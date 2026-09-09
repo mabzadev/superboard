@@ -31,6 +31,8 @@ export interface PluginInfo {
 	lifecycleEnablePath?: string;
 	/** Host route that performs the complete managed deactivation workflow. */
 	lifecycleDisablePath?: string;
+	configurationWhileDisabled?: boolean;
+	lifecycleLocked?: boolean;
 	/** Installed marketplace version (set when source = 'marketplace') */
 	marketplaceVersion?: string;
 	/** Publisher DID, for registry-source plugins. */

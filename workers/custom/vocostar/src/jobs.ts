@@ -7,6 +7,7 @@ import type {
   CustomWorkerStats,
 } from "@superboard/contracts/custom-worker";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
+import { configureVocostarJob } from "./settings.js";
 import { vocalSamples } from "./locales";
 import {
   VocoStarJobError,
@@ -54,6 +55,7 @@ export async function createJob(
   job: CustomWorkerJob,
   env: Env,
   scope?: CustomWorkerScope,
+  settings: Record<string, unknown> = {},
 ): Promise<CustomWorkerJobReceipt> {
   if (!scope) throw new VocoStarJobError("scope_required", 403);
   if (job.projectRef !== scope.projectRef) {
@@ -62,6 +64,7 @@ export async function createJob(
   const hash = await requestHash(job);
   const existing = await byIdempotency(env.VOCOSTAR_DB, job.idempotencyKey);
   if (existing) return existingReceipt(existing, hash, env);
+  job = configureVocostarJob(job, settings);
   if (job.capability === "vocostar.voice.clone")
     return createVoiceJob(job, scope.subject, hash, env);
   if (job.capability === "vocostar.media.convert")
@@ -311,6 +314,7 @@ async function dispatch(job: JobRow, env: Env): Promise<void> {
   ]);
   try {
     payload = await resolveDispatchPayload(job, payload, env);
+    payload = { ...payload, project_ref: job.project_ref, job_id: job.id };
     const response = await (
       voice ? env.VOCALS_ORCHESTRATOR : env.MEDIAS_ORCHESTRATOR
     ).fetch(
@@ -604,6 +608,7 @@ export async function listJobs(
   url: URL,
   env: Env,
   scope?: CustomWorkerScope,
+  operatorProjectRef?: string,
 ): Promise<CustomWorkerJobPage> {
   const limit = Math.min(
     Math.max(
@@ -617,6 +622,7 @@ export async function listJobs(
   const cursor = decodeCursor(url.searchParams.get("cursor"));
   const where: string[] = [];
   const bindings: unknown[] = [];
+  if (operatorProjectRef) { where.push("project_ref = ?"); bindings.push(operatorProjectRef); }
   if (scope) {
     where.push("project_ref = ?");
     bindings.push(scope.projectRef);
@@ -930,4 +936,10 @@ function decodeCursor(
   } catch {
     throw new VocoStarJobError("cursor_invalid");
   }
+}
+
+export async function retryProjectJob(id: string, projectRef: string, env: Env) {
+	const row = await getJobRow(env.VOCOSTAR_DB, id);
+	if (!row || row.project_ref !== projectRef) throw new VocoStarJobError("job_not_found", 404);
+	return retryJob(id, env);
 }

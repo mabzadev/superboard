@@ -544,7 +544,7 @@ function generateDesktopHandlingPage(config: {
 }
 
 function generateQuickLinkPage(link: any, accessPath: string): string {
-  const title = escapeHtml(link.title || 'opengrow');
+  const title = escapeHtml(link.title || 'SuperBoard');
   const subtitle = escapeHtml(link.subtitle || 'Dynamic links, attributions, and referrals across mobile and web platforms.');
   const image = link.image_url ? String(link.image_url) : '';
   return `<!DOCTYPE html>

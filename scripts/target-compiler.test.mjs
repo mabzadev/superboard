@@ -253,7 +253,10 @@ test("the local Site configuration is generated and guarded by the target artifa
 	const config = compileLocalSiteConfiguration(compiled);
 
 	assert.equal(config.name, "superboard-site-local");
-	assert.deepEqual(config.services, [{ binding: "API_SERVICE", service: "superboard-api-local" }]);
+	assert.deepEqual(config.services, [
+		{ binding: "API_SERVICE", service: "superboard-api-local" },
+		{ binding: "MCP_SERVICE", service: "superboard-mcp-local" },
+	]);
 	assert.equal(config.d1_databases[0].database_name, "superboard-local-site-db");
 	assert.deepEqual(
 		config.kv_namespaces.map(({ binding }) => binding),

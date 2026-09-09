@@ -10,13 +10,19 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Button } from "../../../../packages/supbrd-front-ui/src/shared/components/ui/button.js";
 import { mountNativeFrontRenderer } from "../lib/native-front-plugins.js";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
+import { organizeProductNavigation } from "../lib/product-navigation.js";
+import { localizeFrontPath, USER_FRONT_CATALOGS } from "../lib/user-front-i18n.js";
 import { FrontRuntimeProviders } from "./FrontRuntimeProviders.js";
 import { NativeFrontControls } from "./NativeFrontControls.js";
+import { NativeFrontNavigation } from "./NativeFrontNavigation.js";
 import { PluginFrontView } from "./PluginFrontView.js";
 
 export function NativeFrontApp({ projection }: { projection: NativeFrontPresentationProjection }) {
 	return (
-		<FrontRuntimeProviders projection={projection}>
+		<FrontRuntimeProviders
+			key={projection.deployment?.id ?? projection.instance_id}
+			projection={projection}
+		>
 			<NativeFrontShell projection={projection} />
 		</FrontRuntimeProviders>
 	);
@@ -31,12 +37,14 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 	useEffect(() => {
 		try {
 			setCollapsed(
-				localStorage.getItem(`superboard:${projection.instance_id}:sidebar`) === "collapsed",
+				localStorage.getItem(
+					`superboard:${projection.instance_id}:${projection.operator?.id ?? "anonymous"}:sidebar`,
+				) === "collapsed",
 			);
 		} catch {
 			setCollapsed(false);
 		}
-	}, [projection.instance_id]);
+	}, [projection.instance_id, projection.operator?.id]);
 	useEffect(() => {
 		if (!mobileOpen) return;
 		const first = sidebar.current?.querySelector<HTMLElement>("a, button, summary");
@@ -64,12 +72,24 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 		document.addEventListener("keydown", close);
 		return () => document.removeEventListener("keydown", close);
 	}, [mobileOpen]);
+	const navigation = organizeProductNavigation(
+		projection.navigation.map((group) => ({
+			...group,
+			items: localizeNavigationItems(group.items, projection.locale),
+		})),
+		localizeFrontPath(projection.path, projection.locale),
+	);
+	const messages = {
+		...USER_FRONT_CATALOGS[projection.locale],
+		...projection.messages,
+		"site.front.title": USER_FRONT_CATALOGS[projection.locale]["site.front.title"],
+	};
 	const i18n = setupI18n({
 		locale: projection.locale,
-		messages: { [projection.locale]: projection.messages },
+		messages: { [projection.locale]: messages },
 	});
 	const message = (id: string, values?: Record<string, string>) =>
-		Object.hasOwn(projection.messages, id) ? i18n._(id, values) : id;
+		Object.hasOwn(messages, id) ? i18n._(id, values) : id;
 	const mount = (input: NativeFrontPresentationProjection["content_mounts"][number]) =>
 		mountNativeFrontRenderer({ mount: input, plugin_lock: projection.plugin_lock });
 	const layouts = projection.layout_mounts.map(mount);
@@ -156,7 +176,7 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 							setCollapsed(!collapsed);
 							try {
 								localStorage.setItem(
-									`superboard:${projection.instance_id}:sidebar`,
+									`superboard:${projection.instance_id}:${projection.operator?.id ?? "anonymous"}:sidebar`,
 									!collapsed ? "collapsed" : "expanded",
 								);
 							} catch {
@@ -177,53 +197,22 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 					</Button>
 				</div>
 				<nav aria-label={message(layout.navigation_label)}>
-					{projection.navigation.map((group) => (
-						<details
-							key={group.group_id}
-							open={group.items.some(({ href }) =>
-								navigationItemActive(
-									projection.path,
-									href,
-									group.items.map((item) => item.href),
-								),
-							)}
-						>
-							<summary title={collapsed ? message(group.label) : undefined}>
-								<span className="native-front-group-icon" aria-hidden="true">
-									{message(group.label).slice(0, 1)}
-								</span>
-								<span className="native-front-nav-label">{message(group.label)}</span>
-							</summary>
-							<nav
-								aria-label={message("site.front.section_navigation", {
-									section: message(group.label),
-								})}
-							>
-								{group.items.map((item) => (
-									<a
-										key={item.route_id}
-										href={item.href}
-										title={collapsed ? message(item.label) : undefined}
-										onClick={() => setMobileOpen(false)}
-										aria-current={
-											navigationItemActive(
-												projection.path,
-												item.href,
-												group.items.map((candidate) => candidate.href),
-											)
-												? "page"
-												: undefined
-										}
-									>
-										<span className="native-front-group-icon" aria-hidden="true">
-											{message(item.label).slice(0, 1)}
-										</span>
-										<span className="native-front-nav-label">{message(item.label)}</span>
-									</a>
-								))}
-							</nav>
-						</details>
-					))}
+					<NativeFrontNavigation
+						navigation={navigation}
+						collapsed={collapsed}
+						expand={() => {
+							setCollapsed(false);
+							try {
+								localStorage.setItem(
+									`superboard:${projection.instance_id}:${projection.operator?.id ?? "anonymous"}:sidebar`,
+									"expanded",
+								);
+							} catch {
+								return;
+							}
+						}}
+						closeMobile={() => setMobileOpen(false)}
+					/>
 				</nav>
 			</aside>
 			<div className="native-front-content">
@@ -241,14 +230,37 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 					</Button>
 					<div className="native-front-header-copy">
 						<span>{message("site.front.title")}</span>
-						<strong>{currentSurface ? message(currentSurface.title) : projection.path}</strong>
+						<strong>
+							{navigation.activeItem
+								? navigation.activeItem.label
+								: currentSurface
+									? message(currentSurface.title)
+									: projection.path}
+						</strong>
 					</div>
 					<div className="native-front-header-actions">
-						<NativeFrontControls message={message} />
+						<NativeFrontControls message={message} locale={projection.locale} />
 						<ActionList actions={layout.actions} message={message} />
 					</div>
 				</header>
-				<main className={dashboardView ? "native-front-dashboard-main" : undefined}>{body}</main>
+				<main className={dashboardView ? "native-front-dashboard-main" : undefined}>
+					{navigation.localItems.length > 1 && (
+						<nav className="native-front-local-navigation" aria-label={message("navigation.local")}>
+							{navigation.localItems.map((item) => (
+								<a
+									key={item.route_id}
+									href={item.href}
+									aria-current={
+										item.route_id === navigation.activeItem?.route_id ? "page" : undefined
+									}
+								>
+									{item.label}
+								</a>
+							))}
+						</nav>
+					)}
+					{body}
+				</main>
 			</div>
 		</div>
 	);
@@ -384,10 +396,13 @@ function ActionList({
 	);
 }
 
-function activePath(path: string, href: string): boolean {
-	return path === href || (href !== "/" && path.startsWith(`${href}/`));
-}
-
-function navigationItemActive(path: string, href: string, siblingHrefs: readonly string[]) {
-	return siblingHrefs.includes(path) ? path === href : activePath(path, href);
+function localizeNavigationItems(
+	items: NativeFrontPresentationProjection["navigation"][number]["items"],
+	locale: NativeFrontPresentationProjection["locale"],
+): typeof items {
+	return items.map((item) => ({
+		...item,
+		href: localizeFrontPath(item.href, locale),
+		...(item.children ? { children: localizeNavigationItems(item.children, locale) } : {}),
+	}));
 }

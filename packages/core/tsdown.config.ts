@@ -133,6 +133,7 @@ export default defineConfig({
 		// must process.
 		"src/api/route-utils.ts",
 		"src/api/error.ts",
+		"src/api/plugin-settings.ts",
 		"src/api/schemas/index.ts",
 		"src/auth/providers/github.ts",
 		"src/auth/providers/google.ts",

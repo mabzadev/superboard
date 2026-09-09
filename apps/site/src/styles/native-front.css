@@ -100,15 +100,16 @@ textarea {
 }
 
 .native-front-sidebar summary {
+	display: flex;
+	align-items: center;
+	gap: 10px;
 	cursor: pointer;
 	list-style: none;
 	border-radius: 6px;
 	padding: 7px 9px;
-	color: var(--front-muted-foreground);
-	font-size: 10px;
-	font-weight: 700;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
+	color: var(--front-foreground);
+	font-size: 13px;
+	font-weight: 600;
 }
 
 .native-front-sidebar summary::-webkit-details-marker {
@@ -124,6 +125,69 @@ textarea {
 	display: grid;
 	gap: 2px;
 	margin-block-start: 2px;
+	margin-inline-start: 17px;
+	padding-inline-start: 8px;
+	border-inline-start: 1px solid var(--front-border);
+}
+
+.native-front-sidebar .native-front-group-icon {
+	display: block;
+	flex-shrink: 0;
+}
+.native-front-sidebar .native-front-nav-label {
+	flex: 1;
+}
+.native-front-group-chevron {
+	margin-inline-start: auto;
+	flex-shrink: 0;
+}
+.native-front-sidebar details[open] .native-front-group-chevron {
+	transform: rotate(90deg);
+}
+[dir="rtl"] .native-front-group-chevron {
+	transform: scaleX(-1);
+}
+.native-front-direct-link {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 9px;
+	border-radius: 6px;
+	color: var(--front-foreground);
+	text-decoration: none;
+}
+.native-front-direct-link:hover {
+	background: var(--front-sidebar-hover);
+}
+.native-front-admin-navigation {
+	margin-block-start: 10px;
+	border-block-start: 1px solid var(--front-border);
+	padding-block-start: 8px;
+}
+.native-front-local-navigation {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding-block-end: 16px;
+	margin-block-end: 18px;
+	border-block-end: 1px solid var(--front-border);
+}
+.native-front-local-navigation a {
+	padding: 7px 10px;
+	border-radius: 6px;
+	text-decoration: none;
+	color: var(--front-foreground);
+}
+.native-front-local-navigation a:hover {
+	background: var(--front-muted);
+}
+.native-front-local-navigation a[aria-current="page"],
+.native-front-direct-link[aria-current="page"] {
+	background: var(--front-sidebar-active);
+	font-weight: 600;
+}
+.native-front-layout[data-collapsed="true"] .native-front-group-chevron {
+	display: none;
 }
 
 .native-front-sidebar details a {
@@ -134,8 +198,7 @@ textarea {
 	color: var(--front-foreground);
 	font-size: 13px;
 	text-decoration: none;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	overflow-wrap: anywhere;
 }
 
 .native-front-sidebar details a:hover {
@@ -151,7 +214,7 @@ textarea {
 .native-front-content {
 	display: grid;
 	min-width: 0;
-	grid-template-rows: 48px minmax(0, 1fr);
+	grid-template-rows: minmax(48px, auto) minmax(0, 1fr);
 	overflow: hidden;
 }
 
@@ -165,6 +228,30 @@ textarea {
 	border-block-end: 1px solid var(--front-border);
 	background: var(--front-card);
 	padding-inline: 20px 12px;
+	flex-wrap: wrap;
+	padding-block: 8px;
+}
+
+.native-front-deployment {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+
+.native-front-project-data {
+	display: grid;
+	gap: 2px;
+}
+.native-front-project-data > span {
+	font-size: 10px;
+	color: var(--front-muted-foreground);
+}
+.native-front-controls {
+	flex-wrap: wrap;
+}
+.native-front-deployment code {
+	font-size: 10px;
+	overflow-wrap: anywhere;
 }
 
 .native-front-header-copy {

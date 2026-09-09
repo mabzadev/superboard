@@ -12,6 +12,11 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 	description:
 		"Build campaigns, journeys, messages, and channel settings from the active Marketing plugin.",
 	surfaces: [
+		{
+			path_pattern: "/notifications",
+			title: "Push notifications",
+			navigation: marketing("Push notifications", 8),
+		},
 		...[
 			["in-app-messages", "In-app Messages"],
 			["email", "Email"],

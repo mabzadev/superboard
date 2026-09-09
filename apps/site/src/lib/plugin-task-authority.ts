@@ -1,3 +1,4 @@
+import { pluginPackageOwner } from "@superboard/contracts/plugin-packages";
 import { parsePluginTaskCommand, verifyPluginTaskRequest } from "@superboard/contracts/plugin-task";
 import { readJsonObjectLimited, RequestBodyError } from "@superboard/contracts/request-body";
 
@@ -34,7 +35,7 @@ export async function handlePluginTaskAuthority(
     FROM superboard_plugin_workflow_waiters waiter
     JOIN superboard_plugin_lifecycle lifecycle ON lifecycle.instance_id = waiter.instance_id AND lifecycle.target = waiter.target AND lifecycle.plugin_id = waiter.plugin_id
     WHERE waiter.instance_id = ? AND waiter.target = ? AND waiter.state = 'pending' AND lifecycle.state = 'active'
-     AND NOT EXISTS(SELECT 1 FROM superboard_managed_plugin_operations operation WHERE operation.instance_id = waiter.instance_id AND operation.plugin_id = waiter.plugin_id AND operation.status = 'running')
+     AND NOT EXISTS(SELECT 1 FROM superboard_managed_plugin_operations operation WHERE operation.instance_id = waiter.instance_id AND operation.status = 'running')
     ORDER BY waiter.created_at LIMIT 25`)
 				.bind(command.instance_id, target)
 				.all();
@@ -64,7 +65,7 @@ export async function handlePluginTaskAuthority(
     SELECT ?, ?, ?, ?, ?, ?, ?, 'running', (SELECT active_release_id FROM superboard_front_active_releases WHERE instance_id = ?), ?, ?
     WHERE ? = 'supbrd-core' OR ? = 'retention' OR (
      EXISTS(SELECT 1 FROM superboard_plugin_lifecycle WHERE instance_id = ? AND target = ? AND plugin_id = ? AND state = 'active')
-     AND NOT EXISTS(SELECT 1 FROM superboard_managed_plugin_operations WHERE instance_id = ? AND plugin_id = ? AND status = 'running')
+     AND NOT EXISTS(SELECT 1 FROM superboard_managed_plugin_operations WHERE instance_id = ? AND plugin_id IN (?,?) AND status = 'running')
     ) ON CONFLICT(lease_id) DO NOTHING RETURNING lease_id, deadline_at`)
 				.bind(
 					command.lease_id,
@@ -84,6 +85,7 @@ export async function handlePluginTaskAuthority(
 					command.plugin_id,
 					command.instance_id,
 					command.plugin_id,
+					pluginPackageOwner(command.plugin_id),
 				)
 				.first<{ lease_id: string; deadline_at: string }>();
 			if (inserted) return jsonResponse({ ...inserted, state: "running" }, 201);

@@ -1847,10 +1847,15 @@ projects.post("/:id/notifications/search", async (c) => {
 	const hasNewUsersFilter =
 		body.for_new_users !== undefined && body.for_new_users !== null && body.for_new_users !== "";
 	const newUsersFilter = toBool(body.for_new_users) ? 1 : 0;
-	const termClause = term ? " AND (LOWER(n.title) LIKE ? OR LOWER(n.subtitle) LIKE ?)" : "";
-	const termValues = term ? [`%${term}%`, `%${term}%`] : [];
+	// D1 caps LIKE patterns at 50 bytes, including the surrounding wildcards.
+	const literalSearch = new TextEncoder().encode(term).byteLength > 48;
+	const termClause = term ? literalSearch
+		? " AND (instr(LOWER(n.title), ?) > 0 OR instr(LOWER(n.subtitle), ?) > 0)"
+		: " AND (LOWER(n.title) LIKE ? OR LOWER(n.subtitle) LIKE ?)" : "";
+	const termValues = term ? literalSearch ? [term, term] : [`%${term}%`, `%${term}%`] : [];
 	const newUsersClause = hasNewUsersFilter ? " AND COALESCE(nt.new_users, 0) = ?" : "";
 	const newUsersValues = hasNewUsersFilter ? [newUsersFilter] : [];
+	const pushClause = body.send_push === true ? " AND COALESCE(n.send_push, 0) = 1" : "";
 	const count = await c.env.DB.prepare(`
     SELECT COUNT(*) AS total
     FROM notifications n
@@ -1858,6 +1863,7 @@ projects.post("/:id/notifications/search", async (c) => {
     WHERE n.project_id = ? AND COALESCE(n.archived, 0) = ?
       ${newUsersClause}
       ${termClause}
+      ${pushClause}
   `)
 		.bind(project.id, archived, ...newUsersValues, ...termValues)
 		.first();
@@ -1877,6 +1883,7 @@ projects.post("/:id/notifications/search", async (c) => {
     WHERE n.project_id = ? AND COALESCE(n.archived, 0) = ?
       ${newUsersClause}
       ${termClause}
+      ${pushClause}
     ORDER BY n.updated_at DESC
     LIMIT ? OFFSET ?
   `)
@@ -2049,7 +2056,11 @@ projects.post("/:id/exports/links", async (c) => {
 		await sendMail(c.env, downloadFileMessage(c.env, user.email, file.name, file.url));
 	}
 	return c.json(
-		{ message: "Export job has been queued. You will be notified when it's ready.", url: file.url, download_path: file.downloadPath },
+		{
+			message: "Export job has been queued. You will be notified when it's ready.",
+			url: file.url,
+			download_path: file.downloadPath,
+		},
 		202,
 	);
 });

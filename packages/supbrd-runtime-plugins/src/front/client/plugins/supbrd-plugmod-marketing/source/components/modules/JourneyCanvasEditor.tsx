@@ -1,19 +1,28 @@
 "use client";
+import {JourneySimulation}from"../../../studio/JourneySimulation.js";
 
+import {
+	ReactFlow,
+	Background,
+	Controls,
+	MiniMap,
+	Handle,
+	Position,
+	type NodeProps,
+} from "@xyflow/react";
 import {
 	Clock3,
 	GitBranch,
 	LogOut,
 	Mail,
 	PencilLine,
-	Plus,
 	Trash2,
 	UserRoundCog,
 	Webhook,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { Badge } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/badge.js";
+import "@xyflow/react/dist/style.css";
 import { Button } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/button.js";
 import {
 	Card,
@@ -24,6 +33,7 @@ import {
 } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/card.js";
 import { Input } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/input.js";
 import { Label } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/label.js";
+import { useStudioI18n } from "../../../studio/i18n.js";
 import type {
 	EmailTemplate,
 	JourneyCondition,
@@ -79,16 +89,18 @@ const nodeTypes: Array<{
 ];
 
 export function JourneyCanvasEditor({
-	value,
+	project,	value,
 	onChange,
 	templates,
 	connectors,
 }: {
+	project:string;
 	value: JourneyDefinition;
 	onChange: (value: JourneyDefinition) => void;
 	templates: EmailTemplate[];
 	connectors: MarketingChannelConnector[];
 }) {
+	const { t } = useStudioI18n();
 	const [selectedId, setSelectedId] = useState(value.start_node_id);
 	const selected = value.nodes.find((node) => node.id === selectedId) ?? null;
 	const ordered = useMemo(() => layoutNodes(value), [value]);
@@ -173,9 +185,9 @@ export function JourneyCanvasEditor({
 		<div className="space-y-4 rounded-xl border bg-muted/20 p-4">
 			<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 				<div>
-					<div className="font-medium">Journey canvas</div>
+					<div className="font-medium">{t("Journey canvas")}</div>
 					<div className="text-sm text-muted-foreground">
-						Add steps, configure them in the inspector and connect each outcome.
+						{t("Add steps, configure them in the inspector and connect each outcome.")}
 					</div>
 				</div>
 				<div className="flex flex-wrap gap-2">
@@ -195,44 +207,68 @@ export function JourneyCanvasEditor({
 			</div>
 
 			<div className="grid min-h-[420px] gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-				<div className="overflow-auto rounded-xl border bg-background p-5">
-					<div className="mx-auto flex max-w-xl flex-col items-center">
-						<div className="rounded-full border bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm">
-							Event trigger
-						</div>
-						<ConnectorLine />
-						{ordered.map((node, index) => (
-							<div key={node.id} className="flex w-full flex-col items-center">
-								<JourneyNodeCard
-									node={node}
-									selected={node.id === selected?.id}
-									isStart={node.id === value.start_node_id}
-									onSelect={() => setSelectedId(node.id)}
-									onDelete={() => removeNode(node.id)}
-									summary={nodeSummary(node, templates, connectors)}
-								/>
-								{index < ordered.length - 1 && <ConnectorLine />}
-							</div>
-						))}
-						{!ordered.length && (
-							<button
-								type="button"
-								className="rounded-xl border border-dashed p-8 text-sm text-muted-foreground hover:border-primary hover:text-foreground"
-								onClick={() => addNode("email")}
-							>
-								<Plus className="mx-auto mb-2 size-5" /> Add the first action
-							</button>
-						)}
-					</div>
+				<div className="h-[620px] overflow-hidden rounded-xl border border-kumo-line bg-kumo-tint">
+					<ReactFlow
+						nodes={ordered.map((node, index) => ({
+							id: node.id,
+							type: "journey",
+							position: { x: node.type === "branch" ? 160 : (index % 2) * 320, y: index * 150 },
+							data: {
+								label: t(nodeLabel(node.type)),
+								summary: nodeSummary(node, templates, connectors, t),
+								kind: node.type,
+							},
+							selected: node.id === selectedId,
+						}))}
+						edges={value.edges.map((edge, index) => ({
+							id: edge.from + ":" + edge.outcome + ":" + index,
+							source: edge.from,
+							target: edge.to,
+							sourceHandle: edge.outcome,
+							label: edge.outcome === "default" ? undefined : t(edge.outcome),
+							type: "smoothstep",
+						}))}
+						nodeTypes={journeyNodeTypes}
+						onNodeClick={(_event, node) => setSelectedId(node.id)}
+						onConnect={(connection) => {
+							if (connection.source && connection.target && connection.source !== connection.target)
+								connect(
+									connection.source,
+									connection.sourceHandle === "true"
+										? "true"
+										: connection.sourceHandle === "false"
+											? "false"
+											: "default",
+									connection.target,
+								);
+						}}
+						nodesDraggable={false}
+						onNodesDelete={(nodes) => {
+							for (const node of nodes) removeNode(node.id);
+						}}
+						fitView
+						minZoom={0.25}
+						maxZoom={1.5}
+						ariaLabelConfig={{
+							"controls.zoomIn.ariaLabel": t("Zoom in"),
+							"controls.zoomOut.ariaLabel": t("Zoom out"),
+							"controls.fitView.ariaLabel": t("Fit view"),
+							"controls.interactive.ariaLabel": t("Toggle interaction"),
+						}}
+					>
+						<Background />
+						<Controls />
+						<MiniMap />
+					</ReactFlow>
 				</div>
 
 				<Card className="h-fit">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2 text-base">
-							<PencilLine className="size-4" /> Step inspector
+							<PencilLine className="size-4" /> {t("Step inspector")}
 						</CardTitle>
 						<CardDescription>
-							{selected ? nodeLabel(selected.type) : "Select a step on the canvas"}
+							{selected ? t(nodeLabel(selected.type)) : t("Select a step on the canvas")}
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-4">
@@ -257,7 +293,7 @@ export function JourneyCanvasEditor({
 										className="w-full"
 										onClick={() => onChange({ ...value, start_node_id: selected.id })}
 									>
-										Set as first step
+										{t("Set as first step")}
 									</Button>
 								)}
 								<Button
@@ -267,75 +303,39 @@ export function JourneyCanvasEditor({
 									disabled={selected.type === "exit" && value.nodes.length === 1}
 									onClick={() => removeNode(selected.id)}
 								>
-									<Trash2 className="size-4" /> Delete step
+									<Trash2 className="size-4" /> {t("Delete step")}
 								</Button>
 							</>
 						) : (
 							<div className="py-10 text-center text-sm text-muted-foreground">
-								Select a step to edit it.
+								{t("Select a step to edit it.")}
 							</div>
 						)}
 					</CardContent>
 				</Card>
-			</div>
+			</div><JourneySimulation project={project} definition={value} templates={templates}/>
 		</div>
 	);
 }
 
-function JourneyNodeCard({
-	node,
-	selected,
-	isStart,
-	onSelect,
-	onDelete,
-	summary,
-}: {
-	node: JourneyNode;
-	selected: boolean;
-	isStart: boolean;
-	onSelect: () => void;
-	onDelete: () => void;
-	summary: string;
-}) {
-	const metadata = nodeTypes.find((item) => item.type === node.type)!;
-	const Icon = metadata.icon;
+function JourneyGraphNode({ data }: NodeProps) {
 	return (
-		<div
-			className={`w-full max-w-md rounded-xl border bg-card p-4 shadow-sm transition ${
-				selected ? "border-primary ring-2 ring-primary/15" : "hover:border-primary/50"
-			}`}
-		>
-			<div className="flex items-start justify-between gap-3">
-				<button
-					type="button"
-					className="flex min-w-0 flex-1 items-start gap-3 text-left"
-					onClick={onSelect}
-				>
-					<div className="rounded-lg bg-primary/10 p-2 text-primary">
-						<Icon className="size-5" />
-					</div>
-					<div className="min-w-0">
-						<div className="flex flex-wrap items-center gap-2">
-							<span className="font-medium">{metadata.label}</span>
-							{isStart && <Badge variant="secondary">First</Badge>}
-							{node.type === "branch" && <Badge variant="outline">True / False</Badge>}
-						</div>
-						<div className="mt-1 truncate text-sm text-muted-foreground">{summary}</div>
-					</div>
-				</button>
-				<Button
-					type="button"
-					variant="ghost"
-					size="icon"
-					aria-label={`Delete ${metadata.label}`}
-					onClick={onDelete}
-				>
-					<Trash2 className="size-4" />
-				</Button>
-			</div>
+		<div className="w-60 rounded-xl border border-kumo-line bg-kumo-base p-4 text-kumo-default shadow-sm">
+			<Handle type="target" position={Position.Top} />
+			<p className="text-sm font-semibold">{String(data.label)}</p>
+			<p className="mt-2 text-xs text-kumo-subtle">{String(data.summary)}</p>
+			{data.kind === "branch" ? (
+				<>
+					<Handle id="true" type="source" position={Position.Bottom} style={{ left: "25%" }} />
+					<Handle id="false" type="source" position={Position.Bottom} style={{ left: "75%" }} />
+				</>
+			) : data.kind !== "exit" ? (
+				<Handle id="default" type="source" position={Position.Bottom} />
+			) : null}
 		</div>
 	);
 }
+const journeyNodeTypes = { journey: JourneyGraphNode };
 
 function NodeFields({
 	node,
@@ -348,15 +348,16 @@ function NodeFields({
 	connectors: MarketingChannelConnector[];
 	onChange: (patch: Partial<JourneyNode>) => void;
 }) {
+	const { t } = useStudioI18n();
 	if (node.type === "email") {
 		return (
-			<Field label="Email template">
+			<Field label={t("Email template")}>
 				<select
 					className={selectClass}
 					value={node.template_id ?? ""}
 					onChange={(event) => onChange({ template_id: event.target.value })}
 				>
-					<option value="">Choose a template</option>
+					<option value="">{t("Choose a template")}</option>
 					{templates.map((template) => (
 						<option key={template.id} value={template.id}>
 							{template.name}
@@ -368,18 +369,18 @@ function NodeFields({
 	}
 	if (node.type === "channel") {
 		return (
-			<Field label="Channel connector">
+			<Field label={t("Channel connector")}>
 				<select
 					className={selectClass}
 					value={node.connector_id ?? ""}
 					onChange={(event) => onChange({ connector_id: event.target.value })}
 				>
-					<option value="">Choose a connector</option>
+					<option value="">{t("Choose a connector")}</option>
 					{connectors
 						.filter((item) => item.enabled)
 						.map((connector) => (
 							<option key={connector.id} value={connector.id}>
-								{connector.name} · {connector.channel}
+								{connector.name} {t("·")} {connector.channel}
 							</option>
 						))}
 				</select>
@@ -388,7 +389,7 @@ function NodeFields({
 	}
 	if (node.type === "delay") {
 		return (
-			<Field label="Wait in minutes">
+			<Field label={t("Wait in minutes")}>
 				<Input
 					type="number"
 					min={1}
@@ -413,14 +414,14 @@ function NodeFields({
 			onChange({ condition: { ...condition, ...value } });
 		return (
 			<div className="space-y-4">
-				<Field label="Field">
+				<Field label={t("Field")}>
 					<Input
 						value={condition.field}
 						onChange={(event) => patch({ field: event.target.value })}
-						placeholder="attributes.plan"
+						placeholder={t("attributes.plan")}
 					/>
 				</Field>
-				<Field label="Operator">
+				<Field label={t("Operator")}>
 					<select
 						className={selectClass}
 						value={condition.operator}
@@ -430,20 +431,20 @@ function NodeFields({
 							})
 						}
 					>
-						<option value="equals">Equals</option>
-						<option value="not_equals">Does not equal</option>
-						<option value="contains">Contains</option>
-						<option value="starts_with">Starts with</option>
-						<option value="exists">Exists</option>
-						<option value="in">Is one of</option>
-						<option value="greater_than">Greater than</option>
-						<option value="greater_or_equal">Greater or equal</option>
-						<option value="less_than">Less than</option>
-						<option value="less_or_equal">Less or equal</option>
+						<option value="equals">{t("Equals")}</option>
+						<option value="not_equals">{t("Does not equal")}</option>
+						<option value="contains">{t("Contains")}</option>
+						<option value="starts_with">{t("Starts with")}</option>
+						<option value="exists">{t("Exists")}</option>
+						<option value="in">{t("Is one of")}</option>
+						<option value="greater_than">{t("Greater than")}</option>
+						<option value="greater_or_equal">{t("Greater or equal")}</option>
+						<option value="less_than">{t("Less than")}</option>
+						<option value="less_or_equal">{t("Less or equal")}</option>
 					</select>
 				</Field>
 				{condition.operator !== "exists" && (
-					<Field label="Value">
+					<Field label={t("Value")}>
 						<Input
 							value={String(condition.value ?? "")}
 							onChange={(event) => patch({ value: event.target.value })}
@@ -460,13 +461,13 @@ function NodeFields({
 		];
 		return (
 			<div className="space-y-4">
-				<Field label="Subscriber field">
+				<Field label={t("Subscriber field")}>
 					<Input
 						value={first[0]}
 						onChange={(event) => onChange({ attributes: { [event.target.value]: first[1] } })}
 					/>
 				</Field>
-				<Field label="New value">
+				<Field label={t("New value")}>
 					<Input
 						value={String(first[1])}
 						onChange={(event) => onChange({ attributes: { [first[0]]: event.target.value } })}
@@ -477,7 +478,7 @@ function NodeFields({
 	}
 	return (
 		<div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-			This step completes the enrollment.
+			{t("This step completes the enrollment.")}
 		</div>
 	);
 }
@@ -491,6 +492,7 @@ function ConnectionFields({
 	definition: JourneyDefinition;
 	onConnect: (nodeId: string, outcome: "default" | "true" | "false", destination: string) => void;
 }) {
+	const { t } = useStudioI18n();
 	const destinations = definition.nodes.filter((candidate) => candidate.id !== node.id);
 	const target = (outcome: "default" | "true" | "false") =>
 		definition.edges.find((edge) => edge.from === node.id && edge.outcome === outcome)?.to ?? "";
@@ -501,10 +503,10 @@ function ConnectionFields({
 				value={target(outcome)}
 				onChange={(event) => onConnect(node.id, outcome, event.target.value)}
 			>
-				<option value="">Finish without another step</option>
+				<option value="">{t("Finish without another step")}</option>
 				{destinations.map((candidate) => (
 					<option key={candidate.id} value={candidate.id}>
-						{nodeLabel(candidate.type)} · {candidate.id}
+						{t(nodeLabel(candidate.type))} {t("·")} {candidate.id}
 					</option>
 				))}
 			</select>
@@ -518,10 +520,6 @@ function ConnectionFields({
 	) : (
 		select("default", "Continue to")
 	);
-}
-
-function ConnectorLine() {
-	return <div className="h-8 w-px bg-border" aria-hidden="true" />;
 }
 
 function defaultNode(
@@ -571,21 +569,22 @@ function nodeSummary(
 	node: JourneyNode,
 	templates: EmailTemplate[],
 	connectors: MarketingChannelConnector[],
+	t: (key:string)=>string,
 ) {
 	if (node.type === "email")
-		return templates.find((item) => item.id === node.template_id)?.name ?? "Choose a template";
+		return templates.find((item) => item.id === node.template_id)?.name ?? t("Choose a template");
 	if (node.type === "channel")
-		return connectors.find((item) => item.id === node.connector_id)?.name ?? "Choose a connector";
-	if (node.type === "delay") return `Wait ${Math.round((node.delay_seconds ?? 60) / 60)} minutes`;
+		return connectors.find((item) => item.id === node.connector_id)?.name ?? t("Choose a connector");
+	if (node.type === "delay") return t("Wait {minutes} minutes").replace("{minutes}",String(Math.round((node.delay_seconds ?? 60) / 60)));
 	if (node.type === "branch")
 		return `${node.condition?.field ?? "field"} ${node.condition?.operator ?? "equals"} ${String(node.condition?.value ?? "")}`;
 	if (node.type === "update_attribute")
 		return (
 			Object.entries(node.attributes ?? {})
 				.map(([key, value]) => `${key} = ${String(value)}`)
-				.join(", ") || "Configure subscriber data"
+				.join(", ") || t("Configure subscriber data")
 		);
-	return "Complete this enrollment";
+	return t("Complete this enrollment");
 }
 
 function nodeLabel(type: JourneyNodeType) {

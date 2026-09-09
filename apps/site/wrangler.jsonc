@@ -65,11 +65,13 @@
 	},
 	"vars": {
 		"SUPERBOARD_INSTANCE_ID": "mbza-development",
+		"SUPERBOARD_PLUGIN_LIFECYCLE": "required",
 		"SUPERBOARD_ENVIRONMENT": "local",
+		"SUPERBOARD_PUBLIC_ENDPOINTS_JSON": "{\"api\":\"https://api.mbza.dev\",\"auth\":\"https://auth.mbza.dev\",\"shortlinks\":\"https://in.mbza.dev\",\"sdk\":\"https://sdk.mbza.dev\",\"files\":\"https://files.mbza.dev\",\"site\":\"https://site.mbza.dev\",\"mcp\":\"https://mcp.mbza.dev\"}",
 		"SUPERBOARD_PLUGIN_IDS": "[\"supbrd-plug-audit\",\"supbrd-plug-content\",\"supbrd-plug-products\",\"supbrd-plug-settings\",\"supbrd-plug-user\",\"supbrd-plugmod-analytics\",\"supbrd-plugmod-billing\",\"supbrd-plugmod-dynamic-links\",\"supbrd-plugmod-email\",\"supbrd-plugmod-files\",\"supbrd-plugmod-flows\",\"supbrd-plugmod-gateway\",\"supbrd-plugmod-marketing\",\"supbrd-plugmod-mcp\",\"supbrd-plugmod-observability\",\"supbrd-plugmod-onboardings\",\"supbrd-plugmod-paywalls\",\"supbrd-plugmod-support\"]",
 		"SUPERBOARD_RELEASE_OPERATIONS": "disabled",
-		"D1_EXPECTED_MIGRATION": "0020_revalidated_plugin_manifests.sql",
-		"TARGET_ARTIFACT_CHECKSUM": "sha256:306d6e3d783f7ee3b208aa17bca738738a5b7f15e7b3251b312102e6a5e1626d",
+		"D1_EXPECTED_MIGRATION": "0027_reorganisation_plugin_manifests.sql",
+		"TARGET_ARTIFACT_CHECKSUM": "sha256:5164006d862f203da1a15033fd5e9a361132afa1ff2ee494a2586dedfc7bb4cb",
 	},
 	"triggers": {
 		"crons": ["* * * * *"],

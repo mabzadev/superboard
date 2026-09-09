@@ -120,7 +120,7 @@ coverage/
 tsconfig.tsbuildinfo
 test-results/
 playwright-report/
-apps/site/e2e/.auth/
+**/e2e/.auth/
 
 # Local env / secrets
 .env

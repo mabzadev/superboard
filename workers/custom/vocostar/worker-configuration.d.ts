@@ -12,9 +12,14 @@ interface __BaseEnv_Env {
 	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	CUSTOM_WORKER_TOKEN: string;
 	FILES_INTERNAL_TOKEN: string;
+	VOCOSTAR_INTERNAL_CALLBACK_TOKEN: string;
+	VOCOSTAR_LEGACY_JWT_SECRET: string;
+	VOCOSTAR_USER_VOCALS_ROOM: DurableObjectNamespace;
+	VOCOSTAR_USER_MEDIAS_ROOM: DurableObjectNamespace;
 	VOCALS_ORCHESTRATOR: Fetcher;
 	MEDIAS_ORCHESTRATOR: Fetcher;
 	FILES_SERVICE: Fetcher;
+	VOCOSTAR_NOTIFICATION_DISPATCHER: Fetcher;
 }
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_Env {}
@@ -24,7 +29,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_KEY" | "ENVIRONMENT" | "CUSTOM_WORKER_CAPABILITIES" | "FILES_INPUT_ORIGIN" | "D1_EXPECTED_MIGRATION" | "MAX_AUTOMATIC_DISPATCH_ATTEMPTS" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "CUSTOM_WORKER_TOKEN" | "FILES_INTERNAL_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_KEY" | "ENVIRONMENT" | "CUSTOM_WORKER_CAPABILITIES" | "FILES_INPUT_ORIGIN" | "D1_EXPECTED_MIGRATION" | "MAX_AUTOMATIC_DISPATCH_ATTEMPTS" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "CUSTOM_WORKER_TOKEN" | "FILES_INTERNAL_TOKEN" | "VOCOSTAR_INTERNAL_CALLBACK_TOKEN" | "VOCOSTAR_LEGACY_JWT_SECRET">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.
@@ -32,11 +37,19 @@ declare namespace Cloudflare {
 	interface Env {
 	CUSTOM_WORKER_TOKEN: string;
 	FILES_INTERNAL_TOKEN: string;
+	VOCOSTAR_INTERNAL_CALLBACK_TOKEN: string;
+	VOCOSTAR_INTERNAL_CALLBACK_TOKEN_PREVIOUS?: string;
+	VOCOSTAR_LEGACY_JWT_SECRET: string;
+	VOCOSTAR_LEGACY_JWT_SECRET_PREVIOUS?: string;
 	CUSTOM_WORKER_TOKEN_PREVIOUS?: string;
 	}
 }
 interface Env {
 	CUSTOM_WORKER_TOKEN: string;
 	FILES_INTERNAL_TOKEN: string;
+	VOCOSTAR_INTERNAL_CALLBACK_TOKEN: string;
+	VOCOSTAR_INTERNAL_CALLBACK_TOKEN_PREVIOUS?: string;
+	VOCOSTAR_LEGACY_JWT_SECRET: string;
+	VOCOSTAR_LEGACY_JWT_SECRET_PREVIOUS?: string;
 	CUSTOM_WORKER_TOKEN_PREVIOUS?: string;
 }

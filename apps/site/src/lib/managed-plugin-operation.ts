@@ -41,6 +41,9 @@ const snapshotTables = [
 	"superboard_plugin_runtime_health",
 	"superboard_dependency_health",
 	"superboard_plugin_target_artifacts",
+	"superboard_plugin_packages",
+	"superboard_plugin_feature_preferences",
+	"superboard_plugin_package_migrations",
 ] as const;
 
 export async function beginManagedPluginOperation(

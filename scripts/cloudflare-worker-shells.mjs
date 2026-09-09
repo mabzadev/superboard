@@ -19,12 +19,22 @@ import {
 	root,
 	targetNameFromArgs,
 } from "./cloudflare-target.mjs";
+import { deploymentGroups, deploymentEntrypoint } from "./worker-deployment-groups.mjs";
 
 const WORKER_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
 
 export function buildWorkerShellPlan({ target, environment, accountId, existingWorkerNames }) {
 	const existing = new Set(existingWorkerNames.map((name) => String(name)));
-	const workers = deploymentOrder(target).map((service) => {
+	const groups =
+		target.deploymentProfile === "consolidated"
+			? deploymentGroups(deploymentOrder(target))
+			: deploymentOrder(target).map((service) => ({ services: [service] }));
+	const workers = groups.map(({ services: selectedServices }) => {
+		const services =
+			target.deploymentProfile === "consolidated" && selectedServices.includes("email")
+				? [...selectedServices, "push"]
+				: selectedServices;
+		const service = services[0];
 		const name = String(workerNameForService(target, service, environment) ?? "");
 		if (!WORKER_NAME.test(name)) {
 			throw new Error(`Invalid Worker name for ${service}/${environment}`);
@@ -32,6 +42,7 @@ export function buildWorkerShellPlan({ target, environment, accountId, existingW
 		return {
 			service,
 			name,
+			entrypoints: services.length > 1 ? services.map(deploymentEntrypoint) : [],
 			...resourceNameContract(target, name, {
 				allowLegacyName: Boolean(managedWorkerDefinition(target, service)),
 			}),
@@ -137,7 +148,10 @@ async function createPrivateWorkerShell(worker, target) {
 	try {
 		await writeFile(
 			sourcePath,
-			`export default { fetch() { return Response.json({ service: ${JSON.stringify(worker.name)}, status: "bootstrap" }, { status: 503, headers: { "cache-control": "no-store" } }); } };\n`,
+			`import { WorkerEntrypoint } from "cloudflare:workers";
+const handler = { fetch() { return Response.json({ service: ${JSON.stringify(worker.name)}, status: "bootstrap" }, { status: 503, headers: { "cache-control": "no-store" } }); } };
+export default handler;
+${(worker.entrypoints ?? []).map((name) => `export class ${name} extends WorkerEntrypoint { fetch() { return handler.fetch(); } }`).join("\n")}\n`,
 			{ encoding: "utf8", mode: 0o600 },
 		);
 		await writeFile(

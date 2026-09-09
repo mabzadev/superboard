@@ -50,7 +50,7 @@ async function ingest(body: unknown, producer = plugin, secret = "runtime-observ
 	);
 }
 
-test("Observability persists real observations, deduplicates delivery and preserves incident transitions across disable", async () => {
+test("Observability persists observations and incident transitions while the required core rejects disabling", async () => {
 	expect((await toggle("enable")).status).toBe(201);
 	const event = {
 		instance_id: "vocostar",
@@ -96,10 +96,12 @@ test("Observability persists real observations, deduplicates delivery and preser
 	expect(await health.json()).toMatchObject({
 		data: { items: [{ service: "isolated-api", status: "unhealthy" }] },
 	});
-	expect((await toggle("disable")).status).toBe(201);
-	expect((await ingest({ ...event, observation_id: crypto.randomUUID() })).status).toBe(404);
-	expect((await read("incidents", "/api/v1/observability/incidents")).status).toBe(404);
-	expect((await toggle("enable")).status).toBe(201);
+	const disabled = await toggle("disable");
+	expect(disabled.status).toBe(409);
+	expect(await disabled.json()).toMatchObject({ error: { code: "CORE_COMPONENT_REQUIRED" } });
+	expect((await ingest(event)).status).toBe(201);
+	expect((await read("incidents", "/api/v1/observability/incidents")).status).toBe(200);
+	expect((await toggle("enable")).status).toBe(200);
 	const restored = await read("incidents", "/api/v1/observability/incidents");
 	expect(await restored.json()).toMatchObject({
 		data: {

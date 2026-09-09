@@ -10,6 +10,7 @@ import {
 	recentOperatorReauthentication,
 	requireReleaseOperator,
 } from "../../../../lib/operator-guard.js";
+import { syncPluginPackageRuntime } from "../../../../lib/plugin-package-state.js";
 import { createD1FrontReleaseRepository } from "../../../../lib/release-repository.js";
 import { loadLastVerifiedFrontRelease } from "../../../../lib/release-source.js";
 import { isRecord } from "../../../../lib/request-validation.js";
@@ -91,12 +92,11 @@ export const POST: APIRoute = async (context) => {
 		release_id: loaded.release.payload.release_id,
 		finalized_at: now,
 	});
-	for (const pluginId of pluginLifecycle.activated_plugin_ids) {
-		await context.locals.emdash.setPluginStatus(pluginId, "active");
-	}
-	for (const pluginId of pluginLifecycle.disabled_plugin_ids) {
-		await context.locals.emdash.setPluginStatus(pluginId, "inactive");
-	}
+	await syncPluginPackageRuntime(
+		env.DB,
+		{ instance_id: env.SUPERBOARD_INSTANCE_ID, target: pluginTarget },
+		context.locals.emdash,
+	);
 	return jsonResponse(
 		{ ...result, rollback: "pointer_only", plugin_lifecycle: pluginLifecycle },
 		201,

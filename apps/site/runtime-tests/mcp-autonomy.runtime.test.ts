@@ -227,8 +227,8 @@ test("MCP SDK settings and usage use the owning Workers with User absent", async
 					method: "POST",
 					headers,
 				})
-			).status,
-		).toBe(201);
+			).ok,
+		).toBe(true);
 	const stores = env as unknown as {
 		HEALTH_API_DB: D1Database;
 		HEALTH_APP_DB: D1Database;

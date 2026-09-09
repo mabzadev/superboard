@@ -1,3 +1,4 @@
+import { parseDeploymentConfiguration } from "@superboard/contracts/deployment-configuration";
 import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import {
 	PROJECT_CONTEXT_HEADERS,
@@ -25,6 +26,7 @@ import {
 	purchasesJwksFromBillingAuthority,
 } from "./lib/billing-service";
 import { isSsoEnabled } from "./lib/deployment";
+import { deploymentRoutes, deploymentWebOrigins } from "./lib/deployment-routes.js";
 import {
 	DOMAIN_MODULES,
 	DOMAIN_SDK_ROUTES,
@@ -52,6 +54,7 @@ import {
 	proxySupportSurface,
 } from "./lib/support-gateway";
 import adminRoutes from "./routes/admin";
+import { applicationModuleAdmin } from "./routes/application-module-admin.js";
 import { applicationPluginApi } from "./routes/application-plugin.js";
 import applicationUsersAdminRoutes from "./routes/application-users-admin";
 import authRoutes from "./routes/auth";
@@ -74,7 +77,7 @@ import {
 	observabilityAdmin,
 	receiveObservabilityObservation,
 } from "./routes/observability-admin.js";
-import platformStatusRoutes from "./routes/platform-status";
+import platformStatusRoutes, { workerTopology } from "./routes/platform-status";
 import pluginTasks from "./routes/plugin-tasks.js";
 import projectsRoutes from "./routes/projects";
 import purchasesAdminRoutes from "./routes/purchases-admin";
@@ -85,6 +88,11 @@ import redirectRoute from "./routes/redirect";
 import sdkRoutes from "./routes/sdk";
 import siteOperatorRoutes from "./routes/site-operator";
 import usersRoutes from "./routes/users";
+import {
+	proxyVocostarRuntime,
+	VOCOSTAR_CALLBACK_PATHS,
+	VOCOSTAR_WEBSOCKET_PATHS,
+} from "./routes/vocostar-runtime.js";
 import wellKnownRoutes from "./routes/well-known";
 import { Env } from "./types";
 
@@ -312,13 +320,22 @@ app.get("/.well-known/jwks.json", (c) => {
 	return proxyPublicService(c.req.raw, c.env.IDENTITY_SERVICE, "/.well-known/jwks.json");
 });
 
+// Completion callbacks must drain accepted jobs after the plugin stops accepting work.
+app.on("POST", [...VOCOSTAR_CALLBACK_PATHS], (c) => proxyVocostarRuntime(c.req.raw, c.env));
 app.use("*", pluginHttpAdmission);
+app.on("GET", [...VOCOSTAR_WEBSOCKET_PATHS], (c) => proxyVocostarRuntime(c.req.raw, c.env));
 
 // =============================================
 // Route requests by subdomain
 // =============================================
 app.all("*", async (c, next) => {
 	const host = c.req.header("host") || "";
+	const customPath = new URL(c.req.url).pathname;
+	if (
+		host === c.env.API_DOMAIN &&
+		(customPath === "/custom/v1" || customPath.startsWith("/custom/v1/"))
+	)
+		return sdkRoutes.fetch(c.req.raw, c.env);
 
 	if (host === c.env.AUTH_DOMAIN) {
 		const url = new URL(c.req.url);
@@ -334,7 +351,7 @@ app.all("*", async (c, next) => {
 	}
 
 	// Mobile SDK custom domain.
-	if (host.startsWith("sdk.")) {
+	if (host === c.env.SDK_DOMAIN) {
 		const pathname = new URL(c.req.url).pathname;
 		if (
 			pathname === "/api/v1/sdk" ||
@@ -361,6 +378,7 @@ app.get("/internal/site/plugin-health/:pluginId", async (c) => {
 });
 app.route("/internal/site-operator", siteOperatorRoutes);
 app.route("/internal/plugin-tasks", pluginTasks);
+app.all("/api/v1/plugins/:plugin/projects/:projectRef/*", applicationModuleAdmin);
 app.route("/api/v1/auth", authRoutes);
 app.all("/auth", (c) => proxyIdentityAuth(c.req.raw, c.env, "/auth"));
 app.all("/auth/*", async (c) => {
@@ -520,6 +538,28 @@ app.route("/api/v2/inbox/projects", inboxAdminRoutes);
 app.route("/oauth", oauthRoutes);
 app.route("/.well-known", wellKnownRoutes);
 app.route("", mcpOauthRoutes);
+
+app.get("/internal/site/deployment-configuration", async (c) => {
+	const auth = await getRequestAuthContext(c.env, c.req.raw.headers, { request: c.req.raw });
+	if (!auth?.siteOperator) return c.json({ error: { code: "OPERATOR_SESSION_REQUIRED" } }, 401);
+	if (!c.env.SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON)
+		return c.json({ error: { code: "DEPLOYMENT_CONFIGURATION_UNAVAILABLE" } }, 503);
+	const configuration = parseDeploymentConfiguration(
+		c.env.SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON,
+	);
+	return c.json(
+		{
+			configuration,
+			routes: deploymentRoutes(app.routes, configuration, sdkRoutes.routes, isDomainSdkRoutePath),
+			webOrigins: deploymentWebOrigins(c.env.CORS_ORIGINS_JSON),
+			workers: [...workerTopology(c.env).workers.values()].map((worker) => ({
+				id: worker.id,
+				name: worker.workerName,
+			})),
+		},
+		{ headers: { "Cache-Control": "private, no-store" } },
+	);
+});
 
 // Short link redirect — this must remain last.
 app.route("", redirectRoute);

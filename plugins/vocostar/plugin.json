@@ -1,0 +1,19 @@
+{
+	"id": "supbrd-plugmod-vocostar",
+	"name": "Vocostar",
+	"version": "1.0.0",
+	"superboard": ">=0.1.0 <0.2.0",
+	"worker": "custom/vocostar",
+	"stores": ["operations"],
+	"commands": ["retry_job", "update_settings"],
+	"dataSources": ["jobs", "voices", "conversions", "outputs", "settings"],
+	"settings": {
+		"display_name": { "type": "string", "minLength": 1 },
+		"allowed_locales": { "type": "string" },
+		"text_max_characters": { "type": "integer", "minimum": 1, "maximum": 10000 },
+		"media_credit_cost": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+		"voice_cloning_enabled": { "type": "boolean" },
+		"media_conversion_enabled": { "type": "boolean" }
+	},
+	"runtimeSettings": ["allowed_locales", "text_max_characters", "media_credit_cost", "voice_cloning_enabled", "media_conversion_enabled"]
+}

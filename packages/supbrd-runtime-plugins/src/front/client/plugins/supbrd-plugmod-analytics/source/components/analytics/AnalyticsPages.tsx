@@ -69,6 +69,7 @@ import {
 	type RetentionResult,
 	type SavedAnalyticsReport,
 } from "../../api/analytics/analyticsService.js";
+import { useAnalyticsI18n } from "./analytics-i18n.js";
 import {
 	AnalyticsAlertsPage,
 	AnalyticsCohortsPage,
@@ -128,6 +129,7 @@ function useAnalyticsRange() {
 }
 
 function OverviewPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const range = useAnalyticsRange();
 	const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
@@ -138,15 +140,17 @@ function OverviewPage() {
 			setOverview(await getAnalyticsOverview(selectedProject.id, range));
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [range, selectedProject]);
+	}, [range, selectedProject, locale]);
 	useEffect(() => void load(), [load]);
 
 	return (
 		<ModulePage
-			title="Analytics"
-			description="A single, privacy-aware view of product usage, installations and verified revenue."
+			title={t("Analytics")}
+			description={t(
+				"A single, privacy-aware view of product usage, installations and verified revenue.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -154,30 +158,35 @@ function OverviewPage() {
 			) : (
 				<div className="space-y-6">
 					<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-						<MetricCard icon={Activity} label="Events" value={overview?.events} />
-						<MetricCard icon={Users} label="Unique people" value={overview?.unique_subjects} />
-						<MetricCard icon={BarChart3} label="Sessions" value={overview?.sessions} />
-						<MetricCard icon={Smartphone} label="Installations" value={overview?.installations} />
+						<MetricCard icon={Activity} label={t("Events")} value={overview?.events} />
+						<MetricCard icon={Users} label={t("Unique people")} value={overview?.unique_subjects} />
+						<MetricCard icon={BarChart3} label={t("Sessions")} value={overview?.sessions} />
+						<MetricCard
+							icon={Smartphone}
+							label={t("Installations")}
+							value={overview?.installations}
+						/>
 						<MetricCard
 							icon={WalletCards}
-							label="Verified purchases"
+							label={t("Verified purchases")}
 							value={overview?.successful_purchases}
 						/>
 					</div>
 					<Card>
 						<CardHeader className="flex-row items-start justify-between gap-4">
 							<div>
-								<CardTitle>Activity over 30 days</CardTitle>
+								<CardTitle>{t("Activity over 30 days")}</CardTitle>
 								<CardDescription>
-									Accepted events after idempotency and project isolation.
+									{t("Accepted events after idempotency and project isolation.")}
 								</CardDescription>
 							</div>
 							<Button variant="outline" size="sm" onClick={() => void load()}>
-								<RefreshCw className="size-4" /> Refresh
+								<RefreshCw className="size-4" />
+								{t("Refresh")}
 							</Button>
 						</CardHeader>
 						<CardContent>
-							<div className="h-80 w-full" aria-label="Events over time">
+							<div className="h-80 w-full" aria-label={t("Events over time")}>
 								<ResponsiveContainer width="100%" height="100%">
 									<AreaChart data={overview?.series ?? []}>
 										<defs>
@@ -187,11 +196,24 @@ function OverviewPage() {
 											</linearGradient>
 										</defs>
 										<CartesianGrid strokeDasharray="3 3" vertical={false} />
-										<XAxis dataKey="date" tickLine={false} axisLine={false} minTickGap={24} />
+										<XAxis
+											tickFormatter={(value: string) =>
+												new Intl.DateTimeFormat(locale, {
+													month: "short",
+													day: "numeric",
+													timeZone: "UTC",
+												}).format(new Date(value))
+											}
+											dataKey="date"
+											tickLine={false}
+											axisLine={false}
+											minTickGap={24}
+										/>
 										<YAxis allowDecimals={false} tickLine={false} axisLine={false} width={36} />
-										<Tooltip />
+										<Tooltip labelFormatter={(value) => formatDay(String(value), locale)} />
 										<Area
 											dataKey="events"
+											name={t("Events")}
 											type="monotone"
 											stroke="var(--primary)"
 											fill="url(#analyticsEvents)"
@@ -204,19 +226,19 @@ function OverviewPage() {
 					</Card>
 					<div className="grid gap-4 lg:grid-cols-3">
 						<SummaryCard
-							title="Average session"
-							value={formatDuration(overview?.average_session_duration_seconds ?? 0)}
-							detail="Across projected sessions in this period"
+							title={t("Average session")}
+							value={formatDuration(overview?.average_session_duration_seconds ?? 0, locale)}
+							detail={t("Across projected sessions in this period")}
 						/>
 						<SummaryCard
-							title="Purchase events"
-							value={formatNumber(overview?.purchase_events)}
-							detail="Purchases, renewals, refunds and chargebacks"
+							title={t("Purchase events")}
+							value={formatNumber(overview?.purchase_events, locale)}
+							detail={t("Purchases, renewals, refunds and chargebacks")}
 						/>
 						<SummaryCard
-							title="Accounting"
-							value="Verified facts only"
-							detail="SDK clients cannot forge financial events"
+							title={t("Accounting")}
+							value={t("Verified facts only")}
+							detail={t("SDK clients cannot forge financial events")}
 						/>
 					</div>
 				</div>
@@ -226,6 +248,7 @@ function OverviewPage() {
 }
 
 function EventsPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const range = useAnalyticsRange();
 	const [events, setEvents] = useState<AnalyticsEvent[]>([]);
@@ -255,14 +278,16 @@ function EventsPage() {
 			setAnalysis(eventAnalysis);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [appliedName, property, range, selectedProject]);
+	}, [appliedName, property, range, selectedProject, locale]);
 	useEffect(() => void load(), [load]);
 	return (
 		<ModulePage
-			title="Event explorer"
-			description="Inspect the recent, pseudonymized event stream without exposing raw user identifiers."
+			title={t("Event explorer")}
+			description={t(
+				"Inspect the recent, pseudonymized event stream without exposing raw user identifiers.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -271,8 +296,8 @@ function EventsPage() {
 				<div className="space-y-5">
 					<Card>
 						<CardHeader>
-							<CardTitle>Recent events</CardTitle>
-							<CardDescription>Filter by the exact event name.</CardDescription>
+							<CardTitle>{t("Recent events")}</CardTitle>
+							<CardDescription>{t("Filter by the exact event name.")}</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<form
@@ -286,16 +311,23 @@ function EventsPage() {
 								<Input
 									value={eventName}
 									onChange={(event) => setEventName(event.target.value)}
-									placeholder="checkout.completed"
-									aria-label="Event name"
+									placeholder={t("checkout.completed")}
+									aria-label={t("Event name")}
 								/>
 								<Button type="submit">
-									<Filter className="size-4" /> Apply filter
+									<Filter className="size-4" />
+									{t("Apply filter")}
 								</Button>
 							</form>
 							<DataTable
-								columns={["Event", "Source", "Application", "Occurred", "Properties"]}
-								empty="No events match this period and filter."
+								columns={[
+									t("Event"),
+									t("Source"),
+									t("Application"),
+									t("Occurred"),
+									t("Properties"),
+								]}
+								empty={t("No events match this period and filter.")}
 							>
 								{events.map((event) => (
 									<tr key={event.event_id} className="border-b last:border-0">
@@ -306,10 +338,10 @@ function EventsPage() {
 											</div>
 										</Cell>
 										<Cell>
-											<Badge variant="outline">{event.source}</Badge>
+											<Badge variant="outline">{t(labelize(event.source))}</Badge>
 										</Cell>
 										<Cell>{event.application_id}</Cell>
-										<Cell>{formatDate(event.occurred_at)}</Cell>
+										<Cell>{formatDate(event.occurred_at, locale)}</Cell>
 										<Cell>
 											<code className="block max-w-80 truncate text-xs">
 												{JSON.stringify(event.properties)}
@@ -327,12 +359,16 @@ function EventsPage() {
 									<div>
 										<CardTitle>{analysis.event_name}</CardTitle>
 										<CardDescription>
-											Event volume and unique pseudonymous users over 30 days.
+											{t("Event volume and unique pseudonymous users over 30 days.")}
 										</CardDescription>
 									</div>
 									<div className="flex gap-2">
-										<Badge variant="secondary">{formatNumber(analysis.totals.events)} events</Badge>
-										<Badge variant="outline">{formatNumber(analysis.totals.users)} users</Badge>
+										<Badge variant="secondary">
+											{t("Event count", { count: analysis.totals.events })}
+										</Badge>
+										<Badge variant="outline">
+											{t("User count", { count: analysis.totals.users })}
+										</Badge>
 									</div>
 								</CardHeader>
 								<CardContent>
@@ -340,11 +376,23 @@ function EventsPage() {
 										<ResponsiveContainer width="100%" height="100%">
 											<AreaChart data={analysis.series}>
 												<CartesianGrid strokeDasharray="3 3" vertical={false} />
-												<XAxis dataKey="date" tickLine={false} axisLine={false} />
+												<XAxis
+													tickFormatter={(value: string) =>
+														new Intl.DateTimeFormat(locale, {
+															month: "short",
+															day: "numeric",
+															timeZone: "UTC",
+														}).format(new Date(value))
+													}
+													dataKey="date"
+													tickLine={false}
+													axisLine={false}
+												/>
 												<YAxis allowDecimals={false} tickLine={false} axisLine={false} width={36} />
-												<Tooltip />
+												<Tooltip labelFormatter={(value) => formatDay(String(value), locale)} />
 												<Area
 													dataKey="events"
+													name={t("Events")}
 													type="monotone"
 													stroke="var(--primary)"
 													fill="var(--primary)"
@@ -358,17 +406,19 @@ function EventsPage() {
 							</Card>
 							<Card>
 								<CardHeader>
-									<CardTitle className="text-base">Segmentation</CardTitle>
-									<CardDescription>Break down this event by one recorded property.</CardDescription>
+									<CardTitle className="text-base">{t("Segmentation")}</CardTitle>
+									<CardDescription>
+										{t("Break down this event by one recorded property.")}
+									</CardDescription>
 								</CardHeader>
 								<CardContent className="space-y-4">
 									<select
 										className="w-full rounded-md border bg-background px-3 py-2 text-sm"
 										value={property}
 										onChange={(event) => setProperty(event.target.value)}
-										aria-label="Event property"
+										aria-label={t("Event property")}
 									>
-										<option value="">Choose a property</option>
+										<option value="">{t("Choose a property")}</option>
 										{analysis.properties.map((item) => (
 											<option key={item} value={item}>
 												{item}
@@ -383,13 +433,13 @@ function EventsPage() {
 											>
 												<span className="truncate">{item.value}</span>
 												<span className="shrink-0 tabular-nums text-muted-foreground">
-													{formatNumber(item.events)}
+													{formatNumber(item.events, locale)}
 												</span>
 											</div>
 										))}
 										{property && !analysis.segmentation?.items.length && (
 											<p className="py-6 text-center text-sm text-muted-foreground">
-												No values for this property.
+												{t("No values for this property.")}
 											</p>
 										)}
 									</div>
@@ -404,6 +454,7 @@ function EventsPage() {
 }
 
 function InstallationsPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const range = useAnalyticsRange();
 	const [items, setItems] = useState<AnalyticsInstallation[]>([]);
@@ -415,12 +466,14 @@ function InstallationsPage() {
 				setItems(result.items);
 				setError(null);
 			})
-			.catch((cause: unknown) => setError(moduleErrorMessage(cause)));
-	}, [range, selectedProject]);
+			.catch((cause: unknown) => setError(moduleErrorMessage(cause, locale)));
+	}, [range, selectedProject, locale]);
 	return (
 		<ModulePage
-			title="Installations"
-			description="Canonical first installs only—retries and repeated attribution calls do not increase this count."
+			title={t("Installations")}
+			description={t(
+				"Canonical first installs only—retries and repeated attribution calls do not increase this count.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -429,16 +482,22 @@ function InstallationsPage() {
 				<Card>
 					<CardContent className="pt-6">
 						<DataTable
-							columns={["Installed", "Application", "Platform", "Version", "Attribution"]}
-							empty="No installations in this period."
+							columns={[
+								t("Installed"),
+								t("Application"),
+								t("Platform"),
+								t("Version"),
+								t("Attribution"),
+							]}
+							empty={t("No installations in this period.")}
 						>
 							{items.map((item) => (
 								<tr key={item.id} className="border-b last:border-0">
-									<Cell>{formatDate(item.installed_at)}</Cell>
+									<Cell>{formatDate(item.installed_at, locale)}</Cell>
 									<Cell>{item.application_id}</Cell>
 									<Cell>{item.platform || "—"}</Cell>
 									<Cell>{item.app_version || "—"}</Cell>
-									<Cell>{item.attribution_id || "Organic / unknown"}</Cell>
+									<Cell>{item.attribution_id || t("Organic / unknown")}</Cell>
 								</tr>
 							))}
 						</DataTable>
@@ -450,6 +509,7 @@ function InstallationsPage() {
 }
 
 function PurchasesPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const range = useAnalyticsRange();
 	const [items, setItems] = useState<AnalyticsPurchase[]>([]);
@@ -461,12 +521,14 @@ function PurchasesPage() {
 				setItems(result.items);
 				setError(null);
 			})
-			.catch((cause: unknown) => setError(moduleErrorMessage(cause)));
-	}, [range, selectedProject]);
+			.catch((cause: unknown) => setError(moduleErrorMessage(cause, locale)));
+	}, [range, selectedProject, locale]);
 	return (
 		<ModulePage
-			title="Verified purchases"
-			description="Financial facts emitted only after store or billing verification, deduplicated by transaction and event type."
+			title={t("Verified purchases")}
+			description={t(
+				"Financial facts emitted only after store or billing verification, deduplicated by transaction and event type.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -475,23 +537,30 @@ function PurchasesPage() {
 				<Card>
 					<CardContent className="pt-6">
 						<DataTable
-							columns={["Occurred", "Type", "Product", "Amount", "Store", "Transaction"]}
-							empty="No verified purchase facts in this period."
+							columns={[
+								t("Occurred"),
+								t("Type"),
+								t("Product"),
+								t("Amount"),
+								t("Store"),
+								t("Transaction"),
+							]}
+							empty={t("No verified purchase facts in this period.")}
 						>
 							{items.map((item) => (
 								<tr key={item.id} className="border-b last:border-0">
-									<Cell>{formatDate(item.occurred_at)}</Cell>
+									<Cell>{formatDate(item.occurred_at, locale)}</Cell>
 									<Cell>
 										<Badge
 											variant={negativePurchase(item.event_type) ? "destructive" : "secondary"}
 										>
-											{labelize(item.event_type)}
+											{t(labelize(item.event_type))}
 										</Badge>
 									</Cell>
 									<Cell>{item.product_id || "—"}</Cell>
-									<Cell>{formatPurchaseAmount(item)}</Cell>
+									<Cell>{formatPurchaseAmount(item, locale)}</Cell>
 									<Cell>
-										{labelize(item.store)} · {item.environment}
+										{t(labelize(item.store))} · {t(labelize(item.environment))}
 									</Cell>
 									<Cell>
 										<span className="block max-w-44 truncate font-mono text-xs">
@@ -509,6 +578,7 @@ function PurchasesPage() {
 }
 
 function InsightsPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const range = useAnalyticsRange();
 	const [stepsText, setStepsText] = useState("app.opened, checkout.started, purchase.completed");
@@ -529,9 +599,9 @@ function InsightsPage() {
 			setDefinitions(definitionData.items);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [range, selectedProject]);
+	}, [range, selectedProject, locale]);
 	useEffect(() => void load(), [load]);
 	const runFunnel = async () => {
 		if (!selectedProject) return;
@@ -540,19 +610,21 @@ function InsightsPage() {
 			.map((value) => value.trim())
 			.filter(Boolean);
 		if (steps.length < 2) {
-			showErrorNotification("Add at least two comma-separated event names.");
+			showErrorNotification(t("Add at least two comma-separated event names."));
 			return;
 		}
 		try {
 			setFunnel(await queryAnalyticsFunnel(selectedProject.id, { ...range, steps }));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 	return (
 		<ModulePage
-			title="Funnels & retention"
-			description="Understand conversion sequences and whether new installations return over time."
+			title={t("Funnels & retention")}
+			description={t(
+				"Understand conversion sequences and whether new installations return over time.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -561,13 +633,20 @@ function InsightsPage() {
 				<div className="grid gap-6 xl:grid-cols-2">
 					<Card>
 						<CardHeader>
-							<CardTitle>Funnel</CardTitle>
-							<CardDescription>Enter ordered event names separated by commas.</CardDescription>
+							<CardTitle>{t("Funnel")}</CardTitle>
+							<CardDescription>
+								{t("Enter ordered event names separated by commas.")}
+							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
-							<Input value={stepsText} onChange={(event) => setStepsText(event.target.value)} />
+							<Input
+								aria-label={t("Funnel event names")}
+								value={stepsText}
+								onChange={(event) => setStepsText(event.target.value)}
+							/>
 							<Button onClick={() => void runFunnel()}>
-								<MousePointerClick className="size-4" /> Run funnel
+								<MousePointerClick className="size-4" />
+								{t("Run funnel")}
 							</Button>
 							<div className="space-y-3">
 								{funnel?.steps.map((step, index) => (
@@ -576,7 +655,7 @@ function InsightsPage() {
 											<span className="font-medium">
 												{index + 1}. {step.event_name}
 											</span>
-											<span>{formatNumber(step.subjects)} people</span>
+											<span>{t("People count", { count: step.subjects })}</span>
 										</div>
 										<div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
 											<div
@@ -587,7 +666,9 @@ function InsightsPage() {
 											/>
 										</div>
 										<p className="mt-1 text-xs text-muted-foreground">
-											{formatPercent(step.conversion_from_first)} from the first step
+											{t("From first step", {
+												percent: formatPercent(step.conversion_from_first, locale),
+											})}
 										</p>
 									</div>
 								))}
@@ -596,23 +677,26 @@ function InsightsPage() {
 					</Card>
 					<Card>
 						<CardHeader>
-							<CardTitle>Installation retention</CardTitle>
+							<CardTitle>{t("Installation retention")}</CardTitle>
 							<CardDescription>
-								Return rate by install cohort for the first 30 days.
+								{t("Return rate by install cohort for the first 30 days.")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<DataTable
-								columns={["Cohort", "Size", "Day 1", "Day 7", "Day 30"]}
-								empty="Retention appears once installations return and emit events."
+								columns={[t("Cohort"), t("Size"), t("Day 1"), t("Day 7"), t("Day 30")]}
+								empty={t("Retention appears once installations return and emit events.")}
 							>
 								{retention?.cohorts.slice(-20).map((cohort) => (
 									<tr key={cohort.cohort_date} className="border-b last:border-0">
-										<Cell>{cohort.cohort_date}</Cell>
-										<Cell>{formatNumber(cohort.size)}</Cell>
+										<Cell>{formatDay(cohort.cohort_date, locale)}</Cell>
+										<Cell>{formatNumber(cohort.size, locale)}</Cell>
 										{[1, 7, 30].map((day) => (
 											<Cell key={day}>
-												{formatPercent(cohort.days.find((entry) => entry.day === day)?.rate ?? 0)}
+												{formatPercent(
+													cohort.days.find((entry) => entry.day === day)?.rate ?? 0,
+													locale,
+												)}
 											</Cell>
 										))}
 									</tr>
@@ -622,20 +706,22 @@ function InsightsPage() {
 					</Card>
 					<Card className="xl:col-span-2">
 						<CardHeader>
-							<CardTitle>Known event definitions</CardTitle>
+							<CardTitle>{t("Known event definitions")}</CardTitle>
 							<CardDescription>
-								Most recently observed event vocabulary for funnel and journey configuration.
+								{t("Most recently observed event vocabulary for funnel and journey configuration.")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="flex flex-wrap gap-2">
 							{definitions.length ? (
 								definitions.map((definition) => (
 									<Badge key={definition.event_name} variant="outline">
-										{definition.event_name} · {formatNumber(definition.event_count)}
+										{definition.event_name} · {formatNumber(definition.event_count, locale)}
 									</Badge>
 								))
 							) : (
-								<p className="text-sm text-muted-foreground">No events have been projected yet.</p>
+								<p className="text-sm text-muted-foreground">
+									{t("No events have been projected yet.")}
+								</p>
 							)}
 						</CardContent>
 					</Card>
@@ -646,6 +732,7 @@ function InsightsPage() {
 }
 
 function ReportsPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const [reports, setReports] = useState<SavedAnalyticsReport[]>([]);
 	const [operations, setOperations] = useState<AnalyticsOperation[]>([]);
@@ -663,9 +750,9 @@ function ReportsPage() {
 			setOperations(jobs.items);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [selectedProject]);
+	}, [selectedProject, locale]);
 	useEffect(() => void load(), [load]);
 	const run = async (action: () => Promise<unknown>, message: string) => {
 		setBusy(true);
@@ -674,15 +761,15 @@ function ReportsPage() {
 			showSuccessNotification(message);
 			await load();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setBusy(false);
 		}
 	};
 	return (
 		<ModulePage
-			title="Reports & data operations"
-			description="Save reusable analysis definitions and run durable export or rollup jobs."
+			title={t("Reports & data operations")}
+			description={t("Save reusable analysis definitions and run durable export or rollup jobs.")}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -691,15 +778,18 @@ function ReportsPage() {
 				<div className="grid gap-6 xl:grid-cols-2">
 					<Card>
 						<CardHeader>
-							<CardTitle>Saved reports</CardTitle>
-							<CardDescription>Definitions stay scoped to the selected project.</CardDescription>
+							<CardTitle>{t("Saved reports")}</CardTitle>
+							<CardDescription>
+								{t("Definitions stay scoped to the selected project.")}
+							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="flex gap-2">
 								<Input
 									value={name}
 									onChange={(event) => setName(event.target.value)}
-									placeholder="Weekly product pulse"
+									placeholder={t("Weekly product pulse")}
+									aria-label={t("Report name")}
 								/>
 								<Button
 									disabled={busy || !name.trim()}
@@ -708,7 +798,7 @@ function ReportsPage() {
 											await createAnalyticsReport(selectedProject.id, {
 												report_type: "dashboard",
 												name: name.trim(),
-												description: "Dashboard report",
+												description: t("Dashboard report"),
 												definition: {
 													range_days: 30,
 													metrics: ["events", "sessions", "installations", "purchases"],
@@ -716,10 +806,11 @@ function ReportsPage() {
 												enabled: true,
 											});
 											setName("");
-										}, "Report saved")
+										}, t("Report saved"))
 									}
 								>
-									<Plus className="size-4" /> Save
+									<Plus className="size-4" />
+									{t("Save")}
 								</Button>
 							</div>
 							<div className="space-y-2">
@@ -731,18 +822,21 @@ function ReportsPage() {
 										<div>
 											<div className="font-medium">{report.name}</div>
 											<div className="text-xs text-muted-foreground">
-												{labelize(report.report_type)} · updated {formatDate(report.updated_at)}
+												{t("Report updated", {
+													type: t(labelize(report.report_type)),
+													date: formatDate(report.updated_at, locale),
+												})}
 											</div>
 										</div>
 										<Button
 											variant="ghost"
 											size="icon"
-											aria-label={`Delete ${report.name}`}
+											aria-label={t("Delete item", { name: report.name })}
 											disabled={busy}
 											onClick={() =>
 												void run(
 													() => deleteAnalyticsReport(selectedProject.id, report.id),
-													"Report deleted",
+													t("Report deleted"),
 												)
 											}
 										>
@@ -751,16 +845,16 @@ function ReportsPage() {
 									</div>
 								))}
 								{!reports.length && (
-									<p className="text-sm text-muted-foreground">No saved reports yet.</p>
+									<p className="text-sm text-muted-foreground">{t("No saved reports yet.")}</p>
 								)}
 							</div>
 						</CardContent>
 					</Card>
 					<Card>
 						<CardHeader>
-							<CardTitle>Durable operations</CardTitle>
+							<CardTitle>{t("Durable operations")}</CardTitle>
 							<CardDescription>
-								Long-running work uses resumable Cloudflare Workflows.
+								{t("Long-running work uses resumable Cloudflare Workflows.")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
@@ -774,11 +868,12 @@ function ReportsPage() {
 													operation_type: "export",
 													input: {},
 												}),
-											"Export queued",
+											t("Export queued"),
 										)
 									}
 								>
-									<Download className="size-4" /> Export events
+									<Download className="size-4" />
+									{t("Export events")}
 								</Button>
 								<Button
 									variant="outline"
@@ -790,26 +885,27 @@ function ReportsPage() {
 													operation_type: "rebuild_rollups",
 													input: {},
 												}),
-											"Rollup rebuild queued",
+											t("Rollup rebuild queued"),
 										)
 									}
 								>
-									<DatabaseBackup className="size-4" /> Rebuild rollups
+									<DatabaseBackup className="size-4" />
+									{t("Rebuild rollups")}
 								</Button>
 							</div>
 							<DataTable
-								columns={["Operation", "Status", "Created"]}
-								empty="No analytics operations yet."
+								columns={[t("Operation"), t("Status"), t("Created")]}
+								empty={t("No analytics operations yet.")}
 							>
 								{operations.map((operation) => (
 									<tr key={operation.id} className="border-b last:border-0">
-										<Cell>{labelize(operation.operation_type)}</Cell>
+										<Cell>{t(labelize(operation.operation_type))}</Cell>
 										<Cell>
 											<Badge variant={operation.status === "failed" ? "destructive" : "outline"}>
-												{operation.status}
+												{t(labelize(operation.status))}
 											</Badge>
 										</Cell>
-										<Cell>{formatDate(operation.created_at)}</Cell>
+										<Cell>{formatDate(operation.created_at, locale)}</Cell>
 									</tr>
 								))}
 							</DataTable>
@@ -830,6 +926,7 @@ function MetricCard({
 	label: string;
 	value?: number;
 }) {
+	const { locale } = useAnalyticsI18n();
 	return (
 		<Card>
 			<CardContent className="flex items-center gap-3 pt-6">
@@ -838,7 +935,7 @@ function MetricCard({
 				</div>
 				<div>
 					<p className="text-sm text-muted-foreground">{label}</p>
-					<p className="text-2xl font-semibold tabular-nums">{formatNumber(value)}</p>
+					<p className="text-2xl font-semibold tabular-nums">{formatNumber(value, locale)}</p>
 				</div>
 			</CardContent>
 		</Card>
@@ -869,7 +966,7 @@ function DataTable({
 	const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
 	return (
 		<div className="overflow-x-auto rounded-lg border">
-			<table className="w-full min-w-[680px] text-left text-sm">
+			<table className="w-full min-w-[680px] text-start text-sm">
 				<thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
 					<tr>
 						{columns.map((column) => (
@@ -899,40 +996,51 @@ function Cell({ children }: { children: ReactNode }) {
 	return <td className="px-4 py-3 align-top">{children}</td>;
 }
 
-function formatNumber(value?: number) {
+function formatNumber(value: number | undefined, locale: string) {
 	if (value === undefined || !Number.isFinite(value)) return "—";
-	return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
+	return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
 }
 
-function formatDate(value: string) {
-	return new Intl.DateTimeFormat(undefined, {
+function formatDay(value: string, locale: string) {
+	return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(
+		new Date(value),
+	);
+}
+
+function formatDate(value: string, locale: string) {
+	return new Intl.DateTimeFormat(locale, {
 		dateStyle: "medium",
 		timeStyle: "short",
 	}).format(new Date(value));
 }
 
-function formatDuration(seconds: number) {
-	if (seconds < 60) return `${seconds}s`;
+function formatDuration(seconds: number, locale: string) {
+	const secondsFormat = new Intl.NumberFormat(locale, {
+		style: "unit",
+		unit: "second",
+		unitDisplay: "narrow",
+	});
+	if (seconds < 60) return secondsFormat.format(seconds);
 	const minutes = Math.floor(seconds / 60);
-	return `${minutes}m ${seconds % 60}s`;
+	return `${new Intl.NumberFormat(locale, { style: "unit", unit: "minute", unitDisplay: "narrow" }).format(minutes)} ${secondsFormat.format(seconds % 60)}`;
 }
 
-function formatPercent(value: number) {
-	return new Intl.NumberFormat(undefined, {
+function formatPercent(value: number, locale: string) {
+	return new Intl.NumberFormat(locale, {
 		style: "percent",
 		maximumFractionDigits: 1,
 	}).format(value);
 }
 
-function formatPurchaseAmount(item: AnalyticsPurchase) {
+function formatPurchaseAmount(item: AnalyticsPurchase, locale: string) {
 	if (item.amount_micros == null || !item.currency) return "—";
 	try {
-		return new Intl.NumberFormat(undefined, {
+		return new Intl.NumberFormat(locale, {
 			style: "currency",
 			currency: item.currency,
 		}).format(item.amount_micros / 1_000_000);
 	} catch {
-		return `${(item.amount_micros / 1_000_000).toFixed(2)} ${item.currency}`;
+		return `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.amount_micros / 1_000_000)} ${item.currency}`;
 	}
 }
 

@@ -7,7 +7,7 @@ import { getSiteEnv } from "./lib/site-env.js";
 import { resolveSuperBoardPluginTarget } from "./lib/superboard-plugin-catalog.js";
 
 const route =
-	/^\/_emdash\/api\/superboard\/plugins\/supbrd-plug-user\/(commands|data-sources)\/(?:supbrd-plug-user\.(?:command|data_source)\.)?([a-z_]+)$/u;
+	/^\/_emdash\/api\/superboard\/plugins\/supbrd-plug-(?:user|identity)\/(commands|data-sources)\/(?:supbrd-plug-user\.(?:command|data_source)\.)?([a-z_]+)$/u;
 export const onRequest: MiddlewareHandler = async (context, next) => {
 	const match = route.exec(context.url.pathname);
 	const operation = match && applicationUserOperation(match[1], match[2]);

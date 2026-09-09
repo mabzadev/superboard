@@ -18,7 +18,18 @@ export interface PluginViewProps {
 	locale: "en" | "fr";
 }
 
+export interface ConsoleEnvironment {
+	id: string;
+	application: string;
+	label: string;
+	environment: string;
+	apiUrl: string;
+	consoleUrl: string;
+}
+
 export interface FrontContextValue extends PluginViewProps {
+	deployment?: ConsoleEnvironment | null;
+	environments?: readonly ConsoleEnvironment[];
 	publicEndpoints?: PublicEndpoints;
 	instanceId: string;
 	pluginId: string;
@@ -39,8 +50,12 @@ export function FrontContextProvider({
 	return <FrontContext.Provider value={value}>{children}</FrontContext.Provider>;
 }
 
+export function useOptionalFrontContext(): FrontContextValue | null {
+	return useContext(FrontContext);
+}
+
 export function useFrontContext(): FrontContextValue {
-	const value = useContext(FrontContext);
+	const value = useOptionalFrontContext();
 	if (!value) throw new Error("Front context is missing");
 	return value;
 }

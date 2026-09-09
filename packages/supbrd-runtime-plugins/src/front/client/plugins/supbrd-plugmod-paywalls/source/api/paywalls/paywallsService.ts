@@ -103,6 +103,7 @@ export async function createPaywall(
 	payload: Pick<Paywall, "identifier"> & {
 		display_name: string;
 		description?: string;
+		configuration?: PaywallDefinition;
 	},
 ) {
 	return unwrap<Paywall>(await POST(path(projectRef), payload));

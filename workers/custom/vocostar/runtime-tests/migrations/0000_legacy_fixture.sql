@@ -58,3 +58,6 @@ CREATE TABLE send_users_medias (
   created_at TEXT,
   processed_at TEXT
 );
+
+CREATE VIEW v_users_medias AS SELECT * FROM users_medias;
+CREATE TABLE runtime_notification_deliveries (id INTEGER PRIMARY KEY, body TEXT NOT NULL);

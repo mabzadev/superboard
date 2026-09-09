@@ -149,12 +149,15 @@ def convert_audio_ref(audio_src_url: str, user_id: str) -> str:
     print(f"[CONVERT] ✅ {audio_src_url[-40:]} → {out_url[-40:]}")
     return out_url
 
-def update_vocal_progress(vocal_id: str, user_id: str, progress: float):
+def update_vocal_progress(vocal_id: str, user_id: str, progress: float, context: dict | None = None):
   """Met à jour progress dans D1 + notifie la UserVocalsRoom via l'auth-gateway."""
   try:
+    payload = {"vocal_id": vocal_id, "user_id": user_id, "progress": progress}
+    if context is not None:
+      payload.update({key: context[key] for key in ('project_ref', 'job_id', 'subject') if key in context})
     resp = requests.post(
       f"{GATEWAY_URL}/ws/vocals/progress",
-      json={"vocal_id": vocal_id, "user_id": user_id, "progress": progress},
+      json=payload,
       headers={"X-VocoStar-Internal-Token": GATEWAY_INTERNAL_TOKEN},
       timeout=10,
     )
@@ -277,7 +280,7 @@ def run_modal():
     # Progress 0.6 avant Modal (background — non-bloquant)
     threading.Thread(
       target=update_vocal_progress,
-      args=(user_vocal_id, user_id, 0.6),
+      args=(user_vocal_id, user_id, 0.6, payload),
       daemon=True,
     ).start()
 
@@ -304,7 +307,7 @@ def run_modal():
     # Progress 0.9 après Modal + confirmation R2 (background)
     threading.Thread(
       target=update_vocal_progress,
-      args=(user_vocal_id, user_id, 0.9),
+      args=(user_vocal_id, user_id, 0.9, payload),
       daemon=True,
     ).start()
 

@@ -2,22 +2,23 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import topology from "../../config/emdash-plugin-topology.json" with { type: "json" };
+import catalog from "../../config/superboard-plugin-catalog.json" with { type: "json" };
 import {
 	SUPERBOARD_PLUGIN_TEMPLATES,
 	configureSuperBoardPlugins,
 	superboardConfiguredPlugins,
 } from "./superboard-emdash-plugins.mjs";
 
-void test("adapts every concrete SuperBoard manifest into one configured EmDash plugin", () => {
-	const concrete = topology.plugins.filter(({ manifest }) => !manifest.plugin_id.includes("*"));
-	assert.equal(superboardConfiguredPlugins.length, 18);
+void test("registers business packages and the core instead of independent component plugins", () => {
+	const concrete = catalog.plugins;
+	assert.equal(superboardConfiguredPlugins.length, 9);
 	assert.deepEqual(
 		superboardConfiguredPlugins.map(({ id }) => id).toSorted(),
 		concrete.map(({ manifest }) => manifest.plugin_id).toSorted(),
 	);
 	assert.equal(
-		superboardConfiguredPlugins.find(({ id }) => id === "supbrd-plug-user")?.version,
-		"1.4.0",
+		superboardConfiguredPlugins.find(({ id }) => id === "supbrd-plug-identity")?.version,
+		"2.0.0",
 	);
 	assert.deepEqual(SUPERBOARD_PLUGIN_TEMPLATES, ["supbrd-plugmod-custom-*"]);
 	assert.ok(superboardConfiguredPlugins.every(({ id }) => !id.includes("*")));
@@ -53,8 +54,13 @@ void test("registers the canonical settings, Admin page and functional contract 
 	}
 	assert.deepEqual(
 		Object.keys(
-			superboardConfiguredPlugins.find(({ id }) => id === "supbrd-plug-user")?.settingsSchema ?? {},
+			superboardConfiguredPlugins.find(({ id }) => id === "supbrd-plug-identity")?.settingsSchema ??
+				{},
 		).toSorted(),
-		["allow_anonymous_upgrade", "max_active_sessions", "mfa_policy"],
+		[
+			"supbrd-plug-user__allow_anonymous_upgrade",
+			"supbrd-plug-user__max_active_sessions",
+			"supbrd-plug-user__mfa_policy",
+		],
 	);
 });

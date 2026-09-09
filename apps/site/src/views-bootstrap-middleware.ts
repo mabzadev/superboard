@@ -1,8 +1,10 @@
 import { defineMiddleware } from "astro:middleware";
 
+import { onRequest as configurationRequest } from "./instance-configuration-middleware.js";
 import { getSiteEnv } from "./lib/site-env.js";
 import { resolveSuperBoardPluginTarget } from "./lib/superboard-plugin-catalog.js";
 import { ensureSuperBoardViews, restrictSuperBoardViewFilters } from "./lib/superboard-views.js";
+import { onRequest as packageRequest } from "./plugin-packages-middleware.js";
 
 const viewListPathPattern = /^\/_emdash\/api\/content\/views\/?$/u;
 
@@ -26,5 +28,5 @@ export const onRequest = defineMiddleware(async (context, next) => {
 			active.results.map((row) => row.plugin_id),
 		);
 	}
-	return next();
+	return packageRequest(context, () => configurationRequest(context, next));
 });

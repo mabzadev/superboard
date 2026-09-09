@@ -12,12 +12,31 @@ import {
 } from "@superboard/contracts/request-body";
 import { Hono } from "hono";
 import type { AppVariables, Env } from "../types";
+import { applicationModuleSettings } from "../lib/application-module-settings.js";
 import { verifiedAppUserId } from "../lib/billing-identity";
 
 const customSdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
 class CustomSdkIdentityRejectedError extends Error {}
 class CustomSdkDependencyUnavailableError extends Error {}
+
+customSdk.get("/ws/:channel", async (c) => {
+  if (c.env.CUSTOM_WORKER_PLUGIN_ID !== "supbrd-plugmod-vocostar") return c.notFound();
+  const channel = c.req.param("channel");
+  if (channel !== "vocals" && channel !== "medias") return c.notFound();
+  if (c.req.header("Upgrade")?.toLowerCase() !== "websocket") {
+    return failure(c, 426, "websocket_required", "A WebSocket upgrade is required");
+  }
+  try {
+    const context = await applicationContext(c);
+    if (context instanceof Response) return context;
+    return proxyCustom(c, `/internal/v1/runtime/ws/${channel}`, context, {
+      headers: { Upgrade: "websocket" },
+    });
+  } catch (error) {
+    return contextFailure(c, error);
+  }
+});
 
 customSdk.post("/jobs", async (c) => {
   try {
@@ -248,6 +267,9 @@ async function proxyCustom(
   headers.set("x-custom-worker-token", c.env.CUSTOM_WORKER_TOKEN);
   headers.set(CUSTOM_WORKER_PROJECT_HEADER, scope.projectRef);
   headers.set(CUSTOM_WORKER_SUBJECT_HEADER, scope.subject);
+  if (init.method === "POST" && path === CUSTOM_WORKER_JOB_PATH && c.env.CUSTOM_WORKER_PLUGIN_ID) {
+    headers.set("X-SuperBoard-Plugin-Settings", JSON.stringify(await applicationModuleSettings(c.env)));
+  }
   try {
     const response = await c.env.CUSTOM_WORKER.fetch(
       `https://custom.internal${path}`,
@@ -257,6 +279,7 @@ async function proxyCustom(
         signal: init.signal ?? AbortSignal.timeout(10_000),
       },
     );
+    if (response.status === 101) return response;
     return new Response(response.body, {
       status: response.status,
       headers: {

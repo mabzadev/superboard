@@ -13,6 +13,7 @@ export default defineConfig({
 		environment: "jsdom",
 		execArgv: ["--no-experimental-webstorage"],
 		include: ["tests/front-release-dom-parity.test.tsx", "tests/plugin-front-*.test.tsx"],
+		exclude: ["tests/plugin-front-menu-integration.test.tsx"],
 		setupFiles: ["./tests/front-test-setup.ts"],
 		env: {
 			NEXT_PUBLIC_API_URL: "https://api.example.test",

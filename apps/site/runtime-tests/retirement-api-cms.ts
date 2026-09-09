@@ -26,8 +26,8 @@ export async function createCmsApi() {
 		},
 		createDialect: () => new RawBindingD1Dialect({ database: env.DB }),
 		plugins: [
-			createConfiguredSuperBoardPlugin("supbrd-plug-content"),
-			createConfiguredSuperBoardPlugin("supbrd-plug-settings"),
+			createConfiguredSuperBoardPlugin("supbrd-plug-data"),
+			createConfiguredSuperBoardPlugin("supbrd-core"),
 		],
 		sandboxedPluginEntries: [],
 		sandboxEnabled: false,

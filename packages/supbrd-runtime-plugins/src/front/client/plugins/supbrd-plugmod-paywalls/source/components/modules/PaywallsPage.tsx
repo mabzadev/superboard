@@ -1,5 +1,7 @@
 "use client";
-
+import { createStudioDocument, useExperienceI18n } from "@superboard/front-ui/experience-studio";
+import { Button } from "@superboard/front-ui/kumo";
+import { useDraftAutosave } from "@superboard/front-ui/use-draft-autosave";
 import {
 	Archive,
 	BarChart3,
@@ -17,7 +19,6 @@ import {
 	EmptyProject,
 	moduleErrorMessage,
 } from "../../../../../../../../../supbrd-front-ui/src/shared/components/modules/ModulePage.js";
-import { Button } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/button.js";
 import {
 	Card,
 	CardContent,
@@ -67,7 +68,6 @@ import {
 import {
 	ExperienceEditor,
 	ExperienceStatisticsFilters,
-	createExperienceDocument,
 	fromPaywallDefinition,
 	toPaywallDefinition,
 	type ExperienceDocument,
@@ -80,13 +80,17 @@ const displayName = (paywall: Paywall) =>
 	paywall.display_name ?? paywall.name ?? paywall.identifier;
 
 export function PaywallsPage() {
+	const { t, locale } = useExperienceI18n();
+	const [studioTab, setStudioTab] = useState("Design");
 	const { selectedProject } = useProjectSelection();
 	const [items, setItems] = useState<Paywall[]>([]);
 	const [selected, setSelected] = useState<Paywall>();
 	const [versions, setVersions] = useState<PaywallVersion[]>([]);
 	const [placements, setPlacements] = useState<PaywallPlacement[]>([]);
 	const [experiences, setExperiences] = useState<PaywallExperience[]>([]);
-	const [document, setDocument] = useState<ExperienceDocument>(createExperienceDocument);
+	const [document, setDocument] = useState<ExperienceDocument>(() =>
+		createStudioDocument("paywall", locale),
+	);
 	const [documentValid, setDocumentValid] = useState(true);
 	const [editorKey, setEditorKey] = useState("new");
 	const [editorLoading, setEditorLoading] = useState(false);
@@ -101,6 +105,14 @@ export function PaywallsPage() {
 	});
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+
+	const draftStatus = useDraftAutosave({
+		resourceKey: (selectedProject?.id ?? "") + ":" + (selected?.id ?? "") + ":" + editorKey,
+		value: toPaywallDefinition(document),
+		enabled: Boolean(selectedProject && selected && documentValid && !busy && !editorLoading),
+		save: async (value) => createPaywallVersion(selectedProject!.id, selected!.id, value),
+		onSaved: (version) => setVersions((values) => [version, ...values]),
+	});
 
 	const load = useCallback(async () => {
 		if (!selectedProject) return;
@@ -159,7 +171,7 @@ export function PaywallsPage() {
 				description: metadata.description || null,
 			});
 			setSelected((current) => (current ? { ...current, ...updated } : current));
-			showSuccessNotification("Paywall details updated");
+			showSuccessNotification(t("Paywall details updated"));
 			await load();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -175,9 +187,9 @@ export function PaywallsPage() {
 			await archivePaywall(selectedProject.id, selected.id);
 			setSelected(undefined);
 			setVersions([]);
-			setDocument(createExperienceDocument());
+			setDocument(createStudioDocument("paywall", locale));
 			setEditorKey("new");
-			showSuccessNotification("Paywall archived");
+			showSuccessNotification(t("Paywall archived"));
 			await load();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -191,7 +203,7 @@ export function PaywallsPage() {
 		setBusy(true);
 		try {
 			await archivePaywallVersion(selectedProject.id, selected.id, versionId);
-			showSuccessNotification("Paywall version archived");
+			showSuccessNotification(t("Paywall version archived"));
 			await open(selected);
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -201,16 +213,17 @@ export function PaywallsPage() {
 	};
 
 	const create = async () => {
-		if (!selectedProject || !identifier || !name || busy) return;
+		if (!selectedProject || !identifier || !name || !documentValid || busy) return;
 		setBusy(true);
 		try {
 			const result = await createPaywall(selectedProject.id, {
 				identifier,
 				display_name: name,
+				configuration: toPaywallDefinition(document),
 			});
 			setName("");
 			setIdentifier("");
-			showSuccessNotification("Paywall created");
+			showSuccessNotification(t("Paywall created"));
 			await load();
 			await open(result);
 		} catch (cause) {
@@ -244,7 +257,7 @@ export function PaywallsPage() {
 		setBusy(true);
 		try {
 			await publishPaywallVersion(selectedProject.id, selected.id, versionId);
-			showSuccessNotification("Paywall version published");
+			showSuccessNotification(t("Paywall version published"));
 			await Promise.all([load(), open(selected)]);
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -255,69 +268,99 @@ export function PaywallsPage() {
 
 	return (
 		<ModulePage
-			title="Paywalls"
-			description="Design, target, test and publish purchase experiences."
+			title={t("Paywalls")}
+			description={t("Design, target, test and publish purchase experiences.")}
 			error={error}
 		>
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-					<Card>
-						<CardHeader>
-							<CardTitle>Paywalls</CardTitle>
-							<CardDescription>Create a paywall, then save immutable versions.</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-3">
-							<Input
-								placeholder="Identifier"
-								value={identifier}
-								onChange={(event) =>
-									setIdentifier(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "_"))
-								}
-							/>
-							<Input
-								placeholder="Display name"
-								value={name}
-								onChange={(event) => setName(event.target.value)}
-							/>
-							<Button
-								className="w-full"
-								disabled={busy || !identifier || !name}
-								onClick={() => void create()}
-							>
-								<Plus />
-								Create paywall
-							</Button>
-							<div className="space-y-2 border-t pt-4">
-								{items.map((item) => (
-									<button
-										key={item.id}
-										onClick={() => void open(item)}
-										className={`w-full rounded-lg border p-3 text-left ${selected?.id === item.id ? "border-primary bg-primary/5" : ""}`}
+				<div className="grid gap-6">
+					<details open={!selected}>
+						<summary className="cursor-pointer rounded-lg border border-kumo-line bg-kumo-base p-3 font-medium">
+							{t("Library")}
+						</summary>
+						<Card className="border-kumo-line bg-kumo-base">
+							<CardContent className="space-y-3">
+								<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+									<Input
+										placeholder={t("Identifier")}
+										value={identifier}
+										onChange={(event) =>
+											setIdentifier(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "_"))
+										}
+									/>
+									<Input
+										placeholder={t("Display name")}
+										value={name}
+										onChange={(event) => {
+											const next = event.target.value;
+											const slug = (text: string) =>
+												text
+													.normalize("NFKD")
+													.replace(/[\u0300-\u036f]/g, "")
+													.toLowerCase()
+													.replace(/[^a-z0-9]+/g, "_")
+													.replace(/^_+|_+$/g, "");
+											if (!identifier || identifier === slug(name)) setIdentifier(slug(next));
+											setName(next);
+										}}
+									/>
+									<Button
+										className="w-full"
+										disabled={busy || !identifier || !name}
+										onClick={() => void create()}
 									>
-										<span className="block font-medium">{displayName(item)}</span>
-										<span className="text-xs text-muted-foreground">
-											{item.identifier} ·{" "}
-											{item.published_version
-												? `v${item.published_version} published`
-												: "not published"}
-										</span>
-									</button>
-								))}
-								{!items.length && <p className="text-sm text-muted-foreground">No paywalls yet.</p>}
-							</div>
-						</CardContent>
-					</Card>
+										<Plus />
+										{t("Create paywall")}
+									</Button>
+								</div>
+								<div className="space-y-2 border-t pt-4">
+									{items.map((item) => (
+										<button
+											key={item.id}
+											onClick={() => void open(item)}
+											className={`w-full rounded-lg border p-3 text-start ${selected?.id === item.id ? "border-primary bg-primary/5" : ""}`}
+										>
+											<span className="block font-medium">{displayName(item)}</span>
+											<span className="text-xs text-muted-foreground">
+												{item.identifier} {t("·")}{" "}
+												{item.published_version
+													? `v${item.published_version} published`
+													: "not published"}
+											</span>
+										</button>
+									))}
+									{!items.length && (
+										<p className="text-sm text-muted-foreground">{t("No paywalls yet.")}</p>
+									)}
+								</div>
+							</CardContent>
+						</Card>
+					</details>
 
 					<div className="space-y-6">
-						<Card>
+						<nav className="flex gap-2">
+							{["Design", "Delivery", "Versions", "Results"].map((tab) => (
+								<Button
+									key={tab}
+									variant={studioTab === tab ? "secondary" : "ghost"}
+									onClick={() => setStudioTab(tab)}
+								>
+									{t(tab)}
+								</Button>
+							))}
+						</nav>
+						<Card
+							className="border-kumo-line bg-kumo-base"
+							hidden={!["Design", "Versions"].includes(studioTab)}
+						>
 							<CardHeader>
 								<CardTitle>
-									{selected ? `Edit ${displayName(selected)}` : "Visual paywall editor"}
+									{selected ? `${t("Edit")} ${displayName(selected)}` : t("Visual paywall editor")}
 								</CardTitle>
 								<CardDescription>
-									Drag blocks, configure the theme and verify the mobile preview.
+									{t("Drag blocks, configure the theme and verify the mobile preview.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent
@@ -326,79 +369,89 @@ export function PaywallsPage() {
 								aria-busy={busy || editorLoading}
 							>
 								{selected && (
-									<div className="grid gap-3 rounded-lg border p-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_2fr_auto_auto]">
-										<label className="space-y-1 text-xs">
-											Identifier
-											<Input
-												value={metadata.identifier}
-												onChange={(event) =>
-													setMetadata((value) => ({
-														...value,
-														identifier: event.target.value
-															.toLowerCase()
-															.replace(/[^a-z0-9_-]/g, "_"),
-													}))
-												}
-											/>
-										</label>
-										<label className="space-y-1 text-xs">
-											Display name
-											<Input
-												value={metadata.display_name}
-												onChange={(event) =>
-													setMetadata((value) => ({
-														...value,
-														display_name: event.target.value,
-													}))
-												}
-											/>
-										</label>
-										<label className="space-y-1 text-xs">
-											Description
-											<Input
-												value={metadata.description}
-												onChange={(event) =>
-													setMetadata((value) => ({
-														...value,
-														description: event.target.value,
-													}))
-												}
-											/>
-										</label>
-										<Button
-											className="self-end"
-											disabled={busy || !metadata.identifier || !metadata.display_name}
-											onClick={() => void saveMetadata()}
-										>
-											Save details
-										</Button>
-										<Button
-											className="self-end"
-											variant="outline"
-											disabled={busy}
-											onClick={() => void removePaywall()}
-										>
-											<Archive />
-											Archive
-										</Button>
-									</div>
+									<details>
+										<summary className="cursor-pointer py-2 text-sm text-kumo-subtle">
+											{t("Details")}
+										</summary>
+										<div className="grid gap-3 rounded-lg border border-kumo-line p-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_2fr_auto_auto]">
+											<label className="space-y-1 text-xs">
+												{t("Identifier")}
+												<Input
+													value={metadata.identifier}
+													onChange={(event) =>
+														setMetadata((value) => ({
+															...value,
+															identifier: event.target.value
+																.toLowerCase()
+																.replace(/[^a-z0-9_-]/g, "_"),
+														}))
+													}
+												/>
+											</label>
+											<label className="space-y-1 text-xs">
+												{t("Display name")}
+												<Input
+													value={metadata.display_name}
+													onChange={(event) =>
+														setMetadata((value) => ({
+															...value,
+															display_name: event.target.value,
+														}))
+													}
+												/>
+											</label>
+											<label className="space-y-1 text-xs">
+												{t("Description")}
+												<Input
+													value={metadata.description}
+													onChange={(event) =>
+														setMetadata((value) => ({
+															...value,
+															description: event.target.value,
+														}))
+													}
+												/>
+											</label>
+											<Button
+												className="self-end"
+												disabled={busy || !metadata.identifier || !metadata.display_name}
+												onClick={() => void saveMetadata()}
+											>
+												{t("Save details")}
+											</Button>
+											<Button
+												className="self-end"
+												variant="outline"
+												disabled={busy}
+												onClick={() => void removePaywall()}
+											>
+												<Archive />
+												{t("Archive")}
+											</Button>
+										</div>
+									</details>
 								)}
-								<ExperienceEditor
-									key={editorKey}
-									kind="paywall"
-									initialDocument={document}
-									onChange={(value, valid) => {
-										setDocument(value);
-										setDocumentValid(valid);
-									}}
-								/>
+								<p role="status" className="text-xs text-kumo-subtle">
+									{t(selected ? draftStatus : "Create to save")}
+								</p>
+								<div hidden={studioTab !== "Design"}>
+									<ExperienceEditor
+										key={editorKey}
+										kind="paywall"
+										initialDocument={document}
+										onChange={(value, valid) => {
+											setDocument(value);
+											setDocumentValid(valid);
+										}}
+									/>
+								</div>
 								<div className="flex flex-wrap items-end gap-2 border-t pt-4">
 									<label className="min-w-64 flex-1 space-y-1 text-xs">
-										Version notes
+										{t("Version notes")}
 										<Input
 											value={changelog}
 											onChange={(event) => setChangelog(event.target.value)}
-											placeholder="What changed?"
+											placeholder={t("What changed?")}
 										/>
 									</label>
 									<Button
@@ -406,27 +459,30 @@ export function PaywallsPage() {
 										onClick={() => void saveDraft()}
 									>
 										<Plus />
-										Save immutable draft
+										{t("Save immutable draft")}
 									</Button>
 								</div>
-								<VersionList
-									versions={versions}
-									busy={busy}
-									onLoad={(version) => {
-										setDocument(
-											fromPaywallDefinition(
-												version.definition as unknown as Record<string, unknown>,
-											),
-										);
-										setEditorKey(`${selected?.id}:${version.id}:load`);
-									}}
-									onPublish={publish}
-									onArchive={archiveVersion}
-								/>
+								<div hidden={studioTab !== "Versions"}>
+									<VersionList
+										versions={versions}
+										busy={busy}
+										onLoad={(version) => {
+											setDocument(
+												fromPaywallDefinition(
+													version.definition as unknown as Record<string, unknown>,
+												),
+											);
+											setEditorKey(`${selected?.id}:${version.id}:load`);
+										}}
+										onPublish={publish}
+										onArchive={archiveVersion}
+									/>
+								</div>
 							</CardContent>
 						</Card>
 
-						{selected && (
+						{studioTab === "Results" && <PaywallStatisticsPage />}
+						{selected && studioTab === "Delivery" && (
 							<PaywallDeliveryControls
 								projectRef={selectedProject.id}
 								paywall={selected}
@@ -456,33 +512,50 @@ function VersionList({
 	onPublish: (id: string) => Promise<void>;
 	onArchive: (id: string) => Promise<void>;
 }) {
+	const { t } = useExperienceI18n();
+	const [compared, setCompared] = useState<string[]>([]);
 	return (
 		<div className="space-y-2 border-t pt-4">
-			<p className="text-sm font-medium">Version history</p>
+			<p className="text-sm font-medium">{t("Version history")}</p>
 			{versions.map((version) => (
 				<div
 					key={version.id}
 					className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
 				>
-					<button className="text-left" onClick={() => onLoad(version)}>
-						<b>Version {version.version}</b>
+					<button className="text-start" onClick={() => onLoad(version)}>
+						<b>
+							{t("Version")} {version.version}
+						</b>
 						<p className="text-xs capitalize text-muted-foreground">
-							{version.status}
+							{t(version.status)}
 							{version.changelog ? ` · ${version.changelog}` : ""}
 						</p>
 					</button>
 					<div className="flex gap-1">
+						<Button
+							size="sm"
+							variant={compared.includes(version.id) ? "secondary" : "ghost"}
+							onClick={() =>
+								setCompared((value) =>
+									value.includes(version.id)
+										? value.filter((id) => id !== version.id)
+										: [...value.slice(-1), version.id],
+								)
+							}
+						>
+							{t("Compare")}
+						</Button>
 						<Button
 							variant="outline"
 							disabled={busy || version.status === "published" || version.status === "archived"}
 							onClick={() => void onPublish(version.id)}
 						>
 							<Rocket />
-							Publish
+							{t("Publish")}
 						</Button>
 						<Button
 							variant="ghost"
-							size="icon"
+							shape="square"
 							aria-label={`Archive version ${version.version}`}
 							disabled={busy || version.status === "archived"}
 							onClick={() => void onArchive(version.id)}
@@ -494,8 +567,29 @@ function VersionList({
 			))}
 			{!versions.length && (
 				<p className="text-sm text-muted-foreground">
-					Save the first draft to start version history.
+					{t("Save the first draft to start version history.")}
 				</p>
+			)}
+			{compared.length === 2 && (
+				<section>
+					<h3 className="mb-4 font-semibold">{t("Compare versions")}</h3>
+					<div className="grid gap-4 xl:grid-cols-2">
+						{versions
+							.filter((version) => compared.includes(version.id))
+							.map((version) => (
+								<div key={version.id}>
+									<p className="mb-2">v{version.version}</p>
+									<ExperienceEditor
+										previewOnly
+										kind="paywall"
+										initialDocument={fromPaywallDefinition(
+											version.definition as unknown as Record<string, unknown>,
+										)}
+									/>
+								</div>
+							))}
+					</div>
+				</section>
 			)}
 		</div>
 	);
@@ -516,6 +610,7 @@ function PaywallDeliveryControls({
 	experiences: PaywallExperience[];
 	onChanged: () => Promise<void>;
 }) {
+	const { t } = useExperienceI18n();
 	const published = versions.filter(({ status }) => status === "published");
 	const [key, setKey] = useState("default");
 	const [priority, setPriority] = useState(100);
@@ -575,7 +670,7 @@ function PaywallDeliveryControls({
 		try {
 			await deletePaywallPlacement(projectRef, id);
 			if (editingPlacementId === id) setEditingPlacementId(undefined);
-			showSuccessNotification("Placement deactivated");
+			showSuccessNotification(t("Placement deactivated"));
 			await onChanged();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -614,7 +709,7 @@ function PaywallDeliveryControls({
 				},
 				placement.id,
 			);
-			showSuccessNotification("A/B experience created as draft");
+			showSuccessNotification(t("A/B experience created as draft"));
 			await onChanged();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -626,7 +721,7 @@ function PaywallDeliveryControls({
 		setBusy(true);
 		try {
 			await archivePaywallExperience(projectRef, id);
-			showSuccessNotification("Experiment archived");
+			showSuccessNotification(t("Experiment archived"));
 			await onChanged();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -657,16 +752,16 @@ function PaywallDeliveryControls({
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
 					<MapPin />
-					Delivery, targeting and A/B
+					{t("Delivery, targeting and A/B")}
 				</CardTitle>
 				<CardDescription>
-					Choose exactly where a published version resolves in the SDK.
+					{t("Choose exactly where a published version resolves in the SDK.")}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-5">
 				<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
 					<label className="space-y-1 text-xs">
-						Placement key
+						{t("Placement key")}
 						<Input
 							value={key}
 							onChange={(event) =>
@@ -675,22 +770,23 @@ function PaywallDeliveryControls({
 						/>
 					</label>
 					<label className="space-y-1 text-xs">
-						Published version
+						{t("Published version")}
 						<select
 							className="block h-9 w-full rounded-md border bg-background px-3 text-sm"
 							value={versionId}
 							onChange={(event) => setVersionId(event.target.value)}
 						>
-							<option value="">Select…</option>
+							<option value="">{t("Select…")}</option>
 							{published.map((version) => (
 								<option key={version.id} value={version.id}>
-									Version {version.version}
+									{t("Version")}
+									{version.version}
 								</option>
 							))}
 						</select>
 					</label>
 					<label className="space-y-1 text-xs">
-						Priority
+						{t("Priority")}
 						<Input
 							type="number"
 							value={priority}
@@ -698,37 +794,37 @@ function PaywallDeliveryControls({
 						/>
 					</label>
 					<label className="space-y-1 text-xs">
-						Platforms
+						{t("Platforms")}
 						<Input
 							value={platforms}
 							onChange={(event) => setPlatforms(event.target.value)}
-							placeholder="ios,android,web"
+							placeholder={t("ios,android,web")}
 						/>
 					</label>
 					<label className="space-y-1 text-xs">
-						Locales
+						{t("Locales")}
 						<Input
 							value={locales}
 							onChange={(event) => setLocales(event.target.value)}
-							placeholder="en-US,fr-FR"
+							placeholder={t("en-US,fr-FR")}
 						/>
 					</label>
 					<label className="space-y-1 text-xs">
-						Countries
+						{t("Countries")}
 						<Input
 							value={countries}
 							onChange={(event) => setCountries(event.target.value)}
-							placeholder="US,FR"
+							placeholder={t("US,FR")}
 						/>
 					</label>
 				</div>
 				<div className="flex items-center justify-between">
 					<label className="flex items-center gap-2 text-sm">
 						<Switch checked={active} onCheckedChange={setActive} />
-						Active
+						{t("Active")}
 					</label>
 					<Button disabled={busy || !key || !versionId} onClick={() => void savePlacement()}>
-						Save placement
+						{t("Save placement")}
 					</Button>
 				</div>
 				{placements.map((placement) => (
@@ -739,12 +835,13 @@ function PaywallDeliveryControls({
 						<span>
 							<b>{placement.key}</b>
 							<span className="ml-2 text-muted-foreground">
-								priority {placement.priority} · {placement.active ? "active" : "inactive"}
+								{t("priority")}
+								{placement.priority} {t("·")} {placement.active ? "active" : "inactive"}
 							</span>
 						</span>
 						<span className="flex gap-1">
 							<Button
-								size="icon"
+								shape="square"
 								variant="ghost"
 								aria-label={`Edit placement ${placement.key}`}
 								onClick={() => editPlacement(placement)}
@@ -752,7 +849,7 @@ function PaywallDeliveryControls({
 								<Pencil />
 							</Button>
 							<Button
-								size="icon"
+								shape="square"
 								variant="ghost"
 								aria-label={`Deactivate placement ${placement.key}`}
 								disabled={busy || !placement.active}
@@ -765,20 +862,20 @@ function PaywallDeliveryControls({
 				))}
 				<div className="grid gap-3 border-t pt-4 md:grid-cols-[1fr_1fr_auto]">
 					<label className="space-y-1 text-xs">
-						Experiment name
+						{t("Experiment name")}
 						<Input
 							value={experimentName}
 							onChange={(event) => setExperimentName(event.target.value)}
 						/>
 					</label>
 					<label className="space-y-1 text-xs">
-						Placement
+						{t("Placement")}
 						<select
 							className="block h-9 w-full rounded-md border bg-background px-3 text-sm"
 							value={experimentPlacementId}
 							onChange={(event) => setExperimentPlacementId(event.target.value)}
 						>
-							<option value="">Select a placement…</option>
+							<option value="">{t("Select a placement…")}</option>
 							{placements
 								.filter(({ active: placementActive }) => placementActive)
 								.map((placement) => (
@@ -795,12 +892,12 @@ function PaywallDeliveryControls({
 						onClick={() => void createExperiment()}
 					>
 						<FlaskConical />
-						Create 50/50 test
+						{t("Create 50/50 test")}
 					</Button>
 				</div>
 				{published.length < 2 && (
 					<p className="text-xs text-muted-foreground">
-						Publish two versions to create an A/B experiment.
+						{t("Publish two versions to create an A/B experiment.")}
 					</p>
 				)}
 				{experiences.map((experience) => (
@@ -811,7 +908,7 @@ function PaywallDeliveryControls({
 						<span>
 							<b>{experience.name}</b>
 							<span className="ml-2 capitalize text-muted-foreground">
-								{experience.status} · {experience.variants.length} variants
+								{experience.status} {t("·")} {experience.variants.length} {t("variants")}
 							</span>
 						</span>
 						<span className="flex gap-1">
@@ -838,10 +935,10 @@ function PaywallDeliveryControls({
 								}
 								onClick={() => void setExperimentStatus(experience, "completed")}
 							>
-								Complete
+								{t("Complete")}
 							</Button>
 							<Button
-								size="icon"
+								shape="square"
 								variant="ghost"
 								aria-label={`Archive experiment ${experience.name}`}
 								disabled={busy || experience.status === "archived"}
@@ -869,6 +966,7 @@ function csv(value: string) {
 }
 
 export function PaywallStatisticsPage() {
+	const { t } = useExperienceI18n();
 	const { selectedProject } = useProjectSelection();
 	const [data, setData] = useState<PaywallStatistics>();
 	const [error, setError] = useState<string | null>(null);
@@ -908,8 +1006,8 @@ export function PaywallStatisticsPage() {
 	const summary = summaryOrder.map((label) => [label, Number(data?.totals[label] ?? 0)] as const);
 	return (
 		<ModulePage
-			title="Paywall statistics"
-			description="Conversion, revenue and event performance for the last 30 days."
+			title={t("Paywall statistics")}
+			description={t("Conversion, revenue and event performance for the last 30 days.")}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -928,17 +1026,18 @@ export function PaywallStatisticsPage() {
 						))}
 						<Card>
 							<CardHeader>
-								<CardDescription>conversion rate</CardDescription>
+								<CardDescription>{t("conversion rate")}</CardDescription>
 								<CardTitle className="text-3xl">
-									{(Number(data?.totals.conversion_rate ?? 0) * 100).toFixed(1)}%
+									{(Number(data?.totals.conversion_rate ?? 0) * 100).toFixed(1)}
+									{t("%")}
 								</CardTitle>
 							</CardHeader>
 						</Card>
 						<Card>
 							<CardHeader>
-								<CardDescription>tracked revenue</CardDescription>
+								<CardDescription>{t("tracked revenue")}</CardDescription>
 								<CardTitle className="text-3xl">
-									{Number(data?.totals.revenue_micros ?? 0).toLocaleString()} μ
+									{Number(data?.totals.revenue_micros ?? 0).toLocaleString()} {t("μ")}
 								</CardTitle>
 								<CardDescription>
 									{Object.entries(data?.totals.revenue_by_currency ?? {})
@@ -952,17 +1051,17 @@ export function PaywallStatisticsPage() {
 						<CardHeader>
 							<CardTitle className="flex items-center gap-2">
 								<BarChart3 />
-								Time series
+								{t("Time series")}
 							</CardTitle>
 						</CardHeader>
 						<CardContent className="overflow-x-auto">
 							<Table>
 								<TableHeader>
 									<TableRow>
-										<TableHead>Period</TableHead>
-										<TableHead>Event</TableHead>
-										<TableHead>Count</TableHead>
-										<TableHead>Revenue</TableHead>
+										<TableHead>{t("Period")}</TableHead>
+										<TableHead>{t("Event")}</TableHead>
+										<TableHead>{t("Count")}</TableHead>
+										<TableHead>{t("Revenue")}</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
@@ -983,7 +1082,7 @@ export function PaywallStatisticsPage() {
 									{!data?.series.length && (
 										<TableRow>
 											<TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
-												No events match this period.
+												{t("No events match this period.")}
 											</TableCell>
 										</TableRow>
 									)}

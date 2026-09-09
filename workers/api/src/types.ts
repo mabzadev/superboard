@@ -83,6 +83,7 @@ interface ApiSecretEnv {
 	MCP_SERVICE?: Fetcher;
 	CUSTOM_WORKER?: Fetcher;
 	CUSTOM_WORKER_TOKEN?: string;
+	CUSTOM_WORKER_PLUGIN_ID?: string;
 	OBSERVABILITY?: Fetcher;
 	/** Active on targets that have completed the Paywalls/Onboardings cutover. */
 	FLOWS_MODULE?: Fetcher;
@@ -92,6 +93,7 @@ interface ApiSecretEnv {
 	ONBOARDINGS_MODULE?: Fetcher;
 	OBSERVABILITY_INTERNAL_TOKEN?: string;
 	FILES_DOMAIN?: string;
+	SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON?: string;
 	MCP_DOMAIN?: string;
 	REACT_HOST_ACCEPT_INVITE_PATH?: string;
 	REACT_HOST_CHANGE_PASSWORD_PATH?: string;

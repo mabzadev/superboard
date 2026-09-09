@@ -25,7 +25,11 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 			title,
 			navigation: support(title, index),
 		})),
-		{ path_pattern: "/support/quality", title: "Quality" },
-		{ path_pattern: "/support/configuration", title: "Configuration" },
+		{ path_pattern: "/support/quality", title: "Quality", navigation: support("Quality", 11) },
+		{
+			path_pattern: "/support/configuration",
+			title: "Configuration",
+			navigation: support("Configuration", 12),
+		},
 	],
 });

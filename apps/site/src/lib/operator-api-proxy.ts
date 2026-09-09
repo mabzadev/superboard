@@ -3,6 +3,7 @@ import {
 	signSiteOperatorRequest,
 } from "@superboard/contracts/site-operator";
 
+import { canAccessOperatorConsole } from "./operator-access.js";
 import { requireActiveSuperBoardPlugin } from "./plugin-availability.js";
 import {
 	assertIdempotencyKey,
@@ -42,18 +43,13 @@ type CommandAuthority = (input: {
 
 export async function proxyOperatorApiRequest(input: {
 	request: Request;
-	operator: { id: string; role: number };
+	operator: { id: string; role: number; disabled?: boolean };
 	env: OperatorApiProxyEnv;
 	command_authority?: CommandAuthority;
 	plugin_context?: TrustedPluginApiContext;
 }): Promise<Response> {
 	const instanceId = input.env.SUPERBOARD_INSTANCE_ID?.trim();
-	if (
-		!input.operator.id ||
-		!Number.isInteger(input.operator.role) ||
-		input.operator.role < 40 ||
-		input.operator.role > 50
-	) {
+	if (!canAccessOperatorConsole(input.operator)) {
 		return errorResponse(403, "OPERATOR_REQUIRED");
 	}
 	const token = input.env.SITE_OPERATOR_BRIDGE_TOKEN?.trim();

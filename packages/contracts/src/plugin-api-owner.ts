@@ -29,6 +29,7 @@ const owners: Record<string, string> = {
 	content: "supbrd-plug-content",
 	settings: "supbrd-plug-settings",
 };
+const applicationPluginPrefix = /^\/api\/v1\/plugins\/([a-z][a-z0-9-]*)(?:\/|$)/u;
 const appPrefix = /^\/api\/v[12]\/app(?=\/|$)/u;
 const modulePrefix = /^\/api\/v[12]\/([^/]+)(?:\/|$)/u;
 const appSettings = /\/(?:access-key|runtime-policy)(?:\/|$)/u;
@@ -53,6 +54,8 @@ const legacyOwners: readonly (readonly [RegExp, string])[] = [
 ];
 
 export function resolvePluginApiOwner(path: string): string {
+	const applicationPlugin = applicationPluginPrefix.exec(path)?.[1];
+	if (applicationPlugin) return `supbrd-plugmod-${applicationPlugin}`;
 	if (
 		path === "/health" ||
 		path === "/up" ||

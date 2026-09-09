@@ -1,3 +1,6 @@
+import EmailWorkspace from "../supbrd-plugmod-marketing/studio/EmailWorkspace.js";
+import {EmailMessages}from"./EmailMessages.js";
+import {useStudioI18n}from"../supbrd-plugmod-marketing/studio/i18n.js";
 import { useFrontContext } from "@superboard/front-ui/context";
 import { useState, type FormEvent } from "react";
 
@@ -30,9 +33,15 @@ const messages = {
 	},
 };
 
-export default function EmailPage() {
+export default function EmailPage(){
+ const {activePluginIds}=useFrontContext();
+ return activePluginIds.includes("supbrd-plugmod-marketing")?<EmailWorkspace initialTab="Deliveries" initialDeliverySource="transactional"/>:<StandaloneEmailPage/>;
+}
+function StandaloneEmailPage() {
 	const { locale } = useFrontContext();
 	const text = messages[locale];
+	const {t}=useStudioI18n();
+	const [tab,setTab]=useState("Messages");
 	const { selectedProject } = useProjectSelection();
 	const [recipient, setRecipient] = useState("");
 	const [subject, setSubject] = useState("");
@@ -57,8 +66,10 @@ export default function EmailPage() {
 	}
 	return (
 		<>
-			<EmailAdministration />
-			<section className="mx-auto grid w-full max-w-3xl gap-4 p-6">
+			<header className="space-y-4 p-6"><h1 className="text-2xl font-semibold">{t("Emails")}</h1><nav className="flex gap-2">{["Messages","Compose","Settings"].map(key=><Button key={key} variant={tab===key?"secondary":"ghost"} onClick={()=>setTab(key)}>{t(key)}</Button>)}</nav></header>
+            {tab==="Messages"&&selectedProject&&<section className="p-6"><EmailMessages project={selectedProject.id}/></section>}
+            {tab==="Settings"&&<EmailAdministration/>}
+			{tab==="Compose"&&<section className="mx-auto grid w-full max-w-3xl gap-4 p-6">
 				<h2 className="text-lg font-semibold">{text.title}</h2>
 				{error && <p role="alert">{error}</p>}
 				{queued && <p role="status">{text.queued}</p>}
@@ -96,7 +107,7 @@ export default function EmailPage() {
 						{busy ? text.sending : text.send}
 					</Button>
 				</form>
-			</section>
+			</section>}
 		</>
 	);
 }

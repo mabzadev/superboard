@@ -21,6 +21,9 @@ import {
 interface VocalData {
   user_vocal_id: string;
   user_id: string;
+  project_ref?: string;
+  job_id?: string;
+  subject?: string;
   audio_src: string;
   language?: string;
   text_audio: string;
@@ -281,24 +284,28 @@ export class VocalProcessingWorkflow extends WorkflowEntrypoint<
           timeout: "10 seconds",
         },
         async (): Promise<void> => {
-          try {
-            const r = await fetch(`${this.env.GATEWAY_URL}/ws/vocals/notify`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-VocoStar-Internal-Token": this.env.GATEWAY_INTERNAL_TOKEN,
-              },
-              body: JSON.stringify({ user_id: data.user_id }),
-            });
-            if (!r.ok) throw new Error(`Gateway callback HTTP ${r.status}`);
-            console.log(
-              `[Workflow] notify-ws ✅ HTTP ${r.status} vocal=${data.user_vocal_id}`,
-            );
-          } catch (e) {
-            console.warn("[Workflow] notify-ws failed (non-fatal):", e);
-          }
+          const r = await fetch(`${this.env.GATEWAY_URL}/ws/vocals/notify`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-VocoStar-Internal-Token": this.env.GATEWAY_INTERNAL_TOKEN,
+            },
+            body: JSON.stringify({
+              user_id: data.user_id,
+              vocal_id: data.user_vocal_id,
+              project_ref: data.project_ref,
+              job_id: data.job_id,
+              subject: data.subject,
+            }),
+          });
+          if (!r.ok) throw new Error(`Gateway callback HTTP ${r.status}`);
+          console.log(
+            `[Workflow] notify-ws ✅ HTTP ${r.status} vocal=${data.user_vocal_id}`,
+          );
         },
-      );
+      ).catch((error: unknown) => {
+        console.warn("[Workflow] notify-ws failed after retries (non-fatal):", error);
+      });
 
       // ── Step 4 : Push notification FCM ─────────────────────────────────────
       await step.do(
@@ -308,27 +315,28 @@ export class VocalProcessingWorkflow extends WorkflowEntrypoint<
           timeout: "15 seconds",
         },
         async (): Promise<void> => {
-          try {
-            const r = await fetch(`${this.env.GATEWAY_URL}/internal/notify`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-VocoStar-Internal-Token": this.env.GATEWAY_INTERNAL_TOKEN,
-              },
-              body: JSON.stringify({
-                user_id: data.user_id,
-                notification_type: "clone_ready",
-              }),
-            });
-            if (!r.ok) throw new Error(`Gateway callback HTTP ${r.status}`);
-            console.log(
-              `[Workflow] notify-user ✅ HTTP ${r.status} vocal=${data.user_vocal_id}`,
-            );
-          } catch (e) {
-            console.warn("[Workflow] notify-user failed (non-fatal):", e);
-          }
+          const r = await fetch(`${this.env.GATEWAY_URL}/internal/notify`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-VocoStar-Internal-Token": this.env.GATEWAY_INTERNAL_TOKEN,
+            },
+            body: JSON.stringify({
+              user_id: data.user_id,
+              notification_type: "clone_ready",
+              project_ref: data.project_ref,
+              job_id: data.job_id,
+              subject: data.subject,
+            }),
+          });
+          if (!r.ok) throw new Error(`Gateway callback HTTP ${r.status}`);
+          console.log(
+            `[Workflow] notify-user ✅ HTTP ${r.status} vocal=${data.user_vocal_id}`,
+          );
         },
-      );
+      ).catch((error: unknown) => {
+        console.warn("[Workflow] notify-user failed after retries (non-fatal):", error);
+      });
 
       return {
         status: "completed",

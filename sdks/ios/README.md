@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mabzadev/superboard/main/.github/logo.svg">
-    <img src="https://raw.githubusercontent.com/mabzadev/superboard/main/.github/logo.svg" width="120" alt="OpenGrow">
+    <img src="https://raw.githubusercontent.com/mabzadev/superboard/main/.github/logo.svg" width="120" alt="SuperBoard">
   </picture>
 </p>
 
@@ -14,7 +14,7 @@
 
 <p align="center">
   Deep linking, attribution, and smart links for iOS.<br/>
-  Part of the <a href="https://github.com/mabzadev">OpenGrow</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mabzadev">SuperBoard</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
@@ -25,13 +25,13 @@
 
 ---
 
-The OpenGrow iOS SDK provides deep linking, universal linking, link generation, in-app messaging, revenue tracking, and attribution for your iOS apps. It supports both Swift and Objective-C.
+The SuperBoard iOS SDK provides deep linking, universal linking, link generation, in-app messaging, revenue tracking, and attribution for your iOS apps. It supports both Swift and Objective-C.
 
 ## Features
 
 - **Deep linking & universal links** — route users to the right in-app screen, even after install
 - **Smart link generation** — create trackable links with metadata, custom redirects, and UTM parameters
-- **In-app messaging** — display messages and announcements from the OpenGrow dashboard
+- **In-app messaging** — display messages and announcements from the SuperBoard dashboard
 - **Push notifications** — receive push notifications for dashboard-sent messages
 - **Revenue tracking** — log StoreKit 2 and custom purchases with automatic attribution
 - **User identity** — attach user IDs and attributes for analytics and segmentation
@@ -43,7 +43,7 @@ The OpenGrow iOS SDK provides deep linking, universal linking, link generation, 
 - Swift 5.0+
 - Xcode 14+
 
-<!-- opengrow-sdk-documentation:ios:start -->
+<!-- superboard-sdk-documentation:ios:start -->
 
 > **Lifecycle: internal.** This standalone coordinate is retained only
 > to reproduce existing integrations. New public releases are disabled;
@@ -65,7 +65,7 @@ In Xcode, use **File → Add Package Dependencies**, enter
 `1.0.3`. CocoaPods Trunk is not a published or supported
 distribution channel for this SDK.
 
-<!-- opengrow-sdk-documentation:ios:end -->
+<!-- superboard-sdk-documentation:ios:end -->
 
 ## Quick Start
 
@@ -223,11 +223,11 @@ OpenGrow.generateLink(title: "Share this", data: ["itemId": "abc"]) { url in
 
 ### Push notifications
 
-To receive push notifications for messages sent from the OpenGrow dashboard:
+To receive push notifications for messages sent from the SuperBoard dashboard:
 
 **1. Add capabilities** — In Xcode, add the **Push Notifications** capability and enable **Remote notifications** under **Background Modes**.
 
-**2. Upload your APNs key** — In [Apple Developer → Keys](https://developer.apple.com/account/resources/authkeys/list), create a key with APNs enabled. Upload the `.p8` file, Key ID, and Team ID in the OpenGrow Dashboard deployed for the active application target, under **Settings → Push Notifications**.
+**2. Upload your APNs key** — In [Apple Developer → Keys](https://developer.apple.com/account/resources/authkeys/list), create a key with APNs enabled. Upload the `.p8` file, Key ID, and Team ID in the SuperBoard Dashboard deployed for the active application target, under **Settings → Push Notifications**.
 
 **3. Request permission and register:**
 
@@ -243,7 +243,7 @@ UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge
 }
 ```
 
-**4. Pass the device token to OpenGrow:**
+**4. Pass the device token to SuperBoard:**
 
 ```swift
 func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -274,8 +274,8 @@ OpenGrow.numberOfUnreadMessages { count in
 
 ### Setup
 
-1. Enable revenue tracking in the OpenGrow Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
-2. Configure App Store Server Notifications in [App Store Connect](https://appstoreconnect.apple.com) — set the production and sandbox URLs shown in the OpenGrow dashboard under **Developers → iOS Setup → Revenue**
+1. Enable revenue tracking in the SuperBoard Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
+2. Configure App Store Server Notifications in [App Store Connect](https://appstoreconnect.apple.com) — set the production and sandbox URLs shown in the SuperBoard dashboard under **Developers → iOS Setup → Revenue**
 
 ### App Store purchases (StoreKit 2)
 

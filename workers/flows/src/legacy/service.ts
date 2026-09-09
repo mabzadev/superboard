@@ -1,3 +1,4 @@
+import { localizeExperienceDefinition } from "@superboard/contracts/experience-localization";
 import type { FlowGraph, FlowQueueEvent } from "@superboard/contracts/flows";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 import type { Context } from "hono";
@@ -231,7 +232,7 @@ async function createLegacyWorkflow(context: LegacyContext, source: Source, body
 		},
 		source,
 	);
-	if (source === "onboardings" && body.configuration !== undefined) {
+	if (body.configuration !== undefined) {
 		const definition = record(body.configuration);
 		const draftVersion = await createLegacyVersionRecord(
 			context,
@@ -953,7 +954,7 @@ async function resolveLegacyPlacement(context: LegacyContext, source: Source, bo
 			),
 		);
 		if (!selected) continue;
-		const definition = parseRecord(selected.definition_json);
+		const definition = localizeExperienceDefinition(parseRecord(selected.definition_json),typeof body.locale === "string" ? body.locale : undefined);
 		return source === "paywalls"
 			? {
 					placement_id: placement.legacy_id ?? placement.id,

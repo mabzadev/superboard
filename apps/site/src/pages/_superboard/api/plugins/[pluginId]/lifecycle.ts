@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { handleError } from "emdash/api/error";
 
 import { jsonResponse, requireReleaseOperator } from "../../../../../lib/operator-guard.js";
+import { syncPluginPackageRuntime } from "../../../../../lib/plugin-package-state.js";
 import { isRecord } from "../../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../../lib/site-env.js";
 import {
@@ -34,7 +35,14 @@ export const POST: APIRoute = async (context) => {
 			changed_at: new Date().toISOString(),
 			reason: body.reason,
 		});
-		await context.locals.emdash.setPluginStatus(pluginId, "inactive");
+		await syncPluginPackageRuntime(
+			env.DB,
+			{
+				instance_id: env.SUPERBOARD_INSTANCE_ID,
+				target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT),
+			},
+			context.locals.emdash,
+		);
 		return jsonResponse(result, 200);
 	} catch (error) {
 		return handleError(

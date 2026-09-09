@@ -5,6 +5,7 @@ interface __BaseEnv_Env {
 	SUPERBOARD_TARGET: string;
 	OPENGROW_TARGET: string;
 	MCP_DOMAIN: string;
+	MCP_LEGACY_ORIGINS_JSON: string;
 	PUBLIC_API_URL: string;
 	PUBLIC_MCP_URL: string;
 	SUPERBOARD_INSTANCE_ID: string;
@@ -19,7 +20,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SUPERBOARD_TARGET" | "OPENGROW_TARGET" | "MCP_DOMAIN" | "PUBLIC_API_URL" | "PUBLIC_MCP_URL" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SUPERBOARD_TARGET" | "OPENGROW_TARGET" | "MCP_DOMAIN" | "MCP_LEGACY_ORIGINS_JSON" | "PUBLIC_API_URL" | "PUBLIC_MCP_URL" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

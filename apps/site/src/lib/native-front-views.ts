@@ -7,10 +7,12 @@ import type { Menu, MenuItem } from "emdash";
 
 import type {
 	NativeFrontEditableNavigationGroup,
+	NativeFrontEditableNavigationItem,
 	NativeFrontEditableView,
 	NativeFrontViewBindings,
 } from "./native-front-presentation.js";
 
+const menuClassSeparator = /\s+/u;
 const PATH_SUFFIX_PATTERN = /[?#]/u;
 const PATH_EDGE_SLASH_PATTERN = /^\/+|\/+$/gu;
 function isFieldControl(value: unknown): value is NativeRendererField["control"] {
@@ -25,12 +27,19 @@ export function frontViewSlug(path: string): string {
 
 export function editableNavigationFromMenu(
 	menu: Menu | null,
-): NativeFrontEditableNavigationGroup[] | undefined {
-	if (!menu) return undefined;
-	return menu.items.map((group) => ({
-		label: group.label,
-		items: flattenMenuItems(group.children.length > 0 ? group.children : [group]),
-	}));
+): NativeFrontEditableNavigationGroup[] {
+	return (menu?.items ?? []).map((group) => {
+		const classes = group.cssClasses?.split(menuClassSeparator) ?? [];
+		const icon = classes.find((value) => value.startsWith("sb-icon-"))?.slice(8);
+		const direct = group.children.length === 0 || classes.includes("sb-nav-local");
+		return {
+			id: group.id,
+			label: group.label,
+			direct,
+			...(icon ? { icon } : {}),
+			items: menuItems(direct ? [group] : group.children),
+		};
+	});
 }
 
 export function editableViewFromEntry(entry: unknown): NativeFrontEditableView | null {
@@ -63,11 +72,13 @@ export function editableViewFromEntry(entry: unknown): NativeFrontEditableView |
 	};
 }
 
-function flattenMenuItems(items: readonly MenuItem[]): Array<{ label: string; href: string }> {
-	return items.flatMap((item) => [
-		{ label: item.label, href: item.url },
-		...flattenMenuItems(item.children),
-	]);
+function menuItems(items: readonly MenuItem[]): NativeFrontEditableNavigationItem[] {
+	return items.map((item) => ({
+		label: item.label,
+		href: item.url,
+		...(item.children.length ? { children: menuItems(item.children) } : {}),
+		...(item.target ? { target: item.target } : {}),
+	}));
 }
 
 function rendererBlocks(value: unknown): NativeRendererBlock[] | null {

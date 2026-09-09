@@ -1,10 +1,71 @@
 # SuperBoard Site
 
-`apps/site` is the Astro/Cloudflare Site that mounts native EmDash Admin and the
-generic Front SuperBoard runtime. It is the executable target slice for issue
-[#33](https://github.com/mabzadev/superboard/issues/33); it does not replace the
-historical Dashboard until the parity, data migration, development rollout,
-production cutover, rollback, and observation gates have passed.
+`apps/site` is the canonical Astro/Cloudflare site for SuperBoard. It serves
+native EmDash Admin and the React views published by SuperBoard plugins. Both
+use the same EmDash session and user account.
+
+The SuperBoard operator console requires an active EmDash user with
+`settings:manage`. Anonymous visitors are redirected to EmDash login;
+authenticated users without this permission receive `403`. Public sign-in
+routes remain available before authentication.
+
+## Plugin packages
+
+The operator catalogue exposes seven business packages plus the required core.
+Vocostar appears only on its application target. The installable catalogue is
+`config/superboard-plugin-catalog.json`, generated from
+`config/superboard-plugin-packages.json` and the component contracts.
+`config/emdash-plugin-topology.json` retains those internal contracts and must
+not be used to count installed packages. See the [grouping and migration
+reference](../../docs/technical-specs/SUPERBOARD_PLUGINS_REGROUPES_2026-09-09.md).
+
+Use **SuperBoard** for the product name. `pnpm brand:check` validates the
+brand contract, Front sources, and displayed plugin and SDK catalogue labels.
+The same copy checks run in `lint`, `lint:quick`, and `lint:json`, including
+files not yet added to Git. Published SDK coordinates, stored provider keys,
+and legacy environment fallbacks retain their compatibility identifiers.
+
+## Front navigation
+
+Edit the console menu in **EmDash Admin → Menus → Front navigation** (English)
+or **Navigation du front** (French), at
+`/_emdash/admin/menus/superboard-admin?locale=fr`.
+Labels, order, groups, and nested section pages come from these menu records.
+Changes appear after reloading the front. Removing an item keeps it out of the
+navigation; inactive plugins and unauthorized destinations are filtered out.
+
+The bootstrap upgrades an untouched legacy menu and creates missing language
+variants. Existing customized menus are preserved.
+
+Run the complete menu check before changing navigation. The commit hook and
+`.github/workflows/front-menu.yml` run this same check. The static rules also
+run inside `lint`, `lint:quick`, and `lint:json`.
+
+```bash
+pnpm check:front-menu
+```
+
+The check covers calculated paths, renamed helpers, internal import aliases,
+Astro template links, request-derived locale selection, and the English/French
+front selector. Its integration test uses a separate SQLite database, native
+EmDash menu handlers, the real menu cache, and the front renderer. It verifies
+renaming, ordering, moving between levels, deletion, and language isolation.
+EmDash Admin keeps its independent language list.
+
+## Language
+
+The language selector in the console header offers English and French. The choice persists across navigation, reloads, and login. An
+explicit `?lang=` choice takes priority over the saved preference, followed by
+the Identity URL language and the browser's supported language preferences.
+Identity links and plugin contexts follow the console choice.
+
+EmDash Admin has its own preference under **Settings → Language**. Its plugin
+summaries reload in the selected admin language. These two preferences are
+stored separately in this browser. The console supports English and French;
+EmDash Admin retains its own language list.
+
+Analytics views have English and French translations. Translation coverage
+varies in other plugins; some older views still contain English text.
 
 ## Runtime boundaries
 
@@ -33,6 +94,23 @@ pnpm install --frozen-lockfile
 pnpm target:orchestrate check --target mbza-development --environment local --adapter local
 pnpm site:check
 ```
+
+For an Astro dev server on port 4321 and a local API on port 8800, verify the
+API, the site, and the native EmDash admin HTML before testing the console:
+
+```bash
+rtk proxy pnpm site:health --site http://127.0.0.1:4321 --api http://127.0.0.1:8800
+```
+
+Use the origins printed by your launcher if its ports differ. The target
+orchestrator also checks the EmDash admin shell during startup and stops its
+workers if the shell cannot be served. An empty `200` response does not pass.
+
+The Astro development server, type checking, and production builds use separate
+Vite caches. To exercise this isolation, start a fresh development server and
+add `--typecheck` to `site:health`: the command runs Astro diagnostics before
+requesting the admin shell. Stop the dev server before rebuilding workspace
+packages, because those builds replace the dependency files it loads.
 
 Generate the Site, Gateway, and enabled Worker configurations from the local
 target materialization:

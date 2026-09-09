@@ -27,13 +27,19 @@ test("managed lifecycle actions revalidate expired active plugin receipts", asyn
 			.bind("vocostar")
 			.run();
 		const response = await SELF.fetch(
-			`https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings/${action}`,
+			`https://site.example/_emdash/api/superboard/plugins/supbrd-plug-data/${action}`,
 			{ method: "POST", headers },
 		);
 		expect(response.status, await response.clone().text()).toBe(201);
 		expect(await response.json()).toMatchObject({
-			plugin_id: "supbrd-plug-settings",
+			plugin_id: "supbrd-plug-data",
 			status: action === "enable" ? "active" : "disabled",
 		});
+		const health = await env.DB.prepare(
+			"SELECT MAX(expires_at) AS expires_at FROM superboard_plugin_runtime_health WHERE instance_id=? AND plugin_id=?",
+		)
+			.bind("vocostar", "supbrd-plug-user")
+			.first<{ expires_at: string }>();
+		expect(Date.parse(health!.expires_at)).toBeGreaterThan(Date.now());
 	}
 });

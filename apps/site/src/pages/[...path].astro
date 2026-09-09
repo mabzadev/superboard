@@ -5,13 +5,21 @@ import { getSiteEnv } from "../lib/site-env.js";
 
 export const prerender = false;
 
-const model = await resolveSiteFrontPage(getSiteEnv(), Astro.url.pathname, Astro.locals.user);
+Astro.response.headers.set("Cache-Control", "private, no-store");
+const model = await resolveSiteFrontPage(
+	getSiteEnv(),
+	Astro.url.pathname,
+	Astro.locals.user,
+);
 if (model.resolution.result === "redirect") {
 	return Astro.redirect(model.resolution.location, 302);
 }
 if (model.resolution.result === "not_found") Astro.response.status = 404;
 if (model.resolution.result === "forbidden") Astro.response.status = 403;
-if (model.resolution.result === "maintenance" || model.resolution.result === "unavailable") {
+if (
+	model.resolution.result === "maintenance" ||
+	model.resolution.result === "unavailable"
+) {
 	Astro.response.status = 503;
 }
 ---

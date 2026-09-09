@@ -9,7 +9,7 @@ import { BlockRenderer } from "@emdash-cms/blocks";
 import type { Block, BlockInteraction, BlockResponse } from "@emdash-cms/blocks";
 import { useLingui } from "@lingui/react/macro";
 import { CircleNotch, WarningCircle } from "@phosphor-icons/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiFetch, API_BASE } from "../lib/api/client.js";
 
@@ -19,7 +19,9 @@ interface SandboxedPluginPageProps {
 }
 
 export function SandboxedPluginPage({ pluginId, page }: SandboxedPluginPageProps) {
-	const { t } = useLingui();
+	const { t, i18n } = useLingui();
+	const locale = i18n.locale;
+	const pageGeneration = useRef(0);
 	const [blocks, setBlocks] = useState<Block[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -27,21 +29,26 @@ export function SandboxedPluginPage({ pluginId, page }: SandboxedPluginPageProps
 
 	// Send an interaction to the plugin admin route
 	const sendInteraction = useCallback(
-		async (interaction: BlockInteraction) => {
+		async (interaction: BlockInteraction, signal?: AbortSignal) => {
+			const generation = pageGeneration.current;
+			const isCurrent = () => !signal?.aborted && generation === pageGeneration.current;
 			try {
 				const response = await apiFetch(`${API_BASE}/plugins/${pluginId}/admin`, {
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					headers: { "Content-Type": "application/json", "Accept-Language": locale },
 					body: JSON.stringify(interaction),
+					signal,
 				});
 
 				if (!response.ok) {
 					const text = await response.text();
+					if (!isCurrent()) return;
 					setError(t`Plugin responded with ${response.status}: ${text}`);
 					return;
 				}
 
 				const body = (await response.json()) as { data: BlockResponse };
+				if (!isCurrent()) return;
 				const data = body.data;
 				setBlocks(data.blocks);
 				setError(null);
@@ -51,17 +58,24 @@ export function SandboxedPluginPage({ pluginId, page }: SandboxedPluginPageProps
 					setTimeout(setToast, 4000, null);
 				}
 			} catch (err) {
+				if (!isCurrent()) return;
 				setError(err instanceof Error ? err.message : t`Failed to communicate with plugin`);
 			}
 		},
-		[pluginId],
+		[pluginId, locale, t],
 	);
 
 	// Initial page load
 	useEffect(() => {
+		pageGeneration.current += 1;
+		const controller = new AbortController();
 		setLoading(true);
 		setError(null);
-		void sendInteraction({ type: "page_load", page }).finally(() => setLoading(false));
+		setToast(null);
+		void sendInteraction({ type: "page_load", page }, controller.signal).finally(() => {
+			if (!controller.signal.aborted) setLoading(false);
+		});
+		return () => controller.abort();
 	}, [sendInteraction, page]);
 
 	// Handle block actions

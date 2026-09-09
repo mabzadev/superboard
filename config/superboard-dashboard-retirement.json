@@ -2475,7 +2475,7 @@
 			"sha256": "d31215d638606a7f689753840b6e46ae3f13f1b73efa04f44eace50ac21279bf",
 			"disposition": "owned-source",
 			"destinations": [
-				"packages/supbrd-front-ui/src/styles/openflow-tokens.css"
+				"packages/supbrd-front-ui/src/styles/superboard-tokens.css"
 			],
 			"reachable_from_dashboard_routes": false
 		},

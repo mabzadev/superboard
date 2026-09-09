@@ -1,3 +1,4 @@
+import { FrontContextProvider } from "@superboard/front-ui/context";
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -7,7 +8,6 @@ import FilesPage from "../../../packages/supbrd-runtime-plugins/src/front/client
 import McpToolsPage from "../../../packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-mcp/McpToolsPage.js";
 
 const selection = vi.hoisted(() => ({ selectedProject: { id: "42-prod" } }));
-vi.mock("@superboard/front-ui/context", () => ({ useFrontContext: () => ({ locale: "en" }) }));
 vi.mock("../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => selection,
 }));
@@ -64,7 +64,24 @@ afterEach(async () => {
 	container.remove();
 });
 async function render(node: ReactNode) {
-	await act(async () => root.render(node));
+	await act(async () =>
+		root.render(
+			<FrontContextProvider
+				value={{
+					instanceId: "42",
+					pluginId: "supbrd-plugmod-email",
+					operator: null,
+					projectScope: null,
+					activePluginIds: ["supbrd-plugmod-email", "supbrd-plugmod-files", "supbrd-plugmod-mcp"],
+					parameters: {},
+					path: "/email",
+					locale: "en",
+				}}
+			>
+				{node}
+			</FrontContextProvider>,
+		),
+	);
 }
 async function click(label: string) {
 	const button = [...container.querySelectorAll("button")].find(
@@ -100,6 +117,7 @@ test("clicking Upload submits the chosen file and displays completion", async ()
 
 test("clicking Send submits the email and displays its accepted state", async () => {
 	await render(<EmailPage />);
+	await click("Compose");
 	await fill('[name="recipient"]', "recipient@example.test");
 	await fill('[name="subject"]', "Delivery test");
 	await fill('[name="body"]', "A real button submission");

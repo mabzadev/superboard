@@ -144,6 +144,18 @@ app.post("/internal/v1/catalog/products", async (c) => {
 	});
 });
 
+app.get("/internal/v1/catalog/preview",async(c)=>{
+	const offering=c.req.query("offering")??"default";
+	const store=c.req.query("store")??"apple";
+	const environment=c.req.query("environment")??(c.get("project").environment==="test"?"sandbox":"production");
+	if(!["apple","google","stripe","manual"].includes(store)||!["sandbox","production"].includes(environment))throw httpError("catalog_preview_invalid","Choose a supported store and environment.",422);
+	const cursor=c.req.query("cursor")??"";
+	const rows=await c.env.DB.prepare(
+		"SELECT p.id || ':' || s.id AS row_key,p.identifier AS package_identifier,p.display_name,s.store,s.environment,s.store_product_id,s.price_micros,s.currency,s.billing_period,s.trial_period,s.synced_at FROM offerings o JOIN offering_packages op ON op.offering_id=o.id JOIN packages p ON p.id=op.package_id AND p.project_id=o.project_id JOIN store_products s ON s.product_id=p.product_id AND s.project_id=p.project_id WHERE o.project_id=? AND o.identifier=? AND p.active=1 AND s.active=1 AND s.store=? AND s.environment=? AND p.id || ':' || s.id>? ORDER BY row_key LIMIT 101",
+	).bind(project(c),offering,store,environment,cursor).all<Record<string,unknown>>();
+	return c.json({data:{items:rows.results.slice(0,100),...(rows.results.length>100?{nextCursor:rows.results[99]!.row_key}:{})}});
+});
+
 app.get("/internal/v1/catalog/products/:id", async (c) =>
 	c.json({ data: await owned(c, "products", c.req.param("id"), "product") }),
 );

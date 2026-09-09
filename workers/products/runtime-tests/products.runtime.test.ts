@@ -339,6 +339,15 @@ describe("Products Worker with D1", () => {
 			expect.arrayContaining([{ store_product_id: "google.gold", active: 1, identifier: "gold" }]),
 		);
 
+        const gold = await env.DB.prepare("SELECT id FROM products WHERE project_id=? AND identifier=?").bind("11", "gold").first<{id:string}>();
+        const packageResult = await mutate("POST", "/internal/v1/packages", {identifier:"gold-package",display_name:"Gold package",product_id:gold!.id,active:true,position:0}, "gold-package");
+        const goldPackage = await data<{id:string}>(packageResult);
+        await mutate("POST", "/internal/v1/offerings", {identifier:"gold-preview",display_name:"Gold preview",placement:"gold",active:true,package_ids:[goldPackage.id]}, "gold-preview");
+        const previewPath = "/internal/v1/catalog/preview?offering=gold-preview&store=google&environment=production";
+        await expect((await request("GET",previewPath)).json()).resolves.toMatchObject({data:{items:[{package_identifier:"gold-package",store_product_id:"google.gold",price_micros:4900000,currency:"EUR"}]}});
+        await expect((await request("GET",previewPath,undefined,12)).json()).resolves.toMatchObject({data:{items:[]}});
+        await expect((await request("GET",previewPath.replace("production","sandbox"))).json()).resolves.toMatchObject({data:{items:[]}});
+
 		const emptySync = await mutate(
 			"POST",
 			"/internal/v1/catalog/sync",

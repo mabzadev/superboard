@@ -1,3 +1,4 @@
+import { pluginComponentForContribution } from "@superboard/contracts/plugin-packages";
 import type { APIRoute } from "astro";
 
 import { jsonResponse, requirePluginOperator } from "../../../../../../lib/operator-guard.js";
@@ -22,8 +23,11 @@ export const GET: APIRoute = async (context) => {
 		return dispatchPluginApiAdapter(context, "data_source");
 	const denied = requirePluginOperator(context);
 	if (denied) return denied;
-	const pluginId = context.params.pluginId ?? "";
 	const requestedDataSourceId = context.params.dataSourceId ?? "";
+	const pluginId = pluginComponentForContribution(
+		context.params.pluginId ?? "",
+		requestedDataSourceId,
+	);
 	const plugin = superBoardRuntimePluginCatalog().plugins.find(
 		({ manifest }) => manifest.plugin_id === pluginId,
 	);

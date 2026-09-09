@@ -6,6 +6,15 @@ import { describe, expect, it } from "vitest";
 const secret = "paywalls-runtime-secret";
 
 describe("Paywalls Worker with D1", () => {
+  it("preserves the composed definition as the first draft during creation", async () => {
+    const definition={schema_version:1,components:[{id:"title",type:"heading",props:{text:"Bonjour"}}],metadata:{localization:{source_locale:"fr",fallback_locale:"fr",locales:{}}}};
+    const created=await mutate("POST","/internal/v1/paywalls",{identifier:"studio-first-draft",display_name:"Studio first draft",configuration:definition},"studio-first-draft");
+    expect(created.status).toBe(201);
+    const paywall=await data<{id:string}>(created);
+    const versions=await request("GET",`/internal/v1/paywalls/${paywall.id}/versions`);
+    await expect(versions.json()).resolves.toMatchObject({data:[{version:1,status:"draft",definition}]});
+  });
+
   it("requires an authentic, fresh gateway context", async () => {
     expect(
       (await SELF.fetch("https://paywalls.internal/internal/v1")).status,

@@ -16,7 +16,7 @@
 
 <p align="center">
   Deep linking, attribution, and smart links for Android.<br/>
-  Part of the <a href="https://github.com/mabzadev">OpenGrow</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mabzadev">SuperBoard</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
@@ -27,13 +27,13 @@
 
 ---
 
-The OpenGrow Android SDK provides deep linking, app links, link generation, in-app messaging, revenue tracking, and attribution for your Android apps. It supports both Kotlin and Java.
+The SuperBoard Android SDK provides deep linking, app links, link generation, in-app messaging, revenue tracking, and attribution for your Android apps. It supports both Kotlin and Java.
 
 ## Features
 
 - **Deep linking & app links** — route users to the right in-app screen, even after install
 - **Smart link generation** — create trackable links with metadata, custom redirects, and UTM parameters
-- **In-app messaging** — display messages and announcements from the OpenGrow dashboard
+- **In-app messaging** — display messages and announcements from the SuperBoard dashboard
 - **Push notifications** — receive push notifications for dashboard-sent messages via Firebase Cloud Messaging
 - **Revenue tracking** — log Google Play Billing and custom purchases with automatic attribution
 - **User identity** — attach user IDs and attributes for analytics and segmentation
@@ -45,7 +45,7 @@ The OpenGrow Android SDK provides deep linking, app links, link generation, in-a
 - Kotlin 1.6+ or Java 8+
 - Android Studio Arctic Fox+
 
-<!-- opengrow-sdk-documentation:android:start -->
+<!-- superboard-sdk-documentation:android:start -->
 
 > **Lifecycle: internal.** This standalone coordinate is retained only
 > to reproduce existing integrations. New public releases are disabled;
@@ -68,19 +68,19 @@ Set `OPENGROW_GITHUB_PACKAGES_USER` to the GitHub user that
 owns the token. Add the authenticated registry to `settings.gradle.kts`:
 
 ```kotlin
-val openGrowPackagesUser = providers.environmentVariable("OPENGROW_GITHUB_PACKAGES_USER").orNull
+val superBoardPackagesUser = providers.environmentVariable("OPENGROW_GITHUB_PACKAGES_USER").orNull
     ?: error("OPENGROW_GITHUB_PACKAGES_USER is required")
-val openGrowPackagesToken = providers.environmentVariable("OPENGROW_GITHUB_PACKAGES_TOKEN").orNull
+val superBoardPackagesToken = providers.environmentVariable("OPENGROW_GITHUB_PACKAGES_TOKEN").orNull
     ?: error("OPENGROW_GITHUB_PACKAGES_TOKEN is required")
 
 dependencyResolutionManagement {
     repositories {
         maven {
-            name = "OpenGrowGitHubPackages"
+            name = "SuperBoardGitHubPackages"
             url = uri("https://maven.pkg.github.com/mabzadev/superboard-platform")
             credentials {
-                username = openGrowPackagesUser
-                password = openGrowPackagesToken
+                username = superBoardPackagesUser
+                password = superBoardPackagesToken
             }
         }
     }
@@ -101,7 +101,7 @@ test -n "${OPENGROW_GITHUB_PACKAGES_USER:-}" \
   && ./gradlew assemble
 ```
 
-<!-- opengrow-sdk-documentation:android:end -->
+<!-- superboard-sdk-documentation:android:end -->
 
 ## Quick Start
 
@@ -320,7 +320,7 @@ OpenGrow.generateLink(
 
 ### Push notifications
 
-To receive push notifications for messages sent from the OpenGrow dashboard:
+To receive push notifications for messages sent from the SuperBoard dashboard:
 
 **1. Add Firebase Cloud Messaging** — If your app doesn't already use Firebase, add your app in the [Firebase Console](https://console.firebase.google.com), download `google-services.json`, and add the dependencies:
 
@@ -341,7 +341,7 @@ dependencies {
 }
 ```
 
-**2. Upload your Firebase credentials** — In the [Firebase Console](https://console.firebase.google.com), go to **Project Settings → Service Accounts** and generate a new private key. Upload the JSON key file and enter your Firebase Project ID in the OpenGrow Dashboard deployed for the active application target, under **Android Setup → Push Notifications**.
+**2. Upload your Firebase credentials** — In the [Firebase Console](https://console.firebase.google.com), go to **Project Settings → Service Accounts** and generate a new private key. Upload the JSON key file and enter your Firebase Project ID in the SuperBoard Dashboard deployed for the active application target, under **Android Setup → Push Notifications**.
 
 **3. Request notification permission** (Android 13+):
 
@@ -360,7 +360,7 @@ Add to your `AndroidManifest.xml`:
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 ```
 
-**4. Pass the FCM token to OpenGrow:**
+**4. Pass the FCM token to SuperBoard:**
 
 ```kotlin
 FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
@@ -414,8 +414,8 @@ lifecycleScope.launch {
 
 ### Setup
 
-1. Enable revenue tracking in the OpenGrow Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
-2. Configure Google Play Real-Time Developer Notifications — the OpenGrow dashboard provides an automated setup script under **Developers → Android Setup → Revenue**, or you can configure Pub/Sub manually
+1. Enable revenue tracking in the SuperBoard Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
+2. Configure Google Play Real-Time Developer Notifications — the SuperBoard dashboard provides an automated setup script under **Developers → Android Setup → Revenue**, or you can configure Pub/Sub manually
 
 ### Google Play purchases
 

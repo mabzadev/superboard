@@ -18,6 +18,7 @@ import { POST as createUserSlice } from "../src/pages/_superboard/api/releases/u
 import { GET as siteHealth } from "../src/pages/_superboard/health.js";
 import { ALL as operatorApiV1 } from "../src/pages/api/v1/[...path].js";
 import { POST as taskAuthority } from "../src/pages/superboard-system/plugin-task-authority.js";
+import { onRequest as packageMiddleware } from "../src/plugin-packages-middleware.js";
 import { dispatchLifecycleApi, pluginTaskContext } from "./lifecycle-health-services.js";
 
 const routes = new Map<string, APIRoute>([
@@ -35,6 +36,7 @@ const commandPath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/commands\/([
 const dataSourcePath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/data-sources\/([^/]+)$/u;
 const managedPluginActionPath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/(enable|disable)$/u;
 const pluginHealthPath = /^\/_emdash\/api\/plugins\/([^/]+)\/health$/u;
+const packageAdminPath = /^\/_emdash\/api\/plugins\/([^/]+)\/admin$/u;
 
 export default {
 	async fetch(request, workerEnv) {
@@ -43,6 +45,7 @@ export default {
 		const command = url.pathname.match(commandPath);
 		const managedPluginAction = url.pathname.match(managedPluginActionPath);
 		const pluginHealth = url.pathname.match(pluginHealthPath);
+		const packageAdmin = url.pathname.match(packageAdminPath);
 		if (pluginHealth && request.method === "GET") {
 			const plugin = createConfiguredSuperBoardPlugin(decodeURIComponent(pluginHealth[1]!));
 			return Response.json(
@@ -53,7 +56,13 @@ export default {
 				}),
 			);
 		}
-		const handler =
+		const handler: APIRoute | undefined =
+			(packageAdmin && request.method === "POST"
+				? (context) =>
+						packageMiddleware(context, async () =>
+							Response.json({ error: { code: "NOT_FOUND" } }, { status: 404 }),
+						)
+				: null) ??
 			(url.pathname.startsWith("/api/v1/") ? operatorApiV1 : null) ??
 			(managedPluginAction?.[2] === "enable" && request.method === "POST"
 				? enableManagedPlugin

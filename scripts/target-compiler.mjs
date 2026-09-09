@@ -17,6 +17,8 @@ import {
 	workerNameForService,
 } from "./cloudflare-services.mjs";
 import { root } from "./cloudflare-target.mjs";
+import { deploymentConfiguration } from "./deployment-configuration.mjs";
+import { targetForEnvironment } from "./target-environments.mjs";
 
 const ADAPTERS = new Set(["local", "cloudflare"]);
 const LOCAL_PORT_BASE = 8787;
@@ -46,6 +48,7 @@ const LOCAL_SERVICE_PORT_ORDER = [
 const PLUGIN_MIGRATION_ID_PATTERN = /^\d{4}_[a-z0-9_]+$/u;
 
 export async function compileTarget(target, environment, options = {}) {
+	target = targetForEnvironment(target, environment);
 	const environmentResources = target.environments?.[environment];
 	if (!environmentResources) {
 		throw new Error(`${target.target} does not define ${environment}`);
@@ -72,7 +75,7 @@ export async function compileTarget(target, environment, options = {}) {
 			}))
 			.toSorted(compareBy("service")),
 		migrations,
-		plugins: compilePlugins(target, pluginTopology, migrations),
+		plugins: compilePlugins(target, pluginTopology, migrations, environment),
 		routes: compileLogicalRoutes(target),
 		healthChecks: compileLogicalHealthChecks(target),
 		schedules: compileLogicalSchedules(target),
@@ -80,6 +83,7 @@ export async function compileTarget(target, environment, options = {}) {
 	};
 	const graphChecksum = canonicalChecksum(graph);
 	const materialization = {
+		deploymentConfiguration: deploymentConfiguration(target, environment),
 		workers: services.map(({ id }) => ({
 			id,
 			name: workerNameForService(target, id, environment),
@@ -96,6 +100,9 @@ export async function compileTarget(target, environment, options = {}) {
 		healthChecks: compilePhysicalHealthChecks(target),
 		schedules: compilePhysicalSchedules(target, environment),
 		queueConsumers: compilePhysicalQueueConsumers(target, environment, physicalResources),
+		...(target.customWorker?.runtimeBridge?.legacyGateway
+			? { externalBindings: vocostarRuntimeExternalBindings(target) }
+			: {}),
 		site: {
 			workerLoaderBinding: target.siteRuntime.workerLoaderBinding,
 			crons: [...target.siteRuntime.crons],
@@ -323,7 +330,10 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 		],
 		kv_namespaces: [{ binding: "SESSION" }, { binding: "RELEASE_CACHE" }],
 		worker_loaders: [{ binding: compiledTarget.materialization.site.workerLoaderBinding }],
-		services: [{ binding: "API_SERVICE", service: workers.get("api") }],
+		services: [
+			{ binding: "API_SERVICE", service: workers.get("api") },
+			{ binding: "MCP_SERVICE", service: workers.get("mcp") },
+		],
 		tail_consumers: [{ service: workers.get("observability") }],
 		images: { binding: "IMAGES" },
 		assets: { binding: "ASSETS", directory: "./dist/client" },
@@ -339,13 +349,16 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 			SUPERBOARD_INSTANCE_ID: compiledTarget.target,
 			SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 			SUPERBOARD_ENVIRONMENT: compiledTarget.environment,
+			SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON: JSON.stringify(
+				compiledTarget.materialization.deploymentConfiguration,
+			),
 			SUPERBOARD_PUBLIC_ENDPOINTS_JSON: JSON.stringify(
 				Object.fromEntries(
 					compiledTarget.materialization.routes
 						.filter((route) =>
 							["api", "auth", "sdk", "shortlinks", "files", "mcp", "site"].includes(route.id),
 						)
-						.map((route) => [route.id, `https://${route.hostname}`]),
+						.map((route) => [route.id, `https://${route.hostname}${route.path ?? ""}`]),
 				),
 			),
 			SUPERBOARD_PLUGIN_IDS: JSON.stringify(
@@ -383,6 +396,20 @@ export function assertTargetServiceConfiguration(
 		);
 	}
 	const actualBindings = configuredBindings(configuration);
+	for (const external of compiledTarget.materialization.externalBindings ?? []) {
+		if (external.service !== service) continue;
+		const actual = actualBindings.get(external.binding);
+		if (
+			!actual ||
+			(external.className
+				? actual.script_name !== external.worker || actual.class_name !== external.className
+				: actual.service !== external.worker)
+		) {
+			throw new Error(
+				`Target configuration drift for ${service}: ${external.binding} must retain its external owner`,
+			);
+		}
+	}
 	const expectedBindings = compiledTarget.graph.bindings.filter(
 		(binding) => binding.service === service,
 	);
@@ -534,6 +561,7 @@ function compileBindings(target, environment, physicalResources) {
 	};
 
 	addService("site", "API_SERVICE", "api");
+	addService("site", "MCP_SERVICE", "mcp");
 	addService("api", "SITE_SERVICE", "site");
 	const emailTaskBinding = taskApiServiceBinding("email");
 	addService("email", emailTaskBinding.binding, emailTaskBinding.service, emailTaskBinding.props);
@@ -610,6 +638,8 @@ function compileBindings(target, environment, physicalResources) {
 		);
 		if (targetService) addService("custom", customBinding.binding, targetService);
 	}
+	for (const external of vocostarRuntimeExternalBindings(target))
+		addRuntime(external.service, external.binding);
 
 	for (const descriptor of targetD1Descriptors(target, target.target, environment, "all")) {
 		const resource = physicalResources.find(
@@ -658,7 +688,31 @@ function compileBindings(target, environment, physicalResources) {
 	return bindings.toSorted(compareBy("service", "kind", "binding"));
 }
 
-function compilePlugins(target, topology, migrations) {
+function vocostarRuntimeExternalBindings(target) {
+	const gateway = target.customWorker?.runtimeBridge?.legacyGateway;
+	if (!gateway) return [];
+	return [
+		{
+			service: "custom",
+			binding: "VOCOSTAR_USER_VOCALS_ROOM",
+			worker: gateway.worker,
+			className: "UserVocalsRoom",
+		},
+		{
+			service: "custom",
+			binding: "VOCOSTAR_USER_MEDIAS_ROOM",
+			worker: gateway.worker,
+			className: "UserMediasRoom",
+		},
+		{
+			service: "custom",
+			binding: "VOCOSTAR_NOTIFICATION_DISPATCHER",
+			worker: gateway.notificationWorker,
+		},
+	];
+}
+
+function compilePlugins(target, topology, migrations, environment) {
 	if (!Array.isArray(topology?.plugins)) {
 		throw new Error("Plugin topology does not define plugins");
 	}
@@ -670,7 +724,9 @@ function compilePlugins(target, topology, migrations) {
 	return topology.plugins
 		.filter(({ manifest }) => !manifest?.plugin_id.includes("*"))
 		.map(({ manifest, worker_descriptor: workerDescriptor }) => {
-			const targetState = pluginEnabled(target, manifest.plugin_id) ? "active" : "installed";
+			const targetState = pluginEnabled(target, manifest.plugin_id, environment)
+				? "active"
+				: "installed";
 			const storeIds = new Set((manifest.stores ?? []).map(({ store_id: storeId }) => storeId));
 			for (const storeId of workerDescriptor?.store_ids ?? []) {
 				if (!storeIds.has(storeId)) {
@@ -709,7 +765,10 @@ function compilePlugins(target, topology, migrations) {
 		.toSorted(compareBy("pluginId"));
 }
 
-function pluginEnabled(target, pluginId) {
+function pluginEnabled(target, pluginId, environment) {
+	const configured = target.environments[environment]?.plugins?.[pluginId];
+	if (configured === false) return false;
+	if (pluginId === "supbrd-plugmod-vocostar") return target.customWorker?.pluginId === pluginId;
 	const featureByPlugin = {
 		"supbrd-plug-products": "products",
 		"supbrd-plugmod-billing": "billing",
@@ -737,7 +796,30 @@ function compileLogicalRoutes(target) {
 		...(target.domains.dashboard && target.domains.dashboard !== target.domains.site
 			? [{ id: "dashboard", service: "site", surface: "front-alias" }]
 			: []),
-		{ id: "mcp", service: "mcp", surface: "mcp" },
+		{
+			id: "mcp",
+			service: target.domains.mcp === target.domains.site ? "site" : "mcp",
+			surface: "mcp",
+			...(target.domains.mcp === target.domains.site ? { path: "/mcp" } : {}),
+		},
+		...(target.domainAliases ?? []).flatMap((alias, index) =>
+			alias.surface === "mailPreview" && target.mail.transport !== "capture"
+				? []
+				: [
+						{
+							id: `legacy-${index}`,
+							service:
+								alias.surface === "console"
+									? "site"
+									: alias.surface === "mailPreview"
+										? "email"
+										: alias.surface === "mcp"
+											? "mcp"
+											: "api",
+							surface: `legacy-${alias.surface}`,
+						},
+					],
+		),
 		...(target.mail.transport === "capture" && target.domains.mailPreview
 			? [{ id: "mail-preview", service: "email", surface: "mail-preview" }]
 			: []),
@@ -772,7 +854,12 @@ function compileLogicalHealthChecks(target) {
 		{ id: "sdk", kind: "public_surface", service: "api", path: "/health" },
 		{ id: "shortlinks", kind: "public_surface", service: "api", path: "/health" },
 		{ id: "files", kind: "public_surface", service: "api", path: "/health" },
-		{ id: "mcp", kind: "public_surface", service: "mcp", path: "/health" },
+		{
+			id: "mcp",
+			kind: "public_surface",
+			service: target.domains.mcp === target.domains.site ? "site" : "mcp",
+			path: target.domains.mcp === target.domains.site ? "/mcp/health" : "/health",
+		},
 		...(target.domains.dashboard && target.domains.dashboard !== target.domains.site
 			? [
 					{
@@ -796,25 +883,25 @@ function compileLogicalHealthChecks(target) {
 }
 
 function compilePhysicalRoutes(target, environment) {
-	return compileLogicalRoutes(target).map((route) => ({
-		...route,
-		hostname:
-			route.id === "support"
+	return compileLogicalRoutes(target).map((route) => {
+		const hostname = route.id.startsWith("legacy-")
+			? target.domainAliases[Number(route.id.slice(7))].hostname
+			: route.id === "support"
 				? target.domains.api
 				: route.id === "mail-preview"
 					? target.domains.mailPreview
-					: target.domains[route.id],
-		pattern:
-			route.id === "support"
-				? target.environments[environment].supportRouting.pattern
-				: route.id === "mail-preview"
-					? target.domains.mailPreview
-					: target.domains[route.id],
-		mode:
-			route.id === "support"
-				? target.environments[environment].supportRouting.mode
-				: target.environments[environment].publicRouting,
-	}));
+					: target.domains[route.id];
+		return {
+			...route,
+			hostname,
+			pattern:
+				route.id === "support" ? target.environments[environment].supportRouting.pattern : hostname,
+			mode:
+				route.id === "support"
+					? target.environments[environment].supportRouting.mode
+					: target.environments[environment].publicRouting,
+		};
+	});
 }
 
 function compilePhysicalHealthChecks(target) {
@@ -1059,13 +1146,21 @@ function expectedRoutePatterns(compiledTarget, service, { routesEnabled, sitePre
 			return support.mode === "active" ? [support.pattern] : [];
 		}
 		return routes
-			.filter(({ id }) => ["api", "auth", "shortlinks", "sdk", "files"].includes(id))
+			.filter(
+				({ id, surface }) =>
+					["api", "auth", "shortlinks", "sdk", "files"].includes(id) ||
+					surface === "legacy-shortlinks",
+			)
 			.map(({ pattern }) => pattern);
 	}
 	if (service === "site") {
 		return sitePreviewRoute
 			? routes.filter(({ id }) => id === "site").map(({ pattern }) => pattern)
-			: routes.filter((route) => route.service === "site").map(({ pattern }) => pattern);
+			: [
+					...new Set(
+						routes.filter((route) => route.service === "site").map(({ pattern }) => pattern),
+					),
+				];
 	}
 	const routeIds = {
 		email: "mail-preview",
@@ -1073,7 +1168,9 @@ function expectedRoutePatterns(compiledTarget, service, { routesEnabled, sitePre
 		messaging: "messaging",
 	};
 	const routeId = routeIds[service];
-	return routeId ? routes.filter(({ id }) => id === routeId).map(({ pattern }) => pattern) : [];
+	return routeId
+		? routes.filter((route) => route.service === service).map(({ pattern }) => pattern)
+		: [];
 }
 
 function assertTailConsumer(compiledTarget, service, configuration) {
