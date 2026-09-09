@@ -8,6 +8,129 @@ import 'package:test/test.dart';
 import '../dsl/edit.dart' as superboard;
 
 void main() {
+  test(
+    'upgrading the managed library preserves identifiers and unrelated pages',
+    () {
+      final project = compileApp(
+        buildApp((app) {
+          superboard.buildStarterEditFlow(app);
+          app.ensurePage(
+            'UnrelatedPage',
+            route: '/unrelated',
+            body: Scaffold(body: Text('Keep this page')),
+          );
+        }),
+      ).project;
+      final widget = customCode.findCustomWidget(
+        project,
+        name: 'SuperBoardPaywall',
+      )!;
+      final widgetKey = widget.identifier.key;
+      final expectedWidget = widget.code;
+      widget.code = widget.code.replaceFirst('Go Premium', 'Previous title');
+      final action = customCode.findCustomAction(
+        project,
+        name: 'superboardGetCustomerInfoJson',
+      )!;
+      final actionKey = action.identifier.key;
+      final expectedAction = action.code;
+      action.code = '${action.code}\n// Earlier revision\n';
+
+      compileApp(buildApp(superboard.buildManagedLibrary), project: project);
+
+      expect(
+        customCode
+            .findCustomWidget(project, name: 'SuperBoardPaywall')!
+            .identifier
+            .key,
+        widgetKey,
+      );
+      expect(
+        customCode.findCustomWidget(project, name: 'SuperBoardPaywall')!.code,
+        expectedWidget,
+      );
+      expect(
+        customCode
+            .findCustomAction(project, name: 'superboardGetCustomerInfoJson')!
+            .identifier
+            .key,
+        actionKey,
+      );
+      expect(
+        customCode
+            .findCustomAction(project, name: 'superboardGetCustomerInfoJson')!
+            .code,
+        expectedAction,
+      );
+      expect(findPage(project, name: 'UnrelatedPage'), isNotNull);
+    },
+  );
+
+  test('legacy actions retain their identity and use the canonical SDK', () {
+    String? previousKey;
+    final app = buildApp((app) {
+      app.customAction(
+        'opengrowGetCustomerInfoJson',
+        returns: string,
+        code: r'''
+import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as legacy;
+Future<String> opengrowGetCustomerInfoJson() => legacy.opengrowGetCustomerInfoJson();
+''',
+      );
+      app.raw((project) {
+        previousKey = customCode
+            .findCustomAction(project, name: 'opengrowGetCustomerInfoJson')!
+            .identifier
+            .key;
+      });
+      superboard.buildStarterEditFlow(app);
+    });
+    final project = compileApp(app).project;
+    final action = customCode.findCustomAction(
+      project,
+      name: 'opengrowGetCustomerInfoJson',
+    )!;
+    expect(action.identifier.key, previousKey);
+    expect(
+      action.code,
+      contains('package:superboard_flutterflow/superboard_flutterflow.dart'),
+    );
+    expect(action.code, contains('legacy.superboardGetCustomerInfoJson()'));
+    expect(action.code, isNot(contains('package:opengrow_flutterflow/')));
+  });
+
+  test('nullable FlutterFlow inputs have optional nullable Dart fields', () {
+    final project = compileApp(
+      buildApp(superboard.buildStarterEditFlow),
+    ).project;
+    final incompatible = <String>[];
+    for (final widget in project.customCode.customWidgets) {
+      final fields = {
+        for (final match in RegExp(
+          r'final\s+(String|bool|int|double|DateTime)(\?)?\s+(\w+)\s*;',
+        ).allMatches(widget.code))
+          match.group(3)!: match.group(2) == '?',
+      };
+      final required = RegExp(
+        r'\brequired\s+this\.(\w+)',
+      ).allMatches(widget.code).map((match) => match.group(1)).toSet();
+      for (final parameter in widget.parameters) {
+        final name = parameter.identifier.name;
+        if (!parameter.dataType.nonNullable &&
+            fields.containsKey(name) &&
+            (fields[name] != true || required.contains(name))) {
+          incompatible.add('${widget.identifier.name}.$name');
+        }
+      }
+    }
+    expect(
+      incompatible,
+      isEmpty,
+      reason:
+          'FlutterFlow may omit these inputs or bind nullable page parameters.',
+    );
+  });
+
   for (final hasLegacyBindings in [false, true]) {
     test(
       'bootstrap migration repairs ${hasLegacyBindings ? "legacy" : "missing"} library bindings',
