@@ -9,14 +9,14 @@ Import-ready library for replacing RevenueCat actions in FlutterFlow.
 
 ## Installation
 
-Add the published FlutterFlow package `opengrow_flutterflow`
-at the immutable release `sdk-flutterflow-v2.2.5`:
+Add the published FlutterFlow package `superboard_flutterflow`
+at the immutable release `sdk-flutterflow-v3.0.0`:
 
 ```yaml
-opengrow_flutterflow:
+superboard_flutterflow:
   git:
     url: https://github.com/mabzadev/superboard.git
-    ref: sdk-flutterflow-v2.2.5
+    ref: sdk-flutterflow-v3.0.0
     path: sdks/flutterflow
 ```
 
@@ -31,23 +31,11 @@ flutter pub get
 
 <!-- superboard-sdk-documentation:flutterflow:end -->
 
-## SuperBoard 3.0.0 candidate
+## SuperBoard 3.0.0
 
-The source on `dev` is the reviewed v3 candidate. It merges the complete
-Support surface into one `superboard_flutterflow` package and depends on
-`superboard_flutter`. After the catalogue candidate is published at its
-immutable ref, new FlutterFlow projects use only that single package. The exact
-candidate ref is declared in `config/sdk-libraries.json` and the Git-owned
-FlutterFlow library contract; it is not treated as published documentation
-before the tag exists.
-
-```yaml
-superboard_flutterflow:
-  git:
-    url: https://github.com/mabzadev/superboard.git
-    ref: <immutable-v3-ref-from-the-release-catalogue>
-    path: sdks/flutterflow
-```
+The published v3 package includes the complete Support surface in
+`superboard_flutterflow` and depends on `superboard_flutter`. Use the immutable
+installation above; the catalogue records its release commit.
 
 Existing projects must switch to the single v3 package atomically. The release
 catalogue and Git-owned FlutterFlow library contract remain the source of truth

@@ -714,7 +714,6 @@ describe("platform status", () => {
       lifecycle: "active",
       license: "MIT",
       licensePath: "sdks/flutterflow/LICENSE",
-      candidatePackageName: "superboard_flutterflow",
     });
     expect(
       body.data.libraries.find((library: any) => library.id === "javascript"),

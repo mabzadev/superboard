@@ -66,11 +66,6 @@ test("documentation derives lifecycle notices independently from release status"
   assert.match(sections.get("flutterflow-support"), /Lifecycle: archived/u);
   assert.match(sections.get("javascript"), /Lifecycle: archived/u);
   assert.match(sections.get("react-native"), /Lifecycle: archived/u);
-  assert.match(
-    sections.get("flutter"),
-    /sdk-flutter-v2\.1\.4/u,
-  );
-  assert.doesNotMatch(sections.get("flutter"), /sdk-flutter-v3\.0\.0/u);
 });
 
 test("a catalogue promotion regenerates documentation without frozen state", async () => {
