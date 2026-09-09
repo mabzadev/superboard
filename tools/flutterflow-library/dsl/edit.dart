@@ -19,7 +19,7 @@ Future<void> main(List<String> args) async {
   final options = _parseCliOptions(args);
   try {
     await flutterFlowAI(
-      buildStarterEditFlow,
+      buildManagedLibrary,
       apiKey: options.apiKey,
       baseUrl: options.baseUrl,
       projectName: options.projectName,
@@ -138,7 +138,56 @@ Options:
 ''');
 }
 
-void buildStarterEditFlow(App app) {
+void buildManagedLibrary(App app) {
+  final desired = compileApp(buildApp(buildStarterEditFlow)).project;
+  app.raw((project) {
+    for (final widget in desired.customCode.customWidgets) {
+      if (custom_code_helpers.findCustomWidget(
+            project,
+            name: widget.identifier.name,
+          ) !=
+          null) {
+        custom_code_helpers.updateCustomWidget(
+          project,
+          name: widget.identifier.name,
+          code: widget.code,
+          description: widget.description,
+        );
+      }
+    }
+    for (final action in desired.customCode.customActions) {
+      if (custom_code_helpers.findCustomAction(
+            project,
+            name: action.identifier.name,
+          ) !=
+          null) {
+        custom_code_helpers.updateCustomAction(
+          project,
+          name: action.identifier.name,
+          code: action.code,
+          description: action.description,
+        );
+      }
+    }
+    final existingBlocks = {
+      for (final name in ['SuperBoardBuyPackage', 'SuperBoardRestorePurchases'])
+        if (action_block_helpers.findActionBlock(project, name: name) != null)
+          name,
+    };
+    compileApp(
+      buildApp(
+        (app) =>
+            buildStarterEditFlow(app, existingActionBlocks: existingBlocks),
+      ),
+      project: project,
+    );
+  });
+}
+
+void buildStarterEditFlow(
+  App app, {
+  Set<String> existingActionBlocks = const {},
+}) {
   final projectKeyId = FFIdentifier(
     name: 'projectKey',
     key: 'superboard_project_key',
@@ -2189,43 +2238,46 @@ class SuperBoardFlowsBootstrap extends StatelessWidget {
     super.key,
     this.width,
     this.height,
-    required this.apiUrl,
-    required this.projectId,
+    this.apiUrl,
+    this.projectId,
     this.environment = 'production',
-    required this.userId,
+    this.userId,
     this.language = 'disabled',
     this.userPropertiesJson = '{}',
-    required this.debug,
-    required this.realtime,
+    this.debug,
+    this.realtime,
   });
 
   final double? width;
   final double? height;
-  final String apiUrl;
-  final String projectId;
-  final String environment;
-  final String userId;
-  final String language;
-  final String userPropertiesJson;
-  final bool debug;
-  final bool realtime;
+  final String? apiUrl;
+  final String? projectId;
+  final String? environment;
+  final String? userId;
+  final String? language;
+  final String? userPropertiesJson;
+  final bool? debug;
+  final bool? realtime;
 
   @override
   Widget build(BuildContext context) {
-    if (apiUrl.isEmpty || projectId.isEmpty || environment.isEmpty) {
+    final resolvedApiUrl = apiUrl ?? '';
+    final resolvedProjectId = projectId ?? '';
+    final resolvedEnvironment = environment ?? 'production';
+    if (resolvedApiUrl.isEmpty || resolvedProjectId.isEmpty || resolvedEnvironment.isEmpty) {
       throw StateError('SuperBoard Flows configuration is incomplete.');
     }
     return superboard.SuperBoardFlowsBootstrap(
       width: width,
       height: height,
-      apiUrl: apiUrl,
-      projectId: projectId,
-      environment: environment,
-      userId: userId,
-      language: language,
-      userPropertiesJson: userPropertiesJson,
-      debug: debug,
-      realtime: realtime,
+      apiUrl: resolvedApiUrl,
+      projectId: resolvedProjectId,
+      environment: resolvedEnvironment,
+      userId: userId ?? '',
+      language: language ?? 'disabled',
+      userPropertiesJson: userPropertiesJson ?? '{}',
+      debug: debug ?? false,
+      realtime: realtime ?? false,
       navigationAdapter: superboard.SuperBoardCallbackFlowNavigationAdapter(
         location: () => GoRouterState.of(context).uri.toString(),
         onNavigate: (location) => context.go(location),
@@ -2249,19 +2301,21 @@ class SuperBoardFlutterFlowFlowsSlot extends StatelessWidget {
     super.key,
     this.width,
     this.height,
-    required this.slotId,
+    this.slotId,
   });
 
   final double? width;
   final double? height;
-  final String slotId;
+  final String? slotId;
 
   @override
   Widget build(BuildContext context) {
+    final identifier = slotId ?? '';
+    if (identifier.isEmpty) return SizedBox(width: width, height: height);
     return superboard.SuperBoardFlutterFlowFlowsSlot(
       width: width,
       height: height,
-      slotId: slotId,
+      slotId: identifier,
     );
   }
 }
@@ -2282,19 +2336,19 @@ class SuperBoardFlutterFlowFlowsOverlay extends StatelessWidget {
     super.key,
     this.width,
     this.height,
-    required this.showDebugOverlay,
+    this.showDebugOverlay,
   });
 
   final double? width;
   final double? height;
-  final bool showDebugOverlay;
+  final bool? showDebugOverlay;
 
   @override
   Widget build(BuildContext context) {
     return superboard.SuperBoardFlutterFlowFlowsOverlay(
       width: width,
       height: height,
-      showDebugOverlay: showDebugOverlay,
+      showDebugOverlay: showDebugOverlay ?? false,
     );
   }
 }
@@ -2315,19 +2369,21 @@ class SuperBoardFlutterFlowFlowAnchor extends StatelessWidget {
     super.key,
     this.width,
     this.height,
-    required this.anchorName,
+    this.anchorName,
   });
 
   final double? width;
   final double? height;
-  final String anchorName;
+  final String? anchorName;
 
   @override
   Widget build(BuildContext context) {
+    final identifier = anchorName ?? '';
+    if (identifier.isEmpty) return SizedBox(width: width, height: height);
     return superboard.SuperBoardFlutterFlowFlowAnchor(
       width: width,
       height: height,
-      anchorName: anchorName,
+      anchorName: identifier,
     );
   }
 }
@@ -2415,11 +2471,11 @@ class SuperBoardPaywall extends StatelessWidget {
     super.key,
     this.width,
     this.height,
-    required this.offeringIdentifier,
-    required this.title,
-    required this.subtitle,
-    required this.purchaseLabel,
-    required this.restoreLabel,
+    this.offeringIdentifier,
+    this.title,
+    this.subtitle,
+    this.purchaseLabel,
+    this.restoreLabel,
     this.successRouteName = '/',
     this.closeRouteName = '/',
     this.unavailableRouteName = '/',
@@ -2427,14 +2483,14 @@ class SuperBoardPaywall extends StatelessWidget {
 
   final double? width;
   final double? height;
-  final String offeringIdentifier;
-  final String title;
-  final String subtitle;
-  final String purchaseLabel;
-  final String restoreLabel;
-  final String successRouteName;
-  final String closeRouteName;
-  final String unavailableRouteName;
+  final String? offeringIdentifier;
+  final String? title;
+  final String? subtitle;
+  final String? purchaseLabel;
+  final String? restoreLabel;
+  final String? successRouteName;
+  final String? closeRouteName;
+  final String? unavailableRouteName;
 
   void _leave(BuildContext context, String routeName) {
     final destination = routeName.trim();
@@ -2452,15 +2508,15 @@ class SuperBoardPaywall extends StatelessWidget {
     return superboard.SuperBoardPaywall(
       width: width,
       height: height,
-      offeringIdentifier: offeringIdentifier,
-      title: title,
-      subtitle: subtitle,
-      purchaseLabel: purchaseLabel,
-      restoreLabel: restoreLabel,
-      onPurchased: () => _leave(context, successRouteName),
-      onRestored: () => _leave(context, successRouteName),
-      onClosed: () => _leave(context, closeRouteName),
-      onUnavailable: () => _leave(context, unavailableRouteName),
+      offeringIdentifier: offeringIdentifier ?? 'default',
+      title: title ?? 'Go Premium',
+      subtitle: subtitle ?? 'Unlock every feature.',
+      purchaseLabel: purchaseLabel ?? 'Continue',
+      restoreLabel: restoreLabel ?? 'Restore purchases',
+      onPurchased: () => _leave(context, successRouteName ?? '/'),
+      onRestored: () => _leave(context, successRouteName ?? '/'),
+      onClosed: () => _leave(context, closeRouteName ?? '/'),
+      onUnavailable: () => _leave(context, unavailableRouteName ?? '/'),
     );
   }
 }
@@ -2505,15 +2561,15 @@ class SuperBoardOnboarding extends StatelessWidget {
 
   final double? width;
   final double? height;
-  final String placement;
-  final String customerId;
-  final String anonymousId;
-  final String appVersion;
-  final String locale;
-  final String fallbackTitle;
-  final String fallbackBody;
-  final String completionRouteName;
-  final String unavailableRouteName;
+  final String? placement;
+  final String? customerId;
+  final String? anonymousId;
+  final String? appVersion;
+  final String? locale;
+  final String? fallbackTitle;
+  final String? fallbackBody;
+  final String? completionRouteName;
+  final String? unavailableRouteName;
 
   void _leave(BuildContext context, String routeName) {
     final destination = routeName.trim();
@@ -2530,21 +2586,21 @@ class SuperBoardOnboarding extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String? optional(String value) => value.trim().isEmpty ? null : value.trim();
+    String? optional(String? value) => value == null || value.trim().isEmpty ? null : value.trim();
     return superboard.SuperBoardOnboarding(
       width: width,
       height: height,
-      placement: placement.trim().isEmpty ? 'app_launch' : placement.trim(),
+      placement: placement?.trim().isNotEmpty == true ? placement!.trim() : 'app_launch',
       customerId: optional(customerId),
       anonymousId: optional(anonymousId),
       appVersion: optional(appVersion),
       locale: optional(locale),
-      fallbackTitle: fallbackTitle,
-      fallbackBody: fallbackBody,
-      onCompleted: () => _leave(context, completionRouteName),
-      onSkipped: () => _leave(context, completionRouteName),
-      onClosed: () => _leave(context, completionRouteName),
-      onUnavailable: () => _leave(context, unavailableRouteName),
+      fallbackTitle: fallbackTitle ?? '',
+      fallbackBody: fallbackBody ?? '',
+      onCompleted: () => _leave(context, completionRouteName ?? '/superboard-paywall'),
+      onSkipped: () => _leave(context, completionRouteName ?? '/superboard-paywall'),
+      onClosed: () => _leave(context, completionRouteName ?? '/superboard-paywall'),
+      onUnavailable: () => _leave(context, unavailableRouteName ?? '/'),
     );
   }
 }
@@ -2607,14 +2663,14 @@ class SuperBoardCustomerCenter extends StatelessWidget {
 
   final double? width;
   final double? height;
-  final String title;
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
     return superboard.SuperBoardCustomerCenter(
       width: width,
       height: height,
-      title: title.trim().isEmpty ? 'My purchases' : title.trim(),
+      title: title?.trim().isNotEmpty == true ? title!.trim() : 'My purchases',
     );
   }
 }
@@ -2692,6 +2748,30 @@ class SuperBoardCustomerCenter extends StatelessWidget {
       'OGRestoreBridge': 'SuperBoardRestorePurchasesButton',
     };
 
+    const legacyPackage =
+        'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+    const currentPackage =
+        'package:superboard_flutterflow/superboard_flutterflow.dart';
+    final legacyImports = RegExp(
+      r'''import\s+['"]package:opengrow_flutterflow/opengrow_flutterflow\.dart['"]\s+as\s+(\w+)\s*;''',
+    );
+    for (final action in project.customCode.customActions) {
+      final imports = legacyImports.allMatches(action.code).toList();
+      if (imports.isEmpty) continue;
+      var code = action.code;
+      for (final match in imports) {
+        final alias = match.group(1)!;
+        code = code.replaceAll(
+          RegExp('\\b${RegExp.escape(alias)}\\.opengrow(?=[A-Z])'),
+          '$alias.superboard',
+        );
+      }
+      action.code = code
+          .replaceAll(legacyPackage, currentPackage)
+          .replaceAll("'OpenGrow ", "'SuperBoard ")
+          .replaceAll('"OpenGrow ', '"SuperBoard ');
+    }
+
     void visit(FFNode node, void Function(FFNode node) visitor) {
       visitor(node);
       for (final child in node.children) {
@@ -2764,37 +2844,39 @@ class SuperBoardCustomerCenter extends StatelessWidget {
     }
   });
 
-  app.actionBlock(
-    'SuperBoardBuyPackage',
-    params: {
-      'packageIdentifier': string,
-      'offeringIdentifier': string.withDefault('default'),
-    },
-    returns: string,
-    actions: [
-      UpdateAppState.set(
-        'superboardPackageIdentifier',
-        const ActionBlockParam('packageIdentifier'),
-      ),
-      UpdateAppState.set(
-        'superboardOfferingIdentifier',
-        const ActionBlockParam('offeringIdentifier'),
-      ),
-      CallCustomAction(purchaseFromLibraryState, outputAs: 'purchaseOutcome'),
-      Terminate(const ActionOutput('purchaseOutcome')),
-    ],
-    description: 'Purchases a package from an SuperBoard offering.',
-  );
+  if (!existingActionBlocks.contains('SuperBoardBuyPackage'))
+    app.actionBlock(
+      'SuperBoardBuyPackage',
+      params: {
+        'packageIdentifier': string,
+        'offeringIdentifier': string.withDefault('default'),
+      },
+      returns: string,
+      actions: [
+        UpdateAppState.set(
+          'superboardPackageIdentifier',
+          const ActionBlockParam('packageIdentifier'),
+        ),
+        UpdateAppState.set(
+          'superboardOfferingIdentifier',
+          const ActionBlockParam('offeringIdentifier'),
+        ),
+        CallCustomAction(purchaseFromLibraryState, outputAs: 'purchaseOutcome'),
+        Terminate(const ActionOutput('purchaseOutcome')),
+      ],
+      description: 'Purchases a package from an SuperBoard offering.',
+    );
 
-  app.actionBlock(
-    'SuperBoardRestorePurchases',
-    returns: bool_,
-    actions: [
-      CallCustomAction(restore, outputAs: 'restored'),
-      Terminate(const ActionOutput('restored')),
-    ],
-    description: 'Restores purchases and entitlements.',
-  );
+  if (!existingActionBlocks.contains('SuperBoardRestorePurchases'))
+    app.actionBlock(
+      'SuperBoardRestorePurchases',
+      returns: bool_,
+      actions: [
+        CallCustomAction(restore, outputAs: 'restored'),
+        Terminate(const ActionOutput('restored')),
+      ],
+      description: 'Restores purchases and entitlements.',
+    );
 
   // Keep handles referenced so their declaration intent remains explicit.
   initializeAuthenticated;

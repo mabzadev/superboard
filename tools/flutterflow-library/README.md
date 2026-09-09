@@ -29,6 +29,11 @@ The migration remaps existing widget-node references from
 widgets above, then removes the legacy definitions. Re-running the DSL is
 idempotent.
 
+Updates preserve existing widget and action identifiers. Compatibility actions
+keep their names and call the canonical SDK; their former package imports are
+replaced. Existing composed pages and action blocks remain available. Tests
+check nullable FlutterFlow inputs against the Dart fields exposed by widgets.
+
 ## Local verification
 
 The manual `sync-flutterflow-library.yml` workflow runs from `dev`. It checks
