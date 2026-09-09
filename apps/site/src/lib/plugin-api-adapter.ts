@@ -1,3 +1,4 @@
+import { pluginComponentForContribution } from "@superboard/contracts/plugin-packages";
 import {
 	readJsonObjectLimited,
 	readBytesLimited,
@@ -107,7 +108,12 @@ export function matchPluginApiAdapter(
 		!(
 			url.pathname.startsWith("/api/v1/") ||
 			url.pathname.startsWith("/api/v2/") ||
-			(["supbrd-plug-content", "supbrd-plug-audit", "supbrd-plug-settings"].includes(pluginId) &&
+			([
+				"supbrd-plug-content",
+				"supbrd-plug-audit",
+				"supbrd-plug-settings",
+				"supbrd-plugmod-vocostar",
+			].includes(pluginId) &&
 				url.pathname.startsWith("/_emdash/api/"))
 		)
 	)
@@ -154,9 +160,9 @@ export async function dispatchPluginApiAdapter(
 	const denied = requirePluginOperator(context, { mutation: context.request.method !== "GET" });
 	if (denied) return denied;
 	const env = envOverride ?? getSiteEnv();
-	const pluginId = context.params.pluginId ?? "";
 	const localId =
 		(kind === "command" ? context.params.commandId : context.params.dataSourceId) ?? "";
+	const pluginId = pluginComponentForContribution(context.params.pluginId ?? "", localId);
 	const contributionId = localId.includes(`.${kind}.`) ? localId : `${pluginId}.${kind}.${localId}`;
 	const inactive = await requireActiveSuperBoardPlugin(env.DB, {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
@@ -218,7 +224,12 @@ export async function dispatchPluginApiAdapter(
 			...(body !== undefined ? { body } : {}),
 		});
 		if (
-			["supbrd-plug-content", "supbrd-plug-audit", "supbrd-plug-settings"].includes(pluginId) &&
+			[
+				"supbrd-plug-content",
+				"supbrd-plug-audit",
+				"supbrd-plug-settings",
+				"supbrd-plugmod-vocostar",
+			].includes(pluginId) &&
 			destination.pathname.startsWith("/_emdash/api/")
 		) {
 			const dispatch = () =>
@@ -226,7 +237,7 @@ export async function dispatchPluginApiAdapter(
 					? dispatchContentPluginApi(context, request)
 					: pluginId === "supbrd-plug-audit"
 						? dispatchAuditPluginApi(request, env)
-						: dispatchSettingsPluginApi(context, request);
+						: dispatchSettingsPluginApi(context, request, pluginId);
 			if (matched.method === "GET") return dispatch();
 			return executeRepositoryFirstCommand({
 				env,

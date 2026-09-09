@@ -1,4 +1,6 @@
 "use client";
+import { useStudioI18n } from "../../../studio/i18n.js";
+
 
 import {
 	Archive,
@@ -1477,6 +1479,7 @@ function CampaignManagerPage() {
 }
 
 export function MarketingStatisticsPage() {
+	const {t}=useStudioI18n();
 	const { selectedProject } = useProjectSelection();
 	const [statistics, setStatistics] = useState<MarketingStatistics>();
 	const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
@@ -1511,8 +1514,8 @@ export function MarketingStatisticsPage() {
 	useEffect(() => void load(), [load]);
 	return (
 		<ModulePage
-			title="Marketing statistics"
-			description="Delivery, opens, clicks, bounces, complaints, unsubscribes and campaign progression."
+			title={t("Marketing statistics")}
+			description={t("Delivery, opens, clicks, bounces, complaints, unsubscribes and campaign progression.")}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -1521,37 +1524,37 @@ export function MarketingStatisticsPage() {
 				<div className="space-y-6">
 					<div className="flex flex-wrap gap-2">
 						<Input
-							aria-label="Statistics from"
+							aria-label={t("Statistics from")}
 							type="date"
 							className="w-auto"
 							value={from}
 							onChange={(event) => setFrom(event.target.value)}
 						/>
 						<Input
-							aria-label="Statistics to"
+							aria-label={t("Statistics to")}
 							type="date"
 							className="w-auto"
 							value={to}
 							onChange={(event) => setTo(event.target.value)}
 						/>
 						<select
-							aria-label="Statistics interval"
+							aria-label={t("Statistics interval")}
 							className={`${selectClass} w-auto`}
 							value={interval}
 							onChange={(event) => setInterval(event.target.value)}
 						>
-							<option value="hour">Hour</option>
-							<option value="day">Day</option>
-							<option value="week">Week</option>
-							<option value="month">Month</option>
+							<option value="hour">{t("Hour")}</option>
+							<option value="day">{t("Day")}</option>
+							<option value="week">{t("Week")}</option>
+							<option value="month">{t("Month")}</option>
 						</select>
 						<select
-							aria-label="Statistics campaign"
+							aria-label={t("Statistics campaign")}
 							className={`${selectClass} min-w-56 w-auto`}
 							value={campaignId}
 							onChange={(event) => setCampaignId(event.target.value)}
 						>
-							<option value="">All campaigns</option>
+							<option value="">{t("All campaigns")}</option>
 							{campaigns.map((campaign) => (
 								<option key={campaign.id} value={campaign.id}>
 									{campaign.name}
@@ -1560,8 +1563,7 @@ export function MarketingStatisticsPage() {
 						</select>
 						<Button variant="outline" onClick={() => void load()}>
 							<RefreshCw />
-							Refresh
-						</Button>
+							{t("Refresh")}</Button>
 					</div>
 					<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 						{Object.entries(statistics?.totals || {}).map(([key, value]) => (
@@ -1577,19 +1579,18 @@ export function MarketingStatisticsPage() {
 					</div>
 					<Card>
 						<CardHeader>
-							<CardTitle>Time series</CardTitle>
+							<CardTitle>{t("Time series")}</CardTitle>
 							<CardDescription>
-								{statistics?.series.length || 0} measured event buckets
-							</CardDescription>
+								{statistics?.series.length || 0} {t("measured event buckets")}</CardDescription>
 						</CardHeader>
 						<CardContent className="max-h-96 overflow-auto">
 							{statistics?.series.length ? (
 								<table className="w-full text-sm">
 									<thead>
 										<tr className="border-b text-left">
-											<th className="p-2">Period</th>
-											<th className="p-2">Event</th>
-											<th className="p-2 text-right">Total</th>
+											<th className="p-2">{t("Period")}</th>
+											<th className="p-2">{t("Event")}</th>
+											<th className="p-2 text-right">{t("Total")}</th>
 										</tr>
 									</thead>
 									<tbody>

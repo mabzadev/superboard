@@ -59,7 +59,8 @@ export function FrontRuntimeProviders({
 			});
 		return () => controller.abort();
 	}, [requiresScope, scope]);
-	const parameters = { lang: projection.locale, ...mount?.parameters };
+	const locale = projection.locale;
+	const parameters = { ...mount?.parameters, lang: locale };
 	return (
 		<ThemeProvider
 			attribute={["class", "data-theme"]}
@@ -72,13 +73,15 @@ export function FrontRuntimeProviders({
 				value={{
 					path: projection.path,
 					parameters,
-					locale: projection.locale,
+					locale,
 					instanceId: projection.instance_id,
 					pluginId,
 					operator: projection.operator ?? null,
 					projectScope: scope,
 					activePluginIds: projection.plugin_lock.map((entry) => entry.plugin_id),
 					publicEndpoints: projection.public_endpoints,
+					deployment: projection.deployment,
+					environments: projection.environments,
 				}}
 			>
 				<NavigationProvider path={projection.path} parameters={parameters}>

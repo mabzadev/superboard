@@ -10,6 +10,8 @@ void main() {
     final app = buildApp(superboard.buildStarterEditFlow);
     final project = compileApp(app).project;
 
+    expect(project.name, 'SuperBoard');
+
     expect(findActionBlock(project, name: 'SuperBoardBuyPackage'), isNotNull);
     expect(
       findActionBlock(project, name: 'SuperBoardRestorePurchases'),

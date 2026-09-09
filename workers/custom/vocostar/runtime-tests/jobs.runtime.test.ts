@@ -21,6 +21,33 @@ describe("VocoStar custom Worker with D1", () => {
     ]);
   });
 
+	it("operator job lists and retries stay inside the selected project", async () => {
+		const first = await authorized("/internal/v1/jobs", {
+			method: "POST",
+			body: JSON.stringify(mediaJob("admin:project:1", 0)),
+		});
+		const firstJob = await first.json<{ id: string }>();
+		const second = await authorized("/internal/v1/jobs", {
+			method: "POST",
+			headers: { "x-custom-worker-project": "22-test" },
+			body: JSON.stringify({ ...mediaJob("admin:project:2", 0), projectRef: "22-test" }),
+		});
+		const secondJob = await second.json<{ id: string }>();
+		const response = await SELF.fetch(
+			"https://custom.test/internal/v1/operator/projects/11-test/jobs",
+			{ headers: { "x-custom-worker-token": "custom-runtime-secret" } },
+		);
+		expect(response.status).toBe(200);
+		const result = await response.json<{ data: { items: Array<{ id: string }> } }>();
+		expect(result.data.items.map(({ id }) => id)).toEqual([firstJob.id]);
+		const retry = await SELF.fetch(
+			`https://custom.test/internal/v1/operator/projects/11-test/jobs/${secondJob.id}/retry`,
+			{ method: "POST", headers: { "x-custom-worker-token": "custom-runtime-secret" } },
+		);
+		expect(retry.status).toBe(404);
+	});
+
+
   it("reports the applied custom D1 schema revision", async () => {
     const response = await SELF.fetch("https://custom.test/health");
     expect(response.status).toBe(200);
@@ -29,9 +56,9 @@ describe("VocoStar custom Worker with D1", () => {
       status: "ok",
       schema: {
         status: "current",
-        expectedMigration: "0004_owner_scoped_file_ids.sql",
-        latestMigration: "0004_owner_scoped_file_ids.sql",
-        appliedMigrationCount: 5,
+        expectedMigration: "0005_runtime_identity_bridge.sql",
+        latestMigration: "0005_runtime_identity_bridge.sql",
+        appliedMigrationCount: 6,
       },
     });
     const manifest = await authorized("/internal/v1/manifest");

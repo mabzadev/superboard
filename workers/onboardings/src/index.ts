@@ -1,3 +1,4 @@
+import { localizeExperienceDefinition } from "@superboard/contracts/experience-localization";
 import {
 	verifyInternalProjectContextRequest,
 	type InternalProjectContext,
@@ -543,7 +544,7 @@ async function resolve(c: OnboardingContext) {
 			version: version.version,
 			experience_id: experienceId,
 			variant_id: variantId,
-			definition: JSON.parse(version.definition_json),
+			definition: localizeExperienceDefinition(JSON.parse(version.definition_json), input.locale),
 		},
 	});
 }

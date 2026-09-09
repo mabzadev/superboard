@@ -145,7 +145,7 @@ test("blocks paths, methods, query parameters and project scope outside the veri
 			}),
 		},
 	);
-	expect(foreign.status).toBe(404);
+	expect(foreign.status).toBe(403);
 });
 
 test("declared settings commands reject unrelated paths instead of writing a generic store", async () => {

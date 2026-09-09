@@ -15,7 +15,13 @@ hoistPattern:
   - "*"
   - "!@cloudflare/workers-types"
 packageExtensions:
-  "@oslojs/crypto@1.0.1":
+  "@oslojs/webauthn@1.0.0":
+    dependencies:
+      "@oslojs/asn1": "1.0.0"
+      "@oslojs/binary": "1.0.0"
+      "@oslojs/cbor": "1.0.0"
+      "@oslojs/crypto": "1.0.0"
+  "@oslojs/crypto@1.0.x":
     "dependencies":
       "@oslojs/asn1": "1.0.0"
       "@oslojs/binary": "1.0.0"
@@ -211,7 +217,7 @@ catalog:
   "@lingui/babel-plugin-lingui-macro": ^5.9.4
   "@lingui/cli": ^5.9.4
   "@lingui/conf": ^5.9.4
-  "@lingui/core": ^5.9.4
+  "@lingui/core": ^5.9.5
   "@lingui/macro": ^5.9.4
   "@lingui/react": ^5.9.4
   "@oslojs/crypto": ^1.0.1

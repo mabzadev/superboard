@@ -1,6 +1,8 @@
 import type { BillingEnv } from '../types';
 import { constantTimeEqual } from '@superboard/contracts/secret';
 
+type CredentialEnv = Pick<BillingEnv, "STORE_CREDENTIALS_ENCRYPTION_KEY" | "STORE_CREDENTIALS_ENCRYPTION_KEYS" | "STORE_CREDENTIALS_ACTIVE_KEY_VERSION" | "CREDENTIAL_KEY_SCOPE">;
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -17,7 +19,7 @@ async function encryptionKey(material: string): Promise<CryptoKey> {
   return crypto.subtle.importKey('raw', digest, 'AES-GCM', false, ['encrypt', 'decrypt']);
 }
 
-export function credentialKeyMaterial(env: BillingEnv): string {
+export function credentialKeyMaterial(env: CredentialEnv): string {
   const keyring = credentialKeyring(env);
   const version = env.STORE_CREDENTIALS_ACTIVE_KEY_VERSION || Object.keys(keyring).sort().at(-1);
   if (version && keyring[version]) return keyring[version];
@@ -26,7 +28,7 @@ export function credentialKeyMaterial(env: BillingEnv): string {
   return legacy;
 }
 
-function credentialKeyring(env: BillingEnv): Record<string, string> {
+function credentialKeyring(env: CredentialEnv): Record<string, string> {
   if (!env.STORE_CREDENTIALS_ENCRYPTION_KEYS) return {};
   try {
     const parsed = JSON.parse(env.STORE_CREDENTIALS_ENCRYPTION_KEYS);
@@ -37,7 +39,7 @@ function credentialKeyring(env: BillingEnv): Record<string, string> {
   }
 }
 
-export async function encryptCredential(env: BillingEnv, secret: string): Promise<string> {
+export async function encryptCredential(env: CredentialEnv, secret: string): Promise<string> {
   const keyring = credentialKeyring(env);
   const version = env.STORE_CREDENTIALS_ACTIVE_KEY_VERSION || Object.keys(keyring).sort().at(-1) || 'v1';
   const key = keyring[version] || credentialKeyMaterial(env);
@@ -45,7 +47,7 @@ export async function encryptCredential(env: BillingEnv, secret: string): Promis
   return `${version}.${encrypted.slice(3)}`;
 }
 
-export async function decryptCredential(env: BillingEnv, ciphertext: string): Promise<string> {
+export async function decryptCredential(env: CredentialEnv, ciphertext: string): Promise<string> {
   const separator = ciphertext.indexOf('.');
   const version = separator > 0 ? ciphertext.slice(0, separator) : '';
   const keyring = credentialKeyring(env);
@@ -58,7 +60,7 @@ export async function decryptCredential(env: BillingEnv, ciphertext: string): Pr
 export function scopedStoreCredential(row: {
   configuration_encrypted?: string | null;
   billing_configuration_encrypted?: string | null;
-}, env: BillingEnv): string | null {
+}, env: CredentialEnv): string | null {
   return env.CREDENTIAL_KEY_SCOPE === 'billing'
     ? row.billing_configuration_encrypted || null
     : row.configuration_encrypted || null;

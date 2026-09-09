@@ -28,7 +28,7 @@ async function oauthSecretMatches(
 
 // =============================================
 // OAuth2 Doorkeeper-compatible endpoints
-// Compatible with the OpenGrow dashboard OAuth contract.
+// Compatible with the SuperBoard dashboard OAuth contract.
 // =============================================
 
 // POST /oauth/token — password grant + refresh_token grant

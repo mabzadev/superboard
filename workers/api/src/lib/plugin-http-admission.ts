@@ -2,19 +2,28 @@ import { resolvePluginApiOwner } from "@superboard/contracts/plugin-api-owner";
 import { runPluginTask, PluginTaskUnavailable } from "@superboard/contracts/plugin-task";
 import type { MiddlewareHandler } from "hono";
 
+import { isVocostarWebSocketPath } from "../routes/vocostar-runtime.js";
 import type { Env } from "../types.js";
 
 export const pluginHttpAdmission: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
 	const url = new URL(c.req.url);
 	const host = c.req.header("Host") ?? url.hostname;
+	const applicationRoute =
+		isVocostarWebSocketPath(url.pathname) ||
+		url.pathname === "/custom/v1" ||
+		url.pathname.startsWith("/custom/v1/") ||
+		url.pathname.startsWith("/api/v1/sdk/custom/") ||
+		url.pathname.startsWith("/api/v1/platform/custom/");
 	const plugin =
-		host === c.env.AUTH_DOMAIN
-			? "supbrd-plug-user"
-			: host === c.env.FILES_DOMAIN
-				? "supbrd-plugmod-files"
-				: host === c.env.SHORTLINK_DOMAIN
-					? "supbrd-plugmod-dynamic-links"
-					: resolvePluginApiOwner(url.pathname);
+		applicationRoute && c.env.CUSTOM_WORKER_PLUGIN_ID
+			? c.env.CUSTOM_WORKER_PLUGIN_ID
+			: host === c.env.AUTH_DOMAIN
+				? "supbrd-plug-user"
+				: host === c.env.FILES_DOMAIN
+					? "supbrd-plugmod-files"
+					: host === c.env.SHORTLINK_DOMAIN
+						? "supbrd-plugmod-dynamic-links"
+						: resolvePluginApiOwner(url.pathname);
 	if (plugin === "supbrd-core" || c.req.method === "OPTIONS") return next();
 	try {
 		const result = await runPluginTask(

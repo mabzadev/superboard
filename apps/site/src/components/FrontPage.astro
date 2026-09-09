@@ -9,28 +9,28 @@ import {
 } from "../lib/native-front-views.js";
 import { projectNativeFrontPresentation } from "../lib/native-front-presentation.js";
 import { ensureSuperBoardViews } from "../lib/superboard-views.js";
-import { createUserFrontI18n, resolveUserFrontLocale } from "../lib/user-front-i18n.js";
+import { createUserFrontI18n, resolveUserFrontRequestLocale } from "../lib/user-front-i18n.js";
 import { NativeFrontApp } from "./NativeFrontApp.js";
 import { resolveOperatorProjectScope } from "../lib/operator-project-scope.js";
 import { getSiteEnv } from "../lib/site-env.js";
 
 import "../styles/dashboard-views.css";
 import "../styles/native-front.css";
+import "../../../../packages/supbrd-front-ui/src/styles/kumo.css";
 
 interface Props {
 	model: FrontPageModel;
 }
 
 const { model } = Astro.props;
-const requestedLocale = Astro.url.searchParams.get("lang")
-	?? Astro.request.headers.get("accept-language");
-const locale = resolveUserFrontLocale(requestedLocale);
+const locale = resolveUserFrontRequestLocale(Astro.request);
+Astro.response.headers.set("Content-Language", locale);
 let configuration;
 if (model.resolution.result === "rendered" && model.operator) {
 	await ensureSuperBoardViews(Astro.locals.emdash.db);
 	const route = model.release?.release.payload.front_route_manifest.routes.find(({ route_id }) => route_id === model.resolution.route_id);
 	const [menu, viewResult] = await Promise.all([
-		getMenu("superboard-admin"),
+		getMenu("superboard-admin", { locale }),
 		getEmDashEntry("views", frontViewSlug(route?.path_pattern ?? model.requested_path)),
 	]);
 	if (Astro.cache?.enabled) Astro.cache.set(viewResult.cacheHint);
@@ -51,7 +51,7 @@ const title = viewTitle ? (Object.hasOwn(projection.messages, viewTitle) ? i18n.
 ---
 
 <!doctype html>
-<html lang={locale}>
+<html lang={locale} dir="ltr">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />

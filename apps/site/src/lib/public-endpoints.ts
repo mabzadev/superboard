@@ -17,12 +17,12 @@ export function parsePublicEndpoints(raw: string | undefined): PublicEndpoints {
 				url.protocol !== "https:" ||
 				url.username ||
 				url.password ||
-				url.pathname !== "/" ||
+				(url.pathname !== "/" && !(key === "mcp" && url.pathname === "/mcp")) ||
 				url.search ||
 				url.hash
 			)
 				throw new Error();
-			endpoints[key] = url.origin;
+			endpoints[key] = key === "mcp" && url.pathname !== "/" ? url.href : url.origin;
 		}
 		return endpoints;
 	} catch {

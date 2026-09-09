@@ -80,12 +80,16 @@ test("the local target health gate probes every Worker through its declared cont
 			attempts: 1,
 			fetchImpl: async (request) => {
 				requests.push(request);
+				if (new URL(request.url).pathname === "/_emdash/admin/login")
+					return new Response('<html><body><div id="admin-root"></div></body></html>', {
+						headers: { "Content-Type": "text/html" },
+					});
 				return Response.json({ status: "ok" });
 			},
 		},
 	);
 
-	assert.equal(receipts.length, prepared.materialization.services.length);
+	assert.equal(receipts.length, prepared.materialization.services.length + 1);
 	assert.ok(receipts.every(({ status }) => status === 200));
 	assert.ok(
 		requests.some(
@@ -97,6 +101,9 @@ test("the local target health gate probes every Worker through its declared cont
 	assert.ok(requests.some((request) => request.url === "http://127.0.0.1:8791/internal/v1/health"));
 	assert.ok(
 		requests.some((request) => request.url === "http://127.0.0.1:8802/superboard-system/health"),
+	);
+	assert.ok(
+		requests.some((request) => request.url === "http://127.0.0.1:8802/_emdash/admin/login"),
 	);
 });
 
@@ -143,11 +150,5 @@ test("local target start staggers Worker processes", async () => {
 	);
 
 	assert.deepEqual(children, ["api", "site", "dashboard"]);
-	assert.deepEqual(events, [
-		"spawn:api",
-		"wait:150",
-		"spawn:site",
-		"wait:150",
-		"spawn:dashboard",
-	]);
+	assert.deepEqual(events, ["spawn:api", "wait:150", "spawn:site", "wait:150", "spawn:dashboard"]);
 });

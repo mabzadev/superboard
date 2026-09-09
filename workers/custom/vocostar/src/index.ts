@@ -26,7 +26,10 @@ import {
   retryJob,
   stats,
 } from "./jobs";
+import { handleVocostarOperator } from "./operator.js";
 import { VocoStarJobError } from "./validation";
+import { handleRuntimeBridge } from "./runtime-bridge.js";
+import { runtimeJobScope } from "./runtime-identity.js";
 
 const CAPABILITIES: CustomWorkerManifest["capabilities"] = [
   {
@@ -64,6 +67,8 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
       const url = new URL(request.url);
+      const runtimeResponse = await handleRuntimeBridge(request, env);
+      if (runtimeResponse) return runtimeResponse;
       if (request.method === "GET" && url.pathname === "/health") {
         try {
           const [summary, schema] = await Promise.all([
@@ -109,7 +114,9 @@ export default {
       ) {
         return json({ error: "unauthorized" }, 401);
       }
-      const scope = parseCustomWorkerScope(request) ?? undefined;
+      if (url.pathname.startsWith("/internal/v1/operator/")) return await handleVocostarOperator(request, env);
+      const requestedScope = parseCustomWorkerScope(request) ?? undefined;
+      const scope = requestedScope ? await runtimeJobScope(env.VOCOSTAR_DB, requestedScope) : undefined;
       if (
         request.method === "GET" &&
         url.pathname === CUSTOM_WORKER_MANIFEST_PATH
@@ -126,7 +133,7 @@ export default {
         /^\/internal\/v1\/users\/([^/]+)$/u,
       );
       if (request.method === "DELETE" && eraseMatch) {
-        if (!scope || scope.subject !== decodeURIComponent(eraseMatch[1])) {
+        if (!scope || requestedScope?.subject !== decodeURIComponent(eraseMatch[1])) {
           return json({ error: "scope_required" }, 403);
         }
         return json(await eraseApplicationUser(env, scope));
@@ -137,7 +144,7 @@ export default {
         if (request.method === "POST") {
           const body = await readJson(request);
           return json(
-            await createJob(parseCustomWorkerJob(body), env, scope),
+            await createJob(parseCustomWorkerJob(body), env, scope, settingsFromRequest(request)),
             202,
           );
         }
@@ -159,6 +166,8 @@ export default {
         return json(await getJob(jobMatch[1], env, scope));
       return json({ error: "not_found" }, 404);
     } catch (error) {
+      if (String(error).includes("runtime_identity_project_conflict"))
+        return json({ error: "runtime_identity_project_conflict" }, 403);
       if (error instanceof VocoStarJobError)
         return json({ error: error.code }, error.status);
       if (error instanceof CustomWorkerProtocolError)
@@ -232,4 +241,14 @@ function safeError(error: unknown) {
   return (error instanceof Error ? error.message : String(error))
     .replace(/[\r\n\t]+/g, " ")
     .slice(0, 500);
+}
+
+function settingsFromRequest(request: Request): Record<string, unknown> {
+	const raw = request.headers.get("X-SuperBoard-Plugin-Settings");
+	if (!raw) return {};
+	if (raw.length > 16384) throw new VocoStarJobError("settings_invalid");
+	const value: unknown = JSON.parse(raw);
+	if (!value || typeof value !== "object" || Array.isArray(value))
+		throw new VocoStarJobError("settings_invalid");
+	return value as Record<string, unknown>;
 }

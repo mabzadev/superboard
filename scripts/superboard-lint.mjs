@@ -3,6 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { lintSuperBoardBrandProject } from "./superboard-brand.mjs";
+import { lintFrontMenuProject } from "./superboard-front-menu-lint.mjs";
+import { lintPluginPackageProject } from "./superboard-plugin-packages.mjs";
+
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const sourcePattern = /\.[cm]?[jt]sx?$/u;
 const generatedPattern =
@@ -174,7 +178,7 @@ function runGroup(group, paths, { quick, fix }) {
 	}));
 }
 
-function main() {
+async function main() {
 	const options = new Set(process.argv.slice(2));
 	const { groups, excluded } = inspectCoverage();
 	const coverage = {
@@ -188,6 +192,10 @@ function main() {
 	const diagnostics = [...groups].flatMap(([group, paths]) =>
 		runGroup(group, paths, { quick: options.has("--quick"), fix: options.has("--fix") }),
 	);
+	diagnostics.push(...(await lintFrontMenuProject(repositoryRoot)));
+	diagnostics.push(...lintPluginPackageProject(repositoryRoot));
+	diagnostics.push(...(await lintSuperBoardBrandProject(repositoryRoot)));
+
 	if (options.has("--json")) console.log(JSON.stringify({ diagnostics, coverage }));
 	else {
 		for (const diagnostic of diagnostics)
@@ -202,4 +210,4 @@ function main() {
 		process.exitCode = 1;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

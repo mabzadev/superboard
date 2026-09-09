@@ -847,6 +847,48 @@
 			"path": "/mcp",
 			"status": "registered",
 			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-mcp/views/superboard.mcp.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"route_id": "superboard.plugins_vocostar_voices",
+			"path": "/plugins/vocostar/voices",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/VocostarPage.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"route_id": "superboard.plugins_vocostar_conversions",
+			"path": "/plugins/vocostar/conversions",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/VocostarPage.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"route_id": "superboard.plugins_vocostar_outputs",
+			"path": "/plugins/vocostar/outputs",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/VocostarPage.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"route_id": "superboard.plugins_vocostar_jobs",
+			"path": "/plugins/vocostar/jobs",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/VocostarPage.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"route_id": "superboard.plugins_vocostar_settings",
+			"path": "/plugins/vocostar/settings",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/VocostarPage.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"route_id": "superboard.notifications",
+			"path": "/notifications",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/PushNotificationsPage.tsx"
 		}
 	],
 	"provenance": [

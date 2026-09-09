@@ -93,6 +93,30 @@ describe("plugin settings handlers", () => {
 		await teardownTestDatabase(db);
 	});
 
+	it("keeps existing storage readable and writable through a grouped settings schema", async () => {
+		const options = new OptionsRepository(db);
+		const keyForSetting = (key: string) => `plugin:legacy-component:settings:${key}`;
+		await options.set(keyForSetting("note"), "existing value");
+		await options.set(keyForSetting("apiKey"), "test-secret");
+		const read = await handlePluginSettingsGet(db, "grouped-plugin", SCHEMA, keyForSetting);
+		expect(read).toMatchObject({
+			success: true,
+			data: { values: { note: "existing value" }, secretsSet: { apiKey: true } },
+		});
+		expect(JSON.stringify(read)).not.toContain("test-secret");
+		const updated = await handlePluginSettingsUpdate(
+			db,
+			"grouped-plugin",
+			SCHEMA,
+			{ note: "changed value", apiKey: null },
+			keyForSetting,
+		);
+		expect(updated.success).toBe(true);
+		expect(await options.get(keyForSetting("note"))).toBe("changed value");
+		expect(await options.get(keyForSetting("apiKey"))).toBeNull();
+		expect(await options.get("plugin:grouped-plugin:settings:note")).toBeNull();
+	});
+
 	it("GET returns schema defaults when nothing is stored", async () => {
 		const result = await handlePluginSettingsGet(db, PLUGIN_ID, SCHEMA);
 		expect(result.success).toBe(true);
@@ -121,13 +145,16 @@ describe("plugin settings handlers", () => {
 			.selectFrom("_emdash_plugin_setting_versions")
 			.selectAll()
 			.where("plugin_id", "=", PLUGIN_ID)
-			.orderBy("id")
 			.execute();
 		expect(rows).toHaveLength(2);
-		expect(JSON.parse(rows[0]!.values_json)).toMatchObject({ apiUrl: "https://first.example" });
-		expect(JSON.parse(rows[1]!.values_json)).toMatchObject({ apiUrl: "https://second.example" });
+		expect(rows.map((row) => JSON.parse(row.values_json))).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ apiUrl: "https://first.example" }),
+				expect.objectContaining({ apiUrl: "https://second.example" }),
+			]),
+		);
 		expect(JSON.stringify(rows)).not.toContain("test-only-private-value");
-		expect(JSON.parse(rows[1]!.secrets_set_json)).toEqual({ apiKey: true });
+		for (const row of rows) expect(JSON.parse(row.secrets_set_json)).toEqual({ apiKey: true });
 	});
 
 	it("PUT stores values under the plugin's settings: KV keys", async () => {

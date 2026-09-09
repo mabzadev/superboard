@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
+import type { PushDeliveryEnv } from '../lib/push-credentials.js';
 import { encryptCredential, timingSafeEqual } from '../lib/secrets';
 import { readJsonObjectLimited } from '../lib/http-limits';
 import {
@@ -57,7 +58,7 @@ async function signJwt(header: Record<string, unknown>, claims: Record<string, u
   return `${signingInput}.${base64url(signature)}`;
 }
 
-async function fcmAccessToken(env: Env, app: any) {
+async function fcmAccessToken(env: PushDeliveryEnv, app: any) {
   const expiresAt = Date.parse(app.access_token_expiration || '');
   if (app.encrypted_access_token && Number.isFinite(expiresAt) && expiresAt > Date.now() + 60000) {
     return requirePushCredential(env, app.encrypted_access_token, 'FCM');
@@ -115,7 +116,7 @@ function parseJson(value: unknown, fallback: any) {
   }
 }
 
-async function deliverFcm(env: Env, app: any, row: any) {
+async function deliverFcm(env: PushDeliveryEnv, app: any, row: any) {
   const token = await fcmAccessToken(env, app);
   const notification = parseJson(row.notification, {});
   const data = parseJson(row.data, {});
@@ -144,7 +145,7 @@ async function deliverFcm(env: Env, app: any, row: any) {
   }
 }
 
-async function deliverApns(env: Env, app: any, row: any) {
+async function deliverApns(env: PushDeliveryEnv, app: any, row: any) {
   const now = Math.floor(Date.now() / 1000);
   const jwt = await signJwt(
     { alg: 'ES256', kid: app.apn_key_id },
@@ -176,7 +177,7 @@ async function deliverApns(env: Env, app: any, row: any) {
   }
 }
 
-export async function processPushNotifications(env: Env, limit = 25) {
+export async function processPushNotifications(env: PushDeliveryEnv, limit = 25) {
   const boundedLimit = Math.max(1, Math.min(100, Number(limit || 25)));
   await migrateLegacyPushCredentials(env, 100);
   const rows = await env.DB.prepare(`

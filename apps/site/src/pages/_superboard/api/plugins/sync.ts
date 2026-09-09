@@ -1,3 +1,4 @@
+import { pluginPackages, pluginPackageOwner } from "@superboard/contracts/plugin-packages";
 import type { APIRoute } from "astro";
 import { handleError } from "emdash/api/error";
 
@@ -47,7 +48,24 @@ export const POST: APIRoute = async (context) => {
 		if (!operatorId) return jsonResponse({ error: { code: "UNAUTHORIZED" } }, 401);
 		const target = resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local");
 		const targetPluginIds = resolveSuperBoardTargetPluginIds(env.SUPERBOARD_PLUGIN_IDS);
-		const evidence = await verifySuperBoardPluginResources(context, pluginIds ?? targetPluginIds);
+		const componentIds = pluginIds
+			? [
+					...new Set(
+						pluginIds.flatMap((id) => {
+							const owner = pluginPackages.find((item) => item.id === id);
+							return owner
+								? owner.components.filter((component) => targetPluginIds.includes(component))
+								: [id];
+						}),
+					),
+				]
+			: undefined;
+		if (componentIds?.length === 0)
+			return jsonResponse({ error: { code: "PLUGIN_NOT_IN_TARGET" } }, 409);
+		const evidence = await verifySuperBoardPluginResources(
+			context,
+			componentIds ?? targetPluginIds,
+		);
 		const staleOperation = await requireManagedPluginOperationAccess(
 			context,
 			env.DB,
@@ -64,23 +82,38 @@ export const POST: APIRoute = async (context) => {
 			target_plugin_ids: targetPluginIds,
 			checked_at: checkedAt,
 			expires_at: new Date(Date.parse(checkedAt) + expiresInHours * 60 * 60 * 1_000).toISOString(),
-			...(pluginIds ? { plugin_ids: pluginIds } : {}),
+			...(componentIds ? { plugin_ids: componentIds } : {}),
 		});
 		for (const [pluginId, checksum] of evidence) {
 			await env.DB.batch([
 				env.DB.prepare(`UPDATE superboard_plugin_staged_artifacts SET evidence_checksum = ?
- WHERE instance_id = ? AND target = ? AND plugin_id = ? AND plan_id = ?`)
-					.bind(checksum, env.SUPERBOARD_INSTANCE_ID, target, pluginId, plan.plan_id),
+ WHERE instance_id = ? AND target = ? AND plugin_id = ? AND plan_id = ?`).bind(
+					checksum,
+					env.SUPERBOARD_INSTANCE_ID,
+					target,
+					pluginId,
+					plan.plan_id,
+				),
 				env.DB.prepare(`UPDATE superboard_plugin_runtime_health SET evidence_checksum = ?
  WHERE instance_id = ? AND target = ? AND plugin_id = ?
  AND NOT EXISTS (SELECT 1 FROM superboard_plugin_staged_artifacts staged
  WHERE staged.instance_id = superboard_plugin_runtime_health.instance_id
  AND staged.target = superboard_plugin_runtime_health.target
- AND staged.plugin_id = superboard_plugin_runtime_health.plugin_id)`)
-					.bind(checksum, env.SUPERBOARD_INSTANCE_ID, target, pluginId),
+ AND staged.plugin_id = superboard_plugin_runtime_health.plugin_id)`).bind(
+					checksum,
+					env.SUPERBOARD_INSTANCE_ID,
+					target,
+					pluginId,
+				),
 			]);
 		}
-		return jsonResponse({ plan }, 201);
+		return jsonResponse(
+			{
+				plan,
+				packages: [...new Set(plan.plugins.map((plugin) => pluginPackageOwner(plugin.plugin_id)))],
+			},
+			201,
+		);
 	} catch (error) {
 		return handleError(
 			error,

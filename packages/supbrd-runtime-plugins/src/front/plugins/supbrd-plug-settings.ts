@@ -20,6 +20,10 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 		},
 		{ path_pattern: "/app/ios-setup", title: "iOS Setup", navigation: app("iOS Setup", 6) },
 		{ path_pattern: "/app/web-setup", title: "Web Setup", navigation: app("Web Setup", 7) },
-		{ path_pattern: "/project-settings", title: "Project settings" },
+		{
+			path_pattern: "/project-settings",
+			title: "Project settings",
+			navigation: app("Project settings", -1),
+		},
 	],
 });

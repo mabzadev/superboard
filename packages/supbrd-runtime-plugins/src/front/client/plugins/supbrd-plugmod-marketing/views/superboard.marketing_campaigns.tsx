@@ -1,4 +1,2 @@
-import { MarketingListPage } from "../source/components/modules/MarketingPages.js";
-export default function View() {
-	return <MarketingListPage kind="campaigns" />;
-}
+import EmailWorkspace from "../studio/EmailWorkspace.js";
+export default function View() { return <EmailWorkspace initialTab="Campaigns" />; }

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "target": "mbza-development",
   "environment": "local",
-  "target_artifact_checksum": "sha256:862dfa5e75e81e118712f236d4c8968d7fe2d16160970de63021729fb50baf57",
-  "target_graph_checksum": "sha256:24daf067d993bfe3ed87761e90124935e57713d483ae1ed266fad889d8fb583f",
+  "target_artifact_checksum": "sha256:5164006d862f203da1a15033fd5e9a361132afa1ff2ee494a2586dedfc7bb4cb",
+  "target_graph_checksum": "sha256:d13690b1c8172ace1da3a421e92ef4784983198681ca792145c5c95165436216",
   "active_plugin_ids": [
     "supbrd-plug-audit",
     "supbrd-plug-content",
@@ -22,27 +22,29 @@
     "supbrd-plugmod-observability",
     "supbrd-plugmod-onboardings",
     "supbrd-plugmod-paywalls",
-    "supbrd-plugmod-support"
+    "supbrd-plugmod-support",
+    "supbrd-plugmod-vocostar"
   ],
   "manifest_artifact_checksums": {
-    "supbrd-plug-audit": "sha256:4d1b050d3fe4cd68073ece02fbfd40c4a08e17fbcdfdebce6a98ad0ffe172d66",
-    "supbrd-plug-content": "sha256:edbd2a25082957e7751bfc86474a28ba5e57c4720d2b3f24c72d4616120d6f34",
-    "supbrd-plug-products": "sha256:05a2bd04edfaf3eff329090e5300afc1639847317e25bca6122377d8cf3396b5",
-    "supbrd-plug-settings": "sha256:1b7aa454f1da8b0937cfd02224a28e6e160ed63dc6821467e6263d3a79bb5268",
-    "supbrd-plug-user": "sha256:9027f6de744067ed243f77c5de761970edfbcc19713940a6b52cf46d62b8177b",
-    "supbrd-plugmod-analytics": "sha256:9c1f946741b7e5ef2b6fdf0841131602f93fea798564c2e36bad371ed8e15a58",
-    "supbrd-plugmod-billing": "sha256:e885d432117d8c3911c0da8c39f509119f0895d18a846afd17c38fe506cb6247",
-    "supbrd-plugmod-dynamic-links": "sha256:60a7af0f48c2a358cff65895537399a9ee86467529211d16115ea73c8953f6ee",
-    "supbrd-plugmod-email": "sha256:58c021288132d22ae452690cfde1fcf8149fa43b1faf8842bf07348e3b2fd9b2",
-    "supbrd-plugmod-files": "sha256:58674c810cac2679d9129ecac30be86c1400b69026311d7e3c9ba1df6026f137",
-    "supbrd-plugmod-flows": "sha256:39c2b84b5d0d525abf1ef75a1c87d18b0f4e307b1aeddcccfaf2a6aba43dc0a1",
-    "supbrd-plugmod-gateway": "sha256:f1bfa61b15e01a72a17170adc5075717e6bbbee1dce615f1822e89e9780cd614",
-    "supbrd-plugmod-marketing": "sha256:c2fe1f6c7ddee2bec51066cd83847753b4ada11508632b4aa5e2aedaa9f95576",
-    "supbrd-plugmod-mcp": "sha256:2e7840093d1d88c8de5e809843e1fc2a92e7b4b3d2dd3039b58e868eb5b5a7c5",
-    "supbrd-plugmod-observability": "sha256:c8fa11430708384b072ab53b08c759113ed234f9ec72c2d9ea6b3826f1ecb7a4",
-    "supbrd-plugmod-onboardings": "sha256:105154acb3d2f38b5589bf67e0a5617a51d245428782ef6804ae84cd01ce5683",
-    "supbrd-plugmod-paywalls": "sha256:3db67468feb3e017733f29fda1ed70ce12c56fad99fc3bedbfd7bf0b3dcef778",
-    "supbrd-plugmod-support": "sha256:3772abc9d5941cd0bc9d634be0a846bb63fc17752650f49a26a39caa87d98635"
+    "supbrd-plug-audit": "sha256:0bf7e14d34b67459944f69b828ddc397f5913ec18971e8b7d70473fa823b3857",
+    "supbrd-plug-content": "sha256:8b20386195a05dad0bf5764b48af176507d9e615600b86022680edbb91585f72",
+    "supbrd-plug-products": "sha256:260e36b9f44f273ffa7cae5f5e8d4db48b72c59a6ee6324979b0bd9081776f18",
+    "supbrd-plug-settings": "sha256:17ee6750bb8fe8016549f2dfa67280d99761bc9ba4d26b812462b0f3349ab025",
+    "supbrd-plug-user": "sha256:cbf10c6a4a0e801147f2dc3b5dddebffa1289eaae0c5fc638f24346d27b0e613",
+    "supbrd-plugmod-analytics": "sha256:840c1fd57147a0cf9cc90701435a07bee421e7acfeeff5c13cbc126864287e7f",
+    "supbrd-plugmod-billing": "sha256:ca8463b4b60c13da2ddd957b3e3cb803bb38874a3d16604a2f3fd03fc6cf878f",
+    "supbrd-plugmod-dynamic-links": "sha256:7b0c31f2a99cd7978dc20081dfce23556e2f060f8f8adba3121d5ae5ec647d72",
+    "supbrd-plugmod-email": "sha256:368575cd9c4a64a1b206ffecf0b7f43501791f55ac7987ebdda4cdc189612baa",
+    "supbrd-plugmod-files": "sha256:a8a4fdec0f1f586ac28d84113c524155e1c4607d46e2fb704047984eaf4eaec8",
+    "supbrd-plugmod-flows": "sha256:0624d7b318c8bcf4979c2188a12033107c72be1e1df3d6436f2e8bae3cf72a6e",
+    "supbrd-plugmod-gateway": "sha256:706055c7ee1453d6a37a13808d4f298a03230e005f734d6a3ad0f7e8e54a153c",
+    "supbrd-plugmod-marketing": "sha256:8121163ae53eb042084196ec5e02d3c7da2e0a94e7c03782a078c55b9f802009",
+    "supbrd-plugmod-mcp": "sha256:c06aba3b8e1469e3e9dd5e2cc8858b0d57ec15bae99eb587d7ab9b18f1b74ba3",
+    "supbrd-plugmod-observability": "sha256:79ad1a5ece5f28aa3074122f9883d540686330cb1e0ee5406625f126119bcccb",
+    "supbrd-plugmod-onboardings": "sha256:a89371a852ea74c28b2f3d89989ccd1ca6f3d60efc0010e87e69b0014484e043",
+    "supbrd-plugmod-paywalls": "sha256:0a3a16ea269b594384a0cda57b501ca5fa9a5837e79eea81cc73ec91098b0d45",
+    "supbrd-plugmod-support": "sha256:2d3634b785e5296e0d2aab7e7a15d75044a5a26dc0ebfb4a63ad86567a815ed9",
+    "supbrd-plugmod-vocostar": "sha256:3fee74749566bf1b88120f4ccccad400e4140121c1facc77f1a064588896a6b0"
   },
   "verification_key": {
     "key_ops": [
@@ -50,8 +52,8 @@
     ],
     "ext": true,
     "kty": "EC",
-    "x": "1CK5zvNc9JNUZwHGS6x1L0yLfQ2IpiazH7FdZro79UI",
-    "y": "99VjBLOiFSJx6ekByzvpyk54VsgtYk0SRPwcH1pWEiY",
+    "x": "41RNahGRE2J_Ko1B8Ht3fkL6f5DFDJopvkwk3Wt47oc",
+    "y": "RwGawO_iW-6JKNGAMzR7LgBjC8EywxnQ1MVzbzP-NLg",
     "crv": "P-256",
     "kid": "issue-70-parity"
   },
@@ -202,6 +204,14 @@
         {
           "activation_policy": "ready",
           "dependency_id": "dependency.supbrd_plugmod_support",
+          "fallback_dependency_id": null,
+          "kind": "required",
+          "minimum_version": "1.0.0",
+          "runtime_failure_policy": "unavailable"
+        },
+        {
+          "activation_policy": "ready",
+          "dependency_id": "dependency.supbrd_plugmod_vocostar",
           "fallback_dependency_id": null,
           "kind": "required",
           "minimum_version": "1.0.0",
@@ -3263,6 +3273,37 @@
             "audience": "superboard_front",
             "auth_policy": "authenticated",
             "dependencies": [
+              "dependency.supbrd_plugmod_marketing"
+            ],
+            "layout_ids": [
+              "layout.superboard_admin"
+            ],
+            "page_id": "page.superboard_notifications",
+            "parameters": {},
+            "path_pattern": "/notifications",
+            "permission_expression": "supbrd-plugmod-marketing.read",
+            "priority": 200,
+            "query": {},
+            "redirect": null,
+            "renderer_ids": [
+              "supbrd-plugmod-marketing.renderer.admin_surface"
+            ],
+            "route_id": "superboard.notifications",
+            "route_kind": "page",
+            "state_policies": {
+              "empty": "emdash.core.state.empty",
+              "error": "emdash.core.state.error",
+              "forbidden": "emdash.core.state.forbidden",
+              "loading": "emdash.core.state.loading",
+              "maintenance": "emdash.core.state.maintenance",
+              "not_found": "emdash.core.state.not_found",
+              "unavailable": "emdash.core.state.unavailable"
+            }
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "dependencies": [
               "dependency.supbrd_plugmod_onboardings"
             ],
             "layout_ids": [
@@ -3372,6 +3413,161 @@
               "supbrd-plugmod-paywalls.renderer.admin_surface"
             ],
             "route_id": "superboard.paywalls_statistics",
+            "route_kind": "page",
+            "state_policies": {
+              "empty": "emdash.core.state.empty",
+              "error": "emdash.core.state.error",
+              "forbidden": "emdash.core.state.forbidden",
+              "loading": "emdash.core.state.loading",
+              "maintenance": "emdash.core.state.maintenance",
+              "not_found": "emdash.core.state.not_found",
+              "unavailable": "emdash.core.state.unavailable"
+            }
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "dependencies": [
+              "dependency.supbrd_plugmod_vocostar"
+            ],
+            "layout_ids": [
+              "layout.superboard_admin"
+            ],
+            "page_id": "page.superboard_plugins_vocostar_conversions",
+            "parameters": {},
+            "path_pattern": "/plugins/vocostar/conversions",
+            "permission_expression": "supbrd-plugmod-vocostar.read",
+            "priority": 200,
+            "query": {},
+            "redirect": null,
+            "renderer_ids": [
+              "supbrd-plugmod-vocostar.renderer.admin_surface"
+            ],
+            "route_id": "superboard.plugins_vocostar_conversions",
+            "route_kind": "page",
+            "state_policies": {
+              "empty": "emdash.core.state.empty",
+              "error": "emdash.core.state.error",
+              "forbidden": "emdash.core.state.forbidden",
+              "loading": "emdash.core.state.loading",
+              "maintenance": "emdash.core.state.maintenance",
+              "not_found": "emdash.core.state.not_found",
+              "unavailable": "emdash.core.state.unavailable"
+            }
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "dependencies": [
+              "dependency.supbrd_plugmod_vocostar"
+            ],
+            "layout_ids": [
+              "layout.superboard_admin"
+            ],
+            "page_id": "page.superboard_plugins_vocostar_jobs",
+            "parameters": {},
+            "path_pattern": "/plugins/vocostar/jobs",
+            "permission_expression": "supbrd-plugmod-vocostar.read",
+            "priority": 200,
+            "query": {},
+            "redirect": null,
+            "renderer_ids": [
+              "supbrd-plugmod-vocostar.renderer.admin_surface"
+            ],
+            "route_id": "superboard.plugins_vocostar_jobs",
+            "route_kind": "page",
+            "state_policies": {
+              "empty": "emdash.core.state.empty",
+              "error": "emdash.core.state.error",
+              "forbidden": "emdash.core.state.forbidden",
+              "loading": "emdash.core.state.loading",
+              "maintenance": "emdash.core.state.maintenance",
+              "not_found": "emdash.core.state.not_found",
+              "unavailable": "emdash.core.state.unavailable"
+            }
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "dependencies": [
+              "dependency.supbrd_plugmod_vocostar"
+            ],
+            "layout_ids": [
+              "layout.superboard_admin"
+            ],
+            "page_id": "page.superboard_plugins_vocostar_outputs",
+            "parameters": {},
+            "path_pattern": "/plugins/vocostar/outputs",
+            "permission_expression": "supbrd-plugmod-vocostar.read",
+            "priority": 200,
+            "query": {},
+            "redirect": null,
+            "renderer_ids": [
+              "supbrd-plugmod-vocostar.renderer.admin_surface"
+            ],
+            "route_id": "superboard.plugins_vocostar_outputs",
+            "route_kind": "page",
+            "state_policies": {
+              "empty": "emdash.core.state.empty",
+              "error": "emdash.core.state.error",
+              "forbidden": "emdash.core.state.forbidden",
+              "loading": "emdash.core.state.loading",
+              "maintenance": "emdash.core.state.maintenance",
+              "not_found": "emdash.core.state.not_found",
+              "unavailable": "emdash.core.state.unavailable"
+            }
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "dependencies": [
+              "dependency.supbrd_plugmod_vocostar"
+            ],
+            "layout_ids": [
+              "layout.superboard_admin"
+            ],
+            "page_id": "page.superboard_plugins_vocostar_settings",
+            "parameters": {},
+            "path_pattern": "/plugins/vocostar/settings",
+            "permission_expression": "supbrd-plugmod-vocostar.read",
+            "priority": 200,
+            "query": {},
+            "redirect": null,
+            "renderer_ids": [
+              "supbrd-plugmod-vocostar.renderer.admin_surface"
+            ],
+            "route_id": "superboard.plugins_vocostar_settings",
+            "route_kind": "page",
+            "state_policies": {
+              "empty": "emdash.core.state.empty",
+              "error": "emdash.core.state.error",
+              "forbidden": "emdash.core.state.forbidden",
+              "loading": "emdash.core.state.loading",
+              "maintenance": "emdash.core.state.maintenance",
+              "not_found": "emdash.core.state.not_found",
+              "unavailable": "emdash.core.state.unavailable"
+            }
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "dependencies": [
+              "dependency.supbrd_plugmod_vocostar"
+            ],
+            "layout_ids": [
+              "layout.superboard_admin"
+            ],
+            "page_id": "page.superboard_plugins_vocostar_voices",
+            "parameters": {},
+            "path_pattern": "/plugins/vocostar/voices",
+            "permission_expression": "supbrd-plugmod-vocostar.read",
+            "priority": 200,
+            "query": {},
+            "redirect": null,
+            "renderer_ids": [
+              "supbrd-plugmod-vocostar.renderer.admin_surface"
+            ],
+            "route_id": "superboard.plugins_vocostar_voices",
             "route_kind": "page",
             "state_policies": {
               "empty": "emdash.core.state.empty",
@@ -4209,7 +4405,7 @@
         ],
         "schema_version": "1.0.0",
         "system_routes": [],
-        "route_manifest_checksum": "sha256:e46debfe4bb648700551507b43360be2cde6904d7801206affb370069082148c"
+        "route_manifest_checksum": "sha256:f74cf64e70b2ef5a705700f3928fa18dbf281967bbb821f8dc129193b48d9680"
       },
       "gateway_manifest": {
         "gateway_manifest_id": "01J00000000000000000000221",
@@ -6209,6 +6405,18 @@
             "auth_policy": "authenticated",
             "destination": "supbrd-plugmod-marketing",
             "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.create_notification",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.create_notification",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
             "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.create_email_campaign",
             "route_id": "gateway.supbrd-plugmod-marketing.command.create_email_campaign",
             "scopes": [
@@ -6323,6 +6531,18 @@
               "supbrd-plugmod-marketing.write"
             ],
             "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.notifications",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.notifications",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
           },
           {
             "audience": "superboard_front",
@@ -7379,10 +7599,106 @@
               "supbrd-plugmod-support.read"
             ],
             "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-vocostar",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-vocostar/health",
+            "route_id": "gateway.supbrd-plugmod-vocostar.health",
+            "scopes": [
+              "supbrd-plugmod-vocostar.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-vocostar",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-vocostar/commands/supbrd-plugmod-vocostar.command.retry_job",
+            "route_id": "gateway.supbrd-plugmod-vocostar.command.retry_job",
+            "scopes": [
+              "supbrd-plugmod-vocostar.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-vocostar",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-vocostar/commands/supbrd-plugmod-vocostar.command.update_settings",
+            "route_id": "gateway.supbrd-plugmod-vocostar.command.update_settings",
+            "scopes": [
+              "supbrd-plugmod-vocostar.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-vocostar",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-vocostar/data-sources/supbrd-plugmod-vocostar.data_source.jobs",
+            "route_id": "gateway.supbrd-plugmod-vocostar.data_source.jobs",
+            "scopes": [
+              "supbrd-plugmod-vocostar.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-vocostar",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-vocostar/data-sources/supbrd-plugmod-vocostar.data_source.voices",
+            "route_id": "gateway.supbrd-plugmod-vocostar.data_source.voices",
+            "scopes": [
+              "supbrd-plugmod-vocostar.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-vocostar",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-vocostar/data-sources/supbrd-plugmod-vocostar.data_source.conversions",
+            "route_id": "gateway.supbrd-plugmod-vocostar.data_source.conversions",
+            "scopes": [
+              "supbrd-plugmod-vocostar.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-vocostar",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-vocostar/data-sources/supbrd-plugmod-vocostar.data_source.outputs",
+            "route_id": "gateway.supbrd-plugmod-vocostar.data_source.outputs",
+            "scopes": [
+              "supbrd-plugmod-vocostar.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-vocostar",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-vocostar/data-sources/supbrd-plugmod-vocostar.data_source.settings",
+            "route_id": "gateway.supbrd-plugmod-vocostar.data_source.settings",
+            "scopes": [
+              "supbrd-plugmod-vocostar.read"
+            ],
+            "timeout_ms": 10000
           }
         ],
         "schema_version": "1.0.0",
-        "gateway_checksum": "sha256:9ada4c62a1a240317fe03f0620434571e6749cf0003e378b5108c7dac48779a6"
+        "gateway_checksum": "sha256:c2a31624f49bd15da9a7d692e00d0ad10e50a81dc54e35055b48df5f7878d0c5"
       },
       "instance_id": "mbza-development",
       "plugin_lock": [
@@ -7393,111 +7709,117 @@
           "version": "0.1.0"
         },
         {
-          "artifact_checksum": "sha256:4d1b050d3fe4cd68073ece02fbfd40c4a08e17fbcdfdebce6a98ad0ffe172d66",
+          "artifact_checksum": "sha256:0bf7e14d34b67459944f69b828ddc397f5913ec18971e8b7d70473fa823b3857",
           "native": false,
           "plugin_id": "supbrd-plug-audit",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:edbd2a25082957e7751bfc86474a28ba5e57c4720d2b3f24c72d4616120d6f34",
+          "artifact_checksum": "sha256:8b20386195a05dad0bf5764b48af176507d9e615600b86022680edbb91585f72",
           "native": false,
           "plugin_id": "supbrd-plug-content",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:05a2bd04edfaf3eff329090e5300afc1639847317e25bca6122377d8cf3396b5",
+          "artifact_checksum": "sha256:260e36b9f44f273ffa7cae5f5e8d4db48b72c59a6ee6324979b0bd9081776f18",
           "native": false,
           "plugin_id": "supbrd-plug-products",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:1b7aa454f1da8b0937cfd02224a28e6e160ed63dc6821467e6263d3a79bb5268",
+          "artifact_checksum": "sha256:17ee6750bb8fe8016549f2dfa67280d99761bc9ba4d26b812462b0f3349ab025",
           "native": false,
           "plugin_id": "supbrd-plug-settings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:9027f6de744067ed243f77c5de761970edfbcc19713940a6b52cf46d62b8177b",
+          "artifact_checksum": "sha256:cbf10c6a4a0e801147f2dc3b5dddebffa1289eaae0c5fc638f24346d27b0e613",
           "native": false,
           "plugin_id": "supbrd-plug-user",
           "version": "1.4.0"
         },
         {
-          "artifact_checksum": "sha256:9c1f946741b7e5ef2b6fdf0841131602f93fea798564c2e36bad371ed8e15a58",
+          "artifact_checksum": "sha256:840c1fd57147a0cf9cc90701435a07bee421e7acfeeff5c13cbc126864287e7f",
           "native": false,
           "plugin_id": "supbrd-plugmod-analytics",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:e885d432117d8c3911c0da8c39f509119f0895d18a846afd17c38fe506cb6247",
+          "artifact_checksum": "sha256:ca8463b4b60c13da2ddd957b3e3cb803bb38874a3d16604a2f3fd03fc6cf878f",
           "native": false,
           "plugin_id": "supbrd-plugmod-billing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:60a7af0f48c2a358cff65895537399a9ee86467529211d16115ea73c8953f6ee",
+          "artifact_checksum": "sha256:7b0c31f2a99cd7978dc20081dfce23556e2f060f8f8adba3121d5ae5ec647d72",
           "native": false,
           "plugin_id": "supbrd-plugmod-dynamic-links",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:58c021288132d22ae452690cfde1fcf8149fa43b1faf8842bf07348e3b2fd9b2",
+          "artifact_checksum": "sha256:368575cd9c4a64a1b206ffecf0b7f43501791f55ac7987ebdda4cdc189612baa",
           "native": false,
           "plugin_id": "supbrd-plugmod-email",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:58674c810cac2679d9129ecac30be86c1400b69026311d7e3c9ba1df6026f137",
+          "artifact_checksum": "sha256:a8a4fdec0f1f586ac28d84113c524155e1c4607d46e2fb704047984eaf4eaec8",
           "native": false,
           "plugin_id": "supbrd-plugmod-files",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:39c2b84b5d0d525abf1ef75a1c87d18b0f4e307b1aeddcccfaf2a6aba43dc0a1",
+          "artifact_checksum": "sha256:0624d7b318c8bcf4979c2188a12033107c72be1e1df3d6436f2e8bae3cf72a6e",
           "native": false,
           "plugin_id": "supbrd-plugmod-flows",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:f1bfa61b15e01a72a17170adc5075717e6bbbee1dce615f1822e89e9780cd614",
+          "artifact_checksum": "sha256:706055c7ee1453d6a37a13808d4f298a03230e005f734d6a3ad0f7e8e54a153c",
           "native": false,
           "plugin_id": "supbrd-plugmod-gateway",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:c2fe1f6c7ddee2bec51066cd83847753b4ada11508632b4aa5e2aedaa9f95576",
+          "artifact_checksum": "sha256:8121163ae53eb042084196ec5e02d3c7da2e0a94e7c03782a078c55b9f802009",
           "native": false,
           "plugin_id": "supbrd-plugmod-marketing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:2e7840093d1d88c8de5e809843e1fc2a92e7b4b3d2dd3039b58e868eb5b5a7c5",
+          "artifact_checksum": "sha256:c06aba3b8e1469e3e9dd5e2cc8858b0d57ec15bae99eb587d7ab9b18f1b74ba3",
           "native": false,
           "plugin_id": "supbrd-plugmod-mcp",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:c8fa11430708384b072ab53b08c759113ed234f9ec72c2d9ea6b3826f1ecb7a4",
+          "artifact_checksum": "sha256:79ad1a5ece5f28aa3074122f9883d540686330cb1e0ee5406625f126119bcccb",
           "native": false,
           "plugin_id": "supbrd-plugmod-observability",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:105154acb3d2f38b5589bf67e0a5617a51d245428782ef6804ae84cd01ce5683",
+          "artifact_checksum": "sha256:a89371a852ea74c28b2f3d89989ccd1ca6f3d60efc0010e87e69b0014484e043",
           "native": false,
           "plugin_id": "supbrd-plugmod-onboardings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:3db67468feb3e017733f29fda1ed70ce12c56fad99fc3bedbfd7bf0b3dcef778",
+          "artifact_checksum": "sha256:0a3a16ea269b594384a0cda57b501ca5fa9a5837e79eea81cc73ec91098b0d45",
           "native": false,
           "plugin_id": "supbrd-plugmod-paywalls",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:3772abc9d5941cd0bc9d634be0a846bb63fc17752650f49a26a39caa87d98635",
+          "artifact_checksum": "sha256:2d3634b785e5296e0d2aab7e7a15d75044a5a26dc0ebfb4a63ad86567a815ed9",
           "native": false,
           "plugin_id": "supbrd-plugmod-support",
+          "version": "1.0.0"
+        },
+        {
+          "artifact_checksum": "sha256:3fee74749566bf1b88120f4ccccad400e4140121c1facc77f1a064588896a6b0",
+          "native": false,
+          "plugin_id": "supbrd-plugmod-vocostar",
           "version": "1.0.0"
         }
       ],
@@ -7527,6 +7849,13 @@
           {
             "group_id": "app",
             "items": [
+              {
+                "href": "/project-settings",
+                "label": "Project settings",
+                "order": -1,
+                "permission": "supbrd-plug-settings.read",
+                "route_id": "superboard.project_settings"
+              },
               {
                 "href": "/app/customers",
                 "label": "Customers",
@@ -7890,6 +8219,20 @@
                 "order": 10,
                 "permission": "supbrd-plugmod-support.read",
                 "route_id": "superboard.support_settings"
+              },
+              {
+                "href": "/support/quality",
+                "label": "Quality",
+                "order": 11,
+                "permission": "supbrd-plugmod-support.read",
+                "route_id": "superboard.support_quality"
+              },
+              {
+                "href": "/support/configuration",
+                "label": "Configuration",
+                "order": 12,
+                "permission": "supbrd-plugmod-support.read",
+                "route_id": "superboard.support_configuration"
               }
             ],
             "label": "Support",
@@ -7946,6 +8289,13 @@
                 "order": 6,
                 "permission": "supbrd-plugmod-marketing.read",
                 "route_id": "superboard.marketing_settings"
+              },
+              {
+                "href": "/notifications",
+                "label": "Push notifications",
+                "order": 8,
+                "permission": "supbrd-plugmod-marketing.read",
+                "route_id": "superboard.notifications"
               }
             ],
             "label": "Marketing",
@@ -8069,6 +8419,48 @@
             ],
             "label": "Analytics",
             "order": 8
+          },
+          {
+            "group_id": "vocostar",
+            "items": [
+              {
+                "href": "/plugins/vocostar/voices",
+                "label": "Voices",
+                "order": 0,
+                "permission": "supbrd-plugmod-vocostar.read",
+                "route_id": "superboard.plugins_vocostar_voices"
+              },
+              {
+                "href": "/plugins/vocostar/conversions",
+                "label": "Conversions",
+                "order": 1,
+                "permission": "supbrd-plugmod-vocostar.read",
+                "route_id": "superboard.plugins_vocostar_conversions"
+              },
+              {
+                "href": "/plugins/vocostar/outputs",
+                "label": "Generated files",
+                "order": 2,
+                "permission": "supbrd-plugmod-vocostar.read",
+                "route_id": "superboard.plugins_vocostar_outputs"
+              },
+              {
+                "href": "/plugins/vocostar/jobs",
+                "label": "Processing jobs",
+                "order": 3,
+                "permission": "supbrd-plugmod-vocostar.read",
+                "route_id": "superboard.plugins_vocostar_jobs"
+              },
+              {
+                "href": "/plugins/vocostar/settings",
+                "label": "Vocostar settings",
+                "order": 4,
+                "permission": "supbrd-plugmod-vocostar.read",
+                "route_id": "superboard.plugins_vocostar_settings"
+              }
+            ],
+            "label": "Vocostar",
+            "order": 9
           },
           {
             "group_id": "supbrd-plugmod-paywalls.navigation",
@@ -8668,6 +9060,11 @@
             "title": "Recover operator access"
           },
           {
+            "page_id": "page.superboard_notifications",
+            "root_renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
+            "title": "Push notifications"
+          },
+          {
             "page_id": "page.superboard_onboardings",
             "root_renderer_id": "supbrd-plugmod-onboardings.renderer.admin_surface",
             "title": "Onboardings"
@@ -8686,6 +9083,31 @@
             "page_id": "page.superboard_paywalls_statistics",
             "root_renderer_id": "supbrd-plugmod-paywalls.renderer.admin_surface",
             "title": "Paywall statistics"
+          },
+          {
+            "page_id": "page.superboard_plugins_vocostar_conversions",
+            "root_renderer_id": "supbrd-plugmod-vocostar.renderer.admin_surface",
+            "title": "Conversions"
+          },
+          {
+            "page_id": "page.superboard_plugins_vocostar_jobs",
+            "root_renderer_id": "supbrd-plugmod-vocostar.renderer.admin_surface",
+            "title": "Processing jobs"
+          },
+          {
+            "page_id": "page.superboard_plugins_vocostar_outputs",
+            "root_renderer_id": "supbrd-plugmod-vocostar.renderer.admin_surface",
+            "title": "Generated files"
+          },
+          {
+            "page_id": "page.superboard_plugins_vocostar_settings",
+            "root_renderer_id": "supbrd-plugmod-vocostar.renderer.admin_surface",
+            "title": "Vocostar settings"
+          },
+          {
+            "page_id": "page.superboard_plugins_vocostar_voices",
+            "root_renderer_id": "supbrd-plugmod-vocostar.renderer.admin_surface",
+            "title": "Voices"
           },
           {
             "page_id": "page.superboard_products_customers",
@@ -8841,7 +9263,7 @@
           {
             "locale": "en",
             "messages": {
-              "site.admin.open": "Open EmDash Admin",
+              "site.admin.open": "Platform administration",
               "site.front.account": "Account",
               "site.front.account_menu": "Account menu",
               "site.front.close_navigation": "Close navigation",
@@ -8849,6 +9271,9 @@
               "site.front.dark_mode": "Dark mode",
               "site.front.dependency_unavailable": "Dependency unavailable",
               "site.front.dependency_unavailable_description": "A required plugin dependency is unavailable.",
+              "site.front.deployment.development": "Development",
+              "site.front.deployment.local": "Local",
+              "site.front.deployment.production": "Production",
               "site.front.description": "This View comes from the published SuperBoard configuration and is rendered by its plugin.",
               "site.front.empty": "Nothing here yet",
               "site.front.empty_description": "The selected View has no data to display.",
@@ -8871,11 +9296,12 @@
               "site.front.open_account": "Open {name} account menu",
               "site.front.open_navigation": "Open navigation",
               "site.front.production": "Production",
+              "site.front.project_data": "Project data",
               "site.front.project_settings": "Project Settings",
               "site.front.route_manifest": "Front Route Manifest",
               "site.front.section_navigation": "{section} pages",
               "site.front.test": "Test",
-              "site.front.title": "SuperBoard",
+              "site.front.title": "Superboard",
               "site.front.unavailable": "SuperBoard unavailable",
               "site.front.unavailable_description": "No verified SuperBoard configuration can be rendered.",
               "site.front.view_configuration_error": "This View needs a valid renderer and at least one plugin data source.",
@@ -8883,8 +9309,8 @@
               "site.meta.release": "release",
               "site.meta.source": "source",
               "site.meta.state": "state",
-              "site.operator.home": "SuperBoard",
-              "site.operator.home_description": "Choose an active plugin from the navigation or manage plugins in EmDash.",
+              "site.operator.home": "Overview",
+              "site.operator.home_description": "Vplusflare Backend as a Service. Choose a section to manage this environment.",
               "site.operator.login": "Operator sign in",
               "site.operator.login_description": "Use your EmDash account to open this instance.",
               "site.preview.not_found": "Preview not found or expired",
@@ -8933,7 +9359,7 @@
           {
             "locale": "fr",
             "messages": {
-              "site.admin.open": "Ouvrir l’administration EmDash",
+              "site.admin.open": "Administration de la plateforme",
               "site.front.account": "Compte",
               "site.front.account_menu": "Menu du compte",
               "site.front.close_navigation": "Fermer la navigation",
@@ -8941,6 +9367,9 @@
               "site.front.dark_mode": "Mode sombre",
               "site.front.dependency_unavailable": "Dépendance indisponible",
               "site.front.dependency_unavailable_description": "Une dépendance obligatoire du plugin est indisponible.",
+              "site.front.deployment.development": "Développement",
+              "site.front.deployment.local": "Local",
+              "site.front.deployment.production": "Production",
               "site.front.description": "Cette View provient de la configuration SuperBoard publiée et est rendue par son plugin.",
               "site.front.empty": "Aucun contenu pour le moment",
               "site.front.empty_description": "La View sélectionnée n’a aucune donnée à afficher.",
@@ -8963,11 +9392,12 @@
               "site.front.open_account": "Ouvrir le menu du compte de {name}",
               "site.front.open_navigation": "Ouvrir la navigation",
               "site.front.production": "Production",
+              "site.front.project_data": "Données du projet",
               "site.front.project_settings": "Paramètres du projet",
               "site.front.route_manifest": "Manifeste des routes Front",
               "site.front.section_navigation": "Pages {section}",
               "site.front.test": "Test",
-              "site.front.title": "SuperBoard",
+              "site.front.title": "Superboard",
               "site.front.unavailable": "SuperBoard indisponible",
               "site.front.unavailable_description": "Aucune configuration SuperBoard vérifiée ne peut être rendue.",
               "site.front.view_configuration_error": "Cette View exige un renderer valide et au moins une source de données du plugin.",
@@ -8975,8 +9405,8 @@
               "site.meta.release": "release",
               "site.meta.source": "source",
               "site.meta.state": "état",
-              "site.operator.home": "SuperBoard",
-              "site.operator.home_description": "Choisissez un plugin actif dans la navigation ou gérez les plugins dans EmDash.",
+              "site.operator.home": "Vue d’ensemble",
+              "site.operator.home_description": "Backend as a Service de Vplusflare. Choisissez une rubrique pour gérer cet environnement.",
               "site.operator.login": "Connexion opérateur",
               "site.operator.login_description": "Utilisez votre compte EmDash pour ouvrir cette instance.",
               "site.preview.not_found": "Preview introuvable ou expirée",
@@ -9020,6 +9450,82 @@
               "user.profile.title": "Profil opérateur",
               "user.status.active": "Actif",
               "user.status.disabled": "Désactivé"
+            }
+          },
+          {
+            "locale": "ar",
+            "messages": {
+              "site.admin.open": "إدارة المنصة",
+              "site.front.account": "الحساب",
+              "site.front.account_menu": "قائمة الحساب",
+              "site.front.close_navigation": "إغلاق القائمة",
+              "site.front.collapse_sidebar": "طي القائمة",
+              "site.front.dark_mode": "الوضع الداكن",
+              "site.front.dependency_unavailable": "Dependency unavailable",
+              "site.front.dependency_unavailable_description": "A required plugin dependency is unavailable.",
+              "site.front.deployment.development": "التطوير",
+              "site.front.deployment.local": "محلي",
+              "site.front.deployment.production": "الإنتاج",
+              "site.front.description": "This View comes from the published SuperBoard configuration and is rendered by its plugin.",
+              "site.front.empty": "Nothing here yet",
+              "site.front.empty_description": "The selected View has no data to display.",
+              "site.front.environment": "البيئة",
+              "site.front.error": "View error",
+              "site.front.error_description": "The selected plugin renderer could not complete.",
+              "site.front.expand_sidebar": "توسيع القائمة",
+              "site.front.fail_closed": "Fail-closed runtime state",
+              "site.front.fail_closed_description": "No unverified or partial configuration is rendered. EmDash Admin remains available to repair and publish a complete configuration.",
+              "site.front.forbidden": "Access denied",
+              "site.front.forbidden_description": "Your grants do not allow this View.",
+              "site.front.light_mode": "الوضع الفاتح",
+              "site.front.loading": "Loading",
+              "site.front.loading_description": "The selected View is loading.",
+              "site.front.logout": "تسجيل الخروج",
+              "site.front.logout_failed": "تعذر تسجيل الخروج. حاول مرة أخرى.",
+              "site.front.navigation": "تنقل Superboard",
+              "site.front.not_found": "Page not found",
+              "site.front.not_found_description": "The published SuperBoard configuration does not expose this URL.",
+              "site.front.open_account": "فتح قائمة حساب {name}",
+              "site.front.open_navigation": "فتح القائمة",
+              "site.front.production": "الإنتاج",
+              "site.front.project_data": "بيانات المشروع",
+              "site.front.project_settings": "إعدادات المشروع",
+              "site.front.route_manifest": "Front Route Manifest",
+              "site.front.section_navigation": "صفحات {section}",
+              "site.front.test": "اختبار",
+              "site.front.title": "Superboard",
+              "site.front.unavailable": "SuperBoard unavailable",
+              "site.front.unavailable_description": "No verified SuperBoard configuration can be rendered.",
+              "site.front.view_configuration_error": "This View needs a valid renderer and at least one plugin data source.",
+              "site.meta.instance": "instance",
+              "site.meta.release": "release",
+              "site.meta.source": "source",
+              "site.meta.state": "state",
+              "site.operator.home": "نظرة عامة",
+              "site.operator.home_description": "خدمات الخلفية من Vplusflare. اختر قسمًا لإدارة هذه البيئة.",
+              "site.operator.login": "Operator sign in",
+              "site.operator.login_description": "Use your EmDash account to open this instance.",
+              "site.preview.not_found": "Preview not found or expired",
+              "site.preview.operator_required": "Operator session required",
+              "site.preview.verification_failed": "Preview verification failed",
+              "user.action.passkey": "Continue with Passkey",
+              "user.admin.description": "Manage the selected identity View through its verified plugin renderer.",
+              "user.admin.title": "Identity administration",
+              "user.field.email": "Email",
+              "user.field.name": "Name",
+              "user.field.role": "Role",
+              "user.field.status": "Status",
+              "user.login.description": "Continue with the EmDash passkey that protects this SuperBoard instance.",
+              "user.login.title": "Operator sign in",
+              "user.members.description": "Review application-user access independently from operator authentication.",
+              "user.members.title": "Application users",
+              "user.page.profile": "Profile",
+              "user.page.sign_in": "Sign in",
+              "user.page.users": "Users",
+              "user.profile.description": "Review the identity used by this operator session.",
+              "user.profile.title": "Operator profile",
+              "user.status.active": "Active",
+              "user.status.disabled": "Disabled"
             }
           }
         ]
@@ -9302,8 +9808,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9331,8 +9837,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9360,8 +9866,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9389,8 +9895,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9418,8 +9924,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9445,8 +9951,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9472,8 +9978,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9499,8 +10005,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9526,8 +10032,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9555,8 +10061,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9584,8 +10090,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9613,8 +10119,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9642,8 +10148,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9671,8 +10177,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9700,8 +10206,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9729,8 +10235,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9758,8 +10264,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9787,8 +10293,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9816,8 +10322,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9845,8 +10351,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9874,8 +10380,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
-          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9900,6 +10406,35 @@
             "unavailable",
             "maintenance"
           ]
+        },
+        {
+          "abi_version": "1.0.0",
+          "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+          "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+          "capabilities": [
+            "renderer.mount",
+            "data_source.bind",
+            "action.bind"
+          ],
+          "plugin_id": "supbrd-plugmod-vocostar",
+          "plugin_version": "1.0.0",
+          "props_schema": {
+            "checksum": "sha256:190e071c44c7b75cc050c397c805657bb0bda5421195e83adfefdcd4000e2651",
+            "schema_id": "supbrd-plugmod-vocostar.schema.admin_surface_props_v1",
+            "version": "1.0.0"
+          },
+          "renderer_id": "supbrd-plugmod-vocostar.renderer.admin_surface",
+          "runtime_range": ">=0.1.0 <0.2.0",
+          "slots": [],
+          "supported_states": [
+            "loading",
+            "empty",
+            "forbidden",
+            "not_found",
+            "error",
+            "unavailable",
+            "maintenance"
+          ]
         }
       ],
       "rollback": {
@@ -9909,11 +10444,11 @@
       },
       "schema_version": "1.0.0"
     },
-    "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+    "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "xZqukweapmID3284YR3ZjAyaxlNwtH-CdZQ18IYos0hYgiJHtZUUc6itCMD3E5dJdsnTHF11PydHfhA5CZJrCQ"
+      "value": "5NO0A71LWYKqDYoAVhqtLAJdoheh0e0kXsu_m_wjto5xk-W-XLj2a2hMu-NWQgrV5ges2sqdDFF-zULPaBDaSw"
     },
     "validation_receipts": [
       {
@@ -9923,9 +10458,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "schema validation passed",
-        "receipt_checksum": "sha256:bf6236fb958643783d07353d968efc27a69d387e8c9f8cfb3055cb5fa5ac1839"
+        "receipt_checksum": "sha256:a536839c80459eb6d18a614eb8675bf8657425dca43fd4cd8634a4edec18ddee"
       },
       {
         "receipt_id": "01J00000000000000000007004:normalization",
@@ -9934,9 +10469,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "normalization validation passed",
-        "receipt_checksum": "sha256:533230e712fed7ed4ab353bf1e065b1f7ed612c5d54057943ba811442b2849dc"
+        "receipt_checksum": "sha256:15943a0451df80191b344e63895207e647ca4ae712d3f3321b1114fd83558e03"
       },
       {
         "receipt_id": "01J00000000000000000007004:identity",
@@ -9945,9 +10480,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "identity validation passed",
-        "receipt_checksum": "sha256:a6130a6e3382c58e6e8a5f0b6fba152b0e962ff5826cf3d59843b2e17b28c774"
+        "receipt_checksum": "sha256:f56a46fe2fdf689e153e0d1aa40e3de587d8ec0b38fc57e0b4b18d41f3d84619"
       },
       {
         "receipt_id": "01J00000000000000000007004:reference_graph",
@@ -9956,9 +10491,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "reference_graph validation passed",
-        "receipt_checksum": "sha256:2e2d45c092a8e44da71a4c8191628ff516fddd49a75f2b6d8ec7601efa5d9a75"
+        "receipt_checksum": "sha256:2d2687cfb48820a2bcab21f73af34752dc4d2352a846441a630eadde5ffbf995"
       },
       {
         "receipt_id": "01J00000000000000000007004:routing",
@@ -9967,9 +10502,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "routing validation passed",
-        "receipt_checksum": "sha256:21b08263ae7d636fc4a3d35d120f5f0c250d6998373ba3b879c6d742c98abb2d"
+        "receipt_checksum": "sha256:ff6ed645a22204d202802d94a957c31c6cd776331d8bff4491a25a4039a27a98"
       },
       {
         "receipt_id": "01J00000000000000000007004:renderer_compatibility",
@@ -9978,9 +10513,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "renderer_compatibility validation passed",
-        "receipt_checksum": "sha256:f357dc856a8cc3eddb20e623acf414bde2c25d423d3ff5dd4848af701692f92e"
+        "receipt_checksum": "sha256:bfe6e7a9acf489abae1444b83dfeb46b62b2e1ca2acb14097ac159c4a6a49047"
       },
       {
         "receipt_id": "01J00000000000000000007004:actions_data_sources",
@@ -9989,9 +10524,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "actions_data_sources validation passed",
-        "receipt_checksum": "sha256:7ad0bf019fc4dbad0f95cfbec8bc8ab5e5969ba720b6be855a24706498f1b354"
+        "receipt_checksum": "sha256:6680945467f6bd8c60f08fb3059258307f973b3481da07c2416765e50416dd2e"
       },
       {
         "receipt_id": "01J00000000000000000007004:permissions_security",
@@ -10000,9 +10535,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "permissions_security validation passed",
-        "receipt_checksum": "sha256:c7c8d522ef2deadcc0690a192940b0e9f8c17c34de0c53e9de77cc1e9bbbec60"
+        "receipt_checksum": "sha256:f661fd337d76b0cfcd65dad9f1e1fe93be0a3d0b5de83c4b8fdd86e76b3544ed"
       },
       {
         "receipt_id": "01J00000000000000000007004:translations_media",
@@ -10011,9 +10546,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "translations_media validation passed",
-        "receipt_checksum": "sha256:bbe5c7b5f9cd989ea9f680865bb14b325df7a3316bc56728b735f9e486789b6c"
+        "receipt_checksum": "sha256:adb0f35033a74485588ec5d1dd306781c2f6d632ff03736c6e559fd4cbcf039e"
       },
       {
         "receipt_id": "01J00000000000000000007004:plugins_stores_workers",
@@ -10022,9 +10557,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "plugins_stores_workers validation passed",
-        "receipt_checksum": "sha256:f5b7453b19d8b3a1f0b9acb41598c9988c02826324647eba64f8ff047d739559"
+        "receipt_checksum": "sha256:5c68e7ec6a80241f19edef03c69c60a23f8838616af522930886b63a4880720d"
       },
       {
         "receipt_id": "01J00000000000000000007004:migrations",
@@ -10033,9 +10568,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "migrations validation passed",
-        "receipt_checksum": "sha256:5448810ca2e790a35fa10a793d3ed713273dff52199b3097d584a0ae51eaa418"
+        "receipt_checksum": "sha256:163b1ffd823616a43a7dff82634155875f34777ce364756d44af107a0e51845e"
       },
       {
         "receipt_id": "01J00000000000000000007004:rollback_readiness",
@@ -10044,9 +10579,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "rollback_readiness validation passed",
-        "receipt_checksum": "sha256:2a46ba363c3b233310757abc486e4db2374e8696204a5b5e77059c11b82b0419"
+        "receipt_checksum": "sha256:74353c7d917edd9b00518e3976172320695e9a3f28a1289ba943e653fba32b5e"
       },
       {
         "receipt_id": "01J00000000000000000007004:integrity",
@@ -10055,12 +10590,12 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
+        "content_checksum": "sha256:7e7fcd7a3204baff43e8badda8814960930bd655099fe794ea7b3abed79a32f1",
         "message": "integrity validation passed",
-        "receipt_checksum": "sha256:f9f3259e246244f3b3d257e018ded718bc327d3a143260f5839c6321629c6c55"
+        "receipt_checksum": "sha256:ce7edd5dbeb3afca7d8c66a9e6e5c7b938f4ee8819b31baf4936929f2f7ebf11"
       }
     ],
-    "validation_set_checksum": "sha256:e1a4ac8fb982cf6302ff7db8a55596a9ee88738b29b4f729a65ac14f661f8daa",
+    "validation_set_checksum": "sha256:55d733b3b58d8b606aa0d8b354b2e0de8bbef77a47e019ac3ab2b6782b0fa26c",
     "verification_status": "verified"
   }
 }

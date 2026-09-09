@@ -80,7 +80,9 @@ test("EmDash menu and View records become editable Front configuration", () => {
 	expect(frontViewSlug("/analytics/remote-config")).toBe("analytics--remote-config");
 	expect(navigation).toEqual([
 		{
+			id: "analytics",
 			label: "Analyse éditée",
+			direct: false,
 			items: [{ label: "Configuration distante", href: "/analytics/remote-config" }],
 		},
 	]);
@@ -222,6 +224,7 @@ test("EmDash menu and View edits drive the rendered Front within the active Rele
 	expect(output).toContain("Ce texte vient de la View EmDash.");
 	expect(output).toContain("Contenu éditable");
 	expect(output).not.toContain("Hors Release");
+	expect(output).not.toContain('"href":"/analytics/events"');
 	expect(output).not.toContain('"href":"/paywalls"');
 });
 

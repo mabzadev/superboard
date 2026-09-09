@@ -2,7 +2,7 @@
 
 Import-ready library for replacing RevenueCat actions in FlutterFlow.
 
-<!-- opengrow-sdk-documentation:flutterflow:start -->
+<!-- superboard-sdk-documentation:flutterflow:start -->
 
 > **Lifecycle: active.** New versions may be published only through the
 > protected immutable-release workflow.
@@ -29,7 +29,7 @@ Then resolve the immutable dependency:
 flutter pub get
 ```
 
-<!-- opengrow-sdk-documentation:flutterflow:end -->
+<!-- superboard-sdk-documentation:flutterflow:end -->
 
 ## SuperBoard 3.0.0 candidate
 

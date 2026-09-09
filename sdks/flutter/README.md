@@ -37,7 +37,7 @@ import 'package:superboard_flutter/superboard_flutter.dart';
 final superboard = SuperBoard();
 ```
 
-OpenGrow 2.x Dart symbols and entrypoint files remain as deprecated aliases for
+Legacy 2.x Dart symbols and entrypoint files remain as deprecated aliases for
 one major release. Android manifest keys and iOS plist keys also fall back to
 their 2.x spelling. The encrypted purchase outbox, anonymous identifier,
 CustomerInfo cache, and JWKS cache deliberately keep their `opengrow.*`
@@ -134,7 +134,7 @@ The SuperBoard Flutter SDK provides deep linking, app links, universal links, li
 - iOS 13.0+
 - Android API 24+ (Android 7.0)
 
-<!-- opengrow-sdk-documentation:flutter:start -->
+<!-- superboard-sdk-documentation:flutter:start -->
 
 > **Lifecycle: active.** New versions may be published only through the
 > protected immutable-release workflow.
@@ -161,7 +161,7 @@ Then resolve the immutable dependency:
 flutter pub get
 ```
 
-<!-- opengrow-sdk-documentation:flutter:end -->
+<!-- superboard-sdk-documentation:flutter:end -->
 
 ## Platform Setup
 

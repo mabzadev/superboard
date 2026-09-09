@@ -24,7 +24,7 @@ export const sdkDocumentationAuditPaths = Object.freeze([
 ]);
 
 function marker(id, boundary) {
-  return `<!-- opengrow-sdk-documentation:${id}:${boundary} -->`;
+  return `<!-- superboard-sdk-documentation:${id}:${boundary} -->`;
 }
 
 function libraryMap(catalog) {
@@ -218,19 +218,19 @@ function androidRegistrySettingsKotlin(library) {
   }
   const tokenEnvironmentVariable = authentication.tokenEnvironmentVariable;
   return [
-    `val openGrowPackagesUser = providers.environmentVariable("${usernameEnvironmentVariable}").orNull`,
+    `val superBoardPackagesUser = providers.environmentVariable("${usernameEnvironmentVariable}").orNull`,
     `    ?: error("${usernameEnvironmentVariable} is required")`,
-    `val openGrowPackagesToken = providers.environmentVariable("${tokenEnvironmentVariable}").orNull`,
+    `val superBoardPackagesToken = providers.environmentVariable("${tokenEnvironmentVariable}").orNull`,
     `    ?: error("${tokenEnvironmentVariable} is required")`,
     "",
     "dependencyResolutionManagement {",
     "    repositories {",
     "        maven {",
-    '            name = "OpenGrowGitHubPackages"',
+    '            name = "SuperBoardGitHubPackages"',
     `            url = uri("${distribution.registry}")`,
     "            credentials {",
-    "                username = openGrowPackagesUser",
-    "                password = openGrowPackagesToken",
+    "                username = superBoardPackagesUser",
+    "                password = superBoardPackagesToken",
     "            }",
     "        }",
     "    }",
@@ -250,20 +250,20 @@ function androidRegistrySettingsGroovy(library) {
   }
   const tokenEnvironmentVariable = authentication.tokenEnvironmentVariable;
   return [
-    `def openGrowPackagesUser = System.getenv("${usernameEnvironmentVariable}")`,
-    `def openGrowPackagesToken = System.getenv("${tokenEnvironmentVariable}")`,
-    "if (!openGrowPackagesUser || !openGrowPackagesToken) {",
+    `def superBoardPackagesUser = System.getenv("${usernameEnvironmentVariable}")`,
+    `def superBoardPackagesToken = System.getenv("${tokenEnvironmentVariable}")`,
+    "if (!superBoardPackagesUser || !superBoardPackagesToken) {",
     `    throw new GradleException("${usernameEnvironmentVariable} and ${tokenEnvironmentVariable} are required")`,
     "}",
     "",
     "dependencyResolutionManagement {",
     "    repositories {",
     "        maven {",
-    '            name = "OpenGrowGitHubPackages"',
+    '            name = "SuperBoardGitHubPackages"',
     `            url = uri("${distribution.registry}")`,
     "            credentials {",
-    "                username = openGrowPackagesUser",
-    "                password = openGrowPackagesToken",
+    "                username = superBoardPackagesUser",
+    "                password = superBoardPackagesToken",
     "            }",
     "        }",
     "    }",
@@ -365,7 +365,7 @@ export function renderSdkDocumentationSections(catalog) {
         "",
         fenced(
           "javascript",
-          `import OpenGrow from "${javascript.packageName}";`,
+          `import SuperBoard from "${javascript.packageName}";`,
         ),
       ].join("\n"),
     ],
@@ -387,7 +387,7 @@ export function renderSdkDocumentationSections(catalog) {
         fenced("groovy", androidRegistrySettingsGroovy(android)),
         "",
         "Then keep the exact native dependency in `android/app/build.gradle`",
-        "(the OpenGrow config plugin inserts the same coordinate):",
+        "(the SuperBoard config plugin inserts the same coordinate):",
         "",
         fenced("groovy", android.install),
         "",
@@ -404,7 +404,7 @@ export function renderSdkDocumentationSections(catalog) {
         "",
         "### iOS dependency",
         "",
-        "The React Native pod consumes the native OpenGrow podspec directly from its",
+        "The React Native pod consumes the native SuperBoard podspec directly from its",
         "reviewed immutable Git tag; it does not claim a CocoaPods Trunk release:",
         "",
         fenced("ruby", `pod '${ios.packageName}', :podspec => '${iosPodspec}'`),

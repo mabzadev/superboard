@@ -115,3 +115,40 @@ describe("SuperBoard MCP Worker", () => {
 		expect(runtime.API_SERVICE.fetch).not.toHaveBeenCalled();
 	});
 });
+
+it("serves the canonical console MCP endpoint and its path-specific discovery", async () => {
+	const configured = {
+		...env(),
+		MCP_DOMAIN: "board.example.test",
+		PUBLIC_MCP_URL: "https://board.example.test/mcp",
+	};
+	const denied = await worker.fetch(
+		new Request("https://board.example.test/mcp", {
+			method: "POST",
+			headers: { Host: "board.example.test" },
+		}),
+		configured,
+	);
+	expect(denied.status).toBe(401);
+	expect(denied.headers.get("WWW-Authenticate")).toContain(
+		"https://board.example.test/.well-known/oauth-protected-resource/mcp",
+	);
+	const metadata = await worker.fetch(
+		new Request("https://board.example.test/.well-known/oauth-protected-resource/mcp", {
+			headers: { Host: "board.example.test" },
+		}),
+		configured,
+	);
+	expect(metadata.status).toBe(200);
+	expect(await metadata.json()).toMatchObject({
+		resource: "https://board.example.test/mcp",
+		authorization_servers: ["https://api.example.test"],
+	});
+	const rejected = await worker.fetch(
+		new Request("https://board.example.test/mcp", {
+			headers: { Host: "board.example.test", Origin: "https://evil.example.test" },
+		}),
+		configured,
+	);
+	expect(rejected.status).toBe(403);
+});

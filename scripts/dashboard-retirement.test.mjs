@@ -54,9 +54,15 @@ test("the former Dashboard hostname is served and monitored by the Site", async 
 		(route) => route.hostname === target.domains.dashboard,
 	);
 	assert.equal(frontAlias?.service, "site");
-	const health = compiled.materialization.healthChecks.find((check) =>
-		check.url?.includes(target.domains.dashboard),
+	const health = compiled.materialization.healthChecks.find(
+		(check) =>
+			check.url?.includes(target.domains.dashboard) && check.path === "/superboard-system/health",
 	);
 	assert.equal(health?.service, "site");
 	assert.equal(health?.path, "/superboard-system/health");
+	assert.ok(
+		compiled.materialization.healthChecks.some(
+			(check) => check.url?.includes(target.domains.dashboard) && check.path === "/mcp/health",
+		),
+	);
 });

@@ -11,6 +11,9 @@
     "./plugin-task": "./src/plugin-task.ts",
     "./plugin-workflow": "./src/plugin-workflow.ts",
     "./email": "./src/email.ts",
+    "./email-studio": "./src/email-studio.ts",
+    "./experience-localization": "./src/experience-localization.ts",
+    "./journey-simulation": "./src/journey-simulation.ts",
     "./custom-worker": "./src/custom-worker.ts",
     "./observability": "./src/observability.ts",
     "./health": "./src/health.ts",
@@ -25,6 +28,8 @@
     "./fixtures/support/v1.json": "./fixtures/support/v1.json",
     "./billing-catalog": "./src/billing-catalog.ts",
     "./application-plugin-api": "./src/application-plugin-api.ts",
-    "./plugin-api-owner": "./src/plugin-api-owner.ts"
+    "./plugin-api-owner": "./src/plugin-api-owner.ts",
+    "./deployment-configuration": "./src/deployment-configuration.ts",
+    "./plugin-packages": "./src/plugin-packages.ts"
   }
 }

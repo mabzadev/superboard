@@ -15,6 +15,7 @@ function applicationCall(
 	id: string,
 	sdk: Record<string, string>,
 	body?: unknown,
+	pluginId = "supbrd-plug-user",
 ) {
 	const method = kind === "commands" ? "POST" : "GET";
 	const envelope = {
@@ -23,7 +24,7 @@ function applicationCall(
 		...(body === undefined ? {} : { body }),
 	};
 	return SELF.fetch(
-		`https://site.example/_emdash/api/superboard/plugins/supbrd-plug-user/${kind}/${id}${method === "GET" ? `?request=${encodeURIComponent(JSON.stringify(envelope))}` : ""}`,
+		`https://site.example/_emdash/api/superboard/plugins/${pluginId}/${kind}/${id}${method === "GET" ? `?request=${encodeURIComponent(JSON.stringify(envelope))}` : ""}`,
 		{
 			method,
 			headers: { ...sdk, "Content-Type": "application/json" },
@@ -102,6 +103,28 @@ test("application User contracts authenticate SDK users without an EmDash sessio
 	expect(session.user_id).toBe(userId);
 	expect(session.session_id).toBeTruthy();
 	const authenticated = { ...sdk, Authorization: `Bearer ${session.access_token}` };
+	const groupedSessions = await applicationCall(
+		"data-sources",
+		"active_sessions",
+		authenticated,
+		undefined,
+		"supbrd-plug-identity",
+	);
+	expect(groupedSessions.status, await groupedSessions.clone().text()).toBe(200);
+	expect(await groupedSessions.json()).toMatchObject({
+		session_ids: expect.arrayContaining([session.session_id]),
+	});
+	expect(
+		(
+			await applicationCall(
+				"data-sources",
+				"active_sessions",
+				{ ...authenticated, "PROJECT-KEY": instance!.api_key },
+				undefined,
+				"supbrd-plug-identity",
+			)
+		).status,
+	).toBe(403);
 	expect(
 		await (await applicationCall("data-sources", "active_sessions", authenticated)).json(),
 	).toMatchObject({

@@ -45,9 +45,13 @@ test("canonical Settings APIs retain changed values, versions and verified SDK c
 		const saved = await env.DB.prepare(
 			"SELECT values_json FROM _emdash_plugin_setting_versions WHERE id=? AND plugin_id=?",
 		)
-			.bind(version.id, plugin)
+			.bind(version.id, "supbrd-core")
 			.first<{ values_json: string }>();
-		expect(JSON.parse(saved!.values_json).site_name).toBe(name);
+		expect(JSON.parse(saved!.values_json)[`${plugin}__site_name`]).toBe(name);
+		const stored = await env.DB.prepare("SELECT value FROM options WHERE name=?")
+			.bind(`plugin:${plugin}:settings:site_name`)
+			.first<{ value: string }>();
+		expect(JSON.parse(stored!.value)).toBe(name);
 		for (const [id, scenario] of [
 			["update_effective_settings", "mutation"],
 			["effective_settings", "read"],

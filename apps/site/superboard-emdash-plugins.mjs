@@ -4,6 +4,7 @@ const settingLabelSeparators = /[_-]/u;
 import { fileURLToPath } from "node:url";
 
 import topology from "../../config/emdash-plugin-topology.json" with { type: "json" };
+import catalog from "../../config/superboard-plugin-catalog.json" with { type: "json" };
 
 export const SUPERBOARD_PLUGIN_TEMPLATES = Object.freeze(
 	topology.plugins
@@ -15,8 +16,8 @@ export const SUPERBOARD_PLUGIN_TEMPLATES = Object.freeze(
 export function configureSuperBoardPlugins(plugins) {
 	return plugins
 		.filter(({ manifest }) => !manifest.plugin_id.includes("*"))
-		.map(({ manifest }) => {
-			const displayName = pluginDisplayName(manifest.plugin_id);
+		.map(({ manifest, label, kind }) => {
+			const displayName = label ?? pluginDisplayName(manifest.plugin_id);
 			const settingsSchema = emdashSettingsSchema(manifest.settings.schema.properties);
 			const entrypoint = fileURLToPath(
 				new URL(
@@ -27,18 +28,23 @@ export function configureSuperBoardPlugins(plugins) {
 			return {
 				id: manifest.plugin_id,
 				version: manifest.plugin_version,
-				defaultEnabled: false,
+				defaultEnabled: kind === "core",
 				lifecycleManaged: true,
 				lifecycleEnablePath: `/_emdash/api/superboard/plugins/${encodeURIComponent(manifest.plugin_id)}/enable`,
 				lifecycleDisablePath: `/_emdash/api/superboard/plugins/${encodeURIComponent(manifest.plugin_id)}/disable`,
 				entrypoint,
-				adminPages: [{ path: "/", label: displayName, icon: "settings" }],
+				adminPages: [
+					{ path: "/", label: displayName, icon: "settings" },
+					...(manifest.plugin_id === "supbrd-core"
+						? [{ path: "/configuration", label: "Configuration", icon: "settings" }]
+						: []),
+				],
 				settingsSchema,
 				format: "standard",
 				capabilities: [],
 				storage: Object.fromEntries(
 					manifest.stores.map(({ store_id: storeId }) => [
-						storeId.split(".").at(-1),
+						storeId.replaceAll(".", "_").replaceAll("-", "_"),
 						{ indexes: [] },
 					]),
 				),
@@ -57,7 +63,7 @@ export function configureSuperBoardPlugins(plugins) {
 }
 
 export const superboardConfiguredPlugins = Object.freeze(
-	configureSuperBoardPlugins(topology.plugins),
+	configureSuperBoardPlugins(catalog.plugins),
 );
 
 function emdashSettingsSchema(properties) {
@@ -98,6 +104,10 @@ function pluginDisplayName(pluginId) {
 }
 
 function settingLabel(value) {
+	if (String(value).startsWith("supbrd-") && String(value).includes("__")) {
+		const [component, key] = String(value).split("__");
+		return `${pluginDisplayName(component)} · ${settingLabel(key)}`;
+	}
 	return String(value)
 		.split(settingLabelSeparators)
 		.filter(Boolean)

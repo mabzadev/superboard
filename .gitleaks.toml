@@ -1,6 +1,12 @@
 [extend]
 useDefault = true
 
+[[rules]]
+id = "browser-session-state"
+description = "Browser authentication state must remain outside Git"
+path = '''(^|/)\.auth/[^/]+\.json$'''
+regex = '''(?s).+'''
+
 [allowlist]
 description = "Known vendored and runtime-test false positives"
 paths = [

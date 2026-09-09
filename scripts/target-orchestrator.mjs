@@ -3,6 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 
 import { generateDevelopmentSecretAssignments } from "./cloudflare-development-secrets.mjs";
@@ -418,7 +419,9 @@ async function startLocalTarget(prepared, args, { verify = false } = {}) {
 	const children = await spawnLocalServices(prepared.materialization.services, spawnService);
 	await new Promise((resolvePromise, reject) => {
 		let settled = false;
+		const startupController = new AbortController();
 		const stop = (skip) => {
+			startupController.abort();
 			for (const child of children) {
 				if (child !== skip && child.exitCode === null) child.kill("SIGTERM");
 			}
@@ -447,11 +450,27 @@ async function startLocalTarget(prepared, args, { verify = false } = {}) {
 				}
 			});
 		}
-		process.once("SIGINT", () => {
+		const handleStop = () => {
 			if (settled) return;
 			settled = true;
 			stop(null);
 			resolvePromise();
+		};
+		process.once("SIGINT", handleStop);
+		process.once("SIGTERM", handleStop);
+		void verifyLocalTargetHealth(
+			{
+				healthChecks: prepared.materialization.healthChecks.filter(
+					({ service }) => service === "site",
+				),
+			},
+			{},
+			{ signal: startupController.signal },
+		).catch((error) => {
+			if (settled) return;
+			settled = true;
+			stop(null);
+			reject(error);
 		});
 	});
 }
@@ -491,18 +510,23 @@ async function stopLocalChildren(children) {
 export async function verifyLocalTargetHealth(
 	materialization,
 	secretAssignments,
-	{ fetchImpl = fetch, attempts = 120, intervalMs = 500 } = {},
+	{ fetchImpl = fetch, attempts = 120, intervalMs = 500, signal } = {},
 ) {
 	const checks = materialization.healthChecks.filter(({ kind }) => kind === "worker");
 	let receipts = [];
 	for (let attempt = 1; attempt <= attempts; attempt += 1) {
+		signal?.throwIfAborted();
 		receipts = [];
 		for (const healthCheck of checks) {
-			receipts.push(await probeLocalHealth(healthCheck, secretAssignments, fetchImpl));
+			signal?.throwIfAborted();
+			const receipt = await probeLocalHealth(healthCheck, secretAssignments, fetchImpl, signal);
+			receipts.push(receipt);
+			if (healthCheck.service === "site" && receipt.status === 200)
+				receipts.push(await probeLocalAdminShell(healthCheck, fetchImpl, signal));
 		}
+		signal?.throwIfAborted();
 		if (receipts.every(({ status }) => status === 200)) return receipts;
-		if (attempt < attempts)
-			await new Promise((resolvePromise) => setTimeout(resolvePromise, intervalMs));
+		if (attempt < attempts) await delay(intervalMs, undefined, { signal });
 	}
 	throw new Error(
 		`Local target health verification failed: ${receipts
@@ -512,7 +536,7 @@ export async function verifyLocalTargetHealth(
 	);
 }
 
-async function probeLocalHealth(healthCheck, secretAssignments, fetchImpl) {
+async function probeLocalHealth(healthCheck, secretAssignments, fetchImpl, signal) {
 	const headers = new Headers();
 	if (healthCheck.authentication?.type === "secret") {
 		const value = secretAssignments[healthCheck.service]?.[healthCheck.authentication.binding];
@@ -531,9 +555,10 @@ async function probeLocalHealth(healthCheck, secretAssignments, fetchImpl) {
 		const response = await fetchImpl(
 			new Request(healthCheck.url, {
 				headers,
-				signal: AbortSignal.timeout(5_000),
+				signal: healthRequestSignal(signal),
 			}),
 		);
+		await response.body?.cancel();
 		return {
 			id: healthCheck.id,
 			service: healthCheck.service,
@@ -549,6 +574,48 @@ async function probeLocalHealth(healthCheck, secretAssignments, fetchImpl) {
 			error: error instanceof Error ? error.message : String(error),
 		};
 	}
+}
+
+async function probeLocalAdminShell(healthCheck, fetchImpl, signal) {
+	const url = new URL("/_emdash/admin/login", healthCheck.url).href;
+	const receipt = { id: `${healthCheck.id}.admin`, service: "site-admin", url };
+	try {
+		const response = await fetchImpl(new Request(url, { signal: healthRequestSignal(signal) }));
+		if (!response.ok || !response.headers.get("Content-Type")?.includes("text/html")) {
+			await response.body?.cancel();
+			throw new Error(`EmDash admin shell returned HTTP ${response.status} without HTML`);
+		}
+		const reader = response.body?.getReader();
+		if (!reader) throw new Error("EmDash admin shell is empty");
+		const decoder = new TextDecoder();
+		const chunks = [];
+		let size = 0;
+		try {
+			for (;;) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				size += value.byteLength;
+				if (size > 2 * 1024 * 1024) {
+					await reader.cancel();
+					throw new Error("EmDash admin shell exceeds the verification limit");
+				}
+				chunks.push(decoder.decode(value, { stream: true }));
+			}
+			chunks.push(decoder.decode());
+		} finally {
+			reader.releaseLock();
+		}
+		if (!/\bid=["']admin-root["']/u.test(chunks.join("")))
+			throw new Error("EmDash admin shell is empty or missing its application root");
+		return { ...receipt, status: 200 };
+	} catch (error) {
+		return { ...receipt, status: 0, error: error instanceof Error ? error.message : String(error) };
+	}
+}
+
+function healthRequestSignal(signal) {
+	const timeout = AbortSignal.timeout(5000);
+	return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
 function localSecretAssignments(target, environment) {

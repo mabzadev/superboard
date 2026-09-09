@@ -1,3 +1,6 @@
+import {eraseStudioRecipientStatements}from"./delivery-records.js";
+import { emailPublicationIssues, resolveEmailMessage, type EmailDesign } from "@superboard/contracts/email-studio";
+import { emailStudioRoutes, saveEmailStudioTemplate, snapshotEmailCampaign, resolveStoredEmail, getPublishedEmailTemplate } from "./email-studio.js";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
 import { Hono, type Context } from "hono";
@@ -378,6 +381,7 @@ app.use("/internal/v1/*", async (c, next) => {
 });
 
 app.route("/internal/v1", journeyRoutes);
+app.route("/internal/v1/studio", emailStudioRoutes);
 
 app.get("/internal/v1", (c) =>
 	c.json({
@@ -615,6 +619,7 @@ app.delete("/internal/v1/application/users/:userId", async (c) => {
 			`DELETE FROM subscriber_identity_aliases
        WHERE project_id = ? AND subscriber_id = ?`,
 		).bind(projectId, subscriber.id),
+        ...eraseStudioRecipientStatements(c.env.DB,projectId,String(subscriber.id))
 	]);
 	return c.json({
 		data: {
@@ -633,6 +638,7 @@ app.get("/internal/v1/email/subscribers", async (c) => {
 	const status = String(c.req.query("status") || "").trim();
 	const limit = Math.min(positiveInt(c.req.query("limit") || 100, "limit"), 500);
 	const offset = Math.max(Number(c.req.query("offset") || 0), 0);
+	const listId=String(c.req.query("list_id")??"");
 	const like = `%${escapeLike(query)}%`;
 	const rows = await c.env.DB.prepare(
 		`
@@ -641,10 +647,11 @@ app.get("/internal/v1/email/subscribers", async (c) => {
         WHERE membership.project_id = subscriber.project_id AND membership.subscriber_id = subscriber.id) list_ids_json
     FROM subscribers subscriber WHERE subscriber.project_id = ?
       AND (? = '' OR subscriber.status = ?) AND (? = '' OR subscriber.email LIKE ? ESCAPE '\\' OR COALESCE(subscriber.name, '') LIKE ? ESCAPE '\\')
-    ORDER BY subscriber.created_at DESC LIMIT ? OFFSET ?
+      AND (?='' OR EXISTS(SELECT 1 FROM subscriber_list_memberships m WHERE m.project_id=subscriber.project_id AND m.subscriber_id=subscriber.id AND m.list_id=?))
+    ORDER BY subscriber.created_at DESC,subscriber.id DESC LIMIT ? OFFSET ?
   `,
 	)
-		.bind(projectId, status, status, query, like, like, limit, offset)
+		.bind(projectId, status, status, query, like, like, listId, listId, limit, offset)
 		.all<Record<string, unknown>>();
 	return c.json({ data: rows.results.map(serializeSubscriber) });
 });
@@ -848,12 +855,9 @@ app.post("/internal/v1/email/subscribers/:subscriberId/unsubscribe", async (c) =
 
 app.delete("/internal/v1/email/subscribers/:subscriberId", async (c) => {
 	const projectId = c.get("project").projectId;
-	const deleted = await c.env.DB.prepare(
-		"DELETE FROM subscribers WHERE project_id = ? AND id = ? RETURNING id",
-	)
-		.bind(projectId, c.req.param("subscriberId"))
-		.first();
-	if (!deleted) throw failure("subscriber_not_found", "Subscriber not found", 404);
+    await subscriber(c.env.DB,projectId,c.req.param("subscriberId"));
+    await c.env.DB.batch([...eraseStudioRecipientStatements(c.env.DB,projectId,c.req.param("subscriberId")),c.env.DB.prepare("DELETE FROM subscribers WHERE project_id=? AND id=?").bind(projectId,c.req.param("subscriberId"))]);
+
 	return c.json({ data: { deleted: true } });
 });
 
@@ -1144,7 +1148,7 @@ app.delete("/internal/v1/segments/:segmentId", async (c) => {
 
 app.get("/internal/v1/templates", async (c) => {
 	const rows = await c.env.DB.prepare(
-		"SELECT * FROM email_templates WHERE project_id = ? ORDER BY updated_at DESC",
+		"SELECT t.*, s.revision AS studio_revision, s.document_json AS studio_document_json, p.revision AS published_revision FROM email_templates t LEFT JOIN email_studio_documents s ON s.project_id=t.project_id AND s.resource_type='template' AND s.resource_id=t.id LEFT JOIN email_studio_published p ON p.project_id=t.project_id AND p.template_id=t.id WHERE t.project_id = ? ORDER BY t.updated_at DESC",
 	)
 		.bind(c.get("project").projectId)
 		.all<Record<string, unknown>>();
@@ -1155,7 +1159,7 @@ app.post("/internal/v1/templates", async (c) => {
 	const projectId = c.get("project").projectId;
 	const body = await readJsonObject(c.req.raw);
 	const id = crypto.randomUUID();
-	await c.env.DB.prepare(
+	const statement = c.env.DB.prepare(
 		`
     INSERT INTO email_templates (id, project_id, name, template_type, subject, content_html, content_markdown, content_text)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -1175,8 +1179,8 @@ app.post("/internal/v1/templates", async (c) => {
 			optionalText(body.content_html, "content_html", 500_000),
 			optionalText(body.content_markdown, "content_markdown", 500_000),
 			optionalText(body.content_text, "content_text", 500_000),
-		)
-		.run();
+		);
+	await saveEmailStudioTemplate(c.env.DB, projectId, id, body, statement);
 	return c.json({ data: serializeTemplate(await template(c.env.DB, projectId, id)) }, 201);
 });
 
@@ -1184,7 +1188,7 @@ app.patch("/internal/v1/templates/:templateId", async (c) => {
 	const projectId = c.get("project").projectId;
 	const current = await template(c.env.DB, projectId, c.req.param("templateId"));
 	const body = await readJsonObject(c.req.raw);
-	await c.env.DB.prepare(
+	const statement = c.env.DB.prepare(
 		`
     UPDATE email_templates SET name = ?, template_type = ?, subject = ?, content_html = ?, content_markdown = ?, content_text = ?,
       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE project_id = ? AND id = ?
@@ -1207,8 +1211,8 @@ app.patch("/internal/v1/templates/:templateId", async (c) => {
 				: optionalText(body.content_text, "content_text", 500_000),
 			projectId,
 			current.id,
-		)
-		.run();
+		);
+	await saveEmailStudioTemplate(c.env.DB, projectId, String(current.id), body, statement);
 	return c.json({
 		data: serializeTemplate(await template(c.env.DB, projectId, String(current.id))),
 	});
@@ -1532,12 +1536,31 @@ app.post("/internal/v1/transactional", async (c) => {
 	)
 		.bind(project.projectId, recipient)
 		.first<Record<string, unknown>>();
+    const savedDesign=parseStoredJson<EmailDesign|null>(templateRow.studio_document_json,null);
+    const published=savedDesign?await getPublishedEmailTemplate(c.env.DB,project.projectId,String(templateRow.id)):null;
+    if(savedDesign&&!published)throw failure("EMAIL_TEMPLATE_NOT_PUBLISHED","Publish this email template before sending.",409);
+    const messageDesign=published?.document??null;
+    const essential=messageDesign!==null&&!['campaign','lifecycle'].includes(messageDesign.purpose);
+    const renderContext={
+        request_locale:typeof body.locale==="string"?body.locale:undefined,
+        event:jsonObject(body.event,"event"),
+        profile:{...parseStoredJson<Record<string,unknown>>(subscriberRow?.attributes_json,{}),...jsonObject(body.attributes,"attributes"),name:subscriberRow?.name??body.name??"",email:recipient},
+        currency:typeof body.currency==="string"?body.currency:undefined,
+        time_zone:typeof body.time_zone==="string"?body.time_zone:undefined,
+    };
+    if(messageDesign){
+        const issues=emailPublicationIssues(messageDesign);
+        if(issues.length)throw failure("EMAIL_TRANSLATIONS_NOT_READY","Approve the fallback translation before sending.",422,{issues});
+        const resolved=resolveEmailMessage(messageDesign,renderContext);
+        if(resolved.status!=="ready")throw failure("EMAIL_TRANSLATION_MISSING","No approved translation is available.",422);
+        if(resolved.missing_variables.length)throw failure("EMAIL_VARIABLES_MISSING","Required email variables are missing.",422,{variables:resolved.missing_variables});
+    }
 	if (!subscriberRow) {
 		const subscriberId = crypto.randomUUID();
 		await c.env.DB.prepare(
 			`
       INSERT INTO subscribers (id, project_id, email, name, status, attributes_json, consent_status, consent_source, consented_at, created_at, updated_at)
-      VALUES (?, ?, ?, ?, 'enabled', ?, 'confirmed', 'transactional', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      VALUES (?, ?, ?, ?, 'enabled', ?, 'pending', 'transactional', NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
     `,
 		)
 			.bind(
@@ -1555,7 +1578,7 @@ app.post("/internal/v1/transactional", async (c) => {
 	)
 		.bind(project.projectId, recipient)
 		.first();
-	if (suppressed) throw failure("recipient_suppressed", "Recipient is suppressed", 409);
+	if (suppressed && !(essential && suppressed.reason === "unsubscribe")) throw failure("recipient_suppressed", "Recipient is suppressed", 409);
 	const campaignId = crypto.randomUUID();
 	const deliveryId = crypto.randomUUID();
 	await c.env.DB.batch([
@@ -1590,6 +1613,10 @@ app.post("/internal/v1/transactional", async (c) => {
 			subscriberRow.name,
 		),
 	]);
+	await snapshotEmailCampaign(c.env.DB, project.projectId, campaignId, String(templateRow.id), messageDesign?{revision:published!.revision,document:messageDesign}:undefined);
+
+	await c.env.DB.prepare("INSERT INTO email_studio_contexts (project_id,campaign_id,context_json) VALUES (?,?,?)").bind(project.projectId,campaignId,JSON.stringify(renderContext)).run();
+	await resolveStoredEmail(c.env.DB, project.projectId, campaignId, deliveryId, renderContext);
 	await c.env.MARKETING_QUEUE.send({
 		type: "marketing.email.deliver",
 		projectId: project.projectId,
@@ -2479,6 +2506,10 @@ async function transitionCampaign(
 	to: string,
 	values: { scheduled_at?: string } = {},
 ) {
+	if (["scheduled", "running"].includes(to)) {
+		const current = await campaign(env.DB, project.projectId, campaignId);
+		await snapshotEmailCampaign(env.DB, project.projectId, campaignId, current.template_id ? String(current.template_id) : null);
+	}
 	const placeholders = from.map(() => "?").join(",");
 	const updated = await env.DB.prepare(
 		`
@@ -2647,7 +2678,7 @@ async function segment(db: D1Database, projectId: number, id: string) {
 }
 async function template(db: D1Database, projectId: number, id: string) {
 	const row = await db
-		.prepare("SELECT * FROM email_templates WHERE project_id = ? AND id = ?")
+		.prepare("SELECT t.*, s.revision AS studio_revision, s.document_json AS studio_document_json, p.revision AS published_revision FROM email_templates t LEFT JOIN email_studio_documents s ON s.project_id=t.project_id AND s.resource_type='template' AND s.resource_id=t.id LEFT JOIN email_studio_published p ON p.project_id=t.project_id AND p.template_id=t.id WHERE t.project_id = ? AND t.id = ?")
 		.bind(projectId, id)
 		.first<Record<string, unknown>>();
 	if (!row) throw failure("template_not_found", "Template not found", 404);
@@ -2727,7 +2758,8 @@ function serializeCampaign(row: Record<string, unknown>) {
 	};
 }
 function serializeTemplate(row: Record<string, unknown>) {
-	return row;
+	const { studio_document_json, ...value } = row;
+	return { ...value, studio_revision: row.studio_revision ?? 0, studio_document: parseStoredJson(studio_document_json, null) };
 }
 function serializeSmtpProfile(row: Record<string, unknown>) {
 	const configuration = parseStoredJson<Record<string, unknown>>(row.public_config_json, {});

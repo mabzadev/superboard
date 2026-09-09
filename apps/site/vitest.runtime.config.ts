@@ -148,6 +148,7 @@ export default defineConfig({
 	],
 	test: {
 		include: ["runtime-tests/**/*.test.ts"],
+		exclude: ["runtime-tests/plugin-packages.runtime.test.ts"],
 		setupFiles: ["./runtime-tests/apply-migrations.ts"],
 		sequence: { concurrent: false },
 		maxWorkers: 3,

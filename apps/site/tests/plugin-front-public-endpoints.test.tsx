@@ -34,13 +34,38 @@ vi.mock(
 	() => ({ getSocialPreview: async () => null, saveSocialPreview: async () => null }),
 );
 function tree(child: ReactNode, target?: string) {
+	const project = {
+		id: "42-prod",
+		internal_id: "42",
+		name: "Example",
+		identifier: "example",
+		is_test: false,
+		created_at: "2026-09-09T00:00:00Z",
+		updated_at: "2026-09-09T00:00:00Z",
+	};
 	return (
 		<FrontContextProvider
 			value={{
 				instanceId: target ?? "missing",
 				pluginId: "supbrd-plug-settings",
 				operator: null,
-				projectScope: null,
+				projectScope: target
+					? {
+							production_project_ref: project.id,
+							test_project_ref: "42-test",
+							instance: {
+								id: target,
+								name: target,
+								uri_scheme: `app-${target}`,
+								get_started_dismissed: false,
+								created_at: project.created_at,
+								updated_at: project.updated_at,
+								production: project,
+								test: { ...project, id: "42-test", is_test: true },
+								projects: [project],
+							},
+						}
+					: null,
 				activePluginIds: [],
 				parameters: {},
 				path: "/settings",
@@ -111,6 +136,17 @@ test("Android intent filters use the configured short-link host", async () => {
 	)!;
 	await act(async () => button.click());
 	expect(container.textContent).toContain('android:host="in.alpha.example"');
+});
+test("iOS URL schemes follow the selected application instead of a fixed product name", async () => {
+	await act(async () => root.render(tree(<SdkSetupWizard platform="ios" />, "alpha")));
+	const button = [...container.querySelectorAll("button")].find((item) =>
+		item.textContent?.includes("URL Scheme"),
+	)!;
+	await act(async () => button.click());
+	expect(container.textContent).toContain("<string>app-alpha</string>");
+	await act(async () => root.render(tree(<SdkSetupWizard platform="ios" />, "beta")));
+	expect(container.textContent).toContain("<string>app-beta</string>");
+	expect(container.textContent).not.toContain("<string>app-alpha</string>");
 });
 test("missing SDK origin omits executable snippets and reports configuration", async () => {
 	await act(async () => root.render(tree(<SdkSetupWizard platform="web" />)));

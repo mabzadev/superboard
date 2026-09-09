@@ -21,6 +21,9 @@ import {
 interface MediaData {
   media_id: string;
   user_id: string;
+  project_ref?: string;
+  job_id?: string;
+  subject?: string;
   media_type: "video" | "audio" | "text";
   premium?: boolean;
   vocal_ref?: string;
@@ -390,31 +393,32 @@ export class MediaProcessingWorkflow extends WorkflowEntrypoint<
           timeout: "10 seconds",
         },
         async (): Promise<void> => {
-          try {
-            const r = await fetch(
-              `${this.env.GATEWAY_URL}/ws/medias/progress`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-VocoStar-Internal-Token": this.env.GATEWAY_INTERNAL_TOKEN,
-                },
-                body: JSON.stringify({
-                  media_id: data.media_id,
-                  user_id: data.user_id,
-                  progress: 1.0,
-                }),
+          const r = await fetch(
+            `${this.env.GATEWAY_URL}/ws/medias/progress`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-VocoStar-Internal-Token": this.env.GATEWAY_INTERNAL_TOKEN,
               },
-            );
-            if (!r.ok) throw new Error(`Gateway callback HTTP ${r.status}`);
-            console.log(
-              `[Workflow] notify-ws ✅ HTTP ${r.status} media=${data.media_id}`,
-            );
-          } catch (e) {
-            console.warn("[Workflow] notify-ws failed (non-fatal):", e);
-          }
+              body: JSON.stringify({
+                media_id: data.media_id,
+                user_id: data.user_id,
+                progress: 1.0,
+                project_ref: data.project_ref,
+                job_id: data.job_id,
+                subject: data.subject,
+              }),
+            },
+          );
+          if (!r.ok) throw new Error(`Gateway callback HTTP ${r.status}`);
+          console.log(
+            `[Workflow] notify-ws ✅ HTTP ${r.status} media=${data.media_id}`,
+          );
         },
-      );
+      ).catch((error: unknown) => {
+        console.warn("[Workflow] notify-ws failed after retries (non-fatal):", error);
+      });
 
       // ── Step 7 : Push notification FCM ────────────────────────────────────
       await step.do(
@@ -430,27 +434,28 @@ export class MediaProcessingWorkflow extends WorkflowEntrypoint<
               : data.media_type === "audio"
                 ? "audio_ready"
                 : "text_ready";
-          try {
-            const r = await fetch(`${this.env.GATEWAY_URL}/internal/notify`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-VocoStar-Internal-Token": this.env.GATEWAY_INTERNAL_TOKEN,
-              },
-              body: JSON.stringify({
-                user_id: data.user_id,
-                notification_type: notifType,
-              }),
-            });
-            if (!r.ok) throw new Error(`Gateway callback HTTP ${r.status}`);
-            console.log(
-              `[Workflow] notify-push ✅ HTTP ${r.status} type=${notifType}`,
-            );
-          } catch (e) {
-            console.warn("[Workflow] notify-push failed (non-fatal):", e);
-          }
+          const r = await fetch(`${this.env.GATEWAY_URL}/internal/notify`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-VocoStar-Internal-Token": this.env.GATEWAY_INTERNAL_TOKEN,
+            },
+            body: JSON.stringify({
+              user_id: data.user_id,
+              notification_type: notifType,
+              project_ref: data.project_ref,
+              job_id: data.job_id,
+              subject: data.subject,
+            }),
+          });
+          if (!r.ok) throw new Error(`Gateway callback HTTP ${r.status}`);
+          console.log(
+            `[Workflow] notify-push ✅ HTTP ${r.status} type=${notifType}`,
+          );
         },
-      );
+      ).catch((error: unknown) => {
+        console.warn("[Workflow] notify-push failed after retries (non-fatal):", error);
+      });
 
       return {
         status: "completed",

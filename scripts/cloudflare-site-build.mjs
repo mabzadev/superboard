@@ -9,10 +9,11 @@ import {
 	resolveSiteReleaseOperations,
 } from "./cloudflare-site-preview.mjs";
 import { loadTarget, parseArgs, root, targetSelectionFromArgs } from "./cloudflare-target.mjs";
+import { compiledTargetFromArgs } from "./target-compiler.mjs";
 
 export function siteDeploymentArtifact(
 	config,
-	{ previewHostname = null, releaseOperations = false } = {},
+	{ previewHostname = null, releaseOperations = false, deploymentHostnames = [] } = {},
 ) {
 	if (
 		config?.vars?.SUPERBOARD_RELEASE_OPERATIONS !== "disabled" &&
@@ -24,16 +25,25 @@ export function siteDeploymentArtifact(
 	) {
 		throw new Error("Site target builds must keep release operations disabled");
 	}
-	if (config?.routes) {
-		if (!previewHostname) {
+	if (config?.routes?.length) {
+		if (!previewHostname && deploymentHostnames.length === 0) {
 			throw new Error("Site target builds must not acquire a public route");
 		}
 		if (
-			config.routes.length !== 1 ||
-			config.routes[0]?.pattern !== previewHostname ||
-			config.routes[0]?.custom_domain !== true
+			previewHostname &&
+			(config.routes.length !== 1 ||
+				config.routes[0]?.pattern !== previewHostname ||
+				config.routes[0]?.custom_domain !== true)
 		) {
 			throw new Error("Site target build does not match the approved preview hostname");
+		}
+		if (
+			!previewHostname &&
+			config.routes.some(
+				(route) => route.custom_domain !== true || !deploymentHostnames.includes(route.pattern),
+			)
+		) {
+			throw new Error("Site target build does not match the compiled target hostnames");
 		}
 	}
 	return {
@@ -63,11 +73,14 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 	const args = parseArgs(argv);
 	const { targetName, environment } = await targetSelectionFromArgs(args);
 	const { target } = await loadTarget(targetName);
+	const compiledTarget = await compiledTargetFromArgs(target, environment, args);
+	const noRoutes = Boolean(args["no-routes"] || args.preflight || args["dry-run"]);
 	const sitePreviewRoute = resolveSitePreviewRoute({
 		requested: Boolean(args["site-preview-route"]),
 		service: "site",
 		environment,
 		hostname: target.domains.site,
+		noRoutes,
 	});
 	const siteReleaseOperations = resolveSiteReleaseOperations({
 		requested: Boolean(args["release-operations"]),
@@ -85,6 +98,15 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 		targetName,
 		"--environment",
 		environment,
+		...(noRoutes ? ["--no-routes"] : []),
+		...(args["target-artifact"]
+			? [
+					"--target-artifact",
+					args["target-artifact"],
+					"--target-artifact-checksum",
+					args["target-artifact-checksum"],
+				]
+			: []),
 		...(sitePreviewRoute?.cliArgs ?? []),
 		...siteReleaseOperations.cliArgs,
 		...(args["allow-unprovisioned"] ? ["--allow-unprovisioned"] : []),
@@ -102,6 +124,9 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 			siteDeploymentArtifact(generated, {
 				previewHostname: sitePreviewRoute?.hostname ?? null,
 				releaseOperations: siteReleaseOperations.value === "enabled",
+				deploymentHostnames: compiledTarget.materialization.routes
+					.filter((route) => route.service === "site")
+					.map((route) => route.hostname),
 			}),
 			null,
 			2,

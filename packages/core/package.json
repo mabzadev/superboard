@@ -65,6 +65,10 @@
 			"types": "./dist/api/error.d.mts",
 			"default": "./dist/api/error.mjs"
 		},
+		"./api/plugin-settings": {
+			"types": "./dist/api/plugin-settings.d.mts",
+			"default": "./dist/api/plugin-settings.mjs"
+		},
     "./api/schemas": {
       "types": "./dist/api/schemas/index.d.mts",
       "default": "./dist/api/schemas/index.mjs"

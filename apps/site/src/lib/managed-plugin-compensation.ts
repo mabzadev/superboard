@@ -7,6 +7,7 @@ import {
 	type ManagedPluginOperation,
 	parseManagedPluginSnapshot,
 } from "./managed-plugin-operation.js";
+import { syncPluginPackageRuntime } from "./plugin-package-state.js";
 import { loadLastVerifiedFrontRelease } from "./release-source.js";
 import { getSiteEnv } from "./site-env.js";
 
@@ -145,27 +146,15 @@ export async function compensateManagedPluginActivation(
 		);
 		await env.DB.batch(statements);
 	}
-	const states = new Map(
-		(snapshot.superboard_plugin_lifecycle ?? []).flatMap(
-			(row): Array<[string, "active" | "inactive"]> =>
-				typeof row.plugin_id === "string"
-					? [[row.plugin_id, row.state === "active" ? ("active" as const) : ("inactive" as const)]]
-					: [],
-		),
-	);
-	const operationPlugin = await env.DB.prepare(
-		"SELECT plugin_id FROM superboard_managed_plugin_operations WHERE operation_id = ?",
-	)
-		.bind(operation.operation_id)
-		.first<{ plugin_id: string }>();
-	if (operationPlugin && !states.has(operationPlugin.plugin_id))
-		states.set(operationPlugin.plugin_id, "inactive");
 	await env.RELEASE_CACHE.delete(`last_verified_release:${operation.instance_id}`);
 	if (previousId) {
 		const restored = await loadLastVerifiedFrontRelease(env, operation.instance_id);
 		if (restored?.release.payload.release_id !== previousId)
 			throw new Error("PLUGIN_COMPENSATION_CACHE_NOT_RESTORED");
 	}
-	for (const [pluginId, status] of states)
-		await context.locals.emdash.setPluginStatus(pluginId, status);
+	await syncPluginPackageRuntime(
+		env.DB,
+		{ instance_id: operation.instance_id, target: operation.target },
+		context.locals.emdash,
+	);
 }

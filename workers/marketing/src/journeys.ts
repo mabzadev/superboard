@@ -1,3 +1,6 @@
+import {evaluateJourneyCondition as conditionMatches}from"@superboard/contracts/journey-simulation";
+import { freezeDeliveryMessage,recordTransportStatus } from "./delivery-records.js";
+import { deliverySenders } from "./sender-profiles.js";
 import {
 	AnalyticsContractError,
 	parseMarketingSignalV1,
@@ -8,6 +11,7 @@ import { Hono } from "hono";
 
 import { failure } from "./auth";
 import { sendSmtpMessage } from "./email-service";
+import { resolveStoredEmail, claimEmailFrequency } from "./email-studio.js";
 import { decryptJson, encryptJson } from "./secrets";
 import { instrumentHtml, unsubscribeUrl } from "./tracking";
 import type { Env, MarketingQueueJob, SmtpPublicConfig, SmtpSecretConfig } from "./types";
@@ -811,30 +815,7 @@ async function deliverJourneyEmail(
 			content_text: string | null;
 		}>();
 	if (!template) throw new Error("Journey email template is missing");
-	const profile = node.smtp_profile_id
-		? await env.DB.prepare(
-				`SELECT id, public_config_json, encrypted_config FROM smtp_profiles
-         WHERE project_id = ? AND id = ? AND enabled = 1
-           AND (? = 0 OR authentication_status = 'verified')`,
-			)
-				.bind(enrollment.project_id, node.smtp_profile_id, env.ENVIRONMENT === "production" ? 1 : 0)
-				.first<{
-					id: string;
-					public_config_json: string;
-					encrypted_config: string;
-				}>()
-		: await env.DB.prepare(
-				`SELECT id, public_config_json, encrypted_config FROM smtp_profiles
-         WHERE project_id = ? AND enabled = 1
-           AND (? = 0 OR authentication_status = 'verified')
-         ORDER BY priority, created_at LIMIT 1`,
-			)
-				.bind(enrollment.project_id, env.ENVIRONMENT === "production" ? 1 : 0)
-				.first<{
-					id: string;
-					public_config_json: string;
-					encrypted_config: string;
-				}>();
+	const profile = (await deliverySenders(env,enrollment.project_id,node.smtp_profile_id))[0];
 	if (!profile) throw new Error("No production-ready SMTP profile is configured");
 	const replacements = {
 		email: subscriber.email,
@@ -849,7 +830,21 @@ async function deliverJourneyEmail(
 		campaignId: journey.id,
 	};
 	const unsubscribe = await unsubscribeUrl(env, trackingPayload);
-	const personalizedHtml = template.content_html
+	const localized = await resolveStoredEmail(env.DB, enrollment.project_id, node.template_id!, deliveryId, {
+		profile: { ...parseStoredJson<Record<string, unknown>>(subscriber.attributes_json, {}), name: subscriber.name, email: subscriber.email },
+		event: context,
+		unsubscribe_url:unsubscribe,
+	}, "template");
+	if (localized?.status === "skipped") {
+		await recordJourneyDelivery(env.DB, { id: deliveryId, projectId: enrollment.project_id, enrollmentId: enrollment.id, executionId, subscriberId: subscriber.id, channel: "email", recipient: subscriber.email, status: "suppressed", metadata: { reason: "translation_unavailable" } });
+		return { delivery_id: deliveryId, status: "suppressed" };
+	}
+	if(localized && !await claimEmailFrequency(env.DB,enrollment.project_id,deliveryId,subscriber.email)) {
+		await recordJourneyDelivery(env.DB,{id:deliveryId,projectId:enrollment.project_id,enrollmentId:enrollment.id,executionId,subscriberId:subscriber.id,channel:"email",recipient:subscriber.email,status:"suppressed",metadata:{reason:"marketing_frequency_limit"}});
+		return {delivery_id:deliveryId,status:"suppressed"};
+	}
+	const marketingMessage=!localized || ["campaign","lifecycle"].includes(localized.purpose);
+	const personalizedHtml = localized?.status === "ready" ? localized.html : template.content_html
 		? personalize(template.content_html, replacements)
 		: null;
 	const receipt = await sendSmtpMessage(env, {
@@ -857,27 +852,28 @@ async function deliverJourneyEmail(
 		projectId: enrollment.project_id,
 		referenceId: executionId,
 		profileId: profile.id,
+        managed: profile.managed,
 		publicConfig: parseStoredJson<SmtpPublicConfig>(
 			profile.public_config_json,
 			{} as SmtpPublicConfig,
 		),
 		secret:
-			env.EMAIL_PROVIDER === "aws-ses"
+			(profile.managed || env.EMAIL_PROVIDER === "aws-ses")
 				? { password: null }
 				: await decryptJson<SmtpSecretConfig>(env.SMTP_ENCRYPTION_KEY, profile.encrypted_config),
-		message: {
+		message: await freezeDeliveryMessage(env.DB,enrollment.project_id,deliveryId,async()=>({
 			to: subscriber.email,
-			subject: personalize(template.subject ?? String(journey.name), replacements),
+			subject: localized?.status === "ready" ? localized.subject : personalize(template.subject ?? String(journey.name), replacements),
 			html: personalizedHtml ? await instrumentHtml(env, trackingPayload, personalizedHtml) : null,
-			text: `${personalize(template.content_text ?? "", replacements)}\n\nUnsubscribe: ${unsubscribe}`,
+			text: `${localized?.status === "ready" ? localized.text : personalize(template.content_text ?? "", replacements)}${marketingMessage ? `\n\n${localized?.status === "ready" && localized.locale.startsWith("fr") ? "Se désabonner" : "Unsubscribe"}: ${unsubscribe}` : ""}`,
 			headers: {
 				"X-SuperBoard-Journey": journey.id,
 				"X-SuperBoard-Journey-Enrollment": enrollment.id,
-				"List-Unsubscribe": `<${unsubscribe}>`,
-				"List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+				...(marketingMessage ? {"List-Unsubscribe": `<${unsubscribe}>`,"List-Unsubscribe-Post": "List-Unsubscribe=One-Click"} : {}),
 			},
-		},
+		}),localized?.purpose??"lifecycle",localized?.status==="ready"?localized.locale:null),
 	});
+	await recordTransportStatus(env.DB,enrollment.project_id,deliveryId,"sent",receipt.messageId);
 	await recordJourneyDelivery(env.DB, {
 		id: deliveryId,
 		projectId: enrollment.project_id,
@@ -1299,40 +1295,6 @@ function assertAcyclic(start: string, edges: JourneyEdge[]) {
 	walk(start);
 }
 
-function conditionMatches(value: unknown, condition: JourneyCondition) {
-	const actual = condition.field.split(".").reduce<unknown>((current, key) => {
-		return current && typeof current === "object"
-			? (current as Record<string, unknown>)[key]
-			: undefined;
-	}, value);
-	const expected = condition.value;
-	switch (condition.operator) {
-		case "exists":
-			return actual !== undefined && actual !== null && actual !== "";
-		case "equals":
-			return String(actual ?? "") === String(expected ?? "");
-		case "not_equals":
-			return String(actual ?? "") !== String(expected ?? "");
-		case "contains":
-			return String(actual ?? "")
-				.toLowerCase()
-				.includes(String(expected ?? "").toLowerCase());
-		case "starts_with":
-			return String(actual ?? "")
-				.toLowerCase()
-				.startsWith(String(expected ?? "").toLowerCase());
-		case "in":
-			return Array.isArray(expected) && expected.map(String).includes(String(actual ?? ""));
-		case "greater_than":
-			return Number(actual) > Number(expected);
-		case "greater_or_equal":
-			return Number(actual) >= Number(expected);
-		case "less_than":
-			return Number(actual) < Number(expected);
-		case "less_or_equal":
-			return Number(actual) <= Number(expected);
-	}
-}
 
 function edgeDestination(
 	definition: JourneyDefinition,
@@ -1394,11 +1356,12 @@ async function validateJourneyDependencies(db: D1Database, journey: JourneyRow) 
 	for (const node of definition.nodes) {
 		if (node.type === "email") {
 			const template = await db
-				.prepare(`SELECT 1 FROM email_templates WHERE project_id = ? AND id = ?`)
+				.prepare("SELECT t.id,s.resource_id AS studio_id,p.template_id AS published_id FROM email_templates t LEFT JOIN email_studio_documents s ON s.project_id=t.project_id AND s.resource_type='template' AND s.resource_id=t.id LEFT JOIN email_studio_published p ON p.project_id=t.project_id AND p.template_id=t.id WHERE t.project_id=? AND t.id=?")
 				.bind(journey.project_id, node.template_id)
 				.first();
 			if (!template)
 				throw failure("journey_template_missing", `Template ${node.template_id} is missing`, 409);
+			if(template.studio_id&&!template.published_id)throw failure("EMAIL_TEMPLATE_NOT_PUBLISHED","Publish the message template before activating this journey.",409);
 		}
 		if (node.type === "channel") {
 			const destination = await db

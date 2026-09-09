@@ -10,6 +10,7 @@ import { decryptJson as decryptEmail } from "../../../workers/email/src/admin-se
 import { handleEmailAdmin } from "../../../workers/email/src/admin.js";
 import email from "../../../workers/email/src/index.js";
 import marketing from "../../../workers/marketing/src/index.js";
+import { deliverySenders } from "../../../workers/marketing/src/sender-profiles.js";
 import { encryptJson as encryptLegacy } from "../../../workers/marketing/src/secrets.js";
 import { dispatchPluginApiAdapter } from "../src/lib/plugin-api-adapter.js";
 import {
@@ -119,6 +120,12 @@ test("Email alone owns SMTP settings and captures an idempotent transactional me
 	expect(await outbox.json()).toMatchObject({
 		data: [{ subject: "Standalone Email", status: "captured" }],
 	});
+	const log=await emailRequest("GET","/internal/v1/admin/messages");
+	const entries=(await log.json<{data:{items:Array<{id:string;subject:string;status:string}>}}>()).data.items;
+	expect(entries).toContainEqual(expect.objectContaining({subject:"Standalone Email",status:"captured"}));
+	const detail=await emailRequest("GET","/internal/v1/admin/messages/"+entries[0]!.id);
+	expect(await detail.json()).toMatchObject({data:{text_body:"Email works without Marketing."}});
+	expect((await emailRequest("GET","/internal/v1/admin/messages/"+entries[0]!.id,undefined,82)).status).toBe(404);
 	expect(await emailDb.prepare("SELECT COUNT(*) AS count FROM email_messages").first()).toEqual({
 		count: 1,
 	});
@@ -251,6 +258,19 @@ test("migrates legacy SMTP profiles through real Workers and keeps later Email e
 		{},
 	);
 	expect(await again.json()).toMatchObject({ data: { complete: true, imported: 0 } });
+	const newSender=await emailRequest("PUT","/internal/v1/admin/settings/smtp",{...profile,id:crypto.randomUUID(),name:"New Email sender",from_email:"new@example.test",password:"new-sender-secret"},81,"new-email-sender");
+	expect(newSender.ok).toBe(true);
+	const newSenderBody=await newSender.json<{data:{id:string}}>();
+	try {
+		expect(newSenderBody.data.id).not.toBe("legacy-profile");
+		const candidates=await deliverySenders(marketingEnv,81,newSenderBody.data.id);
+		expect(candidates).toHaveLength(1);
+		expect(candidates[0]).toMatchObject({id:newSenderBody.data.id,managed:true,encrypted_config:""});
+		expect(JSON.stringify(candidates)).not.toContain("new-sender-secret");
+		expect(JSON.parse(candidates[0]!.public_config_json)).toMatchObject({from_email:"new@example.test"});
+	} finally {
+		await emailRequest("DELETE","/internal/v1/admin/settings/smtp/"+newSenderBody.data.id,undefined,81,"remove-new-test-sender");
+	}
 });
 
 test("Email sender quotas reject concurrent over-capacity sends before creating a second delivery", async () => {

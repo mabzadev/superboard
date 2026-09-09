@@ -86,6 +86,13 @@ const lifecycleWorker = {
 		if (request.method === "POST" && url.pathname === EMAIL_SERVICE_SMTP_TRANSPORT_PATH) {
 			return deliverDelegatedSmtp(request, env);
 		}
+		if(request.method==="GET"&&url.pathname==="/internal/v1/senders"){
+			if(!(await internalAuthorized(request,env)))return json({error:"unauthorized"},401);
+			const projectId=Number(url.searchParams.get("project_id"));
+			if(!Number.isSafeInteger(projectId)||projectId<=0)return json({error:"project_invalid"},422);
+			const rows=await env.DB.prepare("SELECT id,public_config_json,enabled,authentication_status FROM email_smtp_profiles WHERE project_id=? ORDER BY priority,created_at LIMIT 100").bind(projectId).all<{id:string;public_config_json:string;enabled:number;authentication_status:string}>();
+			return json({configured:rows.results.length>0,known_ids:rows.results.map(row=>row.id),items:rows.results.filter(row=>row.enabled===1&&(env.ENVIRONMENT!=="production"||row.authentication_status==="verified")).map(row=>({id:row.id,publicConfig:safeObjectJson(row.public_config_json)}))});
+		}
 		if (url.pathname.startsWith(EMAIL_SERVICE_OPERATIONS_PATH)) {
 			if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
 			if (request.method === "GET" && url.pathname === EMAIL_SERVICE_OPERATIONS_PATH)

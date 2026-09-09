@@ -122,3 +122,27 @@ test("rejects missing CSRF and insufficient operator permission before dispatch"
 	expect(await permission.json()).toEqual({ error: { code: "OPERATOR_REQUIRED" } });
 	expect(fetch).not.toHaveBeenCalled();
 });
+
+test.each([
+	{ name: "subscriber", role: 10, disabled: false },
+	{ name: "editor", role: 40, disabled: false },
+	{ name: "disabled administrator", role: 50, disabled: true },
+])(
+	"refuses the $name before signing or dispatching an operator request",
+	async ({ role, disabled }) => {
+		const fetch = vi.fn(async () => Response.json({ ok: true }));
+		const operator = { id: "emdash-user", role, disabled };
+		const response = await proxyOperatorApiRequest({
+			request: new Request("https://site.test/api/v1/core/reports"),
+			operator,
+			env: {
+				SUPERBOARD_INSTANCE_ID: "operator-access-test",
+				SITE_OPERATOR_BRIDGE_TOKEN: "operator-access-secret",
+				API_SERVICE: { fetch },
+			},
+		});
+		expect(response.status).toBe(403);
+		await expect(response.json()).resolves.toEqual({ error: { code: "OPERATOR_REQUIRED" } });
+		expect(fetch).not.toHaveBeenCalled();
+	},
+);

@@ -1,7 +1,7 @@
 import { SELF, env } from "cloudflare:test";
 import { expect, test } from "vitest";
 
-test("the host lifecycle actions enable and disable only the selected managed plugin", async () => {
+test("the host lifecycle actions preserve aliases and keep the core required", async () => {
 	const installed = await SELF.fetch("https://site.example/_emdash/api/superboard/plugins/sync", {
 		method: "POST",
 		headers: {
@@ -84,12 +84,22 @@ test("the host lifecycle actions enable and disable only the selected managed pl
 			},
 		},
 	);
-	expect(disabledSettings.status, await disabledSettings.clone().text()).toBe(201);
+	expect(disabledSettings.status, await disabledSettings.clone().text()).toBe(409);
 	expect(await disabledSettings.json()).toMatchObject({
-		plugin_id: "supbrd-plug-settings",
-		status: "disabled",
-		release_id: expect.any(String),
+		error: { code: "CORE_COMPONENT_REQUIRED" },
 	});
+	const disabledIdentity = await SELF.fetch(
+		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-identity/disable",
+		{
+			method: "POST",
+			headers: {
+				Origin: "https://site.example",
+				"X-EmDash-Request": "1",
+				"X-Parity-Operator": "1",
+			},
+		},
+	);
+	expect(disabledIdentity.status, await disabledIdentity.clone().text()).toBe(201);
 
 	const lifecycleAfterDisable = await env.DB.prepare(
 		`SELECT plugin_id, state
@@ -101,7 +111,7 @@ test("the host lifecycle actions enable and disable only the selected managed pl
 		.bind("vocostar", "supbrd-plug-settings", "supbrd-plug-user")
 		.all<{ plugin_id: string; state: string }>();
 	expect(lifecycleAfterDisable.results).toEqual([
-		{ plugin_id: "supbrd-plug-settings", state: "disabled" },
-		{ plugin_id: "supbrd-plug-user", state: "active" },
+		{ plugin_id: "supbrd-plug-settings", state: "active" },
+		{ plugin_id: "supbrd-plug-user", state: "disabled" },
 	]);
 });

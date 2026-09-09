@@ -1,3 +1,5 @@
+import { freezeDeliveryMessage,recordTransportStatus } from "./delivery-records.js";
+import { deliverySenders } from "./sender-profiles.js";
 import type {
   Env,
   MarketingQueueJob,
@@ -13,6 +15,8 @@ import { isEmailTransportInProgress, sendSmtpMessage } from "./email-service";
 import { parseStoredJson } from "./validation";
 import { instrumentHtml, unsubscribeUrl } from "./tracking";
 import { advanceJourneyEnrollment } from "./journeys";
+import { resolveStoredEmail, claimEmailFrequency } from "./email-studio.js";
+import type { EmailRenderContext } from "@superboard/contracts/email-studio";
 
 type Delivery = {
   id: string;
@@ -26,6 +30,7 @@ type Delivery = {
 };
 
 type Campaign = {
+  studio_document_json?:string|null;
   id: string;
   project_id: number;
   subject: string;
@@ -36,11 +41,7 @@ type Campaign = {
   status: string;
 };
 
-type SmtpProfile = {
-  id: string;
-  public_config_json: string;
-  encrypted_config: string;
-};
+
 
 export async function handleMarketingQueue(
   batch: MessageBatch<unknown>,
@@ -214,26 +215,18 @@ async function deliverOptin(
 ) {
   const subscriber = await env.DB.prepare(
     `
-    SELECT id, email, name FROM subscribers
+    SELECT id, email, name, attributes_json FROM subscribers
     WHERE id = ? AND project_id = ? AND status = 'enabled' AND consent_status = 'pending'
       AND optin_token_expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
   `,
   )
     .bind(job.subscriberId, job.projectId)
-    .first<{ id: string; email: string; name: string | null }>();
+    .first<{ id: string; email: string; name: string | null; attributes_json:string }>();
   if (!subscriber) {
     await completeOutbox(env.DB, job.projectId, job.outboxId);
     return;
   }
-  const profile = await env.DB.prepare(
-    `
-    SELECT id, public_config_json, encrypted_config FROM smtp_profiles
-    WHERE project_id = ? AND enabled = 1 AND (? = 0 OR authentication_status = 'verified')
-    ORDER BY priority, created_at LIMIT 1
-  `,
-  )
-    .bind(job.projectId, env.ENVIRONMENT === "production" ? 1 : 0)
-    .first<SmtpProfile>();
+  const profile=(await deliverySenders(env,job.projectId))[0];
   if (!profile)
     throw new Error(
       "No production-ready SMTP profile is configured for double opt-in",
@@ -243,25 +236,30 @@ async function deliverOptin(
     {} as SmtpPublicConfig,
   );
   const secret: SmtpSecretConfig =
-    env.EMAIL_PROVIDER === "aws-ses"
+    (profile.managed || env.EMAIL_PROVIDER === "aws-ses")
       ? { password: null }
       : await decryptJson<SmtpSecretConfig>(
           env.SMTP_ENCRYPTION_KEY,
           profile.encrypted_config,
         );
+  const attributes=parseStoredJson<Record<string,unknown>>(subscriber.attributes_json,{});
+  const french=String(attributes.locale??attributes.communication_locale??"").startsWith("fr");
+  const confirmationTitle=french?"Confirmez votre inscription":"Confirm your subscription";
+  const confirmationAction=french?"Confirmer l’inscription":"Confirm subscription";
   const confirmationUrl = `${env.PUBLIC_API_URL}/api/v1/marketing/opt-in/${job.token}`;
   await sendSmtpMessage(env, {
     idempotencyKey: `marketing.optin:${job.projectId}:${job.outboxId}:${profile.id}`,
     projectId: job.projectId,
     referenceId: job.outboxId,
     profileId: profile.id,
+        managed: profile.managed,
     publicConfig,
     secret,
     message: {
       to: subscriber.email,
-      subject: "Confirm your subscription",
-      text: `Confirm your subscription: ${confirmationUrl}`,
-      html: `<p>Confirm your subscription:</p><p><a href="${confirmationUrl}">Confirm subscription</a></p>`,
+      subject: confirmationTitle,
+      text: `${confirmationTitle}: ${confirmationUrl}`,
+      html: `<p>${confirmationTitle}</p><p><a href="${confirmationUrl}">${confirmationAction}</a></p>`,
     },
   });
   await env.DB.batch([
@@ -425,7 +423,7 @@ async function deliverEmail(
     return;
   const campaign = await env.DB.prepare(
     `
-    SELECT * FROM campaigns WHERE id = ? AND project_id = ?
+    SELECT c.*, s.document_json AS studio_document_json FROM campaigns c LEFT JOIN email_studio_documents s ON s.project_id=c.project_id AND s.resource_type='campaign' AND s.resource_id=c.id WHERE c.id = ? AND c.project_id = ?
   `,
   )
     .bind(delivery.campaign_id, job.projectId)
@@ -442,12 +440,16 @@ async function deliverEmail(
   }
   const subscriber = await env.DB.prepare(
     `
-    SELECT attributes_json FROM subscribers WHERE id = ? AND project_id = ? AND status = 'enabled'
+    SELECT attributes_json,status,consent_status FROM subscribers WHERE id = ? AND project_id = ?
   `,
   )
     .bind(delivery.subscriber_id, job.projectId)
-    .first<{ attributes_json: string }>();
-  if (!subscriber) {
+    .first<{ attributes_json: string;status:string;consent_status:string }>();
+  const studio=campaign.studio_document_json?parseStoredJson<{purpose:string}>(campaign.studio_document_json,{purpose:"campaign"}):null;
+  const essential=studio!==null&&!['campaign','lifecycle'].includes(studio.purpose);
+  const suppression=await env.DB.prepare("SELECT reason FROM suppressions WHERE project_id=? AND email=?").bind(job.projectId,delivery.recipient_email).first<{reason:string}>();
+  const allowed=essential ? subscriber&&['enabled','unsubscribed'].includes(subscriber.status)&&(!suppression||suppression.reason==='unsubscribe') : subscriber?.status==='enabled'&&!suppression&&(!studio||subscriber.consent_status==='confirmed');
+  if (!subscriber || !allowed) {
     await env.DB.prepare(
       `UPDATE email_deliveries SET status = 'suppressed', last_error = 'subscriber_not_eligible', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
     )
@@ -456,12 +458,7 @@ async function deliverEmail(
     await finishCampaignIfComplete(env, job.projectId, campaign.id);
     return;
   }
-  const profiles = await smtpProfiles(
-    env.DB,
-    job.projectId,
-    campaign.smtp_profile_id,
-    env.ENVIRONMENT === "production",
-  );
+  const profiles = await deliverySenders(env,job.projectId,campaign.smtp_profile_id);
   if (!profiles.length)
     throw new Error("No production-ready SMTP profile is configured");
   const attributes = parseStoredJson<Record<string, unknown>>(
@@ -473,6 +470,22 @@ async function deliverEmail(
     name: delivery.recipient_name || "",
     ...attributes,
   };
+  const studioContext = await env.DB.prepare("SELECT context_json FROM email_studio_contexts WHERE project_id=? AND campaign_id=?").bind(job.projectId, campaign.id).first<{ context_json: string }>();
+  const context = studioContext ? JSON.parse(studioContext.context_json) as EmailRenderContext : {};
+  const trackingPayload={projectId:job.projectId,deliveryId:delivery.id,subscriberId:delivery.subscriber_id,campaignId:campaign.id};
+  const unsubscribe=await unsubscribeUrl(env,trackingPayload);
+  const localized = await resolveStoredEmail(env.DB, job.projectId, campaign.id, delivery.id, { ...context, profile: replacements,unsubscribe_url:unsubscribe });
+  if (localized?.status === "skipped") {
+    await env.DB.prepare("UPDATE email_deliveries SET status='suppressed', last_error='translation_unavailable' WHERE project_id=? AND id=?").bind(job.projectId, delivery.id).run();
+    await finishCampaignIfComplete(env, job.projectId, campaign.id);
+    return;
+  }
+  if (localized && !await claimEmailFrequency(env.DB,job.projectId,delivery.id,delivery.recipient_email)) {
+    await env.DB.prepare("UPDATE email_deliveries SET status='suppressed',last_error='marketing_frequency_limit' WHERE project_id=? AND id=?").bind(job.projectId,delivery.id).run();
+    await finishCampaignIfComplete(env,job.projectId,campaign.id);
+    return;
+  }
+  const marketingMessage=!localized || ["campaign","lifecycle"].includes(localized.purpose);
   let lastError: unknown;
   for (const profile of profiles) {
     try {
@@ -481,20 +494,13 @@ async function deliverEmail(
         {} as SmtpPublicConfig,
       );
       const secret: SmtpSecretConfig =
-        env.EMAIL_PROVIDER === "aws-ses"
+        (profile.managed || env.EMAIL_PROVIDER === "aws-ses")
           ? { password: null }
           : await decryptJson<SmtpSecretConfig>(
               env.SMTP_ENCRYPTION_KEY,
               profile.encrypted_config,
             );
-      const trackingPayload = {
-        projectId: job.projectId,
-        deliveryId: delivery.id,
-        subscriberId: delivery.subscriber_id,
-        campaignId: campaign.id,
-      };
-      const unsubscribe = await unsubscribeUrl(env, trackingPayload);
-      const personalizedHtml = campaign.content_html
+      const personalizedHtml = localized?.status === "ready" ? localized.html : campaign.content_html
         ? personalize(campaign.content_html, replacements)
         : null;
       const result = await sendSmtpMessage(env, {
@@ -502,24 +508,25 @@ async function deliverEmail(
         projectId: job.projectId,
         referenceId: delivery.id,
         profileId: profile.id,
+        managed: profile.managed,
         publicConfig,
         secret,
-        message: {
+        message: await freezeDeliveryMessage(env.DB,job.projectId,delivery.id,async()=>({
           to: delivery.recipient_email,
-          subject: personalize(campaign.subject, replacements),
+          subject: localized?.status === "ready" ? localized.subject : personalize(campaign.subject, replacements),
           html:
             personalizedHtml && campaign.tracking_enabled
               ? await instrumentHtml(env, trackingPayload, personalizedHtml)
               : personalizedHtml,
-          text: `${campaign.content_text ? personalize(campaign.content_text, replacements) : ""}\n\nUnsubscribe: ${unsubscribe}`,
+          text: `${localized?.status === "ready" ? localized.text : campaign.content_text ? personalize(campaign.content_text, replacements) : ""}${marketingMessage ? `\n\n${localized?.status === "ready" && localized.locale.startsWith("fr") ? "Se désabonner" : "Unsubscribe"}: ${unsubscribe}` : ""}`,
           headers: {
             "X-OpenGrow-Campaign": campaign.id,
             "X-OpenGrow-Delivery": delivery.id,
-            "List-Unsubscribe": `<${unsubscribe}>`,
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            ...(marketingMessage ? { "List-Unsubscribe": `<${unsubscribe}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : {}),
           },
-        },
+        }),localized?.purpose??"legacy",localized?.status==="ready"?localized.locale:null),
       });
+      await recordTransportStatus(env.DB,job.projectId,delivery.id,"sent",result.messageId);
       const now = new Date().toISOString();
       await env.DB.batch([
         env.DB.prepare(
@@ -528,7 +535,7 @@ async function deliverEmail(
             sent_at = ?, last_error = NULL, updated_at = ? WHERE id = ? AND project_id = ?
         `,
         ).bind(
-          profile.id,
+          profile.managed ? null : profile.id,
           queueAttempt,
           result.messageId,
           now,
@@ -551,10 +558,7 @@ async function deliverEmail(
           now,
         ),
         env.DB.prepare(
-          `
-          INSERT INTO smtp_attempts (id, project_id, delivery_id, smtp_profile_id, attempt_number, success)
-          VALUES (?, ?, ?, ?, ?, 1)
-        `,
+          profile.managed ? "INSERT INTO email_studio_send_attempts (id,project_id,delivery_id,profile_id,attempt_number,success) VALUES (?,?,?,?,?,1)" : "INSERT INTO smtp_attempts (id,project_id,delivery_id,smtp_profile_id,attempt_number,success) VALUES (?,?,?,?,?,1)",
         ).bind(
           crypto.randomUUID(),
           job.projectId,
@@ -569,10 +573,7 @@ async function deliverEmail(
       if (isEmailTransportInProgress(error)) throw error;
       lastError = error;
       await env.DB.prepare(
-        `
-        INSERT INTO smtp_attempts (id, project_id, delivery_id, smtp_profile_id, attempt_number, success, error_message)
-        VALUES (?, ?, ?, ?, ?, 0, ?)
-      `,
+        profile.managed ? "INSERT INTO email_studio_send_attempts (id,project_id,delivery_id,profile_id,attempt_number,success,error_message) VALUES (?,?,?,?,?,0,?)" : "INSERT INTO smtp_attempts (id,project_id,delivery_id,smtp_profile_id,attempt_number,success,error_message) VALUES (?,?,?,?,?,0,?)",
       )
         .bind(
           crypto.randomUUID(),
@@ -592,35 +593,6 @@ async function deliverEmail(
     : new Error("Every SMTP profile failed");
 }
 
-async function smtpProfiles(
-  db: D1Database,
-  projectId: number,
-  preferred: string | null,
-  requireAuthentication: boolean,
-) {
-  const rows = await db
-    .prepare(
-      `
-    SELECT id, public_config_json, encrypted_config FROM smtp_profiles
-    WHERE project_id = ? AND enabled = 1
-      AND (? = 0 OR authentication_status = 'verified')
-      AND (hourly_quota IS NULL OR hourly_quota > (
-        SELECT COUNT(*) FROM email_deliveries delivery
-        WHERE delivery.project_id = smtp_profiles.project_id AND delivery.smtp_profile_id = smtp_profiles.id
-          AND delivery.sent_at >= datetime('now', '-1 hour') AND delivery.status IN ('sent', 'delivered')
-      ))
-      AND (daily_quota IS NULL OR daily_quota > (
-        SELECT COUNT(*) FROM email_deliveries delivery
-        WHERE delivery.project_id = smtp_profiles.project_id AND delivery.smtp_profile_id = smtp_profiles.id
-          AND delivery.sent_at >= datetime('now', '-1 day') AND delivery.status IN ('sent', 'delivered')
-      ))
-    ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, priority ASC, created_at ASC
-  `,
-    )
-    .bind(projectId, requireAuthentication ? 1 : 0, preferred || "")
-    .all<SmtpProfile>();
-  return rows.results;
-}
 
 async function markDeliveryFailed(
   env: Env,

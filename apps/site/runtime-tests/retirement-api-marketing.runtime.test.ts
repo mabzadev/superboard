@@ -12,6 +12,44 @@ import {
 } from "./retirement-api-helpers.js";
 const plugin = "supbrd-plugmod-marketing";
 const file = "retirement-api-marketing.runtime.test.ts";
+
+test("push notification search excludes in-app-only messages through the canonical plugin adapters", async () => {
+	const scope = await prepareApiPlugin(plugin);
+	const base = `/api/v1/projects/${scope.production_project_ref}/notifications`;
+	const prefix = `notification-fixture-${crypto.randomUUID()}`;
+	for (const push of [false, true]) {
+		await jsonResult(
+			await apiCommand(plugin, "create_notification", {
+				method: "POST",
+				path: base,
+				body: {
+					title: `${prefix}-${push ? "push" : "in-app"}`,
+					subtitle: "Fixture",
+					send_push: push,
+					new_users: true,
+					existing_users: false,
+					platforms: ["ios", "android"],
+				},
+			}),
+			201,
+		);
+	}
+	const result = await jsonResult<{ data: Array<{ title: string }>; total_entries: number }>(
+		await apiRead(plugin, "notifications", {
+			method: "POST",
+			path: `${base}/search`,
+			body: { send_push: true, term: prefix },
+		}),
+	);
+	expect(result.total_entries).toBe(1);
+	expect(result.data.map(({ title }) => title)).toEqual([`${prefix}-push`]);
+	const wildcard = await jsonResult<{ data: Array<{ title: string }> }>(await apiRead(plugin, "notifications", {
+		method: "POST", path: `${base}/search`, body: { send_push: true, term: "%-push" },
+	}));
+	expect(wildcard.data.map(({ title }) => title)).toContain(`${prefix}-push`);
+
+});
+
 test("canonical Marketing APIs preserve subscribers, campaign scheduling, journeys, enrollments and connectors", async () => {
 	const scope = await prepareApiPlugin(plugin);
 	const base = `/api/v1/marketing/projects/${scope.production_project_ref}`;

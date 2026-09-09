@@ -11,7 +11,7 @@
 		"preview": "astro preview",
 		"typecheck": "astro check",
 		"types": "wrangler types",
-		"test": "vitest run --config vitest.config.ts && vitest run --config vitest.front.config.ts && vitest run --config vitest.runtime.config.ts",
+		"test": "vitest run --config vitest.config.ts && vitest run --config vitest.menu.config.ts && vitest run --config vitest.front.config.ts && vitest run --config vitest.packages.config.ts && vitest run --config vitest.runtime.config.ts",
 		"test:front": "vitest run --config vitest.front.config.ts",
 		"test:runtime": "vitest run --config vitest.runtime.config.ts",
 		"dry-run": "astro build && wrangler deploy --dry-run",

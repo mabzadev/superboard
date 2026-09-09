@@ -1,5 +1,6 @@
 import { config } from "../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
 import { DELETE, GET, PATCH, POST, PUT } from "../../../transport.js";
+import type { EmailDesign } from "@superboard/contracts/email-studio";
 
 const path = (projectRef: string, resource: string) =>
 	`${config.apiPath}/marketing/projects/${projectRef}${resource}`;
@@ -42,6 +43,9 @@ export type EmailTemplate = {
 	content_html?: string | null;
 	content_markdown?: string | null;
 	content_text?: string | null;
+	studio_document?: EmailDesign | null;
+	studio_revision?: number;
+	published_revision?:number|null;
 };
 export type MarketingMedia = {
 	id: string;
@@ -228,6 +232,10 @@ export async function getEmailSubscribers(projectRef: string, query = "") {
 			`${path(projectRef, "/email/subscribers")}${query ? `?q=${encodeURIComponent(query)}` : ""}`,
 		),
 	);
+}
+export async function getEmailSubscriberPage(projectRef:string,query:string,offset=0,listId=""){
+	const parameters=new URLSearchParams({q:query,offset:String(offset),limit:"50",list_id:listId});
+	return data<EmailSubscriber[]>(await GET(path(projectRef,"/email/subscribers")+"?"+parameters));
 }
 export async function getEmailSubscriber(projectRef: string, id: string) {
 	return data<EmailSubscriber>(await GET(path(projectRef, `/email/subscribers/${id}`)));

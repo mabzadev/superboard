@@ -1,0 +1,27 @@
+---
+import FrontPage from "../../components/FrontPage.astro";
+import { resolveSiteFrontPage } from "../../lib/front-page.js";
+import { getSiteEnv } from "../../lib/site-env.js";
+
+export const prerender = false;
+
+Astro.response.headers.set("Cache-Control", "private, no-store");
+const model = await resolveSiteFrontPage(
+	getSiteEnv(),
+	"/mcp",
+	Astro.locals.user,
+);
+if (model.resolution.result === "redirect") {
+	return Astro.redirect(model.resolution.location, 302);
+}
+if (model.resolution.result === "not_found") Astro.response.status = 404;
+if (model.resolution.result === "forbidden") Astro.response.status = 403;
+if (
+	model.resolution.result === "maintenance" ||
+	model.resolution.result === "unavailable"
+) {
+	Astro.response.status = 503;
+}
+---
+
+<FrontPage model={model} />

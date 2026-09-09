@@ -5,7 +5,7 @@ The canonical FlutterFlow integration is provided by the unified
 current installation and Support API are documented in
 [`../flutterflow/README.md`](../flutterflow/README.md).
 
-<!-- opengrow-sdk-documentation:flutterflow-support:start -->
+<!-- superboard-sdk-documentation:flutterflow-support:start -->
 
 > **Lifecycle: archived.** This package is frozen for existing clients.
 > Its historical release remains available, but no new version may be
@@ -33,4 +33,4 @@ Then resolve the immutable dependency:
 flutter pub get
 ```
 
-<!-- opengrow-sdk-documentation:flutterflow-support:end -->
+<!-- superboard-sdk-documentation:flutterflow-support:end -->

@@ -9,6 +9,11 @@ const data = <T>(response: { data: T | { data: T } }): T =>
 		? (response.data as { data: T }).data
 		: (response.data as T);
 
+export type EmailMessageSummary={id:string;subject:string;kind:string;status:string;transport:string;created_at:string;sent_at:string|null;last_error:string|null;recipients:string;recipient_count:number};
+export type EmailMessageDetail=EmailMessageSummary&{html_body:string|null;text_body:string|null;from_name:string;from_address:string;deliveries:Array<{recipient:string;status:string;provider_status:string|null;attempt_count:number;last_error:string|null}>};
+export async function getEmailMessages(projectRef:string,filters:Record<string,string>={}){return data<{items:EmailMessageSummary[];nextCursor?:string}>(await GET(path(projectRef,"/messages")+"?"+new URLSearchParams(filters)));}
+export async function getEmailMessage(projectRef:string,id:string){return data<EmailMessageDetail>(await GET(path(projectRef,"/messages/"+encodeURIComponent(id))));}
+
 export type SmtpSettings = {
 	id?: string;
 	name?: string;

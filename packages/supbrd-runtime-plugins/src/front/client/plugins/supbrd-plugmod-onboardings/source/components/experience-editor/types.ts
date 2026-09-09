@@ -11,6 +11,8 @@ export type ExperienceTheme = {
 export type ExperienceBlock = {
 	id: string;
 	type:
+		| "question"
+		| "marketing_consent"
 		| "heading"
 		| "text"
 		| "image"

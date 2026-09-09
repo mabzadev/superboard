@@ -3,8 +3,22 @@
 	"baseline_source_commit": "60ab8f5ed2aa04b171967cec3b656bfdd3f0f717",
 	"baseline_source_release_sha256": "aa19393f2ef868836334d65e1c9a46102d55f9c72a2175a14811a0d9df60b921",
 	"additional_contributions": [
-		{ "plugin_id": "supbrd-plugmod-billing", "id": "supbrd-plugmod-billing.command.migrate_products" },
-		{ "plugin_id": "supbrd-plugmod-billing", "id": "supbrd-plugmod-billing.data_source.migration_status" }
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.command.migrate_products"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.data_source.migration_status"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.create_notification"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.notifications"
+		}
 	],
 	"adapters": [
 		{
@@ -141,7 +155,9 @@
 				{
 					"method": "POST",
 					"path": "/_emdash/api/content/:collection",
-					"parameters": ["collection"],
+					"parameters": [
+						"collection"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "none",
@@ -166,7 +182,10 @@
 				{
 					"method": "PUT",
 					"path": "/_emdash/api/content/:collection/:id",
-					"parameters": ["collection", "id"],
+					"parameters": [
+						"collection",
+						"id"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "none",
@@ -191,7 +210,10 @@
 				{
 					"method": "POST",
 					"path": "/_emdash/api/content/:collection/:id/publish",
-					"parameters": ["collection", "id"],
+					"parameters": [
+						"collection",
+						"id"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "passthrough",
@@ -216,7 +238,9 @@
 				{
 					"method": "GET",
 					"path": "/_emdash/api/content/:collection",
-					"parameters": ["collection"],
+					"parameters": [
+						"collection"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "passthrough",
@@ -266,7 +290,10 @@
 				{
 					"method": "GET",
 					"path": "/_emdash/api/content/:collection/:id/revisions",
-					"parameters": ["collection", "id"],
+					"parameters": [
+						"collection",
+						"id"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "passthrough",
@@ -291,8 +318,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/products/projects/:projectRef/catalog/products",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -318,8 +349,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/products/projects/:projectRef/catalog/products/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -345,8 +381,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/products/projects/:projectRef/catalog/products/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -371,8 +412,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/products/projects/:projectRef/packages",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -398,8 +443,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/products/projects/:projectRef/packages/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -425,8 +475,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/products/projects/:projectRef/packages/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -451,8 +506,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/products/projects/:projectRef/offerings",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -478,8 +537,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/products/projects/:projectRef/offerings/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -505,8 +569,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/products/projects/:projectRef/offerings/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -531,8 +600,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/products/projects/:projectRef/entitlements",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -558,8 +631,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/products/projects/:projectRef/entitlements/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -585,8 +663,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/products/projects/:projectRef/entitlements/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -611,8 +694,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/products/projects/:projectRef/catalog/sync",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -638,8 +725,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/products/projects/:projectRef/catalog/products",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -664,8 +755,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/products/projects/:projectRef/packages",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -690,8 +785,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/products/projects/:projectRef/offerings",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -716,8 +815,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/products/projects/:projectRef/entitlements",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -742,8 +845,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/products/projects/:projectRef/statistics",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -768,8 +875,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/products/projects/:projectRef/catalog/syncs",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -820,8 +931,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/app/projects/:projectRef/setup/:platform",
-					"parameters": ["projectRef", "platform"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"platform"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -847,8 +963,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/app/projects/:projectRef/setup/:platform/test",
-					"parameters": ["projectRef", "platform"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"platform"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -924,8 +1045,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/app/projects/:projectRef/setup/:platform",
-					"parameters": ["projectRef", "platform"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"platform"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -982,8 +1108,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/application-users/projects/:projectRef/profiles/:userId",
-					"parameters": ["projectRef", "userId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"userId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1007,8 +1138,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/application-users/projects/:projectRef/profiles/:userId/suspend",
-					"parameters": ["projectRef", "userId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"userId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1096,8 +1232,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/application-users/projects/:projectRef/profiles/:userId",
-					"parameters": ["projectRef", "userId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"userId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1121,8 +1262,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/application-users/projects/:projectRef/members",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1210,8 +1355,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/analytics/projects/:projectRef/reports",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1237,8 +1386,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/analytics/projects/:projectRef/reports/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1264,8 +1418,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/analytics/projects/:projectRef/reports/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -1290,8 +1449,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/analytics/projects/:projectRef/operations",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1317,8 +1480,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/analytics/projects/:projectRef/dashboards",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1344,8 +1511,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/analytics/projects/:projectRef/dashboards/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1371,8 +1543,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/analytics/projects/:projectRef/dashboards/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -1397,8 +1574,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/analytics/projects/:projectRef/cohorts",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1424,8 +1605,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/analytics/projects/:projectRef/cohorts/:id/evaluate",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1451,8 +1637,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/analytics/projects/:projectRef/remote-config/:key",
-					"parameters": ["projectRef", "key"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"key"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1478,8 +1669,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/analytics/projects/:projectRef/alerts",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1505,8 +1700,12 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/analytics/projects/:projectRef/settings",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -1532,8 +1731,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/overview",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1558,8 +1761,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/events",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1584,8 +1791,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/events/analyze",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1610,8 +1821,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/installations",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1636,8 +1851,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/purchases",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1662,8 +1881,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/retention",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1688,8 +1911,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/reports",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -1714,8 +1941,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/dashboards",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -1740,8 +1971,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/sessions",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1766,8 +2001,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/profiles",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -1792,8 +2031,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/views",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1818,8 +2061,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/dimensions",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1844,8 +2091,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/crashes",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -1870,8 +2121,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/feedback",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -1896,8 +2151,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/cohorts",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -1922,8 +2181,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/remote-config",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -1948,8 +2211,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/alerts",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -1974,8 +2241,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/analytics/projects/:projectRef/settings",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2060,8 +2331,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/billing/projects/:projectRef/ledger/purchases",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2087,8 +2362,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/billing/projects/:projectRef/ledger/purchases/:purchaseId/refunds",
-					"parameters": ["projectRef", "purchaseId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"purchaseId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2114,8 +2394,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/billing/projects/:projectRef/ledger/refunds/:refundId",
-					"parameters": ["projectRef", "refundId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"refundId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2141,8 +2426,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/billing/projects/:projectRef/ledger/subscriptions/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2168,8 +2458,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/billing/projects/:projectRef/ledger/reconcile",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2194,8 +2488,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/billing/projects/:projectRef/ledger/purchases",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -2220,8 +2518,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/billing/projects/:projectRef/ledger/purchases/:purchaseId",
-					"parameters": ["projectRef", "purchaseId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"purchaseId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2246,8 +2549,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/billing/projects/:projectRef/ledger/refunds",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2272,8 +2579,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/billing/projects/:projectRef/ledger/subscriptions",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -2298,8 +2609,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/billing/projects/:projectRef/ledger/customers/:customerId/entitlements",
-					"parameters": ["projectRef", "customerId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"customerId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2324,8 +2640,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/billing/projects/:projectRef/ledger",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2350,8 +2670,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/links",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2377,8 +2701,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/links/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2404,8 +2733,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/links/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2430,8 +2764,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/campaigns",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2457,8 +2795,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/campaigns/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2483,8 +2826,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/redirect-rules",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2510,8 +2857,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/redirect-rules/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2537,8 +2889,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/redirect-rules/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2563,8 +2920,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/domains",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2590,8 +2951,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/domains/:id/verify",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2617,8 +2983,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/domains/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2643,8 +3014,12 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/social-preview",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2670,8 +3045,12 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/tracking",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2697,8 +3076,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/links",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -2723,8 +3106,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/links/:slug/resolve",
-					"parameters": ["projectRef", "slug"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"slug"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2757,8 +3145,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/campaigns",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2783,8 +3175,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/campaign-analytics",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -2809,8 +3205,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/redirect-rules",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2835,8 +3235,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/domains",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2861,8 +3265,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/social-preview",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2887,8 +3295,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/tracking",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -2913,8 +3325,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/dynamic-links/projects/:projectRef/statistics",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -2939,8 +3355,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/email/projects/:projectRef/transactional",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2966,8 +3386,12 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/email/projects/:projectRef/settings/smtp",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -2993,8 +3417,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/email/projects/:projectRef/settings/smtp/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3019,8 +3448,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/email/projects/:projectRef/settings/smtp/test",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3046,8 +3479,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/email/projects/:projectRef/settings/smtp/:profileId/verify-domain",
-					"parameters": ["projectRef", "profileId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"profileId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3073,8 +3511,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/email/projects/:projectRef/settings/delivery-outbox/:id/retry",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3100,8 +3543,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/email/projects/:projectRef/settings/dead-letters/:id/replay",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3127,8 +3575,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/email/projects/:projectRef/settings/dead-letters/:id/discard",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3154,8 +3607,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/email/projects/:projectRef/settings/smtp",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3180,8 +3637,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/email/projects/:projectRef/settings/delivery-outbox",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3206,8 +3667,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/email/projects/:projectRef/settings/dead-letters",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3232,8 +3697,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/email/projects/:projectRef/settings/provider-webhooks",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3258,8 +3727,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/email/projects/:projectRef/provider-events",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3284,8 +3757,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/files/projects/:projectRef/upload-tickets",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3309,8 +3786,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/files/projects/:projectRef/upload-tickets/:ticketId/complete",
-					"parameters": ["projectRef", "ticketId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"ticketId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3334,8 +3816,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/files/projects/:projectRef/objects/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3359,8 +3846,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/files/projects/:projectRef/collect-garbage",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3384,8 +3875,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/files/projects/:projectRef/objects",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -3409,8 +3904,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/files/projects/:projectRef/objects/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -3434,8 +3934,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/files/projects/:projectRef/objects/:id/download-ticket",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -3459,8 +3964,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/files/projects/:projectRef/usage",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -3484,8 +3993,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/flows/projects/:projectRef/workflows",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3511,8 +4024,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/flows/projects/:projectRef/workflows/:workflowId",
-					"parameters": ["projectRef", "workflowId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"workflowId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3538,8 +4056,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/flows/projects/:projectRef/workflows/:workflowId/publish",
-					"parameters": ["projectRef", "workflowId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"workflowId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3565,8 +4088,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/flows/projects/:projectRef/workflows/:workflowId/releases",
-					"parameters": ["projectRef", "workflowId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"workflowId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3592,8 +4120,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/flows/projects/:projectRef/environments",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3619,8 +4151,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/flows/projects/:projectRef/environments/:environmentId/rotate-key",
-					"parameters": ["projectRef", "environmentId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"environmentId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3645,8 +4182,12 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/flows/projects/:projectRef/localization",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -3672,8 +4213,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/flows/projects/:projectRef/overview",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3698,8 +4243,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/flows/projects/:projectRef/components",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3724,8 +4273,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/flows/projects/:projectRef/workflows",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -3750,8 +4303,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/flows/projects/:projectRef/workflows/:workflowId",
-					"parameters": ["projectRef", "workflowId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"workflowId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3776,8 +4334,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/flows/projects/:projectRef/environments",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3802,8 +4364,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/flows/projects/:projectRef/localization",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3828,8 +4394,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/flows/projects/:projectRef/users",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -3854,8 +4424,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/flows/projects/:projectRef/users/:userHash",
-					"parameters": ["projectRef", "userHash"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"userHash"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -3905,7 +4480,9 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/gateway/routes/:id",
-					"parameters": ["id"],
+					"parameters": [
+						"id"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "none",
@@ -4030,8 +4607,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/marketing/projects/:projectRef/campaigns",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -4057,8 +4638,13 @@
 				{
 					"method": "PATCH",
 					"path": "/api/v1/marketing/projects/:projectRef/campaigns/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -4084,10 +4670,22 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/marketing/projects/:projectRef/campaigns/:id/:transition",
-					"parameters": ["projectRef", "id", "transition"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id",
+						"transition"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {
-						"transition": ["start", "pause", "resume", "cancel", "archive"]
+						"transition": [
+							"start",
+							"pause",
+							"resume",
+							"cancel",
+							"archive"
+						]
 					},
 					"query": "none",
 					"body": "passthrough",
@@ -4113,8 +4711,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/marketing/projects/:projectRef/campaigns/:id/schedule",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -4140,8 +4743,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/marketing/projects/:projectRef/journeys",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -4167,8 +4774,13 @@
 				{
 					"method": "PATCH",
 					"path": "/api/v1/marketing/projects/:projectRef/journeys/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -4194,10 +4806,21 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/marketing/projects/:projectRef/journeys/:id/:transition",
-					"parameters": ["projectRef", "id", "transition"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id",
+						"transition"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {
-						"transition": ["activate", "pause", "resume", "archive"]
+						"transition": [
+							"activate",
+							"pause",
+							"resume",
+							"archive"
+						]
 					},
 					"query": "none",
 					"body": "passthrough",
@@ -4223,8 +4846,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/marketing/projects/:projectRef/channel-connectors",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -4250,8 +4877,13 @@
 				{
 					"method": "PATCH",
 					"path": "/api/v1/marketing/projects/:projectRef/channel-connectors/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -4277,8 +4909,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/marketing/projects/:projectRef/channel-connectors/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -4303,8 +4940,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/marketing/projects/:projectRef/email/subscribers",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -4329,8 +4970,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/marketing/projects/:projectRef/lists",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -4355,8 +5000,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/marketing/projects/:projectRef/segments",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -4381,8 +5030,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/marketing/projects/:projectRef/templates",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -4407,8 +5060,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/marketing/projects/:projectRef/campaigns",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -4433,8 +5090,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/marketing/projects/:projectRef/statistics",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -4459,8 +5120,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/marketing/projects/:projectRef/journeys",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -4485,8 +5150,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/marketing/projects/:projectRef/journeys/:id/enrollments",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -4511,8 +5181,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/marketing/projects/:projectRef/journeys/:id/statistics",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -4537,8 +5212,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/marketing/projects/:projectRef/channel-connectors",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -4590,7 +5269,9 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/mcp/tokens/:tokenId",
-					"parameters": ["tokenId"],
+					"parameters": [
+						"tokenId"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "none",
@@ -4717,7 +5398,9 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/observability/incidents/:incidentId/acknowledge",
-					"parameters": ["incidentId"],
+					"parameters": [
+						"incidentId"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "none",
@@ -4742,7 +5425,9 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/observability/incidents/:incidentId/resolve",
-					"parameters": ["incidentId"],
+					"parameters": [
+						"incidentId"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "none",
@@ -4767,7 +5452,9 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/platform/custom/jobs/:jobId/retry",
-					"parameters": ["jobId"],
+					"parameters": [
+						"jobId"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "none",
@@ -4794,7 +5481,9 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/platform/email/dead-letters/:deadLetterId/replay",
-					"parameters": ["deadLetterId"],
+					"parameters": [
+						"deadLetterId"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "none",
@@ -4821,7 +5510,9 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/platform/email/dead-letters/:deadLetterId/discard",
-					"parameters": ["deadLetterId"],
+					"parameters": [
+						"deadLetterId"
+					],
 					"server_bound_parameters": [],
 					"parameter_values": {},
 					"query": "none",
@@ -5001,8 +5692,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/onboardings/projects/:projectRef",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5028,8 +5723,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/onboardings/projects/:projectRef/:onboardingId",
-					"parameters": ["projectRef", "onboardingId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"onboardingId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5055,8 +5755,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/onboardings/projects/:projectRef/:onboardingId",
-					"parameters": ["projectRef", "onboardingId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"onboardingId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5081,8 +5786,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/onboardings/projects/:projectRef/:onboardingId/versions",
-					"parameters": ["projectRef", "onboardingId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"onboardingId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5108,8 +5818,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/onboardings/projects/:projectRef/:onboardingId/publish",
-					"parameters": ["projectRef", "onboardingId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"onboardingId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5135,8 +5850,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/onboardings/projects/:projectRef/placements/:placementId",
-					"parameters": ["projectRef", "placementId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"placementId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5154,8 +5874,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/onboardings/projects/:projectRef/placements",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5181,8 +5905,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/onboardings/projects/:projectRef/targeting-rules",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5208,8 +5936,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/onboardings/projects/:projectRef/experiences",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5235,8 +5967,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/onboardings/projects/:projectRef/experiences/:experienceId/status",
-					"parameters": ["projectRef", "experienceId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"experienceId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5262,8 +5999,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/onboardings/projects/:projectRef",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5288,8 +6029,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/onboardings/projects/:projectRef/:onboardingId/versions",
-					"parameters": ["projectRef", "onboardingId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"onboardingId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5314,8 +6060,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/onboardings/projects/:projectRef/placements",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5340,8 +6090,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/onboardings/projects/:projectRef/targeting-rules",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5366,8 +6120,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/onboardings/projects/:projectRef/experiences",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5392,8 +6150,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/onboardings/projects/:projectRef/statistics",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -5418,8 +6180,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/paywalls/projects/:projectRef",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5445,8 +6211,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/paywalls/projects/:projectRef/paywalls/:paywallId",
-					"parameters": ["projectRef", "paywallId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"paywallId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5472,8 +6243,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/paywalls/projects/:projectRef/paywalls/:paywallId",
-					"parameters": ["projectRef", "paywallId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"paywallId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5498,8 +6274,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/paywalls/projects/:projectRef/paywalls/:paywallId/versions",
-					"parameters": ["projectRef", "paywallId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"paywallId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5525,8 +6306,14 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/paywalls/projects/:projectRef/paywalls/:paywallId/versions/:versionId/publish",
-					"parameters": ["projectRef", "paywallId", "versionId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"paywallId",
+						"versionId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5552,8 +6339,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/paywalls/projects/:projectRef/placements/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5571,8 +6363,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/paywalls/projects/:projectRef/placements",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5598,8 +6394,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/paywalls/projects/:projectRef/experiences",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5625,8 +6425,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/paywalls/projects/:projectRef/experiences/:experienceId",
-					"parameters": ["projectRef", "experienceId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"experienceId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5652,8 +6457,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/paywalls/projects/:projectRef/experiences/:experienceId",
-					"parameters": ["projectRef", "experienceId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"experienceId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5678,8 +6488,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/paywalls/projects/:projectRef",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5704,8 +6518,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/paywalls/projects/:projectRef/paywalls/:paywallId/versions",
-					"parameters": ["projectRef", "paywallId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"paywallId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5730,8 +6549,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/paywalls/projects/:projectRef/placements",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5756,8 +6579,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/paywalls/projects/:projectRef/experiences",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5782,8 +6609,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/paywalls/projects/:projectRef/statistics",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -5808,8 +6639,12 @@
 				{
 					"method": "PATCH",
 					"path": "/api/v1/support/projects/:projectRef/settings",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5835,8 +6670,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/support/projects/:projectRef/settings/entities",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5862,8 +6701,13 @@
 				{
 					"method": "PATCH",
 					"path": "/api/v1/support/projects/:projectRef/settings/entities/:entityId",
-					"parameters": ["projectRef", "entityId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"entityId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5889,8 +6733,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/support/projects/:projectRef/settings/entities/:entityId",
-					"parameters": ["projectRef", "entityId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"entityId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5915,8 +6764,13 @@
 				{
 					"method": "PUT",
 					"path": "/api/v1/support/projects/:projectRef/settings/entities/:entityId/secret",
-					"parameters": ["projectRef", "entityId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"entityId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5942,8 +6796,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/support/projects/:projectRef/settings/entities/:entityId/secret",
-					"parameters": ["projectRef", "entityId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"entityId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -5968,8 +6827,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/support/projects/:projectRef/conversations/:conversationId/messages",
-					"parameters": ["projectRef", "conversationId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"conversationId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -5995,8 +6859,13 @@
 				{
 					"method": "PATCH",
 					"path": "/api/v1/support/projects/:projectRef/conversations/:conversationId",
-					"parameters": ["projectRef", "conversationId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"conversationId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -6022,8 +6891,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/support/projects/:projectRef/providers",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -6055,8 +6928,13 @@
 				{
 					"method": "PATCH",
 					"path": "/api/v1/support/projects/:projectRef/providers/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -6088,8 +6966,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/support/projects/:projectRef/providers/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -6121,8 +7004,12 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/support/projects/:projectRef/integrations",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -6154,8 +7041,13 @@
 				{
 					"method": "PATCH",
 					"path": "/api/v1/support/projects/:projectRef/integrations/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "passthrough",
@@ -6187,8 +7079,13 @@
 				{
 					"method": "DELETE",
 					"path": "/api/v1/support/projects/:projectRef/integrations/:id",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -6220,8 +7117,13 @@
 				{
 					"method": "POST",
 					"path": "/api/v1/support/projects/:projectRef/help-center/articles/:id/publish",
-					"parameters": ["projectRef", "id"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"id"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -6253,8 +7155,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/settings",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -6279,8 +7185,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/items",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -6305,8 +7215,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/conversations",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -6331,8 +7245,13 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/conversations/:conversationId/messages",
-					"parameters": ["projectRef", "conversationId"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef",
+						"conversationId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "none",
 					"body": "none",
@@ -6357,8 +7276,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/channels",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -6390,8 +7313,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/providers",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -6423,8 +7350,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/integrations",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -6456,8 +7387,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/help-center/portals",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -6489,8 +7424,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/help-center/categories",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -6522,8 +7461,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/help-center/folders",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -6555,8 +7498,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/help-center/articles",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -6588,8 +7535,12 @@
 				{
 					"method": "GET",
 					"path": "/api/v1/support/projects/:projectRef/captain/tasks",
-					"parameters": ["projectRef"],
-					"server_bound_parameters": ["projectRef"],
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
 					"parameter_values": {},
 					"query": "passthrough",
 					"body": "none",
@@ -6611,7 +7562,268 @@
 					]
 				}
 			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"id": "supbrd-plugmod-vocostar.data_source.jobs",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/plugins/vocostar/projects/:projectRef/jobs",
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/api/v1/plugins/vocostar/projects/:projectRef/"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"id": "supbrd-plugmod-vocostar.data_source.voices",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/plugins/vocostar/projects/:projectRef/voices",
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/api/v1/plugins/vocostar/projects/:projectRef/"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"id": "supbrd-plugmod-vocostar.data_source.conversions",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/plugins/vocostar/projects/:projectRef/conversions",
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/api/v1/plugins/vocostar/projects/:projectRef/"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"id": "supbrd-plugmod-vocostar.data_source.outputs",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/plugins/vocostar/projects/:projectRef/outputs",
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/api/v1/plugins/vocostar/projects/:projectRef/"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"id": "supbrd-plugmod-vocostar.command.retry_job",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/plugins/vocostar/projects/:projectRef/jobs/:jobId/retry",
+					"parameters": [
+						"projectRef",
+						"jobId"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/api/v1/plugins/vocostar/projects/:projectRef/jobs/:jobId/retry"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"id": "supbrd-plugmod-vocostar.data_source.settings",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/_emdash/api/admin/plugins/supbrd-plugmod-vocostar/settings",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/_emdash/api/admin/plugins/supbrd-plugmod-vocostar/settings"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"id": "supbrd-plugmod-vocostar.command.update_settings",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/_emdash/api/admin/plugins/supbrd-plugmod-vocostar/settings",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/_emdash/api/admin/plugins/supbrd-plugmod-vocostar/settings"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.create_notification",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/projects/:projectRef/notifications",
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/api/v1/projects/:projectRef/notifications"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.notifications",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/projects/:projectRef/notifications/search",
+					"parameters": [
+						"projectRef"
+					],
+					"server_bound_parameters": [
+						"projectRef"
+					],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"read_only": true,
+					"sources": [
+						{
+							"file": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/api/v1/projects/:projectRef/notifications/search"
+						}
+					]
+				}
+			]
 		}
 	],
-	"verification": "source-reviewed endpoints only; functional, ownership and plugin-isolation tests remain separate"
+	"verification": "source-reviewed endpoints only; functional, ownership and plugin-isolation tests remain separate",
+	"application_plugins": [
+		{
+			"plugin_id": "supbrd-plugmod-vocostar",
+			"manifest": "plugins/vocostar/plugin.json"
+		}
+	]
 }

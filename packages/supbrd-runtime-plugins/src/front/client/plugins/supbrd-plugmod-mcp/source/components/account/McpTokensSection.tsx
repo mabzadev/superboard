@@ -15,6 +15,11 @@ import { useMcpTokensQuery, useRevokeMcpTokenMutation } from "../../hooks/querie
 
 export default function McpTokensSection() {
 	const config = usePublicConfig();
+	const endpoint = config.mcpUrl
+		? new URL(config.mcpUrl).pathname === "/"
+			? `${config.mcpUrl}/mcp`
+			: config.mcpUrl
+		: undefined;
 	const { data: tokens, isLoading } = useMcpTokensQuery();
 	const revokeMutation = useRevokeMcpTokenMutation();
 
@@ -43,11 +48,11 @@ export default function McpTokensSection() {
 				{config.mcpUrl ? (
 					<a
 						className="break-all font-mono text-xs text-primary hover:underline"
-						href={`${config.mcpUrl}/mcp`}
+						href={endpoint}
 						target="_blank"
 						rel="noopener noreferrer"
 					>
-						{config.mcpUrl}/mcp
+						{endpoint}
 					</a>
 				) : (
 					<p role="alert">{config.endpointError("MCP")}</p>

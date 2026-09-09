@@ -161,7 +161,11 @@ export async function verifySuperBoardPluginManifest(
 				continue;
 			}
 			const id = contributionId(contribution);
-			if (!id?.startsWith(`${String(value.plugin_id)}.`))
+			const namespace = id?.split(".")[0];
+			if (
+				!id?.startsWith(`${String(value.plugin_id)}.`) &&
+				!(namespace && isRecord(value.aliases) && value.aliases[namespace] === value.plugin_id)
+			)
 				errors.push("CONTRIBUTION_NAMESPACE_INVALID");
 			if (!hasExactKeys(contribution, contributionKeys(collectionName))) {
 				errors.push("CONTRIBUTION_NOT_CLOSED");

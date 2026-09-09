@@ -1,5 +1,6 @@
 "use client";
 
+import { useOptionalFrontContext } from "@superboard/front-ui/context";
 import {
 	Bell,
 	CheckCircle2,
@@ -186,9 +187,9 @@ export function sdkInstallCode(platform: "android" | "ios" | "web"): CodeBlockDa
 	const usernameEnvironmentVariable = authentication.usernameEnvironmentVariable;
 	const tokenEnvironmentVariable = authentication.tokenEnvironmentVariable;
 	const settings = [
-		`val openGrowPackagesUser = providers.environmentVariable("${usernameEnvironmentVariable}").orNull`,
+		`val superBoardPackagesUser = providers.environmentVariable("${usernameEnvironmentVariable}").orNull`,
 		`    ?: error("${usernameEnvironmentVariable} is required")`,
-		`val openGrowPackagesToken = providers.environmentVariable("${tokenEnvironmentVariable}").orNull`,
+		`val superBoardPackagesToken = providers.environmentVariable("${tokenEnvironmentVariable}").orNull`,
 		`    ?: error("${tokenEnvironmentVariable} is required")`,
 		"",
 		"dependencyResolutionManagement {",
@@ -197,8 +198,8 @@ export function sdkInstallCode(platform: "android" | "ios" | "web"): CodeBlockDa
 		'            name = "SuperBoardGitHubPackages"',
 		`            url = uri("${distribution.registry}")`,
 		"            credentials {",
-		"                username = openGrowPackagesUser",
-		"                password = openGrowPackagesToken",
+		"                username = superBoardPackagesUser",
+		"                password = superBoardPackagesToken",
 		"            }",
 		"        }",
 		"    }",
@@ -225,13 +226,14 @@ function stepCode(
 	accessKey: string,
 	form: SetupForm,
 	config: ReturnType<typeof usePublicConfig>,
+	uriScheme: string,
 ): CodeBlockData[] | null {
 	if (platform === "ios") {
 		if (step === 1)
 			return code(
 				"xml",
 				"Info.plist",
-				`<key>CFBundleURLTypes</key>\n<array>\n  <dict><key>CFBundleURLSchemes</key><array><string>opengrow</string></array></dict>\n</array>`,
+				`<key>CFBundleURLTypes</key>\n<array>\n  <dict><key>CFBundleURLSchemes</key><array><string>${uriScheme}</string></array></dict>\n</array>`,
 			);
 		if (step === 2) return sdkInstallCode("ios");
 		if (step === 3)
@@ -276,7 +278,7 @@ function stepCode(
 			return code(
 				"typescript",
 				"superboard.ts",
-				`import SuperBoard from "${javascriptLibrary.packageName}";\n\nconst openGrow = new SuperBoard(\n  "${accessKey}",\n  false,\n  (data) => console.info("SuperBoard link", data),\n  "${config.sdkUrl}",\n);\nopenGrow.start();`,
+				`import SuperBoard from "${javascriptLibrary.packageName}";\n\nconst superBoard = new SuperBoard(\n  "${accessKey}",\n  false,\n  (data) => console.info("SuperBoard link", data),\n  "${config.sdkUrl}",\n);\nsuperBoard.start();`,
 			);
 	}
 	return null;
@@ -492,13 +494,18 @@ function SetupStep({
 	accessKey: string;
 }) {
 	const config = usePublicConfig();
+	const front = useOptionalFrontContext();
+	const configuredScheme = front?.projectScope?.instance?.uri_scheme ?? "";
+	const uriScheme = /^[a-z][a-z0-9+.-]*$/iu.test(configuredScheme)
+		? configuredScheme
+		: "superboard";
 	const missingEndpoint =
 		platform === "android" && step === 1 && !config.shortlinkUrl
 			? "Short-link"
 			: platform === "web" && step === 2 && !config.sdkUrl
 				? "SDK"
 				: null;
-	const codeBlock = stepCode(platform, step, accessKey, form, config);
+	const codeBlock = stepCode(platform, step, accessKey, form, config, uriScheme);
 	return (
 		<div className="mx-auto max-w-3xl space-y-6">
 			{missingEndpoint && <p role="alert">{config.endpointError(missingEndpoint)}</p>}

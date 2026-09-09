@@ -10,6 +10,7 @@ import {
 import { DOMAIN_SERVICE_REGISTRY } from "./cloudflare-services.mjs";
 import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 import { validateCustomWorkerBindings } from "./superboard-target-options.mjs";
+import { validateEnvironmentIsolation } from "./target-environments.mjs";
 
 export const root = resolve(new URL("..", import.meta.url).pathname);
 
@@ -53,6 +54,17 @@ export async function validateTarget(target) {
 	if (environments.length === 0) {
 		throw new Error("Invalid target manifest: at least one environment is required");
 	}
+	const consoleIds = new Set();
+	for (const entry of target.consoleEnvironments ?? []) {
+		if (consoleIds.has(entry.id)) throw new Error("CONSOLE_ENVIRONMENT_DUPLICATE");
+		consoleIds.add(entry.id);
+		for (const origin of [entry.apiUrl, entry.consoleUrl]) {
+			const url = strictPublicHttpsUrl(origin);
+			if (!url || url.pathname !== "/" || url.search || url.hash)
+				throw new Error("CONSOLE_ENVIRONMENT_ORIGIN_INVALID");
+		}
+	}
+	validateEnvironmentIsolation(target);
 	resourceIdentity(target);
 	const activeDomains = new Set(
 		Object.values(target.domains ?? {}).map((hostname) => String(hostname).toLowerCase()),
@@ -221,6 +233,14 @@ export async function validateTarget(target) {
 		validateCustomWorkerBindings(target.customWorker);
 		const managedWorkers = target.customWorker.managedWorkers ?? [];
 		const runtimeBridge = target.customWorker.runtimeBridge;
+		if (
+			runtimeBridge?.legacyGateway &&
+			target.customWorker.pluginId !== "supbrd-plugmod-vocostar"
+		) {
+			throw new Error(
+				"Invalid target manifest: runtimeBridge.legacyGateway requires the Vocostar plugin",
+			);
+		}
 		if (managedWorkers.length > 0 && !runtimeBridge) {
 			throw new Error(
 				"Invalid target manifest: customWorker.runtimeBridge is required by managed Workers",
@@ -387,7 +407,7 @@ export function publicDashboardUrl(target) {
 }
 
 export function publicMcpUrl(target) {
-	return `https://${target.domains.mcp}`;
+	return `https://${target.domains.mcp}${target.domains.mcp === target.domains.site ? "/mcp" : ""}`;
 }
 
 export function publicSdkUrl(target) {

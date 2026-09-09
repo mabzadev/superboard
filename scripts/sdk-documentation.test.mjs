@@ -320,7 +320,7 @@ test("missing, duplicate and reversed documentation markers fail closed", async 
     flutterPath,
     documents
       .get(flutterPath)
-      .replace("<!-- opengrow-sdk-documentation:flutter:end -->", ""),
+      .replace("<!-- superboard-sdk-documentation:flutter:end -->", ""),
   );
   let result = applySdkDocumentationSections(catalog, documents);
   assert.match(
@@ -331,7 +331,7 @@ test("missing, duplicate and reversed documentation markers fail closed", async 
   const duplicate = await currentDocuments();
   duplicate.set(
     flutterPath,
-    `${duplicate.get(flutterPath)}\n<!-- opengrow-sdk-documentation:flutter:start -->`,
+    `${duplicate.get(flutterPath)}\n<!-- superboard-sdk-documentation:flutter:start -->`,
   );
   result = applySdkDocumentationSections(catalog, duplicate);
   assert.match(
@@ -345,8 +345,8 @@ test("missing, duplicate and reversed documentation markers fail closed", async 
     reversed
       .get(flutterPath)
       .replace(
-        /<!-- opengrow-sdk-documentation:flutter:start -->[\s\S]*?<!-- opengrow-sdk-documentation:flutter:end -->/u,
-        "<!-- opengrow-sdk-documentation:flutter:end -->\n<!-- opengrow-sdk-documentation:flutter:start -->",
+        /<!-- superboard-sdk-documentation:flutter:start -->[\s\S]*?<!-- superboard-sdk-documentation:flutter:end -->/u,
+        "<!-- superboard-sdk-documentation:flutter:end -->\n<!-- superboard-sdk-documentation:flutter:start -->",
       ),
   );
   result = applySdkDocumentationSections(catalog, reversed);
