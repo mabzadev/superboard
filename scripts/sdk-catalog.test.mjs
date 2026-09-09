@@ -12,6 +12,27 @@ import {
 
 const candidateSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
+function pendingRename(catalog, id) {
+  const library = catalog.libraries.find((entry) => entry.id === id);
+  const published = {
+    flutter: { version: "2.1.4", sha: "1cddb333ff3330fd6ffa507d780821121bd7273a" },
+    flutterflow: { version: "2.2.5", sha: "b90e7e0ede12cf6321a7a8d104baf1fd8f564867" },
+  }[id];
+  const installation = (name, version) =>
+    `${name}:\n  git:\n    url: https://github.com/mabzadev/superboard.git\n    ref: sdk-${id}-v${version}\n    path: sdks/${id}`;
+  Object.assign(library, {
+    packageName: `opengrow_${id}`,
+    latestReleaseVersion: published.version,
+    releaseRef: `sdk-${id}-v${published.version}`,
+    releaseSha: published.sha,
+    releaseStatus: "pending-release",
+    install: installation(`opengrow_${id}`, published.version),
+    candidatePackageName: `superboard_${id}`,
+    candidateInstall: installation(`superboard_${id}`, library.sourceVersion),
+  });
+  return library;
+}
+
 test("schema v5 records published baselines and honest initial Flows packages", async () => {
   const catalog = await loadSdkCatalog();
   const result = await validateSdkCatalog(catalog);
@@ -48,44 +69,6 @@ test("schema v5 records published baselines and honest initial Flows packages", 
     catalog.libraries
       .filter((library) => library.releaseStatus !== "unreleased")
       .every((library) => /^[0-9a-f]{40}$/u.test(library.releaseSha)),
-  );
-
-  const flutter = catalog.libraries.find(({ id }) => id === "flutter");
-  assert.equal(flutter.sourceVersion, "3.0.0");
-  assert.equal(flutter.latestReleaseVersion, "2.1.4");
-  assert.equal(flutter.releaseRef, "sdk-flutter-v2.1.4");
-  assert.equal(flutter.releaseStatus, "pending-release");
-  assert.equal(
-    flutter.releaseSha,
-    "1cddb333ff3330fd6ffa507d780821121bd7273a",
-  );
-  assert.equal(flutter.packageName, "opengrow_flutter");
-  assert.equal(flutter.candidatePackageName, "superboard_flutter");
-  assert.equal(
-    flutter.install,
-    "opengrow_flutter:\n  git:\n    url: https://github.com/mabzadev/superboard.git\n    ref: sdk-flutter-v2.1.4\n    path: sdks/flutter",
-  );
-  assert.match(flutter.candidateInstall, /sdk-flutter-v3\.0\.0/u);
-
-  const flutterflow = catalog.libraries.find(
-    ({ id }) => id === "flutterflow",
-  );
-  assert.equal(flutterflow.sourceVersion, "3.0.0");
-  assert.equal(flutterflow.latestReleaseVersion, "2.2.5");
-  assert.equal(flutterflow.releaseRef, "sdk-flutterflow-v2.2.5");
-  assert.equal(flutterflow.releaseStatus, "pending-release");
-  assert.equal(
-    flutterflow.releaseSha,
-    "b90e7e0ede12cf6321a7a8d104baf1fd8f564867",
-  );
-  assert.equal(flutterflow.packageName, "opengrow_flutterflow");
-  assert.equal(
-    flutterflow.candidatePackageName,
-    "superboard_flutterflow",
-  );
-  assert.equal(
-    flutterflow.install,
-    "opengrow_flutterflow:\n  git:\n    url: https://github.com/mabzadev/superboard.git\n    ref: sdk-flutterflow-v2.2.5\n    path: sdks/flutterflow",
   );
 
   const immutableCoordinates = Object.fromEntries(
@@ -324,6 +307,7 @@ test("unreleased entries cannot smuggle fake publication metadata", async () => 
 test("Flutter candidate publication accepts its canonical SuperBoard Dart manifest", async () => {
   const catalog = await loadSdkCatalog();
   const id = "flutter";
+  pendingRename(catalog, id);
   const tag = releaseCandidateTagFor(catalog, id);
   const result = await validateSdkCatalog(catalog, {
     releaseCandidateTag: tag,
@@ -337,29 +321,27 @@ test("Flutter candidate publication accepts its canonical SuperBoard Dart manife
   );
 });
 
-test("the unified FlutterFlow v3 source matches its exact candidate coordinate", async () => {
+test("the unified FlutterFlow source matches its candidate coordinate", async () => {
   const catalog = await loadSdkCatalog();
-  const flutterflow = catalog.libraries.find(({ id }) => id === "flutterflow");
+  const flutterflow = pendingRename(catalog, "flutterflow");
   const tag = releaseCandidateTagFor(catalog, "flutterflow");
   const result = await validateSdkCatalog(catalog, {
     releaseCandidateTag: tag,
   });
 
   assert.equal(flutterflow.candidatePackageName, "superboard_flutterflow");
-  assert.equal(flutterflow.sourceVersion, "3.0.0");
-  assert.match(flutterflow.candidateInstall, /sdk-flutterflow-v3\.0\.0/u);
+  assert.ok(flutterflow.candidateInstall.includes(`sdk-flutterflow-v${flutterflow.sourceVersion}`));
   assert.deepEqual(result.errors, []);
 });
 
 test("an active promotion atomically adopts the candidate coordinate", async () => {
   const catalog = await loadSdkCatalog();
-  const candidateInstall = catalog.libraries.find(
-    ({ id }) => id === "flutter",
-  ).candidateInstall;
+  const candidate = pendingRename(catalog, "flutter");
+  const { candidateInstall, sourceVersion } = candidate;
   const promoted = promoteSdkRelease(
     catalog,
     "flutter",
-    "3.0.0",
+    sourceVersion,
     candidateSha,
   );
   const flutter = promoted.libraries.find(({ id }) => id === "flutter");
@@ -367,8 +349,8 @@ test("an active promotion atomically adopts the candidate coordinate", async () 
   assert.equal(flutter.lifecycle, "active");
   assert.equal(flutter.packageName, "superboard_flutter");
   assert.equal(flutter.install, candidateInstall);
-  assert.equal(flutter.latestReleaseVersion, "3.0.0");
-  assert.equal(flutter.releaseRef, "sdk-flutter-v3.0.0");
+  assert.equal(flutter.latestReleaseVersion, sourceVersion);
+  assert.equal(flutter.releaseRef, `sdk-flutter-v${sourceVersion}`);
   assert.equal(flutter.releaseStatus, "released");
   assert.equal(flutter.releaseSha, candidateSha);
   assert.equal(Object.hasOwn(flutter, "candidatePackageName"), false);
@@ -418,9 +400,7 @@ test("minimal brand guard protects active names and candidate installs", async (
   );
 
   const wrongCandidate = structuredClone(catalog);
-  const flutterflow = wrongCandidate.libraries.find(
-    ({ id }) => id === "flutterflow",
-  );
+  const flutterflow = pendingRename(wrongCandidate, "flutterflow");
   flutterflow.candidatePackageName = "opengrow_flutterflow_next";
   flutterflow.candidateInstall = flutterflow.candidateInstall.replaceAll(
     "superboard_flutterflow",

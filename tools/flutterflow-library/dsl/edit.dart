@@ -2723,7 +2723,6 @@ class SuperBoardCustomerCenter extends StatelessWidget {
             return;
           }
           node.customWidgetIdentifier = canonical.identifier.deepCopy();
-          if (!node.hasParameterValues()) return;
           final remapped = <String, FFParameterPass>{};
           for (final pass in node.parameterValues.parameterPasses.values) {
             final target = canonicalParameters[pass.paramIdentifier.name];
@@ -2732,7 +2731,22 @@ class SuperBoardCustomerCenter extends StatelessWidget {
             copy.paramIdentifier = target.identifier.deepCopy();
             remapped[target.identifier.key] = copy;
           }
-          node.parameterValues.parameterPasses
+          if (entry.value == 'SuperBoardBootstrap') {
+            for (final binding in {
+              'projectKey': projectKeyId,
+              'sdkBaseUrl': sdkBaseUrlId,
+            }.entries) {
+              final parameter = canonicalParameters[binding.key]!;
+              remapped.putIfAbsent(
+                parameter.identifier.key,
+                () => FFParameterPass(
+                  paramIdentifier: parameter.identifier.deepCopy(),
+                  variable: varFromLibraryValue(binding.value.deepCopy()),
+                ),
+              );
+            }
+          }
+          node.ensureParameterValues().parameterPasses
             ..clear()
             ..addAll(remapped);
         });

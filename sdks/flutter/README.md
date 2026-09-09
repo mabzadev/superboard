@@ -141,14 +141,14 @@ The SuperBoard Flutter SDK provides deep linking, app links, universal links, li
 
 ## Installation
 
-Add the published Flutter package `opengrow_flutter`
-at the immutable release `sdk-flutter-v2.1.4`:
+Add the published Flutter package `superboard_flutter`
+at the immutable release `sdk-flutter-v3.0.0`:
 
 ```yaml
-opengrow_flutter:
+superboard_flutter:
   git:
     url: https://github.com/mabzadev/superboard.git
-    ref: sdk-flutter-v2.1.4
+    ref: sdk-flutter-v3.0.0
     path: sdks/flutter
 ```
 

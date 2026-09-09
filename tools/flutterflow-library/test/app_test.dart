@@ -6,6 +6,55 @@ import 'package:test/test.dart';
 import '../dsl/edit.dart' as superboard;
 
 void main() {
+  test('migrated bootstrap instances bind their required library values', () {
+    final app = buildApp((app) {
+      final dynamic legacy = app.customWidget(
+        'OGBootstrapBridge',
+        code: r'''
+import 'package:flutter/material.dart';
+class OGBootstrapBridge extends StatelessWidget {
+  const OGBootstrapBridge({super.key, this.width, this.height});
+  final double? width;
+  final double? height;
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+''',
+      );
+      app.ensurePage(
+        'ExistingBootstrap',
+        route: '/existing-bootstrap',
+        body: Scaffold(body: legacy()),
+      );
+      superboard.buildStarterEditFlow(app);
+    });
+    final project = compileApp(app).project;
+    Iterable<FFNode> nodes(FFNode node) sync* {
+      yield node;
+      for (final child in node.children) {
+        yield* nodes(child);
+      }
+    }
+
+    final bootstrap = project.widgetClasses.values
+        .expand((widget) => nodes(widget.node))
+        .where(
+          (node) => node.customWidgetIdentifier.name == 'SuperBoardBootstrap',
+        )
+        .single;
+    final bindings = {
+      for (final pass in bootstrap.parameterValues.parameterPasses.values)
+        pass.paramIdentifier.name: pass.variable,
+    };
+    for (final name in ['projectKey', 'sdkBaseUrl']) {
+      expect(bindings[name]?.source, FFVariableSource.LIBRARY_VALUE);
+      expect(
+        bindings[name]?.baseVariable.libraryValue.identifier,
+        findLibraryParameter(project, name: name)!.identifier,
+      );
+    }
+  });
+
   test('SuperBoard private library DSL compiles', () {
     final app = buildApp(superboard.buildStarterEditFlow);
     final project = compileApp(app).project;
