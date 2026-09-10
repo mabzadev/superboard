@@ -70,7 +70,7 @@ test("exercises every required contribution and records parity blockers", async 
 		if (!entry) throw new Error(`Missing plugin for Worker proof: ${row.target}`);
 		if (!entry.worker_descriptor) {
 			const health = await createConfiguredSuperBoardPlugin(row.target).routes.health.handler({
-				kv: { get: async () => null },
+				kv: { list: async () => [] },
 			} as never);
 			expect(health).toMatchObject({ status: "ready" });
 			workerHealthProofs.set(row.target, row.proof_sha256);
