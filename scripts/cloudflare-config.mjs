@@ -62,6 +62,8 @@ const target = targetForEnvironment(
 	environment,
 );
 const compiledTarget = await compiledTargetFromArgs(target, environment, args);
+const routing = assertPublicRoutingReady(target, environment);
+const publicRoutesEnabled = routing.routesEnabled && !args["no-routes"] && !preflight;
 const sitePreviewRoute = resolveSitePreviewRoute({
 	requested: Boolean(args["site-preview-route"]),
 	service,
@@ -75,6 +77,8 @@ const siteReleaseOperations = resolveSiteReleaseOperations({
 	service,
 	environment,
 	sitePreviewRoute,
+	publicRoutesEnabled,
+	readOnly: Boolean(args["read-only-console"]),
 });
 assertTargetPhysicalResourceNames(target, environment);
 assertServiceForTarget(target, service);
@@ -86,8 +90,6 @@ const resources = target.environments[environment];
 if (!resources || !workerNameForService(target, service, environment)) {
 	throw new Error(`${targetName} does not define a ${environment} environment`);
 }
-const routing = assertPublicRoutingReady(target, environment);
-const publicRoutesEnabled = routing.routesEnabled && !args["no-routes"] && !preflight;
 const domainResource = DOMAIN_SERVICES.includes(service)
 	? resources.moduleD1?.[moduleResourceKey(service)]
 	: null;
@@ -220,13 +222,18 @@ function requiredSecretNamesForService() {
 	);
 	if (!requirement) return [];
 	return [
-		...requirement.names,
-		...(siteReleaseOperations.value === "enabled" ? ["SUPERBOARD_RELEASE_PRIVATE_JWK"] : []),
-		...requirement.alternatives.map(({ oneOf }) =>
-			oneOf.includes("STORE_CREDENTIALS_ENCRYPTION_KEYS")
-				? "STORE_CREDENTIALS_ENCRYPTION_KEYS"
-				: oneOf[0],
-		),
+		...new Set([
+			...requirement.names.filter(
+				(name) =>
+					name !== "SUPERBOARD_RELEASE_PRIVATE_JWK" || siteReleaseOperations.value === "enabled",
+			),
+			...(siteReleaseOperations.value === "enabled" ? ["SUPERBOARD_RELEASE_PRIVATE_JWK"] : []),
+			...requirement.alternatives.map(({ oneOf }) =>
+				oneOf.includes("STORE_CREDENTIALS_ENCRYPTION_KEYS")
+					? "STORE_CREDENTIALS_ENCRYPTION_KEYS"
+					: oneOf[0],
+			),
+		]),
 	].sort();
 }
 

@@ -31,6 +31,7 @@ export async function generateConsolidatedConfiguration({
 	preflight = false,
 	noRoutes = false,
 	allowUnprovisioned = false,
+	readOnlyConsole = false,
 	targetArtifactPath,
 	targetArtifactChecksum,
 }) {
@@ -58,6 +59,7 @@ export async function generateConsolidatedConfiguration({
 			...(preflight ? ["--preflight"] : []),
 			...(noRoutes ? ["--no-routes"] : []),
 			...(allowUnprovisioned ? ["--allow-unprovisioned"] : []),
+			...(service === "site" && readOnlyConsole ? ["--read-only-console"] : []),
 		]);
 		const path = output.trim().split("\n").at(-1);
 		entries.push({ service, config: JSON.parse(await readFile(resolve(root, path), "utf8")) });
@@ -297,6 +299,7 @@ export async function runConsolidatedDeployment(input, run = execute) {
 					"--environment",
 					input.environment,
 					...(input.noRoutes || input.preflight || input.dryRun ? ["--no-routes"] : []),
+					...(input.readOnlyConsole ? ["--read-only-console"] : []),
 					...(input.targetArtifactPath && input.targetArtifactChecksum
 						? [
 								"--target-artifact",
@@ -342,6 +345,7 @@ async function main() {
 		preflight: Boolean(args.preflight || args["dry-run"]),
 		noRoutes: Boolean(args["no-routes"]),
 		allowUnprovisioned: Boolean(args["allow-unprovisioned"]),
+		readOnlyConsole: Boolean(args["read-only-console"]),
 		dryRun: Boolean(args["dry-run"]),
 	};
 	const result = input.dryRun

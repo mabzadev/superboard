@@ -105,6 +105,7 @@ const consolidatedInput = {
 	noRoutes: Boolean(args["no-routes"]),
 	uploadOnly: Boolean(args["upload-only"]),
 	initialInstall: Boolean(args["initial-install"]),
+	readOnlyConsole: Boolean(args["read-only-console"]),
 	targetArtifactPath: args["target-artifact"],
 	targetArtifactChecksum: args["target-artifact-checksum"],
 	env: targetCloudflareEnv,

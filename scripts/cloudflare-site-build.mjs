@@ -9,6 +9,7 @@ import {
 	resolveSiteReleaseOperations,
 } from "./cloudflare-site-preview.mjs";
 import { loadTarget, parseArgs, root, targetSelectionFromArgs } from "./cloudflare-target.mjs";
+import { assertPublicRoutingReady } from "./public-routing-gate.mjs";
 import { compiledTargetFromArgs } from "./target-compiler.mjs";
 
 export function siteDeploymentArtifact(
@@ -19,7 +20,7 @@ export function siteDeploymentArtifact(
 		config?.vars?.SUPERBOARD_RELEASE_OPERATIONS !== "disabled" &&
 		!(
 			releaseOperations &&
-			previewHostname &&
+			(previewHostname || deploymentHostnames.length > 0) &&
 			config?.vars?.SUPERBOARD_RELEASE_OPERATIONS === "enabled"
 		)
 	) {
@@ -87,6 +88,8 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 		service: "site",
 		environment,
 		sitePreviewRoute,
+		publicRoutesEnabled: assertPublicRoutingReady(target, environment).routesEnabled && !noRoutes,
+		readOnly: Boolean(args["read-only-console"]),
 	});
 	const siteBuildEnvironment = siteEmailBuildEnvironment(target);
 	execute("pnpm", ["--dir", "apps/site", "run", "build"], siteBuildEnvironment);
@@ -99,6 +102,7 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 		"--environment",
 		environment,
 		...(noRoutes ? ["--no-routes"] : []),
+		...(args["read-only-console"] ? ["--read-only-console"] : []),
 		...(args["target-artifact"]
 			? [
 					"--target-artifact",
