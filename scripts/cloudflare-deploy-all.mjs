@@ -111,12 +111,13 @@ const consolidatedInput = {
 	targetArtifactChecksum: args["target-artifact-checksum"],
 	env: targetCloudflareEnv,
 };
-if (consolidated && !args["prepared-deployment"]) {
+const needsPreparedConsole = services.includes("site");
+if (needsPreparedConsole && !args["prepared-deployment"]) {
 	throw new Error(
 		"PREPARED_DEPLOYMENT_REQUIRED: prepare and validate the console before deploying with --prepared-deployment",
 	);
 }
-const consolidatedManifest = consolidated
+const consolidatedManifest = needsPreparedConsole
 	? JSON.parse(await readFile(resolve(args["prepared-deployment"]), "utf8"))
 	: null;
 if (
@@ -128,9 +129,10 @@ if (
 	throw new Error("PREPARED_DEPLOYMENT_TARGET_MISMATCH");
 }
 if (consolidatedManifest) await verifyConsoleArtifact(consolidatedManifest.consoleArtifact);
-const consolidatedReadiness = consolidatedManifest
-	? assertConsolidatedDeploymentReady(consolidatedManifest, consolidatedInput)
-	: null;
+const consolidatedReadiness =
+	consolidated && consolidatedManifest
+		? assertConsolidatedDeploymentReady(consolidatedManifest, consolidatedInput)
+		: null;
 
 let migrationBatchReceipt = null;
 let identityCutoverReceipt = null;
@@ -230,6 +232,7 @@ for (const service of services) {
 		...(args.preflight ? ["--preflight"] : []),
 		...(args["upload-only"] ? ["--upload-only"] : []),
 		...(args["skip-migrations"] ? ["--skip-migrations"] : []),
+		...(args["prepared-deployment"] ? ["--prepared-deployment", args["prepared-deployment"]] : []),
 		...(migrationBatchReceipt && plan.schemaServices.includes(service)
 			? [
 					"--migration-batch-receipt",

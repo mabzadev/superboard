@@ -2,7 +2,7 @@
 
 An active SuperBoard console enables the signed release operations used by plugin activation. Provision `SUPERBOARD_RELEASE_PRIVATE_JWK` on the Site Worker before deploying it. The development secret generator creates an independent ES256 signing key for this purpose; retain the private key in the deployment secret store across upgrades.
 
-Deployment configuration derives this behavior from the target's active public routing. Private builds and preflight builds keep release operations disabled. To publish an explicitly read-only console, pass `--read-only-console` to `cloudflare-deploy-all.mjs`, `cloudflare-consolidate.mjs`, or `cloudflare-site-build.mjs`. An explicitly read-only console cannot activate plugins.
+Deployment configuration derives this behavior from the target's active public routing. Private builds and preflight builds keep release operations disabled. To prepare an explicitly read-only console, pass `--read-only-console` to `pnpm cloudflare:prepare`. An explicitly read-only console cannot activate plugins.
 
 Plugin activation and deactivation use the signed-in administrator's session and permissions in every environment. The authorization is scoped to the plugin operation and recorded separately from strong reauthentication. Manual release approvals and rollbacks retain their strong reauthentication requirements. Check activation and deactivation after reloading the Plugins page; a successful HTTP health check alone does not verify these actions.
 
@@ -14,6 +14,8 @@ The following commands prepare the development target, run its regression checks
 pnpm cloudflare:prepare --target mbza-development --environment development
 pnpm cloudflare:deploy:all --target mbza-development --environment development --prepared-deployment deploy/generated/mbza-development-development-deployments.json
 ```
+
+To deploy only the console, use `pnpm cloudflare:deploy --service site` with the same target, environment, and `--prepared-deployment` arguments. Both active deployments and version uploads require the prepared manifest. Routing and read-only options must be selected during preparation because deployment preserves the validated configuration.
 
 Run the development runtime test to check activation with production-style authentication checks. This test also runs as part of the Site test suite.
 
