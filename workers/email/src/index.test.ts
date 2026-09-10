@@ -252,74 +252,77 @@ describe("Email Worker health", () => {
 		expect(queueSend).toHaveBeenCalledTimes(2);
 	});
 
-	it("is the idempotent SMTP authority for delegated Marketing delivery", async () => {
-		let row: {
-			id: string;
-			request_sha256: string;
-			status: "sending" | "sent" | "failed" | "outcome_unknown";
-			provider_message_id: string | null;
-			provider_response: string | null;
-			lease_expires_at: string | null;
-		} | null = null;
-		const persistedArguments: unknown[][] = [];
-		const db = {
-			prepare(sql: string) {
-				return {
-					bind(...args: unknown[]) {
-						persistedArguments.push(args);
-						return {
-							first: async () => {
-								if (sql.includes("INSERT OR IGNORE INTO email_transport_deliveries")) {
-									if (row) return null;
-									row = {
-										id: String(args[0]),
-										request_sha256: String(args[2]),
-										status: "sending",
-										provider_message_id: null,
-										provider_response: null,
-										lease_expires_at: String(args[7]),
-									};
-									return { id: row.id };
-								}
-								if (sql.includes("FROM email_transport_deliveries WHERE idempotency_key"))
-									return row;
-								return null;
-							},
-							run: async () => {
-								if (sql.includes("SET status = 'sent'") && row) {
-									row.status = "sent";
-									row.provider_message_id = String(args[0]);
-									row.provider_response = String(args[1]);
-								}
-								return { success: true, meta: { changes: 1 } };
-							},
-						};
-					},
-				};
-			},
-		} as unknown as D1Database;
-		smtp.send.mockResolvedValue({
-			messageId: "provider-message-1",
-			response: "accepted",
-		});
-		const env = environment({ DB: db });
-		const first = await worker.fetch(delegatedSmtpRequest(), env, {} as ExecutionContext);
-		const replay = await worker.fetch(delegatedSmtpRequest(), env, {} as ExecutionContext);
+	it.each(["smtp", "aws-ses"] as const)(
+		"uses configured sender credentials independently of the default %s provider",
+		async (provider) => {
+			let row: {
+				id: string;
+				request_sha256: string;
+				status: "sending" | "sent" | "failed" | "outcome_unknown";
+				provider_message_id: string | null;
+				provider_response: string | null;
+				lease_expires_at: string | null;
+			} | null = null;
+			const persistedArguments: unknown[][] = [];
+			const db = {
+				prepare(sql: string) {
+					return {
+						bind(...args: unknown[]) {
+							persistedArguments.push(args);
+							return {
+								first: async () => {
+									if (sql.includes("INSERT OR IGNORE INTO email_transport_deliveries")) {
+										if (row) return null;
+										row = {
+											id: String(args[0]),
+											request_sha256: String(args[2]),
+											status: "sending",
+											provider_message_id: null,
+											provider_response: null,
+											lease_expires_at: String(args[7]),
+										};
+										return { id: row.id };
+									}
+									if (sql.includes("FROM email_transport_deliveries WHERE idempotency_key"))
+										return row;
+									return null;
+								},
+								run: async () => {
+									if (sql.includes("SET status = 'sent'") && row) {
+										row.status = "sent";
+										row.provider_message_id = String(args[0]);
+										row.provider_response = String(args[1]);
+									}
+									return { success: true, meta: { changes: 1 } };
+								},
+							};
+						},
+					};
+				},
+			} as unknown as D1Database;
+			smtp.send.mockResolvedValue({
+				messageId: "provider-message-1",
+				response: "accepted",
+			});
+			const env = environment({ DB: db, MAIL_PROVIDER: provider });
+			const first = await worker.fetch(delegatedSmtpRequest(), env, {} as ExecutionContext);
+			const replay = await worker.fetch(delegatedSmtpRequest(), env, {} as ExecutionContext);
 
-		expect(first.status).toBe(201);
-		expect(replay.status).toBe(200);
-		await expect(replay.json()).resolves.toMatchObject({
-			status: "sent",
-			messageId: "provider-message-1",
-			replayed: true,
-		});
-		expect(smtp.send).toHaveBeenCalledTimes(1);
-		const delegatedMessage = smtp.send.mock.calls[0]![2] as {
-			messageId: string;
-		};
-		expect(delegatedMessage.messageId).toMatch(/^<opengrow-[a-f0-9]{48}@example\.test>$/);
-		expect(JSON.stringify(persistedArguments)).not.toContain("private-password");
-	});
+			expect(first.status).toBe(201);
+			expect(replay.status).toBe(200);
+			await expect(replay.json()).resolves.toMatchObject({
+				status: "sent",
+				messageId: "provider-message-1",
+				replayed: true,
+			});
+			expect(smtp.send).toHaveBeenCalledTimes(1);
+			const delegatedMessage = smtp.send.mock.calls[0]![2] as {
+				messageId: string;
+			};
+			expect(delegatedMessage.messageId).toMatch(/^<opengrow-[a-f0-9]{48}@example\.test>$/);
+			expect(JSON.stringify(persistedArguments)).not.toContain("private-password");
+		},
+	);
 
 	it("never re-sends a key when D1 fails after provider acceptance", async () => {
 		let status: "sending" | "outcome_unknown" = "sending";

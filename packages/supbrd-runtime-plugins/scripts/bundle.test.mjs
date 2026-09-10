@@ -11,7 +11,7 @@ const catalog = JSON.parse(
 );
 
 for (const { manifest } of catalog.plugins) {
-	test(`${manifest.plugin_id} reads its settings within the sandbox request budget`, async () => {
+	void test(`${manifest.plugin_id} reads its settings within the sandbox request budget`, async () => {
 		const source = await readFile(
 			new URL(`../dist/${manifest.plugin_id}.js`, import.meta.url),
 			"utf8",

@@ -15,26 +15,27 @@ test("secret readiness parses JSON after package-manager warnings", () => {
 	assert.throws(() => parseSecretNames('[]\n[{"name":"KEY"}]'), /parse Wrangler secret list/);
 });
 
-test("required secrets adapt to AWS SES SMTP transports", async () => {
-	const development = (await loadTarget("mbza-development")).target;
-	const production = (await loadTarget("vocostar")).target;
-	const developmentEmail = requiredSecretInventory(development, "development").find(
-		({ service }) => service === "email",
-	);
-	const productionEmail = requiredSecretInventory(production, "production").find(
-		({ service }) => service === "email",
-	);
-
-	assert.deepEqual(developmentEmail.names, [
-		"EMAIL_INTERNAL_TOKEN",
-		"EMAIL_SMTP_ENCRYPTION_KEY",
-		"AWS_SES_SMTP_USERNAME",
-		"AWS_SES_SMTP_PASSWORD",
-		"AWS_SES_SNS_TOPIC_ARN",
-	]);
-	assert.ok(productionEmail.names.includes("AWS_SES_SMTP_PASSWORD"));
-	assert.equal(productionEmail.names.includes("FLOWS_EMAIL_INTERNAL_TOKEN"), false);
-	assert.equal(productionEmail.names.includes("MAIL_PREVIEW_TOKEN"), false);
+test("Email can be deployed before configuring an AWS or SMTP provider", async () => {
+	for (const [targetName, environment] of [
+		["mbza-development", "development"],
+		["vocostar", "production"],
+	]) {
+		const { target } = await loadTarget(targetName);
+		for (const provider of ["aws-ses", "smtp"]) {
+			const configured = { ...target, mail: { ...target.mail, transport: "smtp", provider } };
+			const requirement = requiredSecretInventory(configured, environment).find(
+				({ service }) => service === "email",
+			);
+			assert.equal(
+				evaluateSecretReadiness([requirement], {
+					email: ["EMAIL_INTERNAL_TOKEN", "EMAIL_SMTP_ENCRYPTION_KEY"],
+				}).ready,
+				true,
+				`${targetName}/${provider}`,
+			);
+			assert.equal(evaluateSecretReadiness([requirement], { email: [] }).ready, false);
+		}
+	}
 });
 
 test("every required secret is declared in the upload allowlist", async () => {

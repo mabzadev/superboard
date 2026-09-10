@@ -108,6 +108,7 @@ export default defineConfig({
 						API_SERVICE: { name: "superboard-site-runtime-test", entrypoint: "LifecycleApi" },
 					},
 					bindings: {
+						HEALTH_MAIL_PROVIDER: process.env.SUPERBOARD_TEST_MAIL_PROVIDER ?? "smtp",
 						SUPPORT_WEBHOOK_ENCRYPTION_KEY: "retirement-support-webhook-encryption-key",
 						FLOW_USER_HASH_KEY: "retirement-flows-user-hash-key",
 						FLOW_USER_ENCRYPTION_KEY: "retirement-flows-user-encryption-key",
