@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { lintPlatformSeparation } from "./platform-separation.mjs";
 import { lintSuperBoardBrandProject } from "./superboard-brand.mjs";
 import { lintFrontMenuProject } from "./superboard-front-menu-lint.mjs";
 import { lintPluginPackageProject } from "./superboard-plugin-packages.mjs";
@@ -194,6 +195,7 @@ async function main() {
 	);
 	diagnostics.push(...(await lintFrontMenuProject(repositoryRoot)));
 	diagnostics.push(...lintPluginPackageProject(repositoryRoot));
+	diagnostics.push(...lintPlatformSeparation(repositoryRoot));
 	diagnostics.push(...(await lintSuperBoardBrandProject(repositoryRoot)));
 
 	if (options.has("--json")) console.log(JSON.stringify({ diagnostics, coverage }));

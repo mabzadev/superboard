@@ -23,7 +23,7 @@ import {
 } from "../src/lib/superboard-plugin-catalog.js";
 
 const encodedEncryptionKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-const instanceId = "vocostar";
+const instanceId = "reference-production";
 const target = "local" as const;
 const projectRef = "1-test";
 const checkedAt = "2026-09-03T08:05:00.000Z";

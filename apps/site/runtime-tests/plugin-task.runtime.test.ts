@@ -35,7 +35,7 @@ function moduleEnvironment(id = pluginId): PluginTaskBindings {
 	const execution = pluginTaskContext(createExecutionContext(), id);
 	return {
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
-		SUPERBOARD_INSTANCE_ID: "vocostar",
+		SUPERBOARD_INSTANCE_ID: "reference-production",
 		INTERNAL_API_TOKEN: "runtime-module-secret",
 		API_SERVICE: {
 			fetch: (request) =>
@@ -46,7 +46,7 @@ function moduleEnvironment(id = pluginId): PluginTaskBindings {
 function command(): PluginTaskCommand {
 	return {
 		action: "claim",
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		plugin_id: pluginId,
 		lease_id: crypto.randomUUID(),
 		lease_token: crypto.randomUUID(),
@@ -66,19 +66,19 @@ test.each([
 	["/health", { SUPERBOARD_PLUGIN_LIFECYCLE: "required" }, "PLUGIN_TASK_CONFIGURATION_INVALID"],
 	[
 		"/internal/v1/health",
-		{ SUPERBOARD_INSTANCE_ID: "vocostar" },
+		{ SUPERBOARD_INSTANCE_ID: "reference-production" },
 		"PLUGIN_TASK_CONFIGURATION_INVALID",
 	],
 	[
 		"/health",
-		{ SUPERBOARD_PLUGIN_LIFECYCLE: "required", SUPERBOARD_INSTANCE_ID: "vocostar" },
+		{ SUPERBOARD_PLUGIN_LIFECYCLE: "required", SUPERBOARD_INSTANCE_ID: "reference-production" },
 		"PLUGIN_TASK_AUTHORITY_UNAVAILABLE",
 	],
 	[
 		"/internal/v1/health",
 		{
 			SUPERBOARD_PLUGIN_LIFECYCLE: "required",
-			SUPERBOARD_INSTANCE_ID: "vocostar",
+			SUPERBOARD_INSTANCE_ID: "reference-production",
 			API_SERVICE: { fetch: async () => Response.json({}) },
 		},
 		"PLUGIN_TASK_SECRET_REQUIRED",

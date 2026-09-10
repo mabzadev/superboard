@@ -1,11 +1,10 @@
-import { readRequestObjectLimited } from "@superboard/contracts/request-body";
 import type { Context } from "hono";
 
 import { getRequestAuthContext } from "../lib/auth.js";
 import { resolveAuthorizedProjectContext } from "../lib/domain-modules.js";
 import type { Env } from "../types.js";
 
-const resourcePattern = /^\/(?:jobs|voices|conversions|outputs)(?:\/[a-zA-Z0-9._:-]+\/retry)?$/u;
+const resourcePattern = /^\/jobs(?:\/[a-zA-Z0-9._:-]+\/retry)?$/u;
 
 export async function applicationModuleAdmin(c: Context<{ Bindings: Env }>): Promise<Response> {
 	const pluginId = `supbrd-plugmod-${c.req.param("plugin")}`;
@@ -27,36 +26,6 @@ export async function applicationModuleAdmin(c: Context<{ Bindings: Env }>): Pro
 	const source = new URL(c.req.url);
 	const prefix = `/api/v1/plugins/${c.req.param("plugin")}/projects/${projectRef}`;
 	const resource = source.pathname.slice(prefix.length);
-	if (
-		resource === "/runtime-identities" &&
-		c.req.method === "PUT" &&
-		pluginId === "supbrd-plugmod-vocostar"
-	) {
-		if (auth.siteOperator.role < 50)
-			return Response.json({ error: { code: "FORBIDDEN" } }, { status: 403 });
-		if (!c.env.CUSTOM_WORKER_TOKEN)
-			return Response.json({ error: { code: "PLUGIN_UNAVAILABLE" } }, { status: 503 });
-		const body = await readRequestObjectLimited(c.req.raw, 4096);
-		const response = await c.env.CUSTOM_WORKER.fetch(
-			new Request("https://custom.internal/internal/v1/runtime/identities", {
-				method: "PUT",
-				headers: {
-					"content-type": "application/json",
-					"x-custom-worker-token": c.env.CUSTOM_WORKER_TOKEN,
-				},
-				body: JSON.stringify({
-					legacyUserId: body.legacyUserId,
-					subject: body.subject,
-					projectRef,
-				}),
-				signal: AbortSignal.timeout(10000),
-			}),
-		);
-		return new Response(response.body, {
-			status: response.status,
-			headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-		});
-	}
 	if (
 		!resourcePattern.test(resource) ||
 		(c.req.method !== "GET" &&

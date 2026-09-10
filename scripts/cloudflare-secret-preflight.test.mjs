@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -18,7 +19,7 @@ test("secret readiness parses JSON after package-manager warnings", () => {
 test("Email can be deployed before configuring an AWS or SMTP provider", async () => {
 	for (const [targetName, environment] of [
 		["mbza-development", "development"],
-		["vocostar", "production"],
+		["reference-production", "production"],
 	]) {
 		const { target } = await loadTarget(targetName);
 		for (const provider of ["aws-ses", "smtp"]) {
@@ -41,7 +42,7 @@ test("Email can be deployed before configuring an AWS or SMTP provider", async (
 test("every required secret is declared in the upload allowlist", async () => {
 	for (const [targetName, environment] of [
 		["mbza-development", "development"],
-		["vocostar", "production"],
+		["reference-production", "production"],
 	]) {
 		const target = (await loadTarget(targetName)).target;
 		const allowed = new Map(
@@ -67,7 +68,7 @@ test("every required secret is declared in the upload allowlist", async () => {
 });
 
 test("billing encryption accepts the keyring or transitional single key", async () => {
-	const target = (await loadTarget("vocostar")).target;
+	const target = (await loadTarget("reference-production")).target;
 	const requirement = requiredSecretInventory(target, "production").find(
 		({ service }) => service === "billing",
 	);
@@ -82,7 +83,7 @@ test("billing encryption accepts the keyring or transitional single key", async 
 test("API encryption is required independently from the billing execution mode", async () => {
 	for (const [targetName, environment] of [
 		["mbza-development", "development"],
-		["vocostar", "production"],
+		["reference-production", "production"],
 	]) {
 		const target = (await loadTarget(targetName)).target;
 		const requirement = requiredSecretInventory(target, environment).find(

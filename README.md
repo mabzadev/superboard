@@ -72,19 +72,7 @@ pnpm run test:all
 pnpm run platform:readiness
 ```
 
-To include a reviewed external FlutterFlow client in the fail-closed readiness
-report without committing its source, provide its absolute path by application:
-
-```bash
-pnpm run platform:readiness -- \
-  --client-sources 'vocostar=/absolute/path/to/app-vocostar-ff'
-
-SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/absolute/path/to/app-vocostar-ff \
-  pnpm run flutterflow:source:verify:vocostar
-
-SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/absolute/path/to/app-vocostar-ff \
-  pnpm run flutterflow:migration:plan:vocostar
-```
+Application-specific source and deployment targets belong in their own workspaces.
 
 `test:all` includes every Worker, the EmDash Site and its plugins, MCP, Flutter/FlutterFlow,
 JavaScript, React Native and the internal Support audit tools. Affected iOS and
@@ -176,7 +164,7 @@ never written into Git:
 
 ```bash
 pnpm run cloudflare:deploy:all -- \
-  --target vocostar --environment production \
+  --target mbza-development --environment development \
   --backup-directory /secure/superboard/d1
 ```
 
@@ -187,10 +175,10 @@ command; the checkout never receives a secret file:
 
 ```bash
 pnpm run cloudflare:secrets:upload -- \
-  --target vocostar --environment production --contracts api-jwt-secret
+  --target mbza-development --environment development --contracts api-jwt-secret
 
 <approved-secret-manager-export> | pnpm run cloudflare:secrets:upload -- \
-  --target vocostar --environment production --contracts api-jwt-secret \
+  --target mbza-development --environment development --contracts api-jwt-secret \
   --apply --confirm CLOUDFLARE:SECRET-BUNDLE:<target>:<environment>:<digest>
 ```
 
@@ -217,8 +205,7 @@ The target topology, development procedure and exhaustive FlutterFlow/data
 inventory are documented in `docs/ARCHITECTURE_CIBLE_FR.md`,
 `docs/REFERENCE_ARCHITECTURE.md`, `docs/DEVELOPMENT_WORKFLOW.md` and
 `docs/REFERENCE_DATA_INVENTORY.md`.
-The last VocoStar FlutterFlow mapping is in
-`docs/VOCOSTAR_FLUTTERFLOW_CONVERGENCE.md`; the evidence-backed implementation
+The evidence-backed implementation
 and external-readiness status is in `docs/IMPLEMENTATION_AUDIT_2026-08-08.md`.
 The pinned Support behavior inventory and its publication-leak gate are kept in
 the build-excluded `scripts/support-audit` workspace.
@@ -277,3 +264,11 @@ SuperBoard is released under the [MIT License](./LICENSE).
 
 Contributions follow [CONTRIBUTING.md](./CONTRIBUTING.md). Report security
 issues through the private process documented in [SECURITY.md](./SECURITY.md).
+
+## Local development
+
+Run `pnpm local:start` to build SuperBoard, apply local migrations and start EmDash at `http://127.0.0.1:4321` with its local Workers. Stop the services with `pnpm local:stop`.
+
+Local databases, generated secrets and service logs are stored under `~/.local/share/superboard/local/mbza-development/`. Restarting preserves this data. The command uses the platform development target and does not load application addons.
+
+Run `pnpm local:test` against the running local server to verify plugin activation, deactivation and persistence in the browser. The test restores Communication to its initial state.

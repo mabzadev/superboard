@@ -79,14 +79,6 @@
 			"label_fr": "Statistiques",
 			"components": ["supbrd-plugmod-analytics"],
 			"required_components": []
-		},
-		{
-			"id": "supbrd-plugmod-vocostar",
-			"kind": "application",
-			"label": "Vocostar",
-			"label_fr": "Vocostar",
-			"components": ["supbrd-plugmod-vocostar"],
-			"required_components": []
 		}
 	]
 }

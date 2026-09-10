@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -5,10 +6,10 @@ import { expectedDomainOwners } from "./cloudflare-domain-plan-core.mjs";
 import { loadTarget, publicMcpUrl } from "./cloudflare-target.mjs";
 import { deploymentConfiguration } from "./deployment-configuration.mjs";
 
-for (const targetName of ["mbza-development", "vocostar"])
+for (const targetName of ["mbza-development", "reference-production"])
 	test(`${targetName} generates the requested endpoints and retains its aliases`, async () => {
 		const { target } = await loadTarget(targetName);
-		const environment = targetName === "vocostar" ? "production" : "development";
+		const environment = targetName === "reference-production" ? "production" : "development";
 		const configuration = deploymentConfiguration(target, environment);
 		assert.equal(
 			new Set(configuration.endpoints.map((item) => new URL(item.url).hostname)).size,
@@ -16,10 +17,10 @@ for (const targetName of ["mbza-development", "vocostar"])
 		);
 		assert.equal(
 			publicMcpUrl(target),
-			`https://board.${targetName === "vocostar" ? "vocostar.com" : "mbza.dev"}/mcp`,
+			`https://board.${targetName === "reference-production" ? "reference.example" : "mbza.dev"}/mcp`,
 		);
 		assert.equal(configuration.workers.length, 11);
-		if (targetName !== "vocostar")
+		if (targetName !== "reference-production")
 			assert.equal(
 				expectedDomainOwners(target, environment).filter(
 					(item) => item.hostname === target.domains.site,

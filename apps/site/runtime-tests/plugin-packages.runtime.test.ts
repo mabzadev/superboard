@@ -59,9 +59,9 @@ test("migration keeps disabled functions and re-enabling a package does not enab
 	expect(action.components).toEqual([onboarding]);
 	const packages = await syncInstalledPluginPackages(env.DB, scope);
 	expect(packages.find((row) => row.plugin_id === "supbrd-plug-journeys")?.status).toBe("active");
-	expect(packages.find((row) => row.plugin_id === "supbrd-plugmod-vocostar")?.status).toBe(
-		"inactive",
-	);
+	expect(
+		packages.find((row) => row.plugin_id === "supbrd-plugmod-reference-production"),
+	).toBeUndefined();
 	await env.DB.prepare(
 		"UPDATE superboard_plugin_lifecycle SET state='disabled' WHERE instance_id=? AND target=?",
 	)
@@ -126,11 +126,11 @@ test("a function change is scoped to its instance and checks package ownership",
 	).rejects.toThrow("CORE_COMPONENT_REQUIRED");
 	await expect(
 		packageActionComponents(env.DB, scope, {
-			packageId: "supbrd-plugmod-vocostar",
+			packageId: "supbrd-plugmod-reference-production",
 			action: "enable",
 			targetComponents: [onboarding],
 		}),
-	).rejects.toThrow("PLUGIN_NO_ENABLED_FEATURES");
+	).rejects.toThrow("PLUGIN_NOT_FOUND");
 	const other = { ...scope, instance_id: "another-instance" };
 	await migratePluginPackages(env.DB, other, [onboarding]);
 	expect(
@@ -178,24 +178,14 @@ test("resuming before the completion receipt preserves changed feature preferenc
 	).toEqual([onboarding, flows]);
 });
 
-test("Vocostar is a separate unit selected only by its application target", async () => {
-	const component = "supbrd-plugmod-vocostar";
-	const appScope = { ...scope, instance_id: "vocostar-application" };
-	await migratePluginPackages(env.DB, appScope, [component]);
-	expect(
-		(
-			await packageActionComponents(env.DB, appScope, {
-				packageId: component,
-				action: "enable",
-				targetComponents: [component],
-			})
-		).components,
-	).toEqual([component]);
+test("unregistered application packages are not built into the platform", async () => {
+	const component = "supbrd-plugmod-example";
+	await migratePluginPackages(env.DB, scope, [component]);
 	await expect(
 		packageActionComponents(env.DB, scope, {
 			packageId: component,
 			action: "enable",
-			targetComponents: [onboarding],
+			targetComponents: [component],
 		}),
-	).rejects.toThrow("PLUGIN_NO_ENABLED_FEATURES");
+	).rejects.toThrow("PLUGIN_NOT_FOUND");
 });

@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
@@ -72,7 +73,24 @@ test("legacy deployment matrices without a versioned target lock are rejected", 
 test("deployment matrix selects GitHub Environments without embedding accounts", async () => {
 	const configuration = await loadDeploymentMatrix();
 	const development = selectDeployments(configuration, "dev");
-	const production = selectDeployments(configuration, "main");
+	const production = selectDeployments(
+		{
+			...configuration,
+			deployments: [
+				...configuration.deployments,
+				{
+					id: "reference-production-production",
+					target: "reference-production",
+					branch: "main",
+					githubEnvironment: "production",
+					cloudflareEnvironment: "production",
+					automaticDeployment: { authority: "github-actions" },
+					referenceAcceptance: false,
+				},
+			],
+		},
+		"main",
+	);
 	assert.deepEqual(development.matrix.include, [
 		{
 			id: "mbza-development",
@@ -85,8 +103,8 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
 	assert.equal(development.referenceEnvironment, "development");
 	assert.deepEqual(production.matrix.include, [
 		{
-			id: "vocostar-production",
-			target: "vocostar",
+			id: "reference-production-production",
+			target: "reference-production",
 			deploymentAuthority: "github-actions",
 			githubEnvironment: "production",
 			cloudflareEnvironment: "production",
@@ -97,10 +115,12 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
 	assert.equal(JSON.stringify(configuration).includes("8706f1b6"), false);
 });
 
-test("development uses one native Git connection per Worker while production remains on GitHub Actions", async () => {
+test("development uses native Git connections without an application production deployment", async () => {
 	const configuration = await loadDeploymentMatrix();
 	const development = configuration.deployments.find(({ id }) => id === "mbza-development");
-	const production = configuration.deployments.find(({ id }) => id === "vocostar-production");
+	const production = configuration.deployments.find(
+		({ id }) => id === "reference-production-production",
+	);
 
 	assert.deepEqual(development.automaticDeployment, {
 		authority: "cloudflare-workers-builds",
@@ -135,9 +155,7 @@ test("development uses one native Git connection per Worker while production rem
 		],
 		nonProductionBranchBuilds: false,
 	});
-	assert.deepEqual(production.automaticDeployment, {
-		authority: "github-actions",
-	});
+	assert.equal(production, undefined);
 
 	const packageConfiguration = JSON.parse(
 		await readFile(new URL("../package.json", import.meta.url), "utf8"),
@@ -147,11 +165,9 @@ test("development uses one native Git connection per Worker while production rem
 		/^SUPERBOARD_TARGET= SUPERBOARD_ENVIRONMENT= OPENGROW_TARGET= OPENGROW_ENVIRONMENT= /u,
 		"reference-only billing tests must not inherit an operational Workers Builds target",
 	);
-	assert.deepEqual(
-		selectDeployments(configuration, "main", {
-			authority: "github-actions",
-		}).matrix.include.map(({ id }) => id),
-		["vocostar-production"],
+	assert.throws(
+		() => selectDeployments(configuration, "main", { authority: "github-actions" }),
+		/No Cloudflare deployment is declared for main/u,
 	);
 	assert.throws(
 		() => selectDeployments(configuration, "dev", { authority: "github-actions" }),

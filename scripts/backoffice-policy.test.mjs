@@ -93,7 +93,6 @@ test("each target has one explicit automatic Cloudflare deployment authority", (
 	);
 	assert.deepEqual(authorities, {
 		"mbza-development": "cloudflare-workers-builds",
-		"vocostar-production": "github-actions",
 	});
 	assert.match(read("docs/CLOUDFLARE.md"), /one automatic deployment authority per target/u);
 });
@@ -216,7 +215,7 @@ test("reusable platform source and examples contain no application hostname or e
 	for (const path of reusableFiles) {
 		const source = read(path);
 		assert.equal(
-			/(?:mbza\.dev|vocostar\.com)/u.test(source),
+			/(?:mbza\.dev|reference-production\.com)/u.test(source),
 			false,
 			`${path} embeds an application hostname`,
 		);
@@ -294,7 +293,7 @@ test("MCP is a target-configured back-office adapter with no legacy SaaS gate", 
 	assert.equal(oauth.includes("originFor(c)"), false);
 	for (const targetPath of [
 		"deploy/targets/mbza-development.json",
-		"deploy/targets/vocostar.json",
+		"scripts/fixtures/targets/reference-production.json",
 	]) {
 		const target = JSON.parse(read(targetPath));
 		assert.equal(typeof target.domains.mcp, "string", `${targetPath} needs an MCP domain`);

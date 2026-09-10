@@ -67,7 +67,7 @@ test("an existing EmDash instance upgrades from Pages and Posts to Views", async
 		{ slug: "posts", hidden: 1 },
 		{ slug: "views", hidden: 0 },
 	]);
-	expect(viewCount?.count).toBe(127);
+	expect(viewCount?.count).toBe(122);
 	expect(menuCount?.count).toBeGreaterThan(80);
 });
 
@@ -83,7 +83,7 @@ test("the Views bootstrap resumes after the schema was created without content",
 
 	const after = await countViews();
 	expect(before).toBe(0);
-	expect(after).toBe(127);
+	expect(after).toBe(122);
 });
 
 test("the Views bootstrap upgrades existing renderer bindings without overwriting edits", async () => {
@@ -137,7 +137,7 @@ test("the Views bootstrap upgrades existing renderer bindings without overwritin
 		.where("name", "=", "superboard_views_bootstrap")
 		.executeTakeFirst();
 
-	expect(entries).toHaveLength(127);
+	expect(entries).toHaveLength(122);
 	for (const entry of entries) {
 		const inventoried = baseline.plugins
 			.flatMap((plugin) => plugin.routes)
@@ -148,9 +148,7 @@ test("the Views bootstrap upgrades existing renderer bindings without overwritin
 					? ["supbrd-plugmod-mcp.renderer.admin_surface"]
 					: entry.route_id === "superboard.notifications"
 						? ["supbrd-plugmod-marketing.renderer.admin_surface"]
-						: entry.route_id.startsWith("superboard.plugins_vocostar_")
-							? ["supbrd-plugmod-vocostar.renderer.admin_surface"]
-							: []),
+						: []),
 			entry.path,
 		).toContain(entry.renderer_id);
 		expect(JSON.parse(String(entry.bindings)).data_sources.length, entry.path).toBeGreaterThan(0);
@@ -210,7 +208,7 @@ test("only active plugin Views are paginated and disabling preserves customizati
 		restored.success &&
 			restored.data.items.some((item) => item.data.name === "Custom analytics page"),
 	).toBe(true);
-	expect(await countViews()).toBe(127);
+	expect(await countViews()).toBe(122);
 });
 
 test("a caller cannot opt a disabled plugin into the Views list", async () => {

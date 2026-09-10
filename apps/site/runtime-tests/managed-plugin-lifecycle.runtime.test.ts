@@ -77,7 +77,7 @@ test("a function disabled through the native package page stays disabled after r
 	const enabled = await action(owner, "enable");
 	expect(enabled.status, await enabled.clone().text()).toBe(201);
 	const previousPreference = await env.DB.prepare(
-		"SELECT enabled FROM superboard_plugin_feature_preferences WHERE instance_id='vocostar' AND target='local' AND component_id=?",
+		"SELECT enabled FROM superboard_plugin_feature_preferences WHERE instance_id='reference-production' AND target='local' AND component_id=?",
 	)
 		.bind(flows)
 		.first<{ enabled: number }>();
@@ -91,7 +91,7 @@ test("a function disabled through the native package page stays disabled after r
 		expect((await action(owner, "disable")).status).toBe(201);
 		expect((await action(owner, "enable")).status).toBe(201);
 		const states = await env.DB.prepare(
-			"SELECT plugin_id,state FROM superboard_plugin_lifecycle WHERE instance_id='vocostar' AND target='local' AND plugin_id IN ('supbrd-plugmod-flows','supbrd-plugmod-onboardings') ORDER BY plugin_id",
+			"SELECT plugin_id,state FROM superboard_plugin_lifecycle WHERE instance_id='reference-production' AND target='local' AND plugin_id IN ('supbrd-plugmod-flows','supbrd-plugmod-onboardings') ORDER BY plugin_id",
 		).all();
 		expect(states.results).toEqual([
 			{ plugin_id: flows, state: "disabled" },
@@ -99,7 +99,7 @@ test("a function disabled through the native package page stays disabled after r
 		]);
 	} finally {
 		await env.DB.prepare(
-			"UPDATE superboard_plugin_feature_preferences SET enabled=? WHERE instance_id='vocostar' AND target='local' AND component_id=?",
+			"UPDATE superboard_plugin_feature_preferences SET enabled=? WHERE instance_id='reference-production' AND target='local' AND component_id=?",
 		)
 			.bind(previousPreference?.enabled ?? 1, flows)
 			.run();
@@ -108,7 +108,7 @@ test("a function disabled through the native package page stays disabled after r
 
 async function lifecycle() {
 	return env.DB.prepare(
-		"SELECT plugin_id, artifact_checksum, state, plan_id, activated_release_id, state_changed_at, reason FROM superboard_plugin_lifecycle WHERE instance_id = 'vocostar' ORDER BY plugin_id",
+		"SELECT plugin_id, artifact_checksum, state, plan_id, activated_release_id, state_changed_at, reason FROM superboard_plugin_lifecycle WHERE instance_id = 'reference-production' ORDER BY plugin_id",
 	).all();
 }
 
@@ -127,8 +127,12 @@ test("repeated activation and disable keep the same Release", async () => {
 test("failed activation restores lifecycle and health exactly", async () => {
 	expect((await action(plugin, "enable")).status).toBe(201);
 	const before = await lifecycle();
-	const health = await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health ORDER BY plugin_id").all();
-	const dependency = await env.DB.prepare("SELECT * FROM superboard_dependency_health ORDER BY dependency_id").all();
+	const health = await env.DB.prepare(
+		"SELECT * FROM superboard_plugin_runtime_health ORDER BY plugin_id",
+	).all();
+	const dependency = await env.DB.prepare(
+		"SELECT * FROM superboard_dependency_health ORDER BY dependency_id",
+	).all();
 	const pointer = await env.DB.prepare("SELECT * FROM superboard_front_active_releases").all();
 	await env.DB.exec(
 		"CREATE TRIGGER reject_test_activation BEFORE UPDATE ON superboard_front_active_releases BEGIN SELECT RAISE(ABORT, 'injected activation failure'); END;",
@@ -139,7 +143,9 @@ test("failed activation restores lifecycle and health exactly", async () => {
 	expect(
 		await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health ORDER BY plugin_id").all(),
 	).toMatchObject({ results: health.results });
-	expect(await env.DB.prepare("SELECT * FROM superboard_dependency_health ORDER BY dependency_id").all()).toMatchObject({
+	expect(
+		await env.DB.prepare("SELECT * FROM superboard_dependency_health ORDER BY dependency_id").all(),
+	).toMatchObject({
 		results: dependency.results,
 	});
 	expect(
@@ -194,7 +200,7 @@ test.each([
 	async (_stage, trigger) => {
 		expect((await action(plugin, "enable")).status).toBe(201);
 		await putPluginStoreRecord(env.DB, {
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			target: "local",
 			plugin_id: plugin,
 			store_id: `${plugin}.store.user_directory`,
@@ -246,7 +252,7 @@ test("inactive plugin data is unavailable with 404 and restored on reactivation"
 	await putPluginStoreRecord(env.DB, {
 		plugin_id: plugin,
 		store_id: `${plugin}.store.user_directory`,
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		target: "local",
 		project_ref: "1-prod",
 		entity_type: "settings",
@@ -276,7 +282,7 @@ test("recovers a drained plugin after the lifecycle worker restarts", async () =
 	const before = await lifecycle();
 	const started = await beginManagedPluginOperation(env.DB, {
 		operation_id: crypto.randomUUID(),
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		target: "local",
 		plugin_id: plugin,
 		action: "disable",
@@ -284,7 +290,7 @@ test("recovers a drained plugin after the lifecycle worker restarts", async () =
 	if (!("operation" in started)) throw new Error("operation should acquire lock");
 	await snapshotManagedPluginOperation(env.DB, started.operation, "interrupted-release");
 	await transitionSuperBoardPluginLifecycle(env.DB, {
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		target: "local",
 		plugin_id: plugin,
 		to_state: "draining",
@@ -403,7 +409,7 @@ test("waits for accepted operations before disabling their plugin", async () => 
 	const operationId = crypto.randomUUID();
 	await beginRepositoryCommand(env.DB, {
 		operation_id: operationId,
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		target: "local",
 		project_ref: "1-prod",
 		plugin_id: plugin,
@@ -501,9 +507,9 @@ test("recovers an interrupted compensation without retrying the failing plugin a
 				"SELECT recovery_error FROM superboard_managed_plugin_operations WHERE status = 'running'",
 			).first(),
 		).toEqual({ recovery_error: "PLUGIN_RECOVERY_REQUIRED" });
-		expect((await loadLastVerifiedFrontRelease(env, "vocostar"))?.release.payload.release_id).toBe(
-			(previous as { active_release_id: string }).active_release_id,
-		);
+		expect(
+			(await loadLastVerifiedFrontRelease(env, "reference-production"))?.release.payload.release_id,
+		).toBe((previous as { active_release_id: string }).active_release_id);
 		const pending = await env.DB.prepare(
 			"SELECT operation_id, snapshot_json, release_id FROM superboard_managed_plugin_operations WHERE status = 'running'",
 		).first<{ operation_id: string; snapshot_json: string; release_id: string }>();
@@ -526,7 +532,7 @@ test("recovers an interrupted compensation without retrying the failing plugin a
 				pending!.operation_id,
 			)
 			.run();
-		expect(await loadLastVerifiedFrontRelease(env, "vocostar")).toBeNull();
+		expect(await loadLastVerifiedFrontRelease(env, "reference-production")).toBeNull();
 		await env.DB.prepare(
 			"UPDATE superboard_managed_plugin_operations SET snapshot_json = ? WHERE operation_id = ?",
 		)
@@ -562,7 +568,7 @@ test("a damaged recovery snapshot cannot overwrite valid plugin state", async ()
 	expect((await action(plugin, "enable")).status).toBe(201);
 	const started = await beginManagedPluginOperation(env.DB, {
 		operation_id: crypto.randomUUID(),
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		target: "local",
 		plugin_id: plugin,
 		action: "disable",

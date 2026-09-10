@@ -16,7 +16,6 @@ const groups = [
 ] as const;
 const messages = {
 	en: {
-		vocostar: "Vocostar",
 		console: "Console",
 		api: "API",
 		auth: "Authentication",
@@ -32,7 +31,6 @@ const messages = {
 		modules: "Modules",
 	},
 	fr: {
-		vocostar: "Vocostar",
 		console: "Console",
 		api: "API",
 		auth: "Authentification",
@@ -56,7 +54,7 @@ export function WorkerDeploymentGroups<T extends { id: string; workerName?: stri
 	services: readonly T[];
 	children(service: T): ReactNode;
 }) {
-	const { locale, activePluginIds } = useFrontContext();
+	const { locale } = useFrontContext();
 	const i18n = setupI18n({ locale, messages: { [locale]: messages[locale] } });
 	const grouped = new Map<string, T[]>();
 	for (const service of services) {
@@ -72,11 +70,7 @@ export function WorkerDeploymentGroups<T extends { id: string; workerName?: stri
 			{Array.from(grouped, ([id, services]) => (
 				<details key={id} className="rounded-md border border-kumo-line p-4">
 					<summary className="cursor-pointer">
-						<strong>
-							{id === "extensions" && activePluginIds.includes("supbrd-plugmod-vocostar")
-								? i18n._("vocostar")
-								: i18n._(id)}
-						</strong>
+						<strong>{i18n._(id)}</strong>
 						<span className="ms-3 text-sm text-kumo-subtle">
 							{i18n._("workers")}:{" "}
 							{new Set(services.flatMap(({ workerName }) => (workerName ? [workerName] : []))).size}{" "}

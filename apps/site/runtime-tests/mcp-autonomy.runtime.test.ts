@@ -235,7 +235,7 @@ test("MCP SDK settings and usage use the owning Workers with User absent", async
 		HEALTH_ANALYTICS_DB: D1Database;
 	};
 	const instance = await stores.HEALTH_API_DB.prepare(
-		"SELECT id FROM instances WHERE uri_scheme='vocostar'",
+		"SELECT id FROM instances WHERE uri_scheme='reference-production'",
 	).first<{ id: number }>();
 	const configured = await invoke({
 		tool: "configure_sdk",
@@ -456,7 +456,7 @@ test("SDK partial project failures report completed writes and can resume", asyn
 	await mcpScope();
 	const stores = env as unknown as { HEALTH_API_DB: D1Database; HEALTH_APP_DB: D1Database };
 	const instance = await stores.HEALTH_API_DB.prepare(
-		"SELECT id FROM instances WHERE uri_scheme='vocostar'",
+		"SELECT id FROM instances WHERE uri_scheme='reference-production'",
 	).first<{ id: number }>();
 	let writes = 0;
 	let fail = true;
@@ -478,7 +478,7 @@ test("SDK partial project failures report completed writes and can resume", asyn
 	const invokeSdk = () =>
 		dispatchMcpInstanceIntegration(
 			runtime as never,
-			{ operator_id: "sdk-partial-operator", instance_id: "vocostar", role: 50 },
+			{ operator_id: "sdk-partial-operator", instance_id: "reference-production", role: 50 },
 			instance!.id,
 			"sdk",
 			{ ios_bundle_id: "com.example.partial", ios_team_id: "PARTIAL123" },

@@ -12,16 +12,16 @@ const activeMetadataFiles = [
 	"apps/mcp/package.json",
 	"apps/mcp/server.json",
 	"deploy/targets/mbza-development.json",
-	"deploy/targets/vocostar.json",
+	"deploy/targets/reference-production.json",
 	"sdks/flutter/pubspec.yaml",
 	"sdks/flutter/ios/superboard_flutter.podspec",
 	"sdks/ios/OpenGrow.podspec",
 	"sdks/javascript/package.json",
 	"sdks/react-native/package.json",
 	"sdks/react-native/opengrow-react-native.podspec",
-	"tools/flutterflow-applications/vocostar/dsl/migration.dart",
+	"tools/flutterflow-applications/reference-production/dsl/migration.dart",
 	"tools/flutterflow-library/dsl/edit.dart",
-	"workers/custom/vocostar/orchestrators/PROVENANCE.json",
+	"workers/custom/reference/orchestrators/PROVENANCE.json",
 ];
 
 test("active source and deployment metadata only reference the canonical repository", async () => {

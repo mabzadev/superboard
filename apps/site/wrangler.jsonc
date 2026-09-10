@@ -36,6 +36,10 @@
 			"binding": "API_SERVICE",
 			"service": "superboard-api-local",
 		},
+		{
+			"binding": "MCP_SERVICE",
+			"service": "superboard-mcp-local",
+		},
 	],
 	"tail_consumers": [
 		{
@@ -61,17 +65,19 @@
 			"EMDASH_ENCRYPTION_KEY",
 			"SITE_OPERATOR_BRIDGE_TOKEN",
 			"SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY",
+			"SUPERBOARD_RELEASE_PRIVATE_JWK",
 		],
 	},
 	"vars": {
 		"SUPERBOARD_INSTANCE_ID": "mbza-development",
 		"SUPERBOARD_PLUGIN_LIFECYCLE": "required",
 		"SUPERBOARD_ENVIRONMENT": "local",
-		"SUPERBOARD_PUBLIC_ENDPOINTS_JSON": "{\"api\":\"https://api.mbza.dev\",\"auth\":\"https://auth.mbza.dev\",\"shortlinks\":\"https://in.mbza.dev\",\"sdk\":\"https://sdk.mbza.dev\",\"files\":\"https://files.mbza.dev\",\"site\":\"https://site.mbza.dev\",\"mcp\":\"https://mcp.mbza.dev\"}",
+		"SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON": "{\"schemaVersion\":1,\"target\":\"mbza-development\",\"environment\":\"local\",\"profile\":\"consolidated\",\"source\":\"deploy/targets/mbza-development.json\",\"publicRouting\":\"staged\",\"endpoints\":[{\"surface\":\"console\",\"url\":\"https://board.mbza.dev\",\"worker\":\"console\",\"clients\":[\"operator\"]},{\"surface\":\"custom-api\",\"url\":\"https://api.mbza.dev\",\"worker\":\"api → custom\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"auth\",\"url\":\"https://auth.mbza.dev\",\"worker\":\"api → auth\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"files\",\"url\":\"https://files.mbza.dev\",\"worker\":\"api → files\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"links\",\"url\":\"https://in.mbza.dev\",\"worker\":\"api\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"sdk\",\"url\":\"https://sdk.mbza.dev\",\"worker\":\"api\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"mcp\",\"url\":\"https://board.mbza.dev/mcp\",\"worker\":\"console → api (MCP)\",\"clients\":[\"assistant\"]}],\"workers\":[{\"id\":\"console\",\"name\":\"superboard-site-local\",\"modules\":[\"site\"]},{\"id\":\"api\",\"name\":\"superboard-api-local\",\"modules\":[\"api\",\"app\",\"products\",\"paywalls\",\"onboardings\",\"dynamic-links\",\"mcp\"]},{\"id\":\"auth\",\"name\":\"superboard-identity-local\",\"modules\":[\"identity\"]},{\"id\":\"files\",\"name\":\"superboard-files-local\",\"modules\":[\"files\"]},{\"id\":\"payments\",\"name\":\"superboard-billing-local\",\"modules\":[\"billing\"]},{\"id\":\"communications\",\"name\":\"superboard-email-local\",\"modules\":[\"email\",\"marketing\"]},{\"id\":\"automations\",\"name\":\"superboard-flows-local\",\"modules\":[\"flows\"]},{\"id\":\"support\",\"name\":\"superboard-support-local\",\"modules\":[\"support\"]},{\"id\":\"analytics\",\"name\":\"superboard-analytics-local\",\"modules\":[\"analytics\"]},{\"id\":\"monitoring\",\"name\":\"superboard-observability-local\",\"modules\":[\"observability\"]},{\"id\":\"custom\",\"name\":\"superboard-custom-reference-local\",\"modules\":[\"custom\"]}],\"aliases\":[{\"surface\":\"console\",\"hostname\":\"site.mbza.dev\"},{\"surface\":\"mcp\",\"hostname\":\"mcp.mbza.dev\"},{\"surface\":\"mailPreview\",\"hostname\":\"mail.mbza.dev\"}],\"webOrigins\":[\"https://board.mbza.dev\",\"https://auth.mbza.dev\",\"https://reference.mbza.dev\",\"https://site.mbza.dev\"],\"customCapabilities\":[\"reference.echo\",\"reference.acceptance\"],\"authIssuer\":\"https://auth.mbza.dev\",\"checksum\":\"sha256:363d12617cad9a868e5be4ba3a0d9f2ad7c73c3d8cab7766c527c795c9e7fb00\"}",
+		"SUPERBOARD_PUBLIC_ENDPOINTS_JSON": "{\"api\":\"https://api.mbza.dev\",\"auth\":\"https://auth.mbza.dev\",\"shortlinks\":\"https://in.mbza.dev\",\"sdk\":\"https://sdk.mbza.dev\",\"files\":\"https://files.mbza.dev\",\"site\":\"https://board.mbza.dev\",\"mcp\":\"https://board.mbza.dev/mcp\"}",
 		"SUPERBOARD_PLUGIN_IDS": "[\"supbrd-plug-audit\",\"supbrd-plug-content\",\"supbrd-plug-products\",\"supbrd-plug-settings\",\"supbrd-plug-user\",\"supbrd-plugmod-analytics\",\"supbrd-plugmod-billing\",\"supbrd-plugmod-dynamic-links\",\"supbrd-plugmod-email\",\"supbrd-plugmod-files\",\"supbrd-plugmod-flows\",\"supbrd-plugmod-gateway\",\"supbrd-plugmod-marketing\",\"supbrd-plugmod-mcp\",\"supbrd-plugmod-observability\",\"supbrd-plugmod-onboardings\",\"supbrd-plugmod-paywalls\",\"supbrd-plugmod-support\"]",
-		"SUPERBOARD_RELEASE_OPERATIONS": "disabled",
-		"D1_EXPECTED_MIGRATION": "0027_reorganisation_plugin_manifests.sql",
-		"TARGET_ARTIFACT_CHECKSUM": "sha256:5164006d862f203da1a15033fd5e9a361132afa1ff2ee494a2586dedfc7bb4cb",
+		"SUPERBOARD_RELEASE_OPERATIONS": "enabled",
+		"D1_EXPECTED_MIGRATION": "0030_platform_plugin_manifests.sql",
+		"TARGET_ARTIFACT_CHECKSUM": "sha256:5551a63c41ed66a997d334d0f63bddf724f46fba907c2d8e5c7fc4d9eebcd499",
 	},
 	"triggers": {
 		"crons": ["* * * * *"],

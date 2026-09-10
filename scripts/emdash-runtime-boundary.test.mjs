@@ -7,7 +7,7 @@ const root = resolve(import.meta.dirname, "..");
 const siteBuild = join(root, "apps/site/dist");
 const EXECUTABLE_ARTIFACT_PATTERN = /\.(?:html|js|mjs)$/u;
 const historicalDashboardRuntime = [
-	/https?:\/\/(?:grow\.vocostar\.com|board\.mbza\.dev|localhost:3001)(?:[/'"`]|$)/u,
+	/https?:\/\/(?:grow\.reference-production\.com|board\.mbza\.dev|localhost:3001)(?:[/'"`]|$)/u,
 	/from[\s]+["']next\//u,
 	/import\(["']next\//u,
 	/apps\/dashboard\/(?:\.next|out)\//u,

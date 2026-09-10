@@ -520,7 +520,9 @@ export function referenceReadiness(project, developmentTarget, sdkCatalogue, rep
 		),
 		check(
 			"mail_preview_domain",
-			project.endpoints?.mailPreview === `https://${developmentTarget.domains.mailPreview}`,
+			developmentTarget.domains.mailPreview
+				? project.endpoints?.mailPreview === `https://${developmentTarget.domains.mailPreview}`
+				: project.endpoints?.mailPreview == null,
 		),
 		check(
 			"support_domain",

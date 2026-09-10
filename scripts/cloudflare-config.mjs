@@ -978,30 +978,7 @@ function customConfig() {
 			service: workers[environment],
 		}));
 	}
-	const legacyGateway = target.customWorker.runtimeBridge?.legacyGateway;
-	if (legacyGateway) {
-		config.durable_objects = {
-			bindings: [
-				{
-					name: "VOCOSTAR_USER_VOCALS_ROOM",
-					class_name: "UserVocalsRoom",
-					script_name: legacyGateway.worker,
-				},
-				{
-					name: "VOCOSTAR_USER_MEDIAS_ROOM",
-					class_name: "UserMediasRoom",
-					script_name: legacyGateway.worker,
-				},
-			],
-		};
-		config.services = [
-			...(config.services ?? []),
-			{
-				binding: "VOCOSTAR_NOTIFICATION_DISPATCHER",
-				service: legacyGateway.notificationWorker,
-			},
-		];
-	}
+
 	if (!preflight && target.customWorker.crons?.length) {
 		config.triggers = { crons: [...target.customWorker.crons] };
 	}

@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -63,7 +64,7 @@ test("Site deployment accepts its compiled target hosts and rejects foreign rout
 	assert.throws(
 		() =>
 			siteDeploymentArtifact(
-				{ ...config, routes: [{ pattern: "board.vocostar.com", custom_domain: true }] },
+				{ ...config, routes: [{ pattern: "board.reference.example", custom_domain: true }] },
 				options,
 			),
 		/compiled target hostnames/u,
@@ -80,14 +81,14 @@ test("Site deployment accepts its compiled target hosts and rejects foreign rout
 
 test("Site email plugin build settings come from the selected target", async () => {
 	const development = (await loadTarget("mbza-development")).target;
-	const production = (await loadTarget("vocostar")).target;
+	const production = (await loadTarget("reference-production")).target;
 	expectSiteEmailEnvironment(siteEmailBuildEnvironment(development, {}), {
 		SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@mbza.dev",
 		SUPERBOARD_SITE_EMAIL_FROM_NAME: "SuperBoard Development",
 		SUPERBOARD_SITE_EMAIL_REPLY_TO: "support@mbza.dev",
 	});
 	expectSiteEmailEnvironment(siteEmailBuildEnvironment(production, {}), {
-		SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@vocostar.com",
+		SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@reference.example",
 		SUPERBOARD_SITE_EMAIL_FROM_NAME: "SuperBoard",
 	});
 });

@@ -1015,25 +1015,6 @@
 					"type": "string",
 					"minLength": 1,
 					"maxLength": 500
-				},
-				"legacyGateway": {
-					"type": "object",
-					"additionalProperties": false,
-					"required": ["worker", "notificationWorker", "jwtSecretBinding"],
-					"properties": {
-						"worker": {
-							"type": "string",
-							"pattern": "^[a-z0-9][a-z0-9-]*$"
-						},
-						"notificationWorker": {
-							"type": "string",
-							"pattern": "^[a-z0-9][a-z0-9-]*$"
-						},
-						"jwtSecretBinding": {
-							"type": "string",
-							"pattern": "^[A-Z][A-Z0-9_]+$"
-						}
-					}
 				}
 			}
 		},

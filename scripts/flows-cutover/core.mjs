@@ -25,7 +25,7 @@ const DERIVED_REVERSE_ENTITIES = /\.(?:claims|mappings|users|states|assignments|
 export function assertMbzaDevelopment(target, environment) {
 	if (target !== FLOWS_CUTOVER_TARGET || environment !== FLOWS_CUTOVER_ENVIRONMENT) {
 		throw new Error(
-			"Flows cutover is restricted to --target mbza-development --environment development; VocoStar production is intentionally disabled",
+			"Flows cutover is restricted to --target mbza-development --environment development; production cutover is intentionally disabled",
 		);
 	}
 	return true;

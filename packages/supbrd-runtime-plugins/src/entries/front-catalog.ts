@@ -28,7 +28,6 @@ import { nativeFrontPlugin as observability } from "../front/plugins/supbrd-plug
 import { nativeFrontPlugin as onboardings } from "../front/plugins/supbrd-plugmod-onboardings.js";
 import { nativeFrontPlugin as paywalls } from "../front/plugins/supbrd-plugmod-paywalls.js";
 import { nativeFrontPlugin as support } from "../front/plugins/supbrd-plugmod-support.js";
-import { nativeFrontPlugin as vocostar } from "../front/plugins/supbrd-plugmod-vocostar.js";
 
 export { userPluginManifest, validateUserPluginManifest, buildUserPluginManifest };
 
@@ -51,7 +50,6 @@ export const parityFrontPluginCatalog = Object.freeze([
 	onboardings,
 	observability,
 	mcp,
-	vocostar,
 ]);
 
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- generated topology is validated by the parity gate
