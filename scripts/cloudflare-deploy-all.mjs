@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
+import { verifyConsoleArtifact } from "./cloudflare-console-artifact.mjs";
 import {
 	runConsolidatedDeployment,
-	generateConsolidatedConfiguration,
 	assertConsolidatedDeploymentReady,
 } from "./cloudflare-consolidate.mjs";
 import { sha256File } from "./cloudflare-d1-backup.mjs";
@@ -110,9 +111,23 @@ const consolidatedInput = {
 	targetArtifactChecksum: args["target-artifact-checksum"],
 	env: targetCloudflareEnv,
 };
+if (consolidated && !args["prepared-deployment"]) {
+	throw new Error(
+		"PREPARED_DEPLOYMENT_REQUIRED: prepare and validate the console before deploying with --prepared-deployment",
+	);
+}
 const consolidatedManifest = consolidated
-	? await generateConsolidatedConfiguration(consolidatedInput)
+	? JSON.parse(await readFile(resolve(args["prepared-deployment"]), "utf8"))
 	: null;
+if (
+	consolidatedManifest &&
+	(consolidatedManifest.target !== targetName ||
+		consolidatedManifest.environment !== environment ||
+		!consolidatedManifest.consoleArtifact)
+) {
+	throw new Error("PREPARED_DEPLOYMENT_TARGET_MISMATCH");
+}
+if (consolidatedManifest) await verifyConsoleArtifact(consolidatedManifest.consoleArtifact);
 const consolidatedReadiness = consolidatedManifest
 	? assertConsolidatedDeploymentReady(consolidatedManifest, consolidatedInput)
 	: null;

@@ -32,6 +32,8 @@ export interface OperatorReauthenticationReceipt {
 	reauthenticated_at: string;
 	expires_at: string;
 	receipt_checksum: string;
+	authorization_method?: "operator_session";
+	operation_id?: string;
 }
 
 export interface FrontReleaseCandidateEvidence {
@@ -109,6 +111,7 @@ export function createFrontPreview(
 export async function createOperatorReauthenticationReceipt(
 	input: Omit<OperatorReauthenticationReceipt, "receipt_checksum">,
 ): Promise<OperatorReauthenticationReceipt> {
+	if (!validAuthorizationMethod(input)) throw new Error("Invalid operator authorization method");
 	const reauthenticated = timestamp(input.reauthenticated_at, "reauthenticated_at");
 	const expires = timestamp(input.expires_at, "expires_at");
 	if (expires <= reauthenticated || expires - reauthenticated > 5 * 60 * 1_000) {
@@ -256,6 +259,7 @@ async function validateReauthentication(
 ): Promise<string | null> {
 	const { receipt_checksum: receiptChecksum, ...content } = receipt;
 	if (
+		!validAuthorizationMethod(receipt) ||
 		(await checksum(content)) !== receiptChecksum ||
 		receipt.action !== action ||
 		receipt.instance_id !== candidate.release.payload.instance_id ||
@@ -267,6 +271,18 @@ async function validateReauthentication(
 	const expires = timestamp(receipt.expires_at, "expires_at");
 	if (actionAt < reauthenticated || actionAt > expires) return "STRONG_REAUTH_EXPIRED";
 	return null;
+}
+
+function validAuthorizationMethod(
+	receipt: Omit<OperatorReauthenticationReceipt, "receipt_checksum">,
+) {
+	if (receipt.authorization_method === undefined) return receipt.operation_id === undefined;
+	return (
+		receipt.authorization_method === "operator_session" &&
+		typeof receipt.operation_id === "string" &&
+		receipt.operation_id.trim().length > 0 &&
+		receipt.action !== "front_release.rollback"
+	);
 }
 
 function cloneJson<T>(value: T): T {

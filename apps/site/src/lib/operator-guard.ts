@@ -7,11 +7,14 @@ import type { APIContext } from "astro";
 
 import type { SuperBoardSiteEnv } from "./site-env.js";
 
-const LOCAL_OPERATOR_REAUTHENTICATION = Symbol("superboard.localOperatorReauthentication");
+const MANAGED_PLUGIN_AUTHORIZATION = Symbol("superboard.managedPluginAuthorization");
 
-interface LocalOperatorReauthentication {
+interface ManagedPluginAuthorization {
 	userId: string;
 	verifiedAt: string;
+	instanceId: string;
+	candidateId: string;
+	operationId: string;
 }
 
 export function requireReleaseOperator(
@@ -71,13 +74,21 @@ export async function recentOperatorReauthentication(
 		now: string;
 	},
 ): Promise<OperatorReauthenticationReceipt | null> {
-	if (!context.locals.user || !context.session) return null;
-	const localMarker = (
+	if (!context.locals.user) return null;
+	const operation = (
 		context.locals as typeof context.locals & {
-			[LOCAL_OPERATOR_REAUTHENTICATION]?: LocalOperatorReauthentication;
+			[MANAGED_PLUGIN_AUTHORIZATION]?: ManagedPluginAuthorization;
 		}
-	)[LOCAL_OPERATOR_REAUTHENTICATION];
-	const marker = localMarker ?? (await context.session.get("strongReauthentication"));
+	)[MANAGED_PLUGIN_AUTHORIZATION];
+	if (
+		operation &&
+		(operation.instanceId !== input.instance_id ||
+			operation.candidateId !== input.candidate_id ||
+			input.action === "front_release.rollback" ||
+			!hasPermission(context.locals.user, "settings:manage"))
+	)
+		return null;
+	const marker = operation ?? (await context.session?.get("strongReauthentication"));
 	if (!marker || marker.userId !== context.locals.user.id) return null;
 	const verified = Date.parse(marker.verifiedAt);
 	const now = Date.parse(input.now);
@@ -90,24 +101,35 @@ export async function recentOperatorReauthentication(
 		instance_id: input.instance_id,
 		action: input.action,
 		candidate_id: input.candidate_id,
+		...(operation
+			? { authorization_method: "operator_session" as const, operation_id: operation.operationId }
+			: {}),
 		reauthenticated_at: new Date(verified).toISOString(),
 		expires_at: new Date(verified + 5 * 60 * 1_000).toISOString(),
 	});
 }
 
-export function withLocalOperatorReauthentication<T extends APIContext>(
+export function withManagedPluginAuthorization<T extends APIContext>(
 	context: T,
-	env: SuperBoardSiteEnv,
-	verifiedAt: string,
+	input: Omit<ManagedPluginAuthorization, "userId">,
 ): T {
-	if (env.SUPERBOARD_ENVIRONMENT !== "local" || !context.locals.user) return context;
+	if (
+		requirePluginOperator(context, { mutation: true }) ||
+		!context.locals.user ||
+		context.request.method !== "POST" ||
+		!input.operationId ||
+		!input.candidateId ||
+		!input.instanceId
+	) {
+		throw new Error("PLUGIN_OPERATOR_AUTHORIZATION_REQUIRED");
+	}
 	return {
 		...context,
 		locals: {
 			...context.locals,
-			[LOCAL_OPERATOR_REAUTHENTICATION]: {
+			[MANAGED_PLUGIN_AUTHORIZATION]: {
+				...input,
 				userId: context.locals.user.id,
-				verifiedAt,
 			},
 		},
 	};

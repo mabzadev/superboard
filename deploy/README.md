@@ -4,7 +4,16 @@ An active SuperBoard console enables the signed release operations used by plugi
 
 Deployment configuration derives this behavior from the target's active public routing. Private builds and preflight builds keep release operations disabled. To publish an explicitly read-only console, pass `--read-only-console` to `cloudflare-deploy-all.mjs`, `cloudflare-consolidate.mjs`, or `cloudflare-site-build.mjs`. An explicitly read-only console cannot activate plugins.
 
-After deployment, sign in to EmDash and activate a plugin from the Plugins page. If verification has expired, complete the passkey prompt to resume the activation. Check that the plugin is active after reloading the page. A successful HTTP health check alone does not verify plugin activation.
+Plugin activation and deactivation use the signed-in administrator's session and permissions in every environment. The authorization is scoped to the plugin operation and recorded separately from strong reauthentication. Manual release approvals and rollbacks retain their strong reauthentication requirements. Check activation and deactivation after reloading the Plugins page; a successful HTTP health check alone does not verify these actions.
+
+Prepare the console before deploying it. Preparation builds the Worker and browser assets and records their SHA-256 checksums. Deployment consumes the prepared manifest, checks those files before uploading, and does not rebuild them. A changed artifact blocks deployment.
+
+The following commands prepare the development target, run its regression checks, and deploy the prepared artifact. Configure the target's Cloudflare account and required secrets first.
+
+```sh
+pnpm cloudflare:prepare --target mbza-development --environment development
+pnpm cloudflare:deploy:all --target mbza-development --environment development --prepared-deployment deploy/generated/mbza-development-development-deployments.json
+```
 
 Run the development runtime test to check activation with production-style authentication checks. This test also runs as part of the Site test suite.
 

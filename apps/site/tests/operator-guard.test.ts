@@ -5,6 +5,7 @@ import {
 	recentOperatorReauthentication,
 	requirePluginOperator,
 	requireReleaseOperator,
+	withManagedPluginAuthorization,
 } from "../src/lib/operator-guard.js";
 
 function context(options: { role?: number; origin?: string; marker?: string } = {}) {
@@ -29,6 +30,72 @@ const enabledEnv = { SUPERBOARD_RELEASE_OPERATIONS: "enabled" } as Parameters<
 >[1];
 
 describe("Release operator guard", () => {
+	test("a plugin authorization is limited to its operator, instance and candidate", async () => {
+		const now = "2026-09-10T08:00:00.000Z";
+		const original = {
+			...context({ role: 50 }),
+			locals: { user: { id: "operator-1", role: 50 } },
+			session: { get: async () => undefined },
+		} as Parameters<typeof withManagedPluginAuthorization>[0];
+		const input = {
+			instance_id: "instance-1",
+			candidate_id: "candidate-1",
+			action: "front_release.approve" as const,
+			now,
+		};
+		expect(await recentOperatorReauthentication(original, input)).toBeNull();
+		const authorized = withManagedPluginAuthorization(original, {
+			instanceId: input.instance_id,
+			candidateId: input.candidate_id,
+			operationId: "operation-1",
+			verifiedAt: now,
+		});
+		expect(await recentOperatorReauthentication(authorized, input)).toMatchObject({
+			authorization_method: "operator_session",
+			operation_id: "operation-1",
+			operator_id: "operator-1",
+		});
+		for (const changed of [
+			{ instance_id: "other" },
+			{ candidate_id: "other" },
+			{ action: "front_release.rollback" as const },
+			{ now: "2026-09-10T08:06:00.000Z" },
+		]) {
+			expect(await recentOperatorReauthentication(authorized, { ...input, ...changed })).toBeNull();
+		}
+		expect(
+			await recentOperatorReauthentication(
+				{
+					...authorized,
+					locals: { ...authorized.locals, user: { ...authorized.locals.user!, id: "other" } },
+				},
+				input,
+			),
+		).toBeNull();
+		expect(
+			await recentOperatorReauthentication(
+				{
+					...original,
+					locals: {
+						...original.locals,
+						managedPluginAuthorization: { userId: "operator-1", verifiedAt: now },
+					},
+				} as typeof original,
+				input,
+			),
+		).toBeNull();
+		expect(() =>
+			withManagedPluginAuthorization(
+				{ ...original, request: new Request(original.url, { method: "POST" }) },
+				{
+					instanceId: "instance-1",
+					candidateId: "candidate-1",
+					operationId: "operation-1",
+					verifiedAt: now,
+				},
+			),
+		).toThrow("PLUGIN_OPERATOR_AUTHORIZATION_REQUIRED");
+	});
 	test("the operational deployment permits an admin plugin mutation but retains authorization and CSRF checks", () => {
 		const operations = resolveSiteReleaseOperations({
 			service: "site",

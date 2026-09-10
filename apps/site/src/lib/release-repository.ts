@@ -67,8 +67,8 @@ export function createD1FrontReleaseRepository(db: D1Database): FrontReleaseRepo
 					.prepare(
 						`INSERT INTO superboard_operator_reauthentication_receipts (
 						   receipt_id, operator_id, instance_id, action, candidate_id,
-						   reauthenticated_at, expires_at, receipt_checksum, created_at
-						 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						   reauthenticated_at, expires_at, receipt_checksum, created_at, authorization_method, operation_id
+						 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					)
 					.bind(
 						receipt.receipt_id,
@@ -80,6 +80,8 @@ export function createD1FrontReleaseRepository(db: D1Database): FrontReleaseRepo
 						receipt.expires_at,
 						receipt.receipt_checksum,
 						command.activated_at,
+						receipt.authorization_method ?? "strong_reauthentication",
+						receipt.operation_id ?? null,
 					),
 				db
 					.prepare(

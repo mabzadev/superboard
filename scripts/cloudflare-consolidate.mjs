@@ -5,6 +5,7 @@ import { resolve, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { parseQueueConsumer } from "./cloudflare-billing-consumer.mjs";
+import { captureConsoleArtifact, verifyConsoleArtifact } from "./cloudflare-console-artifact.mjs";
 import { deploymentOrder } from "./cloudflare-deploy-plan.mjs";
 import { parseSecretNames } from "./cloudflare-secret-preflight.mjs";
 import { loadTarget, parseArgs, root, targetSelectionFromArgs } from "./cloudflare-target.mjs";
@@ -200,14 +201,55 @@ function queueOwner(transfer, manifest, env, run) {
 	return owner;
 }
 
+export async function prepareConsolidatedDeployment(input, run = execute) {
+	const env = input.env ?? process.env;
+	run(
+		process.execPath,
+		[
+			"scripts/cloudflare-site-build.mjs",
+			"--target",
+			input.targetName,
+			"--environment",
+			input.environment,
+			...(input.noRoutes || input.preflight || input.dryRun ? ["--no-routes"] : []),
+			...(input.readOnlyConsole ? ["--read-only-console"] : []),
+			...(input.targetArtifactPath && input.targetArtifactChecksum
+				? [
+						"--target-artifact",
+						input.targetArtifactPath,
+						"--target-artifact-checksum",
+						input.targetArtifactChecksum,
+					]
+				: []),
+			...(input.allowUnprovisioned ? ["--allow-unprovisioned"] : []),
+		],
+		{ stdio: "inherit", env },
+	);
+	const manifest = await generateConsolidatedConfiguration(input);
+	const consoleGroup = manifest.groups.find((group) => group.id === "console");
+	if (consoleGroup) {
+		manifest.consoleArtifact = await captureConsoleArtifact(resolve(root, consoleGroup.configPath));
+		await writeFile(manifest.manifestPath, `${JSON.stringify(manifest, null, "\t")}\n`);
+	}
+	return manifest;
+}
+
 export async function runConsolidatedDeployment(input, run = execute) {
-	const manifest = input.manifest ?? (await generateConsolidatedConfiguration(input));
+	if (!input.manifest && !input.dryRun) throw new Error("PREPARED_DEPLOYMENT_REQUIRED");
+	const manifest = input.manifest ?? (await prepareConsolidatedDeployment(input, run));
+	const consoleGroup = manifest.groups.find((group) => group.id === "console");
+	const consoleArtifact = consoleGroup
+		? (manifest.consoleArtifact ??
+			(await captureConsoleArtifact(resolve(root, consoleGroup.configPath))))
+		: null;
+	if (consoleArtifact) await verifyConsoleArtifact(consoleArtifact);
 	const env = input.env ?? process.env;
 	const readiness =
 		input.readiness ??
 		(input.dryRun ? null : assertConsolidatedDeploymentReady(manifest, input, run));
 	const mode = input.dryRun ? "dry-run" : input.uploadOnly ? "upload" : "deploy";
 	const deploy = async (group, path) => {
+		if (consoleArtifact) await verifyConsoleArtifact(consoleArtifact);
 		const values = Object.fromEntries(
 			group.secrets.filter(({ name }) => env[name]).map(({ name }) => [name, env[name]]),
 		);
@@ -289,29 +331,6 @@ export async function runConsolidatedDeployment(input, run = execute) {
 		return (a < 0 ? 8 : a) - (b < 0 ? 8 : b);
 	});
 	for (const group of groups) {
-		if (group.id === "console")
-			run(
-				process.execPath,
-				[
-					"scripts/cloudflare-site-build.mjs",
-					"--target",
-					input.targetName,
-					"--environment",
-					input.environment,
-					...(input.noRoutes || input.preflight || input.dryRun ? ["--no-routes"] : []),
-					...(input.readOnlyConsole ? ["--read-only-console"] : []),
-					...(input.targetArtifactPath && input.targetArtifactChecksum
-						? [
-								"--target-artifact",
-								input.targetArtifactPath,
-								"--target-artifact-checksum",
-								input.targetArtifactChecksum,
-							]
-						: []),
-					...(input.allowUnprovisioned ? ["--allow-unprovisioned"] : []),
-				],
-				{ stdio: "inherit", env },
-			);
 		console.log(`${mode}: ${group.label} (${group.services.join(", ")})`);
 		if (
 			!input.uploadOnly &&
@@ -348,9 +367,11 @@ async function main() {
 		readOnlyConsole: Boolean(args["read-only-console"]),
 		dryRun: Boolean(args["dry-run"]),
 	};
-	const result = input.dryRun
-		? await runConsolidatedDeployment(input)
-		: await generateConsolidatedConfiguration(input);
+	const result = args.prepare
+		? await prepareConsolidatedDeployment(input)
+		: input.dryRun
+			? await runConsolidatedDeployment(input)
+			: await generateConsolidatedConfiguration(input);
 	console.log(
 		JSON.stringify(
 			{
