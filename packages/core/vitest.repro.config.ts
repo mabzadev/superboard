@@ -21,5 +21,5 @@ export default getViteConfig({
 			},
 		},
 	],
-	test: { globals: true, include: ["tests/repro/**/*.render.test.ts"] },
+	test: { globals: true, include: ["../../tests/checks/packages/core/repro/**/*.render.test.ts"] },
 });

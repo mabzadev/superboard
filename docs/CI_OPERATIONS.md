@@ -79,7 +79,7 @@ the required human review and `CI gate`/`Reference gate` remain authoritative.
 
 ## GitHub Environment hardening lifecycle
 
-`config/github-control-plane.json` is also the source of truth for managed
+`scripts/config/github-control-plane.json` is also the source of truth for managed
 Environment protections. Each managed Environment declares the eligible
 reviewer identities, minimum eligible reviewer count, self-review policy, wait
 timer, administrator-bypass policy, and the exact branch/tag deployment
@@ -124,9 +124,9 @@ The reusable FlutterFlow project has a separate protected Environment named
 `flutterflow-library`. Its non-secret project identifier is the Environment
 variable `FF_LIBRARY_PROJECT_ID`; its API credential is the encrypted secret
 `FF_API_KEY`. Both names and the known non-secret project ID are governed by
-`config/github-control-plane.json`. After the required SDK tag workflows
+`scripts/config/github-control-plane.json`. After the required SDK tag workflows
 succeed, `sync-flutterflow-library.yml` derives every release ref from
-`config/flutterflow-library.json`, tests the Git-owned DSL and updates the
+`scripts/config/flutterflow-library.json`, tests the Git-owned DSL and updates the
 remote `SuperBoard` project. It never accepts a branch ref or repository token.
 
 Run the same supported validation locally with:
@@ -158,7 +158,7 @@ FlutterFlow manifest or generated Dart source.
 ## Cloudflare deployment
 
 The versioned deployment contract is
-`config/cloudflare-deployments.json`. `dev` selects `mbza-development` and
+`scripts/config/cloudflare-deployments.json`. `dev` selects `mbza-development` and
 declares Cloudflare Workers Builds as its authority; `main` selects
 `vocostar-production` and declares GitHub Actions. The production workflow asks
 the matrix selector only for `github-actions` entries, and is triggered only for

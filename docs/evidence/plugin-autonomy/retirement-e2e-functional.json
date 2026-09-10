@@ -9,7 +9,7 @@
       "01M1XPN526CJDH0WTM59RJ8NVB"
     ],
     "description": "Real WebAuthn sign-in creates the same operator session after logout.",
-    "source_test": "apps/site/e2e/tests/auth/login.spec.ts",
+    "source_test": "tests/e2e/site/auth/login.spec.ts",
     "captured_at": "2026-09-07T10:29:39.041Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -23,7 +23,7 @@
       "01M1XPNP4G3QV35DN6ETKTSHJC"
     ],
     "description": "Real captured magic link restores the existing operator session; no external email transport.",
-    "source_test": "apps/site/e2e/tests/auth/password-reset.spec.ts",
+    "source_test": "tests/e2e/site/auth/password-reset.spec.ts",
     "captured_at": "2026-09-07T10:29:56.712Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -37,7 +37,7 @@
       "01M1XPNS96WG3Y6MDD4TZRDQ5A"
     ],
     "description": "Real captured magic link restores the existing operator session; no external email transport.",
-    "source_test": "apps/site/e2e/tests/auth/password-reset.spec.ts",
+    "source_test": "tests/e2e/site/auth/password-reset.spec.ts",
     "captured_at": "2026-09-07T10:29:59.959Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -90,7 +90,7 @@
       "1b69f56e-3b18-48a5-8fcb-fac97bb42cec"
     ],
     "description": "Filtered the persisted event stream by exact name and opened event analysis.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:14:52.994Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -104,7 +104,7 @@
       "6ba64b00-02a8-465c-bf03-4fc574134db2"
     ],
     "description": "Screen event ingestion produced the named view and duration in the views table.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:14:59.688Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -118,7 +118,7 @@
       "cf800b27-c29e-4d97-af2b-1613078f820d"
     ],
     "description": "Real event ingestion created both session and pseudonymized profile entries visible through their tabs.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:06.339Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -132,7 +132,7 @@
       "e181eb67-8d3d-435d-a825-8a0e9c3dedc0"
     ],
     "description": "Ingested a feedback event and verified its exact comment and rating in the table.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:12.940Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -146,7 +146,7 @@
       "14fd553b-510d-40fe-9f8f-4bfc3dbb72de"
     ],
     "description": "Ingested a crash, inspected its stored stack, resolved it, and found it in resolved results after reload.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:21.383Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -160,7 +160,7 @@
       "31afcacf-c9a1-4033-ab64-68876ceef534"
     ],
     "description": "Verified browser and country dimensions projected from a real event context.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:27.991Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -174,7 +174,7 @@
       "a1ebb147-7a52-4b86-a44b-0ed627f179a4"
     ],
     "description": "Created an analytics dashboard and widget and reopened the widget from persisted configuration.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:30.762Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -188,7 +188,7 @@
       "4b637a3f-edc0-4b57-8bd1-450e5735a174"
     ],
     "description": "Saved a named event cohort and verified its stored definition after reload.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:33.336Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -202,7 +202,7 @@
       "qa_config_1788776133572_6itq7"
     ],
     "description": "Published and reloaded the actual JSON configuration value.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:35.796Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -216,7 +216,7 @@
       "7380dc7d-7713-48fb-af73-8c47c3cf7b69"
     ],
     "description": "Created and reloaded a stored alert rule without external delivery.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:38.095Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -230,7 +230,7 @@
       "23b49113-4d87-4778-8076-0b4b3b1bc267"
     ],
     "description": "Saved and reloaded a report definition through the reports page.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:40.507Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -246,7 +246,7 @@
       "a66f81f9-5c19-444c-bbab-af843b261113"
     ],
     "description": "Updated a component version, observed two outdated instances, synchronized them and read both new draft versions.",
-    "source_test": "apps/site/e2e/tests/flows/flows-editor.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-editor.spec.ts",
     "captured_at": "2026-09-07T10:21:19.920Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -260,7 +260,7 @@
       "84ec2a81-6f83-4679-932e-55fc729003b4"
     ],
     "description": "Recorded a schema-v1 event through the owning API and verified the real overview count in this view.",
-    "source_test": "apps/site/e2e/tests/dashboard/dashboard.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/dashboard.spec.ts",
     "captured_at": "2026-09-07T10:15:47.386Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -274,7 +274,7 @@
       "63273b35-84ff-4f0e-b88b-0034be1d2c80"
     ],
     "description": "Recorded a schema-v1 event through the owning API and verified the real overview count in this view.",
-    "source_test": "apps/site/e2e/tests/dashboard/dashboard.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/dashboard.spec.ts",
     "captured_at": "2026-09-07T10:15:54.222Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -288,7 +288,7 @@
       "87d7be17-7246-44d0-94fd-88c3fcf0fd8d"
     ],
     "description": "Recorded a schema-v1 event through the owning API and verified the real overview count in this view.",
-    "source_test": "apps/site/e2e/tests/dashboard/dashboard.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/dashboard.spec.ts",
     "captured_at": "2026-09-07T10:16:01.031Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -302,7 +302,7 @@
       "993ee95e-5d8c-471b-882f-0568dce0b8dc"
     ],
     "description": "Recorded a schema-v1 event through the owning API and verified the real overview count in this view.",
-    "source_test": "apps/site/e2e/tests/dashboard/dashboard.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/dashboard.spec.ts",
     "captured_at": "2026-09-07T10:16:07.697Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -316,7 +316,7 @@
       "20a5687b-fbc6-4690-9552-7821c20e2b53"
     ],
     "description": "Saved a real support contact, reloaded the page, and searched for its stored identity.",
-    "source_test": "apps/site/e2e/tests/support/native-operations.spec.ts",
+    "source_test": "tests/e2e/site/support/native-operations.spec.ts",
     "captured_at": "2026-09-07T10:16:27.427Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -330,7 +330,7 @@
       "5b0b29bc-e9ac-46a6-96e3-98d211fd2c9d"
     ],
     "description": "Created and reloaded a persisted team through workforce controls.",
-    "source_test": "apps/site/e2e/tests/support/native-operations.spec.ts",
+    "source_test": "tests/e2e/site/support/native-operations.spec.ts",
     "captured_at": "2026-09-07T10:16:29.882Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -344,7 +344,7 @@
       "77c18ea9-1024-42ad-9182-d50fe07b7aef"
     ],
     "description": "Created a service-level policy and found it after reload.",
-    "source_test": "apps/site/e2e/tests/support/native-operations.spec.ts",
+    "source_test": "tests/e2e/site/support/native-operations.spec.ts",
     "captured_at": "2026-09-07T10:16:32.343Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -358,7 +358,7 @@
       "cc992b1f-f237-41c8-9d93-2299764b05af"
     ],
     "description": "Created a help-center portal through its form and reopened its stored record.",
-    "source_test": "apps/site/e2e/tests/support/native-operations.spec.ts",
+    "source_test": "tests/e2e/site/support/native-operations.spec.ts",
     "captured_at": "2026-09-07T10:16:35.118Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -372,7 +372,7 @@
       "f271813e-16ef-429d-ac06-89815ede89fb"
     ],
     "description": "Saved and reloaded an assistant configuration; no external model invocation claimed.",
-    "source_test": "apps/site/e2e/tests/support/native-operations.spec.ts",
+    "source_test": "tests/e2e/site/support/native-operations.spec.ts",
     "captured_at": "2026-09-07T10:16:37.602Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -386,7 +386,7 @@
       "01M1XPP2637MVECK4P91X9CZYQ"
     ],
     "description": "Captured real verification email, followed its emitted URL, and completed WebAuthn account registration.",
-    "source_test": "apps/site/e2e/tests/auth/register.spec.ts",
+    "source_test": "tests/e2e/site/auth/register.spec.ts",
     "captured_at": "2026-09-07T10:30:07.426Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -400,7 +400,7 @@
       "01M1XPP5SCDXXX15SWKHNAKEDP"
     ],
     "description": "Captured real verification email, followed its emitted URL, and completed WebAuthn account registration.",
-    "source_test": "apps/site/e2e/tests/auth/register.spec.ts",
+    "source_test": "tests/e2e/site/auth/register.spec.ts",
     "captured_at": "2026-09-07T10:30:11.298Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -415,7 +415,7 @@
       "be88b77e-8bcd-4a38-89b4-fc4bbf937fbc"
     ],
     "description": "Added a block, exercised undo/redo, saved the graph, published a real version and activated a release.",
-    "source_test": "apps/site/e2e/tests/flows/flows-editor.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-editor.spec.ts",
     "captured_at": "2026-09-07T10:33:01.744Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -429,7 +429,7 @@
       "23cd59dc-d4ee-4bcd-b68d-dba45797b432"
     ],
     "description": "Created a subscriber without sending opt-in mail, read it back, filtered the table and downloaded a CSV containing its exact address.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-native.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-native.spec.ts",
     "captured_at": "2026-09-07T10:41:01.105Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -443,7 +443,7 @@
       "e8e9ad05-eade-46f8-9f19-ccf577121a39"
     ],
     "description": "Saved a real exit-only journey, activated it with an unused QA trigger, paused it and verified its stored graph and state after reload; no message delivery was configured.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-native.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-native.spec.ts",
     "captured_at": "2026-09-07T10:41:08.043Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -457,7 +457,7 @@
       "28483be7-6d97-4573-8d02-149da604ca9e"
     ],
     "description": "Saved an explicitly disabled webhook connector in the browser and verified its destination and disabled state after reload; no webhook was dispatched.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-native.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-native.spec.ts",
     "captured_at": "2026-09-07T10:41:10.518Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -471,7 +471,7 @@
       "f1a0ff08-d637-4b6a-ba3a-f8b97344a606"
     ],
     "description": "Created a branded domain in the browser, read its stored unverified state and reloaded it; no DNS verification was simulated.",
-    "source_test": "apps/site/e2e/tests/links/dynamic-links-settings.spec.ts",
+    "source_test": "tests/e2e/site/links/dynamic-links-settings.spec.ts",
     "captured_at": "2026-09-07T10:40:38.184Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -485,7 +485,7 @@
       "1-prod"
     ],
     "description": "Changed collection consent preference in the browser, read the owner setting and confirmed it after reload, then restored the original preference.",
-    "source_test": "apps/site/e2e/tests/links/dynamic-links-settings.spec.ts",
+    "source_test": "tests/e2e/site/links/dynamic-links-settings.spec.ts",
     "captured_at": "2026-09-07T10:40:58.777Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -500,7 +500,7 @@
       "e01639aa-b2c3-4c76-b23a-43730b14a404"
     ],
     "description": "Created an HTML template and linked campaign draft through the forms, verified draft state and content through the owner API, then reloaded the table.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-native.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-native.spec.ts",
     "captured_at": "2026-09-07T10:41:04.654Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -514,7 +514,7 @@
       "38796a3f-0d0a-4fe5-b229-b12bd5c2c825"
     ],
     "description": "Created an inactive platform rule with an explicit destination and priority, then verified both fields and its inactive state after reload.",
-    "source_test": "apps/site/e2e/tests/links/dynamic-links-settings.spec.ts",
+    "source_test": "tests/e2e/site/links/dynamic-links-settings.spec.ts",
     "captured_at": "2026-09-07T10:41:57.961Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -528,7 +528,7 @@
       "1-prod"
     ],
     "description": "Saved preview metadata, verified persistence after reload and switched to its live LinkedIn preview.",
-    "source_test": "apps/site/e2e/tests/links/dynamic-links-settings.spec.ts",
+    "source_test": "tests/e2e/site/links/dynamic-links-settings.spec.ts",
     "captured_at": "2026-09-07T10:42:03.049Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -543,7 +543,7 @@
       "o5nrrvpwAGvssPgikYybar2xltGutJsN0RrAmQETyFY"
     ],
     "description": "Registered a backup passkey through the account form, read the credential list, revoked the original and retained the backup.",
-    "source_test": "apps/site/e2e/tests/auth/login.spec.ts",
+    "source_test": "tests/e2e/site/auth/login.spec.ts",
     "captured_at": "2026-09-07T10:42:03.933Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -557,7 +557,7 @@
       "01M1XQC2XK9QGJHF80V2DZ20TV"
     ],
     "description": "Saved the real operator profile, reloaded the form and confirmed the same name in the authenticated Core session.",
-    "source_test": "apps/site/e2e/tests/auth/login.spec.ts",
+    "source_test": "tests/e2e/site/auth/login.spec.ts",
     "captured_at": "2026-09-07T10:42:11.153Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -571,7 +571,7 @@
       "c63f54df-f4cc-4fca-8937-5cea601f1675"
     ],
     "description": "Rotated a real App-owned key through the browser confirmation dialog, authenticated the actual SDK runtime-policy and rejected a different application identifier; the read API redacts the stored credential.",
-    "source_test": "apps/site/e2e/real/production-flows.spec.ts",
+    "source_test": "tests/e2e/site/remote/production-flows.spec.ts",
     "captured_at": "2026-09-07T10:49:57.949Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -586,7 +586,7 @@
       "c9adfdec-0505-4fb3-87b8-048d960aa959"
     ],
     "description": "A real SDK identify/transition/survey populated the user projection; filtering excluded then found the exact persisted hash.",
-    "source_test": "apps/site/e2e/tests/flows/flows-native-runtime.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-native-runtime.spec.ts",
     "captured_at": "2026-09-07T10:55:40.043Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -601,7 +601,7 @@
       "c9adfdec-0505-4fb3-87b8-048d960aa959"
     ],
     "description": "Opened the SDK-created user's workflow history and survey event, then reloaded the same persisted detail.",
-    "source_test": "apps/site/e2e/tests/flows/flows-native-runtime.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-native-runtime.spec.ts",
     "captured_at": "2026-09-07T10:55:42.076Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -616,7 +616,7 @@
       "3674a18e-0e46-4f4f-9c13-d52f05f68d83"
     ],
     "description": "Overview recent activity displays the environment and normalized events emitted by the real published SDK workflow.",
-    "source_test": "apps/site/e2e/tests/flows/flows-native-runtime.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-native-runtime.spec.ts",
     "captured_at": "2026-09-07T10:55:43.085Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -628,7 +628,7 @@
     "type": "browser",
     "data_ids": [],
     "description": "Clicked usage export with the selected reporting dates and downloaded the generated CSV from its returned location.",
-    "source_test": "apps/site/e2e/tests/settings/settings-page.spec.ts",
+    "source_test": "tests/e2e/site/settings/settings-page.spec.ts",
     "captured_at": "2026-09-07T10:56:59.072Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -643,7 +643,7 @@
       "f419a0d9-0dcf-4aea-b0fc-ac33cc669a07"
     ],
     "description": "Selected a real environment and copied the React initialization code; the clipboard contains its project, environment and explicitly configured public API origin.",
-    "source_test": "apps/site/e2e/tests/flows/flows-native-settings.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-native-settings.spec.ts",
     "captured_at": "2026-09-07T11:00:19.579Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -658,7 +658,7 @@
       "642855f4-8f40-4af9-802b-2b8d982c5db6"
     ],
     "description": "Created an environment-scoped launchpad group, paused it through the browser and verified the saved state after reload.",
-    "source_test": "apps/site/e2e/tests/flows/flows-native-settings.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-native-settings.spec.ts",
     "captured_at": "2026-09-07T11:00:23.469Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -672,7 +672,7 @@
       "8c66a791-1467-46e5-ae95-211612deff41"
     ],
     "description": "Created a development environment with its own generated SDK key, reloaded after the one-time secret display and verified draft permission and identifier.",
-    "source_test": "apps/site/e2e/tests/flows/flows-native-settings.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-native-settings.spec.ts",
     "captured_at": "2026-09-07T11:01:38.164Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -686,7 +686,7 @@
       "b0841503-7bf3-4873-8b15-0bb608808a4b"
     ],
     "description": "Created a workflow through its dialog, filtered and reloaded the list, and verified the stored start/component draft graph.",
-    "source_test": "apps/site/e2e/tests/flows/flows-native-settings.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-native-settings.spec.ts",
     "captured_at": "2026-09-07T11:03:33.026Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -700,7 +700,7 @@
       "a592a094-3549-41ef-9d73-179b281aac46"
     ],
     "description": "Created a language group, saved fr-CH\u2192fr\u2192en fallbacks, selected the group after reload and verified the persisted locales.",
-    "source_test": "apps/site/e2e/tests/flows/flows-native-settings.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-native-settings.spec.ts",
     "captured_at": "2026-09-07T11:03:36.435Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -714,7 +714,7 @@
       "3"
     ],
     "description": "Published an in-app message with push explicitly disabled, searched it, reloaded the table and checked its persisted delivery flags.",
-    "source_test": "apps/site/e2e/tests/messaging/messaging-table.spec.ts",
+    "source_test": "tests/e2e/site/messaging/messaging-table.spec.ts",
     "captured_at": "2026-09-07T11:06:03.666Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -729,7 +729,7 @@
       "3192c21a-bc10-4242-97eb-af9f5e5ec5c5"
     ],
     "description": "Ingested two ordered events for one installation and ran the browser funnel; both steps contain the same one subject with full conversion.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-final.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-final.spec.ts",
     "captured_at": "2026-09-07T11:08:01.368Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -743,7 +743,7 @@
       "46500535-5bdc-40e0-adb7-0885d8c0b822"
     ],
     "description": "Added a timeline annotation through Analytics settings, reloaded the tab and confirmed the persisted title.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-final.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-final.spec.ts",
     "captured_at": "2026-09-07T11:08:04.418Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -758,7 +758,7 @@
       "4"
     ],
     "description": "Authenticated and registered a real SDK device, performed attribution twice, observed one canonical installation and reloaded its Analytics row.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-final.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-final.spec.ts",
     "captured_at": "2026-09-07T11:10:43.811Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -772,7 +772,7 @@
       "307e7ea4-0bae-4a9c-9592-06fd0de678c9"
     ],
     "description": "Created an inbound provider webhook credential through the form, reloaded its provider metadata and confirmed the read API does not disclose the secret.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-final.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-final.spec.ts",
     "captured_at": "2026-09-07T11:16:15.759Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -786,7 +786,7 @@
       "83e778c5-f544-49a0-8fe3-8ab142a4f4bd"
     ],
     "description": "Created a subscriber without sending mail, observed the count increase in statistics and refreshed with the selected weekly interval.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-final.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-final.spec.ts",
     "captured_at": "2026-09-07T11:16:17.938Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -805,7 +805,7 @@
       "cc6e84c1-7bcf-419a-acdd-df1f8d54f5bf"
     ],
     "description": "Published an onboarding version, recorded its native impression/step/completion events and verified the filtered UI reports one complete journey and the matching step.",
-    "source_test": "apps/site/e2e/tests/settings/experience-native.spec.ts",
+    "source_test": "tests/e2e/site/settings/experience-native.spec.ts",
     "captured_at": "2026-09-07T11:17:31.363Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -817,7 +817,7 @@
     "type": "browser",
     "data_ids": [],
     "description": "Rejected an SDK event claiming to be a verified purchase, confirmed the financial register remained unchanged and verified its resulting UI state; no externally verified purchase was invented.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-final.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-final.spec.ts",
     "captured_at": "2026-09-07T11:31:57.331Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -832,7 +832,7 @@
       "e118afe1-7a91-4732-97be-e0610cb40ec4"
     ],
     "description": "Created a paywall in the browser, added a spacer in the visual editor, saved an immutable version, published it and reopened the persisted version.",
-    "source_test": "apps/site/e2e/tests/settings/experience-native.spec.ts",
+    "source_test": "tests/e2e/site/settings/experience-native.spec.ts",
     "captured_at": "2026-09-07T11:40:23.881Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -849,7 +849,7 @@
       "f206d52d-7fd7-4369-a8a7-b164886c169f"
     ],
     "description": "Recorded and replayed the same native paywall view, verified deduplication, and filtered its browser statistics by version and platform (iOS1, Android0).",
-    "source_test": "apps/site/e2e/tests/settings/experience-native.spec.ts",
+    "source_test": "tests/e2e/site/settings/experience-native.spec.ts",
     "captured_at": "2026-09-07T11:40:25.444Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   }

@@ -8,10 +8,10 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'models.dart';
 
-typedef OpenGrowIdentityTokenProvider = Future<String> Function();
+typedef SuperBoardIdentityTokenProvider = Future<String> Function();
 
-class OpenGrowMessagingException implements Exception {
-  const OpenGrowMessagingException(
+class SuperBoardMessagingException implements Exception {
+  const SuperBoardMessagingException(
     this.code,
     this.message, {
     this.retryable = false,
@@ -24,15 +24,15 @@ class OpenGrowMessagingException implements Exception {
   final int? statusCode;
 
   @override
-  String toString() => 'OpenGrowMessagingException($code, $message)';
+  String toString() => 'SuperBoardMessagingException($code, $message)';
 }
 
-class OpenGrowMessagingClient {
-  OpenGrowMessagingClient({
+class SuperBoardMessagingClient {
+  SuperBoardMessagingClient({
     required Uri baseUri,
     required int projectId,
     required String identityToken,
-    OpenGrowIdentityTokenProvider? identityTokenProvider,
+    SuperBoardIdentityTokenProvider? identityTokenProvider,
     http.Client? httpClient,
     Duration requestTimeout = const Duration(seconds: 15),
   }) : _baseUri = baseUri,
@@ -68,7 +68,7 @@ class OpenGrowMessagingClient {
   final Uri _baseUri;
   final int _projectId;
   String _identityToken;
-  final OpenGrowIdentityTokenProvider? _identityTokenProvider;
+  final SuperBoardIdentityTokenProvider? _identityTokenProvider;
   final Duration _requestTimeout;
   final http.Client _http;
   Future<String>? _refreshFuture;
@@ -86,7 +86,7 @@ class OpenGrowMessagingClient {
 
   Map<String, String> get _headers => {
     'Authorization': 'Bearer $_identityToken',
-    'X-OpenGrow-Project-Id': '$_projectId',
+    'X-SuperBoard-Project-Id': '$_projectId',
     'Content-Type': 'application/json',
   };
 
@@ -97,7 +97,7 @@ class OpenGrowMessagingClient {
     final payload = _payload(response);
     final data = payload['data'];
     if (data is! Map<String, dynamic>) {
-      throw const OpenGrowMessagingException(
+      throw const SuperBoardMessagingException(
         'configuration_response_invalid',
         'Messaging returned an invalid configuration response',
       );
@@ -105,7 +105,7 @@ class OpenGrowMessagingClient {
     return data;
   }
 
-  Future<OpenGrowConversation> createConversation({
+  Future<SuperBoardConversation> createConversation({
     required String clientConversationId,
     String? subject,
     String? inboxId,
@@ -124,24 +124,25 @@ class OpenGrowMessagingClient {
       ),
     );
     final payload = _payload(response);
-    return OpenGrowConversation.fromJson(
+    return SuperBoardConversation.fromJson(
       payload['data'] as Map<String, dynamic>,
     );
   }
 
-  Future<List<OpenGrowConversation>> conversations() async {
+  Future<List<SuperBoardConversation>> conversations() async {
     final response = await _authorized(
       (headers) => _http.get(_url('/v1/conversations'), headers: headers),
     );
     final payload = _payload(response);
     return (payload['data'] as List<dynamic>? ?? const [])
         .map(
-          (item) => OpenGrowConversation.fromJson(item as Map<String, dynamic>),
+          (item) =>
+              SuperBoardConversation.fromJson(item as Map<String, dynamic>),
         )
         .toList(growable: false);
   }
 
-  Future<OpenGrowConversation> updateConversation(
+  Future<SuperBoardConversation> updateConversation(
     String conversationId, {
     String? status,
     Map<String, dynamic>? customAttributes,
@@ -157,12 +158,12 @@ class OpenGrowMessagingClient {
       ),
     );
     final payload = _payload(response);
-    return OpenGrowConversation.fromJson(
+    return SuperBoardConversation.fromJson(
       payload['data'] as Map<String, dynamic>,
     );
   }
 
-  Future<List<OpenGrowMessage>> messages(
+  Future<List<SuperBoardMessage>> messages(
     String conversationId, {
     int? beforeSequence,
     int limit = 50,
@@ -179,11 +180,11 @@ class OpenGrowMessagingClient {
     );
     final payload = _payload(response);
     return (payload['data'] as List<dynamic>? ?? const [])
-        .map((item) => OpenGrowMessage.fromJson(item as Map<String, dynamic>))
+        .map((item) => SuperBoardMessage.fromJson(item as Map<String, dynamic>))
         .toList(growable: false);
   }
 
-  Future<OpenGrowMessage> sendMessage(
+  Future<SuperBoardMessage> sendMessage(
     String conversationId, {
     required String body,
     required String clientMessageId,
@@ -199,7 +200,7 @@ class OpenGrowMessagingClient {
     metadata: metadata,
   );
 
-  Future<OpenGrowMessage> sendAttachment(
+  Future<SuperBoardMessage> sendAttachment(
     String conversationId, {
     required String attachmentKey,
     required String attachmentName,
@@ -215,7 +216,7 @@ class OpenGrowMessagingClient {
     attachmentContentType: attachmentContentType,
   );
 
-  Future<OpenGrowMessage> _sendMessage(
+  Future<SuperBoardMessage> _sendMessage(
     String conversationId, {
     required String clientMessageId,
     String? body,
@@ -246,7 +247,7 @@ class OpenGrowMessagingClient {
       ),
     );
     final payload = _payload(response);
-    return OpenGrowMessage.fromJson(payload['data'] as Map<String, dynamic>);
+    return SuperBoardMessage.fromJson(payload['data'] as Map<String, dynamic>);
   }
 
   Future<Map<String, dynamic>> submitCsat(
@@ -275,7 +276,7 @@ class OpenGrowMessagingClient {
     required String contentType,
   }) async {
     if (bytes.isEmpty || bytes.length > maxAttachmentBytes) {
-      throw const OpenGrowMessagingException(
+      throw const SuperBoardMessagingException(
         'attachment_invalid',
         'Attachment must contain between 1 byte and 10 MB',
       );
@@ -313,7 +314,7 @@ class OpenGrowMessagingClient {
       _payload(response);
     }
     if (response.bodyBytes.length > maxAttachmentBytes) {
-      throw const OpenGrowMessagingException(
+      throw const SuperBoardMessagingException(
         'attachment_response_too_large',
         'Attachment response exceeds 10 MB',
       );
@@ -364,7 +365,7 @@ class OpenGrowMessagingClient {
       uri,
       headers: {
         'Authorization': 'Bearer $_identityToken',
-        'X-OpenGrow-Project-Id': '$_projectId',
+        'X-SuperBoard-Project-Id': '$_projectId',
       },
       pingInterval: const Duration(seconds: 30),
       connectTimeout: const Duration(seconds: 10),
@@ -398,15 +399,15 @@ class OpenGrowMessagingClient {
     try {
       return await request(_headers).timeout(_requestTimeout);
     } on TimeoutException {
-      throw const OpenGrowMessagingException(
+      throw const SuperBoardMessagingException(
         'request_timeout',
         'Messaging request timed out',
         retryable: true,
       );
-    } on OpenGrowMessagingException {
+    } on SuperBoardMessagingException {
       rethrow;
     } catch (_) {
-      throw const OpenGrowMessagingException(
+      throw const SuperBoardMessagingException(
         'request_unavailable',
         'Messaging is temporarily unavailable',
         retryable: true,
@@ -428,7 +429,7 @@ class OpenGrowMessagingClient {
   Future<void> _refreshIdentityToken() async {
     final provider = _identityTokenProvider;
     if (provider == null) {
-      throw const OpenGrowMessagingException(
+      throw const SuperBoardMessagingException(
         'identity_refresh_unavailable',
         'Identity token refresh is not configured',
       );
@@ -454,7 +455,7 @@ class OpenGrowMessagingClient {
           ? <String, dynamic>{}
           : decodeObject(response.body);
     } catch (_) {
-      throw OpenGrowMessagingException(
+      throw SuperBoardMessagingException(
         'response_invalid',
         'Messaging returned an invalid response',
         retryable: response.statusCode >= 500,
@@ -462,7 +463,7 @@ class OpenGrowMessagingClient {
       );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw OpenGrowMessagingException(
+      throw SuperBoardMessagingException(
         decoded['code'] as String? ?? 'request_failed',
         decoded['message'] as String? ?? 'Messaging request failed',
         retryable: decoded['retryable'] == true,

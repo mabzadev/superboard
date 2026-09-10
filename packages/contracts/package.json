@@ -25,7 +25,6 @@
     "./flows": "./src/flows.ts",
     "./support": "./src/support.ts",
     "./support-notifications": "./src/support-notifications.ts",
-    "./fixtures/support/v1.json": "./fixtures/support/v1.json",
     "./billing-catalog": "./src/billing-catalog.ts",
     "./application-plugin-api": "./src/application-plugin-api.ts",
     "./plugin-api-owner": "./src/plugin-api-owner.ts",

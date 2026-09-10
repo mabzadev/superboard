@@ -13,11 +13,11 @@ current installation and Support API are documented in
 
 ## Historical installation
 
-Add the published FlutterFlow Support package `opengrow_flutterflow_messaging`
+Add the published FlutterFlow Support package `superboard_flutterflow_messaging`
 at the immutable release `sdk-flutterflow-messaging-v1.3.0`:
 
 ```yaml
-opengrow_flutterflow_messaging:
+superboard_flutterflow_messaging:
   git:
     url: https://github.com/mabzadev/superboard.git
     ref: sdk-flutterflow-messaging-v1.3.0

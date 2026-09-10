@@ -1,3 +1,9 @@
+## 4.0.0 (unreleased)
+
+- Use the SuperBoard entrypoints and types. Deprecated namespace aliases are removed.
+- Use the canonical native channels, HTTP headers, authentication endpoint and cache keys.
+- Rebuild native applications after upgrading; cached wrappers from earlier releases are not supported.
+
 ## 3.0.0
 
 - Added FlutterFlow actions and widgets for the native Flows SDK, including
@@ -11,6 +17,6 @@
   `SuperBoard*` / `superboard*`.
 - Moved Support and realtime onto the canonical `superboard_flutter` client;
   FlutterFlow now provides thin actions over that single implementation.
-- Added deprecated aliases for the 35 reviewed VocoStar OpenGrow functions and
+- Added deprecated aliases for the 35 reviewed VocoStar SuperBoard functions and
   the migration widget surface.
 - Added transactional secure-session key mirroring for the v2 rollback window.

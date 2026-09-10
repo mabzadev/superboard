@@ -64,16 +64,16 @@ workflows can create PRs but contain no approval or merge operation.
   image recipe, runtime variables and secret names are Git-managed.
 
 Billing and Support use separate execution boundaries. Support failures cannot
-grant, revoke, retry, or roll back an entitlement. Legacy Messaging is disabled
-on schema-v6 reference targets and exists only as a migration source.
+grant, revoke, retry, or roll back an entitlement. The legacy Messaging runtime is retired. Its database descriptors and SQL
+migrations remain available for importing older installations.
 
 ## Configuration generation
 
-Generate deployment configuration from the registered target. Do not hand-edit files under `deploy/generated`.
+Generate deployment configuration from the registered target. Do not hand-edit files under `infra/generated`.
 
 ```bash
 npm run cloudflare:config:api
-node scripts/cloudflare-config.mjs --service mcp --target <target> --environment <environment>
+node scripts/cloudflare/config.mjs --service mcp --target <target> --environment <environment>
 npm run cloudflare:config:dashboard
 npm run billing:types
 ```
@@ -112,7 +112,7 @@ npm run cloudflare:secrets:check -- \
 npm run typecheck
 npm run test
 npm run billing:check
-npm run legacy-messaging:check
+pnpm run workers:inventory
 npm run worker:check
 npm run mcp:check
 npm run dashboard:cf-build

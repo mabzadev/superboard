@@ -1,6 +1,6 @@
 Canonical Site API integration validation, 7 September 2026
 
-apps/site/runtime-tests/retirement-api-billing.runtime.test.ts
+tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts
 SHA-256: b8c193fa4f38c0efc78dddd8f567968a467a0a592267c7823ae62f74c39f9a64
 
 Grouped run: Products, Billing and Email (3 files, 3 tests passed).
@@ -24,7 +24,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "39099d04-e6d5-4029-aeb3-c60bfa3fd462",
       "070a287a-2fad-4ed2-b02f-5b015869c834"
@@ -37,7 +37,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "39099d04-e6d5-4029-aeb3-c60bfa3fd462"
     ]
@@ -49,7 +49,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "23e51f5a-95a6-4826-8496-9aa3a5e7612d"
     ]
@@ -61,7 +61,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "23e51f5a-95a6-4826-8496-9aa3a5e7612d"
     ]
@@ -73,7 +73,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "23e51f5a-95a6-4826-8496-9aa3a5e7612d"
     ]
@@ -85,7 +85,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "070a287a-2fad-4ed2-b02f-5b015869c834"
     ]
@@ -97,7 +97,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "c74275e4-030b-4abf-bef6-a9bfe57595f6"
     ]
@@ -109,7 +109,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "c74275e4-030b-4abf-bef6-a9bfe57595f6"
     ]
@@ -121,7 +121,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "1e7b2a19-9ae6-40e6-acc6-c4a6a81743b7"
     ]
@@ -133,7 +133,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "1e7b2a19-9ae6-40e6-acc6-c4a6a81743b7"
     ]
@@ -145,7 +145,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "1e7b2a19-9ae6-40e6-acc6-c4a6a81743b7"
     ]
@@ -157,7 +157,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "ffda907c-ecd7-4d33-aa61-4663c661f7de"
     ]
@@ -169,7 +169,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "23e51f5a-95a6-4826-8496-9aa3a5e7612d",
       "ffda907c-ecd7-4d33-aa61-4663c661f7de"

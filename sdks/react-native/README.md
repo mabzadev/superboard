@@ -56,7 +56,7 @@ registry anonymously installable: unauthenticated downloads are unsupported
 and return `401 Unauthorized`.
 
 Provide a GitHub token with `read:packages` only through
-`OPENGROW_GITHUB_PACKAGES_TOKEN`. Keep its value in the
+`SUPERBOARD_GITHUB_PACKAGES_TOKEN`. Keep its value in the
 developer shell or CI secret store; never commit the token to Git or write its
 value into a package-manager configuration file.
 
@@ -65,14 +65,14 @@ placeholder is safe to version; its resolved secret value is not:
 
 ```ini
 @mbzadev:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${OPENGROW_GITHUB_PACKAGES_TOKEN}
+//npm.pkg.github.com/:_authToken=${SUPERBOARD_GITHUB_PACKAGES_TOKEN}
 ```
 
 Install only after the secret environment variable is present:
 
 ```bash
-test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
-  && npm install @mbzadev/opengrow-react-native-sdk@1.0.2
+test -n "${SUPERBOARD_GITHUB_PACKAGES_TOKEN:-}" \
+  && npm install @mbzadev/superboard-react-native-sdk@1.0.2
 ```
 
 ### Android GitHub Packages registry
@@ -82,10 +82,10 @@ authenticated Maven registry. Add this contract to the React Native
 project `android/settings.gradle`:
 
 ```groovy
-def superBoardPackagesUser = System.getenv("OPENGROW_GITHUB_PACKAGES_USER")
-def superBoardPackagesToken = System.getenv("OPENGROW_GITHUB_PACKAGES_TOKEN")
+def superBoardPackagesUser = System.getenv("SUPERBOARD_GITHUB_PACKAGES_USER")
+def superBoardPackagesToken = System.getenv("SUPERBOARD_GITHUB_PACKAGES_TOKEN")
 if (!superBoardPackagesUser || !superBoardPackagesToken) {
-    throw new GradleException("OPENGROW_GITHUB_PACKAGES_USER and OPENGROW_GITHUB_PACKAGES_TOKEN are required")
+    throw new GradleException("SUPERBOARD_GITHUB_PACKAGES_USER and SUPERBOARD_GITHUB_PACKAGES_TOKEN are required")
 }
 
 dependencyResolutionManagement {
@@ -106,14 +106,14 @@ Then keep the exact native dependency in `android/app/build.gradle`
 (the SuperBoard config plugin inserts the same coordinate):
 
 ```groovy
-implementation("io.opengrow:opengrow-android-sdk:1.0.3")
+implementation("io.superboard:superboard-android-sdk:1.0.3")
 ```
 
 Before the Android build, require both Maven credentials:
 
 ```bash
-test -n "${OPENGROW_GITHUB_PACKAGES_USER:-}" \
-  && test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
+test -n "${SUPERBOARD_GITHUB_PACKAGES_USER:-}" \
+  && test -n "${SUPERBOARD_GITHUB_PACKAGES_TOKEN:-}" \
   && cd android && ./gradlew assemble
 ```
 
@@ -123,7 +123,7 @@ The React Native pod consumes the native SuperBoard podspec directly from its
 reviewed immutable Git tag; it does not claim a CocoaPods Trunk release:
 
 ```ruby
-pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mabzadev/superboard/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec'
+pod 'SuperBoard', :podspec => 'https://raw.githubusercontent.com/mabzadev/superboard/sdk-ios-v1.0.3/sdks/ios/SuperBoard.podspec'
 ```
 
 The URL is pinned to `sdk-ios-v1.0.3`. Run `pod install` after updating
@@ -137,25 +137,28 @@ If you're using Expo with a development build, the config plugin automates all n
 
 ```json
 {
-  "plugins": [
-    ["@mbzadev/opengrow-react-native-sdk", {
-      "apiKey": "your-api-key",
-      "scheme": "your_app_scheme",
-      "useTestEnvironment": false,
-      "associatedDomains": ["your_app_host", "your_app_test_host"],
-      "baseURL": "https://your-domain.com"
-    }]
-  ]
+	"plugins": [
+		[
+			"@mbzadev/superboard-react-native-sdk",
+			{
+				"apiKey": "your-api-key",
+				"scheme": "your_app_scheme",
+				"useTestEnvironment": false,
+				"associatedDomains": ["your_app_host", "your_app_test_host"],
+				"baseURL": "https://your-domain.com"
+			}
+		]
+	]
 }
 ```
 
-| Property | Required | Description |
-|---|---|---|
-| `apiKey` | Yes | Your SuperBoard API key |
-| `scheme` | Yes | Custom URL scheme for deep links |
-| `useTestEnvironment` | No | Use test environment (default: `false`) |
-| `associatedDomains` | No | Universal link domains for deep linking |
-| `baseURL` | No | Custom base URL for self-hosted backends |
+| Property             | Required | Description                              |
+| -------------------- | -------- | ---------------------------------------- |
+| `apiKey`             | Yes      | Your SuperBoard API key                  |
+| `scheme`             | Yes      | Custom URL scheme for deep links         |
+| `useTestEnvironment` | No       | Use test environment (default: `false`)  |
+| `associatedDomains`  | No       | Universal link domains for deep linking  |
+| `baseURL`            | No       | Custom base URL for self-hosted backends |
 
 Then run `npx expo prebuild` and build with `npx expo run:ios` / `npx expo run:android`.
 
@@ -170,9 +173,9 @@ Then run `npx expo prebuild` and build with `npx expo run:ios` / `npx expo run:a
 ```kotlin
 override fun onCreate() {
     super.onCreate()
-    OpenGrow.configure(this, "your-api-key", useTestEnvironment = false)
+    SuperBoard.configure(this, "your-api-key", useTestEnvironment = false)
     // Optional: use a custom base URL for self-hosted backends
-    // OpenGrow.configure(this, "your-api-key", useTestEnvironment = false, baseURL = "https://your-domain.com")
+    // SuperBoard.configure(this, "your-api-key", useTestEnvironment = false, baseURL = "https://your-domain.com")
 }
 ```
 
@@ -181,12 +184,12 @@ override fun onCreate() {
 ```kotlin
 override fun onStart() {
     super.onStart()
-    OpenGrow.onStart(this)
+    SuperBoard.onStart(this)
 }
 
 override fun onNewIntent(intent: Intent?) {
     super.onNewIntent(intent)
-    OpenGrow.onNewIntent(intent, this)
+    SuperBoard.onNewIntent(intent, this)
 }
 ```
 
@@ -223,17 +226,17 @@ override fun onNewIntent(intent: Intent?) {
 **1. Initialize the SDK** in `AppDelegate.swift`:
 
 ```swift
-import OpenGrow
+import SuperBoard
 
 func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    OpenGrow.configure(APIKey: "your-api-key", useTestEnvironment: false, delegate: self)
+    SuperBoard.configure(APIKey: "your-api-key", useTestEnvironment: false, delegate: self)
     // Optional: use a custom base URL for self-hosted backends
-    // OpenGrow.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "https://your-domain.com", delegate: self)
-    OpenGrow.setDebug(level: .info)
+    // SuperBoard.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "https://your-domain.com", delegate: self)
+    SuperBoard.setDebug(level: .info)
     return true
 }
 
-func opengrowReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tracking: [String: Any]?) {
+func superboardReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tracking: [String: Any]?) {
     // Native delegate callback
 }
 ```
@@ -242,11 +245,11 @@ func opengrowReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?,
 
 ```swift
 func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-    return OpenGrow.handleAppDelegate(continue: userActivity, restorationHandler: restorationHandler)
+    return SuperBoard.handleAppDelegate(continue: userActivity, restorationHandler: restorationHandler)
 }
 
 func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-    return OpenGrow.handleAppDelegate(open: url, options: options)
+    return SuperBoard.handleAppDelegate(open: url, options: options)
 }
 ```
 
@@ -266,16 +269,16 @@ func application(_ app: UIApplication, open url: URL, options: [UIApplication.Op
 ### Handle deep links
 
 ```typescript
-import SuperBoard from '@mbzadev/opengrow-react-native-sdk';
+import SuperBoard from "@mbzadev/superboard-react-native-sdk";
 
 const listener = SuperBoard.onDeeplinkReceived((response) => {
-    console.log('Link:', response.link);
-    console.log('Data:', response.data);
+	console.log("Link:", response.link);
+	console.log("Data:", response.data);
 
-    // Route the user based on payload
-    if (response.data?.screen === 'product') {
-        navigation.navigate('Product', { id: response.data.productId });
-    }
+	// Route the user based on payload
+	if (response.data?.screen === "product") {
+		navigation.navigate("Product", { id: response.data.productId });
+	}
 });
 
 // When you no longer need the listener
@@ -285,10 +288,10 @@ listener.remove();
 ### Set user identity
 
 ```typescript
-SuperBoard.setIdentifier('user-123');
+SuperBoard.setIdentifier("user-123");
 SuperBoard.setAttributes({
-    name: 'John Doe',
-    plan: 'premium',
+	name: "John Doe",
+	plan: "premium",
 });
 ```
 
@@ -298,31 +301,34 @@ Create smart links with metadata, payload data, and tracking parameters:
 
 ```typescript
 try {
-    const link = await SuperBoard.generateLink(
-        'Check out this product',           // title
-        'Limited time offer',               // subtitle
-        'https://example.com/image.jpg',    // imageURL
-        {                                   // data
-            productId: '12345',
-            screen: 'product_detail',
-        },
-        ['promotion', 'share'],             // tags
-        {                                   // customRedirects
-            android: { link: 'https://example.com/android', open_if_app_installed: true },
-            ios: { link: 'https://example.com/ios', open_if_app_installed: true },
-            desktop: { link: 'https://example.com/desktop', open_if_app_installed: false },
-        },
-        false,                              // showPreviewIos
-        false,                              // showPreviewAndroid
-        {                                   // tracking
-            utm_campaign: 'spring_sale',
-            utm_source: 'in_app',
-            utm_medium: 'share_button',
-        }
-    );
-    console.log('Generated:', link);
+	const link = await SuperBoard.generateLink(
+		"Check out this product", // title
+		"Limited time offer", // subtitle
+		"https://example.com/image.jpg", // imageURL
+		{
+			// data
+			productId: "12345",
+			screen: "product_detail",
+		},
+		["promotion", "share"], // tags
+		{
+			// customRedirects
+			android: { link: "https://example.com/android", open_if_app_installed: true },
+			ios: { link: "https://example.com/ios", open_if_app_installed: true },
+			desktop: { link: "https://example.com/desktop", open_if_app_installed: false },
+		},
+		false, // showPreviewIos
+		false, // showPreviewAndroid
+		{
+			// tracking
+			utm_campaign: "spring_sale",
+			utm_source: "in_app",
+			utm_medium: "share_button",
+		},
+	);
+	console.log("Generated:", link);
 } catch (error) {
-    console.error('Error:', error);
+	console.error("Error:", error);
 }
 ```
 
@@ -335,11 +341,11 @@ try {
 Pass the FCM token to receive push notifications for dashboard-sent messages:
 
 ```typescript
-import messaging from '@react-native-firebase/messaging';
+import messaging from "@react-native-firebase/messaging";
 
 const token = await messaging().getToken();
 if (token) {
-    SuperBoard.setPushToken(token);
+	SuperBoard.setPushToken(token);
 }
 ```
 
@@ -381,10 +387,10 @@ const success = await SuperBoard.logInAppPurchase(transactionId);
 
 ```typescript
 const success = await SuperBoard.logCustomPurchase(
-    'buy',              // type: 'buy' | 'cancel' | 'refund'
-    999,                // priceInCents: $9.99
-    'USD',              // currency code
-    'premium_monthly',  // product identifier
+	"buy", // type: 'buy' | 'cancel' | 'refund'
+	999, // priceInCents: $9.99
+	"USD", // currency code
+	"premium_monthly", // product identifier
 );
 ```
 
@@ -394,19 +400,19 @@ Use `'cancel'` and `'refund'` types for cancellations and refunds. For store pur
 
 ### Key Methods
 
-| Method | Description |
-|---|---|
-| `onDeeplinkReceived(callback)` | Register deep link listener (returns `{ remove }`) |
-| `setSDK(enabled)` | Enable or disable the SDK |
-| `setDebug(level)` | Set logging level (`'info'`, `'error'`) |
-| `setPushToken(token)` | Set FCM/APNs push token |
-| `setIdentifier(identifier)` | Set user ID for dashboard and reports |
-| `setAttributes(attributes)` | Set user attributes for analytics |
-| `generateLink(title, subtitle, imageURL, data, tags, customRedirects, showPreviewIos, showPreviewAndroid, tracking)` | Generate a smart link |
-| `displayMessages()` | Show messages modal |
-| `numberOfUnreadMessages()` | Get unread message count |
-| `logInAppPurchase(transactionId)` | Log a store purchase |
-| `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
+| Method                                                                                                               | Description                                        |
+| -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `onDeeplinkReceived(callback)`                                                                                       | Register deep link listener (returns `{ remove }`) |
+| `setSDK(enabled)`                                                                                                    | Enable or disable the SDK                          |
+| `setDebug(level)`                                                                                                    | Set logging level (`'info'`, `'error'`)            |
+| `setPushToken(token)`                                                                                                | Set FCM/APNs push token                            |
+| `setIdentifier(identifier)`                                                                                          | Set user ID for dashboard and reports              |
+| `setAttributes(attributes)`                                                                                          | Set user attributes for analytics                  |
+| `generateLink(title, subtitle, imageURL, data, tags, customRedirects, showPreviewIos, showPreviewAndroid, tracking)` | Generate a smart link                              |
+| `displayMessages()`                                                                                                  | Show messages modal                                |
+| `numberOfUnreadMessages()`                                                                                           | Get unread message count                           |
+| `logInAppPurchase(transactionId)`                                                                                    | Log a store purchase                               |
+| `logCustomPurchase(type, priceInCents, currency, productId, startDate)`                                              | Log a custom purchase                              |
 
 Full API reference: [React Native SDK API reference](https://github.com/mabzadev/superboard/tree/dev/sdks/react-native#api-reference)
 

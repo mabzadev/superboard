@@ -8,6 +8,7 @@
 		"declarationMap": true,
 		"sourceMap": true,
 		"outDir": "dist",
+		"rootDir": "../..",
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"noUncheckedIndexedAccess": true,
@@ -16,6 +17,6 @@
 		"verbatimModuleSyntax": true,
 		"resolveJsonModule": true
 	},
-	"include": ["src/**/*", "test/**/*"],
+	"include": ["src/**/*", "../../tests/checks/packages/contentful-to-portable-text/**/*"],
 	"exclude": ["node_modules", "dist"]
 }

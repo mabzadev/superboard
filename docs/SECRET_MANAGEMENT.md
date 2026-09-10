@@ -72,7 +72,7 @@ toutes les applications :
   propres à l'application et sont classés
   `application-specific-operator-or-provider` ;
 - les capacités, bindings, D1, crons et fournisseurs propres à l'application
-  restent dans son manifest et son répertoire `workers/custom/<application>`.
+  restent dans son manifest et son répertoire `apps/<application>/worker`.
 
 Pour VocoStar, `custom-worker-internal-token` protège l'adaptateur. Les
 orchestrateurs de clonage vocal et de conversion sont des Service Bindings privés,
@@ -116,7 +116,7 @@ métier avec une seule autorité d'effet SMTP.
 Le gestionnaire peut utiliser cette convention sans l'exposer dans Git :
 
 ```text
-opengrow/
+superboard/
   <target>/
     <environment>/
       contracts/
@@ -155,7 +155,7 @@ Workers Cloudflare, pas au dépôt :
 
 - `development` sélectionne `mbza-development` et le compte Cloudflare MBZA ;
 - `production` sélectionne `vocostar` et le compte Cloudflare VocoStar ;
-- `config/cloudflare-deployments.json` permet à une même branche de sélectionner
+- `scripts/config/cloudflare-deployments.json` permet à une même branche de sélectionner
   plusieurs Environments et donc plusieurs comptes/applications ;
 - `SUPERBOARD_TARGET` est une variable d'Environment qui doit être strictement
   égale à la cible versionnée dans l'entrée de matrice correspondante ;
@@ -224,16 +224,16 @@ variable permanente à remplir ni un second secret partagé entre applications.
 
    ```json
    {
-     "contracts": {
-       "email-internal-token": {
-         "value": "<nouvelle-valeur>",
-         "previousValue": "<ancienne-valeur>"
-       },
-       "files-internal-token": {
-         "value": "<nouvelle-valeur>",
-         "previousValue": "<ancienne-valeur>"
-       }
-     }
+    "contracts": {
+      "email-internal-token": {
+        "value": "<nouvelle-valeur>",
+        "previousValue": "<ancienne-valeur>"
+      },
+      "files-internal-token": {
+        "value": "<nouvelle-valeur>",
+        "previousValue": "<ancienne-valeur>"
+      }
+    }
    }
    ```
 
@@ -341,7 +341,7 @@ Le contrôle distant par nom indique encore les valeurs manquantes suivantes :
 | Service         | Noms manquants                                                                                                                                                                          |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | API             | `EMAIL_INTERNAL_TOKEN`, `PUSH_PROCESS_KEY`, `IAP_PROCESS_KEY`, `ADMIN_API_KEY`, `MAINTENANCE_PROCESS_KEY`, `DIAGNOSTICS_API_KEY`, `OBSERVABILITY_INTERNAL_TOKEN`, `CUSTOM_WORKER_TOKEN` |
-| Billing         | `STORE_CREDENTIALS_ACTIVE_KEY_VERSION`, `OPENGROW_ENTITLEMENT_WEBHOOK_SECRET`                                                                                                           |
+| Billing         | `STORE_CREDENTIALS_ACTIVE_KEY_VERSION`, `SUPERBOARD_ENTITLEMENT_WEBHOOK_SECRET`                                                                                                         |
 | Email           | `EMAIL_INTERNAL_TOKEN`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD`                                                                                     |
 | Identity        | `IDENTITY_KEYSET`, `EMAIL_INTERNAL_TOKEN`, `FILES_INTERNAL_TOKEN`                                                                                                                       |
 | Files           | `FILES_INTERNAL_TOKEN`, `FILES_DOWNLOAD_SIGNING_KEY`                                                                                                                                    |

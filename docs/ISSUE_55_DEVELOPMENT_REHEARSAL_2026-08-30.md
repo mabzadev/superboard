@@ -12,7 +12,7 @@ constitue aucune autorisation de mutation de `vocostar/production`.
 - L’inventaire paginé a couvert 46 ressources sans drift blocker.
 - Le bootstrap a créé les ressources Site D1/R2/KV et les ressources Support
   v2 D1/R2/Vectorize/Queues. Les quatre identifiants qui appartiennent au
-  manifeste sont enregistrés dans `deploy/targets/mbza-development.json`.
+  manifeste sont enregistrés dans `infra/targets/mbza-development.json`.
 - Treize D1 ont été exportés avant la première migration vers le répertoire
   protégé hors Git
   `/Users/appmonster/Workspace/.superboard-backups/issue-55-20260830`.
@@ -32,12 +32,12 @@ constitue aucune autorisation de mutation de `vocostar/production`.
 
 ## Smokes distants
 
-| Surface | Résultat observé |
-| --- | --- |
-| `https://site.mbza.dev/superboard-system/health` | `200` |
-| `https://site.mbza.dev/superboard-system/readiness` | `503`, aucune Release Front active |
-| `https://site.mbza.dev/` | `503`, maintenance fail-closed |
-| `https://site.mbza.dev/_emdash/admin` | session Opérateur SuperBoard vérifiée après magic link |
+| Surface                                             | Résultat observé                                       |
+| --------------------------------------------------- | ------------------------------------------------------ |
+| `https://site.mbza.dev/superboard-system/health`    | `200`                                                  |
+| `https://site.mbza.dev/superboard-system/readiness` | `503`, aucune Release Front active                     |
+| `https://site.mbza.dev/`                            | `503`, maintenance fail-closed                         |
+| `https://site.mbza.dev/_emdash/admin`               | session Opérateur SuperBoard vérifiée après magic link |
 
 Le Dashboard historique et ses domaines restent inchangés. Aucune cible
 `vocostar/production` n’a été lue ou mutée pendant ces opérations.
@@ -199,7 +199,7 @@ Après initialisation opérateur et satisfaction des gates Release Front, le Sit
 development se déploie sur son domaine de preview explicite avec :
 
 ```sh
-node scripts/cloudflare-deploy.mjs \
+node scripts/cloudflare/deploy.mjs \
   --target mbza-development \
   --environment development \
   --service site \

@@ -30,16 +30,16 @@ SuperBoard Flutter SDK for links, messaging, attribution, and purchases.
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'SuperBoard' => 'https://github.com/mabzadev/superboard' }
   s.source           = { :path => '.' }
-  # Embed the internal native SDK in the Flutter pod. EmbeddedOpenGrow contains
+  # Embed the internal native SDK in the Flutter pod. EmbeddedSuperBoard contains
   # repository-relative file symlinks to the canonical sdks/ios sources. Files,
   # rather than the directory itself, are linked because CocoaPods does not
   # recurse through a symlinked source directory. The monorepo Git tag therefore
   # remains self-contained without publishing the internal SDK to CocoaPods.
   s.source_files = [
     'Classes/**/*',
-    'EmbeddedOpenGrow/**/*.swift'
+    'EmbeddedSuperBoard/**/*.swift'
   ]
-  s.resources = 'EmbeddedOpenGrow/**/*.{xib}'
+  s.resources = 'EmbeddedSuperBoard/**/*.{xib}'
   s.dependency 'Flutter'
   s.platform = :ios, '13.0'
 

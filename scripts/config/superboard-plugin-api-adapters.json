@@ -1,0 +1,6675 @@
+{
+	"schema_version": 1,
+	"baseline_source_commit": "60ab8f5ed2aa04b171967cec3b656bfdd3f0f717",
+	"baseline_source_release_sha256": "aa19393f2ef868836334d65e1c9a46102d55f9c72a2175a14811a0d9df60b921",
+	"additional_contributions": [
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.command.migrate_products"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.data_source.migration_status"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.create_notification"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.notifications"
+		}
+	],
+	"adapters": [
+		{
+			"plugin_id": "supbrd-plug-audit",
+			"id": "supbrd-plug-audit.command.archive_ledger",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/_emdash/api/superboard/audit/archives",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "apps/site/src/lib/audit-plugin-api.ts",
+							"line": 9,
+							"symbol": "dispatchAuditPluginApi",
+							"expression": "resource === \"/archives\""
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-audit",
+			"id": "supbrd-plug-audit.command.verify_ledger",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/_emdash/api/superboard/audit/verify",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "apps/site/src/lib/audit-plugin-api.ts",
+							"line": 9,
+							"symbol": "dispatchAuditPluginApi",
+							"expression": "resource === \"/verify\""
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-audit",
+			"id": "supbrd-plug-audit.data_source.ledger",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/_emdash/api/superboard/audit/ledger",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/site/src/lib/audit-plugin-api.ts",
+							"line": 9,
+							"symbol": "dispatchAuditPluginApi",
+							"expression": "resource === \"/ledger\""
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-audit",
+			"id": "supbrd-plug-audit.data_source.ledger_search",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/_emdash/api/superboard/audit/ledger/search",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/site/src/lib/audit-plugin-api.ts",
+							"line": 9,
+							"symbol": "dispatchAuditPluginApi",
+							"expression": "resource === \"/ledger/search\""
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-audit",
+			"id": "supbrd-plug-audit.data_source.archives",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/_emdash/api/superboard/audit/archives",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/site/src/lib/audit-plugin-api.ts",
+							"line": 9,
+							"symbol": "dispatchAuditPluginApi",
+							"expression": "resource === \"/archives\""
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-content",
+			"id": "supbrd-plug-content.command.create_document",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/_emdash/api/content/:collection",
+					"parameters": ["collection"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/core/src/astro/routes/api/content/[collection]/index.ts",
+							"line": 41,
+							"symbol": "export const POST",
+							"expression": "export const POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-content",
+			"id": "supbrd-plug-content.command.update_document",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/_emdash/api/content/:collection/:id",
+					"parameters": ["collection", "id"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/core/src/astro/routes/api/content/[collection]/[id].ts",
+							"line": 66,
+							"symbol": "export const PUT",
+							"expression": "export const PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-content",
+			"id": "supbrd-plug-content.command.publish_document",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/_emdash/api/content/:collection/:id/publish",
+					"parameters": ["collection", "id"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/core/src/astro/routes/api/content/[collection]/[id]/publish.ts",
+							"line": 23,
+							"symbol": "export const POST",
+							"expression": "export const POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-content",
+			"id": "supbrd-plug-content.data_source.documents",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/_emdash/api/content/:collection",
+					"parameters": ["collection"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/core/src/astro/routes/api/content/[collection]/index.ts",
+							"line": 18,
+							"symbol": "export const GET",
+							"expression": "export const GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-content",
+			"id": "supbrd-plug-content.data_source.taxonomies",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/_emdash/api/taxonomies",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/core/src/astro/routes/api/taxonomies/index.ts",
+							"line": 21,
+							"symbol": "export const GET",
+							"expression": "export const GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-content",
+			"id": "supbrd-plug-content.data_source.revisions",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/_emdash/api/content/:collection/:id/revisions",
+					"parameters": ["collection", "id"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/core/src/astro/routes/api/content/[collection]/[id]/revisions.ts",
+							"line": 14,
+							"symbol": "export const GET",
+							"expression": "export const GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.create_product",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/products/projects/:projectRef/catalog/products",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 161,
+							"symbol": "createProduct",
+							"expression": "projectPath(projectRef, \"/catalog/products\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.update_product",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/products/projects/:projectRef/catalog/products/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 169,
+							"symbol": "updateProduct",
+							"expression": "projectPath(projectRef, `/catalog/products/${id}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.archive_product",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/products/projects/:projectRef/catalog/products/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 178,
+							"symbol": "archiveProduct",
+							"expression": "projectPath(projectRef, `/catalog/products/${id}`)",
+							"transport_method": "DELETE_REQUEST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.create_package",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/products/projects/:projectRef/packages",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 188,
+							"symbol": "createPackage",
+							"expression": "projectPath(projectRef, \"/packages\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.update_package",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/products/projects/:projectRef/packages/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 196,
+							"symbol": "updatePackage",
+							"expression": "projectPath(projectRef, `/packages/${id}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.archive_package",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/products/projects/:projectRef/packages/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 205,
+							"symbol": "archivePackage",
+							"expression": "projectPath(projectRef, `/packages/${id}`)",
+							"transport_method": "DELETE_REQUEST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.create_offering",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/products/projects/:projectRef/offerings",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 213,
+							"symbol": "createOffering",
+							"expression": "projectPath(projectRef, \"/offerings\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.update_offering",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/products/projects/:projectRef/offerings/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 221,
+							"symbol": "updateOffering",
+							"expression": "projectPath(projectRef, `/offerings/${id}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.archive_offering",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/products/projects/:projectRef/offerings/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 230,
+							"symbol": "archiveOffering",
+							"expression": "projectPath(projectRef, `/offerings/${id}`)",
+							"transport_method": "DELETE_REQUEST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.create_entitlement",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/products/projects/:projectRef/entitlements",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 240,
+							"symbol": "createEntitlement",
+							"expression": "projectPath(projectRef, \"/entitlements\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.update_entitlement",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/products/projects/:projectRef/entitlements/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 248,
+							"symbol": "updateEntitlement",
+							"expression": "projectPath(projectRef, `/entitlements/${id}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.archive_entitlement",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/products/projects/:projectRef/entitlements/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 257,
+							"symbol": "archiveEntitlement",
+							"expression": "projectPath(projectRef, `/entitlements/${id}`)",
+							"transport_method": "DELETE_REQUEST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.command.sync_store_catalog",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/products/projects/:projectRef/catalog/sync",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 375,
+							"symbol": "syncStoreCatalog",
+							"expression": "projectPath(projectRef, \"/catalog/sync\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.data_source.products",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/products/projects/:projectRef/catalog/products",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 156,
+							"symbol": "getProducts",
+							"expression": "projectPath(projectRef, \"/catalog/products\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.data_source.packages",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/products/projects/:projectRef/packages",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 183,
+							"symbol": "getPackages",
+							"expression": "projectPath(projectRef, \"/packages\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.data_source.offerings",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/products/projects/:projectRef/offerings",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 210,
+							"symbol": "getOfferings",
+							"expression": "projectPath(projectRef, \"/offerings\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.data_source.entitlements",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/products/projects/:projectRef/entitlements",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 235,
+							"symbol": "getEntitlements",
+							"expression": "projectPath(projectRef, \"/entitlements\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.data_source.product_statistics",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/products/projects/:projectRef/statistics",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 360,
+							"symbol": "getProductStatistics",
+							"expression": "`${projectPath(projectRef, \"/statistics\")}${productQuery(filters)}`",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"id": "supbrd-plug-products.data_source.store_sync_runs",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/products/projects/:projectRef/catalog/syncs",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/products/productsService.ts",
+							"line": 385,
+							"symbol": "getStoreSyncRuns",
+							"expression": "projectPath(projectRef, \"/catalog/syncs\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"id": "supbrd-plug-settings.command.update_effective_settings",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/_emdash/api/admin/plugins/supbrd-plug-settings/settings",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/core/src/astro/routes/api/admin/plugins/[id]/settings.ts",
+							"line": 53,
+							"symbol": "export const PUT",
+							"expression": "export const PUT"
+						}
+					],
+					"body_expression": "{ values: settings }"
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"id": "supbrd-plug-settings.command.save_sdk_configuration",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/app/projects/:projectRef/setup/:platform",
+					"parameters": ["projectRef", "platform"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/app/appService.ts",
+							"line": 25,
+							"symbol": "saveSdkConfiguration",
+							"expression": "path(projectRef,`/setup/${platform}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"id": "supbrd-plug-settings.command.test_sdk_configuration",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/app/projects/:projectRef/setup/:platform/test",
+					"parameters": ["projectRef", "platform"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/app/appService.ts",
+							"line": 26,
+							"symbol": "testSdkConfiguration",
+							"expression": "path(projectRef,`/setup/${platform}/test`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"id": "supbrd-plug-settings.data_source.effective_settings",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/_emdash/api/admin/plugins/supbrd-plug-settings/settings",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/core/src/astro/routes/api/admin/plugins/[id]/settings.ts",
+							"line": 27,
+							"symbol": "export const GET",
+							"expression": "export const GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"id": "supbrd-plug-settings.data_source.settings_versions",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/_emdash/api/superboard/settings/versions",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/site/src/lib/settings-plugin-api.ts",
+							"line": 6,
+							"symbol": "dispatchSettingsPluginApi",
+							"expression": "url.pathname === \"/_emdash/api/superboard/settings/versions\""
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"id": "supbrd-plug-settings.data_source.sdk_configurations",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/app/projects/:projectRef/setup/:platform",
+					"parameters": ["projectRef", "platform"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/app/appService.ts",
+							"line": 24,
+							"symbol": "getSdkConfiguration",
+							"expression": "path(projectRef,`/setup/${platform}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"id": "supbrd-plug-user.command.application_sign_in",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/application-identity/commands/application_sign_in",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/contracts/src/application-plugin-api.ts",
+							"line": 1,
+							"symbol": "APPLICATION_USER_ROUTES",
+							"expression": "application_sign_in"
+						},
+						{
+							"file": "packages/plugins/supbrd-plug-identity/worker/src/index.ts",
+							"line": 395,
+							"symbol": "applicationUserOperation",
+							"expression": "/internal/v1/application-plugin/:kind/:id"
+						}
+					]
+				}
+			],
+			"audience": "application_client"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"id": "supbrd-plug-user.command.update_profile",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/application-users/projects/:projectRef/profiles/:userId",
+					"parameters": ["projectRef", "userId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-identity/worker/src/user-administration.ts",
+							"line": 5,
+							"symbol": "userAdministration",
+							"expression": "userAdministration"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"id": "supbrd-plug-user.command.suspend_member",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/application-users/projects/:projectRef/profiles/:userId/suspend",
+					"parameters": ["projectRef", "userId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-identity/worker/src/user-administration.ts",
+							"line": 5,
+							"symbol": "userAdministration",
+							"expression": "userAdministration"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"id": "supbrd-plug-user.command.link_provider",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/application-identity/commands/link_provider",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/contracts/src/application-plugin-api.ts",
+							"line": 1,
+							"symbol": "APPLICATION_USER_ROUTES",
+							"expression": "link_provider"
+						},
+						{
+							"file": "packages/plugins/supbrd-plug-identity/worker/src/index.ts",
+							"line": 395,
+							"symbol": "applicationUserOperation",
+							"expression": "/internal/v1/application-plugin/:kind/:id"
+						}
+					]
+				}
+			],
+			"audience": "application_client"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"id": "supbrd-plug-user.command.revoke_application_session",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/application-identity/commands/revoke_application_session",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/contracts/src/application-plugin-api.ts",
+							"line": 1,
+							"symbol": "APPLICATION_USER_ROUTES",
+							"expression": "revoke_application_session"
+						},
+						{
+							"file": "packages/plugins/supbrd-plug-identity/worker/src/index.ts",
+							"line": 395,
+							"symbol": "applicationUserOperation",
+							"expression": "/internal/v1/application-plugin/:kind/:id"
+						}
+					]
+				}
+			],
+			"audience": "application_client"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"id": "supbrd-plug-user.data_source.current_profile",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/application-users/projects/:projectRef/profiles/:userId",
+					"parameters": ["projectRef", "userId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-identity/worker/src/user-administration.ts",
+							"line": 5,
+							"symbol": "userAdministration",
+							"expression": "userAdministration"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"id": "supbrd-plug-user.data_source.members",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/application-users/projects/:projectRef/members",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-identity/worker/src/user-administration.ts",
+							"line": 5,
+							"symbol": "userAdministration",
+							"expression": "userAdministration"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"id": "supbrd-plug-user.data_source.linked_providers",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/application-identity/data-sources/linked_providers",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/contracts/src/application-plugin-api.ts",
+							"line": 1,
+							"symbol": "APPLICATION_USER_ROUTES",
+							"expression": "linked_providers"
+						},
+						{
+							"file": "packages/plugins/supbrd-plug-identity/worker/src/index.ts",
+							"line": 395,
+							"symbol": "applicationUserOperation",
+							"expression": "/internal/v1/application-plugin/:kind/:id"
+						}
+					]
+				}
+			],
+			"audience": "application_client"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"id": "supbrd-plug-user.data_source.active_sessions",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/application-identity/data-sources/active_sessions",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/contracts/src/application-plugin-api.ts",
+							"line": 1,
+							"symbol": "APPLICATION_USER_ROUTES",
+							"expression": "active_sessions"
+						},
+						{
+							"file": "packages/plugins/supbrd-plug-identity/worker/src/index.ts",
+							"line": 395,
+							"symbol": "applicationUserOperation",
+							"expression": "/internal/v1/application-plugin/:kind/:id"
+						}
+					]
+				}
+			],
+			"audience": "application_client"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.create_analytics_report",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/analytics/projects/:projectRef/reports",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 445,
+							"symbol": "createAnalyticsReport",
+							"expression": "path(projectRef, \"/reports\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.update_analytics_report",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/analytics/projects/:projectRef/reports/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 454,
+							"symbol": "updateAnalyticsReport",
+							"expression": "path(projectRef, `/reports/${id}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.delete_analytics_report",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/analytics/projects/:projectRef/reports/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 464,
+							"symbol": "deleteAnalyticsReport",
+							"expression": "path(projectRef, `/reports/${id}`)",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.create_analytics_operation",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/analytics/projects/:projectRef/operations",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 476,
+							"symbol": "createAnalyticsOperation",
+							"expression": "path(projectRef, \"/operations\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.create_analytics_dashboard",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/analytics/projects/:projectRef/dashboards",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 518,
+							"symbol": "createAnalyticsDashboard",
+							"expression": "path(projectRef, \"/dashboards\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.update_analytics_dashboard",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/analytics/projects/:projectRef/dashboards/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 530,
+							"symbol": "updateAnalyticsDashboard",
+							"expression": "path(projectRef, `/dashboards/${id}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.delete_analytics_dashboard",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/analytics/projects/:projectRef/dashboards/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 542,
+							"symbol": "deleteAnalyticsDashboard",
+							"expression": "path(projectRef, `/dashboards/${id}`)",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.create_analytics_cohort",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/analytics/projects/:projectRef/cohorts",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 661,
+							"symbol": "createAnalyticsCohort",
+							"expression": "path(projectRef, \"/cohorts\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/analytics/projects/:projectRef/cohorts/:id/evaluate",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 675,
+							"symbol": "evaluateAnalyticsCohort",
+							"expression": "path(projectRef, `/cohorts/${id}/evaluate`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/analytics/projects/:projectRef/remote-config/:key",
+					"parameters": ["projectRef", "key"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 693,
+							"symbol": "upsertAnalyticsRemoteConfig",
+							"expression": "path(projectRef, `/remote-config/${encodeURIComponent(key)}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.create_analytics_alert",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/analytics/projects/:projectRef/alerts",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 732,
+							"symbol": "createAnalyticsAlert",
+							"expression": "path(projectRef, \"/alerts\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.command.update_analytics_settings",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/analytics/projects/:projectRef/settings",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 820,
+							"symbol": "updateAnalyticsSettings",
+							"expression": "path(projectRef, \"/settings\")",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_overview",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/overview",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 355,
+							"symbol": "getAnalyticsOverview",
+							"expression": "path(projectRef, `/overview${query(filters)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_events",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/events",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 364,
+							"symbol": "getAnalyticsEvents",
+							"expression": "path(projectRef, `/events${query(filters)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_event_analysis",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/events/analyze",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 377,
+							"symbol": "getAnalyticsEventAnalysis",
+							"expression": "path(projectRef, `/events/analyze${query(filters)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_installations",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/installations",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 386,
+							"symbol": "getAnalyticsInstallations",
+							"expression": "path(projectRef, `/installations${query(filters)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_purchases",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/purchases",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 395,
+							"symbol": "getAnalyticsPurchases",
+							"expression": "path(projectRef, `/purchases${query(filters)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_retention",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/retention",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 430,
+							"symbol": "getAnalyticsRetention",
+							"expression": "path(projectRef, `/retention${query(filters)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_reports",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/reports",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 439,
+							"symbol": "getAnalyticsReports",
+							"expression": "path(projectRef, \"/reports\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_dashboards",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/dashboards",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 506,
+							"symbol": "getAnalyticsDashboards",
+							"expression": "path(projectRef, \"/dashboards\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_sessions",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/sessions",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 573,
+							"symbol": "getAnalyticsSessions",
+							"expression": "path(projectRef, `/sessions${query(filters)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_profiles",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/profiles",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 582,
+							"symbol": "getAnalyticsProfiles",
+							"expression": "path(projectRef, \"/profiles\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_views",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/views",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 588,
+							"symbol": "getAnalyticsViews",
+							"expression": "path(projectRef, `/views${query(filters)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_dimensions",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/dimensions",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 597,
+							"symbol": "getAnalyticsDimensions",
+							"expression": "path(projectRef, `/dimensions${query(filters)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_crashes",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/crashes",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 608,
+							"symbol": "getAnalyticsCrashes",
+							"expression": "path(projectRef, `/crashes${query(filters)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_feedback",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/feedback",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 643,
+							"symbol": "getAnalyticsFeedback",
+							"expression": "path(projectRef, \"/feedback\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_cohorts",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/cohorts",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 655,
+							"symbol": "getAnalyticsCohorts",
+							"expression": "path(projectRef, \"/cohorts\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_remote_config",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/remote-config",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 687,
+							"symbol": "getAnalyticsRemoteConfig",
+							"expression": "path(projectRef, \"/remote-config\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_alerts",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/alerts",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 726,
+							"symbol": "getAnalyticsAlerts",
+							"expression": "path(projectRef, \"/alerts\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"id": "supbrd-plugmod-analytics.data_source.analytics_settings",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/analytics/projects/:projectRef/settings",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/analytics/analyticsService.ts",
+							"line": 816,
+							"symbol": "getAnalyticsSettings",
+							"expression": "path(projectRef, \"/settings\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.command.migrate_products",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/migrate-products",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 310,
+							"symbol": "migrateProductsLedger",
+							"expression": "projectPath(projectRef, \"/migrate-products\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.data_source.migration_status",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/migration/status",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 307,
+							"symbol": "getBillingMigrationStatus",
+							"expression": "projectPath(projectRef, \"/migration/status\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.command.create_purchase",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/purchases",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 225,
+							"symbol": "createPurchase",
+							"expression": "projectPath(projectRef, \"/purchases\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.command.create_refund",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/purchases/:purchaseId/refunds",
+					"parameters": ["projectRef", "purchaseId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 231,
+							"symbol": "createRefund",
+							"expression": "projectPath(projectRef, `/purchases/${purchaseId}/refunds`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.command.update_refund",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/refunds/:refundId",
+					"parameters": ["projectRef", "refundId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 241,
+							"symbol": "updateRefund",
+							"expression": "projectPath(projectRef, `/refunds/${refundId}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.command.update_subscription",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/subscriptions/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "input",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 264,
+							"symbol": "updateSubscription",
+							"expression": "projectPath(projectRef, `/subscriptions/${id}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.command.reconcile_store",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/reconcile",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/billing/billingService.ts",
+							"line": 879,
+							"symbol": "reconcileBillingStore",
+							"expression": "reconcileBillingStore",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.data_source.purchases",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/purchases",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 221,
+							"symbol": "getPurchases",
+							"expression": "`${projectPath(projectRef, \"/purchases\")}${query}`",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.data_source.purchase",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/purchases/:purchaseId",
+					"parameters": ["projectRef", "purchaseId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 228,
+							"symbol": "getPurchase",
+							"expression": "projectPath(projectRef, `/purchases/${purchaseId}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.data_source.refunds",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/refunds",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 238,
+							"symbol": "getRefunds",
+							"expression": "projectPath(projectRef, \"/refunds\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.data_source.subscriptions",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/subscriptions",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 256,
+							"symbol": "getSubscriptions",
+							"expression": "`${projectPath(projectRef, \"/subscriptions\")}${productQuery(filters)}`",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.data_source.financial_customer_entitlements",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/billing/projects/:projectRef/ledger/customers/:customerId/entitlements",
+					"parameters": ["projectRef", "customerId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"line": 248,
+							"symbol": "getFinancialCustomerEntitlements",
+							"expression": "projectPath( projectRef, `/customers/${encodeURIComponent(customerId)}/entitlements` )",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"id": "supbrd-plugmod-billing.data_source.billing_ledger",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/billing/projects/:projectRef/ledger",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/billing/billingService.ts",
+							"line": 882,
+							"symbol": "getBillingLedger",
+							"expression": "getBillingLedger",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.create_link",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/links",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 182,
+							"symbol": "createLink",
+							"expression": "path(projectRef, \"/links\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.update_link",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/links/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 195,
+							"symbol": "updateLink",
+							"expression": "path(projectRef, `/links/${id}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.delete_link",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/links/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 191,
+							"symbol": "deleteLink",
+							"expression": "path(projectRef, `/links/${id}`)",
+							"transport_method": "DELETE_REQUEST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.create_link_campaign",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/campaigns",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 235,
+							"symbol": "createLinkCampaign",
+							"expression": "path(projectRef, \"/campaigns\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.delete_link_campaign",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/campaigns/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 244,
+							"symbol": "deleteLinkCampaign",
+							"expression": "path(projectRef, `/campaigns/${id}`)",
+							"transport_method": "DELETE_REQUEST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.create_redirect_rule",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/redirect-rules",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 254,
+							"symbol": "createRedirectRule",
+							"expression": "path(projectRef, \"/redirect-rules\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.update_redirect_rule",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/redirect-rules/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 263,
+							"symbol": "updateRedirectRule",
+							"expression": "path(projectRef, `/redirect-rules/${id}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/redirect-rules/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 273,
+							"symbol": "deleteRedirectRule",
+							"expression": "path(projectRef, `/redirect-rules/${id}`)",
+							"transport_method": "DELETE_REQUEST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.create_domain",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/domains",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 283,
+							"symbol": "createDomain",
+							"expression": "path(projectRef, \"/domains\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.verify_domain",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/domains/:id/verify",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{ verified }",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 292,
+							"symbol": "verifyDomain",
+							"expression": "path(projectRef, `/domains/${id}/verify`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.delete_domain",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/domains/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 302,
+							"symbol": "deleteDomain",
+							"expression": "path(projectRef, `/domains/${id}`)",
+							"transport_method": "DELETE_REQUEST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.save_social_preview",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/social-preview",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 315,
+							"symbol": "saveSocialPreview",
+							"expression": "path(projectRef, \"/social-preview\")",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.command.save_tracking",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/tracking",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 326,
+							"symbol": "saveTracking",
+							"expression": "path(projectRef, \"/tracking\")",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.data_source.links",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/links",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 160,
+							"symbol": "getLinks",
+							"expression": "path( projectRef, withQuery(\"/links\", { search: search || undefined, active: active === undefined ? undefined : String(active), from: filters.from, to: filters.to, platform: filters.platform, }), )",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.data_source.resolved_link",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/links/:slug/resolve",
+					"parameters": ["projectRef", "slug"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{ platform }",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 205,
+							"symbol": "resolveLink",
+							"expression": "path(projectRef, `/links/${slug}/resolve`)",
+							"transport_method": "POST"
+						},
+						{
+							"file": "packages/plugins/supbrd-plug-communication/dynamic-links/src/index.ts",
+							"line": 252,
+							"symbol": "app.post",
+							"expression": "app.post(\"/internal/v1/links/:slug/resolve\""
+						}
+					],
+					"read_only": true
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.data_source.link_campaigns",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/campaigns",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 215,
+							"symbol": "getLinkCampaigns",
+							"expression": "path(projectRef, \"/campaigns\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/campaign-analytics",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/dynamic-links/src/index.ts",
+							"line": 653,
+							"symbol": "app.get",
+							"expression": "app.get(\"/internal/v1/campaign-analytics\"",
+							"path_fragment": "/campaign-analytics"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.data_source.redirect_rules",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/redirect-rules",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 248,
+							"symbol": "getRedirectRules",
+							"expression": "path(projectRef, \"/redirect-rules\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.data_source.domains",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/domains",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 279,
+							"symbol": "getDomains",
+							"expression": "path(projectRef, \"/domains\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.data_source.social_preview",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/social-preview",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 306,
+							"symbol": "getSocialPreview",
+							"expression": "path(projectRef, \"/social-preview\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.data_source.tracking",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/tracking",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 322,
+							"symbol": "getTracking",
+							"expression": "path(projectRef, \"/tracking\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"id": "supbrd-plugmod-dynamic-links.data_source.link_statistics",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/dynamic-links/projects/:projectRef/statistics",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+							"line": 333,
+							"symbol": "getLinkStatistics",
+							"expression": "path( projectRef, withQuery(\"/statistics\", { from: filters.from, to: filters.to, timezone: filters.timezone, interval: filters.interval, platform: filters.platform, campaign_id: filters.campaign_id, }), )",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.command.send_transactional_email",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/email/projects/:projectRef/transactional",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 72,
+							"symbol": "sendTransactionalEmail",
+							"expression": "path(projectRef, \"/transactional\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.command.save_smtp_settings",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/email/projects/:projectRef/settings/smtp",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 85,
+							"symbol": "saveSmtpSettings",
+							"expression": "path(projectRef, \"/settings/smtp\")",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.command.delete_smtp_settings",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/email/projects/:projectRef/settings/smtp/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 94,
+							"symbol": "deleteSmtpSettings",
+							"expression": "path(projectRef, `/settings/smtp/${id}`)",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.command.test_smtp_settings",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/email/projects/:projectRef/settings/smtp/test",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{ profile_id: profileId, recipient, }",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 98,
+							"symbol": "testSmtpSettings",
+							"expression": "path(projectRef, \"/settings/smtp/test\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.command.verify_smtp_domain",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/email/projects/:projectRef/settings/smtp/:profileId/verify-domain",
+					"parameters": ["projectRef", "profileId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 111,
+							"symbol": "verifySmtpDomain",
+							"expression": "path(projectRef, `/settings/smtp/${profileId}/verify-domain`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.command.retry_delivery_outbox",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/email/projects/:projectRef/settings/delivery-outbox/:id/retry",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 155,
+							"symbol": "retryDeliveryOutbox",
+							"expression": "path(projectRef, `/settings/delivery-outbox/${id}/retry`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.command.replay_dead_letter",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/email/projects/:projectRef/settings/dead-letters/:id/replay",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 167,
+							"symbol": "replayEmailDeadLetter",
+							"expression": "path(projectRef, `/settings/dead-letters/${id}/replay`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.command.discard_dead_letter",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/email/projects/:projectRef/settings/dead-letters/:id/discard",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 176,
+							"symbol": "discardEmailDeadLetter",
+							"expression": "path(projectRef, `/settings/dead-letters/${id}/discard`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.data_source.smtp_settings",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/email/projects/:projectRef/settings/smtp",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 81,
+							"symbol": "getSmtpSettings",
+							"expression": "path(projectRef, \"/settings/smtp\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.data_source.delivery_outbox",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/email/projects/:projectRef/settings/delivery-outbox",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 149,
+							"symbol": "getDeliveryOutbox",
+							"expression": "path(projectRef, \"/settings/delivery-outbox\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.data_source.dead_letters",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/email/projects/:projectRef/settings/dead-letters",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 161,
+							"symbol": "getEmailDeadLetters",
+							"expression": "path(projectRef, \"/settings/dead-letters\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.data_source.provider_webhooks",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/email/projects/:projectRef/settings/provider-webhooks",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 128,
+							"symbol": "getProviderWebhooks",
+							"expression": "path(projectRef, \"/settings/provider-webhooks\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"id": "supbrd-plugmod-email.data_source.provider_events",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/email/projects/:projectRef/provider-events",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"line": 184,
+							"symbol": "getProviderEvents",
+							"expression": "path(projectRef, \"/provider-events\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-files",
+			"id": "supbrd-plugmod-files.command.create_upload_ticket",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/files/projects/:projectRef/upload-tickets",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"line": 15,
+							"symbol": "handleOperatorFiles",
+							"expression": "handleOperatorFiles"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-files",
+			"id": "supbrd-plugmod-files.command.complete_upload",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/files/projects/:projectRef/upload-tickets/:ticketId/complete",
+					"parameters": ["projectRef", "ticketId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"line": 15,
+							"symbol": "handleOperatorFiles",
+							"expression": "handleOperatorFiles"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-files",
+			"id": "supbrd-plugmod-files.command.delete_object",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/files/projects/:projectRef/objects/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"line": 15,
+							"symbol": "handleOperatorFiles",
+							"expression": "handleOperatorFiles"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-files",
+			"id": "supbrd-plugmod-files.command.collect_garbage",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/files/projects/:projectRef/collect-garbage",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"line": 15,
+							"symbol": "handleOperatorFiles",
+							"expression": "handleOperatorFiles"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-files",
+			"id": "supbrd-plugmod-files.data_source.objects",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/files/projects/:projectRef/objects",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"line": 15,
+							"symbol": "handleOperatorFiles",
+							"expression": "handleOperatorFiles"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-files",
+			"id": "supbrd-plugmod-files.data_source.object_metadata",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/files/projects/:projectRef/objects/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"line": 15,
+							"symbol": "handleOperatorFiles",
+							"expression": "handleOperatorFiles"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-files",
+			"id": "supbrd-plugmod-files.data_source.download_ticket",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/files/projects/:projectRef/objects/:id/download-ticket",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"line": 15,
+							"symbol": "handleOperatorFiles",
+							"expression": "handleOperatorFiles"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-files",
+			"id": "supbrd-plugmod-files.data_source.storage_usage",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/files/projects/:projectRef/usage",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"line": 15,
+							"symbol": "handleOperatorFiles",
+							"expression": "handleOperatorFiles"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.command.create_workflow",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/flows/projects/:projectRef/workflows",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "body",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 257,
+							"symbol": "createWorkflow",
+							"expression": "projectPath(projectRef, \"/workflows\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.command.update_workflow",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/flows/projects/:projectRef/workflows/:workflowId",
+					"parameters": ["projectRef", "workflowId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "body",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 276,
+							"symbol": "updateWorkflow",
+							"expression": "projectPath(projectRef, `/workflows/${encodeURIComponent(workflowId)}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.command.publish_workflow",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/flows/projects/:projectRef/workflows/:workflowId/publish",
+					"parameters": ["projectRef", "workflowId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "body",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 310,
+							"symbol": "publishWorkflow",
+							"expression": "projectPath( projectRef, `/workflows/${encodeURIComponent(workflowId)}/publish` )",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.command.activate_version",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/flows/projects/:projectRef/workflows/:workflowId/releases",
+					"parameters": ["projectRef", "workflowId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "body",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 356,
+							"symbol": "activateRelease",
+							"expression": "projectPath( projectRef, `/workflows/${encodeURIComponent(workflowId)}/releases` )",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.command.create_environment",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/flows/projects/:projectRef/environments",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "body",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 586,
+							"symbol": "createEnvironment",
+							"expression": "projectPath(projectRef, \"/environments\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.command.rotate_environment_key",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/flows/projects/:projectRef/environments/:environmentId/rotate-key",
+					"parameters": ["projectRef", "environmentId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 593,
+							"symbol": "rotateEnvironmentKey",
+							"expression": "projectPath( projectRef, `/environments/${encodeURIComponent(environmentId)}/rotate-key` )",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.command.save_localization",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/flows/projects/:projectRef/localization",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "body",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 606,
+							"symbol": "saveLocalization",
+							"expression": "projectPath(projectRef, \"/localization\")",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.data_source.overview",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/flows/projects/:projectRef/overview",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 240,
+							"symbol": "overview",
+							"expression": "projectPath(projectRef, \"/overview\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.data_source.components",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/flows/projects/:projectRef/components",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 506,
+							"symbol": "listComponents",
+							"expression": "projectPath(projectRef, \"/components\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.data_source.workflows",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/flows/projects/:projectRef/workflows",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 242,
+							"symbol": "listWorkflows",
+							"expression": "projectPath(projectRef, `/workflows${query ? `?${query}` : \"\"}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.data_source.workflow",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/flows/projects/:projectRef/workflows/:workflowId",
+					"parameters": ["projectRef", "workflowId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 270,
+							"symbol": "getWorkflow",
+							"expression": "projectPath(projectRef, `/workflows/${encodeURIComponent(workflowId)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.data_source.environments",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/flows/projects/:projectRef/environments",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 582,
+							"symbol": "listEnvironments",
+							"expression": "projectPath(projectRef, \"/environments\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.data_source.localization",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/flows/projects/:projectRef/localization",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 602,
+							"symbol": "listLocalization",
+							"expression": "projectPath(projectRef, \"/localization\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.data_source.users",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/flows/projects/:projectRef/users",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 480,
+							"symbol": "listUsers",
+							"expression": "projectPath( projectRef, `/users${environmentId ? `?environment_id=${encodeURIComponent(environmentId)}` : \"\"}` )",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"id": "supbrd-plugmod-flows.data_source.user_details",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/flows/projects/:projectRef/users/:userHash",
+					"parameters": ["projectRef", "userHash"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/flows/flowsService.ts",
+							"line": 489,
+							"symbol": "getUser",
+							"expression": "projectPath(projectRef, `/users/${encodeURIComponent(userHash)}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-gateway",
+			"id": "supbrd-plugmod-gateway.command.publish_gateway_manifest",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/gateway/manifests",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"line": 24,
+							"symbol": "gatewayAdmin",
+							"expression": "gatewayAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-gateway",
+			"id": "supbrd-plugmod-gateway.command.update_gateway_route",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/gateway/routes/:id",
+					"parameters": ["id"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"line": 24,
+							"symbol": "gatewayAdmin",
+							"expression": "gatewayAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-gateway",
+			"id": "supbrd-plugmod-gateway.command.rotate_access_policy",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/gateway/access-policy",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"line": 24,
+							"symbol": "gatewayAdmin",
+							"expression": "gatewayAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-gateway",
+			"id": "supbrd-plugmod-gateway.data_source.active_gateway_manifest",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/gateway/active-manifest",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"line": 24,
+							"symbol": "gatewayAdmin",
+							"expression": "gatewayAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-gateway",
+			"id": "supbrd-plugmod-gateway.data_source.gateway_routes",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/gateway/routes",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"line": 24,
+							"symbol": "gatewayAdmin",
+							"expression": "gatewayAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-gateway",
+			"id": "supbrd-plugmod-gateway.data_source.rate_limits",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/gateway/rate-limits",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"line": 24,
+							"symbol": "gatewayAdmin",
+							"expression": "gatewayAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.create_email_campaign",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/marketing/projects/:projectRef/campaigns",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 413,
+							"symbol": "createEmailCampaign",
+							"expression": "path(projectRef, \"/campaigns\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.update_email_campaign",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PATCH",
+					"path": "/api/v1/marketing/projects/:projectRef/campaigns/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 421,
+							"symbol": "updateEmailCampaign",
+							"expression": "path(projectRef, `/campaigns/${id}`)",
+							"transport_method": "PATCH"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.transition_email_campaign",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/marketing/projects/:projectRef/campaigns/:id/:transition",
+					"parameters": ["projectRef", "id", "transition"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {
+						"transition": ["start", "pause", "resume", "cancel", "archive"]
+					},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 430,
+							"symbol": "transitionEmailCampaign",
+							"expression": "path(projectRef, `/campaigns/${id}/${transition}`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.schedule_email_campaign",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/marketing/projects/:projectRef/campaigns/:id/schedule",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{ scheduled_at: scheduledAt, }",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 440,
+							"symbol": "scheduleEmailCampaign",
+							"expression": "path(projectRef, `/campaigns/${id}/schedule`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.create_marketing_journey",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/marketing/projects/:projectRef/journeys",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 595,
+							"symbol": "createMarketingJourney",
+							"expression": "path(projectRef, \"/journeys\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.update_marketing_journey",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PATCH",
+					"path": "/api/v1/marketing/projects/:projectRef/journeys/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 604,
+							"symbol": "updateMarketingJourney",
+							"expression": "path(projectRef, `/journeys/${id}`)",
+							"transport_method": "PATCH"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.transition_marketing_journey",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/marketing/projects/:projectRef/journeys/:id/:transition",
+					"parameters": ["projectRef", "id", "transition"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {
+						"transition": ["activate", "pause", "resume", "archive"]
+					},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 614,
+							"symbol": "transitionMarketingJourney",
+							"expression": "path(projectRef, `/journeys/${id}/${transition}`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.create_marketing_channel_connector",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/marketing/projects/:projectRef/channel-connectors",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 664,
+							"symbol": "createMarketingChannelConnector",
+							"expression": "path(projectRef, \"/channel-connectors\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.update_marketing_channel_connector",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PATCH",
+					"path": "/api/v1/marketing/projects/:projectRef/channel-connectors/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 673,
+							"symbol": "updateMarketingChannelConnector",
+							"expression": "path(projectRef, `/channel-connectors/${id}`)",
+							"transport_method": "PATCH"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.delete_marketing_channel_connector",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/marketing/projects/:projectRef/channel-connectors/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 683,
+							"symbol": "deleteMarketingChannelConnector",
+							"expression": "path(projectRef, `/channel-connectors/${id}`)",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.email_subscribers",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/marketing/projects/:projectRef/email/subscribers",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 225,
+							"symbol": "getEmailSubscribers",
+							"expression": "`${path(projectRef, \"/email/subscribers\")}${query ? `?q=${encodeURIComponent(query)}` : \"\"}`",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.subscriber_lists",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/marketing/projects/:projectRef/lists",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 292,
+							"symbol": "getSubscriberLists",
+							"expression": "path(projectRef, \"/lists\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.subscriber_segments",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/marketing/projects/:projectRef/segments",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 336,
+							"symbol": "getSubscriberSegments",
+							"expression": "path(projectRef, \"/segments\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.email_templates",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/marketing/projects/:projectRef/templates",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 365,
+							"symbol": "getEmailTemplates",
+							"expression": "path(projectRef, \"/templates\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.email_campaigns",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/marketing/projects/:projectRef/campaigns",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 407,
+							"symbol": "getEmailCampaigns",
+							"expression": "path(projectRef, \"/campaigns\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.marketing_statistics",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/marketing/projects/:projectRef/statistics",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 469,
+							"symbol": "getMarketingStatistics",
+							"expression": "`${path(projectRef, \"/statistics\")}${query.size ? `?${query}` : \"\"}`",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.marketing_journeys",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/marketing/projects/:projectRef/journeys",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 577,
+							"symbol": "getMarketingJourneys",
+							"expression": "path(projectRef, \"/journeys\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.journey_enrollments",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/marketing/projects/:projectRef/journeys/:id/enrollments",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 624,
+							"symbol": "getJourneyEnrollments",
+							"expression": "path(projectRef, `/journeys/${id}/enrollments`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.journey_statistics",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/marketing/projects/:projectRef/journeys/:id/statistics",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 644,
+							"symbol": "getJourneyStatistics",
+							"expression": "path(projectRef, `/journeys/${id}/statistics`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.marketing_channel_connectors",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/marketing/projects/:projectRef/channel-connectors",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/marketing/marketingService.ts",
+							"line": 650,
+							"symbol": "getMarketingChannelConnectors",
+							"expression": "path(projectRef, \"/channel-connectors\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-mcp",
+			"id": "supbrd-plugmod-mcp.command.approve_consent",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/mcp/approve_consent",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "params",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/mcp/mcpService.ts",
+							"line": 31,
+							"symbol": "approveConsentAPICall",
+							"expression": "config.apiPath + \"/mcp/approve_consent\"",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-mcp",
+			"id": "supbrd-plugmod-mcp.command.revoke_token",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/mcp/tokens/:tokenId",
+					"parameters": ["tokenId"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/mcp/mcpService.ts",
+							"line": 43,
+							"symbol": "revokeMcpTokenAPICall",
+							"expression": "config.apiPath + `/mcp/tokens/${tokenId}`",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-mcp",
+			"id": "supbrd-plugmod-mcp.command.invoke_tool",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/mcp/operator/invocations",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/mcp-operator.ts",
+							"line": 17,
+							"symbol": "mcpOperator",
+							"expression": "mcpOperator"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-mcp",
+			"id": "supbrd-plugmod-mcp.data_source.tokens",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/mcp/tokens",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/mcp/mcpService.ts",
+							"line": 37,
+							"symbol": "listMcpTokensAPICall",
+							"expression": "config.apiPath + \"/mcp/tokens\"",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-mcp",
+			"id": "supbrd-plugmod-mcp.data_source.sessions",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/mcp/operator/sessions",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/mcp-operator.ts",
+							"line": 17,
+							"symbol": "mcpOperator",
+							"expression": "mcpOperator"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-mcp",
+			"id": "supbrd-plugmod-mcp.data_source.tool_receipts",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/mcp/operator/receipts",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/mcp-operator.ts",
+							"line": 17,
+							"symbol": "mcpOperator",
+							"expression": "mcpOperator"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.command.acknowledge_incident",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/observability/incidents/:incidentId/acknowledge",
+					"parameters": ["incidentId"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/observability-admin.ts",
+							"line": 52,
+							"symbol": "observabilityAdmin",
+							"expression": "observabilityAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.command.resolve_incident",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/observability/incidents/:incidentId/resolve",
+					"parameters": ["incidentId"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/observability-admin.ts",
+							"line": 52,
+							"symbol": "observabilityAdmin",
+							"expression": "observabilityAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.command.retry_custom_job",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/platform/custom/jobs/:jobId/retry",
+					"parameters": ["jobId"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/platform/platformService.ts",
+							"line": 411,
+							"symbol": "retryPlatformCustomJob",
+							"expression": "`${config.apiPath}/platform/custom/jobs/${encodeURIComponent(jobId)}/retry`",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.command.replay_email_dead_letter",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/platform/email/dead-letters/:deadLetterId/replay",
+					"parameters": ["deadLetterId"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/platform/platformService.ts",
+							"line": 385,
+							"symbol": "replayPlatformEmailDeadLetter",
+							"expression": "`${config.apiPath}/platform/email/dead-letters/${encodeURIComponent(deadLetterId)}/replay`",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.command.discard_email_dead_letter",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/platform/email/dead-letters/:deadLetterId/discard",
+					"parameters": ["deadLetterId"],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/platform/platformService.ts",
+							"line": 400,
+							"symbol": "discardPlatformEmailDeadLetter",
+							"expression": "`${config.apiPath}/platform/email/dead-letters/${encodeURIComponent(deadLetterId)}/discard`",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.data_source.platform_status",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/platform/status",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/platform/platformService.ts",
+							"line": 338,
+							"symbol": "getPlatformStatus",
+							"expression": "`${config.apiPath}/platform/status`",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.data_source.runtime_metrics",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/observability/runtime-metrics",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/observability-admin.ts",
+							"line": 52,
+							"symbol": "observabilityAdmin",
+							"expression": "observabilityAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.data_source.service_health",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/observability/service-health",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/observability-admin.ts",
+							"line": 52,
+							"symbol": "observabilityAdmin",
+							"expression": "observabilityAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.data_source.incidents",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/observability/incidents",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-core/api/src/routes/observability-admin.ts",
+							"line": 52,
+							"symbol": "observabilityAdmin",
+							"expression": "observabilityAdmin"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.data_source.platform_custom_jobs",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/platform/custom/jobs",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/platform/platformService.ts",
+							"line": 346,
+							"symbol": "getPlatformCustomJobs",
+							"expression": "`${config.apiPath}/platform/custom/jobs?${query}`",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"id": "supbrd-plugmod-observability.data_source.platform_email_operations",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/platform/email/operations",
+					"parameters": [],
+					"server_bound_parameters": [],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/platform/platformService.ts",
+							"line": 375,
+							"symbol": "getPlatformEmailOperations",
+							"expression": "`${config.apiPath}/platform/email/operations?${query}`",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.command.create_onboarding",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/onboardings/projects/:projectRef",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 76,
+							"symbol": "createOnboarding",
+							"expression": "path(id)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.command.update_onboarding",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/onboardings/projects/:projectRef/:onboardingId",
+					"parameters": ["projectRef", "onboardingId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 82,
+							"symbol": "updateOnboarding",
+							"expression": "path(id, `/${onboardingId}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.command.delete_onboarding",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/onboardings/projects/:projectRef/:onboardingId",
+					"parameters": ["projectRef", "onboardingId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 89,
+							"symbol": "deleteOnboarding",
+							"expression": "path(id, `/${onboardingId}`)",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.command.create_onboarding_version",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/onboardings/projects/:projectRef/:onboardingId/versions",
+					"parameters": ["projectRef", "onboardingId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 99,
+							"symbol": "createOnboardingVersion",
+							"expression": "path(id, `/${onboardingId}/versions`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.command.publish_onboarding",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/onboardings/projects/:projectRef/:onboardingId/publish",
+					"parameters": ["projectRef", "onboardingId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{ version_id: versionId }",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 108,
+							"symbol": "publishOnboarding",
+							"expression": "path(id, `/${onboardingId}/publish`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.command.save_onboarding_placement",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/onboardings/projects/:projectRef/placements/:placementId",
+					"parameters": ["projectRef", "placementId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 129,
+							"symbol": "saveOnboardingPlacement",
+							"expression": "path(id, `/placements/${placementId}`)",
+							"transport_method": "PUT"
+						}
+					]
+				},
+				{
+					"method": "POST",
+					"path": "/api/v1/onboardings/projects/:projectRef/placements",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 129,
+							"symbol": "saveOnboardingPlacement",
+							"expression": "path(id, \"/placements\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.command.create_onboarding_targeting_rule",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/onboardings/projects/:projectRef/targeting-rules",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 153,
+							"symbol": "createOnboardingTargetingRule",
+							"expression": "path(id, \"/targeting-rules\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.command.create_onboarding_experience",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/onboardings/projects/:projectRef/experiences",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 172,
+							"symbol": "createOnboardingExperience",
+							"expression": "path(id, \"/experiences\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.command.set_onboarding_experience_status",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/onboardings/projects/:projectRef/experiences/:experienceId/status",
+					"parameters": ["projectRef", "experienceId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{ status }",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 180,
+							"symbol": "setOnboardingExperienceStatus",
+							"expression": "path(id, `/experiences/${experienceId}/status`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.data_source.onboardings",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/onboardings/projects/:projectRef",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 73,
+							"symbol": "getOnboardings",
+							"expression": "path(id)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.data_source.onboarding_versions",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/onboardings/projects/:projectRef/:onboardingId/versions",
+					"parameters": ["projectRef", "onboardingId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 94,
+							"symbol": "getOnboardingVersions",
+							"expression": "path(id, `/${onboardingId}/versions`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.data_source.onboarding_placements",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/onboardings/projects/:projectRef/placements",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 126,
+							"symbol": "getOnboardingPlacements",
+							"expression": "path(id, \"/placements\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.data_source.onboarding_targeting_rules",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/onboardings/projects/:projectRef/targeting-rules",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 148,
+							"symbol": "getOnboardingTargetingRules",
+							"expression": "path(id, \"/targeting-rules\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.data_source.onboarding_experiences",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/onboardings/projects/:projectRef/experiences",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 169,
+							"symbol": "getOnboardingExperiences",
+							"expression": "path(id, \"/experiences\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"id": "supbrd-plugmod-onboardings.data_source.onboarding_statistics",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/onboardings/projects/:projectRef/statistics",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+							"line": 117,
+							"symbol": "getOnboardingStatistics",
+							"expression": "path(id, `/statistics${query ? `?${query}` : \"\"}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.command.create_paywall",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/paywalls/projects/:projectRef",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 109,
+							"symbol": "createPaywall",
+							"expression": "path(projectRef)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.command.update_paywall",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/paywalls/projects/:projectRef/paywalls/:paywallId",
+					"parameters": ["projectRef", "paywallId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 119,
+							"symbol": "updatePaywall",
+							"expression": "path(projectRef, `/paywalls/${paywallId}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.command.archive_paywall",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/paywalls/projects/:projectRef/paywalls/:paywallId",
+					"parameters": ["projectRef", "paywallId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 132,
+							"symbol": "archivePaywall",
+							"expression": "path(projectRef, `/paywalls/${paywallId}`)",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.command.create_paywall_version",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/paywalls/projects/:projectRef/paywalls/:paywallId/versions",
+					"parameters": ["projectRef", "paywallId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{ definition, changelog, }",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 147,
+							"symbol": "createPaywallVersion",
+							"expression": "path(projectRef, `/paywalls/${paywallId}/versions`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.command.publish_paywall_version",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/paywalls/projects/:projectRef/paywalls/:paywallId/versions/:versionId/publish",
+					"parameters": ["projectRef", "paywallId", "versionId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{}",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 161,
+							"symbol": "publishPaywallVersion",
+							"expression": "path(projectRef, `/paywalls/${paywallId}/versions/${versionId}/publish`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.command.save_paywall_placement",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/paywalls/projects/:projectRef/placements/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 191,
+							"symbol": "savePaywallPlacement",
+							"expression": "path(projectRef, resource)",
+							"transport_method": "PUT"
+						}
+					]
+				},
+				{
+					"method": "POST",
+					"path": "/api/v1/paywalls/projects/:projectRef/placements",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 191,
+							"symbol": "savePaywallPlacement",
+							"expression": "path(projectRef, resource)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.command.create_paywall_experience",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/paywalls/projects/:projectRef/experiences",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 216,
+							"symbol": "createPaywallExperience",
+							"expression": "path(projectRef, \"/experiences\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.command.update_paywall_experience",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/paywalls/projects/:projectRef/experiences/:experienceId",
+					"parameters": ["projectRef", "experienceId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "payload",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 225,
+							"symbol": "updatePaywallExperience",
+							"expression": "path(projectRef, `/experiences/${experienceId}`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.command.archive_paywall_experience",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/paywalls/projects/:projectRef/experiences/:experienceId",
+					"parameters": ["projectRef", "experienceId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 235,
+							"symbol": "archivePaywallExperience",
+							"expression": "path(projectRef, `/experiences/${experienceId}`)",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.data_source.paywalls",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/paywalls/projects/:projectRef",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 105,
+							"symbol": "getPaywalls",
+							"expression": "path(projectRef)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.data_source.paywall_versions",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/paywalls/projects/:projectRef/paywalls/:paywallId/versions",
+					"parameters": ["projectRef", "paywallId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 138,
+							"symbol": "getPaywallVersions",
+							"expression": "path(projectRef, `/paywalls/${paywallId}/versions`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.data_source.paywall_placements",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/paywalls/projects/:projectRef/placements",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 187,
+							"symbol": "getPaywallPlacements",
+							"expression": "path(projectRef, \"/placements\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.data_source.paywall_experiences",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/paywalls/projects/:projectRef/experiences",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 210,
+							"symbol": "getPaywallExperiences",
+							"expression": "path(projectRef, \"/experiences\")",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"id": "supbrd-plugmod-paywalls.data_source.paywall_statistics",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/paywalls/projects/:projectRef/statistics",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+							"line": 244,
+							"symbol": "getPaywallStatistics",
+							"expression": "path(projectRef, `/statistics${query ? `?${query}` : \"\"}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.update_support_settings",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PATCH",
+					"path": "/api/v1/support/projects/:projectRef/settings",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "settings",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/settingsService.ts",
+							"line": 75,
+							"symbol": "updateSupportSettings",
+							"expression": "path(projectId)",
+							"transport_method": "PATCH"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.create_support_configuration",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/support/projects/:projectRef/settings/entities",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "entity",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/settingsService.ts",
+							"line": 80,
+							"symbol": "createSupportConfiguration",
+							"expression": "path(projectId, \"/entities\")",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.update_support_configuration",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PATCH",
+					"path": "/api/v1/support/projects/:projectRef/settings/entities/:entityId",
+					"parameters": ["projectRef", "entityId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "entity",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/settingsService.ts",
+							"line": 88,
+							"symbol": "updateSupportConfiguration",
+							"expression": "path(projectId, `/entities/${encodeURIComponent(entityId)}`)",
+							"transport_method": "PATCH"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.delete_support_configuration",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/support/projects/:projectRef/settings/entities/:entityId",
+					"parameters": ["projectRef", "entityId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/settingsService.ts",
+							"line": 104,
+							"symbol": "deleteSupportConfiguration",
+							"expression": "path(projectId, `/entities/${encodeURIComponent(entityId)}`)",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.rotate_support_webhook_secret",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PUT",
+					"path": "/api/v1/support/projects/:projectRef/settings/entities/:entityId/secret",
+					"parameters": ["projectRef", "entityId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{ secret }",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/settingsService.ts",
+							"line": 114,
+							"symbol": "rotateSupportWebhookSecret",
+							"expression": "path(projectId, `/entities/${encodeURIComponent(entityId)}/secret`)",
+							"transport_method": "PUT"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.revoke_support_webhook_secret",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/support/projects/:projectRef/settings/entities/:entityId/secret",
+					"parameters": ["projectRef", "entityId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/settingsService.ts",
+							"line": 127,
+							"symbol": "revokeSupportWebhookSecret",
+							"expression": "path(projectId, `/entities/${encodeURIComponent(entityId)}/secret`)",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.send_inbox_message",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/support/projects/:projectRef/conversations/:conversationId/messages",
+					"parameters": ["projectRef", "conversationId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "{ body, client_message_id: clientMessageId, private: privateNote, }",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/inboxService.ts",
+							"line": 158,
+							"symbol": "sendInboxMessage",
+							"expression": "path(projectId, `/conversations/${encodedId(conversationId)}/messages`)",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.update_inbox_conversation",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PATCH",
+					"path": "/api/v1/support/projects/:projectRef/conversations/:conversationId",
+					"parameters": ["projectRef", "conversationId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"body_expression": "update",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/inboxService.ts",
+							"line": 263,
+							"symbol": "updateInboxConversation",
+							"expression": "path(projectId, `/conversations/${encodedId(conversationId)}`)",
+							"transport_method": "PATCH"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.create_support_provider",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/support/projects/:projectRef/providers",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/channelsService.ts",
+							"line": 55,
+							"symbol": "createSupportProvider",
+							"expression": "createSupportProvider",
+							"path_fragment": "providers"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.update_support_provider",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PATCH",
+					"path": "/api/v1/support/projects/:projectRef/providers/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/channelsService.ts",
+							"line": 71,
+							"symbol": "updateSupportProvider",
+							"expression": "updateSupportProvider",
+							"path_fragment": "providers"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "PATCH"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.delete_support_provider",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/support/projects/:projectRef/providers/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/channelsService.ts",
+							"line": 88,
+							"symbol": "deleteSupportProvider",
+							"expression": "deleteSupportProvider",
+							"path_fragment": "providers"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.create_support_integration",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/support/projects/:projectRef/integrations",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/integrationsService.ts",
+							"line": 24,
+							"symbol": "createSupportIntegration",
+							"expression": "createSupportIntegration",
+							"path_fragment": "integrations"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.update_support_integration",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "PATCH",
+					"path": "/api/v1/support/projects/:projectRef/integrations/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/integrationsService.ts",
+							"line": 36,
+							"symbol": "updateSupportIntegration",
+							"expression": "updateSupportIntegration",
+							"path_fragment": "integrations"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "PATCH"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.delete_support_integration",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "DELETE",
+					"path": "/api/v1/support/projects/:projectRef/integrations/:id",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/integrationsService.ts",
+							"line": 49,
+							"symbol": "deleteSupportIntegration",
+							"expression": "deleteSupportIntegration",
+							"path_fragment": "integrations"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "DELETE"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.command.publish_support_article",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/support/projects/:projectRef/help-center/articles/:id/publish",
+					"parameters": ["projectRef", "id"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/helpCenterService.ts",
+							"line": 59,
+							"symbol": "publishSupportArticle",
+							"expression": "publishSupportArticle",
+							"path_fragment": "help-center/articles"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "POST"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.support_settings",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/settings",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/settingsService.ts",
+							"line": 70,
+							"symbol": "getSupportSettings",
+							"expression": "path(projectId)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.unified_inbox_items",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/items",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/inboxService.ts",
+							"line": 119,
+							"symbol": "getUnifiedInboxItems",
+							"expression": "unifiedPath(projectId, `/items${query.size ? `?${query}` : \"\"}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.inbox_conversations",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/conversations",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/inboxService.ts",
+							"line": 138,
+							"symbol": "getInboxConversations",
+							"expression": "path(projectId, `/conversations${status ? `?status=${status}` : \"\"}`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.inbox_messages",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/conversations/:conversationId/messages",
+					"parameters": ["projectRef", "conversationId"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/inboxService.ts",
+							"line": 148,
+							"symbol": "getInboxMessages",
+							"expression": "path(projectId, `/conversations/${encodedId(conversationId)}/messages`)",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.support_channels",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/channels",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/channelsService.ts",
+							"line": 46,
+							"symbol": "listSupportChannels",
+							"expression": "listSupportChannels",
+							"path_fragment": "channels"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.support_providers",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/providers",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/channelsService.ts",
+							"line": 49,
+							"symbol": "listSupportProviders",
+							"expression": "listSupportProviders",
+							"path_fragment": "providers"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.support_integrations",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/integrations",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/integrationsService.ts",
+							"line": 20,
+							"symbol": "listSupportIntegrations",
+							"expression": "listSupportIntegrations",
+							"path_fragment": "integrations"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.support_portals",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/help-center/portals",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/helpCenterService.ts",
+							"line": 49,
+							"symbol": "supportPortals",
+							"expression": "supportPortals",
+							"path_fragment": "help-center/portals"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.support_categories",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/help-center/categories",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/helpCenterService.ts",
+							"line": 50,
+							"symbol": "supportCategories",
+							"expression": "supportCategories",
+							"path_fragment": "help-center/categories"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.support_folders",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/help-center/folders",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/helpCenterService.ts",
+							"line": 53,
+							"symbol": "supportFolders",
+							"expression": "supportFolders",
+							"path_fragment": "help-center/folders"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.support_articles",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/help-center/articles",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/helpCenterService.ts",
+							"line": 54,
+							"symbol": "supportArticles",
+							"expression": "supportArticles",
+							"path_fragment": "help-center/articles"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"id": "supbrd-plugmod-support.data_source.support_assistant_tasks",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "GET",
+					"path": "/api/v1/support/projects/:projectRef/captain/tasks",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "passthrough",
+					"body": "none",
+					"sources": [
+						{
+							"file": "apps/dashboard/src/api/support/captainService.ts",
+							"line": 69,
+							"symbol": "listSupportAssistantTasks",
+							"expression": "listSupportAssistantTasks",
+							"path_fragment": "captain/tasks"
+						},
+						{
+							"file": "apps/dashboard/src/api/support/nativeClient.ts",
+							"line": 22,
+							"symbol": "supportProjectPath",
+							"expression": "supportProjectPath",
+							"transport_method": "GET"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.command.create_notification",
+			"kind": "command",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/projects/:projectRef/notifications",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/marketing/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/api/v1/projects/:projectRef/notifications"
+						}
+					]
+				}
+			]
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"id": "supbrd-plugmod-marketing.data_source.notifications",
+			"kind": "data_source",
+			"status": "verified",
+			"operations": [
+				{
+					"method": "POST",
+					"path": "/api/v1/projects/:projectRef/notifications/search",
+					"parameters": ["projectRef"],
+					"server_bound_parameters": ["projectRef"],
+					"parameter_values": {},
+					"query": "none",
+					"body": "passthrough",
+					"read_only": true,
+					"sources": [
+						{
+							"file": "packages/plugins/supbrd-plug-communication/src/front/marketing/adapters.ts",
+							"line": 1,
+							"symbol": "adapters",
+							"expression": "/api/v1/projects/:projectRef/notifications/search"
+						}
+					]
+				}
+			]
+		}
+	],
+	"verification": "source-reviewed endpoints only; functional, ownership and plugin-isolation tests remain separate",
+	"application_plugins": []
+}

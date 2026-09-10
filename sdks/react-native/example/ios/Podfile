@@ -22,7 +22,7 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-target 'OpenGrowWrapperExample' do
+target 'SuperBoardWrapperExample' do
   # The native iOS SDK is not published to CocoaPods Trunk. Resolve the
   # reviewed podspec whose own source is the immutable SDK Git tag.
   pod native_contract["ios"]["packageName"], :podspec => native_contract["ios"]["podspecUrl"]

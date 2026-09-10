@@ -29,11 +29,11 @@ android {
         versionName = flutter.versionName
         manifestPlaceholders["SUPERBOARD_API_KEY"] =
             System.getenv("SUPERBOARD_API_KEY")
-                ?: System.getenv("OPENGROW_API_KEY")
+                ?: System.getenv("SUPERBOARD_API_KEY")
                 ?: ""
         manifestPlaceholders["SUPERBOARD_BASE_URL"] =
             System.getenv("SUPERBOARD_BASE_URL")
-                ?: System.getenv("OPENGROW_BASE_URL")
+                ?: System.getenv("SUPERBOARD_BASE_URL")
                 ?: ""
     }
 

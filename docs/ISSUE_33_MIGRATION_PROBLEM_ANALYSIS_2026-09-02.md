@@ -92,7 +92,7 @@ Le routeur et la navigation peuvent reconnaître la nouvelle entrée, mais `isDa
 
 ### Synchroniser un catalogue sans activer un plugin
 
-1. Laissez un plugin concret et `ready` dans `config/emdash-plugin-topology.json`.
+1. Laissez un plugin concret et `ready` dans `scripts/config/emdash-plugin-topology.json`.
 2. Exécutez la synchronisation du catalogue pour une Instance vierge.
 3. Lisez `_plugin_state`.
 

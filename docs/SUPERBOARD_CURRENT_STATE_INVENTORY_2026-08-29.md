@@ -38,14 +38,14 @@ L’inventaire a été produit dans un worktree isolé créé directement depuis
 
 Les statuts signifient :
 
-| Statut | Sens précis dans ce document |
-| --- | --- |
-| **Livré** | Présent au commit, relié à la surface d’exécution ou à un gate. Cela ne prouve pas à lui seul l’état du runtime distant. |
-| **Partiel / bloqué** | Présent au commit, mais un manifeste, un gate, un reçu, une migration ou une preuve externe reste explicitement incomplet. |
-| **Historique / compatibilité** | Conservé pour rollback, migration ou anciens clients ; il ne doit pas devenir la nouvelle autorité EmDash. |
-| **Checkout non validé** | Différence locale par rapport au SHA, non commitée et non livrée. |
+| Statut                         | Sens précis dans ce document                                                                                               |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **Livré**                      | Présent au commit, relié à la surface d’exécution ou à un gate. Cela ne prouve pas à lui seul l’état du runtime distant.   |
+| **Partiel / bloqué**           | Présent au commit, mais un manifeste, un gate, un reçu, une migration ou une preuve externe reste explicitement incomplet. |
+| **Historique / compatibilité** | Conservé pour rollback, migration ou anciens clients ; il ne doit pas devenir la nouvelle autorité EmDash.                 |
+| **Checkout non validé**        | Différence locale par rapport au SHA, non commitée et non livrée.                                                          |
 
-Le dépôt ne contient pas, à ce commit, les fichiers `CONTEXT-MAP.md`, `CONTEXT.md`, `apps/CONTEXT.md` et `workers/CONTEXT.md` mentionnés plus tard dans la carte Wayfinder. Le vocabulaire ci-dessous est donc dérivé des autorités réellement présentes : [manifestes de target][target-schema], [registre de services][service-registry], [contrats partagés][contracts-index] et [documentation d’architecture][architecture].
+Le dépôt ne contient pas, à ce commit, les fichiers `CONTEXT-MAP.md`, `CONTEXT.md`, `apps/CONTEXT.md` et `packages/plugins/CONTEXT.md` mentionnés plus tard dans la carte Wayfinder. Le vocabulaire ci-dessous est donc dérivé des autorités réellement présentes : [manifestes de target][target-schema], [registre de services][service-registry], [contrats partagés][contracts-index] et [documentation d’architecture][architecture].
 
 ## 1. Dashboard : shell, routes, navigation et états
 
@@ -66,21 +66,21 @@ Contrats d’état à préserver :
 
 Le comptage du tree donne 93 `page.tsx`, 19 `layout.tsx`, 4 route handlers Next, 6 limites d’erreur, 5 fichiers de chargement et une 404. Les 84 pages protégées partagent le même shell. Le tableau suivant est l’index de parité à conserver ; les routes de détail dynamiques sont indiquées comme patterns. [Source : arbre App Router][dashboard-app-tree].
 
-| Surface | Routes présentes au commit | État et backing |
-| --- | --- | --- |
-| Entrée et compte public | `/`, `/login`, `/register`, `/register/with_email`, `/reset_password`, `/new_password`, `/accept-invite` | **Livré.** Compte Dashboard, invitation, reset, OTP et redirections sont reliés à l’API centrale. [Sources : service utilisateur][dashboard-user-service], [contexte utilisateur][dashboard-user-context] |
-| OAuth/MCP et preview | `/mcp/authorize`, `/message-preview-craft` | **Livré.** Ces routes sont hors du groupe protégé ; MCP effectue ses propres contrôles, tandis que la preview Craft est une surface de rendu isolée à auditer lors de la migration. [Sources : consentement MCP][dashboard-mcp-authorize], [preview][dashboard-message-preview] |
-| BFF/health Next | `/api/health`, `/api/auth/token`, `/api/auth/refresh`, `/api/auth/revoke` | **Livré.** Ces quatre handlers sont distincts de l’API Worker publique. [Source][dashboard-api-routes] |
-| Shell opérateur | `/dashboard`, `/account`, `/infrastructure`, `/project-settings` | **Livré.** Account, Infrastructure et Project Settings sont accessibles depuis le menu utilisateur, pas depuis les 10 sections principales. [Sources : menu utilisateur][dashboard-user-nav], [header][dashboard-header] |
-| App | `/app/customers`, `/app/users`, `/app/referrals`, `/app/access-key`, `/app/libraries`, `/app/android-setup`, `/app/ios-setup`, `/app/web-setup` | **Livré.** Données App, utilisateurs Identity/Billing, catalogue SDK et configuration par plateforme. [Sources : navigation][dashboard-navigation], [service App][dashboard-app-api], [wizard SDK][dashboard-sdk-wizard] |
-| Identity | `/identity`, `/identity/[lang]`, puis `dashboard`, `users`, `users/[authId]`, `user-attributes`, `user-attributes/new`, `user-attributes/[id]`, `roles`, `roles/new`, `roles/[id]`, `apps`, `apps/new`, `apps/[id]`, `apps/banners/new`, `apps/banners/[id]`, `scopes`, `scopes/new`, `scopes/[id]`, `orgs`, `orgs/new`, `orgs/[id]`, `logs`, `logs/email/[id]`, `logs/sign-in/[id]`, `logs/sms/[id]`, `saml`, `saml/new`, `saml/[id]`, `account` | **Livré en source.** Le segment de langue accepte au moins `en`/`fr`; le target désactive SSO par défaut. L’admin Melody est proxifié par le Worker Identity. [Sources : arbre Identity][dashboard-identity-tree], [Worker Identity][identity-worker], [targets][target-mbza] |
-| Products | `/products/purchases`, `/products/customers`, `/products/offerings`, `/products/entitlements` | **Livré.** Catalogue/offerings/entitlements viennent des Workers Products/Billing ; Customers a une surface Billing dédiée. [Sources : pages][dashboard-products-pages], [Worker Products][products-worker], [API Billing][billing-routes] |
-| Paywalls | `/paywalls`, `/paywalls/statistics` | **Livré.** Définitions, versions publiées/archivées, placements, expériences, variants et statistiques. [Sources : pages][dashboard-paywalls-page], [Worker][paywalls-worker] |
-| Dynamic Links | `/dynamic-links/links`, `/dynamic-links/campaigns`, `/dynamic-links/campaigns/[id]`, `/dynamic-links/redirect-rules`, `/dynamic-links/domain`, `/dynamic-links/social-media-preview`, `/dynamic-links/tracking` | **Livré.** CRUD, résolution, campagnes, règles, domaines, social preview, tracking et statistiques. [Sources : navigation][dashboard-navigation], [Worker][dynamic-links-worker] |
-| Support | `/support/inbox`, `/support/configuration`, `/support/contacts`, `/support/quality` | **Livré en source, convergence VocoStar partielle.** Inbox, realtime, pièces jointes, contacts, sociétés, notes, configuration, audit, CSAT, webhooks et DLQ existent ; la migration Chatwoot/OpenChat et le retrait du legacy ne sont pas terminés. [Sources : Worker][support-worker], [architecture Support][messaging-architecture], [convergence][openchat-convergence] |
-| Marketing | `/marketing/in-app-messages`, `/marketing/email`, `/marketing/campaigns`, `/marketing/journeys`, `/marketing/channels`, `/marketing/statistics`, `/marketing/settings` | **Livré.** In-app historique/central, abonnés, consentement, listes, segments, templates, campagnes, journeys, connecteurs, SMTP, webhooks provider, outbox et dead letters. [Sources : pages][dashboard-marketing-pages], [Worker][marketing-worker] |
-| Analytics | `/analytics`, puis `dashboards`, `users`, `events`, `dimensions`, `views`, `installations`, `purchases`, `insights`, `cohorts`, `crashes`, `feedback`, `remote-config`, `alerts`, `reports`, `settings` | **Livré pour MBZA ; désactivé pour VocoStar.** Toutes les pages pointent vers le Worker Analytics, mais `features.analytics=false` sur VocoStar et son ID D1 est nul. [Sources : pages][dashboard-analytics-pages], [Worker][analytics-worker], [target][target-vocostar] |
-| Onboardings | `/onboardings`, `/onboardings/statistics` | **Livré.** Définitions/versioning, placements, targeting, expériences, résolution SDK, événements et statistiques. [Sources : pages][dashboard-onboarding-pages], [Worker][onboardings-worker] |
+| Surface                 | Routes présentes au commit                                                                                                                                                                                                                                                                                                                                                                                                                        | État et backing                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entrée et compte public | `/`, `/login`, `/register`, `/register/with_email`, `/reset_password`, `/new_password`, `/accept-invite`                                                                                                                                                                                                                                                                                                                                          | **Livré.** Compte Dashboard, invitation, reset, OTP et redirections sont reliés à l’API centrale. [Sources : service utilisateur][dashboard-user-service], [contexte utilisateur][dashboard-user-context]                                                                                                                                                                    |
+| OAuth/MCP et preview    | `/mcp/authorize`, `/message-preview-craft`                                                                                                                                                                                                                                                                                                                                                                                                        | **Livré.** Ces routes sont hors du groupe protégé ; MCP effectue ses propres contrôles, tandis que la preview Craft est une surface de rendu isolée à auditer lors de la migration. [Sources : consentement MCP][dashboard-mcp-authorize], [preview][dashboard-message-preview]                                                                                              |
+| BFF/health Next         | `/api/health`, `/api/auth/token`, `/api/auth/refresh`, `/api/auth/revoke`                                                                                                                                                                                                                                                                                                                                                                         | **Livré.** Ces quatre handlers sont distincts de l’API Worker publique. [Source][dashboard-api-routes]                                                                                                                                                                                                                                                                       |
+| Shell opérateur         | `/dashboard`, `/account`, `/infrastructure`, `/project-settings`                                                                                                                                                                                                                                                                                                                                                                                  | **Livré.** Account, Infrastructure et Project Settings sont accessibles depuis le menu utilisateur, pas depuis les 10 sections principales. [Sources : menu utilisateur][dashboard-user-nav], [header][dashboard-header]                                                                                                                                                     |
+| App                     | `/app/customers`, `/app/users`, `/app/referrals`, `/app/access-key`, `/app/libraries`, `/app/android-setup`, `/app/ios-setup`, `/app/web-setup`                                                                                                                                                                                                                                                                                                   | **Livré.** Données App, utilisateurs Identity/Billing, catalogue SDK et configuration par plateforme. [Sources : navigation][dashboard-navigation], [service App][dashboard-app-api], [wizard SDK][dashboard-sdk-wizard]                                                                                                                                                     |
+| Identity                | `/identity`, `/identity/[lang]`, puis `dashboard`, `users`, `users/[authId]`, `user-attributes`, `user-attributes/new`, `user-attributes/[id]`, `roles`, `roles/new`, `roles/[id]`, `apps`, `apps/new`, `apps/[id]`, `apps/banners/new`, `apps/banners/[id]`, `scopes`, `scopes/new`, `scopes/[id]`, `orgs`, `orgs/new`, `orgs/[id]`, `logs`, `logs/email/[id]`, `logs/sign-in/[id]`, `logs/sms/[id]`, `saml`, `saml/new`, `saml/[id]`, `account` | **Livré en source.** Le segment de langue accepte au moins `en`/`fr`; le target désactive SSO par défaut. L’admin Melody est proxifié par le Worker Identity. [Sources : arbre Identity][dashboard-identity-tree], [Worker Identity][identity-worker], [targets][target-mbza]                                                                                                |
+| Products                | `/products/purchases`, `/products/customers`, `/products/offerings`, `/products/entitlements`                                                                                                                                                                                                                                                                                                                                                     | **Livré.** Catalogue/offerings/entitlements viennent des Workers Products/Billing ; Customers a une surface Billing dédiée. [Sources : pages][dashboard-products-pages], [Worker Products][products-worker], [API Billing][billing-routes]                                                                                                                                   |
+| Paywalls                | `/paywalls`, `/paywalls/statistics`                                                                                                                                                                                                                                                                                                                                                                                                               | **Livré.** Définitions, versions publiées/archivées, placements, expériences, variants et statistiques. [Sources : pages][dashboard-paywalls-page], [Worker][paywalls-worker]                                                                                                                                                                                                |
+| Dynamic Links           | `/dynamic-links/links`, `/dynamic-links/campaigns`, `/dynamic-links/campaigns/[id]`, `/dynamic-links/redirect-rules`, `/dynamic-links/domain`, `/dynamic-links/social-media-preview`, `/dynamic-links/tracking`                                                                                                                                                                                                                                   | **Livré.** CRUD, résolution, campagnes, règles, domaines, social preview, tracking et statistiques. [Sources : navigation][dashboard-navigation], [Worker][dynamic-links-worker]                                                                                                                                                                                             |
+| Support                 | `/support/inbox`, `/support/configuration`, `/support/contacts`, `/support/quality`                                                                                                                                                                                                                                                                                                                                                               | **Livré en source, convergence VocoStar partielle.** Inbox, realtime, pièces jointes, contacts, sociétés, notes, configuration, audit, CSAT, webhooks et DLQ existent ; la migration Chatwoot/OpenChat et le retrait du legacy ne sont pas terminés. [Sources : Worker][support-worker], [architecture Support][messaging-architecture], [convergence][openchat-convergence] |
+| Marketing               | `/marketing/in-app-messages`, `/marketing/email`, `/marketing/campaigns`, `/marketing/journeys`, `/marketing/channels`, `/marketing/statistics`, `/marketing/settings`                                                                                                                                                                                                                                                                            | **Livré.** In-app historique/central, abonnés, consentement, listes, segments, templates, campagnes, journeys, connecteurs, SMTP, webhooks provider, outbox et dead letters. [Sources : pages][dashboard-marketing-pages], [Worker][marketing-worker]                                                                                                                        |
+| Analytics               | `/analytics`, puis `dashboards`, `users`, `events`, `dimensions`, `views`, `installations`, `purchases`, `insights`, `cohorts`, `crashes`, `feedback`, `remote-config`, `alerts`, `reports`, `settings`                                                                                                                                                                                                                                           | **Livré pour MBZA ; désactivé pour VocoStar.** Toutes les pages pointent vers le Worker Analytics, mais `features.analytics=false` sur VocoStar et son ID D1 est nul. [Sources : pages][dashboard-analytics-pages], [Worker][analytics-worker], [target][target-vocostar]                                                                                                    |
+| Onboardings             | `/onboardings`, `/onboardings/statistics`                                                                                                                                                                                                                                                                                                                                                                                                         | **Livré.** Définitions/versioning, placements, targeting, expériences, résolution SDK, événements et statistiques. [Sources : pages][dashboard-onboarding-pages], [Worker][onboardings-worker]                                                                                                                                                                               |
 
 ### 1.3 Navigation et permissions
 
@@ -103,23 +103,23 @@ La migration ne doit donc pas déduire les permissions uniquement de la navigati
 
 Le Worker API monte les namespaces suivants. La liste est volontairement au niveau des contrats stables ; le fichier d’entrée et les routeurs liés contiennent l’inventaire endpoint par endpoint. [Sources : entrée API][api-index], [routeurs API][api-routes-tree].
 
-| Namespace public ou administratif | Responsabilité |
-| --- | --- |
-| `/health`, `/health/billing`, `/up`, `/.well-known/*` | Santé centrale, santé Billing, JWKS achats/Identity, métadonnées OAuth et associations mobile. |
-| `/oauth/*`, `/api/v1/auth/*`, `/api/v1/users/*` | Password/refresh/revoke OAuth Dashboard, utilisateur, invitation, reset et 2FA. |
-| `/auth/*` | Gateway d’identité application vers le Worker Identity. |
-| `/api/v1/instances/*`, `/api/v1/projects/*`, `/api/v1/links/*` | Instances, membres, plateformes, projets, métriques historiques, liens, campagnes, notifications et exports. |
-| `/api/v1/sdk/*` | Surface SDK historique plus achats v1/v2, custom jobs, Marketing preferences et effacement de compte. |
-| `/api/v1/{app,products,paywalls,dynamic-links,support,analytics,marketing,onboardings}/*` | Proxies Dashboard vers les huit Workers de domaine. |
-| Routes SDK de domaine | App runtime policy/events, Products offerings, Paywalls resolve/events, Analytics events/remote config, Onboardings resolve/events. |
-| `/api/v1/support-client/*`, `/api/v1/support/realtime/*` | Surface application Support authentifiée et ticket realtime. |
-| `/api/v1/app-files/*` et domaine Files | Alias de fichiers et téléchargement par ticket. |
-| `/api/v1/billing/*`, `/api/v2/purchases/*`, `/api/v1/iap/*` | Catalogue et clients historiques, achats v2, certifications, providers, refunds, exports et billing local/service. |
-| `/api/v1/platform/*` | Catalogue SDK, statut des Workers, compteurs, effacements, opérations Email et Custom. |
-| `/api/v1/mcp/*`, routes OAuth MCP | Consentement, tokens, projets, liens, analytics, campagnes et SDK config pour le MCP. |
-| `/api/v1/admin/*`, `/api/v1/automation/*`, `/api/v1/diagnostics/*` | Maintenance/cutover, automatisations historiques et diagnostics protégés. |
-| `/api/v1/marketing/tracking/*`, `/opt-in/*`, webhooks Marketing/Email | Entrées publiques signées ou vérifiées par provider. |
-| `/` et routes de short link | Résolution, assets et compatibilité des liens courts. |
+| Namespace public ou administratif                                                         | Responsabilité                                                                                                                      |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `/health`, `/health/billing`, `/up`, `/.well-known/*`                                     | Santé centrale, santé Billing, JWKS achats/Identity, métadonnées OAuth et associations mobile.                                      |
+| `/oauth/*`, `/api/v1/auth/*`, `/api/v1/users/*`                                           | Password/refresh/revoke OAuth Dashboard, utilisateur, invitation, reset et 2FA.                                                     |
+| `/auth/*`                                                                                 | Gateway d’identité application vers le Worker Identity.                                                                             |
+| `/api/v1/instances/*`, `/api/v1/projects/*`, `/api/v1/links/*`                            | Instances, membres, plateformes, projets, métriques historiques, liens, campagnes, notifications et exports.                        |
+| `/api/v1/sdk/*`                                                                           | Surface SDK historique plus achats v1/v2, custom jobs, Marketing preferences et effacement de compte.                               |
+| `/api/v1/{app,products,paywalls,dynamic-links,support,analytics,marketing,onboardings}/*` | Proxies Dashboard vers les huit Workers de domaine.                                                                                 |
+| Routes SDK de domaine                                                                     | App runtime policy/events, Products offerings, Paywalls resolve/events, Analytics events/remote config, Onboardings resolve/events. |
+| `/api/v1/support-client/*`, `/api/v1/support/realtime/*`                                  | Surface application Support authentifiée et ticket realtime.                                                                        |
+| `/api/v1/app-files/*` et domaine Files                                                    | Alias de fichiers et téléchargement par ticket.                                                                                     |
+| `/api/v1/billing/*`, `/api/v2/purchases/*`, `/api/v1/iap/*`                               | Catalogue et clients historiques, achats v2, certifications, providers, refunds, exports et billing local/service.                  |
+| `/api/v1/platform/*`                                                                      | Catalogue SDK, statut des Workers, compteurs, effacements, opérations Email et Custom.                                              |
+| `/api/v1/mcp/*`, routes OAuth MCP                                                         | Consentement, tokens, projets, liens, analytics, campagnes et SDK config pour le MCP.                                               |
+| `/api/v1/admin/*`, `/api/v1/automation/*`, `/api/v1/diagnostics/*`                        | Maintenance/cutover, automatisations historiques et diagnostics protégés.                                                           |
+| `/api/v1/marketing/tracking/*`, `/opt-in/*`, webhooks Marketing/Email                     | Entrées publiques signées ou vérifiées par provider.                                                                                |
+| `/` et routes de short link                                                               | Résolution, assets et compatibilité des liens courts.                                                                               |
 
 L’exécution de `npm run migration:inventory` sur le SHA a compté **320 routes Worker** et **120 tables D1**. Elle a aussi retourné `upstreamAvailable=false`, sans liste fiable de routes ou tables manquantes. Ce n’est pas un résultat de parité : le script et l’ADR refusent explicitement de traiter l’absence d’upstream comme un succès. [Sources : script][inventory-script], [tests fail-closed][inventory-tests], [ADR][adr-canonical].
 
@@ -140,7 +140,7 @@ Contrats structurants :
 
 ### 2.3 Headers et compatibilité client
 
-Le gateway accepte encore plusieurs familles de headers : `Authorization`, `X-Api-Key`, `PROJECT-KEY`, `PLATFORM`, `IDENTIFIER`, `ENVIRONMENT`, les variantes `X-OpenGrow-*` et `X-SuperBoard-*`, `Idempotency-Key`, les headers de diagnostics et les headers du contexte interne. L’auth SDK distingue trois modes : mobile par `PROJECT-KEY` + plateforme/identifiant, serveur par `PROJECT-KEY` + environnement, et legacy par `X-Api-Key`. [Sources : CORS et montage][api-index], [middleware SDK][api-auth-middleware].
+Le gateway accepte encore plusieurs familles de headers : `Authorization`, `X-Api-Key`, `PROJECT-KEY`, `PLATFORM`, `IDENTIFIER`, `ENVIRONMENT`, les variantes `X-SuperBoard-*` et `X-SuperBoard-*`, `Idempotency-Key`, les headers de diagnostics et les headers du contexte interne. L’auth SDK distingue trois modes : mobile par `PROJECT-KEY` + plateforme/identifiant, serveur par `PROJECT-KEY` + environnement, et legacy par `X-Api-Key`. [Sources : CORS et montage][api-index], [middleware SDK][api-auth-middleware].
 
 Ces aliases sont des contrats de compatibilité, même quand leur nom est historique. Les supprimer au profit d’un schéma EmDash unique casserait les clients existants ; ils doivent rester au gateway ou être versionnés avec une migration séparée.
 
@@ -150,64 +150,64 @@ Ces aliases sont des contrats de compatibilité, même quand leur nom est histor
 
 Le registre déclare 8 services de domaine et 10 rôles de plateforme, soit 18 rôles logiques avant les Workers managés propres à une application. `configuration:check` a validé 17 services actifs pour chacun des targets actuels, car Messaging ou Analytics peut être désactivé et les orchestrateurs managés ne sont pas des clés du registre de base. [Sources : registre][service-registry], [catalogue opérateur][platform-status-route], [targets][target-schema].
 
-| Service | Surface et données possédées | État au SHA |
-| --- | --- | --- |
-| Dashboard | Back-office Next/OpenNext, cache OpenNext target-scoped. | **Livré** sur les deux manifests. [source][dashboard-package] |
-| API | Gateway, OAuth Dashboard/MCP, instances/projets, compatibilité SDK, notifications, orchestration, maintenance et D1 central/KV/R2. | **Livré** ; 60 migrations centrales jusqu’à `0060_analytics_verified_fact_backfill.sql`. [source][api-migrations] |
-| App | Customers, referrals, access key, setup plateforme, runtime policy et customer events ; D1 App. | **Livré**, activé sur les deux targets. [source][app-worker] |
-| Products | Produits, packages, offerings, entitlements, achats/refunds/subscriptions et catalog sync ; D1 Products. | **Livré**, activé sur les deux targets. [source][products-worker] |
-| Paywalls | Paywalls/versioning, placements, résolution, expériences/variants et événements ; D1 Paywalls. | **Livré**, activé sur les deux targets. [source][paywalls-worker] |
-| Dynamic Links | Liens, campagnes, règles, domaines, social preview, tracking et statistiques ; D1 Dynamic Links. | **Livré**, activé sur les deux targets. [source][dynamic-links-worker] |
-| Support | Client app, inbox opérateur, contacts, sociétés, notes, participants, drafts, CSAT, config, realtime, attachments et webhooks ; D1/R2/Queue/DLQ/DO. | **Livré en source ; partiel en production** tant que Chatwoot/OpenChat, les données et ressources legacy restent nécessaires. [sources][openchat-convergence] |
-| Analytics | Ingestion, events, sessions, profils, applications, dashboards/widgets, views, dimensions, crashes, feedback, remote config, cohorts, alerts, hooks, annotations, funnels, retention, reports et opérations ; D1/R2/Queue/Workflow. | **Livré MBZA ; désactivé VocoStar.** [source][analytics-worker] |
-| Marketing | Consentement, subscribers, listes, segments, templates/media, campagnes, transactional, journeys/signals/connectors, SMTP, provider events, outbox et DLQ ; D1/R2/Queue. | **Livré**, activé sur les deux targets. [source][marketing-worker] |
-| Onboardings | Définitions, versions, placements, targeting, expériences, résolution/events et statistiques ; D1. | **Livré**, activé sur les deux targets. [source][onboardings-worker] |
-| Billing | Autorité achats/entitlements/providers, projections, certifications et jobs ; D1 central, KV/R2, Queue et binding Analytics. | **Livré en source.** MBZA est déclaré `local`, VocoStar `service`; la certification provider/appareil reste un gate externe. [sources : Worker][billing-worker], [cutover][billing-cutover] |
-| Identity | Melody Auth intégré, utilisateurs application, email/password, providers, refresh, profile, reset, logs et admin proxifié ; D1 Identity, assets, Email et Files bindings. | **Livré en source**, SSO target désactivé. [source][identity-worker] |
-| Files | Upload/list/download/delete, metadata, tickets, effacement ; D1 Files + R2 principal. | **Livré**. [source][files-worker] |
-| Email | Capture/preview ou SMTP, AWS SES, idempotence, opérations et dead letters ; D1 Email + Queue/DLQ. | **Livré**. [source][email-worker] |
-| Observability | Lecture bornée d’Analytics Engine et résumé d’invocations/CPU/wall time. | **Livré**, sans D1 propre. [source][observability-worker] |
-| MCP | Worker public stateless lié en privé à l’API ; adapter local, serveur stdio/HTTP et catalogue d’outils dans `apps/mcp`. | **Livré**. [sources : Worker][mcp-worker], [app MCP][mcp-app] |
-| Messaging | Ancien inbox/conversations/realtime avec D1/R2/Queue/DO. | **Historique**, `features.messaging=false` sur les deux targets ; conservé pour lecture/migration/rollback. [source][messaging-architecture] |
-| Custom reference | `reference.echo` et reçu d’acceptance, D1 durable, cron de rétention. | **Livré** pour MBZA development. [source][custom-reference] |
-| Custom VocoStar | Jobs voix/média, annulation/retry, D1 VocoStar et bindings vers Files et orchestrateurs. | **Partiel/bloqué** : le runtime bridge est `blocked`. [sources : Worker][custom-vocostar], [target][target-vocostar] |
-| Orchestrateurs VocoStar | Workflows vocaux/médias, Durable Objects Dispatcher, pools Containers Standard/Premium et R2 legacy. | **Présents mais bloqués pour activation** par les routes Files/callbacks legacy. [sources : vocals][vocals-orchestrator], [medias][medias-orchestrator] |
+| Service                 | Surface et données possédées                                                                                                                                                                                                        | État au SHA                                                                                                                                                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard               | Back-office Next/OpenNext, cache OpenNext target-scoped.                                                                                                                                                                            | **Livré** sur les deux manifests. [source][dashboard-package]                                                                                                                               |
+| API                     | Gateway, OAuth Dashboard/MCP, instances/projets, compatibilité SDK, notifications, orchestration, maintenance et D1 central/KV/R2.                                                                                                  | **Livré** ; 60 migrations centrales jusqu’à `0060_analytics_verified_fact_backfill.sql`. [source][api-migrations]                                                                           |
+| App                     | Customers, referrals, access key, setup plateforme, runtime policy et customer events ; D1 App.                                                                                                                                     | **Livré**, activé sur les deux targets. [source][app-worker]                                                                                                                                |
+| Products                | Produits, packages, offerings, entitlements, achats/refunds/subscriptions et catalog sync ; D1 Products.                                                                                                                            | **Livré**, activé sur les deux targets. [source][products-worker]                                                                                                                           |
+| Paywalls                | Paywalls/versioning, placements, résolution, expériences/variants et événements ; D1 Paywalls.                                                                                                                                      | **Livré**, activé sur les deux targets. [source][paywalls-worker]                                                                                                                           |
+| Dynamic Links           | Liens, campagnes, règles, domaines, social preview, tracking et statistiques ; D1 Dynamic Links.                                                                                                                                    | **Livré**, activé sur les deux targets. [source][dynamic-links-worker]                                                                                                                      |
+| Support                 | Client app, inbox opérateur, contacts, sociétés, notes, participants, drafts, CSAT, config, realtime, attachments et webhooks ; D1/R2/Queue/DLQ/DO.                                                                                 | **Livré en source ; partiel en production** tant que Chatwoot/OpenChat, les données et ressources legacy restent nécessaires. [sources][openchat-convergence]                               |
+| Analytics               | Ingestion, events, sessions, profils, applications, dashboards/widgets, views, dimensions, crashes, feedback, remote config, cohorts, alerts, hooks, annotations, funnels, retention, reports et opérations ; D1/R2/Queue/Workflow. | **Livré MBZA ; désactivé VocoStar.** [source][analytics-worker]                                                                                                                             |
+| Marketing               | Consentement, subscribers, listes, segments, templates/media, campagnes, transactional, journeys/signals/connectors, SMTP, provider events, outbox et DLQ ; D1/R2/Queue.                                                            | **Livré**, activé sur les deux targets. [source][marketing-worker]                                                                                                                          |
+| Onboardings             | Définitions, versions, placements, targeting, expériences, résolution/events et statistiques ; D1.                                                                                                                                  | **Livré**, activé sur les deux targets. [source][onboardings-worker]                                                                                                                        |
+| Billing                 | Autorité achats/entitlements/providers, projections, certifications et jobs ; D1 central, KV/R2, Queue et binding Analytics.                                                                                                        | **Livré en source.** MBZA est déclaré `local`, VocoStar `service`; la certification provider/appareil reste un gate externe. [sources : Worker][billing-worker], [cutover][billing-cutover] |
+| Identity                | Melody Auth intégré, utilisateurs application, email/password, providers, refresh, profile, reset, logs et admin proxifié ; D1 Identity, assets, Email et Files bindings.                                                           | **Livré en source**, SSO target désactivé. [source][identity-worker]                                                                                                                        |
+| Files                   | Upload/list/download/delete, metadata, tickets, effacement ; D1 Files + R2 principal.                                                                                                                                               | **Livré**. [source][files-worker]                                                                                                                                                           |
+| Email                   | Capture/preview ou SMTP, AWS SES, idempotence, opérations et dead letters ; D1 Email + Queue/DLQ.                                                                                                                                   | **Livré**. [source][email-worker]                                                                                                                                                           |
+| Observability           | Lecture bornée d’Analytics Engine et résumé d’invocations/CPU/wall time.                                                                                                                                                            | **Livré**, sans D1 propre. [source][observability-worker]                                                                                                                                   |
+| MCP                     | Worker public stateless lié en privé à l’API ; adapter local, serveur stdio/HTTP et catalogue d’outils dans `apps/mcp`.                                                                                                             | **Livré**. [sources : Worker][mcp-worker], [app MCP][mcp-app]                                                                                                                               |
+| Messaging               | Ancien inbox/conversations/realtime avec D1/R2/Queue/DO.                                                                                                                                                                            | **Historique**, `features.messaging=false` sur les deux targets ; conservé pour lecture/migration/rollback. [source][messaging-architecture]                                                |
+| Custom reference        | `reference.echo` et reçu d’acceptance, D1 durable, cron de rétention.                                                                                                                                                               | **Livré** pour MBZA development. [source][custom-reference]                                                                                                                                 |
+| Custom VocoStar         | Jobs voix/média, annulation/retry, D1 VocoStar et bindings vers Files et orchestrateurs.                                                                                                                                            | **Partiel/bloqué** : le runtime bridge est `blocked`. [sources : Worker][custom-vocostar], [target][target-vocostar]                                                                        |
+| Orchestrateurs VocoStar | Workflows vocaux/médias, Durable Objects Dispatcher, pools Containers Standard/Premium et R2 legacy.                                                                                                                                | **Présents mais bloqués pour activation** par les routes Files/callbacks legacy. [sources : vocals][vocals-orchestrator], [medias][medias-orchestrator]                                     |
 
 ### 3.2 Traitements asynchrones
 
-| Producteur/consommateur | Traitements et garanties visibles |
-| --- | --- |
-| API | Cron : drain de l’outbox de faits Analytics, reprise des effacements de compte, refresh Apple notifications et maintenance. Queues : events, push, maintenance et Billing selon le mode. Les DLQ sont mises en quarantaine avant ack. [source][api-index] |
-| Billing | Cron de réconciliation ; Queue Billing en mode service ou local ; DLQ persistée, replay/discard audité et idempotence financière. [sources][billing-worker] |
-| Email | Queue de livraison avec idempotence, retry, événements de transport et quarantaine DLQ. Le Worker est l’unique autorité de socket SMTP. [sources : Worker][email-worker], [contrat][email-contract] |
-| Support | Queue + DLQ pour webhooks/événements, D1 de livraison, R2 attachments et un `ConversationRoom` Durable Object par conversation pour séquence et WebSocket hibernant. [sources : registre][service-registry], [architecture][messaging-architecture] |
-| Analytics | Queue d’ingestion, cron chaque minute, archive R2 et `AnalyticsOperationsWorkflow` pour export, replay, rebuild de rollups et effacement de sujet avec retries bornés. [sources : registre][service-registry], [Workflow][analytics-operations] |
-| Marketing | Queue de delivery, cron chaque minute, outbox/double opt-in, journeys, retry et quarantaine ; délègue le transport à Email. [sources : registre][service-registry], [Worker][marketing-worker] |
-| Custom reference | Cron quotidien et D1 de jobs/acceptance. [source][custom-reference] |
-| Custom VocoStar | Cron chaque minute pour dispatch/reprise ; deux Workflows Cloudflare pilotent Durable Objects et Containers, avec leases et tentatives bornées. [sources : target][target-vocostar], [orchestrateurs][vocals-orchestrator] |
-| Services synchrones | App, Products, Paywalls, Dynamic Links et Onboardings possèdent un D1 mais aucun Queue/cron propre au registre. Files et Identity sont synchrones ; Observability lit Analytics Engine ; MCP appelle l’API par Service Binding. [source][service-registry] |
+| Producteur/consommateur | Traitements et garanties visibles                                                                                                                                                                                                                          |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API                     | Cron : drain de l’outbox de faits Analytics, reprise des effacements de compte, refresh Apple notifications et maintenance. Queues : events, push, maintenance et Billing selon le mode. Les DLQ sont mises en quarantaine avant ack. [source][api-index]  |
+| Billing                 | Cron de réconciliation ; Queue Billing en mode service ou local ; DLQ persistée, replay/discard audité et idempotence financière. [sources][billing-worker]                                                                                                |
+| Email                   | Queue de livraison avec idempotence, retry, événements de transport et quarantaine DLQ. Le Worker est l’unique autorité de socket SMTP. [sources : Worker][email-worker], [contrat][email-contract]                                                        |
+| Support                 | Queue + DLQ pour webhooks/événements, D1 de livraison, R2 attachments et un `ConversationRoom` Durable Object par conversation pour séquence et WebSocket hibernant. [sources : registre][service-registry], [architecture][messaging-architecture]        |
+| Analytics               | Queue d’ingestion, cron chaque minute, archive R2 et `AnalyticsOperationsWorkflow` pour export, replay, rebuild de rollups et effacement de sujet avec retries bornés. [sources : registre][service-registry], [Workflow][analytics-operations]            |
+| Marketing               | Queue de delivery, cron chaque minute, outbox/double opt-in, journeys, retry et quarantaine ; délègue le transport à Email. [sources : registre][service-registry], [Worker][marketing-worker]                                                             |
+| Custom reference        | Cron quotidien et D1 de jobs/acceptance. [source][custom-reference]                                                                                                                                                                                        |
+| Custom VocoStar         | Cron chaque minute pour dispatch/reprise ; deux Workflows Cloudflare pilotent Durable Objects et Containers, avec leases et tentatives bornées. [sources : target][target-vocostar], [orchestrateurs][vocals-orchestrator]                                 |
+| Services synchrones     | App, Products, Paywalls, Dynamic Links et Onboardings possèdent un D1 mais aucun Queue/cron propre au registre. Files et Identity sont synchrones ; Observability lit Analytics Engine ; MCP appelle l’API par Service Binding. [source][service-registry] |
 
 ### 3.3 Chaînes de migrations D1
 
 Le nom de fichier est une partie du contrat Cloudflare. Les chaînes suivantes existent au SHA :
 
-| Propriétaire | Nombre | Dernière migration |
-| --- | ---: | --- |
-| API central | 60 | `0060_analytics_verified_fact_backfill.sql` [source][api-migrations] |
-| Identity | 51 | `0149_superboard_identity_log_scope.sql` [source][identity-migrations] |
-| Email | 7 | `0007_aws_ses_events.sql` [source][email-migrations] |
-| Files | 1 | `0001_files.sql` [source][files-migrations] |
-| Messaging historique | 4 | `0004_messaging_dead_letters.sql` [source][messaging-migrations] |
-| App | 4 | `0004_sdk_secret_references.sql` [source][app-migrations] |
-| Products | 3 | `0003_audit_context.sql` [source][products-migrations] |
-| Paywalls | 3 | `0003_audit_context.sql` [source][paywalls-migrations] |
-| Dynamic Links | 3 | `0003_campaign_analytics.sql` [source][dynamic-links-migrations] |
-| Support | 10 | `0009_application_user_erasure.sql` (la chaîne contient aussi `0002a_support_base_upgrade.sql`) [source][support-migrations] |
-| Analytics | 2 | `0002_countly_capabilities.sql` [source][analytics-migrations] |
-| Marketing | 11 | `0011_marketing_journeys.sql` [source][marketing-migrations] |
-| Onboardings | 3 | `0003_full_onboardings.sql` [source][onboardings-migrations] |
-| Custom reference | 2 | `0002_reference_acceptance.sql` [source][custom-reference-migrations] |
-| Custom VocoStar | 4 | `0004_owner_scoped_file_ids.sql` [source][custom-vocostar-migrations] |
+| Propriétaire         | Nombre | Dernière migration                                                                                                           |
+| -------------------- | -----: | ---------------------------------------------------------------------------------------------------------------------------- |
+| API central          |     60 | `0060_analytics_verified_fact_backfill.sql` [source][api-migrations]                                                         |
+| Identity             |     51 | `0149_superboard_identity_log_scope.sql` [source][identity-migrations]                                                       |
+| Email                |      7 | `0007_aws_ses_events.sql` [source][email-migrations]                                                                         |
+| Files                |      1 | `0001_files.sql` [source][files-migrations]                                                                                  |
+| Messaging historique |      4 | `0004_messaging_dead_letters.sql` [source][messaging-migrations]                                                             |
+| App                  |      4 | `0004_sdk_secret_references.sql` [source][app-migrations]                                                                    |
+| Products             |      3 | `0003_audit_context.sql` [source][products-migrations]                                                                       |
+| Paywalls             |      3 | `0003_audit_context.sql` [source][paywalls-migrations]                                                                       |
+| Dynamic Links        |      3 | `0003_campaign_analytics.sql` [source][dynamic-links-migrations]                                                             |
+| Support              |     10 | `0009_application_user_erasure.sql` (la chaîne contient aussi `0002a_support_base_upgrade.sql`) [source][support-migrations] |
+| Analytics            |      2 | `0002_countly_capabilities.sql` [source][analytics-migrations]                                                               |
+| Marketing            |     11 | `0011_marketing_journeys.sql` [source][marketing-migrations]                                                                 |
+| Onboardings          |      3 | `0003_full_onboardings.sql` [source][onboardings-migrations]                                                                 |
+| Custom reference     |      2 | `0002_reference_acceptance.sql` [source][custom-reference-migrations]                                                        |
+| Custom VocoStar      |      4 | `0004_owner_scoped_file_ids.sql` [source][custom-vocostar-migrations]                                                        |
 
 Billing ne possède pas de répertoire de migrations indépendant : son Worker utilise la base centrale et ses tables/migrations vivent dans la chaîne API. Observability, MCP et Dashboard n’ont pas de D1 métier propre ; le Dashboard a un KV de cache OpenNext target-scoped. [Sources : types Billing][billing-types], [registre D1][d1-registry].
 
@@ -219,15 +219,15 @@ Une migration EmDash qui déplace seulement le contenu visuel ne doit pas dépla
 
 Le catalogue machine-validé contient 7 entrées. Son état est : [source][sdk-catalog].
 
-| Entrée | Lifecycle | Source au SHA | Baseline immuable | État |
-| --- | --- | --- | --- | --- |
-| Flutter | active | `superboard_flutter` candidat 3.0.0 dans `sdks/flutter` | `opengrow_flutter` 2.1.4, `sdk-flutter-v2.1.4` | **Partiel : pending-release** |
-| FlutterFlow | active | `superboard_flutterflow` candidat 3.0.0 | `opengrow_flutterflow` 2.2.5, `sdk-flutterflow-v2.2.5` | **Partiel : pending-release** |
-| FlutterFlow Support | archived | 1.3.0 gelé | `sdk-flutterflow-messaging-v1.3.0` | **Historique/released** |
-| iOS | internal | 1.0.3 | tag/release 1.0.3 | **Interne/released** |
-| Android | internal | 1.0.3 | `sdk-android-v1.0.3` | **Interne/released** |
-| JavaScript | archived | 1.0.2 | `sdk-js-v1.0.2` | **Historique/released** |
-| React Native | archived | 1.0.2 | `sdk-react-native-v1.0.2` | **Historique/released** |
+| Entrée              | Lifecycle | Source au SHA                                           | Baseline immuable                                        | État                          |
+| ------------------- | --------- | ------------------------------------------------------- | -------------------------------------------------------- | ----------------------------- |
+| Flutter             | active    | `superboard_flutter` candidat 3.0.0 dans `sdks/flutter` | `superboard_flutter` 2.1.4, `sdk-flutter-v2.1.4`         | **Partiel : pending-release** |
+| FlutterFlow         | active    | `superboard_flutterflow` candidat 3.0.0                 | `superboard_flutterflow` 2.2.5, `sdk-flutterflow-v2.2.5` | **Partiel : pending-release** |
+| FlutterFlow Support | archived  | 1.3.0 gelé                                              | `sdk-flutterflow-messaging-v1.3.0`                       | **Historique/released**       |
+| iOS                 | internal  | 1.0.3                                                   | tag/release 1.0.3                                        | **Interne/released**          |
+| Android             | internal  | 1.0.3                                                   | `sdk-android-v1.0.3`                                     | **Interne/released**          |
+| JavaScript          | archived  | 1.0.2                                                   | `sdk-js-v1.0.2`                                          | **Historique/released**       |
+| React Native        | archived  | 1.0.2                                                   | `sdk-react-native-v1.0.2`                                | **Historique/released**       |
 
 Le catalogue affirme explicitement que seules les deux bibliothèques Dart sont actives, que iOS/Android sont des implémentations internes de Flutter, et que JavaScript/React Native/Support standalone restent reproductibles sans nouvelles releases. La promotion de Flutter et FlutterFlow 3.0 est atomique. [Sources : catalogue][sdk-catalog], [contrat Reference][reference-sdk-coverage].
 
@@ -242,7 +242,7 @@ L’application `apps/reference` matérialise 16 parcours : bootstrap, auth, cr�
 ### 4.3 Autres consommateurs
 
 - la famille Identity conserve cinq SDK Melody : Web, React, Vue, Angular et Next.js. Ils ciblent le même Worker Identity, utilisent OAuth code + PKCE et sont testés par `identity-sdks:check`, mais ils ne figurent pas dans le catalogue de release SuperBoard à 7 entrées. Leur politique de publication/compatibilité est donc une lacune à clarifier avant EmDash ; [sources : README][identity-sdks], [packages][identity-sdk-tree]
-- `apps/mcp` est un serveur/adaptateur local tandis que `workers/mcp` est le Worker distant stateless lié à l’API ; les deux consomment le même contrat opérateur ; [sources : app][mcp-app], [Worker][mcp-worker]
+- `apps/mcp` est un serveur/adaptateur local tandis que `packages/plugins/supbrd-core/mcp` est le Worker distant stateless lié à l’API ; les deux consomment le même contrat opérateur ; [sources : app][mcp-app], [Worker][mcp-worker]
 - VocoStar est déclaré comme unique application FlutterFlow externe. Son plan compte 7 phases, 10 work items, 35 checks et 36 symboles de remplacement, mais sa source n’est pas dans le dépôt ; le readiness offline la marque `source-not-inspected`. [Sources : application][flutterflow-applications], [plan][flutterflow-vocostar-plan]
 - les anciens repos `superboard-platform` et `superboard-reference` sont déclarés legacy ; l’autorité est le monorepo actuel. [Sources : gouvernance][platform-governance], [provenance][history-migration].
 
@@ -250,30 +250,30 @@ L’application `apps/reference` matérialise 16 parcours : bootstrap, auth, cr�
 
 ### 5.1 Topologie déclarée
 
-| Dimension | `mbza-development / development` | `vocostar / production` |
-| --- | --- | --- |
-| Identité physique | `superboard`, stratégie canonique | logique `superboard`, physique `opengrow`, conservation du nom legacy |
-| Routage public | `active` | `staged` — Workers privés, routes publiques désactivées |
-| Features | Billing, App, Products, Paywalls, Dynamic Links, Support, Analytics, Marketing, Onboardings ; Messaging false | Les mêmes sauf Analytics false ; Messaging false |
-| Mode Billing | `local` | `service` |
-| Worker custom | Reference, D1, cron quotidien | VocoStar + deux Workers managés, D1/R2, Workflows, DO, Containers, cron chaque minute |
-| IDs de ressources | 14 requis/configurés selon le gate offline | 13 requis/configurés selon le gate offline ; slot Analytics D1 nul car désactivé |
-| Plan de déploiement calculé | 17 services, aucun blocker | 18 services incluant 2 orchestrateurs ; 3 blockers runtime bridge |
-| Client acceptance | Reference activée par la matrice | Pas de reference acceptance ; convergence FlutterFlow externe requise |
+| Dimension                   | `mbza-development / development`                                                                              | `vocostar / production`                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Identité physique           | `superboard`, stratégie canonique                                                                             | logique `superboard`, physique `superboard`, conservation du nom legacy               |
+| Routage public              | `active`                                                                                                      | `staged` — Workers privés, routes publiques désactivées                               |
+| Features                    | Billing, App, Products, Paywalls, Dynamic Links, Support, Analytics, Marketing, Onboardings ; Messaging false | Les mêmes sauf Analytics false ; Messaging false                                      |
+| Mode Billing                | `local`                                                                                                       | `service`                                                                             |
+| Worker custom               | Reference, D1, cron quotidien                                                                                 | VocoStar + deux Workers managés, D1/R2, Workflows, DO, Containers, cron chaque minute |
+| IDs de ressources           | 14 requis/configurés selon le gate offline                                                                    | 13 requis/configurés selon le gate offline ; slot Analytics D1 nul car désactivé      |
+| Plan de déploiement calculé | 17 services, aucun blocker                                                                                    | 18 services incluant 2 orchestrateurs ; 3 blockers runtime bridge                     |
+| Client acceptance           | Reference activée par la matrice                                                                              | Pas de reference acceptance ; convergence FlutterFlow externe requise                 |
 
 [Sources : target MBZA][target-mbza], [target VocoStar][target-vocostar], [registre][service-registry], [matrice][deployment-matrix].
 
 ### 5.2 Domaines publics
 
-| Surface | MBZA development | VocoStar production |
-| --- | --- | --- |
-| API | `api.mbza.dev` | `api.vocostar.com` |
-| Auth | `auth.mbza.dev` | `auth.vocostar.com` |
-| Short links | `in.mbza.dev` | `go.vocostar.com` |
-| SDK | `sdk.mbza.dev` | `sdk.vocostar.com` |
-| Dashboard | `board.mbza.dev` | `grow.vocostar.com` |
-| Files | `files.mbza.dev` | `files.vocostar.com` |
-| MCP | `mcp.mbza.dev` | `mcp.vocostar.com` |
+| Surface               | MBZA development        | VocoStar production                |
+| --------------------- | ----------------------- | ---------------------------------- |
+| API                   | `api.mbza.dev`          | `api.vocostar.com`                 |
+| Auth                  | `auth.mbza.dev`         | `auth.vocostar.com`                |
+| Short links           | `in.mbza.dev`           | `go.vocostar.com`                  |
+| SDK                   | `sdk.mbza.dev`          | `sdk.vocostar.com`                 |
+| Dashboard             | `board.mbza.dev`        | `grow.vocostar.com`                |
+| Files                 | `files.mbza.dev`        | `files.vocostar.com`               |
+| MCP                   | `mcp.mbza.dev`          | `mcp.vocostar.com`                 |
 | Mail/Messaging legacy | `mail.mbza.dev` preview | `messages.vocostar.com` historique |
 
 Le target MBZA déclare aussi `grow.mbza.dev` comme domaine retiré qui doit rester non assigné. VocoStar surveille `chat.vocostar.com/ready` uniquement comme source legacy Chatwoot/OpenChat jusqu’à la migration et la rétention. [Sources : MBZA][target-mbza], [VocoStar][target-vocostar].
@@ -366,7 +366,7 @@ La migration EmDash doit donc ajouter son propre rollback atomique de **Release 
 - SDK FlutterFlow Support, JavaScript et React Native gelés ;
 - tags iOS/Android et tags 2.x utilisés par la Reference ;
 - anciennes routes API et SDK v1/v2 ;
-- anciens noms physiques `opengrow` sur VocoStar et historiques de migrations SQL.
+- anciens noms physiques `superboard` sur VocoStar et historiques de migrations SQL.
 
 [Sources : historique][history-migration], [Messaging][messaging-architecture], [catalogue SDK][sdk-catalog], [target][target-vocostar].
 
@@ -376,14 +376,14 @@ Au 29 août 2026, le checkout partagé comparé à `d1850233` contient **172 ent
 
 Les ensembles les plus structurants sont :
 
-| Ensemble local | Paths observés | Classification |
-| --- | --- | --- |
-| Flows | `workers/flows/`, `sdks/flows/`, `apps/dashboard/src/app/(protected)/flows/`, `apps/dashboard/src/api/flows/`, `packages/contracts/src/flows.ts`, migration API `0061_flows_legacy_cutover.sql`, scripts de sync/cutover | **Checkout non validé.** Verticale apparemment complète, totalement absente du SHA. |
-| Support étendu | nouvelles pages `automations`, `captain`, `channels`, `help-center`, `integrations`, `proactive-support`, `reports`, `settings`, `workforce`; migrations Support `0010` à `0023`; nouveaux contrats/SDK/tests/runtime | **Checkout non validé.** Ne pas l’inclure dans la parité livrée sans commit reviewé. |
-| Notifications Support et Email inbound | `support-notifications.*`, migration API `0062`, gateway Support, `workers/email/src/inbound.ts`, changements Push/Email | **Checkout non validé.** |
-| SDK | nouveaux clients Flutter Flows/Support, FlutterFlow Flows, typings/support JavaScript, changements de catalogue/release | **Checkout non validé.** |
-| Contrôle Cloudflare | modifications targets, schéma, services, bootstrap, secrets, D1, contrôle GitHub et readiness | **Checkout non validé.** Peut changer la topologie ; ne pas mélanger avec le baseline. |
-| Documentation de domaine et hooks | `CONTEXT*.md`, `docs/agents/`, `AGENTS.md`, Husky/lint-staged/Prettier | **Checkout non validé.** Ces fichiers expliquent le travail en cours, pas l’état livré du SHA. |
+| Ensemble local                         | Paths observés                                                                                                                                                                                                                                         | Classification                                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Flows                                  | `packages/plugins/supbrd-plug-journeys/flows/`, `sdks/flows/`, `apps/dashboard/src/app/(protected)/flows/`, `apps/dashboard/src/api/flows/`, `packages/contracts/src/flows.ts`, migration API `0061_flows_legacy_cutover.sql`, scripts de sync/cutover | **Checkout non validé.** Verticale apparemment complète, totalement absente du SHA.            |
+| Support étendu                         | nouvelles pages `automations`, `captain`, `channels`, `help-center`, `integrations`, `proactive-support`, `reports`, `settings`, `workforce`; migrations Support `0010` à `0023`; nouveaux contrats/SDK/tests/runtime                                  | **Checkout non validé.** Ne pas l’inclure dans la parité livrée sans commit reviewé.           |
+| Notifications Support et Email inbound | `support-notifications.*`, migration API `0062`, gateway Support, `packages/plugins/supbrd-plug-communication/email/src/inbound.ts`, changements Push/Email                                                                                            | **Checkout non validé.**                                                                       |
+| SDK                                    | nouveaux clients Flutter Flows/Support, FlutterFlow Flows, typings/support JavaScript, changements de catalogue/release                                                                                                                                | **Checkout non validé.**                                                                       |
+| Contrôle Cloudflare                    | modifications targets, schéma, services, bootstrap, secrets, D1, contrôle GitHub et readiness                                                                                                                                                          | **Checkout non validé.** Peut changer la topologie ; ne pas mélanger avec le baseline.         |
+| Documentation de domaine et hooks      | `CONTEXT*.md`, `docs/agents/`, `AGENTS.md`, Husky/lint-staged/Prettier                                                                                                                                                                                 | **Checkout non validé.** Ces fichiers expliquent le travail en cours, pas l’état livré du SHA. |
 
 Il faut prendre une décision explicite avant la conception finale EmDash : soit rebaser l’inventaire sur un futur commit reviewé contenant ces travaux, soit maintenir `d1850233` comme baseline et traiter Flows/Support étendu comme une migration parallèle. Mélanger les deux créerait une parité impossible à auditer.
 
@@ -425,7 +425,7 @@ La migration est compatible uniquement si elle prouve les invariants suivants :
 
 ### Targets et opérations
 
-- EmDash consomme `deploy/targets/*` et le registre de services ; il ne les remplace pas ;
+- EmDash consomme `infra/targets/*` et le registre de services ; il ne les remplace pas ;
 - MBZA development et VocoStar production gardent leurs domaines, noms physiques, IDs et modes de routage ;
 - aucune nouvelle autorité de déploiement automatique ne s’ajoute à Workers Builds/GitHub Actions sans décision et tests ;
 - la publication du Front doit s’insérer après les gates CI, routing, domains, secrets et backup applicables ;
@@ -434,35 +434,35 @@ La migration est compatible uniquement si elle prouve les invariants suivants :
 
 ## 10. Risques prioritaires pour la carte Wayfinder
 
-| Priorité | Risque / décision révélée | Pourquoi cela bloque la suite |
-| --- | --- | --- |
-| P0 | Choisir le baseline entre `d1850233` et un futur commit intégrant Flows/Support étendu | La surface à migrer change fortement et le checkout actuel n’est pas auditable comme release. |
-| P0 | Définir le modèle de session Front SuperBoard vs EmDash Admin | Le Dashboard actuel est client-side/localStorage ; une session fusionnée pourrait exposer des privilèges admin CMS ou casser les refresh/backTo. |
-| P0 | Définir un registre versionné route/renderer/capacité/permission/target | Navigation et permissions sont aujourd’hui dispersées entre React, API et Workers. |
-| P0 | Geler les contrats non partagés et la surface API/SDK | Les contrats Support/Products/etc. sont locaux et 320 routes rendent une migration ad hoc risquée. |
-| P0 | Décider comment une Release Front est compilée, validée, publiée et rollbackée | EmDash ne fournit pas encore dans ce dépôt l’artefact atomique requis par la destination. |
-| P1 | Fermer ou isoler les travaux VocoStar déjà bloqués | Le nouveau front ne peut pas transformer un target `staged` et un runtime bridge bloqué en « production migrée ». |
-| P1 | Coordonner la promotion SDK 3.0 avec le front | La Reference compile le rollback 2.x ; changer le front et le SDK simultanément supprimerait une preuve de retour arrière. |
-| P1 | Unifier l’autorité documentaire de déploiement | Le résumé d’audit contredit les manifests/tests ; une troisième pipeline EmDash augmenterait le risque de double déploiement. |
-| P1 | Construire la matrice de rollback multi-couche | Le repo a de bons outils D1/secret/module, mais aucun rollback transactionnel global des Workers et du Front. |
-| P2 | Décider du lifecycle des SDK Identity Melody et des routes hors navigation | Ils sont réels mais ne figurent pas dans le catalogue/dashboard principal. |
+| Priorité | Risque / décision révélée                                                              | Pourquoi cela bloque la suite                                                                                                                    |
+| -------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| P0       | Choisir le baseline entre `d1850233` et un futur commit intégrant Flows/Support étendu | La surface à migrer change fortement et le checkout actuel n’est pas auditable comme release.                                                    |
+| P0       | Définir le modèle de session Front SuperBoard vs EmDash Admin                          | Le Dashboard actuel est client-side/localStorage ; une session fusionnée pourrait exposer des privilèges admin CMS ou casser les refresh/backTo. |
+| P0       | Définir un registre versionné route/renderer/capacité/permission/target                | Navigation et permissions sont aujourd’hui dispersées entre React, API et Workers.                                                               |
+| P0       | Geler les contrats non partagés et la surface API/SDK                                  | Les contrats Support/Products/etc. sont locaux et 320 routes rendent une migration ad hoc risquée.                                               |
+| P0       | Décider comment une Release Front est compilée, validée, publiée et rollbackée         | EmDash ne fournit pas encore dans ce dépôt l’artefact atomique requis par la destination.                                                        |
+| P1       | Fermer ou isoler les travaux VocoStar déjà bloqués                                     | Le nouveau front ne peut pas transformer un target `staged` et un runtime bridge bloqué en « production migrée ».                                |
+| P1       | Coordonner la promotion SDK 3.0 avec le front                                          | La Reference compile le rollback 2.x ; changer le front et le SDK simultanément supprimerait une preuve de retour arrière.                       |
+| P1       | Unifier l’autorité documentaire de déploiement                                         | Le résumé d’audit contredit les manifests/tests ; une troisième pipeline EmDash augmenterait le risque de double déploiement.                    |
+| P1       | Construire la matrice de rollback multi-couche                                         | Le repo a de bons outils D1/secret/module, mais aucun rollback transactionnel global des Workers et du Front.                                    |
+| P2       | Décider du lifecycle des SDK Identity Melody et des routes hors navigation             | Ils sont réels mais ne figurent pas dans le catalogue/dashboard principal.                                                                       |
 
 ## 11. Vérifications exécutées dans le worktree isolé
 
 Les commandes suivantes ont été exécutées sur le SHA après `npm ci --ignore-scripts`. Elles n’ont effectué aucune opération distante ni mutation Cloudflare/GitHub :
 
-| Vérification | Résultat |
-| --- | --- |
-| `npm run migration:inventory` | succès ; 320 routes, 120 tables, upstream indisponible et non vérifié |
-| `npm run migration:inventory:test` | 8/8 tests réussis, dont schéma D1 frais et fail-closed upstream |
-| `npm run cloudflare:test:services` | 28/28 tests réussis, dont huit domaines, migrations attendues, configs privées, Support stateful, Analytics durable et policy Workers |
-| `npm run sdk:catalog:check` | succès ; 7 bibliothèques |
-| `npm run sdk:catalog:test` | 16/16 tests réussis, dont promotion atomique et lifecycle gelé |
-| `npm run configuration:check` | succès ; 1 240 fichiers runtime, 17 services logiques, 14 IDs et 17 Workers déclarés par target, zéro valeur de secret dans les configs |
-| `cloudflare:deploy:all --plan` MBZA | succès ; 17 services, aucun blocker |
-| `cloudflare:deploy:all --plan` VocoStar | plan calculé ; 18 services, 12 schémas, 3 blockers runtime bridge |
-| `cloudflare:routing:check` | MBZA `active-development`; VocoStar `staged-private-workers` |
-| `npm run platform:readiness` offline | commande réussie mais `ready=false` : releases SDK, Reference, client VocoStar, credentials absents du processus et branche de recherche empêchent un résultat global vert |
+| Vérification                            | Résultat                                                                                                                                                                   |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run migration:inventory`           | succès ; 320 routes, 120 tables, upstream indisponible et non vérifié                                                                                                      |
+| `npm run migration:inventory:test`      | 8/8 tests réussis, dont schéma D1 frais et fail-closed upstream                                                                                                            |
+| `npm run cloudflare:test:services`      | 28/28 tests réussis, dont huit domaines, migrations attendues, configs privées, Support stateful, Analytics durable et policy Workers                                      |
+| `npm run sdk:catalog:check`             | succès ; 7 bibliothèques                                                                                                                                                   |
+| `npm run sdk:catalog:test`              | 16/16 tests réussis, dont promotion atomique et lifecycle gelé                                                                                                             |
+| `npm run configuration:check`           | succès ; 1 240 fichiers runtime, 17 services logiques, 14 IDs et 17 Workers déclarés par target, zéro valeur de secret dans les configs                                    |
+| `cloudflare:deploy:all --plan` MBZA     | succès ; 17 services, aucun blocker                                                                                                                                        |
+| `cloudflare:deploy:all --plan` VocoStar | plan calculé ; 18 services, 12 schémas, 3 blockers runtime bridge                                                                                                          |
+| `cloudflare:routing:check`              | MBZA `active-development`; VocoStar `staged-private-workers`                                                                                                               |
+| `npm run platform:readiness` offline    | commande réussie mais `ready=false` : releases SDK, Reference, client VocoStar, credentials absents du processus et branche de recherche empêchent un résultat global vert |
 
 Les scripts correspondants sont eux-mêmes versionnés et testés : [inventaire][inventory-script], [services][service-registry], [catalogue SDK][sdk-catalog-script], [configuration][configuration-boundaries-script], [readiness][platform-readiness-script], [plan][deploy-plan] et [routing][routing-gate]. Un readiness offline rouge n’est pas une preuve d’indisponibilité distante ; il indique seulement que toutes les preuves requises ne sont pas présentes dans ce worktree/processus.
 
@@ -476,26 +476,26 @@ La voie EmDash ne doit commencer la construction qu’après cinq décisions : b
 
 [adr-canonical]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/ADR-001-CANONICAL-SUPERBOARD-SOURCE.md
 [analytics-contract]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/contracts/src/analytics.ts
-[analytics-http]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/analytics/src/http.ts
-[analytics-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/analytics/migrations
-[analytics-operations]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/analytics/src/operations.ts
-[analytics-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/analytics/src/index.ts
-[api-auth]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/api/src/lib/auth.ts
-[api-auth-middleware]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/api/src/middleware/auth.ts
-[api-index]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/api/src/index.ts
-[api-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/api/migrations
-[api-routes-tree]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/api/src/routes
-[app-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/app/migrations
-[app-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/app/src/index.ts
+[analytics-http]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-analytics/worker/src/http.ts
+[analytics-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-analytics/worker/migrations
+[analytics-operations]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-analytics/worker/src/operations.ts
+[analytics-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-analytics/worker/src/index.ts
+[api-auth]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/lib/auth.ts
+[api-auth-middleware]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/middleware/auth.ts
+[api-index]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/index.ts
+[api-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/migrations
+[api-routes-tree]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/routes
+[app-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/app/migrations
+[app-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/app/src/index.ts
 [architecture]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/ARCHITECTURE_CIBLE_FR.md
 [auth-refresh-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/dashboard/src/app/api/auth/refresh/route.ts
 [auth-revoke-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/dashboard/src/app/api/auth/revoke/route.ts
 [auth-token-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/dashboard/src/app/api/auth/token/route.ts
 [backoffice-policy]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/backoffice-policy.test.mjs
 [billing-cutover]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/BILLING_WORKER_CUTOVER.md
-[billing-routes]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/api/src/routes
-[billing-types]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/api/src/types.ts
-[billing-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/billing/src/index.ts
+[billing-routes]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/routes
+[billing-types]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/types.ts
+[billing-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-commerce/billing/src/index.ts
 [bootstrap-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-bootstrap.mjs
 [ci-workflow]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/.github/workflows/ci.yml
 [cloudflare-doc]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/CLOUDFLARE.md
@@ -504,8 +504,8 @@ La voie EmDash ne doit commencer la construction qu’après cinq décisions : b
 [contracts-index]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/contracts/src/index.ts
 [contracts-package]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/contracts/package.json
 [custom-contract]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/contracts/src/custom-worker.ts
-[custom-reference]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/custom/reference/src/index.ts
-[custom-reference-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/custom/reference/migrations
+[custom-reference]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/reference/worker/src/index.ts
+[custom-reference-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/reference/worker/migrations
 [custom-vocostar]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/custom/vocostar/src/index.ts
 [custom-vocostar-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/custom/vocostar/migrations
 [d1-backup]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-d1-backup.mjs
@@ -551,50 +551,50 @@ La voie EmDash ne doit commencer la construction qu’après cinq décisions : b
 [deploy-workflow]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/.github/workflows/deploy-cloudflare.yml
 [deployment-doc]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/DEPLOYMENT.md
 [deployment-matrix]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/cloudflare-deployments.json
-[domain-gateway]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/api/src/lib/domain-modules.ts
-[dynamic-links-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/dynamic-links/migrations
-[dynamic-links-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/dynamic-links/src/index.ts
+[domain-gateway]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/lib/domain-modules.ts
+[dynamic-links-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/dynamic-links/migrations
+[dynamic-links-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/dynamic-links/src/index.ts
 [email-contract]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/contracts/src/email.ts
-[email-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/email/migrations
+[email-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/email/migrations
 [email-transport]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/email-transport/src/index.ts
-[email-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/email/src/index.ts
-[files-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/files/migrations
-[files-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/files/src/index.ts
+[email-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/email/src/index.ts
+[files-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-data/worker/migrations
+[files-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-data/worker/src/index.ts
 [flutterflow-applications]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/flutterflow-applications.json
 [flutterflow-library]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/flutterflow-library.json
-[flutterflow-library-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/flutterflow-library-contract.mjs
+[flutterflow-library-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/tools/flutterflow-library/scripts/flutterflow-library-contract.mjs
 [flutterflow-vocostar-plan]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/flutterflow-migrations/vocostar.json
 [github-control-plane]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/github-control-plane.json
 [history-migration]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/HISTORY_MIGRATION.md
-[identity-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/identity/migrations
+[identity-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-identity/worker/migrations
 [identity-sdk-tree]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/sdks/identity
 [identity-sdks]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/sdks/identity/README.md
-[identity-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/identity/src/index.ts
+[identity-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-identity/worker/src/index.ts
 [implementation-audit]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/IMPLEMENTATION_AUDIT_2026-08-08.md
 [inventory-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/superboard-inventory.mjs
 [inventory-tests]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/superboard-inventory.test.mjs
 [local-storage]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/dashboard/src/lib/LocalStorage.ts
-[marketing-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/marketing/migrations
-[marketing-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/marketing/src/index.ts
+[marketing-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/marketing/migrations
+[marketing-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/marketing/src/index.ts
 [mcp-app]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/mcp
-[mcp-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/mcp/src/index.ts
+[mcp-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/mcp/src/index.ts
 [medias-orchestrator]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/custom/vocostar/orchestrators/medias/src/index.ts
 [messaging-architecture]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/MESSAGING_ARCHITECTURE.md
 [messaging-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/messaging/migrations
 [migration-batch]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-migration-batch.mjs
 [module-cutover]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/MODULE_CUTOVER_RUNBOOK.md
-[observability-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/observability/src/index.ts
-[onboardings-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/onboardings/migrations
-[onboardings-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/onboardings/src/index.ts
+[observability-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/observability/src/index.ts
+[onboardings-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-journeys/onboardings/migrations
+[onboardings-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-journeys/onboardings/src/index.ts
 [openchat-convergence]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/OPENCHAT_SUPPORT_CONVERGENCE.md
 [packages-tree]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages
-[paywalls-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/paywalls/migrations
-[paywalls-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/paywalls/src/index.ts
+[paywalls-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-commerce/paywalls/migrations
+[paywalls-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-commerce/paywalls/src/index.ts
 [platform-governance]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/platform-governance.json
 [platform-readiness-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/platform-readiness.mjs
-[platform-status-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/api/src/routes/platform-status.ts
-[products-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/products/migrations
-[products-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/products/src/index.ts
+[platform-status-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/routes/platform-status.ts
+[products-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-commerce/products/migrations
+[products-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-commerce/products/src/index.ts
 [project-context]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/contracts/src/project-context.ts
 [protected-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/dashboard/src/lib/ProtectedRoute.tsx
 [public-routing]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/PUBLIC_ROUTING_CUTOVER.md
@@ -608,10 +608,10 @@ La voie EmDash ne doit commencer la construction qu’après cinq décisions : b
 [sdk-catalog-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/sdk-catalog.mjs
 [secret-management]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/SECRET_MANAGEMENT.md
 [service-registry]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-services.mjs
-[support-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/support/migrations
-[support-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/support/src/index.ts
-[target-mbza]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/deploy/targets/mbza-development.json
-[target-schema]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/deploy/targets/schema.json
-[target-vocostar]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/deploy/targets/vocostar.json
-[targets-tree]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/deploy/targets
+[support-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-support/worker/migrations
+[support-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-support/worker/src/index.ts
+[target-mbza]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/mbza-development.json
+[target-schema]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/schema.json
+[target-vocostar]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/vocostar.json
+[targets-tree]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets
 [vocals-orchestrator]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/custom/vocostar/orchestrators/vocals/src/index.ts

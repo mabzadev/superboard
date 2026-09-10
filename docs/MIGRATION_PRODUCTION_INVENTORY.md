@@ -1,7 +1,7 @@
 # Production Migration Inventory
 
 This document is the migration contract before product implementation resumes.
-It is generated from the current SuperBoard workspace plus `upstream/opengrow/*`
+It is generated from the current SuperBoard workspace plus `upstream/superboard/*`
 submodules pinned to GitHub `origin/main`.
 
 Run the reproducible inventory with:
@@ -12,31 +12,31 @@ npm run migration:inventory
 
 ## Baseline Commits
 
-| Repository            | Commit                                     |
-| --------------------- | ------------------------------------------ |
-| backend               | `6a20f36994ca587cdeb554e08a25689c4f5240e8` |
-| dashboard             | `43b8fde26bf5d19b3fb1bdea6cb35d2f68e486b7` |
-| mcp                   | `c01b4bca89d0475a817f6671ca42efa9bec02c28` |
-| opengrow-js           | `20fc5ab75e48697037daa3bc5b8b193dd679c35f` |
-| opengrow-iOS          | `fd90467273ac63752be93d84e961941b5bdf149c` |
-| opengrow-Android      | `1116eddf93507aab001e7d60080f38767af58b94` |
-| opengrow-react-native | `864d3bee900a34b24fce334d81abdf32e41b27ea` |
-| opengrow-flutter      | `eec1c65b9732034db5b4679c65ded0b66e3e5c46` |
-| opengrow-utils        | `49e30506df68704acfb8402c3b64ea56f8a54d65` |
+| Repository              | Commit                                     |
+| ----------------------- | ------------------------------------------ |
+| backend                 | `6a20f36994ca587cdeb554e08a25689c4f5240e8` |
+| dashboard               | `43b8fde26bf5d19b3fb1bdea6cb35d2f68e486b7` |
+| mcp                     | `c01b4bca89d0475a817f6671ca42efa9bec02c28` |
+| superboard-js           | `20fc5ab75e48697037daa3bc5b8b193dd679c35f` |
+| superboard-iOS          | `fd90467273ac63752be93d84e961941b5bdf149c` |
+| superboard-Android      | `1116eddf93507aab001e7d60080f38767af58b94` |
+| superboard-react-native | `864d3bee900a34b24fce334d81abdf32e41b27ea` |
+| superboard-flutter      | `eec1c65b9732034db5b4679c65ded0b66e3e5c46` |
+| superboard-utils        | `49e30506df68704acfb8402c3b64ea56f8a54d65` |
 
 ## Current Inventory
 
-| Area        | Upstream SuperBoard |                                    Current SuperBoard |
-| ----------- | ----------------: | --------------------------------------------------: |
-| Routes      |               170 |                                 199 Worker handlers |
-| Tables      |                60 |                                   60 D1 table names |
-| Jobs        |                20 | Cloudflare cron/manual route plus route-local ports |
-| Services    |                58 |                           Partial route-local logic |
-| Models      |                53 |                                      No model layer |
-| Serializers |                32 |                     Partial ad hoc response shaping |
+| Area        | Upstream SuperBoard |                                  Current SuperBoard |
+| ----------- | ------------------: | --------------------------------------------------: |
+| Routes      |                 170 |                                 199 Worker handlers |
+| Tables      |                  60 |                                   60 D1 table names |
+| Jobs        |                  20 | Cloudflare cron/manual route plus route-local ports |
+| Services    |                  58 |                           Partial route-local logic |
+| Models      |                  53 |                                      No model layer |
+| Serializers |                  32 |                     Partial ad hoc response shaping |
 
 The D1 table and column inventory now matches upstream locally after
-`workers/opengrow/migrations/0005_opengrow_production_column_parity.sql`.
+`workers/superboard/migrations/0005_superboard_production_column_parity.sql`.
 
 Current schema gate:
 
@@ -182,7 +182,7 @@ Auth-adjacent mail delivery is now covered by module 13.
   product revenue aggregation and dashboard overview revenue from a real D1
   purchase row.
 - The historical browser validation used the now-removed
-  `NEXT_PUBLIC_OPENGROW_EE` edition flag. Revenue visibility is now controlled
+  `NEXT_PUBLIC_SUPERBOARD_EE` edition flag. Revenue visibility is now controlled
   by the application's `revenue_collection_enabled` capability and has no
   SuperBoard plan dependency; the same fixture showed `pro_monthly`, iOS, 2 units
   and `$9.98` from the local Worker without mocked network routes.
@@ -367,11 +367,11 @@ Auth-adjacent mail delivery is now covered by module 13.
   upstream Active Storage.
 - Export objects include `text/csv` metadata, download content disposition,
   private no-store response headers, and an object metadata expiry timestamp.
-- The Worker is configured with an `R2` bucket binding for `opengrow-files` and a
+- The Worker is configured with an `R2` bucket binding for `superboard-files` and a
   local preview bucket for Wrangler validation.
 - Local smoke validation covered link export creation, usage export creation,
   download endpoint reads from R2, CSV content checks and two captured
-  `Data export - opengrow` emails.
+  `Data export - superboard` emails.
 
 ### 15. Cloudflare scheduled maintenance jobs
 

@@ -13,31 +13,23 @@ This guide covers setup, policy, and the rules around opening a PR. For code pat
 ## Setup
 
 ```bash
-git clone https://github.com/emdash-cms/emdash.git && cd emdash
+git clone https://github.com/mabzadev/superboard.git && cd superboard
 pnpm install
 pnpm build   # required before first run
 ```
 
-### Run the demo
+### Run SuperBoard
 
-`demos/simple/` is the primary development target. Node.js + SQLite, no Cloudflare account needed.
+Start the Site and its local services from the repository root:
 
 ```bash
-cd demos/simple
-pnpm dev    # http://localhost:4321
+pnpm local:start
 ```
 
-Open the admin at `http://localhost:4321/_emdash/admin`. The setup wizard runs on first launch.
-
-In dev, skip passkey auth with the dev bypass:
-
-```
-http://localhost:4321/_emdash/api/setup/dev-bypass?redirect=/_emdash/admin
-```
-
-Demo sites apply their `seed/seed.json` automatically on the first request when the database is empty -- there's no separate seed command.
-
-`demos/cloudflare/` runs on the real `workerd` runtime with D1. See its [README](demos/cloudflare/README.md).
+Open `http://localhost:4321/_emdash/admin`. For an isolated validation instance,
+use `pnpm local:start --state-directory /tmp/superboard-validation`.
+Stop it with `pnpm local:stop` and the same state-directory argument.
+See [the monorepo guide](docs/MONOREPO.md) for local development details.
 
 ### Templates
 
@@ -52,34 +44,33 @@ Available templates: `blank`, `starter`, `blog`, `portfolio`, `marketing`, plus 
 
 ### Watch mode
 
-When iterating on `packages/core` alongside a demo, run two terminals:
+When iterating on `packages/core` alongside a template, run two terminals:
 
 ```bash
 # Terminal 1
 cd packages/core && pnpm dev
 
 # Terminal 2
-cd demos/simple && pnpm dev
+cd templates/blog && pnpm dev
 ```
 
-Core changes propagate to the demo automatically.
+Core changes propagate to the template automatically.
 
 ## Repository Layout
 
-| Directory                 | What it is                                                                      |
-| ------------------------- | ------------------------------------------------------------------------------- |
-| `packages/core/`          | Main `emdash` package -- Astro integration, REST API, database, schema, plugins |
-| `packages/admin/`         | React admin UI SPA (`@emdash-cms/admin`)                                        |
-| `packages/auth/`          | Auth -- passkeys, OAuth, magic links (`@emdash-cms/auth`)                       |
-| `packages/cloudflare/`    | Cloudflare Workers adapter + plugin sandbox                                     |
-| `packages/blocks/`        | Portable Text block definitions                                                 |
-| `packages/create-emdash/` | `create-emdash` CLI scaffolder                                                  |
-| `packages/plugins/`       | First-party plugins                                                             |
-| `demos/`                  | Dev/test apps (`simple`, `cloudflare`, `postgres`, ...)                         |
-| `templates/`              | Starter templates                                                               |
-| `docs/`                   | Documentation site (Starlight)                                                  |
-| `e2e/`                    | Playwright test infrastructure                                                  |
-| `i18n/`                   | Translation status dashboard (Lunaria)                                          |
+| Directory                 | What it is                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `packages/core/`          | Main `emdash` package -- Astro integration, REST API, database, schema, plugins         |
+| `packages/admin/`         | React admin UI SPA (`@emdash-cms/admin`)                                                |
+| `packages/auth/`          | Auth -- passkeys, OAuth, magic links (`@emdash-cms/auth`)                               |
+| `packages/cloudflare/`    | Cloudflare Workers adapter + plugin sandbox                                             |
+| `packages/blocks/`        | Portable Text block definitions                                                         |
+| `packages/create-emdash/` | `create-emdash` CLI scaffolder                                                          |
+| `packages/plugins/`       | First-party plugins                                                                     |
+| `templates/`              | Starter templates                                                                       |
+| `docs/`                   | Documentation site (Starlight)                                                          |
+| `tests/`                  | Maintained tests, shared fixtures and linters; see [the testing guide](tests/README.md) |
+| `i18n/`                   | Translation status dashboard (Lunaria)                                                  |
 
 ## Checks
 
@@ -99,7 +90,7 @@ Tests use real in-memory SQLite -- no mocking. Each test gets a fresh database. 
 
 ### Visual regression tests
 
-The admin UI has a Playwright visual-regression suite (`e2e/tests/visual-regression.spec.ts`) that screenshots key screens in both LTR (English) and RTL (Arabic). It is gated behind `EMDASH_VISUAL=1` so it stays out of the default `pnpm test:e2e` run:
+The admin UI has a Playwright visual-regression suite (`tests/e2e/emdash/visual-regression.spec.ts`) that screenshots key screens in both LTR (English) and RTL (Arabic). It is gated behind `EMDASH_VISUAL=1` so it stays out of the default `pnpm test:e2e` run:
 
 ```bash
 EMDASH_VISUAL=1 pnpm test:e2e visual-regression
@@ -111,13 +102,13 @@ When a PR changes how a screen renders, the `Visual Regression` check goes red a
 
 ### Building your own site in the monorepo
 
-Copy a template into `demos/`, give it a unique `name` in `package.json`, install, and run:
+Copy a template into `apps/`, give it a unique `name` in `package.json`, install, and run:
 
 ```bash
-cp -r templates/blog demos/my-site
-# edit demos/my-site/package.json to set a unique name
+cp -r templates/blog apps/my-site
+# edit apps/my-site/package.json to set a unique name
 pnpm install
-cd demos/my-site && pnpm dev
+cd apps/my-site && pnpm dev
 ```
 
 Your site uses `workspace:*` links, so core changes are reflected immediately.

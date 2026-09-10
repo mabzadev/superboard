@@ -2,6 +2,7 @@ import { useFrontContext, type PluginViewProps } from "@superboard/front-ui/cont
 import { Component, lazy, Suspense, useMemo, type ComponentType, type ReactNode } from "react";
 
 import { useProjectSelection } from "../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js";
+import pluginPackages from "../../../../scripts/config/superboard-plugin-packages.json";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
 import { useFrontRuntimeState } from "./FrontRuntimeProviders.js";
 
@@ -11,11 +12,20 @@ interface PluginClientModule {
 	Providers?: ComponentType<PluginViewProps & { children: ReactNode }>;
 }
 
-const modules = import.meta.glob<PluginClientModule>(
-	"../../../../packages/supbrd-runtime-plugins/src/front/client/plugins/*/index.ts",
-);
+const componentPrefix = /^supbrd-(?:plug|plugmod)-/u;
+const modules = import.meta.glob<PluginClientModule>([
+	"../../../../packages/plugins/supbrd-*/src/front/index.ts",
+	"../../../../packages/plugins/supbrd-*/src/front/*/index.ts",
+]);
 const byPlugin = new Map(
-	Object.entries(modules).map(([path, load]) => [path.split("/").at(-2), load]),
+	pluginPackages.packages.flatMap((definition) =>
+		definition.components.map((pluginId) => {
+			const short = pluginId.replace(componentPrefix, "");
+			const directory = definition.components.length > 1 ? `/${short}` : "";
+			const path = `../../../../packages/plugins/${definition.id}/src/front${directory}/index.ts`;
+			return [pluginId, modules[path]] as const;
+		}),
+	),
 );
 
 export function PluginFrontView({

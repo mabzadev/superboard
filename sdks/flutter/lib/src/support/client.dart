@@ -852,7 +852,7 @@ class SuperBoardMessagingClient extends SuperBoardSupportClient {
     super.identityTokenProvider,
     super.httpClient,
     super.requestTimeout = const Duration(seconds: 15),
-  }) : super._(pathPrefix: '/v1', projectHeader: 'X-OpenGrow-Project-Id');
+  }) : super._(pathPrefix: '/v1', projectHeader: 'X-SuperBoard-Project-Id');
 }
 
 const int maxSupportAttachmentBytes = 10 * 1024 * 1024;

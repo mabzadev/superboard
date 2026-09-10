@@ -22,7 +22,7 @@
   },
   "effective_passed": 141,
   "resolution": {
-    "file": "apps/site/e2e/tests/support/support-management.spec.ts",
+    "file": "tests/e2e/site/support/support-management.spec.ts",
     "title": "Support integrations save and reopen a dashboard app without external delivery",
     "cause": "The unscoped Configure locator matched six integration cards before the asynchronous search result settled.",
     "change": "Scope Configure to the card containing the uniquely named integration created by the test.",

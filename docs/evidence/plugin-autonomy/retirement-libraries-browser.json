@@ -10,7 +10,7 @@
       "sdk-flutter-v2.1.4"
     ],
     "description": "Compared the complete catalogue to the owning API, refreshed it, expanded installation instructions and verified both clipboard actions against the persisted release metadata.",
-    "source_test": "apps/site/e2e/tests/settings/libraries.spec.ts",
+    "source_test": "tests/e2e/site/settings/libraries.spec.ts",
     "captured_at": "2026-09-07T10:46:07.348Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-libraries-browser.json"
   }

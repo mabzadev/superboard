@@ -1,5 +1,5 @@
 
- RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/workers/support
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/packages/plugins/supbrd-plug-support/worker
 
 
  Test Files  5 passed (5)

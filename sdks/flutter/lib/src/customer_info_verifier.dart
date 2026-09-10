@@ -94,8 +94,8 @@ class SuperBoardCustomerInfoVerifier {
     final expiresAt = (values['exp'] as num?)?.toInt() ?? 0;
     final issuedAt = (values['iat'] as num?)?.toInt() ?? 0;
     final audience = values['aud'];
-    const acceptedAudiences = {'superboard-sdk', 'opengrow-sdk'};
-    const acceptedIssuers = {'superboard-purchases', 'opengrow-purchases'};
+    const acceptedAudiences = {'superboard-sdk'};
+    const acceptedIssuers = {'superboard-purchases'};
     final audienceMatches =
         acceptedAudiences.contains(audience) ||
         (audience is List && audience.any(acceptedAudiences.contains));
@@ -163,7 +163,7 @@ class SuperBoardCustomerInfoVerifier {
       query: null,
       fragment: null,
     );
-    final cacheKey = 'opengrow.purchases.jwks.${uri.host}';
+    final cacheKey = 'superboard.purchases.jwks.${uri.host}';
     if (!forceRefresh) {
       final cached = preferences.getString(cacheKey);
       if (cached != null) {
@@ -207,9 +207,3 @@ class SuperBoardCustomerInfoVerifier {
     return decoded.cast<String, dynamic>();
   }
 }
-
-@Deprecated('Use SuperBoardCustomerInfoVerificationException.')
-typedef OpenGrowCustomerInfoVerificationException =
-    SuperBoardCustomerInfoVerificationException;
-@Deprecated('Use SuperBoardCustomerInfoVerifier.')
-typedef OpenGrowCustomerInfoVerifier = SuperBoardCustomerInfoVerifier;

@@ -4,23 +4,23 @@ Le regroupement demandé le 9 septembre 2026 est implémenté et migré sur la c
 
 ## Unités installables
 
-| Plugin | Identifiant |
-| --- | --- |
-| Identité | `supbrd-plug-identity` |
-| Données et fichiers | `supbrd-plug-data` |
-| Commerce | `supbrd-plug-commerce` |
-| Communication | `supbrd-plug-communication` |
-| Parcours | `supbrd-plug-journeys` |
-| Support | `supbrd-plug-support` |
-| Statistiques | `supbrd-plug-analytics` |
+| Plugin              | Identifiant                 |
+| ------------------- | --------------------------- |
+| Identité            | `supbrd-plug-identity`      |
+| Données et fichiers | `supbrd-plug-data`          |
+| Commerce            | `supbrd-plug-commerce`      |
+| Communication       | `supbrd-plug-communication` |
+| Parcours            | `supbrd-plug-journeys`      |
+| Support             | `supbrd-plug-support`       |
+| Statistiques        | `supbrd-plug-analytics`     |
 
 Le socle `supbrd-core` réunit les paramètres, l’audit, la passerelle, l’observabilité et MCP. Ses fonctions obligatoires ne peuvent pas être désactivées. MCP reste une fonction optionnelle. L’extension `supbrd-plugmod-vocostar` conserve son manifeste et ses workers dédiés.
 
 Le transport `cloudflare-email` appartient à EmDash et reste indépendant des campagnes et emails applicatifs. La liste EmDash locale affiche donc neuf entrées : sept plugins métier, le socle et ce transport. Ce total ne signifie pas neuf plugins métier SuperBoard.
 
-La répartition exacte des fonctions est définie dans [superboard-plugin-packages.json](../../config/superboard-plugin-packages.json). Le [catalogue généré](../../config/superboard-plugin-catalog.json) contient les manifestes des unités installables. Le build produit leurs points d’entrée ; les dix-huit anciens points d’entrée autonomes ont été retirés.
+La répartition exacte des fonctions est définie dans [superboard-plugin-packages.json](../../scripts/config/superboard-plugin-packages.json). Le [catalogue généré](../../scripts/config/superboard-plugin-catalog.json) contient les manifestes des unités installables. Le build produit leurs points d’entrée ; les dix-huit anciens points d’entrée autonomes ont été retirés.
 
-`config/emdash-plugin-topology.json` conserve les contrats des fonctions internes pour les versions publiées, les stores, les permissions et les opérations existantes. Ses entrées et les dossiers `src/front/plugins` ne servent plus à compter les unités installables. Les anciens identifiants restent les espaces de noms des fonctions et deviennent des alias vers leur propriétaire.
+`scripts/config/emdash-plugin-topology.json` conserve les contrats des fonctions internes pour les versions publiées, les stores, les permissions et les opérations existantes. Ses entrées et les dossiers `src/front/plugins` ne servent plus à compter les unités installables. Les anciens identifiants restent les espaces de noms des fonctions et deviennent des alias vers leur propriétaire.
 
 ## Cycle de vie et fonctions
 

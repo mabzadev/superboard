@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-class OpenGrowConversation {
-  const OpenGrowConversation({
+class SuperBoardConversation {
+  const SuperBoardConversation({
     required this.id,
     required this.status,
     required this.priority,
@@ -15,8 +15,8 @@ class OpenGrowConversation {
     this.lastMessageAt,
   });
 
-  factory OpenGrowConversation.fromJson(Map<String, dynamic> json) =>
-      OpenGrowConversation(
+  factory SuperBoardConversation.fromJson(Map<String, dynamic> json) =>
+      SuperBoardConversation(
         id: json['id'] as String,
         status: json['status'] as String? ?? 'open',
         priority: json['priority'] as String? ?? 'normal',
@@ -45,8 +45,8 @@ class OpenGrowConversation {
   final String? lastMessageAt;
 }
 
-class OpenGrowMessage {
-  const OpenGrowMessage({
+class SuperBoardMessage {
+  const SuperBoardMessage({
     required this.id,
     required this.conversationId,
     required this.senderKind,
@@ -62,8 +62,8 @@ class OpenGrowMessage {
     this.metadata = const {},
   });
 
-  factory OpenGrowMessage.fromJson(Map<String, dynamic> json) =>
-      OpenGrowMessage(
+  factory SuperBoardMessage.fromJson(Map<String, dynamic> json) =>
+      SuperBoardMessage(
         id: json['id'] as String,
         conversationId: json['conversation_id'] as String,
         senderKind: json['sender_kind'] as String,
@@ -89,7 +89,7 @@ class OpenGrowMessage {
   final String? body;
   final String? attachmentName;
   final String? attachmentContentType;
-  final List<OpenGrowMessageAttachment> attachments;
+  final List<SuperBoardMessageAttachment> attachments;
   final String visibility;
   final String contentType;
   final String? replyToMessageId;
@@ -114,8 +114,8 @@ class OpenGrowMessage {
   };
 }
 
-class OpenGrowMessageAttachment {
-  const OpenGrowMessageAttachment({
+class SuperBoardMessageAttachment {
+  const SuperBoardMessageAttachment({
     required this.id,
     required this.fileName,
     required this.contentType,
@@ -123,8 +123,8 @@ class OpenGrowMessageAttachment {
     this.byteSize,
   });
 
-  factory OpenGrowMessageAttachment.fromJson(Map<String, dynamic> json) =>
-      OpenGrowMessageAttachment(
+  factory SuperBoardMessageAttachment.fromJson(Map<String, dynamic> json) =>
+      SuperBoardMessageAttachment(
         id: json['id']?.toString() ?? '',
         fileName: json['file_name']?.toString() ?? 'attachment',
         contentType:
@@ -148,7 +148,9 @@ class OpenGrowMessageAttachment {
   };
 }
 
-List<OpenGrowMessageAttachment> _decodeAttachments(Map<String, dynamic> json) {
+List<SuperBoardMessageAttachment> _decodeAttachments(
+  Map<String, dynamic> json,
+) {
   Object? value = json['attachments'];
   if (value == null && json['attachments_json'] is String) {
     try {
@@ -162,7 +164,7 @@ List<OpenGrowMessageAttachment> _decodeAttachments(Map<String, dynamic> json) {
       value
           .whereType<Map>()
           .map(
-            (item) => OpenGrowMessageAttachment.fromJson(
+            (item) => SuperBoardMessageAttachment.fromJson(
               item.map((key, value) => MapEntry(key.toString(), value)),
             ),
           )

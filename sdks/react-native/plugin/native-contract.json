@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "android": {
-    "packageName": "io.opengrow:opengrow-android-sdk",
+    "packageName": "io.superboard:superboard-android-sdk",
     "version": "1.0.3"
   },
   "ios": {
-    "packageName": "OpenGrow",
+    "packageName": "SuperBoard",
     "repository": "https://github.com/mabzadev/superboard.git",
     "releaseRef": "sdk-ios-v1.0.3",
-    "podspecUrl": "https://raw.githubusercontent.com/mabzadev/superboard/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec",
+    "podspecUrl": "https://raw.githubusercontent.com/mabzadev/superboard/sdk-ios-v1.0.3/sdks/ios/SuperBoard.podspec",
     "version": "1.0.3"
   }
 }

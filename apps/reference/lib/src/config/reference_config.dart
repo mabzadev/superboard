@@ -21,73 +21,75 @@ class ReferenceConfig {
   factory ReferenceConfig.fromEnvironment() => ReferenceConfig(
     environment: const String.fromEnvironment(
       'SUPERBOARD_ENVIRONMENT',
-      defaultValue: String.fromEnvironment('OPENGROW_ENVIRONMENT'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_ENVIRONMENT'),
     ),
     target: const String.fromEnvironment(
       'SUPERBOARD_TARGET',
-      defaultValue: String.fromEnvironment('OPENGROW_TARGET'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_TARGET'),
     ),
     apiBaseUrl: const String.fromEnvironment(
       'SUPERBOARD_API_URL',
-      defaultValue: String.fromEnvironment('OPENGROW_API_URL'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_API_URL'),
     ),
     sdkBaseUrl: const String.fromEnvironment(
       'SUPERBOARD_SDK_URL',
-      defaultValue: String.fromEnvironment('OPENGROW_SDK_URL'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_SDK_URL'),
     ),
     supportBaseUrl: const String.fromEnvironment(
       'SUPERBOARD_SUPPORT_URL',
-      defaultValue: String.fromEnvironment('OPENGROW_SUPPORT_URL'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_SUPPORT_URL'),
     ),
     shortLinksBaseUrl: const String.fromEnvironment(
       'SUPERBOARD_SHORT_LINKS_URL',
-      defaultValue: String.fromEnvironment('OPENGROW_SHORT_LINKS_URL'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_SHORT_LINKS_URL'),
     ),
     filesBaseUrl: const String.fromEnvironment(
       'SUPERBOARD_FILES_URL',
-      defaultValue: String.fromEnvironment('OPENGROW_FILES_URL'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_FILES_URL'),
     ),
     mailPreviewBaseUrl: const String.fromEnvironment(
       'SUPERBOARD_MAIL_PREVIEW_URL',
-      defaultValue: String.fromEnvironment('OPENGROW_MAIL_PREVIEW_URL'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_MAIL_PREVIEW_URL'),
     ),
     projectKey: const String.fromEnvironment(
       'SUPERBOARD_PROJECT_KEY',
-      defaultValue: String.fromEnvironment('OPENGROW_PROJECT_KEY'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_PROJECT_KEY'),
     ),
-    projectId: int.tryParse(
-      const String.fromEnvironment(
-        'SUPERBOARD_PROJECT_ID',
-        defaultValue: String.fromEnvironment('OPENGROW_PROJECT_ID'),
-      ),
-    ) ?? 0,
+    projectId:
+        int.tryParse(
+          const String.fromEnvironment(
+            'SUPERBOARD_PROJECT_ID',
+            defaultValue: String.fromEnvironment('SUPERBOARD_PROJECT_ID'),
+          ),
+        ) ??
+        0,
     sdkPlatform: const String.fromEnvironment(
       'SUPERBOARD_SDK_PLATFORM',
-      defaultValue: String.fromEnvironment('OPENGROW_SDK_PLATFORM'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_SDK_PLATFORM'),
     ),
     sdkIdentifier: const String.fromEnvironment(
       'SUPERBOARD_SDK_IDENTIFIER',
-      defaultValue: String.fromEnvironment('OPENGROW_SDK_IDENTIFIER'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_SDK_IDENTIFIER'),
     ),
     projectEnvironment: const String.fromEnvironment(
       'SUPERBOARD_PROJECT_ENVIRONMENT',
-      defaultValue: String.fromEnvironment('OPENGROW_PROJECT_ENVIRONMENT'),
+      defaultValue: String.fromEnvironment('SUPERBOARD_PROJECT_ENVIRONMENT'),
     ),
     liveMode: const bool.fromEnvironment(
       'SUPERBOARD_LIVE_MODE',
-      defaultValue: bool.fromEnvironment('OPENGROW_LIVE_MODE'),
+      defaultValue: bool.fromEnvironment('SUPERBOARD_LIVE_MODE'),
     ),
     platformRevision: const String.fromEnvironment(
       'SUPERBOARD_PLATFORM_REVISION',
       defaultValue: String.fromEnvironment(
-        'OPENGROW_PLATFORM_REVISION',
+        'SUPERBOARD_PLATFORM_REVISION',
         defaultValue: 'local',
       ),
     ),
     referenceRevision: const String.fromEnvironment(
       'SUPERBOARD_REFERENCE_REVISION',
       defaultValue: String.fromEnvironment(
-        'OPENGROW_REFERENCE_REVISION',
+        'SUPERBOARD_REFERENCE_REVISION',
         defaultValue: 'local',
       ),
     ),

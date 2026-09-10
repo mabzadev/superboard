@@ -2,7 +2,7 @@
 
 ## Current state
 
-The financial domain is deployed in the private `opengrow-billing` Worker. It has no public route and no `workers.dev` hostname. The API reaches it only through a Cloudflare service binding.
+The financial domain is deployed in the private `superboard-billing` Worker. It has no public route and no `workers.dev` hostname. The API reaches it only through a Cloudflare service binding.
 
 Purchase traffic starts in `local` mode while the private Worker and its dependencies are deployed and verified. The controlled technical cutover to `service` mode happens before the final device certification so that certification exercises the real production architecture. Public release remains blocked until the complete Apple, Google Play, FlutterFlow, and legacy-subscription gate passes.
 
@@ -20,8 +20,8 @@ The endpoint must never return private keys, certificates, Store credentials, or
 
 - `api-auth-gateway` remains the only application authentication authority.
 - SuperBoard verifies the short-lived ES256 JWT issued by that gateway and does not create a second application identity.
-- In `service` mode, `opengrow-billing` resolves the authenticated customer context, signs CustomerInfo, and executes financial writes, receipt verification, restoration, reconciliation, and provider actions.
-- In `service` mode, `opengrow-billing` is also the only active consumer of the Billing queue. The API remains a producer but never executes or consumes financial jobs.
+- In `service` mode, `superboard-billing` resolves the authenticated customer context, signs CustomerInfo, and executes financial writes, receipt verification, restoration, reconciliation, and provider actions.
+- In `service` mode, `superboard-billing` is also the only active consumer of the Billing queue. The API remains a producer but never executes or consumes financial jobs.
 - The dashboard and Messaging cannot assign an entitlement directly.
 - The legacy purchase provider remains enabled until the complete device matrix and subscription inventory pass.
 
@@ -43,7 +43,7 @@ Outbound application projections are persisted in D1 before Queue dispatch. A tw
 ## Required Billing secrets
 
 - `APPLE_ROOT_CERTIFICATES_B64`
-- `OPENGROW_ENTITLEMENT_WEBHOOK_SECRET`
+- `SUPERBOARD_ENTITLEMENT_WEBHOOK_SECRET`
 - `PURCHASES_SIGNING_KEYSET`
 - `STORE_CREDENTIALS_ENCRYPTION_KEYS`
 
@@ -92,7 +92,7 @@ Billing transaction and event references are accepted only when the backend can 
 3. Verify `/health/billing` and the required secret names.
 4. Run `npm run cloudflare:billing-preflight`. This read-only command verifies all required D1 migrations, financial failure and stale-work counters, the live main-queue and DLQ consumers, private Worker readiness, routing mode, public ES256 JWKS documents, and Billing secret names. A blocked result must never be overridden manually.
 5. Set `billingExecutionMode` to `service` and run `npm run cloudflare:config:billing`.
-6. Generate the Billing preflight manifest with `node scripts/cloudflare-config.mjs --target <target> --service billing --environment production --preflight`, then deploy it. This installs the compatible Billing code and queue-name variables without changing queue consumers or cron ownership.
+6. Generate the Billing preflight manifest with `node scripts/cloudflare/config.mjs --target <target> --service billing --environment production --preflight`, then deploy it. This installs the compatible Billing code and queue-name variables without changing queue consumers or cron ownership.
 7. Run `npm run cloudflare:billing-consumer` to inspect the live main-queue owner. Review its exact confirmation value before any mutation.
 8. Move the live main-queue consumer with `npm run cloudflare:billing-consumer -- --execute --confirm <exact-value>`. The command pauses delivery, removes the old consumer, adds and verifies the dedicated consumer, resumes delivery, and attempts rollback if the move fails. Messages remain durable while delivery is paused.
 9. Regenerate the full Billing manifest with `npm run cloudflare:config:billing`. Deploy Billing to attach the main queue, DLQ consumer, and cron, then deploy the API without the financial consumer. Never attach both Workers to the same queue.

@@ -9,15 +9,15 @@ by the Reference application. The Platform catalogue may contain additional
 governed products, including the initially unreleased Flows web packages,
 without making them Reference dependencies.
 
-| SDK | Lifecycle | Compiled/reference baseline | Candidate | Reference coverage |
-| --- | --- | --- | --- | --- |
-| Flutter | active | OpenGrow 2.1.4 | SuperBoard 3.0.0 | reviewed transitive workspace path + lock |
-| FlutterFlow | active | OpenGrow 2.2.5 | SuperBoard 3.0.0 | reviewed direct workspace path + lock |
-| Standalone Support artifact | archived | OpenGrow 1.3.0 | none; Support is native in Flutter/FlutterFlow v3 | historical regression evidence only; never consumed or bundled |
-| Android | internal | OpenGrow 1.0.3 | none | immutable historical release |
-| iOS | internal | OpenGrow 1.0.3 | none | immutable historical release |
-| JavaScript | archived | OpenGrow 1.0.2 | none | immutable historical release |
-| React Native | archived | OpenGrow 1.0.2 | none | immutable historical release |
+| SDK                         | Lifecycle | Compiled/reference baseline | Candidate                                         | Reference coverage                                             |
+| --------------------------- | --------- | --------------------------- | ------------------------------------------------- | -------------------------------------------------------------- |
+| Flutter                     | active    | SuperBoard 2.1.4            | SuperBoard 3.0.0                                  | reviewed transitive workspace path + lock                      |
+| FlutterFlow                 | active    | SuperBoard 2.2.5            | SuperBoard 3.0.0                                  | reviewed direct workspace path + lock                          |
+| Standalone Support artifact | archived  | SuperBoard 1.3.0            | none; Support is native in Flutter/FlutterFlow v3 | historical regression evidence only; never consumed or bundled |
+| Android                     | internal  | SuperBoard 1.0.3            | none                                              | immutable historical release                                   |
+| iOS                         | internal  | SuperBoard 1.0.3            | none                                              | immutable historical release                                   |
+| JavaScript                  | archived  | SuperBoard 1.0.2            | none                                              | immutable historical release                                   |
+| React Native                | archived  | SuperBoard 1.0.2            | none                                              | immutable historical release                                   |
 
 Only Flutter and FlutterFlow are active products. Android and iOS remain
 internal implementations of Flutter. The standalone historical Support artifact,

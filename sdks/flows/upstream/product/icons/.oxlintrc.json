@@ -1,5 +1,15 @@
 {
-	"$schema": "../../node_modules/oxlint/configuration_schema.json",
-	"extends": ["../.oxlintrc.json"],
-	"plugins": ["eslint", "typescript", "unicorn", "react", "oxc", "import", "jsx-a11y"]
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "../.oxlintrc.json"
+  ],
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "react",
+    "oxc",
+    "import",
+    "jsx-a11y"
+  ]
 }

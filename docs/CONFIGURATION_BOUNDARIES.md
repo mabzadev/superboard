@@ -7,8 +7,8 @@ garantir qu’il n’existe que dans sa source d’autorité et jamais comme val
 secours dans le cœur partagé.
 
 Le contrat exécutable est
-`config/configuration-boundaries.json`, validé par
-`schemas/configuration-boundaries.schema.json` et contrôlé avec :
+`scripts/config/configuration-boundaries.json`, validé par
+`scripts/config/configuration-boundaries.schema.json` et contrôlé avec :
 
 ```bash
 npm run configuration:check
@@ -33,11 +33,11 @@ Le cœur partagé contient les protocoles et identités logiques réutilisables 
 - endpoints officiels Apple, Google, Microsoft, Cloudflare et fournisseurs
   mail ;
 - namespace produit logique `superboard`; namespace physique de compatibilité
-  `opengrow` et noms historiques de santé comme `opengrow-api`, conservés
+  `superboard` et noms historiques de santé comme `superboard-api`, conservés
   jusqu'à un cutover de ressources vérifié.
 
 La liste des services et des noms de secrets communs appartient à
-`scripts/cloudflare-services.mjs`. Ces chaînes décrivent un contrat logiciel ;
+`scripts/cloudflare/services.mjs`. Ces chaînes décrivent un contrat logiciel ;
 elles ne sélectionnent ni un compte, ni une application, ni une ressource
 Cloudflare physique.
 
@@ -45,7 +45,7 @@ Cloudflare physique.
 
 `superboard.project.json#/development/target` sélectionne l’unique profil de
 référence. Sa valeur actuelle pointe vers
-`deploy/targets/mbza-development.json`.
+`infra/targets/mbza-development.json`.
 
 Le validateur impose au profil de référence :
 
@@ -62,7 +62,7 @@ les découvre depuis cette source canonique.
 ### 3. Configuration propre à une application
 
 Tout target autre que la référence est un profil applicatif. Son fichier
-`deploy/targets/<application>.json` possède exclusivement :
+`infra/targets/<application>.json` possède exclusivement :
 
 - les domaines publics ;
 - les noms physiques des Workers ;
@@ -76,7 +76,7 @@ Tout target autre que la référence est un profil applicatif. Son fichier
   Worker.
 
 Le métier spécifique vit sous le `customWorker.packagePath` déclaré par le
-target, par exemple `workers/custom/<application>`. Le scanner l’exclut du cœur
+target, par exemple `apps/<application>/worker`. Le scanner l’exclut du cœur
 portable, mais le target reste responsable de son schéma et de ses bindings.
 
 Les fichiers FlutterFlow générés sont des projections autorisées. Ils ne sont
@@ -92,7 +92,7 @@ Les valeurs suivantes ne sont jamais stockées dans un target :
 | ID de compte Cloudflare | `CLOUDFLARE_ACCOUNT_ID_<ACCOUNT_ALIAS>` puis `CLOUDFLARE_ACCOUNT_ID` dans l'environnement du contrôleur sélectionné (Workers Builds en développement, GitHub Actions en production) |
 | Token Cloudflare        | token de build géré par Cloudflare en développement ; `CLOUDFLARE_API_TOKEN` dans le GitHub Environment de production                                                               |
 | Identité projet SDK     | `SUPERBOARD_PROJECT_ID` et `SUPERBOARD_PROJECT_KEY`                                                                                                                                 |
-| Secrets Workers communs | registres de `scripts/cloudflare-services.mjs`, valeurs dans Cloudflare Secrets                                                                                                     |
+| Secrets Workers communs | registres de `scripts/cloudflare/services.mjs`, valeurs dans Cloudflare Secrets                                                                                                     |
 | Secrets Custom Worker   | noms dans `customWorker.secrets`, valeurs dans Cloudflare Secrets                                                                                                                   |
 
 Un nom de secret peut être public. Sa valeur ne peut apparaître ni sous
@@ -119,15 +119,15 @@ Le contrôle échoue si :
 Les tests, fixtures, exemples, documentation, templates Wrangler locaux et
 Custom Workers déclarés sont classés séparément. Ils ne peuvent pas servir de
 configuration de déploiement. Les seuls fichiers Wrangler autorisés pour un
-déploiement sont les artefacts ignorés `deploy/generated/*.jsonc`, produits à
+déploiement sont les artefacts ignorés `infra/generated/*.jsonc`, produits à
 partir d’un target explicite.
 
 ## Ajouter une nouvelle application
 
-1. Ajouter `deploy/targets/<application>.json` conforme au schéma, sans ID de
+1. Ajouter `infra/targets/<application>.json` conforme au schéma, sans ID de
    compte et sans valeur secrète.
 2. Déclarer ses environnements, domaines, ressources, Workers et features.
-3. Ajouter un `workers/custom/<application>` uniquement si le métier sort du
+3. Ajouter un `apps/<application>/worker` uniquement si le métier sort du
    contrat commun ; déclarer son chemin dans `customWorker.packagePath`.
 4. Ajouter l’entrée de déploiement et le GitHub Environment correspondant.
 5. Générer les projections FlutterFlow si l’application utilise FlutterFlow.
@@ -143,8 +143,8 @@ un fixture local ou une source applicative déjà déclarée.
 - l’aperçu de lien social construit désormais l’URL publique en HTTPS ;
 - le faux `SUPPORT_WEBHOOK_ENCRYPTION_KEY` a été retiré de `vars` du Wrangler
   de test Support, puisque Miniflare l’injecte déjà comme secret de test ;
-- le contrôle Legacy Messaging découvre son unique profil depuis les ressources
-  déclarées au lieu d’épingler VocoStar dans `package.json` et dans Vitest.
+- le runtime Legacy Messaging est retiré ; ses migrations SQL restent disponibles
+  pour la reprise de données dans `scripts/database/legacy-messaging-migrations`.
 
 Les IDs réels présents dans les targets restent intentionnellement versionnés :
 ce sont des identifiants non secrets et des garde-fous contre l’adoption ou le

@@ -1,0 +1,21 @@
+{
+  "name": "@superboard/email-worker",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@superboard/contracts": "workspace:*",
+    "@superboard/email-transport": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:workers",
+    "typescript": "catalog:workers",
+    "vitest": "catalog:",
+    "wrangler": "catalog:workers"
+  }
+}

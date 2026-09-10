@@ -6,7 +6,7 @@ import {
 } from "@superboard/contracts/request-body";
 import type { APIContext } from "astro";
 
-import registry from "../../../../config/superboard-plugin-api-adapters.json";
+import registry from "../../../../scripts/config/superboard-plugin-api-adapters.json";
 import { dispatchAuditPluginApi } from "./audit-plugin-api.js";
 import { dispatchContentPluginApi } from "./content-plugin-api.js";
 import {

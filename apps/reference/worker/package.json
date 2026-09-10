@@ -1,0 +1,20 @@
+{
+  "name": "@superboard/custom-reference-worker",
+  "version": "1.2.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.runtime.json",
+    "test": "vitest run && vitest run --config vitest.runtime.config.ts"
+  },
+  "dependencies": {
+    "@superboard/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:workers",
+    "@cloudflare/workers-types": "catalog:workers",
+    "typescript": "catalog:workers",
+    "vitest": "catalog:"
+  }
+}

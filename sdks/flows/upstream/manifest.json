@@ -11,7 +11,7 @@
 		}
 	},
 	"policy": {
-		"generated_by": "scripts/sync-flows-upstream.mjs",
+		"generated_by": "sdks/flows/scripts/sync-flows-upstream.mjs",
 		"dashboard_imported": false,
 		"marketing_site_imported": false,
 		"runtime_upstream_dependency": false,
@@ -5240,13 +5240,6 @@
 			"source": "flows-sdk",
 			"source_path": "examples/react/next/tsconfig.json",
 			"source_sha256": "86c57aa7eec3e819fc7f5f7075219d9383d4ce824b751816636e581170b7cc97"
-		},
-		{
-			"output_path": "reference/framework-examples/react/tanstack/.devcontainer/devcontainer.json",
-			"output_sha256": "4fd6d46ab0c0d671cc57961c55f45ea4f817d417fea8953a324f200c43ffe981",
-			"source": "flows-sdk",
-			"source_path": "examples/react/tanstack/.devcontainer/devcontainer.json",
-			"source_sha256": "4fd6d46ab0c0d671cc57961c55f45ea4f817d417fea8953a324f200c43ffe981"
 		},
 		{
 			"output_path": "reference/framework-examples/react/tanstack/.vscode/settings.json",

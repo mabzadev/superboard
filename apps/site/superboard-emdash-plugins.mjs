@@ -3,8 +3,8 @@ const pluginPrefixPattern = /^supbrd-(?:plug|plugmod)-/u;
 const settingLabelSeparators = /[_-]/u;
 import { fileURLToPath } from "node:url";
 
-import topology from "../../config/emdash-plugin-topology.json" with { type: "json" };
-import catalog from "../../config/superboard-plugin-catalog.json" with { type: "json" };
+import topology from "../../scripts/config/emdash-plugin-topology.json" with { type: "json" };
+import catalog from "../../scripts/config/superboard-plugin-catalog.json" with { type: "json" };
 
 export const SUPERBOARD_PLUGIN_TEMPLATES = Object.freeze(
 	topology.plugins
@@ -20,10 +20,7 @@ export function configureSuperBoardPlugins(plugins) {
 			const displayName = label ?? pluginDisplayName(manifest.plugin_id);
 			const settingsSchema = emdashSettingsSchema(manifest.settings.schema.properties);
 			const entrypoint = fileURLToPath(
-				new URL(
-					`../../packages/supbrd-runtime-plugins/dist/${manifest.plugin_id}.js`,
-					import.meta.url,
-				),
+				new URL(`../../packages/plugins/${manifest.plugin_id}/dist/index.js`, import.meta.url),
 			);
 			return {
 				id: manifest.plugin_id,

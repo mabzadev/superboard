@@ -16,7 +16,7 @@ Do not use the migration tool to apply D1 schema migrations. All destination mig
 
 ## Data ownership and registry
 
-The declarative registry is in `scripts/module-cutover/registry.mjs`. Each entity specifies the legacy database and table, a project-scoped extraction query, the destination table, primary/conflict keys, columns, JSON canonicalization, and dependency order.
+The declarative registry is in `scripts/database/module-cutover-registry.mjs`. Each entity specifies the legacy database and table, a project-scoped extraction query, the destination table, primary/conflict keys, columns, JSON canonicalization, and dependency order.
 
 The current ownership mapping is:
 
@@ -39,14 +39,14 @@ Safety guards abort before writing when a legacy relationship cannot be represen
 Inspect the registry without network access:
 
 ```bash
-node scripts/superboard-module-cutover.mjs registry
-node scripts/superboard-module-cutover.mjs --project-ref 10-test --modules app,products
+node scripts/database/module-cutover.mjs registry
+node scripts/database/module-cutover.mjs --project-ref 10-test --modules app,products
 ```
 
 Run the automated migration tests:
 
 ```bash
-node --test scripts/module-cutover/core.test.mjs
+node --test tests/checks/database/module-cutover-core.test.mjs
 ```
 
 The tests cover deterministic checksums, SQL escaping, project parsing, repeated idempotent execution, checkpoint resume, mismatch abort, production guards, rollback blocking, reverse deltas, and every registered entity with an empty rehearsal fixture.
@@ -55,25 +55,25 @@ For an offline data rehearsal, provide a protected fixture with this shape:
 
 ```json
 {
-  "project": {
-    "project_ref": "10-test",
-    "project_id": 12,
-    "instance_id": 10,
-    "environment": "test"
-  },
-  "source_rows": { "app.customers": [] },
-  "target_rows": { "app.customers": [] },
-  "guard_rows": {},
-  "maintenance": {
-    "10-test": { "enabled": true, "window_id": "rehearsal-2026-08-07" }
-  }
+	"project": {
+		"project_ref": "10-test",
+		"project_id": 12,
+		"instance_id": 10,
+		"environment": "test"
+	},
+	"source_rows": { "app.customers": [] },
+	"target_rows": { "app.customers": [] },
+	"guard_rows": {},
+	"maintenance": {
+		"10-test": { "enabled": true, "window_id": "rehearsal-2026-08-07" }
+	}
 }
 ```
 
 Then run:
 
 ```bash
-node scripts/superboard-module-cutover.mjs plan \
+node scripts/database/module-cutover.mjs plan \
   --project-ref 10-test \
   --fixture /secure/path/rehearsal.json \
   --report /secure/path/plan.json
@@ -86,7 +86,7 @@ Fixtures and snapshots contain project data. Keep them outside the repository wi
 Generate the backup command manifest without executing it:
 
 ```bash
-node scripts/superboard-module-cutover.mjs backup-plan \
+node scripts/database/module-cutover.mjs backup-plan \
   --target vocostar \
   --environment production \
   --project-ref 10-test \
@@ -97,7 +97,7 @@ node scripts/superboard-module-cutover.mjs backup-plan \
 Run a read-only source/target comparison:
 
 ```bash
-node scripts/superboard-module-cutover.mjs plan \
+node scripts/database/module-cutover.mjs plan \
   --target vocostar \
   --environment production \
   --project-ref 10-test \
@@ -108,7 +108,7 @@ node scripts/superboard-module-cutover.mjs plan \
 `plan` omits rows from its report. Use the explicit `snapshot` command only when a protected pre-cutover dataset is required for post-cutover reverse-delta calculation:
 
 ```bash
-node scripts/superboard-module-cutover.mjs snapshot \
+node scripts/database/module-cutover.mjs snapshot \
   --target vocostar \
   --environment production \
   --project-ref 10-test \
@@ -122,7 +122,7 @@ No command in this section writes to Cloudflare.
 
 Do not deploy or start authenticated `10-test` smokes until the secret inventory is complete:
 
-- Gateway: `MODULE_INTERNAL_TOKEN` and `OPENGROW_CUTOVER_TOKEN`.
+- Gateway: `MODULE_INTERNAL_TOKEN` and `SUPERBOARD_CUTOVER_TOKEN`.
 - Every domain Worker: `INTERNAL_API_TOKEN`, with the same rotated value as the gateway module token.
 - Support: `SUPPORT_WEBHOOK_ENCRYPTION_KEY`.
 - Marketing: `SMTP_ENCRYPTION_KEY` and `TRACKING_SIGNING_KEY`.
@@ -150,7 +150,7 @@ and values must never be returned to the Dashboard.
 Create a window file. Times are ISO-8601 instants and must bracket the actual operation:
 
 ```bash
-node scripts/superboard-module-cutover.mjs window \
+node scripts/database/module-cutover.mjs window \
   --project-ref 10-test \
   --window-id global-cutover-2026-08-07 \
   --starts-at 2026-08-07T20:00:00Z \
@@ -168,21 +168,21 @@ PUT /api/v1/admin/module-cutover/maintenance/:projectRef
 { "enabled": true, "window_id": "...", "reason": "..." }
 ```
 
-While enabled, gateway mutations for that project must fail with HTTP 503 and `error.code=maintenance_read_only`. Reads and cutover administration remain available. Configure `OPENGROW_CUTOVER_TOKEN` through the operator secret store; never put it on the command line or in the window file.
+While enabled, gateway mutations for that project must fail with HTTP 503 and `error.code=maintenance_read_only`. Reads and cutover administration remain available. Configure `SUPERBOARD_CUTOVER_TOKEN` through the operator secret store; never put it on the command line or in the window file.
 
 Enable and independently verify maintenance:
 
 ```bash
-export OPENGROW_CUTOVER_TOKEN='<operator-secret>'
+export SUPERBOARD_CUTOVER_TOKEN='<operator-secret>'
 export SUPERBOARD_TARGET='<deployment-target>'
 
-node scripts/superboard-module-cutover.mjs maintenance-enable \
+node scripts/database/module-cutover.mjs maintenance-enable \
   --target vocostar --environment production --project-ref 10-test \
   --window /secure/superboard/10-test-window.json \
   --apply \
   --confirm "MAINTENANCE:${SUPERBOARD_TARGET}:10-test:global-cutover-2026-08-07"
 
-node scripts/superboard-module-cutover.mjs maintenance-status \
+node scripts/database/module-cutover.mjs maintenance-status \
   --target vocostar --environment production --project-ref 10-test --remote-read
 ```
 
@@ -193,7 +193,7 @@ The enable command updates the protected window with the confirmed maintenance e
 The apply confirmation is different from the maintenance confirmation:
 
 ```bash
-node scripts/superboard-module-cutover.mjs apply \
+node scripts/database/module-cutover.mjs apply \
   --target vocostar \
   --environment production \
   --project-ref 10-test \
@@ -213,7 +213,7 @@ Any mismatch aborts immediately. Do not disable constraints, edit a checkpoint, 
 Run an independent final verification:
 
 ```bash
-node scripts/superboard-module-cutover.mjs verify \
+node scripts/database/module-cutover.mjs verify \
   --target vocostar --environment production --project-ref 10-test \
   --remote-read --report /secure/superboard/10-test-verify.json
 ```
@@ -233,7 +233,7 @@ Repeat the complete process for `10-prod` only after the `10-test` functional an
 After executing the generated export commands, create and attach that evidence without rereading the files into memory:
 
 ```bash
-node scripts/superboard-module-cutover.mjs backup-receipt \
+node scripts/database/module-cutover.mjs backup-receipt \
   --project-ref 10-prod \
   --backup-plan /secure/superboard/10-prod-backup-plan.json \
   --window /secure/superboard/10-prod-window.json \
@@ -250,54 +250,54 @@ VocoStar receipt example:
 
 ```json
 {
-  "completed_at": "2026-08-07T19:45:00Z",
-  "artifacts": [
-    {
-      "name": "legacy-api",
-      "bytes": 1234,
-      "sha256": "64 lowercase hex characters"
-    },
-    {
-      "name": "legacy-messaging",
-      "bytes": 1234,
-      "sha256": "64 lowercase hex characters"
-    },
-    {
-      "name": "module-app",
-      "bytes": 1234,
-      "sha256": "64 lowercase hex characters"
-    },
-    {
-      "name": "module-products",
-      "bytes": 1234,
-      "sha256": "64 lowercase hex characters"
-    },
-    {
-      "name": "module-paywalls",
-      "bytes": 1234,
-      "sha256": "64 lowercase hex characters"
-    },
-    {
-      "name": "module-dynamicLinks",
-      "bytes": 1234,
-      "sha256": "64 lowercase hex characters"
-    },
-    {
-      "name": "module-support",
-      "bytes": 1234,
-      "sha256": "64 lowercase hex characters"
-    },
-    {
-      "name": "module-marketing",
-      "bytes": 1234,
-      "sha256": "64 lowercase hex characters"
-    },
-    {
-      "name": "module-onboardings",
-      "bytes": 1234,
-      "sha256": "64 lowercase hex characters"
-    }
-  ]
+	"completed_at": "2026-08-07T19:45:00Z",
+	"artifacts": [
+		{
+			"name": "legacy-api",
+			"bytes": 1234,
+			"sha256": "64 lowercase hex characters"
+		},
+		{
+			"name": "legacy-messaging",
+			"bytes": 1234,
+			"sha256": "64 lowercase hex characters"
+		},
+		{
+			"name": "module-app",
+			"bytes": 1234,
+			"sha256": "64 lowercase hex characters"
+		},
+		{
+			"name": "module-products",
+			"bytes": 1234,
+			"sha256": "64 lowercase hex characters"
+		},
+		{
+			"name": "module-paywalls",
+			"bytes": 1234,
+			"sha256": "64 lowercase hex characters"
+		},
+		{
+			"name": "module-dynamicLinks",
+			"bytes": 1234,
+			"sha256": "64 lowercase hex characters"
+		},
+		{
+			"name": "module-support",
+			"bytes": 1234,
+			"sha256": "64 lowercase hex characters"
+		},
+		{
+			"name": "module-marketing",
+			"bytes": 1234,
+			"sha256": "64 lowercase hex characters"
+		},
+		{
+			"name": "module-onboardings",
+			"bytes": 1234,
+			"sha256": "64 lowercase hex characters"
+		}
+	]
 }
 ```
 
@@ -310,7 +310,7 @@ After backfill verification, deploy and smoke-test bindings in this order while 
 Legacy databases remain untouched for at least 30 days. Before any post-reopen rollback, re-enable maintenance and calculate the delta between the protected baseline and current module rows:
 
 ```bash
-node scripts/superboard-module-cutover.mjs reverse-delta \
+node scripts/database/module-cutover.mjs reverse-delta \
   --target vocostar --environment production --project-ref 10-prod \
   --remote-read \
   --baseline /secure/superboard/10-prod-baseline.json \
@@ -323,7 +323,7 @@ The tool emits legacy upserts only for mappings proven reversible. Deletions or 
 Generate a rollback plan from the backup plan, recorded Worker version IDs, and reverse-delta report:
 
 ```bash
-node scripts/superboard-module-cutover.mjs rollback-plan \
+node scripts/database/module-cutover.mjs rollback-plan \
   --project-ref 10-prod \
   --backup-plan /secure/superboard/10-prod-backup-plan.json \
   --backup-receipt /secure/superboard/10-prod-backup-receipt.json \
@@ -337,7 +337,7 @@ The generated rollback remains `blocked=true` until every backup receipt, Worker
 Disable maintenance only after all global smoke checks and monitoring gates are green:
 
 ```bash
-node scripts/superboard-module-cutover.mjs maintenance-disable \
+node scripts/database/module-cutover.mjs maintenance-disable \
   --target vocostar --environment production --project-ref 10-prod \
   --window /secure/superboard/10-prod-window.json \
   --apply \

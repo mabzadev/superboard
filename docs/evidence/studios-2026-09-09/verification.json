@@ -1,129 +1,102 @@
 {
-  "date": "2026-09-09",
-  "environment": "local",
-  "checks": {
-    "types": {
-      "result": "passed",
-      "test_counts": []
-    },
-    "lint": {
-      "baseline_unchanged": true,
-      "diagnostics": [
-        {
-          "file": "apps/site/tests/plugin-front-menu-integration.test.tsx",
-          "code": "typescript(await-thenable)"
-        },
-        {
-          "file": "packages/core/src/astro/integration/vite-config.ts",
-          "code": "typescript(no-unsafe-type-assertion)"
-        },
-        {
-          "file": "packages/supbrd-runtime-plugins/scripts/bundle.test.mjs",
-          "code": "typescript(no-floating-promises)"
-        }
-      ]
-    },
-    "front-menu": {
-      "result": "passed",
-      "test_counts": []
-    },
-    "site-menu": {
-      "result": "passed",
-      "test_counts": [
-        "1"
-      ]
-    },
-    "site-locales": {
-      "result": "passed",
-      "test_counts": [
-        "13"
-      ]
-    },
-    "contracts": {
-      "result": "passed",
-      "test_counts": [
-        "7"
-      ]
-    },
-    "experience-ui": {
-      "result": "passed",
-      "test_counts": [
-        "229"
-      ]
-    },
-    "plugin-tests": {
-      "result": "passed",
-      "test_counts": [
-        "352"
-      ]
-    },
-    "plugin-build": {
-      "result": "passed",
-      "test_counts": []
-    },
-    "marketing": {
-      "result": "passed",
-      "test_counts": [
-        "17",
-        "18"
-      ]
-    },
-    "email-autonomy": {
-      "result": "passed",
-      "test_counts": [
-        "8"
-      ]
-    },
-    "products": {
-      "result": "passed",
-      "test_counts": [
-        "7",
-        "4"
-      ]
-    },
-    "paywalls": {
-      "result": "passed",
-      "test_counts": [
-        "6",
-        "6"
-      ]
-    },
-    "onboardings": {
-      "result": "passed",
-      "test_counts": [
-        "9",
-        "2"
-      ]
-    },
-    "flows": {
-      "result": "passed",
-      "test_counts": [
-        "42",
-        "33"
-      ]
-    },
-    "sdk": {
-      "result": "passed",
-      "test_counts": []
-    },
-    "sdk-analyze": {
-      "result": "passed",
-      "test_counts": []
-    }
-  },
-  "real_email_sent": false,
-  "public_deployment": false,
-  "browser": [
-    "Email FR/EN save, approve, publish, reload",
-    "Paywall first draft and version comparison",
-    "Onboarding create and preview",
-    "Campaign wizard",
-    "Arabic HTML RTL rendering"
-  ],
-  "external_checks_pending": [
-    "Real translation provider",
-    "Gmail, Outlook, Apple Mail",
-    "Real store purchases",
-    "Physical mobile devices"
-  ]
+	"date": "2026-09-09",
+	"environment": "local",
+	"checks": {
+		"types": {
+			"result": "passed",
+			"test_counts": []
+		},
+		"lint": {
+			"baseline_unchanged": true,
+			"diagnostics": [
+				{
+					"file": "tests/checks/apps/site/plugin-front-menu-integration.test.tsx",
+					"code": "typescript(await-thenable)"
+				},
+				{
+					"file": "packages/core/src/astro/integration/vite-config.ts",
+					"code": "typescript(no-unsafe-type-assertion)"
+				},
+				{
+					"file": "tests/checks/apps/site/plugin-bundles.test.mjs",
+					"code": "typescript(no-floating-promises)"
+				}
+			]
+		},
+		"front-menu": {
+			"result": "passed",
+			"test_counts": []
+		},
+		"site-menu": {
+			"result": "passed",
+			"test_counts": ["1"]
+		},
+		"site-locales": {
+			"result": "passed",
+			"test_counts": ["13"]
+		},
+		"contracts": {
+			"result": "passed",
+			"test_counts": ["7"]
+		},
+		"experience-ui": {
+			"result": "passed",
+			"test_counts": ["229"]
+		},
+		"plugin-tests": {
+			"result": "passed",
+			"test_counts": ["352"]
+		},
+		"plugin-build": {
+			"result": "passed",
+			"test_counts": []
+		},
+		"marketing": {
+			"result": "passed",
+			"test_counts": ["17", "18"]
+		},
+		"email-autonomy": {
+			"result": "passed",
+			"test_counts": ["8"]
+		},
+		"products": {
+			"result": "passed",
+			"test_counts": ["7", "4"]
+		},
+		"paywalls": {
+			"result": "passed",
+			"test_counts": ["6", "6"]
+		},
+		"onboardings": {
+			"result": "passed",
+			"test_counts": ["9", "2"]
+		},
+		"flows": {
+			"result": "passed",
+			"test_counts": ["42", "33"]
+		},
+		"sdk": {
+			"result": "passed",
+			"test_counts": []
+		},
+		"sdk-analyze": {
+			"result": "passed",
+			"test_counts": []
+		}
+	},
+	"real_email_sent": false,
+	"public_deployment": false,
+	"browser": [
+		"Email FR/EN save, approve, publish, reload",
+		"Paywall first draft and version comparison",
+		"Onboarding create and preview",
+		"Campaign wizard",
+		"Arabic HTML RTL rendering"
+	],
+	"external_checks_pending": [
+		"Real translation provider",
+		"Gmail, Outlook, Apple Mail",
+		"Real store purchases",
+		"Physical mobile devices"
+	]
 }

@@ -9,7 +9,7 @@ import { defineConfig, devices } from "@playwright/test";
  * Port 4444 is used to avoid conflicts with development servers.
  */
 export default defineConfig({
-	testDir: "./e2e/tests",
+	testDir: "./tests/e2e/emdash",
 	// Disable parallel to avoid shared database state issues
 	fullyParallel: false,
 	workers: 1,
@@ -20,8 +20,8 @@ export default defineConfig({
 	// first hit; give it headroom so cold compilation doesn't time out specs.
 	timeout: process.env.EMDASH_E2E_TARGET === "cloudflare" ? 90_000 : 30000,
 
-	globalSetup: "./e2e/global-setup.ts",
-	globalTeardown: "./e2e/global-teardown.ts",
+	globalSetup: "./tests/e2e/emdash/global-setup.ts",
+	globalTeardown: "./tests/e2e/emdash/global-teardown.ts",
 
 	use: {
 		baseURL: "http://localhost:4444",

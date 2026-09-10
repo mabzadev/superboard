@@ -1,8 +1,8 @@
-# OpenGrow iOS SDK
+# SuperBoard iOS SDK
 
 ## Overview
 
-OpenGrow is an iOS SDK library for deep linking, universal linking, in-app
+SuperBoard is an iOS SDK library for deep linking, universal linking, in-app
 messaging, and event tracking. The published SDK is distributed through Swift
 Package Manager. Its podspec is retained for immutable Git-pinned native
 integration such as React Native, not as a CocoaPods Trunk release. No external
@@ -24,8 +24,8 @@ dependencies.
 **Pattern:** Service layer with static facade and protocol-based DI.
 
 ```
-OpenGrow.swift (Public static facade)
-  └── OpenGrowManager (Coordinator)
+SuperBoard.swift (Public static facade)
+  └── SuperBoardManager (Coordinator)
         ├── EventsHandler (Lifecycle event tracking)
         ├── PaymentEventsHandler (IAP & custom transactions)
         ├── APIService (REST client)
@@ -37,16 +37,16 @@ All major components have protocol interfaces (`APIServiceProtocol`, `EventsStor
 ## Project Structure
 
 ```
-Sources/OpenGrow/
-├── OpenGrow.swift                    # Public API facade (static methods)
+Sources/SuperBoard/
+├── SuperBoard.swift                    # Public API facade (static methods)
 ├── controllers/                   # UIKit view controllers + XIBs
 ├── helpers/                       # UI helpers (alerts, presentation)
 ├── extensions/                    # UIKit extensions
 ├── view/                          # Table view cells
 └── model/
-    ├── OpenGrow.swift                # Duplicate name - main SDK entry
+    ├── SuperBoard.swift                # Duplicate name - main SDK entry
     ├── handlers/
-    │   ├── OpenGrowManager.swift     # SDK coordinator
+    │   ├── SuperBoardManager.swift     # SDK coordinator
     │   ├── EventsHandler.swift    # Event dispatch (5s batching)
     │   ├── PaymentEventsHandler.swift
     │   └── Context.swift          # Global session state
@@ -67,6 +67,7 @@ Tests/mbzadevsTests/
 ## Key Conventions
 
 ### Code Style
+
 - **Naming:** CamelCase types, camelCase properties/methods
 - **Organization:** `// MARK: - Section Name` in large files
 - **Error handling:** Completion-based (no throws), guard for early returns
@@ -75,6 +76,7 @@ Tests/mbzadevsTests/
 - **Logging:** Use `DebugLogger` (never raw `print()`)
 
 ### Testing
+
 - All handlers/services have protocol interfaces for mock injection
 - Mocks are in `Tests/mbzadevsTests/Mock*.swift`
 - No external test frameworks - plain XCTest only
@@ -82,6 +84,7 @@ Tests/mbzadevsTests/
 - DataCache does NOT auto-clear between tests - manage cleanup manually
 
 ### Build & Run
+
 ```bash
 # Build
 swift build
@@ -90,25 +93,25 @@ swift build
 swift test
 
 # Run specific test
-swift test --filter OpenGrowManagerTests
+swift test --filter SuperBoardManagerTests
 ```
 
 ## Important Gotchas
 
 1. **Bundle.module:** Conditional compilation handles SPM (`Bundle.module`) vs Xcode project (`Bundle.framework`) for XIB resources
-2. **Notification naming:** `OpenGrowNotification` (not `Notification`) to avoid Foundation namespace collision
+2. **Notification naming:** `SuperBoardNotification` (not `Notification`) to avoid Foundation namespace collision
 3. **Event queuing:** Events created before SDK auth are held and linked once authenticated
 4. **Request retries:** Failed network requests queue and retry on app reactivation
 5. **Background sessions:** Separate URLSession instance for background requests with custom delegate
 6. **NSCoding:** Events persist using NSCoding (legacy but stable pattern)
-7. **Static facade:** `OpenGrowManager` is internal; public API is the static `OpenGrow` class only
+7. **Static facade:** `SuperBoardManager` is internal; public API is the static `SuperBoard` class only
 
 ## Branching
 
 - **Main branch:** `main`
 - **Active development:** `development/v2.x` branches
 - **Feature branches:** `feature/*` (e.g., `feature/iap`)
-- **Remotes:** `origin`, `internal`, `internal-sdk-on-opengrow`
+- **Remotes:** `origin`, `internal`, `internal-sdk-on-superboard`
 
 ## Git Commit Rules
 

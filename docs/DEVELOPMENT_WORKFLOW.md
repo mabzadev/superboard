@@ -1,5 +1,11 @@
 # SuperBoard development and release workflow
 
+Maintained tests live in `tests/`: `checks/` groups suites by their application,
+package, plugin or SDK; `e2e/` contains complete user journeys; `fixtures/`
+contains shared test data; and `lints/` contains repository rules. Existing
+`pnpm` commands use these locations. See [the testing guide](../tests/README.md)
+for local validation and the prerequisites for remote suites.
+
 ## Branches and environments
 
 | Git branch     | GitHub Environment                  | Cloudflare environment | Default target                |
@@ -49,7 +55,7 @@ official platform `dev` history before resolving local packages or deploying.
 ## GitHub Environment configuration
 
 The strict, non-secret source of truth for repository structure is
-`config/github-control-plane.json`. It declares both public repositories,
+`scripts/config/github-control-plane.json`. It declares both public repositories,
 their descriptions, Issues/Projects/Wiki policy, allowed merge strategies,
 automatic branch cleanup, default branch, stable required check, Environments,
 mandatory CODEOWNERS review, variable names and secret names. Validate it
@@ -123,7 +129,7 @@ without changing GitHub or Cloudflare:
 ```bash
 npm run platform:readiness
 npm run platform:readiness:remote
-node scripts/platform-readiness.mjs --remote --strict
+node tests/checks/cloudflare/platform-readiness.mjs --remote --strict
 ```
 
 The report distinguishes local contract validity from actual deployment
@@ -218,7 +224,7 @@ payload follows GitHub's versioned REST contracts for
 and [Actions variables](https://docs.github.com/en/rest/actions/variables).
 
 Create the GitHub Environments referenced by
-`config/cloudflare-deployments.json`, or let the confirmed reconciler create
+`scripts/config/cloudflare-deployments.json`, or let the confirmed reconciler create
 their non-secret structure. The current entries are `development` and
 `production`; `cloudflare-*` is only the workflow concurrency group and is not
 an Environment name. Protection intent is versioned beside variables and secret
@@ -315,7 +321,7 @@ npm run target:register -- \
   --operator-support-email support@sample.dev \
   --application-web-origins https://reference.sample.dev \
   --auth-gateway-issuer https://auth.sample.dev \
-  --auth-gateway-audience opengrow \
+  --auth-gateway-audience superboard \
   --auth-gateway-jwks-url https://auth.sample.dev/.well-known/jwks.json
 ```
 
@@ -368,14 +374,14 @@ Pour une extension applicative, le même appel accepte un contrat custom
 entièrement déclaratif :
 
 ```bash
-  --custom-source workers/custom/sample/src/index.ts \
+  --custom-source apps/sample/worker/src/index.ts \
   --custom-capabilities sample.convert,sample.jobs.retry \
   --custom-secrets MODEL_PROVIDER_TOKEN \
   --custom-vars-json '{"JOB_RETENTION_DAYS":"30"}' \
   --custom-crons-json '["*/5 * * * *"]' \
   --custom-d1-binding CUSTOM_DB \
-  --custom-d1-name opengrow-sample-development-dev-custom-db \
-  --custom-migrations-dir workers/custom/sample/migrations \
+  --custom-d1-name superboard-sample-development-dev-custom-db \
+  --custom-migrations-dir apps/sample/worker/migrations \
   --custom-service-bindings-json '[{"binding":"MODEL_SERVICE","workers":{"development":"model-worker-dev"}}]'
 ```
 
@@ -609,13 +615,13 @@ Before merging `dev` to `main`:
 
 ## Bibliothèques et code FlutterFlow
 
-`config/sdk-libraries.json` est l'unique catalogue de versions. Le fichier
-`config/flutterflow-custom-code.json` est l'unique inventaire de widgets,
+`scripts/config/sdk-libraries.json` est l'unique catalogue de versions. Le fichier
+`scripts/config/flutterflow-custom-code.json` est l'unique inventaire de widgets,
 actions communes et adaptateurs réservés à l'application de référence.
 
 Les exports FlutterFlow externes restent hors du dépôt Platform. Chaque analyse
 applicative peut cependant posséder un snapshot versionné sous
-`config/flutterflow-sources/`, vérifié sans lire ses fichiers `.env`. Pour
+`scripts/config/flutterflow-sources/`, vérifié sans lire ses fichiers `.env`. Pour
 VocoStar :
 
 ```bash
@@ -631,7 +637,7 @@ nom de l'application dans le manifeste et dérive automatiquement
 `SUPERBOARD_CLIENT_SOURCE_<APPLICATION>`; il ne contient aucun chemin de poste.
 
 Une application cliente versionnée peut aussi déclarer un plan de migration
-dans `config/flutterflow-migrations/<application>.json`. Le validateur exige que
+dans `scripts/config/flutterflow-migrations/<application>.json`. Le validateur exige que
 chaque gate du snapshot soit couverte une fois, que chaque remplacement existe
 dans la surface FlutterFlow publique et que les dépendances de phase restent
 acycliques et ordonnées :
@@ -709,8 +715,8 @@ Les valeurs claires ne vont ni dans Git, ni dans les manifests de cible, ni
 dans l'état FlutterFlow.
 
 Le projet FlutterFlow réutilisable `SuperBoard` suit désormais le même modèle.
-Sa source canonique est `tools/flutterflow-library/dsl/edit.dart`, son contrat
-est `config/flutterflow-library.json` et son projet FlutterFlow distant n'est
+Sa source canonique est `scripts/clients/flutterflow-library/dsl/edit.dart`, son contrat
+est `scripts/config/flutterflow-library.json` et son projet FlutterFlow distant n'est
 qu'une cible compilée. Le contrat inventorie exactement 11 Library Values et 63
 Custom Actions, refuse les dépendances SSH ou les branches mutables et vérifie
 que les anciens tokens sont supprimés de l'App State. La commande locale est :

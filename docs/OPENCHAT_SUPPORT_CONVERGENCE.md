@@ -37,21 +37,21 @@ partiels.
 
 ### Runtime Cloudflare VocoStar
 
-| Élément | État observé |
-| --- | --- |
-| Domaine | `https://chat.vocostar.com` répond ; `/ready` et `/health` retournent HTTP 200 |
-| Ancien domaine | `sup.vocostar.com` ne résout plus |
-| Application | Worker `openchat`, version active déployée le 3 août 2026 |
-| Asynchrone | Worker privé `openchat-jobs` |
-| Temps réel | Worker privé `openchat-realtime` et Durable Object |
-| Base | D1 `openchat-db`, 93 tables, 201 index, migrations déclarées sans attente |
-| Fichiers | R2 `openchat`, 1 109 objets, environ 189 Mo, assets et uploads mélangés |
-| Webhooks | Queue et DLQ `openchat-webhook-events*` |
-| E-mails | Queue et DLQ `openchat-email-events*` |
-| Recherche IA | Vectorize `openchat-captain-responses`, 1 536 dimensions, cosine |
-| Administration | `/super_admin*` et `/monitoring/sidekiq*` protégés par Cloudflare Access |
+| Élément             | État observé                                                                      |
+| ------------------- | --------------------------------------------------------------------------------- |
+| Domaine             | `https://chat.vocostar.com` répond ; `/ready` et `/health` retournent HTTP 200    |
+| Ancien domaine      | `sup.vocostar.com` ne résout plus                                                 |
+| Application         | Worker `openchat`, version active déployée le 3 août 2026                         |
+| Asynchrone          | Worker privé `openchat-jobs`                                                      |
+| Temps réel          | Worker privé `openchat-realtime` et Durable Object                                |
+| Base                | D1 `openchat-db`, 93 tables, 201 index, migrations déclarées sans attente         |
+| Fichiers            | R2 `openchat`, 1 109 objets, environ 189 Mo, assets et uploads mélangés           |
+| Webhooks            | Queue et DLQ `openchat-webhook-events*`                                           |
+| E-mails             | Queue et DLQ `openchat-email-events*`                                             |
+| Recherche IA        | Vectorize `openchat-captain-responses`, 1 536 dimensions, cosine                  |
+| Administration      | `/super_admin*` et `/monitoring/sidekiq*` protégés par Cloudflare Access          |
 | Secrets application | `ACTIVE_STORAGE_SIGNING_SECRET`, `OPENCHAT_SESSION_SECRET`, `WIDGET_TOKEN_SECRET` |
-| Secret e-mail | `RESEND_API_KEY` absent du Worker `openchat-jobs` |
+| Secret e-mail       | `RESEND_API_KEY` absent du Worker `openchat-jobs`                                 |
 
 Le `/ready` actuel contrôle la présence des bindings mais ne contrôle pas la
 capacité réelle d'envoyer un e-mail. Il est donc vert alors que les e-mails de
@@ -64,21 +64,21 @@ transport sera porté par le Worker Email commun et visible dans Grow.
 Les agrégats D1 suivants ont été lus sans extraire d'identité, de contenu de
 message ou de secret :
 
-| Entité | Nombre |
-| --- | ---: |
-| Comptes | 2 |
-| Utilisateurs agents | 2 |
-| Contacts | 12 |
-| Inboxes | 1 |
-| Conversations | 11 |
-| Messages | 15 |
-| Pièces jointes | 1 |
-| Blobs Active Storage | 2 |
-| Widgets web déclarés | 5 |
-| Labels | 2 |
-| Automatisations, réponses enregistrées, webhooks, CSAT | 0 |
-| Canaux e-mail, API, WhatsApp, SMS, Twilio et réseaux sociaux | 0 |
-| Intégrations, campagnes, Help Center, Captain, équipes, SLA et appels | 0 |
+| Entité                                                                | Nombre |
+| --------------------------------------------------------------------- | -----: |
+| Comptes                                                               |      2 |
+| Utilisateurs agents                                                   |      2 |
+| Contacts                                                              |     12 |
+| Inboxes                                                               |      1 |
+| Conversations                                                         |     11 |
+| Messages                                                              |     15 |
+| Pièces jointes                                                        |      1 |
+| Blobs Active Storage                                                  |      2 |
+| Widgets web déclarés                                                  |      5 |
+| Labels                                                                |      2 |
+| Automatisations, réponses enregistrées, webhooks, CSAT                |      0 |
+| Canaux e-mail, API, WhatsApp, SMS, Twilio et réseaux sociaux          |      0 |
+| Intégrations, campagnes, Help Center, Captain, équipes, SLA et appels |      0 |
 
 Cette utilisation réelle est nettement plus petite que la surface Chatwoot
 portée dans OpenChat. La migration obligatoire concerne donc les contacts, la
@@ -89,24 +89,24 @@ route Chatwoot existe.
 
 ## Doublons et autorité finale
 
-| Domaine fonctionnel | OpenChat actuel | SuperBoard cible | Décision |
-| --- | --- | --- | --- |
-| Authentification agent | sessions, Google, SAML, MFA dans OpenChat | Identity + accès opérateur Grow | supprimer le doublon OpenChat |
-| Identité utilisateur mobile | contact/token Chatwoot | Identity + application JWT | Identity est l'autorité |
-| Contacts et sociétés | tables Chatwoot | Support multi-projet | migrer puis fermer la source |
-| Conversations et messages | D1 OpenChat | D1 Support + Durable Object | migrer avec ordre et idempotence |
-| Pièces jointes | R2 partagé assets/uploads | R2 Support dédié | copier et vérifier SHA-256 |
-| Temps réel | Worker + Durable Object OpenChat | Durable Object Support | SDK Support uniquement |
-| Labels, notes, participants, brouillons | Chatwoot | Support operations | transformer vers les entités communes |
-| Macros et réponses enregistrées | Chatwoot, non utilisées | configuration Support | ne migrer que les lignes existantes |
-| Automatisations | moteur Chatwoot, non utilisé | moteur Support | conserver le moteur commun |
-| Webhooks | Queue OpenChat, non utilisés | Queue/DLQ Support + secrets chiffrés | recréer les secrets, jamais les copier |
-| CSAT | Chatwoot, aucune réponse | Support | conserver le contrat commun |
-| E-mails transactionnels | Queue OpenChat sans fournisseur | Worker Email commun | supprimer le pipeline OpenChat |
-| Notifications agent | tables OpenChat | notifications Support/Grow | consolider dans Grow |
-| Super administration | mini Super Admin OpenChat | Grow | Grow est l'unique back-office |
-| Observabilité | `/ready`, `/metrics`, pseudo-Sidekiq | Infrastructure Grow + Observability | consolider dans Grow |
-| Help Center, social, téléphonie, Captain | code présent mais données nulles | extensions optionnelles | ne pas porter dans le noyau maintenant |
+| Domaine fonctionnel                      | OpenChat actuel                           | SuperBoard cible                     | Décision                               |
+| ---------------------------------------- | ----------------------------------------- | ------------------------------------ | -------------------------------------- |
+| Authentification agent                   | sessions, Google, SAML, MFA dans OpenChat | Identity + accès opérateur Grow      | supprimer le doublon OpenChat          |
+| Identité utilisateur mobile              | contact/token Chatwoot                    | Identity + application JWT           | Identity est l'autorité                |
+| Contacts et sociétés                     | tables Chatwoot                           | Support multi-projet                 | migrer puis fermer la source           |
+| Conversations et messages                | D1 OpenChat                               | D1 Support + Durable Object          | migrer avec ordre et idempotence       |
+| Pièces jointes                           | R2 partagé assets/uploads                 | R2 Support dédié                     | copier et vérifier SHA-256             |
+| Temps réel                               | Worker + Durable Object OpenChat          | Durable Object Support               | SDK Support uniquement                 |
+| Labels, notes, participants, brouillons  | Chatwoot                                  | Support operations                   | transformer vers les entités communes  |
+| Macros et réponses enregistrées          | Chatwoot, non utilisées                   | configuration Support                | ne migrer que les lignes existantes    |
+| Automatisations                          | moteur Chatwoot, non utilisé              | moteur Support                       | conserver le moteur commun             |
+| Webhooks                                 | Queue OpenChat, non utilisés              | Queue/DLQ Support + secrets chiffrés | recréer les secrets, jamais les copier |
+| CSAT                                     | Chatwoot, aucune réponse                  | Support                              | conserver le contrat commun            |
+| E-mails transactionnels                  | Queue OpenChat sans fournisseur           | Worker Email commun                  | supprimer le pipeline OpenChat         |
+| Notifications agent                      | tables OpenChat                           | notifications Support/Grow           | consolider dans Grow                   |
+| Super administration                     | mini Super Admin OpenChat                 | Grow                                 | Grow est l'unique back-office          |
+| Observabilité                            | `/ready`, `/metrics`, pseudo-Sidekiq      | Infrastructure Grow + Observability  | consolider dans Grow                   |
+| Help Center, social, téléphonie, Captain | code présent mais données nulles          | extensions optionnelles              | ne pas porter dans le noyau maintenant |
 
 ## Architecture actuelle transitoire
 
@@ -152,17 +152,17 @@ contrat Support commun ; il ne recrée ni contacts, ni conversations, ni inbox.
 
 ## Écart de préparation SuperBoard Support
 
-Le Worker `opengrow-support` existe déjà dans le compte VocoStar. Sa version
+Le Worker `superboard-support` existe déjà dans le compte VocoStar. Sa version
 active utilise encore les ressources de compatibilité Messaging :
 
-- Queue `opengrow-messaging-events` ;
-- R2 `opengrow-messaging` ;
-- D1 `opengrow-support-db` ;
+- Queue `superboard-messaging-events` ;
+- R2 `superboard-messaging` ;
+- D1 `superboard-support-db` ;
 - secrets `INTERNAL_API_TOKEN` et `SUPPORT_WEBHOOK_ENCRYPTION_KEY`.
 
 La configuration Git de référence prévoit à la place les ressources dédiées
-`opengrow-support-events`, `opengrow-support-events-dlq` et
-`opengrow-support-attachments`. Elles ont été créées dans le compte de
+`superboard-support-events`, `superboard-support-events-dlq` et
+`superboard-support-attachments`. Elles ont été créées dans le compte de
 production le 9 août 2026 et le re-plan distant les réutilise sans conflit. Les
 migrations `0007_message_attachments.sql` et
 `0008_support_dead_letters.sql` restent en attente et la version active du
@@ -200,9 +200,9 @@ d'alimenter le stockage Messaging que l'architecture veut précisément supprime
 
 ### Phase 2 — préparer VocoStar sans bascule
 
-1. sauvegarder et migrer `opengrow-support-db` ;
+1. sauvegarder et migrer `superboard-support-db` ;
 2. créer le R2 et les Queue/DLQ Support dédiés ;
-3. redéployer `opengrow-support` sans route publique et vérifier les bindings ;
+3. redéployer `superboard-support` sans route publique et vérifier les bindings ;
 4. connecter API, Email et Observability par Service Binding ;
 5. mettre à jour la bibliothèque Support FlutterFlow dans le projet de
    référence, pas encore dans VocoStar ;

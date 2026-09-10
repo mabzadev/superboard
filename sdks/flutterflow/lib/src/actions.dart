@@ -99,7 +99,7 @@ Future<bool> superboardInitializeAuthenticated({
         final response = await client
             .post(
               Uri.parse(
-                '${authGatewayBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/auth/opengrow-token',
+                '${authGatewayBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/auth/superboard-token',
               ),
               headers: {
                 'Authorization': 'Bearer ${applicationAccessToken.trim()}',

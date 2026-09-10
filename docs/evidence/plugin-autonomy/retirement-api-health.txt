@@ -1,6 +1,6 @@
 Canonical Site API integration evidence
 
-Test: apps/site/runtime-tests/retirement-api-health.runtime.test.ts
+Test: tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts
 Runner exit code: 0
 All 10 files and 27 tests in this run passed.
 
@@ -13,7 +13,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-content",
@@ -22,7 +22,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-products",
@@ -31,7 +31,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-settings",
@@ -40,7 +40,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-user",
@@ -49,7 +49,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-analytics",
@@ -58,7 +58,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-billing",
@@ -67,7 +67,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-dynamic-links",
@@ -76,7 +76,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-email",
@@ -85,7 +85,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-files",
@@ -94,7 +94,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-flows",
@@ -103,7 +103,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-gateway",
@@ -112,7 +112,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-marketing",
@@ -121,7 +121,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-mcp",
@@ -130,7 +130,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-observability",
@@ -139,7 +139,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-onboardings",
@@ -148,7 +148,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-paywalls",
@@ -157,7 +157,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-support",
@@ -166,7 +166,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   }
 ]
 

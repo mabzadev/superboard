@@ -9,7 +9,7 @@
       "1-prod"
     ],
     "description": "Opened the configured Identity overview alias; showed live auth metadata and followed the Roles navigation link.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:25.325Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -23,7 +23,7 @@
       "1-prod"
     ],
     "description": "Opened the configured Identity overview alias; showed live auth metadata and followed the Roles navigation link.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:26.502Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -37,7 +37,7 @@
       "1-prod"
     ],
     "description": "Opened the configured Identity overview alias; showed live auth metadata and followed the Roles navigation link.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:27.623Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -51,7 +51,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Filtered the actual persisted native subject, confirmed no-result behavior, then restored the user list.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:31.696Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -67,7 +67,7 @@
       "1"
     ],
     "description": "Read real Email/SMS/sign-in events, opened each cleanup confirmation, cancelled, and confirmed all persisted IDs remain.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:36.248Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -81,7 +81,7 @@
       "3"
     ],
     "description": "Six real account buttons produced registered OAuth requests with fresh state and verified PKCE. External navigation was blocked in QA; no remote account change is claimed.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:50.918Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -95,7 +95,7 @@
       "6"
     ],
     "description": "Created using the real browser form and read back through the owning Identity API.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:41:53.282Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -109,7 +109,7 @@
       "6"
     ],
     "description": "Updated with the real Save control; values survived reload and an independent API read.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:41:59.935Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -123,7 +123,7 @@
       "6"
     ],
     "description": "List links open the actual record created by this browser scenario.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:03.236Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -137,7 +137,7 @@
       "19"
     ],
     "description": "Created using the real browser form and read back through the owning Identity API.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:07.433Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -151,7 +151,7 @@
       "19"
     ],
     "description": "Updated with the real Save control; values survived reload and an independent API read.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:09.820Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -165,7 +165,7 @@
       "19"
     ],
     "description": "List links open the actual record created by this browser scenario.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:11.932Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -179,7 +179,7 @@
       "5"
     ],
     "description": "Created using the real browser form and read back through the owning Identity API.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:13.532Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -193,7 +193,7 @@
       "5"
     ],
     "description": "Updated with the real Save control; values survived reload and an independent API read.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:15.355Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -207,7 +207,7 @@
       "5"
     ],
     "description": "List links open the actual record created by this browser scenario.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:17.306Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -221,7 +221,7 @@
       "5"
     ],
     "description": "Created using the real browser form and read back through the owning Identity API.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:18.872Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -235,7 +235,7 @@
       "5"
     ],
     "description": "Updated with the real Save control; values survived reload and an independent API read.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:20.677Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -249,7 +249,7 @@
       "5"
     ],
     "description": "List links open the actual record created by this browser scenario.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:22.617Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -263,7 +263,7 @@
       "6"
     ],
     "description": "Created an SPA application with a selected real OAuth scope using the form.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:24.730Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -277,7 +277,7 @@
       "6"
     ],
     "description": "Saved application metadata and read it back after reload.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:26.570Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -291,7 +291,7 @@
       "6"
     ],
     "description": "Applications list navigates to the persisted application.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:28.526Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -305,7 +305,7 @@
       "4"
     ],
     "description": "Created a real unassigned informational banner using its browser form.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:30.908Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -319,7 +319,7 @@
       "4"
     ],
     "description": "Edited and disabled the actual banner; API and reload confirm both changes.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:32.781Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -333,7 +333,7 @@
       "3"
     ],
     "description": "Saved a QA SAML IdP metadata document using the real form; no authentication at the fixture domain.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:34.424Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -347,7 +347,7 @@
       "3"
     ],
     "description": "Saved email attribute mapping and disabled the QA IdP; reload and API read confirm persistence.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:36.855Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -361,7 +361,7 @@
       "3"
     ],
     "description": "IdP list navigates to its actual persisted configuration.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:38.828Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   }

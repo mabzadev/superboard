@@ -1,8 +1,10 @@
 # SuperBoard Support and legacy Messaging
 
 This filename is retained for old links. SuperBoard Support is the canonical
-conversation implementation. `workers/messaging` is disabled by default and is
-kept only to read/migrate installations created before target schema version 5.
+conversation implementation. The legacy Messaging runtime is retired. Its SQL
+migrations remain in `scripts/database/legacy-messaging-migrations` for
+reading and migrating older installations. `--service messaging` and
+`--enable-legacy-messaging` are rejected; use `--service support`.
 
 ## Identity and public access
 
@@ -15,7 +17,7 @@ required.
 
 ## Canonical isolation
 
-- Worker: target-defined Support Worker, for example `opengrow-support`;
+- Worker: target-defined Support Worker, for example `superboard-support`;
 - D1: target `moduleD1.support`;
 - R2: target `moduleR2.support`;
 - Queue + DLQ: target `moduleQueues.support`;
@@ -50,8 +52,8 @@ purchases, refunds or financial jobs.
 
 `superboard_flutterflow` 3.0 integrates Support/Messaging directly and exposes
 the canonical `superboardSupport*` action names. The frozen
-`opengrow_flutterflow_messaging` 1.3 package and its `opengrowSupport*` /
-`opengrowMessaging*` symbols exist only for rollback and compatibility; new
+`superboard_flutterflow_messaging` 1.3 package and its `superboardSupport*` /
+`superboardMessaging*` symbols exist only for rollback and compatibility; new
 projects must not add that second package.
 
 The package covers configuration, conversations, messages, multiple

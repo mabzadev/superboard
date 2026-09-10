@@ -1,0 +1,4 @@
+<resources>
+    <string name="superboard_messages">Messages</string>
+    <string name="superboard_messages_empty">Your notifications inbox is currently empty.</string>
+</resources>

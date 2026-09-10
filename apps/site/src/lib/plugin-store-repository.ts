@@ -1,8 +1,8 @@
+import { validateUserPluginManifest } from "@superboard/plugin-identity/user";
 import {
 	canonicalizeReleasePayload,
 	verifySuperBoardPluginManifest,
 } from "@superboard/supbrd-core";
-import { validateUserPluginManifest } from "@superboard/supbrd-plug-user";
 
 const pluginPattern = /^supbrd-(?:plug|plugmod)-[a-z0-9*]+(?:-[a-z0-9*]+)*$/u;
 const projectRefPattern = /^\d+-(?:test|prod)$/u;

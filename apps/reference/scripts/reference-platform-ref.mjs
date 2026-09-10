@@ -92,8 +92,7 @@ async function main() {
 }
 
 function environmentValue(canonicalName) {
-	const legacyName = canonicalName.replace(/^SUPERBOARD_/u, "OPENGROW_");
-	return process.env[canonicalName] ?? process.env[legacyName] ?? "";
+	return process.env[canonicalName] ?? "";
 }
 
 const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : "";

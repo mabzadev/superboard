@@ -1,0 +1,32 @@
+{
+	"$schema": "./superboard-brand.schema.json",
+	"schemaVersion": 3,
+	"brand": {
+		"name": "SuperBoard",
+		"slug": "superboard",
+		"namespace": "superboard"
+	},
+	"repositories": {
+		"canonical": "mabzadev/superboard",
+		"layout": {
+			"platform": ".",
+			"reference": "apps/reference"
+		},
+		"legacyReadOnly": ["mabzadev/superboard-platform", "mabzadev/superboard-reference"]
+	},
+	"developmentDomains": {
+		"dashboard": "board.mbza.dev",
+		"reference": "reference.mbza.dev",
+		"shortLinks": "in.mbza.dev"
+	},
+	"sdkStrategy": {
+		"active": ["flutter", "flutterflow"],
+		"internal": ["android", "ios"],
+		"archived": ["flutterflow-support", "javascript", "react-native"]
+	},
+	"cloudflareMigration": {
+		"canonicalWorkerPrefix": "superboard",
+		"persistentResourcePolicy": "retain-physical-name-until-verified-cutover",
+		"canonicalEnvironmentPrefix": "SUPERBOARD_"
+	}
+}

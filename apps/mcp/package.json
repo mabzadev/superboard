@@ -17,7 +17,7 @@
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src/",
+    "lint": "cd ../.. && node apps/mcp/node_modules/eslint/bin/eslint.js --config apps/mcp/eslint.config.js apps/mcp/src tests/checks/apps/mcp",
     "format": "prettier --write src/",
     "format:check": "prettier --check src/"
   },

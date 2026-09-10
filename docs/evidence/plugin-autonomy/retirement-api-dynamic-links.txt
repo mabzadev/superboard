@@ -1,6 +1,6 @@
 Canonical Site API integration evidence
 
-Test: apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts
+Test: tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts
 Runner exit code: 0
 All 10 files and 27 tests in this run passed.
 
@@ -13,7 +13,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
     ]
@@ -25,7 +25,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
     ]
@@ -37,7 +37,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -49,7 +49,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -61,7 +61,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -73,7 +73,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -85,7 +85,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
     ]
@@ -97,7 +97,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
     ]
@@ -109,7 +109,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
     ]
@@ -121,7 +121,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
     ]
@@ -133,7 +133,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -145,7 +145,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -157,7 +157,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -169,7 +169,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -181,7 +181,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
     ]
@@ -193,7 +193,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -205,7 +205,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "c5f6f4d4-6f59-43e9-a07f-81f122244650"
     ]
@@ -217,7 +217,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "c5f6f4d4-6f59-43e9-a07f-81f122244650"
     ]
@@ -229,7 +229,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "c5f6f4d4-6f59-43e9-a07f-81f122244650"
     ]
@@ -241,7 +241,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "c5f6f4d4-6f59-43e9-a07f-81f122244650"
     ]
@@ -253,7 +253,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -265,7 +265,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
     ]

@@ -36,6 +36,6 @@ jobs:
       - name: Build test dependencies
         run: |
           pnpm --filter '@superboard/site^...' --filter '@superboard/email-worker^...' --workspace-concurrency=1 -r build
-          pnpm --dir packages/supbrd-runtime-plugins build
+          pnpm -r --filter @superboard/plugin-* build
       - name: Check plugin behavior and deployment artifacts
         run: pnpm run test:plugins:${{ matrix.check }}

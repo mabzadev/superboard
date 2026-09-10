@@ -229,13 +229,3 @@ class SuperBoard {
     return SuperBoardPlatform.instance.onDeeplinkReceived;
   }
 }
-
-/// Compatibility alias for applications migrating from OpenGrow 2.x.
-///
-/// New code should use [SuperBoard]. The alias deliberately resolves to the
-/// same implementation, so importing the compatibility API cannot register a
-/// second native plugin or a second set of event listeners.
-@Deprecated(
-  'Use SuperBoard. This compatibility alias will be removed in 4.0.0.',
-)
-typedef OpenGrow = SuperBoard;

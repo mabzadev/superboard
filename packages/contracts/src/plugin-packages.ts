@@ -1,4 +1,4 @@
-import definitions from "../../../config/superboard-plugin-packages.json";
+import definitions from "../../../scripts/config/superboard-plugin-packages.json";
 
 export const pluginPackages = definitions.packages;
 

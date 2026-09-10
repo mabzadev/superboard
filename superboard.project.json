@@ -3,7 +3,7 @@
   "product": {
     "name": "SuperBoard",
     "slug": "superboard",
-    "legacySlugs": ["opengrow"]
+    "legacySlugs": ["superboard"]
   },
   "repository": "https://github.com/mabzadev/superboard",
   "layout": {

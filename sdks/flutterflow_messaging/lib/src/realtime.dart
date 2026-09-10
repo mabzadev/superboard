@@ -5,14 +5,14 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'client.dart';
 
-typedef OpenGrowMessagingConnectionFactory =
-    Future<OpenGrowMessagingConnection> Function(String conversationId);
+typedef SuperBoardMessagingConnectionFactory =
+    Future<SuperBoardMessagingConnection> Function(String conversationId);
 
-class OpenGrowMessagingConnection {
-  OpenGrowMessagingConnection.fromChannel(WebSocketChannel channel)
+class SuperBoardMessagingConnection {
+  SuperBoardMessagingConnection.fromChannel(WebSocketChannel channel)
     : this(channel.stream, () => channel.sink.close(1000, 'Client closed'));
 
-  OpenGrowMessagingConnection(this.stream, this._close);
+  SuperBoardMessagingConnection(this.stream, this._close);
 
   final Stream<dynamic> stream;
   final FutureOr<void> Function() _close;
@@ -20,18 +20,18 @@ class OpenGrowMessagingConnection {
   Future<void> close() async => _close();
 }
 
-class OpenGrowMessagingRealtime {
-  OpenGrowMessagingRealtime(
-    OpenGrowMessagingClient client, {
+class SuperBoardMessagingRealtime {
+  SuperBoardMessagingRealtime(
+    SuperBoardMessagingClient client, {
     List<Duration>? retryDelays,
   }) : this.withConnectionFactory(
-         (conversationId) async => OpenGrowMessagingConnection.fromChannel(
+         (conversationId) async => SuperBoardMessagingConnection.fromChannel(
            await client.connect(conversationId),
          ),
          retryDelays: retryDelays,
        );
 
-  OpenGrowMessagingRealtime.withConnectionFactory(
+  SuperBoardMessagingRealtime.withConnectionFactory(
     this._connect, {
     List<Duration>? retryDelays,
   }) : _retryDelays = retryDelays ?? _defaultRetryDelays;
@@ -44,10 +44,10 @@ class OpenGrowMessagingRealtime {
     Duration(seconds: 30),
   ];
 
-  final OpenGrowMessagingConnectionFactory _connect;
+  final SuperBoardMessagingConnectionFactory _connect;
   final List<Duration> _retryDelays;
   final _events = StreamController<String>.broadcast();
-  OpenGrowMessagingConnection? _connection;
+  SuperBoardMessagingConnection? _connection;
   StreamSubscription<dynamic>? _subscription;
   Timer? _retryTimer;
   String? _conversationId;
@@ -63,13 +63,13 @@ class OpenGrowMessagingRealtime {
   Future<void> connect(String conversationId) async {
     final normalized = conversationId.trim();
     if (normalized.isEmpty || normalized.length > 255) {
-      throw const OpenGrowMessagingException(
+      throw const SuperBoardMessagingException(
         'conversation_id_invalid',
         'A valid conversation ID is required',
       );
     }
     if (_disposed) {
-      throw const OpenGrowMessagingException(
+      throw const SuperBoardMessagingException(
         'realtime_disposed',
         'Messaging realtime has been disposed',
       );
@@ -128,7 +128,7 @@ class OpenGrowMessagingRealtime {
       if (!_active(generation, conversation)) return;
       _scheduleReconnect(generation, conversation!, error);
       if (surfaceFailure) {
-        throw OpenGrowMessagingException(
+        throw SuperBoardMessagingException(
           'realtime_connection_failed',
           'Unable to connect to Messaging realtime',
           retryable: true,
@@ -138,7 +138,7 @@ class OpenGrowMessagingRealtime {
   }
 
   void _connectionEnded(
-    OpenGrowMessagingConnection connection,
+    SuperBoardMessagingConnection connection,
     int generation,
     String conversation,
     Object? error,
@@ -187,7 +187,7 @@ class OpenGrowMessagingRealtime {
     await connection?.close();
   }
 
-  Future<void> _closeQuietly(OpenGrowMessagingConnection connection) async {
+  Future<void> _closeQuietly(SuperBoardMessagingConnection connection) async {
     try {
       await connection.close();
     } catch (_) {

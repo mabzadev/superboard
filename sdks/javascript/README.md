@@ -21,10 +21,10 @@ Import the canonical Support surface from the dedicated package export:
 
 ```javascript
 import {
-  SuperBoardSupportClient,
-  SuperBoardSupportException,
-  SuperBoardSupportWidget,
-} from "@mbzadev/opengrow-js-sdk/support";
+	SuperBoardSupportClient,
+	SuperBoardSupportException,
+	SuperBoardSupportWidget,
+} from "@mbzadev/superboard-js-sdk/support";
 ```
 
 Create the client with the public API origin. The client applies
@@ -33,24 +33,24 @@ reuses one `Idempotency-Key` across safe retries, and caps cursor pages at 100.
 
 ```javascript
 const support = new SuperBoardSupportClient({
-  baseUrl: "https://api.example.com",
-  projectId: window.superboard.projectId,
-  identityToken: window.superboard.identityToken,
-  identityTokenProvider: async () => {
-    const response = await fetch("/support/identity", { method: "POST" });
-    const { token } = await response.json();
-    return token;
-  },
-  widgetKey: window.superboard.widgetKey,
-  widgetSignatureProvider: async (request) => {
-    const response = await fetch("/support/sign", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-    });
-    return response.json();
-  },
-  allowedDomains: ["app.example.com"],
+	baseUrl: "https://api.example.com",
+	projectId: window.superboard.projectId,
+	identityToken: window.superboard.identityToken,
+	identityTokenProvider: async () => {
+		const response = await fetch("/support/identity", { method: "POST" });
+		const { token } = await response.json();
+		return token;
+	},
+	widgetKey: window.superboard.widgetKey,
+	widgetSignatureProvider: async (request) => {
+		const response = await fetch("/support/sign", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(request),
+		});
+		return response.json();
+	},
+	allowedDomains: ["app.example.com"],
 });
 ```
 
@@ -88,18 +88,18 @@ client:
 
 ```javascript
 const conversation = await support.createConversation({
-  clientConversationId: crypto.randomUUID(),
-  subject: "Account question",
+	clientConversationId: crypto.randomUUID(),
+	subject: "Account question",
 });
 
 await support.sendMessage(conversation.id, {
-  body: "Could you help me?",
-  clientMessageId: crypto.randomUUID(),
+	body: "Could you help me?",
+	clientMessageId: crypto.randomUUID(),
 });
 
 const articles = await support.searchHelpCenter({
-  portalSlug: "docs",
-  query: "account",
+	portalSlug: "docs",
+	query: "account",
 });
 ```
 
@@ -109,7 +109,7 @@ SuperBoard Support event names are delivered to subscribers:
 ```javascript
 const realtime = support.realtime();
 const unsubscribe = realtime.subscribe((event) => {
-  if (event.type === "message.created") renderMessage(event.message);
+	if (event.type === "message.created") renderMessage(event.message);
 });
 await realtime.connect(conversation.id);
 
@@ -123,8 +123,8 @@ isolated in a closed Shadow DOM and writes user content with `textContent`:
 
 ```javascript
 const widget = new SuperBoardSupportWidget({
-  client: support,
-  title: "Customer Support",
+	client: support,
+	title: "Customer Support",
 });
 
 widget.mount(document.querySelector("#support"));
@@ -150,7 +150,7 @@ registry anonymously installable: unauthenticated downloads are unsupported
 and return `401 Unauthorized`.
 
 Provide a GitHub token with `read:packages` only through
-`OPENGROW_GITHUB_PACKAGES_TOKEN`. Keep its value in the
+`SUPERBOARD_GITHUB_PACKAGES_TOKEN`. Keep its value in the
 developer shell or CI secret store; never commit the token to Git or write its
 value into a package-manager configuration file.
 
@@ -159,20 +159,20 @@ placeholder is safe to version; its resolved secret value is not:
 
 ```ini
 @mbzadev:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${OPENGROW_GITHUB_PACKAGES_TOKEN}
+//npm.pkg.github.com/:_authToken=${SUPERBOARD_GITHUB_PACKAGES_TOKEN}
 ```
 
 Install only after the secret environment variable is present:
 
 ```bash
-test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
-  && npm install @mbzadev/opengrow-js-sdk@1.0.2
+test -n "${SUPERBOARD_GITHUB_PACKAGES_TOKEN:-}" \
+  && npm install @mbzadev/superboard-js-sdk@1.0.2
 ```
 
 Then import the package by its catalogue-owned name:
 
 ```javascript
-import SuperBoard from "@mbzadev/opengrow-js-sdk";
+import SuperBoard from "@mbzadev/superboard-js-sdk";
 ```
 
 <!-- superboard-sdk-documentation:javascript:end -->
@@ -185,9 +185,9 @@ import SuperBoard from "@mbzadev/opengrow-js-sdk";
 constructor(APIKey, testEnvironment, linkHandlingCallback, baseURL);
 ```
 
-Creates a new instance of the opengrow SDK.
+Creates a new instance of the superboard SDK.
 
-- **APIKey** (string): Your API key provided by opengrow for authentication.
+- **APIKey** (string): Your API key provided by superboard for authentication.
 - **testEnvironment** (boolean): Enables the application's test data namespace.
 - **linkHandlingCallback** (Function): A callback function that handles the data received from SuperBoard.
 - **baseURL** (string): The SDK origin configured for the application, without a hard-coded global fallback.
@@ -195,16 +195,16 @@ Creates a new instance of the opengrow SDK.
 #### Example
 
 ```javascript
-const runtimeConfig = window.__OPENGROW_CONFIG__;
+const runtimeConfig = window.__SUPERBOARD_CONFIG__;
 const handleLinkData = (data) => {
-  console.log("Link data received:", data);
+	console.log("Link data received:", data);
 };
 
 const superBoard = new SuperBoard(
-  runtimeConfig.projectKey,
-  runtimeConfig.testEnvironment,
-  handleLinkData,
-  runtimeConfig.sdkOrigin,
+	runtimeConfig.projectKey,
+	runtimeConfig.testEnvironment,
+	handleLinkData,
+	runtimeConfig.sdkOrigin,
 );
 ```
 
@@ -221,12 +221,12 @@ Initializes and starts the SuperBoard SDK by authenticating with the provided AP
 
 ```javascript
 superBoard.start(
-  () => {
-    console.log("SuperBoard authenticated");
-  },
-  (error) => {
-    console.error("SuperBoard authentication failed:", error);
-  },
+	() => {
+		console.log("SuperBoard authenticated");
+	},
+	(error) => {
+		console.error("SuperBoard authentication failed:", error);
+	},
 );
 ```
 
@@ -245,21 +245,21 @@ Creates a new link using the SuperBoard API.
 
 ```javascript
 const linkData = {
-  description: "This is a sample link",
-  category: "Demo",
+	description: "This is a sample link",
+	category: "Demo",
 };
 
 superBoard.createLink(
-  "Sample Link",
-  "This is a subtitle",
-  "https://example.com/image.jpg",
-  linkData,
-  (response) => {
-    console.log("Link created successfully:", response);
-  },
-  (err) => {
-    console.error("Error creating link:", err);
-  },
+	"Sample Link",
+	"This is a subtitle",
+	"https://example.com/image.jpg",
+	linkData,
+	(response) => {
+		console.log("Link created successfully:", response);
+	},
+	(err) => {
+		console.error("Error creating link:", err);
+	},
 );
 ```
 
@@ -311,8 +311,8 @@ Sets the user attributes.
 
 ```javascript
 const attributes = {
-  name: "John Doe",
-  email: "john.doe@example.com",
+	name: "John Doe",
+	email: "john.doe@example.com",
 };
 
 superBoard.setUserAttributes(attributes);
@@ -355,13 +355,13 @@ Retrieves messages for a specific page using the manager.
 
 ```javascript
 superBoard.getMessages(
-  1,
-  (messages) => {
-    console.log("Retrieved messages:", messages);
-  },
-  (err) => {
-    console.error("Error retrieving messages:", err);
-  },
+	1,
+	(messages) => {
+		console.log("Retrieved messages:", messages);
+	},
+	(err) => {
+		console.error("Error retrieving messages:", err);
+	},
 );
 ```
 
@@ -376,45 +376,45 @@ Retrieves the number of unread messages using the manager.
 
 ```javascript
 superBoard.getNumberOfUnreadMessages(
-  (count) => {
-    console.log("Number of unread messages:", count);
-  },
-  (err) => {
-    console.error("Error retrieving unread messages count:", err);
-  },
+	(count) => {
+		console.log("Number of unread messages:", count);
+	},
+	(err) => {
+		console.error("Error retrieving unread messages count:", err);
+	},
 );
 ```
 
 ## Usage Example
 
 ```javascript
-import SuperBoard from "@mbzadev/opengrow-js-sdk";
+import SuperBoard from "@mbzadev/superboard-js-sdk";
 
-const runtimeConfig = window.__OPENGROW_CONFIG__;
+const runtimeConfig = window.__SUPERBOARD_CONFIG__;
 const superBoard = new SuperBoard(
-  runtimeConfig.projectKey,
-  runtimeConfig.testEnvironment,
-  (data) => {
-    console.log("Link data:", data);
-  },
-  runtimeConfig.sdkOrigin,
+	runtimeConfig.projectKey,
+	runtimeConfig.testEnvironment,
+	(data) => {
+		console.log("Link data:", data);
+	},
+	runtimeConfig.sdkOrigin,
 );
 
 superBoard.setUserIdentifier("user-123");
 superBoard.setUserAttributes({ name: "John Doe", age: 30 });
 
 superBoard.start(
-  () => {
-    superBoard.createLink(
-      "Sample Link",
-      "Subtitle",
-      "https://example.com/image.jpg",
-      { foo: "bar" },
-      (response) => console.log("Link created:", response),
-      (error) => console.error("Error:", error),
-    );
-  },
-  (error) => console.error("Authentication failed:", error),
+	() => {
+		superBoard.createLink(
+			"Sample Link",
+			"Subtitle",
+			"https://example.com/image.jpg",
+			{ foo: "bar" },
+			(response) => console.log("Link created:", response),
+			(error) => console.error("Error:", error),
+		);
+	},
+	(error) => console.error("Authentication failed:", error),
 );
 
 console.log("User ID:", superBoard.userIdentifier());

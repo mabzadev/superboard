@@ -74,21 +74,21 @@ distribution channel for this SDK.
 Import the module and configure the SDK in your `AppDelegate`:
 
 ```swift
-import OpenGrow
+import SuperBoard
 
 func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    OpenGrow.configure(APIKey: "your-api-key", useTestEnvironment: false, delegate: self) { success in
+    SuperBoard.configure(APIKey: "your-api-key", useTestEnvironment: false, delegate: self) { success in
         if success {
-            print("OpenGrow SDK is ready")
+            print("SuperBoard SDK is ready")
         }
     }
 
     // Optional: enable debug logging
-    OpenGrow.setDebug(level: .info)
+    SuperBoard.setDebug(level: .info)
 
     // Optional: set user identity for analytics
-    OpenGrow.userIdentifier = "user_id_from_your_app"
-    OpenGrow.userAttributes = ["name": "John Doe", "plan": "premium"]
+    SuperBoard.userIdentifier = "user_id_from_your_app"
+    SuperBoard.userAttributes = ["name": "John Doe", "plan": "premium"]
 
     return true
 }
@@ -97,7 +97,7 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
 Every application must pass its `baseURL` parameter (domain only — the SDK appends the API path):
 
 ```swift
-OpenGrow.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "https://your-domain.com", delegate: self)
+SuperBoard.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "https://your-domain.com", delegate: self)
 ```
 
 ### 2. Forward delegate calls
@@ -106,15 +106,15 @@ OpenGrow.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "
 
 ```swift
 func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-    OpenGrow.handleSceneDelegate(openURLContexts: URLContexts)
+    SuperBoard.handleSceneDelegate(openURLContexts: URLContexts)
 }
 
 func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
-    OpenGrow.handleSceneDelegate(continue: userActivity)
+    SuperBoard.handleSceneDelegate(continue: userActivity)
 }
 
 func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-    OpenGrow.handleSceneDelegate(options: connectionOptions)
+    SuperBoard.handleSceneDelegate(options: connectionOptions)
 }
 ```
 
@@ -122,27 +122,27 @@ func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options conn
 
 ```swift
 func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-    return OpenGrow.handleAppDelegate(continue: userActivity, restorationHandler: restorationHandler)
+    return SuperBoard.handleAppDelegate(continue: userActivity, restorationHandler: restorationHandler)
 }
 
 func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-    return OpenGrow.handleAppDelegate(open: url, options: options)
+    return SuperBoard.handleAppDelegate(open: url, options: options)
 }
 ```
 
 ### 3. Handle deep links
 
-Conform to the `OpenGrowDelegate` protocol to receive deep link callbacks:
+Conform to the `SuperBoardDelegate` protocol to receive deep link callbacks:
 
 ```swift
-class YourViewController: UIViewController, OpenGrowDelegate {
+class YourViewController: UIViewController, SuperBoardDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        OpenGrow.delegate = self
+        SuperBoard.delegate = self
     }
 
-    func opengrowReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tracking: [String: Any]?) {
+    func superboardReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tracking: [String: Any]?) {
         // Route the user based on payload data
         if let screen = payload?["screen"] as? String {
             navigateTo(screen)
@@ -155,12 +155,12 @@ You can also retrieve past payloads:
 
 ```swift
 // Get the most recent payload
-OpenGrow.lastReceivedPayload { payload in
+SuperBoard.lastReceivedPayload { payload in
     print("Last payload: \(payload)")
 }
 
 // Get all payloads received since app launch
-OpenGrow.allReceivedPayloadsSinceStartup { payloads in
+SuperBoard.allReceivedPayloadsSinceStartup { payloads in
     guard let payloads = payloads else { return }
     for payload in payloads {
         print("Payload: \(payload)")
@@ -173,7 +173,7 @@ OpenGrow.allReceivedPayloadsSinceStartup { payloads in
 Create smart links with metadata, payload data, and tracking parameters:
 
 ```swift
-OpenGrow.generateLink(
+SuperBoard.generateLink(
     title: "Check out this product",
     subtitle: "Limited time offer",
     imageURL: "https://example.com/image.jpg",
@@ -199,7 +199,7 @@ let redirects = CustomRedirects(
     desktop: CustomLinkRedirect(link: "https://example.com/desktop-promo", openAppIfInstalled: false)
 )
 
-OpenGrow.generateLink(title: "Special offer", data: ["promoId": "summer25"], customRedirects: redirects) { url in
+SuperBoard.generateLink(title: "Special offer", data: ["promoId": "summer25"], customRedirects: redirects) { url in
     guard let url = url else { return }
     print("Generated link: \(url)")
 }
@@ -210,7 +210,7 @@ OpenGrow.generateLink(title: "Special offer", data: ["promoId": "summer25"], cus
 Present a share sheet after generating a link:
 
 ```swift
-OpenGrow.generateLink(title: "Share this", data: ["itemId": "abc"]) { url in
+SuperBoard.generateLink(title: "Share this", data: ["itemId": "abc"]) { url in
     guard let url = url else { return }
     let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
     self.present(activityVC, animated: true)
@@ -248,7 +248,7 @@ UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge
 ```swift
 func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-    OpenGrow.pushToken = token
+    SuperBoard.pushToken = token
 }
 ```
 
@@ -258,12 +258,12 @@ func application(_ application: UIApplication, didRegisterForRemoteNotifications
 
 ```swift
 // Show the messages list as a modal
-OpenGrow.displayMessagesViewController {
+SuperBoard.displayMessagesViewController {
     // Modal was dismissed
 }
 
 // Get unread count for badges
-OpenGrow.numberOfUnreadMessages { count in
+SuperBoard.numberOfUnreadMessages { count in
     print("Unread: \(count)")
 }
 ```
@@ -287,7 +287,7 @@ let result = try await Product.purchase(...)
 if case .success(let verification) = result,
    case .verified(let transaction) = verification {
 
-    OpenGrow.logInAppPurchase(transactionID: transaction.id) { success in
+    SuperBoard.logInAppPurchase(transactionID: transaction.id) { success in
         if success {
             Task { await transaction.finish() }
         }
@@ -300,7 +300,7 @@ if case .success(let verification) = result,
 ### Custom purchases
 
 ```swift
-OpenGrow.logCustomPurchase(
+SuperBoard.logCustomPurchase(
     type: .buy,
     priceInCents: 999,       // $9.99
     currency: "USD",
@@ -316,28 +316,28 @@ Use `.cancel` and `.refund` transaction types for cancellations and refunds. For
 
 ### Properties
 
-| Property | Type | Description |
-|---|---|---|
-| `delegate` | `OpenGrowDelegate?` | Receives deep link callbacks |
-| `userIdentifier` | `String?` | User ID shown in dashboard and reports |
-| `userAttributes` | `[String: Any]?` | User attributes for analytics |
-| `pushToken` | `String?` | APNs device token for push notifications |
+| Property         | Type                  | Description                              |
+| ---------------- | --------------------- | ---------------------------------------- |
+| `delegate`       | `SuperBoardDelegate?` | Receives deep link callbacks             |
+| `userIdentifier` | `String?`             | User ID shown in dashboard and reports   |
+| `userAttributes` | `[String: Any]?`      | User attributes for analytics            |
+| `pushToken`      | `String?`             | APNs device token for push notifications |
 
 ### Key Methods
 
-| Method | Description |
-|---|---|
-| `configure(APIKey:useTestEnvironment:baseURL:delegate:completion:)` | Initialize the SDK |
-| `setSDK(enabled:)` | Enable or disable the SDK |
-| `setDebug(level:)` | Set logging level (`.info`, `.warn`, `.error`) |
-| `generateLink(...)` | Generate a smart link |
-| `lastReceivedPayload(completion:)` | Get the last deep link payload |
-| `allReceivedPayloadsSinceStartup(completion:)` | Get all payloads since launch |
-| `linkDetails(path:completion:)` | Get details for a link path |
-| `displayMessagesViewController(completion:)` | Show messages modal |
-| `numberOfUnreadMessages(completion:)` | Get unread message count |
-| `logInAppPurchase(transactionID:completion:)` | Log a StoreKit 2 purchase |
-| `logCustomPurchase(type:priceInCents:currency:productID:startDate:completion:)` | Log a custom purchase |
+| Method                                                                          | Description                                    |
+| ------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `configure(APIKey:useTestEnvironment:baseURL:delegate:completion:)`             | Initialize the SDK                             |
+| `setSDK(enabled:)`                                                              | Enable or disable the SDK                      |
+| `setDebug(level:)`                                                              | Set logging level (`.info`, `.warn`, `.error`) |
+| `generateLink(...)`                                                             | Generate a smart link                          |
+| `lastReceivedPayload(completion:)`                                              | Get the last deep link payload                 |
+| `allReceivedPayloadsSinceStartup(completion:)`                                  | Get all payloads since launch                  |
+| `linkDetails(path:completion:)`                                                 | Get details for a link path                    |
+| `displayMessagesViewController(completion:)`                                    | Show messages modal                            |
+| `numberOfUnreadMessages(completion:)`                                           | Get unread message count                       |
+| `logInAppPurchase(transactionID:completion:)`                                   | Log a StoreKit 2 purchase                      |
+| `logCustomPurchase(type:priceInCents:currency:productID:startDate:completion:)` | Log a custom purchase                          |
 
 Full API reference: [iOS SDK API reference](https://github.com/mabzadev/superboard/tree/main/sdks/ios#api-reference)
 

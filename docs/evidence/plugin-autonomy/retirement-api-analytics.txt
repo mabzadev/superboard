@@ -7,7 +7,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4",
       "9e419563-d227-4e9b-8f28-8919684562ef",
@@ -23,7 +23,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4",
       "9e419563-d227-4e9b-8f28-8919684562ef",
@@ -39,7 +39,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4"
     ]
@@ -51,7 +51,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "796cdaee-43f5-4993-a8ef-d81fce4006fd"
     ]
@@ -63,7 +63,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "3465fa2c-5c70-4bea-84d7-e67bbebde41a"
     ]
@@ -75,7 +75,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "796cdaee-43f5-4993-a8ef-d81fce4006fd"
     ]
@@ -87,7 +87,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "fa8fd914-f1de-4a3c-a580-a13e529107ec"
     ]
@@ -99,7 +99,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "b5d10086-fa19-44e2-b110-e72704a4bb7c"
     ]
@@ -111,7 +111,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4"
     ]
@@ -123,7 +123,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4",
       "9e419563-d227-4e9b-8f28-8919684562ef",
@@ -139,7 +139,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "9e419563-d227-4e9b-8f28-8919684562ef"
     ]
@@ -151,7 +151,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "54eec4b8-19fa-4566-80ef-4d0c5b220493"
     ]
@@ -163,7 +163,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
     ]
@@ -175,7 +175,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
     ]
@@ -187,7 +187,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
     ]
@@ -199,7 +199,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
     ]
@@ -211,7 +211,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
     ]
@@ -223,7 +223,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
     ]
@@ -235,7 +235,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "c5d41815-3e27-4c23-87e7-5ddf76013a93"
     ]
@@ -247,7 +247,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "c5d41815-3e27-4c23-87e7-5ddf76013a93"
     ]
@@ -259,7 +259,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "c5d41815-3e27-4c23-87e7-5ddf76013a93"
     ]
@@ -271,7 +271,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "53f40b69-8f82-4d33-8595-d938a5191586"
     ]
@@ -283,7 +283,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "53f40b69-8f82-4d33-8595-d938a5191586"
     ]
@@ -295,7 +295,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "9379317f-9f03-4759-a3ef-e381e1ffa409"
     ]
@@ -307,7 +307,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "9379317f-9f03-4759-a3ef-e381e1ffa409"
     ]
@@ -319,7 +319,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -331,7 +331,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -343,7 +343,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "4b7068e6-6b98-4506-8e32-f1549b1eb61a"
     ]
@@ -355,7 +355,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
     ]
@@ -367,7 +367,7 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
     ]
