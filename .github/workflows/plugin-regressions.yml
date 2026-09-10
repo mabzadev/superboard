@@ -34,6 +34,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Build test dependencies
-        run: pnpm --filter '@superboard/site^...' --workspace-concurrency=1 -r build
+        run: |
+          pnpm --filter '@superboard/site^...' --workspace-concurrency=1 -r build
+          pnpm --dir packages/supbrd-runtime-plugins build
       - name: Check plugin behavior and deployment artifacts
         run: pnpm run test:plugins:${{ matrix.check }}
