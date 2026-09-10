@@ -260,9 +260,9 @@
 		"check:front-menu": "pnpm run lint:front-menu && pnpm run test:front-menu",
 		"plugins:catalog": "node scripts/superboard-plugin-packages.mjs",
 		"plugins:test": "node --test --test-concurrency=1 scripts/superboard-plugin-packages.test.mjs apps/site/superboard-emdash-plugins.test.mjs && pnpm --dir apps/site exec vitest run --config vitest.packages.config.ts && pnpm --dir apps/site exec vitest run --config vitest.front.config.ts tests/plugin-front-package-controls.test.tsx --maxWorkers=1 && pnpm --dir apps/site exec vitest run --config vitest.runtime.config.ts runtime-tests/managed-plugin-enable.runtime.test.ts runtime-tests/managed-plugin-lifecycle.runtime.test.ts runtime-tests/application-plugin.runtime.test.ts --maxWorkers=1 --no-file-parallelism",
-		"test:plugins:local": "SUPERBOARD_TEST_ENVIRONMENT=local pnpm --dir apps/site exec vitest run --config vitest.runtime.config.ts runtime-tests/operational-plugin-activation.runtime.test.ts --maxWorkers=1",
-		"test:plugins:development": "pnpm --dir apps/site run test:runtime:development",
-		"test:plugins:artifact": "node --test scripts/console-artifact-regression.test.mjs scripts/cloudflare-site-preview.test.mjs scripts/cloudflare-site-build.test.mjs scripts/cloudflare-consolidate.test.mjs scripts/cloudflare-development-secrets.test.mjs scripts/cloudflare-secret-preflight.test.mjs && pnpm --dir packages/supbrd-runtime-plugins run test:bundles",
+		"test:plugins:local": "SUPERBOARD_TEST_MAIL_PROVIDER=aws-ses SUPERBOARD_TEST_ENVIRONMENT=local pnpm --dir apps/site exec vitest run --config vitest.runtime.config.ts runtime-tests/operational-plugin-activation.runtime.test.ts --maxWorkers=1",
+		"test:plugins:development": "SUPERBOARD_TEST_MAIL_PROVIDER=aws-ses pnpm --dir apps/site run test:runtime:development",
+		"test:plugins:artifact": "node --test scripts/console-artifact-regression.test.mjs scripts/cloudflare-site-preview.test.mjs scripts/cloudflare-site-build.test.mjs scripts/cloudflare-consolidate.test.mjs scripts/cloudflare-development-secrets.test.mjs scripts/cloudflare-secret-preflight.test.mjs && pnpm --dir packages/supbrd-runtime-plugins run test:bundles && pnpm --dir workers/email test",
 		"test:plugins:regression": "pnpm run test:plugins:local && pnpm run test:plugins:development && pnpm run test:plugins:artifact"
 	},
 	"keywords": [],

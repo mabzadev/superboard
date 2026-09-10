@@ -58,13 +58,9 @@ export function buildDevelopmentSecretPlan({
 		})),
 		optionalCapabilities: {
 			analyticsQueries: analyticsTokenConfigured ? "enabled" : "disabled",
+			awsSesDelivery: awsSesConfigured ? "configured" : "unconfigured",
 		},
-		blockers:
-			target.mail?.transport === "smtp" && target.mail?.provider === "aws-ses" && !awsSesConfigured
-				? [
-						"AWS SES requires AWS_SES_SMTP_USERNAME, AWS_SES_SMTP_PASSWORD and AWS_SES_SNS_TOPIC_ARN",
-					]
-				: [],
+		blockers: [],
 	};
 	return { ...plan, confirmation: developmentSecretConfirmation(plan) };
 }
@@ -158,7 +154,10 @@ export async function generateDevelopmentSecretAssignments({
 			EMAIL_INTERNAL_TOKEN: emailToken,
 			...(target.mail?.transport === "capture"
 				? { MAIL_PREVIEW_TOKEN: token() }
-				: target.mail?.provider === "aws-ses"
+				: target.mail?.provider === "aws-ses" &&
+					  awsSesSmtpUsername &&
+					  awsSesSmtpPassword &&
+					  awsSesSnsTopicArn
 					? {
 							AWS_SES_SMTP_USERNAME: awsSesSmtpUsername,
 							AWS_SES_SMTP_PASSWORD: awsSesSmtpPassword,

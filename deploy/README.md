@@ -6,6 +6,8 @@ Deployment configuration derives this behavior from the target's active public r
 
 Plugin activation and deactivation use the signed-in administrator's session and permissions in every environment. The authorization is scoped to the plugin operation and recorded separately from strong reauthentication. Manual release approvals and rollbacks retain their strong reauthentication requirements. Check activation and deactivation after reloading the Plugins page; a successful HTTP health check alone does not verify these actions.
 
+Communication can be installed and activated before configuring an email provider. AWS and SMTP credentials are optional at deployment; configure senders from the plugin after activation. Email installation readiness checks its database, queue, encryption key, and internal authentication. Delivery health remains separate and reports an unconfigured default transport until its configuration is complete. Saved sender profiles use their own credentials independently of that default transport.
+
 Prepare the console before deploying it. Preparation builds the Worker and browser assets and records their SHA-256 checksums. Deployment consumes the prepared manifest, checks those files before uploading, and does not rebuild them. A changed artifact blocks deployment.
 
 The following commands prepare the development target, run its regression checks, and deploy the prepared artifact. Configure the target's Cloudflare account and required secrets first.

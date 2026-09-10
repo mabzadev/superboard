@@ -96,23 +96,7 @@ export function requiredSecretInventory(target, environment) {
 		"email",
 		target.mail.transport === "capture"
 			? ["EMAIL_INTERNAL_TOKEN", "EMAIL_SMTP_ENCRYPTION_KEY", "MAIL_PREVIEW_TOKEN"]
-			: target.mail.provider === "aws-ses"
-				? [
-						"EMAIL_INTERNAL_TOKEN",
-						"EMAIL_SMTP_ENCRYPTION_KEY",
-						"AWS_SES_SMTP_USERNAME",
-						"AWS_SES_SMTP_PASSWORD",
-						"AWS_SES_SNS_TOPIC_ARN",
-					]
-				: [
-						"EMAIL_INTERNAL_TOKEN",
-						"EMAIL_SMTP_ENCRYPTION_KEY",
-						"SMTP_HOST",
-						"SMTP_PORT",
-						"SMTP_SECURITY",
-						"SMTP_USERNAME",
-						"SMTP_PASSWORD",
-					],
+			: ["EMAIL_INTERNAL_TOKEN", "EMAIL_SMTP_ENCRYPTION_KEY"],
 	);
 	add("identity", [
 		"IDENTITY_KEYSET",
