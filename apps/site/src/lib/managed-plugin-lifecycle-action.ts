@@ -20,7 +20,7 @@ import {
 	jsonResponse,
 	recentOperatorReauthentication,
 	requireReleaseOperator,
-	withLocalOperatorReauthentication,
+	withManagedPluginAuthorization,
 } from "./operator-guard.js";
 import {
 	migratePluginPackages,
@@ -220,19 +220,19 @@ async function executeManagedPluginLifecycleAction(
 		action: "front_release.approve" as const,
 		now: new Date().toISOString(),
 	};
-	let workflowContext = bindManagedPluginOperation(context, operation);
-	let reauthentication = await recentOperatorReauthentication(
+	const workflowContext = withManagedPluginAuthorization(
+		bindManagedPluginOperation(context, operation),
+		{
+			instanceId: env.SUPERBOARD_INSTANCE_ID,
+			candidateId,
+			operationId: operation.operation_id,
+			verifiedAt: reauthenticationInput.now,
+		},
+	);
+	const reauthentication = await recentOperatorReauthentication(
 		workflowContext,
 		reauthenticationInput,
 	);
-	if (!reauthentication && env.SUPERBOARD_ENVIRONMENT === "local" && context.locals.user) {
-		workflowContext = withLocalOperatorReauthentication(
-			workflowContext,
-			env,
-			reauthenticationInput.now,
-		);
-		reauthentication = await recentOperatorReauthentication(workflowContext, reauthenticationInput);
-	}
 	if (!reauthentication) {
 		return jsonResponse({ error: { code: "STRONG_REAUTH_REQUIRED" } }, 403);
 	}

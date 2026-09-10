@@ -1,3 +1,4 @@
+pnpm run test:plugins:regression
 pnpm run check:front-menu
 pnpm exec lint-staged
 gitleaks git . --staged --no-banner --redact

@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { WorkerEntrypoint } from "cloudflare:workers";
 
+import installedCatalog from "../../../config/superboard-plugin-catalog.json";
 import { createConfiguredSuperBoardPlugin } from "../../../packages/supbrd-runtime-plugins/src/runtime.js";
 import { onRequest as applicationPluginMiddleware } from "../src/application-plugin-middleware.js";
 import { POST as initializeOperatorContext } from "../src/pages/_superboard/api/operator-context.js";
@@ -37,6 +38,10 @@ const dataSourcePath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/data-sour
 const managedPluginActionPath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/(enable|disable)$/u;
 const pluginHealthPath = /^\/_emdash\/api\/plugins\/([^/]+)\/health$/u;
 const packageAdminPath = /^\/_emdash\/api\/plugins\/([^/]+)\/admin$/u;
+
+const installedPackages = new Set(
+	installedCatalog.plugins.map(({ manifest }) => manifest.plugin_id),
+);
 
 export default {
 	async fetch(request, workerEnv) {
@@ -76,9 +81,15 @@ export default {
 			routes.get(`${request.method} ${url.pathname}`);
 		if (!handler) return Response.json({ error: { code: "ROUTE_NOT_FOUND" } }, { status: 404 });
 		const operator = request.headers.get("X-Parity-Operator") === "1";
-		const reauthenticated = request.headers.get("X-Parity-Reauthenticated") === "1";
+		const verification = request.headers.get("X-Parity-Reauthenticated");
+		const reauthenticated = verification === "1" || verification === "expired";
 		let strongReauthentication = reauthenticated
-			? { userId: "operator-1", verifiedAt: new Date(Date.now() - 1_000).toISOString() }
+			? {
+					userId: "operator-1",
+					verifiedAt: new Date(
+						Date.now() - (verification === "expired" ? 10 * 60_000 : 1_000),
+					).toISOString(),
+				}
 			: undefined;
 		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- test Worker supplies the Astro fields consumed by real route handlers
 		const context = {
@@ -100,18 +111,24 @@ export default {
 							id: "operator-1",
 							email: "operator@example.com",
 							name: "Operator",
-							role: 50,
+							role: request.headers.get("X-Parity-Role") === "editor" ? 40 : 50,
 							disabled: false,
 						}
 					: undefined,
 				emdash: {
 					setPluginStatus: async () => undefined,
-					inspectPluginHealth: async (pluginId: string) => ({
-						success: true,
-						data: await createConfiguredSuperBoardPlugin(pluginId).routes.health.handler({
-							kv: { get: (key: string) => workerEnv.RELEASE_CACHE.get(key, "json") },
-						}),
-					}),
+					inspectPluginHealth: async (pluginId: string) =>
+						!installedPackages.has(pluginId)
+							? {
+									success: false,
+									error: { code: "NOT_FOUND", message: `Plugin not found: ${pluginId}` },
+								}
+							: {
+									success: true,
+									data: await createConfiguredSuperBoardPlugin(pluginId).routes.health.handler({
+										kv: { get: (key: string) => workerEnv.RELEASE_CACHE.get(key, "json") },
+									}),
+								},
 				},
 			},
 			session: {

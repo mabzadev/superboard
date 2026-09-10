@@ -1,8 +1,10 @@
+import { pluginPackageOwner } from "@superboard/contracts/plugin-packages";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 import { signSiteOperatorRequest } from "@superboard/contracts/site-operator";
 import { sha256Canonical } from "@superboard/supbrd-core";
 import type { APIContext } from "astro";
 
+import packageCatalog from "../../../../config/superboard-plugin-catalog.json";
 import type { SuperBoardSiteEnv } from "./site-env.js";
 import { superBoardRuntimePluginCatalog } from "./superboard-plugin-catalog.js";
 
@@ -18,6 +20,13 @@ export async function verifySuperBoardPluginResources(
 	const manifests = new Map(
 		superBoardRuntimePluginCatalog().plugins.map(({ manifest }) => [manifest.plugin_id, manifest]),
 	);
+	const packageManifests = new Map(
+		packageCatalog.plugins.map(({ manifest }) => [manifest.plugin_id, manifest]),
+	);
+	const inspected = new Map<
+		string,
+		Awaited<ReturnType<typeof context.locals.emdash.inspectPluginHealth>>
+	>();
 	if (!context.locals.user || !env.API_SERVICE || !env.SITE_OPERATOR_BRIDGE_TOKEN)
 		throw new Error("PLUGIN_WORKER_HEALTH_BINDING_UNAVAILABLE");
 	for (const pluginId of pluginIds) {
@@ -25,11 +34,16 @@ export async function verifySuperBoardPluginResources(
 		if (!manifest) throw new Error(`PLUGIN_NOT_FOUND:${pluginId}`);
 		if (pluginId === "supbrd-plug-audit")
 			await env.DB.prepare("SELECT sequence FROM superboard_audit_heads LIMIT 1").all();
-		const result = await context.locals.emdash.inspectPluginHealth(
-			pluginId,
-			context.request,
-			context.locals.user,
-		);
+		const ownerId = pluginPackageOwner(pluginId);
+		const runtimeManifest = packageManifests.get(ownerId) ?? manifest;
+		const result =
+			inspected.get(ownerId) ??
+			(await context.locals.emdash.inspectPluginHealth(
+				ownerId,
+				context.request,
+				context.locals.user,
+			));
+		inspected.set(ownerId, result);
 		if (
 			!result.success ||
 			!result.data ||
@@ -37,11 +51,11 @@ export async function verifySuperBoardPluginResources(
 			!("status" in result.data) ||
 			result.data.status !== "ready" ||
 			!("plugin_id" in result.data) ||
-			result.data.plugin_id !== pluginId ||
+			result.data.plugin_id !== ownerId ||
 			!("artifact_checksum" in result.data) ||
-			result.data.artifact_checksum !== manifest.artifact_checksum ||
+			result.data.artifact_checksum !== runtimeManifest.artifact_checksum ||
 			!("plugin_version" in result.data) ||
-			result.data.plugin_version !== manifest.plugin_version
+			result.data.plugin_version !== runtimeManifest.plugin_version
 		) {
 			throw new Error(`PLUGIN_RUNTIME_HEALTH_FAILED:${pluginId}`);
 		}
@@ -55,6 +69,7 @@ export async function verifySuperBoardPluginResources(
 			pluginId,
 			await sha256Canonical({
 				plugin: result.data,
+				component: { plugin_id: pluginId, artifact_checksum: manifest.artifact_checksum },
 				worker: workerHealth,
 				checked_at: new Date().toISOString(),
 			}),
