@@ -40,6 +40,44 @@ const packages = [
 	"supbrd-plug-analytics",
 ];
 
+test("Communication can be activated and configured before entering provider credentials", async () => {
+	const plugin = "supbrd-plug-communication";
+	const response = await SELF.fetch(actionUrl(plugin, "enable"), { method: "POST", headers });
+	expect(response.status, await response.clone().text()).toBe(201);
+	expect(await enabled(plugin)).toBe(1);
+	const page = await SELF.fetch(`https://site.example/_emdash/api/plugins/${plugin}/admin`, {
+		method: "POST",
+		headers: { ...headers, "Content-Type": "application/json" },
+		body: "{}",
+	});
+	expect(page.status, await page.clone().text()).toBe(200);
+	const disabled = await SELF.fetch(actionUrl(plugin, "disable"), { method: "POST", headers });
+	expect(disabled.status, await disabled.clone().text()).toBe(201);
+	expect(await enabled(plugin)).toBe(0);
+});
+
+test("Communication still requires its installed database schema", async () => {
+	const emailDb = Reflect.get(env, "HEALTH_EMAIL_DB") as D1Database;
+	const migration = await emailDb
+		.prepare("SELECT id,name,applied_at FROM d1_migrations ORDER BY name DESC LIMIT 1")
+		.first<{ id: number; name: string; applied_at: string }>();
+	if (!migration) throw new Error("Email test migrations are missing");
+	await emailDb.prepare("DELETE FROM d1_migrations WHERE id=?").bind(migration.id).run();
+	try {
+		const response = await SELF.fetch(actionUrl("supbrd-plug-communication", "enable"), {
+			method: "POST",
+			headers,
+		});
+		expect(response.status).toBe(500);
+		expect(await enabled("supbrd-plug-communication")).not.toBe(1);
+	} finally {
+		await emailDb
+			.prepare("INSERT INTO d1_migrations(id,name,applied_at) VALUES (?,?,?)")
+			.bind(migration.id, migration.name, migration.applied_at)
+			.run();
+	}
+});
+
 test("an older sign-in does not prevent disabling an already active plugin", async () => {
 	const plugin = "supbrd-plug-data";
 	const setup = await SELF.fetch(actionUrl(plugin, "enable"), {

@@ -17,7 +17,7 @@ const bindings = {
 	"supbrd-plugmod-flows": ["FLOWS_MODULE", "/internal/v1/health"],
 	"supbrd-plugmod-analytics": ["ANALYTICS_MODULE", "/internal/v1/health"],
 	"supbrd-plugmod-marketing": ["MARKETING_MODULE", "/internal/v1/health"],
-	"supbrd-plugmod-email": ["EMAIL_SERVICE", "/health"],
+	"supbrd-plugmod-email": ["EMAIL_SERVICE", "/internal/v1/health"],
 	"supbrd-plugmod-dynamic-links": ["DYNAMIC_LINKS_MODULE", "/internal/v1/health"],
 	"supbrd-plugmod-files": ["FILES_SERVICE", "/health"],
 	"supbrd-plugmod-paywalls": ["PAYWALLS_MODULE", "/internal/v1/health"],

@@ -63,6 +63,8 @@ const lifecycleWorker = {
 				discardDeadLetter: discardEmailDeadLetter,
 			});
 		if (request.method === "GET" && url.pathname === "/health") return health(env);
+		if (request.method === "GET" && url.pathname === "/internal/v1/health")
+			return health(env, "installation");
 		if (request.method === "GET" && url.pathname === "/") return previewShell();
 		if (request.method === "POST" && url.pathname === EMAIL_SERVICE_AWS_SES_EVENTS_PATH) {
 			return receiveAwsSesEvent(request, env);
@@ -86,12 +88,32 @@ const lifecycleWorker = {
 		if (request.method === "POST" && url.pathname === EMAIL_SERVICE_SMTP_TRANSPORT_PATH) {
 			return deliverDelegatedSmtp(request, env);
 		}
-		if(request.method==="GET"&&url.pathname==="/internal/v1/senders"){
-			if(!(await internalAuthorized(request,env)))return json({error:"unauthorized"},401);
-			const projectId=Number(url.searchParams.get("project_id"));
-			if(!Number.isSafeInteger(projectId)||projectId<=0)return json({error:"project_invalid"},422);
-			const rows=await env.DB.prepare("SELECT id,public_config_json,enabled,authentication_status FROM email_smtp_profiles WHERE project_id=? ORDER BY priority,created_at LIMIT 100").bind(projectId).all<{id:string;public_config_json:string;enabled:number;authentication_status:string}>();
-			return json({configured:rows.results.length>0,known_ids:rows.results.map(row=>row.id),items:rows.results.filter(row=>row.enabled===1&&(env.ENVIRONMENT!=="production"||row.authentication_status==="verified")).map(row=>({id:row.id,publicConfig:safeObjectJson(row.public_config_json)}))});
+		if (request.method === "GET" && url.pathname === "/internal/v1/senders") {
+			if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
+			const projectId = Number(url.searchParams.get("project_id"));
+			if (!Number.isSafeInteger(projectId) || projectId <= 0)
+				return json({ error: "project_invalid" }, 422);
+			const rows = await env.DB.prepare(
+				"SELECT id,public_config_json,enabled,authentication_status FROM email_smtp_profiles WHERE project_id=? ORDER BY priority,created_at LIMIT 100",
+			)
+				.bind(projectId)
+				.all<{
+					id: string;
+					public_config_json: string;
+					enabled: number;
+					authentication_status: string;
+				}>();
+			return json({
+				configured: rows.results.length > 0,
+				known_ids: rows.results.map((row) => row.id),
+				items: rows.results
+					.filter(
+						(row) =>
+							row.enabled === 1 &&
+							(env.ENVIRONMENT !== "production" || row.authentication_status === "verified"),
+					)
+					.map((row) => ({ id: row.id, publicConfig: safeObjectJson(row.public_config_json) })),
+			});
 		}
 		if (url.pathname.startsWith(EMAIL_SERVICE_OPERATIONS_PATH)) {
 			if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
@@ -746,10 +768,15 @@ async function deliverDelegatedSmtp(request: Request, env: Env): Promise<Respons
 		const smtp = resolveSmtpConfiguration(env, input.publicConfig, input.secret);
 		result = await sendSmtpMessage(smtp.public, smtp.secret, {
 			...input.message,
-			headers: providerHeaders(env, input.message.headers, {
-				source: input.source,
-				project: String(input.projectId),
-			}),
+			headers: providerHeaders(
+				env,
+				input.message.headers,
+				{
+					source: input.source,
+					project: String(input.projectId),
+				},
+				false,
+			),
 			messageId: await deterministicMessageId(input.idempotencyKey, smtp.public.from_email),
 		});
 	} catch (error) {
@@ -913,10 +940,15 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 				subject: message.subject,
 				text: message.text_body,
 				html: message.html_body,
-				headers: providerHeaders(env, safeJson(message.headers_json), {
-					source: "email",
-					...(message.project_id == null ? {} : { project: String(message.project_id) }),
-				}),
+				headers: providerHeaders(
+					env,
+					safeJson(message.headers_json),
+					{
+						source: "email",
+						...(message.project_id == null ? {} : { project: String(message.project_id) }),
+					},
+					!snapshot,
+				),
 				messageId: await deterministicMessageId(
 					`email.delivery:${message.id}:${delivery.id}`,
 					message.from_address,
@@ -991,6 +1023,7 @@ function smtpConfiguration(env: Env, message: EmailRow) {
 			reply_to: message.reply_to,
 		},
 		{ password: env.SMTP_PASSWORD || null },
+		true,
 	);
 }
 
@@ -1006,8 +1039,9 @@ function resolveSmtpConfiguration(
 		reply_to: string | null;
 	},
 	suppliedSecret: { password: string | null },
+	useDefaultProvider = false,
 ) {
-	if (env.MAIL_PROVIDER === "aws-ses") {
+	if (useDefaultProvider && env.MAIL_PROVIDER === "aws-ses") {
 		const region = String(env.AWS_REGION || "")
 			.trim()
 			.toLowerCase();
@@ -1060,9 +1094,10 @@ function providerHeaders(
 	env: Env,
 	headers: Record<string, string> | undefined,
 	tags: Record<string, string>,
+	useDefaultProvider = true,
 ): Record<string, string> {
 	const output = { ...headers };
-	if (env.MAIL_PROVIDER !== "aws-ses") return output;
+	if (!useDefaultProvider || env.MAIL_PROVIDER !== "aws-ses") return output;
 	const configurationSet = String(env.AWS_SES_CONFIGURATION_SET || "").trim();
 	if (!/^[A-Za-z0-9_-]{1,64}$/u.test(configurationSet)) {
 		throw new Error("AWS_SES_CONFIGURATION_SET is invalid");
@@ -1144,10 +1179,16 @@ function receiptStatus(status: string): EmailServiceReceipt["status"] {
 	return "queued";
 }
 
-async function health(env: Env): Promise<Response> {
-	let configuration: ReturnType<typeof emailConfigurationHealth>;
+async function health(
+	env: Env,
+	purpose: "delivery" | "installation" = "delivery",
+): Promise<Response> {
+	let configuration:
+		| ReturnType<typeof emailConfigurationHealth>
+		| ReturnType<typeof emailInstallationHealth>;
 	try {
-		configuration = emailConfigurationHealth(env);
+		configuration =
+			purpose === "installation" ? emailInstallationHealth(env) : emailConfigurationHealth(env);
 	} catch {
 		return json(
 			{
@@ -1320,6 +1361,18 @@ export async function quarantineEmailDeadLetter(
 		.bind(DEAD_LETTER_MAX_RECORDS)
 		.run();
 	return { id, duplicate: result.meta.changes === 0, ...payload };
+}
+
+function emailInstallationHealth(env: Env) {
+	if (!env.EMAIL_INTERNAL_TOKEN?.trim() || !env.EMAIL_SMTP_ENCRYPTION_KEY?.trim()) {
+		throw new Error("Email internal credentials are not configured");
+	}
+	if (typeof env.EMAIL_QUEUE?.send !== "function") throw new Error("EMAIL_QUEUE is not configured");
+	return {
+		internalAuthenticationConfigured: true,
+		encryptionConfigured: true,
+		queueConfigured: true,
+	};
 }
 
 function emailConfigurationHealth(env: Env) {

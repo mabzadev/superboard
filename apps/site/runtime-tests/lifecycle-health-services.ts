@@ -62,7 +62,12 @@ export async function dispatchLifecycleApi(
 		SHORTLINK_DOMAIN: "links.site.test",
 		OBSERVABILITY_INTERNAL_TOKEN: "runtime-observability-secret",
 		ANALYTICS_DATASET: "runtime",
-		MAIL_TRANSPORT: request.headers.get("X-Test-Email-Transport") === "smtp" ? "smtp" : "capture",
+		MAIL_PROVIDER: env.HEALTH_MAIL_PROVIDER ?? "smtp",
+		MAIL_TRANSPORT:
+			env.HEALTH_MAIL_PROVIDER === "aws-ses" ||
+			request.headers.get("X-Test-Email-Transport") === "smtp"
+				? "smtp"
+				: "capture",
 		IDENTITY_KEYSET: env.HEALTH_IDENTITY_KEYSET,
 		REGISTRATION_MODE: "open",
 		APPLICATION_AUDIENCE: "autonomy.application",

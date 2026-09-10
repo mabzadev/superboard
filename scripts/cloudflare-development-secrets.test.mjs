@@ -67,6 +67,31 @@ test("development secret plan is value-free, account-scoped and deterministic", 
 	);
 });
 
+test("development installation does not wait for AWS credentials", async () => {
+	const { target } = await loadTarget("mbza-development");
+	const plan = buildDevelopmentSecretPlan({
+		target,
+		environment: "development",
+		accountId: "a".repeat(32),
+		awsSesConfigured: false,
+		analyticsTokenConfigured: false,
+	});
+	assert.deepEqual(plan.blockers, []);
+	const assignments = await generateDevelopmentSecretAssignments({
+		target,
+		environment: "development",
+		accountId: "a".repeat(32),
+		appleRootBase64: "apple-root",
+		awsSesSmtpUsername: "",
+		awsSesSmtpPassword: "",
+		awsSesSnsTopicArn: "",
+		analyticsToken: "",
+	});
+	assert.ok(assignments.email.EMAIL_INTERNAL_TOKEN);
+	assert.ok(assignments.email.EMAIL_SMTP_ENCRYPTION_KEY);
+	assert.equal("AWS_SES_SMTP_PASSWORD" in assignments.email, false);
+});
+
 test("development secret plan refuses production and treats analytics credentials as optional", async () => {
 	const { target } = await loadTarget("mbza-development");
 	assert.throws(
