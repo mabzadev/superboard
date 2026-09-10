@@ -37,24 +37,24 @@ policy.
 
 ## Journey and operation matrix
 
-|   # | Page              | Input or operation                                                                                                                                                                                     | Public library execution                                                                                                          | Acceptance evidence                                                                                                                                                                                                                      |
-| --: | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|   # | Page              | Input or operation                                                                                                                                                                                     | Public library execution                                                                                                              | Acceptance evidence                                                                                                                                                                                                                      |
+| --: | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |   1 | Bootstrap         | `{"app_version":"0.1.0","build":"1"}`                                                                                                                                                                  | application initialization, `superboardInitializeAuto` or authenticated initialization, then `superboardApplicationRuntimePolicyJson` | target diagnostics contain only configured origins; runtime policy resolves; no fallback VocoStar/MBZA hostname exists in reusable code                                                                                                  |
 |   2 | Sign in           | password: `email`, `password`; provider: `provider=google\|apple`, `token`, optional `name`                                                                                                            | `superboardApplicationSignInPasswordJson` or `superboardApplicationSignInProviderJson`                                                | nested Identity user, access token and rotating refresh token are accepted and stored securely; invalid credentials remain sanitized                                                                                                     |
-|   3 | Create account    | `email`, `password`, `name`                                                                                                                                                                            | `superboardApplicationRegisterJson`                                                                                                 | registration policy is enforced; session is created only when policy permits; verification mail is visible in the protected development preview                                                                                          |
-|   4 | Password recovery | `operation=request`, `email`; then `operation=reset`, `token`, `password`                                                                                                                              | request and reset actions                                                                                                         | request is enumeration-safe; development email contains the one-time flow; token reuse/expiry is refused                                                                                                                                 |
-|   5 | Home              | optional `app_version`, `build`                                                                                                                                                                        | profile plus runtime policy actions                                                                                               | current authenticated identity and server-owned feature/runtime policy are returned together                                                                                                                                             |
-|   6 | Profile           | `operation=read`; `update_profile` + `name`; `identify` + user fields; `attributes` + object; `logout`; finally `delete`                                                                               | profile, update, identify, attributes, logout and deletion actions                                                                | state reflects each mutation; logout clears both local tokens; deletion clears the session and triggers server-owned purge policy                                                                                                        |
-|   7 | Notifications     | `operation=register` + native `push_token`; `inspect`; `display`                                                                                                                                       | push registration, unread count and display actions                                                                               | device registration appears in Infrastructure, unread state is coherent, APNs/FCM delivery is tested on native devices                                                                                                                   |
-|   8 | Files             | `operation=upload` + `filename`, `content_type`, and `text` or `bytes_base64`; then `list`, `download` + `file_id`, `delete` + `file_id`                                                               | four application Files actions                                                                                                    | ownership, MIME/size policy, list visibility, exact downloaded byte count and deletion are proven; the UI includes base64 only below the 64 KiB proof ceiling                                                                            |
-|   9 | Products          | `operation=inspect`, optional `placement`; `operation=restore`                                                                                                                                         | offerings, customer info, last verified customer info and restore                                                                 | server catalogue and signed/verified entitlement state agree; restore returns updated customer state                                                                                                                                     |
-|  10 | Paywall           | `operation=inspect`, `placement`; optional `operation=purchase`, `package_identifier`, `offering_identifier`; click **Render live widget**                                                             | purchase configuration/actions and the real `SuperBoardPaywall` widget                                                              | placement fallback, rendered version, purchase/restore/close/unavailable callbacks and latest verified purchase result are visible                                                                                                       |
-|  11 | Dynamic links     | generate with `title` and `data`; inspect callback with `operation=last`                                                                                                                               | generate-link and last-deep-link actions                                                                                          | returned short URL uses `https://in.mbza.dev`; opening it exercises redirect and attribution without an embedded API hostname                                                                                                            |
-|  12 | Support inbox     | `configuration`, `list`, `open`, `update`, `messages`, `send`, `upload_attachment`, `download_attachment`, `send_attachment`, `mark_read`, `typing`, `connect`, `disconnect`, `realtime_event`, `csat` | authenticated SuperBoard Support actions only                                                                                       | conversation lifecycle, idempotent client IDs, attachment bytes, realtime, read/typing state and CSAT succeed through canonical SuperBoard routes                                                                                       |
+|   3 | Create account    | `email`, `password`, `name`                                                                                                                                                                            | `superboardApplicationRegisterJson`                                                                                                   | registration policy is enforced; session is created only when policy permits; verification mail is visible in the protected development preview                                                                                          |
+|   4 | Password recovery | `operation=request`, `email`; then `operation=reset`, `token`, `password`                                                                                                                              | request and reset actions                                                                                                             | request is enumeration-safe; development email contains the one-time flow; token reuse/expiry is refused                                                                                                                                 |
+|   5 | Home              | optional `app_version`, `build`                                                                                                                                                                        | profile plus runtime policy actions                                                                                                   | current authenticated identity and server-owned feature/runtime policy are returned together                                                                                                                                             |
+|   6 | Profile           | `operation=read`; `update_profile` + `name`; `identify` + user fields; `attributes` + object; `logout`; finally `delete`                                                                               | profile, update, identify, attributes, logout and deletion actions                                                                    | state reflects each mutation; logout clears both local tokens; deletion clears the session and triggers server-owned purge policy                                                                                                        |
+|   7 | Notifications     | `operation=register` + native `push_token`; `inspect`; `display`                                                                                                                                       | push registration, unread count and display actions                                                                                   | device registration appears in Infrastructure, unread state is coherent, APNs/FCM delivery is tested on native devices                                                                                                                   |
+|   8 | Files             | `operation=upload` + `filename`, `content_type`, and `text` or `bytes_base64`; then `list`, `download` + `file_id`, `delete` + `file_id`                                                               | four application Files actions                                                                                                        | ownership, MIME/size policy, list visibility, exact downloaded byte count and deletion are proven; the UI includes base64 only below the 64 KiB proof ceiling                                                                            |
+|   9 | Products          | `operation=inspect`, optional `placement`; `operation=restore`                                                                                                                                         | offerings, customer info, last verified customer info and restore                                                                     | server catalogue and signed/verified entitlement state agree; restore returns updated customer state                                                                                                                                     |
+|  10 | Paywall           | `operation=inspect`, `placement`; optional `operation=purchase`, `package_identifier`, `offering_identifier`; click **Render live widget**                                                             | purchase configuration/actions and the real `SuperBoardPaywall` widget                                                                | placement fallback, rendered version, purchase/restore/close/unavailable callbacks and latest verified purchase result are visible                                                                                                       |
+|  11 | Dynamic links     | generate with `title` and `data`; inspect callback with `operation=last`                                                                                                                               | generate-link and last-deep-link actions                                                                                              | returned short URL uses `https://in.mbza.dev`; opening it exercises redirect and attribution without an embedded API hostname                                                                                                            |
+|  12 | Support inbox     | `configuration`, `list`, `open`, `update`, `messages`, `send`, `upload_attachment`, `download_attachment`, `send_attachment`, `mark_read`, `typing`, `connect`, `disconnect`, `realtime_event`, `csat` | authenticated SuperBoard Support actions only                                                                                         | conversation lifecycle, idempotent client IDs, attachment bytes, realtime, read/typing state and CSAT succeed through canonical SuperBoard routes                                                                                        |
 |  13 | Marketing consent | `operation=load`; update with `operation=update`, boolean `consented`, object `attributes`, public `list_ids`, stable `idempotency_key`                                                                | `superboardApplicationMarketingPreferencesJson` and `superboardApplicationUpdateMarketingConsentJson`                                 | only the verified Identity email is used; only public lists are exposed; replay is idempotent; opt-out is recorded; complaint/hard-bounce/privacy suppressions cannot be weakened or re-subscribed by the app                            |
-|  14 | Onboarding        | `placement`, optional `locale` and `attributes`; click **Render live widget**                                                                                                                          | real `SuperBoardOnboarding` widget                                                                                                  | version/targeting resolves; progress, completed/skipped/closed/unavailable callbacks are recorded; unpublished or rolled-back content uses the fallback                                                                                  |
-|  15 | Custom extension  | object `payload`, stable `idempotency_key`; after all rows, `operation=acceptance` plus the sixteen evidence entries                                                                                   | create, list, detail and cancellation actions for `reference.echo` or `reference.acceptance`                                      | one public SDK call path proves application JWT exchange, project/subject scoping, durable D1 state and the expected terminal `job_not_cancellable`; the final receipt is bound to both displayed Git SHAs and visible in Infrastructure |
-|  16 | Diagnostics       | `{}`                                                                                                                                                                                                   | bounded public API health request plus sanitized local diagnostics                                                                | environment, endpoint set, SDK registration fields and recoverable error are visible; secrets and bearer values are absent                                                                                                               |
+|  14 | Onboarding        | `placement`, optional `locale` and `attributes`; click **Render live widget**                                                                                                                          | real `SuperBoardOnboarding` widget                                                                                                    | version/targeting resolves; progress, completed/skipped/closed/unavailable callbacks are recorded; unpublished or rolled-back content uses the fallback                                                                                  |
+|  15 | Custom extension  | object `payload`, stable `idempotency_key`; after all rows, `operation=acceptance` plus the sixteen evidence entries                                                                                   | create, list, detail and cancellation actions for `reference.echo` or `reference.acceptance`                                          | one public SDK call path proves application JWT exchange, project/subject scoping, durable D1 state and the expected terminal `job_not_cancellable`; the final receipt is bound to both displayed Git SHAs and visible in Infrastructure |
+|  16 | Diagnostics       | `{}`                                                                                                                                                                                                   | bounded public API health request plus sanitized local diagnostics                                                                    | environment, endpoint set, SDK registration fields and recoverable error are visible; secrets and bearer values are absent                                                                                                               |
 
 ## Support operation examples
 
@@ -63,39 +63,39 @@ binary attachments; the example uses text for readability.
 
 ```json
 {
-  "operation": "open",
-  "client_conversation_id": "reference-<run>-1",
-  "subject": "MBZA acceptance",
-  "custom_attributes": { "source": "reference" }
+	"operation": "open",
+	"client_conversation_id": "reference-<run>-1",
+	"subject": "MBZA acceptance",
+	"custom_attributes": { "source": "reference" }
 }
 ```
 
 ```json
 {
-  "operation": "send",
-  "conversation_id": "<conversation-id>",
-  "client_message_id": "reference-<run>-message-1",
-  "body": "Bonjour depuis SuperBoard Reference",
-  "metadata": { "acceptance_run": "<run>" }
+	"operation": "send",
+	"conversation_id": "<conversation-id>",
+	"client_message_id": "reference-<run>-message-1",
+	"body": "Bonjour depuis SuperBoard Reference",
+	"metadata": { "acceptance_run": "<run>" }
 }
 ```
 
 ```json
 {
-  "operation": "upload_attachment",
-  "conversation_id": "<conversation-id>",
-  "filename": "proof.txt",
-  "content_type": "text/plain",
-  "text": "SuperBoard Support acceptance"
+	"operation": "upload_attachment",
+	"conversation_id": "<conversation-id>",
+	"filename": "proof.txt",
+	"content_type": "text/plain",
+	"text": "SuperBoard Support acceptance"
 }
 ```
 
 ```json
 {
-  "operation": "csat",
-  "conversation_id": "<conversation-id>",
-  "rating": 5,
-  "feedback": "MBZA acceptance passed"
+	"operation": "csat",
+	"conversation_id": "<conversation-id>",
+	"rating": 5,
+	"feedback": "MBZA acceptance passed"
 }
 ```
 
@@ -118,14 +118,14 @@ the application.
 Run from the `superboard` monorepo root:
 
 ```bash
-npm --prefix workers/api run typecheck
-npm --prefix workers/marketing run typecheck
-npm --prefix workers/marketing test
+npm --prefix packages/plugins/supbrd-core/api run typecheck
+npm --prefix packages/plugins/supbrd-plug-communication/marketing run typecheck
+npm --prefix packages/plugins/supbrd-plug-communication/marketing test
 npm run sdk:catalog:check
 npm run sdk:catalog:test
 ```
 
-Run from `opengrow-reference`:
+Run from `superboard-reference`:
 
 ```bash
 npm ci
@@ -154,15 +154,15 @@ the stable idempotency key and the sixteen evidence outcomes:
 
 ```json
 {
-  "operation": "acceptance",
-  "idempotency_key": "reference-acceptance-<run>",
-  "journeys": [
-    {
-      "id": "bootstrap",
-      "status": "passed",
-      "evidence": "runtime policy and target diagnostics accepted"
-    }
-  ]
+	"operation": "acceptance",
+	"idempotency_key": "reference-acceptance-<run>",
+	"journeys": [
+		{
+			"id": "bootstrap",
+			"status": "passed",
+			"evidence": "runtime policy and target diagnostics accepted"
+		}
+	]
 }
 ```
 

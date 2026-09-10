@@ -6,9 +6,9 @@ Cloudflare connections and documentation.
 
 ## Archived repositories
 
-| Repository | Archived state | Historical assets retained |
-| --- | --- | --- |
-| `mabzadev/superboard-platform` | Read-only; GitHub Actions and Dependabot disabled | 18 tags and 13 GitHub Releases |
+| Repository                      | Archived state                                    | Historical assets retained                    |
+| ------------------------------- | ------------------------------------------------- | --------------------------------------------- |
+| `mabzadev/superboard-platform`  | Read-only; GitHub Actions and Dependabot disabled | 18 tags and 13 GitHub Releases                |
 | `mabzadev/superboard-reference` | Read-only; GitHub Actions and Dependabot disabled | No tags or GitHub Releases existed at cutover |
 
 The archived repository descriptions and homepages point to
@@ -19,11 +19,11 @@ them.
 ## Immutable compatibility records
 
 The archived tags and Releases must not be deleted, moved or recreated. The
-historical npm packages `@mbzadev/opengrow-js-sdk` and
-`@mbzadev/opengrow-react-native-sdk`, and the Maven package
-`io.opengrow:opengrow-android-sdk`, remain attached to
+historical npm packages `@mbzadev/superboard-js-sdk` and
+`@mbzadev/superboard-react-native-sdk`, and the Maven package
+`io.superboard:superboard-android-sdk`, remain attached to
 `mabzadev/superboard-platform` in GitHub Packages. Their registry coordinates are
-therefore deliberately retained in `config/sdk-libraries.json`; this is not an
+therefore deliberately retained in `scripts/config/sdk-libraries.json`; this is not an
 active source-code dependency.
 
 All current source, package metadata, FlutterFlow DSL, deployment manifests and

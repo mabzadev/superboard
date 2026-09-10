@@ -57,18 +57,18 @@
       "types": "./dist/astro/routes/*.d.mts",
       "default": "./dist/astro/routes/*.mjs"
     },
-		"./api/route-utils": {
+    "./api/route-utils": {
       "types": "./dist/api/route-utils.d.mts",
       "default": "./dist/api/route-utils.mjs"
-		},
-		"./api/error": {
-			"types": "./dist/api/error.d.mts",
-			"default": "./dist/api/error.mjs"
-		},
-		"./api/plugin-settings": {
-			"types": "./dist/api/plugin-settings.d.mts",
-			"default": "./dist/api/plugin-settings.mjs"
-		},
+    },
+    "./api/error": {
+      "types": "./dist/api/error.d.mts",
+      "default": "./dist/api/error.mjs"
+    },
+    "./api/plugin-settings": {
+      "types": "./dist/api/plugin-settings.d.mts",
+      "default": "./dist/api/plugin-settings.mjs"
+    },
     "./api/schemas": {
       "types": "./dist/api/schemas/index.d.mts",
       "default": "./dist/api/schemas/index.mjs"
@@ -321,7 +321,8 @@
     "typescript": "catalog:",
     "vite": "^6.0.0",
     "vitest": "catalog:",
-    "zod-openapi": "^5.4.6"
+    "zod-openapi": "^5.4.6",
+    "astro": "catalog:"
   },
   "repository": {
     "type": "git",

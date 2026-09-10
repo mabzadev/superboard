@@ -34,7 +34,7 @@
       "site-release-cache"
     ],
     "description": "Compared rendered health badges, project count, explicit unavailable historical metrics, configured endpoint links and a real D1 schema with canonical Worker responses, then clicked Refresh and verified a newer response. Non-healthy or disabled services remained explicit: [{\"id\":\"messaging\",\"status\":\"disabled\"},{\"id\":\"observability\",\"status\":\"misconfigured\"},{\"id\":\"mcp\",\"status\":\"unavailable\"},{\"id\":\"custom\",\"status\":\"degraded\"}]. External Custom status: unavailable.",
-    "source_test": "apps/site/e2e/tests/observability/infrastructure.spec.ts",
+    "source_test": "tests/e2e/site/observability/infrastructure.spec.ts",
     "captured_at": "2026-09-07T12:24:20.712Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-infrastructure-browser.json"
   }

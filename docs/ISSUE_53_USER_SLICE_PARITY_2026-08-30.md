@@ -4,12 +4,12 @@ Cette note lie la Release Front de l’issue #53 aux comportements historiques E
 
 ## Matrice de parité
 
-| Surface Release Front | Équivalent historique | Comportement conservé | Limite volontaire de la slice |
-| --- | --- | --- | --- |
-| `/login` | `/_emdash/admin/login` (`packages/admin/src/router.tsx`) | La connexion opérateur passe exclusivement par la session Passkey EmDash. Le renderer renvoie vers cette route ; aucun JWT applicatif n’est accepté. | Le plugin ne possède ni credential ni session opérateur. |
-| `/app` | shell `/_emdash/admin` | Le layout racine est `emdash.core.renderer.admin_shell`; son ABI est vérifiée avant montage et une incompatibilité ferme la surface. | Aucun retrait ou remplacement du Dashboard historique. |
-| `/app/profile` | identité de la session EmDash | L’id, le nom, l’e-mail, le rôle et l’état proviennent de `Astro.locals.user`, donc de la session opérateur déjà authentifiée. | La mutation du profil demeure décrite par la Command contribution et sera câblée à son Store cible lors du cutover de données. |
-| `/app/users` | `/_emdash/admin/users` (`packages/admin/src/routes/users.tsx`) | L’accès est deny-by-default, exige `users.read`, et la table affiche les utilisateurs lus depuis la source EmDash existante pendant la coexistence. | La migration d’autorité vers le Store dédié appartient à #54. |
+| Surface Release Front | Équivalent historique                                          | Comportement conservé                                                                                                                                | Limite volontaire de la slice                                                                                                  |
+| --------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `/login`              | `/_emdash/admin/login` (`packages/admin/src/router.tsx`)       | La connexion opérateur passe exclusivement par la session Passkey EmDash. Le renderer renvoie vers cette route ; aucun JWT applicatif n’est accepté. | Le plugin ne possède ni credential ni session opérateur.                                                                       |
+| `/app`                | shell `/_emdash/admin`                                         | Le layout racine est `emdash.core.renderer.admin_shell`; son ABI est vérifiée avant montage et une incompatibilité ferme la surface.                 | Aucun retrait ou remplacement du Dashboard historique.                                                                         |
+| `/app/profile`        | identité de la session EmDash                                  | L’id, le nom, l’e-mail, le rôle et l’état proviennent de `Astro.locals.user`, donc de la session opérateur déjà authentifiée.                        | La mutation du profil demeure décrite par la Command contribution et sera câblée à son Store cible lors du cutover de données. |
+| `/app/users`          | `/_emdash/admin/users` (`packages/admin/src/routes/users.tsx`) | L’accès est deny-by-default, exige `users.read`, et la table affiche les utilisateurs lus depuis la source EmDash existante pendant la coexistence.  | La migration d’autorité vers le Store dédié appartient à #54.                                                                  |
 
 ## Propriétés vérifiées
 
@@ -21,7 +21,7 @@ Cette note lie la Release Front de l’issue #53 aux comportements historiques E
 
 ## Reçus et octets immuables
 
-Le test D1 `apps/site/runtime-tests/user-slice.runtime.test.ts` compile les octets d’une seule `FrontReleaseInput`, persiste le même candidate, crée son preview, lie la réauthentification forte et l’approbation au checksum du candidate, active ce même candidate, puis relit les reçus d’activation. Les identifiants de preuve du scénario sont :
+Le test D1 `tests/checks/apps/site/runtime/user-slice.runtime.test.ts` compile les octets d’une seule `FrontReleaseInput`, persiste le même candidate, crée son preview, lie la réauthentification forte et l’approbation au checksum du candidate, active ce même candidate, puis relit les reçus d’activation. Les identifiants de preuve du scénario sont :
 
 - candidate `01J00000000000000000000404` ;
 - release `01J00000000000000000000405` ;

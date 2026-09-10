@@ -1,56 +1,49 @@
 # Suivi des tickets : GitHub
 
-Les tickets et spécifications de ce dépôt sont enregistrés comme issues GitHub dans `mabzadev/superboard`. Utilisez la CLI `gh` pour toutes les opérations.
+Les tickets et spécifications sont des issues GitHub dans
+`mabzadev/superboard`. Utilisez `gh` via RTK.
 
-## Conventions
+Ajoutez `--repo mabzadev/superboard` aux commandes `gh issue` et `gh pr`
+pour éviter toute ambiguïté avec le dépôt EmDash amont.
 
-- **Créer un ticket** : `gh issue create --title "..." --body "..."`. Utilisez un heredoc pour les corps multilignes.
-- **Lire un ticket** : `gh issue view <number> --comments`. Récupérez également ses étiquettes et filtrez les commentaires avec `jq` lorsque nécessaire.
-- **Lister les tickets** : `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'`, avec les filtres `--label` et `--state` appropriés.
-- **Commenter** : `gh issue comment <number> --body "..."`
-- **Ajouter une étiquette** : `gh issue edit <number> --add-label "..."`
-- **Retirer une étiquette** : `gh issue edit <number> --remove-label "..."`
-- **Fermer** : `gh issue close <number> --comment "..."`
+## Opérations
 
-Le dépôt est normalement déduit de `git remote -v`. Depuis ce clone, `gh` doit résoudre `mabzadev/superboard` automatiquement.
+- Lire : `rtk proxy gh issue view <numéro> --repo mabzadev/superboard --comments`.
+- Lister : `rtk proxy gh issue list --repo mabzadev/superboard --state open --json number,title,body,labels`.
+- Créer : `rtk proxy gh issue create --repo mabzadev/superboard --title "<titre>" --body-file <fichier.md>`.
+- Commenter : `rtk proxy gh issue comment <numéro> --repo mabzadev/superboard --body-file <fichier.md>`.
+- Étiqueter : `rtk proxy gh issue edit <numéro> --repo mabzadev/superboard --add-label "<étiquette>"`.
+- Retirer une étiquette : utilisez `--remove-label`.
+- Réclamer : `rtk proxy gh issue edit <numéro> --repo mabzadev/superboard --add-assignee @me`.
+- Fermer : `rtk proxy gh issue close <numéro> --repo mabzadev/superboard`.
+
+Préparez les corps multilignes dans un fichier Markdown et utilisez
+`--body-file`. Consultez `triage-labels.md` pour les rôles de triage.
 
 ## Pull requests comme source de demandes
 
 **PR comme source de demandes : non.**
 
-Les pull requests externes ne font pas partie de la file de triage par défaut. Modifiez cette valeur en `oui` uniquement si le dépôt décide ultérieurement de traiter les PR externes comme des demandes fonctionnelles.
+Les PR externes sont exclues de la file de triage.
+Si cette option est activée ultérieurement, utilisez les opérations
+`gh pr` et retenez les associations d’auteur `CONTRIBUTOR`,
+`FIRST_TIME_CONTRIBUTOR` et `NONE`, obtenues via l’API GitHub.
 
-Lorsque cette option est activée, utilisez les équivalents `gh pr` :
-
-- **Lire une PR** : `gh pr view <number> --comments` puis `gh pr diff <number>`.
-- **Lister les PR externes** : `gh pr list --state open --json number,title,body,labels,author,authorAssociation,comments`.
-- Conservez uniquement les associations `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR` et `NONE`.
-- Écartez `OWNER`, `MEMBER` et `COLLABORATOR`.
-- **Commenter, étiqueter ou fermer** : utilisez `gh pr comment`, `gh pr edit` et `gh pr close`.
-
-GitHub partage la même séquence numérique entre issues et pull requests. Pour résoudre une référence ambiguë comme `#42`, essayez `gh pr view 42`, puis utilisez `gh issue view 42` si ce n’est pas une PR.
-
-## Lorsqu’une compétence indique « publier sur le système de suivi des problèmes »
-
-Créez une issue GitHub dans `mabzadev/superboard`.
-
-## Lorsqu’une compétence indique « récupérer le ticket correspondant »
-
-Exécutez `gh issue view <number> --comments`.
+Pour une référence numérique ambiguë, essayez `gh pr view`, puis
+`gh issue view` si ce n’est pas une PR.
 
 ## Opérations d’orientation
 
-Ces conventions sont utilisées par les compétences d’orientation telles que `wayfinder`.
+Pour les skills comme `wayfinder` :
 
-- **Carte** : une issue unique portant l’étiquette `wayfinder:map`, avec les sections Notes, Décisions jusqu’à présent et Brouillard.
-- **Création d’une carte** : `gh issue create --label wayfinder:map`.
-- **Ticket enfant** : une issue liée à la carte comme sous-ticket GitHub.
-- Si les sous-tickets GitHub ne sont pas disponibles, ajoutez l’enfant à une liste de tâches dans le corps de la carte et placez `Fait partie de #<carte>` au début de son corps.
-- Les tickets enfants utilisent une étiquette `wayfinder:<type>` où le type est `research`, `prototype`, `grilling` ou `task`.
-- **Blocage** : utilisez les dépendances natives GitHub lorsque disponibles.
-- Pour ajouter une dépendance, exécutez `gh api --method POST repos/mabzadev/superboard/issues/<child>/dependencies/blocked_by -F issue_id=<blocker-db-id>`.
-- `<blocker-db-id>` doit être l’identifiant numérique de base de données obtenu avec `gh api repos/mabzadev/superboard/issues/<number> --jq .id`.
-- Si les dépendances natives ne sont pas disponibles, placez `Bloqué par : #<n>, #<n>` au début du corps.
-- **Requête de frontière** : listez les enfants ouverts, puis écartez ceux qui possèdent un bloqueur ouvert ou un responsable. Le premier ticket restant dans l’ordre de la carte est sélectionné.
-- **Réclamation** : `gh issue edit <number> --add-assignee @me`.
-- **Résolution** : commentez la réponse, fermez le ticket, puis ajoutez à la carte un pointeur contenant l’essentiel et le lien vers le ticket.
+- La carte est une issue `wayfinder:map` contenant Notes,
+  Décisions jusqu’à présent et Brouillard.
+- Les enfants sont des sous-tickets GitHub. À défaut, utilisez une
+  liste de tâches dans la carte et « Fait partie de #<carte> » chez l’enfant.
+- Les types utilisent `wayfinder:research`, `wayfinder:prototype`,
+  `wayfinder:grilling` ou `wayfinder:task`.
+- Utilisez les dépendances natives GitHub pour les blocages ;
+  à défaut, indiquez « Bloqué par : #<numéro> ».
+- Sélectionnez le premier enfant ouvert sans bloqueur ouvert ni responsable.
+- À la résolution, consignez le résultat, fermez le ticket et ajoutez
+  son lien avec l’essentiel de la décision dans la carte.

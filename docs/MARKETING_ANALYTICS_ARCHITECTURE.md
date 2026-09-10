@@ -41,7 +41,7 @@ inter-Workers passent par des Service Bindings et un contexte de projet signé.
 
 ### Analytics
 
-Le Worker `workers/analytics` est l'autorité pour :
+Le Worker `packages/plugins/supbrd-plug-analytics/worker` est l'autorité pour :
 
 - l'ingestion unitaire ou par lot d'événements v1 ;
 - la validation stricte du vocabulaire et le rejet des événements système
@@ -80,7 +80,7 @@ devise est présente.
 
 ### Marketing
 
-Le Worker `workers/marketing` reste l'autorité pour :
+Le Worker `packages/plugins/supbrd-plug-communication/marketing` reste l'autorité pour :
 
 - les abonnés, consentements, suppressions et préférences applicatives ;
 - les listes, segments et memberships ;
@@ -227,8 +227,8 @@ n'est pas déclaré.
 ```bash
 npm run contracts:test
 npm run analytics:check
-npm --prefix workers/marketing run typecheck
-npm --prefix workers/marketing test
+npm --prefix packages/plugins/supbrd-plug-communication/marketing run typecheck
+npm --prefix packages/plugins/supbrd-plug-communication/marketing test
 npm run migration:inventory:test
 npm run cloudflare:test:services
 npm run cloudflare:test:targets

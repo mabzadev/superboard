@@ -4,9 +4,9 @@ Running 4 tests using 1 worker
 
 (node:40348) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-  ✓  1 [chromium] › e2e/tests/support/support-completion.spec.ts:49:1 › Support Inbox persists a private note and closed-state filters (4.7s)
-  ✓  2 [chromium] › e2e/tests/support/support-completion.spec.ts:95:1 › Support Quality refreshes live conversation metrics and the audit trail (2.0s)
-  ✓  3 [chromium] › e2e/tests/support/support-completion.spec.ts:137:1 › Support Reports exports the selected reporting period and downloads its real queued result (8.3s)
-  ✓  4 [chromium] › e2e/tests/support/support-completion.spec.ts:183:1 › Proactive Support saves and searches an undelivered campaign draft (2.7s)
+  ✓  1 [chromium] › tests/e2e/emdash/support/support-completion.spec.ts:49:1 › Support Inbox persists a private note and closed-state filters (4.7s)
+  ✓  2 [chromium] › tests/e2e/emdash/support/support-completion.spec.ts:95:1 › Support Quality refreshes live conversation metrics and the audit trail (2.0s)
+  ✓  3 [chromium] › tests/e2e/emdash/support/support-completion.spec.ts:137:1 › Support Reports exports the selected reporting period and downloads its real queued result (8.3s)
+  ✓  4 [chromium] › tests/e2e/emdash/support/support-completion.spec.ts:183:1 › Proactive Support saves and searches an undelivered campaign draft (2.7s)
 
   4 passed (19.2s)

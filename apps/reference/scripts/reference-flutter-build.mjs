@@ -53,10 +53,7 @@ export function buildFlutterDefines(base, environment = {}, { live = false } = {
 }
 
 export function environmentValue(environment, canonicalName) {
-	const legacyName = canonicalName.replace(/^SUPERBOARD_/u, "OPENGROW_");
-	const canonical = environment[canonicalName];
-	if (canonical !== undefined && String(canonical).trim() !== "") return canonical;
-	return environment[legacyName];
+	return environment[canonicalName];
 }
 
 function revision(value, name, required) {
@@ -106,8 +103,8 @@ async function run() {
 		const flutterEnvironment = { ...process.env };
 		delete flutterEnvironment.SUPERBOARD_PROJECT_KEY;
 		delete flutterEnvironment.SUPERBOARD_PROJECT_ID;
-		delete flutterEnvironment.OPENGROW_PROJECT_KEY;
-		delete flutterEnvironment.OPENGROW_PROJECT_ID;
+		delete flutterEnvironment.SUPERBOARD_PROJECT_KEY;
+		delete flutterEnvironment.SUPERBOARD_PROJECT_ID;
 		const result = spawnSync(
 			"flutter",
 			["build", "web", "--no-pub", `--dart-define-from-file=${temporaryPath}`],

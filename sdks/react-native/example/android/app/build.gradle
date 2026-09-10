@@ -79,14 +79,14 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "opengrowwrapper.example"
+    namespace "superboardwrapper.example"
     defaultConfig {
-        applicationId "io.opengrow.example"
+        applicationId "io.superboard.example"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
-        buildConfigField "String", "OPENGROW_API_KEY", "\"${System.getenv('OPENGROW_API_KEY') ?: ''}\""
+        buildConfigField "String", "SUPERBOARD_API_KEY", "\"${System.getenv('SUPERBOARD_API_KEY') ?: ''}\""
     }
     // signingConfigs {
     //     debug {
@@ -111,7 +111,7 @@ android {
 }
 
 dependencies {
-    def openGrowNativeContract = new JsonSlurper().parse(rootProject.file("../../plugin/native-contract.json"))
+    def superBoardNativeContract = new JsonSlurper().parse(rootProject.file("../../plugin/native-contract.json"))
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
@@ -121,7 +121,7 @@ dependencies {
         implementation jscFlavor
     }
 
-    implementation "${openGrowNativeContract.android.packageName}:${openGrowNativeContract.android.version}"
+    implementation "${superBoardNativeContract.android.packageName}:${superBoardNativeContract.android.version}"
 }
 
 repositories {

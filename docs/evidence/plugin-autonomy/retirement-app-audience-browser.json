@@ -9,7 +9,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Searched a real SDK application account, inspected it, saved the profile name through the browser form and verified persistence after reload. Original name restored after the scenario.",
-    "source_test": "apps/site/e2e/tests/app/app-audience.spec.ts",
+    "source_test": "tests/e2e/site/app/app-audience.spec.ts",
     "captured_at": "2026-09-07T11:12:45.274Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   },
@@ -23,7 +23,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Searched a real SDK application account, inspected it, saved the profile name through the browser form and verified persistence after reload. Original name restored after the scenario.",
-    "source_test": "apps/site/e2e/tests/app/app-audience.spec.ts",
+    "source_test": "tests/e2e/site/app/app-audience.spec.ts",
     "captured_at": "2026-09-07T11:12:48.026Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   },
@@ -37,7 +37,7 @@
       "ab270a2b-9ae4-483d-a6a8-2f7ba538c34b"
     ],
     "description": "Created and edited a real acquisition customer with browser controls; normalized country and reloaded name were read back through the owning API, with search filtering verified.",
-    "source_test": "apps/site/e2e/tests/app/app-audience.spec.ts",
+    "source_test": "tests/e2e/site/app/app-audience.spec.ts",
     "captured_at": "2026-09-07T11:12:51.681Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   },
@@ -52,7 +52,7 @@
       "1be7994f-979e-4754-a1bc-7b0adb3b2496"
     ],
     "description": "Created real referral records through the owning API, then filtered, sorted both directions and reloaded the browser search state.",
-    "source_test": "apps/site/e2e/tests/app/app-audience.spec.ts",
+    "source_test": "tests/e2e/site/app/app-audience.spec.ts",
     "captured_at": "2026-09-07T11:12:55.057Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   }

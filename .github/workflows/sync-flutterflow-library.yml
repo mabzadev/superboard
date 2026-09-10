@@ -42,8 +42,8 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
           import { execFileSync } from 'node:child_process';
-          const manifest = JSON.parse(readFileSync('config/flutterflow-library.json', 'utf8'));
-          const catalog = JSON.parse(readFileSync('config/sdk-libraries.json', 'utf8'));
+          const manifest = JSON.parse(readFileSync('scripts/config/flutterflow-library.json', 'utf8'));
+          const catalog = JSON.parse(readFileSync('scripts/config/sdk-libraries.json', 'utf8'));
           for (const dependency of manifest.dependencies) {
             const library = catalog.libraries.find(({ id }) => id === dependency.catalogId);
             if (library?.releaseStatus !== 'released' || library.releaseRef !== dependency.requiredRef) {
@@ -58,8 +58,8 @@ jobs:
       - name: Prepare an isolated FlutterFlow workspace
         run: |
           flutterflow ai init "$RUNNER_TEMP/superboard-flutterflow" --project "$FF_LIBRARY_PROJECT_ID" --base-url https://api.flutterflow.io/v2 --no-save
-          cp tools/flutterflow-library/dsl/edit.dart "$RUNNER_TEMP/superboard-flutterflow/dsl/edit.dart"
-          cp tools/flutterflow-library/test/app_test.dart "$RUNNER_TEMP/superboard-flutterflow/test/app_test.dart"
+          cp scripts/clients/flutterflow-library/dsl/edit.dart "$RUNNER_TEMP/superboard-flutterflow/dsl/edit.dart"
+          cp tests/checks/clients/flutterflow-library/app_test.dart "$RUNNER_TEMP/superboard-flutterflow/test/app_test.dart"
       - name: Test the compiled library
         run: flutterflow ai test test/app_test.dart
         working-directory: ${{ runner.temp }}/superboard-flutterflow

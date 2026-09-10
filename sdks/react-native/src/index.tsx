@@ -9,14 +9,14 @@ import type {
 	Tracking,
 	TransactionType,
 	Any,
-} from "./NativeOpenGrowWrapper";
+} from "./NativeSuperBoardWrapper";
 
-const LINKING_ERROR = `The package '@mbzadev/opengrow-react-native-sdk' doesn't seem to be linked. Make sure you properly integrated the native bindings.`;
+const LINKING_ERROR = `The package '@mbzadev/superboard-react-native-sdk' doesn't seem to be linked. Make sure you properly integrated the native bindings.`;
 
 // Feature detection for Turbo Modules
 const isTurboModuleEnabled = (global as any).RN$Bridgeless === true;
 
-interface OpenGrowWrapperInterface {
+interface SuperBoardWrapperInterface {
 	setIdentifier(identifier?: string): void;
 	setPushToken(pushToken?: string): void;
 	setAttributes(attributes?: { [key: string]: Any }): void;
@@ -72,44 +72,44 @@ function hasAddDeeplinkListener(obj: unknown): obj is { addDeeplinkListener: () 
 	);
 }
 
-let OpenGrowWrapperModule: OpenGrowWrapperInterface;
+let SuperBoardWrapperModule: SuperBoardWrapperInterface;
 
 if (isTurboModuleEnabled) {
 	try {
 		// Try to import Turbo Module
-		OpenGrowWrapperModule = require("./NativeOpenGrowWrapper").default;
+		SuperBoardWrapperModule = require("./NativeSuperBoardWrapper").default;
 		log("info", "Turbo modules enabled - using Turbo modules");
 	} catch {
 		log("info", "Turbo modules enabled but not available - falling back to legacy bridge");
-		OpenGrowWrapperModule = NativeModules.OpenGrowWrapper;
+		SuperBoardWrapperModule = NativeModules.SuperBoardWrapper;
 	}
 } else {
 	// Use legacy bridge
-	OpenGrowWrapperModule = NativeModules.OpenGrowWrapper;
+	SuperBoardWrapperModule = NativeModules.SuperBoardWrapper;
 	log("info", "Turbo modules disabled - falling back to legacy bridge");
 }
 
-if (!OpenGrowWrapperModule) {
+if (!SuperBoardWrapperModule) {
 	log("error", LINKING_ERROR);
 	throw new Error(LINKING_ERROR);
 }
 
-class OpenGrowWrapper implements OpenGrowWrapperInterface {
-	private module: OpenGrowWrapperInterface;
+class SuperBoardWrapper implements SuperBoardWrapperInterface {
+	private module: SuperBoardWrapperInterface;
 	private listeners: Set<(data: DeeplinkResponse) => void> = new Set();
 
 	constructor() {
-		this.module = OpenGrowWrapperModule;
+		this.module = SuperBoardWrapperModule;
 
 		if (hasAddDeeplinkListener(this.module)) {
 			log("info", "Has native addDeeplinkListener - registering addDeeplinkListener");
 			this.module.addDeeplinkListener();
 		}
 
-		if (NativeModules.OpenGrowWrapper) {
-			log("info", "Has NativeModules.OpenGrowWrapper - registering adding event listener");
-			const emitter = new NativeEventEmitter(NativeModules.OpenGrowWrapper);
-			emitter.addListener("onOpenGrowDeeplinkReceived", (data) => {
+		if (NativeModules.SuperBoardWrapper) {
+			log("info", "Has NativeModules.SuperBoardWrapper - registering adding event listener");
+			const emitter = new NativeEventEmitter(NativeModules.SuperBoardWrapper);
+			emitter.addListener("onSuperBoardDeeplinkReceived", (data) => {
 				this.triggerDeeplink(data);
 			});
 		}
@@ -283,10 +283,10 @@ class OpenGrowWrapper implements OpenGrowWrapperInterface {
 }
 
 // Export singleton instance
-export default new OpenGrowWrapper();
+export default new SuperBoardWrapper();
 
 // Also export class for advanced usage
-export { OpenGrowWrapper };
+export { SuperBoardWrapper };
 
 // Export types for TypeScript users
 export type {
@@ -297,4 +297,4 @@ export type {
 	CustomLinkRedirect,
 	CustomRedirects,
 	TransactionType,
-} from "./NativeOpenGrowWrapper";
+} from "./NativeSuperBoardWrapper";

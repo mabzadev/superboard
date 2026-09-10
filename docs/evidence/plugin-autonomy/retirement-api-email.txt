@@ -1,6 +1,6 @@
 Canonical Site API integration validation, 7 September 2026
 
-apps/site/runtime-tests/retirement-api-email.runtime.test.ts
+tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts
 SHA-256: 2c9b5f1938f6550a8b48d2cebe58c0d567b17db276b991553af90d67eeea7d8b
 
 Grouped run: Products, Billing and Email (3 files, 3 tests passed).
@@ -24,7 +24,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "1719f648-60ae-4b1c-9c50-dc52f514814e"
     ]
@@ -36,7 +36,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "1719f648-60ae-4b1c-9c50-dc52f514814e"
     ]
@@ -48,7 +48,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "1719f648-60ae-4b1c-9c50-dc52f514814e"
     ]
@@ -60,7 +60,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "1719f648-60ae-4b1c-9c50-dc52f514814e"
     ]
@@ -72,7 +72,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "3538e6e5-5a40-4904-850d-266ab422b696"
     ]
@@ -84,7 +84,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "3538e6e5-5a40-4904-850d-266ab422b696"
     ]
@@ -96,7 +96,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "772960d0-360b-4898-a4f7-b43394dd6440"
     ]
@@ -108,7 +108,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "f510f08a-757e-49d3-a24d-e2805e49c9d0"
     ]
@@ -120,7 +120,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "438e8032-07a4-4eb5-8a9b-4d55f7ed8538",
       "4562be4e-e743-430f-ae33-0f2dedaa7e73"
@@ -133,7 +133,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "3538e6e5-5a40-4904-850d-266ab422b696"
     ]
@@ -145,7 +145,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "438e8032-07a4-4eb5-8a9b-4d55f7ed8538"
     ]
@@ -157,7 +157,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "4562be4e-e743-430f-ae33-0f2dedaa7e73"
     ]
@@ -169,7 +169,7 @@ Recorded successful operations:
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "1719f648-60ae-4b1c-9c50-dc52f514814e"
     ]

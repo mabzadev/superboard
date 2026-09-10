@@ -10,8 +10,8 @@
     "directory": "apps/reference"
   },
   "scripts": {
-    "brand:check": "node scripts/reference-brand.mjs && node --test scripts/reference-brand.test.mjs",
-    "config:test": "node --test scripts/reference-brand.test.mjs scripts/reference-config.test.mjs scripts/reference-deployment-gate.test.mjs scripts/reference-history-bridge.test.mjs scripts/reference-platform-ref.test.mjs scripts/reference-sdk-coverage.test.mjs scripts/reference-sdk-lock.test.mjs scripts/reference-sdk-promotion.test.mjs",
+    "brand:check": "node scripts/reference-brand.mjs && node --test ../../tests/checks/apps/reference/reference-brand.test.mjs",
+    "config:test": "node --test ../../tests/checks/apps/reference/reference-brand.test.mjs ../../tests/checks/apps/reference/reference-config.test.mjs ../../tests/checks/apps/reference/reference-deployment-gate.test.mjs ../../tests/checks/apps/reference/reference-history-bridge.test.mjs ../../tests/checks/apps/reference/reference-platform-ref.test.mjs ../../tests/checks/apps/reference/reference-sdk-coverage.test.mjs ../../tests/checks/apps/reference/reference-sdk-lock.test.mjs ../../tests/checks/apps/reference/reference-sdk-promotion.test.mjs",
     "sdk:coverage:check": "node scripts/reference-sdk-coverage.mjs check",
     "sdk:coverage:verify": "node scripts/reference-sdk-coverage.mjs verify-remote",
     "sdk:coverage:catalog": "node scripts/reference-sdk-coverage.mjs verify-catalog",
@@ -26,7 +26,7 @@
     "cloudflare:deploy:private": "npm run flutter:web && node scripts/reference-cloudflare.mjs --no-routes",
     "cloudflare:deploy:built": "node scripts/reference-cloudflare.mjs",
     "flutter:analyze": "flutter analyze --no-pub",
-    "flutter:test": "flutter test --no-pub",
+    "flutter:test": "flutter test --no-pub ../../tests/checks/apps/reference/flutter",
     "flutter:web": "node scripts/reference-flutter-build.mjs",
     "flutter:web:live": "node scripts/reference-flutter-build.mjs --live",
     "test": "npm run config:test && npm run flutter:analyze && npm run flutter:test",

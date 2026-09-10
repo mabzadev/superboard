@@ -16,7 +16,11 @@
 			"routable": false,
 			"titleField": "name",
 			"sortOrder": 0,
-			"supports": ["drafts", "revisions", "search"],
+			"supports": [
+				"drafts",
+				"revisions",
+				"search"
+			],
 			"fields": [
 				{
 					"slug": "name",

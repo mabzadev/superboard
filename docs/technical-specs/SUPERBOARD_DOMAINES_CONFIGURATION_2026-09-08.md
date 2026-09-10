@@ -14,7 +14,7 @@ Choix utilisateur du 8 septembre 2026 : six sous-domaines canoniques par instanc
 
 ## Sources de configuration
 
-`deploy/targets/mbza-development.json` et `deploy/targets/vocostar.json` définissent les domaines, les workers et les environnements. `domainAliases` conserve les anciennes adresses pour préparer la migration ; ces alias ne sont pas comptés parmi les six noms canoniques. Leur déclaration ne constitue pas une preuve de rattachement dans Cloudflare.
+`infra/targets/mbza-development.json` et `infra/targets/vocostar.json` définissent les domaines, les workers et les environnements. `domainAliases` conserve les anciennes adresses pour préparer la migration ; ces alias ne sont pas comptés parmi les six noms canoniques. Leur déclaration ne constitue pas une preuve de rattachement dans Cloudflare.
 
 Le compilateur produit une projection publique de la configuration, son empreinte et la variable `SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON` pour le Site et l’API. Cette projection sélectionne explicitement les champs affichables. Elle n’exporte ni les secrets ni les valeurs arbitraires des variables des workers.
 
@@ -42,7 +42,7 @@ Le serveur distingue l’origine de l’URL complète de ressource. La découver
 
 Aucun déploiement ni changement DNS n’est effectué par ces modifications locales. Les passkeys opérateur et les liens mobiles existants doivent être pris en compte avant de retirer `site.*`, `grow.vocostar.com` ou `go.vocostar.com`. Les alias de compatibilité permettent de préparer cette transition. Vocostar conserve son routage public en préparation et son bridge de production bloqué.
 
-Les scripts de génération et de tests se lancent avec RTK selon les consignes du dépôt. Les configurations de `deploy/generated/` sont des sorties ; modifier les manifestes de cible pour changer les valeurs de référence.
+Les scripts de génération et de tests se lancent avec RTK selon les consignes du dépôt. Les configurations de `infra/generated/` sont des sorties ; modifier les manifestes de cible pour changer les valeurs de référence.
 
 ## Vérification locale
 
@@ -50,6 +50,6 @@ Les tests de domaines, de projection, de compilation des cibles et de regroupeme
 
 Les vérifications de types du Site, de l’API, du MCP et des packages de front passent. Le lint rapide ne signale aucun diagnostic. Le lint complet retrouve exactement les trois diagnostics présents avant ces modifications, dans `plugin-front-menu-integration.test.tsx`, `vite-config.ts` et `bundle.test.mjs`.
 
-La suite `scripts/cloudflare-services.test.mjs` compte 26 tests réussis et un échec préexistant : son attente Vocostar ne comprend pas le binding `VOCOSTAR_NOTIFICATION_DISPATCHER`, déjà produit par le générateur avant ce changement.
+La suite `tests/checks/cloudflare/services.test.mjs` compte 26 tests réussis et un échec préexistant : son attente Vocostar ne comprend pas le binding `VOCOSTAR_NOTIFICATION_DISPATCHER`, déjà produit par le générateur avant ce changement.
 
 La page native EmDash a été vérifiée dans le navigateur, avec les adresses, noms de workers et routes chargés depuis l’API locale. La dernière vérification visuelle du résumé front n’a pas été possible dans le navigateur ; son affichage et son actualisation ont été testés en DOM. Les contrôles HTTP locaux confirment le refus d’accès anonyme à la configuration et les réponses MCP de découverte, santé et authentification. Ils ne valident pas un déploiement public ni un parcours OAuth complet.

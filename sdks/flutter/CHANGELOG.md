@@ -1,76 +1,82 @@
+## 4.0.0 (unreleased)
+
+- Use the SuperBoard entrypoints and types. Deprecated namespace aliases are removed.
+- Use the canonical native channels, HTTP headers, authentication endpoint and cache keys.
+- Rebuild native applications after upgrading; cached wrappers from earlier releases are not supported.
+
 ## 3.0.0
 
-* Added the native Flows client, HTTP/WebSocket contracts, encrypted cache, reconnection, slots, overlays, anchors, navigation adapter, and debug panel
-* Added native Basics V2 Card, Checklist, Hint, Modal, Tooltip, Tour, and Survey renderers plus a custom component registry
-* Added native `superboard-commerce` rendering backed only by verified Products purchases and restorations, without duplicate revenue telemetry
-* Persisted triggered survey and tour progress for offline resume and matched upstream navigation, click, anchor, and wait semantics
-* Added workflow start/reset/fetch, identification, properties, project/environment/language context, and block streams
-* Added the canonical SuperBoard Support client, typed models, bounded uploads,
+- Added the native Flows client, HTTP/WebSocket contracts, encrypted cache, reconnection, slots, overlays, anchors, navigation adapter, and debug panel
+- Added native Basics V2 Card, Checklist, Hint, Modal, Tooltip, Tour, and Survey renderers plus a custom component registry
+- Added native `superboard-commerce` rendering backed only by verified Products purchases and restorations, without duplicate revenue telemetry
+- Persisted triggered survey and tour progress for offline resume and matched upstream navigation, click, anchor, and wait semantics
+- Added workflow start/reset/fetch, identification, properties, project/environment/language context, and block streams
+- Added the canonical SuperBoard Support client, typed models, bounded uploads,
   authenticated realtime reconnection, and native client routes
-* Renamed the public Flutter package and API to SuperBoard
-* Added one-major-version deprecated aliases for OpenGrow 2.x Dart symbols and files
-* Renamed the Android and iOS Flutter plugin registrants atomically
-* Added canonical native configuration keys with OpenGrow 2.x fallbacks
-* Added canonical method and event channels with stale-build fallback support
-* Preserved the encrypted `opengrow.*` storage namespace for lossless upgrades and rollbacks
-* Accepted both SuperBoard and OpenGrow purchase JWT audiences and issuers during migration
+- Renamed the public Flutter package and API to SuperBoard
+- Added one-major-version deprecated aliases for SuperBoard 2.x Dart symbols and files
+- Renamed the Android and iOS Flutter plugin registrants atomically
+- Added canonical native configuration keys with SuperBoard 2.x fallbacks
+- Added canonical method and event channels with stale-build fallback support
+- Preserved the encrypted `superboard.*` storage namespace for lossless upgrades and rollbacks
+- Accepted previous and canonical purchase JWT audiences and issuers during migration
 
 ## 2.1.4
 
-* Resolve Google Play product contracts from the trusted server catalog instead of client timing
-* Bound Purchases API requests and response bodies with retryable timeout errors
-* Retry Store transaction completion after durable server validation without validating twice
+- Resolve Google Play product contracts from the trusted server catalog instead of client timing
+- Bound Purchases API requests and response bodies with retryable timeout errors
+- Retry Store transaction completion after durable server validation without validating twice
 
 ## 2.1.3
 
-* Added an authenticated, signed CustomerInfo preflight before opening the Store purchase flow
-* Refused new purchases when identity synchronization or CustomerInfo verification fails
+- Added an authenticated, signed CustomerInfo preflight before opening the Store purchase flow
+- Refused new purchases when identity synchronization or CustomerInfo verification fails
 
 ## 2.0.0
 
-* Added remote paywall configuration with per-placement offline caching
-* Added targeting and deterministic experiment assignment models
-* Added paywall funnel events and stable Purchases v2 errors
-* Added typed subscriptions, active subscriptions, management URLs, and virtual currencies
-* Added Customer Center configuration and richer customer information
-* Changed the default Purchases endpoint to `/purchases/v2` while the server keeps v1 compatible
+- Added remote paywall configuration with per-placement offline caching
+- Added targeting and deterministic experiment assignment models
+- Added paywall funnel events and stable Purchases v2 errors
+- Added typed subscriptions, active subscriptions, management URLs, and virtual currencies
+- Added Customer Center configuration and richer customer information
+- Changed the default Purchases endpoint to `/purchases/v2` while the server keeps v1 compatible
 
 ## 1.1.1
 
-* Relaxed the `shared_preferences` constraint for FlutterFlow 2.5.3 compatibility
+- Relaxed the `shared_preferences` constraint for FlutterFlow 2.5.3 compatibility
 
 ## 1.1.0
 
-* Added automatic Bundle ID / Package Name discovery
-* Added native-configuration initialization
-* Added Flutter message-center count and display methods
-* Added server-verified StoreKit 2 and Google Play purchases
-* Added offerings, packages, entitlements, and signed customer information
-* Added login/logout, restore, sync, offline cache, and customer info stream
-* Added explicit purchased, cancelled, pending, and failed outcomes
-* Added custom base URL support via Info.plist (iOS) and AndroidManifest.xml (Android)
-* Added revenue tracking with `logInAppPurchase` and `logCustomPurchase` methods
-* Added `TransactionType` enum (buy, cancel, refund)
-* Embedded the native Android implementation for credential-free private Git builds
+- Added automatic Bundle ID / Package Name discovery
+- Added native-configuration initialization
+- Added Flutter message-center count and display methods
+- Added server-verified StoreKit 2 and Google Play purchases
+- Added offerings, packages, entitlements, and signed customer information
+- Added login/logout, restore, sync, offline cache, and customer info stream
+- Added explicit purchased, cancelled, pending, and failed outcomes
+- Added custom base URL support via Info.plist (iOS) and AndroidManifest.xml (Android)
+- Added revenue tracking with `logInAppPurchase` and `logCustomPurchase` methods
+- Added `TransactionType` enum (buy, cancel, refund)
+- Embedded the native Android implementation for credential-free private Git builds
 
 ## 1.0.1
 
-* Documentation improvements
-* Added iOS Associated Domains configuration instructions
-* Enhanced API documentation with comprehensive examples
-* Updated README with complete setup guide
-* Improved code comments and inline documentation
+- Documentation improvements
+- Added iOS Associated Domains configuration instructions
+- Enhanced API documentation with comprehensive examples
+- Updated README with complete setup guide
+- Improved code comments and inline documentation
 
 ## 1.0.0
 
-* Initial release of SuperBoard Flutter Plugin
-* Deep linking support for iOS and Android
-* Link generation with custom redirects and tracking parameters
-* UTM campaign tracking (utm_campaign, utm_source, utm_medium)
-* User identification and custom attributes
-* Push notification token management
-* In-app messaging support
-* Configurable debug levels
-* Stream-based deeplink event handling
-* Platform-specific configuration via Info.plist (iOS) and AndroidManifest.xml (Android)
-* Support for iOS 13.0+ and Android API 21+
+- Initial release of SuperBoard Flutter Plugin
+- Deep linking support for iOS and Android
+- Link generation with custom redirects and tracking parameters
+- UTM campaign tracking (utm_campaign, utm_source, utm_medium)
+- User identification and custom attributes
+- Push notification token management
+- In-app messaging support
+- Configurable debug levels
+- Stream-based deeplink event handling
+- Platform-specific configuration via Info.plist (iOS) and AndroidManifest.xml (Android)
+- Support for iOS 13.0+ and Android API 21+

@@ -60,18 +60,18 @@ registry anonymously installable: unauthenticated downloads are unsupported
 and return `401 Unauthorized`.
 
 Provide a GitHub token with `read:packages` only through
-`OPENGROW_GITHUB_PACKAGES_TOKEN`. Keep its value in the
+`SUPERBOARD_GITHUB_PACKAGES_TOKEN`. Keep its value in the
 developer shell or CI secret store; never commit the token to Git or write its
 value into a package-manager configuration file.
 
-Set `OPENGROW_GITHUB_PACKAGES_USER` to the GitHub user that
+Set `SUPERBOARD_GITHUB_PACKAGES_USER` to the GitHub user that
 owns the token. Add the authenticated registry to `settings.gradle.kts`:
 
 ```kotlin
-val superBoardPackagesUser = providers.environmentVariable("OPENGROW_GITHUB_PACKAGES_USER").orNull
-    ?: error("OPENGROW_GITHUB_PACKAGES_USER is required")
-val superBoardPackagesToken = providers.environmentVariable("OPENGROW_GITHUB_PACKAGES_TOKEN").orNull
-    ?: error("OPENGROW_GITHUB_PACKAGES_TOKEN is required")
+val superBoardPackagesUser = providers.environmentVariable("SUPERBOARD_GITHUB_PACKAGES_USER").orNull
+    ?: error("SUPERBOARD_GITHUB_PACKAGES_USER is required")
+val superBoardPackagesToken = providers.environmentVariable("SUPERBOARD_GITHUB_PACKAGES_TOKEN").orNull
+    ?: error("SUPERBOARD_GITHUB_PACKAGES_TOKEN is required")
 
 dependencyResolutionManagement {
     repositories {
@@ -90,14 +90,14 @@ dependencyResolutionManagement {
 Then add the exact dependency to the application module:
 
 ```kotlin
-implementation("io.opengrow:opengrow-android-sdk:1.0.3")
+implementation("io.superboard:superboard-android-sdk:1.0.3")
 ```
 
 Resolve or build only after both secret inputs are present:
 
 ```bash
-test -n "${OPENGROW_GITHUB_PACKAGES_USER:-}" \
-  && test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
+test -n "${SUPERBOARD_GITHUB_PACKAGES_USER:-}" \
+  && test -n "${SUPERBOARD_GITHUB_PACKAGES_TOKEN:-}" \
   && ./gradlew assemble
 ```
 
@@ -110,19 +110,19 @@ test -n "${OPENGROW_GITHUB_PACKAGES_USER:-}" \
 Configure the SDK in your `Application` class:
 
 ```kotlin
-import io.opengrow.OpenGrow
+import io.superboard.SuperBoard
 
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        OpenGrow.configure(this, "your-api-key", useTestEnvironment = false)
+        SuperBoard.configure(this, "your-api-key", useTestEnvironment = false)
 
         // Optional: enable debug logging
-        OpenGrow.setDebug(LogLevel.INFO)
+        SuperBoard.setDebug(LogLevel.INFO)
 
         // Optional: set user identity for analytics
-        OpenGrow.identifier = "user_id_from_your_app"
-        OpenGrow.attributes = mapOf("name" to "John Doe", "plan" to "premium")
+        SuperBoard.identifier = "user_id_from_your_app"
+        SuperBoard.attributes = mapOf("name" to "John Doe", "plan" to "premium")
     }
 }
 ```
@@ -130,7 +130,7 @@ class MyApplication : Application() {
 Every application must pass its `baseURL` parameter (domain only — the SDK appends the API path):
 
 ```kotlin
-OpenGrow.configure(this, "your-api-key", useTestEnvironment = false, baseURL = "https://your-domain.com")
+SuperBoard.configure(this, "your-api-key", useTestEnvironment = false, baseURL = "https://your-domain.com")
 ```
 
 ### 2. Forward lifecycle events
@@ -141,12 +141,12 @@ In your **launcher activity**, forward lifecycle events to the SDK:
 class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
-        OpenGrow.onStart(this)
+        SuperBoard.onStart(this)
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        OpenGrow.onNewIntent(intent, this)
+        SuperBoard.onNewIntent(intent, this)
     }
 }
 ```
@@ -186,7 +186,7 @@ Add these intent filters to your launcher activity in `AndroidManifest.xml`:
 Register a listener in your launcher activity to receive deep link events:
 
 ```kotlin
-OpenGrow.setOnDeeplinkReceivedListener(this) { deeplinkDetails ->
+SuperBoard.setOnDeeplinkReceivedListener(this) { deeplinkDetails ->
     // Route the user based on payload data
     val link = deeplinkDetails.link
     val payload = deeplinkDetails.data
@@ -202,9 +202,9 @@ Or use Kotlin Flow for a coroutine-based approach:
 
 ```kotlin
 lifecycleScope.launch {
-    OpenGrow.Companion::openedLinkDetails.flow.collect { deeplinkDetails ->
+    SuperBoard.Companion::openedLinkDetails.flow.collect { deeplinkDetails ->
         deeplinkDetails?.let {
-            Log.d("OpenGrow", "Link: ${it.link}, data: ${it.data}")
+            Log.d("SuperBoard", "Link: ${it.link}, data: ${it.data}")
         }
     }
 }
@@ -214,12 +214,12 @@ You can also retrieve details for a specific link path:
 
 ```kotlin
 // Using a callback
-OpenGrow.linkDetails(path = "/my-link-path", lifecycleOwner = this) { details, error ->
-    details?.let { Log.d("OpenGrow", "Details: $it") }
+SuperBoard.linkDetails(path = "/my-link-path", lifecycleOwner = this) { details, error ->
+    details?.let { Log.d("SuperBoard", "Details: $it") }
 }
 
 // Using coroutines
-val details = OpenGrow.linkDetails(path = "/my-link-path")
+val details = SuperBoard.linkDetails(path = "/my-link-path")
 ```
 
 ## Link Generation
@@ -227,7 +227,7 @@ val details = OpenGrow.linkDetails(path = "/my-link-path")
 Create smart links with metadata, payload data, and tracking parameters:
 
 ```kotlin
-OpenGrow.generateLink(
+SuperBoard.generateLink(
     title = "Check out this product",
     subtitle = "Limited time offer",
     imageURL = "https://example.com/image.jpg",
@@ -240,8 +240,8 @@ OpenGrow.generateLink(
     ),
     lifecycleOwner = this,
     listener = { link, error ->
-        link?.let { Log.d("OpenGrow", "Generated: $it") }
-        error?.let { Log.e("OpenGrow", "Error: $it") }
+        link?.let { Log.d("SuperBoard", "Generated: $it") }
+        error?.let { Log.e("SuperBoard", "Error: $it") }
     }
 )
 ```
@@ -251,7 +251,7 @@ Or using coroutines:
 ```kotlin
 lifecycleScope.launch {
     try {
-        val link = OpenGrow.generateLink(
+        val link = SuperBoard.generateLink(
             title = "Check out this product",
             subtitle = "Limited time offer",
             imageURL = "https://example.com/image.jpg",
@@ -263,9 +263,9 @@ lifecycleScope.launch {
                 utmMedium = "share_button"
             )
         )
-        Log.d("OpenGrow", "Generated: $link")
-    } catch (e: OpenGrowException) {
-        Log.e("OpenGrow", "Error: ${e.message}")
+        Log.d("SuperBoard", "Generated: $link")
+    } catch (e: SuperBoardException) {
+        Log.e("SuperBoard", "Error: ${e.message}")
     }
 }
 ```
@@ -281,13 +281,13 @@ val redirects = CustomRedirects(
     desktop = CustomLinkRedirect(link = "https://example.com/desktop-promo", openAppIfInstalled = false)
 )
 
-OpenGrow.generateLink(
+SuperBoard.generateLink(
     title = "Special offer",
     data = mapOf("promoId" to "summer25"),
     customRedirects = redirects,
     lifecycleOwner = this,
     listener = { link, error ->
-        link?.let { Log.d("OpenGrow", "Generated: $it") }
+        link?.let { Log.d("SuperBoard", "Generated: $it") }
     }
 )
 ```
@@ -297,7 +297,7 @@ OpenGrow.generateLink(
 Launch a share intent after generating a link:
 
 ```kotlin
-OpenGrow.generateLink(
+SuperBoard.generateLink(
     title = "Share this",
     data = mapOf("itemId" to "abc"),
     lifecycleOwner = this,
@@ -364,7 +364,7 @@ Add to your `AndroidManifest.xml`:
 
 ```kotlin
 FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-    OpenGrow.pushToken = token
+    SuperBoard.pushToken = token
 }
 ```
 
@@ -374,7 +374,7 @@ Also update the token when it refreshes:
 class MyMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        OpenGrow.pushToken = token
+        SuperBoard.pushToken = token
     }
 }
 ```
@@ -397,14 +397,14 @@ Register the service in `AndroidManifest.xml`:
 
 ```kotlin
 // Show the messages list as a modal fragment
-OpenGrow.displayMessagesFragment {
+SuperBoard.displayMessagesFragment {
     // Fragment was dismissed
 }
 
 // Get unread count for badges
 lifecycleScope.launch {
-    val count = OpenGrow.numberOfUnreadMessages()
-    Log.d("OpenGrow", "Unread: $count")
+    val count = SuperBoard.numberOfUnreadMessages()
+    Log.d("SuperBoard", "Unread: $count")
 }
 ```
 
@@ -424,7 +424,7 @@ lifecycleScope.launch {
 override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
     if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
         for (purchase in purchases) {
-            OpenGrow.logInAppPurchase(purchase.originalJson)
+            SuperBoard.logInAppPurchase(purchase.originalJson)
         }
     }
 }
@@ -435,7 +435,7 @@ override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Pu
 ### Custom purchases
 
 ```kotlin
-OpenGrow.logCustomPurchase(
+SuperBoard.logCustomPurchase(
     type = PaymentEventType.BUY,
     priceInCents = 999,       // $9.99
     currency = "USD",
@@ -449,36 +449,36 @@ Use `CANCELLATION` and `REFUND` payment event types for cancellations and refund
 
 ### Properties
 
-| Property | Type | Description |
-|---|---|---|
-| `useTestEnvironment` | `Boolean` | Enable or disable test environment |
-| `identifier` | `String?` | User ID shown in dashboard and reports |
-| `attributes` | `Map<String, Any>?` | User attributes for analytics |
-| `openedLinkDetails` | `DeeplinkDetails?` | Kotlin Flow emitting deep link details |
-| `pushToken` | `String?` | FCM device token for push notifications |
+| Property             | Type                | Description                             |
+| -------------------- | ------------------- | --------------------------------------- |
+| `useTestEnvironment` | `Boolean`           | Enable or disable test environment      |
+| `identifier`         | `String?`           | User ID shown in dashboard and reports  |
+| `attributes`         | `Map<String, Any>?` | User attributes for analytics           |
+| `openedLinkDetails`  | `DeeplinkDetails?`  | Kotlin Flow emitting deep link details  |
+| `pushToken`          | `String?`           | FCM device token for push notifications |
 
 ### Key Methods
 
-| Method | Description |
-|---|---|
-| `configure(application, apiKey, useTestEnvironment, baseURL)` | Initialize the SDK |
-| `setSDK(enabled)` | Enable or disable the SDK |
-| `setDebug(level)` | Set logging level (`INFO`, `ERROR`) |
-| `onStart(activity)` | Forward launcher activity's `onStart()` |
-| `onNewIntent(intent, activity)` | Forward launcher activity's `onNewIntent()` |
-| `generateLink(...)` | Generate a smart link (callback or coroutine) |
-| `setOnDeeplinkReceivedListener(activity, listener)` | Register deep link listener |
-| `linkDetails(path, ...)` | Get details for a link path (callback or coroutine) |
-| `displayMessagesFragment(onDismissed)` | Show messages modal fragment |
-| `numberOfUnreadMessages()` | Get unread message count (suspend) |
-| `logInAppPurchase(originalJson)` | Log a Google Play Billing purchase |
-| `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
+| Method                                                                  | Description                                         |
+| ----------------------------------------------------------------------- | --------------------------------------------------- |
+| `configure(application, apiKey, useTestEnvironment, baseURL)`           | Initialize the SDK                                  |
+| `setSDK(enabled)`                                                       | Enable or disable the SDK                           |
+| `setDebug(level)`                                                       | Set logging level (`INFO`, `ERROR`)                 |
+| `onStart(activity)`                                                     | Forward launcher activity's `onStart()`             |
+| `onNewIntent(intent, activity)`                                         | Forward launcher activity's `onNewIntent()`         |
+| `generateLink(...)`                                                     | Generate a smart link (callback or coroutine)       |
+| `setOnDeeplinkReceivedListener(activity, listener)`                     | Register deep link listener                         |
+| `linkDetails(path, ...)`                                                | Get details for a link path (callback or coroutine) |
+| `displayMessagesFragment(onDismissed)`                                  | Show messages modal fragment                        |
+| `numberOfUnreadMessages()`                                              | Get unread message count (suspend)                  |
+| `logInAppPurchase(originalJson)`                                        | Log a Google Play Billing purchase                  |
+| `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase                               |
 
 Full API reference: [Android SDK API reference](https://github.com/mabzadev/superboard/tree/dev/sdks/android#api-reference)
 
 ## Example App
 
-A demo project is included in [`sdks/android/OpenGrow/app`](https://github.com/mabzadev/superboard/tree/dev/sdks/android/OpenGrow/app).
+A demo project is included in [`sdks/android/SuperBoard/app`](https://github.com/mabzadev/superboard/tree/dev/sdks/android/SuperBoard/app).
 
 ## Setup Guides
 

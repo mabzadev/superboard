@@ -9,7 +9,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Compared the native user to the owning API, rendered French passkey controls without translation errors, cancelled deletion, reloaded and returned through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:36.588Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -23,7 +23,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:41.843Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -37,7 +37,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:47.004Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -51,7 +51,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:52.342Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   }

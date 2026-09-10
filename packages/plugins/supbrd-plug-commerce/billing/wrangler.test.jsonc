@@ -1,0 +1,56 @@
+{
+	"$schema": "../../../../node_modules/wrangler/config-schema.json",
+	"name": "superboard-billing-test",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-08-08",
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"vars": {
+		"ENVIRONMENT": "test",
+		"API_DOMAIN": "api.billing.test",
+		"SDK_DOMAIN": "sdk.billing.test",
+		"CREDENTIAL_KEY_SCOPE": "billing-runtime",
+		"BILLING_RELEASE_STALE_MINUTES": "60",
+		"BILLING_CATALOG_STALE_HOURS": "24",
+		"BILLING_QUEUE_NAME": "billing-test",
+		"BILLING_DLQ_NAME": "billing-test-dlq",
+		"AUTH_GATEWAY_ISSUER": "https://api.billing.test",
+		"AUTH_GATEWAY_AUDIENCE": "billing-runtime",
+		"AUTH_GATEWAY_JWKS_URL": "https://api.billing.test/.well-known/jwks.json",
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "billing-test",
+			"database_id": "00000000-0000-0000-0000-000000000015",
+			"migrations_dir": "../../supbrd-core/api/migrations",
+		},
+	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "00000000000000000000000000000015",
+		},
+	],
+	"r2_buckets": [
+		{
+			"binding": "R2",
+			"bucket_name": "billing-test-files",
+		},
+	],
+	"queues": {
+		"producers": [
+			{
+				"binding": "BILLING_QUEUE",
+				"queue": "billing-test",
+			},
+		],
+		"consumers": [
+			{
+				"queue": "billing-test-dlq",
+				"max_batch_size": 10,
+				"max_batch_timeout": 5,
+				"max_retries": 8,
+			},
+		],
+	},
+}

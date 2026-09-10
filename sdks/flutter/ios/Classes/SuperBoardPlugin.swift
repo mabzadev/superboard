@@ -1,7 +1,7 @@
 import Flutter
 import UIKit
-#if canImport(OpenGrow)
-import OpenGrow
+#if canImport(SuperBoard)
+import SuperBoard
 #endif
 
 extension Array where Element == Any {
@@ -53,18 +53,15 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
         // Read API key and test environment flag from Info.plist
         if let infoDictionary = Bundle.main.infoDictionary,
-           let apiKey = (infoDictionary["SuperBoardApiKey"] as? String)
-                ?? (infoDictionary["OpenGrowApiKey"] as? String),
+           let apiKey = (infoDictionary["SuperBoardApiKey"] as? String),
            !apiKey.isEmpty,
-           let baseURL = (infoDictionary["SuperBoardBaseURL"] as? String)
-                ?? (infoDictionary["OpenGrowBaseURL"] as? String),
+           let baseURL = (infoDictionary["SuperBoardBaseURL"] as? String),
            !baseURL.isEmpty {
             let useTestEnvironment = (infoDictionary["SuperBoardUseTestEnvironment"] as? Bool)
-                ?? (infoDictionary["OpenGrowUseTestEnvironment"] as? Bool)
                 ?? false
-            OpenGrow.configure(APIKey: apiKey, useTestEnvironment: useTestEnvironment, baseURL: baseURL, delegate: self)
+            SuperBoard.configure(APIKey: apiKey, useTestEnvironment: useTestEnvironment, baseURL: baseURL, delegate: self)
         } else {
-            NSLog("SuperBoardApiKey and SuperBoardBaseURL are required in Info.plist (OpenGrow 2.x keys remain supported)")
+            NSLog("SuperBoardApiKey and SuperBoardBaseURL are required in Info.plist")
         }
         
         return true
@@ -72,12 +69,12 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
     
     // Handle universal link continuation
     public func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([Any]) -> Void) -> Bool {
-        return OpenGrow.handleAppDelegate(continue: userActivity, restorationHandler: Array.convertClosure(restorationHandler, toOptionalArrayOf: UIUserActivityRestoring.self))
+        return SuperBoard.handleAppDelegate(continue: userActivity, restorationHandler: Array.convertClosure(restorationHandler, toOptionalArrayOf: UIUserActivityRestoring.self))
     }
 
     // Handle URI opening
     public func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        return OpenGrow.handleAppDelegate(open: url, options: options)
+        return SuperBoard.handleAppDelegate(open: url, options: options)
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -145,7 +142,7 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
             let trackingSource = trackingMap?["utm_source"]
             let trackingMedium = trackingMap?["utm_medium"]
             
-            OpenGrow.generateLink(
+            SuperBoard.generateLink(
                 title: title,
                 subtitle: subtitle,
                 imageURL: imageURL,
@@ -172,16 +169,16 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
                 return
             }
             
-            OpenGrow.pushToken = token
+            SuperBoard.pushToken = token
             result(nil)
             
         case "numberOfUnreadMessages":
-            OpenGrow.numberOfUnreadMessages { count in
+            SuperBoard.numberOfUnreadMessages { count in
                 result(count)
             }
             
         case "displayMessages":
-            OpenGrow.displayMessagesViewController() {
+            SuperBoard.displayMessagesViewController() {
                 result(nil)
             }
             
@@ -192,7 +189,7 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
                 return
             }
             
-            OpenGrow.userIdentifier = identifier
+            SuperBoard.userIdentifier = identifier
             result(nil)
             
         case "setUserAttributes":
@@ -202,7 +199,7 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
                 return
             }
             
-            OpenGrow.userAttributes = attributes
+            SuperBoard.userAttributes = attributes
             result(nil)
             
         case "setDebugLevel":
@@ -222,7 +219,7 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
                 debugLevel = .error
             }
             
-            OpenGrow.setDebug(level: debugLevel)
+            SuperBoard.setDebug(level: debugLevel)
             result(nil)
             
         case "logInAppPurchase":
@@ -233,7 +230,7 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
                 return
             }
 
-            OpenGrow.logInAppPurchase(transactionID: transactionId) { success in
+            SuperBoard.logInAppPurchase(transactionID: transactionId) { success in
                 if success {
                     result(nil)
                 } else {
@@ -270,7 +267,7 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
                 startDate = formatter.date(from: dateString)
             }
 
-            OpenGrow.logCustomPurchase(type: type, priceInCents: priceInCents, currency: currency, productID: productId, startDate: startDate) { success in
+            SuperBoard.logCustomPurchase(type: type, priceInCents: priceInCents, currency: currency, productID: productId, startDate: startDate) { success in
                 if success {
                     result(nil)
                 } else {
@@ -284,9 +281,9 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
     }
 }
 
-// MARK: - OpenGrowDelegate
-extension SuperBoardPlugin: OpenGrowDelegate {
-    public func opengrowReceivedPayloadFromDeeplink(link: String?, payload: [String : Any]?, tracking: [String : Any]?) {
+// MARK: - SuperBoardDelegate
+extension SuperBoardPlugin: SuperBoardDelegate {
+    public func superboardReceivedPayloadFromDeeplink(link: String?, payload: [String : Any]?, tracking: [String : Any]?) {
         guard let eventSink = eventSink else { return }
         
         var eventData: [String: Any] = [:]

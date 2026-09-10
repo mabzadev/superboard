@@ -8,7 +8,7 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "a0d2128b-521c-46a0-9c39-c28b543b3b1b"
     ]
@@ -20,7 +20,7 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "a0d2128b-521c-46a0-9c39-c28b543b3b1b"
     ]
@@ -32,7 +32,7 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "ecbb95687102473686fe8f0b9c8e420505d3b83e63ffba485341fc61deb215b2"
     ]
@@ -44,7 +44,7 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "ecbb95687102473686fe8f0b9c8e420505d3b83e63ffba485341fc61deb215b2"
     ]
@@ -56,7 +56,7 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "ecbb95687102473686fe8f0b9c8e420505d3b83e63ffba485341fc61deb215b2"
     ]
@@ -68,7 +68,7 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "1-prod",
       "1-test"
@@ -81,7 +81,7 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "28c10cf3-d229-4c94-aace-a93ef6abe8bb"
     ]
@@ -93,7 +93,7 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "28c10cf3-d229-4c94-aace-a93ef6abe8bb"
     ]

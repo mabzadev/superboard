@@ -4,8 +4,8 @@ Running 3 tests using 1 worker
 
 (node:22550) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-  ✓  1 [chromium] › e2e/tests/settings/system-tools.spec.ts:4:1 › audit synchronizes its ledger, searches persisted receipts and creates an immutable archive (2.8s)
-  ✓  2 [chromium] › e2e/tests/settings/system-tools.spec.ts:30:1 › content creates, edits, publishes and reopens a document with its revision history (2.7s)
-  ✓  3 [chromium] › e2e/tests/settings/system-tools.spec.ts:66:1 › gateway saves a route, publishes the manifest and invokes the real API target (2.7s)
+  ✓  1 [chromium] › tests/e2e/emdash/settings/system-tools.spec.ts:4:1 › audit synchronizes its ledger, searches persisted receipts and creates an immutable archive (2.8s)
+  ✓  2 [chromium] › tests/e2e/emdash/settings/system-tools.spec.ts:30:1 › content creates, edits, publishes and reopens a document with its revision history (2.7s)
+  ✓  3 [chromium] › tests/e2e/emdash/settings/system-tools.spec.ts:66:1 › gateway saves a route, publishes the manifest and invokes the real API target (2.7s)
 
   3 passed (9.1s)

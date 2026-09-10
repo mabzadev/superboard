@@ -29,8 +29,8 @@ action and requires the exact terminal `job_not_cancellable` response because
 reference receipts complete synchronously; failed-job retry remains available
 only to Grow administrators.
 The library versions and complete public action/widget surface are referenced
-from `config/sdk-libraries.json` and
-`config/flutterflow-custom-code.json` at the monorepo root; this application
+from `scripts/config/sdk-libraries.json` and
+`scripts/config/flutterflow-custom-code.json` at the monorepo root; this application
 contains no copied network implementation or Marketing adapter.
 The complete platform data-store and duplicate inventory is maintained in
 [`docs/REFERENCE_DATA_INVENTORY.md`](https://github.com/mabzadev/superboard/blob/dev/docs/REFERENCE_DATA_INVENTORY.md).

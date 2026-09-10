@@ -56,10 +56,10 @@ apply plugin: "kotlin-parcelize"
 android {
     // The native SDK sources are embedded in the Flutter plugin so a separate
     // Maven credential is never required by FlutterFlow's remote builder.
-    // The embedded internal Android SDK imports io.opengrow.R and
-    // io.opengrow.BuildConfig. Keep that physical resource namespace stable;
+    // The embedded internal Android SDK imports io.superboard.R and
+    // io.superboard.BuildConfig. Keep that physical resource namespace stable;
     // the public Flutter registrant itself is io.superboard.wrapper.
-    namespace = "io.opengrow"
+    namespace = "io.superboard"
 
     compileSdk = 36
 
@@ -75,15 +75,15 @@ android {
     sourceSets {
         main.java.srcDirs += [
             "src/main/kotlin",
-            "../../android/OpenGrow/OpenGrow/src/main/java"
+            "../../android/SuperBoard/SuperBoard/src/main/java"
         ]
-        main.res.srcDirs += "../../android/OpenGrow/OpenGrow/src/main/res"
-        test.java.srcDirs += "src/test/kotlin"
+        main.res.srcDirs += "../../android/SuperBoard/SuperBoard/src/main/res"
+        test.java.setSrcDirs(["../../../tests/checks/sdks/flutter/android/kotlin"])
     }
 
     defaultConfig {
         minSdk = 24
-        consumerProguardFiles "../../android/OpenGrow/OpenGrow/consumer-rules.pro"
+        consumerProguardFiles "../../android/SuperBoard/SuperBoard/consumer-rules.pro"
         buildConfigField "String", "SDK_VERSION", "\"${flutterSdkVersion}\""
         buildConfigField "boolean", "NETWORK_LOGGING", "false"
     }

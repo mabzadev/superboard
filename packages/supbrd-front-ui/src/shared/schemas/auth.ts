@@ -4,7 +4,7 @@ import {
 	emailSchema,
 	nameSchema,
 	passwordSchema,
-} from "../../../../supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/schemas/shared.js";
+} from "../../../../plugins/supbrd-core/src/front/settings/schemas/shared.js";
 
 export const loginSchema = z.object({
 	email: emailSchema,

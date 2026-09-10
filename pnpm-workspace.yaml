@@ -16,7 +16,7 @@ hoistPattern:
   - "!@cloudflare/workers-types"
 packageExtensions:
   "@oslojs/webauthn@1.0.0":
-    dependencies:
+    "dependencies":
       "@oslojs/asn1": "1.0.0"
       "@oslojs/binary": "1.0.0"
       "@oslojs/cbor": "1.0.0"
@@ -129,35 +129,29 @@ packages:
   - packages/*
   - packages/plugins/*
   - apps/*
-  - "!apps/dashboard"
-  - demos/*
   - templates/*
   - packages/blocks/playground
-  - e2e/fixture
-  - e2e/fixture-cloudflare
-  - fixtures/*
   - docs
   - i18n
   - infra/*
   # SuperBoard overlay workspaces.
-  - workers/api
-  - workers/billing
-  - workers/messaging
-  - workers/app
-  - workers/products
-  - workers/paywalls
-  - workers/dynamic-links
-  - workers/support
-  - workers/analytics
-  - workers/marketing
-  - workers/onboardings
-  - workers/flows
-  - workers/email
-  - workers/identity
-  - workers/files
-  - workers/observability
-  - workers/mcp
-  - workers/custom/reference
+  - packages/plugins/supbrd-core/api
+  - packages/plugins/supbrd-plug-commerce/billing
+  - packages/plugins/supbrd-core/app
+  - packages/plugins/supbrd-plug-commerce/products
+  - packages/plugins/supbrd-plug-commerce/paywalls
+  - packages/plugins/supbrd-plug-communication/dynamic-links
+  - packages/plugins/supbrd-plug-support/worker
+  - packages/plugins/supbrd-plug-analytics/worker
+  - packages/plugins/supbrd-plug-communication/marketing
+  - packages/plugins/supbrd-plug-journeys/onboardings
+  - packages/plugins/supbrd-plug-journeys/flows
+  - packages/plugins/supbrd-plug-communication/email
+  - packages/plugins/supbrd-plug-identity/worker
+  - packages/plugins/supbrd-plug-data/worker
+  - packages/plugins/supbrd-core/observability
+  - packages/plugins/supbrd-core/mcp
+  - apps/reference/worker
   - sdks/flows/upstream/packages/shared
   - sdks/flows/upstream/packages/styles
   - sdks/flows/upstream/packages/js
@@ -174,6 +168,9 @@ packages:
   - sdks/javascript
   - sdks/react-native
   - sdks/react-native/example
+  - tests/fixtures/emdash-site
+  - tests/fixtures/emdash-cloudflare
+  - tests/fixtures/performance-site
 catalog:
   "@arethetypeswrong/cli": ^0.18.2
   "@astrojs/check": ^0.9.7
@@ -279,3 +276,14 @@ catalog:
   "y-protocols": ^1.0.7
   yjs: ^13.6.0
   zod: ^4.4.1
+
+catalogs:
+  "workers":
+    "@cloudflare/vitest-pool-workers": "0.20.3"
+    "@cloudflare/workers-types": "5.20260828.1"
+    "@typescript-eslint/eslint-plugin": "8.68.0"
+    "@typescript-eslint/parser": "8.68.0"
+    "eslint": "9.39.5"
+    "hono": "4.13.5"
+    "typescript": "5.9.3"
+    "wrangler": "4.125.0"

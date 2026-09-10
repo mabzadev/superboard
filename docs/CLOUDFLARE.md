@@ -1,18 +1,20 @@
 # Cloudflare targets and rollout
 
+Les suites maintenues sont centralisées dans `tests/` : `lints/` pour les règles du dépôt, `checks/cloudflare/` pour les contrôles du déploiement, et `e2e/` pour les parcours. Les opérations restent dans `scripts/cloudflare/` et les cibles dans `infra/targets/`. Les commandes `pnpm` sont conservées. Consultez [le guide des tests](../tests/README.md) pour la validation locale et les prérequis des suites distantes.
+
 ## Isolation contract
 
-Each deployment target has one manifest under `deploy/targets` and declares
+Each deployment target has one manifest under `infra/targets` and declares
 either `development` or `production`. Secret values and Cloudflare account IDs
 are rejected by the manifest schema. `SUPERBOARD_TARGET` and
 `SUPERBOARD_ENVIRONMENT` select the manifest and environment used by
 automation. During the non-destructive transition, scripts read
-`OPENGROW_TARGET` and `OPENGROW_ENVIRONMENT` only as fallbacks; a defined
+`SUPERBOARD_TARGET` and `SUPERBOARD_ENVIRONMENT` only as fallbacks; a defined
 `SUPERBOARD_*` value always wins.
 
 The same read contract applies to `SUPERBOARD_RELEASE` (fallback
-`OPENGROW_RELEASE`) and `SUPERBOARD_REFERENCE_REPOSITORY` (fallback
-`OPENGROW_REFERENCE_REPOSITORY`). This change does not rewrite GitHub
+`SUPERBOARD_RELEASE`) and `SUPERBOARD_REFERENCE_REPOSITORY` (fallback
+`SUPERBOARD_REFERENCE_REPOSITORY`). This change does not rewrite GitHub
 Environment variables or Worker vars remotely: migration of stored values is a
 separate, audited cutover. The same canonical-first rule applies to
 `SUPERBOARD_REFERENCE_DISPATCH_TOKEN` and
@@ -31,7 +33,7 @@ secret of its own.
 
 ## Automatic deployment authority
 
-`config/cloudflare-deployments.json` enforces one automatic deployment authority per target:
+`scripts/config/cloudflare-deployments.json` enforces one automatic deployment authority per target:
 
 - `mbza-development` is deployed from `dev` by Cloudflare Workers Builds. Each
   declared Worker has its own native Git connection to `mabzadev/superboard`.
@@ -59,7 +61,7 @@ credential. The exact source-owned Workers Builds contract is:
 ```text
 repository: mabzadev/superboard
 production branch: dev
-build command: npm ci && npm --prefix apps/reference ci && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test
+build command: npm ci && npm --prefix apps/reference ci && node --test tests/checks/repository/backoffice-policy.test.mjs tests/checks/github/deployment-matrix.test.mjs tests/checks/github/deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test
 deploy command: npm run cloudflare:deploy -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT" --service "$SUPERBOARD_SERVICE"
 build variables: CLOUDFLARE_ACCOUNT_ID, SUPERBOARD_TARGET=mbza-development, SUPERBOARD_ENVIRONMENT=development, SUPERBOARD_SERVICE=<one declared service>
 non-production branch builds: disabled
@@ -153,7 +155,7 @@ namespace that Cloudflare must actually resolve. The fresh MBZA target uses
 `superboard` for both namespaces with `migrationStrategy: canonical`; its first
 provisioning creates canonical `superboard-*` resources because no historical
 MBZA platform resources exist in the selected account. VocoStar uses
-`logicalName: superboard`, `physicalName: opengrow` and
+`logicalName: superboard`, `physicalName: superboard` and
 `migrationStrategy: retain-physical-name` because its production resources own
 historical data. `previousNames` records only a physical namespace that is
 actually retained. New application targets use the canonical `superboard`

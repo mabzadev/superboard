@@ -1,0 +1,26 @@
+{
+  "name": "@superboard/api-worker",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@superboard/contracts": "workspace:*",
+    "@apple/app-store-server-library": "^3.1.0",
+    "bcryptjs": "^3.0.2",
+    "hono": "catalog:workers",
+    "jose": "^5.10.0",
+    "qrcode": "^1.5.4",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:workers",
+    "typescript": "catalog:workers",
+    "wrangler": "catalog:workers",
+    "vitest": "catalog:"
+  }
+}

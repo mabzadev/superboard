@@ -7,7 +7,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1-prod"
     ]
@@ -19,7 +19,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1-prod"
     ]
@@ -31,7 +31,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "0f386b86-2065-46d4-91b3-5841663aa980"
     ]
@@ -43,7 +43,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "0f386b86-2065-46d4-91b3-5841663aa980"
     ]
@@ -55,7 +55,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "0f386b86-2065-46d4-91b3-5841663aa980"
     ]
@@ -67,7 +67,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "0f386b86-2065-46d4-91b3-5841663aa980"
     ]
@@ -79,7 +79,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
     ]
@@ -91,7 +91,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
     ]
@@ -103,7 +103,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
     ]
@@ -115,7 +115,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "15b24c85-1e11-4f44-ac40-d431c8766459",
       "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
@@ -128,7 +128,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
     ]
@@ -140,7 +140,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
     ]
@@ -152,7 +152,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
     ]
@@ -164,7 +164,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "2e64f413-9791-48cc-93c8-d6fe9f7b7295"
     ]
@@ -176,7 +176,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "2e64f413-9791-48cc-93c8-d6fe9f7b7295"
     ]
@@ -188,7 +188,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "e62ccc6c-0555-42f7-b2b3-df4d738a9171"
     ]
@@ -200,7 +200,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "e62ccc6c-0555-42f7-b2b3-df4d738a9171"
     ]
@@ -212,7 +212,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "e62ccc6c-0555-42f7-b2b3-df4d738a9171"
     ]
@@ -224,7 +224,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "aaf98c5f-4954-43fe-9edb-c7392313f98a"
     ]
@@ -236,7 +236,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "ad675b1e-236c-4e70-8d71-fdc6155d3f01"
     ]
@@ -248,7 +248,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "aa2e1f30-8954-413e-97d5-f60975c43d7f"
     ]
@@ -260,7 +260,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "5d484d36-70d1-45e7-8109-c99babb3ef3f"
     ]
@@ -272,7 +272,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "aaf98c5f-4954-43fe-9edb-c7392313f98a"
     ]
@@ -284,7 +284,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "8d18dc5e-1d10-4ceb-b859-8382fe8d57f0"
     ]
@@ -296,7 +296,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
     ]
@@ -308,7 +308,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
     ]
@@ -320,7 +320,7 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "0f386b86-2065-46d4-91b3-5841663aa980"
     ]

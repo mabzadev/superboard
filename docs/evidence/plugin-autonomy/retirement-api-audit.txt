@@ -1,6 +1,6 @@
 Canonical Site API integration evidence
 
-Test: apps/site/runtime-tests/retirement-api-audit.runtime.test.ts
+Test: tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts
 Runner exit code: 0
 All 10 files and 27 tests in this run passed.
 
@@ -13,7 +13,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
-    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts",
     "data_ids": [
       "lifecycle:fd140da5-64f9-48f3-ae4c-5df4c7854e8c"
     ]
@@ -25,7 +25,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
-    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts",
     "data_ids": [
       "lifecycle:fd140da5-64f9-48f3-ae4c-5df4c7854e8c"
     ]
@@ -37,7 +37,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
-    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts",
     "data_ids": [
       "lifecycle:fd140da5-64f9-48f3-ae4c-5df4c7854e8c"
     ]
@@ -49,7 +49,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
-    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts",
     "data_ids": [
       "d2b9cb63-4d32-474f-b7e2-a001f80d7404"
     ]
@@ -61,7 +61,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
-    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts",
     "data_ids": [
       "d2b9cb63-4d32-474f-b7e2-a001f80d7404"
     ]

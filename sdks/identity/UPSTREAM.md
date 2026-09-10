@@ -6,4 +6,4 @@
 - Imported areas: `sdks/web-sdk`, `sdks/react-sdk`, `sdks/vue-sdk`, `sdks/angular-sdk`, and `sdks/nextjs-sdk`
 - Integration: source-preserving monorepo import with the original package APIs, tests and build configurations
 
-The upstream license is included in `LICENSE` and the server/admin provenance is recorded under `workers/identity/vendor/melody-auth/`.
+The upstream license is included in `LICENSE` and the server/admin provenance is recorded under `packages/plugins/supbrd-plug-identity/worker/vendor/melody-auth/`.

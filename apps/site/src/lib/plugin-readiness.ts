@@ -4,7 +4,7 @@ import { signSiteOperatorRequest } from "@superboard/contracts/site-operator";
 import { sha256Canonical } from "@superboard/supbrd-core";
 import type { APIContext } from "astro";
 
-import packageCatalog from "../../../../config/superboard-plugin-catalog.json";
+import packageCatalog from "../../../../scripts/config/superboard-plugin-catalog.json";
 import type { SuperBoardSiteEnv } from "./site-env.js";
 import { superBoardRuntimePluginCatalog } from "./superboard-plugin-catalog.js";
 

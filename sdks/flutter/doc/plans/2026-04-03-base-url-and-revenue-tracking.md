@@ -13,32 +13,33 @@
 ## Task 1: Add Base URL Support — iOS Native Side
 
 **Files:**
-- Modify: `ios/Classes/OpenGrowPlugin.swift:51-56` (the `application(_:didFinishLaunchingWithOptions:)` method)
+
+- Modify: `ios/Classes/SuperBoardPlugin.swift:51-56` (the `application(_:didFinishLaunchingWithOptions:)` method)
 
 **Step 1: Update iOS configure call to pass baseURL from Info.plist**
 
-In `OpenGrowPlugin.swift`, update the `application(_:didFinishLaunchingWithOptions:)` method to read `OpenGrowBaseURL` from Info.plist and pass it to `OpenGrow.configure()`:
+In `SuperBoardPlugin.swift`, update the `application(_:didFinishLaunchingWithOptions:)` method to read `SuperBoardBaseURL` from Info.plist and pass it to `SuperBoard.configure()`:
 
 ```swift
 public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
-    if let infoDictionary = Bundle.main.infoDictionary, let apiKey = infoDictionary["OpenGrowApiKey"] as? String {
-        let useTestEnvironment = infoDictionary["OpenGrowUseTestEnvironment"] as? Bool ?? false
-        let baseURL = infoDictionary["OpenGrowBaseURL"] as? String
-        OpenGrow.configure(APIKey: apiKey, useTestEnvironment: useTestEnvironment, baseURL: baseURL, delegate: self)
+    if let infoDictionary = Bundle.main.infoDictionary, let apiKey = infoDictionary["SuperBoardApiKey"] as? String {
+        let useTestEnvironment = infoDictionary["SuperBoardUseTestEnvironment"] as? Bool ?? false
+        let baseURL = infoDictionary["SuperBoardBaseURL"] as? String
+        SuperBoard.configure(APIKey: apiKey, useTestEnvironment: useTestEnvironment, baseURL: baseURL, delegate: self)
     }
-    
+
     return true
 }
 ```
 
-**Step 2: Verify the iOS native SDK `OpenGrow.configure` signature accepts `baseURL: String?`**
+**Step 2: Verify the iOS native SDK `SuperBoard.configure` signature accepts `baseURL: String?`**
 
-The iOS OpenGrow SDK (version ~> 2.2) already has this parameter. No podspec version bump needed — verify by building.
+The iOS SuperBoard SDK (version ~> 2.2) already has this parameter. No podspec version bump needed — verify by building.
 
 **Step 3: Commit**
 
 ```bash
-git add ios/Classes/OpenGrowPlugin.swift
+git add ios/Classes/SuperBoardPlugin.swift
 git commit -m "feat(ios): add base URL support from Info.plist"
 ```
 
@@ -47,29 +48,30 @@ git commit -m "feat(ios): add base URL support from Info.plist"
 ## Task 2: Add Base URL Support — Android Native Side
 
 **Files:**
-- Modify: `android/src/main/kotlin/io/opengrow/wrapper/OpenGrowPlugin.kt:78-82` (the `onAttachedToEngine` configure block)
+
+- Modify: `android/src/main/kotlin/io/superboard/wrapper/SuperBoardPlugin.kt:78-82` (the `onAttachedToEngine` configure block)
 
 **Step 1: Update Android configure call to pass baseURL from AndroidManifest meta-data**
 
-In `OpenGrowPlugin.kt`, update the configure block inside `onAttachedToEngine` to read `opengrow_base_url` and pass it:
+In `SuperBoardPlugin.kt`, update the configure block inside `onAttachedToEngine` to read `superboard_base_url` and pass it:
 
 ```kotlin
 val app = flutterPluginBinding.applicationContext as Application
 val meta = app.packageManager.getApplicationInfo(app.packageName, PackageManager.GET_META_DATA).metaData
-val apiKey = meta.getString("opengrow_api_key")
-val useTestEnvironment = meta.getBoolean("opengrow_use_test_environment", false)
-val baseURL = meta.getString("opengrow_base_url")
-OpenGrow.configure(application, apiKey ?: "", useTestEnvironment, baseURL)
+val apiKey = meta.getString("superboard_api_key")
+val useTestEnvironment = meta.getBoolean("superboard_use_test_environment", false)
+val baseURL = meta.getString("superboard_base_url")
+SuperBoard.configure(application, apiKey ?: "", useTestEnvironment, baseURL)
 ```
 
-**Step 2: Verify the Android native SDK `OpenGrow.configure` signature accepts `baseURL: String?`**
+**Step 2: Verify the Android native SDK `SuperBoard.configure` signature accepts `baseURL: String?`**
 
-The Android OpenGrow SDK (version 1.1.0) already has this parameter. No version bump needed — verify by building.
+The Android SuperBoard SDK (version 1.1.0) already has this parameter. No version bump needed — verify by building.
 
 **Step 3: Commit**
 
 ```bash
-git add android/src/main/kotlin/io/opengrow/wrapper/OpenGrowPlugin.kt
+git add android/src/main/kotlin/io/superboard/wrapper/SuperBoardPlugin.kt
 git commit -m "feat(android): add base URL support from AndroidManifest"
 ```
 
@@ -78,11 +80,12 @@ git commit -m "feat(android): add base URL support from AndroidManifest"
 ## Task 3: Add Revenue Tracking Models — Dart Side
 
 **Files:**
-- Modify: `lib/models/opengrow_link.dart` (add `TransactionType` enum at end of file)
 
-**Step 1: Add `TransactionType` enum to opengrow_link.dart**
+- Modify: `lib/models/superboard_link.dart` (add `TransactionType` enum at end of file)
 
-Append to the end of `lib/models/opengrow_link.dart`:
+**Step 1: Add `TransactionType` enum to superboard_link.dart**
+
+Append to the end of `lib/models/superboard_link.dart`:
 
 ```dart
 /// Type of transaction for revenue tracking
@@ -101,7 +104,7 @@ enum TransactionType {
 **Step 2: Commit**
 
 ```bash
-git add lib/models/opengrow_link.dart
+git add lib/models/superboard_link.dart
 git commit -m "feat: add TransactionType enum for revenue tracking"
 ```
 
@@ -110,11 +113,12 @@ git commit -m "feat: add TransactionType enum for revenue tracking"
 ## Task 4: Add Revenue Tracking — Platform Interface
 
 **Files:**
-- Modify: `lib/opengrow_platform_interface.dart:54` (add two new method stubs before the closing brace)
 
-**Step 1: Add `logInAppPurchase` and `logCustomPurchase` to OpenGrowPlatform**
+- Modify: `lib/superboard_platform_interface.dart:54` (add two new method stubs before the closing brace)
 
-Add these methods after the `setDebugLevel` method (after line 54) in `opengrow_platform_interface.dart`:
+**Step 1: Add `logInAppPurchase` and `logCustomPurchase` to SuperBoardPlatform**
+
+Add these methods after the `setDebugLevel` method (after line 54) in `superboard_platform_interface.dart`:
 
 ```dart
   /// Log an in-app purchase from the platform store
@@ -140,7 +144,7 @@ Add these methods after the `setDebugLevel` method (after line 54) in `opengrow_
 Also add the import for models at the top (line 4):
 
 ```dart
-import 'models/opengrow_link.dart';
+import 'models/superboard_link.dart';
 ```
 
 (This import already exists — verify it does.)
@@ -148,7 +152,7 @@ import 'models/opengrow_link.dart';
 **Step 2: Commit**
 
 ```bash
-git add lib/opengrow_platform_interface.dart
+git add lib/superboard_platform_interface.dart
 git commit -m "feat: add revenue tracking methods to platform interface"
 ```
 
@@ -157,9 +161,10 @@ git commit -m "feat: add revenue tracking methods to platform interface"
 ## Task 5: Add Revenue Tracking — Method Channel Implementation
 
 **Files:**
-- Modify: `lib/opengrow_method_channel.dart:96` (add two new method implementations before the closing brace)
 
-**Step 1: Implement `logInAppPurchase` in MethodChannelOpenGrow**
+- Modify: `lib/superboard_method_channel.dart:96` (add two new method implementations before the closing brace)
+
+**Step 1: Implement `logInAppPurchase` in MethodChannelSuperBoard**
 
 Add after the `setDebugLevel` method (after line 96):
 
@@ -171,7 +176,7 @@ Add after the `setDebugLevel` method (after line 96):
         'transactionId': transactionId,
       });
     } on PlatformException catch (e) {
-      throw OpenGrowException(
+      throw SuperBoardException(
         e.message ?? 'Failed to log in-app purchase',
         code: e.code,
       );
@@ -195,7 +200,7 @@ Add after the `setDebugLevel` method (after line 96):
         'startDate': startDate?.toIso8601String(),
       });
     } on PlatformException catch (e) {
-      throw OpenGrowException(
+      throw SuperBoardException(
         e.message ?? 'Failed to log custom purchase',
         code: e.code,
       );
@@ -206,7 +211,7 @@ Add after the `setDebugLevel` method (after line 96):
 **Step 2: Commit**
 
 ```bash
-git add lib/opengrow_method_channel.dart
+git add lib/superboard_method_channel.dart
 git commit -m "feat: implement revenue tracking in method channel"
 ```
 
@@ -215,13 +220,14 @@ git commit -m "feat: implement revenue tracking in method channel"
 ## Task 6: Add Revenue Tracking — Public Dart API
 
 **Files:**
-- Modify: `lib/opengrow.dart:117` (add two new public methods before the `onDeeplinkReceived` getter)
 
-**Step 1: Add `logInAppPurchase` and `logCustomPurchase` to OpenGrow class**
+- Modify: `lib/superboard.dart:117` (add two new public methods before the `onDeeplinkReceived` getter)
+
+**Step 1: Add `logInAppPurchase` and `logCustomPurchase` to SuperBoard class**
 
 Add before the `onDeeplinkReceived` stream getter (before line 119):
 
-```dart
+````dart
   /// Log an in-app purchase from the platform store
   ///
   /// Tracks a store purchase for revenue attribution.
@@ -230,14 +236,14 @@ Add before the `onDeeplinkReceived` stream getter (before line 119):
   /// - iOS: The StoreKit transaction ID (pass as string, e.g. `transaction.id.description`)
   /// - Android: The purchase original JSON (e.g. `purchase.originalJson`)
   ///
-  /// Throws [OpenGrowException] if the operation fails
+  /// Throws [SuperBoardException] if the operation fails
   ///
   /// Example:
   /// ```dart
-  /// await OpenGrow().logInAppPurchase('12345');
+  /// await SuperBoard().logInAppPurchase('12345');
   /// ```
   Future<void> logInAppPurchase(String transactionId) {
-    return OpenGrowPlatform.instance.logInAppPurchase(transactionId);
+    return SuperBoardPlatform.instance.logInAppPurchase(transactionId);
   }
 
   /// Log a custom purchase for revenue tracking
@@ -250,11 +256,11 @@ Add before the `onDeeplinkReceived` stream getter (before line 119):
   /// [productId] - A unique product identifier
   /// [startDate] - Optional transaction date (defaults to now on the native side)
   ///
-  /// Throws [OpenGrowException] if the operation fails
+  /// Throws [SuperBoardException] if the operation fails
   ///
   /// Example:
   /// ```dart
-  /// await OpenGrow().logCustomPurchase(
+  /// await SuperBoard().logCustomPurchase(
   ///   type: TransactionType.buy,
   ///   priceInCents: 999,
   ///   currency: 'USD',
@@ -268,7 +274,7 @@ Add before the `onDeeplinkReceived` stream getter (before line 119):
     required String productId,
     DateTime? startDate,
   }) {
-    return OpenGrowPlatform.instance.logCustomPurchase(
+    return SuperBoardPlatform.instance.logCustomPurchase(
       type: type,
       priceInCents: priceInCents,
       currency: currency,
@@ -276,12 +282,12 @@ Add before the `onDeeplinkReceived` stream getter (before line 119):
       startDate: startDate,
     );
   }
-```
+````
 
 **Step 2: Commit**
 
 ```bash
-git add lib/opengrow.dart
+git add lib/superboard.dart
 git commit -m "feat: add revenue tracking public API"
 ```
 
@@ -290,7 +296,8 @@ git commit -m "feat: add revenue tracking public API"
 ## Task 7: Add Revenue Tracking — iOS Native Handler
 
 **Files:**
-- Modify: `ios/Classes/OpenGrowPlugin.swift:71-212` (add two new cases in the `handle` switch statement)
+
+- Modify: `ios/Classes/SuperBoardPlugin.swift:71-212` (add two new cases in the `handle` switch statement)
 
 **Step 1: Add `logInAppPurchase` case to iOS handle method**
 
@@ -304,15 +311,15 @@ Add before the `default:` case (before line 209) in the `handle` method:
                 result(FlutterError(code: "INVALID_ARGUMENT", message: "transactionId is required", details: nil))
                 return
             }
-            
-            OpenGrow.logInAppPurchase(transactionID: transactionId) { success in
+
+            SuperBoard.logInAppPurchase(transactionID: transactionId) { success in
                 if success {
                     result(nil)
                 } else {
                     result(FlutterError(code: "PAYMENT_ERROR", message: "Failed to log in-app purchase", details: nil))
                 }
             }
-            
+
         case "logCustomPurchase":
             guard let args = call.arguments as? [String: Any],
                   let typeString = args["type"] as? String,
@@ -322,7 +329,7 @@ Add before the `default:` case (before line 209) in the `handle` method:
                 result(FlutterError(code: "INVALID_ARGUMENT", message: "type, priceInCents, currency, and productId are required", details: nil))
                 return
             }
-            
+
             let type: TransactionType
             switch typeString {
             case "buy":
@@ -335,14 +342,14 @@ Add before the `default:` case (before line 209) in the `handle` method:
                 result(FlutterError(code: "INVALID_ARGUMENT", message: "Invalid transaction type: \(typeString)", details: nil))
                 return
             }
-            
+
             var startDate: Date?
             if let dateString = args["startDate"] as? String {
                 let formatter = ISO8601DateFormatter()
                 startDate = formatter.date(from: dateString)
             }
-            
-            OpenGrow.logCustomPurchase(type: type, priceInCents: priceInCents, currency: currency, productID: productId, startDate: startDate) { success in
+
+            SuperBoard.logCustomPurchase(type: type, priceInCents: priceInCents, currency: currency, productID: productId, startDate: startDate) { success in
                 if success {
                     result(nil)
                 } else {
@@ -354,7 +361,7 @@ Add before the `default:` case (before line 209) in the `handle` method:
 **Step 2: Commit**
 
 ```bash
-git add ios/Classes/OpenGrowPlugin.swift
+git add ios/Classes/SuperBoardPlugin.swift
 git commit -m "feat(ios): add revenue tracking method channel handlers"
 ```
 
@@ -363,14 +370,15 @@ git commit -m "feat(ios): add revenue tracking method channel handlers"
 ## Task 8: Add Revenue Tracking — Android Native Handler
 
 **Files:**
-- Modify: `android/src/main/kotlin/io/opengrow/wrapper/OpenGrowPlugin.kt:95-257` (add two new cases in the `when` block)
+
+- Modify: `android/src/main/kotlin/io/superboard/wrapper/SuperBoardPlugin.kt:95-257` (add two new cases in the `when` block)
 
 **Step 1: Add imports for PaymentEventType**
 
-Add to the imports at the top of `OpenGrowPlugin.kt`:
+Add to the imports at the top of `SuperBoardPlugin.kt`:
 
 ```kotlin
-import io.opengrow.model.events.PaymentEventType
+import io.superboard.model.events.PaymentEventType
 import java.time.Instant
 ```
 
@@ -381,32 +389,32 @@ Add before the `else ->` case (before line 254) in the `when` block:
 ```kotlin
             "logInAppPurchase" -> {
                 val transactionId = call.argument<String>("transactionId")
-                
+
                 if (transactionId == null) {
                     result.error("INVALID_ARGUMENT", "transactionId is required", null)
                     return
                 }
-                
+
                 try {
-                    OpenGrow.logInAppPurchase(transactionId)
+                    SuperBoard.logInAppPurchase(transactionId)
                     result.success(null)
                 } catch (e: Exception) {
                     result.error("PAYMENT_ERROR", e.message, null)
                 }
             }
-            
+
             "logCustomPurchase" -> {
                 val typeString = call.argument<String>("type")
                 val priceInCents = call.argument<Int>("priceInCents")
                 val currency = call.argument<String>("currency")
                 val productId = call.argument<String>("productId")
                 val startDateString = call.argument<String>("startDate")
-                
+
                 if (typeString == null || priceInCents == null || currency == null || productId == null) {
                     result.error("INVALID_ARGUMENT", "type, priceInCents, currency, and productId are required", null)
                     return
                 }
-                
+
                 val type = when (typeString) {
                     "buy" -> PaymentEventType.BUY
                     "cancel" -> PaymentEventType.CANCEL
@@ -416,7 +424,7 @@ Add before the `else ->` case (before line 254) in the `when` block:
                         return
                     }
                 }
-                
+
                 val startDate = startDateString?.let {
                     try {
                         InstantCompat.from(Instant.parse(it))
@@ -424,9 +432,9 @@ Add before the `else ->` case (before line 254) in the `when` block:
                         null
                     }
                 }
-                
+
                 try {
-                    OpenGrow.logCustomPurchase(type, priceInCents, currency, productId, startDate)
+                    SuperBoard.logCustomPurchase(type, priceInCents, currency, productId, startDate)
                     result.success(null)
                 } catch (e: Exception) {
                     result.error("PAYMENT_ERROR", e.message, null)
@@ -434,12 +442,12 @@ Add before the `else ->` case (before line 254) in the `when` block:
             }
 ```
 
-> **Note:** The Android SDK uses `InstantCompat` for dates. Verify the exact import during implementation — it may be `io.opengrow.model.InstantCompat` or from `java.time`. Check the Android SDK source. If `InstantCompat` is not directly constructable from `Instant`, pass `null` for `startDate` and let the SDK default to now — this is acceptable since the parameter is optional.
+> **Note:** The Android SDK uses `InstantCompat` for dates. Verify the exact import during implementation — it may be `io.superboard.model.InstantCompat` or from `java.time`. Check the Android SDK source. If `InstantCompat` is not directly constructable from `Instant`, pass `null` for `startDate` and let the SDK default to now — this is acceptable since the parameter is optional.
 
 **Step 3: Commit**
 
 ```bash
-git add android/src/main/kotlin/io/opengrow/wrapper/OpenGrowPlugin.kt
+git add android/src/main/kotlin/io/superboard/wrapper/SuperBoardPlugin.kt
 git commit -m "feat(android): add revenue tracking method channel handlers"
 ```
 
@@ -448,18 +456,21 @@ git commit -m "feat(android): add revenue tracking method channel handlers"
 ## Task 9: Update README and Example App
 
 **Files:**
+
 - Modify: `README.md` (add base URL config and revenue tracking docs)
 - Modify: `example/lib/main.dart` (add revenue tracking example usage)
 
 **Step 1: Add base URL documentation to README**
 
 Add a "Base URL Configuration" section after the existing configuration sections, documenting:
-- iOS: Add `OpenGrowBaseURL` key to Info.plist with the custom domain
-- Android: Add `<meta-data android:name="opengrow_base_url" android:value="https://your-domain.com" />` to AndroidManifest.xml
+
+- iOS: Add `SuperBoardBaseURL` key to Info.plist with the custom domain
+- Android: Add `<meta-data android:name="superboard_base_url" android:value="https://your-domain.com" />` to AndroidManifest.xml
 
 **Step 2: Add revenue tracking documentation to README**
 
 Add a "Revenue Tracking" section documenting:
+
 - `logInAppPurchase` with platform-specific transactionId guidance
 - `logCustomPurchase` with TransactionType enum values and example
 - Code examples for both methods
@@ -467,7 +478,8 @@ Add a "Revenue Tracking" section documenting:
 **Step 3: Add revenue tracking example to example app**
 
 Add example buttons/calls in `example/lib/main.dart` demonstrating:
-- `await OpenGrow().logCustomPurchase(type: TransactionType.buy, priceInCents: 999, currency: 'USD', productId: 'premium')`
+
+- `await SuperBoard().logCustomPurchase(type: TransactionType.buy, priceInCents: 999, currency: 'USD', productId: 'premium')`
 
 **Step 4: Commit**
 
@@ -483,7 +495,7 @@ git commit -m "docs: add base URL and revenue tracking documentation"
 **Step 1: Run Flutter analyze**
 
 ```bash
-cd /Users/razvanchelemen/Clients_work/opengrow/opengrow-flutter
+cd /Users/razvanchelemen/Clients_work/superboard/superboard-flutter
 flutter analyze
 ```
 
@@ -518,6 +530,7 @@ Expected: Build succeeds. This confirms the Android native SDK accepts the `base
 ```bash
 git add -A && git commit -m "fix: address build issues"
 ```
-> Historical OpenGrow 2.x implementation plan. Retained for release forensics
+
+> Historical SuperBoard 2.x implementation plan. Retained for release forensics
 > only; use the SuperBoard 3 API and migration section in `../../README.md` for
 > current integration instructions.

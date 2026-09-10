@@ -1,25 +1,25 @@
 # Verified public-key, documentation, and test-fixture findings imported with the
 # pinned EmDash tree or SuperBoard's unvalidated Flows source. Keep these exact
 # fingerprints narrow so new findings in the same files still fail the scan.
-apps/labeler/test/issuer-helpers.ts:generic-api-key:25
-apps/labeler/test/runtime-records.test.ts:generic-api-key:7
+tests/checks/apps/labeler/issuer-helpers.ts:generic-api-key:25
+tests/checks/apps/labeler/runtime-records.test.ts:generic-api-key:7
 apps/labeler/docs/runbooks.md:generic-api-key:490
-apps/labeler/test/runtime-operator-api.test.ts:generic-api-key:18
-apps/labeler/test/runtime-public-assessment.test.ts:generic-api-key:74
+tests/checks/apps/labeler/runtime-operator-api.test.ts:generic-api-key:18
+tests/checks/apps/labeler/runtime-public-assessment.test.ts:generic-api-key:74
 docs/src/content/docs/reference/field-types.mdx:generic-api-key:322
 docs/src/content/docs/reference/rest-api.mdx:generic-api-key:411
-packages/core/tests/unit/api/ownership-extraction.test.ts:generic-api-key:105
-packages/core/tests/unit/auth/signup.test.ts:generic-api-key:210
-packages/core/tests/unit/auth/signup.test.ts:generic-api-key:316
-packages/core/tests/unit/preview/urls.test.ts:generic-api-key:126
-packages/registry-moderation/tests/fixtures/label-crypto.json:generic-api-key:3
-packages/registry-moderation/tests/fixtures/label-crypto.json:generic-api-key:4
-packages/registry-moderation/tests/fixtures/label-crypto.json:generic-api-key:5
-packages/registry-moderation/tests/fixtures/p256-label-v1.json:generic-api-key:16
-workers/flows/src/services/crypto.test.ts:generic-api-key:9
-workers/flows/src/services/crypto.test.ts:generic-api-key:13
-workers/flows/src/services/crypto.test.ts:generic-api-key:14
-workers/flows/src/services/crypto.test.ts:generic-api-key:25
+tests/checks/packages/core/unit/api/ownership-extraction.test.ts:generic-api-key:105
+tests/checks/packages/core/unit/auth/signup.test.ts:generic-api-key:210
+tests/checks/packages/core/unit/auth/signup.test.ts:generic-api-key:316
+tests/checks/packages/core/unit/preview/urls.test.ts:generic-api-key:126
+tests/fixtures/packages/registry-moderation/tests/label-crypto.json:generic-api-key:3
+tests/fixtures/packages/registry-moderation/tests/label-crypto.json:generic-api-key:4
+tests/fixtures/packages/registry-moderation/tests/label-crypto.json:generic-api-key:5
+tests/fixtures/packages/registry-moderation/tests/p256-label-v1.json:generic-api-key:16
+tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:9
+tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:13
+tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:14
+tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:25
 
 # Historical forms of the same verified EmDash documentation and test fixtures.
 15154ab3384e93945db104aff6724023a4138522:apps/labeler/docs/runbooks.md:generic-api-key:418
@@ -28,3 +28,9 @@ f7ee61d812bc5deb3e02a60a2eb36874751ad478:docs/src/content/docs/reference/rest-ap
 43fcb9a13132016aef63cd0d77434c62f7e7631a:packages/core/tests/unit/auth/signup.test.ts:generic-api-key:207
 43fcb9a13132016aef63cd0d77434c62f7e7631a:packages/core/tests/unit/auth/signup.test.ts:generic-api-key:313
 43fcb9a13132016aef63cd0d77434c62f7e7631a:packages/core/tests/unit/preview/urls.test.ts:generic-api-key:101
+
+# Deterministic test fixtures after source relocation.
+tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:10
+tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:15
+tests/checks/sdks/flutter/unit/customer_info_verifier_test.dart:jwt:21
+tests/checks/sdks/identity/react/unit/Provider.test.tsx:generic-api-key:116

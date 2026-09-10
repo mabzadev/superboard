@@ -27,7 +27,7 @@ Before starting any work that involves editing code, run `pnpm lint:json | jq '.
 During work:
 
 - `pnpm lint:quick` after every edit (sub-second)
-- `pnpm typecheck` (packages) or `pnpm typecheck:demos` (Astro demos) after each round of edits
+- `pnpm typecheck` (packages) or `pnpm site:typecheck` (SuperBoard Site) after each round of edits
 - `pnpm format` regularly (oxfmt, tabs)
 
 Before opening a PR: tests pass, lint clean, formatted, changeset added if a published package changed. See [.changeset/README.md](.changeset/README.md).
@@ -35,6 +35,34 @@ Before opening a PR: tests pass, lint clean, formatted, changeset added if a pub
 A changeset is user-facing documentation that lands verbatim in a package CHANGELOG. Review its usefulness to someone upgrading, not only its presence and frontmatter. Follow [.changeset/README.md](.changeset/README.md) for the canonical writing and review standard, including proportional detail and migration guidance for default or breaking changes.
 
 When opening a PR with `gh`/the API, copy `.github/PULL_REQUEST_TEMPLATE.md` into the body and fill every section -- the GitHub UI injects it automatically but the CLI does not, and PRs missing it are auto-closed. Check the AI-generated code disclosure box and name the model. Tick checklist items only for what you actually verified; for test-only/docs/CI PRs, note why changeset/i18n/Discussion items are n/a.
+
+## Scripts and repository configuration
+
+Before adding or moving a script, changing repository configuration or editing a
+CI command, read [scripts/README.md](scripts/README.md) and
+[tests/README.md](tests/README.md) for ownership and generation rules. Keep
+operational scripts in the existing seven script folders. All maintained test
+sources belong in `tests/`: browser journeys in `e2e/`, shared test data in
+`fixtures/`, linters in `lints/` and automated checks in `checks/`. Place
+`*.test.mjs` files in `checks/`, grouped by their owner. Plugin-specific operational
+scripts remain with their plugin.
+
+Package test commands keep their original working directory and dependencies.
+Run `pnpm tests:prepare` after an installation with `--ignore-scripts`; it creates
+ignored dependency links for the central test suites. Preserve pinned upstream
+copies and runtime-exported fixture APIs.
+
+Astro subprocesses owned by a test runner must receive `ASTRO_DEV_BACKGROUND=1`
+so agent detection does not detach the server. Stop the owned process before
+removing its temporary database. Browser assertions must wait for hydration;
+use the existing `AdminPage.waitForHydration()` helper.
+
+Edit root command and workspace settings in
+`scripts/config/emdash-root.overlay.json`, then run `pnpm emdash:overlay` and
+`pnpm emdash:overlay:check`. Keep existing `pnpm` command names working. Configs
+and their schemas live together in `scripts/config/`; deployment outputs go to
+`infra/generated/`. Preserve existing migrations and regenerate signed catalogs
+through their generators when their sources move.
 
 ## Architecture
 
@@ -222,7 +250,7 @@ after(async () => {
 
 **One query beats two.** Use `LEFT JOIN` for parent+children. Batch with `WHERE id IN (...)`, chunked at `SQL_BATCH_SIZE` (from `utils/chunks.ts`) for D1's bind-parameter limit.
 
-**Query-count snapshots.** `pnpm query-counts` (see `scripts/query-counts.mjs`) records per-route query counts in `scripts/query-counts.snapshot.{sqlite,d1}.json`. CI auto-updates on PRs -- review the diff. Fewer is always right; more needs a conversation. An increase on a logged-out route is presumed wrong: the snapshot diff makes it visible, it does not make it acceptable.
+**Query-count snapshots.** `pnpm query-counts` (see `scripts/emdash/query-counts.mjs`) records per-route query counts in `scripts/emdash/query-counts.snapshot.{sqlite,d1}.json`. CI auto-updates on PRs -- review the diff. Fewer is always right; more needs a conversation. An increase on a logged-out route is presumed wrong: the snapshot diff makes it visible, it does not make it acceptable.
 
 # Admin UI
 
@@ -375,10 +403,10 @@ In libraries used in a Worker but not themselves Workers, install `@cloudflare/w
 
 # Testing
 
-- **Framework:** vitest. Tests in `packages/core/tests/`.
+- **Framework:** vitest. Tests in `tests/checks/packages/core/`.
 - **No mocks for the DB.** Node's built-in SQLite driver by default. PostgreSQL parity tests via a real `pg` connection with per-test schema isolation (set `EMDASH_TEST_PG` to a connection string for a role with `CREATEDB` to opt in).
-- **Utilities:** `tests/utils/test-db.ts` exposes `setupTestDatabase()`, `setupTestDatabaseWithCollections()`, `teardownTestDatabase()` for SQLite and `setupTestPostgresDatabase()` etc. for Postgres. Dialect-agnostic: `setupForDialect`, `setupForDialectWithCollections`, `teardownForDialect`, plus `describeEachDialect(name, fn)`. Use the dialect wrapper for query-builder code -- regressions tend to be dialect-specific.
-- **Structure:** `tests/unit/`, `tests/integration/`, `tests/e2e/` (Playwright). Test files mirror source structure. Each test gets a fresh DB.
+- **Utilities:** `tests/checks/packages/core/utils/test-db.ts` exposes `setupTestDatabase()`, `setupTestDatabaseWithCollections()`, `teardownTestDatabase()` for SQLite and `setupTestPostgresDatabase()` etc. for Postgres. Dialect-agnostic: `setupForDialect`, `setupForDialectWithCollections`, `teardownForDialect`, plus `describeEachDialect(name, fn)`. Use the dialect wrapper for query-builder code -- regressions tend to be dialect-specific.
+- **Structure:** Core unit and integration suites are under `tests/checks/packages/core/`; browser journeys are under `tests/e2e/`. Test files mirror their owner's functional structure. Each test gets a fresh DB.
 
 **A test must be able to fail on a real regression.** If it can't, it's not a test -- delete it. The common offenders:
 
@@ -410,3 +438,17 @@ In agent-browser:
 ```typescript
 await page.goto("http://localhost:4321/_emdash/api/setup/dev-bypass?redirect=/_emdash/admin");
 ```
+
+## Skills de l’agent
+
+### Suivi des tickets
+
+Les tickets sont les issues GitHub de `mabzadev/superboard`. Avant toute opération sur un ticket, lisez `docs/agents/issue-tracker.md`.
+
+### Étiquettes de triage
+
+Avant de trier ou d’étiqueter un ticket, lisez le mapping des cinq rôles dans `docs/agents/triage-labels.md`.
+
+### Documentation du domaine
+
+Le dépôt utilise des contextes multiples. Avant d’explorer le code ou de proposer une décision architecturale, lisez `docs/agents/domain.md`.

@@ -1,0 +1,297 @@
+import "../../fixtures/cloudflare/targets.mjs";
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+	buildSecretAssignments,
+	buildSecretBundlePlan,
+	buildSecretUploadReceipt,
+	secretBundleConfirmation,
+	secretVersionTag,
+	versionedSecretBundleArgs,
+} from "../../../scripts/cloudflare/secret-bundle.mjs";
+import { loadTarget } from "../../../scripts/cloudflare/target.mjs";
+
+test("secret bundle plan expands shared members without values", async () => {
+	const { target } = await loadTarget("reference-production");
+	const plan = buildSecretBundlePlan({
+		target,
+		targetName: "reference-production",
+		environment: "production",
+		contractIds: ["email-internal-token", "files-internal-token"],
+	});
+	assert.equal(plan.valuesIncluded, false);
+	assert.equal(plan.blockers.length, 0);
+	assert.equal(plan.confirmation, secretBundleConfirmation(plan));
+	assert.deepEqual(
+		plan.contracts[0].members.map(({ service, name }) => ({ service, name })),
+		[
+			{ service: "api", name: "EMAIL_INTERNAL_TOKEN" },
+			{ service: "email", name: "EMAIL_INTERNAL_TOKEN" },
+			{ service: "identity", name: "EMAIL_INTERNAL_TOKEN" },
+			{ service: "support", name: "EMAIL_INTERNAL_TOKEN" },
+			{ service: "marketing", name: "EMAIL_INTERNAL_TOKEN" },
+		],
+	);
+});
+
+test("shared contract input assigns the exact same value to every Worker", async () => {
+	const { target } = await loadTarget("reference-production");
+	const plan = buildSecretBundlePlan({
+		target,
+		targetName: "reference-production",
+		environment: "production",
+		contractIds: ["email-internal-token"],
+	});
+	const assignments = buildSecretAssignments(plan, {
+		contracts: {
+			"email-internal-token": { value: "coordinated-test-value" },
+		},
+	});
+	assert.deepEqual(assignments, {
+		api: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
+		email: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
+		identity: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
+		support: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
+		marketing: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
+	});
+});
+
+test("keyring alternatives require one allowed binding for all members", async () => {
+	const { target } = await loadTarget("reference-production");
+	const plan = buildSecretBundlePlan({
+		target,
+		targetName: "reference-production",
+		environment: "production",
+		contractIds: ["billing-credential-keyring"],
+	});
+	const assignments = buildSecretAssignments(plan, {
+		contracts: {
+			"billing-credential-keyring": {
+				name: "STORE_CREDENTIALS_ENCRYPTION_KEYS",
+				value: '{"v2":"key-material"}',
+			},
+		},
+	});
+	assert.deepEqual(Object.keys(assignments), ["api", "billing"]);
+	assert.equal(
+		assignments.api.STORE_CREDENTIALS_ENCRYPTION_KEYS,
+		assignments.billing.STORE_CREDENTIALS_ENCRYPTION_KEYS,
+	);
+	assert.throws(
+		() =>
+			buildSecretAssignments(plan, {
+				contracts: {
+					"billing-credential-keyring": {
+						name: "UNDECLARED_KEY",
+						value: "test-value",
+					},
+				},
+			}),
+		/allowed binding/u,
+	);
+});
+
+test("OAuth and external-peer contracts fail closed", async () => {
+	const { target } = await loadTarget("reference-production");
+	assert.throws(
+		() =>
+			buildSecretBundlePlan({
+				target,
+				targetName: "reference-production",
+				environment: "production",
+				contractIds: ["dashboard-client-secret"],
+			}),
+		/Unknown secret contract/u,
+	);
+
+	const webhook = buildSecretBundlePlan({
+		target,
+		targetName: "reference-production",
+		environment: "production",
+		contractIds: ["entitlement-webhook-secret"],
+	});
+	assert.equal(webhook.blockers[0].id, "entitlement-webhook-secret.external-peers");
+	const confirmed = buildSecretBundlePlan({
+		target,
+		targetName: "reference-production",
+		environment: "production",
+		contractIds: ["entitlement-webhook-secret"],
+		externalPeersReady: true,
+	});
+	assert.equal(confirmed.blockers.length, 0);
+	assert.notEqual(confirmed.confirmation, webhook.confirmation);
+
+	const gateway = buildSecretBundlePlan({
+		target,
+		targetName: "reference-production",
+		environment: "production",
+		contractIds: ["managed-worker-gateway-callback-token"],
+	});
+	assert.equal(gateway.blockers[0].id, "managed-worker-gateway-callback-token.external-peers");
+	const gatewayConfirmed = buildSecretBundlePlan({
+		target,
+		targetName: "reference-production",
+		environment: "production",
+		contractIds: ["managed-worker-gateway-callback-token"],
+		externalPeersReady: true,
+	});
+	assert.deepEqual(gatewayConfirmed.blockers, []);
+	assert.deepEqual(
+		buildSecretAssignments(gatewayConfirmed, {
+			contracts: {
+				"managed-worker-gateway-callback-token": {
+					value: "coordinated-gateway-token",
+				},
+			},
+		}),
+		{
+			"managed-vocals-orchestrator": {
+				GATEWAY_INTERNAL_TOKEN: "coordinated-gateway-token",
+			},
+			"managed-medias-orchestrator": {
+				GATEWAY_INTERNAL_TOKEN: "coordinated-gateway-token",
+			},
+		},
+	);
+});
+
+test("bundle input is exact and Wrangler upload creates inactive versions", async () => {
+	const { target } = await loadTarget("reference-production");
+	const plan = buildSecretBundlePlan({
+		target,
+		targetName: "reference-production",
+		environment: "production",
+		contractIds: ["api-push-process-key"],
+	});
+	assert.throws(
+		() =>
+			buildSecretAssignments(plan, {
+				contracts: {
+					"api-push-process-key": { value: "test-value" },
+					extra: { value: "test-value" },
+				},
+			}),
+		/exactly the planned contracts/u,
+	);
+	const tag = secretVersionTag(plan, "api");
+	assert.match(tag, /^superboard-secret-[a-f0-9]{12}-api$/u);
+	assert.deepEqual(
+		versionedSecretBundleArgs("/tmp/api.jsonc", "reference-production", "production", "api", tag),
+		[
+			"wrangler",
+			"versions",
+			"secret",
+			"bulk",
+			"--config",
+			"/tmp/api.jsonc",
+			"--message",
+			"SuperBoard coordinated secrets for reference-production/production/api",
+			"--tag",
+			tag,
+		],
+	);
+	assert.deepEqual(
+		buildSecretUploadReceipt(plan, [
+			{
+				service: "api",
+				worker: "superboard-api",
+				names: ["PUSH_PROCESS_KEY"],
+				strategy: "inactive-version",
+				versionTag: tag,
+			},
+		]),
+		{
+			schemaVersion: 1,
+			mode: "inactive-secret-bundle-upload",
+			target: "reference-production",
+			environment: "production",
+			valuesIncluded: false,
+			planConfirmation: plan.confirmation,
+			externalPeersReady: false,
+			overlap: false,
+			contracts: ["api-push-process-key"],
+			services: [
+				{
+					service: "api",
+					worker: "superboard-api",
+					names: ["PUSH_PROCESS_KEY"],
+					strategy: "inactive-version",
+					versionTag: tag,
+				},
+			],
+			nextAction:
+				"Promote only in a separately approved release window; inactive versions do not change traffic.",
+		},
+	);
+});
+
+test("overlap assigns the old token only to accepting consumers", async () => {
+	const { target } = await loadTarget("reference-production");
+	const plan = buildSecretBundlePlan({
+		target,
+		targetName: "reference-production",
+		environment: "production",
+		contractIds: ["email-internal-token"],
+		overlap: true,
+	});
+	assert.equal(plan.blockers.length, 0);
+	const assignments = buildSecretAssignments(plan, {
+		contracts: {
+			"email-internal-token": {
+				value: "new-email-token",
+				previousValue: "old-email-token",
+			},
+		},
+	});
+	assert.deepEqual(assignments, {
+		api: { EMAIL_INTERNAL_TOKEN: "new-email-token" },
+		email: {
+			EMAIL_INTERNAL_TOKEN: "new-email-token",
+			EMAIL_INTERNAL_TOKEN_PREVIOUS: "old-email-token",
+		},
+		identity: { EMAIL_INTERNAL_TOKEN: "new-email-token" },
+		support: { EMAIL_INTERNAL_TOKEN: "new-email-token" },
+		marketing: { EMAIL_INTERNAL_TOKEN: "new-email-token" },
+	});
+	assert.throws(
+		() =>
+			buildSecretAssignments(plan, {
+				contracts: {
+					"email-internal-token": {
+						value: "same-token",
+						previousValue: "same-token",
+					},
+				},
+			}),
+		/must differ/u,
+	);
+});
+
+test("Flows cutover adds only its dedicated API pair without assigning platform email bindings", async () => {
+	const { target } = await loadTarget("mbza-development");
+	const internalPlan = buildSecretBundlePlan({
+		target,
+		targetName: "mbza-development",
+		environment: "development",
+		contractIds: ["flows-internal-token"],
+		overlap: true,
+	});
+	assert.deepEqual(
+		buildSecretAssignments(internalPlan, {
+			contracts: {
+				"flows-internal-token": {
+					value: "new-flows-token",
+					previousValue: "unchanged-platform-module-token",
+				},
+			},
+		}),
+		{
+			api: { FLOWS_INTERNAL_TOKEN: "new-flows-token" },
+			flows: {
+				INTERNAL_API_TOKEN: "new-flows-token",
+				INTERNAL_API_TOKEN_PREVIOUS: "unchanged-platform-module-token",
+			},
+		},
+	);
+});

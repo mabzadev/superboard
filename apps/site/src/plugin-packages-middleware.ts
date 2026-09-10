@@ -4,7 +4,7 @@ import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 import type { MiddlewareHandler } from "astro";
 
 import { resolveLocale } from "../../../packages/admin/src/locales/config.js";
-import { createConfiguredSuperBoardPlugin } from "../../../packages/supbrd-runtime-plugins/src/runtime.js";
+import { createConfiguredSuperBoardPlugin } from "./lib/configured-plugin.js";
 import {
 	runManagedPluginLifecycleAction,
 	recoverExpiredManagedPluginOperation,

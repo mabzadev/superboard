@@ -7,14 +7,10 @@ import type {
 	RendererDescriptor,
 } from "@superboard/supbrd-core";
 
-import compatibility from "../../../../config/superboard-plugin-compatibility.json";
+import compatibility from "../../../../scripts/config/superboard-plugin-compatibility.json";
 
 const discoveredModules = import.meta.glob<{ nativeFrontPlugin: NativeFrontPluginModule }>(
-	[
-		"../front-plugins/*.ts",
-		"../../../../packages/supbrd-plug-user/src/native-front.ts",
-		"../../../../packages/supbrd-runtime-plugins/src/front/plugins/*.ts",
-	],
+	["../front-plugins/*.ts", "../../../../packages/plugins/supbrd-*/src/front-*.ts"],
 	{ eager: true },
 );
 

@@ -161,7 +161,7 @@ The configured application Identity service remains the only authentication
 authority; during the VocoStar transition this can still be the historical
 gateway. The library never issues an application token. It exchanges the existing
 access token for a short-lived ES256 SuperBoard identity JWT through
-`POST /auth/opengrow-token`. A purchase cannot start when this exchange fails.
+`POST /auth/superboard-token`. A purchase cannot start when this exchange fails.
 The short-lived identity JWT is reused until shortly before expiration and
 concurrent refreshes are deduplicated. Store transactions received during SDK
 startup are buffered, then processed serially with outbox recovery.

@@ -138,11 +138,11 @@ jobs:
           test "$(git rev-parse HEAD)" = "$CATALOGUE_SHA"
           git fetch --no-tags origin "refs/heads/$DEPLOYMENT_BRANCH"
           git merge-base --is-ancestor "$CATALOGUE_SHA" FETCH_HEAD
-          node scripts/sdk-catalog.mjs check
+          node scripts/clients/sdk-catalog.mjs check
           active_libraries="$(node -p "require('./config/sdk-libraries.json').libraries.filter((item) => item.lifecycle === 'active').map((item) => item.id).join(' ')")"
           test "$active_libraries" = "flutter flutterflow"
           for library in $active_libraries; do
-            tag="$(node scripts/sdk-catalog.mjs release-tag --library "$library")"
+            tag="$(node scripts/clients/sdk-catalog.mjs release-tag --library "$library")"
             git fetch --force origin "refs/tags/$tag:refs/tags/$tag"
             git merge-base --is-ancestor "refs/tags/$tag^{}" "$CATALOGUE_SHA"
             gh api "repos/${{ steps.metadata.outputs.platform_repository }}/releases/tags/$tag" >/dev/null
@@ -413,8 +413,8 @@ jobs:
           cache: true
       - name: Require exact tested revisions and reference project identity
         env:
-          SUPERBOARD_PROJECT_KEY: ${{ secrets.SUPERBOARD_PROJECT_KEY || secrets.OPENGROW_PROJECT_KEY }}
-          SUPERBOARD_PROJECT_ID: ${{ secrets.SUPERBOARD_PROJECT_ID || secrets.OPENGROW_PROJECT_ID }}
+          SUPERBOARD_PROJECT_KEY: ${{ secrets.SUPERBOARD_PROJECT_KEY || secrets.SUPERBOARD_PROJECT_KEY }}
+          SUPERBOARD_PROJECT_ID: ${{ secrets.SUPERBOARD_PROJECT_ID || secrets.SUPERBOARD_PROJECT_ID }}
         run: |
           [[ "$SUPERBOARD_PLATFORM_REVISION" =~ ^[0-9a-f]{40}$ ]]
           [[ "$SUPERBOARD_REFERENCE_REVISION" =~ ^[0-9a-f]{40}$ ]]
@@ -426,8 +426,8 @@ jobs:
       - run: npm ci
       - name: Build live MBZA acceptance artifact
         env:
-          SUPERBOARD_PROJECT_KEY: ${{ secrets.SUPERBOARD_PROJECT_KEY || secrets.OPENGROW_PROJECT_KEY }}
-          SUPERBOARD_PROJECT_ID: ${{ secrets.SUPERBOARD_PROJECT_ID || secrets.OPENGROW_PROJECT_ID }}
+          SUPERBOARD_PROJECT_KEY: ${{ secrets.SUPERBOARD_PROJECT_KEY || secrets.SUPERBOARD_PROJECT_KEY }}
+          SUPERBOARD_PROJECT_ID: ${{ secrets.SUPERBOARD_PROJECT_ID || secrets.SUPERBOARD_PROJECT_ID }}
         run: npm run flutter:web:live
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:

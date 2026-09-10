@@ -220,10 +220,23 @@ export async function sendPluginTaskCommand(
 	const { service, url, token } = pluginTaskAuthority(env, command.plugin_id);
 	const unsigned = new Request(url, { method: "POST", body: JSON.stringify(command) });
 	const headers = await signPluginTaskRequest(unsigned, token);
-	const response = await service.fetch(
-		new Request(unsigned, { headers, signal: AbortSignal.timeout(10000) }),
-	);
-	const payload = await readJsonObjectLimited(response, 16384);
+	let response: Response;
+	try {
+		response = await service.fetch(
+			new Request(unsigned, { headers, signal: AbortSignal.timeout(10000) }),
+		);
+	} catch {
+		throw new PluginTaskUnavailable("PLUGIN_TASK_AUTHORITY_UNAVAILABLE", 503);
+	}
+	let payload: Record<string, unknown>;
+	try {
+		payload = await readJsonObjectLimited(response, 16384);
+	} catch {
+		throw new PluginTaskUnavailable(
+			"PLUGIN_TASK_AUTHORITY_UNAVAILABLE",
+			response.status >= 400 ? response.status : 502,
+		);
+	}
 	if (!response.ok) {
 		const code =
 			payload.error &&
@@ -234,6 +247,18 @@ export async function sendPluginTaskCommand(
 				: "PLUGIN_TASK_AUTHORITY_UNAVAILABLE";
 		throw new PluginTaskUnavailable(code, response.status);
 	}
+	const valid =
+		command.action === "wakeups"
+			? Array.isArray(payload.waiters)
+			: command.action === "wake_done"
+				? payload.notified === true
+				: payload.lease_id === command.lease_id &&
+					(command.action === "finish"
+						? payload.state === "finished"
+						: payload.state === "running" &&
+							typeof payload.deadline_at === "string" &&
+							Number.isFinite(Date.parse(payload.deadline_at)));
+	if (!valid) throw new PluginTaskUnavailable("PLUGIN_TASK_AUTHORITY_UNAVAILABLE", 502);
 	return payload;
 }
 

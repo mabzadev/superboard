@@ -15,7 +15,7 @@ module.exports = [
     },
     output: {
       path: path.resolve(__dirname, "dist"),
-      filename: "opengrow.js",
+      filename: "superboard.js",
       library: {
         type: "module",
       },
@@ -56,9 +56,9 @@ module.exports = [
     entry: "./src/index.js",
     output: {
       path: path.resolve(__dirname, "dist"),
-      filename: "opengrow.umd.cjs",
+      filename: "superboard.umd.cjs",
       library: {
-        name: "OpenGrow",
+        name: "SuperBoard",
         type: "umd",
         export: "default",
       },

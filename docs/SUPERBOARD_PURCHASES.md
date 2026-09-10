@@ -10,7 +10,7 @@ Never add Apple `.p8` files, Store service-account JSON, or signing private keys
 
 ## Identity
 
-The existing `api-auth-gateway` remains the only application authentication authority. After application authentication, FlutterFlow exchanges the existing access token through `POST /auth/opengrow-token`. SuperBoard accepts only the resulting short-lived ES256 token with the configured issuer, `opengrow` audience, and opaque user subject.
+The existing `api-auth-gateway` remains the only application authentication authority. After application authentication, FlutterFlow exchanges the existing access token through `POST /auth/superboard-token`. SuperBoard accepts only the resulting short-lived ES256 token with the configured issuer, `superboard` audience, and opaque user subject.
 
 No second application login, account, or session is created.
 

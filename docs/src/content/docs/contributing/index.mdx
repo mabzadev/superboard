@@ -22,16 +22,16 @@ For the full contributor reference — repo layout, architecture, code conventio
    pnpm build    # required before first run
    ```
 
-2. **Start the demo**
+2. **Start the blog template**
 
    ```bash
-   cd demos/simple
+   cd templates/blog
    pnpm dev
    ```
 
    The setup wizard runs automatically on first launch — it creates the database, runs migrations, and prompts you to create an admin account.
 
-   To populate with sample content: `pnpm seed`
+   Sample content is seeded automatically on the first request to an empty database.
 
 3. **Open the admin**
 
@@ -49,14 +49,14 @@ For the full contributor reference — repo layout, architecture, code conventio
 
 ### Watch Mode
 
-For iterating on core packages alongside the demo, run two terminals:
+For iterating on core packages alongside the blog template, run two terminals:
 
 ```bash
 # Terminal 1 — rebuild packages/core on change
 cd packages/core && pnpm dev
 
-# Terminal 2 — run the demo
-cd demos/simple && pnpm dev
+# Terminal 2 — run the blog template
+cd templates/blog && pnpm dev
 ```
 
 ### Checks

@@ -11,7 +11,7 @@
       "3cd0e421-eb91-425e-994e-b522e617216f"
     ],
     "description": "Created linked product/package/offering using real forms; edited and archived the offering, verified filters and persisted relationships while the product remains active.",
-    "source_test": "apps/site/e2e/tests/revenue/revenue-page.spec.ts",
+    "source_test": "tests/e2e/site/revenue/revenue-page.spec.ts",
     "captured_at": "2026-09-07T10:46:49.610Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-products-browser.json"
   }

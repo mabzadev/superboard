@@ -5,5 +5,5 @@
 		"verbatimModuleSyntax": true,
 		"noEmit": true
 	},
-	"include": ["src/**/*", "tests/**/*"]
+	"include": ["src/**/*", "../../tests/checks/packages/atproto-test-utils/**/*"]
 }

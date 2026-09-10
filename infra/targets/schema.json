@@ -1,0 +1,1609 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://superboard.local/infra/targets/schema.json",
+	"title": "SuperBoard deployment target",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"schemaVersion",
+		"target",
+		"accountAlias",
+		"resourceIdentity",
+		"workersDevSubdomain",
+		"zoneName",
+		"registrationMode",
+		"ssoEnabled",
+		"features",
+		"applicationIdentity",
+		"filePolicy",
+		"mail",
+		"operator",
+		"domains",
+		"retiredDomains",
+		"workers",
+		"authGateway",
+		"siteRuntime",
+		"environments"
+	],
+	"properties": {
+		"$schema": {
+			"type": "string"
+		},
+		"schemaVersion": {
+			"const": 17
+		},
+		"target": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9-]{1,30}$"
+		},
+		"accountAlias": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9-]{1,30}$"
+		},
+		"resourceIdentity": {
+			"$ref": "#/$defs/resourceIdentity"
+		},
+		"workersDevSubdomain": {
+			"type": "string",
+			"pattern": "^[a-z0-9-]+$"
+		},
+		"zoneName": {
+			"$ref": "#/$defs/hostname"
+		},
+		"registrationMode": {
+			"enum": ["allowlist", "public"]
+		},
+		"ssoEnabled": {
+			"type": "boolean"
+		},
+		"features": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"billing",
+				"messaging",
+				"app",
+				"products",
+				"paywalls",
+				"dynamic-links",
+				"support",
+				"analytics",
+				"marketing",
+				"onboardings",
+				"flows"
+			],
+			"properties": {
+				"billing": {
+					"type": "boolean"
+				},
+				"messaging": {
+					"type": "boolean"
+				},
+				"app": {
+					"type": "boolean"
+				},
+				"products": {
+					"type": "boolean"
+				},
+				"paywalls": {
+					"type": "boolean"
+				},
+				"dynamic-links": {
+					"type": "boolean"
+				},
+				"support": {
+					"type": "boolean"
+				},
+				"analytics": {
+					"type": "boolean"
+				},
+				"marketing": {
+					"type": "boolean"
+				},
+				"onboardings": {
+					"type": "boolean"
+				},
+				"flows": {
+					"type": "boolean"
+				}
+			}
+		},
+		"applicationIdentity": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"registrationMode",
+				"applicationAudience",
+				"googleAudiences",
+				"appleAudiences",
+				"webOrigins"
+			],
+			"properties": {
+				"registrationMode": {
+					"enum": ["open", "closed"]
+				},
+				"applicationAudience": {
+					"type": "string",
+					"pattern": "^[a-z][a-z0-9.:-]{2,254}$"
+				},
+				"googleAudiences": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"minLength": 3,
+						"maxLength": 255
+					},
+					"uniqueItems": true
+				},
+				"appleAudiences": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"minLength": 3,
+						"maxLength": 255
+					},
+					"uniqueItems": true
+				},
+				"webOrigins": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"pattern": "^https://[A-Za-z0-9.-]+(?::[0-9]{1,5})?$"
+					},
+					"uniqueItems": true
+				}
+			}
+		},
+		"filePolicy": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["maxBytes", "allowedContentTypes", "downloadTicketTtlSeconds"],
+			"properties": {
+				"maxBytes": {
+					"type": "integer",
+					"minimum": 1,
+					"maximum": 104857600
+				},
+				"allowedContentTypes": {
+					"type": "array",
+					"minItems": 1,
+					"maxItems": 100,
+					"uniqueItems": true,
+					"items": {
+						"type": "string",
+						"pattern": "^[a-z0-9!#$&^_.+-]+/(?:\\*|[a-z0-9!#$&^_.+-]+)$"
+					}
+				},
+				"downloadTicketTtlSeconds": {
+					"type": "integer",
+					"minimum": 60,
+					"maximum": 3600
+				}
+			}
+		},
+		"mail": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["transport", "provider", "fromName", "fromAddress"],
+			"properties": {
+				"transport": {
+					"enum": ["capture", "smtp"]
+				},
+				"provider": {
+					"enum": ["smtp", "aws-ses"]
+				},
+				"awsRegion": {
+					"type": "string",
+					"pattern": "^[a-z]{2}(-gov)?-[a-z]+-[0-9]$"
+				},
+				"configurationSet": {
+					"type": "string",
+					"pattern": "^[A-Za-z0-9_-]{1,64}$"
+				},
+				"fromName": {
+					"type": "string",
+					"minLength": 1
+				},
+				"fromAddress": {
+					"type": "string",
+					"pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+				},
+				"replyToAddress": {
+					"type": "string",
+					"pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+				}
+			},
+			"allOf": [
+				{
+					"if": {
+						"properties": {
+							"provider": {
+								"const": "aws-ses"
+							}
+						}
+					},
+					"then": {
+						"required": ["awsRegion", "configurationSet"]
+					}
+				}
+			]
+		},
+		"domains": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["api", "auth", "shortlinks", "sdk", "site", "files", "mcp"],
+			"properties": {
+				"api": {
+					"$ref": "#/$defs/hostname"
+				},
+				"auth": {
+					"$ref": "#/$defs/hostname"
+				},
+				"shortlinks": {
+					"$ref": "#/$defs/hostname"
+				},
+				"sdk": {
+					"$ref": "#/$defs/hostname"
+				},
+				"dashboard": {
+					"$ref": "#/$defs/hostname"
+				},
+				"site": {
+					"$ref": "#/$defs/hostname"
+				},
+				"files": {
+					"$ref": "#/$defs/hostname"
+				},
+				"mcp": {
+					"$ref": "#/$defs/hostname"
+				},
+				"mailPreview": {
+					"$ref": "#/$defs/hostname"
+				},
+				"messaging": {
+					"$ref": "#/$defs/hostname"
+				}
+			}
+		},
+		"retiredDomains": {
+			"type": "array",
+			"maxItems": 20,
+			"uniqueItems": true,
+			"items": {
+				"$ref": "#/$defs/retiredDomain"
+			}
+		},
+		"workers": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["api", "site", "email", "identity", "files", "observability", "mcp"],
+			"properties": {
+				"api": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"site": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"dashboard": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"billing": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"messaging": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"email": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"identity": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"files": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"observability": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"mcp": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"custom": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"app": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"products": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"paywalls": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"dynamic-links": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"support": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"analytics": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"marketing": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"onboardings": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"flows": {
+					"$ref": "#/$defs/workerNames"
+				}
+			}
+		},
+		"oauth": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["dashboardClientId"],
+			"properties": {
+				"dashboardClientId": {
+					"type": "string",
+					"minLength": 3
+				}
+			}
+		},
+		"authGateway": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["issuer", "audience", "jwksUrl"],
+			"properties": {
+				"issuer": {
+					"type": "string",
+					"pattern": "^https://[^\\s]+$"
+				},
+				"audience": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"jwksUrl": {
+					"type": "string",
+					"pattern": "^https://[^\\s]+$"
+				}
+			}
+		},
+		"siteRuntime": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["workerLoaderBinding", "crons", "observability"],
+			"properties": {
+				"workerLoaderBinding": {
+					"const": "LOADER"
+				},
+				"crons": {
+					"type": "array",
+					"minItems": 1,
+					"uniqueItems": true,
+					"items": {
+						"type": "string",
+						"minLength": 5,
+						"maxLength": 100
+					}
+				},
+				"observability": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["enabled", "logs", "traces"],
+					"properties": {
+						"enabled": {
+							"const": true
+						},
+						"logs": {
+							"type": "object",
+							"additionalProperties": false,
+							"required": ["enabled", "head_sampling_rate", "invocation_logs"],
+							"properties": {
+								"enabled": {
+									"const": true
+								},
+								"head_sampling_rate": {
+									"type": "number",
+									"minimum": 0,
+									"maximum": 1
+								},
+								"invocation_logs": {
+									"const": true
+								}
+							}
+						},
+						"traces": {
+							"type": "object",
+							"additionalProperties": false,
+							"required": ["enabled", "head_sampling_rate"],
+							"properties": {
+								"enabled": {
+									"const": true
+								},
+								"head_sampling_rate": {
+									"type": "number",
+									"minimum": 0,
+									"maximum": 1
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"publicSurfaceMonitors": {
+			"type": "array",
+			"maxItems": 20,
+			"uniqueItems": true,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["id", "url", "description"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"pattern": "^[a-z][a-z0-9-]{1,50}$"
+					},
+					"url": {
+						"type": "string",
+						"pattern": "^https://[^\\s]+$"
+					},
+					"healthUrl": {
+						"type": "string",
+						"pattern": "^https://[^\\s]+$"
+					},
+					"description": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 300
+					}
+				}
+			}
+		},
+		"operator": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["docsUrl", "email"],
+			"properties": {
+				"docsUrl": {
+					"type": "string",
+					"pattern": "^https://[^\\s]+$"
+				},
+				"email": {
+					"type": "string",
+					"pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+				},
+				"supportEmail": {
+					"type": "string",
+					"pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+				}
+			}
+		},
+		"customWorker": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["source", "packagePath", "description", "capabilities", "secrets"],
+			"properties": {
+				"source": {
+					"type": "string",
+					"pattern": "^apps/[a-z0-9-]+/worker/src/index\\.ts$"
+				},
+				"packagePath": {
+					"type": "string",
+					"pattern": "^apps/[a-z0-9-]+/worker$"
+				},
+				"description": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 500
+				},
+				"capabilities": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"pattern": "^[a-z][a-z0-9.-]+$"
+					},
+					"uniqueItems": true
+				},
+				"secrets": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"pattern": "^[A-Z][A-Z0-9_]+$"
+					},
+					"contains": {
+						"const": "CUSTOM_WORKER_TOKEN"
+					},
+					"uniqueItems": true
+				},
+				"vars": {
+					"type": "object",
+					"propertyNames": {
+						"pattern": "^[A-Z][A-Z0-9_]+$"
+					},
+					"additionalProperties": {
+						"type": "string",
+						"maxLength": 2048
+					}
+				},
+				"crons": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"pattern": "^\\S+(?:\\s+\\S+){4}$",
+						"maxLength": 100
+					},
+					"maxItems": 3,
+					"uniqueItems": true
+				},
+				"d1Binding": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["binding", "migrationsDir"],
+					"properties": {
+						"binding": {
+							"type": "string",
+							"pattern": "^[A-Z][A-Z0-9_]+$"
+						},
+						"migrationsDir": {
+							"type": "string",
+							"pattern": "^apps/[a-z0-9-]+/worker/migrations$"
+						}
+					}
+				},
+				"serviceBindings": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["binding", "workers"],
+						"properties": {
+							"binding": {
+								"type": "string",
+								"pattern": "^[A-Z][A-Z0-9_]+$"
+							},
+							"workers": {
+								"$ref": "#/$defs/workerNames"
+							}
+						}
+					}
+				},
+				"managedWorkers": {
+					"type": "array",
+					"maxItems": 20,
+					"uniqueItems": true,
+					"items": {
+						"$ref": "#/$defs/managedWorker"
+					}
+				},
+				"runtimeBridge": {
+					"$ref": "#/$defs/runtimeBridge"
+				},
+				"pluginId": {
+					"type": "string",
+					"pattern": "^supbrd-plugmod-[a-z0-9-]+$"
+				}
+			}
+		},
+		"productionCutover": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["application", "snapshot", "clientReceipt"],
+			"properties": {
+				"application": {
+					"type": "string",
+					"pattern": "^[a-z0-9][a-z0-9-]*$"
+				},
+				"snapshot": {
+					"type": "string",
+					"pattern": "^scripts/config/flutterflow-sources/[a-z0-9-]+\\.json$"
+				},
+				"clientReceipt": {
+					"type": "string",
+					"pattern": "^scripts/config/flutterflow-releases/[a-z0-9-]+\\.json$"
+				}
+			}
+		},
+		"environments": {
+			"type": "object",
+			"additionalProperties": false,
+			"minProperties": 1,
+			"properties": {
+				"local": {
+					"$ref": "#/$defs/environment"
+				},
+				"development": {
+					"$ref": "#/$defs/environment"
+				},
+				"production": {
+					"$ref": "#/$defs/environment"
+				}
+			}
+		},
+		"displayName": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 100
+		},
+		"consoleEnvironments": {
+			"type": "array",
+			"maxItems": 99,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["id", "application", "label", "environment", "apiUrl", "consoleUrl"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+					},
+					"application": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 100
+					},
+					"label": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 100
+					},
+					"environment": {
+						"type": "string",
+						"enum": ["local", "development", "production"]
+					},
+					"apiUrl": {
+						"type": "string",
+						"pattern": "^https://[^/?#@]+/?$"
+					},
+					"consoleUrl": {
+						"type": "string",
+						"pattern": "^https://[^/?#@]+/?$"
+					}
+				}
+			}
+		},
+		"deploymentProfile": {
+			"type": "string",
+			"enum": ["legacy", "consolidated"]
+		},
+		"domainAliases": {
+			"type": "array",
+			"maxItems": 32,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["surface", "hostname"],
+				"properties": {
+					"surface": {
+						"enum": ["console", "mcp", "shortlinks", "mailPreview"]
+					},
+					"hostname": {
+						"$ref": "#/$defs/hostname"
+					},
+					"reason": {
+						"type": "string",
+						"maxLength": 300
+					}
+				}
+			}
+		}
+	},
+	"allOf": [
+		{
+			"if": {
+				"required": ["environments"],
+				"properties": {
+					"environments": {
+						"required": ["production"],
+						"properties": {
+							"production": {
+								"required": ["publicRouting"],
+								"properties": {
+									"publicRouting": {
+										"const": "active"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"then": {
+				"required": ["productionCutover"]
+			}
+		}
+	],
+	"$defs": {
+		"resourceIdentity": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["logicalName", "physicalName", "previousNames", "migrationStrategy"],
+			"properties": {
+				"logicalName": {
+					"type": "string",
+					"pattern": "^[a-z][a-z0-9-]{1,62}$"
+				},
+				"physicalName": {
+					"type": "string",
+					"pattern": "^[a-z][a-z0-9-]{1,62}$"
+				},
+				"previousNames": {
+					"type": "array",
+					"maxItems": 10,
+					"uniqueItems": true,
+					"items": {
+						"type": "string",
+						"pattern": "^[a-z][a-z0-9-]{1,62}$"
+					}
+				},
+				"migrationStrategy": {
+					"enum": ["canonical", "retain-physical-name"]
+				}
+			}
+		},
+		"retiredDomain": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["hostname", "formerSurface", "policy"],
+			"properties": {
+				"hostname": {
+					"$ref": "#/$defs/hostname"
+				},
+				"formerSurface": {
+					"type": "string",
+					"pattern": "^[a-z][a-z0-9-]{1,50}$"
+				},
+				"policy": {
+					"const": "must-be-unassigned"
+				},
+				"reason": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 300
+				}
+			}
+		},
+		"hostname": {
+			"type": "string",
+			"pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+		},
+		"workerNames": {
+			"type": "object",
+			"additionalProperties": false,
+			"minProperties": 1,
+			"properties": {
+				"local": {
+					"type": "string",
+					"pattern": "^[a-z0-9-]+$"
+				},
+				"development": {
+					"type": "string",
+					"pattern": "^[a-z0-9-]+$"
+				},
+				"production": {
+					"type": "string",
+					"pattern": "^[a-z0-9-]+$"
+				}
+			}
+		},
+		"managedWorker": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"id",
+				"source",
+				"packagePath",
+				"description",
+				"workers",
+				"secrets",
+				"r2Resource",
+				"d1Binding",
+				"workflow",
+				"containers",
+				"durableObjects",
+				"migrations"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"pattern": "^[a-z][a-z0-9-]{1,21}$"
+				},
+				"source": {
+					"type": "string",
+					"pattern": "^apps/[a-z0-9-]+/worker/orchestrators/[a-z0-9-]+/src/index\\.ts$"
+				},
+				"packagePath": {
+					"type": "string",
+					"pattern": "^apps/[a-z0-9-]+/worker/orchestrators/[a-z0-9-]+$"
+				},
+				"description": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 500
+				},
+				"workers": {
+					"$ref": "#/$defs/workerNames"
+				},
+				"secrets": {
+					"type": "array",
+					"minItems": 1,
+					"items": {
+						"type": "string",
+						"pattern": "^[A-Z][A-Z0-9_]+$"
+					},
+					"uniqueItems": true
+				},
+				"vars": {
+					"type": "object",
+					"propertyNames": {
+						"pattern": "^[A-Z][A-Z0-9_]+$"
+					},
+					"additionalProperties": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 2048
+					}
+				},
+				"r2Resource": {
+					"enum": ["r2", "customR2"]
+				},
+				"watermarkPath": {
+					"type": "string",
+					"pattern": "^/[A-Za-z0-9._/-]+$",
+					"maxLength": 255
+				},
+				"d1Binding": {
+					"type": "string",
+					"pattern": "^[A-Z][A-Z0-9_]+$"
+				},
+				"workflow": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["binding", "className", "names"],
+					"properties": {
+						"binding": {
+							"type": "string",
+							"pattern": "^[A-Z][A-Z0-9_]+$"
+						},
+						"className": {
+							"type": "string",
+							"pattern": "^[A-Z][A-Za-z0-9]+$"
+						},
+						"names": {
+							"$ref": "#/$defs/workerNames"
+						}
+					}
+				},
+				"containers": {
+					"type": "array",
+					"minItems": 1,
+					"maxItems": 4,
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["binding", "className", "dockerfile", "maxInstances", "instanceType"],
+						"properties": {
+							"binding": {
+								"type": "string",
+								"pattern": "^[A-Z][A-Z0-9_]+$"
+							},
+							"className": {
+								"type": "string",
+								"pattern": "^[A-Z][A-Za-z0-9]+$"
+							},
+							"dockerfile": {
+								"type": "string",
+								"pattern": "^apps/[a-z0-9-]+/worker/orchestrators/[a-z0-9-]+/container/Dockerfile$"
+							},
+							"maxInstances": {
+								"type": "integer",
+								"minimum": 1,
+								"maximum": 100
+							},
+							"instanceType": {
+								"enum": ["lite", "basic", "standard-1", "standard-2", "standard-3", "standard-4"]
+							}
+						}
+					}
+				},
+				"durableObjects": {
+					"type": "array",
+					"maxItems": 10,
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["binding", "className", "storage"],
+						"properties": {
+							"binding": {
+								"type": "string",
+								"pattern": "^[A-Z][A-Z0-9_]+$"
+							},
+							"className": {
+								"type": "string",
+								"pattern": "^[A-Z][A-Za-z0-9]+$"
+							},
+							"storage": {
+								"enum": ["sqlite", "legacy-kv"]
+							}
+						}
+					}
+				},
+				"migrations": {
+					"type": "array",
+					"minItems": 1,
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["tag"],
+						"properties": {
+							"tag": {
+								"type": "string",
+								"pattern": "^[A-Za-z0-9._-]+$"
+							},
+							"newClasses": {
+								"type": "array",
+								"items": {
+									"type": "string",
+									"pattern": "^[A-Z][A-Za-z0-9]+$"
+								},
+								"uniqueItems": true
+							},
+							"newSqliteClasses": {
+								"type": "array",
+								"items": {
+									"type": "string",
+									"pattern": "^[A-Z][A-Za-z0-9]+$"
+								},
+								"uniqueItems": true
+							}
+						}
+					}
+				}
+			}
+		},
+		"runtimeBridge": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"filesInputOrigin",
+				"outputFileOrigin",
+				"gatewayOrigin",
+				"gatewayWorker",
+				"gatewaySecretBinding",
+				"callbackPaths",
+				"deploymentStatus",
+				"blockedReason"
+			],
+			"properties": {
+				"filesInputOrigin": {
+					"type": "string",
+					"pattern": "^https://[A-Za-z0-9.-]+(?::443)?$"
+				},
+				"outputFileOrigin": {
+					"type": "string",
+					"pattern": "^https://[A-Za-z0-9.-]+(?::443)?$"
+				},
+				"gatewayOrigin": {
+					"type": "string",
+					"pattern": "^https://[A-Za-z0-9.-]+(?::443)?$"
+				},
+				"gatewayWorker": {
+					"type": "string",
+					"pattern": "^[a-z0-9][a-z0-9-]*$"
+				},
+				"gatewaySecretBinding": {
+					"type": "string",
+					"pattern": "^[A-Z][A-Z0-9_]+$"
+				},
+				"callbackPaths": {
+					"type": "array",
+					"minItems": 1,
+					"maxItems": 20,
+					"uniqueItems": true,
+					"items": {
+						"type": "string",
+						"pattern": "^/[A-Za-z0-9._/-]+$"
+					}
+				},
+				"deploymentStatus": {
+					"enum": ["blocked", "verified"]
+				},
+				"blockedReason": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 500
+				}
+			}
+		},
+		"namedResource": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["name"],
+			"properties": {
+				"name": {
+					"type": "string",
+					"minLength": 1
+				},
+				"id": {
+					"type": ["string", "null"]
+				},
+				"legacyName": {
+					"type": "boolean",
+					"default": false
+				}
+			}
+		},
+		"moduleD1": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"app",
+				"products",
+				"paywalls",
+				"dynamicLinks",
+				"support",
+				"analytics",
+				"marketing",
+				"onboardings"
+			],
+			"properties": {
+				"app": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"products": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"paywalls": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"dynamicLinks": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"support": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"analytics": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"marketing": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"onboardings": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"flows": {
+					"$ref": "#/$defs/namedResource"
+				}
+			}
+		},
+		"moduleR2": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["support", "analytics", "marketing"],
+			"properties": {
+				"support": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"analytics": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"marketing": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"flows": {
+					"$ref": "#/$defs/namedResource"
+				}
+			}
+		},
+		"moduleQueue": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["name", "dlq"],
+			"properties": {
+				"name": {
+					"type": "string",
+					"minLength": 1
+				},
+				"dlq": {
+					"type": "string",
+					"minLength": 1
+				}
+			}
+		},
+		"moduleQueues": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["support", "analytics", "marketing"],
+			"properties": {
+				"support": {
+					"$ref": "#/$defs/moduleQueue"
+				},
+				"supportAi": {
+					"$ref": "#/$defs/moduleQueue"
+				},
+				"supportBulk": {
+					"$ref": "#/$defs/moduleQueue"
+				},
+				"analytics": {
+					"$ref": "#/$defs/moduleQueue"
+				},
+				"marketing": {
+					"$ref": "#/$defs/moduleQueue"
+				},
+				"flows": {
+					"$ref": "#/$defs/moduleQueue"
+				}
+			}
+		},
+		"vectorizeResource": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["name", "dimensions", "metric"],
+			"properties": {
+				"name": {
+					"type": "string",
+					"minLength": 1
+				},
+				"dimensions": {
+					"type": "integer",
+					"minimum": 1,
+					"maximum": 1536
+				},
+				"metric": {
+					"enum": ["cosine", "euclidean", "dot-product"]
+				},
+				"description": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 500
+				},
+				"legacyName": {
+					"type": "boolean"
+				}
+			}
+		},
+		"moduleVectorize": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"supportKnowledge": {
+					"$ref": "#/$defs/vectorizeResource"
+				}
+			}
+		},
+		"supportRouting": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["pattern", "worker", "mode"],
+			"properties": {
+				"pattern": {
+					"type": "string",
+					"pattern": "^[a-z0-9.-]+/api/v1/support\\*$"
+				},
+				"worker": {
+					"type": "string",
+					"minLength": 1
+				},
+				"mode": {
+					"enum": ["staged", "active"]
+				}
+			}
+		},
+		"queues": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"events",
+				"eventsDlq",
+				"push",
+				"pushDlq",
+				"maintenance",
+				"maintenanceDlq",
+				"billing",
+				"billingDlq",
+				"email",
+				"emailDlq"
+			],
+			"properties": {
+				"events": {
+					"type": "string"
+				},
+				"eventsDlq": {
+					"type": "string"
+				},
+				"push": {
+					"type": "string"
+				},
+				"pushDlq": {
+					"type": "string"
+				},
+				"maintenance": {
+					"type": "string"
+				},
+				"maintenanceDlq": {
+					"type": "string"
+				},
+				"billing": {
+					"type": "string"
+				},
+				"billingDlq": {
+					"type": "string"
+				},
+				"messaging": {
+					"type": "string"
+				},
+				"messagingDlq": {
+					"type": "string"
+				},
+				"email": {
+					"type": "string"
+				},
+				"emailDlq": {
+					"type": "string"
+				}
+			}
+		},
+		"environment": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"d1",
+				"siteD1",
+				"siteMedia",
+				"siteSessionKv",
+				"siteReleaseKv",
+				"kv",
+				"r2",
+				"emailD1",
+				"identityD1",
+				"filesD1",
+				"analyticsDataset",
+				"supportProjectIds",
+				"moduleD1",
+				"moduleR2",
+				"moduleVectorize",
+				"moduleQueues",
+				"supportRouting",
+				"publicRouting",
+				"billingExecutionMode",
+				"queues"
+			],
+			"properties": {
+				"d1": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"siteD1": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"siteMedia": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"siteSessionKv": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"siteReleaseKv": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"kv": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"r2": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"dashboardCache": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"messagingD1": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"messagingR2": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"emailD1": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"identityD1": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"filesD1": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"customD1": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"customR2": {
+					"$ref": "#/$defs/namedResource"
+				},
+				"analyticsDataset": {
+					"type": "string",
+					"pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+				},
+				"moduleD1": {
+					"$ref": "#/$defs/moduleD1"
+				},
+				"moduleR2": {
+					"$ref": "#/$defs/moduleR2"
+				},
+				"moduleVectorize": {
+					"$ref": "#/$defs/moduleVectorize"
+				},
+				"moduleQueues": {
+					"$ref": "#/$defs/moduleQueues"
+				},
+				"supportRouting": {
+					"$ref": "#/$defs/supportRouting"
+				},
+				"messagingProjectIds": {
+					"type": "array",
+					"items": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"uniqueItems": true
+				},
+				"supportProjectIds": {
+					"type": "array",
+					"items": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"uniqueItems": true
+				},
+				"publicRouting": {
+					"enum": ["active", "staged"]
+				},
+				"billingExecutionMode": {
+					"enum": ["local", "service"]
+				},
+				"queues": {
+					"$ref": "#/$defs/queues"
+				},
+				"plugins": {
+					"type": "object",
+					"propertyNames": {
+						"pattern": "^supbrd-(plug|plugmod)-[a-z0-9-]+$"
+					},
+					"additionalProperties": {
+						"type": "boolean"
+					}
+				},
+				"domains": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["api", "auth", "shortlinks", "sdk", "site", "files", "mcp"],
+					"properties": {
+						"api": {
+							"$ref": "#/$defs/hostname"
+						},
+						"auth": {
+							"$ref": "#/$defs/hostname"
+						},
+						"shortlinks": {
+							"$ref": "#/$defs/hostname"
+						},
+						"sdk": {
+							"$ref": "#/$defs/hostname"
+						},
+						"dashboard": {
+							"$ref": "#/$defs/hostname"
+						},
+						"site": {
+							"$ref": "#/$defs/hostname"
+						},
+						"files": {
+							"$ref": "#/$defs/hostname"
+						},
+						"mcp": {
+							"$ref": "#/$defs/hostname"
+						},
+						"mailPreview": {
+							"$ref": "#/$defs/hostname"
+						},
+						"messaging": {
+							"$ref": "#/$defs/hostname"
+						}
+					}
+				},
+				"applicationIdentity": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"registrationMode",
+						"applicationAudience",
+						"googleAudiences",
+						"appleAudiences",
+						"webOrigins"
+					],
+					"properties": {
+						"registrationMode": {
+							"enum": ["open", "closed"]
+						},
+						"applicationAudience": {
+							"type": "string",
+							"pattern": "^[a-z][a-z0-9.:-]{2,254}$"
+						},
+						"googleAudiences": {
+							"type": "array",
+							"items": {
+								"type": "string",
+								"minLength": 3,
+								"maxLength": 255
+							},
+							"uniqueItems": true
+						},
+						"appleAudiences": {
+							"type": "array",
+							"items": {
+								"type": "string",
+								"minLength": 3,
+								"maxLength": 255
+							},
+							"uniqueItems": true
+						},
+						"webOrigins": {
+							"type": "array",
+							"items": {
+								"type": "string",
+								"pattern": "^https://[A-Za-z0-9.-]+(?::[0-9]{1,5})?$"
+							},
+							"uniqueItems": true
+						}
+					}
+				},
+				"oauth": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["dashboardClientId"],
+					"properties": {
+						"dashboardClientId": {
+							"type": "string",
+							"minLength": 3
+						}
+					}
+				},
+				"authGateway": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["issuer", "audience", "jwksUrl"],
+					"properties": {
+						"issuer": {
+							"type": "string",
+							"pattern": "^https://[^\\s]+$"
+						},
+						"audience": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 255
+						},
+						"jwksUrl": {
+							"type": "string",
+							"pattern": "^https://[^\\s]+$"
+						}
+					}
+				},
+				"mail": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["transport", "provider", "fromName", "fromAddress"],
+					"properties": {
+						"transport": {
+							"enum": ["capture", "smtp"]
+						},
+						"provider": {
+							"enum": ["smtp", "aws-ses"]
+						},
+						"awsRegion": {
+							"type": "string",
+							"pattern": "^[a-z]{2}(-gov)?-[a-z]+-[0-9]$"
+						},
+						"configurationSet": {
+							"type": "string",
+							"pattern": "^[A-Za-z0-9_-]{1,64}$"
+						},
+						"fromName": {
+							"type": "string",
+							"minLength": 1
+						},
+						"fromAddress": {
+							"type": "string",
+							"pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+						},
+						"replyToAddress": {
+							"type": "string",
+							"pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+						}
+					},
+					"allOf": [
+						{
+							"if": {
+								"properties": {
+									"provider": {
+										"const": "aws-ses"
+									}
+								}
+							},
+							"then": {
+								"required": ["awsRegion", "configurationSet"]
+							}
+						}
+					]
+				},
+				"filePolicy": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["maxBytes", "allowedContentTypes", "downloadTicketTtlSeconds"],
+					"properties": {
+						"maxBytes": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 104857600
+						},
+						"allowedContentTypes": {
+							"type": "array",
+							"minItems": 1,
+							"maxItems": 100,
+							"uniqueItems": true,
+							"items": {
+								"type": "string",
+								"pattern": "^[a-z0-9!#$&^_.+-]+/(?:\\*|[a-z0-9!#$&^_.+-]+)$"
+							}
+						},
+						"downloadTicketTtlSeconds": {
+							"type": "integer",
+							"minimum": 60,
+							"maximum": 3600
+						}
+					}
+				},
+				"operator": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["docsUrl", "email"],
+					"properties": {
+						"docsUrl": {
+							"type": "string",
+							"pattern": "^https://[^\\s]+$"
+						},
+						"email": {
+							"type": "string",
+							"pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+						},
+						"supportEmail": {
+							"type": "string",
+							"pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+						}
+					}
+				},
+				"displayName": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 100
+				},
+				"domainAliases": {
+					"type": "array",
+					"maxItems": 32,
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["surface", "hostname"],
+						"properties": {
+							"surface": {
+								"enum": ["console", "mcp", "shortlinks", "mailPreview"]
+							},
+							"hostname": {
+								"$ref": "#/$defs/hostname"
+							},
+							"reason": {
+								"type": "string",
+								"maxLength": 300
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

@@ -1,5 +1,7 @@
 # Proposition de réorganisation de SuperBoard
 
+> Document historique : les constats et les chemins ci-dessous décrivent un état antérieur du dépôt. Certains composants ont été déplacés ou retirés. Pour l’organisation actuelle, consulter le [guide du monorepo](../MONOREPO.md).
+
 Le [compte rendu d’implémentation](./SUPERBOARD_REORGANISATION_IMPLEMENTATION_2026-09-07.md) décrit les changements et les conditions de mise en service.
 
 Proposition du 7 septembre 2026, fondée sur le code et les manifestes de ce checkout. Elle définit une organisation à implémenter ; elle ne décrit pas une refonte déjà livrée ni un état de production vérifié.
@@ -10,17 +12,17 @@ L’[inventaire associé](./SUPERBOARD_FONCTIONNALITES_2026-09-07.md) détaille 
 
 ## Constats dans le code
 
-| Constat | Conséquence pour la proposition | Source |
-| --- | --- | --- |
-| Le front canonique est `apps/site`, avec les vues dans les plugins. Le dashboard historique est retiré. | Modifier le shell Astro/React existant et les contributions des plugins. | [Contexte des applications](../../apps/CONTEXT.md) |
-| La barre latérale possède déjà un mode réduit, mémorisé par instance. Chaque groupe est un `details` indépendant. | Conserver la réduction, ajouter un état d’accordéon exclusif et rendre les niveaux visibles. | [NativeFrontApp](../../apps/site/src/components/NativeFrontApp.tsx) |
-| Le contrat de navigation contient un groupe et une liste d’items, sans arbre de sous-groupes. | Garder deux niveaux dans la barre et déplacer les réglages détaillés dans les pages. | [Contrat de navigation](../../packages/supbrd-core/src/native-front.ts) |
-| Les initiales des libellés servent d’icônes pour les groupes et pour les liens. | Utiliser des pictogrammes distincts pour les rubriques et un retrait visuel pour leurs pages. | [Shell](../../apps/site/src/components/NativeFrontApp.tsx), [styles](../../apps/site/src/styles/native-front.css) |
-| `App / Users`, `Identity / Users`, `App / Customers` et `Products / Customers` coexistent. | Distinguer compte applicatif, installation/profil, identité de connexion et client payant ; les relier dans une fiche. | [Catalogue des vues](../../config/superboard-front-view-implementations.json) |
-| Le registre contient 19 rôles de services, dont `messaging` historique et `custom`. | Base de comparaison : 17 rôles communs hors ces deux rôles. Un rôle déclaré ne prouve pas un déploiement actif. | [Registre des services](../../scripts/cloudflare-services.mjs) |
-| La topologie contient 18 plugins concrets et un modèle `supbrd-plugmod-custom-*`, indiqué `not_ready`. | Créer une identité de plugin explicite pour Vocostar. | [Topologie](../../config/emdash-plugin-topology.json), [catalogue runtime](../../packages/supbrd-runtime-plugins/src/entries/front-catalog.ts) |
-| Vocostar possède un adaptateur custom et deux orchestrateurs. Son `runtimeBridge` est `blocked` ; les callbacks dépendent de l’ancien `api-auth-gateway`. | Traiter la bascule des callbacks comme une étape de séparation du plugin. | [Cible Vocostar](../../deploy/targets/vocostar.json) |
-| Le sélecteur « Production / Test » sélectionne un projet dans une même instance. | Ajouter un contexte d’environnement déployé, avec son adresse API ; conserver séparément le type de projet et le mode des achats. | [Contrôles](../../apps/site/src/components/NativeFrontControls.tsx), [sélection de projet](../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.tsx) |
+| Constat                                                                                                                                                   | Conséquence pour la proposition                                                                                                   | Source                                                                                                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Le front canonique est `apps/site`, avec les vues dans les plugins. Le dashboard historique est retiré.                                                   | Modifier le shell Astro/React existant et les contributions des plugins.                                                          | [Contexte des applications](../../apps/CONTEXT.md)                                                                                                                    |
+| La barre latérale possède déjà un mode réduit, mémorisé par instance. Chaque groupe est un `details` indépendant.                                         | Conserver la réduction, ajouter un état d’accordéon exclusif et rendre les niveaux visibles.                                      | [NativeFrontApp](../../apps/site/src/components/NativeFrontApp.tsx)                                                                                                   |
+| Le contrat de navigation contient un groupe et une liste d’items, sans arbre de sous-groupes.                                                             | Garder deux niveaux dans la barre et déplacer les réglages détaillés dans les pages.                                              | [Contrat de navigation](../../packages/supbrd-core/src/native-front.ts)                                                                                               |
+| Les initiales des libellés servent d’icônes pour les groupes et pour les liens.                                                                           | Utiliser des pictogrammes distincts pour les rubriques et un retrait visuel pour leurs pages.                                     | [Shell](../../apps/site/src/components/NativeFrontApp.tsx), [styles](../../apps/site/src/styles/native-front.css)                                                     |
+| `App / Users`, `Identity / Users`, `App / Customers` et `Products / Customers` coexistent.                                                                | Distinguer compte applicatif, installation/profil, identité de connexion et client payant ; les relier dans une fiche.            | [Catalogue des vues](../../scripts/config/superboard-front-view-implementations.json)                                                                                 |
+| Le registre contient 19 rôles de services, dont `messaging` historique et `custom`.                                                                       | Base de comparaison : 17 rôles communs hors ces deux rôles. Un rôle déclaré ne prouve pas un déploiement actif.                   | [Registre des services](../../scripts/cloudflare/services.mjs)                                                                                                        |
+| La topologie contient 18 plugins concrets et un modèle `supbrd-plugmod-custom-*`, indiqué `not_ready`.                                                    | Créer une identité de plugin explicite pour Vocostar.                                                                             | [Topologie](../../scripts/config/emdash-plugin-topology.json), [catalogue runtime](../../apps/site/src/lib/plugin-front-catalog.ts)                                   |
+| Vocostar possède un adaptateur custom et deux orchestrateurs. Son `runtimeBridge` est `blocked` ; les callbacks dépendent de l’ancien `api-auth-gateway`. | Traiter la bascule des callbacks comme une étape de séparation du plugin.                                                         | [Cible Vocostar](../../infra/targets/vocostar.json)                                                                                                                   |
+| Le sélecteur « Production / Test » sélectionne un projet dans une même instance.                                                                          | Ajouter un contexte d’environnement déployé, avec son adresse API ; conserver séparément le type de projet et le mode des achats. | [Contrôles](../../apps/site/src/components/NativeFrontControls.tsx), [sélection de projet](../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.tsx) |
 
 Les anciens documents d’architecture sont des références historiques. Leur chiffre de seize workers et leur description d’un dashboard OpenNext ne sont pas le catalogue courant.
 
@@ -97,17 +99,17 @@ Administration
 
 Les pages profondes deviennent des onglets locaux :
 
-| Page | Onglets ou sous-pages locales |
-| --- | --- |
-| Connexion et sécurité | Comptes de connexion ; méthodes de connexion ; applications OAuth ; permissions API ; SSO d’entreprise ; règles des comptes ; attributs utilisateur |
-| Liens et attribution | Liens ; campagnes de liens ; redirections ; domaines ; aperçus sociaux ; suivi des clics |
-| Service client | Conversations ; contacts ; agents et équipes ; canaux ; règles automatiques ; aide proactive ; centre d’aide ; assistant IA ; intégrations ; satisfaction et qualité ; rapports ; paramètres |
-| Produits et offres | Produits ; groupes de produits ; offres ; tarifs ; synchronisation Apple/Google |
-| Achats et abonnements | Achats ; abonnements ; remboursements ; rapprochement ; opérations en échec |
-| Audience et utilisation | Utilisateurs et sessions ; installations ; écrans consultés ; appareils et pays ; groupes d’utilisateurs |
-| Parcours d’accueil / Écrans d’abonnement | Liste ; éditeur ; versions ; emplacements ; ciblage et variantes ; résultats |
-| Paramètres de l’environnement | Général ; API et domaines ; connexion et sécurité ; applications clientes ; clés API ; bibliothèques SDK ; Web/iOS/Android ; configuration distante ; équipe d’administration |
-| Exploitation | État des services ; incidents ; traitements et reprises ; suppressions de comptes ; journal d’audit ; diagnostic API ; accès des assistants IA |
+| Page                                     | Onglets ou sous-pages locales                                                                                                                                                                |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connexion et sécurité                    | Comptes de connexion ; méthodes de connexion ; applications OAuth ; permissions API ; SSO d’entreprise ; règles des comptes ; attributs utilisateur                                          |
+| Liens et attribution                     | Liens ; campagnes de liens ; redirections ; domaines ; aperçus sociaux ; suivi des clics                                                                                                     |
+| Service client                           | Conversations ; contacts ; agents et équipes ; canaux ; règles automatiques ; aide proactive ; centre d’aide ; assistant IA ; intégrations ; satisfaction et qualité ; rapports ; paramètres |
+| Produits et offres                       | Produits ; groupes de produits ; offres ; tarifs ; synchronisation Apple/Google                                                                                                              |
+| Achats et abonnements                    | Achats ; abonnements ; remboursements ; rapprochement ; opérations en échec                                                                                                                  |
+| Audience et utilisation                  | Utilisateurs et sessions ; installations ; écrans consultés ; appareils et pays ; groupes d’utilisateurs                                                                                     |
+| Parcours d’accueil / Écrans d’abonnement | Liste ; éditeur ; versions ; emplacements ; ciblage et variantes ; résultats                                                                                                                 |
+| Paramètres de l’environnement            | Général ; API et domaines ; connexion et sécurité ; applications clientes ; clés API ; bibliothèques SDK ; Web/iOS/Android ; configuration distante ; équipe d’administration                |
+| Exploitation                             | État des services ; incidents ; traitements et reprises ; suppressions de comptes ; journal d’audit ; diagnostic API ; accès des assistants IA                                               |
 
 Les statistiques contextuelles restent aussi accessibles depuis les campagnes, parcours et écrans d’abonnement. Les liens croisés ouvrent la même page filtrée et évitent de créer plusieurs écrans concurrents. Les détails d’utilisateur, de campagne ou de scénario sont accessibles depuis leurs listes et leur fil d’Ariane ; ils ne deviennent pas autant d’entrées permanentes dans le menu.
 
@@ -128,35 +130,35 @@ L’accueil doit appartenir au socle, afin qu’une désactivation du plugin Sta
 
 Les identifiants techniques et les URL actuelles restent stables dans la première étape. Seuls les noms affichés, les regroupements et les liens changent.
 
-| Nom actuel | Nom proposé |
-| --- | --- |
-| Dashboard | Vue d’ensemble |
-| App | Réparti entre Utilisateurs et accès et Paramètres de l’environnement |
-| Identity | Connexion et sécurité |
-| App / Customers | Profils et installations |
-| Identity / Users | Comptes de connexion |
-| Products / Customers | Clients payants |
-| Scopes | Permissions API |
-| Account Policies | Règles des comptes |
-| Products / Offerings | Produits et offres |
-| Entitlements | Droits d’accès achetés |
-| Paywalls | Écrans d’abonnement |
-| Onboardings | Parcours d’accueil |
-| Flows / Workflows | Scénarios automatisés |
-| Launchpad | Déclenchements et publications |
-| Flows / Environments | Environnements des parcours |
-| Dynamic Links | Liens et attribution |
-| Workforce | Agents et équipes |
-| Captain | Assistant IA du support |
-| Proactive Support | Aide proactive |
-| Journeys | Parcours marketing |
-| Funnels & Retention | Conversions et fidélisation |
-| Cohorts | Groupes d’utilisateurs |
-| Remote Config | Configuration distante |
-| Gateway | Routage de l’API |
-| MCP | Accès des assistants IA |
-| Observability / Infrastructure | Exploitation |
-| Custom worker | Nom du plugin concerné, par exemple Vocostar |
+| Nom actuel                     | Nom proposé                                                          |
+| ------------------------------ | -------------------------------------------------------------------- |
+| Dashboard                      | Vue d’ensemble                                                       |
+| App                            | Réparti entre Utilisateurs et accès et Paramètres de l’environnement |
+| Identity                       | Connexion et sécurité                                                |
+| App / Customers                | Profils et installations                                             |
+| Identity / Users               | Comptes de connexion                                                 |
+| Products / Customers           | Clients payants                                                      |
+| Scopes                         | Permissions API                                                      |
+| Account Policies               | Règles des comptes                                                   |
+| Products / Offerings           | Produits et offres                                                   |
+| Entitlements                   | Droits d’accès achetés                                               |
+| Paywalls                       | Écrans d’abonnement                                                  |
+| Onboardings                    | Parcours d’accueil                                                   |
+| Flows / Workflows              | Scénarios automatisés                                                |
+| Launchpad                      | Déclenchements et publications                                       |
+| Flows / Environments           | Environnements des parcours                                          |
+| Dynamic Links                  | Liens et attribution                                                 |
+| Workforce                      | Agents et équipes                                                    |
+| Captain                        | Assistant IA du support                                              |
+| Proactive Support              | Aide proactive                                                       |
+| Journeys                       | Parcours marketing                                                   |
+| Funnels & Retention            | Conversions et fidélisation                                          |
+| Cohorts                        | Groupes d’utilisateurs                                               |
+| Remote Config                  | Configuration distante                                               |
+| Gateway                        | Routage de l’API                                                     |
+| MCP                            | Accès des assistants IA                                              |
+| Observability / Infrastructure | Exploitation                                                         |
+| Custom worker                  | Nom du plugin concerné, par exemple Vocostar                         |
 
 ## SuperBoard, environnements et Vocostar
 
@@ -191,14 +193,14 @@ Les bindings et variables Wrangler doivent être déclarés pour chaque environn
 
 Le plugin reçoit l’identifiant concret proposé `supbrd-plugmod-vocostar` et le nom affiché **Vocostar**. Sa version évolue indépendamment, avec une plage de compatibilité SuperBoard. Son manifeste déclare ses vues, paramètres, capacités, dépendances, migrations et moteurs d’exécution.
 
-| Responsabilité SuperBoard | Responsabilité Vocostar |
-| --- | --- |
-| Utilisateurs, authentification, sessions et autorisations | Paramètres métier voix et médias |
-| API publique et résolution de l’environnement | Création et orchestration des traitements Vocostar |
-| Stockage, contrats de fichiers et permissions | Références des entrées et sorties propres aux conversions |
-| Paiements, achats et droits génériques | Règles métier de consommation et compensation de crédits |
-| E-mails, push et support | Événements métier qui déclenchent ces services |
-| Exploitation, traces et registre de plugins | État et progression des jobs voix/média |
+| Responsabilité SuperBoard                                 | Responsabilité Vocostar                                   |
+| --------------------------------------------------------- | --------------------------------------------------------- |
+| Utilisateurs, authentification, sessions et autorisations | Paramètres métier voix et médias                          |
+| API publique et résolution de l’environnement             | Création et orchestration des traitements Vocostar        |
+| Stockage, contrats de fichiers et permissions             | Références des entrées et sorties propres aux conversions |
+| Paiements, achats et droits génériques                    | Règles métier de consommation et compensation de crédits  |
+| E-mails, push et support                                  | Événements métier qui déclenchent ces services            |
+| Exploitation, traces et registre de plugins               | État et progression des jobs voix/média                   |
 
 Les fournisseurs IA, modèles, langues, limites de traitement, tarifs en crédits, filigranes, quotas de concurrence et paramètres visuels appartiennent à la configuration Vocostar de l’environnement. Cette liste définit la personnalisation cible ; elle ne présume pas que tous ces réglages disposent déjà d’un écran.
 
@@ -212,18 +214,18 @@ La séparation est achevée quand le socle peut être construit et déployé san
 
 La cible est de **10 services SuperBoard pour le profil complet**, contre 17 rôles communs actuels : sept déploiements de moins, soit environ 41 %. C’est un objectif d’architecture à confirmer par les builds, les mesures de charge et la migration des contrats ; aucun worker n’a été supprimé pendant cette étude.
 
-| Service cible | Regroupement des rôles actuels | Justification |
-| --- | --- | --- |
-| Console (`console`) | `site` | Front, administration EmDash, publication des configurations et autorité des plugins |
-| API (`api`) | `api` + `app` + `products` + `paywalls` + `onboardings` + `dynamic-links` + `mcp` | Regrouper les façades et les traitements synchrones de configuration/catalogue ; garder les contrats internes par domaine |
-| Authentification (`auth`) | `identity` | Conserver l’isolation du moteur de connexion, de ses clés et sessions |
-| Fichiers (`files`) | `files` | Conserver le transfert en flux et ses ressources séparées de l’API de gestion |
-| Paiements (`payments`) | `billing` | Isoler les webhooks stores, reprises et traitements financiers |
-| Communication (`communications`) | `email` + `marketing`, puis extraction du transport push actuellement dans `api` | Un moteur d’envoi, avec files et priorités distinctes pour transactionnel, push et campagnes |
-| Automatisations (`automations`) | `flows` | Garder ses Durable Objects, Workflows, délais et exécutions indépendants |
-| Service client (`support`) | `support` | Garder les conversations temps réel et leurs traitements IA indépendants |
-| Statistiques (`analytics`) | `analytics` | Isoler collecte, agrégations, rapports et opérations volumineuses |
-| Supervision (`monitoring`) | `observability` | Garder la collecte des erreurs et la surveillance séparées des services surveillés |
+| Service cible                    | Regroupement des rôles actuels                                                    | Justification                                                                                                             |
+| -------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Console (`console`)              | `site`                                                                            | Front, administration EmDash, publication des configurations et autorité des plugins                                      |
+| API (`api`)                      | `api` + `app` + `products` + `paywalls` + `onboardings` + `dynamic-links` + `mcp` | Regrouper les façades et les traitements synchrones de configuration/catalogue ; garder les contrats internes par domaine |
+| Authentification (`auth`)        | `identity`                                                                        | Conserver l’isolation du moteur de connexion, de ses clés et sessions                                                     |
+| Fichiers (`files`)               | `files`                                                                           | Conserver le transfert en flux et ses ressources séparées de l’API de gestion                                             |
+| Paiements (`payments`)           | `billing`                                                                         | Isoler les webhooks stores, reprises et traitements financiers                                                            |
+| Communication (`communications`) | `email` + `marketing`, puis extraction du transport push actuellement dans `api`  | Un moteur d’envoi, avec files et priorités distinctes pour transactionnel, push et campagnes                              |
+| Automatisations (`automations`)  | `flows`                                                                           | Garder ses Durable Objects, Workflows, délais et exécutions indépendants                                                  |
+| Service client (`support`)       | `support`                                                                         | Garder les conversations temps réel et leurs traitements IA indépendants                                                  |
+| Statistiques (`analytics`)       | `analytics`                                                                       | Isoler collecte, agrégations, rapports et opérations volumineuses                                                         |
+| Supervision (`monitoring`)       | `observability`                                                                   | Garder la collecte des erreurs et la surveillance séparées des services surveillés                                        |
 
 L’API regroupée conserve des interfaces par domaine. Les imports internes remplacent les allers-retours devenus inutiles, tout en conservant les contrôles d’accès propres à chaque module. Les opérations qui nécessitent des interfaces privées peuvent conserver des points d’entrée nommés via les Service Bindings. [Documentation Cloudflare sur les Service Bindings RPC](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/rpc/).
 
@@ -237,11 +239,11 @@ Les files d’e-mails transactionnels, campagnes et push restent distinctes avec
 
 Les nombres actuels ci-dessous sont calculés à partir des rôles et des drapeaux des manifestes, sans requête à Cloudflare. Ils expriment les rôles sélectionnés, pas le nombre de services sains en production.
 
-| Profil | Rôles sélectionnés dans le code | Objectif après regroupement |
-| --- | --- | --- |
-| SuperBoard complet, hors custom et Messaging | 17 | 10 |
-| MBZA avec extension de référence | 17 + 1 custom = 18 | 10 + 1 extension de référence = 11 |
-| Vocostar avec Analytics et Flows désactivés | 15 + 1 adaptateur + 2 orchestrateurs = 18 | 8 + 1 plugin runtime + 2 moteurs = 11 |
+| Profil                                       | Rôles sélectionnés dans le code           | Objectif après regroupement           |
+| -------------------------------------------- | ----------------------------------------- | ------------------------------------- |
+| SuperBoard complet, hors custom et Messaging | 17                                        | 10                                    |
+| MBZA avec extension de référence             | 17 + 1 custom = 18                        | 10 + 1 extension de référence = 11    |
+| Vocostar avec Analytics et Flows désactivés  | 15 + 1 adaptateur + 2 orchestrateurs = 18 | 8 + 1 plugin runtime + 2 moteurs = 11 |
 
 Vocostar reste **un plugin produit** possédant initialement trois runtimes : coordination des jobs, moteur voix, moteur média. Dans l’interface d’exploitation, ceux-ci sont regroupés sous Vocostar. Fusionner ensuite l’adaptateur et les orchestrateurs n’est pas requis pour la première réduction : leurs classes `Dispatcher`/`Standard`, conteneurs, Workflows et traitements en cours demandent une migration séparée.
 
@@ -251,7 +253,7 @@ Le worker `messaging` historique est désactivé dans les deux cibles examinées
 
 ### Noms et organisation du dépôt
 
-Les nouveaux déploiements suivent `superboard-{application}-{environnement}-{service}`. Par exemple, `superboard-demo-dev-api`. Les labels de l’interface restent français et lisibles. Les noms historiques `opengrow-*` et `send-users-*` sont conservés comme alias de migration jusqu’à la bascule de leurs liaisons et de leurs ressources.
+Les nouveaux déploiements suivent `superboard-{application}-{environnement}-{service}`. Par exemple, `superboard-demo-dev-api`. Les labels de l’interface restent français et lisibles. Les noms historiques `superboard-*` et `send-users-*` sont conservés comme alias de migration jusqu’à la bascule de leurs liaisons et de leurs ressources.
 
 L’organisation suivante est une cible de responsabilité. Les déplacements physiques viennent après les changements de contrats et ne constituent pas un préalable à la correction du menu.
 
@@ -265,21 +267,21 @@ plugins/vocostar/                  cible : manifeste, vues, réglages, métier
   workers/voice/                   moteur voix
   workers/media/                   moteur média
 workers/                           points de déploiement des 10 services
-deploy/targets/                    applications et environnements
+infra/targets/                    applications et environnements
 ```
 
 Les domaines fonctionnels des plugins sont Utilisateurs et accès, Données et contenus, Ventes et abonnements, Communication, Parcours et automatisations, Statistiques, Paramètres et Exploitation. Les plugins existants conservent leurs identifiants et leur activation indépendante. Un menu peut réunir plusieurs plugins et un worker peut exécuter plusieurs modules : ces trois découpages répondent à des besoins différents.
 
 ## Ordre de réalisation et critères de validation
 
-| Étape | Résultat attendu | Vérification avant de poursuivre |
-| --- | --- | --- |
-| 1. Navigation | Libellés français, groupes métier, accordéon exclusif, mode réduit utilisable, onglets locaux | Tests de comportement reproduisant le défaut ; URL profondes, retour navigateur, clavier, mobile, français/anglais/arabe ; aucune des 121 vues perdue |
-| 2. Environnements | Contexte application/environnement/API distinct du projet Production/Test | Deux déploiements de recette avec données, clés, caches et permissions isolés ; jeton de A refusé sur B |
-| 3. Plugin Vocostar | Manifeste concret, pages dédiées, configuration par environnement, installation et désactivation | Socle sans Vocostar ; activation sur A uniquement ; appels directs refusés sur B ; sauvegarde des réglages à la désactivation |
-| 4. API regroupée | Intégration progressive App, Products, Paywalls, Onboardings, Dynamic Links, MCP | Parité des réponses et autorisations ; SDK existants ; redirections publiques ; protocole MCP/OAuth ; taille du bundle, mémoire, latence et requêtes SQL |
-| 5. Communication regroupée | E-mail et Marketing dans un runtime, puis transport push | Envoi transactionnel sous charge de campagne ; idempotence, reprise, files d’échec et quotas par canal |
-| 6. Bascule et retrait | Liaisons, domaines et supervision utilisent les nouveaux services | Drainage des queues et jobs, sauvegardes, rapprochement des données, rollback applicatif testé ; migrations de données uniquement en avant |
+| Étape                      | Résultat attendu                                                                                 | Vérification avant de poursuivre                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Navigation              | Libellés français, groupes métier, accordéon exclusif, mode réduit utilisable, onglets locaux    | Tests de comportement reproduisant le défaut ; URL profondes, retour navigateur, clavier, mobile, français/anglais/arabe ; aucune des 121 vues perdue    |
+| 2. Environnements          | Contexte application/environnement/API distinct du projet Production/Test                        | Deux déploiements de recette avec données, clés, caches et permissions isolés ; jeton de A refusé sur B                                                  |
+| 3. Plugin Vocostar         | Manifeste concret, pages dédiées, configuration par environnement, installation et désactivation | Socle sans Vocostar ; activation sur A uniquement ; appels directs refusés sur B ; sauvegarde des réglages à la désactivation                            |
+| 4. API regroupée           | Intégration progressive App, Products, Paywalls, Onboardings, Dynamic Links, MCP                 | Parité des réponses et autorisations ; SDK existants ; redirections publiques ; protocole MCP/OAuth ; taille du bundle, mémoire, latence et requêtes SQL |
+| 5. Communication regroupée | E-mail et Marketing dans un runtime, puis transport push                                         | Envoi transactionnel sous charge de campagne ; idempotence, reprise, files d’échec et quotas par canal                                                   |
+| 6. Bascule et retrait      | Liaisons, domaines et supervision utilisent les nouveaux services                                | Drainage des queues et jobs, sauvegardes, rapprochement des données, rollback applicatif testé ; migrations de données uniquement en avant               |
 
 La bascule Vocostar requiert en particulier de porter les callbacks encore détenus par l’ancienne passerelle, de vérifier leurs secrets d’authentification et d’achever les ressources de la cible. Son manifeste contient encore des ressources non renseignées et du routage public `staged` ; cette étude ne certifie donc pas son déploiement de production.
 

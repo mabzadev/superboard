@@ -2470,9 +2470,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mbzadev/opengrow-react-native-sdk@workspace:.":
+"@mbzadev/superboard-react-native-sdk@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@mbzadev/opengrow-react-native-sdk@workspace:."
+  resolution: "@mbzadev/superboard-react-native-sdk@workspace:."
   dependencies:
     "@commitlint/config-conventional": ^17.0.2
     "@evilmartians/lefthook": ^1.5.0
@@ -7127,9 +7127,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"image-size@patch:image-size@npm%3A1.2.1#./.yarn/patches/image-size-npm-1.2.1-e285f3c080.patch::locator=%40mbzadev%2Fopengrow-react-native-sdk%40workspace%3A.":
+"image-size@patch:image-size@npm%3A1.2.1#./.yarn/patches/image-size-npm-1.2.1-e285f3c080.patch::locator=%40mbzadev%2Fsuperboard-react-native-sdk%40workspace%3A.":
   version: 1.2.1
-  resolution: "image-size@patch:image-size@npm%3A1.2.1#./.yarn/patches/image-size-npm-1.2.1-e285f3c080.patch::version=1.2.1&hash=80d774&locator=%40mbzadev%2Fopengrow-react-native-sdk%40workspace%3A."
+  resolution: "image-size@patch:image-size@npm%3A1.2.1#./.yarn/patches/image-size-npm-1.2.1-e285f3c080.patch::version=1.2.1&hash=80d774&locator=%40mbzadev%2Fsuperboard-react-native-sdk%40workspace%3A."
   dependencies:
     queue: 6.0.2
   bin:

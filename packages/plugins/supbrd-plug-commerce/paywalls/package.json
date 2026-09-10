@@ -1,0 +1,24 @@
+{
+  "name": "@superboard/paywalls-worker",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.runtime.json",
+    "test": "vitest run && INTERNAL_API_TOKEN=paywalls-runtime-secret vitest run --config vitest.runtime.config.ts",
+    "test:unit": "vitest run",
+    "test:runtime": "INTERNAL_API_TOKEN=paywalls-runtime-secret vitest run --config vitest.runtime.config.ts"
+  },
+  "dependencies": {
+    "@superboard/contracts": "workspace:*",
+    "hono": "catalog:workers"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:workers",
+    "@cloudflare/workers-types": "catalog:workers",
+    "typescript": "catalog:workers",
+    "vitest": "catalog:",
+    "wrangler": "catalog:workers"
+  }
+}

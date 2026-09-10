@@ -1,4 +1,4 @@
-import { userPluginManifest } from "@superboard/supbrd-plug-user";
+import { userPluginManifest } from "@superboard/plugin-identity/user";
 
 import {
 	installSuperBoardPluginCatalog,

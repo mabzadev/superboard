@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { emailSchema } from "../../../../supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/schemas/shared.js";
+import { emailSchema } from "../../../../plugins/supbrd-core/src/front/settings/schemas/shared.js";
 
 export const createProjectSchema = z.object({
 	name: z.string().min(3, "Project name must be at least 3 characters"),

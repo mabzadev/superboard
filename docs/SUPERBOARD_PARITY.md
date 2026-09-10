@@ -1,7 +1,7 @@
 # SuperBoard Parity Strategy
 
 SuperBoard historically tracked a Rails upstream as a Cloudflare adaptation. The
-comparison source was expected below `upstream/opengrow/*`. Those sources are
+comparison source was expected below `upstream/superboard/*`. Those sources are
 not present in the current platform checkout, so upstream parity is currently
 **unverified**. The checked-in Cloudflare contracts, migrations, manifests and
 tests remain authoritative for the new reference platform, but an empty
@@ -26,7 +26,7 @@ forensic tool when immutable historical sources are supplied.
   rather than misleading empty arrays, whenever no upstream comparison ran;
 - `npm run migration:parity:check` is the fail-closed command for an actual
   upstream comparison. It exits non-zero until
-  `upstream/opengrow/backend` is available.
+  `upstream/superboard/backend` is available.
 - The Auth/Users module now follows the upstream Devise/Doorkeeper flows for
   client-validated registration, OAuth password/refresh tokens, invitations,
   password reset tokens, TOTP 2FA challenge/verification, identity SSO
@@ -105,8 +105,8 @@ forensic tool when immutable historical sources are supplied.
 3. Do not add permanent "not available" endpoints. If a feature is not fully
    implemented yet, back it with the upstream-shaped tables and make the missing
    behavior explicit in follow-up work.
-4. Do not edit restored `upstream/opengrow/*` comparison sources for product
-   work. Port behavior into `workers/api`, the domain Workers and
+4. Do not edit restored `upstream/superboard/*` comparison sources for product
+   work. Port behavior into `packages/plugins/supbrd-core/api`, the domain Workers and
    `apps/dashboard`.
 5. Prefer Cloudflare-native replacements for infrastructure:
    - D1 for PostgreSQL tables that fit relational storage.

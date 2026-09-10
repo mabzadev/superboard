@@ -30,11 +30,7 @@
 	"ignore": [
 		"@emdash-cms/aggregator",
 		"@emdash-cms/blocks-playground",
-		"@emdash-cms/demo-cloudflare",
-		"@emdash-cms/demo-postgres",
-		"@emdash-cms/demo-preview",
 		"@emdash-cms/marketplace",
-		"@emdash-cms/playground",
 		"@emdash-cms/plugin-api-test",
 		"@emdash-cms/plugin-marketplace-test",
 		"@emdash-cms/plugin-mcp-smoke",
@@ -49,9 +45,7 @@
 		"@emdash-cms/template-starter",
 		"@emdash-cms/template-starter-cloudflare",
 		"docs",
-		"emdash-demo",
 		"emdash-e2e-fixture",
-		"emdash-e2e-fixture-cloudflare",
-		"emdash-plugins-demo"
+		"emdash-e2e-fixture-cloudflare"
 	]
 }

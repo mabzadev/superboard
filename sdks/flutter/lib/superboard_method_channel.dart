@@ -9,15 +9,9 @@ class MethodChannelSuperBoard extends SuperBoardPlatform {
   MethodChannelSuperBoard({
     MethodChannel? methodChannel,
     EventChannel? eventChannel,
-    MethodChannel? legacyMethodChannel,
-    EventChannel? legacyEventChannel,
   }) : methodChannel = methodChannel ?? const MethodChannel('superboard'),
        eventChannel =
-           eventChannel ?? const EventChannel('superboard/deeplinks'),
-       legacyMethodChannel =
-           legacyMethodChannel ?? const MethodChannel('opengrow'),
-       legacyEventChannel =
-           legacyEventChannel ?? const EventChannel('opengrow/deeplinks');
+           eventChannel ?? const EventChannel('superboard/deeplinks');
 
   /// The method channel used to interact with the native platform.
   @visibleForTesting
@@ -26,16 +20,6 @@ class MethodChannelSuperBoard extends SuperBoardPlatform {
   /// The event channel for receiving deeplink events
   @visibleForTesting
   final EventChannel eventChannel;
-
-  /// The OpenGrow 2.x method channel used only when a stale native wrapper is
-  /// still present after a package upgrade. New native wrappers register only
-  /// the canonical channel and one plugin instance.
-  @visibleForTesting
-  final MethodChannel legacyMethodChannel;
-
-  /// The OpenGrow 2.x event-channel fallback for stale native build caches.
-  @visibleForTesting
-  final EventChannel legacyEventChannel;
 
   Stream<DeeplinkDetails>? _onDeeplinkReceived;
 
@@ -195,29 +179,8 @@ class MethodChannelSuperBoard extends SuperBoardPlatform {
     return _onDeeplinkReceived!;
   }
 
-  Future<T?> _invokeMethod<T>(String method, [Object? arguments]) async {
-    try {
-      return await methodChannel.invokeMethod<T>(method, arguments);
-    } on MissingPluginException {
-      return legacyMethodChannel.invokeMethod<T>(method, arguments);
-    }
-  }
+  Future<T?> _invokeMethod<T>(String method, [Object? arguments]) =>
+      methodChannel.invokeMethod<T>(method, arguments);
 
-  Stream<dynamic> _receiveEvents() async* {
-    try {
-      await for (final event in eventChannel.receiveBroadcastStream()) {
-        yield event;
-      }
-    } on MissingPluginException {
-      await for (final event in legacyEventChannel.receiveBroadcastStream()) {
-        yield event;
-      }
-    }
-  }
+  Stream<dynamic> _receiveEvents() => eventChannel.receiveBroadcastStream();
 }
-
-/// Compatibility alias for the OpenGrow 2.x method-channel implementation.
-@Deprecated(
-  'Use MethodChannelSuperBoard. This compatibility alias will be removed in 4.0.0.',
-)
-typedef MethodChannelOpenGrow = MethodChannelSuperBoard;

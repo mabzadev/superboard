@@ -1,0 +1,101 @@
+{
+	"$schema": "./configuration-boundaries.schema.json",
+	"schemaVersion": 1,
+	"authorities": {
+		"sharedPlatform": {
+			"serviceRegistry": "scripts/cloudflare/services.mjs",
+			"projectManifest": "superboard.project.json",
+			"runtimeRoots": [
+				"apps/mcp/src",
+				"apps/site/src",
+				"packages",
+				"scripts/local",
+				"scripts/cloudflare",
+				"scripts/github",
+				"scripts/emdash",
+				"scripts/clients",
+				"scripts/database",
+				"sdks"
+			]
+		},
+		"reference": {
+			"targetSelector": "superboard.project.json#/development/target",
+			"requiredEnvironment": "development",
+			"domainSuffixPolicy": "derive-from-domains.api",
+			"requiredMailTransport": "smtp",
+			"requiredMailProvider": "aws-ses"
+		},
+		"applications": {
+			"targetDirectory": "infra/targets",
+			"targetSchema": "infra/targets/schema.json",
+			"customPackageField": "customWorker.packagePath",
+			"derivedProjectionPaths": [
+				"scripts/config/flutterflow-application-bindings.json",
+				"scripts/config/flutterflow-applications.json",
+				"scripts/config/flutterflow-migrations",
+				"scripts/config/flutterflow-releases",
+				"scripts/config/flutterflow-sources"
+			]
+		}
+	},
+	"injection": {
+		"accountId": {
+			"defaultEnvironmentName": "CLOUDFLARE_ACCOUNT_ID",
+			"scopedEnvironmentPrefix": "CLOUDFLARE_ACCOUNT_ID_"
+		},
+		"deploymentCredentialEnvironmentNames": ["CLOUDFLARE_API_TOKEN"],
+		"projectCredentialEnvironmentNames": ["SUPERBOARD_PROJECT_ID", "SUPERBOARD_PROJECT_KEY"],
+		"secretRegistries": [
+			"PLATFORM_SERVICE_SECRETS",
+			"DOMAIN_SERVICE_REGISTRY",
+			"customWorker.secrets"
+		]
+	},
+	"scan": {
+		"ignoredDirectoryNames": [
+			".build",
+			".dart_tool",
+			".git",
+			".gradle",
+			".next",
+			".open-next",
+			".swiftpm",
+			".wrangler",
+			".yarn",
+			"DerivedData",
+			"Pods",
+			"build",
+			"coverage",
+			"infra/generated",
+			"dist",
+			"node_modules",
+			"out"
+		],
+		"ignoredFileSuffixes": [".lock", ".snap"],
+		"portableExtensions": [
+			".cjs",
+			".dart",
+			".js",
+			".json",
+			".jsonc",
+			".jsx",
+			".mjs",
+			".ts",
+			".tsx",
+			".yaml",
+			".yml"
+		],
+		"localOnlyPathSegments": ["/example/", "/fixtures/", "/runtime-tests/", "/test/", "/tests/"],
+		"localOnlyFileMarkers": [".test.", ".spec.", "wrangler.test.jsonc"],
+		"localWranglerTemplates": [
+			"packages/plugins/supbrd-core/app/wrangler.jsonc",
+			"packages/plugins/supbrd-plug-communication/dynamic-links/wrangler.jsonc",
+			"packages/plugins/supbrd-plug-journeys/flows/wrangler.jsonc",
+			"packages/plugins/supbrd-plug-identity/worker/wrangler.jsonc",
+			"packages/plugins/supbrd-plug-journeys/onboardings/wrangler.jsonc",
+			"packages/plugins/supbrd-plug-commerce/paywalls/wrangler.jsonc",
+			"packages/plugins/supbrd-plug-commerce/products/wrangler.jsonc",
+			"packages/marketplace/wrangler.jsonc"
+		]
+	}
+}

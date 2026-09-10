@@ -1,7 +1,7 @@
 # SuperBoard Flows web SDK
 
 The web SDK is imported from two pinned upstream commits through
-`scripts/sync-flows-upstream.mjs`. Runtime packages live under `upstream/packages` and use the
+`sdks/flows/scripts/sync-flows-upstream.mjs`. Runtime packages live under `upstream/packages` and use the
 `@superboard` namespace:
 
 - `@superboard/flows-js`
@@ -11,7 +11,7 @@ The web SDK is imported from two pinned upstream commits through
 - `@superboard/flows-shared`
 - `@superboard/flows-styles`
 
-Their source state is governed by `config/sdk-libraries.json` schema v5. The four consumable SDKs
+Their source state is governed by `scripts/config/sdk-libraries.json` schema v5. The four consumable SDKs
 are initially `unreleased`: no npm artifact, immutable tag, release ref, release SHA or install
 command is claimed before a real first publication. `flows-shared` and `flows-styles` are private
 workspace dependencies bundled by the public SDK builds, so the catalogue marks them
@@ -43,15 +43,15 @@ Products-backed renderer under the exact `superboard-commerce` key:
 
 ```tsx
 <FlowsProvider
-  components={{
-    ...components,
-    "superboard-commerce": SuperBoardCommerce,
-  }}
-  tourComponents={tourComponents}
-  surveyComponents={surveyComponents}
-  {...flowsConfiguration}
+	components={{
+		...components,
+		"superboard-commerce": SuperBoardCommerce,
+	}}
+	tourComponents={tourComponents}
+	surveyComponents={surveyComponents}
+	{...flowsConfiguration}
 >
-  {children}
+	{children}
 </FlowsProvider>
 ```
 
@@ -70,7 +70,7 @@ purchase accounting authoritative and prevents duplicate revenue analytics.
 Prepare clean local clones at the commits recorded in `upstream/manifest.json`, then run:
 
 ```sh
-node scripts/sync-flows-upstream.mjs \
+node sdks/flows/scripts/sync-flows-upstream.mjs \
   --flows-sh-source /path/to/flows.sh \
   --flows-sdk-source /path/to/flows-sdk
 ```

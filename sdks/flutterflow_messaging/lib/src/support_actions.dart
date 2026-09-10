@@ -4,77 +4,77 @@ import 'actions.dart';
 
 /// Canonical Support names for the FlutterFlow API. The historical Messaging
 /// names remain available as compatibility aliases during application cutover.
-Stream<String> get opengrowSupportEventJsonStream =>
-    opengrowMessagingEventJsonStream;
+Stream<String> get superboardSupportEventJsonStream =>
+    superboardMessagingEventJsonStream;
 
-Future<bool> opengrowSupportInitializeAuthenticated({
+Future<bool> superboardSupportInitializeAuthenticated({
   required String applicationAccessToken,
   required int projectId,
   required String authGatewayUrl,
   required String supportUrl,
-}) => opengrowMessagingInitializeAuthenticated(
+}) => superboardMessagingInitializeAuthenticated(
   applicationAccessToken: applicationAccessToken,
   projectId: projectId,
   authGatewayUrl: authGatewayUrl,
   messagingUrl: supportUrl,
 );
 
-Future<String> opengrowSupportOpenConversation({
+Future<String> superboardSupportOpenConversation({
   required String clientConversationId,
   String? subject,
   String? inboxId,
   String customAttributesJson = '{}',
-}) => opengrowMessagingOpenConversation(
+}) => superboardMessagingOpenConversation(
   clientConversationId: clientConversationId,
   subject: subject,
   inboxId: inboxId,
   customAttributesJson: customAttributesJson,
 );
 
-Future<String> opengrowSupportGetConfigurationJson() =>
-    opengrowMessagingGetConfigurationJson();
+Future<String> superboardSupportGetConfigurationJson() =>
+    superboardMessagingGetConfigurationJson();
 
-Future<String> opengrowSupportListConversationsJson() =>
-    opengrowMessagingListConversationsJson();
+Future<String> superboardSupportListConversationsJson() =>
+    superboardMessagingListConversationsJson();
 
-Future<String> opengrowSupportUpdateConversationJson({
+Future<String> superboardSupportUpdateConversationJson({
   required String conversationId,
   String? status,
   String? customAttributesJson,
-}) => opengrowMessagingUpdateConversationJson(
+}) => superboardMessagingUpdateConversationJson(
   conversationId: conversationId,
   status: status,
   customAttributesJson: customAttributesJson,
 );
 
-Future<String> opengrowSupportMessagesJson(
+Future<String> superboardSupportMessagesJson(
   String conversationId, {
   int? beforeSequence,
   int limit = 50,
-}) => opengrowMessagingMessagesJson(
+}) => superboardMessagingMessagesJson(
   conversationId,
   beforeSequence: beforeSequence,
   limit: limit,
 );
 
-Future<String> opengrowSupportSend({
+Future<String> superboardSupportSend({
   required String conversationId,
   required String body,
   required String clientMessageId,
-}) => opengrowMessagingSend(
+}) => superboardMessagingSend(
   conversationId: conversationId,
   body: body,
   clientMessageId: clientMessageId,
 );
 
-Future<String> opengrowSupportSendAdvanced({
+Future<String> superboardSupportSendAdvanced({
   required String conversationId,
   required String body,
   required String clientMessageId,
   String contentType = 'text',
   String? replyToMessageId,
   String metadataJson = '{}',
-}) => opengrowMessagingSendAdvanced(
+}) => superboardMessagingSendAdvanced(
   conversationId: conversationId,
   body: body,
   clientMessageId: clientMessageId,
@@ -83,63 +83,63 @@ Future<String> opengrowSupportSendAdvanced({
   metadataJson: metadataJson,
 );
 
-Future<String> opengrowSupportSubmitCsatJson({
+Future<String> superboardSupportSubmitCsatJson({
   required String conversationId,
   required int rating,
   String? feedback,
-}) => opengrowMessagingSubmitCsatJson(
+}) => superboardMessagingSubmitCsatJson(
   conversationId: conversationId,
   rating: rating,
   feedback: feedback,
 );
 
-Future<String> opengrowSupportUploadAttachmentJson({
+Future<String> superboardSupportUploadAttachmentJson({
   required String conversationId,
   required Uint8List bytes,
   required String filename,
   required String contentType,
-}) => opengrowMessagingUploadAttachmentJson(
+}) => superboardMessagingUploadAttachmentJson(
   conversationId: conversationId,
   bytes: bytes,
   filename: filename,
   contentType: contentType,
 );
 
-Future<Uint8List> opengrowSupportDownloadAttachment({
+Future<Uint8List> superboardSupportDownloadAttachment({
   required String conversationId,
   required String messageId,
   String? attachmentId,
-}) => opengrowMessagingDownloadAttachment(
+}) => superboardMessagingDownloadAttachment(
   conversationId: conversationId,
   messageId: messageId,
   attachmentId: attachmentId,
 );
 
-Future<String> opengrowSupportSendAttachment({
+Future<String> superboardSupportSendAttachment({
   required String conversationId,
   required String attachmentJson,
   required String clientMessageId,
   String body = '',
-}) => opengrowMessagingSendAttachment(
+}) => superboardMessagingSendAttachment(
   conversationId: conversationId,
   attachmentJson: attachmentJson,
   clientMessageId: clientMessageId,
   body: body,
 );
 
-Future<String> opengrowSupportMarkRead(String conversationId) =>
-    opengrowMessagingMarkRead(conversationId);
+Future<String> superboardSupportMarkRead(String conversationId) =>
+    superboardMessagingMarkRead(conversationId);
 
-Future<bool> opengrowSupportSetTyping(String conversationId, bool active) =>
-    opengrowMessagingSetTyping(conversationId, active);
+Future<bool> superboardSupportSetTyping(String conversationId, bool active) =>
+    superboardMessagingSetTyping(conversationId, active);
 
-Future<bool> opengrowSupportConnectRealtime(String conversationId) =>
-    opengrowMessagingConnectRealtime(conversationId);
+Future<bool> superboardSupportConnectRealtime(String conversationId) =>
+    superboardMessagingConnectRealtime(conversationId);
 
-Future<bool> opengrowSupportDisconnectRealtime() =>
-    opengrowMessagingDisconnectRealtime();
+Future<bool> superboardSupportDisconnectRealtime() =>
+    superboardMessagingDisconnectRealtime();
 
-Future<String> opengrowSupportGetLastRealtimeEventJson() =>
-    opengrowMessagingGetLastRealtimeEventJson();
+Future<String> superboardSupportGetLastRealtimeEventJson() =>
+    superboardMessagingGetLastRealtimeEventJson();
 
-Future<bool> opengrowSupportDispose() => opengrowMessagingDispose();
+Future<bool> superboardSupportDispose() => superboardMessagingDispose();

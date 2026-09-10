@@ -9,7 +9,7 @@
       "1-test"
     ],
     "description": "Changed the Test Support business profile through its form and verified the owning API and reloaded field before restoring the previous name.",
-    "source_test": "apps/site/e2e/tests/support/support-management.spec.ts",
+    "source_test": "tests/e2e/site/support/support-management.spec.ts",
     "captured_at": "2026-09-07T11:12:24.497Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-management-browser.json"
   },
@@ -23,7 +23,7 @@
       "abb0ad1b-c716-44c9-a960-7df5ccd21a1f"
     ],
     "description": "Created and edited a Worker-validated configuration label, compared its persisted ID and name, and reopened it after reload.",
-    "source_test": "apps/site/e2e/tests/support/support-management.spec.ts",
+    "source_test": "tests/e2e/site/support/support-management.spec.ts",
     "captured_at": "2026-09-07T11:12:27.332Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-management-browser.json"
   },
@@ -38,7 +38,7 @@
       "fa0a9331-83cb-4b81-a4e1-1c68add7f8ef"
     ],
     "description": "Attached a widget connection through its form to a real native inbox, verified the stored relationship, and reloaded both Channels and Connections views.",
-    "source_test": "apps/site/e2e/tests/support/support-management.spec.ts",
+    "source_test": "tests/e2e/site/support/support-management.spec.ts",
     "captured_at": "2026-09-07T11:12:30.802Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-management-browser.json"
   },
@@ -52,7 +52,7 @@
       "65bec71c-1935-44c1-8cb0-08363af48f3f"
     ],
     "description": "Configured a dashboard app using the integration form, verified its stored target URL, searched it after reload and saved an updated target through its configuration form; no external delivery was initiated.",
-    "source_test": "apps/site/e2e/tests/support/support-management.spec.ts",
+    "source_test": "tests/e2e/site/support/support-management.spec.ts",
     "captured_at": "2026-09-07T11:12:33.642Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-management-browser.json"
   }

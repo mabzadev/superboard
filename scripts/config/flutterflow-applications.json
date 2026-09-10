@@ -1,0 +1,6 @@
+{
+	"$schema": "./flutterflow-applications.schema.json",
+	"schemaVersion": 2,
+	"owner": "superboard",
+	"applications": []
+}

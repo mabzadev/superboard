@@ -56,8 +56,3 @@ class FlutterSuperBoardPurchaseStore implements SuperBoardPurchaseStore {
   Future<void> restorePurchases({String? applicationUserName}) =>
       _purchases.restorePurchases(applicationUserName: applicationUserName);
 }
-
-@Deprecated('Use SuperBoardPurchaseStore.')
-typedef OpenGrowPurchaseStore = SuperBoardPurchaseStore;
-@Deprecated('Use FlutterSuperBoardPurchaseStore.')
-typedef FlutterOpenGrowPurchaseStore = FlutterSuperBoardPurchaseStore;

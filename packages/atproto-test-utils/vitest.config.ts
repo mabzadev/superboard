@@ -1,7 +1,12 @@
 import { defineConfig } from "vitest/config";
 
-export default defineConfig({
-	test: {
-		environment: "node",
-	},
-});
+import { centralTests } from "../../tests/checks/project-config.mjs";
+
+export default centralTests(
+	import.meta.url,
+	defineConfig({
+		test: {
+			environment: "node",
+		},
+	}),
+);

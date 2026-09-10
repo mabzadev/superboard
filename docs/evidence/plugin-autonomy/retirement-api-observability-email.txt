@@ -17,7 +17,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability-email.runtime.test.ts",
     "data_ids": [
       "2794fa03-b107-4d50-b0bf-e9d5583ef474",
       "b2de27eb-f7e6-401a-a520-f2cdff9643a5",
@@ -31,7 +31,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability-email.runtime.test.ts",
     "data_ids": [
       "b2de27eb-f7e6-401a-a520-f2cdff9643a5"
     ]
@@ -43,7 +43,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability-email.runtime.test.ts",
     "data_ids": [
       "fadd519b-b93a-46b4-ab96-ea5425fe7b4d"
     ]

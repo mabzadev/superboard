@@ -1,0 +1,1 @@
+../../../../../ios/Sources/SuperBoard/model/entities/CustomLinkRedirect.swift

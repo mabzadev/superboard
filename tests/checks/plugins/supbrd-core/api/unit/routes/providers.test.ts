@@ -1,0 +1,711 @@
+import { importPKCS8, SignJWT } from "jose";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { encryptCredential } from "../../../../../../../packages/plugins/supbrd-core/api/src/lib/secrets";
+import iapRoutes from "../../../../../../../packages/plugins/supbrd-core/api/src/routes/iap";
+import { processPushNotifications } from "../../../../../../../packages/plugins/supbrd-core/api/src/routes/push";
+import { Env } from "../../../../../../../packages/plugins/supbrd-core/api/src/types";
+import { createFakeD1, FakeD1Call } from "../../helpers/fake-d1";
+
+function pemFromPkcs8(bytes: ArrayBuffer): string {
+	const binary = String.fromCharCode(...new Uint8Array(bytes));
+	const base64 = btoa(binary);
+	const lines = base64.match(/.{1,64}/g) || [];
+	return ["-----BEGIN PRIVATE KEY-----", ...lines, "-----END PRIVATE KEY-----"].join("\n"); // gitleaks:allow -- generated in memory
+}
+
+async function googleServiceAccountJson() {
+	const key = await crypto.subtle.generateKey(
+		{
+			name: "RSASSA-PKCS1-v1_5",
+			modulusLength: 2048,
+			publicExponent: new Uint8Array([1, 0, 1]),
+			hash: "SHA-256",
+		},
+		true,
+		["sign", "verify"],
+	);
+	return JSON.stringify({
+		client_email: "play-verifier@example.iam.gserviceaccount.com",
+		private_key: pemFromPkcs8(await crypto.subtle.exportKey("pkcs8", key.privateKey)),
+		token_uri: "https://oauth2.googleapis.com/token",
+	});
+}
+
+const APPLE_TEST_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgUYK/s2lykibsPHRx
+t5O+q5mPac40KS7w70sceiJpkqahRANCAASn9fQNVFY7zCgEmgBHa5K/usJvv2uF
+KkdCuMjGCLv9opM4FtfHh7B12Lda2kSkkb0MmR0ApE+xynsuyibIyJ6Q
+-----END PRIVATE KEY-----`;
+
+const APPLE_TEST_CERT_B64 =
+	"MIIBhzCCAS2gAwIBAgIUOTNPxqaK2FoU8rnGnPg01L1sgDUwCgYIKoZIzj0EAwIwGTEXMBUGA1UEAwwOQXBwbGUgVGVzdCBJQVAwHhcNMjYwNTI3MTgzNjUyWhcNMjcwNTI3MTgzNjUyWjAZMRcwFQYDVQQDDA5BcHBsZSBUZXN0IElBUDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKf19A1UVjvMKASaAEdrkr+6wm+/a4UqR0K4yMYIu/2ikzgW18eHsHXYt1raRKSRvQyZHQCkT7HKey7KJsjInpCjUzBRMB0GA1UdDgQWBBR2ysPxUxgCzl9KrFIlUjPvK+xSuzAfBgNVHSMEGDAWgBR2ysPxUxgCzl9KrFIlUjPvK+xSuzAPBgNVHRMBAf8EBTADAQH/MAoGCCqGSM49BAMCA0gAMEUCIQCuXAaaLJPhOprXQjJQoeOliVN64wqfPqb9dCjB9p0VqgIgZsvRe8FIHy20Ixz7cgsJPF+N0BfEddXfydjTltt0H0k=";
+
+async function signedAppleJws(payload: Record<string, unknown>) {
+	const key = await importPKCS8(APPLE_TEST_PRIVATE_KEY, "ES256");
+	return new SignJWT(payload)
+		.setProtectedHeader({ alg: "ES256", x5c: [APPLE_TEST_CERT_B64] })
+		.sign(key);
+}
+
+function baseEnv(db: D1Database, overrides: Partial<Env> = {}): Env {
+	return {
+		DB: db,
+		KV: {} as any,
+		ENVIRONMENT: "test",
+		SHORTLINK_DOMAIN: "go.test",
+		API_DOMAIN: "api.test",
+		SDK_DOMAIN: "sdk.test",
+		CORS_ORIGIN: "*",
+		JWT_SECRET: "providers-secret",
+		STORE_CREDENTIALS_ENCRYPTION_KEYS: JSON.stringify({ v1: "push-test-key-material" }),
+		STORE_CREDENTIALS_ACTIVE_KEY_VERSION: "v1",
+		...overrides,
+	};
+}
+
+function projectDb(state: { webhooks: any[]; purchases: any[]; subscriptions: any[] }) {
+	return createFakeD1((call: FakeD1Call) => {
+		const { op, sql, args } = call;
+		if (op === "first" && sql.includes("FROM projects WHERE instance_id = ? AND is_test = ?")) {
+			return {
+				id: Number(args[1]) === 1 ? 102 : 101,
+				instance_id: Number(args[0]),
+				is_test: Number(args[1]),
+				name: "Production",
+				identifier: "prod",
+			};
+		}
+		if (op === "run" && sql.startsWith("INSERT INTO iap_webhook_messages")) {
+			state.webhooks.push({
+				source: args[0],
+				notification_type: args[2],
+				instance_id: args[5],
+				project_id: args[6],
+			});
+			return true;
+		}
+		if (op === "run" && sql.startsWith("INSERT INTO purchase_events")) {
+			state.purchases.push({
+				project_id: args[0],
+				product_id: args[1],
+				transaction_id: args[2],
+				event_type: args[5],
+				purchase_type: args[6],
+			});
+			return true;
+		}
+		if (op === "run" && sql.startsWith("INSERT INTO subscription_states")) {
+			state.subscriptions.push({
+				project_id: args[0],
+				product_id: args[1],
+				transaction_id: args[2],
+				status: args[7],
+			});
+			return true;
+		}
+		return undefined;
+	});
+}
+
+function queuedAppleDb(state: {
+	event: { id: string; status: string } | null;
+	queueFailures: number;
+}) {
+	return createFakeD1((call: FakeD1Call) => {
+		const { op, sql, args } = call;
+		if (op === "first" && sql.includes("FROM projects WHERE instance_id = ? AND is_test = ?")) {
+			return {
+				id: 101,
+				instance_id: Number(args[0]),
+				is_test: Number(args[1]),
+				name: "Production",
+				identifier: "prod",
+			};
+		}
+		if (op === "run" && sql.startsWith("INSERT OR IGNORE INTO billing_webhook_events")) {
+			if (state.event) return { success: true, meta: { changes: 0 } };
+			state.event = { id: String(args[0]), status: "received" };
+			return true;
+		}
+		if (
+			op === "first" &&
+			sql.includes("store = 'apple'") &&
+			sql.includes("external_event_id = ?")
+		) {
+			return state.event;
+		}
+		if (
+			op === "run" &&
+			sql.startsWith("UPDATE billing_webhook_events") &&
+			sql.includes("status = 'failed'")
+		) {
+			if (state.event) state.event.status = "failed";
+			state.queueFailures += 1;
+			return true;
+		}
+		return undefined;
+	});
+}
+
+function pushDb(rows: any[], state: { updates: any[]; claimChanges?: number }) {
+	return createFakeD1((call: FakeD1Call) => {
+		const { op, sql, args } = call;
+		if (op === "all" && sql.includes("FROM rpush_notifications rn JOIN rpush_apps ra")) {
+			return rows;
+		}
+		if (op === "all" && sql.includes("encrypted_")) return [];
+		if (op === "run" && sql.startsWith("UPDATE rpush_notifications SET processing = 1")) {
+			state.updates.push({ type: "processing", id: args[0] });
+			return { success: true, meta: { changes: state.claimChanges ?? 1 } };
+		}
+		if (op === "run" && sql.includes("SET delivered = 1")) {
+			state.updates.push({ type: "delivered", id: args[0] });
+			return true;
+		}
+		if (op === "run" && sql.includes("SET failed = ?")) {
+			state.updates.push({
+				type: "failed",
+				failed: args[0],
+				message: args[2],
+				retries: args[3],
+				id: args[6],
+			});
+			return true;
+		}
+		return undefined;
+	});
+}
+
+afterEach(() => {
+	vi.unstubAllGlobals();
+});
+
+describe("IAP webhooks", () => {
+	it("returns a retryable failure when a persisted Apple notification cannot enter the queue", async () => {
+		const state = { event: null as { id: string; status: string } | null, queueFailures: 0 };
+		const send = vi.fn(async () => {
+			throw new Error("queue unavailable");
+		});
+		const env = baseEnv(queuedAppleDb(state), {
+			ENVIRONMENT: "production",
+			BILLING_QUEUE: { send } as unknown as Queue,
+		});
+
+		const response = await iapRoutes.request(
+			"/apple/production/10",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json", "cf-ray": "apple-queue-test" },
+				body: JSON.stringify({ signedPayload: "header.payload.signature" }),
+			},
+			env,
+		);
+
+		expect(response.status).toBe(503);
+		await expect(response.json()).resolves.toEqual({
+			code: "apple_notification_queue_unavailable",
+			message: "Apple notification queue is temporarily unavailable",
+			retryable: true,
+			request_id: "apple-queue-test",
+		});
+		expect(state.event?.status).toBe("failed");
+		expect(state.queueFailures).toBe(1);
+	});
+
+	it("requeues an Apple notification replay while its durable event is not processed", async () => {
+		const state = { event: null as { id: string; status: string } | null, queueFailures: 0 };
+		const send = vi.fn(async () => undefined);
+		const env = baseEnv(queuedAppleDb(state), {
+			ENVIRONMENT: "production",
+			BILLING_QUEUE: { send } as unknown as Queue,
+		});
+		const request = () =>
+			iapRoutes.request(
+				"/apple/production/10",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ signedPayload: "header.payload.signature" }),
+				},
+				env,
+			);
+
+		expect((await request()).status).toBe(202);
+		const replay = await request();
+
+		expect(replay.status).toBe(202);
+		await expect(replay.json()).resolves.toMatchObject({ duplicate: true });
+		expect(send).toHaveBeenCalledTimes(2);
+		expect(new Set(send.mock.calls.map(([job]) => (job as { eventId: string }).eventId)).size).toBe(
+			1,
+		);
+	});
+
+	it("accepts signed Apple JWS fixtures and persists subscription state", async () => {
+		const state = { webhooks: [] as any[], purchases: [] as any[], subscriptions: [] as any[] };
+		const transaction = await signedAppleJws({
+			transactionId: "apple-tx-1",
+			originalTransactionId: "apple-original-1",
+			productId: "premium_monthly",
+			type: "Auto-Renewable Subscription",
+			price: 9990000,
+			currency: "USD",
+			purchaseDate: Date.now(),
+			expiresDate: Date.now() + 30 * 86400_000,
+		});
+		const signedPayload = await signedAppleJws({
+			notificationType: "DID_RENEW",
+			data: { signedTransactionInfo: transaction },
+		});
+
+		const response = await iapRoutes.request(
+			"/apple/production/10",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ signedPayload }),
+			},
+			baseEnv(projectDb(state), { ENVIRONMENT: "production", IAP_ALLOW_UNSIGNED_FIXTURES: "true" }),
+		);
+
+		expect(response.status).toBe(200);
+		expect(state.webhooks).toHaveLength(1);
+		expect(state.purchases).toMatchObject([
+			{
+				product_id: "premium_monthly",
+				transaction_id: "apple-tx-1",
+				event_type: "buy",
+				purchase_type: "subscription",
+			},
+		]);
+		expect(state.subscriptions).toHaveLength(1);
+	});
+
+	it("rejects unsigned Apple production payloads", async () => {
+		const state = { webhooks: [] as any[], purchases: [] as any[], subscriptions: [] as any[] };
+		const env = baseEnv(projectDb(state), { ENVIRONMENT: "production" });
+		const response = await iapRoutes.request(
+			"/apple/production/10",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					notificationType: "DID_RENEW",
+					transactionInfo: { transactionId: "tx_1" },
+				}),
+			},
+			env,
+		);
+
+		expect(response.status).toBe(400);
+		await expect(response.json()).resolves.toMatchObject({
+			code: "apple_signature_invalid",
+			message: "Apple notification signature is invalid",
+			retryable: false,
+		});
+		expect(state.webhooks).toHaveLength(0);
+	});
+
+	it("rejects Google RTDN without valid Pub/Sub authentication", async () => {
+		const env = baseEnv(projectDb({ webhooks: [], purchases: [], subscriptions: [] }), {
+			ENVIRONMENT: "production",
+			GOOGLE_PUBSUB_VERIFICATION_TOKEN: "expected-token",
+		});
+		const response = await iapRoutes.request(
+			"/google/10?token=expected-token",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json", "X-Goog-Channel-Token": "wrong-token" },
+				body: JSON.stringify({
+					subscriptionNotification: { purchaseToken: "gpa-token", subscriptionId: "premium" },
+				}),
+			},
+			env,
+		);
+
+		expect(response.status).toBe(401);
+		await expect(response.json()).resolves.toMatchObject({
+			code: "google_pubsub_authentication_invalid",
+			message: "Google Pub/Sub authentication is invalid",
+			retryable: false,
+		});
+	});
+
+	it("returns a stable non-retryable error for an unreadable Google Pub/Sub payload", async () => {
+		const env = baseEnv(projectDb({ webhooks: [], purchases: [], subscriptions: [] }), {
+			ENVIRONMENT: "production",
+			GOOGLE_PUBSUB_VERIFICATION_TOKEN: "expected-token",
+		});
+		const response = await iapRoutes.request(
+			"/google/10",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"cf-ray": "google-payload-test",
+					"X-Goog-Channel-Token": "expected-token",
+				},
+				body: JSON.stringify({ message: { data: "not-json" } }),
+			},
+			env,
+		);
+
+		expect(response.status).toBe(400);
+		await expect(response.json()).resolves.toEqual({
+			code: "google_pubsub_payload_invalid",
+			message: "Google Pub/Sub payload is invalid",
+			retryable: false,
+			request_id: "google-payload-test",
+		});
+	});
+
+	it("routes Google license-test notifications to the test project after provider classification", async () => {
+		const calls: Array<{ path: string; body: Record<string, any> }> = [];
+		const billing = {
+			fetch: vi.fn(async (request: Request) => {
+				const body = (await request.json()) as Record<string, any>;
+				calls.push({ path: new URL(request.url).pathname, body });
+				if (new URL(request.url).pathname.endsWith("/google/purchases/classify")) {
+					return Response.json({ data: { environment: "sandbox" } });
+				}
+				return Response.json({
+					data: { event_id: "event-1", duplicate: false, queued: true, processed: false },
+				});
+			}),
+		};
+		const env = baseEnv(projectDb({ webhooks: [], purchases: [], subscriptions: [] }), {
+			ENVIRONMENT: "production",
+			BILLING_EXECUTION_MODE: "service",
+			BILLING: billing as unknown as Fetcher,
+			GOOGLE_PUBSUB_VERIFICATION_TOKEN: "migration-token",
+		});
+		const providerPayload = {
+			packageName: "com.example.android",
+			eventTimeMillis: String(Date.now()),
+			subscriptionNotification: {
+				notificationType: "SUBSCRIPTION_PURCHASED",
+				purchaseToken: "license-test-token",
+				subscriptionId: "premium_weekly",
+			},
+		};
+		const response = await iapRoutes.request(
+			"/google/10",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json", "X-Goog-Channel-Token": "migration-token" },
+				body: JSON.stringify({
+					message: { messageId: "pubsub-message-1", data: btoa(JSON.stringify(providerPayload)) },
+				}),
+			},
+			env,
+		);
+
+		expect(response.status).toBe(202);
+		expect(calls.map((call) => call.path)).toEqual([
+			"/internal/v1/google/purchases/classify",
+			"/internal/v1/provider-events/ingest",
+		]);
+		expect(calls[1].body).toMatchObject({
+			project_id: "102",
+			environment: "sandbox",
+			job: { projectId: "102", environment: "sandbox" },
+		});
+	});
+
+	it("accepts pending Google chargeback reviews without attempting purchase verification", async () => {
+		const calls: Array<{ path: string; body: Record<string, any> }> = [];
+		const db = createFakeD1((call) => {
+			if (
+				call.op === "first" &&
+				call.sql.includes("FROM projects WHERE instance_id = ? AND is_test = ?")
+			) {
+				return { id: 101, instance_id: 10, is_test: 0, name: "Production", identifier: "prod" };
+			}
+			if (
+				call.op === "first" &&
+				call.sql.includes("FROM billing_transactions t") &&
+				call.sql.includes("JOIN projects p")
+			) {
+				return { project_id: "102", environment: "sandbox" };
+			}
+			return undefined;
+		});
+		const billing = {
+			fetch: vi.fn(async (request: Request) => {
+				const body = (await request.json()) as Record<string, any>;
+				calls.push({ path: new URL(request.url).pathname, body });
+				return Response.json({
+					data: { event_id: "refund-event-1", duplicate: false, queued: true, processed: false },
+				});
+			}),
+		};
+		const env = baseEnv(db, {
+			ENVIRONMENT: "production",
+			BILLING_EXECUTION_MODE: "service",
+			BILLING: billing as unknown as Fetcher,
+			GOOGLE_PUBSUB_VERIFICATION_TOKEN: "migration-token",
+		});
+		const providerPayload = {
+			packageName: "com.example.android",
+			eventTimeMillis: "1785830400000",
+			pendingRefundReviewNotification: {
+				version: "1.0",
+				pendingRefundToken: "pending-refund-token",
+				orderId: "GPA.1234-5678-9012-34567",
+				refundReason: 7,
+			},
+		};
+		const response = await iapRoutes.request(
+			"/google/10",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json", "X-Goog-Channel-Token": "migration-token" },
+				body: JSON.stringify({
+					message: {
+						messageId: "pubsub-refund-review-1",
+						data: btoa(JSON.stringify(providerPayload)),
+					},
+				}),
+			},
+			env,
+		);
+
+		expect(response.status).toBe(202);
+		expect(calls).toHaveLength(1);
+		expect(calls[0]).toMatchObject({
+			path: "/internal/v1/provider-events/ingest",
+			body: {
+				project_id: "102",
+				environment: "sandbox",
+				external_event_id: "pubsub-refund-review-1",
+				event_type: "PENDING_REFUND_REVIEW_CHARGEBACK",
+				job: {
+					type: "billing.google.refund.review",
+					projectId: "102",
+					environment: "sandbox",
+					eventOccurredAt: "2026-08-04T08:00:00.000Z",
+				},
+			},
+		});
+	});
+
+	it("persists Google signed-fixture-equivalent subscription events when test fixtures are explicitly enabled", async () => {
+		const state = { webhooks: [] as any[], purchases: [] as any[], subscriptions: [] as any[] };
+		const env = baseEnv(projectDb(state), { IAP_ALLOW_UNSIGNED_FIXTURES: "true" });
+		const response = await iapRoutes.request(
+			"/google/10",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					subscriptionNotification: {
+						notificationType: "SUBSCRIPTION_PURCHASED",
+						purchaseToken: "purchase-token",
+						subscriptionId: "premium_monthly",
+					},
+					eventTimeMillis: String(Date.now()),
+				}),
+			},
+			env,
+		);
+
+		expect(response.status).toBe(200);
+		expect(state.webhooks).toHaveLength(1);
+		expect(state.purchases).toMatchObject([
+			{
+				product_id: "premium_monthly",
+				transaction_id: "purchase-token",
+				event_type: "buy",
+				purchase_type: "subscription",
+			},
+		]);
+		expect(state.subscriptions).toHaveLength(1);
+	});
+
+	it("requires Google Play purchase verification credentials in production after RTDN token validation", async () => {
+		const env = baseEnv(projectDb({ webhooks: [], purchases: [], subscriptions: [] }), {
+			ENVIRONMENT: "production",
+			GOOGLE_PUBSUB_VERIFICATION_TOKEN: "expected-token",
+		});
+		const response = await iapRoutes.request(
+			"/google/10",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json", "X-Goog-Channel-Token": "expected-token" },
+				body: JSON.stringify({
+					packageName: "com.superboard.android",
+					subscriptionNotification: {
+						notificationType: "SUBSCRIPTION_PURCHASED",
+						purchaseToken: "purchase-token",
+						subscriptionId: "premium_monthly",
+					},
+				}),
+			},
+			env,
+		);
+
+		expect(response.status).toBe(503);
+		await expect(response.json()).resolves.toMatchObject({
+			code: "google_purchase_verification_failed",
+			message: "Google Play purchase verification failed",
+			retryable: true,
+		});
+	});
+
+	it("verifies Google subscription purchases with the Android Publisher API when credentials are configured", async () => {
+		const state = { webhooks: [] as any[], purchases: [] as any[], subscriptions: [] as any[] };
+		const fetchSpy = vi.fn(async (url: string) => {
+			if (url === "https://oauth2.googleapis.com/token") {
+				return new Response(
+					JSON.stringify({ access_token: "google-access-token", expires_in: 3600 }),
+					{ status: 200 },
+				);
+			}
+			if (
+				url.includes(
+					"/androidpublisher/v3/applications/com.superboard.android/purchases/subscriptionsv2/tokens/purchase-token",
+				)
+			) {
+				return new Response(
+					JSON.stringify({
+						latestOrderId: "GPA.1234-5678-9012-34567",
+						startTime: "2026-05-01T00:00:00Z",
+						lineItems: [{ productId: "premium_monthly", expiryTime: "2026-06-01T00:00:00Z" }],
+					}),
+					{ status: 200 },
+				);
+			}
+			return new Response(JSON.stringify({ error: { message: `unexpected ${url}` } }), {
+				status: 404,
+			});
+		});
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const env = baseEnv(projectDb(state), {
+			ENVIRONMENT: "production",
+			GOOGLE_PUBSUB_VERIFICATION_TOKEN: "expected-token",
+			GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: await googleServiceAccountJson(),
+		});
+		const response = await iapRoutes.request(
+			"/google/10",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json", "X-Goog-Channel-Token": "expected-token" },
+				body: JSON.stringify({
+					packageName: "com.superboard.android",
+					subscriptionNotification: {
+						notificationType: "SUBSCRIPTION_PURCHASED",
+						purchaseToken: "purchase-token",
+						subscriptionId: "premium_monthly",
+					},
+				}),
+			},
+			env,
+		);
+
+		expect(response.status).toBe(200);
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
+		expect(state.purchases).toMatchObject([
+			{
+				product_id: "premium_monthly",
+				transaction_id: "purchase-token",
+				event_type: "buy",
+				purchase_type: "subscription",
+			},
+		]);
+		expect(state.subscriptions).toHaveLength(1);
+	});
+});
+
+describe("push processing", () => {
+	it("marks FCM notifications delivered when provider send succeeds", async () => {
+		const state = { updates: [] as any[] };
+		const env = baseEnv(pushDb([], state));
+		const row = {
+			id: 1,
+			type: "Rpush::Fcm::Notification",
+			device_token: "device-token",
+			notification: JSON.stringify({ title: "Hello", body: "World" }),
+			data: JSON.stringify({ linksquared: "true" }),
+			firebase_project_id: "firebase-project",
+			encrypted_access_token: await encryptCredential(env, "cached-fcm-token"),
+			access_token_expiration: new Date(Date.now() + 3600_000).toISOString(),
+			retries: 0,
+		};
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response(JSON.stringify({ name: "messages/1" }), { status: 200 })),
+		);
+
+		env.DB = pushDb([row], state);
+		const result = await processPushNotifications(env);
+
+		expect(result).toMatchObject({ processed: 1, results: [{ id: 1, delivered: true }] });
+		expect(state.updates).toEqual([
+			{ type: "processing", id: 1 },
+			{ type: "delivered", id: 1 },
+		]);
+	});
+
+	it("marks push notifications failed after the final retry", async () => {
+		const state = { updates: [] as any[] };
+		const env = baseEnv(pushDb([], state));
+		const row = {
+			id: 2,
+			type: "Rpush::Fcm::Notification",
+			device_token: "device-token",
+			notification: "{}",
+			data: "{}",
+			firebase_project_id: "firebase-project",
+			encrypted_access_token: await encryptCredential(env, "cached-fcm-token"),
+			access_token_expiration: new Date(Date.now() + 3600_000).toISOString(),
+			retries: 4,
+		};
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(
+				async () =>
+					new Response(JSON.stringify({ error: { message: "Invalid token" } }), { status: 400 }),
+			),
+		);
+
+		env.DB = pushDb([row], state);
+		const result = await processPushNotifications(env);
+
+		expect(result).toMatchObject({
+			processed: 1,
+			results: [{ id: 2, delivered: false, retry: false, retries: 5 }],
+		});
+		expect(state.updates.at(-1)).toMatchObject({
+			type: "failed",
+			failed: 1,
+			message: "Invalid token",
+			retries: 5,
+			id: 2,
+		});
+	});
+
+	it("does not deliver a notification claimed by another queue consumer", async () => {
+		const state = { updates: [] as any[], claimChanges: 0 };
+		const env = baseEnv(pushDb([], state));
+		const row = {
+			id: 3,
+			type: "Rpush::Fcm::Notification",
+			device_token: "device-token",
+			notification: "{}",
+			data: "{}",
+			firebase_project_id: "firebase-project",
+			encrypted_access_token: await encryptCredential(env, "cached-fcm-token"),
+			access_token_expiration: new Date(Date.now() + 3600_000).toISOString(),
+			retries: 0,
+		};
+		env.DB = pushDb([row], state);
+		const fetchSpy = vi.fn();
+		vi.stubGlobal("fetch", fetchSpy);
+
+		await expect(processPushNotifications(env)).resolves.toEqual({ processed: 0, results: [] });
+		expect(fetchSpy).not.toHaveBeenCalled();
+		expect(state.updates).toEqual([{ type: "processing", id: 3 }]);
+	});
+});

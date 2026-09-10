@@ -1,0 +1,7 @@
+{
+	"$schema": "../config/flutterflow-application-bindings.schema.json",
+	"schemaVersion": 2,
+	"owner": "superboard",
+	"generatedFrom": "scripts/config/flutterflow-applications.json",
+	"applications": []
+}

@@ -2,15 +2,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "OpenGrow",
+    name: "SuperBoard",
     platforms: [.iOS(.v13)],
     products: [
-        .library(name: "OpenGrow", targets: ["OpenGrow"]),
+        .library(name: "SuperBoard", targets: ["SuperBoard"]),
     ],
     targets: [
         .target(
-            name: "OpenGrow",
-            path: "sdks/ios/Sources/OpenGrow",
+            name: "SuperBoard",
+            path: "sdks/ios/Sources/SuperBoard",
             resources: [
                 .process("controllers/MessagesViewController.xib"),
                 .process("controllers/MessageDetailsViewController.xib"),
@@ -18,9 +18,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "OpenGrowTests",
-            dependencies: ["OpenGrow"],
-            path: "sdks/ios/Tests/opengrow-iosTests"
+            name: "SuperBoardTests",
+            dependencies: ["SuperBoard"],
+            path: "tests/checks/sdks/ios"
         ),
     ]
 )

@@ -93,7 +93,7 @@ class SuperBoardPurchases {
   String _baseUrl = '';
   String _appVersion = '';
   String _buildNumber = '';
-  String _sdkVersion = '3.0.0';
+  String _sdkVersion = '4.0.0';
   String _storefront = '';
   String _campaign = '';
   String? _anonymousId;
@@ -114,7 +114,7 @@ class SuperBoardPurchases {
     SuperBoardIdentityTokenProvider? identityTokenProvider,
     String appVersion = '',
     String buildNumber = '',
-    String sdkVersion = '3.0.0',
+    String sdkVersion = '4.0.0',
     String storefront = '',
     String campaign = '',
   }) async {
@@ -150,16 +150,16 @@ class SuperBoardPurchases {
     _storefront = storefront;
     _campaign = campaign;
     _preferences = await SharedPreferences.getInstance();
-    _anonymousId = _preferences!.getString('opengrow.purchases.anonymous_id');
+    _anonymousId = _preferences!.getString('superboard.purchases.anonymous_id');
     if (_anonymousId == null) {
-      _anonymousId = r'$opengrow_anon_' + const Uuid().v4();
+      _anonymousId = r'$superboard_anon_' + const Uuid().v4();
       await _preferences!.setString(
-        'opengrow.purchases.anonymous_id',
+        'superboard.purchases.anonymous_id',
         _anonymousId!,
       );
     }
     final cached = await _secureStorage.read(
-      key: 'opengrow.purchases.customer_info.verified',
+      key: 'superboard.purchases.customer_info.verified',
     );
     if (cached != null) {
       try {
@@ -175,7 +175,7 @@ class SuperBoardPurchases {
         _customerId = info.customerId;
       } catch (_) {
         await _secureStorage.delete(
-          key: 'opengrow.purchases.customer_info.verified',
+          key: 'superboard.purchases.customer_info.verified',
         );
       }
     }
@@ -212,7 +212,7 @@ class SuperBoardPurchases {
         : const Uuid().v5(
             Namespace.url.value,
             [
-              'opengrow-certification-v1',
+              'superboard-certification-v1',
               runId.trim(),
               checkKey.trim(),
               passed ? 'passed' : 'failed',
@@ -261,9 +261,9 @@ class SuperBoardPurchases {
   Future<SuperBoardCustomerInfo> logOut() async {
     _setIdentityToken(null);
     _tokenProvider = null;
-    _anonymousId = r'$opengrow_anon_' + const Uuid().v4();
+    _anonymousId = r'$superboard_anon_' + const Uuid().v4();
     await _preferences?.setString(
-      'opengrow.purchases.anonymous_id',
+      'superboard.purchases.anonymous_id',
       _anonymousId!,
     );
     _customerId = null;
@@ -365,7 +365,7 @@ class SuperBoardPurchases {
   Future<SuperBoardPurchaseConfiguration> getPurchaseConfiguration({
     String placement = 'default',
   }) async {
-    final cacheKey = 'opengrow.purchases.configuration.$placement';
+    final cacheKey = 'superboard.purchases.configuration.$placement';
     try {
       final response = await _request(
         'GET',
@@ -970,7 +970,7 @@ class SuperBoardPurchases {
     _lastCustomerInfo = info;
     _customerId = info.customerId ?? _customerId;
     await _secureStorage.write(
-      key: 'opengrow.purchases.customer_info.verified',
+      key: 'superboard.purchases.customer_info.verified',
       value: jsonEncode({...info.toJson(), 'signature': value['signature']}),
     );
     _customerInfoController.add(info);
@@ -1033,12 +1033,6 @@ class SuperBoardPurchases {
         if (_storefront.isNotEmpty) 'X-SuperBoard-Storefront': _storefront,
         if (_campaign.isNotEmpty) 'X-SuperBoard-Campaign': _campaign,
         // Compatibility headers remain during the rolling Worker migration.
-        'X-OpenGrow-Anonymous-ID': _anonymousId!,
-        'X-OpenGrow-SDK-Version': _sdkVersion,
-        if (_appVersion.isNotEmpty) 'X-OpenGrow-App-Version': _appVersion,
-        if (_buildNumber.isNotEmpty) 'X-OpenGrow-Build-Number': _buildNumber,
-        if (_storefront.isNotEmpty) 'X-OpenGrow-Storefront': _storefront,
-        if (_campaign.isNotEmpty) 'X-OpenGrow-Campaign': _campaign,
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       })
       ..body = jsonEncode(body ?? const {});
@@ -1189,10 +1183,3 @@ class SuperBoardPurchases {
     await _purchaseResultController.close();
   }
 }
-
-@Deprecated('Use SuperBoardIdentityTokenProvider.')
-typedef OpenGrowIdentityTokenProvider = SuperBoardIdentityTokenProvider;
-@Deprecated('Use SuperBoardPurchasesException.')
-typedef OpenGrowPurchasesException = SuperBoardPurchasesException;
-@Deprecated('Use SuperBoardPurchases.')
-typedef OpenGrowPurchases = SuperBoardPurchases;

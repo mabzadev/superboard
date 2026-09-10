@@ -1,6 +1,6 @@
 Canonical Site API integration evidence
 
-Test: apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts
+Test: tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts
 Runner exit code: 0
 All 10 files and 27 tests in this run passed.
 
@@ -13,7 +13,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "0f835715-b032-4817-a735-a910142d4c3a"
     ]
@@ -25,7 +25,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "0f835715-b032-4817-a735-a910142d4c3a"
     ]
@@ -37,7 +37,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "0f835715-b032-4817-a735-a910142d4c3a"
     ]
@@ -49,7 +49,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "783ac2b8-ceeb-466a-8464-2673eb0a2219"
     ]
@@ -61,7 +61,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "783ac2b8-ceeb-466a-8464-2673eb0a2219"
     ]
@@ -73,7 +73,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "783ac2b8-ceeb-466a-8464-2673eb0a2219"
     ]
@@ -85,7 +85,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "979bc81f-b47a-497b-abf9-7f46972abaee"
     ]
@@ -97,7 +97,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "979bc81f-b47a-497b-abf9-7f46972abaee"
     ]
@@ -109,7 +109,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "55f6224c-c3a8-4f7f-b07f-95816baf7255"
     ]
@@ -121,7 +121,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "55f6224c-c3a8-4f7f-b07f-95816baf7255"
     ]
@@ -133,7 +133,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "1f79294a-93c9-4347-93ff-b9db7451ef80"
     ]
@@ -145,7 +145,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "1f79294a-93c9-4347-93ff-b9db7451ef80"
     ]
@@ -157,7 +157,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "1f79294a-93c9-4347-93ff-b9db7451ef80"
     ]
@@ -169,7 +169,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "0f835715-b032-4817-a735-a910142d4c3a"
     ]
@@ -181,7 +181,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "0f835715-b032-4817-a735-a910142d4c3a"
     ]
