@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
@@ -11,18 +12,34 @@ import {
 	isIgnoredDirectory,
 } from "./configuration-boundaries.mjs";
 
-test("the repository has one MBZA reference profile and isolated application profiles", async () => {
+test("the standalone repository has its reference profile without an application target", async () => {
 	const report = await auditConfigurationBoundaries();
 	assert.equal(report.valid, true, report.errors.join("\n"));
 	assert.equal(report.classification.reference.target, "mbza-development");
 	assert.deepEqual(report.classification.reference.environments, ["development", "local"]);
 	assert.ok(report.classification.reference.cloudflareResourceIds > 0);
 	const applications = report.classification.applications.map(({ target }) => target);
-	assert.ok(applications.includes("vocostar"));
+	assert.deepEqual(applications, []);
 	assert.equal(new Set(applications).size, applications.length);
 	assert.ok(report.classification.shared.scannedFiles > 0);
 	assert.equal(report.classification.injected.accountId.storedInTargetManifest, false);
 	assert.equal(report.classification.injected.secretValuesStoredInTargetOrWranglerVars, false);
+});
+
+test("a locale cookie prefix is not a reference to a Worker resource", () => {
+	assert.deepEqual(
+		findForbiddenSharedOccurrences({
+			path: "cookie.ts",
+			source: 'export const COOKIE = "superboard-locale";',
+			ownership: {
+				domainSuffixes: [],
+				exactLiterals: [
+					{ value: "superboard-local", kind: "cloudflare-resource-name", target: "reference" },
+				],
+			},
+		}),
+		[],
+	);
 });
 
 test("the injected secret inventory is derived from common and custom registries", () => {
@@ -47,12 +64,12 @@ test("shared source rejects target domains, resource ids and workstation paths",
 	const occurrences = findForbiddenSharedOccurrences({
 		path: "workers/api/src/example.ts",
 		source: [
-			'fetch("https://api.vocostar.com/v1")',
+			'fetch("https://api.reference.example/v1")',
 			`const databaseId = "${resourceId}";`,
 			'const receipt = "/Users/example/private/receipt.json";',
 		].join("\n"),
 		ownership: {
-			domainSuffixes: ["mbza.dev", "vocostar.com"],
+			domainSuffixes: ["mbza.dev", "reference.example"],
 			exactLiterals: [
 				{
 					value: resourceId,
@@ -77,7 +94,7 @@ test("common provider and service-binding URLs remain allowed", () => {
 			'fetch("https://api.cloudflare.com/client/v4/accounts")',
 		].join("\n"),
 		ownership: {
-			domainSuffixes: ["mbza.dev", "vocostar.com"],
+			domainSuffixes: ["mbza.dev", "reference.example"],
 			exactLiterals: [],
 		},
 	});
@@ -128,11 +145,11 @@ test("root scripts cannot silently select one application target", () => {
 		findHardcodedTargetCommands(
 			{
 				portable: "node scripts/check.mjs --target $OPENGROW_TARGET",
-				pinned: "node scripts/check.mjs --target vocostar --environment production",
+				pinned: "node scripts/check.mjs --target reference-production --environment production",
 			},
-			["mbza-development", "vocostar"],
+			["mbza-development", "reference-production"],
 		),
-		[{ script: "pinned", target: "vocostar" }],
+		[{ script: "pinned", target: "reference-production" }],
 	);
 });
 

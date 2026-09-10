@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import { execFile, execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -70,7 +71,7 @@ test("the declarative registry exposes exactly nine domain services", () => {
 	assert.equal(PLATFORM_SERVICE_SECRETS.email.includes("FLOWS_EMAIL_INTERNAL_TOKEN"), false);
 	for (const secrets of Object.values(PLATFORM_SERVICE_SECRETS)) {
 		assert.equal(
-			secrets.some((name) => /vocostar|mbza/i.test(name)),
+			secrets.some((name) => /reference-production|mbza/i.test(name)),
 			false,
 			"common secret names must not contain an application or environment brand",
 		);
@@ -153,7 +154,7 @@ test("validation-only local D1 resources receive stable distinct ids", () => {
 test("generated Site config uses target resources and follows public routing activation", async () => {
 	for (const [targetName, environment] of [
 		["mbza-development", "development"],
-		["vocostar", "production"],
+		["reference-production", "production"],
 	]) {
 		execFileSync(
 			process.execPath,
@@ -285,7 +286,7 @@ test("development Site preview routing is explicit and only acquires the canonic
 	assert.equal(JSON.stringify(config.routes).includes("site.mbza.dev"), false);
 
 	for (const extraArgs of [
-		["--target", "vocostar", "--environment", "production", "--allow-unprovisioned"],
+		["--target", "reference-production", "--environment", "production", "--allow-unprovisioned"],
 		["--target", "mbza-development", "--environment", "development", "--no-routes"],
 	]) {
 		assert.throws(
@@ -334,7 +335,7 @@ test("explicit release operations preserve preview validation and cannot bypass 
 		["--target", "mbza-development", "--environment", "development", "--no-routes"],
 		[
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 			"--site-preview-route",
@@ -541,7 +542,7 @@ test("generated domain config is private and has no static project allowlist", (
 			"--service",
 			"marketing",
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 			"--allow-unprovisioned",
@@ -551,7 +552,10 @@ test("generated domain config is private and has no static project allowlist", (
 	);
 	const config = JSON.parse(
 		readFileSync(
-			new URL("../deploy/generated/vocostar-marketing-production.jsonc", import.meta.url),
+			new URL(
+				"../deploy/generated/reference-production-marketing-production.jsonc",
+				import.meta.url,
+			),
 			"utf8",
 		),
 	);
@@ -567,7 +571,7 @@ test("generated domain config is private and has no static project allowlist", (
 	]);
 	assert.equal(config.vars.QUEUE_NAME, "opengrow-marketing-delivery");
 	assert.equal(config.vars.DLQ_NAME, "opengrow-marketing-delivery-dlq");
-	assert.equal(config.vars.PUBLIC_API_URL, "https://api.vocostar.com");
+	assert.equal(config.vars.PUBLIC_API_URL, "https://api.reference.example");
 	assert.deepEqual(config.services, [
 		{ binding: "EMAIL_SERVICE", service: "opengrow-email" },
 		{
@@ -595,7 +599,7 @@ test("generated Support config includes its stateful runtime resources", () => {
 			"--service",
 			"support",
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 			"--allow-unprovisioned",
@@ -604,7 +608,7 @@ test("generated Support config includes its stateful runtime resources", () => {
 	);
 	const config = JSON.parse(
 		readFileSync(
-			new URL("../deploy/generated/vocostar-support-production.jsonc", import.meta.url),
+			new URL("../deploy/generated/reference-production-support-production.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
@@ -682,7 +686,7 @@ test("generated Support config includes its stateful runtime resources", () => {
 test("generated Files config enforces the selected target upload policy", () => {
 	for (const [target, environment] of [
 		["mbza-development", "development"],
-		["vocostar", "production"],
+		["reference-production", "production"],
 	]) {
 		execFileSync(
 			process.execPath,
@@ -707,7 +711,7 @@ test("generated Files config enforces the selected target upload policy", () => 
 	);
 	const production = JSON.parse(
 		readFileSync(
-			new URL("../deploy/generated/vocostar-files-production.jsonc", import.meta.url),
+			new URL("../deploy/generated/reference-production-files-production.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
@@ -734,7 +738,7 @@ test("generated Email and Marketing configs quarantine terminal queue failures",
 				"--service",
 				service,
 				"--target",
-				"vocostar",
+				"reference-production",
 				"--environment",
 				"production",
 				"--allow-unprovisioned",
@@ -744,7 +748,7 @@ test("generated Email and Marketing configs quarantine terminal queue failures",
 	}
 	const email = JSON.parse(
 		readFileSync(
-			new URL("../deploy/generated/vocostar-email-production.jsonc", import.meta.url),
+			new URL("../deploy/generated/reference-production-email-production.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
@@ -753,17 +757,14 @@ test("generated Email and Marketing configs quarantine terminal queue failures",
 	assert.equal(email.queues.consumers[0].dead_letter_queue, email.vars.EMAIL_DLQ_NAME);
 	assert.equal(email.queues.consumers[1].queue, email.vars.EMAIL_DLQ_NAME);
 	assert.equal(email.queues.consumers[1].dead_letter_queue, undefined);
-	assert.deepEqual(email.secrets.required, [
-		"AWS_SES_SMTP_PASSWORD",
-		"AWS_SES_SMTP_USERNAME",
-		"AWS_SES_SNS_TOPIC_ARN",
-		"EMAIL_INTERNAL_TOKEN",
-		"EMAIL_SMTP_ENCRYPTION_KEY",
-	]);
+	assert.deepEqual(email.secrets.required, ["EMAIL_INTERNAL_TOKEN", "EMAIL_SMTP_ENCRYPTION_KEY"]);
 
 	const marketing = JSON.parse(
 		readFileSync(
-			new URL("../deploy/generated/vocostar-marketing-production.jsonc", import.meta.url),
+			new URL(
+				"../deploy/generated/reference-production-marketing-production.jsonc",
+				import.meta.url,
+			),
 			"utf8",
 		),
 	);
@@ -795,7 +796,7 @@ test("domain secret rotation accepts only secrets declared by the registry", () 
 			"--service",
 			"marketing",
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 			"--name",
@@ -820,7 +821,7 @@ test("legacy single-binding secret upload never reads or mutates an allowed valu
 			"--service",
 			"api",
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 			"--name",
@@ -850,7 +851,7 @@ test("retired Dashboard secret upload is rejected before reading a value", () =>
 			"--service",
 			"dashboard",
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 			"--name",
@@ -875,7 +876,7 @@ test("observability secret rotation rejects undeclared values before invoking Wr
 			"--service",
 			"observability",
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 			"--name",
@@ -909,7 +910,7 @@ test("all common platform services reject undeclared secret names", () => {
 				"--service",
 				service,
 				"--target",
-				"vocostar",
+				"reference-production",
 				"--environment",
 				"production",
 				"--name",
@@ -966,7 +967,7 @@ test("staged production API stays private while exposing service bindings", asyn
 			"--service",
 			"api",
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 			"--allow-unprovisioned",
@@ -975,7 +976,7 @@ test("staged production API stays private while exposing service bindings", asyn
 	);
 	const config = JSON.parse(
 		readFileSync(
-			new URL("../deploy/generated/vocostar-api-production.jsonc", import.meta.url),
+			new URL("../deploy/generated/reference-production-api-production.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
@@ -1008,8 +1009,8 @@ test("staged production API stays private while exposing service bindings", asyn
 		JSON.parse(config.vars.PUBLIC_SURFACES_JSON).find(({ id }) => id === "legacy-chatwoot"),
 		{
 			id: "legacy-chatwoot",
-			url: "https://chat.vocostar.com",
-			healthUrl: "https://chat.vocostar.com/ready",
+			url: "https://chat.reference.example",
+			healthUrl: "https://chat.reference.example/ready",
 			description:
 				"Legacy Chatwoot migration source; keep read-only until OpenGrow Support acceptance and retention sign-off, then remove this monitor with the service",
 		},
@@ -1103,15 +1104,17 @@ test("staged production API stays private while exposing service bindings", asyn
 		},
 	);
 
-	const vocostarCatalog = JSON.parse(config.vars.PLATFORM_WORKERS_JSON);
-	const { target: vocostarTarget } = await loadTarget("vocostar");
-	const expectedManaged = vocostarTarget.customWorker.managedWorkers.map((component) => ({
-		id: managedWorkerService(component),
-		workerName: component.workers.production,
-		binding: managedWorkerOperationalBinding(component),
-	}));
+	const referenceApplicationCatalog = JSON.parse(config.vars.PLATFORM_WORKERS_JSON);
+	const { target: referenceApplicationTarget } = await loadTarget("reference-production");
+	const expectedManaged = referenceApplicationTarget.customWorker.managedWorkers.map(
+		(component) => ({
+			id: managedWorkerService(component),
+			workerName: component.workers.production,
+			binding: managedWorkerOperationalBinding(component),
+		}),
+	);
 	assert.deepEqual(
-		vocostarCatalog.workers
+		referenceApplicationCatalog.workers
 			.filter(({ managed }) => managed)
 			.map(({ id, workerName, managed }) => ({
 				id,
@@ -1126,7 +1129,7 @@ test("staged production API stays private while exposing service bindings", asyn
 			{ binding: component.binding, service: component.workerName },
 		);
 	}
-	assert.deepEqual(vocostarCatalog.customDependencies, [
+	assert.deepEqual(referenceApplicationCatalog.customDependencies, [
 		{
 			binding: "VOCALS_ORCHESTRATOR",
 			workerName: "send-users-vocals-orchestrator",
@@ -1137,7 +1140,7 @@ test("staged production API stays private while exposing service bindings", asyn
 		},
 		{ binding: "FILES_SERVICE", workerName: "opengrow-files" },
 	]);
-	assert.equal(JSON.stringify(vocostarCatalog).includes("TOKEN"), false);
+	assert.equal(JSON.stringify(referenceApplicationCatalog).includes("TOKEN"), false);
 });
 
 test("parallel configuration generation publishes only complete atomic JSON", async () => {
@@ -1147,7 +1150,7 @@ test("parallel configuration generation publishes only complete atomic JSON", as
 		"--service",
 		"api",
 		"--target",
-		"vocostar",
+		"reference-production",
 		"--environment",
 		"production",
 		"--allow-unprovisioned",
@@ -1163,7 +1166,7 @@ test("parallel configuration generation publishes only complete atomic JSON", as
 	);
 	const config = JSON.parse(
 		readFileSync(
-			new URL("../deploy/generated/vocostar-api-production.jsonc", import.meta.url),
+			new URL("../deploy/generated/reference-production-api-production.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
@@ -1255,7 +1258,7 @@ test("generated identity and files configs are private and parameterized", () =>
 	assert.equal(files.r2_buckets[0].bucket_name, "superboard-dev-files");
 });
 
-test("generated VocoStar custom config declares all legacy bridges through the target", () => {
+test("generated custom config preserves target service bindings", () => {
 	execFileSync(
 		process.execPath,
 		[
@@ -1263,7 +1266,7 @@ test("generated VocoStar custom config declares all legacy bridges through the t
 			"--service",
 			"custom",
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 		],
@@ -1271,18 +1274,18 @@ test("generated VocoStar custom config declares all legacy bridges through the t
 	);
 	const config = JSON.parse(
 		readFileSync(
-			new URL("../deploy/generated/vocostar-custom-production.jsonc", import.meta.url),
+			new URL("../deploy/generated/reference-production-custom-production.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
 	assert.equal(config.workers_dev, false);
-	assert.equal(config.main, "../../workers/custom/vocostar/src/index.ts");
+	assert.equal(config.main, "../../workers/custom/reference/src/index.ts");
 	assert.deepEqual(config.d1_databases, [
 		{
-			binding: "VOCOSTAR_DB",
-			database_name: "vocostar-db",
-			database_id: "07c6f044-e00a-421f-90de-b56db7bcfc40",
-			migrations_dir: "../../workers/custom/vocostar/migrations",
+			binding: "REFERENCE_DB",
+			database_name: "reference-production-db",
+			database_id: "897331b4-db26-5ad7-94e9-400875525f9a",
+			migrations_dir: "../../workers/custom/reference/migrations",
 			migrations_table: "d1_migrations",
 		},
 	]);
@@ -1300,12 +1303,9 @@ test("generated VocoStar custom config declares all legacy bridges through the t
 			service: "opengrow-files",
 		},
 	]);
-	assert.deepEqual(config.triggers, { crons: ["*/1 * * * *"] });
+	assert.deepEqual(config.triggers, { crons: ["0 3 * * *"] });
 	assert.equal(config.vars.LEGACY_FILE_ORIGIN, undefined);
-	assert.equal(
-		config.vars.CUSTOM_WORKER_CAPABILITIES,
-		"vocostar.voice.clone,vocostar.media.convert,vocostar.jobs.read,vocostar.jobs.cancel,vocostar.jobs.retry",
-	);
+	assert.equal(config.vars.CUSTOM_WORKER_CAPABILITIES, "reference.echo,reference.acceptance");
 });
 
 test("generated reference custom config owns its durable D1 job store", () => {
@@ -1357,7 +1357,7 @@ test("custom preflight versions are isolated from scheduled triggers", () => {
 			"--service",
 			"custom",
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 			"--preflight",
@@ -1366,7 +1366,7 @@ test("custom preflight versions are isolated from scheduled triggers", () => {
 	);
 	const config = JSON.parse(
 		readFileSync(
-			new URL("../deploy/generated/vocostar-custom-production.jsonc", import.meta.url),
+			new URL("../deploy/generated/reference-production-custom-production.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
@@ -1382,7 +1382,7 @@ test("custom secret rotation is restricted by each target manifest", () => {
 			"--service",
 			"custom",
 			"--target",
-			"vocostar",
+			"reference-production",
 			"--environment",
 			"production",
 			"--name",

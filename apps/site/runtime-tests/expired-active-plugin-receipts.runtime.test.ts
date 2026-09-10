@@ -18,13 +18,13 @@ test("managed lifecycle actions revalidate expired active plugin receipts", asyn
 			`UPDATE superboard_plugin_runtime_health SET expires_at = '2000-01-01T00:00:00.000Z'
 			 WHERE instance_id = ? AND target = 'local'`,
 		)
-			.bind("vocostar")
+			.bind("reference-production")
 			.run();
 		await env.DB.prepare(
 			`UPDATE superboard_dependency_health SET expires_at = '2000-01-01T00:00:00.000Z'
 			 WHERE instance_id = ?`,
 		)
-			.bind("vocostar")
+			.bind("reference-production")
 			.run();
 		const response = await SELF.fetch(
 			`https://site.example/_emdash/api/superboard/plugins/supbrd-plug-data/${action}`,
@@ -38,7 +38,7 @@ test("managed lifecycle actions revalidate expired active plugin receipts", asyn
 		const health = await env.DB.prepare(
 			"SELECT MAX(expires_at) AS expires_at FROM superboard_plugin_runtime_health WHERE instance_id=? AND plugin_id=?",
 		)
-			.bind("vocostar", "supbrd-plug-user")
+			.bind("reference-production", "supbrd-plug-user")
 			.first<{ expires_at: string }>();
 		expect(Date.parse(health!.expires_at)).toBeGreaterThan(Date.now());
 	}

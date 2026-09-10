@@ -100,9 +100,6 @@ export async function compileTarget(target, environment, options = {}) {
 		healthChecks: compilePhysicalHealthChecks(target),
 		schedules: compilePhysicalSchedules(target, environment),
 		queueConsumers: compilePhysicalQueueConsumers(target, environment, physicalResources),
-		...(target.customWorker?.runtimeBridge?.legacyGateway
-			? { externalBindings: vocostarRuntimeExternalBindings(target) }
-			: {}),
 		site: {
 			workerLoaderBinding: target.siteRuntime.workerLoaderBinding,
 			crons: [...target.siteRuntime.crons],
@@ -344,7 +341,11 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 				allowed_sender_addresses: [compiledTarget.materialization.site.mailFromAddress],
 			},
 		],
-		secrets: { required: (siteSecrets?.names ?? []).toSorted() },
+		secrets: {
+			required: [
+				...new Set([...(siteSecrets?.names ?? []), "SUPERBOARD_RELEASE_PRIVATE_JWK"]),
+			].toSorted(),
+		},
 		vars: {
 			SUPERBOARD_INSTANCE_ID: compiledTarget.target,
 			SUPERBOARD_PLUGIN_LIFECYCLE: "required",
@@ -366,7 +367,7 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 					.filter(({ targetState }) => targetState === "active")
 					.map(({ pluginId }) => pluginId),
 			),
-			SUPERBOARD_RELEASE_OPERATIONS: "disabled",
+			SUPERBOARD_RELEASE_OPERATIONS: "enabled",
 			D1_EXPECTED_MIGRATION: siteMigration?.files.at(-1)?.file,
 			TARGET_ARTIFACT_CHECKSUM: compiledTarget.checksum,
 		},
@@ -638,8 +639,6 @@ function compileBindings(target, environment, physicalResources) {
 		);
 		if (targetService) addService("custom", customBinding.binding, targetService);
 	}
-	for (const external of vocostarRuntimeExternalBindings(target))
-		addRuntime(external.service, external.binding);
 
 	for (const descriptor of targetD1Descriptors(target, target.target, environment, "all")) {
 		const resource = physicalResources.find(
@@ -686,30 +685,6 @@ function compileBindings(target, environment, physicalResources) {
 	addRuntime("observability", "ANALYTICS");
 	if (target.features.messaging) addRuntime("messaging", "CONVERSATIONS");
 	return bindings.toSorted(compareBy("service", "kind", "binding"));
-}
-
-function vocostarRuntimeExternalBindings(target) {
-	const gateway = target.customWorker?.runtimeBridge?.legacyGateway;
-	if (!gateway) return [];
-	return [
-		{
-			service: "custom",
-			binding: "VOCOSTAR_USER_VOCALS_ROOM",
-			worker: gateway.worker,
-			className: "UserVocalsRoom",
-		},
-		{
-			service: "custom",
-			binding: "VOCOSTAR_USER_MEDIAS_ROOM",
-			worker: gateway.worker,
-			className: "UserMediasRoom",
-		},
-		{
-			service: "custom",
-			binding: "VOCOSTAR_NOTIFICATION_DISPATCHER",
-			worker: gateway.notificationWorker,
-		},
-	];
 }
 
 function compilePlugins(target, topology, migrations, environment) {
@@ -768,7 +743,6 @@ function compilePlugins(target, topology, migrations, environment) {
 function pluginEnabled(target, pluginId, environment) {
 	const configured = target.environments[environment]?.plugins?.[pluginId];
 	if (configured === false) return false;
-	if (pluginId === "supbrd-plugmod-vocostar") return target.customWorker?.pluginId === pluginId;
 	const featureByPlugin = {
 		"supbrd-plug-products": "products",
 		"supbrd-plugmod-billing": "billing",

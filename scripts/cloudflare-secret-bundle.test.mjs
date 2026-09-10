@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -12,10 +13,10 @@ import {
 import { loadTarget } from "./cloudflare-target.mjs";
 
 test("secret bundle plan expands shared members without values", async () => {
-	const { target } = await loadTarget("vocostar");
+	const { target } = await loadTarget("reference-production");
 	const plan = buildSecretBundlePlan({
 		target,
-		targetName: "vocostar",
+		targetName: "reference-production",
 		environment: "production",
 		contractIds: ["email-internal-token", "files-internal-token"],
 	});
@@ -35,10 +36,10 @@ test("secret bundle plan expands shared members without values", async () => {
 });
 
 test("shared contract input assigns the exact same value to every Worker", async () => {
-	const { target } = await loadTarget("vocostar");
+	const { target } = await loadTarget("reference-production");
 	const plan = buildSecretBundlePlan({
 		target,
-		targetName: "vocostar",
+		targetName: "reference-production",
 		environment: "production",
 		contractIds: ["email-internal-token"],
 	});
@@ -57,10 +58,10 @@ test("shared contract input assigns the exact same value to every Worker", async
 });
 
 test("keyring alternatives require one allowed binding for all members", async () => {
-	const { target } = await loadTarget("vocostar");
+	const { target } = await loadTarget("reference-production");
 	const plan = buildSecretBundlePlan({
 		target,
-		targetName: "vocostar",
+		targetName: "reference-production",
 		environment: "production",
 		contractIds: ["billing-credential-keyring"],
 	});
@@ -92,12 +93,12 @@ test("keyring alternatives require one allowed binding for all members", async (
 });
 
 test("OAuth and external-peer contracts fail closed", async () => {
-	const { target } = await loadTarget("vocostar");
+	const { target } = await loadTarget("reference-production");
 	assert.throws(
 		() =>
 			buildSecretBundlePlan({
 				target,
-				targetName: "vocostar",
+				targetName: "reference-production",
 				environment: "production",
 				contractIds: ["dashboard-client-secret"],
 			}),
@@ -106,14 +107,14 @@ test("OAuth and external-peer contracts fail closed", async () => {
 
 	const webhook = buildSecretBundlePlan({
 		target,
-		targetName: "vocostar",
+		targetName: "reference-production",
 		environment: "production",
 		contractIds: ["entitlement-webhook-secret"],
 	});
 	assert.equal(webhook.blockers[0].id, "entitlement-webhook-secret.external-peers");
 	const confirmed = buildSecretBundlePlan({
 		target,
-		targetName: "vocostar",
+		targetName: "reference-production",
 		environment: "production",
 		contractIds: ["entitlement-webhook-secret"],
 		externalPeersReady: true,
@@ -123,14 +124,14 @@ test("OAuth and external-peer contracts fail closed", async () => {
 
 	const gateway = buildSecretBundlePlan({
 		target,
-		targetName: "vocostar",
+		targetName: "reference-production",
 		environment: "production",
 		contractIds: ["managed-worker-gateway-callback-token"],
 	});
 	assert.equal(gateway.blockers[0].id, "managed-worker-gateway-callback-token.external-peers");
 	const gatewayConfirmed = buildSecretBundlePlan({
 		target,
-		targetName: "vocostar",
+		targetName: "reference-production",
 		environment: "production",
 		contractIds: ["managed-worker-gateway-callback-token"],
 		externalPeersReady: true,
@@ -151,16 +152,15 @@ test("OAuth and external-peer contracts fail closed", async () => {
 			"managed-medias-orchestrator": {
 				GATEWAY_INTERNAL_TOKEN: "coordinated-gateway-token",
 			},
-			custom: { VOCOSTAR_INTERNAL_CALLBACK_TOKEN: "coordinated-gateway-token" },
 		},
 	);
 });
 
 test("bundle input is exact and Wrangler upload creates inactive versions", async () => {
-	const { target } = await loadTarget("vocostar");
+	const { target } = await loadTarget("reference-production");
 	const plan = buildSecretBundlePlan({
 		target,
-		targetName: "vocostar",
+		targetName: "reference-production",
 		environment: "production",
 		contractIds: ["api-push-process-key"],
 	});
@@ -177,7 +177,7 @@ test("bundle input is exact and Wrangler upload creates inactive versions", asyn
 	const tag = secretVersionTag(plan, "api");
 	assert.match(tag, /^opengrow-secret-[a-f0-9]{12}-api$/u);
 	assert.deepEqual(
-		versionedSecretBundleArgs("/tmp/api.jsonc", "vocostar", "production", "api", tag),
+		versionedSecretBundleArgs("/tmp/api.jsonc", "reference-production", "production", "api", tag),
 		[
 			"wrangler",
 			"versions",
@@ -186,7 +186,7 @@ test("bundle input is exact and Wrangler upload creates inactive versions", asyn
 			"--config",
 			"/tmp/api.jsonc",
 			"--message",
-			"OpenGrow coordinated secrets for vocostar/production/api",
+			"OpenGrow coordinated secrets for reference-production/production/api",
 			"--tag",
 			tag,
 		],
@@ -204,7 +204,7 @@ test("bundle input is exact and Wrangler upload creates inactive versions", asyn
 		{
 			schemaVersion: 1,
 			mode: "inactive-secret-bundle-upload",
-			target: "vocostar",
+			target: "reference-production",
 			environment: "production",
 			valuesIncluded: false,
 			planConfirmation: plan.confirmation,
@@ -227,10 +227,10 @@ test("bundle input is exact and Wrangler upload creates inactive versions", asyn
 });
 
 test("overlap assigns the old token only to accepting consumers", async () => {
-	const { target } = await loadTarget("vocostar");
+	const { target } = await loadTarget("reference-production");
 	const plan = buildSecretBundlePlan({
 		target,
-		targetName: "vocostar",
+		targetName: "reference-production",
 		environment: "production",
 		contractIds: ["email-internal-token"],
 		overlap: true,

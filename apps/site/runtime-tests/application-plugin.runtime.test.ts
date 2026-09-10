@@ -45,7 +45,7 @@ test("application User contracts authenticate SDK users without an EmDash sessio
 	expect(scoped.status).toBe(200);
 	const databases = env as unknown as { HEALTH_API_DB: D1Database; HEALTH_IDENTITY_DB: D1Database };
 	const instance = await databases.HEALTH_API_DB.prepare(
-		"SELECT id,api_key FROM instances WHERE uri_scheme='vocostar'",
+		"SELECT id,api_key FROM instances WHERE uri_scheme='reference-production'",
 	).first<{ id: number; api_key: string }>();
 	const application = await databases.HEALTH_API_DB.prepare(
 		"INSERT INTO applications(instance_id,platform,enabled) VALUES (?,'web',1) RETURNING id",

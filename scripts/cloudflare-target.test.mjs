@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -15,11 +16,11 @@ import {
 } from "./cloudflare-target.mjs";
 
 test("committed targets validate without embedding Cloudflare account ids", async () => {
-	for (const name of ["mbza-development", "vocostar"]) {
+	for (const name of ["mbza-development", "reference-production"]) {
 		const { target } = await loadTarget(name);
 		assert.equal("accountId" in target, false);
 		assert.equal(target.schemaVersion, 17);
-		assert.match(target.zoneName, /^(?:mbza\.dev|vocostar\.com)$/u);
+		assert.match(target.zoneName, /^(?:mbza\.dev|reference\.example)$/u);
 		assert.deepEqual(
 			target.resourceIdentity,
 			name === "mbza-development"
@@ -57,48 +58,54 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
 			assert.ok(resources.filesD1.name.endsWith("files-db"));
 		}
 	}
-	const { target: vocostar } = await loadTarget("vocostar");
-	assert.equal(vocostar.environments.production.customD1.name, "vocostar-db");
-	assert.equal(vocostar.environments.production.customR2.name, "app-vocostar");
-	assert.equal(vocostar.environments.production.publicRouting, "staged");
+	const { target: referenceApplication } = await loadTarget("reference-production");
+	assert.equal(
+		referenceApplication.environments.production.customD1.name,
+		"reference-production-db",
+	);
+	assert.equal(
+		referenceApplication.environments.production.customR2.name,
+		"app-reference-production",
+	);
+	assert.equal(referenceApplication.environments.production.publicRouting, "staged");
 	assert.notEqual(
-		vocostar.environments.production.siteMedia.name,
-		vocostar.environments.production.r2.name,
+		referenceApplication.environments.production.siteMedia.name,
+		referenceApplication.environments.production.r2.name,
 		"EmDash media must not share the application files bucket",
 	);
-	assert.equal(vocostar.customWorker.serviceBindings.length, 3);
-	assert.deepEqual(vocostar.customWorker.crons, ["*/1 * * * *"]);
+	assert.equal(referenceApplication.customWorker.serviceBindings.length, 3);
+	assert.deepEqual(referenceApplication.customWorker.crons, ["0 3 * * *"]);
 	assert.deepEqual(
-		vocostar.customWorker.managedWorkers.map(({ id }) => id),
+		referenceApplication.customWorker.managedWorkers.map(({ id }) => id),
 		["vocals-orchestrator", "medias-orchestrator"],
 	);
 	assert.equal(
-		vocostar.customWorker.managedWorkers[0].workers.production,
+		referenceApplication.customWorker.managedWorkers[0].workers.production,
 		"send-users-vocals-orchestrator",
 	);
-	assert.equal(vocostar.features.messaging, false);
-	assert.equal(vocostar.filePolicy.maxBytes, 52_428_800);
-	assert.equal(vocostar.filePolicy.downloadTicketTtlSeconds, 1_800);
-	assert.ok(vocostar.filePolicy.allowedContentTypes.includes("audio/*"));
-	assert.ok(vocostar.filePolicy.allowedContentTypes.includes("video/*"));
+	assert.equal(referenceApplication.features.messaging, false);
+	assert.equal(referenceApplication.filePolicy.maxBytes, 52_428_800);
+	assert.equal(referenceApplication.filePolicy.downloadTicketTtlSeconds, 1_800);
+	assert.ok(referenceApplication.filePolicy.allowedContentTypes.includes("audio/*"));
+	assert.ok(referenceApplication.filePolicy.allowedContentTypes.includes("video/*"));
 	assert.notEqual(
-		vocostar.environments.production.moduleQueues.support.name,
-		vocostar.environments.production.queues.messaging,
+		referenceApplication.environments.production.moduleQueues.support.name,
+		referenceApplication.environments.production.queues.messaging,
 	);
 	assert.notEqual(
-		vocostar.environments.production.moduleR2.support.name,
-		vocostar.environments.production.messagingR2.name,
+		referenceApplication.environments.production.moduleR2.support.name,
+		referenceApplication.environments.production.messagingR2.name,
 	);
 	assert.equal(
-		vocostar.environments.production.moduleR2.support.name,
+		referenceApplication.environments.production.moduleR2.support.name,
 		"opengrow-support-v2-attachments",
 	);
-	assert.deepEqual(vocostar.environments.production.supportRouting, {
-		pattern: "api.vocostar.com/api/v1/support*",
+	assert.deepEqual(referenceApplication.environments.production.supportRouting, {
+		pattern: "api.reference.example/api/v1/support*",
 		worker: "opengrow-api",
 		mode: "staged",
 	});
-	assert.deepEqual(vocostar.environments.production.moduleVectorize, {
+	assert.deepEqual(referenceApplication.environments.production.moduleVectorize, {
 		supportKnowledge: {
 			name: "opengrow-support-v2-knowledge",
 			dimensions: 1024,
@@ -123,8 +130,8 @@ test("mbza development domains keep API and short links separate", async () => {
 			reason: "Previous back-office hostname replaced by board.mbza.dev.",
 		},
 	]);
-	assert.equal(target.domains.mailPreview, "mail.mbza.dev");
-	assert.equal(target.domains.mcp, "mcp.mbza.dev");
+	assert.equal(target.domains.mailPreview, undefined);
+	assert.equal(target.domains.mcp, "board.mbza.dev");
 	assert.equal(target.domains.messaging, undefined);
 	assert.equal(target.workers.messaging, undefined);
 	assert.equal(target.environments.development.messagingD1, undefined);
@@ -204,10 +211,13 @@ test("resource identity keeps canonical and legacy physical resources fail-close
 	target.environments.development.d1.name = "opengrow-dev-db";
 	await assert.rejects(validateTarget(target), /outside the declared superboard namespace/u);
 
-	const { target: vocostarSource } = await loadTarget("vocostar");
-	const vocostar = structuredClone(vocostarSource);
-	vocostar.environments.production.d1.name = "superboard-db";
-	await assert.rejects(validateTarget(vocostar), /outside the declared opengrow namespace/u);
+	const { target: referenceApplicationSource } = await loadTarget("reference-production");
+	const referenceApplication = structuredClone(referenceApplicationSource);
+	referenceApplication.environments.production.d1.name = "superboard-db";
+	await assert.rejects(
+		validateTarget(referenceApplication),
+		/outside the declared opengrow namespace/u,
+	);
 
 	const retired = structuredClone(source);
 	retired.retiredDomains[0].hostname = retired.domains.dashboard;
@@ -229,14 +239,14 @@ test("public surface monitors are constrained to one safe HTTPS origin", async (
 });
 
 test("production public routing requires a typed client cutover receipt", async () => {
-	const { target: source } = await loadTarget("vocostar");
+	const { target: source } = await loadTarget("reference-production");
 	const target = structuredClone(source);
 	target.environments.production.publicRouting = "active";
 	await assert.rejects(validateTarget(target), /must have required property 'productionCutover'/u);
 	target.productionCutover = {
-		application: "vocostar",
-		snapshot: "config/flutterflow-sources/vocostar.json",
-		clientReceipt: "config/flutterflow-releases/vocostar.json",
+		application: "reference-production",
+		snapshot: "config/flutterflow-sources/reference-production.json",
+		clientReceipt: "config/flutterflow-releases/reference-production.json",
 	};
 	await validateTarget(target);
 });
@@ -287,17 +297,17 @@ test("local, development and production environments are accepted", () => {
 });
 
 test("operational commands never select an implicit application target", () => {
-	assert.equal(targetNameFromArgs({ target: "vocostar" }, {}), "vocostar");
+	assert.equal(targetNameFromArgs({ target: "reference-production" }, {}), "reference-production");
 	assert.equal(targetNameFromArgs({}, { OPENGROW_TARGET: "mbza-development" }), "mbza-development");
 	assert.equal(
 		targetNameFromArgs(
 			{},
 			{
-				SUPERBOARD_TARGET: "vocostar",
+				SUPERBOARD_TARGET: "reference-production",
 				OPENGROW_TARGET: "mbza-development",
 			},
 		),
-		"vocostar",
+		"reference-production",
 	);
 	assert.throws(() => targetNameFromArgs({}, {}), /SUPERBOARD_TARGET.*OPENGROW_TARGET/u);
 });
@@ -312,7 +322,11 @@ test("validation can explicitly select the checked-in reference target", async (
 		},
 	);
 	await assert.rejects(
-		targetSelectionFromArgs({ reference: true, target: "vocostar" }, {}, { allowReference: true }),
+		targetSelectionFromArgs(
+			{ reference: true, target: "reference-production" },
+			{},
+			{ allowReference: true },
+		),
 		/cannot be combined/u,
 	);
 	await assert.rejects(

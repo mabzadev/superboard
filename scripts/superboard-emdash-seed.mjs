@@ -6,6 +6,9 @@ const navigationPath = join(root, "config/superboard-dashboard-navigation.json")
 const parityPath = join(root, "config/emdash-parity-matrix.json");
 const topologyPath = join(root, "config/emdash-plugin-topology.json");
 const seedPath = join(root, "apps/site/seed/seed.json");
+const nativeMenus = JSON.parse(
+	readFileSync(join(root, "config/superboard-front-menu-seed.json"), "utf8"),
+);
 const navigation = JSON.parse(readFileSync(navigationPath, "utf8"));
 const parity = JSON.parse(readFileSync(parityPath, "utf8"));
 const topology = JSON.parse(readFileSync(topologyPath, "utf8"));
@@ -189,22 +192,7 @@ const seed = {
 			],
 		},
 	],
-	menus: [
-		{
-			name: "superboard-admin",
-			label: "SuperBoard Admin",
-			items: navigation.sections.map((section) => ({
-				type: "custom",
-				label: section.label,
-				url: section.href,
-				children: section.pages.map((view) => ({
-					type: "custom",
-					label: view.label,
-					url: view.href,
-				})),
-			})),
-		},
-	],
+	menus: nativeMenus,
 	content: {
 		views: views.map((view) => {
 			const pluginId = pluginForView(view.href);

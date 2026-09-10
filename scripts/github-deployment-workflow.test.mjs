@@ -19,14 +19,14 @@ test("root regeneration preserves the explicitly disabled automatic CI", async (
 	assert.ok(manifest.scripts["site:build"]);
 });
 
-test("configured development builds deploy the Site and preserve production approval selection", async () => {
+test("configured development builds deploy the Site without an application deployment", async () => {
 	const configuration = await loadDeploymentMatrix();
 	assert.equal(validateDeploymentConfiguration(configuration), true);
 	const targets = selectDeployments(configuration, "dev");
 	assert.ok(targets.matrix.include.every((entry) => entry.cloudflareEnvironment === "development"));
-	const production = selectDeployments(configuration, "main", { authority: "github-actions" });
-	assert.ok(
-		production.matrix.include.every((entry) => entry.cloudflareEnvironment === "production"),
+	assert.throws(
+		() => selectDeployments(configuration, "main", { authority: "github-actions" }),
+		/No Cloudflare deployment/,
 	);
 	const definitions = JSON.stringify(configuration);
 	assert.doesNotMatch(definitions, /apps\/dashboard|opennextjs/u);

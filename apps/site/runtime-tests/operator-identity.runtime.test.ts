@@ -31,7 +31,7 @@ test("accepts an EmDash operator without an account in the historical users tabl
 	const secret = "site-operator-runtime-secret";
 	const operator = {
 		operator_id: "operator-without-historical-account",
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		role: 50,
 	};
 	const url = "https://api.internal/api/v1/paywalls/projects/1-prod/paywalls";
@@ -40,7 +40,7 @@ test("accepts an EmDash operator without an account in the historical users tabl
 	// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- real D1 binding with the environment fields consumed by the API authentication path
 	const apiEnv = {
 		...env,
-		SUPERBOARD_TARGET: "vocostar",
+		SUPERBOARD_TARGET: "reference-production",
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 		SITE_OPERATOR_BRIDGE_TOKEN: secret,
 	} as unknown as Env;
@@ -70,7 +70,7 @@ beforeAll(async () => {
 		),
 	);
 	await synchronizeSuperBoardPluginCatalog(env.DB, {
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		target: "local",
 		approved_by: "emdash-owner",
 		checked_at: "2026-09-05T00:00:00.000Z",
@@ -81,7 +81,7 @@ beforeAll(async () => {
 		),
 	});
 	await env.DB.prepare(
-		"UPDATE superboard_plugin_lifecycle SET state = 'active' WHERE instance_id = 'vocostar' AND target = 'local' AND plugin_id IN ('supbrd-plugmod-paywalls','supbrd-plugmod-billing','supbrd-plugmod-marketing','supbrd-plugmod-mcp')",
+		"UPDATE superboard_plugin_lifecycle SET state = 'active' WHERE instance_id = 'reference-production' AND target = 'local' AND plugin_id IN ('supbrd-plugmod-paywalls','supbrd-plugmod-billing','supbrd-plugmod-marketing','supbrd-plugmod-mcp')",
 	).run();
 	await env.DB.batch([
 		env.DB.prepare(
@@ -97,7 +97,7 @@ beforeAll(async () => {
 			.map((statement) => env.DB.prepare(statement)),
 		env.DB.prepare(scopeMigration),
 		env.DB.prepare(
-			"INSERT OR IGNORE INTO instances (id, uri_scheme, api_key) VALUES (42, 'vocostar', 'runtime-api-key'), (43, 'other-instance', 'other-api-key')",
+			"INSERT OR IGNORE INTO instances (id, uri_scheme, api_key) VALUES (42, 'reference-production', 'runtime-api-key'), (43, 'other-instance', 'other-api-key')",
 		),
 		env.DB.prepare(
 			"INSERT OR IGNORE INTO projects (id, instance_id, is_test, name, identifier) VALUES (81, 42, 0, 'Production', 'runtime-prod'), (82, 42, 1, 'Test', 'runtime-test'), (83, 43, 0, 'Other', 'other-prod')",
@@ -110,7 +110,7 @@ test("forwards the EmDash operator through the real domain gateway without histo
 	const moduleSecret = "runtime-module-secret";
 	const apiEnv = {
 		...env,
-		SUPERBOARD_TARGET: "vocostar",
+		SUPERBOARD_TARGET: "reference-production",
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 		SITE_OPERATOR_BRIDGE_TOKEN: secret,
 		MODULE_INTERNAL_TOKEN: moduleSecret,
@@ -129,7 +129,7 @@ test("forwards the EmDash operator through the real domain gateway without histo
 			DB: env.DB,
 			API_SERVICE: service,
 			SITE_OPERATOR_BRIDGE_TOKEN: secret,
-			SUPERBOARD_INSTANCE_ID: "vocostar",
+			SUPERBOARD_INSTANCE_ID: "reference-production",
 		},
 	});
 	expect(response.status).toBe(200);
@@ -150,7 +150,7 @@ test("forwards the EmDash operator through the real domain gateway without histo
 			DB: env.DB,
 			API_SERVICE: service,
 			SITE_OPERATOR_BRIDGE_TOKEN: secret,
-			SUPERBOARD_INSTANCE_ID: "vocostar",
+			SUPERBOARD_INSTANCE_ID: "reference-production",
 		},
 	});
 	expect(forbidden.status).toBe(403);
@@ -168,7 +168,7 @@ test("persists a Paywalls mutation and its EmDash actor, and replays without dup
 	>[1];
 	const apiEnv = {
 		...env,
-		SUPERBOARD_TARGET: "vocostar",
+		SUPERBOARD_TARGET: "reference-production",
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 		SITE_OPERATOR_BRIDGE_TOKEN: secret,
 		MODULE_INTERNAL_TOKEN: moduleSecret,
@@ -176,7 +176,7 @@ test("persists a Paywalls mutation and its EmDash actor, and replays without dup
 	} as unknown as Env;
 	const siteEnv = {
 		...env,
-		SUPERBOARD_INSTANCE_ID: "vocostar",
+		SUPERBOARD_INSTANCE_ID: "reference-production",
 		SITE_OPERATOR_BRIDGE_TOKEN: secret,
 		API_SERVICE: { fetch: (request: Request) => api.fetch(request, apiEnv) },
 	};
@@ -221,7 +221,7 @@ test("persists a Paywalls mutation and its EmDash actor, and replays without dup
 	).all<{ actor_id: string; project_ref: string }>();
 	expect(audit.results).toEqual([{ actor_id: operator.id, project_ref: "42-prod" }]);
 	await env.DB.prepare(
-		"UPDATE superboard_plugin_lifecycle SET state = 'disabled' WHERE instance_id = 'vocostar' AND plugin_id = 'supbrd-plugmod-paywalls'",
+		"UPDATE superboard_plugin_lifecycle SET state = 'disabled' WHERE instance_id = 'reference-production' AND plugin_id = 'supbrd-plugmod-paywalls'",
 	).run();
 	const disabled = await proxyOperatorApiRequest({
 		env: siteEnv,
@@ -241,7 +241,7 @@ test("keeps signed Site requests on the dedicated Billing Worker", async () => {
 	} as Parameters<typeof billing.fetch>[1];
 	const apiEnv = {
 		...env,
-		SUPERBOARD_TARGET: "vocostar",
+		SUPERBOARD_TARGET: "reference-production",
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 		SITE_OPERATOR_BRIDGE_TOKEN: "runtime-site-operator-health-secret",
 		MODULE_INTERNAL_TOKEN: moduleSecret,
@@ -253,7 +253,7 @@ test("keeps signed Site requests on the dedicated Billing Worker", async () => {
 	);
 	const headers = await signSiteOperatorRequest(
 		request,
-		{ operator_id: "billing-site-operator", instance_id: "vocostar", role: 50 },
+		{ operator_id: "billing-site-operator", instance_id: "reference-production", role: 50 },
 		"runtime-site-operator-health-secret",
 	);
 	const response = await api.fetch(new Request(request, { headers }), apiEnv);
@@ -262,7 +262,7 @@ test("keeps signed Site requests on the dedicated Billing Worker", async () => {
 	const other = new Request("https://api.internal/api/v2/purchases/projects/43-prod/dead-letters");
 	const forgedHeaders = await signSiteOperatorRequest(
 		other,
-		{ operator_id: "billing-site-operator", instance_id: "vocostar", role: 50 },
+		{ operator_id: "billing-site-operator", instance_id: "reference-production", role: 50 },
 		"runtime-site-operator-health-secret",
 	);
 	expect((await api.fetch(new Request(other, { headers: forgedHeaders }), apiEnv)).status).toBe(
@@ -273,7 +273,7 @@ test("keeps signed Site requests on the dedicated Billing Worker", async () => {
 test("legacy instance adapters expose only the bound instance without historical roles", async () => {
 	const apiEnv = {
 		...env,
-		SUPERBOARD_TARGET: "vocostar",
+		SUPERBOARD_TARGET: "reference-production",
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 		SITE_OPERATOR_BRIDGE_TOKEN: "runtime-site-operator-health-secret",
 		SHORTLINK_DOMAIN: "links.test",
@@ -282,7 +282,7 @@ test("legacy instance adapters expose only the bound instance without historical
 		const input = new Request(`https://api.internal${path}`, { method });
 		const headers = await signSiteOperatorRequest(
 			input,
-			{ operator_id: "legacy-site-owner", instance_id: "vocostar", role: 50 },
+			{ operator_id: "legacy-site-owner", instance_id: "reference-production", role: 50 },
 			"runtime-site-operator-health-secret",
 		);
 		return api.fetch(new Request(input, { headers }), apiEnv);
@@ -318,11 +318,15 @@ test("MCP consent, exchange, refresh and revocation use stable EmDash grants wit
 	);
 	const apiEnv = {
 		...env,
-		SUPERBOARD_TARGET: "vocostar",
+		SUPERBOARD_TARGET: "reference-production",
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 		SITE_OPERATOR_BRIDGE_TOKEN: "runtime-site-operator-health-secret",
 	} as unknown as Env;
-	const operator = { operator_id: "emdash-mcp-owner", instance_id: "vocostar", role: 50 };
+	const operator = {
+		operator_id: "emdash-mcp-owner",
+		instance_id: "reference-production",
+		role: 50,
+	};
 	const post = (path: string, body: unknown) =>
 		api.fetch(
 			new Request(`https://api.internal${path}`, {
@@ -420,12 +424,12 @@ test("resolves real project references and only initializes missing scope on exp
 	const operator = { id: "emdash-owner-without-user-account", role: 50 };
 	const apiEnv = {
 		...env,
-		SUPERBOARD_TARGET: "vocostar",
+		SUPERBOARD_TARGET: "reference-production",
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 		SITE_OPERATOR_BRIDGE_TOKEN: "runtime-scope-secret",
 	} as unknown as Env;
 	const siteEnv = {
-		SUPERBOARD_INSTANCE_ID: "vocostar",
+		SUPERBOARD_INSTANCE_ID: "reference-production",
 		SITE_OPERATOR_BRIDGE_TOKEN: "runtime-scope-secret",
 		API_SERVICE: { fetch: (request: Request) => api.fetch(request, apiEnv) },
 	};
@@ -433,7 +437,7 @@ test("resolves real project references and only initializes missing scope on exp
 	const metadata = await resolveOperatorProjectScope(siteEnv, operator);
 	expect(metadata.instance).toMatchObject({
 		id: "42",
-		uri_scheme: "vocostar",
+		uri_scheme: "reference-production",
 		get_started_dismissed: true,
 		production: { internal_id: "81", name: "Production" },
 	});

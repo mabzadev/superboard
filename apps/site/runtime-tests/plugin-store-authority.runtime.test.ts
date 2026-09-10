@@ -43,14 +43,14 @@ const targetProof = {
 
 describe("EmDash plugin Store authority", () => {
 	test("synchronizes every concrete SuperBoard plugin into the EmDash runtime lifecycle", async () => {
-		const scope = { ...targetProof, instance_id: "vocostar", target: "local" as const };
+		const scope = { ...targetProof, instance_id: "reference-production", target: "local" as const };
 		const receipt = await synchronizeSuperBoardPluginCatalog(env.DB, {
 			...scope,
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:20:00.000Z",
 			expires_at: "2999-08-31T08:20:00.000Z",
 		});
-		expect(receipt.installed).toHaveLength(19);
+		expect(receipt.installed).toHaveLength(18);
 		expect(receipt.templates).toEqual(["supbrd-plugmod-custom-*"]);
 		expect(
 			receipt.installed.find(({ plugin_id }) => plugin_id === "supbrd-plug-user"),
@@ -65,14 +65,14 @@ describe("EmDash plugin Store authority", () => {
 		)
 			.bind(scope.instance_id, scope.target)
 			.first<{ count: number }>();
-		expect(states?.count).toBe(19);
+		expect(states?.count).toBe(18);
 		const health = await env.DB.prepare(
 			`SELECT COUNT(*) count FROM superboard_plugin_runtime_health
 			 WHERE instance_id = ? AND target = ? AND status = 'ready'`,
 		)
 			.bind(scope.instance_id, scope.target)
 			.first<{ count: number }>();
-		expect(health?.count).toBe(19);
+		expect(health?.count).toBe(18);
 		const candidateLock = await loadReleasableSuperBoardPluginLock(env.DB, scope);
 		await activatePluginRelease(
 			env.DB,
@@ -139,7 +139,7 @@ describe("EmDash plugin Store authority", () => {
 			.bind(scope.instance_id, scope.target)
 			.run();
 		const reducedLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
-		expect(reducedLock).toHaveLength(18);
+		expect(reducedLock).toHaveLength(17);
 		expect(
 			reducedLock.some(({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-marketing"),
 		).toBe(false);
@@ -155,10 +155,14 @@ describe("EmDash plugin Store authority", () => {
 	});
 
 	test("installs the exact compiled user plugin and publishes bounded dependency health", async () => {
-		const committedHealth = await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health WHERE instance_id = ? AND target = 'local' AND plugin_id = ?").bind("vocostar", userPluginManifest.plugin_id).first();
+		const committedHealth = await env.DB.prepare(
+			"SELECT * FROM superboard_plugin_runtime_health WHERE instance_id = ? AND target = 'local' AND plugin_id = ?",
+		)
+			.bind("reference-production", userPluginManifest.plugin_id)
+			.first();
 		const receipt = await installCompiledUserPlugin(env.DB, {
 			...targetProof,
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:30:00.000Z",
 			expires_at: "2999-08-30T09:30:00.000Z",
@@ -190,14 +194,20 @@ describe("EmDash plugin Store authority", () => {
 			`SELECT status, evidence_checksum, expires_at FROM superboard_plugin_releasable_health
 			 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 		)
-			.bind("vocostar", userPluginManifest.plugin_id)
+			.bind("reference-production", userPluginManifest.plugin_id)
 			.first();
 		expect(health).toEqual({
 			status: "ready",
 			evidence_checksum: receipt.evidence_checksum,
 			expires_at: receipt.expires_at,
 		});
-		expect(await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health WHERE instance_id = ? AND target = 'local' AND plugin_id = ?").bind("vocostar", userPluginManifest.plugin_id).first()).toEqual(committedHealth);
+		expect(
+			await env.DB.prepare(
+				"SELECT * FROM superboard_plugin_runtime_health WHERE instance_id = ? AND target = 'local' AND plugin_id = ?",
+			)
+				.bind("reference-production", userPluginManifest.plugin_id)
+				.first(),
+		).toEqual(committedHealth);
 	});
 
 	test("writes through the repository with stable aliases, CAS, idempotence and outbox", async () => {
@@ -208,8 +218,8 @@ describe("EmDash plugin Store authority", () => {
 		const input = {
 			plugin_id: "supbrd-plug-user",
 			store_id: "supbrd-plug-user.store.user_directory",
-			projectId: "vocostar",
-			pid: "vocostar",
+			projectId: "reference-production",
+			pid: "reference-production",
 			project_ref: "10-test",
 			entity_type: "user",
 			entity_id: "user-1",
@@ -220,7 +230,11 @@ describe("EmDash plugin Store authority", () => {
 			encryption_key: encryptionKey,
 		};
 		const created = await putPluginStoreRecord(env.DB, input);
-		expect(created).toMatchObject({ revision: 1, instance_id: "vocostar", idempotent: false });
+		expect(created).toMatchObject({
+			revision: 1,
+			instance_id: "reference-production",
+			idempotent: false,
+		});
 		expect(await putPluginStoreRecord(env.DB, input)).toMatchObject({
 			revision: 1,
 			idempotent: true,
@@ -245,7 +259,7 @@ describe("EmDash plugin Store authority", () => {
 		const page = await listPluginStoreRecords(env.DB, {
 			plugin_id: input.plugin_id,
 			store_id: input.store_id,
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			project_ref: "10-test",
 			limit: 10,
 			encryption_key: encryptionKey,
@@ -269,7 +283,7 @@ describe("EmDash plugin Store authority", () => {
 	test("commits compatibility mutations before transient execution and replays receipts", async () => {
 		await synchronizeSuperBoardPluginCatalog(env.DB, {
 			...targetProof,
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:20:00.000Z",
 			expires_at: "2999-08-31T08:20:00.000Z",
@@ -288,7 +302,7 @@ describe("EmDash plugin Store authority", () => {
 		});
 		const input = {
 			operation_id: "operation-analytics-report-1",
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			project_ref: scope.project_ref,
 			plugin_id: scope.plugin_id,
 			command_id: "supbrd-plugmod-analytics.command.create_analytics_report",
@@ -340,13 +354,13 @@ describe("EmDash plugin Store authority", () => {
 	test("keeps the compatibility Worker transient behind the repository-first gateway", async () => {
 		await synchronizeSuperBoardPluginCatalog(env.DB, {
 			...targetProof,
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T09:10:00.000Z",
 			expires_at: "2999-08-31T09:10:00.000Z",
 		});
 		await env.DB.prepare(
-			"UPDATE superboard_plugin_lifecycle SET state = 'active' WHERE instance_id = 'vocostar' AND plugin_id = 'supbrd-plugmod-analytics'",
+			"UPDATE superboard_plugin_lifecycle SET state = 'active' WHERE instance_id = 'reference-production' AND plugin_id = 'supbrd-plugmod-analytics'",
 		).run();
 		const rawKey = crypto.getRandomValues(new Uint8Array(32));
 		const encodedKey = btoa(String.fromCodePoint(...rawKey));
@@ -379,7 +393,7 @@ describe("EmDash plugin Store authority", () => {
 			API_SERVICE: apiService,
 			SITE_OPERATOR_BRIDGE_TOKEN: "bridge-token",
 			DB: env.DB,
-			SUPERBOARD_INSTANCE_ID: "vocostar",
+			SUPERBOARD_INSTANCE_ID: "reference-production",
 			SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: encodedKey,
 		};
 		const first = await proxyOperatorApiRequest({
@@ -427,7 +441,7 @@ describe("EmDash plugin Store authority", () => {
 		await putPluginStoreRecord(env.DB, {
 			plugin_id: "supbrd-plug-settings",
 			store_id: "supbrd-plug-settings.store.settings",
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			entity_type: "settings",
 			entity_id: "settings-1",
 			expected_revision: null,
@@ -438,7 +452,7 @@ describe("EmDash plugin Store authority", () => {
 		});
 		const delta = await exportPluginStoreReverseDelta(env.DB, {
 			plugin_id: "supbrd-plug-settings",
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			updated_after: "2026-08-30T01:59:00.000Z",
 			encryption_key: encryptionKey,
 		});
@@ -679,7 +693,7 @@ async function activatePluginRelease(
 }
 
 const releaseIdentifiers = {
-	instance_id: "vocostar",
+	instance_id: "reference-production",
 	front_draft_id: "01J00000000000000000000501",
 	draft_snapshot_id: "01J00000000000000000000502",
 	compilation_id: "01J00000000000000000000503",

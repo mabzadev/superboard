@@ -29,7 +29,7 @@ test("disables the last business plugin and activates another without User", asy
 		const active = await env.DB.prepare(
 			"SELECT plugin_id FROM superboard_plugin_lifecycle WHERE instance_id = ? AND target = 'local' AND state = 'active' ORDER BY plugin_id",
 		)
-			.bind("vocostar")
+			.bind("reference-production")
 			.all<{ plugin_id: string }>();
 		expect(active.results.map(({ plugin_id }) => plugin_id)).toEqual(
 			[

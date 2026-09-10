@@ -32,7 +32,7 @@ import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
 function release(): CompiledFrontRelease {
 	return {
 		payload: {
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			candidate_id: "candidate-runtime",
 			release_id: "release-runtime",
 			previous_release_id: null,
@@ -57,7 +57,7 @@ describe("Site Front Release D1 workflow", () => {
 	test("persists one immutable snapshot behind draft revision CAS", async () => {
 		const created = await saveFrontDraft(env.DB, {
 			front_draft_id: "draft-runtime",
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			expected_draft_revision: 0,
 			value: { title: "First" },
 			updated_at: "2026-08-30T00:00:00.000Z",
@@ -65,7 +65,7 @@ describe("Site Front Release D1 workflow", () => {
 		expect(created.status).toBe("updated");
 		const conflict = await saveFrontDraft(env.DB, {
 			front_draft_id: "draft-runtime",
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			expected_draft_revision: 0,
 			value: { title: "Stale" },
 			updated_at: "2026-08-30T00:01:00.000Z",
@@ -75,7 +75,7 @@ describe("Site Front Release D1 workflow", () => {
 			await createDraftSnapshotCas(env.DB, {
 				draft_snapshot_id: "snapshot-runtime",
 				front_draft_id: "draft-runtime",
-				instance_id: "vocostar",
+				instance_id: "reference-production",
 				expected_draft_revision: 1,
 				created_at: "2026-08-30T00:02:00.000Z",
 			}),
@@ -112,7 +112,7 @@ describe("Site Front Release D1 workflow", () => {
 		const reauthentication = await createOperatorReauthenticationReceipt({
 			receipt_id: "activation-runtime-reauth",
 			operator_id: approval.operator_id,
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			action: "front_release.activate",
 			candidate_id: candidate.payload.candidate_id,
 			reauthenticated_at: "2026-08-30T00:01:30.000Z",
@@ -122,7 +122,7 @@ describe("Site Front Release D1 workflow", () => {
 			await repository.compareAndSwapActive({
 				candidate: stored,
 				command: {
-					instance_id: "vocostar",
+					instance_id: "reference-production",
 					candidate_id: candidate.payload.candidate_id,
 					activation_id: "activation-runtime",
 					expected_active_release_id: null,
@@ -136,7 +136,7 @@ describe("Site Front Release D1 workflow", () => {
 			await repository.compareAndSwapActive({
 				candidate: stored,
 				command: {
-					instance_id: "vocostar",
+					instance_id: "reference-production",
 					candidate_id: candidate.payload.candidate_id,
 					activation_id: "activation-stale",
 					expected_active_release_id: null,
@@ -181,7 +181,7 @@ describe("Site Front Release D1 workflow", () => {
 		const firstActivationReauthentication = await createOperatorReauthenticationReceipt({
 			receipt_id: "smoke-activation-a-reauth",
 			operator_id: firstApproval.operator_id,
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			action: "front_release.activate",
 			candidate_id: first.payload.candidate_id,
 			reauthenticated_at: "2026-08-30T00:10:30.000Z",
@@ -191,7 +191,7 @@ describe("Site Front Release D1 workflow", () => {
 			await repository.compareAndSwapActive({
 				candidate: firstStored,
 				command: {
-					instance_id: "vocostar",
+					instance_id: "reference-production",
 					candidate_id: first.payload.candidate_id,
 					activation_id: "smoke-activation-a",
 					expected_active_release_id: "release-runtime",
@@ -263,7 +263,7 @@ describe("Site Front Release D1 workflow", () => {
 		const secondActivationReauthentication = await createOperatorReauthenticationReceipt({
 			receipt_id: "smoke-activation-b-reauth",
 			operator_id: secondApproval.operator_id,
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			action: "front_release.activate",
 			candidate_id: second.payload.candidate_id,
 			reauthenticated_at: "2026-08-30T00:13:30.000Z",
@@ -273,7 +273,7 @@ describe("Site Front Release D1 workflow", () => {
 			await repository.compareAndSwapActive({
 				candidate: { ...secondStored, status: "approved", approval: secondApproval },
 				command: {
-					instance_id: "vocostar",
+					instance_id: "reference-production",
 					candidate_id: second.payload.candidate_id,
 					activation_id: "smoke-activation-b",
 					expected_active_release_id: first.payload.release_id,
@@ -286,23 +286,23 @@ describe("Site Front Release D1 workflow", () => {
 		expect(
 			await verifyActivationReceipts(env.DB, {
 				activation_id: "smoke-activation-b",
-				instance_id: "vocostar",
+				instance_id: "reference-production",
 				active_release_id: second.payload.release_id,
 				pointer_revision: 3,
 			}),
 		).toBe(true);
-		await env.RELEASE_CACHE.delete("last_verified_release:vocostar");
-		expect((await loadLastVerifiedFrontRelease(env, "vocostar"))?.release.payload.release_id).toBe(
-			second.payload.release_id,
-		);
+		await env.RELEASE_CACHE.delete("last_verified_release:reference-production");
+		expect(
+			(await loadLastVerifiedFrontRelease(env, "reference-production"))?.release.payload.release_id,
+		).toBe(second.payload.release_id);
 
-		const active = await repository.getActive("vocostar");
+		const active = await repository.getActive("reference-production");
 		const rollbackTarget = await getCandidateByReleaseId(env.DB, first.payload.release_id);
 		if (!active || !rollbackTarget) throw new Error("rollback state missing");
 		const receipt = await createOperatorReauthenticationReceipt({
 			receipt_id: "smoke-rollback-reauth",
 			operator_id: "operator-runtime",
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			action: "front_release.rollback",
 			candidate_id: rollbackTarget.release.payload.candidate_id,
 			reauthenticated_at: "2026-08-30T00:14:00.000Z",
@@ -320,7 +320,7 @@ describe("Site Front Release D1 workflow", () => {
 			await repository.compareAndSwapActive({
 				candidate: rollbackTarget,
 				command: {
-					instance_id: "vocostar",
+					instance_id: "reference-production",
 					candidate_id: rollbackTarget.release.payload.candidate_id,
 					activation_id: "smoke-rollback-a",
 					expected_active_release_id: rollbackPlan.expected_active_release_id,
@@ -330,10 +330,10 @@ describe("Site Front Release D1 workflow", () => {
 				},
 			}),
 		).toMatchObject({ status: "activated", active_release_id: first.payload.release_id });
-		await env.RELEASE_CACHE.delete("last_verified_release:vocostar");
-		expect((await loadLastVerifiedFrontRelease(env, "vocostar"))?.release.payload.release_id).toBe(
-			first.payload.release_id,
-		);
+		await env.RELEASE_CACHE.delete("last_verified_release:reference-production");
+		expect(
+			(await loadLastVerifiedFrontRelease(env, "reference-production"))?.release.payload.release_id,
+		).toBe(first.payload.release_id);
 	});
 });
 
@@ -344,7 +344,7 @@ async function frontReleaseInput(input: {
 	releaseSequence: number;
 }): Promise<FrontReleaseInput> {
 	const releaseInput = await composeUserFrontReleaseInput({
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		front_draft_id: "01J00000000000000000000110",
 		draft_snapshot_id: "01J00000000000000000000111",
 		compilation_id: input.candidateId,

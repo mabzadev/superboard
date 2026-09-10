@@ -13,7 +13,7 @@ const topology = JSON.parse(
 test("seven installable business packages retain every component contract and store", () => {
 	const catalog = buildPluginPackages(topology);
 	assert.equal(catalog.plugins.filter((plugin) => plugin.kind === "business").length, 7);
-	assert.equal(catalog.plugins.filter((plugin) => plugin.kind === "application").length, 1);
+	assert.equal(catalog.plugins.filter((plugin) => plugin.kind === "application").length, 0);
 	assert.equal(catalog.plugins.filter((plugin) => plugin.kind === "core").length, 1);
 	const originals = topology.plugins.filter(({ manifest }) => !manifest.plugin_id.includes("*"));
 	assert.deepEqual(

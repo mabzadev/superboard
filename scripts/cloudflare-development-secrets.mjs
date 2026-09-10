@@ -240,7 +240,7 @@ export function assertRequiredSecretCoverage(assignments, requirements) {
 	return true;
 }
 
-async function fetchAppleRootG3(fetchImpl = fetch) {
+export async function fetchAppleRootG3(fetchImpl = fetch) {
 	const response = await fetchImpl(APPLE_ROOT_G3_URL, {
 		headers: { Accept: "application/x-x509-ca-cert" },
 		signal: AbortSignal.timeout(10_000),

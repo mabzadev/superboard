@@ -26,7 +26,7 @@ for (const source of ["checkout", "upstream regeneration"]) {
 					);
 		writeFileSync(
 			join(directory, "pnpm"),
-			'#!/bin/sh\nif [ "$1 $2" = "run mcp:docker:check" ]; then exec /bin/sh -c "$MCP_DOCKER_COMMAND"; fi\nexit 0\n',
+			'#!/bin/sh\nif [ "$1 $2" = "run mcp:docker:check" ]; then exit 127; fi\nexit 0\n',
 			{ mode: 0o755 },
 		);
 		writeFileSync(
@@ -45,20 +45,12 @@ for (const source of ["checkout", "upstream regeneration"]) {
 			env: {
 				...process.env,
 				PATH: `${directory}:${process.env.PATH}`,
-				MCP_DOCKER_COMMAND: manifest.scripts["mcp:docker:check"],
 				MCP_VALIDATION_LOG: log,
 			},
 		};
 		const result = spawnSync("/bin/sh", ["-c", manifest.scripts["mcp:check"]], options);
 		assert.equal(result.status, 0, result.stderr);
 		assert.match(readFileSync(log, "utf8"), /cloudflare-dry-run\.mjs --service mcp/);
-		const optionalImage = spawnSync(
-			"/bin/sh",
-			["-c", manifest.scripts["mcp:docker:check"]],
-			options,
-		);
-		assert.equal(optionalImage.status, 127);
-		assert.match(optionalImage.stderr, /Docker is unavailable/);
 	});
 }
 

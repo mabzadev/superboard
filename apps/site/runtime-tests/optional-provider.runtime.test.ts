@@ -23,7 +23,7 @@ test("an internal Email integration cannot write while Email is disabled and res
 		MAIL_FROM_ADDRESS: "sender@example.test",
 		EMAIL_INTERNAL_TOKEN: "runtime-email-secret",
 		EMAIL_SMTP_ENCRYPTION_KEY: "email-integration-key",
-		SUPERBOARD_INSTANCE_ID: "vocostar",
+		SUPERBOARD_INSTANCE_ID: "reference-production",
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 		API_SERVICE: {
 			fetch: (request: Request) =>
@@ -82,7 +82,7 @@ test("Analytics keeps a signal pending while Marketing is disabled and delivers 
 	const bindings = {
 		DB: stores.HEALTH_MARKETING_DB,
 		ENVIRONMENT: "local",
-		SUPERBOARD_INSTANCE_ID: "vocostar",
+		SUPERBOARD_INSTANCE_ID: "reference-production",
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 		INTERNAL_API_TOKEN: "runtime-module-secret",
 		API_SERVICE: {

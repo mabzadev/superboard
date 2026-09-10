@@ -88,11 +88,6 @@ import redirectRoute from "./routes/redirect";
 import sdkRoutes from "./routes/sdk";
 import siteOperatorRoutes from "./routes/site-operator";
 import usersRoutes from "./routes/users";
-import {
-	proxyVocostarRuntime,
-	VOCOSTAR_CALLBACK_PATHS,
-	VOCOSTAR_WEBSOCKET_PATHS,
-} from "./routes/vocostar-runtime.js";
 import wellKnownRoutes from "./routes/well-known";
 import { Env } from "./types";
 
@@ -320,10 +315,7 @@ app.get("/.well-known/jwks.json", (c) => {
 	return proxyPublicService(c.req.raw, c.env.IDENTITY_SERVICE, "/.well-known/jwks.json");
 });
 
-// Completion callbacks must drain accepted jobs after the plugin stops accepting work.
-app.on("POST", [...VOCOSTAR_CALLBACK_PATHS], (c) => proxyVocostarRuntime(c.req.raw, c.env));
 app.use("*", pluginHttpAdmission);
-app.on("GET", [...VOCOSTAR_WEBSOCKET_PATHS], (c) => proxyVocostarRuntime(c.req.raw, c.env));
 
 // =============================================
 // Route requests by subdomain

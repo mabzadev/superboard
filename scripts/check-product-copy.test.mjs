@@ -22,7 +22,7 @@ function fixture(context, source) {
 		);
 }
 test("product copy catches deployment branding in the plugin Front without a retired application", (context) => {
-	const run = fixture(context, 'export const title="VocoStar";');
+	const run = fixture(context, 'export const title="Reference application";');
 	const result = run();
 	assert.equal(result.status, 1);
 	assert.match(result.stderr, /deployment-specific branding/u);

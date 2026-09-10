@@ -21,7 +21,11 @@
 			"package-lock.json",
 			"package.json",
 			"pnpm-lock.yaml",
-			"pnpm-workspace.yaml"
+			"pnpm-workspace.yaml",
+			"Dockerfile",
+			"compose.yaml",
+			".dockerignore",
+			"infra/emdash-bot"
 		]
 	},
 	"compatibility": {

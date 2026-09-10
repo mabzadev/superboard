@@ -82,7 +82,7 @@ describe("native Support Grow pages", () => {
 		services.getSettings.mockResolvedValue({
 			data: {
 				settings: {
-					business_name: "VocoStar Care",
+					business_name: "Reference application Care",
 					locale: "en",
 					timezone: "Europe/Zurich",
 					date_format: "YYYY-MM-DD",
@@ -172,7 +172,7 @@ describe("native Support Grow pages", () => {
 		const user = userEvent.setup();
 		const { container } = render(<SupportSettingsPage />);
 
-		expect(await screen.findByDisplayValue("VocoStar Care")).toBeInTheDocument();
+		expect(await screen.findByDisplayValue("Reference application Care")).toBeInTheDocument();
 		expect(screen.getByText("Support capabilities")).toBeInTheDocument();
 		await user.click(screen.getByRole("tab", { name: "Operations" }));
 		await waitFor(() => expect(screen.getByText("Queued jobs")).toBeInTheDocument());

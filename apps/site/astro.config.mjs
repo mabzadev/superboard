@@ -43,7 +43,14 @@ const emailFromName = process.env.SUPERBOARD_SITE_EMAIL_FROM_NAME ?? "SuperBoard
 const emailReplyTo = process.env.SUPERBOARD_SITE_EMAIL_REPLY_TO || undefined;
 export default defineConfig({
 	output: "server",
-	adapter: cloudflare(),
+	adapter: cloudflare(
+		process.env.SUPERBOARD_LOCAL_STATE_DIRECTORY
+			? {
+					persistState: { path: process.env.SUPERBOARD_LOCAL_STATE_DIRECTORY },
+					remoteBindings: false,
+				}
+			: {},
+	),
 	integrations: [
 		superboardRuntimeCache(),
 		react(),

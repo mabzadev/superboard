@@ -32,7 +32,7 @@ test("produces candidate, preview, approval and activation evidence for the user
 	const publicJwk = await crypto.subtle.exportKey("jwk", keys.publicKey);
 	const release = await compileFrontRelease(
 		await composeUserFrontReleaseInput({
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			front_draft_id: "01J00000000000000000000401",
 			draft_snapshot_id: "01J00000000000000000000402",
 			compilation_id: "01J00000000000000000000403",
@@ -61,7 +61,7 @@ test("produces candidate, preview, approval and activation evidence for the user
 	await env.DB.prepare(
 		`INSERT OR REPLACE INTO superboard_dependency_health
 		 (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
-		 VALUES ('vocostar', 'dependency.supbrd_plug_user', 'ready', ?, ?, ?)`,
+		 VALUES ('reference-production', 'dependency.supbrd_plug_user', 'ready', ?, ?, ?)`,
 	)
 		.bind(
 			`sha256:${"a".repeat(64)}`,
@@ -81,7 +81,7 @@ test("produces candidate, preview, approval and activation evidence for the user
 	const reauthentication = await createOperatorReauthenticationReceipt({
 		receipt_id: "user-slice-runtime-reauth",
 		operator_id: "operator-runtime",
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		action: "front_release.approve",
 		candidate_id: release.payload.candidate_id,
 		reauthenticated_at: "2026-08-30T00:55:00.000Z",
@@ -109,18 +109,18 @@ test("produces candidate, preview, approval and activation evidence for the user
 		errors: [],
 	});
 	const repository = createD1FrontReleaseRepository(env.DB);
-	const active = await repository.getActive("vocostar");
+	const active = await repository.getActive("reference-production");
 	const activationReauthentication = await createOperatorReauthenticationReceipt({
 		receipt_id: "user-slice-runtime-activation-reauth",
 		operator_id: "operator-runtime",
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		action: "front_release.activate",
 		candidate_id: release.payload.candidate_id,
 		reauthenticated_at: "2026-08-30T00:56:30.000Z",
 		expires_at: "2026-08-30T01:01:30.000Z",
 	});
 	const activation = await activateFrontRelease(repository, {
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		candidate_id: release.payload.candidate_id,
 		activation_id: "user-slice-runtime-activation",
 		expected_active_release_id: active?.active_release_id ?? null,
@@ -133,7 +133,7 @@ test("produces candidate, preview, approval and activation evidence for the user
 	expect(
 		await verifyActivationReceipts(env.DB, {
 			activation_id: activation.activation_id,
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			active_release_id: activation.active_release_id,
 			pointer_revision: activation.pointer_revision,
 		}),

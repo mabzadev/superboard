@@ -6,7 +6,7 @@ import schema from "../schemas/front-release-input.schema.json";
 const minimalInput = {
 	schema_version: "1.0.0",
 	compiler_version: "0.1.0",
-	instance_id: "vocostar",
+	instance_id: "reference-production",
 	front_draft_id: "01J00000000000000000000001",
 	draft_snapshot_id: "01J00000000000000000000002",
 	compilation_id: "01J00000000000000000000003",

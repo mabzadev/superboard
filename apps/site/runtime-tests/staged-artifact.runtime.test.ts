@@ -45,7 +45,7 @@ test("preparing a replacement artifact preserves the active artifact and its hea
 		.first();
 	const before = await env.DB.prepare("SELECT * FROM superboard_front_active_releases").first();
 	await installSuperBoardPluginCatalog(env.DB, {
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		target: "local",
 		plan_id: "replacement-plan",
 		approved_by: "operator-1",
@@ -73,9 +73,11 @@ test("preparing a replacement artifact preserves the active artifact and its hea
 		before,
 	);
 	expect(
-		await loadSelectedSuperBoardPluginLock(env.DB, { instance_id: "vocostar", target: "local" }, [
-			pluginId,
-		]),
+		await loadSelectedSuperBoardPluginLock(
+			env.DB,
+			{ instance_id: "reference-production", target: "local" },
+			[pluginId],
+		),
 	).toContainEqual({
 		plugin_id: pluginId,
 		version: current.plugin_version,
@@ -84,15 +86,42 @@ test("preparing a replacement artifact preserves the active artifact and its hea
 	});
 });
 
-
 test("resource verification for an active plugin stages its new proof without replacing the committed proof", async () => {
- const pluginId="supbrd-plugmod-paywalls";
- const headers={Origin:"https://site.example","X-EmDash-Request":"1","X-Parity-Operator":"1","Content-Type":"application/json"};
- expect((await SELF.fetch(`https://site.example/_emdash/api/superboard/plugins/${pluginId}/enable`,{method:"POST",headers})).status).toBe(201);
- const before=await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health WHERE plugin_id=?").bind(pluginId).first();
- const sync=await SELF.fetch("https://site.example/_emdash/api/superboard/plugins/sync",{method:"POST",headers,body:JSON.stringify({plugin_ids:[pluginId],expires_in_hours:1})});
- expect(sync.status,await sync.clone().text()).toBe(201);
- expect(await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health WHERE plugin_id=?").bind(pluginId).first()).toEqual(before);
- const staged=await env.DB.prepare("SELECT evidence_checksum FROM superboard_plugin_staged_artifacts WHERE plugin_id=?").bind(pluginId).first();
- expect(staged?.evidence_checksum).not.toBe(before?.evidence_checksum);
+	const pluginId = "supbrd-plugmod-paywalls";
+	const headers = {
+		Origin: "https://site.example",
+		"X-EmDash-Request": "1",
+		"X-Parity-Operator": "1",
+		"Content-Type": "application/json",
+	};
+	expect(
+		(
+			await SELF.fetch(`https://site.example/_emdash/api/superboard/plugins/${pluginId}/enable`, {
+				method: "POST",
+				headers,
+			})
+		).status,
+	).toBe(201);
+	const before = await env.DB.prepare(
+		"SELECT * FROM superboard_plugin_runtime_health WHERE plugin_id=?",
+	)
+		.bind(pluginId)
+		.first();
+	const sync = await SELF.fetch("https://site.example/_emdash/api/superboard/plugins/sync", {
+		method: "POST",
+		headers,
+		body: JSON.stringify({ plugin_ids: [pluginId], expires_in_hours: 1 }),
+	});
+	expect(sync.status, await sync.clone().text()).toBe(201);
+	expect(
+		await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health WHERE plugin_id=?")
+			.bind(pluginId)
+			.first(),
+	).toEqual(before);
+	const staged = await env.DB.prepare(
+		"SELECT evidence_checksum FROM superboard_plugin_staged_artifacts WHERE plugin_id=?",
+	)
+		.bind(pluginId)
+		.first();
+	expect(staged?.evidence_checksum).not.toBe(before?.evidence_checksum);
 });

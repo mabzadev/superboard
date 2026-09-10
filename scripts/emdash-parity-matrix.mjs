@@ -11,12 +11,10 @@ const topologyPath = join(root, "config/emdash-plugin-topology.json");
 const parityReleasePath = join(root, "config/superboard-parity-release.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "config/superboard-front-bundle.json");
-const manifestMigrationPath = join(
-	root,
-	"apps/site/migrations/0027_reorganisation_plugin_manifests.sql",
-);
+const manifestMigrationPath = join(root, "apps/site/migrations/0030_platform_plugin_manifests.sql");
 const compatibilityPath = join(root, "config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0027_reorganisation_plugin_manifests.sql"),
 	join(root, "apps/site/migrations/0016_native_front_compatibility.sql"),
 	join(root, "apps/site/migrations/0017_native_front_presentation.sql"),
 	join(root, "apps/site/migrations/0020_revalidated_plugin_manifests.sql"),
@@ -52,10 +50,6 @@ const userManifestOverride = existsSync(frontCatalogPath)
 		).buildUserPluginManifest(frontBundleReceipt)
 	: null;
 
-const applicationPlugin = JSON.parse(
-	readFileSync(join(root, "plugins/vocostar/plugin.json"), "utf8"),
-);
-
 const fullPlugins = ["user", "settings", "content", "products", "audit"];
 const modulePlugins = [
 	["gateway", "api"],
@@ -72,10 +66,8 @@ const modulePlugins = [
 	["observability", "observability"],
 	["mcp", "mcp"],
 	["custom-*", null],
-	["vocostar", applicationPlugin.worker],
 ];
 const pluginStores = {
-	[applicationPlugin.id]: applicationPlugin.stores,
 	"supbrd-plug-user": ["user_directory", "user_credentials", "user_sessions"],
 	"supbrd-plug-settings": ["settings", "versions"],
 	"supbrd-plug-content": ["documents", "taxonomies", "revisions"],
@@ -98,7 +90,6 @@ const pluginStores = {
 };
 
 const pluginSettings = {
-	[applicationPlugin.id]: applicationPlugin.settings,
 	"supbrd-plug-user": {
 		mfa_policy: { type: "string", enum: ["optional", "required"] },
 		allow_anonymous_upgrade: { type: "boolean" },
@@ -210,10 +201,6 @@ const pluginSettings = {
 };
 
 const pluginOperations = {
-	[applicationPlugin.id]: {
-		commands: applicationPlugin.commands,
-		dataSources: applicationPlugin.dataSources,
-	},
 	"supbrd-plug-user": {
 		commands: [
 			"application_sign_in",
@@ -1256,12 +1243,11 @@ function workerRuntimeContract(name, worker) {
 		"marketing",
 		"email",
 		"custom-*",
-		"vocostar",
 	]).has(name);
 	const path = worker ? `workers/${worker}` : "deploy/targets";
 	const proof = worker
 		? workerProof(worker, join(root, `workers/${worker}`))
-		: join(root, "scripts/vocostar-managed-workers.test.mjs");
+		: join(root, "scripts/custom-worker-check.test.mjs");
 	return {
 		path,
 		execution_mode: asynchronous ? "asynchronous" : "synchronous",
@@ -1430,6 +1416,10 @@ function manifestRegistryMigration(topology) {
 }
 
 function pluginCompatibilityRegistry() {
+	const bundled = new Set([
+		...fullPlugins.map((id) => `supbrd-plug-${id}`),
+		...modulePlugins.map(([id]) => `supbrd-plugmod-${id}`),
+	]);
 	const artifacts = Object.fromEntries(
 		compatibilitySourcePaths
 			.flatMap((path) =>
@@ -1455,6 +1445,7 @@ function pluginCompatibilityRegistry() {
 					},
 				),
 			)
+			.filter(([, artifact]) => bundled.has(artifact.plugin_id))
 			.toSorted(([left], [right]) => left.localeCompare(right)),
 	);
 	if (Object.keys(artifacts).length === 0) {

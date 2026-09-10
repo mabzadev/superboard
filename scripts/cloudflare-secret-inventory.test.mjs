@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -30,7 +31,7 @@ test("secret inventory includes enabled common and target-specific contracts onl
 test("secret coordination covers every required binding without values", async () => {
 	for (const [targetName, environment] of [
 		["mbza-development", "development"],
-		["vocostar", "production"],
+		["reference-production", "production"],
 	]) {
 		const { target } = await loadTarget(targetName);
 		const requirements = requiredSecretInventory(target, environment);
@@ -48,7 +49,7 @@ test("secret coordination covers every required binding without values", async (
 
 test("analytics query credentials are optional in development and required in production", async () => {
 	const development = (await loadTarget("mbza-development")).target;
-	const production = (await loadTarget("vocostar")).target;
+	const production = (await loadTarget("reference-production")).target;
 	assert.deepEqual(
 		requiredSecretInventory(development, "development").find(
 			({ service }) => service === "observability",
@@ -68,7 +69,7 @@ test("analytics query credentials are optional in development and required in pr
 });
 
 test("managed Worker secrets are application-specific and value-free", async () => {
-	const { target } = await loadTarget("vocostar");
+	const { target } = await loadTarget("reference-production");
 	const inventory = secretInventory(target);
 	const vocals = inventory.find(({ service }) => service === "managed-vocals-orchestrator");
 	assert.deepEqual(vocals.names, [
@@ -98,10 +99,6 @@ test("managed Worker secrets are application-specific and value-free", async () 
 				service: "managed-medias-orchestrator",
 				name: "GATEWAY_INTERNAL_TOKEN",
 			},
-			{
-				service: "custom",
-				name: "VOCOSTAR_INTERNAL_CALLBACK_TOKEN",
-			},
 		],
 	);
 	assert.equal(
@@ -114,7 +111,7 @@ test("managed Worker secrets are application-specific and value-free", async () 
 
 test("shared production contracts identify both ends and environment-specific billing ownership", async () => {
 	const development = (await loadTarget("mbza-development")).target;
-	const production = (await loadTarget("vocostar")).target;
+	const production = (await loadTarget("reference-production")).target;
 	const developmentPlan = secretCoordinationPlan(development, "development");
 	const productionPlan = secretCoordinationPlan(production, "production");
 
@@ -186,21 +183,19 @@ test("shared production contracts identify both ends and environment-specific bi
 	);
 });
 
-test("AWS SES and target extension secrets have explicit provenance", async () => {
-	const target = (await loadTarget("vocostar")).target;
+test("AWS setup remains optional while extension tokens retain their scope", async () => {
+	const target = (await loadTarget("reference-production")).target;
 	const plan = secretCoordinationPlan(target, "production");
-	assert.equal(
-		plan.contracts.find(({ id }) => id === "email-aws-ses-smtp-username").source,
-		"external-aws-ses-smtp-credential",
-	);
-	assert.equal(
-		plan.contracts.find(({ id }) => id === "email-aws-ses-smtp-password").source,
-		"external-aws-ses-smtp-credential",
-	);
-	assert.equal(
-		plan.contracts.find(({ id }) => id === "email-aws-ses-sns-topic-arn").source,
-		"external-aws-sns-topic-configuration",
-	);
+	for (const id of [
+		"email-aws-ses-smtp-username",
+		"email-aws-ses-smtp-password",
+		"email-aws-ses-sns-topic-arn",
+	]) {
+		assert.equal(
+			plan.contracts.find((contract) => contract.id === id),
+			undefined,
+		);
+	}
 	assert.equal(
 		plan.contracts.find(({ id }) => id === "custom-custom-worker-token"),
 		undefined,

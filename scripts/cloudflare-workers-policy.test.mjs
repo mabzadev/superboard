@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
@@ -112,7 +113,7 @@ test("source Wrangler templates never pin a Cloudflare account resource", () => 
 test("portable runtime sources never pin an application domain, account id, or workstation path", () => {
 	const forbidden = [
 		[
-			/(?:[a-z0-9-]+\.)*(?:vocostar\.com|mbza\.dev)\b/iu,
+			/(?:[a-z0-9-]+\.)*(?:reference-production\.com|mbza\.dev)\b/iu,
 			"application domains belong in deploy/targets manifests",
 		],
 		[

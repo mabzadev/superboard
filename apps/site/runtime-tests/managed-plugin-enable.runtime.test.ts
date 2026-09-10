@@ -22,7 +22,7 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 		 SET expires_at = '2000-01-01T00:00:00.000Z'
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 	)
-		.bind("vocostar", "supbrd-plug-settings")
+		.bind("reference-production", "supbrd-plug-settings")
 		.run();
 
 	const response = await SELF.fetch(
@@ -48,7 +48,7 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 		 FROM superboard_plugin_lifecycle
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 	)
-		.bind("vocostar", "supbrd-plug-user")
+		.bind("reference-production", "supbrd-plug-user")
 		.first<{ state: string; activated_release_id: string | null }>();
 	expect(lifecycle).toMatchObject({ state: "active", activated_release_id: expect.any(String) });
 	const unrelatedLifecycle = await env.DB.prepare(
@@ -56,7 +56,7 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 		 FROM superboard_plugin_lifecycle
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 	)
-		.bind("vocostar", "supbrd-plug-settings")
+		.bind("reference-production", "supbrd-plug-settings")
 		.first<{ state: string; activated_release_id: string | null }>();
 	expect(unrelatedLifecycle).toEqual({ state: "installed", activated_release_id: null });
 
@@ -108,7 +108,7 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 		   AND plugin_id IN (?, ?)
 		 ORDER BY plugin_id`,
 	)
-		.bind("vocostar", "supbrd-plug-settings", "supbrd-plug-user")
+		.bind("reference-production", "supbrd-plug-settings", "supbrd-plug-user")
 		.all<{ plugin_id: string; state: string }>();
 	expect(lifecycleAfterDisable.results).toEqual([
 		{ plugin_id: "supbrd-plug-settings", state: "active" },

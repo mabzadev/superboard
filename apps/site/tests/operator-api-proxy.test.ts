@@ -23,7 +23,7 @@ test("proxies an operator request through the private API binding without leakin
 		}),
 		operator: { id: "emdash-owner", role: 50 },
 		env: {
-			SUPERBOARD_INSTANCE_ID: "vocostar",
+			SUPERBOARD_INSTANCE_ID: "reference-production",
 			API_SERVICE: { fetch },
 			SITE_OPERATOR_BRIDGE_TOKEN: "site-bridge-secret",
 		},
@@ -36,9 +36,11 @@ test("proxies an operator request through the private API binding without leakin
 	expect(forwarded.headers.get("Authorization")).toBeNull();
 	expect(forwarded.headers.get("X-SuperBoard-Site-Operator")).toBeNull();
 	expect(forwarded.headers.get("X-SuperBoard-Internal-Token")).toBeNull();
-	expect(await verifySiteOperatorRequest(forwarded, "vocostar", "site-bridge-secret")).toEqual({
+	expect(
+		await verifySiteOperatorRequest(forwarded, "reference-production", "site-bridge-secret"),
+	).toEqual({
 		operator_id: "emdash-owner",
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		role: 50,
 	});
 });
@@ -57,7 +59,7 @@ test("fails closed when a mutation cannot first commit to the EmDash command rep
 		}),
 		operator: { id: "emdash-owner", role: 50 },
 		env: {
-			SUPERBOARD_INSTANCE_ID: "vocostar",
+			SUPERBOARD_INSTANCE_ID: "reference-production",
 			API_SERVICE: { fetch },
 			SITE_OPERATOR_BRIDGE_TOKEN: "site-bridge-secret",
 		},
@@ -85,7 +87,7 @@ test("fails closed without a private binding, token or same-origin mutation", as
 			}),
 			operator: { id: "emdash-owner", role: 50 },
 			env: {
-				SUPERBOARD_INSTANCE_ID: "vocostar",
+				SUPERBOARD_INSTANCE_ID: "reference-production",
 				API_SERVICE: { fetch: vi.fn() },
 				SITE_OPERATOR_BRIDGE_TOKEN: "site-bridge-secret",
 			},
@@ -96,7 +98,7 @@ test("fails closed without a private binding, token or same-origin mutation", as
 test("rejects missing CSRF and insufficient operator permission before dispatch", async () => {
 	const fetch = vi.fn(async () => Response.json({ ok: true }));
 	const env = {
-		SUPERBOARD_INSTANCE_ID: "vocostar",
+		SUPERBOARD_INSTANCE_ID: "reference-production",
 		API_SERVICE: { fetch },
 		SITE_OPERATOR_BRIDGE_TOKEN: "bridge-secret",
 	};

@@ -61,7 +61,7 @@ describe("platform library catalogue service", () => {
 				data: [
 					{
 						id: "erase-1",
-						projectRef: "vocostar",
+						projectRef: "reference-production",
 						subjectReference: "0123456789ab",
 						status: "processing",
 					},
