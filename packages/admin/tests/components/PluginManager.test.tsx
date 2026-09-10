@@ -1,7 +1,9 @@
 import { Toasty } from "@cloudflare/kumo";
+import { DirectionProvider } from "@cloudflare/kumo/primitives";
+import { i18n } from "@lingui/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import type { PluginInfo, AdminManifest } from "../../src/lib/api";
 import { ApiResponseError } from "../../src/lib/api/client.js";
@@ -120,33 +122,41 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe("PluginManager", () => {
-	it("retries a managed activation only after successful verification", async () => {
-		const plugin = makePlugin({ enabled: false, status: "inactive", lifecycleManaged: true });
-		mockFetchPlugins.mockResolvedValue([plugin]);
-		mockEnablePlugin
-			.mockRejectedValueOnce(
-				new ApiResponseError(403, "STRONG_REAUTH_REQUIRED", "Verification required"),
-			)
-			.mockImplementationOnce(async () => {
-				const active = { ...plugin, enabled: true, status: "active" };
-				mockFetchPlugins.mockResolvedValue([active]);
-				return active;
-			});
-		const screen = await render(
-			<Wrapper>
-				<PluginManager />
-			</Wrapper>,
-		);
-		await screen.getByRole("switch", { name: "Enable plugin" }).click();
-		await expect
-			.element(screen.getByRole("dialog", { name: "Verify your identity" }))
-			.toBeInTheDocument();
-		expect(mockEnablePlugin).toHaveBeenCalledTimes(1);
-		// The unit harness omits Kumo's portal CSS; native DOM clicks exercise the handler.
-		screen.getByRole("button", { name: "Complete verification" }).element().click();
-		await expect.element(screen.getByRole("switch", { name: "Disable plugin" })).toBeChecked();
-		expect(mockEnablePlugin).toHaveBeenCalledTimes(2);
-	});
+	it.each(["en", "ar"])(
+		"retries a managed activation only after successful verification (%s)",
+		async (locale) => {
+			i18n.loadAndActivate({ locale, messages: {} });
+			const plugin = makePlugin({ enabled: false, status: "inactive", lifecycleManaged: true });
+			mockFetchPlugins.mockResolvedValue([plugin]);
+			mockEnablePlugin
+				.mockRejectedValueOnce(
+					new ApiResponseError(403, "STRONG_REAUTH_REQUIRED", "Verification required"),
+				)
+				.mockImplementationOnce(async () => {
+					const active = { ...plugin, enabled: true, status: "active" };
+					mockFetchPlugins.mockResolvedValue([active]);
+					return active;
+				});
+			const screen = await render(
+				<Wrapper>
+					<DirectionProvider direction={locale === "ar" ? "rtl" : "ltr"}>
+						<PluginManager />
+					</DirectionProvider>
+				</Wrapper>,
+			);
+			await screen.getByRole("switch", { name: "Enable plugin" }).click();
+			await expect
+				.element(screen.getByRole("dialog", { name: "Verify your identity" }))
+				.toBeInTheDocument();
+			expect(mockEnablePlugin).toHaveBeenCalledTimes(1);
+			// The unit harness omits Kumo's portal CSS; native DOM clicks exercise the handler.
+			screen.getByRole("button", { name: "Complete verification" }).element().click();
+			await expect.element(screen.getByRole("switch", { name: "Disable plugin" })).toBeChecked();
+			expect(mockEnablePlugin).toHaveBeenCalledTimes(2);
+		},
+	);
+
+	afterEach(() => i18n.loadAndActivate({ locale: "en", messages: {} }));
 
 	it("cancelling verification leaves the plugin disabled", async () => {
 		mockFetchPlugins.mockResolvedValue([
