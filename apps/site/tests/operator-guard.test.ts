@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import { resolveSiteReleaseOperations } from "../../../scripts/cloudflare-site-preview.mjs";
 import {
 	recentOperatorReauthentication,
 	requirePluginOperator,
@@ -28,6 +29,23 @@ const enabledEnv = { SUPERBOARD_RELEASE_OPERATIONS: "enabled" } as Parameters<
 >[1];
 
 describe("Release operator guard", () => {
+	test("the operational deployment permits an admin plugin mutation but retains authorization and CSRF checks", () => {
+		const operations = resolveSiteReleaseOperations({
+			service: "site",
+			environment: "development",
+			publicRoutesEnabled: true,
+		});
+		const deployed = { SUPERBOARD_RELEASE_OPERATIONS: operations.value } as Parameters<
+			typeof requireReleaseOperator
+		>[1];
+		expect(requireReleaseOperator(context({ role: 50 }), deployed)).toBeNull();
+		expect(requireReleaseOperator(context(), deployed)?.status).toBe(401);
+		expect(requireReleaseOperator(context({ role: 40 }), deployed)?.status).toBe(403);
+		expect(
+			requireReleaseOperator(context({ role: 50, origin: "https://other.example" }), deployed)
+				?.status,
+		).toBe(403);
+	});
 	test("allows authenticated operators to inspect plugin Stores without enabling releases", () => {
 		expect(requirePluginOperator(context())).toHaveProperty("status", 401);
 		expect(requirePluginOperator(context({ role: 40 }))).toHaveProperty("status", 403);

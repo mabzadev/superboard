@@ -31,11 +31,18 @@ export function resolveSiteReleaseOperations({
 	service,
 	environment,
 	sitePreviewRoute,
+	publicRoutesEnabled = false,
+	readOnly = false,
 }) {
-	if (!requested) return { value: "disabled", cliArgs: [] };
+	if (readOnly && requested)
+		throw new Error("--read-only-console conflicts with --release-operations");
+	const operationalConsole = service === "site" && publicRoutesEnabled && !readOnly;
+	if (!requested && !operationalConsole) return { value: "disabled", cliArgs: [] };
 	if (
 		service !== "site" ||
-		(environment !== "local" && (environment !== "development" || !sitePreviewRoute))
+		(!operationalConsole &&
+			environment !== "local" &&
+			(environment !== "development" || !sitePreviewRoute))
 	) {
 		throw new Error(
 			"--release-operations requires a local Site or an active development Site preview route",

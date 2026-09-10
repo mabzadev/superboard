@@ -6,7 +6,7 @@
  * update/uninstall for marketplace-installed plugins.
  */
 
-import { Badge, Button, Checkbox, Switch, Toast } from "@cloudflare/kumo";
+import { Badge, Button, Checkbox, Dialog, Switch, Toast } from "@cloudflare/kumo";
 import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import {
@@ -34,6 +34,7 @@ import {
 	type AdminManifest,
 	CAPABILITY_LABELS,
 } from "../lib/api";
+import { ApiResponseError } from "../lib/api/client.js";
 import {
 	checkPluginUpdates,
 	PluginMcpConsentRequiredError,
@@ -52,6 +53,7 @@ import { safeIconUrl } from "../lib/url.js";
 import { cn } from "../lib/utils";
 import { ADMIN_NAV_ICONS } from "./admin-navigation-icons.js";
 import { CaretNext } from "./ArrowIcons.js";
+import { PasskeyLogin } from "./auth/PasskeyLogin.js";
 import { CapabilityConsentDialog } from "./CapabilityConsentDialog.js";
 import { DialogError, getMutationError } from "./DialogError.js";
 import { RouterLinkButton } from "./RouterLinkButton.js";
@@ -78,6 +80,33 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 	const queryClient = useQueryClient();
 	const toastManager = Toast.useToastManager();
 	const hasMarketplace = !!manifest?.marketplace;
+	const [verification, setVerification] = React.useState<{
+		plugin: PluginInfo;
+		action: "enable" | "disable";
+	} | null>(null);
+	const pendingVerification = React.useRef(verification);
+	const closeVerification = () => {
+		pendingVerification.current = null;
+		setVerification(null);
+	};
+	const requestVerification = (err: unknown, plugin: PluginInfo, action: "enable" | "disable") => {
+		if (
+			!plugin.lifecycleManaged ||
+			!(err instanceof ApiResponseError) ||
+			err.code !== "STRONG_REAUTH_REQUIRED"
+		)
+			return false;
+		const pending = { plugin, action };
+		pendingVerification.current = pending;
+		setVerification(pending);
+		return true;
+	};
+	const lifecycleError = (err: unknown) =>
+		err instanceof ApiResponseError && err.code === "RELEASE_OPERATIONS_DISABLED"
+			? t`Plugin activation is unavailable in this deployment. Contact the administrator to complete the console configuration.`
+			: err instanceof Error
+				? err.message
+				: t`An error occurred`;
 
 	const {
 		data: plugins,
@@ -110,10 +139,11 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 				description: t`${plugin.name} is now active`,
 			});
 		},
-		onError: (err) => {
+		onError: (err, plugin) => {
+			if (requestVerification(err, plugin, "enable")) return;
 			toastManager.add({
 				title: t`Failed to enable plugin`,
-				description: err instanceof Error ? err.message : t`An error occurred`,
+				description: lifecycleError(err),
 				type: "error",
 			});
 		},
@@ -131,10 +161,11 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 				description: t`${plugin.name} has been deactivated`,
 			});
 		},
-		onError: (err) => {
+		onError: (err, plugin) => {
+			if (requestVerification(err, plugin, "disable")) return;
 			toastManager.add({
 				title: t`Failed to disable plugin`,
-				description: err instanceof Error ? err.message : t`An error occurred`,
+				description: lifecycleError(err),
 				type: "error",
 			});
 		},
@@ -169,6 +200,31 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 
 	return (
 		<div className="space-y-6">
+			<Dialog.Root
+				open={verification !== null}
+				onOpenChange={(open) => !open && closeVerification()}
+			>
+				<Dialog className="space-y-4 p-6" size="sm">
+					<Dialog.Title className="text-lg font-semibold">{t`Verify your identity`}</Dialog.Title>
+					<Dialog.Description className="text-kumo-subtle">
+						{t`Confirm your identity to apply the plugin change. Your pending action will resume after verification.`}
+					</Dialog.Description>
+					{verification && (
+						<PasskeyLogin
+							optionsEndpoint="/_emdash/api/auth/passkey/options"
+							verifyEndpoint="/_emdash/api/auth/passkey/verify"
+							buttonText={t`Verify with passkey`}
+							onSuccess={() => {
+								if (pendingVerification.current !== verification) return;
+								closeVerification();
+								if (verification.action === "enable") enableMutation.mutate(verification.plugin);
+								else disableMutation.mutate(verification.plugin);
+							}}
+						/>
+					)}
+					<Button variant="secondary" onClick={closeVerification}>{t`Cancel`}</Button>
+				</Dialog>
+			</Dialog.Root>
 			<div className="flex flex-wrap items-start justify-between gap-4">
 				<div className="min-w-0">
 					<h1 className="text-2xl font-semibold leading-tight">{t`Plugins`}</h1>

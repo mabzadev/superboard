@@ -80,7 +80,7 @@ export async function throwResponseError(res: Response, fallback: string): Promi
 	throw new ApiResponseError(
 		res.status,
 		code,
-		message || `${fallback}: ${res.statusText}`,
+		message || `${fallback}: ${code !== "UNKNOWN_ERROR" ? code : res.statusText || res.status}`,
 		details,
 	);
 }
