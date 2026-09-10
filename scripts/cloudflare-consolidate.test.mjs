@@ -1,11 +1,66 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 
 import {
 	assertConsolidatedDeploymentReady,
 	runConsolidatedDeployment,
 } from "./cloudflare-consolidate.mjs";
+import { renderRootPackage } from "./emdash-overlay.mjs";
+
+for (const source of ["checkout", "upstream regeneration"]) {
+	void test(`Cloudflare MCP validation works without Docker after ${source}`, (context) => {
+		const directory = mkdtempSync(join(tmpdir(), "superboard-mcp-without-docker-"));
+		context.after(() => rmSync(directory, { recursive: true, force: true }));
+		const manifest =
+			source === "checkout"
+				? JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
+				: renderRootPackage(
+						{},
+						JSON.parse(
+							readFileSync(new URL("../config/emdash-root.overlay.json", import.meta.url), "utf8"),
+						),
+					);
+		writeFileSync(
+			join(directory, "pnpm"),
+			'#!/bin/sh\nif [ "$1 $2" = "run mcp:docker:check" ]; then exec /bin/sh -c "$MCP_DOCKER_COMMAND"; fi\nexit 0\n',
+			{ mode: 0o755 },
+		);
+		writeFileSync(
+			join(directory, "docker"),
+			'#!/bin/sh\necho "Docker is unavailable" >&2\nexit 127\n',
+			{ mode: 0o755 },
+		);
+		const log = join(directory, "validation.log");
+		writeFileSync(
+			join(directory, "node"),
+			'#!/bin/sh\nprintf "%s\\n" "$*" >> "$MCP_VALIDATION_LOG"\n',
+			{ mode: 0o755 },
+		);
+		const options = {
+			encoding: "utf8",
+			env: {
+				...process.env,
+				PATH: `${directory}:${process.env.PATH}`,
+				MCP_DOCKER_COMMAND: manifest.scripts["mcp:docker:check"],
+				MCP_VALIDATION_LOG: log,
+			},
+		};
+		const result = spawnSync("/bin/sh", ["-c", manifest.scripts["mcp:check"]], options);
+		assert.equal(result.status, 0, result.stderr);
+		assert.match(readFileSync(log, "utf8"), /cloudflare-dry-run\.mjs --service mcp/);
+		const optionalImage = spawnSync(
+			"/bin/sh",
+			["-c", manifest.scripts["mcp:docker:check"]],
+			options,
+		);
+		assert.equal(optionalImage.status, 127);
+		assert.match(optionalImage.stderr, /Docker is unavailable/);
+	});
+}
 
 const group = (id) => ({
 	id,

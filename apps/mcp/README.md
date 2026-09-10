@@ -121,7 +121,8 @@ npm --prefix apps/mcp run build
 npm --prefix apps/mcp start
 ```
 
-Or with Docker:
+The Cloudflare Worker and standard MCP checks do not require Docker. To package
+the optional standalone HTTP adapter as a container:
 
 ```bash
 docker build -f apps/mcp/Dockerfile -t superboard-mcp apps/mcp
@@ -130,6 +131,8 @@ docker run --rm -p 8080:8080 \
   -e PUBLIC_URL \
   superboard-mcp
 ```
+
+Run `pnpm mcp:docker:check` from the repository root to validate this optional image.
 
 Then use `http://localhost:8080/mcp` as the server URL in any of the client configs above.
 

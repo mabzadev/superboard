@@ -26,7 +26,8 @@ iOS changes run the simulator test script on `macos-latest`; Android changes
 install the pinned API 35/Build Tools 34 components and run the library unit
 tests. MCP source changes select the Worker matrix and run the Worker tests,
 shared MCP application suite, typechecks, build, lint, both dependency audits,
-standalone Docker build and Wrangler dry run. Flutter SDK changes still validate
+and Wrangler dry run. The standalone MCP Docker image is optional and has a
+separate `pnpm mcp:docker:check` command. Flutter SDK changes still validate
 both the Flutter package and its FlutterFlow consumer.
 
 Manual workflow dispatch runs the complete supported matrix. Use it only when a complete validation is intentionally required. Concurrency cancellation stops an obsolete run when a newer commit arrives on the same branch or pull request.
