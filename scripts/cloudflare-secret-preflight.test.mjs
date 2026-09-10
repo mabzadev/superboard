@@ -5,6 +5,16 @@ import { requiredSecretInventory, secretInventory } from "./cloudflare-secret-in
 import { evaluateSecretReadiness, parseSecretNames } from "./cloudflare-secret-preflight.mjs";
 import { loadTarget } from "./cloudflare-target.mjs";
 
+test("secret readiness parses JSON after package-manager warnings", () => {
+	assert.deepEqual(
+		parseSecretNames(
+			'[WARN] dependencies are out of sync\n[\n {"name":"SIGNING_KEY","type":"secret_text"}\n]\n',
+		),
+		["SIGNING_KEY"],
+	);
+	assert.throws(() => parseSecretNames('[]\n[{"name":"KEY"}]'), /parse Wrangler secret list/);
+});
+
 test("required secrets adapt to AWS SES SMTP transports", async () => {
 	const development = (await loadTarget("mbza-development")).target;
 	const production = (await loadTarget("vocostar")).target;
