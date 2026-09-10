@@ -1,7 +1,6 @@
 import {
 	Activity,
 	Blocks,
-	AudioLines,
 	ChartNoAxesCombined,
 	ChevronRight,
 	Circle,
@@ -25,7 +24,6 @@ const icons = {
 	communication: MessagesSquare,
 	automations: Workflow,
 	analytics: ChartNoAxesCombined,
-	vocostar: AudioLines,
 	settings: Settings2,
 	operations: Activity,
 	plugins: Blocks,

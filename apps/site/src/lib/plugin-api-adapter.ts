@@ -108,12 +108,7 @@ export function matchPluginApiAdapter(
 		!(
 			url.pathname.startsWith("/api/v1/") ||
 			url.pathname.startsWith("/api/v2/") ||
-			([
-				"supbrd-plug-content",
-				"supbrd-plug-audit",
-				"supbrd-plug-settings",
-				"supbrd-plugmod-vocostar",
-			].includes(pluginId) &&
+			(["supbrd-plug-content", "supbrd-plug-audit", "supbrd-plug-settings"].includes(pluginId) &&
 				url.pathname.startsWith("/_emdash/api/"))
 		)
 	)
@@ -224,12 +219,7 @@ export async function dispatchPluginApiAdapter(
 			...(body !== undefined ? { body } : {}),
 		});
 		if (
-			[
-				"supbrd-plug-content",
-				"supbrd-plug-audit",
-				"supbrd-plug-settings",
-				"supbrd-plugmod-vocostar",
-			].includes(pluginId) &&
+			["supbrd-plug-content", "supbrd-plug-audit", "supbrd-plug-settings"].includes(pluginId) &&
 			destination.pathname.startsWith("/_emdash/api/")
 		) {
 			const dispatch = () =>

@@ -1,13 +1,6 @@
 # Cloudflare console deployment
 
-SuperBoard's standard local workflow and the Mabza Cloudflare deployment do not require Docker. Container builds belong to the optional runtimes below.
-
-| Files                                                                        | Purpose                                                                     | Used by the Mabza target                      |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------- |
-| `workers/custom/vocostar/orchestrators/{vocals,medias}/container/Dockerfile` | Python and FFmpeg containers used by Vocostar's audio and video workflows   | No; declared only by the Vocostar target      |
-| `apps/mcp/Dockerfile`                                                        | Optional standalone HTTP MCP adapter; validate with `pnpm mcp:docker:check` | No; the target runs the Cloudflare MCP Worker |
-| `Dockerfile`, `compose.yaml`, `.dockerignore`                                | Integrated EmDash blog-template container example                           | No                                            |
-| `infra/emdash-bot/Dockerfile`                                                | Linux sandbox used by the integrated upstream EmDash bot                    | No                                            |
+SuperBoard runs locally and on Cloudflare without Docker. Application-specific Workers, containers, manifests, and deployment targets belong in separate addon workspaces.
 
 An active SuperBoard console enables the signed release operations used by plugin activation. Provision `SUPERBOARD_RELEASE_PRIVATE_JWK` on the Site Worker before deploying it. The development secret generator creates an independent ES256 signing key for this purpose; retain the private key in the deployment secret store across upgrades.
 

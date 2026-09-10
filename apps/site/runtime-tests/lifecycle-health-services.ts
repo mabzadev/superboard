@@ -4,7 +4,7 @@ import analytics from "../../../workers/analytics/src/index.js";
 import api from "../../../workers/api/src/index.js";
 import app from "../../../workers/app/src/index.js";
 import billing from "../../../workers/billing/src/index.js";
-import customVocostar from "../../../workers/custom/vocostar/src/index.js";
+import customReference from "../../../workers/custom/reference/src/index.js";
 import dynamicLinks from "../../../workers/dynamic-links/src/index.js";
 import email from "../../../workers/email/src/index.js";
 import files from "../../../workers/files/src/index.js";
@@ -19,7 +19,7 @@ import products from "../../../workers/products/src/index.js";
 import support from "../../../workers/support/src/index.js";
 
 const workers = {
-	CUSTOM_WORKER: ["custom-vocostar", customVocostar],
+	CUSTOM_WORKER: ["custom-reference", customReference],
 	IDENTITY_SERVICE: ["identity", identity],
 	APP_MODULE: ["app", app],
 	PRODUCTS_MODULE: ["products", products],
@@ -52,7 +52,7 @@ export async function dispatchLifecycleApi(
 		PUBLIC_ROUTING_MODE: "active",
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 		ENVIRONMENT: "local",
-		SUPERBOARD_TARGET: "vocostar",
+		SUPERBOARD_TARGET: "reference-production",
 		PUBLIC_API_URL: "https://api.site.test",
 		PUBLIC_MCP_URL: "https://mcp.site.test",
 		API_DOMAIN: "api.site.test",
@@ -87,7 +87,7 @@ export async function dispatchLifecycleApi(
 		EMAIL_INTERNAL_TOKEN: "runtime-email-secret",
 		EMAIL_SMTP_ENCRYPTION_KEY: "runtime-email-encryption-key",
 		CUSTOM_WORKER_TOKEN: "retirement-custom-secret",
-		APP_KEY: "vocostar",
+		APP_KEY: "reference-production",
 		MODULE_INTERNAL_TOKEN: "runtime-module-secret",
 		FLOWS_INTERNAL_TOKEN: "runtime-flows-secret",
 		FILES_INTERNAL_TOKEN: "runtime-files-secret",
@@ -126,7 +126,7 @@ export async function dispatchLifecycleApi(
 						INTERNAL_API_TOKEN:
 							name === "flows" ? base.FLOWS_INTERNAL_TOKEN : base.MODULE_INTERNAL_TOKEN,
 						DB: env[`HEALTH_${name.replaceAll("-", "_").toUpperCase()}_DB`],
-						VOCOSTAR_DB: env.HEALTH_CUSTOM_VOCOSTAR_DB,
+						REFERENCE_DB: env.HEALTH_CUSTOM_REFERENCE_DB,
 						D1_EXPECTED_MIGRATION: migrations[name]?.at(-1)?.name,
 					};
 					// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- each imported real Worker receives its isolated migrated test database

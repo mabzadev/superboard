@@ -103,15 +103,7 @@ async function files(directory) {
 }
 
 function stripTechnicalReferences(line) {
-	return line
-		.replace(/https?:\/\/[^\s'"`)>]+/giu, "")
-		.replace(/[\w.+-]+@[\w.-]+/giu, "")
-		.replace(/\b[\w.-]*vocostar\.(?:com|workers\.dev)\b/giu, "")
-		.replace(/\b[\w.]*[-_][\w.-]*vocostar[\w.-]*\b/giu, "")
-		.replace(/\b[\w.-]*vocostar[\w.-]*[-_][\w.-]*\b/giu, "")
-		.replace(/--target\s+vocostar\b/giu, "")
-		.replace(/deploy\/targets\/vocostar\.json\b/giu, "")
-		.replace(/application:\s*\{\s*uid:\s*['"]vocostar['"]\s*\}/giu, "");
+	return line.replace(/https?:\/\/[^\s'"`)>]+/giu, "").replace(/[\w.+-]+@[\w.-]+/giu, "");
 }
 
 function issue(file, index, reason) {

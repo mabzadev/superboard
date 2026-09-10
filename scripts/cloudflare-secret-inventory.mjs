@@ -426,31 +426,11 @@ export function secretCoordinationPlan(target, environment) {
 			source: "coordinated-external-peer-secret",
 			sameValueRequired: true,
 			rotation: "coordinate-external-gateway-before-promoting-worker-versions",
-			externalPeers: [
-				`${runtimeBridge.legacyGateway?.worker ?? runtimeBridge.gatewayWorker}/${runtimeBridge.gatewaySecretBinding}`,
-			],
-			members: [
-				...managedWorkerServices(target).map((service) =>
-					exactMember(service, "GATEWAY_INTERNAL_TOKEN"),
-				),
-				...(runtimeBridge.legacyGateway
-					? [exactMember("custom", "VOCOSTAR_INTERNAL_CALLBACK_TOKEN")]
-					: []),
-			],
+			externalPeers: [`${runtimeBridge.gatewayWorker}/${runtimeBridge.gatewaySecretBinding}`],
+			members: managedWorkerServices(target).map((service) =>
+				exactMember(service, "GATEWAY_INTERNAL_TOKEN"),
+			),
 		});
-		if (runtimeBridge.legacyGateway) {
-			addContract({
-				id: "vocostar-legacy-identity-token",
-				scope: "application-specific",
-				source: "coordinated-external-peer-secret",
-				sameValueRequired: true,
-				rotation: "coordinate-legacy-jwt-issuer-and-retain-previous-verifier-until-token-expiry",
-				externalPeers: [
-					`${runtimeBridge.legacyGateway.worker}/${runtimeBridge.legacyGateway.jwtSecretBinding}`,
-				],
-				members: [exactMember("custom", "VOCOSTAR_LEGACY_JWT_SECRET")],
-			});
-		}
 	}
 
 	for (const requirement of requirements) {

@@ -46,6 +46,7 @@
 		"@vitejs/plugin-react": "^6.0.1",
 		"typescript": "catalog:",
 		"vitest": "catalog:",
-		"wrangler": "catalog:"
+		"wrangler": "catalog:",
+		"@lingui/babel-plugin-lingui-macro": "catalog:"
 	}
 }

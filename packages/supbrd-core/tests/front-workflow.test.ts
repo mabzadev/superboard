@@ -16,7 +16,7 @@ import {
 function release(): CompiledFrontRelease {
 	return {
 		payload: {
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			front_draft_id: "01J00000000000000000000001",
 			draft_snapshot_id: "01J00000000000000000000002",
 			candidate_id: "01J00000000000000000000003",
@@ -39,7 +39,7 @@ function candidate(): FrontReleaseCandidateRecord {
 function draft(): FrontDraft {
 	return {
 		front_draft_id: "01J00000000000000000000001",
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		revision: 4,
 		input: { title: "Draft four" },
 		updated_at: "2026-08-29T18:00:00.000Z",
@@ -100,7 +100,7 @@ describe("Front Release workflow", () => {
 		const receipt = await createOperatorReauthenticationReceipt({
 			receipt_id: "01J00000000000000000000007",
 			operator_id: "operator-1",
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			action: "front_release.approve",
 			candidate_id: record.release.payload.candidate_id,
 			reauthenticated_at: "2026-08-29T18:00:00.000Z",
@@ -149,7 +149,7 @@ describe("Front Release workflow", () => {
 		const receipt = await createOperatorReauthenticationReceipt({
 			receipt_id: "01J00000000000000000000017",
 			operator_id: "operator-1",
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			action: "front_release.approve",
 			candidate_id: record.release.payload.candidate_id,
 			reauthenticated_at: "2026-08-29T18:00:00.000Z",
@@ -203,7 +203,7 @@ describe("Front Release workflow", () => {
 		const reauthentication = await createOperatorReauthenticationReceipt({
 			receipt_id: "01J00000000000000000000008",
 			operator_id: "operator-1",
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			action: "front_release.rollback",
 			candidate_id: record.release.payload.candidate_id,
 			reauthenticated_at: "2026-08-29T18:00:00.000Z",
@@ -212,7 +212,7 @@ describe("Front Release workflow", () => {
 		expect(
 			await planPointerRollback(
 				{
-					instance_id: "vocostar",
+					instance_id: "reference-production",
 					active_release_id: "01J00000000000000000000009",
 					previous_release_id: record.release.payload.release_id,
 					pointer_revision: 2,
@@ -230,7 +230,7 @@ describe("Front Release workflow", () => {
 		expect(
 			await planPointerRollback(
 				{
-					instance_id: "vocostar",
+					instance_id: "reference-production",
 					active_release_id: "01J00000000000000000000009",
 					previous_release_id: incompatible.release.payload.release_id,
 					pointer_revision: 2,

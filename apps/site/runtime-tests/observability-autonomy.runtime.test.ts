@@ -53,7 +53,7 @@ async function ingest(body: unknown, producer = plugin, secret = "runtime-observ
 test("Observability persists observations and incident transitions while the required core rejects disabling", async () => {
 	expect((await toggle("enable")).status).toBe(201);
 	const event = {
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		observation_id: crypto.randomUUID(),
 		service: "isolated-api",
 		event_type: "fetch",
@@ -119,7 +119,7 @@ test("the actual tail handler persists sanitized observations without observing 
 	const context = pluginTaskContext(createExecutionContext(), plugin);
 	const bindings = {
 		SUPERBOARD_PLUGIN_LIFECYCLE: "required",
-		SUPERBOARD_INSTANCE_ID: "vocostar",
+		SUPERBOARD_INSTANCE_ID: "reference-production",
 		OBSERVABILITY_INTERNAL_TOKEN: "runtime-observability-secret",
 		ENVIRONMENT: "local",
 		ANALYTICS: { writeDataPoint() {} },

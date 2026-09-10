@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -9,7 +10,7 @@ const siteResources = ["siteD1", "siteSessionKv", "siteReleaseKv", "siteMedia"];
 test("Site resources retain physical names while exposing their logical migration identity", async () => {
 	for (const [name, environment] of [
 		["mbza-development", "development"],
-		["vocostar", "production"],
+		["reference-production", "production"],
 	]) {
 		const { target } = await loadTarget(name);
 		const contracts = assertTargetPhysicalResourceNames(target, environment);

@@ -17,7 +17,7 @@ test("receipt renewal does not clear an unavailable active plugin", async () => 
 		 SET status = 'unavailable', expires_at = '2000-01-01T00:00:00.000Z'
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 	)
-		.bind("vocostar", "supbrd-plug-user")
+		.bind("reference-production", "supbrd-plug-user")
 		.run();
 
 	const identityDb = (env as unknown as { HEALTH_IDENTITY_DB: D1Database }).HEALTH_IDENTITY_DB;
@@ -35,7 +35,7 @@ test("receipt renewal does not clear an unavailable active plugin", async () => 
 		`SELECT status FROM superboard_plugin_runtime_health
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 	)
-		.bind("vocostar", "supbrd-plug-user")
+		.bind("reference-production", "supbrd-plug-user")
 		.first();
 	expect(health).toMatchObject({ status: "unavailable" });
 });

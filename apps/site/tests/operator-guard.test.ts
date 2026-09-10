@@ -143,7 +143,7 @@ describe("Release operator guard", () => {
 				},
 			} as Parameters<typeof recentOperatorReauthentication>[0],
 			{
-				instance_id: "vocostar",
+				instance_id: "reference-production",
 				candidate_id: "candidate-1",
 				action: "front_release.approve",
 				now,
@@ -151,7 +151,7 @@ describe("Release operator guard", () => {
 		);
 		expect(receipt).toMatchObject({
 			operator_id: "operator-1",
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			action: "front_release.approve",
 		});
 		expect(receipt?.receipt_checksum).toMatch(/^sha256:[a-f0-9]{64}$/u);
@@ -168,7 +168,7 @@ describe("Release operator guard", () => {
 					},
 				} as Parameters<typeof recentOperatorReauthentication>[0],
 				{
-					instance_id: "vocostar",
+					instance_id: "reference-production",
 					candidate_id: "candidate-1",
 					action: "front_release.approve",
 					now,

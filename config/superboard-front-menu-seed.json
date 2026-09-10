@@ -1,0 +1,1183 @@
+[
+	{
+		"id": "front-menu:en",
+		"name": "superboard-admin",
+		"label": "Front navigation",
+		"locale": "en",
+		"items": [
+			{
+				"type": "custom",
+				"label": "Overview",
+				"url": "/superboard-system/home",
+				"cssClasses": "sb-icon-home",
+				"children": []
+			},
+			{
+				"type": "custom",
+				"label": "Users and access",
+				"url": "/app/users",
+				"cssClasses": "sb-icon-users",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Application users",
+						"url": "/app/users"
+					},
+					{
+						"type": "custom",
+						"label": "Application members",
+						"url": "/app/members"
+					},
+					{
+						"type": "custom",
+						"label": "Profiles and installations",
+						"url": "/app/customers"
+					},
+					{
+						"type": "custom",
+						"label": "Sign-in and security",
+						"url": "/identity/en/dashboard",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Sign-in and security",
+								"url": "/identity/en/dashboard"
+							},
+							{
+								"type": "custom",
+								"label": "Sign-in accounts",
+								"url": "/identity/en/users"
+							},
+							{
+								"type": "custom",
+								"label": "OAuth applications",
+								"url": "/identity/en/apps"
+							},
+							{
+								"type": "custom",
+								"label": "API permissions",
+								"url": "/identity/en/scopes"
+							},
+							{
+								"type": "custom",
+								"label": "Enterprise SSO",
+								"url": "/identity/en/saml"
+							},
+							{
+								"type": "custom",
+								"label": "Account policies",
+								"url": "/identity/en/account"
+							},
+							{
+								"type": "custom",
+								"label": "User attributes",
+								"url": "/identity/en/user-attributes"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Organizations",
+						"url": "/identity/en/orgs"
+					},
+					{
+						"type": "custom",
+						"label": "Roles and permissions",
+						"url": "/identity/en/roles"
+					},
+					{
+						"type": "custom",
+						"label": "Sign-in logs",
+						"url": "/identity/en/logs"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Data and content",
+				"url": "/system/content",
+				"cssClasses": "sb-icon-data",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Content",
+						"url": "/system/content"
+					},
+					{
+						"type": "custom",
+						"label": "Files and media",
+						"url": "/system/files"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Sales and subscriptions",
+				"url": "/products/purchases",
+				"cssClasses": "sb-icon-sales",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Purchases and subscriptions",
+						"url": "/products/purchases"
+					},
+					{
+						"type": "custom",
+						"label": "Paying customers",
+						"url": "/products/customers"
+					},
+					{
+						"type": "custom",
+						"label": "Products and offers",
+						"url": "/products/offerings"
+					},
+					{
+						"type": "custom",
+						"label": "Purchased access rights",
+						"url": "/products/entitlements"
+					},
+					{
+						"type": "custom",
+						"label": "Subscription screens",
+						"url": "/paywalls",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Subscription screens",
+								"url": "/paywalls"
+							},
+							{
+								"type": "custom",
+								"label": "Subscription screen results",
+								"url": "/paywalls/statistics"
+							}
+						]
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Communication",
+				"url": "/marketing/campaigns",
+				"cssClasses": "sb-icon-communication",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Campaigns and newsletters",
+						"url": "/marketing/campaigns"
+					},
+					{
+						"type": "custom",
+						"label": "In-app messages",
+						"url": "/marketing/in-app-messages"
+					},
+					{
+						"type": "custom",
+						"label": "Email and marketing contacts",
+						"url": "/marketing/email"
+					},
+					{
+						"type": "custom",
+						"label": "Push notifications",
+						"url": "/notifications"
+					},
+					{
+						"type": "custom",
+						"label": "Marketing channels and settings",
+						"url": "/marketing/channels",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Delivery channels",
+								"url": "/marketing/channels"
+							},
+							{
+								"type": "custom",
+								"label": "Marketing settings",
+								"url": "/marketing/settings"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Campaign results",
+						"url": "/marketing/statistics"
+					},
+					{
+						"type": "custom",
+						"label": "Referrals",
+						"url": "/app/referrals"
+					},
+					{
+						"type": "custom",
+						"label": "Links and attribution",
+						"url": "/dynamic-links/links",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Links",
+								"url": "/dynamic-links/links"
+							},
+							{
+								"type": "custom",
+								"label": "Link campaigns",
+								"url": "/dynamic-links/campaigns"
+							},
+							{
+								"type": "custom",
+								"label": "Redirect rules",
+								"url": "/dynamic-links/redirect-rules"
+							},
+							{
+								"type": "custom",
+								"label": "Link domains",
+								"url": "/dynamic-links/domain"
+							},
+							{
+								"type": "custom",
+								"label": "Social previews",
+								"url": "/dynamic-links/social-media-preview"
+							},
+							{
+								"type": "custom",
+								"label": "Click tracking",
+								"url": "/dynamic-links/tracking"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Customer service",
+						"url": "/support/inbox",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Conversations",
+								"url": "/support/inbox"
+							},
+							{
+								"type": "custom",
+								"label": "Contacts",
+								"url": "/support/contacts"
+							},
+							{
+								"type": "custom",
+								"label": "Agents and teams",
+								"url": "/support/workforce"
+							},
+							{
+								"type": "custom",
+								"label": "Contact channels",
+								"url": "/support/channels"
+							},
+							{
+								"type": "custom",
+								"label": "Automation rules",
+								"url": "/support/automations"
+							},
+							{
+								"type": "custom",
+								"label": "Proactive help",
+								"url": "/support/proactive-support"
+							},
+							{
+								"type": "custom",
+								"label": "Help center",
+								"url": "/support/help-center"
+							},
+							{
+								"type": "custom",
+								"label": "Support AI assistant",
+								"url": "/support/captain"
+							},
+							{
+								"type": "custom",
+								"label": "Support integrations",
+								"url": "/support/integrations"
+							},
+							{
+								"type": "custom",
+								"label": "Satisfaction and quality",
+								"url": "/support/quality"
+							},
+							{
+								"type": "custom",
+								"label": "Support reports",
+								"url": "/support/reports"
+							},
+							{
+								"type": "custom",
+								"label": "Support settings",
+								"url": "/support/settings"
+							},
+							{
+								"type": "custom",
+								"label": "Support configuration",
+								"url": "/support/configuration"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Transactional deliveries",
+						"url": "/system/email"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Journeys and automations",
+				"url": "/onboardings",
+				"cssClasses": "sb-icon-automations",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Welcome journeys",
+						"url": "/onboardings",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Welcome journeys",
+								"url": "/onboardings"
+							},
+							{
+								"type": "custom",
+								"label": "Welcome journey results",
+								"url": "/onboardings/statistics"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Automated scenarios",
+						"url": "/flows/workflows",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Automated scenarios",
+								"url": "/flows/workflows"
+							},
+							{
+								"type": "custom",
+								"label": "Automation overview",
+								"url": "/flows"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Triggers and releases",
+						"url": "/flows/launchpad"
+					},
+					{
+						"type": "custom",
+						"label": "Marketing journeys",
+						"url": "/marketing/journeys"
+					},
+					{
+						"type": "custom",
+						"label": "Journey components",
+						"url": "/flows/components"
+					},
+					{
+						"type": "custom",
+						"label": "Participant tracking",
+						"url": "/flows/users"
+					},
+					{
+						"type": "custom",
+						"label": "Journey settings",
+						"url": "/flows/settings/environments",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Journey environments",
+								"url": "/flows/settings/environments"
+							},
+							{
+								"type": "custom",
+								"label": "Journey translations",
+								"url": "/flows/settings/localization"
+							},
+							{
+								"type": "custom",
+								"label": "Journey integration",
+								"url": "/flows/settings/sdk"
+							}
+						]
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Statistics",
+				"url": "/dashboard",
+				"cssClasses": "sb-icon-analytics",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Application overview",
+						"url": "/dashboard"
+					},
+					{
+						"type": "custom",
+						"label": "Statistics overview",
+						"url": "/analytics"
+					},
+					{
+						"type": "custom",
+						"label": "Dashboards",
+						"url": "/analytics/dashboards"
+					},
+					{
+						"type": "custom",
+						"label": "Audience and usage",
+						"url": "/analytics/users",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Audience and usage",
+								"url": "/analytics/users"
+							},
+							{
+								"type": "custom",
+								"label": "Installations",
+								"url": "/analytics/installations"
+							},
+							{
+								"type": "custom",
+								"label": "Viewed screens",
+								"url": "/analytics/views"
+							},
+							{
+								"type": "custom",
+								"label": "Devices and countries",
+								"url": "/analytics/dimensions"
+							},
+							{
+								"type": "custom",
+								"label": "User groups",
+								"url": "/analytics/cohorts"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Events",
+						"url": "/analytics/events"
+					},
+					{
+						"type": "custom",
+						"label": "Conversion and retention",
+						"url": "/analytics/insights"
+					},
+					{
+						"type": "custom",
+						"label": "Verified revenue",
+						"url": "/analytics/purchases"
+					},
+					{
+						"type": "custom",
+						"label": "Reports and exports",
+						"url": "/analytics/reports",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Reports and exports",
+								"url": "/analytics/reports"
+							},
+							{
+								"type": "custom",
+								"label": "Alerts",
+								"url": "/analytics/alerts"
+							},
+							{
+								"type": "custom",
+								"label": "Application errors",
+								"url": "/analytics/crashes"
+							},
+							{
+								"type": "custom",
+								"label": "User feedback",
+								"url": "/analytics/feedback"
+							},
+							{
+								"type": "custom",
+								"label": "Statistics settings",
+								"url": "/analytics/settings"
+							}
+						]
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Environment settings",
+				"url": "/project-settings",
+				"cssClasses": "sb-icon-settings sb-nav-local",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Environment settings",
+						"url": "/project-settings"
+					},
+					{
+						"type": "custom",
+						"label": "API keys",
+						"url": "/app/access-key"
+					},
+					{
+						"type": "custom",
+						"label": "SDK libraries",
+						"url": "/app/libraries"
+					},
+					{
+						"type": "custom",
+						"label": "Web setup",
+						"url": "/app/web-setup"
+					},
+					{
+						"type": "custom",
+						"label": "iOS setup",
+						"url": "/app/ios-setup"
+					},
+					{
+						"type": "custom",
+						"label": "Android setup",
+						"url": "/app/android-setup"
+					},
+					{
+						"type": "custom",
+						"label": "Remote configuration",
+						"url": "/analytics/remote-config"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Operations",
+				"url": "/infrastructure",
+				"cssClasses": "sb-icon-operations sb-nav-local",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Service health",
+						"url": "/infrastructure"
+					},
+					{
+						"type": "custom",
+						"label": "Audit log",
+						"url": "/system/audit"
+					},
+					{
+						"type": "custom",
+						"label": "API routing",
+						"url": "/system/gateway"
+					},
+					{
+						"type": "custom",
+						"label": "AI assistant access",
+						"url": "/mcp"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Plugins",
+				"url": "/_emdash/admin/plugins-manager",
+				"cssClasses": "sb-icon-plugins"
+			}
+		]
+	},
+	{
+		"id": "front-menu:fr",
+		"name": "superboard-admin",
+		"label": "Navigation du front",
+		"locale": "fr",
+		"translationOf": "front-menu:en",
+		"items": [
+			{
+				"type": "custom",
+				"label": "Vue d’ensemble",
+				"url": "/superboard-system/home",
+				"cssClasses": "sb-icon-home",
+				"children": []
+			},
+			{
+				"type": "custom",
+				"label": "Utilisateurs et accès",
+				"url": "/app/users",
+				"cssClasses": "sb-icon-users",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Utilisateurs de l’application",
+						"url": "/app/users"
+					},
+					{
+						"type": "custom",
+						"label": "Membres de l’application",
+						"url": "/app/members"
+					},
+					{
+						"type": "custom",
+						"label": "Profils et installations",
+						"url": "/app/customers"
+					},
+					{
+						"type": "custom",
+						"label": "Connexion et sécurité",
+						"url": "/identity/fr/dashboard",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Connexion et sécurité",
+								"url": "/identity/fr/dashboard"
+							},
+							{
+								"type": "custom",
+								"label": "Comptes de connexion",
+								"url": "/identity/fr/users"
+							},
+							{
+								"type": "custom",
+								"label": "Applications OAuth",
+								"url": "/identity/fr/apps"
+							},
+							{
+								"type": "custom",
+								"label": "Permissions API",
+								"url": "/identity/fr/scopes"
+							},
+							{
+								"type": "custom",
+								"label": "SSO d’entreprise",
+								"url": "/identity/fr/saml"
+							},
+							{
+								"type": "custom",
+								"label": "Règles des comptes",
+								"url": "/identity/fr/account"
+							},
+							{
+								"type": "custom",
+								"label": "Attributs utilisateur",
+								"url": "/identity/fr/user-attributes"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Organisations",
+						"url": "/identity/fr/orgs"
+					},
+					{
+						"type": "custom",
+						"label": "Rôles et autorisations",
+						"url": "/identity/fr/roles"
+					},
+					{
+						"type": "custom",
+						"label": "Journal des connexions",
+						"url": "/identity/fr/logs"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Données et contenus",
+				"url": "/system/content",
+				"cssClasses": "sb-icon-data",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Contenus",
+						"url": "/system/content"
+					},
+					{
+						"type": "custom",
+						"label": "Fichiers et médias",
+						"url": "/system/files"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Ventes et abonnements",
+				"url": "/products/purchases",
+				"cssClasses": "sb-icon-sales",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Achats et abonnements",
+						"url": "/products/purchases"
+					},
+					{
+						"type": "custom",
+						"label": "Clients payants",
+						"url": "/products/customers"
+					},
+					{
+						"type": "custom",
+						"label": "Produits et offres",
+						"url": "/products/offerings"
+					},
+					{
+						"type": "custom",
+						"label": "Droits d’accès achetés",
+						"url": "/products/entitlements"
+					},
+					{
+						"type": "custom",
+						"label": "Écrans d’abonnement",
+						"url": "/paywalls",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Écrans d’abonnement",
+								"url": "/paywalls"
+							},
+							{
+								"type": "custom",
+								"label": "Résultats des écrans d’abonnement",
+								"url": "/paywalls/statistics"
+							}
+						]
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Communication",
+				"url": "/marketing/campaigns",
+				"cssClasses": "sb-icon-communication",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Campagnes et newsletters",
+						"url": "/marketing/campaigns"
+					},
+					{
+						"type": "custom",
+						"label": "Messages dans l’application",
+						"url": "/marketing/in-app-messages"
+					},
+					{
+						"type": "custom",
+						"label": "E-mails et contacts marketing",
+						"url": "/marketing/email"
+					},
+					{
+						"type": "custom",
+						"label": "Notifications push",
+						"url": "/notifications"
+					},
+					{
+						"type": "custom",
+						"label": "Canaux et paramètres marketing",
+						"url": "/marketing/channels",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Canaux de diffusion",
+								"url": "/marketing/channels"
+							},
+							{
+								"type": "custom",
+								"label": "Paramètres marketing",
+								"url": "/marketing/settings"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Résultats des campagnes",
+						"url": "/marketing/statistics"
+					},
+					{
+						"type": "custom",
+						"label": "Parrainages",
+						"url": "/app/referrals"
+					},
+					{
+						"type": "custom",
+						"label": "Liens et attribution",
+						"url": "/dynamic-links/links",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Liens",
+								"url": "/dynamic-links/links"
+							},
+							{
+								"type": "custom",
+								"label": "Campagnes de liens",
+								"url": "/dynamic-links/campaigns"
+							},
+							{
+								"type": "custom",
+								"label": "Règles de redirection",
+								"url": "/dynamic-links/redirect-rules"
+							},
+							{
+								"type": "custom",
+								"label": "Domaines des liens",
+								"url": "/dynamic-links/domain"
+							},
+							{
+								"type": "custom",
+								"label": "Aperçus sociaux",
+								"url": "/dynamic-links/social-media-preview"
+							},
+							{
+								"type": "custom",
+								"label": "Suivi des clics",
+								"url": "/dynamic-links/tracking"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Service client",
+						"url": "/support/inbox",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Conversations",
+								"url": "/support/inbox"
+							},
+							{
+								"type": "custom",
+								"label": "Contacts",
+								"url": "/support/contacts"
+							},
+							{
+								"type": "custom",
+								"label": "Agents et équipes",
+								"url": "/support/workforce"
+							},
+							{
+								"type": "custom",
+								"label": "Canaux de contact",
+								"url": "/support/channels"
+							},
+							{
+								"type": "custom",
+								"label": "Règles automatiques",
+								"url": "/support/automations"
+							},
+							{
+								"type": "custom",
+								"label": "Aide proactive",
+								"url": "/support/proactive-support"
+							},
+							{
+								"type": "custom",
+								"label": "Centre d’aide",
+								"url": "/support/help-center"
+							},
+							{
+								"type": "custom",
+								"label": "Assistant IA du support",
+								"url": "/support/captain"
+							},
+							{
+								"type": "custom",
+								"label": "Intégrations du support",
+								"url": "/support/integrations"
+							},
+							{
+								"type": "custom",
+								"label": "Satisfaction et qualité",
+								"url": "/support/quality"
+							},
+							{
+								"type": "custom",
+								"label": "Rapports du support",
+								"url": "/support/reports"
+							},
+							{
+								"type": "custom",
+								"label": "Paramètres du support",
+								"url": "/support/settings"
+							},
+							{
+								"type": "custom",
+								"label": "Configuration du service client",
+								"url": "/support/configuration"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Envois transactionnels",
+						"url": "/system/email"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Parcours et automatisations",
+				"url": "/onboardings",
+				"cssClasses": "sb-icon-automations",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Parcours d’accueil",
+						"url": "/onboardings",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Parcours d’accueil",
+								"url": "/onboardings"
+							},
+							{
+								"type": "custom",
+								"label": "Résultats des parcours d’accueil",
+								"url": "/onboardings/statistics"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Scénarios automatisés",
+						"url": "/flows/workflows",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Scénarios automatisés",
+								"url": "/flows/workflows"
+							},
+							{
+								"type": "custom",
+								"label": "Vue d’ensemble des automatisations",
+								"url": "/flows"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Déclenchements et publications",
+						"url": "/flows/launchpad"
+					},
+					{
+						"type": "custom",
+						"label": "Parcours marketing",
+						"url": "/marketing/journeys"
+					},
+					{
+						"type": "custom",
+						"label": "Composants de parcours",
+						"url": "/flows/components"
+					},
+					{
+						"type": "custom",
+						"label": "Suivi des participants",
+						"url": "/flows/users"
+					},
+					{
+						"type": "custom",
+						"label": "Paramètres des parcours",
+						"url": "/flows/settings/environments",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Environnements des parcours",
+								"url": "/flows/settings/environments"
+							},
+							{
+								"type": "custom",
+								"label": "Traductions des parcours",
+								"url": "/flows/settings/localization"
+							},
+							{
+								"type": "custom",
+								"label": "Intégration des parcours",
+								"url": "/flows/settings/sdk"
+							}
+						]
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Statistiques",
+				"url": "/dashboard",
+				"cssClasses": "sb-icon-analytics",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Vue d’ensemble de l’application",
+						"url": "/dashboard"
+					},
+					{
+						"type": "custom",
+						"label": "Vue d’ensemble des statistiques",
+						"url": "/analytics"
+					},
+					{
+						"type": "custom",
+						"label": "Tableaux de bord",
+						"url": "/analytics/dashboards"
+					},
+					{
+						"type": "custom",
+						"label": "Audience et utilisation",
+						"url": "/analytics/users",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Audience et utilisation",
+								"url": "/analytics/users"
+							},
+							{
+								"type": "custom",
+								"label": "Installations",
+								"url": "/analytics/installations"
+							},
+							{
+								"type": "custom",
+								"label": "Écrans consultés",
+								"url": "/analytics/views"
+							},
+							{
+								"type": "custom",
+								"label": "Appareils et pays",
+								"url": "/analytics/dimensions"
+							},
+							{
+								"type": "custom",
+								"label": "Groupes d’utilisateurs",
+								"url": "/analytics/cohorts"
+							}
+						]
+					},
+					{
+						"type": "custom",
+						"label": "Événements",
+						"url": "/analytics/events"
+					},
+					{
+						"type": "custom",
+						"label": "Conversions et fidélisation",
+						"url": "/analytics/insights"
+					},
+					{
+						"type": "custom",
+						"label": "Revenus vérifiés",
+						"url": "/analytics/purchases"
+					},
+					{
+						"type": "custom",
+						"label": "Rapports et exports",
+						"url": "/analytics/reports",
+						"children": [
+							{
+								"type": "custom",
+								"label": "Rapports et exports",
+								"url": "/analytics/reports"
+							},
+							{
+								"type": "custom",
+								"label": "Alertes",
+								"url": "/analytics/alerts"
+							},
+							{
+								"type": "custom",
+								"label": "Erreurs de l’application",
+								"url": "/analytics/crashes"
+							},
+							{
+								"type": "custom",
+								"label": "Retours utilisateur",
+								"url": "/analytics/feedback"
+							},
+							{
+								"type": "custom",
+								"label": "Paramètres des statistiques",
+								"url": "/analytics/settings"
+							}
+						]
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Paramètres de l’environnement",
+				"url": "/project-settings",
+				"cssClasses": "sb-icon-settings sb-nav-local",
+				"children": [
+					{
+						"type": "custom",
+						"label": "Paramètres de l’environnement",
+						"url": "/project-settings"
+					},
+					{
+						"type": "custom",
+						"label": "Clés API",
+						"url": "/app/access-key"
+					},
+					{
+						"type": "custom",
+						"label": "Bibliothèques SDK",
+						"url": "/app/libraries"
+					},
+					{
+						"type": "custom",
+						"label": "Configurer le Web",
+						"url": "/app/web-setup"
+					},
+					{
+						"type": "custom",
+						"label": "Configurer iOS",
+						"url": "/app/ios-setup"
+					},
+					{
+						"type": "custom",
+						"label": "Configurer Android",
+						"url": "/app/android-setup"
+					},
+					{
+						"type": "custom",
+						"label": "Configuration distante",
+						"url": "/analytics/remote-config"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Exploitation",
+				"url": "/infrastructure",
+				"cssClasses": "sb-icon-operations sb-nav-local",
+				"children": [
+					{
+						"type": "custom",
+						"label": "État des services",
+						"url": "/infrastructure"
+					},
+					{
+						"type": "custom",
+						"label": "Journal d’audit",
+						"url": "/system/audit"
+					},
+					{
+						"type": "custom",
+						"label": "Routage de l’API",
+						"url": "/system/gateway"
+					},
+					{
+						"type": "custom",
+						"label": "Accès des assistants IA",
+						"url": "/mcp"
+					}
+				]
+			},
+			{
+				"type": "custom",
+				"label": "Plugins",
+				"url": "/_emdash/admin/plugins-manager",
+				"cssClasses": "sb-icon-plugins"
+			}
+		]
+	}
+]

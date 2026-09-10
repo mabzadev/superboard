@@ -158,9 +158,6 @@ packages:
   - workers/observability
   - workers/mcp
   - workers/custom/reference
-  - workers/custom/vocostar
-  - workers/custom/vocostar/orchestrators/medias
-  - workers/custom/vocostar/orchestrators/vocals
   - sdks/flows/upstream/packages/shared
   - sdks/flows/upstream/packages/styles
   - sdks/flows/upstream/packages/js

@@ -589,39 +589,6 @@
 				},
 				{
 					"type": "custom",
-					"label": "Vocostar",
-					"url": "/plugins/vocostar/voices",
-					"cssClasses": "sb-icon-vocostar",
-					"children": [
-						{
-							"type": "custom",
-							"label": "Voices",
-							"url": "/plugins/vocostar/voices"
-						},
-						{
-							"type": "custom",
-							"label": "Conversions",
-							"url": "/plugins/vocostar/conversions"
-						},
-						{
-							"type": "custom",
-							"label": "Generated files",
-							"url": "/plugins/vocostar/outputs"
-						},
-						{
-							"type": "custom",
-							"label": "Processing jobs",
-							"url": "/plugins/vocostar/jobs"
-						},
-						{
-							"type": "custom",
-							"label": "Vocostar settings",
-							"url": "/plugins/vocostar/settings"
-						}
-					]
-				},
-				{
-					"type": "custom",
 					"label": "Environment settings",
 					"url": "/project-settings",
 					"cssClasses": "sb-icon-settings sb-nav-local",
@@ -1208,39 +1175,6 @@
 									"url": "/analytics/settings"
 								}
 							]
-						}
-					]
-				},
-				{
-					"type": "custom",
-					"label": "Vocostar",
-					"url": "/plugins/vocostar/voices",
-					"cssClasses": "sb-icon-vocostar",
-					"children": [
-						{
-							"type": "custom",
-							"label": "Voix",
-							"url": "/plugins/vocostar/voices"
-						},
-						{
-							"type": "custom",
-							"label": "Conversions",
-							"url": "/plugins/vocostar/conversions"
-						},
-						{
-							"type": "custom",
-							"label": "Fichiers générés",
-							"url": "/plugins/vocostar/outputs"
-						},
-						{
-							"type": "custom",
-							"label": "Traitements en cours",
-							"url": "/plugins/vocostar/jobs"
-						},
-						{
-							"type": "custom",
-							"label": "Configuration Vocostar",
-							"url": "/plugins/vocostar/settings"
 						}
 					]
 				},

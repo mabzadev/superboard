@@ -1,3 +1,4 @@
+import "./test-targets.mjs";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
@@ -5,7 +6,13 @@ import test from "node:test";
 test("the retired Dashboard OAuth tool cannot plan a new Dashboard deployment", () => {
 	const result = spawnSync(
 		process.execPath,
-		["scripts/cloudflare-rotate-oauth.mjs", "--target", "vocostar", "--environment", "production"],
+		[
+			"scripts/cloudflare-rotate-oauth.mjs",
+			"--target",
+			"reference-production",
+			"--environment",
+			"production",
+		],
 		{ encoding: "utf8" },
 	);
 	assert.equal(result.status, 2);

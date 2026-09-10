@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { delimiter, resolve } from "node:path";
 
 import Ajv from "ajv/dist/2020.js";
 
@@ -34,8 +34,26 @@ export async function loadTarget(targetName) {
 	if (!/^[a-z][a-z0-9-]{1,30}$/.test(targetName ?? "")) {
 		throw new Error("--target must contain only lowercase letters, numbers and hyphens");
 	}
-	const path = resolve(root, "deploy", "targets", `${targetName}.json`);
-	const target = JSON.parse(await readFile(path, "utf8"));
+	const directories = [
+		resolve(root, "deploy", "targets"),
+		...(process.env.SUPERBOARD_ADDITIONAL_TARGET_DIRECTORIES ?? "")
+			.split(delimiter)
+			.filter(Boolean),
+	];
+	const candidates = [];
+	for (const directory of new Set(directories.map((directory) => resolve(directory)))) {
+		const path = resolve(directory, `${targetName}.json`);
+		try {
+			candidates.push({ path, target: JSON.parse(await readFile(path, "utf8")) });
+		} catch (error) {
+			if (error.code !== "ENOENT") throw error;
+		}
+	}
+	if (candidates.length !== 1)
+		throw new Error(
+			candidates.length ? "AMBIGUOUS_TARGET_DEFINITION" : `Target not found: ${targetName}`,
+		);
+	const { path, target } = candidates[0];
 	await validateTarget(target);
 	return { path, target };
 }
@@ -233,14 +251,6 @@ export async function validateTarget(target) {
 		validateCustomWorkerBindings(target.customWorker);
 		const managedWorkers = target.customWorker.managedWorkers ?? [];
 		const runtimeBridge = target.customWorker.runtimeBridge;
-		if (
-			runtimeBridge?.legacyGateway &&
-			target.customWorker.pluginId !== "supbrd-plugmod-vocostar"
-		) {
-			throw new Error(
-				"Invalid target manifest: runtimeBridge.legacyGateway requires the Vocostar plugin",
-			);
-		}
 		if (managedWorkers.length > 0 && !runtimeBridge) {
 			throw new Error(
 				"Invalid target manifest: customWorker.runtimeBridge is required by managed Workers",

@@ -9,7 +9,10 @@ import {
 } from "../../../../../../../../../../supbrd-front-ui/src/shared/components/modules/ModulePage.js";
 
 const state = vi.hoisted(() => ({
-	project: { id: "project-1", name: "Vocostar" } as { id: string; name: string } | null,
+	project: { id: "project-1", name: "Reference application" } as {
+		id: string;
+		name: string;
+	} | null,
 	events: vi.fn(),
 	reports: vi.fn(),
 	operations: vi.fn(),
@@ -72,7 +75,7 @@ function Page({ kind, locale }: { kind: AnalyticsPageKind; locale: "en" | "fr" }
 describe("Analytics follows the console language", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		state.project = { id: "project-1", name: "Vocostar" };
+		state.project = { id: "project-1", name: "Reference application" };
 		state.events.mockResolvedValue({ items: [] });
 		state.reports.mockResolvedValue({ items: [] });
 		state.operations.mockResolvedValue({ items: [] });

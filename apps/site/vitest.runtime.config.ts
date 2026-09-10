@@ -4,12 +4,18 @@ import { fileURLToPath } from "node:url";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
 
+import { loadTarget } from "../../scripts/cloudflare-target.mjs";
 import { d1RuntimeBindings } from "../../scripts/cloudflare-vitest-d1.mjs";
 import { buildFreshInstancePlan } from "../../scripts/superboard-fresh-instance-proof.mjs";
+import { compileTarget, compileLocalSiteConfiguration } from "../../scripts/target-compiler.mjs";
 import { createSmtpCaptureFixture } from "./runtime-tests/retirement-smtp-fixture.js";
 
+const localSiteConfiguration = compileLocalSiteConfiguration(
+	await compileTarget((await loadTarget("mbza-development")).target, "local"),
+);
+
 const healthWorkers = [
-	"custom-vocostar",
+	"custom-reference",
 	"identity",
 	"app",
 	"products",
@@ -28,20 +34,16 @@ const healthMigrations = Object.fromEntries(
 	await Promise.all(
 		healthWorkers.map(async (name) => [
 			name,
-			name === "custom-vocostar"
-				? [
-						...(await readD1Migrations(
-							fileURLToPath(
-								new URL("../../workers/custom/vocostar/runtime-tests/migrations", import.meta.url),
-							),
-						)),
-						...(await readD1Migrations(
-							fileURLToPath(new URL("../../workers/custom/vocostar/migrations", import.meta.url)),
-						)),
-					]
-				: await readD1Migrations(
-						fileURLToPath(new URL(`../../workers/${name}/migrations`, import.meta.url)),
+			await readD1Migrations(
+				fileURLToPath(
+					new URL(
+						name === "custom-reference"
+							? "../../workers/custom/reference/migrations"
+							: `../../workers/${name}/migrations`,
+						import.meta.url,
 					),
+				),
+			),
 		]),
 	),
 );
@@ -126,18 +128,25 @@ export default defineConfig({
 						PARITY_VERIFIED_PROOF_RECEIPTS:
 							process.env.SUPERBOARD_VERIFIED_PROOF_RECEIPTS ??
 							JSON.stringify({ complete: false, proofs: {} }),
-						SUPERBOARD_INSTANCE_ID: "vocostar",
+						SUPERBOARD_INSTANCE_ID: "reference-production",
 						SUPERBOARD_ENVIRONMENT: process.env.SUPERBOARD_TEST_ENVIRONMENT ?? "local",
 						SUPERBOARD_PLUGIN_IDS: JSON.stringify(parityRelease.active_plugin_ids),
 						SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-						SUPERBOARD_RELEASE_OPERATIONS: "enabled",
-						SUPERBOARD_RELEASE_PRIVATE_JWK: JSON.stringify({
-							...privateJwk,
-							kid: "site-runtime-parity",
-							alg: "ES256",
-							key_ops: ["sign"],
-							ext: true,
-						}),
+						SUPERBOARD_RELEASE_OPERATIONS:
+							process.env.SUPERBOARD_TEST_ENVIRONMENT === "development"
+								? "enabled"
+								: localSiteConfiguration.vars.SUPERBOARD_RELEASE_OPERATIONS,
+						SUPERBOARD_RELEASE_PRIVATE_JWK:
+							process.env.SUPERBOARD_TEST_ENVIRONMENT === "local" &&
+							!localSiteConfiguration.secrets.required.includes("SUPERBOARD_RELEASE_PRIVATE_JWK")
+								? ""
+								: JSON.stringify({
+										...privateJwk,
+										kid: "site-runtime-parity",
+										alg: "ES256",
+										key_ops: ["sign"],
+										ext: true,
+									}),
 						TARGET_ARTIFACT_CHECKSUM: parityRelease.target_artifact_checksum,
 						...d1RuntimeBindings(
 							await readD1Migrations(fileURLToPath(new URL("./migrations", import.meta.url))),

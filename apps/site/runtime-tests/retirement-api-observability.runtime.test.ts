@@ -2,7 +2,7 @@ import { signPluginTaskRequest } from "@superboard/contracts/plugin-task";
 import { createExecutionContext, env } from "cloudflare:test";
 import { expect, test } from "vitest";
 
-import customWorker from "../../../workers/custom/vocostar/src/index.js";
+import customWorker from "../../../workers/custom/reference/src/index.js";
 import { dispatchLifecycleApi, pluginTaskContext } from "./lifecycle-health-services.js";
 import {
 	apiCommand,
@@ -14,13 +14,13 @@ import {
 } from "./retirement-api-helpers.js";
 const plugin = "supbrd-plugmod-observability";
 const file = "retirement-api-observability.runtime.test.ts";
-test("canonical Observability APIs preserve real observations and incident transitions and retry an unavailable external Custom job truthfully", async () => {
+test("canonical Observability APIs preserve real observations and incident transitions and reject unsupported retries without changing Custom jobs", async () => {
 	const scope = await prepareApiPlugin(plugin);
 	const db = pluginDatabase("api");
 	const read = async <T>(id: string, path: string) =>
 		jsonResult<T>(await apiRead(plugin, id, { method: "GET", path }));
 	const observation = {
-		instance_id: "vocostar",
+		instance_id: "reference-production",
 		observation_id: crypto.randomUUID(),
 		service: "proof-api",
 		event_type: "fetch",
@@ -108,23 +108,14 @@ test("canonical Observability APIs preserve real observations and incident trans
 	expect(status).toMatchObject({
 		metricAvailability: { mode: "managed", historicalMetrics: "unavailable" },
 		metrics: { instances: 1, projects: 2 },
-		deployment: { target: "vocostar" },
+		deployment: { target: "reference-production" },
 	});
 	proveApi(plugin, "platform_status", "read", file, [
 		scope.production_project_ref,
 		scope.test_project_ref,
 	]);
-	const customDb = pluginDatabase("custom-vocostar");
+	const customDb = pluginDatabase("custom-reference");
 	const userId = crypto.randomUUID();
-	const voiceId = crypto.randomUUID();
-	await customDb.batch([
-		customDb
-			.prepare("INSERT INTO users (id,premium,credits,is_anonymous) VALUES (?,1,100,1)")
-			.bind(userId),
-		customDb
-			.prepare("INSERT INTO app_vocals (id,refs) VALUES (?,?)")
-			.bind(voiceId, "https://files.example.test/reference.mp3"),
-	]);
 	const create = await customWorker.fetch(
 		new Request("https://custom.internal/internal/v1/jobs", {
 			method: "POST",
@@ -137,54 +128,38 @@ test("canonical Observability APIs preserve real observations and incident trans
 			body: JSON.stringify({
 				idempotencyKey: crypto.randomUUID(),
 				projectRef: scope.production_project_ref,
-				capability: "vocostar.media.convert",
+				capability: "reference.echo",
 				requestedAt: new Date().toISOString(),
-				payload: {
-					vocalId: voiceId,
-					vocalType: "app",
-					mediaType: "text",
-					creditCost: 10,
-					input: { text: "Bonjour", language: "fr" },
-				},
+				payload: { message: "observability integration" },
 			}),
 		}),
 		{
-			VOCOSTAR_DB: customDb,
+			REFERENCE_DB: customDb,
 			CUSTOM_WORKER_TOKEN: "retirement-custom-secret",
-			APP_KEY: "vocostar",
+			ENVIRONMENT: "development",
+			REFERENCE_JOB_RETENTION_DAYS: "30",
 		} as never,
 	);
 	const job = await jsonResult<{ id: string; status: string }>(create, 202);
-	expect(job.status).toBe("queued");
+	expect(job.status).toBe("completed");
 	const before = await customDb
-		.prepare("SELECT attempts,last_error FROM opengrow_custom_jobs WHERE id=?")
+		.prepare("SELECT * FROM reference_custom_jobs WHERE id=?")
 		.bind(job.id)
-		.first<{ attempts: number; last_error: string }>();
-	expect(before?.attempts).toBe(1);
-	expect(before?.last_error).toBeTruthy();
+		.first();
 	const listed = await read<{ jobs: Array<Record<string, unknown>> }>(
 		"platform_custom_jobs",
 		"/api/v1/platform/custom/jobs",
 	);
-	expect(listed.jobs).toContainEqual(expect.objectContaining({ id: job.id, status: "queued" }));
+	expect(listed.jobs).toContainEqual(expect.objectContaining({ id: job.id, status: "completed" }));
 	proveApi(plugin, "platform_custom_jobs", "read", file, [job.id]);
-	const retried = await jsonResult<{ id: string; status: string }>(
-		await apiCommand(plugin, "retry_custom_job", {
-			method: "POST",
-			path: `/api/v1/platform/custom/jobs/${job.id}/retry`,
-		}),
-		202,
-	);
-	expect(retried).toMatchObject({ id: job.id, status: "queued" });
+	const retried = await apiCommand(plugin, "retry_custom_job", {
+		method: "POST",
+		path: `/api/v1/platform/custom/jobs/${job.id}/retry`,
+	});
+	expect(retried.status, await retried.clone().text()).toBe(404);
 	const after = await customDb
-		.prepare("SELECT attempts,last_error,status FROM opengrow_custom_jobs WHERE id=?")
+		.prepare("SELECT * FROM reference_custom_jobs WHERE id=?")
 		.bind(job.id)
-		.first<{ attempts: number; last_error: string; status: string }>();
-	expect(after?.attempts).toBe(2);
-	expect(after?.last_error).toBeTruthy();
-	expect(after?.status).toBe("queued");
-	expect(
-		await customDb.prepare("SELECT credits FROM users WHERE id=?").bind(userId).first(),
-	).toEqual({ credits: 90 });
-	proveApi(plugin, "retry_custom_job", "mutation", file, [job.id]);
+		.first();
+	expect(after).toEqual(before);
 });

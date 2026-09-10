@@ -64,11 +64,11 @@ Open **Settings > MCP** and add a new server:
 
 ```json
 {
-  "mcpServers": {
-    "superboard": {
-      "url": "<TARGET_MCP_URL>"
-    }
-  }
+	"mcpServers": {
+		"superboard": {
+			"url": "<TARGET_MCP_URL>"
+		}
+	}
 }
 ```
 
@@ -78,11 +78,11 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ```json
 {
-  "mcpServers": {
-    "superboard": {
-      "serverUrl": "<TARGET_MCP_URL>"
-    }
-  }
+	"mcpServers": {
+		"superboard": {
+			"serverUrl": "<TARGET_MCP_URL>"
+		}
+	}
 }
 ```
 
@@ -92,12 +92,12 @@ Add to your `.vscode/mcp.json`:
 
 ```json
 {
-  "servers": {
-    "superboard": {
-      "type": "http",
-      "url": "<TARGET_MCP_URL>"
-    }
-  }
+	"servers": {
+		"superboard": {
+			"type": "http",
+			"url": "<TARGET_MCP_URL>"
+		}
+	}
 }
 ```
 
@@ -121,18 +121,7 @@ npm --prefix apps/mcp run build
 npm --prefix apps/mcp start
 ```
 
-The Cloudflare Worker and standard MCP checks do not require Docker. To package
-the optional standalone HTTP adapter as a container:
-
-```bash
-docker build -f apps/mcp/Dockerfile -t superboard-mcp apps/mcp
-docker run --rm -p 8080:8080 \
-  -e SUPERBOARD_API_URL \
-  -e PUBLIC_URL \
-  superboard-mcp
-```
-
-Run `pnpm mcp:docker:check` from the repository root to validate this optional image.
+The Cloudflare Worker and local Node adapters run without Docker.
 
 Then use `http://localhost:8080/mcp` as the server URL in any of the client configs above.
 
@@ -140,35 +129,35 @@ Then use `http://localhost:8080/mcp` as the server URL in any of the client conf
 
 ## Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `8080` | Server port |
-| `SUPERBOARD_API_URL` | required | API origin from the selected SuperBoard target |
-| `PUBLIC_URL` | required for HTTP | Public origin of this MCP server, used in OAuth metadata |
+| Variable             | Default           | Description                                              |
+| -------------------- | ----------------- | -------------------------------------------------------- |
+| `PORT`               | `8080`            | Server port                                              |
+| `SUPERBOARD_API_URL` | required          | API origin from the selected SuperBoard target           |
+| `PUBLIC_URL`         | required for HTTP | Public origin of this MCP server, used in OAuth metadata |
 
 Copy `.env.example` to `.env` for local development.
 
 ## Tools
 
-| Tool | Description |
-|------|-------------|
-| `get_status` | Account info, instances, projects, and domains |
-| `get_platform_status` | Read-only target, API, Worker, store, job and public-endpoint status for owners/admins |
-| `get_usage` | 30-day active-user metric for an instance |
-| `create_project` | Create a new instance with production and test projects |
-| `create_link` | Create a deep link with metadata, tags, and custom data |
-| `get_link` | Get full details of a link by path |
-| `update_link` | Update a link's metadata, tags, or redirects |
-| `archive_link` | Deactivate a link (irreversible) |
-| `search_links` | Search and list links with pagination and filters |
-| `get_analytics_overview` | Project-level metrics: views, installs, opens, revenue |
-| `get_link_analytics` | Per-link daily metrics |
-| `get_top_links` | Top performing links ranked by views |
-| `create_campaign` | Create a campaign to group related links |
-| `list_campaigns` | List campaigns with aggregated metrics |
-| `archive_campaign` | Archive a campaign and deactivate its links |
-| `configure_redirects` | Set per-platform redirect behavior (App Store, Play Store, web) |
-| `configure_sdk` | Configure iOS/Android SDK settings (bundle ID, team ID, etc.) |
+| Tool                     | Description                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------- |
+| `get_status`             | Account info, instances, projects, and domains                                         |
+| `get_platform_status`    | Read-only target, API, Worker, store, job and public-endpoint status for owners/admins |
+| `get_usage`              | 30-day active-user metric for an instance                                              |
+| `create_project`         | Create a new instance with production and test projects                                |
+| `create_link`            | Create a deep link with metadata, tags, and custom data                                |
+| `get_link`               | Get full details of a link by path                                                     |
+| `update_link`            | Update a link's metadata, tags, or redirects                                           |
+| `archive_link`           | Deactivate a link (irreversible)                                                       |
+| `search_links`           | Search and list links with pagination and filters                                      |
+| `get_analytics_overview` | Project-level metrics: views, installs, opens, revenue                                 |
+| `get_link_analytics`     | Per-link daily metrics                                                                 |
+| `get_top_links`          | Top performing links ranked by views                                                   |
+| `create_campaign`        | Create a campaign to group related links                                               |
+| `list_campaigns`         | List campaigns with aggregated metrics                                                 |
+| `archive_campaign`       | Archive a campaign and deactivate its links                                            |
+| `configure_redirects`    | Set per-platform redirect behavior (App Store, Play Store, web)                        |
+| `configure_sdk`          | Configure iOS/Android SDK settings (bundle ID, team ID, etc.)                          |
 
 ## Architecture
 
@@ -206,12 +195,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for project structure and PR guidelines.
 
 ## SDKs
 
-| Platform | Repository |
-|----------|-----------|
-| iOS | [`sdks/ios`](https://github.com/mabzadev/superboard/tree/main/sdks/ios) |
-| Android | [`sdks/android`](https://github.com/mabzadev/superboard/tree/main/sdks/android) |
+| Platform     | Repository                                                                                |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| iOS          | [`sdks/ios`](https://github.com/mabzadev/superboard/tree/main/sdks/ios)                   |
+| Android      | [`sdks/android`](https://github.com/mabzadev/superboard/tree/main/sdks/android)           |
 | React Native | [`sdks/react-native`](https://github.com/mabzadev/superboard/tree/main/sdks/react-native) |
-| Flutter | [`sdks/flutter`](https://github.com/mabzadev/superboard/tree/main/sdks/flutter) |
+| Flutter      | [`sdks/flutter`](https://github.com/mabzadev/superboard/tree/main/sdks/flutter)           |
 
 ## License
 

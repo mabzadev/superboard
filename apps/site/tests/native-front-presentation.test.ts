@@ -18,7 +18,7 @@ import { superBoardRuntimePluginCatalog } from "../src/lib/superboard-plugin-cat
 import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
 
 const identifiers = {
-	instance_id: "vocostar",
+	instance_id: "reference-production",
 	front_draft_id: "01J00000000000000000000401",
 	draft_snapshot_id: "01J00000000000000000000402",
 	compilation_id: "01J00000000000000000000403",

@@ -16,7 +16,7 @@ interface DashboardParityRow {
 }
 
 const identifiers = {
-	instance_id: "vocostar",
+	instance_id: "reference-production",
 	front_draft_id: "01J00000000000000000000301",
 	draft_snapshot_id: "01J00000000000000000000302",
 	compilation_id: "01J00000000000000000000303",

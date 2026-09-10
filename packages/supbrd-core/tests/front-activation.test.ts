@@ -11,7 +11,7 @@ import {
 function candidate(): CompiledFrontRelease {
 	return {
 		payload: {
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			candidate_id: "01J00000000000000000000011",
 			release_id: "01J00000000000000000000012",
 			previous_release_id: null,
@@ -69,7 +69,7 @@ describe("Front Release activation", () => {
 
 		expect(
 			await activateFrontRelease(repository, {
-				instance_id: "vocostar",
+				instance_id: "reference-production",
 				candidate_id: release.payload.candidate_id,
 				activation_id: "01J00000000000000000000018",
 				expected_active_release_id: null,
@@ -89,7 +89,7 @@ describe("Front Release activation", () => {
 		const reauthentication = await activationReauthentication(release);
 
 		const activated = await activateFrontRelease(repository, {
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			candidate_id: release.payload.candidate_id,
 			activation_id: "01J00000000000000000000013",
 			expected_active_release_id: null,
@@ -105,7 +105,7 @@ describe("Front Release activation", () => {
 		});
 
 		const staleRetry = await activateFrontRelease(repository, {
-			instance_id: "vocostar",
+			instance_id: "reference-production",
 			candidate_id: release.payload.candidate_id,
 			activation_id: "01J00000000000000000000014",
 			expected_active_release_id: null,
@@ -118,7 +118,7 @@ describe("Front Release activation", () => {
 			active_release_id: release.payload.release_id,
 			pointer_revision: 1,
 		});
-		expect(await repository.getActive("vocostar")).toMatchObject({
+		expect(await repository.getActive("reference-production")).toMatchObject({
 			active_release_id: release.payload.release_id,
 			pointer_revision: 1,
 		});
@@ -135,7 +135,7 @@ describe("Front Release activation", () => {
 		mismatched.warnings_acknowledged = ["different-warning-set"];
 		expect(
 			await activateFrontRelease(repository, {
-				instance_id: "vocostar",
+				instance_id: "reference-production",
 				candidate_id: release.payload.candidate_id,
 				activation_id: "01J00000000000000000000015",
 				expected_active_release_id: null,
@@ -147,7 +147,7 @@ describe("Front Release activation", () => {
 
 		expect(
 			await activateFrontRelease(repository, {
-				instance_id: "vocostar",
+				instance_id: "reference-production",
 				candidate_id: release.payload.candidate_id,
 				activation_id: "01J00000000000000000000016",
 				expected_active_release_id: null,
