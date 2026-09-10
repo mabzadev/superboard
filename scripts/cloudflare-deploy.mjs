@@ -1,6 +1,8 @@
 import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
+import { verifyConsoleArtifact } from "./cloudflare-console-artifact.mjs";
 import { migrationConfirmation } from "./cloudflare-d1-converge.mjs";
 import { D1_SCHEMA_OWNERS, d1Descriptor, localMigrationFiles } from "./cloudflare-d1-registry.mjs";
 import { runtimeBridgeDeploymentBlockers } from "./cloudflare-deploy-plan.mjs";
@@ -30,6 +32,27 @@ const targetName = targetNameFromArgs(args);
 const environment = environmentFromArgs(args);
 const service = args.service ?? "api";
 const uploadOnly = Boolean(args["upload-only"] || args.preflight);
+if (service === "site" && !args["prepared-deployment"]) {
+	throw new Error(
+		"PREPARED_DEPLOYMENT_REQUIRED: prepare and validate the console before deployment",
+	);
+}
+const preparedManifest =
+	service === "site"
+		? JSON.parse(await readFile(resolve(args["prepared-deployment"]), "utf8"))
+		: null;
+const consoleArtifact = preparedManifest?.consoleArtifact;
+if (preparedManifest) {
+	if (preparedManifest.target !== targetName || preparedManifest.environment !== environment) {
+		throw new Error("PREPARED_DEPLOYMENT_TARGET_MISMATCH");
+	}
+	if (!consoleArtifact) throw new Error("PREPARED_CONSOLE_ARTIFACT_REQUIRED");
+	const consoleGroup = preparedManifest.groups?.find((group) => group.id === "console");
+	if (!consoleGroup || resolve(root, consoleGroup.configPath) !== consoleArtifact.configPath) {
+		throw new Error("PREPARED_CONSOLE_CONFIG_MISMATCH");
+	}
+	await verifyConsoleArtifact(consoleArtifact);
+}
 
 const { target } = await loadTarget(targetName);
 await compiledTargetFromArgs(target, environment, args);
@@ -117,24 +140,6 @@ const configPath = resolve(
 );
 generateServiceConfig();
 
-if (service === "site") {
-	run(
-		process.execPath,
-		[
-			resolve(root, "scripts", "cloudflare-site-build.mjs"),
-			"--target",
-			targetName,
-			"--environment",
-			environment,
-			...(sitePreviewRoute?.cliArgs ?? []),
-			...siteReleaseOperations.cliArgs,
-			...(args["read-only-console"] ? ["--read-only-console"] : []),
-			...(args["no-routes"] || args.preflight ? ["--no-routes"] : []),
-		],
-		targetCloudflareEnv,
-	);
-}
-
 if (service === "identity") {
 	run("npm", ["run", "build:client"], targetCloudflareEnv, resolve(root, "workers", "identity"));
 }
@@ -209,13 +214,14 @@ if (service === "identity" && !uploadOnly) {
 generateServiceConfig();
 
 if (service === "site") {
+	await verifyConsoleArtifact(consoleArtifact);
 	run(
 		"npx",
 		[
 			"wrangler",
 			...(uploadOnly ? ["versions", "upload"] : ["deploy"]),
 			"--config",
-			resolve(root, "apps/site/dist/server/wrangler.json"),
+			consoleArtifact.configPath,
 		],
 		targetCloudflareEnv,
 	);
@@ -228,6 +234,7 @@ if (service === "site") {
 }
 
 function generateServiceConfig() {
+	if (service === "site") return;
 	run(
 		"node",
 		[
