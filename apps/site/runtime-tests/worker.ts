@@ -53,13 +53,7 @@ export default {
 		const packageAdmin = url.pathname.match(packageAdminPath);
 		if (pluginHealth && request.method === "GET") {
 			const plugin = createConfiguredSuperBoardPlugin(decodeURIComponent(pluginHealth[1]!));
-			return Response.json(
-				await plugin.routes.health.handler({
-					kv: {
-						get: (key: string) => workerEnv.RELEASE_CACHE.get(key, "json"),
-					},
-				}),
-			);
+			return Response.json(await plugin.routes.health.handler(pluginRuntimeContext(workerEnv)));
 		}
 		const handler: APIRoute | undefined =
 			(packageAdmin && request.method === "POST"
@@ -125,9 +119,9 @@ export default {
 								}
 							: {
 									success: true,
-									data: await createConfiguredSuperBoardPlugin(pluginId).routes.health.handler({
-										kv: { get: (key: string) => workerEnv.RELEASE_CACHE.get(key, "json") },
-									}),
+									data: await createConfiguredSuperBoardPlugin(pluginId).routes.health.handler(
+										pluginRuntimeContext(workerEnv),
+									),
 								},
 				},
 			},
@@ -141,6 +135,22 @@ export default {
 		return applicationPluginMiddleware(context, async () => await handler(context));
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;
+
+function pluginRuntimeContext(workerEnv: Cloudflare.Env) {
+	return {
+		kv: {
+			list: async (prefix?: string) => {
+				const result = await workerEnv.RELEASE_CACHE.list({ prefix });
+				return Promise.all(
+					result.keys.map(async ({ name }) => ({
+						key: name,
+						value: await workerEnv.RELEASE_CACHE.get(name, "json"),
+					})),
+				);
+			},
+		},
+	};
+}
 
 export class LifecycleApi extends WorkerEntrypoint {
 	async fetch(request: Request) {

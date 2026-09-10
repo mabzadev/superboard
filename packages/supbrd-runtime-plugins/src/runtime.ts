@@ -68,7 +68,7 @@ interface RuntimeManifest {
 }
 
 interface RuntimeRouteContext {
-	kv: { get(key: string): Promise<unknown> };
+	kv: { list(prefix?: string): Promise<Array<{ key: string; value: unknown }>> };
 }
 
 const topologyManifests = new Map(
@@ -152,13 +152,18 @@ function routePluginContext(
 		"kv" in routeContext &&
 		typeof routeContext.kv === "object" &&
 		routeContext.kv !== null &&
-		"get" in routeContext.kv &&
-		typeof routeContext.kv.get === "function"
+		"list" in routeContext.kv &&
+		typeof routeContext.kv.list === "function"
 	) {
 		const kv = routeContext.kv;
-		const get = kv.get;
-		if (typeof get !== "function") throw new Error("Plugin execution context is unavailable");
-		return { kv: { get: async (key: string): Promise<unknown> => Reflect.apply(get, kv, [key]) } };
+		const list = kv.list;
+		if (typeof list !== "function") throw new Error("Plugin execution context is unavailable");
+		return {
+			kv: {
+				list: async (prefix?: string): Promise<Array<{ key: string; value: unknown }>> =>
+					Reflect.apply(list, kv, [prefix]),
+			},
+		};
 	}
 	throw new Error("Plugin execution context is unavailable");
 }
@@ -211,13 +216,14 @@ function adminBlocks(manifest: RuntimeManifest, request?: AdminRequest) {
 }
 
 async function effectiveSettings(
-	kv: { get(key: string): Promise<unknown> },
+	kv: RuntimeRouteContext["kv"],
 	properties: Record<string, JsonSetting>,
 ) {
 	const values: Record<string, unknown> = {};
 	const secrets_set: Record<string, boolean> = {};
+	const settings = new Map((await kv.list("settings:")).map(({ key, value }) => [key, value]));
 	for (const [key, field] of Object.entries(properties)) {
-		const value = await kv.get(`settings:${key}`);
+		const value = settings.get(`settings:${key}`) ?? null;
 		if (field.writeOnly === true) secrets_set[key] = value !== null && value !== "";
 		else values[key] = value;
 	}

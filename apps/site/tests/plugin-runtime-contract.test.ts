@@ -40,7 +40,7 @@ test("every SuperBoard plugin exposes its validated sandbox contract without inv
 		const admin = await plugin.routes.admin!.handler({} as never);
 		expect(admin).toMatchObject({ blocks: expect.any(Array) });
 		const health = await plugin.routes.health!.handler({
-			kv: { get: vi.fn(async () => null) },
+			kv: { list: vi.fn(async () => []) },
 		} as never);
 		expect(health).toMatchObject({
 			plugin_id: manifest.plugin_id,
