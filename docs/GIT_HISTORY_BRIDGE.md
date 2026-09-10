@@ -7,10 +7,10 @@ history and does not require this bridge.
 This runbook records the earlier one-time repository initialization split in
 which `main` and `dev` had no merge base. It applies only to these legacy repos:
 
-| Repository                   | Preserved pre-SuperBoard `main`                                                        |
-| ---------------------------- | ------------------------------------------------------------------------------------ |
-| `mabzadev/superboard-platform`  | `audit/pre-opengrow-main-b633af5ac8d5` at `b633af5ac8d523a36b9fe0e9ea6e83d2da2cf377` |
-| `mabzadev/superboard-reference` | `audit/pre-opengrow-main-729eaf47b2dd` at `729eaf47b2dd061d2be9e01df37b00dc4f0bb490` |
+| Repository                      | Preserved pre-SuperBoard `main`                                                        |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| `mabzadev/superboard-platform`  | `audit/pre-superboard-main-b633af5ac8d5` at `b633af5ac8d523a36b9fe0e9ea6e83d2da2cf377` |
+| `mabzadev/superboard-reference` | `audit/pre-superboard-main-729eaf47b2dd` at `729eaf47b2dd061d2be9e01df37b00dc4f0bb490` |
 
 The audit refs retain the independently initialized GitHub README histories.
 They are evidence and recovery refs; never move, delete or reuse them.

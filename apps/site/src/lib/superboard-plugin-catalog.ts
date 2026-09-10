@@ -1,14 +1,14 @@
+import { userPluginManifest, validateUserPluginManifest } from "@superboard/plugin-identity/user";
 import {
 	canonicalizeReleasePayload,
 	sha256Canonical,
 	verifySuperBoardPluginManifest,
 	type SuperBoardPluginManifest,
 } from "@superboard/supbrd-core";
-import { userPluginManifest, validateUserPluginManifest } from "@superboard/supbrd-plug-user";
 import { z } from "zod";
 
-import topologyJson from "../../../../config/emdash-plugin-topology.json";
-import compatibilityJson from "../../../../config/superboard-plugin-compatibility.json";
+import topologyJson from "../../../../scripts/config/emdash-plugin-topology.json";
+import compatibilityJson from "../../../../scripts/config/superboard-plugin-compatibility.json";
 
 export type SuperBoardPluginTarget = "local" | "development" | "production";
 export type SuperBoardPluginLifecycleState =

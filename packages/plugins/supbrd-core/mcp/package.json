@@ -1,0 +1,19 @@
+{
+  "name": "@superboard/mcp-worker",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:workers",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

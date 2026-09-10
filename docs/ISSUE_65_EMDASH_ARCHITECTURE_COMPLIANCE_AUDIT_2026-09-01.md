@@ -1,5 +1,7 @@
 # Audit de conformité exécutable à l’architecture EmDash
 
+> Document historique : les constats et les chemins ci-dessous décrivent un état antérieur du dépôt. Certains composants ont été déplacés ou retirés. Pour l’organisation actuelle, consulter le [guide du monorepo](MONOREPO.md).
+
 - Date de l’audit : 1er septembre 2026
 - Commit audité : `35aad4cb2fbe164e754ca55a67f79d9cb2ec1441`
 - Périmètre : terminologie, Front du Site, Release Front, catalogue et lifecycle des plugins, Stores, Gateway, targets Cloudflare et reproductibilité d’une Instance vierge
@@ -10,16 +12,16 @@
 
 Le commit audité ne satisfait aucun des huit invariants dans sa totalité. Il contient une Release Front signée, un pointeur d’activation, un repository de Stores, des manifests de targets, un générateur Wrangler et des migrations testées. Les chemins exécutables restent cependant divisés entre ces contrats et des registres ou routages codés.
 
-| Invariant audité | Classification | Motif déterminant |
-| --- | --- | --- |
-| Terminologie Plugin full EmDash, Plugin module et Worker métier | **Partiel** | Les discriminants de manifest existent, mais le runtime publie encore les libellés `Full SuperBoard` et `Module SuperBoard` et n’expose aucun terme canonique dans ses sources actives. |
-| Front sans dépendance runtime au Dashboard ou à Next.js | **Violé** | Le Site importe 82 fois `apps/dashboard/src` et résout des API Next.js par des shims Astro. |
-| Routes, pages, navigation, sous-menus, permissions, renderers et états issus de la Release active et des manifests | **Violé** | Le matcher de routes lit la Release active, mais la navigation, le registre de composants, le montage des renderers et les états visibles sont codés dans le Site. |
-| Catalogue de 18 plugins et lifecycle `available → installed → active` piloté par les données | **Violé** | Le catalogue contient bien 18 plugins concrets, mais les 18 sont configurés et activés implicitement ; le modèle d’état ne représente que `active` ou `inactive`. |
-| Stores de plugins autoritatifs, Workers métier limités à l’exécution | **Violé** | Le repository de Stores fonctionne isolément, mais le Front lit et écrit encore via `API_SERVICE`; les Workers modifient directement leurs D1 métier. |
-| Gateway piloté par son catalogue, ses politiques et le Gateway Manifest actif | **Violé** | La Release compile un Gateway Manifest vide, alors que 63 enregistrements de routes ou middlewares restent codés dans le Worker API. |
-| Même compilateur de target et même graphe pour local, development et production | **Violé** | `local` est rejeté, aucun target suivi ne couvre development et production pour une même Instance, et le compilateur de Release ne consomme pas le target. |
-| Instance vierge reproductible de local vers development puis production | **Violé** | Chaque propriétaire D1 peut créer isolément un schéma frais valide, mais aucun chemin exécutable ne reproduit une Instance complète entre les trois environnements sans configuration manuelle. |
+| Invariant audité                                                                                                   | Classification | Motif déterminant                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terminologie Plugin full EmDash, Plugin module et Worker métier                                                    | **Partiel**    | Les discriminants de manifest existent, mais le runtime publie encore les libellés `Full SuperBoard` et `Module SuperBoard` et n’expose aucun terme canonique dans ses sources actives.         |
+| Front sans dépendance runtime au Dashboard ou à Next.js                                                            | **Violé**      | Le Site importe 82 fois `apps/dashboard/src` et résout des API Next.js par des shims Astro.                                                                                                     |
+| Routes, pages, navigation, sous-menus, permissions, renderers et états issus de la Release active et des manifests | **Violé**      | Le matcher de routes lit la Release active, mais la navigation, le registre de composants, le montage des renderers et les états visibles sont codés dans le Site.                              |
+| Catalogue de 18 plugins et lifecycle `available → installed → active` piloté par les données                       | **Violé**      | Le catalogue contient bien 18 plugins concrets, mais les 18 sont configurés et activés implicitement ; le modèle d’état ne représente que `active` ou `inactive`.                               |
+| Stores de plugins autoritatifs, Workers métier limités à l’exécution                                               | **Violé**      | Le repository de Stores fonctionne isolément, mais le Front lit et écrit encore via `API_SERVICE`; les Workers modifient directement leurs D1 métier.                                           |
+| Gateway piloté par son catalogue, ses politiques et le Gateway Manifest actif                                      | **Violé**      | La Release compile un Gateway Manifest vide, alors que 63 enregistrements de routes ou middlewares restent codés dans le Worker API.                                                            |
+| Même compilateur de target et même graphe pour local, development et production                                    | **Violé**      | `local` est rejeté, aucun target suivi ne couvre development et production pour une même Instance, et le compilateur de Release ne consomme pas le target.                                      |
+| Instance vierge reproductible de local vers development puis production                                            | **Violé**      | Chaque propriétaire D1 peut créer isolément un schéma frais valide, mais aucun chemin exécutable ne reproduit une Instance complète entre les trois environnements sans configuration manuelle. |
 
 ## Méthode et état du worktree
 
@@ -36,7 +38,7 @@ Le worktree contenait avant l’audit des modifications qui ne font pas partie d
  M apps/dashboard/src/analytics/posthog.ts
  M apps/site/emdash-env.d.ts
  M apps/site/src/lib/front-surface-registry.ts
- M apps/site/tests/front-surface-parity.test.ts
+ M tests/checks/apps/site/front-surface-parity.test.ts
  M apps/site/wrangler.jsonc
 ?? apps/dashboard/src/analytics/__tests__/
 ?? apps/dashboard/src/context/__tests__/useProjectSelection.site.tsx
@@ -68,14 +70,14 @@ Le lint de référence était déjà bloqué avant la création de ce rapport. `
 
 Les commandes ciblées exécutées dans le snapshot du SHA ont produit les résultats suivants :
 
-| Commande | Résultat |
-| --- | --- |
-| `pnpm --dir packages/supbrd-core test` | 7 fichiers, 16 tests passés |
-| `pnpm --dir apps/site exec vitest run --config vitest.config.ts tests/front-surface-parity.test.ts tests/user-front-release.test.ts tests/operator-api-proxy.test.ts tests/plugin-runtime-contract.test.ts` | 4 fichiers, 12 tests passés |
-| `pnpm --dir apps/site exec vitest run --config vitest.runtime.config.ts runtime-tests/plugin-store-authority.runtime.test.ts` | 1 fichier, 10 tests passés |
-| `pnpm --filter '@superboard/site^...' build`, puis `pnpm --dir apps/site build` | dépendances construites, puis build Astro du Site terminé |
-| `node --test scripts/cloudflare-target.test.mjs scripts/cloudflare-services.test.mjs scripts/cloudflare-deploy-plan.test.mjs` | 45 tests passés |
-| `node --test scripts/cloudflare-d1-schema.test.mjs` | 17 tests passés, dont 16 propriétaires de schéma D1 |
+| Commande                                                                                                                                                                                                    | Résultat                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `pnpm --dir packages/supbrd-core test`                                                                                                                                                                      | 7 fichiers, 16 tests passés                               |
+| `pnpm --dir apps/site exec vitest run --config vitest.config.ts tests/front-surface-parity.test.ts tests/user-front-release.test.ts tests/operator-api-proxy.test.ts tests/plugin-runtime-contract.test.ts` | 4 fichiers, 12 tests passés                               |
+| `pnpm --dir apps/site exec vitest run --config vitest.runtime.config.ts runtime-tests/plugin-store-authority.runtime.test.ts`                                                                               | 1 fichier, 10 tests passés                                |
+| `pnpm --filter '@superboard/site^...' build`, puis `pnpm --dir apps/site build`                                                                                                                             | dépendances construites, puis build Astro du Site terminé |
+| `node --test tests/checks/cloudflare/target.test.mjs tests/checks/cloudflare/services.test.mjs tests/checks/cloudflare/deploy-plan.test.mjs`                                                                | 45 tests passés                                           |
+| `node --test tests/checks/database/d1-schema.test.mjs`                                                                                                                                                      | 17 tests passés, dont 16 propriétaires de schéma D1       |
 
 Un test vert est interprété selon le comportement qu’il exerce. Par exemple, le premier test runtime des Stores passe précisément parce que la synchronisation rend les 18 plugins `active`; il confirme donc l’activation implicite au lieu de satisfaire le lifecycle demandé.
 
@@ -162,11 +164,11 @@ Les 16 tests de `packages/supbrd-core` et les 12 tests Front ciblés passent dan
 
 ### Registres de routes et de pages statiques
 
-La Release composée n’est pas issue de données d’Instance. `apps/site/src/lib/user-front-release.ts:5,17-19,78-138` lit `config/emdash-parity-matrix.json`, transforme ses lignes Dashboard en routes/pages/navigation et ajoute deux routes codées. Le fichier fixe aussi les transitions, le layout, le thème et les états (`:139-205`).
+La Release composée n’est pas issue de données d’Instance. `apps/site/src/lib/user-front-release.ts:5,17-19,78-138` lit `scripts/config/emdash-parity-matrix.json`, transforme ses lignes Dashboard en routes/pages/navigation et ajoute deux routes codées. Le fichier fixe aussi les transitions, le layout, le thème et les états (`:139-205`).
 
 Le renderer visible repasse ensuite par un second routeur codé. `apps/site/src/lib/front-surface-registry.ts:1-96` contient la table des chemins et quatre expressions régulières. `apps/site/src/components/SuperBoardFrontApp.tsx:329-486` transforme le composant trouvé en un `switch` de composants importés du Dashboard. Les routes Identity possèdent encore un autre routeur codé dans `:583-627`.
 
-Le test `apps/site/tests/front-surface-parity.test.ts:30-97` prouve que chaque ligne de la matrice statique possède une entrée dans ce registre statique. Il ne démontre pas qu’une modification de manifest actif change le renderer sans modification du code.
+Le test `tests/checks/apps/site/front-surface-parity.test.ts:30-97` prouve que chaque ligne de la matrice statique possède une entrée dans ce registre statique. Il ne démontre pas qu’une modification de manifest actif change le renderer sans modification du code.
 
 ### Navigation et sous-menus statiques
 
@@ -177,7 +179,7 @@ Une fonction sait filtrer la navigation d’une Release dans `apps/site/src/lib/
 ```text
 $ git grep -n 'presentation.navigation' 35aad4c -- apps/site/src | wc -l
 1
-$ git grep -n 'visibleUserNavigation(' 35aad4c -- apps/site/src apps/site/tests | wc -l
+$ git grep -n 'visibleUserNavigation(' 35aad4c -- apps/site/src tests/checks/apps/site | wc -l
 3
 ```
 
@@ -200,7 +202,7 @@ Le compilateur ne compense pas ces limites. `packages/supbrd-core/src/release-co
 1. Remplacer `apps/site/src/lib/front-surface-registry.ts:1-115` et le `switch` de `SuperBoardFrontApp.tsx:329-486` par un registre construit exclusivement depuis le Plugin Lock et les manifests vérifiés de la Release active.
 2. Remplacer `navigationGroups` dans `SuperBoardFrontApp.tsx:145-261` par `presentation.navigation`, y compris les sous-menus et leur filtrage par les droits réels.
 3. Faire monter par `FrontPage.astro:29-48,119-167` les layouts, renderers et state renderers déclarés, puis appliquer `presentation.theme`, les traductions et les médias de la Release.
-4. Remplacer la composition depuis `config/emdash-parity-matrix.json` dans `user-front-release.ts:5,17-19,78-138` par un snapshot de l’Instance et des contributions des seuls plugins actifs sur le target.
+4. Remplacer la composition depuis `scripts/config/emdash-parity-matrix.json` dans `user-front-release.ts:5,17-19,78-138` par un snapshot de l’Instance et des contributions des seuls plugins actifs sur le target.
 5. Remplacer `operatorFrontPermissions` dans `front-page.ts:168-182` par la résolution des grants de l’Instance ; ne pas convertir automatiquement toutes les expressions déclarées en permissions accordées.
 6. Remplacer les receipts synthétiques de `release-compiler.ts:237-258` par des validateurs qui résolvent réellement pages, navigation, layouts, renderers, états, permissions et artefacts.
 
@@ -210,30 +212,30 @@ Le compilateur ne compense pas ces limites. `packages/supbrd-core/src/release-co
 
 ### Catalogue complet
 
-Le contrat distingue `plugin_kind: "full" | "module"` et `execution.worker: "none" | "dedicated"` dans `packages/supbrd-core/src/plugin-manifest.ts:57-80`. Les 18 plugins concrets suivis dans `config/emdash-plugin-topology.json` sont :
+Le contrat distingue `plugin_kind: "full" | "module"` et `execution.worker: "none" | "dedicated"` dans `packages/supbrd-core/src/plugin-manifest.ts:57-80`. Les 18 plugins concrets suivis dans `scripts/config/emdash-plugin-topology.json` sont :
 
-| Plugin full EmDash | Plugin module |
-| --- | --- |
-| `supbrd-plug-user` | `supbrd-plugmod-gateway` |
-| `supbrd-plug-settings` | `supbrd-plugmod-billing` |
-| `supbrd-plug-content` | `supbrd-plugmod-support` |
-| `supbrd-plug-products` | `supbrd-plugmod-flows` |
-| `supbrd-plug-audit` | `supbrd-plugmod-analytics` |
-|  | `supbrd-plugmod-marketing` |
-|  | `supbrd-plugmod-email` |
-|  | `supbrd-plugmod-dynamic-links` |
-|  | `supbrd-plugmod-files` |
-|  | `supbrd-plugmod-paywalls` |
-|  | `supbrd-plugmod-onboardings` |
-|  | `supbrd-plugmod-observability` |
-|  | `supbrd-plugmod-mcp` |
+| Plugin full EmDash     | Plugin module                  |
+| ---------------------- | ------------------------------ |
+| `supbrd-plug-user`     | `supbrd-plugmod-gateway`       |
+| `supbrd-plug-settings` | `supbrd-plugmod-billing`       |
+| `supbrd-plug-content`  | `supbrd-plugmod-support`       |
+| `supbrd-plug-products` | `supbrd-plugmod-flows`         |
+| `supbrd-plug-audit`    | `supbrd-plugmod-analytics`     |
+|                        | `supbrd-plugmod-marketing`     |
+|                        | `supbrd-plugmod-email`         |
+|                        | `supbrd-plugmod-dynamic-links` |
+|                        | `supbrd-plugmod-files`         |
+|                        | `supbrd-plugmod-paywalls`      |
+|                        | `supbrd-plugmod-onboardings`   |
+|                        | `supbrd-plugmod-observability` |
+|                        | `supbrd-plugmod-mcp`           |
 
-Les premières déclarations se trouvent à `config/emdash-plugin-topology.json:11,668,1083,1554,2170,2571,3128,3690,4504,5053,5759,6442,6997,7616,8073,8599,9137,9566`. Le template non installable `supbrd-plugmod-custom-*` apparaît à `:9997`.
+Les premières déclarations se trouvent à `scripts/config/emdash-plugin-topology.json:11,668,1083,1554,2170,2571,3128,3690,4504,5053,5759,6442,6997,7616,8073,8599,9137,9566`. Le template non installable `supbrd-plugmod-custom-*` apparaît à `:9997`.
 
 Le comptage exécuté sur le JSON du SHA confirme la cardinalité :
 
 ```text
-$ git show 35aad4c:config/emdash-plugin-topology.json \
+$ git show 35aad4c:scripts/config/emdash-plugin-topology.json \
     | jq '{
         all: (.plugins | length),
         concrete: (.plugins
@@ -262,7 +264,7 @@ L’absence d’une ligne de données n’empêche pas l’activation. `packages
 
 La synchronisation du catalogue fusionne installation et activation. `apps/site/src/lib/superboard-plugin-catalog.ts:76-181` parcourt tous les plugins, écrit leur manifest comme actif, force `_plugin_state.status = 'active'` et publie leur santé `ready`. `loadActiveSuperBoardPluginLock` exige ensuite que la taille de l’ensemble actif soit exactement celle du catalogue (`:192-219`).
 
-Le test runtime confirme ce comportement : `apps/site/runtime-tests/plugin-store-authority.runtime.test.ts:29-69` appelle une seule synchronisation puis exige 18 lignes `_plugin_state` actives, 18 manifests actifs et 18 dépendances `ready`.
+Le test runtime confirme ce comportement : `tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts:29-69` appelle une seule synchronisation puis exige 18 lignes `_plugin_state` actives, 18 manifests actifs et 18 dépendances `ready`.
 
 ```text
 $ pnpm --dir apps/site exec vitest run --config vitest.runtime.config.ts \
@@ -289,7 +291,7 @@ Le succès du test établit que le passage `available → installed → active` 
 
 Chaque Store déclare son autorité dans `packages/supbrd-core/src/plugin-manifest.ts:9-18`. `apps/site/src/lib/plugin-store-repository.ts:41-173` vérifie le manifest actif et l’autorité, chiffre la charge utile, applique un compare-and-swap de révision et associe l’opération. Les triggers de `apps/site/migrations/0005_plugin_store_authority.sql:33-160` imposent le namespace, l’outbox et l’interdiction de suppression.
 
-`apps/site/runtime-tests/plugin-store-authority.runtime.test.ts:112-176` exerce chiffrement, idempotence, compare-and-swap, outbox et rejet inter-Store. Les 10 tests runtime passent.
+`tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts:112-176` exerce chiffrement, idempotence, compare-and-swap, outbox et rejet inter-Store. Les 10 tests runtime passent.
 
 ### Le repository de Store n’est pas le chemin d’écriture produit
 
@@ -308,13 +310,13 @@ La data source de plugin lit ces Stores dans `apps/site/src/pages/_superboard/ap
 
 Les routes `apps/site/src/pages/api/v1/[...path].ts:8-16` et `api/v2/[...path].ts:8-16` transmettent toutes les requêtes au proxy. Les lectures vont directement à `API_SERVICE` (`apps/site/src/lib/operator-api-proxy.ts:61-65`). Pour une mutation, le Site chiffre et insère la requête dans `superboard_plugin_command_operations`, puis appelle quand même `API_SERVICE` et conserve sa réponse (`:86-145`; `plugin-command-authority.ts:40-145`). Cette table est un journal de commande et de réponse ; elle ne met pas à jour `superboard_plugin_store_records`.
 
-Les Workers effectuent encore les écritures métier. Un exemple complet apparaît dans `workers/api/src/routes/links.ts:35-104,119-142`, qui insère, met à jour et supprime directement dans `redirect_configs`, `links` et `custom_redirects` via `c.env.DB`.
+Les Workers effectuent encore les écritures métier. Un exemple complet apparaît dans `packages/plugins/supbrd-core/api/src/routes/links.ts:35-104,119-142`, qui insère, met à jour et supprime directement dans `redirect_configs`, `links` et `custom_redirects` via `c.env.DB`.
 
 La recherche suivante trouve 115 fichiers source Worker hors tests contenant une écriture SQL directe :
 
 ```text
 $ git grep -l -E 'INSERT INTO|UPDATE [a-zA-Z_]+ SET|DELETE FROM' 35aad4c \
-    -- workers/api/src workers/*/src | rg -v '\.(test|spec)\.' | wc -l
+    -- packages/plugins/supbrd-core/api/src workers/*/src | rg -v '\.(test|spec)\.' | wc -l
 115
 ```
 
@@ -324,7 +326,7 @@ Le test `plugin-store-authority.runtime.test.ts:178-230` appelle cette approche 
 
 1. Raccorder les commands de chaque manifest à `putPluginStoreRecord` ou à un repository de Store typé équivalent avant toute exécution Worker. Le point de passage actuel `operator-api-proxy.ts:86-145` ne persiste qu’un journal de commande.
 2. Remplacer les lectures directes `API_SERVICE` de `operator-api-proxy.ts:61-65` par les data sources des Stores, avec un mode de compatibilité borné uniquement pendant migration.
-3. Migrer les écritures directes des routes Worker, dont `workers/api/src/routes/links.ts:35-142`, vers des commands consommant un état déjà autoritatif. Le Worker peut produire un effet ou un callback, mais ne doit plus posséder la ligne métier canonique.
+3. Migrer les écritures directes des routes Worker, dont `packages/plugins/supbrd-core/api/src/routes/links.ts:35-142`, vers des commands consommant un état déjà autoritatif. Le Worker peut produire un effet ou un callback, mais ne doit plus posséder la ligne métier canonique.
 4. Utiliser les leases et callbacks de `plugin-store-repository.ts:380-420` pour rapporter les effets d’exécution sans donner au Worker l’autorité de présentation ou de stockage.
 5. Ajouter des tests produit qui créent, lisent, modifient et suppriment une entité par le Front, puis prouvent que le Store est l’unique source et que le Worker peut être reconstruit depuis celle-ci.
 
@@ -334,11 +336,11 @@ Le test `plugin-store-authority.runtime.test.ts:178-230` appelle cette approche 
 
 ### Catalogue nominal sans implémentation spécifique
 
-`config/emdash-plugin-topology.json:2568-2580` déclare `supbrd-plugmod-gateway`. Ses deux Stores sont `rate_limits` et `route_manifests`, et ses commandes de publication, modification et politique apparaissent à `:3003-3033`.
+`scripts/config/emdash-plugin-topology.json:2568-2580` déclare `supbrd-plugmod-gateway`. Ses deux Stores sont `rate_limits` et `route_manifests`, et ses commandes de publication, modification et politique apparaissent à `:3003-3033`.
 
-L’entrypoint n’implémente aucun comportement Gateway : `packages/supbrd-runtime-plugins/src/entries/supbrd-plugmod-gateway.ts:1-3` appelle la fabrique commune. Cette fabrique ne fournit que les routes descriptives `admin`, `contract`, `health`, `settings/effective`, `commands/catalog` et `data-sources/catalog` (`packages/supbrd-runtime-plugins/src/runtime.ts:44-87`). Elle n’exécute aucune command Gateway et ne lit aucun Store métier.
+L’entrypoint n’implémente aucun comportement Gateway : `packages/supbrd-runtime-plugins/src/entries/supbrd-plugmod-gateway.ts:1-3` appelle la fabrique commune. Cette fabrique ne fournit que les routes descriptives `admin`, `contract`, `health`, `settings/effective`, `commands/catalog` et `data-sources/catalog` (`packages/supbrd-core/src/plugin-runtime.ts:44-87`). Elle n’exécute aucune command Gateway et ne lit aucun Store métier.
 
-Deux data sources sont en outre rattachées au mauvais Store. `active_gateway_manifest` et `gateway_routes` pointent vers `rate_limits` dans `config/emdash-plugin-topology.json:3037-3058`, alors que `route_manifests` existe à `:2704` et son repository à `:3091-3100`.
+Deux data sources sont en outre rattachées au mauvais Store. `active_gateway_manifest` et `gateway_routes` pointent vers `rate_limits` dans `scripts/config/emdash-plugin-topology.json:3037-3058`, alors que `route_manifests` existe à `:2704` et son repository à `:3091-3100`.
 
 ### Manifest vide et non consommé
 
@@ -346,25 +348,25 @@ Deux data sources sont en outre rattachées au mauvais Store. `active_gateway_ma
 
 ```json
 {
-  "gateway_manifest": {
-    "schema_version": "1.0.0",
-    "gateway_manifest_id": "01J00000000000000000000221",
-    "routes": []
-  }
+	"gateway_manifest": {
+		"schema_version": "1.0.0",
+		"gateway_manifest_id": "01J00000000000000000000221",
+		"routes": []
+	}
 }
 ```
 
 Le runtime de Release omet le Gateway Manifest (`packages/supbrd-core/src/front-runtime.ts:4-7`), et `apps/site/src/lib/release-source.ts:168-179` ne transmet que le Front Route Manifest et les dependency policies.
 
-Le Worker API enregistre en revanche ses routes, redirections et middlewares dans `workers/api/src/index.ts:95-145,314-534`. Ses destinations et politiques restent codées dans `workers/api/src/lib/domain-modules.ts:15-73,177-324`.
+Le Worker API enregistre en revanche ses routes, redirections et middlewares dans `packages/plugins/supbrd-core/api/src/index.ts:95-145,314-534`. Ses destinations et politiques restent codées dans `packages/plugins/supbrd-core/api/src/lib/domain-modules.ts:15-73,177-324`.
 
 Les commandes au SHA mesurent le décalage :
 
 ```text
-$ git show 35aad4c:workers/api/src/index.ts \
+$ git show 35aad4c:packages/plugins/supbrd-core/api/src/index.ts \
     | grep -Ec '^\s*app\.(get|post|put|patch|delete|options|all|route|use)\('
 63
-$ git grep -l 'gateway_manifest' 35aad4c -- workers/api/src | wc -l
+$ git grep -l 'gateway_manifest' 35aad4c -- packages/plugins/supbrd-core/api/src | wc -l
 0
 ```
 
@@ -440,12 +442,12 @@ Ce résultat suit directement `release-compiler.ts:237-258`, qui construit chaqu
 ### Remplacements du routage Gateway
 
 1. Remplacer l’entrypoint générique `packages/supbrd-runtime-plugins/src/entries/supbrd-plugmod-gateway.ts:1-3` par une implémentation dédiée de ses commands, data sources et Stores.
-2. Fermer les schémas Route, Policy et Manifest dans `config/emdash-plugin-topology.json:2815-2955`, corriger les `store_id` à `:3042,3054`, puis ajouter une migration Site corrective.
+2. Fermer les schémas Route, Policy et Manifest dans `scripts/config/emdash-plugin-topology.json:2815-2955`, corriger les `store_id` à `:3042,3054`, puis ajouter une migration Site corrective.
 3. Remplacer `routes: []` dans `apps/site/src/lib/user-front-release.ts:161-165` par la composition déterministe du snapshot Gateway de l’Instance et des plugins actifs.
 4. Valider dans `packages/supbrd-core/src/release-compiler.ts` les collisions méthode + chemin, destinations, bindings, scopes, politiques, timeouts et références de Store.
 5. Ajouter le Gateway Manifest vérifié à `LastVerifiedFrontRelease` (`front-runtime.ts:4-7`) et à `release-source.ts:168-179`.
-6. Remplacer le routage de `workers/api/src/index.ts:314-534` et `workers/api/src/lib/domain-modules.ts:15-73` par un matcher du manifest actif. Les modules existants peuvent rester des adaptateurs de destination métier.
-7. Fournir au Gateway un binding vers le manifest actif ou son cache signé dans `scripts/cloudflare-config.mjs:331-392` et `workers/api/src/types.ts:30-98`, sans ajouter une lecture D1 par requête.
+6. Remplacer le routage de `packages/plugins/supbrd-core/api/src/index.ts:314-534` et `packages/plugins/supbrd-core/api/src/lib/domain-modules.ts:15-73` par un matcher du manifest actif. Les modules existants peuvent rester des adaptateurs de destination métier.
+7. Fournir au Gateway un binding vers le manifest actif ou son cache signé dans `scripts/cloudflare/config.mjs:331-392` et `packages/plugins/supbrd-core/api/src/types.ts:30-98`, sans ajouter une lecture D1 par requête.
 
 ## 7. Compilateur de target et parité des environnements
 
@@ -453,21 +455,21 @@ Ce résultat suit directement `release-compiler.ts:237-258`, qui construit chaqu
 
 ### Fragments conformes pour development et production
 
-Les manifests de target sont fermés et validés par `deploy/targets/schema.json:1-31` et `scripts/cloudflare-target.mjs:30-58`. Les ressources requises selon les features sont contrôlées dans `cloudflare-target.mjs:85-145`. `scripts/cloudflare-bootstrap-core.mjs:53-240` construit l’inventaire physique, et `scripts/cloudflare-d1-registry.mjs:10-153` résout les propriétaires D1 et leurs migrations.
+Les manifests de target sont fermés et validés par `infra/targets/schema.json:1-31` et `scripts/cloudflare/target.mjs:30-58`. Les ressources requises selon les features sont contrôlées dans `cloudflare-target.mjs:85-145`. `scripts/cloudflare/bootstrap-core.mjs:53-240` construit l’inventaire physique, et `scripts/database/d1-registry.mjs:10-153` résout les propriétaires D1 et leurs migrations.
 
-`scripts/cloudflare-config.mjs:230-448` assemble les configs Site/API et `:451-586` les modules. Le plan de déploiement impose les migrations avant le Worker en development et un batch D1 avant tous les Workers en production (`scripts/cloudflare-deploy-plan.mjs:105-175`; `scripts/cloudflare-deploy.mjs:71-129,192-231`). Les 45 tests target/services/deploy passent au SHA.
+`scripts/cloudflare/config.mjs:230-448` assemble les configs Site/API et `:451-586` les modules. Le plan de déploiement impose les migrations avant le Worker en development et un batch D1 avant tous les Workers en production (`scripts/cloudflare/deploy-plan.mjs:105-175`; `scripts/cloudflare/deploy.mjs:71-129,192-231`). Les 45 tests target/services/deploy passent au SHA.
 
 ### `local` n’est pas un target compilable
 
-Le schéma n’autorise que `development` et `production` (`deploy/targets/schema.json:418-425`). `scripts/cloudflare-target.mjs:331-339` rejette explicitement toute autre valeur.
+Le schéma n’autorise que `development` et `production` (`infra/targets/schema.json:418-425`). `scripts/cloudflare/target.mjs:331-339` rejette explicitement toute autre valeur.
 
 ```text
-$ node scripts/cloudflare-config.mjs --target mbza-development \
+$ node scripts/cloudflare/config.mjs --target mbza-development \
     --environment local --service site --allow-unprovisioned --no-routes --preflight
 Error: --environment must be development or production
 ```
 
-Le Site local utilise à la place `apps/site/wrangler.jsonc:1-27`, un fichier manuel qui déclare D1, R2, KV et Worker Loader. Il ne déclare pas le binding `API_SERVICE` pourtant requis par `apps/site/src/lib/operator-api-proxy.ts:36-39`, ni les contrats secrets du repository de commands. Les configs development et production générées déclarent toutes deux `API_SERVICE` dans `scripts/cloudflare-config.mjs:230-263`.
+Le Site local utilise à la place `apps/site/wrangler.jsonc:1-27`, un fichier manuel qui déclare D1, R2, KV et Worker Loader. Il ne déclare pas le binding `API_SERVICE` pourtant requis par `apps/site/src/lib/operator-api-proxy.ts:36-39`, ni les contrats secrets du repository de commands. Les configs development et production générées déclarent toutes deux `API_SERVICE` dans `scripts/cloudflare/config.mjs:230-263`.
 
 ### Aucun target suivi ne couvre toute la promotion
 
@@ -475,7 +477,7 @@ La commande suivante montre que les deux manifests suivis contiennent chacun un 
 
 ```text
 $ for target in mbza-development vocostar; do
-    git show 35aad4c:deploy/targets/$target.json \
+    git show 35aad4c:infra/targets/$target.json \
       | jq -c --arg target "$target" \
           '{target:$target,environments:(.environments|keys),has_release:has("release")}'
   done
@@ -487,7 +489,7 @@ $ for target in mbza-development vocostar; do
 
 ### Parité des migrations non vérifiée
 
-`scripts/cloudflare-d1-schema.test.mjs:38-70` déduplique les descriptors par `migrationsPath`, applique chaque chaîne une fois sur une base SQLite neuve, puis contrôle son intégrité. Le test démontre que chaque propriétaire suivi peut construire isolément un schéma frais valide. Il ne compare ni liste de migrations, ni checksum, ni schéma final entre local, development et production pour une même Instance.
+`tests/checks/database/d1-schema.test.mjs:38-70` déduplique les descriptors par `migrationsPath`, applique chaque chaîne une fois sur une base SQLite neuve, puis contrôle son intégrité. Le test démontre que chaque propriétaire suivi peut construire isolément un schéma frais valide. Il ne compare ni liste de migrations, ni checksum, ni schéma final entre local, development et production pour une même Instance.
 
 Les 17 tests verts ne constituent donc pas une preuve que les trois environnements utilisent les mêmes migrations. Cette parité reste à intégrer à l’artefact de target et à vérifier avant promotion.
 
@@ -497,19 +499,19 @@ Les 17 tests verts ne constituent donc pas une preuve que les trois environnemen
 
 Le Plugin Lock perd les données qui permettraient de relier les deux mondes. `apps/site/src/lib/superboard-plugin-catalog.ts:192-219` réduit chaque plugin actif à `plugin_id`, `version`, `artifact_checksum` et `native`; les ressources, migrations, Stores, commands et data sources du manifest ne font pas partie de la résolution target.
 
-`scripts/cloudflare-config.mjs:45-151` effectue la sélection et l’écriture au chargement, puis choisit une fonction de config par une longue branche `service`. Il ne produit pas un artefact canonique et checksumé réutilisé par bootstrap, migration, déploiement et compilation de Release.
+`scripts/cloudflare/config.mjs:45-151` effectue la sélection et l’écriture au chargement, puis choisit une fonction de config par une longue branche `service`. Il ne produit pas un artefact canonique et checksumé réutilisé par bootstrap, migration, déploiement et compilation de Release.
 
 ### Workflow de Release différent selon l’environnement
 
-Les opérations de Release Front sont limitées au Site development avec route de preview explicite (`scripts/cloudflare-site-preview.mjs:29-41`). Elles sont désactivées dans le Site local (`apps/site/wrangler.jsonc:17-20`) et refusées pour production. `apps/site/src/lib/operator-guard.ts:10-20` retourne `503 RELEASE_OPERATIONS_DISABLED` lorsque le flag n’est pas activé.
+Les opérations de Release Front sont limitées au Site development avec route de preview explicite (`scripts/cloudflare/site-preview.mjs:29-41`). Elles sont désactivées dans le Site local (`apps/site/wrangler.jsonc:17-20`) et refusées pour production. `apps/site/src/lib/operator-guard.ts:10-20` retourne `503 RELEASE_OPERATIONS_DISABLED` lorsque le flag n’est pas activé.
 
-Le schéma target est fermé et ne contient aucun champ Release (`deploy/targets/schema.json:6-31`). La config API injecte `SUPERBOARD_RELEASE` depuis l’environnement ou le SHA Git, avec un fallback `local`, dans `scripts/cloudflare-config.mjs:286-293`; cet identifiant n’est pas le Front Release Payload signé et ne relie pas les autres Workers au même artefact.
+Le schéma target est fermé et ne contient aucun champ Release (`infra/targets/schema.json:6-31`). La config API injecte `SUPERBOARD_RELEASE` depuis l’environnement ou le SHA Git, avec un fallback `local`, dans `scripts/cloudflare/config.mjs:286-293`; cet identifiant n’est pas le Front Release Payload signé et ne relie pas les autres Workers au même artefact.
 
 ### Remplacements du compilateur de target
 
-1. Extraire de `scripts/cloudflare-config.mjs:45-151` une fonction pure `compileTarget` qui retourne un artefact canonique et checksumé : target, environnement, Instance, services, ressources, bindings, migrations, plugins actifs et identité de Release.
+1. Extraire de `scripts/cloudflare/config.mjs:45-151` une fonction pure `compileTarget` qui retourne un artefact canonique et checksumé : target, environnement, Instance, services, ressources, bindings, migrations, plugins actifs et identité de Release.
 2. Faire consommer ce même artefact par `cloudflare-bootstrap-core.mjs`, `cloudflare-d1-registry.mjs`, `cloudflare-deploy.mjs:130-136,260-320` et `compileFrontRelease`, au lieu de recalculer des vues séparées.
-3. Ajouter `local` au schéma `deploy/targets/schema.json:418-425` et au parser `scripts/cloudflare-target.mjs:331-339`, avec le même graphe logique que development et production.
+3. Ajouter `local` au schéma `infra/targets/schema.json:418-425` et au parser `scripts/cloudflare/target.mjs:331-339`, avec le même graphe logique que development et production.
 4. Remplacer `apps/site/wrangler.jsonc:1-27` par une sortie du compilateur de target local. Le binding `API_SERVICE`, les migrations, les KV, R2, secrets contractuels et le Loader doivent provenir du même graphe.
 5. Produire les matérialisations local, development et production d’une même Instance depuis un target logique unique ; comparer uniquement ces matérialisations, sans forcer deux targets distincts à partager les mêmes features.
 6. Étendre le Plugin Lock de `superboard-plugin-catalog.ts:192-219` avec la résolution des manifests complets et leurs ressources/migrations, ou joindre ces manifests par checksum dans l’artefact target.
@@ -522,13 +524,13 @@ Le schéma target est fermé et ne contient aucun champ Release (`deploy/targets
 
 ### Ce que la preuve actuelle couvre
 
-`scripts/cloudflare-d1-schema.test.mjs:38-70` charge tous les targets suivis, déduplique les propriétaires par chemin de migrations, applique chaque fichier sur une base SQLite neuve, puis vérifie l’intégrité, les clés étrangères et la présence de tables.
+`tests/checks/database/d1-schema.test.mjs:38-70` charge tous les targets suivis, déduplique les propriétaires par chemin de migrations, applique chaque fichier sur une base SQLite neuve, puis vérifie l’intégrité, les clés étrangères et la présence de tables.
 
 Le bloc suivant résume la sortie de la commande ; il regroupe les seize sous-tests sans prétendre reproduire le format TAP brut :
 
 ```text
-$ node --test scripts/cloudflare-d1-schema.test.mjs
-✔ api: workers/api/migrations
+$ node --test tests/checks/database/d1-schema.test.mjs
+✔ api: packages/plugins/supbrd-core/api/migrations
 ✔ site: apps/site/migrations
 ✔ email, identity, files, custom, app, products, dynamic-links
 ✔ support, analytics, marketing, flows, paywalls, onboardings
@@ -539,18 +541,18 @@ Cette commande est une preuve valable de migrations fraîches pour 16 propriéta
 
 ### Pourquoi la chaîne demandée ne peut pas être exécutée au commit audité
 
-1. `local` est rejeté par `scripts/cloudflare-target.mjs:331-339`, donc le premier environnement ne peut pas passer par le même compilateur.
+1. `local` est rejeté par `scripts/cloudflare/target.mjs:331-339`, donc le premier environnement ne peut pas passer par le même compilateur.
 2. Le fichier local `apps/site/wrangler.jsonc:1-27` ne possède pas `API_SERVICE`. Sur une configuration vierge, `operator-api-proxy.ts:36-39` répond `503 GATEWAY_BRIDGE_UNAVAILABLE` avant toute opération métier.
 3. La synchronisation de plugins active les 18 plugins d’un coup (`superboard-plugin-catalog.ts:76-181`) au lieu de reproduire les choix de lifecycle de l’Instance.
 4. Aucun target suivi ne relie development et production pour une même Instance, donc aucun graphe logique ne traverse ces deux environnements.
 5. Les opérations de Release ne sont disponibles qu’en development (`cloudflare-site-preview.mjs:29-41`).
 6. Aucun artefact target ne contient l’identité de la Release, et aucun script ne relie dans une même exécution Instance, plugins, Stores, Gateway, ressources, migrations et activation.
 
-La recherche suivante n’a trouvé aucun orchestrateur sous `scripts`, `apps/site/runtime-tests` ou `e2e` qui enchaîne les trois environnements :
+La recherche suivante n’a trouvé aucun orchestrateur sous `scripts`, `tests/checks/apps/site/runtime` ou `e2e` qui enchaîne les trois environnements :
 
 ```text
 $ git grep -l -E 'local.{0,80}development.{0,80}production|development.{0,80}production.{0,80}local' \
-    35aad4c -- scripts apps/site/runtime-tests e2e | wc -l
+    35aad4c -- scripts tests/checks/apps/site/runtime e2e | wc -l
 0
 ```
 
@@ -568,7 +570,7 @@ La preuve d’arrivée doit exercer un seul protocole contre une Instance neuve 
 6. Comparer les checksums canoniques du graphe logique, du Plugin Lock, des manifests, des migrations et de la Release ; exercer aussi le rollback.
 7. Exécuter un parcours produit qui lit et écrit par les Stores avec les Workers indisponibles puis disponibles, afin de prouver leur absence d’autorité.
 
-Cette preuve doit remplacer l’assemblage séparé de `apps/site/wrangler.jsonc`, `scripts/cloudflare-config.mjs`, `scripts/cloudflare-d1-registry.mjs`, `scripts/cloudflare-deploy.mjs`, `apps/site/src/lib/superboard-plugin-catalog.ts` et `packages/supbrd-core/src/release-compiler.ts`. Le test D1 frais existant reste utile comme sous-gate de migrations.
+Cette preuve doit remplacer l’assemblage séparé de `apps/site/wrangler.jsonc`, `scripts/cloudflare/config.mjs`, `scripts/database/d1-registry.mjs`, `scripts/cloudflare/deploy.mjs`, `apps/site/src/lib/superboard-plugin-catalog.ts` et `packages/supbrd-core/src/release-compiler.ts`. Le test D1 frais existant reste utile comme sous-gate de migrations.
 
 ## Ordre de remplacement
 

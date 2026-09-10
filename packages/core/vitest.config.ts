@@ -1,5 +1,7 @@
 import { defineConfig } from "vitest/config";
 
+import { centralTests } from "../../tests/checks/project-config.mjs";
+
 // Stub the adapter-provided virtual modules that runtime code imports.
 // Individual tests still `vi.mock()` the ones they care about; this plugin
 // just prevents "cannot find package" errors when a test pulls in a chunk
@@ -21,54 +23,57 @@ const virtualStubs: Record<string, string> = {
 	"virtual:emdash/build": "export const buildTime = 0;",
 };
 
-export default defineConfig({
-	plugins: [
-		{
-			name: "emdash-virtual-stubs",
-			resolveId(id) {
-				// Object.hasOwn — not `in` — so prototype-chain properties
-				// (toString, hasOwnProperty, etc.) aren't accidentally matched.
-				if (Object.hasOwn(virtualStubs, id)) return "\0" + id;
-				return null;
+export default centralTests(
+	import.meta.url,
+	defineConfig({
+		plugins: [
+			{
+				name: "emdash-virtual-stubs",
+				resolveId(id) {
+					// Object.hasOwn — not `in` — so prototype-chain properties
+					// (toString, hasOwnProperty, etc.) aren't accidentally matched.
+					if (Object.hasOwn(virtualStubs, id)) return "\0" + id;
+					return null;
+				},
+				load(id) {
+					if (!id.startsWith("\0virtual:emdash/")) return null;
+					const key = id.slice(1);
+					if (Object.hasOwn(virtualStubs, key)) return virtualStubs[key];
+					return null;
+				},
 			},
-			load(id) {
-				if (!id.startsWith("\0virtual:emdash/")) return null;
-				const key = id.slice(1);
-				if (Object.hasOwn(virtualStubs, key)) return virtualStubs[key];
-				return null;
-			},
-		},
-	],
-	test: {
-		globals: true,
-		environment: "node",
-		include: ["tests/**/*.test.ts"],
-		// Server integration tests (cli, client, smoke) start real Astro dev
-		// servers and need a full workspace build — run them in a dedicated
-		// CI job, not via `pnpm test`.
-		// The fixture has symlinked node_modules that contain test files
-		// from transitive deps (zod, emdash) — exclude them too.
-		exclude: [
-			"tests/workerd/**",
-			// Render tests import .astro components and need the Astro Vite
-			// plugin -- run them via the dedicated repro config (test:repro),
-			// not this plain-node config which cannot transform .astro.
-			"tests/repro/**/*.render.test.ts",
-			"tests/integration/smoke/**",
-			"tests/integration/cli/**",
-			"tests/integration/client/**",
-			"tests/integration/media/**",
-			"tests/integration/fixture/**",
 		],
-		coverage: {
-			provider: "v8",
-			reporter: ["text", "json", "html"],
-			thresholds: {
-				statements: 80,
-				branches: 80,
-				functions: 80,
-				lines: 80,
+		test: {
+			globals: true,
+			environment: "node",
+			include: ["../../tests/checks/packages/core/**/*.test.ts"],
+			// Server integration tests (cli, client, smoke) start real Astro dev
+			// servers and need a full workspace build — run them in a dedicated
+			// CI job, not via `pnpm test`.
+			// The fixture has symlinked node_modules that contain test files
+			// from transitive deps (zod, emdash) — exclude them too.
+			exclude: [
+				"../../tests/checks/packages/core/workerd/**",
+				// Render tests import .astro components and need the Astro Vite
+				// plugin -- run them via the dedicated repro config (test:repro),
+				// not this plain-node config which cannot transform .astro.
+				"../../tests/checks/packages/core/repro/**/*.render.test.ts",
+				"../../tests/checks/packages/core/integration/smoke/**",
+				"../../tests/checks/packages/core/integration/cli/**",
+				"../../tests/checks/packages/core/integration/client/**",
+				"../../tests/checks/packages/core/integration/media/**",
+				"../../tests/fixtures/core-integration-site/**",
+			],
+			coverage: {
+				provider: "v8",
+				reporter: ["text", "json", "html"],
+				thresholds: {
+					statements: 80,
+					branches: 80,
+					functions: 80,
+					lines: 80,
+				},
 			},
 		},
-	},
-});
+	}),
+);

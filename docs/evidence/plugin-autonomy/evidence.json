@@ -5749,7 +5749,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-audit",
@@ -5758,7 +5758,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-audit",
@@ -5767,7 +5767,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-content",
@@ -5776,7 +5776,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-content",
@@ -5785,7 +5785,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-content",
@@ -5794,7 +5794,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-products",
@@ -5803,7 +5803,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-products",
@@ -5812,7 +5812,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-products",
@@ -5821,7 +5821,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-settings",
@@ -5830,7 +5830,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-settings",
@@ -5839,7 +5839,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-settings",
@@ -5848,7 +5848,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-user",
@@ -5857,7 +5857,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-user",
@@ -5866,7 +5866,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-user",
@@ -5875,7 +5875,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-analytics",
@@ -5884,7 +5884,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-analytics",
@@ -5893,7 +5893,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-analytics",
@@ -5902,7 +5902,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-billing",
@@ -5911,7 +5911,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-billing",
@@ -5920,7 +5920,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-billing",
@@ -5929,7 +5929,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-dynamic-links",
@@ -5938,7 +5938,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-dynamic-links",
@@ -5947,7 +5947,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-dynamic-links",
@@ -5956,7 +5956,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-email",
@@ -5965,7 +5965,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-email",
@@ -5974,7 +5974,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-email",
@@ -5983,7 +5983,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-files",
@@ -5992,7 +5992,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-files",
@@ -6001,7 +6001,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-files",
@@ -6010,7 +6010,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-flows",
@@ -6019,7 +6019,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-flows",
@@ -6028,7 +6028,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-flows",
@@ -6037,7 +6037,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-gateway",
@@ -6046,7 +6046,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-gateway",
@@ -6055,7 +6055,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-gateway",
@@ -6064,7 +6064,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-marketing",
@@ -6073,7 +6073,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-marketing",
@@ -6082,7 +6082,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-marketing",
@@ -6091,7 +6091,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-mcp",
@@ -6100,7 +6100,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-mcp",
@@ -6109,7 +6109,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-mcp",
@@ -6118,7 +6118,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-observability",
@@ -6127,7 +6127,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-observability",
@@ -6136,7 +6136,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-observability",
@@ -6145,7 +6145,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-onboardings",
@@ -6154,7 +6154,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-onboardings",
@@ -6163,7 +6163,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-onboardings",
@@ -6172,7 +6172,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-paywalls",
@@ -6181,7 +6181,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-paywalls",
@@ -6190,7 +6190,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-paywalls",
@@ -6199,7 +6199,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-support",
@@ -6208,7 +6208,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-support",
@@ -6217,7 +6217,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-support",
@@ -6226,7 +6226,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "emdash-core",
@@ -6235,7 +6235,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/site-runtime-tests.txt",
-    "test": "apps/site/runtime-tests/plugin-independence-matrix.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/plugin-independence-matrix.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-products",
@@ -7380,7 +7380,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "1719f648-60ae-4b1c-9c50-dc52f514814e"
     ]
@@ -7392,7 +7392,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "1719f648-60ae-4b1c-9c50-dc52f514814e"
     ]
@@ -7404,7 +7404,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "1719f648-60ae-4b1c-9c50-dc52f514814e"
     ]
@@ -7416,7 +7416,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "d20a04bb-c585-49db-907b-f2e9aacee0b5"
     ]
@@ -7428,7 +7428,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "d20a04bb-c585-49db-907b-f2e9aacee0b5"
     ]
@@ -7440,7 +7440,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "d20a04bb-c585-49db-907b-f2e9aacee0b5"
     ]
@@ -7452,7 +7452,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "1719f648-60ae-4b1c-9c50-dc52f514814e"
     ]
@@ -7464,7 +7464,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "4846ab8a-e146-4b71-ad34-c6ab425bf9ef"
     ]
@@ -7476,7 +7476,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "4846ab8a-e146-4b71-ad34-c6ab425bf9ef"
     ]
@@ -7488,7 +7488,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "3538e6e5-5a40-4904-850d-266ab422b696"
     ]
@@ -7500,7 +7500,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "3538e6e5-5a40-4904-850d-266ab422b696"
     ]
@@ -7512,7 +7512,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "4846ab8a-e146-4b71-ad34-c6ab425bf9ef"
     ]
@@ -7524,7 +7524,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "edfeba82-5569-4ad9-a5bf-900294f07aff"
     ]
@@ -7536,7 +7536,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "edfeba82-5569-4ad9-a5bf-900294f07aff"
     ]
@@ -7548,7 +7548,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "39099d04-e6d5-4029-aeb3-c60bfa3fd462",
       "070a287a-2fad-4ed2-b02f-5b015869c834"
@@ -7561,7 +7561,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "edfeba82-5569-4ad9-a5bf-900294f07aff"
     ]
@@ -7573,7 +7573,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "772960d0-360b-4898-a4f7-b43394dd6440"
     ]
@@ -7585,7 +7585,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "39099d04-e6d5-4029-aeb3-c60bfa3fd462"
     ]
@@ -7597,7 +7597,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "23e51f5a-95a6-4826-8496-9aa3a5e7612d"
     ]
@@ -7609,7 +7609,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "f510f08a-757e-49d3-a24d-e2805e49c9d0"
     ]
@@ -7621,7 +7621,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "f5a483c2-b679-4654-83f1-c8c13e09cc1f"
     ]
@@ -7633,7 +7633,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "f5a483c2-b679-4654-83f1-c8c13e09cc1f"
     ]
@@ -7645,7 +7645,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "23e51f5a-95a6-4826-8496-9aa3a5e7612d"
     ]
@@ -7657,7 +7657,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "f5a483c2-b679-4654-83f1-c8c13e09cc1f"
     ]
@@ -7669,7 +7669,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "438e8032-07a4-4eb5-8a9b-4d55f7ed8538",
       "4562be4e-e743-430f-ae33-0f2dedaa7e73"
@@ -7682,7 +7682,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "23e51f5a-95a6-4826-8496-9aa3a5e7612d"
     ]
@@ -7694,7 +7694,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "070a287a-2fad-4ed2-b02f-5b015869c834"
     ]
@@ -7706,7 +7706,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "55a3968f-8396-4daf-ba8d-3303866be022"
     ]
@@ -7718,7 +7718,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "55a3968f-8396-4daf-ba8d-3303866be022"
     ]
@@ -7730,7 +7730,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "c74275e4-030b-4abf-bef6-a9bfe57595f6"
     ]
@@ -7742,7 +7742,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "3538e6e5-5a40-4904-850d-266ab422b696"
     ]
@@ -7754,7 +7754,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "d20a04bb-c585-49db-907b-f2e9aacee0b5"
     ]
@@ -7766,7 +7766,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "c74275e4-030b-4abf-bef6-a9bfe57595f6"
     ]
@@ -7778,7 +7778,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "438e8032-07a4-4eb5-8a9b-4d55f7ed8538"
     ]
@@ -7790,7 +7790,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "f5a483c2-b679-4654-83f1-c8c13e09cc1f"
     ]
@@ -7802,7 +7802,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "1e7b2a19-9ae6-40e6-acc6-c4a6a81743b7"
     ]
@@ -7814,7 +7814,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "1e7b2a19-9ae6-40e6-acc6-c4a6a81743b7"
     ]
@@ -7826,7 +7826,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "edfeba82-5569-4ad9-a5bf-900294f07aff"
     ]
@@ -7838,7 +7838,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "4562be4e-e743-430f-ae33-0f2dedaa7e73"
     ]
@@ -7850,7 +7850,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "4846ab8a-e146-4b71-ad34-c6ab425bf9ef"
     ]
@@ -7862,7 +7862,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "1e7b2a19-9ae6-40e6-acc6-c4a6a81743b7"
     ]
@@ -7874,7 +7874,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
-    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-products.runtime.test.ts",
     "data_ids": [
       "d20a04bb-c585-49db-907b-f2e9aacee0b5"
     ]
@@ -7886,7 +7886,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-email.runtime.test.ts",
     "data_ids": [
       "1719f648-60ae-4b1c-9c50-dc52f514814e"
     ]
@@ -7898,7 +7898,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "ffda907c-ecd7-4d33-aa61-4663c661f7de"
     ]
@@ -7910,7 +7910,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-billing.runtime.test.ts",
     "data_ids": [
       "23e51f5a-95a6-4826-8496-9aa3a5e7612d",
       "ffda907c-ecd7-4d33-aa61-4663c661f7de"
@@ -7923,7 +7923,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-content",
@@ -7932,7 +7932,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-products",
@@ -7941,7 +7941,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-settings",
@@ -7950,7 +7950,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-user",
@@ -7959,7 +7959,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-analytics",
@@ -7968,7 +7968,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-billing",
@@ -7977,7 +7977,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-dynamic-links",
@@ -7986,7 +7986,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-email",
@@ -7995,7 +7995,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-files",
@@ -8004,7 +8004,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-flows",
@@ -8013,7 +8013,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-gateway",
@@ -8022,7 +8022,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-marketing",
@@ -8031,7 +8031,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-mcp",
@@ -8040,7 +8040,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-observability",
@@ -8049,7 +8049,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-onboardings",
@@ -8058,7 +8058,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-paywalls",
@@ -8067,7 +8067,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plugmod-support",
@@ -8076,7 +8076,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-health.txt",
-    "test": "apps/site/runtime-tests/retirement-api-health.runtime.test.ts"
+    "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
     "plugin_id": "supbrd-plug-settings",
@@ -8085,7 +8085,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-settings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-settings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-settings.runtime.test.ts",
     "data_ids": [
       "01M1XPD8KKDGK4QSAET6AWYNZ3"
     ]
@@ -8097,7 +8097,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-settings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-settings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-settings.runtime.test.ts",
     "data_ids": [
       "01M1XPD8KKDGK4QSAET6AWYNZ3"
     ]
@@ -8109,7 +8109,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-settings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-settings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-settings.runtime.test.ts",
     "data_ids": [
       "01M1XPD8KKDGK4QSAET6AWYNZ3"
     ]
@@ -8121,7 +8121,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-settings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-settings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-settings.runtime.test.ts",
     "data_ids": [
       "47c1cd7e-d21a-47a7-8700-d764303b88a7"
     ]
@@ -8133,7 +8133,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-settings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-settings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-settings.runtime.test.ts",
     "data_ids": [
       "47c1cd7e-d21a-47a7-8700-d764303b88a7"
     ]
@@ -8145,7 +8145,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-settings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-settings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-settings.runtime.test.ts",
     "data_ids": [
       "47c1cd7e-d21a-47a7-8700-d764303b88a7"
     ]
@@ -8157,7 +8157,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-content.txt",
-    "test": "apps/site/runtime-tests/retirement-api-content.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-content.runtime.test.ts",
     "data_ids": [
       "01M1XPD8MXYCR1DKVWDK3AF73C"
     ]
@@ -8169,7 +8169,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-content.txt",
-    "test": "apps/site/runtime-tests/retirement-api-content.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-content.runtime.test.ts",
     "data_ids": [
       "01M1XPD8MXYCR1DKVWDK3AF73C"
     ]
@@ -8181,7 +8181,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-content.txt",
-    "test": "apps/site/runtime-tests/retirement-api-content.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-content.runtime.test.ts",
     "data_ids": [
       "01M1XPD8MXYCR1DKVWDK3AF73C",
       "01M1XPD8NN653XXQ7TF069CNJ7"
@@ -8194,7 +8194,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-content.txt",
-    "test": "apps/site/runtime-tests/retirement-api-content.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-content.runtime.test.ts",
     "data_ids": [
       "01M1XPD8MXYCR1DKVWDK3AF73C"
     ]
@@ -8206,7 +8206,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-content.txt",
-    "test": "apps/site/runtime-tests/retirement-api-content.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-content.runtime.test.ts",
     "data_ids": [
       "01M1XPD8MXYCR1DKVWDK3AF73C"
     ]
@@ -8218,7 +8218,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-content.txt",
-    "test": "apps/site/runtime-tests/retirement-api-content.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-content.runtime.test.ts",
     "data_ids": [
       "01M1XPD8PPHC9BXNRQTEFZMB0G"
     ]
@@ -8230,7 +8230,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
     ]
@@ -8242,7 +8242,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
     ]
@@ -8254,7 +8254,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -8266,7 +8266,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -8278,7 +8278,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -8290,7 +8290,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -8302,7 +8302,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
     ]
@@ -8314,7 +8314,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
     ]
@@ -8326,7 +8326,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
     ]
@@ -8338,7 +8338,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
     ]
@@ -8350,7 +8350,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "3aaad6b5-26bf-4378-8df1-ecf83dc884e8"
     ]
@@ -8362,7 +8362,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "3aaad6b5-26bf-4378-8df1-ecf83dc884e8"
     ]
@@ -8374,7 +8374,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "0f835715-b032-4817-a735-a910142d4c3a"
     ]
@@ -8386,7 +8386,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -8398,7 +8398,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -8410,7 +8410,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "3aaad6b5-26bf-4378-8df1-ecf83dc884e8"
     ]
@@ -8422,7 +8422,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "0f835715-b032-4817-a735-a910142d4c3a"
     ]
@@ -8434,7 +8434,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -8446,7 +8446,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -8458,7 +8458,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "783ac2b8-ceeb-466a-8464-2673eb0a2219"
     ]
@@ -8470,7 +8470,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "783ac2b8-ceeb-466a-8464-2673eb0a2219"
     ]
@@ -8482,7 +8482,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
     ]
@@ -8494,7 +8494,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "784b7fa0-99c7-4def-9ccc-b33ead16dbda",
       "8cde9abf-fd15-4f71-8740-fa968fd7ed6a"
@@ -8507,7 +8507,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "784b7fa0-99c7-4def-9ccc-b33ead16dbda",
       "8cde9abf-fd15-4f71-8740-fa968fd7ed6a"
@@ -8520,7 +8520,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "784b7fa0-99c7-4def-9ccc-b33ead16dbda",
       "8cde9abf-fd15-4f71-8740-fa968fd7ed6a"
@@ -8533,7 +8533,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "979bc81f-b47a-497b-abf9-7f46972abaee"
     ]
@@ -8545,7 +8545,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "979bc81f-b47a-497b-abf9-7f46972abaee"
     ]
@@ -8557,7 +8557,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -8569,7 +8569,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "c5f6f4d4-6f59-43e9-a07f-81f122244650"
     ]
@@ -8581,7 +8581,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "fba5a977-262c-4251-ad88-889a0a7e0d7e"
     ]
@@ -8593,7 +8593,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "fba5a977-262c-4251-ad88-889a0a7e0d7e"
     ]
@@ -8605,7 +8605,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "55f6224c-c3a8-4f7f-b07f-95816baf7255"
     ]
@@ -8617,7 +8617,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "55f6224c-c3a8-4f7f-b07f-95816baf7255"
     ]
@@ -8629,7 +8629,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "ec435b0d-3ae2-404a-b2ac-c0d22e00b9ec"
     ]
@@ -8641,7 +8641,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "c5f6f4d4-6f59-43e9-a07f-81f122244650"
     ]
@@ -8653,7 +8653,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "c5f6f4d4-6f59-43e9-a07f-81f122244650"
     ]
@@ -8665,7 +8665,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "ec435b0d-3ae2-404a-b2ac-c0d22e00b9ec"
     ]
@@ -8677,7 +8677,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "ec435b0d-3ae2-404a-b2ac-c0d22e00b9ec"
     ]
@@ -8689,7 +8689,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "1f79294a-93c9-4347-93ff-b9db7451ef80"
     ]
@@ -8701,7 +8701,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "1f79294a-93c9-4347-93ff-b9db7451ef80"
     ]
@@ -8713,7 +8713,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "1f79294a-93c9-4347-93ff-b9db7451ef80"
     ]
@@ -8725,7 +8725,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "c5f6f4d4-6f59-43e9-a07f-81f122244650"
     ]
@@ -8737,7 +8737,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
     ]
@@ -8749,7 +8749,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
-    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-dynamic-links.runtime.test.ts",
     "data_ids": [
       "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
     ]
@@ -8761,7 +8761,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "3aaad6b5-26bf-4378-8df1-ecf83dc884e8",
       "fba5a977-262c-4251-ad88-889a0a7e0d7e"
@@ -8774,7 +8774,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "0f835715-b032-4817-a735-a910142d4c3a"
     ]
@@ -8786,7 +8786,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "ec435b0d-3ae2-404a-b2ac-c0d22e00b9ec"
     ]
@@ -8798,7 +8798,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
-    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-onboardings.runtime.test.ts",
     "data_ids": [
       "0f835715-b032-4817-a735-a910142d4c3a"
     ]
@@ -8810,7 +8810,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-paywalls.txt",
-    "test": "apps/site/runtime-tests/retirement-api-paywalls.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-paywalls.runtime.test.ts",
     "data_ids": [
       "3aaad6b5-26bf-4378-8df1-ecf83dc884e8"
     ]
@@ -8822,7 +8822,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
-    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts",
     "data_ids": [
       "lifecycle:fd140da5-64f9-48f3-ae4c-5df4c7854e8c"
     ]
@@ -8834,7 +8834,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
-    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts",
     "data_ids": [
       "lifecycle:fd140da5-64f9-48f3-ae4c-5df4c7854e8c"
     ]
@@ -8846,7 +8846,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
-    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts",
     "data_ids": [
       "lifecycle:fd140da5-64f9-48f3-ae4c-5df4c7854e8c"
     ]
@@ -8858,7 +8858,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
-    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts",
     "data_ids": [
       "d2b9cb63-4d32-474f-b7e2-a001f80d7404"
     ]
@@ -8870,7 +8870,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
-    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-audit.runtime.test.ts",
     "data_ids": [
       "d2b9cb63-4d32-474f-b7e2-a001f80d7404"
     ]
@@ -8882,7 +8882,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
-    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-files.runtime.test.ts",
     "data_ids": [
       "57661d31-f181-4de5-9c25-063562785ac3"
     ]
@@ -8894,7 +8894,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-gateway.txt",
-    "test": "apps/site/runtime-tests/retirement-api-gateway.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-gateway.runtime.test.ts",
     "data_ids": [
       "proof-c5ca66d8-3503-4d7d-a808-72b62cdfc35b"
     ]
@@ -8906,7 +8906,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-gateway.txt",
-    "test": "apps/site/runtime-tests/retirement-api-gateway.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-gateway.runtime.test.ts",
     "data_ids": [
       "proof-c5ca66d8-3503-4d7d-a808-72b62cdfc35b"
     ]
@@ -8918,7 +8918,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
-    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-files.runtime.test.ts",
     "data_ids": [
       "57661d31-f181-4de5-9c25-063562785ac3"
     ]
@@ -8930,7 +8930,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
-    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-files.runtime.test.ts",
     "data_ids": [
       "57661d31-f181-4de5-9c25-063562785ac3"
     ]
@@ -8942,7 +8942,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-gateway.txt",
-    "test": "apps/site/runtime-tests/retirement-api-gateway.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-gateway.runtime.test.ts",
     "data_ids": [
       "45240efd-e5f1-463f-b93f-a9cfd5fc5c35"
     ]
@@ -8954,7 +8954,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-gateway.txt",
-    "test": "apps/site/runtime-tests/retirement-api-gateway.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-gateway.runtime.test.ts",
     "data_ids": [
       "45240efd-e5f1-463f-b93f-a9cfd5fc5c35"
     ]
@@ -8966,7 +8966,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
-    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-files.runtime.test.ts",
     "data_ids": [
       "57661d31-f181-4de5-9c25-063562785ac3"
     ]
@@ -8978,7 +8978,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
-    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-files.runtime.test.ts",
     "data_ids": [
       "57661d31-f181-4de5-9c25-063562785ac3"
     ]
@@ -8990,7 +8990,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
-    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-files.runtime.test.ts",
     "data_ids": [
       "57661d31-f181-4de5-9c25-063562785ac3"
     ]
@@ -9002,7 +9002,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-gateway.txt",
-    "test": "apps/site/runtime-tests/retirement-api-gateway.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-gateway.runtime.test.ts",
     "data_ids": [
       "proof-c5ca66d8-3503-4d7d-a808-72b62cdfc35b"
     ]
@@ -9014,7 +9014,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
-    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-files.runtime.test.ts",
     "data_ids": [
       "57661d31-f181-4de5-9c25-063562785ac3"
     ]
@@ -9026,7 +9026,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
-    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-files.runtime.test.ts",
     "data_ids": [
       "dd89f90c-761a-4c2f-8042-fda38bf9439e"
     ]
@@ -9038,7 +9038,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-gateway.txt",
-    "test": "apps/site/runtime-tests/retirement-api-gateway.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-gateway.runtime.test.ts",
     "data_ids": [
       "vocostar:1"
     ]
@@ -9050,7 +9050,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "mcp_authorization_codes:4824fbcd353b47fa101b5a48255d8aa8"
     ]
@@ -9062,7 +9062,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "8f7d19bd2211054153c52a213c6044a1"
     ]
@@ -9074,7 +9074,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "8f7d19bd2211054153c52a213c6044a1"
     ]
@@ -9086,7 +9086,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "55e4c0dc-3e28-49bb-8cc2-0381dd24d000",
       "ccb2aab7-5b25-4c37-9f49-25382a296380"
@@ -9099,7 +9099,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "ccb2aab7-5b25-4c37-9f49-25382a296380"
     ]
@@ -9111,7 +9111,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "55e4c0dc-3e28-49bb-8cc2-0381dd24d000"
     ]
@@ -9126,7 +9126,7 @@
       "01M1XPNP4G3QV35DN6ETKTSHJC"
     ],
     "description": "Real captured magic link restores the existing operator session; no external email transport.",
-    "source_test": "apps/site/e2e/tests/auth/password-reset.spec.ts",
+    "source_test": "tests/e2e/site/auth/password-reset.spec.ts",
     "captured_at": "2026-09-07T10:29:56.712Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9140,7 +9140,7 @@
       "01M1XPNS96WG3Y6MDD4TZRDQ5A"
     ],
     "description": "Real captured magic link restores the existing operator session; no external email transport.",
-    "source_test": "apps/site/e2e/tests/auth/password-reset.spec.ts",
+    "source_test": "tests/e2e/site/auth/password-reset.spec.ts",
     "captured_at": "2026-09-07T10:29:59.959Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9178,7 +9178,7 @@
       "1b69f56e-3b18-48a5-8fcb-fac97bb42cec"
     ],
     "description": "Filtered the persisted event stream by exact name and opened event analysis.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:14:52.994Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9192,7 +9192,7 @@
       "6ba64b00-02a8-465c-bf03-4fc574134db2"
     ],
     "description": "Screen event ingestion produced the named view and duration in the views table.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:14:59.688Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9206,7 +9206,7 @@
       "cf800b27-c29e-4d97-af2b-1613078f820d"
     ],
     "description": "Real event ingestion created both session and pseudonymized profile entries visible through their tabs.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:06.339Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9220,7 +9220,7 @@
       "e181eb67-8d3d-435d-a825-8a0e9c3dedc0"
     ],
     "description": "Ingested a feedback event and verified its exact comment and rating in the table.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:12.940Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9234,7 +9234,7 @@
       "14fd553b-510d-40fe-9f8f-4bfc3dbb72de"
     ],
     "description": "Ingested a crash, inspected its stored stack, resolved it, and found it in resolved results after reload.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:21.383Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9248,7 +9248,7 @@
       "31afcacf-c9a1-4033-ab64-68876ceef534"
     ],
     "description": "Verified browser and country dimensions projected from a real event context.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:27.991Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9262,7 +9262,7 @@
       "a1ebb147-7a52-4b86-a44b-0ed627f179a4"
     ],
     "description": "Created an analytics dashboard and widget and reopened the widget from persisted configuration.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:30.762Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9276,7 +9276,7 @@
       "4b637a3f-edc0-4b57-8bd1-450e5735a174"
     ],
     "description": "Saved a named event cohort and verified its stored definition after reload.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:33.336Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9290,7 +9290,7 @@
       "qa_config_1788776133572_6itq7"
     ],
     "description": "Published and reloaded the actual JSON configuration value.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:35.796Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9304,7 +9304,7 @@
       "7380dc7d-7713-48fb-af73-8c47c3cf7b69"
     ],
     "description": "Created and reloaded a stored alert rule without external delivery.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:38.095Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9318,7 +9318,7 @@
       "23b49113-4d87-4778-8076-0b4b3b1bc267"
     ],
     "description": "Saved and reloaded a report definition through the reports page.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-operations.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-operations.spec.ts",
     "captured_at": "2026-09-07T10:15:40.507Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9334,7 +9334,7 @@
       "a66f81f9-5c19-444c-bbab-af843b261113"
     ],
     "description": "Updated a component version, observed two outdated instances, synchronized them and read both new draft versions.",
-    "source_test": "apps/site/e2e/tests/flows/flows-editor.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-editor.spec.ts",
     "captured_at": "2026-09-07T10:21:19.920Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9348,7 +9348,7 @@
       "84ec2a81-6f83-4679-932e-55fc729003b4"
     ],
     "description": "Recorded a schema-v1 event through the owning API and verified the real overview count in this view.",
-    "source_test": "apps/site/e2e/tests/dashboard/dashboard.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/dashboard.spec.ts",
     "captured_at": "2026-09-07T10:15:47.386Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9362,7 +9362,7 @@
       "63273b35-84ff-4f0e-b88b-0034be1d2c80"
     ],
     "description": "Recorded a schema-v1 event through the owning API and verified the real overview count in this view.",
-    "source_test": "apps/site/e2e/tests/dashboard/dashboard.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/dashboard.spec.ts",
     "captured_at": "2026-09-07T10:15:54.222Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9376,7 +9376,7 @@
       "87d7be17-7246-44d0-94fd-88c3fcf0fd8d"
     ],
     "description": "Recorded a schema-v1 event through the owning API and verified the real overview count in this view.",
-    "source_test": "apps/site/e2e/tests/dashboard/dashboard.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/dashboard.spec.ts",
     "captured_at": "2026-09-07T10:16:01.031Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9390,7 +9390,7 @@
       "993ee95e-5d8c-471b-882f-0568dce0b8dc"
     ],
     "description": "Recorded a schema-v1 event through the owning API and verified the real overview count in this view.",
-    "source_test": "apps/site/e2e/tests/dashboard/dashboard.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/dashboard.spec.ts",
     "captured_at": "2026-09-07T10:16:07.697Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9404,7 +9404,7 @@
       "20a5687b-fbc6-4690-9552-7821c20e2b53"
     ],
     "description": "Saved a real support contact, reloaded the page, and searched for its stored identity.",
-    "source_test": "apps/site/e2e/tests/support/native-operations.spec.ts",
+    "source_test": "tests/e2e/site/support/native-operations.spec.ts",
     "captured_at": "2026-09-07T10:16:27.427Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9418,7 +9418,7 @@
       "5b0b29bc-e9ac-46a6-96e3-98d211fd2c9d"
     ],
     "description": "Created and reloaded a persisted team through workforce controls.",
-    "source_test": "apps/site/e2e/tests/support/native-operations.spec.ts",
+    "source_test": "tests/e2e/site/support/native-operations.spec.ts",
     "captured_at": "2026-09-07T10:16:29.882Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9432,7 +9432,7 @@
       "77c18ea9-1024-42ad-9182-d50fe07b7aef"
     ],
     "description": "Created a service-level policy and found it after reload.",
-    "source_test": "apps/site/e2e/tests/support/native-operations.spec.ts",
+    "source_test": "tests/e2e/site/support/native-operations.spec.ts",
     "captured_at": "2026-09-07T10:16:32.343Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9446,7 +9446,7 @@
       "cc992b1f-f237-41c8-9d93-2299764b05af"
     ],
     "description": "Created a help-center portal through its form and reopened its stored record.",
-    "source_test": "apps/site/e2e/tests/support/native-operations.spec.ts",
+    "source_test": "tests/e2e/site/support/native-operations.spec.ts",
     "captured_at": "2026-09-07T10:16:35.118Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9460,7 +9460,7 @@
       "f271813e-16ef-429d-ac06-89815ede89fb"
     ],
     "description": "Saved and reloaded an assistant configuration; no external model invocation claimed.",
-    "source_test": "apps/site/e2e/tests/support/native-operations.spec.ts",
+    "source_test": "tests/e2e/site/support/native-operations.spec.ts",
     "captured_at": "2026-09-07T10:16:37.602Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9474,7 +9474,7 @@
       "01M1XPP2637MVECK4P91X9CZYQ"
     ],
     "description": "Captured real verification email, followed its emitted URL, and completed WebAuthn account registration.",
-    "source_test": "apps/site/e2e/tests/auth/register.spec.ts",
+    "source_test": "tests/e2e/site/auth/register.spec.ts",
     "captured_at": "2026-09-07T10:30:07.426Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9488,7 +9488,7 @@
       "01M1XPP5SCDXXX15SWKHNAKEDP"
     ],
     "description": "Captured real verification email, followed its emitted URL, and completed WebAuthn account registration.",
-    "source_test": "apps/site/e2e/tests/auth/register.spec.ts",
+    "source_test": "tests/e2e/site/auth/register.spec.ts",
     "captured_at": "2026-09-07T10:30:11.298Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9503,7 +9503,7 @@
       "be88b77e-8bcd-4a38-89b4-fc4bbf937fbc"
     ],
     "description": "Added a block, exercised undo/redo, saved the graph, published a real version and activated a release.",
-    "source_test": "apps/site/e2e/tests/flows/flows-editor.spec.ts",
+    "source_test": "tests/e2e/site/flows/flows-editor.spec.ts",
     "captured_at": "2026-09-07T10:33:01.744Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9517,7 +9517,7 @@
       "23cd59dc-d4ee-4bcd-b68d-dba45797b432"
     ],
     "description": "Created a subscriber without sending opt-in mail, read it back, filtered the table and downloaded a CSV containing its exact address.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-native.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-native.spec.ts",
     "captured_at": "2026-09-07T10:41:01.105Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9531,7 +9531,7 @@
       "e8e9ad05-eade-46f8-9f19-ccf577121a39"
     ],
     "description": "Saved a real exit-only journey, activated it with an unused QA trigger, paused it and verified its stored graph and state after reload; no message delivery was configured.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-native.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-native.spec.ts",
     "captured_at": "2026-09-07T10:41:08.043Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9545,7 +9545,7 @@
       "28483be7-6d97-4573-8d02-149da604ca9e"
     ],
     "description": "Saved an explicitly disabled webhook connector in the browser and verified its destination and disabled state after reload; no webhook was dispatched.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-native.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-native.spec.ts",
     "captured_at": "2026-09-07T10:41:10.518Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9559,7 +9559,7 @@
       "f1a0ff08-d637-4b6a-ba3a-f8b97344a606"
     ],
     "description": "Created a branded domain in the browser, read its stored unverified state and reloaded it; no DNS verification was simulated.",
-    "source_test": "apps/site/e2e/tests/links/dynamic-links-settings.spec.ts",
+    "source_test": "tests/e2e/site/links/dynamic-links-settings.spec.ts",
     "captured_at": "2026-09-07T10:40:38.184Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9573,7 +9573,7 @@
       "1-prod"
     ],
     "description": "Changed collection consent preference in the browser, read the owner setting and confirmed it after reload, then restored the original preference.",
-    "source_test": "apps/site/e2e/tests/links/dynamic-links-settings.spec.ts",
+    "source_test": "tests/e2e/site/links/dynamic-links-settings.spec.ts",
     "captured_at": "2026-09-07T10:40:58.777Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9588,7 +9588,7 @@
       "e01639aa-b2c3-4c76-b23a-43730b14a404"
     ],
     "description": "Created an HTML template and linked campaign draft through the forms, verified draft state and content through the owner API, then reloaded the table.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-native.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-native.spec.ts",
     "captured_at": "2026-09-07T10:41:04.654Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9602,7 +9602,7 @@
       "38796a3f-0d0a-4fe5-b229-b12bd5c2c825"
     ],
     "description": "Created an inactive platform rule with an explicit destination and priority, then verified both fields and its inactive state after reload.",
-    "source_test": "apps/site/e2e/tests/links/dynamic-links-settings.spec.ts",
+    "source_test": "tests/e2e/site/links/dynamic-links-settings.spec.ts",
     "captured_at": "2026-09-07T10:41:57.961Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9616,7 +9616,7 @@
       "1-prod"
     ],
     "description": "Saved preview metadata, verified persistence after reload and switched to its live LinkedIn preview.",
-    "source_test": "apps/site/e2e/tests/links/dynamic-links-settings.spec.ts",
+    "source_test": "tests/e2e/site/links/dynamic-links-settings.spec.ts",
     "captured_at": "2026-09-07T10:42:03.049Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9631,7 +9631,7 @@
       "o5nrrvpwAGvssPgikYybar2xltGutJsN0RrAmQETyFY"
     ],
     "description": "Registered a backup passkey through the account form, read the credential list, revoked the original and retained the backup.",
-    "source_test": "apps/site/e2e/tests/auth/login.spec.ts",
+    "source_test": "tests/e2e/site/auth/login.spec.ts",
     "captured_at": "2026-09-07T10:42:03.933Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9645,7 +9645,7 @@
       "01M1XQC2XK9QGJHF80V2DZ20TV"
     ],
     "description": "Saved the real operator profile, reloaded the form and confirmed the same name in the authenticated Core session.",
-    "source_test": "apps/site/e2e/tests/auth/login.spec.ts",
+    "source_test": "tests/e2e/site/auth/login.spec.ts",
     "captured_at": "2026-09-07T10:42:11.153Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -9659,7 +9659,7 @@
       "1-prod"
     ],
     "description": "Opened the configured Identity overview alias; showed live auth metadata and followed the Roles navigation link.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:25.325Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9673,7 +9673,7 @@
       "1-prod"
     ],
     "description": "Opened the configured Identity overview alias; showed live auth metadata and followed the Roles navigation link.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:26.502Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9687,7 +9687,7 @@
       "1-prod"
     ],
     "description": "Opened the configured Identity overview alias; showed live auth metadata and followed the Roles navigation link.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:27.623Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9701,7 +9701,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Filtered the actual persisted native subject, confirmed no-result behavior, then restored the user list.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:31.696Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9717,7 +9717,7 @@
       "1"
     ],
     "description": "Read real Email/SMS/sign-in events, opened each cleanup confirmation, cancelled, and confirmed all persisted IDs remain.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:36.248Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9731,7 +9731,7 @@
       "3"
     ],
     "description": "Six real account buttons produced registered OAuth requests with fresh state and verified PKCE. External navigation was blocked in QA; no remote account change is claimed.",
-    "source_test": "apps/site/e2e/tests/identity/identity-navigation.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-navigation.spec.ts",
     "captured_at": "2026-09-07T10:41:50.918Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9745,7 +9745,7 @@
       "6"
     ],
     "description": "Created using the real browser form and read back through the owning Identity API.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:41:53.282Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9759,7 +9759,7 @@
       "6"
     ],
     "description": "Updated with the real Save control; values survived reload and an independent API read.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:41:59.935Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9773,7 +9773,7 @@
       "6"
     ],
     "description": "List links open the actual record created by this browser scenario.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:03.236Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9787,7 +9787,7 @@
       "19"
     ],
     "description": "Created using the real browser form and read back through the owning Identity API.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:07.433Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9801,7 +9801,7 @@
       "19"
     ],
     "description": "Updated with the real Save control; values survived reload and an independent API read.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:09.820Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9815,7 +9815,7 @@
       "19"
     ],
     "description": "List links open the actual record created by this browser scenario.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:11.932Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9829,7 +9829,7 @@
       "5"
     ],
     "description": "Created using the real browser form and read back through the owning Identity API.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:13.532Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9843,7 +9843,7 @@
       "5"
     ],
     "description": "Updated with the real Save control; values survived reload and an independent API read.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:15.355Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9857,7 +9857,7 @@
       "5"
     ],
     "description": "List links open the actual record created by this browser scenario.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:17.306Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9871,7 +9871,7 @@
       "5"
     ],
     "description": "Created using the real browser form and read back through the owning Identity API.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:18.872Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9885,7 +9885,7 @@
       "5"
     ],
     "description": "Updated with the real Save control; values survived reload and an independent API read.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:20.677Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9899,7 +9899,7 @@
       "5"
     ],
     "description": "List links open the actual record created by this browser scenario.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:22.617Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9913,7 +9913,7 @@
       "6"
     ],
     "description": "Created an SPA application with a selected real OAuth scope using the form.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:24.730Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9927,7 +9927,7 @@
       "6"
     ],
     "description": "Saved application metadata and read it back after reload.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:26.570Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9941,7 +9941,7 @@
       "6"
     ],
     "description": "Applications list navigates to the persisted application.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:28.526Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9955,7 +9955,7 @@
       "4"
     ],
     "description": "Created a real unassigned informational banner using its browser form.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:30.908Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9969,7 +9969,7 @@
       "4"
     ],
     "description": "Edited and disabled the actual banner; API and reload confirm both changes.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:32.781Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9983,7 +9983,7 @@
       "3"
     ],
     "description": "Saved a QA SAML IdP metadata document using the real form; no authentication at the fixture domain.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:34.424Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -9997,7 +9997,7 @@
       "3"
     ],
     "description": "Saved email attribute mapping and disabled the QA IdP; reload and API read confirm persistence.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:36.855Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -10011,7 +10011,7 @@
       "3"
     ],
     "description": "IdP list navigates to its actual persisted configuration.",
-    "source_test": "apps/site/e2e/tests/identity/identity.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity.spec.ts",
     "captured_at": "2026-09-07T10:42:38.828Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
@@ -10061,7 +10061,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Compared the native user to the owning API, rendered French passkey controls without translation errors, cancelled deletion, reloaded and returned through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:36.588Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10075,7 +10075,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:41.843Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10089,7 +10089,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:47.004Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10103,7 +10103,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:52.342Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10117,7 +10117,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Compared the native user to the owning API, rendered French passkey controls without translation errors, cancelled deletion, reloaded and returned through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:36.588Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10131,7 +10131,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Compared the native user to the owning API, rendered French passkey controls without translation errors, cancelled deletion, reloaded and returned through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:36.588Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10145,7 +10145,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Compared the native user to the owning API, rendered French passkey controls without translation errors, cancelled deletion, reloaded and returned through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:36.588Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10159,7 +10159,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:41.843Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10173,7 +10173,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:41.843Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10187,7 +10187,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:41.843Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10201,7 +10201,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:47.004Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10215,7 +10215,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:47.004Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10229,7 +10229,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:47.004Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10243,7 +10243,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:52.342Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10257,7 +10257,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:52.342Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10271,7 +10271,7 @@
       "1"
     ],
     "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
-    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "source_test": "tests/e2e/site/identity/identity-details.spec.ts",
     "captured_at": "2026-09-07T10:44:52.342Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
   },
@@ -10282,7 +10282,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4",
       "9e419563-d227-4e9b-8f28-8919684562ef",
@@ -10298,7 +10298,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4",
       "9e419563-d227-4e9b-8f28-8919684562ef",
@@ -10314,7 +10314,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4"
     ]
@@ -10326,7 +10326,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "796cdaee-43f5-4993-a8ef-d81fce4006fd"
     ]
@@ -10338,7 +10338,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "3465fa2c-5c70-4bea-84d7-e67bbebde41a"
     ]
@@ -10350,7 +10350,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "796cdaee-43f5-4993-a8ef-d81fce4006fd"
     ]
@@ -10362,7 +10362,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "fa8fd914-f1de-4a3c-a580-a13e529107ec"
     ]
@@ -10374,7 +10374,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "b5d10086-fa19-44e2-b110-e72704a4bb7c"
     ]
@@ -10386,7 +10386,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4"
     ]
@@ -10398,7 +10398,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4",
       "9e419563-d227-4e9b-8f28-8919684562ef",
@@ -10414,7 +10414,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "9e419563-d227-4e9b-8f28-8919684562ef"
     ]
@@ -10426,7 +10426,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "54eec4b8-19fa-4566-80ef-4d0c5b220493"
     ]
@@ -10438,7 +10438,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
     ]
@@ -10450,7 +10450,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
     ]
@@ -10462,7 +10462,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
     ]
@@ -10474,7 +10474,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
     ]
@@ -10486,7 +10486,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
     ]
@@ -10498,7 +10498,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
     ]
@@ -10510,7 +10510,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "c5d41815-3e27-4c23-87e7-5ddf76013a93"
     ]
@@ -10522,7 +10522,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "c5d41815-3e27-4c23-87e7-5ddf76013a93"
     ]
@@ -10534,7 +10534,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "c5d41815-3e27-4c23-87e7-5ddf76013a93"
     ]
@@ -10546,7 +10546,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "53f40b69-8f82-4d33-8595-d938a5191586"
     ]
@@ -10558,7 +10558,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "53f40b69-8f82-4d33-8595-d938a5191586"
     ]
@@ -10570,7 +10570,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "9379317f-9f03-4759-a3ef-e381e1ffa409"
     ]
@@ -10582,7 +10582,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "9379317f-9f03-4759-a3ef-e381e1ffa409"
     ]
@@ -10594,7 +10594,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -10606,7 +10606,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "1"
     ]
@@ -10618,7 +10618,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "4b7068e6-6b98-4506-8e32-f1549b1eb61a"
     ]
@@ -10630,7 +10630,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
     ]
@@ -10642,7 +10642,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
-    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-analytics.runtime.test.ts",
     "data_ids": [
       "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
     ]
@@ -10658,7 +10658,7 @@
       "sdk-flutter-v2.1.4"
     ],
     "description": "Compared the complete catalogue to the owning API, refreshed it, expanded installation instructions and verified both clipboard actions against the persisted release metadata.",
-    "source_test": "apps/site/e2e/tests/settings/libraries.spec.ts",
+    "source_test": "tests/e2e/site/settings/libraries.spec.ts",
     "captured_at": "2026-09-07T10:46:07.348Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-libraries-browser.json"
   },
@@ -10673,7 +10673,7 @@
       "d10de095-9e7f-498f-baba-31ff31ebdf24"
     ],
     "description": "Synchronized and verified the real ledger, searched its persisted operation, archived that sequence and reloaded the immutable checksum.",
-    "source_test": "apps/site/e2e/tests/settings/system-tools.spec.ts",
+    "source_test": "tests/e2e/site/settings/system-tools.spec.ts",
     "captured_at": "2026-09-07T10:55:55.227Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-system-tools-browser.json"
   },
@@ -10687,7 +10687,7 @@
       "01M1XR5B9YVKVSNS8WPHR7NY2W"
     ],
     "description": "Created and edited a real CMS document, published it, compared its stored locale and content, then reloaded and opened revision history.",
-    "source_test": "apps/site/e2e/tests/settings/system-tools.spec.ts",
+    "source_test": "tests/e2e/site/settings/system-tools.spec.ts",
     "captured_at": "2026-09-07T10:55:57.964Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-system-tools-browser.json"
   },
@@ -10702,7 +10702,7 @@
       "f3164e5d-325f-41e2-90cb-94d4678cb43b"
     ],
     "description": "Saved a draft gateway route, published and re-read its manifest, invoked the real health target through the UI and reopened the persisted route after reload.",
-    "source_test": "apps/site/e2e/tests/settings/system-tools.spec.ts",
+    "source_test": "tests/e2e/site/settings/system-tools.spec.ts",
     "captured_at": "2026-09-07T10:56:00.645Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-system-tools-browser.json"
   },
@@ -10718,7 +10718,7 @@
       "3cd0e421-eb91-425e-994e-b522e617216f"
     ],
     "description": "Created linked product/package/offering using real forms; edited and archived the offering, verified filters and persisted relationships while the product remains active.",
-    "source_test": "apps/site/e2e/tests/revenue/revenue-page.spec.ts",
+    "source_test": "tests/e2e/site/revenue/revenue-page.spec.ts",
     "captured_at": "2026-09-07T10:46:49.610Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-products-browser.json"
   },
@@ -10732,7 +10732,7 @@
       "fd5fc990-a545-48a0-b790-29b2ae1c5c49"
     ],
     "description": "Created a real SDK anonymous customer, found it in the browser, blocked it, confirmed persistence after reload, then unblocked and verified no-result search.",
-    "source_test": "apps/site/e2e/tests/revenue/revenue-page.spec.ts",
+    "source_test": "tests/e2e/site/revenue/revenue-page.spec.ts",
     "captured_at": "2026-09-07T10:53:33.311Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-billing-customers-browser.json"
   },
@@ -10743,7 +10743,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "flow-project-1-component-card",
       "flow-project-1-component-tour-card",
@@ -10764,7 +10764,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "9bf72391-4643-4ebd-9f6a-5380c2be64ff"
     ]
@@ -10776,7 +10776,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "9bf72391-4643-4ebd-9f6a-5380c2be64ff"
     ]
@@ -10788,7 +10788,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "e0dd7bcd-cdb4-45a0-bdda-1e100c48f5ee"
     ]
@@ -10800,7 +10800,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "9bf72391-4643-4ebd-9f6a-5380c2be64ff"
     ]
@@ -10812,7 +10812,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "024550d3-d82e-4f93-a957-ccde7f92f69e"
     ]
@@ -10824,7 +10824,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "497e97e80ec72c94194cc31160d7bc6b6d4a70ae8e9610b8e622b4d36af4a592"
     ]
@@ -10836,7 +10836,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "14d4cebd-d555-499e-8bfa-47d8af8e731b"
     ]
@@ -10848,7 +10848,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "497e97e80ec72c94194cc31160d7bc6b6d4a70ae8e9610b8e622b4d36af4a592"
     ]
@@ -10860,7 +10860,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "4357d0de-4f64-4dd4-be73-9f2b5cf1dc99"
     ]
@@ -10872,7 +10872,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "5ff28371-6277-48f4-8ea0-84552305eed3"
     ]
@@ -10884,7 +10884,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "5ff28371-6277-48f4-8ea0-84552305eed3"
     ]
@@ -10896,7 +10896,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
     ]
@@ -10908,7 +10908,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "14972f24-0cd8-4b20-bca4-9988a3189904"
     ]
@@ -10920,7 +10920,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "14972f24-0cd8-4b20-bca4-9988a3189904"
     ]
@@ -10932,7 +10932,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "14972f24-0cd8-4b20-bca4-9988a3189904"
     ]
@@ -10944,7 +10944,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
     ]
@@ -10956,7 +10956,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
     ]
@@ -10968,7 +10968,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "db1966ac-2c95-45fd-b4a2-6c22678d3eac"
     ]
@@ -10980,7 +10980,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
     ]
@@ -10992,7 +10992,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "14972f24-0cd8-4b20-bca4-9988a3189904",
       "db1966ac-2c95-45fd-b4a2-6c22678d3eac",
@@ -11006,7 +11006,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "14972f24-0cd8-4b20-bca4-9988a3189904"
     ]
@@ -11018,7 +11018,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
     ]
@@ -11030,7 +11030,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-flows.txt",
-    "test": "apps/site/runtime-tests/retirement-api-flows.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-flows.runtime.test.ts",
     "data_ids": [
       "14972f24-0cd8-4b20-bca4-9988a3189904",
       "497e97e80ec72c94194cc31160d7bc6b6d4a70ae8e9610b8e622b4d36af4a592"
@@ -11043,7 +11043,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "e0dd7bcd-cdb4-45a0-bdda-1e100c48f5ee",
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
@@ -11056,7 +11056,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
     ]
@@ -11068,7 +11068,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
     ]
@@ -11080,7 +11080,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
     ]
@@ -11092,7 +11092,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
     ]
@@ -11104,7 +11104,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "6ab1e988-f3c7-406b-be0d-b2a96a84d07e"
     ]
@@ -11116,7 +11116,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
     ]
@@ -11128,7 +11128,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "1f284dc3-8fba-41cf-a64e-9138c88a2596"
     ]
@@ -11140,7 +11140,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "1f284dc3-8fba-41cf-a64e-9138c88a2596"
     ]
@@ -11152,7 +11152,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "1f284dc3-8fba-41cf-a64e-9138c88a2596"
     ]
@@ -11164,7 +11164,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "1f284dc3-8fba-41cf-a64e-9138c88a2596"
     ]
@@ -11176,7 +11176,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability-email.runtime.test.ts",
     "data_ids": [
       "2794fa03-b107-4d50-b0bf-e9d5583ef474",
       "b2de27eb-f7e6-401a-a520-f2cdff9643a5",
@@ -11190,7 +11190,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability-email.runtime.test.ts",
     "data_ids": [
       "b2de27eb-f7e6-401a-a520-f2cdff9643a5"
     ]
@@ -11202,7 +11202,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability-email.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability-email.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability-email.runtime.test.ts",
     "data_ids": [
       "fadd519b-b93a-46b4-ab96-ea5425fe7b4d"
     ]
@@ -11214,7 +11214,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
-    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-user.runtime.test.ts",
     "data_ids": [
       "0f947c1c-2fa5-4c7a-84dd-16395d4affce",
       "e9646e88-7c03-453c-9163-bb0236673c75"
@@ -11227,7 +11227,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
-    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-user.runtime.test.ts",
     "data_ids": [
       "e9646e88-7c03-453c-9163-bb0236673c75",
       "91faa374-567d-46d7-b8cb-b28ca7b02dd0"
@@ -11240,7 +11240,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
-    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-user.runtime.test.ts",
     "data_ids": [
       "0f947c1c-2fa5-4c7a-84dd-16395d4affce"
     ]
@@ -11252,7 +11252,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
-    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-user.runtime.test.ts",
     "data_ids": [
       "0f947c1c-2fa5-4c7a-84dd-16395d4affce"
     ]
@@ -11264,7 +11264,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
-    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-user.runtime.test.ts",
     "data_ids": [
       "0f947c1c-2fa5-4c7a-84dd-16395d4affce"
     ]
@@ -11276,7 +11276,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
-    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-user.runtime.test.ts",
     "data_ids": [
       "0f947c1c-2fa5-4c7a-84dd-16395d4affce",
       "5c5b059c-5dcc-456a-939f-1f24fe1cd9f9"
@@ -11289,7 +11289,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
-    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-user.runtime.test.ts",
     "data_ids": [
       "0f947c1c-2fa5-4c7a-84dd-16395d4affce"
     ]
@@ -11301,7 +11301,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
-    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-user.runtime.test.ts",
     "data_ids": [
       "91faa374-567d-46d7-b8cb-b28ca7b02dd0"
     ]
@@ -11313,7 +11313,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
-    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-user.runtime.test.ts",
     "data_ids": [
       "0f947c1c-2fa5-4c7a-84dd-16395d4affce"
     ]
@@ -11325,7 +11325,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "a0d2128b-521c-46a0-9c39-c28b543b3b1b"
     ]
@@ -11337,7 +11337,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "a0d2128b-521c-46a0-9c39-c28b543b3b1b"
     ]
@@ -11349,7 +11349,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1-prod"
     ]
@@ -11361,7 +11361,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1-prod"
     ]
@@ -11373,7 +11373,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "ecbb95687102473686fe8f0b9c8e420505d3b83e63ffba485341fc61deb215b2"
     ]
@@ -11385,7 +11385,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "0f386b86-2065-46d4-91b3-5841663aa980"
     ]
@@ -11397,7 +11397,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "ecbb95687102473686fe8f0b9c8e420505d3b83e63ffba485341fc61deb215b2"
     ]
@@ -11409,7 +11409,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "0f386b86-2065-46d4-91b3-5841663aa980"
     ]
@@ -11421,7 +11421,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "ecbb95687102473686fe8f0b9c8e420505d3b83e63ffba485341fc61deb215b2"
     ]
@@ -11433,7 +11433,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "0f386b86-2065-46d4-91b3-5841663aa980"
     ]
@@ -11445,7 +11445,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "0f386b86-2065-46d4-91b3-5841663aa980"
     ]
@@ -11457,7 +11457,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "1-prod",
       "1-test"
@@ -11470,7 +11470,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
     ]
@@ -11482,7 +11482,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "28c10cf3-d229-4c94-aace-a93ef6abe8bb"
     ]
@@ -11494,7 +11494,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
-    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-observability.runtime.test.ts",
     "data_ids": [
       "28c10cf3-d229-4c94-aace-a93ef6abe8bb"
     ]
@@ -11506,7 +11506,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
     ]
@@ -11518,7 +11518,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
     ]
@@ -11530,7 +11530,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "15b24c85-1e11-4f44-ac40-d431c8766459",
       "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
@@ -11543,7 +11543,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
     ]
@@ -11555,7 +11555,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
     ]
@@ -11567,7 +11567,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
     ]
@@ -11579,7 +11579,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "2e64f413-9791-48cc-93c8-d6fe9f7b7295"
     ]
@@ -11591,7 +11591,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "2e64f413-9791-48cc-93c8-d6fe9f7b7295"
     ]
@@ -11603,7 +11603,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "e62ccc6c-0555-42f7-b2b3-df4d738a9171"
     ]
@@ -11615,7 +11615,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "e62ccc6c-0555-42f7-b2b3-df4d738a9171"
     ]
@@ -11627,7 +11627,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "e62ccc6c-0555-42f7-b2b3-df4d738a9171"
     ]
@@ -11639,7 +11639,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "aaf98c5f-4954-43fe-9edb-c7392313f98a"
     ]
@@ -11651,7 +11651,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "ad675b1e-236c-4e70-8d71-fdc6155d3f01"
     ]
@@ -11663,7 +11663,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "aa2e1f30-8954-413e-97d5-f60975c43d7f"
     ]
@@ -11675,7 +11675,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "5d484d36-70d1-45e7-8109-c99babb3ef3f"
     ]
@@ -11687,7 +11687,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "aaf98c5f-4954-43fe-9edb-c7392313f98a"
     ]
@@ -11699,7 +11699,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "8d18dc5e-1d10-4ceb-b859-8382fe8d57f0"
     ]
@@ -11711,7 +11711,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
     ]
@@ -11723,7 +11723,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
     ]
@@ -11735,7 +11735,7 @@
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
-    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-support.runtime.test.ts",
     "data_ids": [
       "0f386b86-2065-46d4-91b3-5841663aa980"
     ]
@@ -11951,7 +11951,7 @@
       "1-test"
     ],
     "description": "Changed the Test Support business profile through its form and verified the owning API and reloaded field before restoring the previous name.",
-    "source_test": "apps/site/e2e/tests/support/support-management.spec.ts",
+    "source_test": "tests/e2e/site/support/support-management.spec.ts",
     "captured_at": "2026-09-07T11:12:24.497Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-management-browser.json"
   },
@@ -11965,7 +11965,7 @@
       "abb0ad1b-c716-44c9-a960-7df5ccd21a1f"
     ],
     "description": "Created and edited a Worker-validated configuration label, compared its persisted ID and name, and reopened it after reload.",
-    "source_test": "apps/site/e2e/tests/support/support-management.spec.ts",
+    "source_test": "tests/e2e/site/support/support-management.spec.ts",
     "captured_at": "2026-09-07T11:12:27.332Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-management-browser.json"
   },
@@ -11980,7 +11980,7 @@
       "fa0a9331-83cb-4b81-a4e1-1c68add7f8ef"
     ],
     "description": "Attached a widget connection through its form to a real native inbox, verified the stored relationship, and reloaded both Channels and Connections views.",
-    "source_test": "apps/site/e2e/tests/support/support-management.spec.ts",
+    "source_test": "tests/e2e/site/support/support-management.spec.ts",
     "captured_at": "2026-09-07T11:12:30.802Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-management-browser.json"
   },
@@ -11994,7 +11994,7 @@
       "65bec71c-1935-44c1-8cb0-08363af48f3f"
     ],
     "description": "Configured a dashboard app using the integration form, verified its stored target URL, searched it after reload and saved an updated target through its configuration form; no external delivery was initiated.",
-    "source_test": "apps/site/e2e/tests/support/support-management.spec.ts",
+    "source_test": "tests/e2e/site/support/support-management.spec.ts",
     "captured_at": "2026-09-07T11:12:33.642Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-management-browser.json"
   },
@@ -12008,7 +12008,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Searched a real SDK application account, inspected it, saved the profile name through the browser form and verified persistence after reload. Original name restored after the scenario.",
-    "source_test": "apps/site/e2e/tests/app/app-audience.spec.ts",
+    "source_test": "tests/e2e/site/app/app-audience.spec.ts",
     "captured_at": "2026-09-07T11:12:45.274Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   },
@@ -12022,7 +12022,7 @@
       "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
     ],
     "description": "Searched a real SDK application account, inspected it, saved the profile name through the browser form and verified persistence after reload. Original name restored after the scenario.",
-    "source_test": "apps/site/e2e/tests/app/app-audience.spec.ts",
+    "source_test": "tests/e2e/site/app/app-audience.spec.ts",
     "captured_at": "2026-09-07T11:12:48.026Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   },
@@ -12036,7 +12036,7 @@
       "ab270a2b-9ae4-483d-a6a8-2f7ba538c34b"
     ],
     "description": "Created and edited a real acquisition customer with browser controls; normalized country and reloaded name were read back through the owning API, with search filtering verified.",
-    "source_test": "apps/site/e2e/tests/app/app-audience.spec.ts",
+    "source_test": "tests/e2e/site/app/app-audience.spec.ts",
     "captured_at": "2026-09-07T11:12:51.681Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   },
@@ -12051,7 +12051,7 @@
       "1be7994f-979e-4754-a1bc-7b0adb3b2496"
     ],
     "description": "Created real referral records through the owning API, then filtered, sorted both directions and reloaded the browser search state.",
-    "source_test": "apps/site/e2e/tests/app/app-audience.spec.ts",
+    "source_test": "tests/e2e/site/app/app-audience.spec.ts",
     "captured_at": "2026-09-07T11:12:55.057Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   },
@@ -12065,7 +12065,7 @@
       "307e7ea4-0bae-4a9c-9592-06fd0de678c9"
     ],
     "description": "Created an inbound provider webhook credential through the form, reloaded its provider metadata and confirmed the read API does not disclose the secret.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-final.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-final.spec.ts",
     "captured_at": "2026-09-07T11:16:15.759Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -12079,7 +12079,7 @@
       "83e778c5-f544-49a0-8fe3-8ab142a4f4bd"
     ],
     "description": "Created a subscriber without sending mail, observed the count increase in statistics and refreshed with the selected weekly interval.",
-    "source_test": "apps/site/e2e/tests/messaging/marketing-final.spec.ts",
+    "source_test": "tests/e2e/site/messaging/marketing-final.spec.ts",
     "captured_at": "2026-09-07T11:16:17.938Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -12098,7 +12098,7 @@
       "cc6e84c1-7bcf-419a-acdd-df1f8d54f5bf"
     ],
     "description": "Published an onboarding version, recorded its native impression/step/completion events and verified the filtered UI reports one complete journey and the matching step.",
-    "source_test": "apps/site/e2e/tests/settings/experience-native.spec.ts",
+    "source_test": "tests/e2e/site/settings/experience-native.spec.ts",
     "captured_at": "2026-09-07T11:17:31.363Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -12110,7 +12110,7 @@
     "type": "browser",
     "data_ids": [],
     "description": "Rejected an SDK event claiming to be a verified purchase, confirmed the financial register remained unchanged and verified its resulting UI state; no externally verified purchase was invented.",
-    "source_test": "apps/site/e2e/tests/dashboard/analytics-final.spec.ts",
+    "source_test": "tests/e2e/site/dashboard/analytics-final.spec.ts",
     "captured_at": "2026-09-07T11:31:57.331Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -12125,7 +12125,7 @@
       "e118afe1-7a91-4732-97be-e0610cb40ec4"
     ],
     "description": "Created a paywall in the browser, added a spacer in the visual editor, saved an immutable version, published it and reopened the persisted version.",
-    "source_test": "apps/site/e2e/tests/settings/experience-native.spec.ts",
+    "source_test": "tests/e2e/site/settings/experience-native.spec.ts",
     "captured_at": "2026-09-07T11:40:23.881Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -12142,7 +12142,7 @@
       "f206d52d-7fd7-4369-a8a7-b164886c169f"
     ],
     "description": "Recorded and replayed the same native paywall view, verified deduplication, and filtered its browser statistics by version and platform (iOS1, Android0).",
-    "source_test": "apps/site/e2e/tests/settings/experience-native.spec.ts",
+    "source_test": "tests/e2e/site/settings/experience-native.spec.ts",
     "captured_at": "2026-09-07T11:40:25.444Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
@@ -12157,7 +12157,7 @@
       "e18aeb5b-083b-4277-8d76-c0348e66f065"
     ],
     "description": "Created a real conversation through the owning API, saved a private agent note in the browser, closed it and verified reload plus open/closed filtering. No public reply was sent.",
-    "source_test": "apps/site/e2e/tests/support/support-completion.spec.ts",
+    "source_test": "tests/e2e/site/support/support-completion.spec.ts",
     "captured_at": "2026-09-07T11:34:20.132Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   },
@@ -12172,7 +12172,7 @@
       "c5c71a04-e138-42d8-a903-afd8c14b27f3"
     ],
     "description": "Refreshed after a real conversation state change, checked the decremented open count and the persisted audit event shown by Quality.",
-    "source_test": "apps/site/e2e/tests/support/support-completion.spec.ts",
+    "source_test": "tests/e2e/site/support/support-completion.spec.ts",
     "captured_at": "2026-09-07T11:34:22.186Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   },
@@ -12187,7 +12187,7 @@
       "8bd3e138-0951-48b0-8e71-293ab6b12fb3"
     ],
     "description": "Selected an empty future period, queued a real report export, waited for the actual Worker consumer, downloaded its R2 JSON and checked the persisted filters and empty result.",
-    "source_test": "apps/site/e2e/tests/support/support-completion.spec.ts",
+    "source_test": "tests/e2e/site/support/support-completion.spec.ts",
     "captured_at": "2026-09-07T11:34:30.536Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   },
@@ -12202,7 +12202,7 @@
       "82892049-e6a6-496c-890f-0e40b1424e14"
     ],
     "description": "Created a proactive campaign through the form, reloaded and searched it, and read back its draft state without starting or sending it.",
-    "source_test": "apps/site/e2e/tests/support/support-completion.spec.ts",
+    "source_test": "tests/e2e/site/support/support-completion.spec.ts",
     "captured_at": "2026-09-07T11:34:33.280Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   },
@@ -12241,7 +12241,7 @@
       "site-release-cache"
     ],
     "description": "Compared rendered health badges, project count, explicit unavailable historical metrics, configured endpoint links and a real D1 schema with canonical Worker responses, then clicked Refresh and verified a newer response. Non-healthy or disabled services remained explicit: [{\"id\":\"messaging\",\"status\":\"disabled\"},{\"id\":\"observability\",\"status\":\"misconfigured\"},{\"id\":\"mcp\",\"status\":\"unavailable\"},{\"id\":\"custom\",\"status\":\"degraded\"}]. External Custom status: unavailable.",
-    "source_test": "apps/site/e2e/tests/observability/infrastructure.spec.ts",
+    "source_test": "tests/e2e/site/observability/infrastructure.spec.ts",
     "captured_at": "2026-09-07T12:24:20.712Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-infrastructure-browser.json"
   }

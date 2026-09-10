@@ -13,15 +13,15 @@
     }
   </style>
   <body>
-    <script src="/dist/opengrow.js"></script>
+    <script src="/dist/superboard.js"></script>
 
     <script>
-      const runtimeConfig = window.__OPENGROW_CONFIG__;
+      const runtimeConfig = window.__SUPERBOARD_CONFIG__;
       if (!runtimeConfig?.projectKey || !runtimeConfig?.sdkOrigin) {
-        throw new Error("Inject __OPENGROW_CONFIG__ before loading the OpenGrow example");
+        throw new Error("Inject __SUPERBOARD_CONFIG__ before loading the SuperBoard example");
       }
 
-      const sdk = new OpenGrow.default(
+      const sdk = new SuperBoard.default(
         runtimeConfig.projectKey,
         Boolean(runtimeConfig.testEnvironment),
         (data) => {

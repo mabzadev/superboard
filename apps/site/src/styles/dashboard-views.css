@@ -2,7 +2,14 @@
 @import "../../../../packages/supbrd-front-ui/src/styles/globals.css";
 
 @source "../../../../packages/supbrd-front-ui/src";
-@source "../../../../packages/supbrd-runtime-plugins/src/front/client";
+@source "../../../../packages/plugins/supbrd-core/src/front";
+@source "../../../../packages/plugins/supbrd-plug-identity/src/front";
+@source "../../../../packages/plugins/supbrd-plug-data/src/front";
+@source "../../../../packages/plugins/supbrd-plug-commerce/src/front";
+@source "../../../../packages/plugins/supbrd-plug-communication/src/front";
+@source "../../../../packages/plugins/supbrd-plug-journeys/src/front";
+@source "../../../../packages/plugins/supbrd-plug-support/src/front";
+@source "../../../../packages/plugins/supbrd-plug-analytics/src/front";
 
 .native-front-dashboard-view {
 	width: 100%;

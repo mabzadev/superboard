@@ -7,7 +7,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "e0dd7bcd-cdb4-45a0-bdda-1e100c48f5ee"
     ]
@@ -19,7 +19,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "024550d3-d82e-4f93-a957-ccde7f92f69e"
     ]
@@ -31,7 +31,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "14d4cebd-d555-499e-8bfa-47d8af8e731b"
     ]
@@ -43,7 +43,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "4357d0de-4f64-4dd4-be73-9f2b5cf1dc99"
     ]
@@ -55,7 +55,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
     ]
@@ -67,7 +67,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
     ]
@@ -79,7 +79,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
     ]
@@ -91,7 +91,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
     ]
@@ -103,7 +103,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
     ]
@@ -115,7 +115,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "e0dd7bcd-cdb4-45a0-bdda-1e100c48f5ee",
       "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
@@ -128,7 +128,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
     ]
@@ -140,7 +140,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
     ]
@@ -152,7 +152,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
     ]
@@ -164,7 +164,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
     ]
@@ -176,7 +176,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "6ab1e988-f3c7-406b-be0d-b2a96a84d07e"
     ]
@@ -188,7 +188,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
     ]
@@ -200,7 +200,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "1f284dc3-8fba-41cf-a64e-9138c88a2596"
     ]
@@ -212,7 +212,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "1f284dc3-8fba-41cf-a64e-9138c88a2596"
     ]
@@ -224,7 +224,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "1f284dc3-8fba-41cf-a64e-9138c88a2596"
     ]
@@ -236,7 +236,7 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
-    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-marketing.runtime.test.ts",
     "data_ids": [
       "1f284dc3-8fba-41cf-a64e-9138c88a2596"
     ]

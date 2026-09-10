@@ -161,7 +161,7 @@ class SuperBoardApplicationSessionManager {
           ),
         )
         .replaceAll('=', '');
-    return 'opengrow.application_session.v1.$scope';
+    return 'superboard.application_session.v1.$scope';
   }
 
   Future<SuperBoardApplicationSession?> restore() {

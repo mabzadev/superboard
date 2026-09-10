@@ -4,8 +4,8 @@ Running 3 tests using 1 worker
 
 (node:14768) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-  ✓  1 [chromium] › e2e/tests/settings/sdk-setup.spec.ts:34:2 › android SDK setup saves, verifies, reloads and removes its Test configuration (3.9s)
-  ✓  2 [chromium] › e2e/tests/settings/sdk-setup.spec.ts:34:2 › ios SDK setup saves, verifies, reloads and removes its Test configuration (3.7s)
-  ✓  3 [chromium] › e2e/tests/settings/sdk-setup.spec.ts:34:2 › web SDK setup saves, verifies, reloads and removes its Test configuration (3.7s)
+  ✓  1 [chromium] › tests/e2e/emdash/settings/sdk-setup.spec.ts:34:2 › android SDK setup saves, verifies, reloads and removes its Test configuration (3.9s)
+  ✓  2 [chromium] › tests/e2e/emdash/settings/sdk-setup.spec.ts:34:2 › ios SDK setup saves, verifies, reloads and removes its Test configuration (3.7s)
+  ✓  3 [chromium] › tests/e2e/emdash/settings/sdk-setup.spec.ts:34:2 › web SDK setup saves, verifies, reloads and removes its Test configuration (3.7s)
 
   3 passed (12.4s)

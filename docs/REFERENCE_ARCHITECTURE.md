@@ -25,8 +25,8 @@ The canonical source layout is:
   SuperBoard libraries without copying their implementation.
 
 The reusable FlutterFlow library project named `SuperBoard` is also owned by the
-platform repository: its Git source is `tools/flutterflow-library`, its
-machine-readable surface is `config/flutterflow-library.json`, and its remote
+platform repository: its Git source is `scripts/clients/flutterflow-library`, its
+machine-readable surface is `scripts/config/flutterflow-library.json`, and its remote
 FlutterFlow project ID/API key come only from the protected GitHub Environment.
 The remote project is never a second source authority.
 
@@ -48,7 +48,7 @@ the product name and must not appear as a default inside reusable runtime code.
 | Support       | `https://api.mbza.dev/api/v1/support-client`       | Authenticated mobile Support gateway (HTTP, attachments and realtime tickets)           |
 
 The API and short-link origins are deliberately distinct. Platform endpoints
-come from `deploy/targets/mbza-development.json`; the acceptance application's
+come from `infra/targets/mbza-development.json`; the acceptance application's
 own URL and Static Assets Worker come from
 `apps/reference/reference.project.json`. Neither manifest contains a
 Cloudflare account ID or credential.
@@ -129,7 +129,7 @@ pending; pull requests never publish the MBZA test site.
 The target `features` object decides which optional common Workers are deployed.
 API, dashboard, email, identity, files, observability and MCP are the mandatory
 control-plane baseline. A feature
-required by a second application must graduate from `workers/custom/<app>` to a
+required by a second application must graduate from `apps/<app>/worker` to a
 common Worker.
 
 Files is the sole authority for application objects. Authenticated clients
@@ -160,7 +160,7 @@ Cloudflare secrets and support overlap rotation.
 
 ## Configuration contract
 
-`deploy/targets/<target>.json` contains only non-secret declarative state:
+`infra/targets/<target>.json` contains only non-secret declarative state:
 
 - target and account alias;
 - environment (`development` or `production`);
@@ -183,7 +183,7 @@ this order:
 1. `CLOUDFLARE_ACCOUNT_ID_<ACCOUNT_ALIAS>`;
 2. `CLOUDFLARE_ACCOUNT_ID` supplied by the GitHub Environment or operator.
 
-The committed development target is `deploy/targets/mbza-development.json`.
+The committed development target is `infra/targets/mbza-development.json`.
 Its resource IDs remain `null` until the first authorized bootstrap. Running
 bootstrap without `--apply` is a local plan and performs no Cloudflare write.
 
@@ -353,7 +353,7 @@ no-store `503 degraded` response when readiness is not proven.
 The app-specific Worker protocol is defined by
 `@superboard/contracts/custom-worker`. It exposes a private manifest and a
 versioned job envelope containing a capability, project reference, timestamp and
-idempotency key. `workers/custom/reference` is the template used by `mbza.dev`.
+idempotency key. `apps/reference/worker` is the template used by `mbza.dev`.
 
 Rules:
 
@@ -444,6 +444,11 @@ Cloudflare Queue backlog, D1 size and R2 usage require Cloudflare Analytics/API
 permissions and are never guessed from application tables.
 
 ## Legacy VocoStar convergence
+
+This section records the earlier application cutover design. VocoStar-specific
+source now belongs to its separate application workspace; the reusable
+reference Worker is `apps/reference/worker`. The historical deployment claims
+below are not a statement of the current remote environment.
 
 `api.vocostar.com` becomes the SuperBoard gateway instead of a separate unmanaged
 API island. Existing VocoStar conversion/media workers move behind one

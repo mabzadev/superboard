@@ -1,6 +1,7 @@
 * @mabzadev
 
-/deploy/ @mabzadev
+/infra/targets/ @mabzadev
+/packages/plugins/ @mabzadev
 /apps/reference/ @mabzadev
-/workers/api/migrations/ @mabzadev
+/packages/plugins/supbrd-core/api/migrations/ @mabzadev
 /.github/workflows/ @mabzadev

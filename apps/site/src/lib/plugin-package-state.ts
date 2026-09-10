@@ -1,6 +1,6 @@
 import { pluginPackage, pluginPackages } from "@superboard/contracts/plugin-packages";
 
-import catalog from "../../../../config/superboard-plugin-catalog.json";
+import catalog from "../../../../scripts/config/superboard-plugin-catalog.json";
 
 export interface PluginPackageScope {
 	instance_id: string;

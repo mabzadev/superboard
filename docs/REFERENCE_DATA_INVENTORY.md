@@ -57,7 +57,7 @@ manifest. The generated Wrangler file is ignored.
 | `SUPERBOARD_LIVE_MODE`           | `false` by default, `true` for integration tests | no                                            |
 
 The reference resolves these canonical `SUPERBOARD_*` values first. Matching
-`OPENGROW_*` Dart defines remain temporary migration fallbacks only; they are
+`SUPERBOARD_*` Dart defines remain temporary migration fallbacks only; they are
 not the configuration to copy into a new project.
 
 All endpoint values are validated as absolute HTTPS URLs. Demo mode exercises
@@ -112,7 +112,7 @@ Actions supplied by the SuperBoard libraries:
   `superboardApplicationCurrentSessionJson`, registration,
   password/provider/anonymous sign-in, secure refresh rotation, password reset,
   profile, logout, account deletion and disposal actions declared in
-  `config/flutterflow-custom-code.json`. The SDK is the only encrypted token
+  `scripts/config/flutterflow-custom-code.json`. The SDK is the only encrypted token
   store; the reference application intentionally owns no second token store;
 - marketing preferences: `superboardApplicationMarketingPreferencesJson` and
   `superboardApplicationUpdateMarketingConsentJson`; the API derives the
@@ -155,9 +155,9 @@ Le Dashboard relie chaque fichier à la branche Git de développement; la CI
 refuse tout symbole public ou fichier source absent du manifeste, ainsi que tout
 nom déclaré qui n'est plus exporté.
 
-Deprecated `opengrowSupport*` and `opengrowMessaging*` aliases remain available
+Deprecated `superboardSupport*` and `superboardMessaging*` aliases remain available
 only for migrations declared by the v3 compatibility surface.
-`opengrowGetUnreadMessageCount` and `opengrowDisplayMessages` are confined to
+`superboardGetUnreadMessageCount` and `superboardDisplayMessages` are confined to
 the published v2 rollback coordinate; new FlutterFlow work uses only
 `superboardSupport*` and the canonical `superboard*` actions.
 
@@ -218,7 +218,7 @@ application-state value.
 | Marketing D1 + R2                     | subscribers (including application identity linkage), consent, suppressions, public/private lists, templates, campaigns and media                                                                                                                               |
 | Onboardings D1                        | flows, versions, placements, variants and events                                                                                                                                                                                                                |
 | Reference Custom D1                   | durable `reference.echo` jobs and strict `reference.acceptance` receipts used to prove create/list/detail/cancel semantics, exact build provenance, all sixteen journeys, project/owner scoping, pagination, stats, idempotency and target-configured retention |
-| Application Custom D1 (when declared) | application-only jobs; VocoStar uses `opengrow_custom_jobs`, an exactly-once cancellation refund ledger and its retained business database                                                                                                                      |
+| Application Custom D1 (when declared) | application-only jobs; VocoStar uses `superboard_custom_jobs`, an exactly-once cancellation refund ledger and its retained business database                                                                                                                    |
 
 Queues and DLQs exist independently for events, push, maintenance, billing,
 email, Support and Marketing. Legacy Messaging queues are not deployed when
@@ -246,7 +246,7 @@ retry. No capability name implicitly creates a Cloudflare trigger.
 | Marketing        | `audit_events`, `campaigns`, `email_deliveries`, `email_events`, `email_templates`, `marketing_channel_connectors`, `marketing_idempotency_keys`, `marketing_journey_deliveries`, `marketing_journey_enrollments`, `marketing_journey_step_executions`, `marketing_journey_versions`, `marketing_journeys`, `marketing_media`, `marketing_outbox`, `marketing_signal_receipts`, `provider_event_receipts`, `provider_webhook_endpoints`, `segment_memberships`, `smtp_attempts`, `smtp_profiles`, `subscriber_identity_aliases`, `subscriber_list_memberships`, `subscriber_lists`, `subscriber_segments`, `subscribers`, `suppressions` |
 | Onboardings      | `audit_events`, `events`, `experience_variants`, `experiences`, `idempotency_keys`, `onboarding_versions`, `onboardings`, `placements`, `targeting_rules`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Reference custom | `reference_custom_jobs`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| VocoStar custom  | `opengrow_custom_jobs` plus the existing app-owned VocoStar tables                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| VocoStar custom  | `superboard_custom_jobs` plus the existing app-owned VocoStar tables                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 Names such as `audit_events`, `events`, `contacts`, `conversations` and
 `idempotency_keys` repeat safely because each module has its own D1 binding.

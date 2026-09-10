@@ -93,9 +93,3 @@ abstract class SuperBoardPlatform extends PlatformInterface {
     throw UnimplementedError('onDeeplinkReceived has not been implemented.');
   }
 }
-
-/// Compatibility alias for the OpenGrow 2.x platform interface.
-@Deprecated(
-  'Use SuperBoardPlatform. This compatibility alias will be removed in 4.0.0.',
-)
-typedef OpenGrowPlatform = SuperBoardPlatform;

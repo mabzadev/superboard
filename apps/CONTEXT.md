@@ -2,6 +2,11 @@
 
 Ce contexte nomme les surfaces interactives du Site EmDash et du produit SuperBoard.
 
+Les contrôles des applications sont dans `tests/checks/apps/`. Les parcours
+navigateur d'EmDash et de SuperBoard sont dans `tests/e2e/emdash/` et
+`tests/e2e/site/`. Consultez [le guide des tests](../tests/README.md) avant de
+modifier un parcours ou sa configuration de test.
+
 ## Langage
 
 **SuperBoard Login** :
@@ -17,5 +22,5 @@ Interface d’administration possédée par un plugin, identifiée par une route
 _À éviter_ : page générique de remplacement, contenu supprimé à la désactivation
 
 **Dashboard historique** :
-Application SuperBoard remplacée par le Site EmDash. Son code est conservé dans l’historique Git ; l’inventaire de retrait est `config/superboard-dashboard-retirement.json`. Les vues actives appartiennent aux plugins et utilisent la session opérateur EmDash.
+Application SuperBoard remplacée par le Site EmDash. Son code est conservé dans l’historique Git ; l’inventaire de retrait est `scripts/config/superboard-dashboard-retirement.json`. Les vues actives appartiennent aux plugins et utilisent la session opérateur EmDash.
 _À éviter_ : Front SuperBoard cible

@@ -93,7 +93,7 @@ Les sources primaires et les contraintes détaillées sont réunies dans [la not
 
 ## Configuration et interface EmDash
 
-Les manifestes `deploy/targets/<cible>.json` restent la source des adresses et de l’état souhaité du déploiement. La cible comprend cinq rôles d’origine et une liste explicite d’alias de migration. Le compilateur produit les variables anciennes nécessaires aux SDK et aux workers ; ces valeurs dérivées ne deviennent pas une seconde configuration indépendante.
+Les manifestes `infra/targets/<cible>.json` restent la source des adresses et de l’état souhaité du déploiement. La cible comprend cinq rôles d’origine et une liste explicite d’alias de migration. Le compilateur produit les variables anciennes nécessaires aux SDK et aux workers ; ces valeurs dérivées ne deviennent pas une seconde configuration indépendante.
 
 Une page de réglages EmDash affiche chaque rôle, son domaine canonique, ses alias, son worker de destination et son état vérifié. Une adresse attendue dans un manifeste et une adresse réellement rattachée dans Cloudflare doivent rester distinguées.
 
@@ -123,8 +123,8 @@ Les APIs, les webhooks, les signatures, les téléchargements signés et les con
 
 ## Sources du dépôt
 
-- [Catalogue des plugins](../../config/emdash-plugin-topology.json).
-- [Groupes de workers](../../scripts/worker-deployment-groups.mjs).
-- [Cible MBZA](../../deploy/targets/mbza-development.json) et [cible Vocostar](../../deploy/targets/vocostar.json).
-- [Routage des sous-domaines](../../workers/api/src/index.ts) et [générateur Cloudflare](../../scripts/cloudflare-config.mjs).
-- [RP ID Identity](../../workers/identity/src/melody/utils/crypto.ts), [découverte Identity](../../workers/identity/src/melody/handlers/other.ts) et [passkeys EmDash](../../packages/core/src/auth/passkey-config.ts).
+- [Catalogue des plugins](../../scripts/config/emdash-plugin-topology.json).
+- [Groupes de workers](../../scripts/cloudflare/deployment-groups.mjs).
+- [Cible MBZA](../../infra/targets/mbza-development.json) et [cible Vocostar](../../infra/targets/vocostar.json).
+- [Routage des sous-domaines](../../packages/plugins/supbrd-core/api/src/index.ts) et [générateur Cloudflare](../../scripts/cloudflare/config.mjs).
+- [RP ID Identity](../../packages/plugins/supbrd-plug-identity/worker/src/melody/utils/crypto.ts), [découverte Identity](../../packages/plugins/supbrd-plug-identity/worker/src/melody/handlers/other.ts) et [passkeys EmDash](../../packages/core/src/auth/passkey-config.ts).

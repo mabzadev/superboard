@@ -19,4 +19,3 @@ export 'src/support/client.dart';
 export 'src/support/models.dart';
 export 'src/support/realtime.dart';
 export 'src/support/support_actions.dart';
-export 'src/compatibility.dart';

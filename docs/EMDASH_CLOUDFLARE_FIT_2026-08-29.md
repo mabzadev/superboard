@@ -22,11 +22,11 @@ La conclusion factuelle est donc : **compatibilité de plateforme conditionnelle
 
 ## Références immuables examinées
 
-| Élément | Référence épinglée | Observation |
-| --- | --- | --- |
-| SuperBoard | commit [d1850233e97b79c3cde7eae18a0123d4d39c8ae2](https://github.com/mabzadev/superboard/commit/d1850233e97b79c3cde7eae18a0123d4d39c8ae2) | Point de départ imposé à cette recherche. |
-| EmDash publié | tag emdash@0.35.0, commit [3c99225d80a38a9751ed0e4b56e3924e40308e70](https://github.com/emdash-cms/emdash/commit/3c99225d80a38a9751ed0e4b56e3924e40308e70) | Dernière release trouvée dans le clone complet ; base reproductible utilisée pour les mesures de paquet. |
-| EmDash main | commit [1717d31b351164a5f78e95fe004ee582c7c50f40](https://github.com/emdash-cms/emdash/commit/1717d31b351164a5f78e95fe004ee582c7c50f40) | État du dépôt le 28 août 2026, soixante commits après 0.35.0. Utilisé uniquement pour vérifier les évolutions déjà présentes en amont. |
+| Élément       | Référence épinglée                                                                                                                                         | Observation                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| SuperBoard    | commit [d1850233e97b79c3cde7eae18a0123d4d39c8ae2](https://github.com/mabzadev/superboard/commit/d1850233e97b79c3cde7eae18a0123d4d39c8ae2)                  | Point de départ imposé à cette recherche.                                                                                              |
+| EmDash publié | tag emdash@0.35.0, commit [3c99225d80a38a9751ed0e4b56e3924e40308e70](https://github.com/emdash-cms/emdash/commit/3c99225d80a38a9751ed0e4b56e3924e40308e70) | Dernière release trouvée dans le clone complet ; base reproductible utilisée pour les mesures de paquet.                               |
+| EmDash main   | commit [1717d31b351164a5f78e95fe004ee582c7c50f40](https://github.com/emdash-cms/emdash/commit/1717d31b351164a5f78e95fe004ee582c7c50f40)                    | État du dépôt le 28 août 2026, soixante commits après 0.35.0. Utilisé uniquement pour vérifier les évolutions déjà présentes en amont. |
 
 Le dépôt EmDash a été cloné sans shallow clone et avec récursion des submodules. Aucun submodule n’était déclaré. Le dépôt se décrit lui-même comme une beta preview ; une migration ne doit donc pas confondre la branche main, qui affiche toujours 0.35.0 dans ses manifests, avec l’artefact immuable de la release 0.35.0. Sources : [README EmDash 0.35.0](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/README.md), [package core 0.35.0](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/packages/core/package.json), [package Cloudflare 0.35.0](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/packages/cloudflare/package.json).
 
@@ -34,7 +34,7 @@ La release fixe le socle de démonstration Cloudflare à Astro 7.0.0, @astrojs/c
 
 ## Topologie SuperBoard constatée
 
-SuperBoard est un monorepo canonique pilotant plusieurs cibles Cloudflare depuis des manifests déclaratifs. Le développement mbza-development et la production vocostar peuvent vivre dans des comptes Cloudflare différents ; chaque compte est sélectionné à l’exécution et les identifiants de compte ne sont pas committés. Sources : [README SuperBoard](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/README.md), [cible mbza-development](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/deploy/targets/mbza-development.json), [cible vocostar](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/deploy/targets/vocostar.json).
+SuperBoard est un monorepo canonique pilotant plusieurs cibles Cloudflare depuis des manifests déclaratifs. Le développement mbza-development et la production vocostar peuvent vivre dans des comptes Cloudflare différents ; chaque compte est sélectionné à l’exécution et les identifiants de compte ne sont pas committés. Sources : [README SuperBoard](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/README.md), [cible mbza-development](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/mbza-development.json), [cible vocostar](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/vocostar.json).
 
 Les manifests nomment dix-sept Workers de plateforme ou de domaine par cible ; VocoStar déclare en plus deux Workers managés d’orchestration. Certaines fonctionnalités sont désactivées selon la cible, de sorte que ce nombre est un plafond déclaratif et non le nombre exact d’instances actives. Cette topologie est très en dessous de la limite actuelle de 500 Workers par compte Paid. Les Dynamic Workers chargés par EmDash ne sont pas des scripts statiques supplémentaires de ce catalogue, mais ils ont leur propre facturation et leur propre limite de concurrence. Sources : [registre de services SuperBoard](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-services.mjs), [limites Workers](https://developers.cloudflare.com/workers/platform/limits/), [tarification Dynamic Workers](https://developers.cloudflare.com/dynamic-workers/pricing/).
 
@@ -48,7 +48,7 @@ Le générateur de configuration SuperBoard applique actuellement à chaque serv
 
 Le Dashboard est ensuite une exception de build : le point d’entrée est apps/dashboard/.open-next/worker.js, les assets viennent de .open-next/assets, le cache incrémental Next est un bucket R2 NEXT_INC_CACHE_R2_BUCKET, et le Worker possède un service binding vers lui-même. Il ne possède ni D1, ni R2 MEDIA, ni KV SESSION, ni Worker Loader, ni Cron. Source : [générateur Cloudflare SuperBoard](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-config.mjs).
 
-Les domaines du Dashboard sont des Custom Domains exacts : board.mbza.dev en développement et grow.vocostar.com en production. Les autres Workers communiquent largement par Service bindings et possèdent chacun leurs ressources D1, R2, KV, Queues, Durable Objects, Workflows ou Analytics Engine selon leur rôle. Les migrations D1 sont attribuées à un seul propriétaire de schéma et sont des fichiers SQL ordonnés. Sources : [cible mbza-development](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/deploy/targets/mbza-development.json), [cible vocostar](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/deploy/targets/vocostar.json), [registre D1](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-d1-registry.mjs).
+Les domaines du Dashboard sont des Custom Domains exacts : board.mbza.dev en développement et grow.vocostar.com en production. Les autres Workers communiquent largement par Service bindings et possèdent chacun leurs ressources D1, R2, KV, Queues, Durable Objects, Workflows ou Analytics Engine selon leur rôle. Les migrations D1 sont attribuées à un seul propriétaire de schéma et sont des fichiers SQL ordonnés. Sources : [cible mbza-development](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/mbza-development.json), [cible vocostar](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/vocostar.json), [registre D1](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-d1-registry.mjs).
 
 ## Forme Cloudflare d’EmDash constatée
 
@@ -56,18 +56,18 @@ EmDash n’est pas une bibliothèque CMS agnostique du framework à injecter dan
 
 Le Worker officiel lie :
 
-| Binding ou capacité | Rôle observé | Caractère |
-| --- | --- | --- |
-| D1 DB | Tables internes, collections, utilisateurs, plugins et contenu | Requis par la configuration Cloudflare examinée |
-| R2 MEDIA | Binaire des médias | Requis par la configuration examinée |
-| KV SESSION | Sessions Astro | Ajouté automatiquement par l’adapter Cloudflare |
-| Assets | Assets Astro compilés | Ajouté par l’adapter |
-| Worker Loader LOADER | Dynamic Workers des plugins sandboxés | Requis si les plugins sandboxés sont utilisés |
-| PluginBridge exporté | RPC contrôlé entre isolates et Worker hôte | Requis avec LOADER |
-| Cron | Publication planifiée, tâches plugins et maintenance | Un cron général sur main ; deux crons dans la release 0.35.0 du démonstrateur |
-| Observability | Logs du Worker hôte | Activé dans le démonstrateur |
-| KV CACHE | Cache objet D1 | Optionnel et distinct de SESSION |
-| AI_SEARCH et Images | Recherche IA et transformations média | Options du démonstrateur, pas minimum universel du CMS |
+| Binding ou capacité  | Rôle observé                                                   | Caractère                                                                     |
+| -------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| D1 DB                | Tables internes, collections, utilisateurs, plugins et contenu | Requis par la configuration Cloudflare examinée                               |
+| R2 MEDIA             | Binaire des médias                                             | Requis par la configuration examinée                                          |
+| KV SESSION           | Sessions Astro                                                 | Ajouté automatiquement par l’adapter Cloudflare                               |
+| Assets               | Assets Astro compilés                                          | Ajouté par l’adapter                                                          |
+| Worker Loader LOADER | Dynamic Workers des plugins sandboxés                          | Requis si les plugins sandboxés sont utilisés                                 |
+| PluginBridge exporté | RPC contrôlé entre isolates et Worker hôte                     | Requis avec LOADER                                                            |
+| Cron                 | Publication planifiée, tâches plugins et maintenance           | Un cron général sur main ; deux crons dans la release 0.35.0 du démonstrateur |
+| Observability        | Logs du Worker hôte                                            | Activé dans le démonstrateur                                                  |
+| KV CACHE             | Cache objet D1                                                 | Optionnel et distinct de SESSION                                              |
+| AI_SEARCH et Images  | Recherche IA et transformations média                          | Options du démonstrateur, pas minimum universel du CMS                        |
 
 Sources : [Wrangler EmDash 0.35.0](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/demos/cloudflare/wrangler.jsonc), [entrypoint Worker](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/demos/cloudflare/src/worker.ts), [déploiement Cloudflare EmDash](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/docs/src/content/docs/deployment/cloudflare.mdx), [adapter Astro Cloudflare](https://docs.astro.build/en/guides/integrations-guide/cloudflare/).
 
@@ -75,26 +75,26 @@ Le bucket NEXT_INC_CACHE_R2_BUCKET du Dashboard OpenNext ne remplit donc pas le 
 
 ## Matrice de compatibilité
 
-| Sujet | Fait vérifié | État |
-| --- | --- | --- |
-| Runtime SSR | Astro Cloudflare produit un Worker ES modules valide ; le dry-run de la release passe. | Compatible |
-| Dashboard actuel | Le build et l’entrypoint sont Next/OpenNext, pas Astro. | Incompatible sans remplacement ou surface distincte |
-| D1 | EmDash fournit un adapter D1 et un workflow de migrations. | Compatible sous nouvelles ressources et nouveau control plane |
-| R2 | EmDash fournit un adapter R2 natif. | Compatible ; ressource et politique média à déclarer |
-| KV | Astro utilise KV pour SESSION ; EmDash peut utiliser un second KV pour CACHE. | Compatible ; identités absentes aujourd’hui |
-| Plugins sandboxés | Worker Loader et bridge fonctionnent dans le modèle Cloudflare. | Compatible sous Workers Paid, avec limites de concurrence et observabilité à traiter |
-| Workers for Platforms | Le code officiel utilise worker_loaders, pas dispatch_namespaces. | Non requis par la forme EmDash examinée |
-| Service bindings | Un Site Astro Worker peut recevoir des bindings vers les Workers SuperBoard du même compte. | Compatible sous même compte et contrats explicites |
-| Appels depuis plugin sandboxé | ctx.http utilise globalThis.fetch vers des hôtes HTTP autorisés, pas un binding SuperBoard privé. | Lacune fonctionnelle pour tout contrat privé attendu |
-| Routage | Custom Domains, Routes et versions permettent une coexistence orchestrée. | Compatible, mais aucun plan de propriété de route n’existe |
-| Local | D1, R2, KV et Service bindings ont des simulations locales ; la preuve complète LOADER du démo n’est pas locale et autonome. | Partiellement prouvé |
-| Migrations | EmDash peut générer un manifest, appliquer et vérifier avant trafic. | Compatible en principe, non intégré au registre SQL SuperBoard |
-| Sauvegarde | L’export obligatoire SuperBoard échoue sur les bases avec FTS5 virtuel. | Bloquant |
-| D1 read replicas | EmDash les prend en charge avec Sessions. | Bloqué par le flag SuperBoard si le mode session est activé |
-| Observabilité hôte | Workers Logs, traces et Tail Worker sont disponibles. | Compatible |
-| Observabilité isolates | Aucun tail attaché par le runner EmDash 0.35.0. | Incomplète |
-| Déploiement multi-cible | Astro 6+ exige un build par environnement ; SuperBoard construit déjà le Dashboard par cible. | Compatible après remplacement du build |
-| Rollback | Les versions Worker se restaurent, mais pas l’état D1, R2 ou KV. | Preuve de rollback données toujours requise |
+| Sujet                         | Fait vérifié                                                                                                                 | État                                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Runtime SSR                   | Astro Cloudflare produit un Worker ES modules valide ; le dry-run de la release passe.                                       | Compatible                                                                           |
+| Dashboard actuel              | Le build et l’entrypoint sont Next/OpenNext, pas Astro.                                                                      | Incompatible sans remplacement ou surface distincte                                  |
+| D1                            | EmDash fournit un adapter D1 et un workflow de migrations.                                                                   | Compatible sous nouvelles ressources et nouveau control plane                        |
+| R2                            | EmDash fournit un adapter R2 natif.                                                                                          | Compatible ; ressource et politique média à déclarer                                 |
+| KV                            | Astro utilise KV pour SESSION ; EmDash peut utiliser un second KV pour CACHE.                                                | Compatible ; identités absentes aujourd’hui                                          |
+| Plugins sandboxés             | Worker Loader et bridge fonctionnent dans le modèle Cloudflare.                                                              | Compatible sous Workers Paid, avec limites de concurrence et observabilité à traiter |
+| Workers for Platforms         | Le code officiel utilise worker_loaders, pas dispatch_namespaces.                                                            | Non requis par la forme EmDash examinée                                              |
+| Service bindings              | Un Site Astro Worker peut recevoir des bindings vers les Workers SuperBoard du même compte.                                  | Compatible sous même compte et contrats explicites                                   |
+| Appels depuis plugin sandboxé | ctx.http utilise globalThis.fetch vers des hôtes HTTP autorisés, pas un binding SuperBoard privé.                            | Lacune fonctionnelle pour tout contrat privé attendu                                 |
+| Routage                       | Custom Domains, Routes et versions permettent une coexistence orchestrée.                                                    | Compatible, mais aucun plan de propriété de route n’existe                           |
+| Local                         | D1, R2, KV et Service bindings ont des simulations locales ; la preuve complète LOADER du démo n’est pas locale et autonome. | Partiellement prouvé                                                                 |
+| Migrations                    | EmDash peut générer un manifest, appliquer et vérifier avant trafic.                                                         | Compatible en principe, non intégré au registre SQL SuperBoard                       |
+| Sauvegarde                    | L’export obligatoire SuperBoard échoue sur les bases avec FTS5 virtuel.                                                      | Bloquant                                                                             |
+| D1 read replicas              | EmDash les prend en charge avec Sessions.                                                                                    | Bloqué par le flag SuperBoard si le mode session est activé                          |
+| Observabilité hôte            | Workers Logs, traces et Tail Worker sont disponibles.                                                                        | Compatible                                                                           |
+| Observabilité isolates        | Aucun tail attaché par le runner EmDash 0.35.0.                                                                              | Incomplète                                                                           |
+| Déploiement multi-cible       | Astro 6+ exige un build par environnement ; SuperBoard construit déjà le Dashboard par cible.                                | Compatible après remplacement du build                                               |
+| Rollback                      | Les versions Worker se restaurent, mais pas l’état D1, R2 ou KV.                                                             | Preuve de rollback données toujours requise                                          |
 
 ## Incompatibilités et contraintes détaillées
 
@@ -108,11 +108,11 @@ Astro 6 et suivants déterminent l’environnement Cloudflare pendant le build. 
 
 ### 2. Resources D1, R2 et KV absentes
 
-Ni le schéma deploy/targets/schema.json, ni mbza-development, ni vocostar ne déclarent un CMS, un D1 EmDash, un bucket MEDIA EmDash, un KV SESSION ou un KV CACHE EmDash. Le registre des services refuse tout service extérieur à sa liste, et le registre D1 refuse tout propriétaire extérieur à sa liste. Sources : [schéma de cible](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/deploy/targets/schema.json), [registre de services](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-services.mjs), [registre D1](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-d1-registry.mjs).
+Ni le schéma infra/targets/schema.json, ni mbza-development, ni vocostar ne déclarent un CMS, un D1 EmDash, un bucket MEDIA EmDash, un KV SESSION ou un KV CACHE EmDash. Le registre des services refuse tout service extérieur à sa liste, et le registre D1 refuse tout propriétaire extérieur à sa liste. Sources : [schéma de cible](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/schema.json), [registre de services](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-services.mjs), [registre D1](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-d1-registry.mjs).
 
 La D1 d’EmDash contient à la fois l’administration, l’authentification, le modèle de contenu, le contenu et le stockage logique des plugins. Le bridge sandboxé accède directement à DB et MEDIA du Worker hôte. Il n’est pas possible de remplacer ce D1 par une liste de Service bindings vers les D1 métiers existantes sans réécrire l’adapter et le bridge. Sources : [runner sandbox](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/packages/cloudflare/src/sandbox/runner.ts), [bridge sandbox](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/packages/cloudflare/src/sandbox/bridge.ts).
 
-L’adapter R2 natif ne fournit pas d’URL signée ; les uploads passent par le Worker. EmDash fixe par défaut son upload maximal à 50 MiB. Les manifests SuperBoard fixent 10 MiB en développement et 50 MiB en production pour le service Files, mais cette règle ne s’applique pas automatiquement au Site EmDash. La politique média du CMS doit donc être explicitement alignée. Sources : [stockage EmDash](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/docs/src/content/docs/deployment/storage.mdx), [configuration EmDash](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/docs/src/content/docs/reference/configuration.mdx), [cibles SuperBoard](https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/deploy/targets).
+L’adapter R2 natif ne fournit pas d’URL signée ; les uploads passent par le Worker. EmDash fixe par défaut son upload maximal à 50 MiB. Les manifests SuperBoard fixent 10 MiB en développement et 50 MiB en production pour le service Files, mais cette règle ne s’applique pas automatiquement au Site EmDash. La politique média du CMS doit donc être explicitement alignée. Sources : [stockage EmDash](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/docs/src/content/docs/deployment/storage.mdx), [configuration EmDash](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/docs/src/content/docs/reference/configuration.mdx), [cibles SuperBoard](https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets).
 
 ### 3. D1 Sessions et global_fetch_strictly_public
 
@@ -201,7 +201,7 @@ Prérequis factuel : la migration doit posséder deux niveaux de preuve distinct
 
 ### 9. Observabilité
 
-Le Worker hôte EmDash peut recevoir exactement les réglages de Workers Logs, traces et tail_consumers déjà générés par SuperBoard. Workers Logs sur Paid conserve au maximum sept jours, avec vingt millions d’événements inclus par mois ; la taille maximale d’un log est 256 Ko. Les métriques Worker sont consultables jusqu’à trois mois. Les traces sont encore en beta le 29 août 2026 et leur facturation doit commencer le 1er octobre 2026. Sources : [Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/), [métriques](https://developers.cloudflare.com/workers/observability/metrics-and-analytics/), [traces](https://developers.cloudflare.com/workers/observability/traces/).
+Le Worker hôte EmDash peut recevoir exactement les réglages de Workers Logs, traces et tail_consumers déjà générés par SuperBoard. Workers Logs sur Paid conserve au maximum sept jours, avec vingt millions d’événements inclus par mois ; la taille maximale d’un log est 256 Ko. Les métriques Worker sont consultables jusqu’à trois mois. Les traces sont encore en beta le 29 août 2026 et leur facturation doit commencer le 1er octobre 2026. Sources : [Workers Logs](https://developers.cloudflare.com/packages/plugins/supbrd-core/observability/logs/workers-logs/), [métriques](https://developers.cloudflare.com/packages/plugins/supbrd-core/observability/metrics-and-analytics/), [traces](https://developers.cloudflare.com/packages/plugins/supbrd-core/observability/traces/).
 
 Les Dynamic Workers sont des contexts séparés. Cloudflare exige de leur attacher un Tail Worker dans la propriété tails pour conserver leurs console.log, exceptions et métadonnées. Activer observability sur le loader ne capture que le loader. Le runner EmDash 0.35.0 construit ses isolates avec modules, globalOutbound, limits et env, mais sans tails. Son API ctx.log appelle le PluginBridge, qui écrit avec console dans le Worker hôte ; ce chemin contrôlé est visible, contrairement aux logs directs de l’isolate. Sources : [observabilité Dynamic Workers](https://developers.cloudflare.com/dynamic-workers/usage/observability/), [runner EmDash](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/packages/cloudflare/src/sandbox/runner.ts), [bridge EmDash](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/packages/cloudflare/src/sandbox/bridge.ts).
 
@@ -211,21 +211,21 @@ Le Worker observability de SuperBoard est un Tail Worker Paid et peut rester le 
 
 Les chiffres suivants proviennent de la documentation Cloudflare courante au 29 août 2026. Ils ne constituent pas une estimation de facture SuperBoard.
 
-| Produit | Limite ou inclusion courante | Incidence vérifiable |
-| --- | --- | --- |
-| Workers Paid | Minimum 5 USD par compte/mois ; 10 M requêtes et 30 M ms CPU inclus | Requis par Dynamic Workers sur chaque compte cible |
-| Worker | 10 MiB gzip Paid, 128 MiB mémoire, 500 Workers, 250 Cron Triggers | Le paquet EmDash mesuré tient ; mémoire runtime non mesurée |
-| Worker | 10 000 subrequests Paid, 32 invocations Worker par requête | Borne les graphes de Service bindings et plugins |
-| Dynamic Workers | 1 000 uniques/mois inclus, puis 0,002 USD par Worker/jour | Dépend du nombre de plugins et versions effectivement invoqués |
-| Dynamic Workers | 4 isolates distincts simultanés par requête Worker | Conflit possible avec le fan-out parallèle des hooks EmDash |
-| D1 Paid | 50 000 DB par compte, 10 Go par DB, 1 To par compte | Nombre de DB non bloquant ; 10 Go par Site est une borne dure |
-| D1 Paid | 1 000 requêtes DB par invocation, ligne/BLOB 2 Mo, 100 colonnes/table | À vérifier contre les contenus Portable Text et collections réels |
-| D1 Paid | 30 jours Time Travel | Retour base possible, destructif et non hors compte |
-| R2 | 5 Tio par objet, 5 Gio en upload simple, 4,995 Tio multipart | EmDash limite par défaut à 50 Mio avant ces plafonds |
-| R2 Standard | 10 Go-mois, 1 M opérations A et 10 M opérations B inclus | À mesurer sur les médias et leur lecture |
-| KV Paid | valeur 25 Mio, 1 écriture/s sur une même clé | Sessions/cache possibles ; hotspots d’invalidation à tester |
-| KV Paid | 10 M lectures, 1 M écritures, 1 Go inclus par mois | SESSION et CACHE ont des profils séparés |
-| Routes | 1 000 routes/zone, 100 Custom Domains/zone | Pas de pression quantitative constatée |
+| Produit         | Limite ou inclusion courante                                          | Incidence vérifiable                                              |
+| --------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Workers Paid    | Minimum 5 USD par compte/mois ; 10 M requêtes et 30 M ms CPU inclus   | Requis par Dynamic Workers sur chaque compte cible                |
+| Worker          | 10 MiB gzip Paid, 128 MiB mémoire, 500 Workers, 250 Cron Triggers     | Le paquet EmDash mesuré tient ; mémoire runtime non mesurée       |
+| Worker          | 10 000 subrequests Paid, 32 invocations Worker par requête            | Borne les graphes de Service bindings et plugins                  |
+| Dynamic Workers | 1 000 uniques/mois inclus, puis 0,002 USD par Worker/jour             | Dépend du nombre de plugins et versions effectivement invoqués    |
+| Dynamic Workers | 4 isolates distincts simultanés par requête Worker                    | Conflit possible avec le fan-out parallèle des hooks EmDash       |
+| D1 Paid         | 50 000 DB par compte, 10 Go par DB, 1 To par compte                   | Nombre de DB non bloquant ; 10 Go par Site est une borne dure     |
+| D1 Paid         | 1 000 requêtes DB par invocation, ligne/BLOB 2 Mo, 100 colonnes/table | À vérifier contre les contenus Portable Text et collections réels |
+| D1 Paid         | 30 jours Time Travel                                                  | Retour base possible, destructif et non hors compte               |
+| R2              | 5 Tio par objet, 5 Gio en upload simple, 4,995 Tio multipart          | EmDash limite par défaut à 50 Mio avant ces plafonds              |
+| R2 Standard     | 10 Go-mois, 1 M opérations A et 10 M opérations B inclus              | À mesurer sur les médias et leur lecture                          |
+| KV Paid         | valeur 25 Mio, 1 écriture/s sur une même clé                          | Sessions/cache possibles ; hotspots d’invalidation à tester       |
+| KV Paid         | 10 M lectures, 1 M écritures, 1 Go inclus par mois                    | SESSION et CACHE ont des profils séparés                          |
+| Routes          | 1 000 routes/zone, 100 Custom Domains/zone                            | Pas de pression quantitative constatée                            |
 
 Sources : [limites Workers](https://developers.cloudflare.com/workers/platform/limits/), [tarification Workers](https://developers.cloudflare.com/workers/platform/pricing/), [tarification Dynamic Workers](https://developers.cloudflare.com/dynamic-workers/pricing/), [limites Dynamic Workers](https://developers.cloudflare.com/dynamic-workers/platform/limits/), [limites D1](https://developers.cloudflare.com/d1/platform/limits/), [tarification D1](https://developers.cloudflare.com/d1/platform/pricing/), [limites R2](https://developers.cloudflare.com/r2/platform/limits/), [tarification R2](https://developers.cloudflare.com/r2/pricing/), [limites KV](https://developers.cloudflare.com/kv/platform/limits/), [tarification KV](https://developers.cloudflare.com/kv/platform/pricing/).
 

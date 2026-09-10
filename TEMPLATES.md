@@ -111,20 +111,6 @@ Everything else is synced from the base template using a script:
 
 **Run this after making changes** to `src/`, `seed/`, `tsconfig.json`, `emdash-env.d.ts`, or `.gitignore` in any base template. It copies those files to the corresponding cloudflare variant.
 
-The primary Node demo is also synced from the blog template:
-
-```bash
-./scripts/sync-blog-demos.sh
-```
-
-This script does two kinds of sync:
-
-- full template sync for `templates/blog` -> `demos/simple`
-- frontend-only sync (keeping runtime-specific files) for:
-  - `templates/blog-cloudflare` -> `demos/cloudflare`
-  - `templates/blog-cloudflare` -> `demos/preview`
-  - `templates/blog` -> `demos/postgres`
-
 ### Taking Screenshots
 
 Template screenshots live in `assets/templates/{template}/latest/` and are used in the README. To update them after making visual changes:
@@ -154,7 +140,7 @@ To add pages for a template, edit `templates/screenshots.json`.
 2. Include a seed file at `seed/seed.json` (or configure the path in `package.json` under `emdash.seed`)
 3. Add the `typecheck` script to `package.json`
 4. Create the cloudflare variant in `templates/{name}-cloudflare/` with the appropriate adapter config
-5. Add the template pair to `scripts/sync-cloudflare-templates.sh`
+5. Add the template pair to `scripts/emdash/sync-cloudflare-templates.sh`
 6. Add the template's pages to `templates/screenshots.json` and run the screenshot script
 7. Update the README template gallery
 

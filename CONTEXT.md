@@ -2,6 +2,10 @@
 
 Ce contexte définit le vocabulaire transversal de SuperBoard en tant que site EmDash, sans décrire son implémentation.
 
+Les preuves de fonctionnement de la plateforme sont organisées dans
+[tests/README.md](tests/README.md). Leurs suites suivent les propriétaires du
+code, même lorsque leurs fichiers sont centralisés.
+
 ## Langage
 
 **Site EmDash** :
@@ -21,7 +25,7 @@ Dépôt officiel `emdash-cms/emdash`, utilisé comme source de synchronisation m
 _À éviter_ : dépôt canonique EmDash de SuperBoard, fork produit
 
 **Socle EmDash intégré** :
-Copie complète et exactement épinglée d’EmDash amont conservée dans le dépôt canonique SuperBoard.
+Copie épinglée d’EmDash amont conservée dans le dépôt canonique SuperBoard. Les applications de démonstration amont sont exclues.
 _À éviter_ : dépendance EmDash flottante, sous-module externe
 
 **Opérateur SuperBoard** :

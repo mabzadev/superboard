@@ -33,10 +33,6 @@ pnpm-debug.log*
 # uploads & EmDash data
 uploads/
 .emdash/
-!packages/core/tests/e2e/fixture/.emdash/
-!packages/core/tests/integration/fixture/.emdash/
-!e2e/fixture/.emdash/
-!e2e/fixture-cloudflare/.emdash/
 !templates/*/.emdash/seed.json
 
 # macOS-specific files
@@ -54,8 +50,6 @@ playwright/.cache/
 # Visual regression baselines are platform-specific. CI (Linux) is the source
 # of truth and commits `-linux.png` via the visual-apply workflow; locally
 # generated macOS/Windows baselines must never be committed (they won't match).
-e2e/tests/*-snapshots/*-darwin.png
-e2e/tests/*-snapshots/*-win32.png
 
 # Debug screenshots
 debug-*.png
@@ -74,8 +68,6 @@ __screenshots__/
 
 .emdash-bundle-tmp
 
-# Downloaded test data (fetched on demand in CI)
-examples/wp-theme-unit-test/
 # .opencode is local-only EXCEPT for agents/, which are shared with CI workflows
 # (review.yml, ultrareview.yml, bonk.yml, ultrabonk.yml). Use a contents-style
 # pattern so we can re-include the agents subdirectory.
@@ -89,12 +81,6 @@ examples/wp-theme-unit-test/
 
 .perf-query-counts
 query-counts-out/
-
-# Generated query-dump artefacts; tooling lives in scripts/query-dumps/ but
-# the per-run JSON and classification reports regenerate from the harness.
-scripts/query-dumps/sqlite/
-scripts/query-dumps/d1/
-scripts/query-dumps/classification.*.md
 !.dev.vars.example
 
 # SuperBoard overlay
@@ -105,13 +91,13 @@ node_modules/
 build/
 .dart_tool/
 **/.flutterflow/
-tools/flutterflow-library/generated_code/
+scripts/clients/flutterflow-library/generated_code/
 **/.flutter-plugins-dependencies
 .next/
 .vercel/
 .open-next/
 .wrangler/
-deploy/generated/
+infra/generated/
 .backups/
 dist/
 out/
@@ -120,7 +106,7 @@ coverage/
 tsconfig.tsbuildinfo
 test-results/
 playwright-report/
-**/e2e/.auth/
+tests/e2e/site/.auth
 
 # Local env / secrets
 .env
@@ -140,7 +126,25 @@ yarn-error.log*
 .turbo/
 /.ci-reference-contract/
 /.flows-cutover/
-/scripts/support-audit/generated/
+/packages/plugins/supbrd-plug-support/scripts/support-audit/generated/
+
+!sdks/flows/upstream/reference/product-docs/assets/sdk/debug-mode.png
+
+# Local test environments
+/tests/**/.auth/
+/tests/**/.astro/
+/tests/**/node_modules
+/tests/**/.wrangler/
+/tests/**/dist/
+
+# Maintained fixture seeds
+!tests/fixtures/*/.emdash/
+tests/fixtures/*/.emdash/*
+!tests/fixtures/*/.emdash/seed.json
+
+# Platform-specific browser screenshots
+tests/e2e/emdash/*-snapshots/*-darwin.png
+tests/e2e/emdash/*-snapshots/*-win32.png
 package-lock.json
 !apps/mcp/package-lock.json
 !sdks/javascript/package-lock.json

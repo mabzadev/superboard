@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Builds and runs the OpenGrow iOS SDK tests via SPM.
+# Builds and runs the SuperBoard iOS SDK tests via SPM.
 #
 # The Xcode project (.xcodeproj) doesn't include the test target,
 # so we temporarily hide it so xcodebuild picks up Package.swift instead.
@@ -13,8 +13,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-XCODEPROJ="$PROJECT_DIR/OpenGrow.xcodeproj"
-XCODEPROJ_BAK="$PROJECT_DIR/OpenGrow.xcodeproj.bak"
+XCODEPROJ="$PROJECT_DIR/SuperBoard.xcodeproj"
+XCODEPROJ_BAK="$PROJECT_DIR/SuperBoard.xcodeproj.bak"
 
 # Find an available iPhone simulator
 SIMULATOR_ID=$(xcrun simctl list devices available -j 2>/dev/null \
@@ -62,7 +62,7 @@ fi
 
 # Build and test
 xcodebuild test \
-    -scheme OpenGrow \
+    -scheme SuperBoard \
     -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
     -parallel-testing-enabled NO \
     $ONLY_TESTING \

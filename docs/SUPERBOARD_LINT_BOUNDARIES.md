@@ -8,11 +8,11 @@ The root gate uses the existing project configurations:
 | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | EmDash packages and applications, Site, and SuperBoard runtime definitions | Root `.oxlintrc.json`, with type-aware checks                                                |
 | Dashboard                                                                  | `apps/dashboard/eslint.config.mjs`                                                           |
-| Plugin client components and `supbrd-front-ui`                             | Dashboard rules through `config/superboard-front-eslint.config.mjs`                          |
+| Plugin client components and `supbrd-front-ui`                             | Dashboard rules through `tests/lints/frontend.config.mjs`                                    |
 | MCP application                                                            | `apps/mcp/eslint.config.js`                                                                  |
 | Analytics, Flows, Marketing, and Support Workers                           | Each Worker's `eslint.config.mjs`                                                            |
 | Imported executable Flows SDK packages and E2E tests                       | Imported SDK Oxlint configurations, with type-aware checks                                   |
-| Other SuperBoard JavaScript and TypeScript                                 | `config/superboard-lint.oxlintrc.json`, with correctness, `no-var`, and `prefer-const` rules |
+| Other SuperBoard JavaScript and TypeScript                                 | `tests/lints/superboard.oxlintrc.json`, with correctness, `no-var`, and `prefer-const` rules |
 
 The last group uses syntax checks because these sources have no common TypeScript project. Run `pnpm typecheck` separately to check the package and Worker type contracts. The root EmDash style configuration does not define the conventions of the historical Dashboard or Workers.
 
@@ -26,7 +26,7 @@ An ESLint ignored-file warning remains a failing diagnostic. Do not add an exclu
 
 ## Machine-readable results
 
-`pnpm lint:json` returns an object with `diagnostics` and `coverage`. For a clean JSON stream independent of package-manager status messages, run `node scripts/superboard-lint.mjs --json` directly. An empty `diagnostics` array means the lint gate passed; it does not establish functional or browser-test coverage.
+`pnpm lint:json` returns an object with `diagnostics` and `coverage`. For a clean JSON stream independent of package-manager status messages, run `node tests/lints/lint.mjs --json` directly. An empty `diagnostics` array means the lint gate passed; it does not establish functional or browser-test coverage.
 
 `pnpm lint:quick` uses the same file inventory and ESLint rules, with the type-aware Oxlint pass omitted. It does not replace `pnpm lint` or `pnpm typecheck` before delivery. `pnpm lint:fix` applies each owning linter's available fixes; review the resulting diff and rerun the full gate.
 
@@ -36,7 +36,7 @@ The Flows synchronizer replaces its generated directory. Run `pnpm install --fro
 
 ## Record plugin and view proofs
 
-Run `node scripts/superboard-plugin-validation-report.mjs --evidence <evidence.json> --output <report.json>` to compare test evidence with `config/superboard-plugin-independence-baseline.json`. The command writes JSON and Markdown reports and exits with status 1 while required evidence is missing, failed, or insufficient. It never derives the expected routes from the modified implementation.
+Run `node tests/checks/emdash/validation-report.mjs --evidence <evidence.json> --output <report.json>` to compare test evidence with `scripts/config/superboard-plugin-independence-baseline.json`. The command writes JSON and Markdown reports and exits with status 1 while required evidence is missing, failed, or insufficient. It never derives the expected routes from the modified implementation.
 
 Evidence is a JSON array. Each entry supplies `plugin_id`, `route_id` (or `null` for lifecycle checks), `scenario`, `status` (`passed` or `failed`), `type` (`unit`, `integration`, or `browser`), and an existing `evidence_path`. Mutation proofs also supply nonempty `data_ids` identifying persisted test data. Keep credentials out of evidence artifacts.
 

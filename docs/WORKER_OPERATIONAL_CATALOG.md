@@ -6,10 +6,10 @@ the existing SuperBoard owner/admin authorization.
 
 ## Sources of truth
 
-- `deploy/targets/<target>.json` owns deployment names, feature activation,
+- `infra/targets/<target>.json` owns deployment names, feature activation,
   public domains, public monitors, and application-specific service bindings.
-- `scripts/cloudflare-services.mjs` owns the complete common service registry.
-- `workers/api/src/routes/platform-status.ts` owns reusable operational
+- `scripts/cloudflare/services.mjs` owns the complete common service registry.
+- `packages/plugins/supbrd-core/api/src/routes/platform-status.ts` owns reusable operational
   descriptions: purpose, health mode/path, capabilities, routes, data/queue
   dependencies, and supported job families.
 - Existing `API_CAPABILITIES` remain the only API route/capability catalog;

@@ -414,7 +414,7 @@ class SuperBoardApplicationClient {
   ) async {
     final result = await _json(
       'POST',
-      apiBaseUri.resolve('/auth/opengrow-token'),
+      apiBaseUri.resolve('/auth/superboard-token'),
       authenticated: true,
     );
     final token = result['access_token']?.toString() ?? '';

@@ -143,36 +143,36 @@ contract:
 
 ```json
 {
-  "schema_version": 1,
-  "window_id": "chatwoot-vocostar-test-2026-08-08",
-  "starts_at": "2026-08-08T20:00:00Z",
-  "ends_at": "2026-08-08T22:00:00Z",
-  "opengrow_maintenance": { "enabled": true, "confirmed_at": "..." },
-  "chatwoot_maintenance": { "enabled": true, "confirmed_at": "..." },
-  "backup_receipt": {
-    "artifacts": [
-      {
-        "name": "chatwoot-postgres",
-        "bytes": 1,
-        "sha256": "64 lowercase hex characters"
-      },
-      {
-        "name": "chatwoot-storage",
-        "bytes": 1,
-        "sha256": "64 lowercase hex characters"
-      },
-      {
-        "name": "chatwoot-export",
-        "bytes": 1,
-        "sha256": "64 lowercase hex characters"
-      },
-      {
-        "name": "module-support",
-        "bytes": 1,
-        "sha256": "64 lowercase hex characters"
-      }
-    ]
-  }
+	"schema_version": 1,
+	"window_id": "chatwoot-vocostar-test-2026-08-08",
+	"starts_at": "2026-08-08T20:00:00Z",
+	"ends_at": "2026-08-08T22:00:00Z",
+	"superboard_maintenance": { "enabled": true, "confirmed_at": "..." },
+	"chatwoot_maintenance": { "enabled": true, "confirmed_at": "..." },
+	"backup_receipt": {
+		"artifacts": [
+			{
+				"name": "chatwoot-postgres",
+				"bytes": 1,
+				"sha256": "64 lowercase hex characters"
+			},
+			{
+				"name": "chatwoot-storage",
+				"bytes": 1,
+				"sha256": "64 lowercase hex characters"
+			},
+			{
+				"name": "chatwoot-export",
+				"bytes": 1,
+				"sha256": "64 lowercase hex characters"
+			},
+			{
+				"name": "module-support",
+				"bytes": 1,
+				"sha256": "64 lowercase hex characters"
+			}
+		]
+	}
 }
 ```
 

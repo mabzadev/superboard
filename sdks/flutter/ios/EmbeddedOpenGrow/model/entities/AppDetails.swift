@@ -1,1 +1,0 @@
-../../../../../ios/Sources/OpenGrow/model/entities/AppDetails.swift

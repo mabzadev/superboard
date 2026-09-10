@@ -16,23 +16,23 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.opengrow.OpenGrow
-import io.opengrow.model.CustomLinkRedirect
-import io.opengrow.model.DebugLogger
-import io.opengrow.model.LogLevel
-import io.opengrow.model.exceptions.OpenGrowException
-import io.opengrow.service.CustomRedirects
-import io.opengrow.service.TrackingParams
+import io.superboard.SuperBoard
+import io.superboard.model.CustomLinkRedirect
+import io.superboard.model.DebugLogger
+import io.superboard.model.LogLevel
+import io.superboard.model.exceptions.SuperBoardException
+import io.superboard.service.CustomRedirects
+import io.superboard.service.TrackingParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import io.opengrow.model.events.PaymentEventType
+import io.superboard.model.events.PaymentEventType
 import java.io.Serializable
 import java.lang.ref.WeakReference
 
-/** Flutter wrapper for the internal OpenGrow native implementation. */
+/** Flutter wrapper for the internal SuperBoard native implementation. */
 class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var channel: MethodChannel
     private lateinit var eventChannel: EventChannel
@@ -45,7 +45,7 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         override fun onActivityCreated(p0: Activity, p1: Bundle?) { }
         override fun onActivityStarted(activity: Activity) {
             if (activity is FlutterActivity) {
-                OpenGrow.onStart(activity)
+                SuperBoard.onStart(activity)
             }
         }
         override fun onActivityResumed(activity: Activity) { }
@@ -79,24 +79,18 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         val app = flutterPluginBinding.applicationContext as Application
         val meta = app.packageManager.getApplicationInfo(app.packageName, PackageManager.GET_META_DATA).metaData
         val apiKey = meta.getString("superboard_api_key")
-            ?: meta.getString("opengrow_api_key")
-        val useTestEnvironment = if (meta.containsKey("superboard_use_test_environment")) {
-            meta.getBoolean("superboard_use_test_environment", false)
-        } else {
-            meta.getBoolean("opengrow_use_test_environment", false)
-        }
+        val useTestEnvironment = meta.getBoolean("superboard_use_test_environment", false)
         val baseURL = meta.getString("superboard_base_url")
-            ?: meta.getString("opengrow_base_url")
         if (apiKey.isNullOrBlank() || baseURL.isNullOrBlank()) {
-            Log.e("SuperBoard", "superboard_api_key and superboard_base_url are required in AndroidManifest.xml (OpenGrow 2.x keys remain supported)")
+            Log.e("SuperBoard", "superboard_api_key and superboard_base_url are required in AndroidManifest.xml")
             return
         }
-        OpenGrow.configure(application, apiKey, useTestEnvironment, baseURL)
+        SuperBoard.configure(application, apiKey, useTestEnvironment, baseURL)
     }
 
     private fun setupDeeplinkListener() {
         activityBinding?.activity?.let { activity ->
-            OpenGrow.setOnDeeplinkReceivedListener(activity) { linkDetails ->
+            SuperBoard.setOnDeeplinkReceivedListener(activity) { linkDetails ->
                 coroutineScope.launch {
                     eventSink?.success(mapOf("link" to linkDetails.link, "data" to linkDetails.data, "tracking" to linkDetails.tracking))
                 }
@@ -176,7 +170,7 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 coroutineScope.launch {
                     try {
                         val link = withContext(Dispatchers.IO) {
-                            OpenGrow.generateLink(
+                            SuperBoard.generateLink(
                                 title = title,
                                 subtitle = subtitle,
                                 imageURL = imageURL,
@@ -189,7 +183,7 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                             )
                         }
                         result.success(link)
-                    } catch (e: OpenGrowException) {
+                    } catch (e: SuperBoardException) {
                         result.error("GENERATION_ERROR", e.message, null)
                     } catch (e: Exception) {
                         result.error("GENERATION_ERROR", e.message, null)
@@ -206,7 +200,7 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 }
                 
                 try {
-                    OpenGrow.pushToken = token
+                    SuperBoard.pushToken = token
                     result.success(null)
                 } catch (e: Exception) {
                     result.error("TOKEN_ERROR", e.message, null)
@@ -214,14 +208,14 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             }
 
             "numberOfUnreadMessages" -> {
-                OpenGrow.numberOfUnreadMessages(onResult = { count ->
+                SuperBoard.numberOfUnreadMessages(onResult = { count ->
                     result.success(count ?: 0)
                 })
             }
 
             "displayMessages" -> {
                 try {
-                    val displayed = OpenGrow.displayMessagesFragment {
+                    val displayed = SuperBoard.displayMessagesFragment {
                         result.success(null)
                     }
                     if (!displayed) {
@@ -241,7 +235,7 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 }
                 
                 try {
-                    OpenGrow.identifier = identifier
+                    SuperBoard.identifier = identifier
                     result.success(null)
                 } catch (e: Exception) {
                     result.error("USER_ERROR", e.message, null)
@@ -257,7 +251,7 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 }
                 
                 try {
-                    OpenGrow.attributes = attributes
+                    SuperBoard.attributes = attributes
                     result.success(null)
                 } catch (e: Exception) {
                     result.error("USER_ERROR", e.message, null)
@@ -275,9 +269,9 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 try {
                     // Convert the public value to the internal native debug level.
                     when (level.lowercase()) {
-                        "info" -> OpenGrow.setDebug(LogLevel.INFO)
-                        "error" -> OpenGrow.setDebug(LogLevel.ERROR)
-                        else -> OpenGrow.setDebug(LogLevel.ERROR)
+                        "info" -> SuperBoard.setDebug(LogLevel.INFO)
+                        "error" -> SuperBoard.setDebug(LogLevel.ERROR)
+                        else -> SuperBoard.setDebug(LogLevel.ERROR)
                     }
                     result.success(null)
                 } catch (e: Exception) {
@@ -294,7 +288,7 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 }
 
                 try {
-                    OpenGrow.logInAppPurchase(transactionId)
+                    SuperBoard.logInAppPurchase(transactionId)
                     result.success(null)
                 } catch (e: Exception) {
                     result.error("PAYMENT_ERROR", e.message, null)
@@ -324,7 +318,7 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 }
 
                 try {
-                    OpenGrow.logCustomPurchase(type, priceInCents, currency, productId)
+                    SuperBoard.logCustomPurchase(type, priceInCents, currency, productId)
                     result.success(null)
                 } catch (e: Exception) {
                     result.error("PAYMENT_ERROR", e.message, null)
@@ -351,7 +345,7 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
         // Add listener for new intents
         binding.addOnNewIntentListener { intent ->
-            OpenGrow.onNewIntent(intent, binding.activity)
+            SuperBoard.onNewIntent(intent, binding.activity)
             false
         }
     }
@@ -368,7 +362,7 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
         // Add listener for new intents
         binding.addOnNewIntentListener { intent ->
-            OpenGrow.onNewIntent(intent, binding.activity)
+            SuperBoard.onNewIntent(intent, binding.activity)
             false
         }
     }

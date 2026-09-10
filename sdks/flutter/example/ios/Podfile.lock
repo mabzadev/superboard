@@ -11,7 +11,7 @@ PODS:
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
-  - superboard_flutter (3.0.0):
+  - superboard_flutter (4.0.0):
     - Flutter
   - url_launcher_ios (0.0.1):
     - Flutter
@@ -47,7 +47,7 @@ SPEC CHECKSUMS:
   in_app_purchase_storekit: 22cca7d08eebca9babdf4d07d0baccb73325d3c8
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
-  superboard_flutter: ff5f064a3cbf407517a7297a4cea452cfb5c2304
+  superboard_flutter: f4e8fd585e41427528734e1e3d04bf019bb442d0
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e

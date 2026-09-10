@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "check:import": "node ../../scripts/sync-flows-upstream.mjs --check && node --test ../../scripts/sync-flows-upstream.test.mjs",
+    "check:import": "node ../../sdks/flows/scripts/sync-flows-upstream.mjs --check && node --test ../../tests/checks/sdks/flows/sync-flows-upstream.test.mjs",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   }

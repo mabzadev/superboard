@@ -1,7 +1,7 @@
 {
-  "name": "@mbzadev/opengrow-react-native-sdk",
+  "name": "@mbzadev/superboard-react-native-sdk",
   "version": "1.0.2",
-  "description": "OpenGrow react native SDK",
+  "description": "SuperBoard react native SDK",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
@@ -40,13 +40,13 @@
   ],
   "scripts": {
     "check": "yarn security:test && yarn security:audit && yarn typecheck && yarn test --runInBand && yarn prepare && yarn pack:check",
-    "example": "pnpm --filter @mbzadev/opengrow-react-native-example",
+    "example": "pnpm --filter @mbzadev/superboard-react-native-example",
     "test": "jest",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build example_old_arch/android/build example_old_arch/android/app/build example_old_arch/ios/build lib",
-    "security:test": "node --test ../../scripts/react-native-npm-audit.test.mjs",
-    "security:audit": "node ../../scripts/react-native-npm-audit.mjs",
+    "security:test": "node --test ../../tests/checks/clients/react-native-npm-audit.test.mjs",
+    "security:audit": "node ../../scripts/clients/react-native-npm-audit.mjs",
     "prepare": "bob build",
     "pack:check": "npm pack --dry-run --ignore-scripts",
     "release": "release-it"
@@ -55,7 +55,7 @@
     "react-native",
     "ios",
     "android",
-    "opengrow",
+    "superboard",
     "deeplink",
     "attribution",
     "dynamic link",
@@ -67,7 +67,7 @@
     "url": "git+https://github.com/mabzadev/superboard.git",
     "directory": "sdks/react-native"
   },
-  "author": "OpenGrow <razvan@appssemble.com> (https://github.com/mabzadev/superboard)",
+  "author": "SuperBoard <razvan@appssemble.com> (https://github.com/mabzadev/superboard)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/mabzadev/superboard/issues"
@@ -125,7 +125,7 @@
         "preset": "react-native",
         "displayName": "src",
         "testMatch": [
-          "<rootDir>/src/**/__tests__/**/*.{ts,tsx,js}"
+          "<rootDir>/../../tests/checks/sdks/react-native/unit/**/*.{test,spec}.{ts,tsx,js}"
         ],
         "modulePathIgnorePatterns": [
           "<rootDir>/example/node_modules",
@@ -134,12 +134,16 @@
         ],
         "transformIgnorePatterns": [
           "node_modules/(?!((@react-native|react-native)/|\\.pnpm/(@react-native\\+|react-native@)))"
+        ],
+        "roots": [
+          "<rootDir>/src",
+          "<rootDir>/../../tests/checks/sdks/react-native/unit"
         ]
       },
       {
         "displayName": "plugin",
         "testMatch": [
-          "<rootDir>/plugin/__tests__/*.{ts,tsx,js}"
+          "<rootDir>/../../tests/checks/sdks/react-native/plugin/*.{test,spec}.{ts,tsx,js}"
         ],
         "testEnvironment": "node",
         "moduleFileExtensions": [
@@ -147,8 +151,12 @@
           "json"
         ],
         "moduleNameMapper": {
-          "^expo/config-plugins$": "<rootDir>/plugin/__tests__/__mocks__/expo-config-plugins.js"
-        }
+          "^expo/config-plugins$": "<rootDir>/../../tests/checks/sdks/react-native/plugin/__mocks__/expo-config-plugins.js"
+        },
+        "roots": [
+          "<rootDir>/plugin",
+          "<rootDir>/../../tests/checks/sdks/react-native/plugin"
+        ]
       }
     ]
   },
@@ -227,7 +235,7 @@
     ]
   },
   "codegenConfig": {
-    "name": "RNOpenGrowWrapperSpec",
+    "name": "RNSuperBoardWrapperSpec",
     "type": "modules",
     "jsSrcsDir": "src",
     "outputDir": {
@@ -235,7 +243,7 @@
       "android": "android/generated"
     },
     "android": {
-      "javaPackageName": "com.opengrowwrapper"
+      "javaPackageName": "com.superboardwrapper"
     },
     "includesGeneratedCode": true
   },

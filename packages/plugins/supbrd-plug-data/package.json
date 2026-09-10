@@ -1,0 +1,41 @@
+{
+  "name": "@superboard/plugin-data",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./front/*": "./src/front/*",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "node ../../supbrd-core/scripts/build-plugin.mjs",
+    "typecheck": "tsgo --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@emdash-cms/admin": "workspace:*"
+  },
+  "devDependencies": {
+    "@superboard/contracts": "workspace:*",
+    "@superboard/front-ui": "workspace:*",
+    "@superboard/supbrd-core": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "4.1.5",
+    "@xyflow/react": "^12.11.3",
+    "jsdom": "26.1.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "4.1.5"
+  },
+  "license": "MIT"
+}

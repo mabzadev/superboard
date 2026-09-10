@@ -4,11 +4,16 @@ import { fileURLToPath } from "node:url";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
 
-import { loadTarget } from "../../scripts/cloudflare-target.mjs";
-import { d1RuntimeBindings } from "../../scripts/cloudflare-vitest-d1.mjs";
-import { buildFreshInstancePlan } from "../../scripts/superboard-fresh-instance-proof.mjs";
-import { compileTarget, compileLocalSiteConfiguration } from "../../scripts/target-compiler.mjs";
-import { createSmtpCaptureFixture } from "./runtime-tests/retirement-smtp-fixture.js";
+import { servicePackagePath } from "../../scripts/cloudflare/services.mjs";
+import {
+	compileTarget,
+	compileLocalSiteConfiguration,
+} from "../../scripts/cloudflare/target-compiler.mjs";
+import { loadTarget } from "../../scripts/cloudflare/target.mjs";
+import { d1RuntimeBindings } from "../../scripts/cloudflare/vitest-d1.mjs";
+import { createSmtpCaptureFixture } from "../../tests/checks/apps/site/runtime/retirement-smtp-fixture.js";
+import { buildFreshInstancePlan } from "../../tests/checks/emdash/fresh-instance-proof.mjs";
+import { centralTests } from "../../tests/checks/project-config.mjs";
 
 const localSiteConfiguration = compileLocalSiteConfiguration(
 	await compileTarget((await loadTarget("mbza-development")).target, "local"),
@@ -38,8 +43,8 @@ const healthMigrations = Object.fromEntries(
 				fileURLToPath(
 					new URL(
 						name === "custom-reference"
-							? "../../workers/custom/reference/migrations"
-							: `../../workers/${name}/migrations`,
+							? "../reference/worker/migrations"
+							: `../../${servicePackagePath(name)}/migrations`,
 						import.meta.url,
 					),
 				),
@@ -49,120 +54,127 @@ const healthMigrations = Object.fromEntries(
 );
 
 const parityRelease = JSON.parse(
-	readFileSync(new URL("../../config/superboard-parity-release.json", import.meta.url), "utf8"),
+	readFileSync(
+		new URL("../../scripts/config/superboard-parity-release.json", import.meta.url),
+		"utf8",
+	),
 );
 
-export default defineConfig({
-	plugins: [
-		cloudflareTest(async () => {
-			const releaseKeys = await crypto.subtle.generateKey(
-				{ name: "ECDSA", namedCurve: "P-256" },
-				true,
-				["sign", "verify"],
-			);
-			const privateJwk = await crypto.subtle.exportKey("jwk", releaseKeys.privateKey);
-			return {
-				wrangler: {
-					configPath: fileURLToPath(new URL("./wrangler.test.jsonc", import.meta.url)),
-				},
-				miniflare: {
-					compatibilityDate: "2026-08-08",
-					d1Databases: {
-						DB: "site-runtime",
-						...Object.fromEntries(
-							healthWorkers.map((name) => [
-								`HEALTH_${name.replaceAll("-", "_").toUpperCase()}_DB`,
-								`health-${name}`,
-							]),
-						),
+export default centralTests(
+	import.meta.url,
+	defineConfig({
+		plugins: [
+			cloudflareTest(async () => {
+				const releaseKeys = await crypto.subtle.generateKey(
+					{ name: "ECDSA", namedCurve: "P-256" },
+					true,
+					["sign", "verify"],
+				);
+				const privateJwk = await crypto.subtle.exportKey("jwk", releaseKeys.privateKey);
+				return {
+					wrangler: {
+						configPath: fileURLToPath(new URL("./wrangler.test.jsonc", import.meta.url)),
 					},
-					r2Buckets: ["HEALTH_FILES_R2", "EVENT_ARCHIVE"],
-					durableObjects: {
-						CONVERSATIONS: { className: "RetirementSupportConversationRoom", useSQLite: true },
-						FLOW_USER_RUNTIME: { className: "RetirementFlowUserRuntime", useSQLite: true },
-						FLOW_REALTIME_HUB: { className: "RetirementFlowRealtimeHub", useSQLite: true },
-					},
-					queueProducers: {
-						SUPPORT_QUEUE: "retirement-support-messages",
-						SUPPORT_AI_QUEUE: "retirement-support-ai",
-						SUPPORT_OUTBOUND_QUEUE: "retirement-support-outbound",
-						MARKETING_QUEUE: "retirement-marketing-queue",
-						FLOW_EVENTS: "retirement-flows-events",
-						ANALYTICS_INGEST_QUEUE: "retirement-analytics-ingest",
-						EMAIL_QUEUE: "retirement-email-delivery",
-					},
-					serviceBindings: {
-						TEST_SMTP_CAPTURE: createSmtpCaptureFixture(),
-						TEST_API_EVIDENCE_RECORDER: async (request: Request) => {
-							const path = process.env.SUPERBOARD_API_EVIDENCE_PATH;
-							if (path) {
-								if (!path.startsWith("/tmp/superboard-"))
-									throw new Error("Invalid API evidence output path");
-								appendFileSync(path, JSON.stringify(await request.json()) + "\n");
-							}
-							return Response.json({ recorded: Boolean(path) });
+					miniflare: {
+						compatibilityDate: "2026-08-08",
+						d1Databases: {
+							DB: "site-runtime",
+							...Object.fromEntries(
+								healthWorkers.map((name) => [
+									`HEALTH_${name.replaceAll("-", "_").toUpperCase()}_DB`,
+									`health-${name}`,
+								]),
+							),
 						},
-						SITE_SERVICE: { name: "superboard-site-runtime-test" },
-						WORKFLOW_API_SERVICE: {
-							name: "superboard-site-runtime-test",
-							entrypoint: "WorkflowLifecycleApi",
+						r2Buckets: ["HEALTH_FILES_R2", "EVENT_ARCHIVE"],
+						durableObjects: {
+							CONVERSATIONS: { className: "RetirementSupportConversationRoom", useSQLite: true },
+							FLOW_USER_RUNTIME: { className: "RetirementFlowUserRuntime", useSQLite: true },
+							FLOW_REALTIME_HUB: { className: "RetirementFlowRealtimeHub", useSQLite: true },
 						},
-						API_SERVICE: { name: "superboard-site-runtime-test", entrypoint: "LifecycleApi" },
+						queueProducers: {
+							SUPPORT_QUEUE: "retirement-support-messages",
+							SUPPORT_AI_QUEUE: "retirement-support-ai",
+							SUPPORT_OUTBOUND_QUEUE: "retirement-support-outbound",
+							MARKETING_QUEUE: "retirement-marketing-queue",
+							FLOW_EVENTS: "retirement-flows-events",
+							ANALYTICS_INGEST_QUEUE: "retirement-analytics-ingest",
+							EMAIL_QUEUE: "retirement-email-delivery",
+						},
+						serviceBindings: {
+							TEST_SMTP_CAPTURE: createSmtpCaptureFixture(),
+							TEST_API_EVIDENCE_RECORDER: async (request: Request) => {
+								const path = process.env.SUPERBOARD_API_EVIDENCE_PATH;
+								if (path) {
+									if (!path.startsWith("/tmp/superboard-"))
+										throw new Error("Invalid API evidence output path");
+									appendFileSync(path, JSON.stringify(await request.json()) + "\n");
+								}
+								return Response.json({ recorded: Boolean(path) });
+							},
+							SITE_SERVICE: { name: "superboard-site-runtime-test" },
+							WORKFLOW_API_SERVICE: {
+								name: "superboard-site-runtime-test",
+								entrypoint: "WorkflowLifecycleApi",
+							},
+							API_SERVICE: { name: "superboard-site-runtime-test", entrypoint: "LifecycleApi" },
+						},
+						bindings: {
+							HEALTH_MAIL_PROVIDER: process.env.SUPERBOARD_TEST_MAIL_PROVIDER ?? "smtp",
+							SUPPORT_WEBHOOK_ENCRYPTION_KEY: "retirement-support-webhook-encryption-key",
+							FLOW_USER_HASH_KEY: "retirement-flows-user-hash-key",
+							FLOW_USER_ENCRYPTION_KEY: "retirement-flows-user-encryption-key",
+							ANALYTICS_ID_HASH_KEY: "retirement-analytics-hash-key",
+							ANALYTICS_CONFIG_ENCRYPTION_KEY: "retirement-analytics-configuration-key",
+							SITE_OPERATOR_BRIDGE_TOKEN: "runtime-site-operator-health-secret",
+							HEALTH_IDENTITY_KEYSET: JSON.stringify({
+								active_kid: "autonomy-identity",
+								keys: [{ ...privateJwk, kid: "autonomy-identity", alg: "ES256" }],
+							}),
+							HEALTH_MIGRATIONS_JSON: JSON.stringify(healthMigrations),
+							FRESH_INSTANCE_PLAN_JSON: JSON.stringify(
+								await buildFreshInstancePlan("mbza-development"),
+							),
+							PARITY_VERIFIED_PROOF_RECEIPTS:
+								process.env.SUPERBOARD_VERIFIED_PROOF_RECEIPTS ??
+								JSON.stringify({ complete: false, proofs: {} }),
+							SUPERBOARD_INSTANCE_ID: "reference-production",
+							SUPERBOARD_ENVIRONMENT: process.env.SUPERBOARD_TEST_ENVIRONMENT ?? "local",
+							SUPERBOARD_PLUGIN_IDS: JSON.stringify(parityRelease.active_plugin_ids),
+							SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY:
+								"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+							SUPERBOARD_RELEASE_OPERATIONS:
+								process.env.SUPERBOARD_TEST_ENVIRONMENT === "development"
+									? "enabled"
+									: localSiteConfiguration.vars.SUPERBOARD_RELEASE_OPERATIONS,
+							SUPERBOARD_RELEASE_PRIVATE_JWK:
+								process.env.SUPERBOARD_TEST_ENVIRONMENT === "local" &&
+								!localSiteConfiguration.secrets.required.includes("SUPERBOARD_RELEASE_PRIVATE_JWK")
+									? ""
+									: JSON.stringify({
+											...privateJwk,
+											kid: "site-runtime-parity",
+											alg: "ES256",
+											key_ops: ["sign"],
+											ext: true,
+										}),
+							TARGET_ARTIFACT_CHECKSUM: parityRelease.target_artifact_checksum,
+							...d1RuntimeBindings(
+								await readD1Migrations(fileURLToPath(new URL("./migrations", import.meta.url))),
+							),
+						},
 					},
-					bindings: {
-						HEALTH_MAIL_PROVIDER: process.env.SUPERBOARD_TEST_MAIL_PROVIDER ?? "smtp",
-						SUPPORT_WEBHOOK_ENCRYPTION_KEY: "retirement-support-webhook-encryption-key",
-						FLOW_USER_HASH_KEY: "retirement-flows-user-hash-key",
-						FLOW_USER_ENCRYPTION_KEY: "retirement-flows-user-encryption-key",
-						ANALYTICS_ID_HASH_KEY: "retirement-analytics-hash-key",
-						ANALYTICS_CONFIG_ENCRYPTION_KEY: "retirement-analytics-configuration-key",
-						SITE_OPERATOR_BRIDGE_TOKEN: "runtime-site-operator-health-secret",
-						HEALTH_IDENTITY_KEYSET: JSON.stringify({
-							active_kid: "autonomy-identity",
-							keys: [{ ...privateJwk, kid: "autonomy-identity", alg: "ES256" }],
-						}),
-						HEALTH_MIGRATIONS_JSON: JSON.stringify(healthMigrations),
-						FRESH_INSTANCE_PLAN_JSON: JSON.stringify(
-							await buildFreshInstancePlan("mbza-development"),
-						),
-						PARITY_VERIFIED_PROOF_RECEIPTS:
-							process.env.SUPERBOARD_VERIFIED_PROOF_RECEIPTS ??
-							JSON.stringify({ complete: false, proofs: {} }),
-						SUPERBOARD_INSTANCE_ID: "reference-production",
-						SUPERBOARD_ENVIRONMENT: process.env.SUPERBOARD_TEST_ENVIRONMENT ?? "local",
-						SUPERBOARD_PLUGIN_IDS: JSON.stringify(parityRelease.active_plugin_ids),
-						SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-						SUPERBOARD_RELEASE_OPERATIONS:
-							process.env.SUPERBOARD_TEST_ENVIRONMENT === "development"
-								? "enabled"
-								: localSiteConfiguration.vars.SUPERBOARD_RELEASE_OPERATIONS,
-						SUPERBOARD_RELEASE_PRIVATE_JWK:
-							process.env.SUPERBOARD_TEST_ENVIRONMENT === "local" &&
-							!localSiteConfiguration.secrets.required.includes("SUPERBOARD_RELEASE_PRIVATE_JWK")
-								? ""
-								: JSON.stringify({
-										...privateJwk,
-										kid: "site-runtime-parity",
-										alg: "ES256",
-										key_ops: ["sign"],
-										ext: true,
-									}),
-						TARGET_ARTIFACT_CHECKSUM: parityRelease.target_artifact_checksum,
-						...d1RuntimeBindings(
-							await readD1Migrations(fileURLToPath(new URL("./migrations", import.meta.url))),
-						),
-					},
-				},
-			};
-		}),
-	],
-	test: {
-		include: ["runtime-tests/**/*.test.ts"],
-		exclude: ["runtime-tests/plugin-packages.runtime.test.ts"],
-		setupFiles: ["./runtime-tests/apply-migrations.ts"],
-		sequence: { concurrent: false },
-		maxWorkers: 3,
-		testTimeout: 30000,
-		hookTimeout: 60000,
-	},
-});
+				};
+			}),
+		],
+		test: {
+			include: ["../../tests/checks/apps/site/runtime/**/*.test.ts"],
+			exclude: ["../../tests/checks/apps/site/runtime/plugin-packages.runtime.test.ts"],
+			setupFiles: ["../../tests/checks/apps/site/runtime/apply-migrations.ts"],
+			sequence: { concurrent: false },
+			maxWorkers: 3,
+			testTimeout: 30000,
+			hookTimeout: 60000,
+		},
+	}),
+);

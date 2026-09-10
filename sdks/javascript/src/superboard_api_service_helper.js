@@ -1,0 +1,127 @@
+import SuperBoardContext from "./superboard_context.js";
+
+function handleResponse(xhr, success, error) {
+	if (xhr.status < 200 || xhr.status >= 300) {
+		error(xhr.statusText || `HTTP ${xhr.status}`);
+		return;
+	}
+	if (!xhr.responseText) {
+		success(null);
+		return;
+	}
+	try {
+		success(JSON.parse(xhr.responseText));
+	} catch {
+		error("SuperBoard API returned invalid JSON");
+	}
+}
+
+/**
+ * Helper class for making API requests to SuperBoard service.
+ */
+class SuperBoardAPIServiceHelper {
+	/**
+	 * Constructor for SuperBoardAPIServiceHelper.
+	 * @param {string} APIKey - API key for accessing the SuperBoard API.
+	 */
+	constructor(APIKey) {
+		this.APIKey = APIKey;
+	}
+
+	/**
+	 * Perform a POST request to the SuperBoard API.
+	 * @param {string} path - API endpoint path.
+	 * @param {Object} data - Data to be sent in the request body.
+	 * @param {Function} success - Success callback function.
+	 * @param {Function} error - Error callback function.
+	 */
+	POST(path, data, success, error) {
+		const headers = this.buildHeaders();
+		const endpoint = this.endpoint(path);
+
+		const xhr = new XMLHttpRequest();
+		xhr.open("POST", endpoint, true);
+
+		// Set request headers
+		for (const key in headers) {
+			xhr.setRequestHeader(key, headers[key]);
+		}
+
+		xhr.onreadystatechange = function () {
+			if (xhr.readyState === XMLHttpRequest.DONE) {
+				handleResponse(xhr, success, error);
+			}
+		};
+		xhr.onerror = () => error("SuperBoard network request failed");
+
+		xhr.send(JSON.stringify(data));
+	}
+
+	GET(path, success, error) {
+		const headers = this.buildHeaders();
+		const endpoint = this.endpoint(path);
+
+		const xhr = new XMLHttpRequest();
+		xhr.open("GET", endpoint, true);
+
+		// Set request headers
+		for (const key in headers) {
+			xhr.setRequestHeader(key, headers[key]);
+		}
+
+		xhr.onreadystatechange = function () {
+			if (xhr.readyState === XMLHttpRequest.DONE) {
+				handleResponse(xhr, success, error);
+			}
+		};
+		xhr.onerror = () => error("SuperBoard network request failed");
+
+		// Sending no argument is required for GET: some runtimes reject or drop a
+		// GET request whose XMLHttpRequest body is non-null.
+		xhr.send();
+	}
+
+	endpoint(path) {
+		if (!SuperBoardContext.API_BASE_URL) {
+			throw new Error("SuperBoard baseURL is not configured");
+		}
+		return SuperBoardContext.API_BASE_URL + path;
+	}
+
+	/**
+	 * Build request headers for the API request.
+	 * @returns {Object} - Request headers.
+	 */
+	buildHeaders() {
+		const headers = {};
+		headers["Content-Type"] = "application/json";
+		headers["PLATFORM"] = "web";
+
+		// Get identifier
+		// Add domain identifier header
+		if (typeof window !== "undefined" && window.location) {
+			const { protocol, hostname, port } = window.location;
+			const portPart = port ? `:${port}` : "";
+			const fullURL = `${protocol}//${hostname}${portPart}`;
+			headers["IDENTIFIER"] = fullURL;
+		}
+
+		// Add SuperBoard ID header
+		if (SuperBoardContext.linksquaredID) {
+			headers["linksquared"] = SuperBoardContext.linksquaredID;
+		}
+
+		// Add API key header
+		if (SuperBoardContext.API_KEY) {
+			if (SuperBoardContext.testEnvironment) {
+				headers["PROJECT_KEY"] = "test_" + SuperBoardContext.API_KEY;
+			} else {
+				headers["PROJECT_KEY"] = SuperBoardContext.API_KEY;
+			}
+		}
+
+		return headers;
+	}
+}
+
+export default SuperBoardAPIServiceHelper;

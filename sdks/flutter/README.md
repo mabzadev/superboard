@@ -40,7 +40,7 @@ final superboard = SuperBoard();
 Legacy 2.x Dart symbols and entrypoint files remain as deprecated aliases for
 one major release. Android manifest keys and iOS plist keys also fall back to
 their 2.x spelling. The encrypted purchase outbox, anonymous identifier,
-CustomerInfo cache, and JWKS cache deliberately keep their `opengrow.*`
+CustomerInfo cache, and JWKS cache deliberately keep their `superboard.*`
 physical storage keys so an upgrade or rollback cannot disconnect a user or
 lose an unfinished purchase. Do not install the 2.x and 3.x packages together.
 Follow the [complete 2.x to 3.x migration checklist](MIGRATION.md) before
@@ -484,21 +484,21 @@ reconnect with bounded backoff.
 
 ### Properties
 
-| Property | Type | Description |
-|---|---|---|
+| Property             | Type                      | Description                |
+| -------------------- | ------------------------- | -------------------------- |
 | `onDeeplinkReceived` | `Stream<DeeplinkDetails>` | Stream of deep link events |
 
 ### Key Methods
 
-| Method | Description |
-|---|---|
-| `setDebugLevel(level)` | Set logging level (`'info'`, `'error'`) |
-| `setPushToken(token)` | Set FCM/APNs push token |
-| `setUserIdentifier(identifier)` | Set user ID for dashboard and reports |
-| `setUserAttributes(attributes)` | Set user attributes for analytics |
-| `generateLink(params)` | Generate a smart link |
-| `logInAppPurchase(transactionId)` | Log a store purchase |
-| `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
+| Method                                                                  | Description                             |
+| ----------------------------------------------------------------------- | --------------------------------------- |
+| `setDebugLevel(level)`                                                  | Set logging level (`'info'`, `'error'`) |
+| `setPushToken(token)`                                                   | Set FCM/APNs push token                 |
+| `setUserIdentifier(identifier)`                                         | Set user ID for dashboard and reports   |
+| `setUserAttributes(attributes)`                                         | Set user attributes for analytics       |
+| `generateLink(params)`                                                  | Generate a smart link                   |
+| `logInAppPurchase(transactionId)`                                       | Log a store purchase                    |
+| `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase                   |
 
 Full API reference: [Flutter SDK API reference](https://github.com/mabzadev/superboard/tree/main/sdks/flutter#api-reference)
 

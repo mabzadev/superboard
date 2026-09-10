@@ -1,0 +1,29 @@
+{
+  "name": "@superboard/flows-worker",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "lint": "cd ../../../.. && node packages/plugins/supbrd-plug-journeys/flows/node_modules/eslint/bin/eslint.js --config packages/plugins/supbrd-plug-journeys/flows/eslint.config.mjs packages/plugins/supbrd-plug-journeys/flows/src tests/checks/plugins/supbrd-plug-journeys/flows packages/plugins/supbrd-plug-journeys/flows/vitest.config.ts packages/plugins/supbrd-plug-journeys/flows/vitest.runtime.config.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.runtime.json",
+    "test": "vitest run --config vitest.config.ts && vitest run --config vitest.runtime.config.ts",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:runtime": "vitest run --config vitest.runtime.config.ts",
+    "types": "node ../../../../scripts/cloudflare/types.mjs --service flows --reference --allow-unprovisioned"
+  },
+  "dependencies": {
+    "@superboard/contracts": "workspace:*",
+    "hono": "catalog:workers"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:workers",
+    "@cloudflare/workers-types": "catalog:workers",
+    "@typescript-eslint/eslint-plugin": "catalog:workers",
+    "@typescript-eslint/parser": "catalog:workers",
+    "eslint": "catalog:workers",
+    "typescript": "catalog:workers",
+    "vitest": "catalog:",
+    "wrangler": "catalog:workers"
+  }
+}

@@ -2,49 +2,58 @@ import { fileURLToPath } from "node:url";
 
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+
+import { centralTests } from "../../tests/checks/project-config.mjs";
 const shared = fileURLToPath(new URL("./src/", import.meta.url));
-export default defineConfig({
-	plugins: [react()],
-	resolve: {
-		alias: [
-			{ find: "next/navigation", replacement: shared + "navigation.tsx" },
-			{ find: "next/link", replacement: shared + "next-link.tsx" },
-			{ find: "next/image", replacement: shared + "next-image.tsx" },
-			{ find: "next/dynamic", replacement: shared + "next-dynamic.tsx" },
-		],
-	},
-	test: {
-		coverage: {
-			provider: "v8",
-			include: ["src/shared/lib/**", "src/shared/constants/**", "src/shared/schemas/**"],
-			exclude: [
-				"**/__tests__/**",
-				"**/lib/api.ts",
-				"**/lib/RefreshTokenHelper.ts",
-				"**/lib/Notifications.ts",
-				"**/lib/ProtectedRoute.tsx",
-				"**/lib/adminOnlyDisplay.tsx",
-				"**/lib/copyTextHelper.tsx",
-				"**/lib/config.ts",
-				"**/hooks/use-mobile.ts",
-				"**/hooks/useCreateLinkForm.ts",
-				"**/hooks/useResolvedRedirects.ts",
-				"**/hooks/useSetupProgress.ts",
+export default centralTests(
+	import.meta.url,
+	defineConfig({
+		plugins: [react()],
+		resolve: {
+			alias: [
+				{ find: "next/navigation", replacement: shared + "navigation.tsx" },
+				{ find: "next/link", replacement: shared + "next-link.tsx" },
+				{ find: "next/image", replacement: shared + "next-image.tsx" },
+				{ find: "next/dynamic", replacement: shared + "next-dynamic.tsx" },
 			],
-			thresholds: { statements: 80, branches: 70, functions: 80, lines: 80 },
 		},
-		environment: "jsdom",
-		include: ["src/**/__tests__/**/*.test.{ts,tsx}"],
-		setupFiles: [fileURLToPath(new URL("./tests/setup.ts", import.meta.url))],
-		execArgv: ["--no-experimental-webstorage"],
-		env: {
-			NEXT_PUBLIC_API_URL: "https://api.example.test",
-			NEXT_PUBLIC_AUTH_URL: "https://auth.example.test",
-			NEXT_PUBLIC_CLIENT_ID: "front-test",
-			NEXT_PUBLIC_DOCS_URL: "https://docs.example.test",
-			NEXT_PUBLIC_SDK_URL: "https://sdk.example.test",
-			NEXT_PUBLIC_SHORTLINK_URL: "https://links.example.test",
-			NEXT_PUBLIC_MCP_URL: "https://mcp.example.test",
+		test: {
+			coverage: {
+				provider: "v8",
+				include: ["src/shared/lib/**", "src/shared/constants/**", "src/shared/schemas/**"],
+				exclude: [
+					"**/__tests__/**",
+					"**/lib/api.ts",
+					"**/lib/RefreshTokenHelper.ts",
+					"**/lib/Notifications.ts",
+					"**/lib/ProtectedRoute.tsx",
+					"**/lib/adminOnlyDisplay.tsx",
+					"**/lib/copyTextHelper.tsx",
+					"**/lib/config.ts",
+					"**/hooks/use-mobile.ts",
+					"**/hooks/useCreateLinkForm.ts",
+					"**/hooks/useResolvedRedirects.ts",
+					"**/hooks/useSetupProgress.ts",
+				],
+				thresholds: { statements: 80, branches: 70, functions: 80, lines: 80 },
+			},
+			environment: "jsdom",
+			include: ["../../tests/checks/packages/supbrd-front-ui/unit/**/**/*.test.{ts,tsx}"],
+			setupFiles: [
+				fileURLToPath(
+					new URL("../../tests/checks/packages/supbrd-front-ui/setup.ts", import.meta.url),
+				),
+			],
+			execArgv: ["--no-experimental-webstorage"],
+			env: {
+				NEXT_PUBLIC_API_URL: "https://api.example.test",
+				NEXT_PUBLIC_AUTH_URL: "https://auth.example.test",
+				NEXT_PUBLIC_CLIENT_ID: "front-test",
+				NEXT_PUBLIC_DOCS_URL: "https://docs.example.test",
+				NEXT_PUBLIC_SDK_URL: "https://sdk.example.test",
+				NEXT_PUBLIC_SHORTLINK_URL: "https://links.example.test",
+				NEXT_PUBLIC_MCP_URL: "https://mcp.example.test",
+			},
 		},
-	},
-});
+	}),
+);

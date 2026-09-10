@@ -1,6 +1,6 @@
 name: superboard_flutter
 description: SuperBoard Flutter SDK for verified purchases, deep links, messaging, attribution, and campaign tracking.
-version: 3.0.0
+version: 4.0.0
 homepage: https://github.com/mabzadev/superboard
 repository: https://github.com/mabzadev/superboard
 issue_tracker: https://github.com/mabzadev/superboard/issues

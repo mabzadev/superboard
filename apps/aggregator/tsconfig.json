@@ -9,5 +9,5 @@
 		"verbatimModuleSyntax": true,
 		"noEmit": true
 	},
-	"include": ["src/**/*", "test/**/*", "worker-configuration.d.ts"]
+	"include": ["src/**/*", "../../tests/checks/apps/aggregator/**/*", "worker-configuration.d.ts"]
 }

@@ -12,7 +12,7 @@
 	"exclude": [
 		"node_modules",
 		"dist",
-		"tests",
+		"../../tests/checks/packages/core",
 		"src/astro/**",
 		"src/components/**",
 		"src/preview/**",

@@ -17,7 +17,7 @@ so a green `main` workflow cannot replace `api.vocostar.com`,
 ## Client convergence receipt
 
 The application snapshot lives in
-`config/flutterflow-sources/<application>.json`. Its schema-validated
+`scripts/config/flutterflow-sources/<application>.json`. Its schema-validated
 convergence contract must prove all declared legacy sources absent, all required
 SuperBoard authorities present in the generated application runtime and the
 declared diagnostic budget respected.
@@ -34,7 +34,7 @@ SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/secure/fresh/app-vocostar-ff \
   npm run flutterflow:source:verify:vocostar
 
 npm run flutterflow:client:release -- generate \
-  --manifest config/flutterflow-sources/vocostar.json \
+  --manifest scripts/config/flutterflow-sources/vocostar.json \
   --source /secure/fresh/app-vocostar-ff \
   > /secure/review/vocostar-client-receipt.json
 ```
@@ -51,12 +51,12 @@ The generated receipt binds:
 
 It contains no source text, token, password, provider secret or environment
 value. Review it, add it as
-`config/flutterflow-releases/<application>.json`, and verify it independently:
+`scripts/config/flutterflow-releases/<application>.json`, and verify it independently:
 
 ```bash
 npm run flutterflow:client:release -- verify \
-  --manifest config/flutterflow-sources/vocostar.json \
-  --receipt config/flutterflow-releases/vocostar.json \
+  --manifest scripts/config/flutterflow-sources/vocostar.json \
+  --receipt scripts/config/flutterflow-releases/vocostar.json \
   --source /secure/fresh/app-vocostar-ff
 ```
 

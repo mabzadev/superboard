@@ -454,38 +454,3 @@ class SuperBoardVirtualCurrencies {
   final Map<String, SuperBoardVirtualCurrency> all;
   final DateTime fetchedAt;
 }
-
-// OpenGrow 2.x source compatibility. These aliases intentionally live in the
-// canonical library so one import supports an incremental app migration.
-@Deprecated('Use SuperBoardPurchaseOutcome.')
-typedef OpenGrowPurchaseOutcome = SuperBoardPurchaseOutcome;
-@Deprecated('Use SuperBoardSubscriptionInfo.')
-typedef OpenGrowSubscriptionInfo = SuperBoardSubscriptionInfo;
-@Deprecated('Use SuperBoardEntitlementInfo.')
-typedef OpenGrowEntitlementInfo = SuperBoardEntitlementInfo;
-@Deprecated('Use SuperBoardCustomerInfo.')
-typedef OpenGrowCustomerInfo = SuperBoardCustomerInfo;
-@Deprecated('Use SuperBoardStoreProduct.')
-typedef OpenGrowStoreProduct = SuperBoardStoreProduct;
-@Deprecated('Use SuperBoardPackage.')
-typedef OpenGrowPackage = SuperBoardPackage;
-@Deprecated('Use SuperBoardOffering.')
-typedef OpenGrowOffering = SuperBoardOffering;
-@Deprecated('Use SuperBoardOfferings.')
-typedef OpenGrowOfferings = SuperBoardOfferings;
-@Deprecated('Use SuperBoardPurchaseResult.')
-typedef OpenGrowPurchaseResult = SuperBoardPurchaseResult;
-@Deprecated('Use SuperBoardCertificationResult.')
-typedef OpenGrowCertificationResult = SuperBoardCertificationResult;
-@Deprecated('Use SuperBoardPlacement.')
-typedef OpenGrowPlacement = SuperBoardPlacement;
-@Deprecated('Use SuperBoardExperimentAssignment.')
-typedef OpenGrowExperimentAssignment = SuperBoardExperimentAssignment;
-@Deprecated('Use SuperBoardPaywallConfiguration.')
-typedef OpenGrowPaywallConfiguration = SuperBoardPaywallConfiguration;
-@Deprecated('Use SuperBoardPurchaseConfiguration.')
-typedef OpenGrowPurchaseConfiguration = SuperBoardPurchaseConfiguration;
-@Deprecated('Use SuperBoardVirtualCurrency.')
-typedef OpenGrowVirtualCurrency = SuperBoardVirtualCurrency;
-@Deprecated('Use SuperBoardVirtualCurrencies.')
-typedef OpenGrowVirtualCurrencies = SuperBoardVirtualCurrencies;

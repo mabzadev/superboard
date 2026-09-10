@@ -1,4 +1,4 @@
-import type { PluginSqlStore } from "../../../../packages/supbrd-runtime-plugins/src/server/sql-store.js";
+import type { PluginSqlStore } from "../../../../packages/supbrd-core/src/plugin-sql-store.js";
 
 export function nativePluginStore(db: D1Database): PluginSqlStore {
 	return {

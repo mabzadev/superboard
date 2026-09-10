@@ -16,10 +16,10 @@ and never fork this code.
 
 ## Integrated EmDash foundation
 
-This repository contains the complete EmDash 0.35.0 source at commit
+This repository integrates EmDash 0.35.0 from commit
 `1717d31b351164a5f78e95fe004ee582c7c50f40` from
 [`emdash-cms/emdash`](https://github.com/emdash-cms/emdash.git).
-`config/emdash-integration.json` records the imported revision and the root
+`scripts/config/emdash-integration.json` records the imported revision and the root
 overlay used by the integrated repository.
 
 The operator Front runs in `apps/site`. EmDash supplies operator sessions,
@@ -29,7 +29,7 @@ The plugins own their React components, business commands and Worker runtimes.
 
 Plugin activation publishes a verified Front Release and preserves plugin data
 when its views are disabled. The historical route and menu inventory is retained
-in `config/superboard-plugin-independence-baseline.json`.
+in `scripts/config/superboard-plugin-independence-baseline.json`.
 
 Use the integrated pnpm gates from the repository root:
 
@@ -45,24 +45,21 @@ pnpm flows:check
 
 ## Layout
 
-| Path                         | Purpose                                                               |
-| ---------------------------- | --------------------------------------------------------------------- |
-| `apps/site`                  | Site EmDash, operator authentication and plugin Front on Workers      |
-| `apps/reference`             | Executable Flutter/FlutterFlow reference application and its tests    |
-| `workers/api`                | Hono API, OAuth, short links, purchases and queues                    |
-| `workers/mcp`                | Target-deployed stateless MCP Worker with a private API binding       |
-| `apps/mcp`                   | Local MCP adapter, reusable tool catalogue and editor plugin          |
-| `sdks/flutter`               | Active `superboard_flutter` 3.x SDK                                   |
-| `sdks/flutterflow`           | Active unified `superboard_flutterflow` 3.x library                   |
-| `sdks/flutterflow_messaging` | Archived 1.3 compatibility package; merged into FlutterFlow 3.x       |
-| `sdks/ios`                   | Internal native implementation embedded by the Flutter SDK            |
-| `sdks/android`               | Internal native implementation embedded by the Flutter SDK            |
-| `sdks/javascript`            | Archived historical JavaScript package                                |
-| `sdks/react-native`          | Archived historical React Native package                              |
-| `packages/shared`            | Shared utilities                                                      |
-| `deploy/targets`             | Non-secret target manifests and physical-resource migration contracts |
+| Path | Purpose |
+| --- | --- |
+| `apps/` | Executable applications, including the Site and reference client |
+| `packages/` | EmDash foundation and shared libraries |
+| `packages/plugins/` | Plugins, their Front sources and their service packages |
+| `sdks/` | Client libraries; lifecycle and versions are recorded in the SDK catalogue |
+| `scripts/config/` | Global configuration and its validation schemas |
+| `infra/targets/` | Deployment target manifests |
+| `infra/generated/` | Generated deployment output |
+| `scripts/` | Commands grouped by usage; see [the scripts guide](scripts/README.md) |
+| `tests/` | E2E journeys, fixtures, linters and checks; see [the test guide](tests/README.md) |
 
-The root `Package.swift` exposes the iOS SDK directly from `sdks/ios`.
+The root `Package.swift` exposes the iOS SDK from `sdks/ios`.
+See [the monorepo guide](docs/MONOREPO.md) for the remaining EmDash directories,
+plugin ownership and local development commands.
 
 ## Local validation
 
@@ -106,7 +103,7 @@ pushes or uploads secret values.
 
 ## Cloudflare targets
 
-`deploy/targets/<target>.json` contains non-secret names, domains and resource
+`infra/targets/<target>.json` contains non-secret names, domains and resource
 identifiers, but never credentials or Cloudflare account IDs. Development and
 production are separate targets and may live in different Cloudflare accounts.
 The account is selected at runtime with a scoped environment variable derived
@@ -208,13 +205,13 @@ inventory are documented in `docs/ARCHITECTURE_CIBLE_FR.md`,
 The evidence-backed implementation
 and external-readiness status is in `docs/IMPLEMENTATION_AUDIT_2026-08-08.md`.
 The pinned Support behavior inventory and its publication-leak gate are kept in
-the build-excluded `scripts/support-audit` workspace.
+the build-excluded `packages/plugins/supbrd-plug-support/scripts/support-audit` workspace.
 The value-free cross-Worker secret graph, production provenance rules and
 rotation protocol are in `docs/SECRET_MANAGEMENT.md`.
 
 ## SDK releases
 
-`config/sdk-libraries.json` is the canonical, machine-validated SDK catalogue.
+`scripts/config/sdk-libraries.json` is the canonical, machine-validated SDK catalogue.
 It records each package path, source version, latest immutable release, install
 snippet when one really exists, package-local MIT licence and whether the
 current source is `released`, `pending-release` or still `unreleased`. An
@@ -242,8 +239,8 @@ command. The plugin Front exposes the same read-only catalogue and licence links
 - FlutterFlow consumes the public repository by immutable `ref` and package
   `path`; no repository read token is required or stored in exported source.
 
-`tools/flutterflow-library` is the Git authority for the reusable FlutterFlow
-project named `SuperBoard`. `config/flutterflow-library.json` inventories its 11
+`scripts/clients/flutterflow-library` is the Git authority for the reusable FlutterFlow
+project named `SuperBoard`. `scripts/config/flutterflow-library.json` inventories its 11
 target-supplied Library Values and 64 custom actions. Run
 `pnpm run flutterflow-library:check` to prove that its DSL, public HTTPS
 dependencies, immutable refs, token-state policy and GitHub sync workflow stay

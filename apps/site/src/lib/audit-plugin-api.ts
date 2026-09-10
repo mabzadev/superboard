@@ -5,7 +5,7 @@ import {
 	archiveAuditLedger,
 	listAuditEntries,
 	verifyAuditLedger,
-} from "../../../../packages/supbrd-runtime-plugins/src/server/audit.js";
+} from "../../../../packages/plugins/supbrd-core/src/audit.js";
 import { nativePluginStore } from "./native-plugin-store.js";
 
 const archiveInput = z.object({

@@ -169,9 +169,3 @@ enum TransactionType {
   /// A refund transaction
   refund,
 }
-
-/// Compatibility alias for errors emitted by OpenGrow 2.x APIs.
-@Deprecated(
-  'Use SuperBoardException. This compatibility alias will be removed in 4.0.0.',
-)
-typedef OpenGrowException = SuperBoardException;

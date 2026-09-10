@@ -8,28 +8,28 @@ import 'client.dart';
 import 'models.dart';
 import 'realtime.dart';
 
-OpenGrowMessagingClient? _client;
-OpenGrowMessagingRealtime? _realtime;
+SuperBoardMessagingClient? _client;
+SuperBoardMessagingRealtime? _realtime;
 StreamSubscription<String>? _realtimeSubscription;
 final _realtimeEvents = StreamController<String>.broadcast();
 String _lastRealtimeEventJson = '';
 
-Stream<String> get opengrowMessagingEventJsonStream => _realtimeEvents.stream;
+Stream<String> get superboardMessagingEventJsonStream => _realtimeEvents.stream;
 
-Future<bool> opengrowMessagingInitializeAuthenticated({
+Future<bool> superboardMessagingInitializeAuthenticated({
   required String applicationAccessToken,
   required int projectId,
   required String authGatewayUrl,
   required String messagingUrl,
 }) async {
   if (applicationAccessToken.trim().isEmpty) {
-    throw const OpenGrowMessagingException(
+    throw const SuperBoardMessagingException(
       'identity_required',
       'Application authentication is required before Messaging initialization',
     );
   }
   if (projectId <= 0) {
-    throw const OpenGrowMessagingException(
+    throw const SuperBoardMessagingException(
       'project_id_invalid',
       'Project ID must be positive',
     );
@@ -41,7 +41,7 @@ Future<bool> opengrowMessagingInitializeAuthenticated({
     try {
       response = await http
           .post(
-            Uri.parse('$base/auth/opengrow-token'),
+            Uri.parse('$base/auth/superboard-token'),
             headers: {
               'Authorization': 'Bearer ${applicationAccessToken.trim()}',
               'Accept': 'application/json',
@@ -49,8 +49,8 @@ Future<bool> opengrowMessagingInitializeAuthenticated({
           )
           .timeout(const Duration(seconds: 10));
     } catch (error) {
-      if (error is OpenGrowMessagingException) rethrow;
-      throw const OpenGrowMessagingException(
+      if (error is SuperBoardMessagingException) rethrow;
+      throw const SuperBoardMessagingException(
         'identity_gateway_unavailable',
         'The authentication gateway is temporarily unavailable',
         retryable: true,
@@ -62,7 +62,7 @@ Future<bool> opengrowMessagingInitializeAuthenticated({
           ? <String, dynamic>{}
           : decodeObject(response.body);
     } catch (_) {
-      throw OpenGrowMessagingException(
+      throw SuperBoardMessagingException(
         'identity_response_invalid',
         'The authentication gateway returned an invalid response',
         retryable: response.statusCode >= 500,
@@ -71,7 +71,7 @@ Future<bool> opengrowMessagingInitializeAuthenticated({
     }
     final identityToken = payload['access_token']?.toString() ?? '';
     if (response.statusCode != 200 || identityToken.isEmpty) {
-      throw OpenGrowMessagingException(
+      throw SuperBoardMessagingException(
         payload['code']?.toString() ?? 'identity_sync_failed',
         payload['message']?.toString() ?? 'Identity synchronization failed',
         retryable: payload['retryable'] == true || response.statusCode >= 500,
@@ -85,13 +85,13 @@ Future<bool> opengrowMessagingInitializeAuthenticated({
   await _realtimeSubscription?.cancel();
   await _realtime?.dispose();
   _client?.close();
-  _client = OpenGrowMessagingClient(
+  _client = SuperBoardMessagingClient(
     baseUri: Uri.parse(messagingUrl),
     projectId: projectId,
     identityToken: initialToken,
     identityTokenProvider: tokenProvider,
   );
-  _realtime = OpenGrowMessagingRealtime(_client!);
+  _realtime = SuperBoardMessagingRealtime(_client!);
   _realtimeSubscription = _realtime!.events.listen((event) {
     _lastRealtimeEventJson = event;
     _realtimeEvents.add(event);
@@ -99,7 +99,7 @@ Future<bool> opengrowMessagingInitializeAuthenticated({
   return true;
 }
 
-Future<String> opengrowMessagingOpenConversation({
+Future<String> superboardMessagingOpenConversation({
   required String clientConversationId,
   String? subject,
   String? inboxId,
@@ -115,10 +115,10 @@ Future<String> opengrowMessagingOpenConversation({
   return conversation.id;
 }
 
-Future<String> opengrowMessagingGetConfigurationJson() async =>
+Future<String> superboardMessagingGetConfigurationJson() async =>
     jsonEncode(await _requiredClient.configuration());
 
-Future<String> opengrowMessagingListConversationsJson() async => jsonEncode(
+Future<String> superboardMessagingListConversationsJson() async => jsonEncode(
   (await _requiredClient.conversations())
       .map(
         (item) => {
@@ -138,7 +138,7 @@ Future<String> opengrowMessagingListConversationsJson() async => jsonEncode(
       .toList(growable: false),
 );
 
-Future<String> opengrowMessagingUpdateConversationJson({
+Future<String> superboardMessagingUpdateConversationJson({
   required String conversationId,
   String? status,
   String? customAttributesJson,
@@ -161,7 +161,7 @@ Future<String> opengrowMessagingUpdateConversationJson({
   });
 }
 
-Future<String> opengrowMessagingMessagesJson(
+Future<String> superboardMessagingMessagesJson(
   String conversationId, {
   int? beforeSequence,
   int limit = 50,
@@ -173,7 +173,7 @@ Future<String> opengrowMessagingMessagesJson(
   )).map((item) => item.toJson()).toList(growable: false),
 );
 
-Future<String> opengrowMessagingSend({
+Future<String> superboardMessagingSend({
   required String conversationId,
   required String body,
   required String clientMessageId,
@@ -183,7 +183,7 @@ Future<String> opengrowMessagingSend({
   clientMessageId: clientMessageId,
 )).id;
 
-Future<String> opengrowMessagingSendAdvanced({
+Future<String> superboardMessagingSendAdvanced({
   required String conversationId,
   required String body,
   required String clientMessageId,
@@ -199,7 +199,7 @@ Future<String> opengrowMessagingSendAdvanced({
   metadata: decodeObject(metadataJson),
 )).id;
 
-Future<String> opengrowMessagingSubmitCsatJson({
+Future<String> superboardMessagingSubmitCsatJson({
   required String conversationId,
   required int rating,
   String? feedback,
@@ -211,7 +211,7 @@ Future<String> opengrowMessagingSubmitCsatJson({
   ),
 );
 
-Future<String> opengrowMessagingUploadAttachmentJson({
+Future<String> superboardMessagingUploadAttachmentJson({
   required String conversationId,
   required Uint8List bytes,
   required String filename,
@@ -225,7 +225,7 @@ Future<String> opengrowMessagingUploadAttachmentJson({
   ),
 );
 
-Future<Uint8List> opengrowMessagingDownloadAttachment({
+Future<Uint8List> superboardMessagingDownloadAttachment({
   required String conversationId,
   required String messageId,
   String? attachmentId,
@@ -235,7 +235,7 @@ Future<Uint8List> opengrowMessagingDownloadAttachment({
   attachmentId: attachmentId,
 );
 
-Future<String> opengrowMessagingSendAttachment({
+Future<String> superboardMessagingSendAttachment({
   required String conversationId,
   required String attachmentJson,
   required String clientMessageId,
@@ -253,10 +253,10 @@ Future<String> opengrowMessagingSendAttachment({
   )).id;
 }
 
-Future<String> opengrowMessagingMarkRead(String conversationId) =>
+Future<String> superboardMessagingMarkRead(String conversationId) =>
     _requiredClient.markRead(conversationId);
 
-Future<bool> opengrowMessagingSetTyping(
+Future<bool> superboardMessagingSetTyping(
   String conversationId,
   bool active,
 ) async {
@@ -264,20 +264,20 @@ Future<bool> opengrowMessagingSetTyping(
   return true;
 }
 
-Future<bool> opengrowMessagingConnectRealtime(String conversationId) async {
+Future<bool> superboardMessagingConnectRealtime(String conversationId) async {
   await _requiredRealtime.connect(conversationId);
   return true;
 }
 
-Future<bool> opengrowMessagingDisconnectRealtime() async {
+Future<bool> superboardMessagingDisconnectRealtime() async {
   await _requiredRealtime.disconnect();
   return true;
 }
 
-Future<String> opengrowMessagingGetLastRealtimeEventJson() async =>
+Future<String> superboardMessagingGetLastRealtimeEventJson() async =>
     _lastRealtimeEventJson;
 
-Future<bool> opengrowMessagingDispose() async {
+Future<bool> superboardMessagingDispose() async {
   await _realtimeSubscription?.cancel();
   _realtimeSubscription = null;
   await _realtime?.dispose();
@@ -288,23 +288,23 @@ Future<bool> opengrowMessagingDispose() async {
   return true;
 }
 
-OpenGrowMessagingClient get _requiredClient {
+SuperBoardMessagingClient get _requiredClient {
   final value = _client;
   if (value == null) {
-    throw const OpenGrowMessagingException(
+    throw const SuperBoardMessagingException(
       'not_initialized',
-      'Call opengrowMessagingInitializeAuthenticated first',
+      'Call superboardMessagingInitializeAuthenticated first',
     );
   }
   return value;
 }
 
-OpenGrowMessagingRealtime get _requiredRealtime {
+SuperBoardMessagingRealtime get _requiredRealtime {
   final value = _realtime;
   if (value == null) {
-    throw const OpenGrowMessagingException(
+    throw const SuperBoardMessagingException(
       'not_initialized',
-      'Call opengrowMessagingInitializeAuthenticated first',
+      'Call superboardMessagingInitializeAuthenticated first',
     );
   }
   return value;

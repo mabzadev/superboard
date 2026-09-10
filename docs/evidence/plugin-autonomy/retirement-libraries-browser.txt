@@ -4,6 +4,6 @@ Running 1 test using 1 worker
 
 (node:16645) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-  ✓  1 [chromium] › e2e/tests/settings/libraries.spec.ts:4:1 › the library catalogue refreshes and copies the published release and installation (3.8s)
+  ✓  1 [chromium] › tests/e2e/emdash/settings/libraries.spec.ts:4:1 › the library catalogue refreshes and copies the published release and installation (3.8s)
 
   1 passed (4.9s)

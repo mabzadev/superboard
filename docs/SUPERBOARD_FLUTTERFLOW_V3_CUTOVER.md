@@ -7,7 +7,7 @@ package:
   `sdk-flutterflow-v3.0.0`;
 - its transitive active dependency is `superboard_flutter` at
   `sdk-flutter-v3.0.0`;
-- `opengrow_flutterflow_messaging` remains frozen at 1.3.0 only as a rollback
+- `superboard_flutterflow_messaging` remains frozen at 1.3.0 only as a rollback
   artefact. It must not be installed beside `superboard_flutterflow`.
 
 The Git-owned FlutterFlow library is the deployment authority. The real
@@ -30,7 +30,7 @@ file or API key is committed.
 
 Source verification uses `SUPERBOARD_CLIENT_SOURCE_VOCOSTAR`. During the
 migration window only, the verifier and migration-plan CLI also accept
-`OPENGROW_CLIENT_SOURCE_VOCOSTAR` as a fallback alias; when both are present,
+`SUPERBOARD_CLIENT_SOURCE_VOCOSTAR` as a fallback alias; when both are present,
 the SuperBoard variable wins. Neither variable is committed with an export
 path.
 
@@ -41,8 +41,8 @@ an intermediate project state.
 
 1. Export and retain the last validated VocoStar project snapshot and its
    receipt.
-2. Remove both `opengrow_flutterflow` and
-   `opengrow_flutterflow_messaging` from Pub dependencies.
+2. Remove both `superboard_flutterflow` and
+   `superboard_flutterflow_messaging` from Pub dependencies.
 3. Add only `superboard_flutterflow`, pinned to
    `sdk-flutterflow-v3.0.0` over public HTTPS.
 4. Replace the Library dependency with the SuperBoard library and bind all 11
@@ -52,8 +52,8 @@ an intermediate project state.
    to `superboard*`, widgets/pages to `SuperBoard*`, and routes to
    `/superboard-*` while preserving FlutterFlow protobuf identifiers wherever
    action graphs already reference them.
-6. Replace the reviewed 35 `opengrow*` VocoStar function references and the
-   `OpenGrowOnboarding` widget reference. v3 still exports deprecated aliases
+6. Replace the reviewed 35 `superboard*` VocoStar function references and the
+   `SuperBoardOnboarding` widget reference. v3 still exports deprecated aliases
    so generated-code ordering inside this single commit remains safe.
 7. Write native v3 keys (`superboard_*` on Android and `SuperBoard*` on iOS).
    The Flutter plugin reads these first and retains v2 key fallbacks.
@@ -68,7 +68,7 @@ an intermediate project state.
 
 The secure application session is transactionally mirrored under the v3
 `superboard.application_session.v1.*` key and the v2
-`opengrow.application_session.v1.*` key during this compatibility window.
+`superboard.application_session.v1.*` key during this compatibility window.
 Logout and account deletion clear both.
 
 ## Promotion
@@ -81,8 +81,8 @@ commit to VocoStar. Do not regenerate dependencies or tags during promotion.
 ## Rollback
 
 Rollback restores the retained pre-cutover FlutterFlow snapshot as one commit,
-thereby restoring `opengrow_flutterflow@2.2.5` and
-`opengrow_flutterflow_messaging@1.3.0` at their existing immutable refs. Remove
+thereby restoring `superboard_flutterflow@2.2.5` and
+`superboard_flutterflow_messaging@1.3.0` at their existing immutable refs. Remove
 `superboard_flutterflow` in the same commit. The mirrored v2 secure-session key
 keeps current sessions recoverable. Re-run native identity, purchase, support,
 and file smoke tests before reopening traffic.

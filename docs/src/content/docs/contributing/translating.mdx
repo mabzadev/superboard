@@ -104,12 +104,12 @@ Always test your translations in the running admin UI. Strings that read well in
 
 <Steps>
 
-1. **Compile and run the demo:**
+1. **Compile and run the blog template:**
 
    ```bash
    pnpm run locale:compile
    pnpm build
-   pnpm --filter emdash-demo dev
+   pnpm --filter @emdash-cms/template-blog dev
    ```
 
 2. **Switch locale** in the admin Settings page and verify your translations look correct in context.
@@ -120,9 +120,9 @@ Always test your translations in the running admin UI. Strings that read well in
 
 EmDash ships a **pseudo locale** that garbles all wrapped strings into accented lookalikes — `"Dashboard"` becomes `"Ðàšĥƀöàřð"`, and so on. Any string that appears in normal English while the pseudo locale is active is either missing a `t\`...\`` wrapper or is coming from outside the catalog.
 
-To enable it, add the following to your `.env` file in the demo directory:
+To enable it, add the following to your `.env` file in the template directory:
 
-```ini title="demos/simple/.env"
+```ini title="templates/blog/.env"
 EMDASH_PSEUDO_LOCALE=1
 ```
 

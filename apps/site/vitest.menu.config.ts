@@ -1,7 +1,15 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-export default defineConfig({
-	plugins: [react()],
-	test: { environment: "node", include: ["tests/plugin-front-menu-integration.test.tsx"] },
-});
+import { centralTests } from "../../tests/checks/project-config.mjs";
+
+export default centralTests(
+	import.meta.url,
+	defineConfig({
+		plugins: [react()],
+		test: {
+			environment: "node",
+			include: ["../../tests/checks/apps/site/plugin-front-menu-integration.test.tsx"],
+		},
+	}),
+);

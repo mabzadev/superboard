@@ -1,0 +1,54 @@
+{
+  "name": "@superboard/plugin-core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./front/*": "./src/front/*",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "node ../../supbrd-core/scripts/build-plugin.mjs",
+    "typecheck": "tsgo --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@emdash-cms/admin": "workspace:*"
+  },
+  "devDependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@lingui/core": "catalog:",
+    "@superboard/contracts": "workspace:*",
+    "@superboard/front-ui": "workspace:*",
+    "@superboard/supbrd-core": "workspace:*",
+    "@tanstack/react-query": "^5.90.21",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "4.1.5",
+    "@xyflow/react": "^12.11.3",
+    "axios": "^1.19.0",
+    "date-fns": "^4.1.0",
+    "jsdom": "26.1.0",
+    "lucide-react": "^0.525.0",
+    "react": "catalog:",
+    "react-day-picker": "^9.8.1",
+    "react-dom": "catalog:",
+    "react-hook-form": "^7.71.2",
+    "recharts": "^3.0.2",
+    "shiki": "^3.23.0",
+    "typescript": "catalog:",
+    "validator": "^13.15.15",
+    "vitest": "4.1.5",
+    "zod": "^4.3.6"
+  },
+  "license": "MIT"
+}

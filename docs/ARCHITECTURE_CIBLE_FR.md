@@ -62,7 +62,7 @@ flowchart TB
 | Support mobile           | `https://api.mbza.dev/api/v1/support-client` | conversations, pièces jointes, temps réel et CSAT                                             |
 
 Les services de plateforme sont déclarés dans
-`deploy/targets/mbza-development.json`. L'adresse de l'application de référence
+`infra/targets/mbza-development.json`. L'adresse de l'application de référence
 et son Worker Static Assets sont déclarés dans
 `apps/reference/reference.project.json`. Ces manifestes ne contiennent ni ID de
 compte Cloudflare ni secret et leurs valeurs ne deviennent jamais des valeurs
@@ -371,7 +371,7 @@ obtenues via l'API Analytics avec un jeton en lecture seule; elles ne doivent pa
 | `dev`                     | `development`                | `mbza-development`         | déploiement automatique de la recette MBZA |
 | `main`                    | une ou plusieurs productions | manifests des applications | déploiements automatiques multi-comptes    |
 
-`config/cloudflare-deployments.json` sélectionne, pour chaque branche, tous les
+`scripts/config/cloudflare-deployments.json` sélectionne, pour chaque branche, tous les
 GitHub Environments à déployer et fixe la cible attendue pour chacun. Chaque
 Environment fournit `SUPERBOARD_TARGET`, qui doit être strictement identique à
 cette cible versionnée, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` et, en

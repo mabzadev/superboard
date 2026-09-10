@@ -5,7 +5,7 @@ Status: superseded by the monorepo consolidation on 11 August 2026.
 ## Context
 
 The repository inherited documentation and an inventory command for comparing a
-former Rails implementation below `upstream/opengrow/*`. No such comparison
+former Rails implementation below `upstream/superboard/*`. No such comparison
 source, submodule declaration or immutable repository mapping is present in the
 current checkout. An empty comparison previously looked green because zero
 upstream routes and tables produced zero missing entries.

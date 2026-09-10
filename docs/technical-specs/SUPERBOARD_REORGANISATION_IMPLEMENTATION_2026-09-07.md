@@ -1,5 +1,7 @@
 # Réorganisation de SuperBoard : implémentation et mise en service
 
+> Document historique : les constats et les chemins ci-dessous décrivent un état antérieur du dépôt. Certains composants ont été déplacés ou retirés. Pour l’organisation actuelle, consulter le [guide du monorepo](../MONOREPO.md).
+
 SuperBoard conserve le socle BaaS de Vplusflare. La console organise les fonctionnalités par usage, les environnements possèdent une configuration de déploiement distincte et Vocostar dispose d’un plugin concret. Le dépôt contient le générateur des services regroupés et les étapes de préparation de leur bascule.
 
 Cette implémentation est vérifiée localement. Aucun domaine, secret, worker ou jeu de données de production n’a été modifié pendant ce travail. Les comptes de déploiement et les ressources Vocostar doivent être vérifiés avant la mise en service.
@@ -32,7 +34,7 @@ Le diagnostic local a reproduit une administration vide alors que le front étai
 
 La validation couvre 104 tests unitaires du site, 9 tests de démarrage et un test HTTP de connexion/déconnexion commun au back-office et au front. La reproduction « serveur frais → typecheck → premier accès à l’administration » échoue avant la séparation des caches et passe après. Le typecheck du site passe sans erreur. Le lint complet conserve l’avertissement antérieur dans `packages/core/src/astro/integration/vite-config.ts` ; le lint rapide est propre.
 
-Sources : [garde opérateur](../../apps/site/src/lib/operator-access.ts), [résolution des pages](../../apps/site/src/lib/front-page.ts), [isolation du cache](../../apps/site/runtime-cache.mjs), [contrôle local](../../scripts/check-local-console.mjs), [test de session partagée](../../apps/site/e2e/tests/auth/admin-session.spec.ts).
+Sources : [garde opérateur](../../apps/site/src/lib/operator-access.ts), [résolution des pages](../../apps/site/src/lib/front-page.ts), [isolation du cache](../../apps/site/runtime-cache.mjs), [contrôle local](../../tests/e2e/site/console.mjs), [test de session partagée](../../tests/e2e/site/auth/admin-session.spec.ts).
 
 ## Environnements
 
@@ -42,7 +44,7 @@ Un environnement peut redéfinir `domains`, `applicationIdentity`, `oauth`, `aut
 
 La validation refuse le partage d’un domaine API, d’un domaine d’authentification, d’une console, d’un worker ou d’un stockage d’identité entre deux environnements déployés d’une même cible. Le mode local reste compatible avec les outils de développement existants. Les liens de console supplémentaires se déclarent dans `consoleEnvironments` ; les destinations doivent être des origines HTTPS valides.
 
-Sources : [matérialisation par environnement](../../scripts/target-environments.mjs), [schéma](../../deploy/targets/schema.json), [validation du contexte de console](../../apps/site/src/lib/deployment-context.ts).
+Sources : [matérialisation par environnement](../../scripts/cloudflare/target-environments.mjs), [schéma](../../infra/targets/schema.json), [validation du contexte de console](../../apps/site/src/lib/deployment-context.ts).
 
 ## Plugin Vocostar
 
@@ -54,7 +56,7 @@ Les réglages sont conservés par EmDash dans l’environnement. L’API lit un 
 
 La valeur de coût laissée vide conserve le contrat de tarification historique. Les fournisseurs, ressources, modèles de conteneurs et paramètres de déploiement restent déclarés dans la cible. Les données métier et pipelines Vocostar existants sont conservés ; ce changement ne remplace pas la migration de leurs données historiques.
 
-Sources : [vues](../../packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar), [façade administrative](../../workers/api/src/routes/application-module-admin.ts), [réglages exécutés](../../workers/custom/vocostar/src/settings.ts), [worker métier](../../workers/custom/vocostar/src/index.ts).
+Sources : [vues](../../packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar), [façade administrative](../../packages/plugins/supbrd-core/api/src/routes/application-module-admin.ts), [réglages exécutés](../../workers/custom/vocostar/src/settings.ts), [worker métier](../../workers/custom/vocostar/src/index.ts).
 
 ## Callbacks et WebSockets Vocostar
 
@@ -68,7 +70,7 @@ Les liaisons `VOCOSTAR_USER_VOCALS_ROOM` et `VOCOSTAR_USER_MEDIAS_ROOM` pointent
 
 Les orchestrateurs et conteneurs transmettent `project_ref`, `job_id` et `subject` lorsqu’ils sont fournis. Un ancien identifiant de queue n’est pas transformé en identifiant de job SuperBoard. Les erreurs HTTP des callbacks déclenchent les reprises configurées dans les Workflows ; si toutes les tentatives échouent, le résultat du traitement terminé est conservé et l’échec de notification est journalisé.
 
-Sources : [bridge](../../workers/custom/vocostar/src/runtime-bridge.ts), [associations d’identité](../../workers/custom/vocostar/src/runtime-identity.ts), [façade API](../../workers/api/src/routes/vocostar-runtime.ts), [tests des connexions et callbacks](../../workers/custom/vocostar/runtime-tests/runtime-bridge.runtime.test.ts), [tests API avec D1](../../scripts/vocostar-api-runtime.test.mjs).
+Sources : [bridge](../../workers/custom/vocostar/src/runtime-bridge.ts), [associations d’identité](../../workers/custom/vocostar/src/runtime-identity.ts), [façade API](../../packages/plugins/supbrd-core/api/src/routes/vocostar-runtime.ts), [tests des connexions et callbacks](../../workers/custom/vocostar/runtime-tests/runtime-bridge.runtime.test.ts), [tests API avec D1](../../scripts/vocostar-api-runtime.test.mjs).
 
 ## Services regroupés
 
@@ -93,18 +95,18 @@ Chaque module reçoit ses propres bindings et variables. Les secrets des modules
 
 Le générateur conserve les politiques de queues et produit les transferts de consommateurs. Il refuse les collisions de consommateurs, les runtimes incompatibles et le déplacement implicite des Durable Objects. Les interfaces privées utilisent des points d’entrée nommés. Les shells d’initialisation déclarent ces points d’entrée avant le déploiement des dépendants.
 
-Sources : [compilateur](../../scripts/worker-deployment-groups.mjs), [génération et déploiement](../../scripts/cloudflare-consolidate.mjs), [déploiement complet](../../scripts/cloudflare-deploy-all.mjs), [initialisation](../../scripts/cloudflare-worker-shells.mjs).
+Sources : [compilateur](../../scripts/cloudflare/deployment-groups.mjs), [génération et déploiement](../../scripts/cloudflare/consolidate.mjs), [déploiement complet](../../scripts/cloudflare/deploy-all.mjs), [initialisation](../../scripts/cloudflare/worker-shells.mjs).
 
 ## Préparation du déploiement
 
 Générer et examiner le plan d’une cible constitue la première étape.
 
 ```bash
-rtk proxy node scripts/cloudflare-deploy-all.mjs --target mbza-development --environment development --plan
-rtk proxy node scripts/cloudflare-consolidate.mjs --target mbza-development --environment development --preflight --allow-unprovisioned
+rtk proxy node scripts/cloudflare/deploy-all.mjs --target mbza-development --environment development --plan
+rtk proxy node scripts/cloudflare/consolidate.mjs --target mbza-development --environment development --preflight --allow-unprovisioned
 ```
 
-La génération écrit les configurations, les interfaces d’exécution et un manifeste sous `deploy/generated/`. Le manifeste liste les services, les secrets à reprendre, les transferts de queues et les anciens workers candidats au retrait. `--allow-unprovisioned` sert à la validation des configurations ; le déploiement normal exige les ressources réelles.
+La génération écrit les configurations, les interfaces d’exécution et un manifeste sous `infra/generated/`. Le manifeste liste les services, les secrets à reprendre, les transferts de queues et les anciens workers candidats au retrait. `--allow-unprovisioned` sert à la validation des configurations ; le déploiement normal exige les ressources réelles.
 
 Le déploiement complet respecte les contrôles existants sur les migrations, les sauvegardes, l’identité et le routage. Avant les migrations, il vérifie la présence des secrets des services regroupés. Les secrets déjà configurés dans Cloudflare n’ont pas à être fournis de nouveau. Lors du premier passage, les valeurs manquantes doivent être provisionnées à partir des sources de secrets de l’environnement.
 
@@ -120,7 +122,7 @@ Le retrait des anciens workers est séparé de la publication : vérifier le dra
 
 Les migrations [0026](../../apps/site/migrations/0026_previous_plugin_manifests.sql) et [0027](../../apps/site/migrations/0027_reorganisation_plugin_manifests.sql) conservent les manifestes précédents et enregistrent les manifestes de cette réorganisation. Les anciennes migrations ne sont pas modifiées.
 
-Le registre de compatibilité conserve les checksums des renderers précédents. Une release existante peut continuer à utiliser un renderer reconnu ; un checksum inconnu reste refusé. La génération des artefacts est assurée par `scripts/emdash-parity-generate.mjs` et refuse la modification d’une migration publiée.
+Le registre de compatibilité conserve les checksums des renderers précédents. Une release existante peut continuer à utiliser un renderer reconnu ; un checksum inconnu reste refusé. La génération des artefacts est assurée par `scripts/emdash/parity-generate.mjs` et refuse la modification d’une migration publiée.
 
 ## Vérifications et limites de mise en service
 

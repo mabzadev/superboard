@@ -3,21 +3,21 @@
 	"kind": "superboard-fresh-instance-proof-receipt",
 	"status": "passed",
 	"target": "mbza-development",
-	"plan_checksum": "sha256:a486adf4f41e0b1e234e8fcc39871c087fe6ec87f1ff77ff07c661cfc0116942",
+	"plan_checksum": "sha256:64d712ed3b28061782535a26b098c80042c7322a527ad6c88ccda86e326f316d",
 	"adapters": [
 		{
 			"environment": "local",
 			"adapter": "local",
-			"artifact_checksum": "sha256:b584fc4e9506bb13285f43d07a03dd2aebe2d2c8a7a96e40fd62ba3f1d5b246a",
-			"graph_checksum": "sha256:465d2ce24b8f70d75c476242bdc0d256948ad0b39ed0f7d038f1d482dc46fd75",
-			"service_count": 17
+			"artifact_checksum": "sha256:0a267d4e0ce33d89f2439cad0c0ee3310dedf4d297e38ce4a44b07bd4bdcce43",
+			"graph_checksum": "sha256:0360304408670211f643ff5eb07f3187ba00b5eaceb98bbc100872e4528ed1e7",
+			"service_count": 18
 		},
 		{
 			"environment": "development",
 			"adapter": "cloudflare",
-			"artifact_checksum": "sha256:b3e9a0c69f5dd61db81b1d00efa86792adf38758e56cf6f02590c6cb256e4c85",
-			"graph_checksum": "sha256:465d2ce24b8f70d75c476242bdc0d256948ad0b39ed0f7d038f1d482dc46fd75",
-			"service_count": 17
+			"artifact_checksum": "sha256:b2ebd9784d450c99f361425de4877269b59b4bbe58cb972daba0f18969986e1a",
+			"graph_checksum": "sha256:0360304408670211f643ff5eb07f3187ba00b5eaceb98bbc100872e4528ed1e7",
+			"service_count": 18
 		}
 	],
 	"operator": {
@@ -29,8 +29,8 @@
 	"plugins": {
 		"manifest_count": 18,
 		"installed_count": 18,
-		"target_active_count": 16,
-		"target_inactive_count": 2,
+		"target_active_count": 18,
+		"target_inactive_count": 0,
 		"installation_step_receipt_count": 144
 	},
 	"stores": {
@@ -38,21 +38,21 @@
 		"source_to_store_count": 39,
 		"new_empty_store_count": 2,
 		"authority": "plugin_repositories",
-		"receipt_checksum": "sha256:54505bcb327a75d28cae659f7672ec8944d50964b44ad7c845da91a4b59d939b"
+		"receipt_checksum": "sha256:65f6a4be32cf99ce9c16d7ab539bf11bb58422f733957d00f28337f8cf74d8ca"
 	},
 	"workers": {
 		"health_status": "ready",
-		"local_health_receipt_count": 17,
-		"development_health_receipt_count": 17,
+		"local_health_receipt_count": 19,
+		"development_health_receipt_count": 19,
 		"plugin_health_receipt_count": 18
 	},
 	"release": {
 		"status": "active",
 		"validation_receipt_count": 13,
-		"active_route_count": 116,
-		"catalog_declared_route_count": 120,
-		"catalog_rendered_route_count": 120,
-		"catalog_mounted_renderer_count": 234
+		"active_route_count": 124,
+		"catalog_declared_route_count": 124,
+		"catalog_rendered_route_count": 124,
+		"catalog_mounted_renderer_count": 241
 	},
 	"constraints": {
 		"direct_sql_writes": false,
@@ -65,12 +65,12 @@
 			"id": "target_adapters",
 			"sources": [
 				{
-					"path": "scripts/superboard-fresh-instance-proof.test.mjs",
-					"checksum": "sha256:4276f2476c679f43151e7d9f49650a98f2ab9aee7ead76ae3b0ab797cbd164fa"
+					"path": "tests/checks/emdash/fresh-instance-proof.test.mjs",
+					"checksum": "sha256:651134cf8d8761fb61cc9115004adb66cdee2a4570089d4a3144bb0369fc9e4a"
 				},
 				{
-					"path": "scripts/target-compiler.test.mjs",
-					"checksum": "sha256:286a0f8721466dda2d73c912fd8015a7061d74f266bf0ea3b5938c5a558b80cf"
+					"path": "tests/checks/cloudflare/target-compiler.test.mjs",
+					"checksum": "sha256:1ad2e8fe581a012d0755d4039a8d23aab644d0699a7428515633d9a2825e3499"
 				}
 			],
 			"result_checksum": "sha256:e1565d95f15ed9b29138d040ab733aeb0172ca6e0e7cad81e183ab564a8a02bd",
@@ -80,8 +80,8 @@
 			"id": "store_schema",
 			"sources": [
 				{
-					"path": "scripts/module-cutover/registry-schema.test.mjs",
-					"checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+					"path": "tests/checks/database/module-cutover-registry-schema.test.mjs",
+					"checksum": "sha256:0da9146fbaa45ff13e668feda38d0857c0efa9099187ff14c055a64ef3b67a44"
 				}
 			],
 			"result_checksum": "sha256:e1565d95f15ed9b29138d040ab733aeb0172ca6e0e7cad81e183ab564a8a02bd",
@@ -92,11 +92,11 @@
 			"sources": [
 				{
 					"path": "apps/site/vitest.runtime.config.ts",
-					"checksum": "sha256:1d1679a108f4d7263131606fe9487241758a6d64b0e97cefb3372c1c3a310fc8"
+					"checksum": "sha256:a49019a9409db0c334b7d7e5d1752da4d91b37ea0234dc3d6b7350685c2f3c9a"
 				},
 				{
-					"path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
-					"checksum": "sha256:5900133c52e7497354fd3c7cd09f817ce29e0171fbfe482bbeca81a9d9c54ece"
+					"path": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+					"checksum": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0"
 				}
 			],
 			"result_checksum": "sha256:e1565d95f15ed9b29138d040ab733aeb0172ca6e0e7cad81e183ab564a8a02bd",
@@ -106,37 +106,37 @@
 			"id": "store_convergence",
 			"sources": [
 				{
-					"path": "scripts/emdash-migration-rehearsal-proof.mjs",
-					"checksum": "sha256:2995f668adcb6c1c413bf9505a5daa57dd7cee41b1dcd7dba4163f30a761d651"
+					"path": "tests/checks/database/migration-proof.mjs",
+					"checksum": "sha256:1e7186919001a8a627d463d7c0a21c0897793402fadbda8238843faeeba95f14"
 				},
 				{
-					"path": "scripts/emdash-migration-rehearsal-proof.test.mjs",
-					"checksum": "sha256:9e1b847349a243a7fd78f898d1e5231c32ba1c2e65202bc7ffb9a57edc977424"
+					"path": "tests/checks/database/migration-proof.test.mjs",
+					"checksum": "sha256:7ec4b57868da3814537a738d0fc8e34f4402baa137d6a8338950f81f65a77662"
 				}
 			],
-			"result_checksum": "sha256:df21119cfd373170dcb509e336f31823acbbb5a14e0163e6916b456ca59499e3",
+			"result_checksum": "sha256:1fe83ca5a30fb0ac197b28d10b60c5cc684d7d5d81c85308fa3d6ecc6a61bc04",
 			"status": "passed"
 		},
 		{
 			"id": "local_workers",
 			"sources": [
 				{
-					"path": "scripts/target-orchestrator.mjs",
-					"checksum": "sha256:2005ad71a4694ca2d3029c9e65e3e1a95771632d59b3dccba44eb0fce428f154"
+					"path": "scripts/cloudflare/target-orchestrator.mjs",
+					"checksum": "sha256:b60bd8ce46fb7cab9f2c983049227236659bbd9da9705e0fc39b5592eafe4f76"
 				}
 			],
-			"result_checksum": "sha256:29538d8630064b34eb38b0077535abee820863a2bd09352fa145615e040d53fd",
+			"result_checksum": "sha256:701e27d1de59ed6a78661e3d5edab16e32cd46ecfa98fc7804d5fc36f9787fb1",
 			"status": "passed"
 		},
 		{
 			"id": "development_workers",
 			"sources": [
 				{
-					"path": "scripts/target-orchestrator.mjs",
-					"checksum": "sha256:2005ad71a4694ca2d3029c9e65e3e1a95771632d59b3dccba44eb0fce428f154"
+					"path": "scripts/cloudflare/target-orchestrator.mjs",
+					"checksum": "sha256:b60bd8ce46fb7cab9f2c983049227236659bbd9da9705e0fc39b5592eafe4f76"
 				}
 			],
-			"result_checksum": "sha256:0f99460a894207489fb09beeab0811283925d07deb52f574956ceee2344f1cf0",
+			"result_checksum": "sha256:623b1d1318f97e873fc97045a430359bf94314803983bed513bf9700cb1b39ac",
 			"status": "passed"
 		},
 		{
@@ -144,31 +144,31 @@
 			"sources": [
 				{
 					"path": "apps/site/vitest.runtime.config.ts",
-					"checksum": "sha256:1d1679a108f4d7263131606fe9487241758a6d64b0e97cefb3372c1c3a310fc8"
+					"checksum": "sha256:a49019a9409db0c334b7d7e5d1752da4d91b37ea0234dc3d6b7350685c2f3c9a"
 				},
 				{
-					"path": "apps/site/runtime-tests/fresh-instance-proof.runtime.test.ts",
-					"checksum": "sha256:2bca269f4362a19ec82dcc6a497a89275e9aba1969285bb15ab80d52f50a1d5d"
+					"path": "tests/checks/apps/site/runtime/fresh-instance-proof.runtime.test.ts",
+					"checksum": "sha256:0d97d7ca86d5236f03b3c7b55bc03de18540c06b3d7121645edad87a82d45836"
 				}
 			],
-			"result_checksum": "sha256:129d3e3aacd4052ba53531277994cf6568193af3952c5e899b2cfa18c8336d36",
+			"result_checksum": "sha256:19da0be69fed2a8e77879cdc0cf47db4f868e47c9a6ae3a73ed5397e31c51919",
 			"status": "passed"
 		},
 		{
 			"id": "route_states",
 			"sources": [
 				{
-					"path": "apps/site/tests/front-surface-parity.test.ts",
-					"checksum": "sha256:ab86ae4c4c438cbfdea4e337427f38eddfc21465d7da75b12591de2a2770e32b"
+					"path": "tests/checks/apps/site/front-surface-parity.test.ts",
+					"checksum": "sha256:b1bb0908294c6b4349c56957bccb2fe12e0261351fb653292224c063223faa93"
 				},
 				{
-					"path": "apps/site/tests/native-front-views-seed.test.ts",
-					"checksum": "sha256:5e069f28703681990c175444a5653329d6b98ff01839b68f368595f008d89504"
+					"path": "tests/checks/apps/site/native-front-views-seed.test.ts",
+					"checksum": "sha256:a77f36bebe6bec2c2b36fbf60428e55b3c8a96c989ec0428c246717e120ca813"
 				}
 			],
 			"result_checksum": "sha256:e1565d95f15ed9b29138d040ab733aeb0172ca6e0e7cad81e183ab564a8a02bd",
 			"status": "passed"
 		}
 	],
-	"receipt_checksum": "sha256:91fd75f7d166b6cc6857a6e83a8d4bf2908caee07767384035f4b18d541a702b"
+	"receipt_checksum": "sha256:0ef0c04650606dfc5aeeb96a7c4265dddaa270276d6ff252bc74ad5873e99ccd"
 }

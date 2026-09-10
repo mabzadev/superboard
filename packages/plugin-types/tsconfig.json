@@ -6,5 +6,5 @@
 		"lib": ["es2023", "esnext.typedarrays"]
 	},
 	"include": ["src/**/*"],
-	"exclude": ["node_modules", "dist", "tests"]
+	"exclude": ["node_modules", "dist", "../../tests/checks/packages/plugin-types"]
 }

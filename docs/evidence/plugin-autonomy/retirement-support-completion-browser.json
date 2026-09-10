@@ -10,7 +10,7 @@
       "e18aeb5b-083b-4277-8d76-c0348e66f065"
     ],
     "description": "Created a real conversation through the owning API, saved a private agent note in the browser, closed it and verified reload plus open/closed filtering. No public reply was sent.",
-    "source_test": "apps/site/e2e/tests/support/support-completion.spec.ts",
+    "source_test": "tests/e2e/site/support/support-completion.spec.ts",
     "captured_at": "2026-09-07T11:34:20.132Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   },
@@ -25,7 +25,7 @@
       "c5c71a04-e138-42d8-a903-afd8c14b27f3"
     ],
     "description": "Refreshed after a real conversation state change, checked the decremented open count and the persisted audit event shown by Quality.",
-    "source_test": "apps/site/e2e/tests/support/support-completion.spec.ts",
+    "source_test": "tests/e2e/site/support/support-completion.spec.ts",
     "captured_at": "2026-09-07T11:34:22.186Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   },
@@ -40,7 +40,7 @@
       "8bd3e138-0951-48b0-8e71-293ab6b12fb3"
     ],
     "description": "Selected an empty future period, queued a real report export, waited for the actual Worker consumer, downloaded its R2 JSON and checked the persisted filters and empty result.",
-    "source_test": "apps/site/e2e/tests/support/support-completion.spec.ts",
+    "source_test": "tests/e2e/site/support/support-completion.spec.ts",
     "captured_at": "2026-09-07T11:34:30.536Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   },
@@ -55,7 +55,7 @@
       "82892049-e6a6-496c-890f-0e40b1424e14"
     ],
     "description": "Created a proactive campaign through the form, reloaded and searched it, and read back its draft state without starting or sending it.",
-    "source_test": "apps/site/e2e/tests/support/support-completion.spec.ts",
+    "source_test": "tests/e2e/site/support/support-completion.spec.ts",
     "captured_at": "2026-09-07T11:34:33.280Z",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   }

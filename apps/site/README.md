@@ -13,9 +13,9 @@ routes remain available before authentication.
 
 The operator catalogue exposes seven business packages plus the required core.
 Vocostar appears only on its application target. The installable catalogue is
-`config/superboard-plugin-catalog.json`, generated from
-`config/superboard-plugin-packages.json` and the component contracts.
-`config/emdash-plugin-topology.json` retains those internal contracts and must
+`scripts/config/superboard-plugin-catalog.json`, generated from
+`scripts/config/superboard-plugin-packages.json` and the component contracts.
+`scripts/config/emdash-plugin-topology.json` retains those internal contracts and must
 not be used to count installed packages. See the [grouping and migration
 reference](../../docs/technical-specs/SUPERBOARD_PLUGINS_REGROUPES_2026-09-09.md).
 
@@ -146,7 +146,7 @@ An authorized development rehearsal may enable the release endpoints only on
 the explicit Site preview route:
 
 ```bash
-node scripts/cloudflare-deploy.mjs \
+node scripts/cloudflare/deploy.mjs \
   --target mbza-development \
   --environment development \
   --service site \

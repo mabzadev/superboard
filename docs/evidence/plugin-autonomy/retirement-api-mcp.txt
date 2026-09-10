@@ -1,6 +1,6 @@
 Canonical Site API integration evidence
 
-Test: apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts
+Test: tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts
 Runner exit code: 0
 All 10 files and 27 tests in this run passed.
 
@@ -13,7 +13,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "mcp_authorization_codes:4824fbcd353b47fa101b5a48255d8aa8"
     ]
@@ -25,7 +25,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "8f7d19bd2211054153c52a213c6044a1"
     ]
@@ -37,7 +37,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "8f7d19bd2211054153c52a213c6044a1"
     ]
@@ -49,7 +49,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "55e4c0dc-3e28-49bb-8cc2-0381dd24d000",
       "ccb2aab7-5b25-4c37-9f49-25382a296380"
@@ -62,7 +62,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "ccb2aab7-5b25-4c37-9f49-25382a296380"
     ]
@@ -74,7 +74,7 @@ Recorded observations (emitted after semantic and persistence assertions):
     "status": "passed",
     "type": "integration",
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
-    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "test": "tests/checks/apps/site/runtime/retirement-api-mcp.runtime.test.ts",
     "data_ids": [
       "55e4c0dc-3e28-49bb-8cc2-0381dd24d000"
     ]
