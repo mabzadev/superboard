@@ -238,10 +238,13 @@ export async function runConsolidatedDeployment(input, run = execute) {
 	if (!input.manifest && !input.dryRun) throw new Error("PREPARED_DEPLOYMENT_REQUIRED");
 	const manifest = input.manifest ?? (await prepareConsolidatedDeployment(input, run));
 	const consoleGroup = manifest.groups.find((group) => group.id === "console");
-	const consoleArtifact = consoleGroup
-		? (manifest.consoleArtifact ??
-			(await captureConsoleArtifact(resolve(root, consoleGroup.configPath))))
-		: null;
+	if (consoleGroup && !manifest.consoleArtifact) {
+		throw new Error("PREPARED_CONSOLE_ARTIFACT_REQUIRED");
+	}
+	const consoleArtifact = consoleGroup ? manifest.consoleArtifact : null;
+	if (consoleArtifact && resolve(root, consoleGroup.configPath) !== consoleArtifact.configPath) {
+		throw new Error("PREPARED_CONSOLE_CONFIG_MISMATCH");
+	}
 	if (consoleArtifact) await verifyConsoleArtifact(consoleArtifact);
 	const env = input.env ?? process.env;
 	const readiness =
