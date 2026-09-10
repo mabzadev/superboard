@@ -4,6 +4,7 @@ import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { PluginInfo, AdminManifest } from "../../src/lib/api";
+import { ApiResponseError } from "../../src/lib/api/client.js";
 import type { PluginUpdateInfo } from "../../src/lib/api/marketplace";
 import { render } from "../utils/render.tsx";
 
@@ -42,6 +43,14 @@ vi.mock("@tanstack/react-router", async () => {
 const mockFetchPlugins = vi.fn<() => Promise<PluginInfo[]>>();
 const mockEnablePlugin = vi.fn();
 const mockDisablePlugin = vi.fn();
+let finishVerification: (() => void) | undefined;
+
+vi.mock("../../src/components/auth/PasskeyLogin.js", () => ({
+	PasskeyLogin: ({ onSuccess }: { onSuccess: (response: unknown) => void }) => {
+		finishVerification = () => onSuccess({ success: true });
+		return <button onClick={finishVerification}>Complete verification</button>;
+	},
+}));
 
 vi.mock("../../src/lib/api", async () => {
 	const actual = await vi.importActual("../../src/lib/api");
@@ -111,8 +120,63 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe("PluginManager", () => {
+	it("retries a managed activation only after successful verification", async () => {
+		const plugin = makePlugin({ enabled: false, status: "inactive", lifecycleManaged: true });
+		mockFetchPlugins.mockResolvedValue([plugin]);
+		mockEnablePlugin
+			.mockRejectedValueOnce(
+				new ApiResponseError(403, "STRONG_REAUTH_REQUIRED", "Verification required"),
+			)
+			.mockImplementationOnce(async () => {
+				const active = { ...plugin, enabled: true, status: "active" };
+				mockFetchPlugins.mockResolvedValue([active]);
+				return active;
+			});
+		const screen = await render(
+			<Wrapper>
+				<PluginManager />
+			</Wrapper>,
+		);
+		await screen.getByRole("switch", { name: "Enable plugin" }).click();
+		await expect
+			.element(screen.getByRole("dialog", { name: "Verify your identity" }))
+			.toBeInTheDocument();
+		expect(mockEnablePlugin).toHaveBeenCalledTimes(1);
+		// The unit harness omits Kumo's portal CSS; native DOM clicks exercise the handler.
+		screen.getByRole("button", { name: "Complete verification" }).element().click();
+		await expect.element(screen.getByRole("switch", { name: "Disable plugin" })).toBeChecked();
+		expect(mockEnablePlugin).toHaveBeenCalledTimes(2);
+	});
+
+	it("cancelling verification leaves the plugin disabled", async () => {
+		mockFetchPlugins.mockResolvedValue([
+			makePlugin({ enabled: false, status: "inactive", lifecycleManaged: true }),
+		]);
+		mockEnablePlugin.mockRejectedValueOnce(
+			new ApiResponseError(403, "STRONG_REAUTH_REQUIRED", "Verification required"),
+		);
+		const screen = await render(
+			<Wrapper>
+				<PluginManager />
+			</Wrapper>,
+		);
+		await screen.getByRole("switch", { name: "Enable plugin" }).click();
+		await expect
+			.element(screen.getByRole("dialog", { name: "Verify your identity" }))
+			.toBeInTheDocument();
+		const delayedVerification = finishVerification;
+		screen.getByRole("button", { name: "Cancel" }).element().click();
+		await expect.element(screen.getByRole("dialog")).not.toBeInTheDocument();
+		delayedVerification?.();
+		await expect.element(screen.getByRole("switch", { name: "Enable plugin" })).not.toBeChecked();
+		expect(mockEnablePlugin).toHaveBeenCalledTimes(1);
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockEnablePlugin.mockReset();
+		mockDisablePlugin.mockReset();
+		finishVerification = undefined;
 		mockFetchPlugins.mockResolvedValue([
 			makePlugin({
 				id: "audit-log",

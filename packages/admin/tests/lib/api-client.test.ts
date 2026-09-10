@@ -166,4 +166,14 @@ describe("throwResponseError", () => {
 			"fallback: Internal Server Error",
 		);
 	});
+
+	it("keeps a server error code when an HTTP/2 response has no status text", async () => {
+		const response = Response.json(
+			{ error: { code: "RELEASE_OPERATIONS_DISABLED" } },
+			{ status: 503 },
+		);
+		await expect(throwResponseError(response, "Failed to enable plugin")).rejects.toThrow(
+			"Failed to enable plugin: RELEASE_OPERATIONS_DISABLED",
+		);
+	});
 });

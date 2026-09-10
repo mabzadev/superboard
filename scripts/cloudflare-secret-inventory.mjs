@@ -85,6 +85,9 @@ export function requiredSecretInventory(target, environment) {
 		"EMDASH_ENCRYPTION_KEY",
 		"SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY",
 		"SITE_OPERATOR_BRIDGE_TOKEN",
+		...(target.environments?.[environment]?.publicRouting === "active"
+			? ["SUPERBOARD_RELEASE_PRIVATE_JWK"]
+			: []),
 	]);
 	if (target.features?.billing)
 		add("billing", [...BILLING_REQUIRED, "INTERNAL_API_TOKEN"], [BILLING_KEY_ALTERNATIVE]);

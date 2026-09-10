@@ -8,6 +8,36 @@ import {
 
 const RELEASE_OPERATIONS_PATTERN = /--release-operations/u;
 
+test("an active operational console enables plugin releases while previews stay read-only", () => {
+	for (const environment of ["development", "production"]) {
+		assert.equal(
+			resolveSiteReleaseOperations({
+				service: "site",
+				environment,
+				publicRoutesEnabled: true,
+			}).value,
+			"enabled",
+		);
+		assert.equal(
+			resolveSiteReleaseOperations({
+				service: "site",
+				environment,
+				publicRoutesEnabled: false,
+			}).value,
+			"disabled",
+		);
+		assert.equal(
+			resolveSiteReleaseOperations({
+				service: "site",
+				environment,
+				publicRoutesEnabled: true,
+				readOnly: true,
+			}).value,
+			"disabled",
+		);
+	}
+});
+
 test("Release operations require an explicit opt-in on a local Site or development preview", () => {
 	for (const selection of [
 		{ service: "site", environment: "local" },

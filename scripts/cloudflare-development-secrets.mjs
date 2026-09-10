@@ -119,6 +119,7 @@ export async function generateDevelopmentSecretAssignments({
 	const appleRoots = JSON.stringify([appleRootBase64]);
 	const assignments = {
 		site: {
+			SUPERBOARD_RELEASE_PRIVATE_JWK: JSON.stringify(await generateReleaseSigningKey()),
 			EMDASH_ENCRYPTION_KEY: `emdash_enc_v1_${randomBytes(32).toString("base64url")}`,
 			SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
 			SITE_OPERATOR_BRIDGE_TOKEN: siteOperatorBridgeToken,
@@ -277,6 +278,20 @@ async function generatePurchasesKeyset() {
 	return {
 		active_kid: kid,
 		keys: [{ ...key, kid, alg: "ES256", use: "sig", key_ops: ["sign"] }],
+	};
+}
+
+export async function generateReleaseSigningKey() {
+	const pair = await webcrypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+		"sign",
+		"verify",
+	]);
+	return {
+		...(await webcrypto.subtle.exportKey("jwk", pair.privateKey)),
+		kid: `superboard-release-${randomBytes(12).toString("hex")}`,
+		alg: "ES256",
+		use: "sig",
+		key_ops: ["sign"],
 	};
 }
 

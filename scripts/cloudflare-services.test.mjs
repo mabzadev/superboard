@@ -179,7 +179,14 @@ test("generated Site config uses target resources and follows public routing act
 		);
 
 		assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, target.target);
-		assert.equal(config.vars.SUPERBOARD_RELEASE_OPERATIONS, "disabled");
+		assert.equal(
+			config.vars.SUPERBOARD_RELEASE_OPERATIONS,
+			resources.publicRouting === "active" ? "enabled" : "disabled",
+		);
+		assert.equal(
+			config.secrets.required.includes("SUPERBOARD_RELEASE_PRIVATE_JWK"),
+			resources.publicRouting === "active",
+		);
 		assert.match(config.vars.D1_EXPECTED_MIGRATION, /^\d+.*\.sql$/u);
 		assert.equal(config.compatibility_flags.includes("global_fetch_strictly_public"), false);
 		assert.equal(config.d1_databases[0].database_name, resources.siteD1.name);
@@ -299,7 +306,7 @@ test("development Site preview routing is explicit and only acquires the canonic
 	}
 });
 
-test("development Front Release operations require the explicit Site preview route", () => {
+test("explicit release operations preserve preview validation and cannot bypass private routing", () => {
 	execFileSync(
 		process.execPath,
 		[
@@ -324,7 +331,7 @@ test("development Front Release operations require the explicit Site preview rou
 	assert.equal(config.vars.SUPERBOARD_RELEASE_OPERATIONS, "enabled");
 
 	for (const extraArgs of [
-		["--target", "mbza-development", "--environment", "development"],
+		["--target", "mbza-development", "--environment", "development", "--no-routes"],
 		[
 			"--target",
 			"vocostar",
@@ -347,7 +354,7 @@ test("development Front Release operations require the explicit Site preview rou
 					],
 					{ cwd: new URL("..", import.meta.url), stdio: "pipe" },
 				),
-			/release-operations/u,
+			/(?:release-operations|site-preview-route)/u,
 		);
 	}
 });

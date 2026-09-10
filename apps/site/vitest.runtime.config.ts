@@ -126,7 +126,7 @@ export default defineConfig({
 							process.env.SUPERBOARD_VERIFIED_PROOF_RECEIPTS ??
 							JSON.stringify({ complete: false, proofs: {} }),
 						SUPERBOARD_INSTANCE_ID: "vocostar",
-						SUPERBOARD_ENVIRONMENT: "local",
+						SUPERBOARD_ENVIRONMENT: process.env.SUPERBOARD_TEST_ENVIRONMENT ?? "local",
 						SUPERBOARD_PLUGIN_IDS: JSON.stringify(parityRelease.active_plugin_ids),
 						SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 						SUPERBOARD_RELEASE_OPERATIONS: "enabled",
