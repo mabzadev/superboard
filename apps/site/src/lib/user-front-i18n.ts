@@ -1,5 +1,4 @@
-import { setupI18n } from "@lingui/core";
-import { compileMessage } from "@lingui/message-utils/compileMessage";
+import { createFrontI18n } from "@superboard/front-ui/i18n";
 
 import {
 	USER_FRONT_CATALOGS,
@@ -42,9 +41,7 @@ export function createUserFrontI18n(
 	locale: UserFrontLocale,
 	messages: Record<string, string> = USER_FRONT_CATALOGS[locale],
 ) {
-	return setupI18n({ locale, messages: { [locale]: messages } }).setMessagesCompiler(
-		compileMessage,
-	);
+	return createFrontI18n({ locale, messages: { [locale]: messages } });
 }
 
 export function resolveUserFrontLocale(value: string | null): UserFrontLocale {

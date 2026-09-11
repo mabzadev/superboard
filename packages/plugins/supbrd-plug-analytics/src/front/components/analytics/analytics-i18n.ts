@@ -1,5 +1,6 @@
-import { setupI18n, type Messages } from "@lingui/core";
+import type { Messages } from "@lingui/core";
 import { useFrontContext } from "@superboard/front-ui/context";
+import { createFrontI18n } from "@superboard/front-ui/i18n";
 import { useMemo } from "react";
 
 const french: Record<string, string> = {
@@ -523,7 +524,7 @@ const catalogs = {
 export function useAnalyticsI18n() {
 	const { locale } = useFrontContext();
 	return useMemo(() => {
-		const i18n = setupI18n({ locale, messages: { [locale]: catalogs[locale] } });
+		const i18n = createFrontI18n({ locale, messages: { [locale]: catalogs[locale] } });
 		return {
 			locale,
 			t: (message: string, values?: Record<string, unknown>) =>

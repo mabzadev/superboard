@@ -1,5 +1,5 @@
-import { setupI18n } from "@lingui/core";
 import { useFrontContext } from "@superboard/front-ui/context";
+import { createFrontI18n } from "@superboard/front-ui/i18n";
 import type { ReactNode } from "react";
 
 const groups = [
@@ -55,7 +55,7 @@ export function WorkerDeploymentGroups<T extends { id: string; workerName?: stri
 	children(service: T): ReactNode;
 }) {
 	const { locale } = useFrontContext();
-	const i18n = setupI18n({ locale, messages: { [locale]: messages[locale] } });
+	const i18n = createFrontI18n({ locale, messages: { [locale]: messages[locale] } });
 	const grouped = new Map<string, T[]>();
 	for (const service of services) {
 		const id =

@@ -25,7 +25,6 @@
     "@emdash-cms/auth": "workspace:*",
     "@emdash-cms/cloudflare": "workspace:*",
     "@lingui/core": "catalog:",
-    "@lingui/message-utils": "5.9.5",
     "@noble/secp256k1": "^3.0.0",
     "@superboard/supbrd-core": "workspace:*",
     "@superboard/contracts": "workspace:*",
