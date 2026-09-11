@@ -1,39 +1,39 @@
 {
   "schema_version": 1,
-  "matrix_sha256": "sha256:12ba8a115b1a3cf81e7d760bf6f8826de1be182a870da4479aa9c72515f1febc",
-  "topology_sha256": "sha256:61ca6b49c58822b6bf51ad2d5c05e8ce139fbbd5d4c0823679a2062137a94697",
+  "matrix_sha256": "sha256:4aac646334411378a2f4af5c8394365404030275e3d468c91ae627058f260c03",
+  "topology_sha256": "sha256:a69c632110d0d929109346d8cb0312911c6cffdab7268f5d93f71df28cf2ad87",
   "row_count": 979,
   "required_row_count": 594,
   "public_cutover": false,
   "release": {
     "source": "scripts/config/superboard-parity-release.json",
     "release_id": "01J00000000000000000007005",
-    "content_checksum": "sha256:210ee2559608e74bf3d30b9a01d71bbf8dee047dbd594fbee886e07843c46dab",
+    "content_checksum": "sha256:536a24ca59dcc9009cb0db362d2e1f562dd1061addc1d4e7bab0b8de82edb424",
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "GfbBAvnlEYVU6rrdgh7DZHUfbmISJj2S96ZCNuoKvnvskJIuDeuvb9d6L0nnp68jRsqiISAZ7qzMK9vxXsrwwg"
+      "value": "leKPE5xMZsgRvE6DXjs2Uc3Y5U3JIRXHWYy49Egb5u_I0zR2HDfWRmUBZY8rroyhdX9UeD1_y8gUxbYtkVk9ww"
     },
-    "validation_set_checksum": "sha256:16341fb0e98a800ae36e199bcd2c3d59164d41d3b3ad6ace894259d15d9cb7ef",
+    "validation_set_checksum": "sha256:ad4c30dd291d9c8c0adadbfef586da7a955331cfc3f2c096f18463e0cc988a4f",
     "validation_receipt_checksums": [
-      "sha256:07c7a63b2db43bfae7bbf5ac4181c85851bdf5b0b1f378365c38b76fa04b6687",
-      "sha256:936c75e1a0a88c477df8d4ca13ebddf466b820c60301e5f45d5dc94d8fca99f1",
-      "sha256:48038eca855dfbcaae64cf7cd6ed6b618d27ac7ca1bcb9a154099733da4beddf",
-      "sha256:8adca4621ebd133bb79897313842ed75cf7d846a2307d19b067f557ef1675e5a",
-      "sha256:8e522c20751dad072665bbd6a7e49d13f2a14fd375cabc505dda1607447f6057",
-      "sha256:90dd77630732ccaeb0ee58a047a6119e745d1005da41fdaa2fcd23d0ec7a6594",
-      "sha256:8c7fb1f24472a1c84e668061ce55a374b4910c4b3385ddca475c08dfdd12f6e6",
-      "sha256:2e305dda3d9779e26e84aab634850d3710a53b66478430bd9e11eef40b8f425e",
-      "sha256:5f10a591a15e0aeb5c07bdb1c7a4ea30ba07173220741f6fd9ad5a765e581e78",
-      "sha256:3e8a2d4c121cdfd7e1597444128f6de41eeb264d91489217a0633f6a8d4cc31c",
-      "sha256:1b7d3cebc86953a7da1a74eb6531b5eced9a8345003ee0bd02343bf0db6dce1e",
-      "sha256:f84c8cbe064772c851106c9d5719b17c8219ba11af1bd8f2b3708b9578a8fcd7",
-      "sha256:d94859ab9c68c72037288b4539caa516aff6818646cd34bb8e59ce6da06ae146"
+      "sha256:f24f8935772f47c33af8cbca17c5a566633af3bb286622027ced9a051281179f",
+      "sha256:818b1875097af3763e610e930464d83ddb486cee20910618e6cac042c4dce575",
+      "sha256:eed08390393d38ae73590a203e8f50102224a74c3343821a1d815ae4dda8bcff",
+      "sha256:cf47f5dbc8f17a421a15b16672f5c53510510d68b6bdb873d7287463828273b7",
+      "sha256:50e0f998ca9fdf965bc3fd6bb4159d5f18a1eb76388ef0c5b10666fbf9fcbc9a",
+      "sha256:4a27b0c64f6e353b7b40ed5ddebdde3ff15b13c73f626027106c872cd1682192",
+      "sha256:cf6602e701add4dc2d5bf7cfc648c3c4db9e83cf5d70e2d4ffb1fad4bdc2302f",
+      "sha256:b1b4a77a6ae3eb33432a18de0565c3323e68e84f9fda7f1a1b1891094b1e6ad9",
+      "sha256:8922ddc5bed204970d36b11cca53cd0502fea48c5a8d25485a86597ff6f33cec",
+      "sha256:6b29be7fa404c0c688c4ba54bf49157eac9b2bf3710eb10e45178a52e6334c18",
+      "sha256:bfb1656468c73a6a54d5a4f48f7856acd3a3bffcde011aac95744d7742f085a8",
+      "sha256:0a8f53c0b8f4cb60195baa27ca98ec66cde3a6d14708cb787bb989222b7bfb2a",
+      "sha256:361ed4c0fe7717f9e3529460ce2809f4ba723667146566f64451d7457bada732"
     ],
     "verification_status": "verified",
     "target": "mbza-development",
     "environment": "local",
-    "target_artifact_checksum": "sha256:b058d3e794ec2e0135292341402da9c73c3e65b4d15d2354c98674c6f738a010",
+    "target_artifact_checksum": "sha256:9de004954789207b3eb9abd7cffa80b447d987d80ac0a11f01ef8aed7740a466",
     "active_plugin_ids": [
       "supbrd-plug-audit",
       "supbrd-plug-content",
@@ -57,9 +57,9 @@
   },
   "front_bundle": {
     "schema_version": 1,
-    "build_id": "69N1GXNHE7XPQ9930CGJV6SJ30",
-    "build_checksum": "sha256:5ff2fd851652caf4bce177bebdf0540e57aeee696ed958bfaa1f4097c1eb8fa8",
-    "source_count": 668
+    "build_id": "409KEG9W7S422Q0VSYF2E6YWWD",
+    "build_checksum": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a",
+    "source_count": 669
   },
   "store_coverage": [
     {

@@ -1,6 +1,6 @@
-import { setupI18n } from "@lingui/core";
 import { pluginPackage, componentSettingKey } from "@superboard/contracts/plugin-packages";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
+import { createFrontI18n } from "@superboard/front-ui/i18n";
 import type { MiddlewareHandler } from "astro";
 
 import { resolveLocale } from "../../../packages/admin/src/locales/config.js";
@@ -176,7 +176,7 @@ export const onRequest = (async (context, next) => {
 		}
 		const requestedLocale = resolveLocale(context.request);
 		const locale = requestedLocale === "fr" || requestedLocale === "ar" ? requestedLocale : "en";
-		const i18n = setupI18n({ locale, messages: { [locale]: messages[locale] } });
+		const i18n = createFrontI18n({ locale, messages: { [locale]: messages[locale] } });
 		const t = (key: string) => i18n._(key);
 		const states = await env.DB.prepare(
 			"SELECT plugin_id,state FROM superboard_plugin_lifecycle WHERE instance_id=? AND target=?",

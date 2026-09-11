@@ -1,9 +1,9 @@
 "use client";
 
-import { setupI18n } from "@lingui/core";
 import { useMemo, type ReactNode } from "react";
 
 import { useOptionalFrontContext } from "../../../context.js";
+import { createFrontI18n } from "../../../i18n.js";
 import { ApiError, getErrorMessage } from "../../lib/ApiError.js";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert.js";
 
@@ -24,7 +24,7 @@ const french: Record<string, string> = {
 };
 
 function moduleI18n(locale: string) {
-	return setupI18n({
+	return createFrontI18n({
 		locale,
 		messages: {
 			[locale]:

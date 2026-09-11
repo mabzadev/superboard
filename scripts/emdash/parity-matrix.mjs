@@ -12,12 +12,10 @@ const topologyPath = join(root, "scripts/config/emdash-plugin-topology.json");
 const parityReleasePath = join(root, "scripts/config/superboard-parity-release.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "scripts/config/superboard-front-bundle.json");
-const manifestMigrationPath = join(
-	root,
-	"apps/site/migrations/0035_front_runtime_compatibility.sql",
-);
+const manifestMigrationPath = join(root, "apps/site/migrations/0036_compiled_front_catalogs.sql");
 const compatibilityPath = join(root, "scripts/config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0035_front_runtime_compatibility.sql"),
 	join(root, "apps/site/migrations/0034_test_source_layout_manifests.sql"),
 	join(root, "apps/site/migrations/0033_script_layout_manifests.sql"),
 	join(root, "apps/site/migrations/0032_plugin_source_layout_manifests.sql"),

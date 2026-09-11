@@ -1,5 +1,5 @@
-import { setupI18n } from "@lingui/core";
 import { useFrontContext } from "@superboard/front-ui/context";
+import { createFrontI18n } from "@superboard/front-ui/i18n";
 import { Button, Input } from "@superboard/front-ui/kumo";
 import { useCallback, useEffect, useState } from "react";
 
@@ -40,7 +40,7 @@ interface Notification {
 export default function PushNotificationsPage() {
 	const { locale } = useFrontContext();
 	const { selectedProject } = useProjectSelection();
-	const i18n = setupI18n({ locale, messages: { [locale]: copy[locale] } });
+	const i18n = createFrontI18n({ locale, messages: { [locale]: copy[locale] } });
 	const [page, setPage] = useState(1);
 	const [pages, setPages] = useState(1);
 	const [items, setItems] = useState<Notification[]>([]);

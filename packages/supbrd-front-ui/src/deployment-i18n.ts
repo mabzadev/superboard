@@ -1,4 +1,4 @@
-import { setupI18n } from "@lingui/core";
+import { createFrontI18n } from "./i18n.js";
 const messages = {
 	en: {
 		cloudflare: "Cloudflare",
@@ -81,6 +81,6 @@ const messages = {
 };
 export function deploymentI18n(language: string) {
 	const locale = language === "fr" ? "fr" : "en";
-	const i18n = setupI18n({ locale, messages: { [locale]: messages[locale] } });
+	const i18n = createFrontI18n({ locale, messages: { [locale]: messages[locale] } });
 	return (id: string) => i18n._(id);
 }
