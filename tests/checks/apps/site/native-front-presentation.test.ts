@@ -327,6 +327,7 @@ test("keeps an active multi-plugin Release renderable across renderer upgrades",
 	});
 	const release = await compile(locked, "01J00000000000000000000412");
 	const legacyAnalyticsBuilds = [
+		"sha256:085d9fc3afdf6e893295f7f2701dfb84e1668c73ba0df6c03d9a713578fdd769",
 		...new Set(
 			Object.values(compatibility.artifacts).flatMap(({ plugin_id: pluginId, renderer_builds }) =>
 				pluginId === "supbrd-plugmod-analytics"
