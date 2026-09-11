@@ -14,13 +14,15 @@ const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.jso
 const frontBundlePath = join(root, "scripts/config/superboard-front-bundle.json");
 const manifestMigrationPath = join(
 	root,
-	"apps/site/migrations/0034_test_source_layout_manifests.sql",
+	"apps/site/migrations/0035_front_runtime_compatibility.sql",
 );
 const compatibilityPath = join(root, "scripts/config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0034_test_source_layout_manifests.sql"),
 	join(root, "apps/site/migrations/0033_script_layout_manifests.sql"),
 	join(root, "apps/site/migrations/0032_plugin_source_layout_manifests.sql"),
 	join(root, "apps/site/migrations/0031_canonical_namespace_manifests.sql"),
+	join(root, "apps/site/migrations/0030_platform_plugin_manifests.sql"),
 	join(root, "apps/site/migrations/0027_reorganisation_plugin_manifests.sql"),
 	join(root, "apps/site/migrations/0016_native_front_compatibility.sql"),
 	join(root, "apps/site/migrations/0017_native_front_presentation.sql"),
