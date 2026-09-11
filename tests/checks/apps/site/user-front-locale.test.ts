@@ -1,9 +1,47 @@
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+import { build } from "esbuild";
 import { expect, test } from "vitest";
 
 import {
 	localizeFrontPath,
 	resolveUserFrontRequestLocale,
 } from "../../../../apps/site/src/lib/user-front-i18n.js";
+
+test("production Front translations interpolate operator names and section names", async () => {
+	const bundle = await build({
+		entryPoints: [
+			fileURLToPath(new URL("../../../../apps/site/src/lib/user-front-i18n.ts", import.meta.url)),
+		],
+		bundle: true,
+		format: "esm",
+		platform: "node",
+		write: false,
+		define: { "process.env.NODE_ENV": '"production"' },
+	});
+	const result = spawnSync(
+		process.execPath,
+		[
+			"--input-type=module",
+			"-e",
+			`${bundle.outputFiles[0]!.text}
+		const translations = createUserFrontI18n("fr");
+		console.log(JSON.stringify({
+			account: translations._("site.front.open_account", {name: "Zoë"}),
+			section: translations._("site.front.section_navigation", {section: "Commerce"})
+		}));
+	`,
+		],
+		{ encoding: "utf8" },
+	);
+	expect(result.status, result.stderr).toBe(0);
+	expect(JSON.parse(result.stdout)).toEqual({
+		account: "Ouvrir le menu du compte de Zoë",
+		section: "Pages Commerce",
+	});
+	expect(result.stderr).not.toContain("Uncompiled message");
+});
 
 test.each([
 	["de-CH,fr;q=0.9,en;q=0.8", "fr"],

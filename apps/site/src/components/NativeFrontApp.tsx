@@ -1,4 +1,3 @@
-import { setupI18n } from "@lingui/core";
 import { watchPluginLifecycle } from "@superboard/front-ui/lifecycle";
 import type {
 	NativeRendererBlock,
@@ -11,7 +10,11 @@ import { Button } from "../../../../packages/supbrd-front-ui/src/shared/componen
 import { mountNativeFrontRenderer } from "../lib/native-front-plugins.js";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
 import { organizeProductNavigation } from "../lib/product-navigation.js";
-import { localizeFrontPath, USER_FRONT_CATALOGS } from "../lib/user-front-i18n.js";
+import {
+	createUserFrontI18n,
+	localizeFrontPath,
+	USER_FRONT_CATALOGS,
+} from "../lib/user-front-i18n.js";
 import { FrontRuntimeProviders } from "./FrontRuntimeProviders.js";
 import { NativeFrontControls } from "./NativeFrontControls.js";
 import { NativeFrontNavigation } from "./NativeFrontNavigation.js";
@@ -84,10 +87,7 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 		...projection.messages,
 		"site.front.title": USER_FRONT_CATALOGS[projection.locale]["site.front.title"],
 	};
-	const i18n = setupI18n({
-		locale: projection.locale,
-		messages: { [projection.locale]: messages },
-	});
+	const i18n = createUserFrontI18n(projection.locale, messages);
 	const message = (id: string, values?: Record<string, string>) =>
 		Object.hasOwn(messages, id) ? i18n._(id, values) : id;
 	const mount = (input: NativeFrontPresentationProjection["content_mounts"][number]) =>

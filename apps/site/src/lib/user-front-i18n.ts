@@ -1,4 +1,5 @@
 import { setupI18n } from "@lingui/core";
+import { compileMessage } from "@lingui/message-utils/compileMessage";
 
 import {
 	USER_FRONT_CATALOGS,
@@ -37,8 +38,13 @@ export function resolveUserFrontRequestLocale(request: Request): UserFrontLocale
 	return resolveUserFrontLocale(request.headers.get("accept-language"));
 }
 
-export function createUserFrontI18n(locale: UserFrontLocale) {
-	return setupI18n({ locale, messages: { [locale]: USER_FRONT_CATALOGS[locale] } });
+export function createUserFrontI18n(
+	locale: UserFrontLocale,
+	messages: Record<string, string> = USER_FRONT_CATALOGS[locale],
+) {
+	return setupI18n({ locale, messages: { [locale]: messages } }).setMessagesCompiler(
+		compileMessage,
+	);
 }
 
 export function resolveUserFrontLocale(value: string | null): UserFrontLocale {
