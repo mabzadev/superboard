@@ -78,6 +78,13 @@
         "supbrd-plugmod-billing.renderer.admin_surface": "sha256:5ff2fd851652caf4bce177bebdf0540e57aeee696ed958bfaa1f4097c1eb8fa8"
       }
     },
+    "sha256:0eedccc0ae08c2a30e9dea8489fe3c06df03ea8a86fbc95f10db88391fc7b2ef": {
+      "plugin_id": "supbrd-plugmod-gateway",
+      "manifest_checksum": "sha256:8da5c87965ffcdf5fd869908f138ecc75e2bc25ddfd974f7c28732aa8f7c15dc",
+      "renderer_builds": {
+        "supbrd-plugmod-gateway.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:0fb2247aa06bb3570caa97329c0e7a08130093c49bdbe7b2a76666ac8618b173": {
       "plugin_id": "supbrd-plug-products",
       "manifest_checksum": "sha256:b128c6080735500b1525de1253e3a21b4497b75622078e4460e131eede3b0342",
@@ -207,6 +214,13 @@
         "supbrd-plugmod-analytics.renderer.admin_surface": "sha256:ffa096a463822b818e5d9452c0d96b89fc12f29c40284ce3e30ae734219e10f1"
       }
     },
+    "sha256:219ffd42b9d8a6d555867d1901a50e3217c03aa8e944f10cefc0ef89ff8cf515": {
+      "plugin_id": "supbrd-plugmod-observability",
+      "manifest_checksum": "sha256:e796c191ff977db3ddc7d0fb71dde7c43b4bad9bdeeab5610fb1138ef764662b",
+      "renderer_builds": {
+        "supbrd-plugmod-observability.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:251750962dc79132b577a2900c6553f0766dda30d96c240578d466b50125e50f": {
       "plugin_id": "supbrd-plug-products",
       "manifest_checksum": "sha256:5b9c276baf27a84e38e51a685dbfcf2ae3978d1a38faa5d742b4030b71ccd857",
@@ -233,6 +247,13 @@
       "manifest_checksum": "sha256:4d80d5bbd2589de005105c5dc2028a2eb05541806004345954f7b422ec032e03",
       "renderer_builds": {
         "supbrd-plug-products.renderer.admin_surface": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f"
+      }
+    },
+    "sha256:26f6b521d13fb455affaa02fb6e009588a024219ee96e8849872c99639c8c458": {
+      "plugin_id": "supbrd-plug-content",
+      "manifest_checksum": "sha256:a60c6adb68b3c7346fb22f77af3e5dcdecf7b6530c9f657411fcbb36fc33dfc8",
+      "renderer_builds": {
+        "supbrd-plug-content.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
       }
     },
     "sha256:290cac0f87026f8c2b6415c6f2648ed7a43c36a8d336a53a20e18cbb959eb77d": {
@@ -263,6 +284,13 @@
         "supbrd-plugmod-support.renderer.admin_surface": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f"
       }
     },
+    "sha256:2d7ca95dd9d88c39bcc49b3efd7b693730b67609b47bb38aa6ca1fcbbb0f857d": {
+      "plugin_id": "supbrd-plugmod-custom-*",
+      "manifest_checksum": "sha256:d7bfe21407deae03a643ee73c3fa3c09add2d11a4d8115f551e4801c30ae87bf",
+      "renderer_builds": {
+        "supbrd-plugmod-custom-*.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:2e7840093d1d88c8de5e809843e1fc2a92e7b4b3d2dd3039b58e868eb5b5a7c5": {
       "plugin_id": "supbrd-plugmod-mcp",
       "manifest_checksum": "sha256:b47093de9a6aa79ebe0a55b1278070be85e4d86439a64d39d122fde44eabc586",
@@ -282,6 +310,13 @@
       "manifest_checksum": "sha256:b93ac94b99257f565aa9d45d21a6bb0ba807fad18baf25ae79128323875335dc",
       "renderer_builds": {
         "supbrd-plug-content.renderer.admin_surface": "sha256:5ff2fd851652caf4bce177bebdf0540e57aeee696ed958bfaa1f4097c1eb8fa8"
+      }
+    },
+    "sha256:2fd7448101716cfaf3035f10ed82ce09a4bebac04bef07ce361a5ff1e4a1dfc4": {
+      "plugin_id": "supbrd-plugmod-onboardings",
+      "manifest_checksum": "sha256:68569247df2320796332301fb90f992fcc7ad3ed61cb2d8048d0fe9d488e59a5",
+      "renderer_builds": {
+        "supbrd-plugmod-onboardings.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
       }
     },
     "sha256:33a96f1b7e3140d126da106d7a735eb06be458de379bef50a484f20fc85d629a": {
@@ -333,6 +368,13 @@
         "supbrd-plugmod-paywalls.renderer.admin_surface": "sha256:5ff2fd851652caf4bce177bebdf0540e57aeee696ed958bfaa1f4097c1eb8fa8"
       }
     },
+    "sha256:3919111f9c128e4d15d7f0cd99f57337b46498492ac26bcc72ebc32da5593ed0": {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "manifest_checksum": "sha256:7612d91cc232d17ecd5e891649f09d57ea86ce0b82c315197de9c3b665c4db22",
+      "renderer_builds": {
+        "supbrd-plugmod-analytics.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:39c2b84b5d0d525abf1ef75a1c87d18b0f4e307b1aeddcccfaf2a6aba43dc0a1": {
       "plugin_id": "supbrd-plugmod-flows",
       "manifest_checksum": "sha256:f3e5e92f1151b5f8b3dd2b10990a6f327d8c716b7b8416eaee6edec1d87be4b3",
@@ -355,6 +397,13 @@
       "manifest_checksum": "sha256:d0b7b27d93425ce95ca8b64bc8862a62ac63e76c7153c164b30d2560eba555d8",
       "renderer_builds": {
         "supbrd-plugmod-dynamic-links.renderer.admin_surface": "sha256:ffa096a463822b818e5d9452c0d96b89fc12f29c40284ce3e30ae734219e10f1"
+      }
+    },
+    "sha256:3d9d3ce901ee95c4342ac22c6390be941f699e4a68e39d36bb453c448f3c85e8": {
+      "plugin_id": "supbrd-plugmod-email",
+      "manifest_checksum": "sha256:70c716a8156e02eee82193183fe7f67a0f758b1e9ec4699e5458e532bd5a441f",
+      "renderer_builds": {
+        "supbrd-plugmod-email.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
       }
     },
     "sha256:3db67468feb3e017733f29fda1ed70ce12c56fad99fc3bedbfd7bf0b3dcef778": {
@@ -420,6 +469,20 @@
         "supbrd-plugmod-dynamic-links.renderer.admin_surface": "sha256:b3318a2b1c6e16e0daa891100d97c9d1ab99901f3128afcf7c585910d8ccfe64"
       }
     },
+    "sha256:4ad18fb8d9d66166b191bb5c395d0368e6c197edeadfa6255f18cecb9ad65468": {
+      "plugin_id": "supbrd-plug-products",
+      "manifest_checksum": "sha256:e462c96abb4e8024710ce908fc7d9b6dc67ec24ae2b7ce1a512e3034e7d6c956",
+      "renderer_builds": {
+        "supbrd-plug-products.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
+    "sha256:4bb1217a61e938e2251f1b186b9d6e51a76e227be2a0e12430724abeb3d78122": {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "manifest_checksum": "sha256:1943f13cf17038b95fce2d777ca7b2d8cdca5b5c864ebe3be229b5003ec9b2ca",
+      "renderer_builds": {
+        "supbrd-plugmod-marketing.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:4beea4ce95c0daecb6fe9d9983f39f0f0428072236564acd9dcfb938c1c1052e": {
       "plugin_id": "supbrd-plugmod-billing",
       "manifest_checksum": "sha256:09bf470ea62fa4e9911a052261a14e2b1e24b8a5c8b2c02c80b9a3ff50dc97cc",
@@ -460,6 +523,16 @@
       "manifest_checksum": "sha256:c17b0a5f24e0e9d8f034d1be911bb0d0f66a8f51d46bf055f31f8166d800a21a",
       "renderer_builds": {
         "supbrd-plugmod-custom-*.renderer.admin_surface": "sha256:b3318a2b1c6e16e0daa891100d97c9d1ab99901f3128afcf7c585910d8ccfe64"
+      }
+    },
+    "sha256:5390cbffa67fb14dfb321ca33f78abf65c055346789ab1d35c368eada5148ec9": {
+      "plugin_id": "supbrd-plug-user",
+      "manifest_checksum": "sha256:c587778c4c59b3beaa571ac8ceff9669e19759890d123c68829a0c0cbe93a6f5",
+      "renderer_builds": {
+        "supbrd-plug-user.renderer.login_form": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a",
+        "supbrd-plug-user.renderer.profile_card": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a",
+        "supbrd-plug-user.renderer.members_table": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a",
+        "supbrd-plug-user.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
       }
     },
     "sha256:54805bd99c2af5005463b439320417a5d2cbf4509f46e79f95fb39b8d3ebe937": {
@@ -730,6 +803,13 @@
         "supbrd-plugmod-support.renderer.admin_surface": "sha256:b3318a2b1c6e16e0daa891100d97c9d1ab99901f3128afcf7c585910d8ccfe64"
       }
     },
+    "sha256:77b48cfdefb0e1bc58dd166fc03440eeef273518a5a5a80b52b174cd413f8198": {
+      "plugin_id": "supbrd-plugmod-files",
+      "manifest_checksum": "sha256:9be909cb3684be03a905cbf63bee36bbb5c07ed196479b5bedbafd56faf143ad",
+      "renderer_builds": {
+        "supbrd-plugmod-files.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:796fdd77973de047ba6decb405e616f65c07af95720d66dd1dba999abc5718e0": {
       "plugin_id": "supbrd-plugmod-analytics",
       "manifest_checksum": "sha256:cd68c67b8cd2fff8cd9748dda47129b63b0d90ee3bf09917fcec83fba1943e06",
@@ -800,6 +880,13 @@
         "supbrd-plugmod-paywalls.renderer.admin_surface": "sha256:ffa096a463822b818e5d9452c0d96b89fc12f29c40284ce3e30ae734219e10f1"
       }
     },
+    "sha256:7fc23328b2cd8a1e1f1cd4277df8d9fd26cfbd1b55cefca2483d952188888396": {
+      "plugin_id": "supbrd-plug-settings",
+      "manifest_checksum": "sha256:5c7d9f340951fb28ccd550376f61f9bf5909b8a1ce189dde5a77dee0114eff93",
+      "renderer_builds": {
+        "supbrd-plug-settings.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:8121163ae53eb042084196ec5e02d3c7da2e0a94e7c03782a078c55b9f802009": {
       "plugin_id": "supbrd-plugmod-marketing",
       "manifest_checksum": "sha256:98572ebed7e2145f12231642c3ab39b4beb1bdeb313bbc2229e98f20a07310de",
@@ -849,6 +936,13 @@
         "supbrd-plug-products.renderer.admin_surface": "sha256:9f6ccf5f3e8e4b9816e0ebebf38fb77c0db83b3dddc98187daad736705d15362"
       }
     },
+    "sha256:859bdd6854114955b486561f1da160c21497bc50fb0d893618bafe136ade581c": {
+      "plugin_id": "supbrd-plugmod-mcp",
+      "manifest_checksum": "sha256:077072bed01747596224a1df2334ce35f54c6983b8201f8c2ff2aefe246f66da",
+      "renderer_builds": {
+        "supbrd-plugmod-mcp.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:8785b1ae19937943bf1d5f697c225726e0ca64b815f8997dc4c32574c801054e": {
       "plugin_id": "supbrd-plugmod-custom-*",
       "manifest_checksum": "sha256:5c477e5ee8c80fe963bb9b36470e01e089b1f209eec6a54aef093f72bfafdc80",
@@ -892,6 +986,13 @@
       "manifest_checksum": "sha256:5cbd5ffa826a3a80311064d9557f7d6bba7b45579803247df25c12c4368a9970",
       "renderer_builds": {
         "supbrd-plugmod-support.renderer.admin_surface": "sha256:ffa096a463822b818e5d9452c0d96b89fc12f29c40284ce3e30ae734219e10f1"
+      }
+    },
+    "sha256:92a4d05d5c8551b36a6ff7ec44c476bab01e34d582066e40650e821212dcf4ff": {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "manifest_checksum": "sha256:1b1767737d03ccd24cf17c5280e2144b8aa960955e643fc8e8c3adbb0b28fa94",
+      "renderer_builds": {
+        "supbrd-plugmod-dynamic-links.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
       }
     },
     "sha256:95e1dbc6cb233feb666d2de6b56986e6c14549586ddf884a102c428f3aca3065": {
@@ -1065,6 +1166,13 @@
         "supbrd-plugmod-mcp.renderer.admin_surface": "sha256:c1b9e8b5dcf148ac833bbea07bf2b8a07817b261e76ff3329ed0940f87de7d23"
       }
     },
+    "sha256:b04d94144abb49f1e88bfa69a4fb6fccabed345208728f220220643b21d2ee37": {
+      "plugin_id": "supbrd-plugmod-flows",
+      "manifest_checksum": "sha256:6bd656d0a532de1d90a7339579072bb84b737c8667dc59b93c2085ec11afaddc",
+      "renderer_builds": {
+        "supbrd-plugmod-flows.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:b051e5c35b0fc9354ba212709f9c1a900e16003ad279b77e9e832fe18603c42a": {
       "plugin_id": "supbrd-plug-audit",
       "manifest_checksum": "sha256:f5281aae0ba2ba293cac1f5d078038efeb9cabe2e2f1ef98babffedafa9c0bbc",
@@ -1219,6 +1327,13 @@
         "supbrd-plugmod-billing.renderer.admin_surface": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f"
       }
     },
+    "sha256:cafb95de600091ccfc435333022e5a326cd11d553efa8dc3f0666a6e0778021c": {
+      "plugin_id": "supbrd-plugmod-support",
+      "manifest_checksum": "sha256:1f68b6d6176f857571c3176a51b3108e8bbce21a99c024e907f6737bfa7a4748",
+      "renderer_builds": {
+        "supbrd-plugmod-support.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:cbf10c6a4a0e801147f2dc3b5dddebffa1289eaae0c5fc638f24346d27b0e613": {
       "plugin_id": "supbrd-plug-user",
       "manifest_checksum": "sha256:e80de87f9a05453b64ed60bd89c1b6404da0dc0baa78dddc063347377cc886ea",
@@ -1279,6 +1394,13 @@
       "manifest_checksum": "sha256:9ef646d91d119a744e651e0603e8da003b763fca1801f1767c32f4fb2ea112f8",
       "renderer_builds": {
         "supbrd-plugmod-marketing.renderer.admin_surface": "sha256:085d9fc3afdf6e893295f7f2701dfb84e1668c73ba0df6c03d9a713578fdd769"
+      }
+    },
+    "sha256:d362a196cded8fe08d4283951b99b4f1a3525f430f4ee3464a9ef92d174d87ce": {
+      "plugin_id": "supbrd-plugmod-paywalls",
+      "manifest_checksum": "sha256:db47c7424d1dc4b310a461675ab8eea989d3398cf02a040404d12d9c9b5d2d4e",
+      "renderer_builds": {
+        "supbrd-plugmod-paywalls.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
       }
     },
     "sha256:d3e1b3a94de7bee6a65154751a57efe046accc716181c0f06143bd92b1fb0d5c": {
@@ -1372,6 +1494,13 @@
         "supbrd-plugmod-onboardings.renderer.admin_surface": "sha256:ffa096a463822b818e5d9452c0d96b89fc12f29c40284ce3e30ae734219e10f1"
       }
     },
+    "sha256:e21c740705f77374d58db04a83e354be243b65d02f3705b28e977d086fed11e3": {
+      "plugin_id": "supbrd-plugmod-billing",
+      "manifest_checksum": "sha256:d3e1089068326b4eac9a0680fdf8def003aef129e82c0837240c287b4f82314c",
+      "renderer_builds": {
+        "supbrd-plugmod-billing.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
+      }
+    },
     "sha256:e22a9b18e1c7b3617e5a5a0199cdc83f5fd8b5c19b9a84cda15588b219eaabaa": {
       "plugin_id": "supbrd-plugmod-onboardings",
       "manifest_checksum": "sha256:551696b935af1c8d83af0d1de5310f65f846bef6052f66f74311799a435fa407",
@@ -1461,6 +1590,13 @@
       "manifest_checksum": "sha256:66e382018222ce88e8dc222b67056ce929701d97ba4670f0e62f17af3d1b9e8b",
       "renderer_builds": {
         "supbrd-plugmod-gateway.renderer.admin_surface": "sha256:ffa096a463822b818e5d9452c0d96b89fc12f29c40284ce3e30ae734219e10f1"
+      }
+    },
+    "sha256:f896f96d30d5e8a73fa839f566ce67ff0ace170d8ec1083fbc51e997ac61b9b8": {
+      "plugin_id": "supbrd-plug-audit",
+      "manifest_checksum": "sha256:f8dcf1a660416f28fbce9913445211be8d3a6effeb8ce6ca098b33bb575c4525",
+      "renderer_builds": {
+        "supbrd-plug-audit.renderer.admin_surface": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a"
       }
     },
     "sha256:f8a6dd8a2534fec3eebff7d458dc9f55617b20c0aa18601267bfe41876d51828": {

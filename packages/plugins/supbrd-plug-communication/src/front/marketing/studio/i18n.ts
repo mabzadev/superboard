@@ -1,5 +1,5 @@
-import { setupI18n } from "@lingui/core";
 import { useFrontContext } from "@superboard/front-ui/context";
+import { createFrontI18n } from "@superboard/front-ui/i18n";
 import { useMemo } from "react";
 
 const french: Record<string, string> = {
@@ -9,10 +9,10 @@ const french: Record<string, string> = {
 	"Create draft": "Créer un brouillon",
 	"Edit channel": "Modifier le canal",
 	"Add a channel": "Ajouter un canal",
-	"Delay": "Attente",
-	"Branch": "Condition",
+	Delay: "Attente",
+	Branch: "Condition",
 	"Update data": "Mettre à jour le profil",
-	"Exit": "Fin",
+	Exit: "Fin",
 	"Complete this enrollment": "Terminer ce parcours",
 	"Wait {minutes} minutes": "Attendre {minutes} minutes",
 	"No sender identities configured.": "Aucun expéditeur configuré.",
@@ -508,7 +508,7 @@ export function studioI18n(locale: "en" | "fr") {
 					legacy: "History",
 					unknown: "Not specified",
 				};
-	const i18n = setupI18n({ locale, messages: { [locale]: messages } });
+	const i18n = createFrontI18n({ locale, messages: { [locale]: messages } });
 	return (key: string) => (Object.hasOwn(messages, key) ? i18n._(key) : key);
 }
 export function useStudioI18n() {

@@ -8,6 +8,7 @@
     "./api": "./src/shared/lib/api.ts",
     "./navigation": "./src/navigation.tsx",
     "./query": "./src/query.ts",
+    "./i18n": "./src/i18n.ts",
     "./next-link": "./src/next-link.tsx",
     "./next-image": "./src/next-image.tsx",
     "./next-dynamic": "./src/next-dynamic.tsx",
@@ -15,7 +16,7 @@
   },
   "scripts": {
     "typecheck": "tsgo --noEmit",
-    "test": "vitest run --config vitest.config.ts",
+    "test": "node --test ../../tests/checks/packages/supbrd-front-ui/i18n.production.test.mjs && vitest run --config vitest.config.ts",
     "test:coverage": "vitest run --config vitest.config.ts --coverage"
   },
   "dependencies": {
@@ -28,6 +29,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@icons-pack/react-simple-icons": "^13.7.0",
     "@lingui/core": "catalog:",
+    "@lingui/message-utils": "5.9.5",
     "@preact/signals-core": "^1.7.0",
     "@radix-ui/react-alert-dialog": "^1.1.23",
     "@radix-ui/react-avatar": "^1.1.10",
@@ -73,6 +75,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "esbuild": "0.25.12",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

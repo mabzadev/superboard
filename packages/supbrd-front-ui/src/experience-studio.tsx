@@ -1,4 +1,3 @@
-import { setupI18n } from "@lingui/core";
 import { canonicalEmailLocale } from "@superboard/contracts/email-studio";
 import {
 	experienceTranslations,
@@ -9,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useFrontContext } from "./context.js";
 import { ExperienceFlowCanvas } from "./experience-flow-canvas.js";
+import { createFrontI18n } from "./i18n.js";
 import { Button, Checkbox, Input, InputArea, Select } from "./kumo.js";
 import { useProjectSelection } from "./shared/context/useProjectSelection.js";
 import { createPluginApiClient } from "./shared/lib/api.js";
@@ -429,7 +429,7 @@ export function useExperienceI18n() {
 						marketing_consent: "Email preferences",
 						benefits: "Benefits",
 					};
-		const i18n = setupI18n({ locale, messages: { [locale]: messages } });
+		const i18n = createFrontI18n({ locale, messages: { [locale]: messages } });
 		return (key: string) => (Object.hasOwn(messages, key) ? i18n._(key) : key);
 	}, [locale]);
 	return { locale, t };
