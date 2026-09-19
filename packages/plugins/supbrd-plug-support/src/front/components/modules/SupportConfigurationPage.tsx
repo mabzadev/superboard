@@ -1,8 +1,8 @@
 "use client";
-
 import { Plus, RefreshCw, Save, Settings2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { SectionNavigation } from "../../../../../../supbrd-front-ui/src/section-navigation.js";
 import {
 	Alert,
 	AlertDescription,
@@ -243,6 +243,7 @@ export default function SupportConfigurationPage() {
 						Refresh
 					</Button>
 				</div>
+				<SectionNavigation />
 				<Alert>
 					<Settings2 />
 					<AlertTitle>One dashboard, isolated runtime</AlertTitle>

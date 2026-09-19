@@ -1,8 +1,8 @@
 "use client";
-
 import { Building2, Plus, RefreshCw, Save, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { SectionNavigation } from "../../../../../../supbrd-front-ui/src/section-navigation.js";
 import { Badge } from "../../../../../../supbrd-front-ui/src/shared/components/ui/badge.js";
 import { Button } from "../../../../../../supbrd-front-ui/src/shared/components/ui/button.js";
 import { Card } from "../../../../../../supbrd-front-ui/src/shared/components/ui/card.js";
@@ -223,6 +223,7 @@ export default function SupportContactsPage() {
 						New contact
 					</Button>
 				</div>
+				<SectionNavigation />
 				<div className="flex gap-2">
 					<div className="relative max-w-xl flex-1">
 						<Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />

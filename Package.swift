@@ -10,7 +10,7 @@ let package = Package(
     targets: [
         .target(
             name: "SuperBoard",
-            path: "sdks/ios/Sources/SuperBoard",
+            path: "sdks/flutter/native/ios/Sources/SuperBoard",
             resources: [
                 .process("controllers/MessagesViewController.xib"),
                 .process("controllers/MessageDetailsViewController.xib"),
@@ -20,7 +20,7 @@ let package = Package(
         .testTarget(
             name: "SuperBoardTests",
             dependencies: ["SuperBoard"],
-            path: "tests/checks/sdks/ios"
+            path: "tests/checks/sdks/flutter/native/ios"
         ),
     ]
 )

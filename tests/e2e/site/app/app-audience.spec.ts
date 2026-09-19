@@ -10,10 +10,7 @@ import {
 } from "../../../fixtures/site-browser/site-api.js";
 const plugin = "supbrd-plug-user";
 
-for (const [path, route] of [
-	["/app/users", "superboard.users"],
-	["/app/members", "superboard.app_members"],
-] as const) {
+for (const [path, route] of [["/app/users", "superboard.users"]] as const) {
 	test(`Application audience ${path} searches and saves a native profile`, async ({
 		authenticatedPage: page,
 	}) => {

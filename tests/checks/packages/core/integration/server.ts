@@ -14,10 +14,11 @@
  *   // ctx.cwd     — working directory of the running server
  *   await ctx.cleanup();
  */
-
 import { spawn } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
+
+import { z } from "zod";
 
 import { EmDashClient } from "../../../../../packages/core/src/client/index.js";
 
@@ -237,9 +238,14 @@ export async function createTestServer(options: TestServerOptions): Promise<Test
 			const body = await setupRes.text().catch(() => "");
 			throw new Error(`Setup bypass failed (${setupRes.status}): ${body}`);
 		}
-		const setupJson = (await setupRes.json()) as {
-			data: { user: { id: string; email: string }; token?: string };
-		};
+		const setupJson = z
+			.object({
+				data: z.object({
+					user: z.object({ id: z.string(), email: z.string() }),
+					token: z.string().optional(),
+				}),
+			})
+			.parse(await setupRes.json());
 		const setupData = setupJson.data;
 		const token = setupData.token;
 		if (!token) {

@@ -6,18 +6,17 @@ import { pathToFileURL } from "node:url";
 
 export const stableSuperBoardPackagePaths = new Set([
 	"apps/mcp/package.json",
-	"sdks/flows/upstream/packages/js-components/package.json",
-	"sdks/flows/upstream/packages/js/package.json",
-	"sdks/flows/upstream/packages/react-components/package.json",
-	"sdks/flows/upstream/packages/react/package.json",
-	"sdks/flows/upstream/product/shared/package.json",
-	"sdks/flows/upstream/product/types/package.json",
-	"sdks/identity/angular/package.json",
-	"sdks/identity/react/package.json",
-	"sdks/identity/vue/package.json",
-	"sdks/identity/web/package.json",
-	"sdks/javascript/package.json",
-	"sdks/react-native/package.json",
+	"sdks/web/flows/upstream/packages/js-components/package.json",
+	"sdks/web/flows/upstream/packages/js/package.json",
+	"sdks/web/flows/upstream/packages/react-components/package.json",
+	"sdks/web/flows/upstream/packages/react/package.json",
+	"sdks/web/flows/upstream/product/shared/package.json",
+	"sdks/web/flows/upstream/product/types/package.json",
+	"sdks/web/identity/angular/package.json",
+	"sdks/web/identity/react/package.json",
+	"sdks/web/identity/vue/package.json",
+	"sdks/web/identity/web/package.json",
+	"sdks/web/package.json",
 ]);
 
 export function isVersionCheckExempt(file) {

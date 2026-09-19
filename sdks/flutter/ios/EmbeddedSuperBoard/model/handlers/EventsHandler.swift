@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/handlers/EventsHandler.swift
+../../../../native/ios/Sources/SuperBoard/model/handlers/EventsHandler.swift

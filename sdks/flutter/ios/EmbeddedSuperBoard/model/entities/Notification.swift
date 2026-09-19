@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/entities/Notification.swift
+../../../../native/ios/Sources/SuperBoard/model/entities/Notification.swift

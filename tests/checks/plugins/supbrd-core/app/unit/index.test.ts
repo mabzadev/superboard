@@ -66,9 +66,7 @@ describe("app worker", () => {
 			env(),
 		);
 		expect(response.status).toBe(403);
-		expect(((await response.json()) as { error: { code: string } }).error.code).toBe(
-			"project_context_invalid",
-		);
+		expect(await response.json()).toMatchObject({ error: { code: "project_context_invalid" } });
 	});
 
 	it("accepts a fresh signed context for the canonical project", async () => {

@@ -44,14 +44,14 @@ export const sdkContracts = Object.freeze({
 	ios: Object.freeze({
 		lifecycle: "internal",
 		packageName: "SuperBoard",
-		sourcePath: "sdks/ios",
+		sourcePath: "sdks/flutter/native/ios",
 		releasePrefix: "sdk-ios-v",
 		coverageMode: "historical-release",
 	}),
 	android: Object.freeze({
 		lifecycle: "internal",
 		packageName: "io.superboard:superboard-android-sdk",
-		sourcePath: "sdks/android/SuperBoard",
+		sourcePath: "sdks/flutter/native/android/SuperBoard",
 		releasePrefix: "sdk-android-v",
 		coverageMode: "historical-release",
 	}),
@@ -389,11 +389,18 @@ export function verifyCatalogueCoverage(manifest, catalogue) {
 		throw new Error("SDK catalogue repository must match the coverage manifest");
 	}
 	const catalogueLibraries = new Map(
-		(catalogue.libraries ?? []).map((library) => [library.id, library]),
+		[
+			...(catalogue.libraries ?? []),
+			...(catalogue.components ?? []),
+			...(catalogue.retiredLibraries ?? []),
+		].map((library) => [library.id, library]),
 	);
 	if (
 		!Array.isArray(catalogue.libraries) ||
-		catalogueLibraries.size !== catalogue.libraries.length
+		catalogueLibraries.size !==
+			catalogue.libraries.length +
+				(catalogue.components?.length ?? 0) +
+				(catalogue.retiredLibraries?.length ?? 0)
 	) {
 		throw new Error("SDK catalogue must not contain duplicate library ids");
 	}
@@ -444,7 +451,11 @@ function verifyLegacyCatalogueTransition(manifest, catalogue, libraries) {
 		);
 	}
 	const catalogueLibraries = new Map(
-		(catalogue.libraries ?? []).map((library) => [library.id, library]),
+		[
+			...(catalogue.libraries ?? []),
+			...(catalogue.components ?? []),
+			...(catalogue.retiredLibraries ?? []),
+		].map((library) => [library.id, library]),
 	);
 	if (
 		!Array.isArray(catalogue.libraries) ||

@@ -19,7 +19,7 @@ Lancez les commandes `pnpm` depuis la racine du dépôt.
 Un outil spécifique à un plugin reste dans
 `packages/plugins/<plugin>/scripts/`. Ses tests se trouvent dans
 `tests/checks/plugins/<plugin>/`. Les outils d'import du SDK Flows restent dans
-`sdks/flows/scripts/`, avec leurs tests dans `tests/checks/sdks/flows/`.
+`sdks/web/flows/scripts/`, avec leurs tests dans `tests/checks/sdks/web/flows/`.
 
 ## Commandes courantes
 
@@ -58,6 +58,19 @@ Les noms des commandes de déploiement et des services restent stables. Le
 déplacement des tests ne change pas les cibles, les bindings ou les migrations.
 Les contrôles de déploiement sont exécutés depuis `tests/checks/cloudflare/` ;
 les opérations restent dans `scripts/cloudflare/`.
+
+Le lanceur local conserve les journaux de chaque service dans son dossier
+`logs/`. Il retire le transfert vers les consommateurs Tail du registre local,
+qui peut réémettre ses propres erreurs pendant le démarrage. Les configurations
+de déploiement Cloudflare conservent leurs consommateurs Tail. Le Site local
+accepte le nom interne `site.internal` pour les appels signés des Workers ;
+les autres noms non autorisés restent refusés.
+
+`cloudflare:deploy` et `cloudflare:deploy:all` exécutent le lint complet et
+`lint:contracts` avant les régressions des plugins et le déploiement.
+`quality:release` rassemble la validation locale préalable ; son exécution ne
+déploie aucun service. Le détail des contrôles et de la dette initiale figure
+dans [le guide des tests](../tests/README.md#lints-et-qualité).
 
 Suivez le [workflow de développement](../docs/DEVELOPMENT_WORKFLOW.md) et le
 [guide Cloudflare](../docs/CLOUDFLARE.md) pour la validation, les sauvegardes et le

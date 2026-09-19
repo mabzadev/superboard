@@ -1,5 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
 
+import { retiredFrontPageDestination } from "./lib/retired-front-pages.js";
 import { FRONT_LOCALE_COOKIE, isUserFrontLocale } from "./lib/user-front-i18n.js";
 
 export const onRequest = defineMiddleware(({ request, url, cookies }, next) => {
@@ -17,5 +18,8 @@ export const onRequest = defineMiddleware(({ request, url, cookies }, next) => {
 			maxAge: 31536000,
 		});
 	}
+	const destination = retiredFrontPageDestination(url.pathname);
+	if (destination && (request.method === "GET" || request.method === "HEAD"))
+		return Response.redirect(new URL(`${destination}${url.search}`, url), 308);
 	return next();
 });

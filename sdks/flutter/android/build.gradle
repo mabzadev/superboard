@@ -75,15 +75,15 @@ android {
     sourceSets {
         main.java.srcDirs += [
             "src/main/kotlin",
-            "../../android/SuperBoard/SuperBoard/src/main/java"
+            "../native/android/SuperBoard/SuperBoard/src/main/java"
         ]
-        main.res.srcDirs += "../../android/SuperBoard/SuperBoard/src/main/res"
+        main.res.srcDirs += "../native/android/SuperBoard/SuperBoard/src/main/res"
         test.java.setSrcDirs(["../../../tests/checks/sdks/flutter/android/kotlin"])
     }
 
     defaultConfig {
         minSdk = 24
-        consumerProguardFiles "../../android/SuperBoard/SuperBoard/consumer-rules.pro"
+        consumerProguardFiles "../native/android/SuperBoard/SuperBoard/consumer-rules.pro"
         buildConfigField "String", "SDK_VERSION", "\"${flutterSdkVersion}\""
         buildConfigField "boolean", "NETWORK_LOGGING", "false"
     }

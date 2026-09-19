@@ -1,3 +1,4 @@
 {
-  "*": "prettier --ignore-unknown --write"
+	"*.astro": "prettier --write",
+	"*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,yaml,yml,css,md,mdx}": "oxfmt --ignore-path .gitignore --write"
 }

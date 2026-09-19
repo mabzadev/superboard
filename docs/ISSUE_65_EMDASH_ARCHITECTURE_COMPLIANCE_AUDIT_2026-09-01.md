@@ -66,7 +66,7 @@ $ cd "$audit_snapshot"
 $ pnpm install --frozen-lockfile
 ```
 
-Le lint de référence était déjà bloqué avant la création de ce rapport. `pnpm lint:json` ne produit pas de JSON exploitable parce qu’Oxlint cherche `sdks/flows/upstream/product/icons/../../.oxlintrc.json`, absent du checkout. Ce blocage n’est pas causé par le rapport.
+Le lint de référence était déjà bloqué avant la création de ce rapport. `pnpm lint:json` ne produit pas de JSON exploitable parce qu’Oxlint cherche `sdks/web/flows/upstream/product/icons/../../.oxlintrc.json`, absent du checkout. Ce blocage n’est pas causé par le rapport.
 
 Les commandes ciblées exécutées dans le snapshot du SHA ont produit les résultats suivants :
 

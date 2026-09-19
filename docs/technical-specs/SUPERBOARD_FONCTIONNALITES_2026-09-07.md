@@ -443,18 +443,18 @@ Lectures : `operations`.
 
 Les états ci-dessous viennent du catalogue local ; les tags distants et registres de publication n’ont pas été interrogés.
 
-| Bibliothèque                           | Cycle de vie | État de release déclaré | Sources                                                                                              |
-| -------------------------------------- | ------------ | ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| SuperBoard Flutter                     | `active`     | `pending-release`       | [sdks/flutter](../../sdks/flutter)                                                                   |
-| SuperBoard FlutterFlow                 | `active`     | `pending-release`       | [sdks/flutterflow](../../sdks/flutterflow)                                                           |
-| SuperBoard FlutterFlow Support         | `archived`   | `released`              | [sdks/flutterflow_messaging](../../sdks/flutterflow_messaging)                                       |
-| SuperBoard iOS                         | `internal`   | `released`              | [sdks/ios](../../sdks/ios)                                                                           |
-| SuperBoard Android                     | `internal`   | `released`              | [sdks/android/SuperBoard](../../sdks/android/SuperBoard)                                             |
-| SuperBoard JavaScript                  | `archived`   | `released`              | [sdks/javascript](../../sdks/javascript)                                                             |
-| SuperBoard React Native                | `archived`   | `released`              | [sdks/react-native](../../sdks/react-native)                                                         |
-| SuperBoard Flows JavaScript            | `active`     | `unreleased`            | [sdks/flows/upstream/packages/js](../../sdks/flows/upstream/packages/js)                             |
-| SuperBoard Flows React                 | `active`     | `unreleased`            | [sdks/flows/upstream/packages/react](../../sdks/flows/upstream/packages/react)                       |
-| SuperBoard Flows JavaScript Components | `active`     | `unreleased`            | [sdks/flows/upstream/packages/js-components](../../sdks/flows/upstream/packages/js-components)       |
-| SuperBoard Flows React Components      | `active`     | `unreleased`            | [sdks/flows/upstream/packages/react-components](../../sdks/flows/upstream/packages/react-components) |
-| SuperBoard Flows Shared                | `internal`   | `unreleased`            | [sdks/flows/upstream/packages/shared](../../sdks/flows/upstream/packages/shared)                     |
-| SuperBoard Flows Styles                | `internal`   | `unreleased`            | [sdks/flows/upstream/packages/styles](../../sdks/flows/upstream/packages/styles)                     |
+| Bibliothèque                           | Cycle de vie | État de release déclaré | Sources                                                                                                      |
+| -------------------------------------- | ------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------ |
+| SuperBoard Flutter                     | `active`     | `pending-release`       | [sdks/flutter](../../sdks/flutter)                                                                           |
+| SuperBoard FlutterFlow                 | `active`     | `pending-release`       | [sdks/flutterflow](../../sdks/flutterflow)                                                                   |
+| SuperBoard FlutterFlow Support         | `archived`   | `released`              | [sdks/flutterflow_messaging](../../sdks/flutterflow_messaging)                                               |
+| SuperBoard iOS                         | `internal`   | `released`              | [sdks/ios](../../sdks/ios)                                                                                   |
+| SuperBoard Android                     | `internal`   | `released`              | [sdks/flutter/native/android/SuperBoard](../../sdks/flutter/native/android/SuperBoard)                       |
+| SuperBoard JavaScript                  | `archived`   | `released`              | [sdks/javascript](../../sdks/javascript)                                                                     |
+| SuperBoard React Native                | `archived`   | `released`              | [sdks/react-native](../../sdks/react-native)                                                                 |
+| SuperBoard Flows JavaScript            | `active`     | `unreleased`            | [sdks/web/flows/upstream/packages/js](../../sdks/web/flows/upstream/packages/js)                             |
+| SuperBoard Flows React                 | `active`     | `unreleased`            | [sdks/web/flows/upstream/packages/react](../../sdks/web/flows/upstream/packages/react)                       |
+| SuperBoard Flows JavaScript Components | `active`     | `unreleased`            | [sdks/web/flows/upstream/packages/js-components](../../sdks/web/flows/upstream/packages/js-components)       |
+| SuperBoard Flows React Components      | `active`     | `unreleased`            | [sdks/web/flows/upstream/packages/react-components](../../sdks/web/flows/upstream/packages/react-components) |
+| SuperBoard Flows Shared                | `internal`   | `unreleased`            | [sdks/web/flows/upstream/packages/shared](../../sdks/web/flows/upstream/packages/shared)                     |
+| SuperBoard Flows Styles                | `internal`   | `unreleased`            | [sdks/web/flows/upstream/packages/styles](../../sdks/web/flows/upstream/packages/styles)                     |

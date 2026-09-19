@@ -435,6 +435,65 @@ export function lintFrontMenuSource(filename, source, options = {}) {
 	return diagnostics;
 }
 
+export function lintFrontMenuTargets(menus, views, moduleExists) {
+	const results = [];
+	const report = (filename, code, message) =>
+		results.push({ filename, code: `superboard(${code})`, message, severity: "error" });
+	const menuFile = "scripts/config/superboard-front-menu-seed.json";
+	const viewFile = "scripts/config/superboard-front-view-implementations.json";
+	if (!Array.isArray(menus) || !menus.length || !Array.isArray(views) || !views.length) {
+		report(
+			menuFile,
+			"front-navigation-empty",
+			"Navigation and view inventories must be non-empty arrays.",
+		);
+		return results;
+	}
+	const routes = views
+		.filter((view) => view.status === "registered")
+		.map((view) => {
+			if (!view.module || !moduleExists(view.module))
+				report(
+					viewFile,
+					"front-view-module",
+					`Missing view module for ${view.path}: ${view.module}`,
+				);
+			return new RegExp(
+				`^${view.path
+					.split("/")
+					.map((segment) =>
+						segment.startsWith(":")
+							? "[^/]+"
+							: segment.startsWith("*")
+								? ".*"
+								: segment.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"),
+					)
+					.join("/")}/?$`,
+				"u",
+			);
+		});
+	function visit(items) {
+		for (const item of items ?? []) {
+			if (item.url && !/^https?:\/\//u.test(item.url)) {
+				if (!item.url.startsWith("/") || item.url.startsWith("//")) {
+					report(menuFile, "front-menu-target", `Invalid navigation destination: ${item.url}`);
+				} else {
+					const path = new URL(item.url, "https://navigation.invalid").pathname;
+					if (!corePaths.has(path) && !routes.some((route) => route.test(path)))
+						report(
+							menuFile,
+							"front-menu-target",
+							`No registered view for ${item.url} (${item.label}).`,
+						);
+				}
+			}
+			visit(item.children);
+		}
+	}
+	for (const menu of menus) visit(menu.items);
+	return results;
+}
+
 export async function lintFrontMenuProject(root, sources) {
 	const files = sources ?? new Map();
 	if (!sources) {
@@ -453,6 +512,18 @@ export async function lintFrontMenuProject(root, sources) {
 			? readFileSync(resolve(root, path), "utf8")
 			: undefined);
 	const results = [];
+	if (!sources) {
+		const menus = JSON.parse(
+			readFileSync(resolve(root, "scripts/config/superboard-front-menu-seed.json"), "utf8"),
+		);
+		const { views } = JSON.parse(
+			readFileSync(
+				resolve(root, "scripts/config/superboard-front-view-implementations.json"),
+				"utf8",
+			),
+		);
+		results.push(...lintFrontMenuTargets(menus, views, (path) => existsSync(resolve(root, path))));
+	}
 	let compiler;
 	for (const [filename, source] of files) {
 		let astroAst;

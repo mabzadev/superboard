@@ -630,12 +630,8 @@ export function buildParityMatrix() {
 	});
 
 	const sdkRows = [
-		[
-			"javascript",
-			"sdks/javascript/src",
-			"tests/checks/sdks/javascript/emdash-store-parity.test.js",
-		],
-		["react-native", "sdks/react-native/src", "tests/checks/sdks/react-native/unit/index.test.tsx"],
+		["web", "sdks/web/src", "tests/checks/sdks/web/emdash-store-parity.test.js"],
+		["tauri", "sdks/tauri/src", "tests/checks/sdks/tauri/client.test.mjs"],
 		["flutter", "sdks/flutter/lib", "tests/checks/sdks/flutter/unit/emdash_store_parity_test.dart"],
 		[
 			"flutterflow",

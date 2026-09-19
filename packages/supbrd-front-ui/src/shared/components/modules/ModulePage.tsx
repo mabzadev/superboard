@@ -4,6 +4,7 @@ import { useMemo, type ReactNode } from "react";
 
 import { useOptionalFrontContext } from "../../../context.js";
 import { createFrontI18n } from "../../../i18n.js";
+import { SectionNavigation } from "../../../section-navigation.js";
 import { ApiError, getErrorMessage } from "../../lib/ApiError.js";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert.js";
 
@@ -67,6 +68,7 @@ export function ModulePage({
 					<p className="ds-page-description">{description}</p>
 				</div>
 			</header>
+			<SectionNavigation />
 			{error && (
 				<Alert variant="destructive">
 					<AlertTitle>{i18n._("Unable to load this module")}</AlertTitle>

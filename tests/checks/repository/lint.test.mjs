@@ -6,8 +6,59 @@ import test from "node:test";
 
 import { ESLint } from "eslint";
 
-import { lintFrontMenuSource, lintFrontMenuProject } from "../../lints/front-menu.mjs";
+import {
+	lintFrontMenuSource,
+	lintFrontMenuProject,
+	lintFrontMenuTargets,
+} from "../../lints/front-menu.mjs";
 import { classifyLintSources, normalizeEslintDiagnostics } from "../../lints/lint.mjs";
+
+test("navigation rejects orphan links and missing view files without rejecting localized routes", () => {
+	const views = [{ path: "/identity/:lang/logs", status: "registered", module: "logs.tsx" }];
+	const menus = [
+		{
+			items: [
+				{
+					label: "Identity",
+					children: [
+						{ label: "Logs", url: "/identity/fr/logs?filter=recent" },
+						{ label: "Home", url: "/superboard-system/home" },
+						{ label: "Docs", url: "https://example.test/docs" },
+					],
+				},
+			],
+		},
+	];
+	assert.deepEqual(
+		lintFrontMenuTargets(menus, views, () => true),
+		[],
+	);
+	assert.equal(
+		lintFrontMenuTargets(menus, views, () => false)[0].code,
+		"superboard(front-view-module)",
+	);
+	for (const url of [
+		"/missing",
+		"/identity/fr/logs/unknown",
+		["javascript", "alert(1)"].join(":"),
+		"//example.test",
+	]) {
+		const diagnostics = lintFrontMenuTargets(
+			[{ items: [{ label: "Broken", children: [{ url }] }] }],
+			views,
+			() => true,
+		);
+		assert.equal(diagnostics[0].code, "superboard(front-menu-target)", url);
+	}
+	assert.equal(
+		lintFrontMenuTargets(menus, [{ ...views[0], status: "unregistered" }], () => true)[0].code,
+		"superboard(front-menu-target)",
+	);
+	assert.equal(
+		lintFrontMenuTargets([], [], () => true)[0].code,
+		"superboard(front-navigation-empty)",
+	);
+});
 
 test("new executable sources receive a linter without a manually maintained allowlist", () => {
 	const paths = [
@@ -29,9 +80,9 @@ test("new executable sources receive a linter without a manually maintained allo
 });
 
 test("reference snippets stay outside executable lint while imported SDK runtime remains checked", () => {
-	const executable = "sdks/flows/upstream/packages/react/src/lib/api.ts";
-	const reference = "sdks/flows/upstream/reference/product-examples/modal/src/app/page.tsx";
-	const productReference = "sdks/flows/upstream/product/ui/src/button.tsx";
+	const executable = "sdks/web/flows/upstream/packages/react/src/lib/api.ts";
+	const reference = "sdks/web/flows/upstream/reference/product-examples/modal/src/app/page.tsx";
+	const productReference = "sdks/web/flows/upstream/product/ui/src/button.tsx";
 	const { groups, excluded } = classifyLintSources(
 		[executable, reference, productReference],
 		new Set(),

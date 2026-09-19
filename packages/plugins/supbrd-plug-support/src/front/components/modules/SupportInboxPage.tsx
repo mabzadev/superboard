@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "@superboard/front-ui/next-link";
 import {
 	CircleUserRound,
@@ -20,6 +19,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { SectionNavigation } from "../../../../../../supbrd-front-ui/src/section-navigation.js";
 import {
 	Alert,
 	AlertDescription,
@@ -535,6 +535,7 @@ export default function InboxPage() {
 						</Button>
 					</div>
 				</div>
+				<SectionNavigation />
 				<Alert>
 					<ShieldCheck />
 					<AlertTitle>Isolated Support runtime</AlertTitle>

@@ -1,0 +1,119 @@
+{
+	"name": "@superboard/web",
+	"version": "0.1.0",
+	"description": "SuperBoard Web SDK with application identity, links, support and Flows.",
+	"type": "module",
+	"types": "./dist/index.d.ts",
+	"main": "./dist/superboard.umd.cjs",
+	"module": "./dist/superboard.js",
+	"browser": "./dist/superboard.js",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/superboard.js",
+			"require": "./dist/superboard.umd.cjs",
+			"default": "./dist/superboard.js"
+		},
+		"./support": {
+			"types": "./dist/support.d.ts",
+			"import": "./dist/support.js",
+			"require": "./dist/support.umd.cjs",
+			"default": "./dist/support.js"
+		},
+		"./client": {
+			"types": "./src/client.d.ts",
+			"import": "./src/client.js"
+		},
+		"./flows": {
+			"types": "./dist/flows/index.d.ts",
+			"import": "./dist/flows/index.mjs"
+		},
+		"./flows/*": {
+			"types": "./dist/flows/*.d.ts",
+			"import": "./dist/flows/*.mjs"
+		},
+		"./flows/react": {
+			"types": "./dist/flows/react/index.d.ts",
+			"import": "./dist/flows/react/index.mjs"
+		},
+		"./flows/react/*": {
+			"types": "./dist/flows/react/*.d.ts",
+			"import": "./dist/flows/react/*.mjs"
+		},
+		"./flows/components": {
+			"types": "./dist/flows/components/index.d.ts",
+			"import": "./dist/flows/components/index.mjs"
+		},
+		"./flows/components/*": {
+			"types": "./dist/flows/components/*.d.ts",
+			"import": "./dist/flows/components/*.mjs"
+		},
+		"./flows/react-components": {
+			"types": "./dist/flows/react-components/index.d.ts",
+			"import": "./dist/flows/react-components/index.mjs"
+		},
+		"./flows/react-components/*": {
+			"types": "./dist/flows/react-components/*.d.ts",
+			"import": "./dist/flows/react-components/*.mjs"
+		},
+		"./identity": {
+			"types": "./dist/identity/index.d.ts",
+			"import": "./dist/identity/index.js"
+		},
+		"./flows/react-components/index.css": "./dist/flows/react-components/index.css",
+		"./flows/styles/*": "./dist/flows/styles/*"
+	},
+	"files": [
+		"dist",
+		"src/client.js",
+		"src/client.d.ts"
+	],
+	"scripts": {
+		"start": "webpack-dev-server --config webpack.config.cjs --open",
+		"build": "webpack --config webpack.config.cjs && node scripts/build-modules.mjs",
+		"test": "node --test ../../tests/checks/sdks/web/superboard.test.js ../../tests/checks/sdks/web/support.test.js ../../tests/checks/sdks/web/emdash-store-parity.test.js ../../tests/checks/sdks/web/client.test.mjs",
+		"test:package": "node --test ../../tests/checks/sdks/web/package.test.js",
+		"pack:check": "npm pack --dry-run",
+		"audit:production": "npm audit --omit=dev --workspaces=false --audit-level=low",
+		"audit:development": "npm audit --include=dev --workspaces=false --audit-level=low",
+		"audit": "npm run audit:production && npm run audit:development",
+		"check": "npm run audit && npm test && npm run build && npm run test:package && npm run pack:check"
+	},
+	"keywords": [
+		"superboard",
+		"javascript",
+		"library"
+	],
+	"author": "SuperBoard",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/mabzadev/superboard.git",
+		"directory": "sdks/web"
+	},
+	"devDependencies": {
+		"copy-webpack-plugin": "^14.0.0",
+		"webpack": "^5.109.2",
+		"webpack-cli": "^7.2.2",
+		"webpack-dev-server": "^6.0.0"
+	},
+	"dependencies": {
+		"@lit-labs/preact-signals": "^1.0.3",
+		"@preact/signals-core": "^1.14.4",
+		"clsx": "^2.1.1",
+		"es-toolkit": "^1.50.0",
+		"lit": "^3.3.3",
+		"@floating-ui/dom": "^1.8.0",
+		"dompurify": "^3.4.12",
+		"@floating-ui/react-dom": "^2.1.9",
+		"@melody-auth/shared": "^1.0.11"
+	},
+	"peerDependencies": {
+		"react": ">=17.0.2"
+	},
+	"peerDependenciesMeta": {
+		"react": {
+			"optional": true
+		}
+	}
+}

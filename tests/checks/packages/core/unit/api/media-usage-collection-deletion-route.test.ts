@@ -49,7 +49,7 @@ function context(
 
 async function expectError(response: Response, status: number, code: string) {
 	expect(response.status).toBe(status);
-	expect((await response.json()) as { error: { code: string } }).toMatchObject({
+	expect(await response.json()).toMatchObject({
 		error: expect.objectContaining({ code }),
 	});
 }

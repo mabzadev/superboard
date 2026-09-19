@@ -15,10 +15,9 @@ const activeMetadataFiles = [
 	"tests/fixtures/cloudflare/targets/reference-production.json",
 	"sdks/flutter/pubspec.yaml",
 	"sdks/flutter/ios/superboard_flutter.podspec",
-	"sdks/ios/SuperBoard.podspec",
-	"sdks/javascript/package.json",
-	"sdks/react-native/package.json",
-	"sdks/react-native/superboard-react-native.podspec",
+	"sdks/flutter/native/ios/SuperBoard.podspec",
+	"sdks/web/package.json",
+	"sdks/tauri/package.json",
 	"scripts/clients/flutterflow-library/dsl/edit.dart",
 ];
 
@@ -46,7 +45,9 @@ test("historical package coordinates remain explicitly frozen on the archived pa
 
 	const historicalIds = ["android", "javascript", "react-native"];
 	for (const id of historicalIds) {
-		const library = catalog.libraries.find((entry) => entry.id === id);
+		const library = [...catalog.libraries, ...catalog.components, ...catalog.retiredLibraries].find(
+			(entry) => entry.id === id,
+		);
 		assert.ok(library, `missing historical SDK ${id}`);
 		assert.ok(
 			["internal", "archived"].includes(library.lifecycle),

@@ -5,7 +5,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
-const canonicalRoot = join(repositoryRoot, "sdks/ios/Sources/SuperBoard");
+const canonicalRoot = join(repositoryRoot, "sdks/flutter/native/ios/Sources/SuperBoard");
 const embeddedRoot = join(repositoryRoot, "sdks/flutter/ios/EmbeddedSuperBoard");
 const podspecUrl = new URL("../../../sdks/flutter/ios/superboard_flutter.podspec", import.meta.url);
 

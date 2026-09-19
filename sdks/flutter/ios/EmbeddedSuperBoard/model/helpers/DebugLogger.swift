@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/helpers/DebugLogger.swift
+../../../../native/ios/Sources/SuperBoard/model/helpers/DebugLogger.swift

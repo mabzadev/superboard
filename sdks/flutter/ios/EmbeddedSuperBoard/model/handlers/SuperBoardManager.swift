@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/handlers/SuperBoardManager.swift
+../../../../native/ios/Sources/SuperBoard/model/handlers/SuperBoardManager.swift

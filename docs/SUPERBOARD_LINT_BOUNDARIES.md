@@ -20,7 +20,7 @@ The last group uses syntax checks because these sources have no common TypeScrip
 
 `pnpm lint:coverage` prints the complete source inventory grouped by linter. It includes tracked files and untracked files that Git does not ignore. A new executable file receives a linter without adding it to an allowlist. New files inside an upstream EmDash package retain the package's rules.
 
-The inventory also reports exclusions with a reason: generated output, declaration files, skill scaffolds, and imported Flows reference material. Flows `product/` and `reference/` are source references, as described in `sdks/flows/upstream/GENERATED.md`; the executable SDK lives under `packages/` and `tests/e2e/`. `pnpm flows-sdk:check:import` verifies the imported files against their recorded checksums, including the reference material.
+The inventory also reports exclusions with a reason: generated output, declaration files, skill scaffolds, and imported Flows reference material. Flows `product/` and `reference/` are source references, as described in `sdks/web/flows/upstream/GENERATED.md`; the executable SDK lives under `packages/` and `tests/e2e/`. `pnpm flows-sdk:check:import` verifies the imported files against their recorded checksums, including the reference material.
 
 An ESLint ignored-file warning remains a failing diagnostic. Do not add an exclusion to make an executable source disappear from the gate. Assign it the configuration that owns its conventions.
 

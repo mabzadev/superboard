@@ -45,17 +45,17 @@ pnpm flows:check
 
 ## Layout
 
-| Path | Purpose |
-| --- | --- |
-| `apps/` | Executable applications, including the Site and reference client |
-| `packages/` | EmDash foundation and shared libraries |
-| `packages/plugins/` | Plugins, their Front sources and their service packages |
-| `sdks/` | Client libraries; lifecycle and versions are recorded in the SDK catalogue |
-| `scripts/config/` | Global configuration and its validation schemas |
-| `infra/targets/` | Deployment target manifests |
-| `infra/generated/` | Generated deployment output |
-| `scripts/` | Commands grouped by usage; see [the scripts guide](scripts/README.md) |
-| `tests/` | E2E journeys, fixtures, linters and checks; see [the test guide](tests/README.md) |
+| Path                | Purpose                                                                           |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `apps/`             | Executable applications, including the Site and reference client                  |
+| `packages/`         | EmDash foundation and shared libraries                                            |
+| `packages/plugins/` | Plugins, their Front sources and their service packages                           |
+| `sdks/`             | Client libraries; lifecycle and versions are recorded in the SDK catalogue        |
+| `scripts/config/`   | Global configuration and its validation schemas                                   |
+| `infra/targets/`    | Deployment target manifests                                                       |
+| `infra/generated/`  | Generated deployment output                                                       |
+| `scripts/`          | Commands grouped by usage; see [the scripts guide](scripts/README.md)             |
+| `tests/`            | E2E journeys, fixtures, linters and checks; see [the test guide](tests/README.md) |
 
 The root `Package.swift` exposes the iOS SDK from `sdks/ios`.
 See [the monorepo guide](docs/MONOREPO.md) for the remaining EmDash directories,
@@ -209,51 +209,31 @@ the build-excluded `packages/plugins/supbrd-plug-support/scripts/support-audit` 
 The value-free cross-Worker secret graph, production provenance rules and
 rotation protocol are in `docs/SECRET_MANAGEMENT.md`.
 
-## SDK releases
+## SDKs
 
-`scripts/config/sdk-libraries.json` is the canonical, machine-validated SDK catalogue.
-It records each package path, source version, latest immutable release, install
-snippet when one really exists, package-local MIT licence and whether the
-current source is `released`, `pending-release` or still `unreleased`. An
-unreleased entry cannot declare a release ref, release SHA or installation
-command. The plugin Front exposes the same read-only catalogue and licence links at
-`/app/libraries`; it never rewrites Git.
+The four application SDKs are:
 
-- `pnpm run sdk:catalog:check` verifies source versions, tags and the complete
-  FlutterFlow public-code surface.
-- `pnpm run sdk:documentation:check` proves that every canonical installation
-  section uses the catalogue's published coordinate, immutable ref and version;
-  `pnpm run sdk:documentation:write` refreshes those bounded sections after a
-  protected catalogue promotion.
-- `.github/workflows/prepare-sdk-release.yml` is the reviewed manual authority
-  that creates a new immutable tag from a release-ready catalogue entry.
-- `.github/workflows/release-sdk.yml` validates that tag again before testing
-  and binds an `sdk-release` Environment approval to its exact tag and SHA
-  before publishing the selected package, then opens a protected catalogue PR.
-- `.github/workflows/promote-reference-sdk.yml` waits until the complete
-  FlutterFlow and Support set is published, verifies every official tag and
-  GitHub release, then dispatches one atomic set promotion to the reference
-  repository. The reference opens its own protected dependency PR.
-- iOS additionally receives the root SemVer alias recorded in `releaseRef`, as
-  required by Swift Package Manager; all other SDKs use their namespaced tag.
-- FlutterFlow consumes the public repository by immutable `ref` and package
-  `path`; no repository read token is required or stored in exported source.
+| SDK         | Source             | Use                                                       |
+| ----------- | ------------------ | --------------------------------------------------------- |
+| Flutter     | `sdks/flutter`     | Flutter applications                                      |
+| FlutterFlow | `sdks/flutterflow` | FlutterFlow actions and widgets built on Flutter          |
+| Web         | `sdks/web`         | JavaScript and TypeScript browser applications            |
+| Tauri       | `sdks/tauri`       | Desktop applications using the Web client and native HTTP |
 
-`scripts/clients/flutterflow-library` is the Git authority for the reusable FlutterFlow
-project named `SuperBoard`. `scripts/config/flutterflow-library.json` inventories its 11
-target-supplied Library Values and 64 custom actions. Run
-`pnpm run flutterflow-library:check` to prove that its DSL, public HTTPS
-dependencies, immutable refs, token-state policy and GitHub sync workflow stay
-aligned. Published status and the immutable dependency ref come only from the
-SDK catalogue; reference promotion refuses any pending entry. The protected
-`sync-flutterflow-library.yml` workflow initializes the workspace from the
-`FF_LIBRARY_PROJECT_ID` variable, tests the DSL, then updates the remote project
-with `FF_API_KEY`; neither value is hardcoded in Git. Remote synchronization
-remains intentionally gated until that encrypted Environment secret is
-installed.
+Flutter owns its native implementations in `sdks/flutter/native/`.
+Web owns the Identity and Flows components in `sdks/web/identity/` and
+`sdks/web/flows/`. These are internal dependencies, not additional SDKs to
+install. Historical release coordinates remain recorded in
+`scripts/config/sdk-libraries.json`; archived source is retained by Git history.
 
-The migration provenance and source SHAs are documented in
-`docs/HISTORY_MIGRATION.md`.
+Run `pnpm sdk:catalog:check` to validate the public catalogue and internal
+components. `pnpm sdk:documentation:check` verifies installation instructions
+against published release metadata. A source version marked `unreleased` has
+no registry version or immutable installation tag yet.
+
+`pnpm web:check`, `pnpm tauri:check` and `pnpm flutter:check` validate the SDKs.
+The FlutterFlow reusable project lives in `scripts/clients/flutterflow-library`;
+its public actions are inventoried in `scripts/config/flutterflow-custom-code.json`.
 
 ## License
 

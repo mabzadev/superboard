@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/data-cache/Dictionary+Cache.swift
+../../../../native/ios/Sources/SuperBoard/model/data-cache/Dictionary+Cache.swift

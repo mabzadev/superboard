@@ -5,23 +5,23 @@ SuperBoard foundation.
 
 ## Source layout
 
-| Path                                                     | Ownership                                                                                               |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `apps/site`                                              | Astro Site, EmDash Admin and composition of the SuperBoard Front                                        |
-| `apps/reference`                                         | Flutter reference application, acceptance contract and custom Worker                                    |
-| `apps/mcp`                                               | Standalone MCP server                                                                                   |
-| `packages/plugins`                                       | EmDash plugins and the eight SuperBoard plugin packages                                                 |
-| `packages/core`, `packages/admin`, other EmDash packages | Integrated EmDash foundation                                                                            |
-| `packages/supbrd-core`                                   | Shared SuperBoard contracts and plugin runtime helpers                                                  |
-| `packages/supbrd-front-ui`                               | Shared browser components                                                                               |
-| `packages/contracts`, `packages/email-transport`         | Shared service contracts and email transport                                                            |
-| `sdks`                                                   | Client libraries; lifecycle and release coordinates are recorded in `scripts/config/sdk-libraries.json` |
-| `scripts/config`                                         | Global configuration, schemas and versioned integration artifacts                                       |
-| `infra/targets`                                          | Non-secret deployment manifests                                                                         |
-| `infra/generated`                                        | Generated deployment configurations and build artifacts                                                 |
-| `scripts`                                                | Commands grouped by usage; see the [scripts guide](../scripts/README.md)                                |
-| `tests`                                                  | Maintained test suites, fixtures, linters and checks; see the [test guide](../tests/README.md)          |
-| `scripts/clients/flutterflow-library`                    | Reusable FlutterFlow library source                                                                     |
+| Path                                                     | Ownership                                                                                             |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `apps/site`                                              | Astro Site, EmDash Admin and composition of the SuperBoard Front                                      |
+| `apps/reference`                                         | Flutter reference application, acceptance contract and custom Worker                                  |
+| `apps/mcp`                                               | Standalone MCP server                                                                                 |
+| `packages/plugins`                                       | EmDash plugins and the eight SuperBoard plugin packages                                               |
+| `packages/core`, `packages/admin`, other EmDash packages | Integrated EmDash foundation                                                                          |
+| `packages/supbrd-core`                                   | Shared SuperBoard contracts and plugin runtime helpers                                                |
+| `packages/supbrd-front-ui`                               | Shared browser components                                                                             |
+| `packages/contracts`, `packages/email-transport`         | Shared service contracts and email transport                                                          |
+| `sdks`                                                   | Flutter, FlutterFlow, Web and Tauri; native code belongs to Flutter, Identity and Flows belong to Web |
+| `scripts/config`                                         | Global configuration, schemas and versioned integration artifacts                                     |
+| `infra/targets`                                          | Non-secret deployment manifests                                                                       |
+| `infra/generated`                                        | Generated deployment configurations and build artifacts                                               |
+| `scripts`                                                | Commands grouped by usage; see the [scripts guide](../scripts/README.md)                              |
+| `tests`                                                  | Maintained test suites, fixtures, linters and checks; see the [test guide](../tests/README.md)        |
+| `scripts/clients/flutterflow-library`                    | Reusable FlutterFlow library source                                                                   |
 
 The other EmDash directories retain their existing roles: documentation,
 templates, assets, translation tooling,

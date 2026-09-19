@@ -145,4 +145,4 @@ $ pnpm --dir apps/dashboard exec vitest run \
 1 fichier, 4 tests passés
 ```
 
-Les deux commandes signalent que `node_modules` ne correspond pas entièrement au lockfile courant. `pnpm lint:json` reste bloqué avant l’analyse par la configuration Oxlint absente sous `sdks/flows/upstream/product/icons`; le même blocage est déjà consigné dans l’audit #65. Les fichiers produit n’ont pas été modifiés par cette analyse.
+Les deux commandes signalent que `node_modules` ne correspond pas entièrement au lockfile courant. `pnpm lint:json` reste bloqué avant l’analyse par la configuration Oxlint absente sous `sdks/web/flows/upstream/product/icons`; le même blocage est déjà consigné dans l’audit #65. Les fichiers produit n’ont pas été modifiés par cette analyse.

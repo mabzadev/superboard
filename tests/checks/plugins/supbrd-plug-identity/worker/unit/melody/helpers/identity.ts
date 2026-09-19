@@ -1,6 +1,7 @@
 import { genCodeChallenge } from "@melody-auth/shared";
 import { Database } from "better-sqlite3";
 import { mock, mockedKV } from "tests/mock";
+import { z } from "zod";
 
 import {
 	adapterConfig,
@@ -129,14 +130,14 @@ export const postSignInRequest = async (
 export const prepareFollowUpParams = async (db: Database) => {
 	const appRecord = await getApp(db);
 	const res = await postSignInRequest(db, appRecord);
-	const json = (await res.json()) as { code: string };
+	const json = z.object({ code: z.string() }).parse(await res.json());
 	return `?locale=en&code=${json.code}`;
 };
 
 export const prepareFollowUpBody = async (db: Database, policy?: string) => {
 	const appRecord = await getApp(db);
 	const res = await postSignInRequest(db, appRecord, policy ? { policy } : undefined);
-	const json = (await res.json()) as { code: string };
+	const json = z.object({ code: z.string() }).parse(await res.json());
 	return {
 		code: json.code,
 		locale: "en",

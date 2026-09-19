@@ -50,7 +50,7 @@ const overlay = {
 	package: {
 		metadata: { name: "superboard", private: true },
 		scripts: { test: "superboard-test", "site:test": "site-test" },
-		workspaces: ["apps/site", "packages/plugins/supbrd-core/api", "sdks/javascript"],
+		workspaces: ["apps/site", "packages/plugins/supbrd-core/api", "sdks/web"],
 		overrides: { postcss: "8.5.26", "glob@12.0.0": { minimatch: "10.2.6" } },
 		catalogs: { workers: { typescript: "5.9.3", hono: "4.13.5" } },
 		devDependencies: { prettier: "overlay", eslint: "overlay-eslint" },
@@ -130,7 +130,7 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 			"image-size@^1.0.2": "1.2.1",
 		},
 		patchedDependencies: {
-			"image-size@1.2.1": "sdks/react-native/.yarn/patches/image-size.patch",
+			"image-size@1.2.1": "patches/image-size.patch",
 		},
 		trustPolicyExclude: ["semver@5.7.2"],
 		virtualStoreType: "project",
@@ -159,7 +159,7 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 	assert.deepEqual(workspace.catalogs, overlay.package.catalogs);
 	assert.ok(!result.includes("  - apps/site\n"));
 	assert.ok(result.includes("  - packages/plugins/supbrd-core/api"));
-	assert.ok(result.includes("  - sdks/javascript"));
+	assert.ok(result.includes("  - sdks/web"));
 	assert.ok(result.includes('"eslint-import-resolver-typescript": "4.4.5"'));
 	assert.ok(result.includes('"glob@12.0.0>minimatch": "10.2.6"'));
 	assert.ok(!result.includes('"glob@12.0.0": \n'));
@@ -167,9 +167,7 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 	assert.ok(result.includes('"core-js": false'));
 	assert.ok(result.includes('"unrs-resolver": true'));
 	assert.ok(result.includes('"eslint-config-prettier": "10.1.8"'));
-	assert.ok(
-		result.includes('"image-size@1.2.1": sdks/react-native/.yarn/patches/image-size.patch'),
-	);
+	assert.ok(result.includes('"image-size@1.2.1": patches/image-size.patch'));
 	assert.ok(result.includes('- "semver@5.7.2"'));
 	assert.ok(result.includes("virtualStoreType: project"));
 	assert.ok(result.includes("verifyDepsBeforeRun: warn"));
@@ -207,7 +205,7 @@ void test("gitignore keeps the pnpm lock authoritative", () => {
 	assert.ok(!lines.includes("/pnpm-lock.yaml"));
 	assert.ok(lines.includes("package-lock.json"));
 	assert.ok(lines.includes("!apps/mcp/package-lock.json"));
-	assert.ok(lines.includes("!sdks/javascript/package-lock.json"));
+	assert.ok(lines.includes("!sdks/web/package-lock.json"));
 	assert.ok(lines.includes("!.dev.vars.example"));
 	assert.ok(lines.includes(".backups/"));
 });
@@ -238,14 +236,20 @@ void test("local SuperBoard packages cannot fall back to the npm registry", () =
 });
 
 void test("workspace dependency normalization excludes vendored examples", () => {
-	const exact = new Set(["packages/plugins/supbrd-core/api", "sdks/flows/upstream/packages/js"]);
+	const exact = new Set([
+		"packages/plugins/supbrd-core/api",
+		"sdks/web/flows/upstream/packages/js",
+	]);
 
 	assert.equal(isIntegratedWorkspaceDirectory("apps/site", exact), true);
 	assert.equal(isIntegratedWorkspaceDirectory("packages/contracts", exact), true);
 	assert.equal(isIntegratedWorkspaceDirectory("packages/plugins/supbrd-core/api", exact), true);
-	assert.equal(isIntegratedWorkspaceDirectory("sdks/flows/upstream/packages/js", exact), true);
+	assert.equal(isIntegratedWorkspaceDirectory("sdks/web/flows/upstream/packages/js", exact), true);
 	assert.equal(
-		isIntegratedWorkspaceDirectory("sdks/flows/upstream/reference/framework-examples/astro", exact),
+		isIntegratedWorkspaceDirectory(
+			"sdks/web/flows/upstream/reference/framework-examples/astro",
+			exact,
+		),
 		false,
 	);
 });

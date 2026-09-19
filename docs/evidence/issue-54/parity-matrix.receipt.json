@@ -1,486 +1,486 @@
 {
-  "schema_version": 1,
-  "matrix_sha256": "sha256:4aac646334411378a2f4af5c8394365404030275e3d468c91ae627058f260c03",
-  "topology_sha256": "sha256:a69c632110d0d929109346d8cb0312911c6cffdab7268f5d93f71df28cf2ad87",
-  "row_count": 979,
-  "required_row_count": 594,
-  "public_cutover": false,
-  "release": {
-    "source": "scripts/config/superboard-parity-release.json",
-    "release_id": "01J00000000000000000007005",
-    "content_checksum": "sha256:536a24ca59dcc9009cb0db362d2e1f562dd1061addc1d4e7bab0b8de82edb424",
-    "signature": {
-      "algorithm": "ES256",
-      "kid": "issue-70-parity",
-      "value": "leKPE5xMZsgRvE6DXjs2Uc3Y5U3JIRXHWYy49Egb5u_I0zR2HDfWRmUBZY8rroyhdX9UeD1_y8gUxbYtkVk9ww"
-    },
-    "validation_set_checksum": "sha256:ad4c30dd291d9c8c0adadbfef586da7a955331cfc3f2c096f18463e0cc988a4f",
-    "validation_receipt_checksums": [
-      "sha256:f24f8935772f47c33af8cbca17c5a566633af3bb286622027ced9a051281179f",
-      "sha256:818b1875097af3763e610e930464d83ddb486cee20910618e6cac042c4dce575",
-      "sha256:eed08390393d38ae73590a203e8f50102224a74c3343821a1d815ae4dda8bcff",
-      "sha256:cf47f5dbc8f17a421a15b16672f5c53510510d68b6bdb873d7287463828273b7",
-      "sha256:50e0f998ca9fdf965bc3fd6bb4159d5f18a1eb76388ef0c5b10666fbf9fcbc9a",
-      "sha256:4a27b0c64f6e353b7b40ed5ddebdde3ff15b13c73f626027106c872cd1682192",
-      "sha256:cf6602e701add4dc2d5bf7cfc648c3c4db9e83cf5d70e2d4ffb1fad4bdc2302f",
-      "sha256:b1b4a77a6ae3eb33432a18de0565c3323e68e84f9fda7f1a1b1891094b1e6ad9",
-      "sha256:8922ddc5bed204970d36b11cca53cd0502fea48c5a8d25485a86597ff6f33cec",
-      "sha256:6b29be7fa404c0c688c4ba54bf49157eac9b2bf3710eb10e45178a52e6334c18",
-      "sha256:bfb1656468c73a6a54d5a4f48f7856acd3a3bffcde011aac95744d7742f085a8",
-      "sha256:0a8f53c0b8f4cb60195baa27ca98ec66cde3a6d14708cb787bb989222b7bfb2a",
-      "sha256:361ed4c0fe7717f9e3529460ce2809f4ba723667146566f64451d7457bada732"
-    ],
-    "verification_status": "verified",
-    "target": "mbza-development",
-    "environment": "local",
-    "target_artifact_checksum": "sha256:9de004954789207b3eb9abd7cffa80b447d987d80ac0a11f01ef8aed7740a466",
-    "active_plugin_ids": [
-      "supbrd-plug-audit",
-      "supbrd-plug-content",
-      "supbrd-plug-products",
-      "supbrd-plug-settings",
-      "supbrd-plug-user",
-      "supbrd-plugmod-analytics",
-      "supbrd-plugmod-billing",
-      "supbrd-plugmod-dynamic-links",
-      "supbrd-plugmod-email",
-      "supbrd-plugmod-files",
-      "supbrd-plugmod-flows",
-      "supbrd-plugmod-gateway",
-      "supbrd-plugmod-marketing",
-      "supbrd-plugmod-mcp",
-      "supbrd-plugmod-observability",
-      "supbrd-plugmod-onboardings",
-      "supbrd-plugmod-paywalls",
-      "supbrd-plugmod-support"
-    ]
-  },
-  "front_bundle": {
-    "schema_version": 1,
-    "build_id": "409KEG9W7S422Q0VSYF2E6YWWD",
-    "build_checksum": "sha256:2a13c476123bf82d2e046a69b346b511bde8438308de3c10ac49d3a59b76419a",
-    "source_count": 669
-  },
-  "store_coverage": [
-    {
-      "store_id": "supbrd-plug-user.store.user_directory",
-      "descriptor_checksum": "sha256:447e2d1f4751b85a5fd2cd590ff85bddc9bd2f6ab2d2404cd2c02a5454893a26",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-user.store.user_credentials",
-      "descriptor_checksum": "sha256:df81066da4bdf3654cb75cd481caf6115c17f631573a6bdacfb3fe5981be837a",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-user.store.user_sessions",
-      "descriptor_checksum": "sha256:f0b534d5d0a07c1ecc2b882a4584b3ae84a399bfa54001720af67862754a4218",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-settings.store.settings",
-      "descriptor_checksum": "sha256:b6c44e9a8c9d318cfe0558f494819e8b7b8c565798862b9b5d0250cf244605a6",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-settings.store.versions",
-      "descriptor_checksum": "sha256:97b2ad95e404daed80c2df2973ce7d32b3acb5a4210c2a06945be88f28063009",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-content.store.documents",
-      "descriptor_checksum": "sha256:e0040fc99cf418e9f46157eaf313113c5e12ebd22d42b7b24622b9f9ef5c0c37",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-content.store.revisions",
-      "descriptor_checksum": "sha256:c8b3c7375627a58fb248d1f7d59034c3e61407aa8eba2d1b7b1d98fb5d8aac2f",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-content.store.taxonomies",
-      "descriptor_checksum": "sha256:962378748ca4ccd4ee79492d7c19b93d4078c6c1653739e194ea6f573727b58b",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-products.store.catalog",
-      "descriptor_checksum": "sha256:f8ad75558b33e51c66e02c3e6418cbfe0669c269c65342c8f80a157a3bc34ae1",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-products.store.offers",
-      "descriptor_checksum": "sha256:419c619f46595024ffbc09013e1a70b6e05b3503c92fd9d013ced438843be35c",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-products.store.prices",
-      "descriptor_checksum": "sha256:1b830ee2dbfcbb57adb55caf87e21218f9b09feabf1f3c5344521687c675d133",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-audit.store.archives",
-      "descriptor_checksum": "sha256:4b318cca40e50b136098b87004a11265c5ed7b9ba7b720bf078b6a11245a5ea3",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plug-audit.store.ledger",
-      "descriptor_checksum": "sha256:d71e34a6c5e5fc8cc8521feed3b6ce83b0b4c9f86770abac0d955d4bbaf25192",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-gateway.store.rate_limits",
-      "descriptor_checksum": "sha256:bc29214435d8c2c50e3379aeb0ca31ec000eb067968c397de696cc689b92c04c",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-gateway.store.route_manifests",
-      "descriptor_checksum": "sha256:639efeadc143c7b2271d6df6895073a819d2839a8958b997dfd27bc6abe23aa5",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-billing.store.ledger",
-      "descriptor_checksum": "sha256:0a733744dd071118039e9f26b6187679dce935d8f2b346e61d50ed207079d934",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-billing.store.purchases",
-      "descriptor_checksum": "sha256:5d35bd750a536f1ea85d24b37873a2a5a71e0b5022e46b304ceb8259f34009a6",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-billing.store.subscriptions",
-      "descriptor_checksum": "sha256:662f0305c280ce2481886c9b2668716bfffd1b565713d2d9e153519cb95cd0bf",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-support.store.contacts",
-      "descriptor_checksum": "sha256:f4cdbc0f563a96e40f33a42b1572f723668fb4f386ee525aabb840ab9ee8b866",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-support.store.conversations",
-      "descriptor_checksum": "sha256:b4016e28efd5ee9c2719d8fae79fe4ad87d45381c002daa8d1872fce17769314",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-support.store.messages",
-      "descriptor_checksum": "sha256:27d930af7e90b72d2c6ee0a9ebacdd54bea72cc102f8d876803990293f3d6066",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-flows.store.definitions",
-      "descriptor_checksum": "sha256:3167fd13727be6ca5c689282d23cbc3d1104dbe72d9c4396b3db0cd35662dc35",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-flows.store.runtime",
-      "descriptor_checksum": "sha256:c838d6c86602fe6558ae20c32bff8ac404ea0722cdcadf17dd0ea18e15c3dfb8",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-analytics.store.aggregates",
-      "descriptor_checksum": "sha256:0375d10359df38a67a3ae3adfe165e887d0d53c2bca45983f13328d85e6d77a9",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-analytics.store.events",
-      "descriptor_checksum": "sha256:b6ac2eb37771ed79dfbc243a4b5ce75fbc6e1e7571a87a0c64267109e2635eaa",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-marketing.store.campaigns",
-      "descriptor_checksum": "sha256:bcaacb21d457199d359ab63e38d53f56e3439a73a9c1cbd6eed718923d7225bb",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-marketing.store.consent",
-      "descriptor_checksum": "sha256:fd031bf75f4307aea6accef7a1281085c2ac582d986e08002df50cdd23550b39",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-marketing.store.journeys",
-      "descriptor_checksum": "sha256:c7ad53ab687f843497ec4304655fe669b9c9beca30ab17ccd095ef04c1d88539",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-email.store.deliveries",
-      "descriptor_checksum": "sha256:56aa488cf6fe4c59ab4eeedca84b5676a8f61ee0c06f4292dbdc7bbf2e688bd6",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-email.store.provider_events",
-      "descriptor_checksum": "sha256:5268f1f367ccc81e3d5ed232d0471a0e5c5563f8d361ad5e59991188d9123b4e",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-dynamic-links.store.attribution",
-      "descriptor_checksum": "sha256:13bd741e2028f48c27b0a4f254482120603c6c0965d9ca559f5e5a79829d675a",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-dynamic-links.store.links",
-      "descriptor_checksum": "sha256:93fb7e71836776fe504af8df4b5b48e5ccbda1cac6c35b89ba89d24b87d038b0",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-files.store.objects",
-      "descriptor_checksum": "sha256:ab61c05ce4d9ecaa0bbef602398f218f453010e7ad0a3ec30657e10684ade926",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-files.store.tickets",
-      "descriptor_checksum": "sha256:7083b5c05178e298144328b45a5d8153072c88d20f35d32c67e93e03e8880956",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-paywalls.store.definitions",
-      "descriptor_checksum": "sha256:440b86b69ee18eca82d5ae16eda3c90c4df1f5c351918152e2a8f13c9c8fe90f",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-paywalls.store.exposures",
-      "descriptor_checksum": "sha256:2847d494fb2bc0e649dda8bc8559934665760192c2ca8096437293b1ebcd66e6",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-onboardings.store.definitions",
-      "descriptor_checksum": "sha256:09d144b88b147879f44866aa47251a8b6795c5cbaf83fc727c4a168f6fd70dd4",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-onboardings.store.progress",
-      "descriptor_checksum": "sha256:3a133cc9914e89785618119e6bc2f9f7d212b9e25a43da7e1443be006242d0a5",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-observability.store.health_projections",
-      "descriptor_checksum": "sha256:b54d0b3505f714f9164b2bc8cb8f11a990d8528304c728932e388d52cc449e72",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-mcp.store.sessions",
-      "descriptor_checksum": "sha256:82cba6fba50672551cf122d1340a3cced8ad3d1f65bb12f992b410cd47cff4b0",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-mcp.store.tool_receipts",
-      "descriptor_checksum": "sha256:03ad526c3e1818a8d1b6ffe295e93683bc37f5eeda8d8fb954ade2b5db8ca6a6",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    },
-    {
-      "store_id": "supbrd-plugmod-custom-*.store.operations",
-      "descriptor_checksum": "sha256:9fe34d69030a7e77cec46d37728be8598282db6550fe6b902d5736184c3be64a",
-      "executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
-      "test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
-      "double_import": "passed",
-      "shadow_read": "passed",
-      "reverse_delta": "passed_without_deletes",
-      "rollback": "non_destructive"
-    }
-  ]
+	"schema_version": 1,
+	"matrix_sha256": "sha256:09cbba2f81862fdd6a38370fb050118b754b4e1b17f3526573efc255f36de4e2",
+	"topology_sha256": "sha256:50e7614bf15df9829812c32ddca01e368815a9a3c6e755e23a0775d65b66260c",
+	"row_count": 979,
+	"required_row_count": 594,
+	"public_cutover": false,
+	"release": {
+		"source": "scripts/config/superboard-parity-release.json",
+		"release_id": "01J00000000000000000007005",
+		"content_checksum": "sha256:d1c1988ce5c4f7b234a7ecdec9718651ba876a41dc75352960ee9a98f023c351",
+		"signature": {
+			"algorithm": "ES256",
+			"kid": "issue-70-parity",
+			"value": "tlGd_MWSjsmlE-IpLetp9hGBiMi6m5uOEnN9MzWx_Ru-kP_t0IJ229ky3MBB3k4mLPYOLbCSh3wfZ_Y5LcfFAA"
+		},
+		"validation_set_checksum": "sha256:24e4d6761dad546aee04d08d490170fc93996992c604cd25a49daa965f218890",
+		"validation_receipt_checksums": [
+			"sha256:a400679b2c2fa6a83b7b8bac79dc577fdcf046cb3ac640a7091e469550350b27",
+			"sha256:cfdafc59d7b5bd4d1ad57f315ffa032f71767f5276ea70483e217f5ba9b2dc2f",
+			"sha256:924eeb0508e2560da47fb82854f9e7b1dd4bc9a38137ecc60a3a557acaf7415c",
+			"sha256:ed5afea39d15379618c33451184f9871af26cd931aab3cbea20ecb44f9a3f773",
+			"sha256:1256db6d3759f534a5073c752f39cb1a4439d00987fea7a4880175e75882b556",
+			"sha256:dc554442c6e93792f77a1265c1effc512b83fbec490d6239e13e82b798968459",
+			"sha256:4737cd5a1201fc75cfb383a930fbeb8f66461444a15d6c30531449393416f772",
+			"sha256:4bf728bcbfbf2bb8956b438522b5cd44a117c63a912f6f5bbabb1d7d5ceed740",
+			"sha256:2a428a63db73d0bfbc6b5a3a5666e8ce7ef89a469ccef3dbc6d39278c83cbb8b",
+			"sha256:c9b29307e0f6f9b71af79e2373a430ab5ddeca73df74c3a074442046e7bb38d3",
+			"sha256:d9fa45920f4ebe92b8fd7123ad3921fbe5af4e920a3f9e7f9c53c3accb2b667e",
+			"sha256:df1c9279c0d28a4d09c21015336222ce337968494bce3b95d01fcae3ad03f75e",
+			"sha256:7a3e1193c77100571daaf468e5c414abda421393dcebed2784d4412586d00f21"
+		],
+		"verification_status": "verified",
+		"target": "mbza-development",
+		"environment": "local",
+		"target_artifact_checksum": "sha256:93c99ceaabac54125fbb7d0cb247c869106ce1f36a4feac4fc747bfa77be9c37",
+		"active_plugin_ids": [
+			"supbrd-plug-audit",
+			"supbrd-plug-content",
+			"supbrd-plug-products",
+			"supbrd-plug-settings",
+			"supbrd-plug-user",
+			"supbrd-plugmod-analytics",
+			"supbrd-plugmod-billing",
+			"supbrd-plugmod-dynamic-links",
+			"supbrd-plugmod-email",
+			"supbrd-plugmod-files",
+			"supbrd-plugmod-flows",
+			"supbrd-plugmod-gateway",
+			"supbrd-plugmod-marketing",
+			"supbrd-plugmod-mcp",
+			"supbrd-plugmod-observability",
+			"supbrd-plugmod-onboardings",
+			"supbrd-plugmod-paywalls",
+			"supbrd-plugmod-support"
+		]
+	},
+	"front_bundle": {
+		"schema_version": 1,
+		"build_id": "4ZFH18BCW3RQM9M9BM1SZ8HP6B",
+		"build_checksum": "sha256:1ee199de760ee3d4cacd348f7cad478e8fe7ad6537fcc7e76dc1d62981bace28",
+		"source_count": 670
+	},
+	"store_coverage": [
+		{
+			"store_id": "supbrd-plug-user.store.user_directory",
+			"descriptor_checksum": "sha256:447e2d1f4751b85a5fd2cd590ff85bddc9bd2f6ab2d2404cd2c02a5454893a26",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-user.store.user_credentials",
+			"descriptor_checksum": "sha256:df81066da4bdf3654cb75cd481caf6115c17f631573a6bdacfb3fe5981be837a",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-user.store.user_sessions",
+			"descriptor_checksum": "sha256:f0b534d5d0a07c1ecc2b882a4584b3ae84a399bfa54001720af67862754a4218",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-settings.store.settings",
+			"descriptor_checksum": "sha256:b6c44e9a8c9d318cfe0558f494819e8b7b8c565798862b9b5d0250cf244605a6",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-settings.store.versions",
+			"descriptor_checksum": "sha256:97b2ad95e404daed80c2df2973ce7d32b3acb5a4210c2a06945be88f28063009",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-content.store.documents",
+			"descriptor_checksum": "sha256:e0040fc99cf418e9f46157eaf313113c5e12ebd22d42b7b24622b9f9ef5c0c37",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-content.store.revisions",
+			"descriptor_checksum": "sha256:c8b3c7375627a58fb248d1f7d59034c3e61407aa8eba2d1b7b1d98fb5d8aac2f",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-content.store.taxonomies",
+			"descriptor_checksum": "sha256:962378748ca4ccd4ee79492d7c19b93d4078c6c1653739e194ea6f573727b58b",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-products.store.catalog",
+			"descriptor_checksum": "sha256:f8ad75558b33e51c66e02c3e6418cbfe0669c269c65342c8f80a157a3bc34ae1",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-products.store.offers",
+			"descriptor_checksum": "sha256:419c619f46595024ffbc09013e1a70b6e05b3503c92fd9d013ced438843be35c",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-products.store.prices",
+			"descriptor_checksum": "sha256:1b830ee2dbfcbb57adb55caf87e21218f9b09feabf1f3c5344521687c675d133",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-audit.store.archives",
+			"descriptor_checksum": "sha256:4b318cca40e50b136098b87004a11265c5ed7b9ba7b720bf078b6a11245a5ea3",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plug-audit.store.ledger",
+			"descriptor_checksum": "sha256:d71e34a6c5e5fc8cc8521feed3b6ce83b0b4c9f86770abac0d955d4bbaf25192",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-gateway.store.rate_limits",
+			"descriptor_checksum": "sha256:bc29214435d8c2c50e3379aeb0ca31ec000eb067968c397de696cc689b92c04c",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-gateway.store.route_manifests",
+			"descriptor_checksum": "sha256:639efeadc143c7b2271d6df6895073a819d2839a8958b997dfd27bc6abe23aa5",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-billing.store.ledger",
+			"descriptor_checksum": "sha256:0a733744dd071118039e9f26b6187679dce935d8f2b346e61d50ed207079d934",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-billing.store.purchases",
+			"descriptor_checksum": "sha256:5d35bd750a536f1ea85d24b37873a2a5a71e0b5022e46b304ceb8259f34009a6",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-billing.store.subscriptions",
+			"descriptor_checksum": "sha256:662f0305c280ce2481886c9b2668716bfffd1b565713d2d9e153519cb95cd0bf",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-support.store.contacts",
+			"descriptor_checksum": "sha256:f4cdbc0f563a96e40f33a42b1572f723668fb4f386ee525aabb840ab9ee8b866",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-support.store.conversations",
+			"descriptor_checksum": "sha256:b4016e28efd5ee9c2719d8fae79fe4ad87d45381c002daa8d1872fce17769314",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-support.store.messages",
+			"descriptor_checksum": "sha256:27d930af7e90b72d2c6ee0a9ebacdd54bea72cc102f8d876803990293f3d6066",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-flows.store.definitions",
+			"descriptor_checksum": "sha256:3167fd13727be6ca5c689282d23cbc3d1104dbe72d9c4396b3db0cd35662dc35",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-flows.store.runtime",
+			"descriptor_checksum": "sha256:c838d6c86602fe6558ae20c32bff8ac404ea0722cdcadf17dd0ea18e15c3dfb8",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-analytics.store.aggregates",
+			"descriptor_checksum": "sha256:0375d10359df38a67a3ae3adfe165e887d0d53c2bca45983f13328d85e6d77a9",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-analytics.store.events",
+			"descriptor_checksum": "sha256:b6ac2eb37771ed79dfbc243a4b5ce75fbc6e1e7571a87a0c64267109e2635eaa",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-marketing.store.campaigns",
+			"descriptor_checksum": "sha256:bcaacb21d457199d359ab63e38d53f56e3439a73a9c1cbd6eed718923d7225bb",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-marketing.store.consent",
+			"descriptor_checksum": "sha256:fd031bf75f4307aea6accef7a1281085c2ac582d986e08002df50cdd23550b39",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-marketing.store.journeys",
+			"descriptor_checksum": "sha256:c7ad53ab687f843497ec4304655fe669b9c9beca30ab17ccd095ef04c1d88539",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-email.store.deliveries",
+			"descriptor_checksum": "sha256:56aa488cf6fe4c59ab4eeedca84b5676a8f61ee0c06f4292dbdc7bbf2e688bd6",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-email.store.provider_events",
+			"descriptor_checksum": "sha256:5268f1f367ccc81e3d5ed232d0471a0e5c5563f8d361ad5e59991188d9123b4e",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-dynamic-links.store.attribution",
+			"descriptor_checksum": "sha256:13bd741e2028f48c27b0a4f254482120603c6c0965d9ca559f5e5a79829d675a",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-dynamic-links.store.links",
+			"descriptor_checksum": "sha256:93fb7e71836776fe504af8df4b5b48e5ccbda1cac6c35b89ba89d24b87d038b0",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-files.store.objects",
+			"descriptor_checksum": "sha256:ab61c05ce4d9ecaa0bbef602398f218f453010e7ad0a3ec30657e10684ade926",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-files.store.tickets",
+			"descriptor_checksum": "sha256:7083b5c05178e298144328b45a5d8153072c88d20f35d32c67e93e03e8880956",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-paywalls.store.definitions",
+			"descriptor_checksum": "sha256:440b86b69ee18eca82d5ae16eda3c90c4df1f5c351918152e2a8f13c9c8fe90f",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-paywalls.store.exposures",
+			"descriptor_checksum": "sha256:2847d494fb2bc0e649dda8bc8559934665760192c2ca8096437293b1ebcd66e6",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-onboardings.store.definitions",
+			"descriptor_checksum": "sha256:09d144b88b147879f44866aa47251a8b6795c5cbaf83fc727c4a168f6fd70dd4",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-onboardings.store.progress",
+			"descriptor_checksum": "sha256:3a133cc9914e89785618119e6bc2f9f7d212b9e25a43da7e1443be006242d0a5",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-observability.store.health_projections",
+			"descriptor_checksum": "sha256:b54d0b3505f714f9164b2bc8cb8f11a990d8528304c728932e388d52cc449e72",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-mcp.store.sessions",
+			"descriptor_checksum": "sha256:82cba6fba50672551cf122d1340a3cced8ad3d1f65bb12f992b410cd47cff4b0",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-mcp.store.tool_receipts",
+			"descriptor_checksum": "sha256:03ad526c3e1818a8d1b6ffe295e93683bc37f5eeda8d8fb954ade2b5db8ca6a6",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		},
+		{
+			"store_id": "supbrd-plugmod-custom-*.store.operations",
+			"descriptor_checksum": "sha256:9fe34d69030a7e77cec46d37728be8598282db6550fe6b902d5736184c3be64a",
+			"executable_test": "tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
+			"test_sha256": "sha256:e3db4f4a8a0dc57a4f0b1f7c193de298d248ca75ed0783a46f27d77a4f2817c0",
+			"double_import": "passed",
+			"shadow_read": "passed",
+			"reverse_delta": "passed_without_deletes",
+			"rollback": "non_destructive"
+		}
+	]
 }

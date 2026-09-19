@@ -1,0 +1,24 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('com.android.library') {
+        project.android.lint {
+            abortOnError = false
+            checkAllWarnings = true
+            sarifReport = true
+        }
+    }
+}
+
+gradle.projectsEvaluated {
+    def project = gradle.rootProject
+    def detekt = project.configurations.create('superboardDetekt')
+    project.dependencies.add(detekt.name, 'io.gitlab.arturbosch.detekt:detekt-cli:1.23.8:all')
+    project.tasks.register('lintKotlin', JavaExec) {
+        classpath = detekt
+        mainClass.set('io.gitlab.arturbosch.detekt.cli.Main')
+        args '--input', project.file('../../').absolutePath,
+            '--excludes', '**/build/**,**/.gradle/**,**/upstream/**,**/Pods/**,**/.symlinks/**',
+            '--report', "sarif:${project.layout.buildDirectory.get()}/reports/detekt.sarif",
+            '--build-upon-default-config'
+        ignoreExitValue = true
+    }
+}
