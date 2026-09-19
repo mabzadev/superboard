@@ -18,7 +18,7 @@ const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverif
  * enforcement is not configured.
  */
 export function getTurnstileSecretKey(): string {
-	return import.meta.env.EMDASH_TURNSTILE_SECRET_KEY || import.meta.env.TURNSTILE_SECRET_KEY || "";
+	return process.env.EMDASH_TURNSTILE_SECRET_KEY || process.env.TURNSTILE_SECRET_KEY || "";
 }
 
 /**
@@ -49,6 +49,7 @@ export async function verifyTurnstileToken(
 			// the comment POST would hang until the runtime kills it
 			signal: AbortSignal.timeout(10_000),
 		});
+		if (!res.ok) return false;
 		const data: { success?: boolean; "error-codes"?: string[] } = await res.json();
 		if (!data.success) {
 			console.warn("[comments] Turnstile verification failed:", data["error-codes"] ?? []);

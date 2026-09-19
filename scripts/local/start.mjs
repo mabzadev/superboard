@@ -136,7 +136,7 @@ async function start() {
 			service.id === "site"
 				? resolve(root, "apps/site/wrangler.jsonc")
 				: resolve(root, "infra/generated", `${targetName}-${service.id}-local.jsonc`);
-		const configuration = await readLocalConfiguration(configPath);
+		const configuration = localRuntimeConfiguration(await readLocalConfiguration(configPath));
 		await writeFile(
 			configPath,
 			`${JSON.stringify(withLocalSecretBindings(configuration, values), null, 2)}\n`,
@@ -315,6 +315,13 @@ async function start() {
 		children.map((child) => new Promise((resolveExit) => child.once("exit", resolveExit))),
 	);
 	await rm(pidPath, { force: true });
+}
+
+export function localRuntimeConfiguration(configuration) {
+	// Local registry delivery warnings can otherwise become new tail events during startup.
+	const local = { ...configuration };
+	delete local.tail_consumers;
+	return local;
 }
 
 export async function readLocalConfiguration(path) {

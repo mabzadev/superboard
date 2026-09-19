@@ -77,7 +77,7 @@ test("release history cannot classify the current successful release as failed",
 	const catalogue = await loadSdkCatalog();
 	const history = await loadSdkReleaseHistory();
 	const conflict = structuredClone(history);
-	const ios = catalogue.libraries.find((library) => library.id === "ios");
+	const ios = catalogue.components.find((library) => library.id === "ios");
 	conflict.immutableFailures[0] = {
 		...conflict.immutableFailures[0],
 		version: ios.latestReleaseVersion,

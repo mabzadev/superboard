@@ -1,205 +1,305 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schemaVersion",
-    "repository",
-    "developmentBranch",
-    "releasePolicy",
-    "libraries"
-  ],
-  "properties": {
-    "$schema": { "type": "string" },
-    "schemaVersion": { "const": 5 },
-    "repository": { "type": "string", "format": "uri" },
-    "developmentBranch": { "type": "string", "minLength": 1 },
-    "releasePolicy": { "const": "immutable-tag" },
-    "libraries": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "lifecycle": { "const": "archived" }
-              },
-              "required": ["lifecycle"]
-            },
-            "then": {
-              "properties": { "releaseStatus": { "const": "released" } }
-            }
-          },
-          {
-            "if": {
-              "properties": {
-                "releaseStatus": { "const": "unreleased" }
-              },
-              "required": ["releaseStatus"]
-            },
-            "then": {
-              "required": ["publicationTarget"],
-              "properties": {
-                "publicationTarget": {},
-                "lifecycle": { "enum": ["active", "internal"] },
-                "latestReleaseVersion": false,
-                "releaseRef": false,
-                "releaseSha": false,
-                "install": false,
-                "candidatePackageName": false,
-                "candidateInstall": false,
-                "distribution": false
-              }
-            },
-            "else": {
-              "required": [
-                "latestReleaseVersion",
-                "releaseRef",
-                "releaseSha",
-                "install"
-              ],
-              "properties": {
-                "latestReleaseVersion": {},
-                "releaseRef": {},
-                "releaseSha": {},
-                "install": {}
-              }
-            }
-          },
-          {
-            "if": {
-              "properties": {
-                "publicationTarget": { "const": "public-npm" }
-              },
-              "required": ["publicationTarget"]
-            },
-            "then": {
-              "properties": {
-                "ecosystem": { "const": "npm" },
-                "lifecycle": { "const": "active" }
-              }
-            }
-          },
-          {
-            "if": {
-              "properties": {
-                "publicationTarget": { "const": "workspace-only" }
-              },
-              "required": ["publicationTarget"]
-            },
-            "then": {
-              "properties": {
-                "lifecycle": { "const": "internal" },
-                "releaseStatus": { "const": "unreleased" }
-              }
-            }
-          },
-          {
-            "if": {
-              "properties": {
-                "id": {
-                  "enum": ["android", "javascript", "react-native"]
-                }
-              },
-              "required": ["id"]
-            },
-            "then": {
-              "properties": { "distribution": {} },
-              "required": ["distribution"]
-            }
-          }
-        ],
-        "required": [
-          "id",
-          "lifecycle",
-          "displayName",
-          "ecosystem",
-          "packageName",
-          "sourcePath",
-          "license",
-          "licensePath",
-          "versionSource",
-          "sourceVersion",
-          "releaseStatus"
-        ],
-        "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "lifecycle": { "enum": ["active", "internal", "archived"] },
-          "displayName": { "type": "string", "minLength": 1 },
-          "ecosystem": { "type": "string", "minLength": 1 },
-          "packageName": { "type": "string", "minLength": 1 },
-          "candidatePackageName": { "type": "string", "minLength": 1 },
-          "sourcePath": { "type": "string", "minLength": 1 },
-          "license": { "const": "MIT" },
-          "licensePath": { "type": "string", "minLength": 1 },
-          "versionSource": { "type": "string", "minLength": 1 },
-          "sourceVersion": {
-            "type": "string",
-            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
-          },
-          "latestReleaseVersion": {
-            "type": "string",
-            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
-          },
-          "releaseRef": { "type": "string", "minLength": 1 },
-          "releaseStatus": {
-            "enum": ["released", "pending-release", "unreleased"]
-          },
-          "releaseSha": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{40}$"
-          },
-          "surfaceManifest": { "type": "string" },
-          "notes": { "type": "string" },
-          "publicationTarget": {
-            "enum": ["public-npm", "workspace-only"]
-          },
-          "install": { "type": "string", "minLength": 1 },
-          "candidateInstall": { "type": "string", "minLength": 1 },
-          "distribution": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "registryKind",
-              "repository",
-              "registry",
-              "publicMetadata",
-              "anonymousInstallable",
-              "authentication"
-            ],
-            "properties": {
-              "repository": {
-                "const": "mabzadev/superboard-platform"
-              },
-              "registryKind": {
-                "enum": ["github-packages-npm", "github-packages-maven"]
-              },
-              "registry": { "type": "string", "format": "uri" },
-              "publicMetadata": { "type": "boolean" },
-              "anonymousInstallable": { "type": "boolean" },
-              "authentication": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": ["required", "tokenEnvironmentVariable"],
-                "properties": {
-                  "required": { "type": "boolean" },
-                  "tokenEnvironmentVariable": {
-                    "type": "string",
-                    "pattern": "^[A-Z][A-Z0-9_]+$"
-                  },
-                  "usernameEnvironmentVariable": {
-                    "type": "string",
-                    "pattern": "^[A-Z][A-Z0-9_]+$"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["schemaVersion", "repository", "developmentBranch", "releasePolicy", "libraries"],
+	"properties": {
+		"$schema": {
+			"type": "string"
+		},
+		"schemaVersion": {
+			"const": 6
+		},
+		"repository": {
+			"type": "string",
+			"format": "uri"
+		},
+		"developmentBranch": {
+			"type": "string",
+			"minLength": 1
+		},
+		"releasePolicy": {
+			"const": "immutable-tag"
+		},
+		"libraries": {
+			"type": "array",
+			"minItems": 4,
+			"items": {
+				"$ref": "#/$defs/library"
+			},
+			"maxItems": 4
+		},
+		"components": {
+			"type": "array",
+			"items": {
+				"$ref": "#/$defs/library"
+			}
+		},
+		"retiredLibraries": {
+			"type": "array",
+			"items": {
+				"$ref": "#/$defs/library"
+			}
+		}
+	},
+	"$defs": {
+		"library": {
+			"type": "object",
+			"additionalProperties": false,
+			"allOf": [
+				{
+					"if": {
+						"properties": {
+							"lifecycle": {
+								"const": "archived"
+							}
+						},
+						"required": ["lifecycle"]
+					},
+					"then": {
+						"properties": {
+							"releaseStatus": {
+								"const": "released"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"releaseStatus": {
+								"const": "unreleased"
+							}
+						},
+						"required": ["releaseStatus"]
+					},
+					"then": {
+						"required": ["publicationTarget"],
+						"properties": {
+							"publicationTarget": {},
+							"lifecycle": {
+								"enum": ["active", "internal"]
+							},
+							"latestReleaseVersion": false,
+							"releaseRef": false,
+							"releaseSha": false,
+							"install": false,
+							"candidatePackageName": false,
+							"candidateInstall": false,
+							"distribution": false
+						}
+					},
+					"else": {
+						"required": ["latestReleaseVersion", "releaseRef", "releaseSha", "install"],
+						"properties": {
+							"latestReleaseVersion": {},
+							"releaseRef": {},
+							"releaseSha": {},
+							"install": {}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"publicationTarget": {
+								"const": "public-npm"
+							}
+						},
+						"required": ["publicationTarget"]
+					},
+					"then": {
+						"properties": {
+							"ecosystem": {
+								"const": "npm"
+							},
+							"lifecycle": {
+								"const": "active"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"publicationTarget": {
+								"const": "workspace-only"
+							}
+						},
+						"required": ["publicationTarget"]
+					},
+					"then": {
+						"properties": {
+							"lifecycle": {
+								"const": "internal"
+							},
+							"releaseStatus": {
+								"const": "unreleased"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"id": {
+								"enum": ["android", "javascript", "react-native"]
+							}
+						},
+						"required": ["id"]
+					},
+					"then": {
+						"properties": {
+							"distribution": {}
+						},
+						"required": ["distribution"]
+					}
+				}
+			],
+			"required": [
+				"id",
+				"lifecycle",
+				"displayName",
+				"ecosystem",
+				"packageName",
+				"sourcePath",
+				"license",
+				"licensePath",
+				"versionSource",
+				"sourceVersion",
+				"releaseStatus"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"pattern": "^[a-z0-9-]+$"
+				},
+				"lifecycle": {
+					"enum": ["active", "internal", "archived"]
+				},
+				"displayName": {
+					"type": "string",
+					"minLength": 1
+				},
+				"ecosystem": {
+					"type": "string",
+					"minLength": 1
+				},
+				"packageName": {
+					"type": "string",
+					"minLength": 1
+				},
+				"candidatePackageName": {
+					"type": "string",
+					"minLength": 1
+				},
+				"sourcePath": {
+					"type": "string",
+					"minLength": 1
+				},
+				"license": {
+					"const": "MIT"
+				},
+				"licensePath": {
+					"type": "string",
+					"minLength": 1
+				},
+				"versionSource": {
+					"type": "string",
+					"minLength": 1
+				},
+				"sourceVersion": {
+					"type": "string",
+					"pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+				},
+				"latestReleaseVersion": {
+					"type": "string",
+					"pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+				},
+				"releaseRef": {
+					"type": "string",
+					"minLength": 1
+				},
+				"releaseStatus": {
+					"enum": ["released", "pending-release", "unreleased"]
+				},
+				"releaseSha": {
+					"type": "string",
+					"pattern": "^[0-9a-f]{40}$"
+				},
+				"surfaceManifest": {
+					"type": "string"
+				},
+				"notes": {
+					"type": "string"
+				},
+				"publicationTarget": {
+					"enum": ["public-npm", "workspace-only"]
+				},
+				"install": {
+					"type": "string",
+					"minLength": 1
+				},
+				"candidateInstall": {
+					"type": "string",
+					"minLength": 1
+				},
+				"distribution": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"registryKind",
+						"repository",
+						"registry",
+						"publicMetadata",
+						"anonymousInstallable",
+						"authentication"
+					],
+					"properties": {
+						"repository": {
+							"const": "mabzadev/superboard-platform"
+						},
+						"registryKind": {
+							"enum": ["github-packages-npm", "github-packages-maven"]
+						},
+						"registry": {
+							"type": "string",
+							"format": "uri"
+						},
+						"publicMetadata": {
+							"type": "boolean"
+						},
+						"anonymousInstallable": {
+							"type": "boolean"
+						},
+						"authentication": {
+							"type": "object",
+							"additionalProperties": false,
+							"required": ["required", "tokenEnvironmentVariable"],
+							"properties": {
+								"required": {
+									"type": "boolean"
+								},
+								"tokenEnvironmentVariable": {
+									"type": "string",
+									"pattern": "^[A-Z][A-Z0-9_]+$"
+								},
+								"usernameEnvironmentVariable": {
+									"type": "string",
+									"pattern": "^[A-Z][A-Z0-9_]+$"
+								}
+							}
+						}
+					}
+				},
+				"sourcePublication": {
+					"enum": ["local", "repository"]
+				},
+				"releaseSourcePath": {
+					"type": "string",
+					"minLength": 1
+				}
+			}
+		}
+	}
 }

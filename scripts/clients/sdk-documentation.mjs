@@ -2,24 +2,20 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { loadSdkCatalog, validateSdkCatalog } from "./sdk-catalog.mjs";
+import { loadSdkCatalog, validateSdkCatalog, sdkCatalogEntries } from "./sdk-catalog.mjs";
 
 const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
 export const sdkDocumentationContracts = Object.freeze([
 	{ id: "flutter", path: "sdks/flutter/README.md" },
 	{ id: "flutterflow", path: "sdks/flutterflow/README.md" },
-	{
-		id: "flutterflow-support",
-		path: "sdks/flutterflow_messaging/README.md",
-	},
-	{ id: "ios", path: "sdks/ios/README.md" },
-	{ id: "android", path: "sdks/android/README.md" },
-	{ id: "javascript", path: "sdks/javascript/README.md" },
-	{ id: "react-native", path: "sdks/react-native/README.md" },
+	{ id: "ios", path: "sdks/flutter/native/ios/README.md" },
+	{ id: "android", path: "sdks/flutter/native/android/README.md" },
+	{ id: "web", path: "sdks/web/README.md" },
+	{ id: "tauri", path: "sdks/tauri/README.md" },
 ]);
 
-export const sdkDocumentationAuditPaths = Object.freeze(["sdks/ios/CLAUDE.md"]);
+export const sdkDocumentationAuditPaths = Object.freeze(["sdks/flutter/native/ios/CLAUDE.md"]);
 
 function marker(id, boundary) {
 	return `<!-- superboard-sdk-documentation:${id}:${boundary} -->`;
@@ -30,7 +26,7 @@ function libraryMap(catalog) {
 		throw new Error("SDK catalogue must contain a libraries array");
 	}
 	const libraries = new Map();
-	for (const library of catalog.libraries) {
+	for (const library of sdkCatalogEntries(catalog)) {
 		if (!library?.id || libraries.has(library.id)) {
 			throw new Error(`SDK catalogue contains an invalid or duplicate id: ${String(library?.id)}`);
 		}
@@ -282,6 +278,18 @@ function androidRegistryDisclosure(library) {
 	];
 }
 
+function clientInstallation(library) {
+	return [
+		...lifecycleNotice(library),
+		"",
+		"## Installation",
+		"",
+		library.releaseStatus === "unreleased"
+			? `Source version ${library.sourceVersion} is not published. Use the monorepo workspace during development; there is no npm release to install yet.`
+			: fenced("bash", library.install),
+	].join("\n");
+}
+
 export function renderSdkDocumentationSections(catalog) {
 	const libraries = libraryMap(catalog);
 	const flutter = published(libraries, "flutter");
@@ -295,10 +303,12 @@ export function renderSdkDocumentationSections(catalog) {
 	const iosPodspec = githubRawUrl(
 		catalog.repository,
 		iosSourceTag,
-		`${ios.sourcePath}/SuperBoard.podspec`,
+		`${ios.releaseSourcePath ?? ios.sourcePath}/SuperBoard.podspec`,
 	);
 
 	return new Map([
+		["web", clientInstallation(libraries.get("web"))],
+		["tauri", clientInstallation(libraries.get("tauri"))],
 		["flutter", flutterInstallation(flutter)],
 		["flutterflow", flutterInstallation(flutterflow, "FlutterFlow")],
 		["flutterflow-support", flutterInstallation(support, "FlutterFlow Support")],
@@ -471,18 +481,6 @@ function semanticErrors(catalog, documents) {
 			pattern: /sdk-flutterflow-v[0-9]+\.[0-9]+\.[0-9]+/gu,
 			expected: published(libraries, "flutterflow").releaseRef,
 		},
-		{
-			path: "sdks/flutterflow_messaging/README.md",
-			id: "flutterflow-support",
-			pattern: /sdk-flutterflow-messaging-v[0-9]+\.[0-9]+\.[0-9]+/gu,
-			expected: published(libraries, "flutterflow-support").releaseRef,
-		},
-		{
-			path: "sdks/react-native/README.md",
-			id: "ios",
-			pattern: /sdk-ios-v[0-9]+\.[0-9]+\.[0-9]+/gu,
-			expected: `sdk-ios-v${published(libraries, "ios").latestReleaseVersion}`,
-		},
 	];
 	for (const { path, id, pattern, expected } of releaseRefChecks) {
 		for (const match of (documents.get(path) ?? "").matchAll(pattern)) {
@@ -492,20 +490,22 @@ function semanticErrors(catalog, documents) {
 		}
 	}
 
-	const iosReadme = documents.get("sdks/ios/README.md") ?? "";
+	const iosReadme = documents.get("sdks/flutter/native/ios/README.md") ?? "";
 	if (
 		/cocoapods\.org\/pods\/SuperBoard/iu.test(iosReadme) ||
 		/^\s*pod\s+['"]SuperBoard['"]\s*$/mu.test(iosReadme)
 	) {
-		errors.push("sdks/ios/README.md: CocoaPods Trunk is not a published SDK distribution channel");
+		errors.push(
+			"sdks/flutter/native/ios/README.md: CocoaPods Trunk is not a published SDK distribution channel",
+		);
 	}
-	const iosGuide = documents.get("sdks/ios/CLAUDE.md") ?? "";
+	const iosGuide = documents.get("sdks/flutter/native/ios/CLAUDE.md") ?? "";
 	if (
 		/Distributed via[^\n]*CocoaPods/iu.test(iosGuide) ||
 		/Package Managers:[^\n]*CocoaPods/iu.test(iosGuide)
 	) {
 		errors.push(
-			"sdks/ios/CLAUDE.md: CocoaPods must not be documented as a published package channel",
+			"sdks/flutter/native/ios/CLAUDE.md: CocoaPods must not be documented as a published package channel",
 		);
 	}
 

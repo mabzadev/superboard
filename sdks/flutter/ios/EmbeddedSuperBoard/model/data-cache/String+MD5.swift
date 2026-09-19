@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/data-cache/String+MD5.swift
+../../../../native/ios/Sources/SuperBoard/model/data-cache/String+MD5.swift

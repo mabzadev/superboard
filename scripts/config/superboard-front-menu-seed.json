@@ -25,11 +25,6 @@
 					},
 					{
 						"type": "custom",
-						"label": "Application members",
-						"url": "/app/members"
-					},
-					{
-						"type": "custom",
 						"label": "Profiles and installations",
 						"url": "/app/customers"
 					},
@@ -411,23 +406,13 @@
 			{
 				"type": "custom",
 				"label": "Statistics",
-				"url": "/dashboard",
+				"url": "/analytics",
 				"cssClasses": "sb-icon-analytics",
 				"children": [
 					{
 						"type": "custom",
-						"label": "Application overview",
-						"url": "/dashboard"
-					},
-					{
-						"type": "custom",
 						"label": "Statistics overview",
 						"url": "/analytics"
-					},
-					{
-						"type": "custom",
-						"label": "Dashboards",
-						"url": "/analytics/dashboards"
 					},
 					{
 						"type": "custom",
@@ -613,11 +598,6 @@
 						"type": "custom",
 						"label": "Utilisateurs de l’application",
 						"url": "/app/users"
-					},
-					{
-						"type": "custom",
-						"label": "Membres de l’application",
-						"url": "/app/members"
 					},
 					{
 						"type": "custom",
@@ -1002,23 +982,13 @@
 			{
 				"type": "custom",
 				"label": "Statistiques",
-				"url": "/dashboard",
+				"url": "/analytics",
 				"cssClasses": "sb-icon-analytics",
 				"children": [
 					{
 						"type": "custom",
-						"label": "Vue d’ensemble de l’application",
-						"url": "/dashboard"
-					},
-					{
-						"type": "custom",
 						"label": "Vue d’ensemble des statistiques",
 						"url": "/analytics"
-					},
-					{
-						"type": "custom",
-						"label": "Tableaux de bord",
-						"url": "/analytics/dashboards"
 					},
 					{
 						"type": "custom",

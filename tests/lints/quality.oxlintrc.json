@@ -1,0 +1,71 @@
+{
+	"$schema": "../../node_modules/oxlint/configuration_schema.json",
+	"plugins": ["typescript", "import", "promise", "vitest"],
+	"categories": {
+		"correctness": "off"
+	},
+	"rules": {
+		"typescript/no-floating-promises": [
+			"error",
+			{
+				"ignoreVoid": false
+			}
+		],
+		"typescript/no-misused-promises": "error",
+		"typescript/await-thenable": "error",
+		"typescript/no-unsafe-assignment": "error",
+		"typescript/no-unsafe-argument": "error",
+		"typescript/no-unsafe-call": "error",
+		"typescript/no-unsafe-member-access": "error",
+		"typescript/no-unsafe-return": "error",
+		"typescript/no-unsafe-type-assertion": "error",
+		"typescript/no-non-null-assertion": "error",
+		"typescript/switch-exhaustiveness-check": "error",
+		"typescript/no-for-in-array": "error",
+		"typescript/no-base-to-string": "error",
+		"typescript/restrict-plus-operands": "error",
+		"typescript/restrict-template-expressions": [
+			"error",
+			{
+				"allowNumber": true,
+				"allowBoolean": true
+			}
+		],
+		"typescript/only-throw-error": "error",
+		"typescript/use-unknown-in-catch-callback-variable": "error",
+		"typescript/no-unnecessary-type-assertion": "error",
+		"typescript/no-duplicate-type-constituents": "error",
+		"typescript/no-confusing-void-expression": "error",
+		"import/no-cycle": "error",
+		"promise/no-multiple-resolved": "error",
+		"promise/no-return-in-finally": "error",
+		"promise/valid-params": "error"
+	},
+	"overrides": [
+		{
+			"files": [
+				"**/*.test.ts",
+				"**/*.test.tsx",
+				"**/*.spec.ts",
+				"**/*.test.mjs",
+				"tests/**/*.{ts,tsx,mjs,js}"
+			],
+			"rules": {
+				"vitest/no-focused-tests": "error",
+				"vitest/valid-expect": "error",
+				"vitest/valid-expect-in-promise": "error",
+				"vitest/no-conditional-expect": "error",
+				"vitest/no-identical-title": "error",
+				"vitest/no-duplicate-hooks": "error",
+				"typescript/no-unsafe-assignment": "off",
+				"typescript/no-unsafe-argument": "off",
+				"typescript/no-unsafe-call": "off",
+				"typescript/no-unsafe-member-access": "off",
+				"typescript/no-unsafe-return": "off",
+				"typescript/no-unsafe-type-assertion": "off",
+				"typescript/no-non-null-assertion": "off",
+				"typescript/no-confusing-void-expression": "off"
+			}
+		}
+	]
+}

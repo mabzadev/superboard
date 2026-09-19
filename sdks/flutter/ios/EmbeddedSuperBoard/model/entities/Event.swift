@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/entities/Event.swift
+../../../../native/ios/Sources/SuperBoard/model/entities/Event.swift

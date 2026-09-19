@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/helpers/AppDetailsHelper.swift
+../../../../native/ios/Sources/SuperBoard/model/helpers/AppDetailsHelper.swift

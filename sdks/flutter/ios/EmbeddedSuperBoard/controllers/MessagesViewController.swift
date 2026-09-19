@@ -1,1 +1,1 @@
-../../../../ios/Sources/SuperBoard/controllers/MessagesViewController.swift
+../../../native/ios/Sources/SuperBoard/controllers/MessagesViewController.swift

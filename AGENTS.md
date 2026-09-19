@@ -26,9 +26,17 @@ Before starting any work that involves editing code, run `pnpm lint:json | jq '.
 
 During work:
 
-- `pnpm lint:quick` after every edit (sub-second)
+- `pnpm lint:quick` after every edit (changed files; configuration changes expand the scope)
 - `pnpm typecheck` (packages) or `pnpm site:typecheck` (SuperBoard Site) after each round of edits
 - `pnpm format` regularly (oxfmt, tabs)
+
+For lint rules, coverage, native analyzers, baseline handling or quality CI,
+read [tests/README.md § Lints et qualité](tests/README.md#lints-et-qualité).
+Run `pnpm lint:test` after changing an analyzer and `pnpm lint` before completing
+the change. Add positive and negative behavior examples for custom rules.
+Keep existing diagnostics visible through `lint:quality:report`; never expand
+the baseline or disable a check to hide a regression. Analyzer failures and
+empty command globs are failures, not successful checks.
 
 Before opening a PR: tests pass, lint clean, formatted, changeset added if a published package changed. See [.changeset/README.md](.changeset/README.md).
 

@@ -1,6 +1,7 @@
 import { Database } from "better-sqlite3";
 import { mock } from "tests/mock";
 import { expect } from "vitest";
+import { z } from "zod";
 
 import { routeConfig } from "../../../../../../../../packages/plugins/supbrd-plug-identity/worker/src/melody/configs";
 import { oauthDto } from "../../../../../../../../packages/plugins/supbrd-plug-identity/worker/src/melody/dtos";
@@ -98,6 +99,6 @@ export const getS2sToken = async (db: Database, scope: string = "root") => {
 		},
 		mock(db),
 	);
-	const json = (await res.json()) as { access_token: string };
+	const json = z.object({ access_token: z.string() }).parse(await res.json());
 	return json.access_token;
 };

@@ -143,7 +143,7 @@ test("the Platform catalogue v5 may add Flows packages without changing referenc
 		id: "flows-js",
 		lifecycle: "active",
 		packageName: "@superboard/flows-js",
-		sourcePath: "sdks/flows/upstream/packages/js",
+		sourcePath: "sdks/web/flows/upstream/packages/js",
 		sourceVersion: "1.23.3",
 		releaseStatus: "unreleased",
 		publicationTarget: "public-npm",

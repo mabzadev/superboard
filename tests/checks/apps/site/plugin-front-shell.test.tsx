@@ -1,39 +1,43 @@
 import { useFrontContext } from "@superboard/front-ui/context";
 import { useParams } from "@superboard/front-ui/navigation";
+import type { NativeRendererMountInput } from "@superboard/supbrd-core";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { NativeFrontApp } from "../../../../apps/site/src/components/NativeFrontApp.js";
-import { CORE_ADMIN_SHELL_DESCRIPTOR } from "../../../../apps/site/src/lib/core-front-contract.js";
+import {
+	CORE_ADMIN_SHELL_DESCRIPTOR,
+	CORE_FRONT_RENDERER_DESCRIPTORS,
+	CORE_OPERATOR_HOME_RENDERER_ID,
+} from "../../../../apps/site/src/lib/core-front-contract.js";
 import type { NativeFrontPresentationProjection } from "../../../../apps/site/src/lib/native-front-presentation.js";
 import { USER_FRONT_CATALOGS } from "../../../../apps/site/src/lib/user-front-catalogs.js";
+import { ModulePage } from "../../../../packages/supbrd-front-ui/src/shared/components/modules/ModulePage.js";
 import { useProjectSelection } from "../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js";
 
-vi.mock("../../../../apps/site/src/lib/native-front-plugins.js", () => ({
-	mountNativeFrontRenderer: ({ mount }: { mount: { renderer: { plugin_id: string } } }) =>
-		mount.renderer.plugin_id === "supbrd-core"
-			? {
-					kind: "layout",
-					title: "SuperBoard",
-					home_href: "/superboard-system/home",
-					navigation_label: "Product sections",
-					actions: [{ label: "EmDash", href: "/_emdash/admin" }],
-				}
-			: { kind: "surface", title: "Products", blocks: [] },
-}));
+vi.mock("../../../../apps/site/src/lib/native-front-plugins.js", async () => {
+	const { nativeFrontPlugin } =
+		await import("../../../../apps/site/src/front-plugins/emdash-core.js");
+	return {
+		mountNativeFrontRenderer: ({ mount }: { mount: NativeRendererMountInput }) =>
+			mount.renderer.plugin_id === "supbrd-core"
+				? nativeFrontPlugin.mount_renderer(mount)
+				: { kind: "surface", title: "Products", blocks: [] },
+	};
+});
 vi.mock("../../../../apps/site/src/components/PluginFrontView.js", () => ({
 	PluginFrontView: () => {
 		const { selectedProject } = useProjectSelection();
 		const { locale } = useFrontContext();
 		const { lang } = useParams();
 		return (
-			<>
+			<ModulePage title="Products" description="Manage products">
 				<output data-testid="view-project">{selectedProject?.id}</output>
 				<span data-testid="view-language">
 					{locale}:{lang}
 				</span>
-			</>
+			</ModulePage>
 		);
 	},
 }));
@@ -173,6 +177,92 @@ test("a previously published translation cannot restore a retired product name",
 async function render(value = projection) {
 	await act(async () => root.render(<NativeFrontApp projection={value} />));
 }
+
+test("administration is available only inside the account panel", async () => {
+	const descriptor = CORE_FRONT_RENDERER_DESCRIPTORS.find(
+		(renderer) => renderer.renderer_id === CORE_OPERATOR_HOME_RENDERER_ID,
+	);
+	if (!descriptor) throw new Error("Home renderer missing");
+	await render({
+		...projection,
+		path: "/superboard-system/home",
+		content_mounts: [
+			{
+				...projection.content_mounts[0]!,
+				renderer: descriptor,
+				route_id: "emdash.core.operator_home",
+				path: "/superboard-system/home",
+			},
+		],
+	});
+	expect(container.querySelector('a[href="/_emdash/admin"]')).toBeNull();
+	await click("Open Ada account menu");
+	const links = [...document.querySelectorAll('[role="dialog"] a')].filter(
+		(node) => node.textContent === "Platform administration",
+	);
+	expect(links).toHaveLength(1);
+	expect(links[0]?.getAttribute("href")).toBe("/_emdash/admin");
+	expect(container.querySelector("main h1")?.textContent).toBe("Overview");
+});
+
+test.each(["en", "fr"] as const)(
+	"%s header keeps controls without repeating the brand or page title",
+	async (locale) => {
+		await render({ ...projection, locale, messages: USER_FRONT_CATALOGS[locale] });
+		const header = container.querySelector(".native-front-content > header");
+		expect(header).not.toBeNull();
+		expect(header!.textContent).not.toContain("SuperBoard");
+		expect(header!.textContent).not.toContain("Offerings");
+		expect(container.querySelector("main h1")?.textContent).toBe("Products");
+		expect(
+			container.querySelector('aside a[href="/superboard-system/home"]')?.textContent,
+		).toContain("SuperBoard");
+		expect(header!.querySelector("select")?.value).toBe("production");
+		await click(locale === "fr" ? "Ouvrir le menu du compte de Ada" : "Open Ada account menu");
+		expect(document.querySelector('[role="dialog"] a[href="/_emdash/admin"]')).not.toBeNull();
+	},
+);
+
+test("section links follow the page title and retain their active destination", async () => {
+	await render({
+		...projection,
+		navigation: [
+			{
+				...projection.navigation[0]!,
+				items: [
+					{
+						route_id: "products-section",
+						href: "/products",
+						label: "Products",
+						order: 0,
+						permission: "allow",
+						children: [
+							...projection.navigation[0]!.items,
+							{
+								route_id: "catalog",
+								href: "/products/catalog",
+								label: "Catalog",
+								order: 1,
+								permission: "allow",
+							},
+						],
+					},
+				],
+			},
+		],
+	});
+	const heading = container.querySelector("main h1");
+	const navigation = container.querySelector('main nav[aria-label="Section pages"]');
+	expect(heading).not.toBeNull();
+	expect(navigation).not.toBeNull();
+	expect(
+		Boolean(heading!.compareDocumentPosition(navigation!) & Node.DOCUMENT_POSITION_FOLLOWING),
+	).toBe(true);
+	expect(navigation!.querySelector('a[aria-current="page"]')?.getAttribute("href")).toBe(
+		"/products/offerings",
+	);
+	expect(navigation!.querySelector('a[href="/products/catalog"]')).not.toBeNull();
+});
 async function click(name: string) {
 	const button = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
 		(node) => node.getAttribute("aria-label") === name || node.textContent === name,
@@ -186,6 +276,7 @@ test("environment selection reaches plugin views and survives a page remount", a
 	expect(container.querySelector("output")?.textContent).toBe("42-prod");
 	const select = container.querySelector<HTMLSelectElement>('select[aria-label="Project data"]');
 	expect(select).not.toBeNull();
+	expect(container.textContent).not.toContain("Project data");
 	await act(async () => {
 		select!.value = "test";
 		select!.dispatchEvent(new Event("change", { bubbles: true }));
@@ -204,8 +295,8 @@ test("account controls expose active plugin destinations and report a failed log
 	);
 	await render();
 	await click("Open Ada account menu");
-	expect(document.querySelector('a[role="menuitem"][href="/account"]')).not.toBeNull();
-	expect(document.querySelector('a[role="menuitem"][href="/project-settings"]')).not.toBeNull();
+	expect(document.querySelector('a[href="/account"]')).not.toBeNull();
+	expect(document.querySelector('a[href="/project-settings"]')).not.toBeNull();
 	await click("Log out");
 	expect(container.querySelector('[role="alert"]')?.textContent).toContain("Sign out failed");
 	vi.unstubAllGlobals();
@@ -280,14 +371,17 @@ test("French selection reaches plugin route parameters even when its published U
 		})),
 	});
 	expect(container.querySelector('[data-testid="view-language"]')?.textContent).toBe("fr:fr");
-	expect(container.querySelector('[role="combobox"][aria-label="Langue"]')?.textContent).toContain(
+	await click("Ouvrir le menu du compte de Ada");
+	expect(document.querySelector('[role="combobox"][aria-label="Langue"]')?.textContent).toContain(
 		"Français",
 	);
 });
 
 test("the front language selector offers only English and French", async () => {
 	await render();
-	const selector = container.querySelector<HTMLButtonElement>(
+	expect(container.querySelector('[role="combobox"][aria-label="Language"]')).toBeNull();
+	await click("Open Ada account menu");
+	const selector = document.querySelector<HTMLButtonElement>(
 		'[role="combobox"][aria-label="Language"]',
 	);
 	expect(selector).not.toBeNull();

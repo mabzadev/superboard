@@ -1,4 +1,8 @@
 import { watchPluginLifecycle } from "@superboard/front-ui/lifecycle";
+import {
+	SectionNavigation,
+	SectionNavigationProvider,
+} from "@superboard/front-ui/section-navigation";
 import type {
 	NativeRendererBlock,
 	NativeRendererCard,
@@ -90,6 +94,20 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 	const i18n = createUserFrontI18n(projection.locale, messages);
 	const message = (id: string, values?: Record<string, string>) =>
 		Object.hasOwn(messages, id) ? i18n._(id, values) : id;
+	const sectionNavigation =
+		navigation.localItems.length > 1 ? (
+			<nav className="native-front-local-navigation" aria-label={message("navigation.local")}>
+				{navigation.localItems.map((item) => (
+					<a
+						key={item.route_id}
+						href={item.href}
+						aria-current={item.route_id === navigation.activeItem?.route_id ? "page" : undefined}
+					>
+						{item.label}
+					</a>
+				))}
+			</nav>
+		) : null;
 	const mount = (input: NativeFrontPresentationProjection["content_mounts"][number]) =>
 		mountNativeFrontRenderer({ mount: input, plugin_lock: projection.plugin_lock });
 	const layouts = projection.layout_mounts.map(mount);
@@ -228,38 +246,16 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 					>
 						☰
 					</Button>
-					<div className="native-front-header-copy">
-						<span>{message("site.front.title")}</span>
-						<strong>
-							{navigation.activeItem
-								? navigation.activeItem.label
-								: currentSurface
-									? message(currentSurface.title)
-									: projection.path}
-						</strong>
-					</div>
 					<div className="native-front-header-actions">
-						<NativeFrontControls message={message} locale={projection.locale} />
-						<ActionList actions={layout.actions} message={message} />
+						<NativeFrontControls
+							message={message}
+							locale={projection.locale}
+							actions={layout.actions}
+						/>
 					</div>
 				</header>
 				<main className={dashboardView ? "native-front-dashboard-main" : undefined}>
-					{navigation.localItems.length > 1 && (
-						<nav className="native-front-local-navigation" aria-label={message("navigation.local")}>
-							{navigation.localItems.map((item) => (
-								<a
-									key={item.route_id}
-									href={item.href}
-									aria-current={
-										item.route_id === navigation.activeItem?.route_id ? "page" : undefined
-									}
-								>
-									{item.label}
-								</a>
-							))}
-						</nav>
-					)}
-					{body}
+					<SectionNavigationProvider value={sectionNavigation}>{body}</SectionNavigationProvider>
 				</main>
 			</div>
 		</div>
@@ -292,6 +288,7 @@ function RendererDocument({
 				</div>
 				<ActionList actions={document.actions} message={message} />
 			</header>
+			<SectionNavigation />
 			<div className="native-front-blocks">
 				{document.blocks.map((block, index) => (
 					<RendererBlock key={`${block.kind}:${index}`} block={block} message={message} />

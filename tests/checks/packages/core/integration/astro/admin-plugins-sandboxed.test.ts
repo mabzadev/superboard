@@ -197,7 +197,7 @@ describe("admin plugin routes: statically-sandboxed plugins (real runtime)", () 
 		const response = await enablePlugin(ctx(runtime, { id: "webhook-notifier" }));
 
 		expect(response.status).toBe(503);
-		expect((await response.json()) as unknown).toEqual({
+		expect(await response.json()).toEqual({
 			success: false,
 			error: {
 				code: "MEDIA_USAGE_ACTIVATION_IN_PROGRESS",

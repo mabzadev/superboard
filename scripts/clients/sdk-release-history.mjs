@@ -9,6 +9,8 @@ const historyPath = resolve(root, "scripts/config/sdk-release-history.json");
 const historySchemaPath = resolve(root, "scripts/config/sdk-release-history.schema.json");
 const tagPrefixes = Object.freeze({
 	flutter: "sdk-flutter-v",
+	web: "sdk-web-v",
+	tauri: "sdk-tauri-v",
 	flutterflow: "sdk-flutterflow-v",
 	"flutterflow-support": "sdk-flutterflow-messaging-v",
 	ios: "sdk-ios-v",
@@ -72,7 +74,11 @@ export async function validateSdkReleaseHistory(history, catalogue) {
 			refs.add(reference);
 		}
 
-		const current = catalogue?.libraries?.find((library) => library.id === failure.libraryId);
+		const current = [
+			...(catalogue?.libraries ?? []),
+			...(catalogue?.components ?? []),
+			...(catalogue?.retiredLibraries ?? []),
+		].find((library) => library.id === failure.libraryId);
 		if (current?.latestReleaseVersion === failure.version) {
 			errors.push(`${label} conflicts with the current successful release`);
 		}

@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/helpers/UserAgentHelper.swift
+../../../../native/ios/Sources/SuperBoard/model/helpers/UserAgentHelper.swift

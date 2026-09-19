@@ -14,6 +14,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import type { AstroIntegration, AstroIntegrationLogger, AstroIntegrationMiddleware } from "astro";
+import { z } from "zod";
 
 import { validateAllowedOrigins, validateOriginShape } from "../../auth/allowed-origins.js";
 import { normalizeMigrationConfig } from "../../database/migrations/policy.js";
@@ -677,13 +678,11 @@ export function emdash(config: EmDashConfig = {}): AstroIntegration {
 							return;
 						}
 
-						const { data: result } = (await response.json()) as {
-							data: {
-								types: string;
-								hash: string;
-								collections: number;
-							};
-						};
+						const { data: result } = z
+							.object({
+								data: z.object({ types: z.string(), hash: z.string(), collections: z.number() }),
+							})
+							.parse(await response.json());
 
 						// Only write if content changed
 						let needsWrite = true;

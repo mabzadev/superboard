@@ -24,7 +24,7 @@ const flutterIosPluginUrl = new URL(
 	import.meta.url,
 );
 const nativeAndroidGradleUrl = new URL(
-	"../../../sdks/android/SuperBoard/SuperBoard/build.gradle.kts",
+	"../../../sdks/flutter/native/android/SuperBoard/SuperBoard/build.gradle.kts",
 	import.meta.url,
 );
 const flutterIosPodspecUrl = new URL(
@@ -36,7 +36,7 @@ const flutterExamplePodLockUrl = new URL(
 	import.meta.url,
 );
 const nativeServiceUrl = new URL(
-	"../../../sdks/android/SuperBoard/SuperBoard/src/main/java/io/superboard/service/SuperBoardService.kt",
+	"../../../sdks/flutter/native/android/SuperBoard/SuperBoard/src/main/java/io/superboard/service/SuperBoardService.kt",
 	import.meta.url,
 );
 
@@ -206,7 +206,7 @@ test("Flutter consumers lock the patched JOSE implementation", async () => {
 test("Android SDK sources do not generate or consume the obsolete test server field", async () => {
 	const obsoleteField = ["TEST", "SERVER", "URL"].join("_");
 	const sourceRoots = [
-		new URL("../../../sdks/android/", import.meta.url),
+		new URL("../../../sdks/flutter/native/android/", import.meta.url),
 		new URL("../../../sdks/flutter/android/", import.meta.url),
 	];
 	const files = (

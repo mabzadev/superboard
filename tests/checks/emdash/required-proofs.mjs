@@ -38,13 +38,13 @@ export function buildRequiredProofPlan(matrix) {
 			name: "Node parity proofs",
 			proofs: [
 				"tests/checks/emdash/parity-matrix.test.mjs",
-				"tests/checks/sdks/javascript/emdash-store-parity.test.js",
+				"tests/checks/sdks/web/emdash-store-parity.test.js",
 			],
 			command: process.execPath,
 			args: [
 				"--test",
 				"tests/checks/emdash/parity-matrix.test.mjs",
-				"tests/checks/sdks/javascript/emdash-store-parity.test.js",
+				"tests/checks/sdks/web/emdash-store-parity.test.js",
 			],
 			cwd: root,
 		},
@@ -126,17 +126,10 @@ export function buildRequiredProofPlan(matrix) {
 			cwd: root,
 		},
 		{
-			name: "React Native SDK contract",
-			proofs: ["tests/checks/sdks/react-native/unit/index.test.tsx"],
-			command: "pnpm",
-			args: [
-				"--dir",
-				"sdks/react-native",
-				"exec",
-				"jest",
-				"../../tests/checks/sdks/react-native/unit/index.test.tsx",
-				"--runInBand",
-			],
+			name: "Tauri SDK contract",
+			proofs: ["tests/checks/sdks/tauri/client.test.mjs"],
+			command: process.execPath,
+			args: ["--test", "tests/checks/sdks/tauri/client.test.mjs"],
 			cwd: root,
 		},
 		{

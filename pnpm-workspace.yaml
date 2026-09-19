@@ -118,7 +118,7 @@ overrides:
   "@flue/runtime@2.0.3>hono": "4.12.27"
 patchedDependencies:
   # SuperBoard retained dependency patches.
-  "image-size@1.2.1": sdks/react-native/.yarn/patches/image-size-npm-1.2.1-e285f3c080.patch
+  "image-size@1.2.1": patches/image-size-npm-1.2.1-e285f3c080.patch
   "@sigstore/core@4.0.1": patches/@sigstore__core@4.0.1.patch
   image-size@2.0.2: patches/image-size@2.0.2.patch
   partysocket@1.1.18: patches/partysocket@1.1.18.patch
@@ -152,25 +152,24 @@ packages:
   - packages/plugins/supbrd-core/observability
   - packages/plugins/supbrd-core/mcp
   - apps/reference/worker
-  - sdks/flows/upstream/packages/shared
-  - sdks/flows/upstream/packages/styles
-  - sdks/flows/upstream/packages/js
-  - sdks/flows/upstream/packages/react
-  - sdks/flows/upstream/packages/js-components
-  - sdks/flows/upstream/packages/react-components
-  - sdks/flows/upstream/tests/e2e
-  - sdks/identity/web
-  - sdks/identity/react
-  - sdks/identity/vue
-  - sdks/identity/angular
-  - sdks/identity/nextjs
-  - sdks/flows
-  - sdks/javascript
-  - sdks/react-native
-  - sdks/react-native/example
+  - sdks/web/flows/upstream/packages/shared
+  - sdks/web/flows/upstream/packages/styles
+  - sdks/web/flows/upstream/packages/js
+  - sdks/web/flows/upstream/packages/react
+  - sdks/web/flows/upstream/packages/js-components
+  - sdks/web/flows/upstream/packages/react-components
+  - sdks/web/flows/upstream/tests/e2e
+  - sdks/web/identity/web
+  - sdks/web/identity/react
+  - sdks/web/identity/vue
+  - sdks/web/identity/angular
+  - sdks/web/identity/nextjs
+  - sdks/web/flows
+  - sdks/web
   - tests/fixtures/emdash-site
   - tests/fixtures/emdash-cloudflare
   - tests/fixtures/performance-site
+  - sdks/tauri
 catalog:
   "@arethetypeswrong/cli": ^0.18.2
   "@astrojs/check": ^0.9.7

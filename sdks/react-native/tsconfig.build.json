@@ -1,4 +1,0 @@
-{
-  "extends": "./tsconfig",
-  "exclude": ["example", "example_old_arch", "lib"]
-}

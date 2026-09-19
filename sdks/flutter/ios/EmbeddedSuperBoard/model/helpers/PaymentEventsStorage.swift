@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/helpers/PaymentEventsStorage.swift
+../../../../native/ios/Sources/SuperBoard/model/helpers/PaymentEventsStorage.swift

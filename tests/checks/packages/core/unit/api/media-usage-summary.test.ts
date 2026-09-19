@@ -41,11 +41,6 @@ interface SuccessBody<T> {
 	data: T;
 }
 
-interface ErrorBody {
-	success: false;
-	error: { code: string; message: string };
-}
-
 interface MediaListBodyItem extends MediaItem {
 	url: string;
 	usage?: {
@@ -348,7 +343,7 @@ describe("media usage summary handler and routes", () => {
 		const response = await invokeList("?page=1&cursor=cursor", Role.CONTRIBUTOR);
 
 		expect(response.status).toBe(400);
-		expect((await response.json()) as ErrorBody).toEqual(
+		expect(await response.json()).toEqual(
 			expect.objectContaining({ error: expect.objectContaining({ code: "VALIDATION_ERROR" }) }),
 		);
 		expect(queries).toHaveLength(0);
@@ -409,7 +404,7 @@ describe("media usage summary handler and routes", () => {
 		const response = await invokeList("?includeUsage=0", Role.CONTRIBUTOR);
 
 		expect(response.status).toBe(400);
-		expect((await response.json()) as ErrorBody).toEqual(
+		expect(await response.json()).toEqual(
 			expect.objectContaining({ error: expect.objectContaining({ code: "VALIDATION_ERROR" }) }),
 		);
 		expect(queries).toHaveLength(0);
@@ -474,7 +469,7 @@ describe("media usage summary handler and routes", () => {
 		const response = await invokeGet(usedMedia.id, "?includeUsage=false", Role.CONTRIBUTOR);
 
 		expect(response.status).toBe(400);
-		expect((await response.json()) as ErrorBody).toEqual(
+		expect(await response.json()).toEqual(
 			expect.objectContaining({ error: expect.objectContaining({ code: "VALIDATION_ERROR" }) }),
 		);
 		expect(queries).toHaveLength(0);
@@ -484,7 +479,7 @@ describe("media usage summary handler and routes", () => {
 		const response = await invokeGet("missing", "?includeUsage=1", Role.CONTRIBUTOR);
 
 		expect(response.status).toBe(404);
-		expect((await response.json()) as ErrorBody).toEqual(
+		expect(await response.json()).toEqual(
 			expect.objectContaining({ error: expect.objectContaining({ code: "NOT_FOUND" }) }),
 		);
 		expect(queries).toHaveLength(1);
@@ -499,7 +494,7 @@ describe("media usage summary handler and routes", () => {
 		const response = await invokeList("?includeUsage=1", Role.CONTRIBUTOR);
 
 		expect(response.status).toBe(500);
-		expect((await response.json()) as ErrorBody).toEqual({
+		expect(await response.json()).toEqual({
 			success: false,
 			error: { code: "MEDIA_USAGE_READ_ERROR", message: "Failed to read media usage" },
 		});
@@ -514,7 +509,7 @@ describe("media usage summary handler and routes", () => {
 		const response = await invokeGet(usedMedia.id, "?includeUsage=1", Role.CONTRIBUTOR);
 
 		expect(response.status).toBe(500);
-		expect((await response.json()) as ErrorBody).toEqual({
+		expect(await response.json()).toEqual({
 			success: false,
 			error: { code: "MEDIA_USAGE_READ_ERROR", message: "Failed to read media usage" },
 		});

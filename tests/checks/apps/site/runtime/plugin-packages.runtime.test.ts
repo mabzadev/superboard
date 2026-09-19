@@ -2,6 +2,7 @@ import { applyD1Migrations, type D1Migration } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { beforeEach, expect, test } from "vitest";
 
+import { proxyOperatorApiRequest } from "../../../../../apps/site/src/lib/operator-api-proxy.js";
 import {
 	migratePluginPackages,
 	packageActionComponents,
@@ -20,6 +21,40 @@ declare global {
 const scope = { instance_id: "package-test", target: "local" as const };
 const onboarding = "supbrd-plugmod-onboardings";
 const flows = "supbrd-plugmod-flows";
+
+test("SDK catalogue access follows Settings activation without requiring Observability", async () => {
+	let dispatched = 0;
+	const request = (path = "/api/v1/platform/libraries", role = 50) =>
+		proxyOperatorApiRequest({
+			request: new Request(`https://site.example.test${path}`),
+			operator: { id: "catalogue-operator", role },
+			env: {
+				DB: env.DB,
+				SUPERBOARD_INSTANCE_ID: scope.instance_id,
+				SUPERBOARD_ENVIRONMENT: scope.target,
+				SITE_OPERATOR_BRIDGE_TOKEN: "test-catalogue-bridge",
+				API_SERVICE: {
+					fetch: async () => {
+						dispatched++;
+						return Response.json({ data: { libraries: [] } });
+					},
+				},
+			},
+		});
+	expect((await request()).status).toBe(404);
+	expect(dispatched).toBe(0);
+	await env.DB.prepare(
+		"INSERT INTO superboard_plugin_lifecycle (instance_id,target,plugin_id,artifact_checksum,state,state_changed_at) SELECT ?,?,'supbrd-plug-settings',artifact_checksum,'active',? FROM superboard_plugin_manifest_artifacts WHERE plugin_id='supbrd-plug-settings' LIMIT 1",
+	)
+		.bind(scope.instance_id, scope.target, new Date().toISOString())
+		.run();
+	expect((await request()).status).toBe(200);
+	expect((await request("/api/v1/platform/libraries/")).status).toBe(200);
+	expect((await request("/api/v1/platform/status")).status).toBe(404);
+	expect((await request("/api/v1/platform/libraries-other")).status).toBe(404);
+	expect((await request("/api/v1/platform/libraries", 1)).status).toBe(403);
+	expect(dispatched).toBe(2);
+});
 
 beforeEach(async () => {
 	await applyD1Migrations(env.DB, env.PACKAGE_MIGRATIONS);

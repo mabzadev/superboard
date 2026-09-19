@@ -123,11 +123,11 @@ test("generated native dependency trees never enter the shared source audit", ()
 		},
 	};
 	for (const [path, name] of [
-		["sdks/ios/.build", ".build"],
-		["sdks/android/.gradle", ".gradle"],
-		["sdks/ios/.swiftpm", ".swiftpm"],
-		["sdks/ios/DerivedData", "DerivedData"],
-		["sdks/ios/example/Pods", "Pods"],
+		["sdks/flutter/native/ios/.build", ".build"],
+		["sdks/flutter/native/android/.gradle", ".gradle"],
+		["sdks/flutter/native/ios/.swiftpm", ".swiftpm"],
+		["sdks/flutter/native/ios/DerivedData", "DerivedData"],
+		["sdks/flutter/native/ios/example/Pods", "Pods"],
 		["sdks/flutter/build", "build"],
 	]) {
 		assert.equal(isIgnoredDirectory(path, name, contract), true, path);

@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 
-import { loadSdkCatalog } from "../../../scripts/clients/sdk-catalog.mjs";
+import { loadSdkCatalog, sdkCatalogEntries } from "../../../scripts/clients/sdk-catalog.mjs";
 import {
 	applySdkDocumentationSections,
 	renderSdkDocumentationSections,
@@ -40,7 +40,7 @@ test("canonical SDK documentation is generated from the release catalogue", asyn
 
 test("documentation follows published metadata, not pending source state", async () => {
 	const catalog = await loadSdkCatalog();
-	const flutterflow = catalog.libraries.find(({ id }) => id === "flutterflow");
+	const flutterflow = sdkCatalogEntries(catalog).find(({ id }) => id === "flutterflow");
 	const publishedRef = flutterflow.releaseRef;
 	flutterflow.sourceVersion = "9.9.9";
 	flutterflow.releaseStatus = "pending-release";
@@ -65,7 +65,7 @@ test("documentation derives lifecycle notices independently from release status"
 
 test("a catalogue promotion regenerates documentation without frozen state", async () => {
 	const catalog = await loadSdkCatalog();
-	const flutterflow = catalog.libraries.find(({ id }) => id === "flutterflow");
+	const flutterflow = sdkCatalogEntries(catalog).find(({ id }) => id === "flutterflow");
 	const [major, minor, patch] = flutterflow.sourceVersion.split(".").map(Number);
 	const promotedVersion =
 		flutterflow.sourceVersion === flutterflow.latestReleaseVersion
@@ -93,22 +93,22 @@ test("a catalogue promotion regenerates documentation without frozen state", asy
 
 test("all package coordinates and versions are derived state-independently", async () => {
 	const catalog = await loadSdkCatalog();
-	const javascript = catalog.libraries.find(({ id }) => id === "javascript");
+	const javascript = sdkCatalogEntries(catalog).find(({ id }) => id === "javascript");
 	javascript.packageName = "@example/superboard-browser";
 	javascript.latestReleaseVersion = "7.8.9";
 	javascript.releaseRef = "sdk-js-v7.8.9";
 	javascript.install = "npm install @example/superboard-browser@7.8.9";
-	const reactNative = catalog.libraries.find(({ id }) => id === "react-native");
+	const reactNative = sdkCatalogEntries(catalog).find(({ id }) => id === "react-native");
 	reactNative.packageName = "@example/superboard-native";
 	reactNative.latestReleaseVersion = "4.5.6";
 	reactNative.releaseRef = "sdk-react-native-v4.5.6";
 	reactNative.install = "npm install @example/superboard-native@4.5.6";
-	const android = catalog.libraries.find(({ id }) => id === "android");
+	const android = sdkCatalogEntries(catalog).find(({ id }) => id === "android");
 	android.packageName = "dev.example:superboard-android";
 	android.latestReleaseVersion = "3.2.1";
 	android.releaseRef = "sdk-android-v3.2.1";
 	android.install = 'implementation("dev.example:superboard-android:3.2.1")';
-	const ios = catalog.libraries.find(({ id }) => id === "ios");
+	const ios = sdkCatalogEntries(catalog).find(({ id }) => id === "ios");
 	ios.latestReleaseVersion = "6.5.4";
 	ios.releaseRef = "6.5.4";
 	ios.install =
@@ -236,7 +236,7 @@ test("registry shell preflights stop npm and Gradle when credentials are absent"
 test("documentation rejects hardcoded registry credentials", async () => {
 	const catalog = await loadSdkCatalog();
 	const documents = await currentDocuments();
-	const javascriptPath = "sdks/javascript/README.md";
+	const javascriptPath = "sdks/web/README.md";
 	documents.set(
 		javascriptPath,
 		`${documents.get(javascriptPath)}\n//npm.pkg.github.com/:_authToken=github_pat_forbidden\n`,
@@ -262,8 +262,8 @@ test("iOS documentation rejects an unsupported CocoaPods Trunk promise", async (
 
 	const documents = await currentDocuments();
 	documents.set(
-		"sdks/ios/CLAUDE.md",
-		`${documents.get("sdks/ios/CLAUDE.md")}\nDistributed via SPM and CocoaPods.\n`,
+		"sdks/flutter/native/ios/CLAUDE.md",
+		`${documents.get("sdks/flutter/native/ios/CLAUDE.md")}\nDistributed via SPM and CocoaPods.\n`,
 	);
 	const result = validateSdkDocumentation(catalog, documents);
 	assert.match(result.errors.join("\n"), /must not be documented as a published package channel/u);
@@ -305,8 +305,8 @@ test("missing, duplicate and reversed documentation markers fail closed", async 
 test("retired npm and Gradle coordinates fail outside generated sections", async () => {
 	const catalog = await loadSdkCatalog();
 	const documents = await currentDocuments();
-	const jsPath = "sdks/javascript/README.md";
-	const androidPath = "sdks/android/README.md";
+	const jsPath = "sdks/web/README.md";
+	const androidPath = "sdks/flutter/native/android/README.md";
 	documents.set(
 		jsPath,
 		`${documents.get(jsPath)}\nimport SuperBoard from "@mbzadev/superboard-js";\n`,

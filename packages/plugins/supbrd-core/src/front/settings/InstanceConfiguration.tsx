@@ -4,6 +4,7 @@ import { LinkButton, Loader } from "@superboard/front-ui/kumo";
 import { useQuery } from "@superboard/front-ui/query";
 
 import { deploymentI18n } from "../../../../../supbrd-front-ui/src/deployment-i18n.js";
+import { SectionNavigation } from "../../../../../supbrd-front-ui/src/section-navigation.js";
 
 export default function InstanceConfiguration() {
 	const context = useFrontContext();
@@ -26,6 +27,7 @@ export default function InstanceConfiguration() {
 		<section className="p-6 space-y-4">
 			<h1 className="text-xl font-semibold">{t("title")}</h1>
 			<p>{t("description")}</p>
+			<SectionNavigation />
 			{query.isPending ? (
 				<Loader />
 			) : query.error ? (

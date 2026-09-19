@@ -258,6 +258,7 @@ export type PlatformLibrary = {
 	ecosystem: string;
 	packageName: string;
 	sourcePath: string;
+	sourcePublication?: "local" | "repository";
 	license: "MIT";
 	licensePath: string;
 	versionSource: string;
