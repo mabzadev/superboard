@@ -280,7 +280,7 @@ export function PaywallsPage() {
 						<summary className="cursor-pointer rounded-lg border border-kumo-line bg-kumo-base p-3 font-medium">
 							{t("Library")}
 						</summary>
-						<Card className="border-kumo-line bg-kumo-base">
+						<Card className="mt-3 border-kumo-line bg-kumo-base">
 							<CardContent className="space-y-3">
 								<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
 									<Input

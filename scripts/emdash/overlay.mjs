@@ -212,6 +212,7 @@ export function renderRootPackage(upstreamPackage, overlay) {
 	scripts["emdash:format:check:full"] = scripts["format:check"];
 	scripts.format = "node scripts/emdash/overlay.mjs format";
 	scripts["format:check"] = "node scripts/emdash/overlay.mjs format-check";
+	Object.assign(scripts, product.commandOverrides ?? {});
 
 	return {
 		...upstreamPackage,
@@ -374,7 +375,7 @@ export function renderGitignore(upstreamGitignore, overlay) {
 	const localLines = overlay.gitignore
 		.split("\n")
 		.filter((line) => line.trim() !== "/pnpm-lock.yaml" && line.trim() !== "pnpm-lock.yaml");
-	return `${upstream.trimEnd()}\n!.dev.vars.example\n\n# SuperBoard overlay\n${localLines.join("\n").trim()}\npackage-lock.json\n!apps/mcp/package-lock.json\n!sdks/javascript/package-lock.json\n`;
+	return `${upstream.trimEnd()}\n!.dev.vars.example\n\n# SuperBoard overlay\n${localLines.join("\n").trim()}\npackage-lock.json\n!apps/mcp/package-lock.json\n!sdks/web/package-lock.json\n`;
 }
 
 export function isLintSourcePath(path) {

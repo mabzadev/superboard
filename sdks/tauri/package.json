@@ -1,0 +1,51 @@
+{
+	"name": "@superboard/tauri",
+	"version": "0.1.0",
+	"description": "SuperBoard client for Tauri desktop applications.",
+	"type": "module",
+	"main": "./src/index.js",
+	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"import": "./src/index.js"
+		},
+		"./flows": {
+			"types": "./src/flows.d.ts",
+			"import": "./src/flows.js"
+		},
+		"./flows/react": {
+			"types": "./src/flows-react.d.ts",
+			"import": "./src/flows-react.js"
+		},
+		"./flows/components": {
+			"types": "./src/flows-components.d.ts",
+			"import": "./src/flows-components.js"
+		},
+		"./flows/react-components": {
+			"types": "./src/flows-react-components.d.ts",
+			"import": "./src/flows-react-components.js"
+		},
+		"./identity": {
+			"types": "./src/identity.d.ts",
+			"import": "./src/identity.js"
+		}
+	},
+	"files": [
+		"src"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/mabzadev/superboard.git",
+		"directory": "sdks/tauri"
+	},
+	"scripts": {
+		"test": "node --test ../../tests/checks/sdks/tauri/*.test.mjs",
+		"pack:check": "pnpm pack --dry-run"
+	},
+	"dependencies": {
+		"@superboard/web": "workspace:*",
+		"@tauri-apps/plugin-http": "^2.5.0"
+	}
+}

@@ -42,7 +42,7 @@ couvre l'intégration mobile. `site/remote/` contient les parcours qui nécessit
 une cible distante.
 
 Les images de référence et snapshots propres à un test restent avec sa suite.
-Les sources amont épinglées dans `sdks/flows/upstream/` restent intactes, avec
+Les sources amont épinglées dans `sdks/web/flows/upstream/` restent intactes, avec
 leurs tests d'origine. Les générateurs de fixtures exportés par
 `packages/registry-moderation` sont utilisés par le runtime et restent dans ce
 package.
@@ -71,7 +71,7 @@ pnpm flutterflow-purchases:check
 Les configurations Vitest, Playwright, Gradle et Swift restent liées au projet
 qu'elles exécutent. Elles pointent vers les sources de test centralisées. iOS
 utilise le `Package.swift` à la racine ; ses tests se trouvent dans
-`checks/sdks/ios/`. Les tests Android utilisent les source sets des projets SDK.
+`checks/sdks/flutter/native/ios/`. Les tests Android utilisent les source sets des projets SDK.
 
 L'installation relie automatiquement les dépendances de chaque suite à son
 package d'origine. Ces liens `node_modules` sont générés et ignorés par Git.
@@ -85,6 +85,8 @@ Pour les parcours locaux :
 pnpm test:e2e
 pnpm local:start --state-directory /tmp/superboard-validation
 pnpm local:test
+pnpm local:test:front-layout
+pnpm local:test:navigation
 pnpm local:stop --state-directory /tmp/superboard-validation
 ```
 
@@ -93,12 +95,102 @@ Les suites distantes, notamment `test:plugins:development` et les scénarios de
 inclure cette phase : consultez sa définition avant de l'utiliser pour une
 validation uniquement locale.
 
+`local:test:front-layout` utilise uniquement une adresse de boucle locale.
+Il vérifie la connexion de développement, le chargement des utilisateurs,
+l'unicité du lien d'administration, l'ordre titre/onglets en anglais et en
+français et l'espacement de la bibliothèque des écrans d'abonnement.
+
+`local:test:navigation` parcourt les liens du menu latéral et des sections dans
+Chromium, attend le chargement de React, puis vérifie les réponses HTTP, les
+requêtes API et les erreurs JavaScript. Il ouvre les six étapes Android et iOS
+et exige les liens de configuration depuis Paramètres et Bibliothèques. Le
+serveur local doit être démarré et le composant Paramètres activé. Ce parcours
+fait également partie de `pnpm local:test`.
+
+Pour limiter le parcours : `pnpm local:test:navigation /app/libraries`.
+`SUPERBOARD_NAVIGATION_REPORT=/tmp/navigation.json` enregistre les résultats
+par page. Les tests portent sur la navigation interne et les chargements ; les
+paiements, envois de messages et validations auprès des boutiques exigent leurs
+propres tests d'intégration.
+
+`pnpm test:navigation` vérifie l'accès au catalogue avec Paramètres actif et
+Supervision inactive, le refus lorsque Paramètres est inactif ou l'opérateur
+non autorisé, et la présence des liens de section. Le workflow GitHub `quality`
+exécute ces tests. `pnpm lint:navigation`
+contrôle les destinations des menus déclarés et l'existence des fichiers de
+vue. Ces règles sont aussi exécutées par `pnpm lint` et `pnpm lint:quick`.
+
 Les tests hérités de Melody dans
 `checks/plugins/supbrd-plug-identity/worker/unit/melody/` sont conservés. Leur
 ancien environnement Node, Redis et PostgreSQL n'est pas raccordé aux commandes
 actuelles du Worker Cloudflare. Une réussite de ces commandes ne valide donc
 pas cette suite héritée. Les tests iOS et les tests Android sur appareil exigent
 également les plateformes et simulateurs correspondants.
+
+## Lints et qualité
+
+`pnpm lint` exécute les tests des analyseurs, les règles existantes et les
+contrôles étendus. `pnpm lint:quick` sélectionne les fichiers modifiés ; un
+changement de configuration ou de dépendances élargit la sélection. Les
+contrats du dépôt restent vérifiés même lorsqu'aucun fichier source n'a changé.
+L'analyse typée et Knip font partie du contrôle complet.
+
+| Commande                   | Contenu                                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `pnpm lint:quality`        | JavaScript, TypeScript, Astro, React, accessibilité, traductions, frontières des packages, chemins et dépendances. |
+| `pnpm lint:quality:report` | Tous les diagnostics, y compris la dette initiale.                                                                 |
+| `pnpm lint:test`           | Exemples valides et invalides des analyseurs, défaillances d'outils et protection des migrations.                  |
+| `pnpm lint:contracts`      | Overlay, dépendances du workspace, configuration Cloudflare, exports publics et inventaire des services.           |
+| `pnpm lint:automation`     | Workflows GitHub avec Actionlint et scripts shell avec ShellCheck.                                                 |
+| `pnpm lint:dart`           | Flutter et FlutterFlow, avec leurs dépendances résolues par `flutter pub get`.                                     |
+| `pnpm lint:android`        | Android Lint et Detekt ; nécessite Java 17, Android 35 et les Build Tools 34.                                      |
+| `pnpm lint:swift`          | Sources Swift et tests maintenus, avec SwiftLint.                                                                  |
+| `pnpm quality:check`       | Lint complet, contrats et vérification des types du projet.                                                        |
+| `pnpm quality:release`     | Qualité, menus, traductions de production, artefacts des plugins et preuves locales de migration/restauration.     |
+
+Les configurations se trouvent dans `lints/` : `quality.config.mjs` pour
+ESLint/Astro, `quality.oxlintrc.json` pour l'analyse typée et les tests,
+`quality-rules.mjs` pour les conventions SuperBoard, et `dart.yaml`,
+`swiftlint.yml`, `android.gradle` pour les SDK. `repository.mjs` vérifie les
+chemins et les configurations sans exécuter les commandes qu'il inspecte.
+
+L'analyse typée vise les fichiers TypeScript. Les scripts JavaScript reçoivent
+les contrôles syntaxiques et de dépendances. Les assertions non nulles et les
+objets partiels des tests conservent leurs exceptions ; les promesses et les
+assertions asynchrones restent contrôlées. Les fixtures autonomes reçoivent
+l'analyse syntaxique ; leurs types sont validés par leurs suites de construction.
+Les sources amont épinglées et les bundles Yarn ne sont pas réécrits pour
+satisfaire les règles étendues. Le lanceur historique conserve sa couverture
+du runtime SDK Flows importé.
+
+`lints/baseline.json` enregistre les diagnostics existants au moment de
+l'activation, par fichier, règle et empreinte de la ligne concernée. Un
+diagnostic supplémentaire, déplacé dans un autre fichier ou portant sur une
+ligne modifiée échoue. Le nombre de diagnostics connus apparaît dans la sortie :
+un contrôle réussi ne signifie pas que cette dette est corrigée. La CI refuse
+l'augmentation de ces exceptions par rapport à sa révision de comparaison.
+Les erreurs de configuration, les analyseurs défaillants, les tests focalisés
+et les modifications de migrations ne peuvent pas être masqués par cet état
+initial. Les commentaires de désactivation hérités restent gérés par les
+linters historiques ; les contrôles étendus s'exécutent indépendamment.
+
+Les empreintes des diagnostics React excluent le chemin absolu et les numéros
+de lignes de l'extrait affiché par le compilateur. Le message sémantique et la
+ligne de code restent vérifiés : ajouter un import ne crée pas artificiellement
+une nouvelle alerte, mais changer l'expression fautive reste bloquant.
+
+La commande complète ne met jamais à jour cet état initial. L'option
+`--capture-baseline` du lanceur est réservée à l'introduction examinée d'un
+analyseur ; elle ne constitue pas une correction. Ajoutez un exemple qui
+échoue et un exemple correct dans `checks/repository/quality.test.mjs` pour
+chaque règle propre au dépôt.
+
+Le workflow `Repository quality` exécute les contrôles de sources et les
+analyseurs natifs. `SUPERBOARD_LINT_BASE` fixe la révision de comparaison pour
+les migrations et la dette ; localement, sa valeur par défaut est `HEAD`.
+Un outil natif manquant produit un échec explicite. Les règles statiques sur
+les requêtes, les autorisations et le navigateur ne remplacent pas les parcours
+réels, les tests de permissions et la vérification de la version déployée.
 
 ## Ajouter un test ou un contrôle
 

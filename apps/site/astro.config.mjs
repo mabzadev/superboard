@@ -6,6 +6,7 @@ import { defineConfig } from "astro/config";
 import emdash from "emdash/astro";
 
 import { dashboardViteAliases } from "./dashboard-vite-aliases.mjs";
+import { localSiteServerOptions } from "./local-vite-config.mjs";
 import { superboardReleaseOperatorApi } from "./release-operator-api.mjs";
 import { superboardRuntimeCache } from "./runtime-cache.mjs";
 import { superboardConfiguredPlugins } from "./superboard-emdash-plugins.mjs";
@@ -74,6 +75,7 @@ export default defineConfig({
 	devToolbar: { enabled: false },
 	security: { checkOrigin: true },
 	vite: {
+		server: localSiteServerOptions(process.env.SUPERBOARD_LOCAL_STATE_DIRECTORY),
 		define: {
 			"process.env.NEXT_PUBLIC_SUPERBOARD_EMDASH_FRONT": JSON.stringify("1"),
 		},

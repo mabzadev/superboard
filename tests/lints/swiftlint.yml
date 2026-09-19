@@ -1,0 +1,19 @@
+only_rules:
+  - force_cast
+  - force_try
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - discarded_notification_center_observer
+  - unused_capture_list
+  - unneeded_break_in_switch
+  - duplicate_imports
+  - duplicate_enum_cases
+  - empty_count
+  - fatal_error_message
+  - overridden_super_call
+  - prohibited_super_call
+  - unowned_variable_capture
+  - weak_delegate
+  - compiler_protocol_init
+  - unavailable_function
+  - valid_ibinspectable

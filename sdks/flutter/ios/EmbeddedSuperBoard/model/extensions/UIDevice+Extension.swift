@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/extensions/UIDevice+Extension.swift
+../../../../native/ios/Sources/SuperBoard/model/extensions/UIDevice+Extension.swift

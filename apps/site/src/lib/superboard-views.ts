@@ -6,7 +6,7 @@ import { nativeFrontPluginCatalog } from "./native-front-plugins.js";
 import { superBoardRuntimePluginCatalog } from "./superboard-plugin-catalog.js";
 
 const VIEWS_BOOTSTRAP_KEY = Symbol.for("superboard:views-bootstrap");
-const VIEWS_BOOTSTRAP_VERSION = "5.0.0";
+const VIEWS_BOOTSTRAP_VERSION = "7.0.0";
 const seed = readSeedFile(seedJson);
 
 interface ViewsBootstrapState {

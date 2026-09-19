@@ -68,6 +68,7 @@ export function resolvePluginApiOwner(path: string): string {
 	if (path.startsWith("/api/v2/")) return "supbrd-plugmod-billing";
 	if (path.startsWith("/_emdash/api/content/")) return "supbrd-plug-content";
 	if (path.startsWith("/_emdash/api/superboard/audit/")) return "supbrd-plug-audit";
+	if (/^\/api\/v1\/platform\/libraries\/?$/u.test(path)) return "supbrd-plug-settings";
 	const prefix = modulePrefix.exec(path)?.[1];
 	if (prefix === "app") {
 		const resource = path.replace(appPrefix, "");

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { sdkCatalogEntries } from "../../../scripts/clients/sdk-catalog.mjs";
 import {
 	loadSdkCatalog,
 	promoteSdkRelease,
@@ -14,7 +15,7 @@ import {
 const candidateSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 function pendingRename(catalog, id) {
-	const library = catalog.libraries.find((entry) => entry.id === id);
+	const library = sdkCatalogEntries(catalog).find((entry) => entry.id === id);
 	const published = {
 		flutter: { version: "2.1.4", sha: "1cddb333ff3330fd6ffa507d780821121bd7273a" },
 		flutterflow: { version: "2.2.5", sha: "b90e7e0ede12cf6321a7a8d104baf1fd8f564867" },
@@ -34,32 +35,19 @@ function pendingRename(catalog, id) {
 	return library;
 }
 
-test("schema v5 records published baselines and honest initial Flows packages", async () => {
+test("four public SDKs retain native components and immutable release history", async () => {
 	const catalog = await loadSdkCatalog();
 	const result = await validateSdkCatalog(catalog);
 
 	assert.deepEqual(result.errors, []);
-	assert.equal(catalog.schemaVersion, 5);
+	assert.equal(catalog.schemaVersion, 6);
 	assert.equal(catalog.repository, "https://github.com/mabzadev/superboard");
-	assert.equal(result.libraries, 13);
+	assert.equal(result.libraries, 4);
 	assert.deepEqual(
 		Object.fromEntries(catalog.libraries.map(({ id, lifecycle }) => [id, lifecycle])),
-		{
-			flutter: "active",
-			flutterflow: "active",
-			"flutterflow-support": "archived",
-			ios: "internal",
-			android: "internal",
-			javascript: "archived",
-			"react-native": "archived",
-			"flows-js": "active",
-			"flows-react": "active",
-			"flows-js-components": "active",
-			"flows-react-components": "active",
-			"flows-shared": "internal",
-			"flows-styles": "internal",
-		},
+		{ flutter: "active", flutterflow: "active", web: "active", tauri: "active" },
 	);
+
 	assert.ok(catalog.libraries.every((library) => library.license === "MIT"));
 	assert.ok(
 		catalog.libraries
@@ -68,7 +56,7 @@ test("schema v5 records published baselines and honest initial Flows packages", 
 	);
 
 	const immutableCoordinates = Object.fromEntries(
-		catalog.libraries
+		sdkCatalogEntries(catalog)
 			.filter(
 				({ lifecycle, releaseStatus }) => lifecycle !== "active" && releaseStatus === "released",
 			)
@@ -110,19 +98,19 @@ test("schema v5 records published baselines and honest initial Flows packages", 
 		},
 	});
 	assert.equal(
-		catalog.libraries.find(({ id }) => id === "android").distribution.registry,
+		sdkCatalogEntries(catalog).find(({ id }) => id === "android").distribution.registry,
 		"https://maven.pkg.github.com/mabzadev/superboard-platform",
 	);
 	assert.match(
-		catalog.libraries.find(({ id }) => id === "flutterflow-support").install,
+		sdkCatalogEntries(catalog).find(({ id }) => id === "flutterflow-support").install,
 		/github\.com\/mabzadev\/superboard\.git/u,
 	);
 	assert.equal(
-		catalog.libraries.find(({ id }) => id === "ios").install,
+		sdkCatalogEntries(catalog).find(({ id }) => id === "ios").install,
 		'.package(url: "https://github.com/mabzadev/superboard.git", exact: "1.0.3")',
 	);
 
-	const flows = catalog.libraries.filter(({ id }) => id.startsWith("flows-"));
+	const flows = catalog.components.filter(({ id }) => id.startsWith("flows-"));
 	assert.equal(flows.length, 6);
 	assert.deepEqual(
 		Object.fromEntries(
@@ -136,25 +124,25 @@ test("schema v5 records published baselines and honest initial Flows packages", 
 				packageName: "@superboard/flows-js",
 				sourceVersion: "1.23.3",
 				releaseStatus: "unreleased",
-				publicationTarget: "public-npm",
+				publicationTarget: "workspace-only",
 			},
 			"flows-react": {
 				packageName: "@superboard/flows-react",
 				sourceVersion: "1.26.3",
 				releaseStatus: "unreleased",
-				publicationTarget: "public-npm",
+				publicationTarget: "workspace-only",
 			},
 			"flows-js-components": {
 				packageName: "@superboard/flows-js-components",
 				sourceVersion: "2.10.4",
 				releaseStatus: "unreleased",
-				publicationTarget: "public-npm",
+				publicationTarget: "workspace-only",
 			},
 			"flows-react-components": {
 				packageName: "@superboard/flows-react-components",
 				sourceVersion: "2.9.4",
 				releaseStatus: "unreleased",
-				publicationTarget: "public-npm",
+				publicationTarget: "workspace-only",
 			},
 			"flows-shared": {
 				packageName: "@superboard/flows-shared",
@@ -186,7 +174,7 @@ test("only active libraries can resolve candidates or be promoted", async () => 
 
 	assert.equal(releaseCandidateTagFor(catalog, "flutter"), "sdk-flutter-v4.0.0");
 	assert.equal(releaseCandidateRefFor(catalog, "flutterflow"), "sdk-flutterflow-v4.0.0");
-	assert.equal(releaseCandidateTagFor(catalog, "flows-js"), "sdk-flows-js-v1.23.3");
+	assert.equal(releaseCandidateTagFor(catalog, "web"), "sdk-web-v0.1.0");
 	assert.equal(releaseTagFor(catalog, "javascript"), "sdk-js-v1.0.2");
 
 	for (const id of [
@@ -197,6 +185,10 @@ test("only active libraries can resolve candidates or be promoted", async () => 
 		"react-native",
 		"flows-shared",
 		"flows-styles",
+		"flows-js",
+		"flows-react",
+		"flows-js-components",
+		"flows-react-components",
 	]) {
 		assert.throws(() => releaseCandidateTagFor(catalog, id), /cannot be published/u);
 		assert.throws(
@@ -204,7 +196,7 @@ test("only active libraries can resolve candidates or be promoted", async () => 
 				promoteSdkRelease(
 					catalog,
 					id,
-					catalog.libraries.find((library) => library.id === id).sourceVersion,
+					sdkCatalogEntries(catalog).find((library) => library.id === id).sourceVersion,
 					candidateSha,
 				),
 			/cannot be published/u,
@@ -212,35 +204,35 @@ test("only active libraries can resolve candidates or be promoted", async () => 
 	}
 });
 
-test("an initial Flows release gains its immutable metadata only on promotion", async () => {
+test("an initial Web release gains its immutable metadata only on promotion", async () => {
 	const catalog = await loadSdkCatalog();
 
-	assert.throws(() => releaseTagFor(catalog, "flows-react"), /not marked ready/u);
-	assert.equal(releaseCandidateRefFor(catalog, "flows-react"), "sdk-flows-react-v1.26.3");
+	assert.throws(() => releaseTagFor(catalog, "web"), /not marked ready/u);
+	assert.equal(releaseCandidateRefFor(catalog, "web"), "sdk-web-v0.1.0");
 	assert.deepEqual(
 		(
 			await validateSdkCatalog(catalog, {
-				releaseCandidateTag: "sdk-flows-react-v1.26.3",
+				releaseCandidateTag: "sdk-web-v0.1.0",
 			})
 		).errors,
 		[],
 	);
 
-	const promoted = promoteSdkRelease(catalog, "flows-react", "1.26.3", candidateSha);
-	const library = promoted.libraries.find(({ id }) => id === "flows-react");
-	assert.equal(library.latestReleaseVersion, "1.26.3");
-	assert.equal(library.releaseRef, "sdk-flows-react-v1.26.3");
+	const promoted = promoteSdkRelease(catalog, "web", "0.1.0", candidateSha);
+	const library = sdkCatalogEntries(promoted).find(({ id }) => id === "web");
+	assert.equal(library.latestReleaseVersion, "0.1.0");
+	assert.equal(library.releaseRef, "sdk-web-v0.1.0");
 	assert.equal(library.releaseStatus, "released");
 	assert.equal(library.releaseSha, candidateSha);
-	assert.equal(library.install, "npm install @superboard/flows-react@1.26.3");
-	assert.equal(releaseTagFor(promoted, "flows-react"), library.releaseRef);
+	assert.equal(library.install, "npm install @superboard/web@0.1.0");
+	assert.equal(releaseTagFor(promoted, "web"), library.releaseRef);
 	assert.deepEqual((await validateSdkCatalog(promoted)).errors, []);
 });
 
 test("unreleased entries cannot smuggle fake publication metadata", async () => {
 	const catalog = await loadSdkCatalog();
 	const forged = structuredClone(catalog);
-	const library = forged.libraries.find(({ id }) => id === "flows-js");
+	const library = sdkCatalogEntries(forged).find(({ id }) => id === "flows-js");
 	Object.assign(library, {
 		latestReleaseVersion: library.sourceVersion,
 		releaseRef: `sdk-flows-js-v${library.sourceVersion}`,
@@ -266,7 +258,7 @@ test("Flutter candidate publication accepts its canonical SuperBoard Dart manife
 	const result = await validateSdkCatalog(catalog, {
 		releaseCandidateTag: tag,
 	});
-	const library = catalog.libraries.find((item) => item.id === id);
+	const library = sdkCatalogEntries(catalog).find((item) => item.id === id);
 	assert.ok(
 		!result.errors.includes(
 			`libraries.${id}.source package name is ${library.packageName}, expected ${library.candidatePackageName} before candidate publication`,
@@ -293,7 +285,7 @@ test("an active promotion atomically adopts the candidate coordinate", async () 
 	const candidate = pendingRename(catalog, "flutter");
 	const { candidateInstall, sourceVersion } = candidate;
 	const promoted = promoteSdkRelease(catalog, "flutter", sourceVersion, candidateSha);
-	const flutter = promoted.libraries.find(({ id }) => id === "flutter");
+	const flutter = sdkCatalogEntries(promoted).find(({ id }) => id === "flutter");
 
 	assert.equal(flutter.lifecycle, "active");
 	assert.equal(flutter.packageName, "superboard_flutter");
@@ -309,7 +301,7 @@ test("an active promotion atomically adopts the candidate coordinate", async () 
 test("lifecycle rules freeze non-active packages and preserve release SHAs", async () => {
 	const catalog = await loadSdkCatalog();
 	const archived = structuredClone(catalog);
-	const javascript = archived.libraries.find(({ id }) => id === "javascript");
+	const javascript = sdkCatalogEntries(archived).find(({ id }) => id === "javascript");
 	javascript.sourceVersion = "2.0.0";
 	javascript.releaseStatus = "pending-release";
 	let result = await validateSdkCatalog(archived);
@@ -321,7 +313,7 @@ test("lifecycle rules freeze non-active packages and preserve release SHAs", asy
 	);
 
 	const missingSha = structuredClone(catalog);
-	delete missingSha.libraries.find(({ id }) => id === "flutter").releaseSha;
+	delete sdkCatalogEntries(missingSha).find(({ id }) => id === "flutter").releaseSha;
 	result = await validateSdkCatalog(missingSha);
 	assert.ok(
 		result.errors.includes(
@@ -333,7 +325,7 @@ test("lifecycle rules freeze non-active packages and preserve release SHAs", asy
 test("minimal brand guard protects active names and candidate installs", async () => {
 	const catalog = await loadSdkCatalog();
 	const wrongDisplayName = structuredClone(catalog);
-	wrongDisplayName.libraries.find(({ id }) => id === "flutter").displayName =
+	sdkCatalogEntries(wrongDisplayName).find(({ id }) => id === "flutter").displayName =
 		"OtherProduct Flutter";
 	let result = await validateSdkCatalog(wrongDisplayName);
 	assert.ok(result.errors.includes("libraries.flutter.displayName must use the SuperBoard brand"));
@@ -360,13 +352,13 @@ test("minimal brand guard protects active names and candidate installs", async (
 
 test("registry history stays honest, authenticated and secret-free", async () => {
 	const catalog = await loadSdkCatalog();
-	const android = catalog.libraries.find(({ id }) => id === "android");
+	const android = sdkCatalogEntries(catalog).find(({ id }) => id === "android");
 	assert.equal(
 		android.distribution.registry,
 		"https://maven.pkg.github.com/mabzadev/superboard-platform",
 	);
 	for (const id of ["android", "javascript", "react-native"]) {
-		const library = catalog.libraries.find((item) => item.id === id);
+		const library = sdkCatalogEntries(catalog).find((item) => item.id === id);
 		assert.equal(library.distribution.repository, "mabzadev/superboard-platform");
 		assert.equal(library.distribution.publicMetadata, true);
 		assert.equal(library.distribution.anonymousInstallable, false);
@@ -378,7 +370,7 @@ test("registry history stays honest, authenticated and secret-free", async () =>
 	}
 
 	const hardcodedCredential = structuredClone(catalog);
-	hardcodedCredential.libraries.find(
+	sdkCatalogEntries(hardcodedCredential).find(
 		({ id }) => id === "javascript",
 	).distribution.authentication.token = "github_pat_forbidden";
 	let result = await validateSdkCatalog(hardcodedCredential);
@@ -389,8 +381,9 @@ test("registry history stays honest, authenticated and secret-free", async () =>
 		),
 	);
 	const wrongRegistry = structuredClone(catalog);
-	wrongRegistry.libraries.find((library) => library.id === "javascript").distribution.registry =
-		"https://repo1.maven.org/maven2";
+	sdkCatalogEntries(wrongRegistry).find(
+		(library) => library.id === "javascript",
+	).distribution.registry = "https://repo1.maven.org/maven2";
 	result = await validateSdkCatalog(wrongRegistry);
 	assert.ok(
 		result.errors.includes(
@@ -422,7 +415,7 @@ test("FlutterFlow catalogue validates the unified canonical surface", async () =
 test("SDK catalogue rejects a missing or non-MIT package licence", async () => {
 	const catalog = await loadSdkCatalog();
 	const invalid = structuredClone(catalog);
-	const flutterFlow = invalid.libraries.find((library) => library.id === "flutterflow");
+	const flutterFlow = sdkCatalogEntries(invalid).find((library) => library.id === "flutterflow");
 	flutterFlow.license = "UNLICENSED";
 	flutterFlow.licensePath = "sdks/flutterflow/ABSENT-LICENSE";
 	const result = await validateSdkCatalog(invalid);
@@ -438,11 +431,13 @@ test("released SDKs require exact immutable commit identities", async () => {
 	let result = await validateSdkCatalog(schemaDrift);
 	assert.ok(result.errors.some((error) => error.includes("additional properties")));
 
-	const released = catalog.libraries.filter((library) => library.releaseStatus === "released");
+	const released = sdkCatalogEntries(catalog).filter(
+		(library) => library.releaseStatus === "released",
+	);
 	assert.ok(released.length >= 2);
 	const missingLibrary = released[0];
 	const missing = structuredClone(catalog);
-	delete missing.libraries.find((library) => library.id === missingLibrary.id).releaseSha;
+	delete sdkCatalogEntries(missing).find((library) => library.id === missingLibrary.id).releaseSha;
 	result = await validateSdkCatalog(missing);
 	assert.ok(
 		result.errors.includes(
@@ -452,7 +447,7 @@ test("released SDKs require exact immutable commit identities", async () => {
 
 	const invalidLibrary = released[1];
 	const invalid = structuredClone(catalog);
-	invalid.libraries.find((library) => library.id === invalidLibrary.id).releaseSha = "ABC";
+	sdkCatalogEntries(invalid).find((library) => library.id === invalidLibrary.id).releaseSha = "ABC";
 	result = await validateSdkCatalog(invalid);
 	assert.ok(
 		result.errors.includes(
@@ -467,7 +462,7 @@ test("released SDKs require exact immutable commit identities", async () => {
 	});
 	assert.ok(result.errors.some((error) => error.includes("catalogue records")));
 	const promotable =
-		catalog.libraries.find((library) => library.releaseStatus === "pending-release") ??
+		sdkCatalogEntries(catalog).find((library) => library.releaseStatus === "pending-release") ??
 		catalog.libraries[0];
 	assert.throws(
 		() => promoteSdkRelease(catalog, promotable.id, promotable.sourceVersion),
@@ -477,7 +472,7 @@ test("released SDKs require exact immutable commit identities", async () => {
 
 test("catalogue candidate validation blocks a burned immutable version", async () => {
 	const catalog = await loadSdkCatalog();
-	const ios = catalog.libraries.find((library) => library.id === "ios");
+	const ios = sdkCatalogEntries(catalog).find((library) => library.id === "ios");
 	Object.assign(ios, {
 		sourceVersion: "1.0.1",
 		latestReleaseVersion: "1.0.0",

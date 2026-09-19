@@ -65,7 +65,7 @@
 			"zod@^4.4.1": "4.4.1"
 		},
 		"patchedDependencies": {
-			"image-size@1.2.1": "sdks/react-native/.yarn/patches/image-size-npm-1.2.1-e285f3c080.patch"
+			"image-size@1.2.1": "patches/image-size-npm-1.2.1-e285f3c080.patch"
 		},
 		"trustPolicyExclude": ["semver@5.7.2"],
 		"virtualStoreType": "project",

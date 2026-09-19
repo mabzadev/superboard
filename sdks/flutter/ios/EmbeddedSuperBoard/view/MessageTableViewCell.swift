@@ -1,1 +1,1 @@
-../../../../ios/Sources/SuperBoard/view/MessageTableViewCell.swift
+../../../native/ios/Sources/SuperBoard/view/MessageTableViewCell.swift

@@ -81,7 +81,7 @@ describe("media usage detail auth middleware", () => {
 		const response = await invokeThroughAuth(await createToken("contributor-1", ["admin"]));
 
 		expect(response.status).toBe(200);
-		expect((await response.json()) as { data: { items: unknown[] } }).toEqual(
+		expect(await response.json()).toEqual(
 			expect.objectContaining({ data: expect.objectContaining({ items: [] }) }),
 		);
 	});

@@ -8,9 +8,11 @@ import { lintPluginPackageProject } from "../../scripts/emdash/plugin-packages.m
 import { lintSuperBoardBrandProject } from "./brand.mjs";
 import { lintFrontMenuProject } from "./front-menu.mjs";
 import { lintPlatformSeparation } from "./platform-separation.mjs";
+import { lintQuality } from "./quality.mjs";
+import { trackedFiles } from "./repository.mjs";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const sourcePattern = /\.[cm]?[jt]sx?$/u;
+const sourcePattern = /(?:\.[cm]?[jt]sx?|\.astro)$/u;
 const generatedPattern =
 	/(?:^|\/)(?:dist|node_modules|generated|\.next|\.open-next|\.wrangler|coverage)\//u;
 const workerEslintRoots = [
@@ -47,11 +49,11 @@ export function classifyLintSources(paths, upstreamPaths) {
 	for (const path of new Set(paths)) {
 		if (!sourcePattern.test(path)) continue;
 		let reason;
-		if (path.endsWith(".d.ts")) reason = "generated-types";
+		if (path.endsWith("/worker-configuration.d.ts")) reason = "generated-types";
 		else if (generatedPattern.test(path)) reason = "generated-output";
 		else if (
-			path.startsWith("sdks/flows/upstream/reference/") ||
-			path.startsWith("sdks/flows/upstream/product/")
+			path.startsWith("sdks/web/flows/upstream/reference/") ||
+			path.startsWith("sdks/web/flows/upstream/product/")
 		)
 			reason = "imported-reference";
 		else if (
@@ -68,7 +70,9 @@ export function classifyLintSources(paths, upstreamPaths) {
 		const workerRoot = workerEslintRoots.find(
 			(root) => sourcePath.startsWith(`${root}/`) && path.endsWith(".ts"),
 		);
-		if (
+		if (path.endsWith(".astro") || path.endsWith(".d.ts")) {
+			group = path.endsWith(".astro") ? "astro" : "declarations";
+		} else if (
 			sourcePath.startsWith("packages/supbrd-front-ui/") ||
 			(sourcePath.startsWith("packages/plugins/supbrd-") && sourcePath.includes("/src/front/"))
 		) {
@@ -86,7 +90,7 @@ export function classifyLintSources(paths, upstreamPaths) {
 			(sourcePath.startsWith("packages/plugins/supbrd-") && sourcePath.includes("/scripts/"))
 		) {
 			group = "native";
-		} else if (path.startsWith("sdks/flows/upstream/")) {
+		} else if (path.startsWith("sdks/web/flows/upstream/")) {
 			group = "flows";
 		} else if (
 			upstreamPaths.has(path) ||
@@ -126,7 +130,7 @@ function gitLines(arguments_) {
 	return result.stdout.split("\0").filter(Boolean);
 }
 
-function inspectCoverage() {
+export function inspectCoverage() {
 	const config = JSON.parse(
 		readFileSync(resolve(repositoryRoot, "scripts/config/emdash-integration.json"), "utf8"),
 	);
@@ -139,7 +143,24 @@ function inspectCoverage() {
 	return classifyLintSources(paths, upstream);
 }
 
+export function selectChangedSources(paths, changed) {
+	if (
+		changed.some(
+			(path) =>
+				/(?:^|\/)(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig[^/]*\.json|.*(?:eslint|oxlint).*config.*|\.oxlintrc\.json)$/u.test(
+					path,
+				) ||
+				path.startsWith("tests/lints/") ||
+				path.startsWith("scripts/config/"),
+		)
+	)
+		return paths;
+	const selected = new Set(changed);
+	return paths.filter((path) => selected.has(path));
+}
+
 function runGroup(group, paths, { quick, fix }) {
+	if (group === "astro" || group === "declarations") return [];
 	const eslintRoot =
 		group === "frontend" ? "." : group.startsWith("eslint:") ? group.slice("eslint:".length) : null;
 	const cwd = repositoryRoot;
@@ -153,7 +174,7 @@ function runGroup(group, paths, { quick, fix }) {
 		group === "native"
 			? "tests/lints/superboard.oxlintrc.json"
 			: group === "flows"
-				? "sdks/flows/upstream/.oxlintrc.json"
+				? "sdks/web/flows/upstream/.oxlintrc.json"
 				: ".oxlintrc.json";
 	const arguments_ = eslintRoot
 		? [
@@ -213,6 +234,12 @@ function runGroup(group, paths, { quick, fix }) {
 async function main() {
 	const options = new Set(process.argv.slice(2));
 	const { groups, excluded } = inspectCoverage();
+	const changed = options.has("--quick")
+		? [
+				...gitLines(["diff", "--name-only", "--diff-filter=ACMR", "-z", "HEAD"]),
+				...gitLines(["ls-files", "--others", "--exclude-standard", "-z"]),
+			]
+		: null;
 	const coverage = {
 		checked: Object.fromEntries([...groups].map(([group, paths]) => [group, paths.length])),
 		excluded,
@@ -222,14 +249,30 @@ async function main() {
 		return;
 	}
 	const diagnostics = [...groups].flatMap(([group, paths]) =>
-		runGroup(group, paths, { quick: options.has("--quick"), fix: options.has("--fix") }),
+		runGroup(group, changed ? selectChangedSources(paths, changed) : paths, {
+			quick: options.has("--quick"),
+			fix: options.has("--fix"),
+		}),
 	);
 	diagnostics.push(...(await lintFrontMenuProject(repositoryRoot)));
 	diagnostics.push(...lintPluginPackageProject(repositoryRoot));
 	diagnostics.push(...lintPlatformSeparation(repositoryRoot));
 	diagnostics.push(...(await lintSuperBoardBrandProject(repositoryRoot)));
+	const qualityPaths = trackedFiles(repositoryRoot);
+	const quality = await lintQuality({
+		paths: changed ? selectChangedSources(qualityPaths, changed) : qualityPaths,
+		quick: options.has("--quick"),
+	});
+	diagnostics.push(...quality.diagnostics);
 
-	if (options.has("--json")) console.log(JSON.stringify({ diagnostics, coverage }));
+	if (options.has("--json"))
+		console.log(
+			JSON.stringify({
+				diagnostics,
+				coverage,
+				quality: { existing: quality.existing, total: quality.total },
+			}),
+		);
 	else {
 		for (const diagnostic of diagnostics)
 			console.log(
@@ -237,6 +280,9 @@ async function main() {
 			);
 		console.log(
 			`Checked ${[...groups.values()].reduce((sum, paths) => sum + paths.length, 0)} source files across ${groups.size} lint configurations; ${diagnostics.length} diagnostics.`,
+		);
+		console.log(
+			`Extended quality: ${quality.existing} existing findings recorded in tests/lints/baseline.json; ${quality.diagnostics.length} new findings.`,
 		);
 	}
 	if (diagnostics.some(({ severity }) => severity === "error" || severity === "warning"))

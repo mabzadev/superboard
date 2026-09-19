@@ -32,6 +32,11 @@ import {
 	normalizeListStart,
 	readOrderedListMetadata,
 } from "../content/converters/numbered-list.js";
+import {
+	readMediaProvidersResponse,
+	readMediaListResponse,
+	readMediaItemResponse,
+} from "../media/client-response.js";
 import { computeThumbnailSize } from "../media/thumbnail.js";
 import { CodeMarkExtension } from "./code-mark.js";
 import { InlineCodeBlockExtension } from "./inline-code-block.js";
@@ -1444,8 +1449,8 @@ function InlineMediaPicker({
 		setSelectedId(null);
 		setActiveProvider("local");
 		ecFetch(`${API_BASE}/media/providers`)
-			.then((r) => r.json())
-			.then((d) => setProviders(d.data.items ?? []))
+			.then(readMediaProvidersResponse)
+			.then(setProviders)
 			.catch(() => setProviders([]));
 	}, [open]);
 
@@ -1463,23 +1468,7 @@ function InlineMediaPicker({
 		void (async () => {
 			try {
 				const r = await ecFetch(url);
-				const d = await r.json();
-				const raw = d.data.items ?? [];
-				// eslint-disable-next-line typescript/no-unsafe-type-assertion -- API response items mapped to MediaItem shape
-				const typedRaw = raw as Array<{
-					id: string;
-					filename?: string;
-					mimeType?: string;
-					url?: string;
-					previewUrl?: string;
-					storageKey?: string;
-					width?: number;
-					height?: number;
-					blurhash?: string;
-					dominantColor?: string;
-					alt?: string;
-					meta?: Record<string, unknown>;
-				}>;
+				const typedRaw = await readMediaListResponse(r);
 				setItems(
 					typedRaw.map((item) => ({
 						id: item.id,
@@ -1562,10 +1551,7 @@ function InlineMediaPicker({
 				if (dims.height) formData.append("height", String(dims.height));
 				if (dims.thumbnail) formData.append("thumbnail", dims.thumbnail, "thumb.png");
 				const res = await ecFetch(`${API_BASE}/media`, { method: "POST", body: formData });
-				const data = await res.json();
-				const unwrapped = data.data ?? data;
-				if (!unwrapped.item) throw new Error("Upload failed");
-				const raw = unwrapped.item;
+				const raw = await readMediaItemResponse(res);
 				item = {
 					id: raw.id,
 					filename: raw.filename || file.name,
@@ -1585,10 +1571,7 @@ function InlineMediaPicker({
 					method: "POST",
 					body: formData,
 				});
-				const data = await res.json();
-				const unwrapped = data.data ?? data;
-				if (!unwrapped.item) throw new Error("Upload failed");
-				const raw = unwrapped.item;
+				const raw = await readMediaItemResponse(res);
 				item = {
 					id: raw.id,
 					filename: raw.filename || file.name,

@@ -3,6 +3,7 @@
 import { FolderKanban } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { SectionNavigation } from "../../../../../../../supbrd-front-ui/src/section-navigation.js";
 import { cn } from "../../../../../../../supbrd-front-ui/src/shared/lib/utils.js";
 import { useFlows } from "./FlowsContext.js";
 import { useFlowI18n } from "./i18n.js";
@@ -34,6 +35,7 @@ export function FlowsPage({
 				</div>
 				{actions && <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>}
 			</header>
+			<SectionNavigation />
 
 			{!projectRef ? <FlowsEmptyState icon={FolderKanban} title={t("selectProject")} /> : children}
 		</section>

@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import InstanceConfiguration from "../../../../packages/plugins/supbrd-core/src/front/settings/InstanceConfiguration.js";
+import { SectionNavigationProvider } from "../../../../packages/supbrd-front-ui/src/section-navigation.js";
 
 test("the French settings view follows configuration returned by the running API", async () => {
 	let configuration: DeploymentConfiguration = {
@@ -49,7 +50,16 @@ test("the French settings view follows configuration returned by the running API
 							activePluginIds: ["supbrd-plug-settings"],
 						}}
 					>
-						<InstanceConfiguration />
+						<SectionNavigationProvider
+							value={
+								<nav aria-label="Configuration">
+									<a href="/app/android-setup">Android</a>
+									<a href="/app/ios-setup">iOS</a>
+								</nav>
+							}
+						>
+							<InstanceConfiguration />
+						</SectionNavigationProvider>
 					</FrontContextProvider>
 				</QueryClientProvider>,
 			);
@@ -58,9 +68,20 @@ test("the French settings view follows configuration returned by the running API
 			expect(container.textContent).toContain("https://board.mbza.dev/mcp");
 		});
 		expect(container.querySelector("h1")?.textContent).toBe("Configuration de l’instance");
-		expect(container.querySelector("a")?.getAttribute("href")).toBe(
-			"/_emdash/admin/plugins/supbrd-plug-settings/configuration",
-		);
+		const navigation = container.querySelector('nav[aria-label="Configuration"]');
+		expect(navigation?.querySelector('a[href="/app/android-setup"]')).not.toBeNull();
+		expect(navigation?.querySelector('a[href="/app/ios-setup"]')).not.toBeNull();
+		expect(navigation).not.toBeNull();
+		const heading = container.querySelector("h1");
+		if (!heading || !navigation) throw new Error("Settings heading and navigation are required");
+		expect(
+			Boolean(heading.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING),
+		).toBe(true);
+		expect(
+			container
+				.querySelector('a[href="/_emdash/admin/plugins/supbrd-plug-settings/configuration"]')
+				?.getAttribute("href"),
+		).toBe("/_emdash/admin/plugins/supbrd-plug-settings/configuration");
 		configuration = {
 			...configuration,
 			checksum: "updated",

@@ -3,18 +3,15 @@
 	"workspaces": {
 		".": {
 			"entry": [
-				"e2e/**/*.ts"
+				"tests/checks/**/*.test.{ts,tsx,mjs}",
+				"tests/e2e/**/*.{ts,mjs}",
+				"tests/lints/*.{mjs,ts}",
+				"scripts/**/*.{mjs,ts}"
 			],
-			"project": [
-				"e2e/**/*.ts"
-			]
+			"project": ["tests/**/*.{ts,tsx,mjs}", "scripts/**/*.{ts,mjs}"]
 		},
 		"packages/core": {
-			"entry": [
-				"src/astro/**/*.ts",
-				"src/db/*.ts",
-				"src/storage/*.ts"
-			],
+			"entry": ["src/astro/**/*.ts", "src/db/*.ts", "src/storage/*.ts"],
 			"ignoreDependencies": [
 				"cloudflare",
 				"@aws-sdk/client-s3",
@@ -23,25 +20,42 @@
 			]
 		},
 		"packages/auth": {
-			"ignoreDependencies": [
-				"cloudflare",
-				"kysely"
-			]
+			"ignoreDependencies": ["cloudflare", "kysely"]
 		},
 		"packages/admin": {},
 		"packages/gutenberg-to-portable-text": {},
-		"packages/sandbox-cloudflare": {
-			"ignoreDependencies": [
-				"cloudflare"
-			]
+		"packages/plugins/*": {},
+		"packages/cloudflare": {
+			"ignoreDependencies": ["cloudflare"]
 		},
-		"packages/plugins/*": {}
+		"sdks/web": {
+			"entry": [
+				"src/index.js",
+				"src/client.js",
+				"src/support.js",
+				"dist/identity/index.js",
+				"dist/flows/**/*.mjs",
+				"dist/**/*.d.ts"
+			]
+		}
 	},
 	"ignore": [
 		"**/dist/**",
-		"**/*.d.ts"
+		"!sdks/web/dist/**",
+		"**/*.d.ts",
+		"!sdks/web/dist/**/*.d.ts",
+		"sdks/web/flows/upstream/**",
+		"**/worker-configuration.d.ts",
+		"**/generated/**",
+		"**/.symlinks/**",
+		"**/Pods/**",
+		"**/.dart_tool/**",
+		"**/build/**"
 	],
-	"ignoreDependencies": [
-		"@changesets/cli"
-	]
+	"ignoreDependencies": ["@changesets/cli"],
+	"ignoreWorkspaces": ["sdks/flutter/example", "sdks/web/flows/upstream/**"],
+	"babel": false,
+	"ignoreIssues": {
+		"sdks/web/package.json": ["optionalPeerDependencies"]
+	}
 }

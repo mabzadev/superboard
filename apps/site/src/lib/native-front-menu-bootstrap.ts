@@ -6,6 +6,7 @@ import {
 	type SetMenuItem,
 } from "../../../../packages/core/src/database/repositories/menu.js";
 import legacyMenu from "../../seed/legacy-superboard-menu.json";
+import { retiredFrontPageDestination } from "./retired-front-pages.js";
 
 const pendingLabel = "superboard-front-menu:initializing";
 
@@ -34,6 +35,14 @@ export async function ensureNativeFrontMenus(
 		if (menu.label === pendingLabel || untouchedLegacy) {
 			await repository.setItems(menu.id, locale, seedItems(definition.items));
 			await repository.update(menu.id, { label: definition.label });
+		} else {
+			for (const item of items) {
+				const destination = retiredFrontPageDestination(item.customUrl ?? "");
+				if (!destination) continue;
+				if (items.some((child) => child.parentId === item.id))
+					await repository.updateItem(menu.id, item.id, { customUrl: destination });
+				else await repository.deleteItem(menu.id, item.id);
+			}
 		}
 	}
 }

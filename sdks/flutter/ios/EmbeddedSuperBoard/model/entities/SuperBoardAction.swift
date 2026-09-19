@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/entities/SuperBoardAction.swift
+../../../../native/ios/Sources/SuperBoard/model/entities/SuperBoardAction.swift

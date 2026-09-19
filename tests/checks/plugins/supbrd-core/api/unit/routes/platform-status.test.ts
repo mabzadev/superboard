@@ -673,10 +673,20 @@ describe("platform status", () => {
 			license: "MIT",
 			licensePath: "sdks/flutterflow/LICENSE",
 		});
-		expect(body.data.libraries.find((library: any) => library.id === "javascript")).toMatchObject({
-			lifecycle: "archived",
-			releaseStatus: "released",
-		});
+		expect(body.data.libraries.map((library: { id: string }) => library.id).toSorted()).toEqual([
+			"flutter",
+			"flutterflow",
+			"tauri",
+			"web",
+		]);
+		for (const id of ["web", "tauri"]) {
+			expect(
+				body.data.libraries.find((library: { id: string }) => library.id === id),
+			).toMatchObject({
+				lifecycle: "active",
+				releaseStatus: "unreleased",
+			});
+		}
 		expect(body.data.customCode.actions.support).toContain(
 			"superboardSupportInitializeAuthenticated",
 		);

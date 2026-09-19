@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/entities/TransactionData.swift
+../../../../native/ios/Sources/SuperBoard/model/entities/TransactionData.swift

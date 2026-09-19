@@ -128,7 +128,7 @@ yarn-error.log*
 /.flows-cutover/
 /packages/plugins/supbrd-plug-support/scripts/support-audit/generated/
 
-!sdks/flows/upstream/reference/product-docs/assets/sdk/debug-mode.png
+!sdks/web/flows/upstream/reference/product-docs/assets/sdk/debug-mode.png
 
 # Local test environments
 /tests/**/.auth/
@@ -145,6 +145,10 @@ tests/fixtures/*/.emdash/*
 # Platform-specific browser screenshots
 tests/e2e/emdash/*-snapshots/*-darwin.png
 tests/e2e/emdash/*-snapshots/*-win32.png
+
+# Native dependency links (not maintained sources)
+**/.symlinks/
+**/Pods/
 package-lock.json
 !apps/mcp/package-lock.json
-!sdks/javascript/package-lock.json
+!sdks/web/package-lock.json

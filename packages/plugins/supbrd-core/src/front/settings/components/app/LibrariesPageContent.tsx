@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { SectionNavigation } from "../../../../../../../supbrd-front-ui/src/section-navigation.js";
 import {
 	Alert,
 	AlertDescription,
@@ -72,6 +73,8 @@ export default function LibrariesPageContent() {
 					Refresh
 				</Button>
 			</div>
+
+			<SectionNavigation />
 
 			{error && (
 				<Alert variant="destructive">
@@ -204,35 +207,37 @@ export default function LibrariesPageContent() {
 												</p>
 											</div>
 										)}
-										<div className="flex flex-wrap gap-3 text-sm">
-											<a
-												className="inline-flex items-center gap-1 text-primary"
-												href={`${catalog.repository}/tree/${encodeURIComponent(catalog.developmentBranch)}/${library.sourcePath}`}
-												target="_blank"
-												rel="noreferrer"
-											>
-												Open source on {catalog.developmentBranch}
-												<ExternalLink className="size-3" />
-											</a>
-											<a
-												className="inline-flex items-center gap-1 text-primary"
-												href={`${catalog.repository}/blob/${encodeURIComponent(catalog.developmentBranch)}/${library.versionSource}`}
-												target="_blank"
-												rel="noreferrer"
-											>
-												Version authority
-												<ExternalLink className="size-3" />
-											</a>
-											<a
-												className="inline-flex items-center gap-1 text-primary"
-												href={`${catalog.repository}/blob/${encodeURIComponent(catalog.developmentBranch)}/${library.licensePath}`}
-												target="_blank"
-												rel="noreferrer"
-											>
-												{library.license} license
-												<ExternalLink className="size-3" />
-											</a>
-										</div>
+										{library.sourcePublication !== "local" && (
+											<div className="flex flex-wrap gap-3 text-sm">
+												<a
+													className="inline-flex items-center gap-1 text-primary"
+													href={`${catalog.repository}/tree/${encodeURIComponent(catalog.developmentBranch)}/${library.sourcePath}`}
+													target="_blank"
+													rel="noreferrer"
+												>
+													Open source on {catalog.developmentBranch}
+													<ExternalLink className="size-3" />
+												</a>
+												<a
+													className="inline-flex items-center gap-1 text-primary"
+													href={`${catalog.repository}/blob/${encodeURIComponent(catalog.developmentBranch)}/${library.versionSource}`}
+													target="_blank"
+													rel="noreferrer"
+												>
+													Version authority
+													<ExternalLink className="size-3" />
+												</a>
+												<a
+													className="inline-flex items-center gap-1 text-primary"
+													href={`${catalog.repository}/blob/${encodeURIComponent(catalog.developmentBranch)}/${library.licensePath}`}
+													target="_blank"
+													rel="noreferrer"
+												>
+													{library.license} license
+													<ExternalLink className="size-3" />
+												</a>
+											</div>
+										)}
 										{releaseRef && (
 											<div>
 												<p className="mb-1 text-xs font-medium text-muted-foreground">

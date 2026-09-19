@@ -33,4 +33,4 @@ f7ee61d812bc5deb3e02a60a2eb36874751ad478:docs/src/content/docs/reference/rest-ap
 tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:10
 tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:15
 tests/checks/sdks/flutter/unit/customer_info_verifier_test.dart:jwt:21
-tests/checks/sdks/identity/react/unit/Provider.test.tsx:generic-api-key:116
+tests/checks/sdks/web/identity/react/unit/Provider.test.tsx:generic-api-key:116

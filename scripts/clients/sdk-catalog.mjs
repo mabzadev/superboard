@@ -13,7 +13,7 @@ import {
 const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const catalogPath = resolve(root, "scripts/config/sdk-libraries.json");
 const catalogSchemaPath = resolve(root, "scripts/config/sdk-libraries.schema.json");
-const catalogSchemaVersion = 5;
+const catalogSchemaVersion = 6;
 const canonicalRepository = "https://github.com/mabzadev/superboard";
 const semver = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
 const commitSha = /^[0-9a-f]{40}$/;
@@ -23,6 +23,8 @@ const githubPackagesUserEnvironmentVariable = "SUPERBOARD_GITHUB_PACKAGES_USER";
 const registryDistributionIds = new Set(["android", "javascript", "react-native"]);
 const tagPrefixes = Object.freeze({
 	flutter: "sdk-flutter-v",
+	web: "sdk-web-v",
+	tauri: "sdk-tauri-v",
 	flutterflow: "sdk-flutterflow-v",
 	"flutterflow-support": "sdk-flutterflow-messaging-v",
 	ios: "sdk-ios-v",
@@ -34,6 +36,14 @@ const tagPrefixes = Object.freeze({
 	"flows-js-components": "sdk-flows-js-components-v",
 	"flows-react-components": "sdk-flows-react-components-v",
 });
+
+export function sdkCatalogEntries(catalog) {
+	return [
+		...(catalog?.libraries ?? []),
+		...(catalog?.components ?? []),
+		...(catalog?.retiredLibraries ?? []),
+	];
+}
 
 export async function loadSdkCatalog(path = catalogPath) {
 	return JSON.parse(await readFile(path, "utf8"));
@@ -53,7 +63,7 @@ export async function validateSdkCatalog(catalog, options = {}) {
 	const ids = new Set();
 	const packages = new Set();
 	const candidatePackages = new Set();
-	for (const library of catalog?.libraries ?? []) {
+	for (const library of sdkCatalogEntries(catalog)) {
 		const prefix = `libraries.${String(library?.id ?? "unknown")}`;
 		if (!/^[a-z0-9-]+$/.test(library?.id ?? "")) errors.push(`${prefix}.id is invalid`);
 		if (ids.has(library.id)) errors.push(`${prefix}.id is duplicated`);
@@ -157,6 +167,7 @@ export async function validateSdkCatalog(catalog, options = {}) {
 				errors.push(`${prefix}.install must pin latestReleaseVersion`);
 		}
 		validateDistributionContract(catalog, library, prefix, errors);
+		if (catalog.retiredLibraries?.includes(library)) continue;
 		const sourcePath = protectedRepoPath(library.sourcePath, `${prefix}.sourcePath`, errors);
 		if (library.license !== "MIT") errors.push(`${prefix}.license must be MIT`);
 		const licensePath = protectedRepoPath(library.licensePath, `${prefix}.licensePath`, errors);
@@ -223,9 +234,16 @@ export async function validateSdkCatalog(catalog, options = {}) {
 			errors.push(`candidate package ${candidatePackage} duplicates a released packageName`);
 		}
 	}
-	if (Object.keys(tagPrefixes).some((id) => !ids.has(id)))
+	if (
+		["flutter", "flutterflow", "web", "tauri"].some(
+			(id) => !catalog.libraries.some((library) => library.id === id),
+		)
+	)
 		errors.push("catalogue is missing one or more governed libraries");
-	const historyResult = await validateSdkReleaseHistory(releaseHistory, catalog);
+	const historyResult = await validateSdkReleaseHistory(releaseHistory, {
+		...catalog,
+		libraries: sdkCatalogEntries(catalog),
+	});
 	errors.push(...historyResult.errors);
 	await validateFlutterFlowSurface(catalog, errors, options.flutterFlowManifest);
 	if (options.releaseTag)
@@ -367,7 +385,7 @@ function releaseTagEntry(catalog, tag, errors) {
 		errors.push(`Invalid SDK release version: ${version}`);
 		return null;
 	}
-	const library = catalog.libraries.find((item) => item.id === id);
+	const library = sdkCatalogEntries(catalog).find((item) => item.id === id);
 	if (!library) {
 		errors.push(`SDK release ${id} is absent from the catalogue`);
 		return null;
@@ -471,7 +489,7 @@ async function validateFlutterFlowSurface(catalog, errors, manifestOverride) {
 	validateExactSet(declaredSymbols, implementedSymbols, "FlutterFlow public symbol", errors);
 	if (/chatwoot/i.test(JSON.stringify(manifest)))
 		errors.push("FlutterFlow canonical manifest must not reference Chatwoot");
-	const surfaceUsers = catalog.libraries
+	const surfaceUsers = sdkCatalogEntries(catalog)
 		.filter((item) => item.lifecycle === "active" && item.ecosystem === "FlutterFlow")
 		.map((item) => item.id);
 	if (!surfaceUsers.includes("flutterflow"))
@@ -545,7 +563,7 @@ function escapeRegex(value) {
 }
 
 export function releaseTagFor(catalog, id) {
-	const library = catalog.libraries.find((item) => item.id === id);
+	const library = sdkCatalogEntries(catalog).find((item) => item.id === id);
 	const prefix = tagPrefixes[id];
 	if (!library || !prefix) throw new Error(`Unknown SDK library: ${id}`);
 	if (
@@ -557,7 +575,7 @@ export function releaseTagFor(catalog, id) {
 }
 
 export function releaseRefFor(catalog, id) {
-	const library = catalog.libraries.find((item) => item.id === id);
+	const library = sdkCatalogEntries(catalog).find((item) => item.id === id);
 	if (!library) throw new Error(`Unknown SDK library: ${id}`);
 	if (
 		library.releaseStatus !== "released" ||
@@ -568,7 +586,7 @@ export function releaseRefFor(catalog, id) {
 }
 
 export function releaseCandidateTagFor(catalog, id) {
-	const library = catalog.libraries.find((item) => item.id === id);
+	const library = sdkCatalogEntries(catalog).find((item) => item.id === id);
 	const prefix = tagPrefixes[id];
 	if (!library) throw new Error(`Unknown SDK library: ${id}`);
 	if (library.lifecycle !== "active")
@@ -587,14 +605,14 @@ export function releaseCandidateTagFor(catalog, id) {
 }
 
 export function releaseCandidateRefFor(catalog, id) {
-	const library = catalog.libraries.find((item) => item.id === id);
+	const library = sdkCatalogEntries(catalog).find((item) => item.id === id);
 	if (!library) throw new Error(`Unknown SDK library: ${id}`);
 	releaseCandidateTagFor(catalog, id);
 	return id === "ios" ? library.sourceVersion : `${tagPrefixes[id]}${library.sourceVersion}`;
 }
 
 export function promoteSdkRelease(catalog, id, version, releaseSha) {
-	const library = catalog.libraries.find((item) => item.id === id);
+	const library = sdkCatalogEntries(catalog).find((item) => item.id === id);
 	if (!library) throw new Error(`Unknown SDK library: ${id}`);
 	if (library.lifecycle !== "active")
 		throw new Error(`${id} is ${library.lifecycle} and cannot be published`);
@@ -617,11 +635,12 @@ export function promoteSdkRelease(catalog, id, version, releaseSha) {
 		throw new Error(`${id} is not pending or awaiting its initial release`);
 	}
 	const promoted = structuredClone(catalog);
-	const target = promoted.libraries.find((item) => item.id === id);
+	const target = sdkCatalogEntries(promoted).find((item) => item.id === id);
 	const previousVersion = target.latestReleaseVersion;
 	const initialRelease = target.releaseStatus === "unreleased";
 	target.latestReleaseVersion = version;
 	target.releaseRef = id === "ios" ? version : `${tagPrefixes[id]}${version}`;
+	target.sourcePublication = "repository";
 	target.releaseStatus = "released";
 	target.releaseSha = releaseSha;
 	if (target.candidatePackageName && target.candidateInstall) {
@@ -659,7 +678,7 @@ async function main() {
 	}
 	if (command === "candidate-tag") {
 		const tag = releaseCandidateTagFor(catalog, args.library);
-		const library = catalog.libraries.find((item) => item.id === args.library);
+		const library = sdkCatalogEntries(catalog).find((item) => item.id === args.library);
 		assertSdkReleaseCandidateNotFailed(
 			await loadSdkReleaseHistory(),
 			args.library,
@@ -670,7 +689,7 @@ async function main() {
 	}
 	if (command === "candidate-ref") {
 		const reference = releaseCandidateRefFor(catalog, args.library);
-		const library = catalog.libraries.find((item) => item.id === args.library);
+		const library = sdkCatalogEntries(catalog).find((item) => item.id === args.library);
 		assertSdkReleaseCandidateNotFailed(
 			await loadSdkReleaseHistory(),
 			args.library,

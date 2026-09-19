@@ -33,10 +33,6 @@ interface SuccessBody<T> {
 	data: T;
 }
 
-interface ErrorBody {
-	error: { code: string; message: string };
-}
-
 describe("media usage detail schemas", () => {
 	it("defaults and validates entry-group pagination", () => {
 		expect(mediaUsageDetailsQuery.parse({})).toEqual({ limit: 50 });
@@ -356,7 +352,7 @@ describe("media usage details handler and route", () => {
 			const response = await invokeRoute({ id, query, role, tokenScopes });
 
 			expect(response.status).toBe(status);
-			expect((await response.json()) as ErrorBody).toEqual(
+			expect(await response.json()).toEqual(
 				expect.objectContaining({ error: expect.objectContaining({ code }) }),
 			);
 			expect(queries).toHaveLength(0);
@@ -371,7 +367,7 @@ describe("media usage details handler and route", () => {
 		});
 
 		expect(response.status).toBe(400);
-		expect((await response.json()) as ErrorBody).toEqual(
+		expect(await response.json()).toEqual(
 			expect.objectContaining({ error: expect.objectContaining({ code: "INVALID_CURSOR" }) }),
 		);
 	});
@@ -391,7 +387,7 @@ describe("media usage details handler and route", () => {
 			});
 
 			expect(response.status).toBe(status);
-			expect((await response.json()) as ErrorBody).toEqual(
+			expect(await response.json()).toEqual(
 				expect.objectContaining({ error: expect.objectContaining({ code }) }),
 			);
 			expect(queries).toHaveLength(0);
@@ -407,7 +403,7 @@ describe("media usage details handler and route", () => {
 		} as RouteContext);
 
 		expect(response.status).toBe(500);
-		expect((await response.json()) as ErrorBody).toEqual(
+		expect(await response.json()).toEqual(
 			expect.objectContaining({ error: expect.objectContaining({ code: "NOT_CONFIGURED" }) }),
 		);
 	});

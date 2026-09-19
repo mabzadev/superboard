@@ -137,8 +137,8 @@ function code(language: string, filename: string, content: string): CodeBlockDat
 	return [{ language, filename, code: content }];
 }
 
-function library(id: "ios" | "android" | "javascript") {
-	const value = sdkCatalog.libraries.find((item) => item.id === id);
+function library(id: "ios" | "android") {
+	const value = [...sdkCatalog.libraries, ...sdkCatalog.components].find((item) => item.id === id);
 	if (!value) throw new Error(`SDK catalogue entry ${id} is missing`);
 	if (!("install" in value) || typeof value.install !== "string") {
 		throw new Error(`SDK catalogue entry ${id} has no published installation`);
@@ -146,7 +146,7 @@ function library(id: "ios" | "android" | "javascript") {
 	return value;
 }
 
-function registryLibrary(id: "android" | "javascript") {
+function registryLibrary(id: "android") {
 	const value = library(id);
 	if (!("distribution" in value) || !value.distribution) {
 		throw new Error(`SDK catalogue entry ${id} has no distribution contract`);
@@ -159,23 +159,15 @@ export function sdkInstallCode(platform: "android" | "ios" | "web"): CodeBlockDa
 		return code("swift", "Package.swift", library("ios").install);
 	}
 	if (platform === "web") {
-		const javascript = registryLibrary("javascript");
-		const distribution = javascript.distribution;
-		const tokenEnvironmentVariable = distribution.authentication.tokenEnvironmentVariable;
-		const scope = javascript.packageName.split("/")[0];
-		const registryHost = new URL(distribution.registry).host;
-		return [
-			...code(
-				"ini",
-				".npmrc",
-				`${scope}:registry=${distribution.registry}\n//${registryHost}/:_authToken=\${${tokenEnvironmentVariable}}`,
-			),
-			...code(
-				"bash",
-				"Terminal",
-				`test -n "\${${tokenEnvironmentVariable}:-}" \\\n  && ${javascript.install}`,
-			),
-		];
+		const web = sdkCatalog.libraries.find((item) => item.id === "web");
+		if (!web) throw new Error("SDK catalogue entry web is missing");
+		return code(
+			"bash",
+			"Terminal",
+			"install" in web && typeof web.install === "string"
+				? web.install
+				: `# ${web.displayName} ${web.sourceVersion}: source not published yet.\n# Use the monorepo workspace for local development.\npnpm --dir ${web.sourcePath} build`,
+		);
 	}
 
 	const android = registryLibrary("android");
@@ -272,7 +264,8 @@ function stepCode(
 	}
 	if (platform === "web") {
 		if (step === 2 && !config.sdkUrl) return null;
-		const javascriptLibrary = library("javascript");
+		const javascriptLibrary = sdkCatalog.libraries.find((item) => item.id === "web");
+		if (!javascriptLibrary) throw new Error("SDK catalogue entry web is missing");
 		if (step === 1) return sdkInstallCode("web");
 		if (step === 2)
 			return code(

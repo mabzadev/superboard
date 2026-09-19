@@ -1,1 +1,1 @@
-../../../../ios/Sources/SuperBoard/helpers/AlertHelper.swift
+../../../native/ios/Sources/SuperBoard/helpers/AlertHelper.swift

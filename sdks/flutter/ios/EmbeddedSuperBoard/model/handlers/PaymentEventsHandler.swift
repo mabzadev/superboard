@@ -1,1 +1,1 @@
-../../../../../ios/Sources/SuperBoard/model/handlers/PaymentEventsHandler.swift
+../../../../native/ios/Sources/SuperBoard/model/handlers/PaymentEventsHandler.swift

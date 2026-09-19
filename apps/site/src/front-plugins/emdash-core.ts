@@ -61,12 +61,14 @@ export const nativeFrontPlugin: NativeFrontPluginModule = {
 				eyebrow: "site.front.title",
 				title: home ? "site.operator.home" : "site.operator.login",
 				description: home ? "site.operator.home_description" : "site.operator.login_description",
-				actions: [
-					{
-						label: "site.admin.open",
-						href: home ? "/_emdash/admin/plugins-manager" : "/_emdash/admin/login",
-					},
-				],
+				actions: home
+					? []
+					: [
+							{
+								label: "site.admin.open",
+								href: "/_emdash/admin/login",
+							},
+						],
 				blocks: [],
 				details: [],
 			};

@@ -1,1 +1,1 @@
-../../../ios/Sources/SuperBoard/SuperBoard.swift
+../../native/ios/Sources/SuperBoard/SuperBoard.swift

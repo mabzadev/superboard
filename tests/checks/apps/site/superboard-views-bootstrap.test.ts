@@ -16,6 +16,42 @@ import { setupTestDatabase, teardownTestDatabase } from "../../packages/core/uti
 
 let db: Awaited<ReturnType<typeof setupTestDatabase>>;
 
+test("retiring duplicate analytics pages upgrades saved menus without replacing custom links", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: seedJson.menus });
+	const repo = new MenuRepository(db);
+	const menus = await repo.findByName("superboard-admin");
+	const retainedIds = new Set<string>();
+	for (const menu of menus) {
+		await repo.setItems(menu.id, menu.locale, [
+			{ type: "custom", label: `My statistics ${menu.locale}`, customUrl: "/dashboard" },
+			{ type: "custom", label: "Duplicate overview", customUrl: "/dashboard", parentIndex: 0 },
+			{
+				type: "custom",
+				label: "Saved dashboards",
+				customUrl: "/analytics/dashboards",
+				parentIndex: 0,
+			},
+			{ type: "custom", label: "My reports", customUrl: "/analytics/reports", parentIndex: 0 },
+		]);
+		for (const item of await repo.findItems(menu.id))
+			if (item.label === "My reports") retainedIds.add(item.id);
+	}
+	await db
+		.insertInto("options")
+		.values({ name: "superboard_views_bootstrap", value: JSON.stringify("5.0.0") })
+		.execute();
+	await ensureSuperBoardViews(db);
+	for (const menu of menus) {
+		const items = await repo.findItems(menu.id);
+		expect(items.map((item) => item.customUrl)).toEqual(["/analytics", "/analytics/reports"]);
+		expect(items[0]?.label).toBe(`My statistics ${menu.locale}`);
+		expect(retainedIds.has(items[1]?.id ?? "")).toBe(true);
+		await ensureNativeFrontMenus(db, seedJson.menus);
+		expect(await repo.findItems(menu.id)).toEqual(items);
+	}
+});
+
 afterEach(async () => {
 	await teardownTestDatabase(db);
 });
@@ -154,7 +190,7 @@ test("the Views bootstrap upgrades existing renderer bindings without overwritin
 	expect(JSON.parse(String(edited?.bindings)).data_sources).toEqual([
 		"supbrd-plugmod-analytics.data_source.operator_custom",
 	]);
-	expect(marker?.value).toBe(JSON.stringify("5.0.0"));
+	expect(marker?.value).toBe(JSON.stringify("7.0.0"));
 });
 
 async function countViews(): Promise<number> {
@@ -263,6 +299,13 @@ test("the legacy default menu becomes native bilingual front navigation and late
 	const repo = new MenuRepository(db);
 	const menus = await repo.findByName("superboard-admin");
 	expect(menus.map((menu) => menu.locale).toSorted()).toEqual(["en", "fr"]);
+	for (const menu of menus) {
+		const destinations = (await repo.findItems(menu.id)).map((item) => item.customUrl);
+		expect(destinations).not.toContain("/dashboard");
+		expect(destinations).not.toContain("/analytics/dashboards");
+		expect(destinations).not.toContain("/app/members");
+		expect(destinations).toContain("/analytics");
+	}
 	const french = menus.find((menu) => menu.locale === "fr")!;
 	expect(french.label).toBe("Navigation du front");
 	const items = await repo.findItems(french.id);
@@ -285,4 +328,36 @@ test("customized legacy EmDash navigation is not replaced during upgrade", async
 	]);
 	await ensureSuperBoardViews(db);
 	expect((await repo.findItems(menu.id)).map((item) => item.label)).toEqual(["My overview"]);
+});
+
+test("retiring members upgrades installed menus while preserving user links and custom children", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: seedJson.menus });
+	const repo = new MenuRepository(db);
+	const menus = await repo.findByName("superboard-admin");
+	for (const menu of menus) {
+		await repo.setItems(menu.id, menu.locale, [
+			{ type: "custom", label: "My users", customUrl: "/app/users" },
+			{ type: "custom", label: "Duplicate members", customUrl: "/app/members" },
+			{ type: "custom", label: "My group", customUrl: "/app/members/" },
+			{ type: "custom", label: "My customers", customUrl: "/app/customers", parentIndex: 2 },
+		]);
+	}
+	await db
+		.insertInto("options")
+		.values({ name: "superboard_views_bootstrap", value: JSON.stringify("6.0.0") })
+		.execute();
+	await ensureSuperBoardViews(db);
+	for (const menu of menus) {
+		const items = await repo.findItems(menu.id);
+		expect(items.map(({ customUrl }) => customUrl)).toEqual([
+			"/app/users",
+			"/app/users",
+			"/app/customers",
+		]);
+		expect(items.map(({ label }) => label)).toEqual(["My users", "My group", "My customers"]);
+		expect(items[2]?.parentId).toBe(items[1]?.id);
+		await ensureNativeFrontMenus(db, seedJson.menus);
+		expect(await repo.findItems(menu.id)).toEqual(items);
+	}
 });

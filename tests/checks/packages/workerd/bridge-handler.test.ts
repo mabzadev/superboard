@@ -634,7 +634,7 @@ describe("Bridge Handler Conformance", () => {
 		);
 
 		expect(response.status).toBe(503);
-		expect((await response.json()) as unknown).toEqual({
+		expect(await response.json()).toEqual({
 			error: {
 				code: "MEDIA_USAGE_ACTIVATION_IN_PROGRESS",
 				message: "Media usage activation is in progress",

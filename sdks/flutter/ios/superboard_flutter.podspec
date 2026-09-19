@@ -31,7 +31,7 @@ SuperBoard Flutter SDK for links, messaging, attribution, and purchases.
   s.author           = { 'SuperBoard' => 'https://github.com/mabzadev/superboard' }
   s.source           = { :path => '.' }
   # Embed the internal native SDK in the Flutter pod. EmbeddedSuperBoard contains
-  # repository-relative file symlinks to the canonical sdks/ios sources. Files,
+  # repository-relative file symlinks to the canonical sdks/flutter/native/ios sources. Files,
   # rather than the directory itself, are linked because CocoaPods does not
   # recurse through a symlinked source directory. The monorepo Git tag therefore
   # remains self-contained without publishing the internal SDK to CocoaPods.
