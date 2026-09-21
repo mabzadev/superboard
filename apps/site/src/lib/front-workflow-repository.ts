@@ -11,6 +11,7 @@ import {
 	verifyFrontRelease,
 } from "@superboard/supbrd-core";
 
+import { validateReleaseRouteViews } from "./plugin-client-catalog.js";
 import { createD1FrontReleaseRepository } from "./release-repository.js";
 
 interface DraftRow {
@@ -358,14 +359,26 @@ export async function candidateEvidence(
 		.bind(candidate.release.payload.instance_id, new Date().toISOString())
 		.all<{ dependency_id: string; status: "ready" | "unavailable" }>();
 	const health = new Map(healthRows.results.map((row) => [row.dependency_id, row.status]));
-	const dependenciesReady = candidate.release.payload.dependency_policies
+	const dependenciesReady = (candidate.release.payload.dependency_policies ?? [])
 		.filter(({ kind }) => kind === "required")
 		.every(({ dependency_id: dependencyId }) => health.get(dependencyId) === "ready");
+	const viewFailures = await validateReleaseRouteViews(
+		candidate.release.payload.front_route_manifest?.routes ?? [],
+		candidate.release.payload.renderers ?? [],
+	);
+	for (const failure of viewFailures) {
+		verification.errors.push(
+			`ROUTE_VIEW_NOT_LOADABLE:${failure.plugin_id}:${failure.route_id}: ${failure.error}`,
+		);
+	}
+	if (viewFailures.length > 0) {
+		verification.valid = false;
+	}
 	return {
 		signing_key_status: key?.status ?? "missing",
 		verification,
 		dependencies_ready: passedLayers.has("reference_graph") && dependenciesReady,
-		renderers_ready: passedLayers.has("renderer_compatibility"),
+		renderers_ready: passedLayers.has("renderer_compatibility") && viewFailures.length === 0,
 		gateway_ready: passedLayers.has("routing") && passedLayers.has("actions_data_sources"),
 		stores_ready: passedLayers.has("plugins_stores_workers"),
 		migrations_ready: passedLayers.has("migrations"),
