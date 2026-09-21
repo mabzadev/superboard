@@ -14,9 +14,10 @@ import { NativeFrontApp } from "./NativeFrontApp.js";
 import { resolveOperatorProjectScope } from "../lib/operator-project-scope.js";
 import { getSiteEnv } from "../lib/site-env.js";
 
+import "@superboard/front-ui/styles/kumo.css";
 import "../styles/dashboard-views.css";
 import "../styles/native-front.css";
-import "../../../../packages/supbrd-front-ui/src/styles/kumo.css";
+import "@superboard/front-ui/styles/fonts.css";
 
 interface Props {
 	model: FrontPageModel;
@@ -56,7 +57,34 @@ const title = viewTitle ? (Object.hasOwn(projection.messages, viewTitle) ? i18n.
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="robots" content="noindex, nofollow" />
+		<meta name="superboard-release-id" content={projection.release_id ?? ""} />
 		<title>{title}</title>
+		<script is:inline define:vars={{ instanceId: model.instance_id }}>
+			(() => {
+				let preference = "dark";
+				try {
+					const storedPreference =
+						localStorage.getItem(`superboard:${instanceId}:theme`) ||
+						localStorage.getItem("superboard-theme") ||
+						localStorage.getItem("theme");
+					if (storedPreference === "light" || storedPreference === "dark") {
+						preference = storedPreference;
+					} else if (storedPreference === "system") {
+						const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+						preference = prefersDark ? "dark" : "light";
+					}
+				} catch {
+					// Storage can be unavailable in privacy-restricted contexts.
+				}
+				if (preference === "dark") {
+					document.documentElement.classList.add("dark");
+				} else {
+					document.documentElement.classList.remove("dark");
+				}
+				document.documentElement.setAttribute("data-theme", preference);
+				document.documentElement.setAttribute("data-mode", preference);
+			})();
+		</script>
 	</head>
 	<body>
 		<NativeFrontApp projection={projection} client:only="react" />

@@ -5,6 +5,7 @@ import { handleError } from "emdash/api/error";
 import { loadDraftSnapshot, recordCompilation } from "../../../../lib/front-workflow-repository.js";
 import { requireManagedPluginOperationAccess } from "../../../../lib/managed-plugin-operation.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
+import { validateReleaseRouteViews } from "../../../../lib/plugin-client-catalog.js";
 import { stageCompiledFrontRelease } from "../../../../lib/release-repository.js";
 import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
@@ -82,6 +83,36 @@ export const POST: APIRoute = async (context) => {
 		}
 		if (input.instance_id !== env.SUPERBOARD_INSTANCE_ID) {
 			return jsonResponse({ error: { code: "INSTANCE_MISMATCH" } }, 409);
+		}
+		const viewFailures = await validateReleaseRouteViews(
+			input.front_route_manifest.routes,
+			input.renderers,
+		);
+		if (viewFailures.length > 0) {
+			if (failedCompilation) {
+				await recordCompilation(env.DB, {
+					...failedCompilation,
+					status: "rejected",
+					error_code: "ROUTE_VIEW_NOT_LOADABLE",
+					created_at: new Date().toISOString(),
+				});
+				failedCompilation = undefined;
+			}
+			return jsonResponse(
+				{
+					error: {
+						code: "ROUTE_VIEW_NOT_LOADABLE",
+						message: "Front Release candidate contains routes without loadable views",
+						failures: viewFailures.map((f) => ({
+							route_id: f.route_id,
+							path: f.path_pattern,
+							plugin_id: f.plugin_id,
+							error: f.error.split("\n")[0],
+						})),
+					},
+				},
+				422,
+			);
 		}
 		const privateJwk = parsePrivateReleaseJwk(env.SUPERBOARD_RELEASE_PRIVATE_JWK);
 		const privateKey = await crypto.subtle.importKey(
