@@ -4,6 +4,7 @@ import {
 	createFrontPreview,
 	createOperatorReauthenticationReceipt,
 	planPointerRollback,
+	validateFrontReleaseCandidate,
 	type CompiledFrontRelease,
 	type FrontReleaseInput,
 	type ReleaseApproval,
@@ -16,6 +17,7 @@ import {
 	resolveSiteFrontPage,
 } from "../../../../../apps/site/src/lib/front-page.js";
 import {
+	candidateEvidence,
 	createDraftSnapshotCas,
 	getCandidateByReleaseId,
 	loadDraftSnapshot,
@@ -153,6 +155,76 @@ describe("Site Front Release D1 workflow", () => {
 			"SELECT COUNT(*) AS count FROM superboard_front_outbox WHERE event_type = 'front_release.activated'",
 		).first<{ count: number }>();
 		expect(outbox?.count).toBe(1);
+	});
+
+	test("rejects activation preflight when a candidate contains an unchargeable view", async () => {
+		const invalidCandidate = release();
+		invalidCandidate.signature = { algorithm: "ES256", kid: "unknown-key", value: "sig" };
+		invalidCandidate.payload.front_route_manifest = {
+			...invalidCandidate.payload.front_route_manifest,
+			routes: [
+				{
+					route_id: "superboard.unmapped_view",
+					path_pattern: "/unmapped",
+					route_kind: "page",
+					audience: "superboard_front",
+					auth_policy: "authenticated",
+					permission_expression: "allow",
+					priority: 200,
+					parameters: {},
+					query: {},
+					page_id: "page.unmapped",
+					layout_ids: [],
+					renderer_ids: ["supbrd-plugmod-analytics.renderer.admin_surface"],
+					state_policies: {
+						loading: "emdash.core.state.loading",
+						empty: "emdash.core.state.empty",
+						forbidden: "emdash.core.state.forbidden",
+						not_found: "emdash.core.state.not_found",
+						error: "emdash.core.state.error",
+						unavailable: "emdash.core.state.unavailable",
+						maintenance: "emdash.core.state.maintenance",
+					},
+					dependencies: [],
+					redirect: null,
+				},
+			],
+		};
+		invalidCandidate.payload.renderers = [
+			{
+				renderer_id: "supbrd-plugmod-analytics.renderer.admin_surface",
+				plugin_id: "supbrd-plugmod-analytics",
+				plugin_version: "1.0.0",
+				build_id: "b1",
+				build_checksum: "c1",
+				abi_version: "1.0.0",
+				runtime_range: ">=1.0.0",
+				props_schema: { schema_id: "s1", version: "1.0.0", checksum: "c1" },
+				capabilities: [],
+				slots: [],
+				supported_states: [],
+			},
+		];
+		const evidence = await candidateEvidence(env.DB, {
+			release: invalidCandidate,
+			status: "approved",
+			approval: null,
+		});
+		expect(evidence.renderers_ready).toBe(false);
+		expect(evidence.verification.errors.some((e) => e.includes("superboard.unmapped_view"))).toBe(
+			true,
+		);
+		const verification = validateFrontReleaseCandidate(
+			{
+				release: invalidCandidate,
+				status: "approved",
+				approval: null,
+			},
+			evidence,
+		);
+		expect(verification.valid).toBe(false);
+		expect(verification.errors).toContain("RENDERERS_NOT_READY");
+		expect(verification.errors.some((e) => e.includes("superboard.unmapped_view"))).toBe(true);
 	});
 
 	test("smokes preview, activation cache reload and pointer rollback without recompilation", async () => {

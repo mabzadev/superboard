@@ -134,9 +134,9 @@ test("adding and removing a plugin from the Release changes the rendered Front",
 	]);
 
 	expect(absentMarkup).toContain("Page not found");
-	expect(absentMarkup).not.toContain('"href":"/marketing/campaigns"');
+	expect(absentMarkup).not.toContain('"href":"/communication/campaigns"');
 	expect(activeMarkup).toContain("Campaigns");
-	expect(activeMarkup).toContain('"href":"/marketing/campaigns"');
+	expect(activeMarkup).toContain('"href":"/communication/campaigns"');
 	expect(activeMarkup).toContain("supbrd-plugmod-marketing");
 });
 

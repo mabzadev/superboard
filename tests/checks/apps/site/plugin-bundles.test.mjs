@@ -9,11 +9,19 @@ const catalog = JSON.parse(
 		"utf8",
 	),
 );
+const packagesConfig = JSON.parse(
+	await readFile(
+		new URL("../../../../scripts/config/superboard-plugin-packages.json", import.meta.url),
+		"utf8",
+	),
+);
+const packageDirectory = new Map(packagesConfig.packages.map((pkg) => [pkg.id, pkg.directory]));
 
 for (const { manifest } of catalog.plugins) {
 	void test(`${manifest.plugin_id} reads its settings within the sandbox request budget`, async () => {
+		const directory = packageDirectory.get(manifest.plugin_id) ?? manifest.plugin_id;
 		const source = await readFile(
-			new URL(`../../../../packages/plugins/${manifest.plugin_id}/dist/index.js`, import.meta.url),
+			new URL(`../../../../packages/plugins/${directory}/dist/index.js`, import.meta.url),
 			"utf8",
 		);
 		const module = new SourceTextModule(source, { context: createContext({ Request }) });
@@ -70,7 +78,7 @@ for (const { manifest } of catalog.plugins) {
 
 void test("the built Analytics plugin renders French in a sandbox without Node globals", async () => {
 	const source = await readFile(
-		new URL("../../../../packages/plugins/supbrd-plug-analytics/dist/index.js", import.meta.url),
+		new URL("../../../../packages/plugins/superboard-analytics/dist/index.js", import.meta.url),
 		"utf8",
 	);
 	const module = new SourceTextModule(source, { context: createContext({ Request }) });

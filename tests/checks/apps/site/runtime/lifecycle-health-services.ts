@@ -1,22 +1,22 @@
 import { z } from "zod";
 
 import customReference from "../../../../../apps/reference/worker/src/index.js";
-import api from "../../../../../packages/plugins/supbrd-core/api/src/index.js";
-import app from "../../../../../packages/plugins/supbrd-core/app/src/index.js";
-import mcp from "../../../../../packages/plugins/supbrd-core/mcp/src/index.js";
-import observability from "../../../../../packages/plugins/supbrd-core/observability/src/index.js";
-import analytics from "../../../../../packages/plugins/supbrd-plug-analytics/worker/src/index.js";
-import billing from "../../../../../packages/plugins/supbrd-plug-commerce/billing/src/index.js";
-import paywalls from "../../../../../packages/plugins/supbrd-plug-commerce/paywalls/src/index.js";
-import products from "../../../../../packages/plugins/supbrd-plug-commerce/products/src/index.js";
-import dynamicLinks from "../../../../../packages/plugins/supbrd-plug-communication/dynamic-links/src/index.js";
-import email from "../../../../../packages/plugins/supbrd-plug-communication/email/src/index.js";
-import marketing from "../../../../../packages/plugins/supbrd-plug-communication/marketing/src/index.js";
-import files from "../../../../../packages/plugins/supbrd-plug-data/worker/src/index.js";
-import identity from "../../../../../packages/plugins/supbrd-plug-identity/worker/src/index.js";
-import flows from "../../../../../packages/plugins/supbrd-plug-journeys/flows/src/index.js";
-import onboardings from "../../../../../packages/plugins/supbrd-plug-journeys/onboardings/src/index.js";
-import support from "../../../../../packages/plugins/supbrd-plug-support/worker/src/index.js";
+import dynamicLinks from "../../../../../packages/plugins/superboard-acquisition/dynamic-links/src/index.js";
+import flows from "../../../../../packages/plugins/superboard-acquisition/flows/src/index.js";
+import onboardings from "../../../../../packages/plugins/superboard-acquisition/onboardings/src/index.js";
+import paywalls from "../../../../../packages/plugins/superboard-acquisition/paywalls/src/index.js";
+import analytics from "../../../../../packages/plugins/superboard-analytics/worker/src/index.js";
+import identity from "../../../../../packages/plugins/superboard-authentification/worker/src/index.js";
+import email from "../../../../../packages/plugins/superboard-communication/email/src/index.js";
+import marketing from "../../../../../packages/plugins/superboard-communication/marketing/src/index.js";
+import api from "../../../../../packages/plugins/superboard-core/api/src/index.js";
+import app from "../../../../../packages/plugins/superboard-core/app/src/index.js";
+import mcp from "../../../../../packages/plugins/superboard-core/mcp/src/index.js";
+import observability from "../../../../../packages/plugins/superboard-core/observability/src/index.js";
+import files from "../../../../../packages/plugins/superboard-data/worker/src/index.js";
+import billing from "../../../../../packages/plugins/superboard-monetization/billing/src/index.js";
+import products from "../../../../../packages/plugins/superboard-monetization/products/src/index.js";
+import support from "../../../../../packages/plugins/superboard-support/worker/src/index.js";
 
 const workers = {
 	CUSTOM_WORKER: ["custom-reference", customReference],
@@ -69,6 +69,7 @@ export async function dispatchLifecycleApi(
 				? "smtp"
 				: "capture",
 		IDENTITY_KEYSET: env.HEALTH_IDENTITY_KEYSET,
+		IDENTITY_REALM: "reference-production",
 		REGISTRATION_MODE: "open",
 		APPLICATION_AUDIENCE: "autonomy.application",
 		SUPERBOARD_IDENTITY_ISSUER: "https://api.site.test",
