@@ -5,6 +5,11 @@ import { dirname, resolve } from "node:path";
 
 import { chromium } from "@playwright/test";
 
+import {
+	exerciseBusinessActionFaults,
+	prepareBusinessActionFixtures,
+	runPublishedBusinessActions,
+} from "../../fixtures/site-browser/business-actions.mjs";
 import { createIsolatedInstance } from "../../fixtures/site-browser/isolated-instance.mjs";
 import { exercisePublishedMenuFaults } from "../../fixtures/site-browser/published-menu-faults.mjs";
 import { summarizePublishedMenu } from "../../fixtures/site-browser/published-menu-report.mjs";
@@ -27,6 +32,8 @@ const report = {
 	discovered: [],
 	pages: [],
 	faults: [],
+	actions: [],
+	action_faults: [],
 	errors: [],
 };
 const saveReport = () => writeFile(reportPath, JSON.stringify(report, null, 2), { mode: 0o600 });
@@ -137,6 +144,38 @@ try {
 		}
 	}
 	assert.ok(report.pages.length);
+	const projectScope =
+		report.project_scope?.production_project_ref ??
+		report.project_scope?.project_scope?.production_project_ref;
+	const fixtures = await prepareBusinessActionFixtures(instance, page.request, {
+		origin: instance.origin,
+		projectRef: projectScope,
+	});
+	report.fixtures = {
+		users: fixtures.users.map((user) => user.email),
+		expected_campaigns: fixtures.expected.campaigns,
+	};
+	await saveReport();
+	report.actions.push(
+		...(await runPublishedBusinessActions(context, {
+			origin: instance.origin,
+			releaseId: report.release_id,
+			users: fixtures.users,
+			expected: fixtures.expected,
+		})),
+	);
+	await saveReport();
+	assert.ok(
+		report.actions.length === 6 && report.actions.every((action) => action.success),
+		`Representative business actions failed: ${JSON.stringify(report.actions, null, 2)}`,
+	);
+	await exerciseBusinessActionFaults(
+		instance,
+		context,
+		{ origin: instance.origin, releaseId: report.release_id, expected: fixtures.expected },
+		report.action_faults,
+		saveReport,
+	);
 	assert.ok(
 		summarizePublishedMenu(report).complete,
 		"Published menu contains failures or unverified destinations; inspect the report",

@@ -87,6 +87,7 @@ pnpm local:start --state-directory /tmp/superboard-validation
 pnpm local:test
 pnpm local:test:front-layout
 pnpm local:test:navigation
+pnpm local:test:settings
 pnpm local:stop --state-directory /tmp/superboard-validation
 ```
 
@@ -108,10 +109,29 @@ serveur local doit être démarré et le composant Paramètres activé. Ce parco
 fait également partie de `pnpm local:test`.
 
 Pour limiter le parcours : `pnpm local:test:navigation /app/libraries`.
-`SUPERBOARD_NAVIGATION_REPORT=/tmp/navigation.json` enregistre les résultats
-par page. Les tests portent sur la navigation interne et les chargements ; les
-paiements, envois de messages et validations auprès des boutiques exigent leurs
-propres tests d'intégration.
+Sans argument, le parcours exécute aussi trois actions métier représentatives
+depuis les vues publiées : recherche d'un utilisateur connu, actualisation des
+statistiques marketing par la requête réelle, puis sauvegarde et relecture d'un
+réglage de profil après rechargement. `SUPERBOARD_NAVIGATION_ACTIONS_ONLY=1`
+exécute ces actions seules. `SUPERBOARD_NAVIGATION_REPORT=/tmp/navigation.json`
+(ou `SUPERBOARD_POST_PUBLICATION_REPORT`) enregistre les imports contrôlés, les
+pages rendues, les actions effectuées avec effet attendu et observé, et les
+erreurs, avec langue et identité de Release Front ; une action ou une page en
+échec fait échouer la commande. Les tests portent sur la navigation interne,
+les chargements et ces actions ; les paiements, envois réels de messages et
+validations auprès des boutiques exigent leurs propres tests d'intégration. La
+réussite couvre les parcours exécutés et ne certifie ni l'ensemble des SDK ni
+les fournisseurs externes.
+
+`local:test:settings` ouvre les sept pages Settings en français et en anglais
+sur l'instance locale démarrée, avec les plugins activés et leurs vues publiées.
+Le parcours attend l'hydratation, ouvre Configuration au clavier, vérifie
+l'identité du plugin dans le diagnostic et relance le contrôle de ses Workers.
+`SUPERBOARD_SETTINGS_REPORT=/tmp/settings.json` conserve les résultats par URL,
+langue et Release Front. Une erreur de page ou d'API fait échouer la commande.
+Le statut de santé reste explicite dans le rapport : un diagnostic consultable
+ne prouve pas qu'un service indiqué comme indisponible fonctionne. Ce parcours
+ne vérifie pas la sauvegarde de tous les formulaires métier.
 
 `pnpm test:navigation` vérifie l'accès au catalogue avec Paramètres actif et
 Supervision inactive, le refus lorsque Paramètres est inactif ou l'opérateur

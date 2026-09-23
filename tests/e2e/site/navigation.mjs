@@ -3,17 +3,25 @@ import { writeFile } from "node:fs/promises";
 
 import { chromium } from "@playwright/test";
 
+import { runPublishedBusinessActions } from "../../fixtures/site-browser/business-actions.mjs";
+import { AdminPage } from "../../fixtures/emdash-browser/admin.ts";
+
 const origin = new URL(process.env.SUPERBOARD_LOCAL_URL ?? "http://127.0.0.1:4321");
 assert(["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname));
 const browser = await chromium.launch();
 const results = [];
 const actionResults = [];
+const controlledModules = new Set();
+const actionsOnly = process.env.SUPERBOARD_NAVIGATION_ACTIONS_ONLY === "1";
+let servedReleaseId;
 const requested = process.argv.slice(2);
 assert(requested.every((path) => path.startsWith("/") && !path.startsWith("//")));
 
 try {
 	const context = await browser.newContext();
 	const page = await context.newPage();
+	page.setDefaultTimeout(30000);
+	page.setDefaultNavigationTimeout(30000);
 	await page.goto(
 		new URL("/_emdash/api/auth/dev-bypass?redirect=/superboard-system/home", origin).href,
 	);
@@ -25,6 +33,7 @@ try {
 		);
 	});
 	assert.ok(releaseId && releaseId !== "unknown", "Active Front Release ID must be present in DOM");
+	servedReleaseId = releaseId;
 	console.log(`Verified active Front Release: ${releaseId}`);
 
 	for (const [retired, canonical] of [
@@ -44,7 +53,6 @@ try {
 
 	const pending = new Set(requested.length ? requested : ["/app/android-setup", "/app/ios-setup"]);
 	const visited = new Set();
-	const controlledModules = new Set();
 
 	page.on("response", (res) => {
 		const url = res.url();
@@ -58,6 +66,7 @@ try {
 	});
 
 	async function discover() {
+		if (requested.length || new URL(page.url()).pathname.startsWith("/_emdash/admin")) return;
 		for (const href of await page
 			.locator('aside a[href], main nav a[href], a[href^="/app/"], a[href^="/settings"]')
 			.evaluateAll((elements) =>
@@ -70,6 +79,7 @@ try {
 	}
 
 	await discover();
+	if (actionsOnly) pending.clear();
 
 	for (const locale of ["en", "fr"]) {
 		for (const path of pending) {
@@ -80,8 +90,7 @@ try {
 			const failures = new Set();
 			const onError = (error) => errors.push(error.message.split("\n")[0]);
 			const onResponse = (response) => {
-				if (response.status() >= 400 && response.status() !== 404)
-					failures.add(`${response.status()} ${response.url()}`);
+				if (response.status() >= 400) failures.add(`${response.status()} ${response.url()}`);
 			};
 			page.on("pageerror", onError);
 			page.on("response", onResponse);
@@ -99,13 +108,18 @@ try {
 					status = (await page.goto(targetUrl.href))?.status();
 				}
 
-				await page
-					.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])')
-					.waitFor({ timeout: 30000 });
-				await page
-					.locator('main h1, main input, main table, main [role="alert"], main form')
-					.first()
-					.waitFor({ timeout: 30000 });
+				if (path.startsWith("/_emdash/admin")) {
+					await new AdminPage(page).waitForHydration();
+					await page.getByRole("heading", { name: "Communication", exact: true }).waitFor();
+				} else {
+					await page
+						.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])')
+						.waitFor({ timeout: 30000 });
+					await page
+						.locator('main h1, main input, main table, main [role="alert"], main form')
+						.first()
+						.waitFor({ timeout: 30000 });
+				}
 
 				if (["/project-settings", "/app/libraries"].includes(path))
 					assert(
@@ -187,6 +201,11 @@ try {
 			}
 
 			const headings = await page.locator("main h1").allTextContents();
+			if (["/products/purchases", "/monetization/purchases"].includes(path)) {
+				const expected = locale === "fr" ? "Achats" : "Purchases";
+				if (!headings.includes(expected))
+					errors.push(`Missing localized purchase heading: ${expected}`);
+			}
 			page.off("pageerror", onError);
 			page.off("response", onResponse);
 
@@ -207,120 +226,8 @@ try {
 
 	// Execute Representative Business Actions
 	if (!requested.length) {
-		for (const locale of ["en", "fr"]) {
-			// Action 1: Search user
-			try {
-				await page.goto(new URL(`/app/users?lang=${locale}`, origin).href);
-				await page.locator('main input, main [role="alert"]').first().waitFor({ timeout: 20000 });
-				const searchInput = page
-					.locator('main input[type="text"], main input[type="search"]')
-					.first();
-				assert.ok((await searchInput.count()) > 0, "User search input must exist on /app/users");
-				await searchInput.fill("test-operator-query");
-				await page.keyboard.press("Enter");
-				await page.waitForTimeout(1000);
-				const content = await page.locator("main").textContent();
-				assert.ok(content && content.length > 0, "Search results or empty state must be rendered");
-				actionResults.push({
-					action: "search_user",
-					locale,
-					release_id: releaseId,
-					expected: "User search query executed and filtered table or showed empty state",
-					observed: `Search input interacted successfully (${content?.length ?? 0} chars rendered)`,
-					success: true,
-				});
-			} catch (err) {
-				actionResults.push({
-					action: "search_user",
-					locale,
-					release_id: releaseId,
-					expected: "User search query executed",
-					observed: `Failed: ${err.message}`,
-					success: false,
-					error: err.message,
-				});
-			}
-
-			// Action 2: Refresh statistics
-			try {
-				await page.goto(new URL(`/communication/statistics?lang=${locale}`, origin).href);
-				await page
-					.locator('main button:has-text("Refresh"), main button:has-text("Actualiser")')
-					.first()
-					.waitFor({ timeout: 20000 });
-				const refreshBtn = page
-					.locator('main button:has-text("Refresh"), main button:has-text("Actualiser")')
-					.first();
-				assert.ok(
-					(await refreshBtn.count()) > 0,
-					"Refresh button must exist on /communication/statistics",
-				);
-				await refreshBtn.click();
-				await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
-				actionResults.push({
-					action: "refresh_statistics",
-					locale,
-					release_id: releaseId,
-					expected: "Statistics refreshed with real network query",
-					observed: "Statistics refresh button triggered and completed",
-					success: true,
-				});
-			} catch (err) {
-				actionResults.push({
-					action: "refresh_statistics",
-					locale,
-					release_id: releaseId,
-					expected: "Statistics refreshed",
-					observed: `Failed: ${err.message}`,
-					success: false,
-					error: err.message,
-				});
-			}
-
-			// Action 3: Modify, save and reload setting
-			try {
-				await page.goto(new URL(`/app/profile?lang=${locale}`, origin).href);
-				await page.locator("main form, main input").first().waitFor({ timeout: 20000 });
-				const nameInput = page.locator('main input[name="name"], main form input').first();
-				assert.ok((await nameInput.count()) > 0, "Profile name input must exist on /app/profile");
-				const originalName = await nameInput.inputValue();
-				const updatedName = `${originalName}-test`;
-				await nameInput.fill(updatedName);
-				const saveBtn = page.locator('main button[type="submit"]').first();
-				assert.ok((await saveBtn.count()) > 0, "Submit button must exist on /app/profile");
-				await saveBtn.click();
-				await page.waitForTimeout(1000);
-				await page.reload();
-				await page.locator("main form, main input").first().waitFor({ timeout: 20000 });
-				const reloadedName = await page
-					.locator('main input[name="name"], main form input')
-					.first()
-					.inputValue();
-				assert.equal(reloadedName, updatedName, "Modified setting must persist after reload");
-				// Restore
-				await nameInput.fill(originalName);
-				await page.locator('main button[type="submit"]').first().click();
-				await page.waitForTimeout(500);
-				actionResults.push({
-					action: "save_and_reload_setting",
-					locale,
-					release_id: releaseId,
-					expected: "Setting updated, saved and verified after reload",
-					observed: `Setting persisted value '${reloadedName}' verified and restored to '${originalName}'`,
-					success: true,
-				});
-			} catch (err) {
-				actionResults.push({
-					action: "save_and_reload_setting",
-					locale,
-					release_id: releaseId,
-					expected: "Setting saved and persisted after reload",
-					observed: `Failed: ${err.message}`,
-					success: false,
-					error: err.message,
-				});
-			}
-		}
+		const records = await runPublishedBusinessActions(context, { origin, releaseId });
+		actionResults.push(...records);
 	}
 } finally {
 	await browser.close();
@@ -329,7 +236,7 @@ try {
 		process.env.SUPERBOARD_POST_PUBLICATION_REPORT || process.env.SUPERBOARD_NAVIGATION_REPORT;
 	if (reportPath) {
 		const report = {
-			release_id: results[0]?.release_id ?? "unknown",
+			release_id: servedReleaseId ?? "unknown",
 			timestamp: new Date().toISOString(),
 			controlled_imports: [...controlledModules],
 			rendered_pages: results,
@@ -345,7 +252,10 @@ try {
 	}
 }
 
-assert(results.length > 0, "No navigation paths were checked");
+assert(
+	results.length > 0 || (actionsOnly && actionResults.length === 6),
+	"No navigation paths or complete action suite were checked",
+);
 const failedPages = results.filter(
 	(r) => r.status !== 200 || r.errors.length || r.failures.length || r.alerts.length,
 );
