@@ -1,0 +1,111 @@
+{
+  "issue": 77,
+  "status": "passed",
+  "started_at": "2026-09-23T21:28:57.388Z",
+  "finished_at": "2026-09-23T21:35:06.143Z",
+  "command": "node tests/e2e/site/published-menu.mjs",
+  "release_id": "0C077F7DBA66D4EADB536D7D67",
+  "origin": "http://127.0.0.1:61451",
+  "operator_verified": true,
+  "temporary_instance_removed": true,
+  "fixtures": {
+    "users": [
+      "issue77-fixture-1-668d0abb@example.test",
+      "issue77-fixture-2-8c68864a@example.test"
+    ],
+    "expected_campaigns": 1
+  },
+  "coverage": {
+    "planned": 118,
+    "executed": 118,
+    "passed": 118,
+    "failed": 0,
+    "unverified": [],
+    "expected_faults": 18,
+    "unexpected_faults": 0,
+    "actions": {
+      "executed": 6,
+      "failed": 0
+    },
+    "expected_action_faults": 3,
+    "unexpected_action_faults": 0,
+    "complete": true
+  },
+  "actions": [
+    {
+      "action": "search_user",
+      "locale": "en",
+      "release_id": "0C077F7DBA66D4EADB536D7D67",
+      "expected": "Search finds a known fixture user and excludes another known fixture user",
+      "observed": "The real query for issue77-fixture-2-8c68864a@example.test returned and rendered the matching fixture while excluding issue77-fixture-1-668d0abb@example.test",
+      "success": true
+    },
+    {
+      "action": "refresh_statistics",
+      "locale": "en",
+      "release_id": "0C077F7DBA66D4EADB536D7D67",
+      "expected": "Refresh triggers the real statistics data source and renders its measured buckets",
+      "observed": "The statistics API answered 200 with 1 campaign(s) and the rendered bucket count (0) matches its series",
+      "success": true
+    },
+    {
+      "action": "save_and_reload_setting",
+      "locale": "en",
+      "release_id": "0C077F7DBA66D4EADB536D7D67",
+      "expected": "A profile setting is saved through the real API and persists after reload",
+      "observed": "The save was accepted (2xx), the changed value survived a reload and the original value was restored",
+      "success": true
+    },
+    {
+      "action": "search_user",
+      "locale": "fr",
+      "release_id": "0C077F7DBA66D4EADB536D7D67",
+      "expected": "Search finds a known fixture user and excludes another known fixture user",
+      "observed": "The real query for issue77-fixture-2-8c68864a@example.test returned and rendered the matching fixture while excluding issue77-fixture-1-668d0abb@example.test",
+      "success": true
+    },
+    {
+      "action": "refresh_statistics",
+      "locale": "fr",
+      "release_id": "0C077F7DBA66D4EADB536D7D67",
+      "expected": "Refresh triggers the real statistics data source and renders its measured buckets",
+      "observed": "The statistics API answered 200 with 1 campaign(s) and the rendered bucket count (0) matches its series",
+      "success": true
+    },
+    {
+      "action": "save_and_reload_setting",
+      "locale": "fr",
+      "release_id": "0C077F7DBA66D4EADB536D7D67",
+      "expected": "A profile setting is saved through the real API and persists after reload",
+      "observed": "The save was accepted (2xx), the changed value survived a reload and the original value was restored",
+      "success": true
+    }
+  ],
+  "action_faults": [
+    {
+      "name": "save-refused",
+      "expected": "failed",
+      "observed": "failed",
+      "status": 400,
+      "code": "VALIDATION_ERROR"
+    },
+    {
+      "name": "statistics-store-damaged",
+      "expected": "failed",
+      "observed": "failed"
+    },
+    {
+      "name": "statistics-store-restored",
+      "expected": "passed",
+      "observed": "passed"
+    }
+  ],
+  "full_report": "test-results/published-menu-3faf2490-4058-467a-bdad-e5e41d7fba99.json",
+  "full_report_sha256": "1e81bed1ae9daf9d09128d0d6916bd7a29d5bd3ad4f9020f9f3a238dcddf22ca",
+  "limitations": [
+    "Cloudflare Analytics Engine metrics and public domain probes are unconfigured in the isolated local instance",
+    "Success covers the executed journeys, actions and expected faults on the tested Release; it is not a certification of every SDK or external provider",
+    "No real message is sent, and no purchase or third-party provider operation is performed",
+    "The save-refusal probe exercises the real service boundary by API; its in-view surfacing is covered by the store-damage fault, which fails through the browser"
+  ]
+}
