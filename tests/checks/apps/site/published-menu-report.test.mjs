@@ -67,3 +67,52 @@ await test("different query destinations stay unverified until each is executed"
 	});
 	assert.deepEqual(result.unverified, [{ href: "/acquisition/paywalls?item=two", locale: "en" }]);
 });
+
+const healthy = () => ({
+	origin,
+	discovered: [{ href: "/analytics", locale: "en" }],
+	pages: [passed("en")],
+	faults: [],
+	errors: [],
+});
+const action = (success) => ({
+	action: "refresh_statistics",
+	locale: "en",
+	release_id: "release",
+	expected: "Real statistics query",
+	observed: success ? "Rendered result matches the known data" : "Failed",
+	success,
+});
+
+await test("an unsuccessful business action breaks coverage completeness", () => {
+	const result = summarizePublishedMenu({ ...healthy(), actions: [action(true), action(false)] });
+	assert.equal(result.complete, false);
+	assert.equal(result.actions.executed, 2);
+	assert.equal(result.actions.failed, 1);
+});
+
+await test("expected action failures do not penalize coverage, unexpected recoveries do", () => {
+	const damaged = {
+		name: "statistics-store-damaged",
+		expected: "failed",
+		result: action(false),
+	};
+	const restored = {
+		name: "statistics-store-restored",
+		expected: "passed",
+		result: action(true),
+	};
+	const healthyRun = summarizePublishedMenu({
+		...healthy(),
+		actions: [action(true)],
+		action_faults: [damaged, restored],
+	});
+	assert.equal(healthyRun.complete, true);
+	assert.equal(healthyRun.expected_action_faults, 2);
+	restored.result = action(false);
+	assert.equal(
+		summarizePublishedMenu({ ...healthy(), actions: [action(true)], action_faults: [restored] })
+			.complete,
+		false,
+	);
+});
