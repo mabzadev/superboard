@@ -1,16 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../../../../../packages/plugins/supbrd-core/api/src/lib/auth", () => ({
+vi.mock("../../../../../../../packages/plugins/superboard-core/api/src/lib/auth", () => ({
 	getRequestAuthContext: vi.fn(),
 }));
 
-import { getRequestAuthContext } from "../../../../../../../packages/plugins/supbrd-core/api/src/lib/auth";
-import platform from "../../../../../../../packages/plugins/supbrd-core/api/src/routes/platform-status";
+import { getRequestAuthContext } from "../../../../../../../packages/plugins/superboard-core/api/src/lib/auth";
+import platform, {
+	workerTopology,
+} from "../../../../../../../packages/plugins/superboard-core/api/src/routes/platform-status.js";
 import sdkCatalog from "../../../../../../../scripts/config/sdk-libraries.json";
 
 const auth = vi.mocked(getRequestAuthContext);
 
 describe("platform status", () => {
+	it("accepts catalogs after Messaging retirement but still requires the API Worker", () => {
+		const catalog = JSON.parse(workerCatalog());
+		catalog.workers = catalog.workers.filter((entry: { id: string }) => entry.id !== "messaging");
+		const parseCatalog = () =>
+			workerTopology({
+				SUPERBOARD_TARGET: "mbza-development",
+				ENVIRONMENT: "development",
+				PLATFORM_WORKERS_JSON: JSON.stringify(catalog),
+			} as never);
+		expect(parseCatalog().status).toBe("ok");
+		catalog.workers = catalog.workers.filter((entry: { id: string }) => entry.id !== "api");
+		expect(parseCatalog()).toMatchObject({
+			status: "misconfigured",
+			error: "Worker catalog is incomplete",
+		});
+	});
 	beforeEach(() => {
 		auth.mockResolvedValue({ userId: 7, instanceId: 12 } as never);
 	});

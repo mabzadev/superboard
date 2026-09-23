@@ -1,0 +1,1428 @@
+{
+	"issue": 76,
+	"status": "passed",
+	"started_at": "2026-09-23T17:55:05.120Z",
+	"finished_at": "2026-09-23T18:01:31.748Z",
+	"command": "node tests/e2e/site/published-menu.mjs",
+	"release_id": "037244B5DCFFF45F58AB7C58D9",
+	"origin": "http://127.0.0.1:61047",
+	"operator_verified": true,
+	"temporary_instance_removed": true,
+	"activations": [
+		{
+			"plugin_id": "supbrd-core",
+			"http_status": 201,
+			"status": "active",
+			"release_id": "0EFF286011EF14677A2D3BE0DF",
+			"package_id": "supbrd-core"
+		},
+		{
+			"plugin_id": "supbrd-plug-identity",
+			"http_status": 201,
+			"status": "active",
+			"release_id": "099BD91FD972D4DE6AB62FFC76",
+			"package_id": "supbrd-plug-identity"
+		},
+		{
+			"plugin_id": "supbrd-plug-data",
+			"http_status": 201,
+			"status": "active",
+			"release_id": "04ACF0615C2934DCA94697D9A7",
+			"package_id": "supbrd-plug-data"
+		},
+		{
+			"plugin_id": "supbrd-plug-commerce",
+			"http_status": 201,
+			"status": "active",
+			"release_id": "017E6A1FEED844376BCDAA8DA8",
+			"package_id": "supbrd-plug-commerce"
+		},
+		{
+			"plugin_id": "supbrd-plug-communication",
+			"http_status": 201,
+			"status": "active",
+			"release_id": "063EA05751F8B475298760CEAD",
+			"package_id": "supbrd-plug-communication"
+		},
+		{
+			"plugin_id": "supbrd-plug-journeys",
+			"http_status": 201,
+			"status": "active",
+			"release_id": "0E2AC7FD7781844C4803FE41D3",
+			"package_id": "supbrd-plug-journeys"
+		},
+		{
+			"plugin_id": "supbrd-plug-support",
+			"http_status": 201,
+			"status": "active",
+			"release_id": "0AB5E481F160B4F8CA64029A3B",
+			"package_id": "supbrd-plug-support"
+		},
+		{
+			"plugin_id": "supbrd-plug-analytics",
+			"http_status": 201,
+			"status": "active",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"package_id": "supbrd-plug-analytics"
+		}
+	],
+	"coverage": {
+		"destinations": 59,
+		"languages": ["en", "fr"],
+		"pages": 118,
+		"passed": 118,
+		"failed": 0,
+		"unverified": [],
+		"expected_refusals": 10,
+		"successful_controls": 8
+	},
+	"pages": [
+		{
+			"url": "http://127.0.0.1:61047/superboard-system/home?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Vplusflare Backend as a Service. Choose a section to manage this environment. / Backend as a Service de Vplusflare. Choisissez une rubrique pour gérer cet environnement.",
+			"status": "passed",
+			"api_responses": 0,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/home?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Dashboard / Dashboard: Unique people / Personnes uniques",
+			"status": "passed",
+			"api_responses": 10,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/users?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Account / Compte",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/apps?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Client ID / ID Client",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/logs?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Receiver / Destinataire",
+			"status": "passed",
+			"api_responses": 5,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/settings?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "textbox: Sign-in page logo / Logo de la page de connexion",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/data/content?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create collection / Créer la collection",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/data/files?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Upload / Transférer",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/data/settings?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Default language / Langue par défaut",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/monetization/customers?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Identity / Identity",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/monetization/products?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: New iOS product / Nouveau produit iOS",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/monetization/offerings?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: New offering / Nouvelle offre",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/monetization/entitlements?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Add entitlement / Ajouter un droit d’accès",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/monetization/settings?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "checkbox: Enable purchases / Activer les achats",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/communication/campaigns?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Campaign email / E-mails de campagne: button: Add email / Ajouter un e-mail",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/communication/email?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Transactional email / E-mail transactionnel: button: Add email / Ajouter un e-mail",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/communication/in-app-messages?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Add message / Ajouter un message",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/communication/settings?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Save profile / Enregistrer l’expéditeur",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/acquisition/paywalls?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create paywall / Créer un paywall",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/acquisition/onboardings?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create onboarding / Créer un parcours d’accueil",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/acquisition/dynamic-links?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create link / Créer un lien",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/acquisition/settings?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: New environment / Nouvel environnement",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/support/inbox?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Inbox / Boîte de réception: button: Add an item / Ajouter un élément",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/support/help-center?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Help Center / Centre d’aide: button: Add an item / Ajouter un élément",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/support/settings?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Business name / Nom de l’entreprise",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Unique people / Personnes uniques",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/users?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "tab: User profiles / Profils utilisateurs",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/events?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Apply filter / Appliquer le filtre",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/insights?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Run funnel / Analyser l’entonnoir",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/purchases?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "No verified purchase facts in this period. / Aucun achat vérifié pendant cette période.",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/reports?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Export events / Exporter les événements",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/remote-config?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Publish / Publier",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/settings?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Observed applications / Applications observées",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/settings?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Service / Service",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/_emdash/admin/plugins-manager?lang=en",
+			"locale": "en",
+			"release_id": null,
+			"expected": "Communication / Communication: switch: /.+/u / /.+/u",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/customers?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Add customer / Add customer",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/user-attributes?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Include in ID Token Body / Inclure dans le corps du token ID",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/referrals?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "No referrals yet / No referrals yet",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/directory/users?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Invite User / Inviter un utilisateur",
+			"status": "passed",
+			"api_responses": 6,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/roles?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Note / Remarque",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/scopes?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Client Type / Type de client",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/orgs?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Slug / Identifiant",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/saml?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "SAML / SAML",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/installations?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Installed / Date d’installation",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/views?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Tracked views / Vues suivies",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/dimensions?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Platforms & versions / Plateformes et versions",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/cohorts?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create cohort / Créer une cohorte",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/alerts?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create alert / Créer une alerte",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/crashes?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "combobox: Crash status / État du plantage",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/feedback?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Comment / Commentaire",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/access-key?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create Access Key / Create Access Key",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/libraries?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "SuperBoard Flutter / SuperBoard Flutter",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/web-setup?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Application domain / Application domain",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/ios-setup?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Apple Team ID / Apple Team ID",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/android-setup?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "SHA-256 certificate / SHA-256 certificate",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/infrastructure?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Latest observed service health / Dernier état observé des services",
+			"status": "passed",
+			"api_responses": 7,
+			"limitations": [
+				"Cloudflare Analytics Engine metrics are unconfigured in the isolated local instance"
+			]
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/audit?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create immutable archive / Créer une archive immuable",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/gateway?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Save draft route / Enregistrer la route brouillon",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/mcp?lang=en",
+			"locale": "en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Run tool / Exécuter l’outil",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/superboard-system/home?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Vplusflare Backend as a Service. Choose a section to manage this environment. / Backend as a Service de Vplusflare. Choisissez une rubrique pour gérer cet environnement.",
+			"status": "passed",
+			"api_responses": 0,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/home?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Dashboard / Dashboard: Unique people / Personnes uniques",
+			"status": "passed",
+			"api_responses": 10,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/users?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Account / Compte",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/apps?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Client ID / ID Client",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/logs?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Receiver / Destinataire",
+			"status": "passed",
+			"api_responses": 5,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/settings?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "textbox: Sign-in page logo / Logo de la page de connexion",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/data/content?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create collection / Créer la collection",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/data/files?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Upload / Transférer",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/data/settings?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Default language / Langue par défaut",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/monetization/customers?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Identity / Identity",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/monetization/products?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: New iOS product / Nouveau produit iOS",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/monetization/offerings?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: New offering / Nouvelle offre",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/monetization/entitlements?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Add entitlement / Ajouter un droit d’accès",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/monetization/settings?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "checkbox: Enable purchases / Activer les achats",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/communication/campaigns?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Campaign email / E-mails de campagne: button: Add email / Ajouter un e-mail",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/communication/email?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Transactional email / E-mail transactionnel: button: Add email / Ajouter un e-mail",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/communication/in-app-messages?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Add message / Ajouter un message",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/communication/settings?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Save profile / Enregistrer l’expéditeur",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/acquisition/paywalls?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create paywall / Créer un paywall",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/acquisition/onboardings?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create onboarding / Créer un parcours d’accueil",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/acquisition/dynamic-links?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create link / Créer un lien",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/acquisition/settings?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: New environment / Nouvel environnement",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/support/inbox?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Inbox / Boîte de réception: button: Add an item / Ajouter un élément",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/support/help-center?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Help Center / Centre d’aide: button: Add an item / Ajouter un élément",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/support/settings?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Business name / Nom de l’entreprise",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Unique people / Personnes uniques",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/users?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "tab: User profiles / Profils utilisateurs",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/events?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Apply filter / Appliquer le filtre",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/insights?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Run funnel / Analyser l’entonnoir",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/purchases?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "No verified purchase facts in this period. / Aucun achat vérifié pendant cette période.",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/reports?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Export events / Exporter les événements",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/remote-config?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Publish / Publier",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/settings?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Observed applications / Applications observées",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/settings?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Service / Service",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/_emdash/admin/plugins-manager?lang=fr",
+			"locale": "fr",
+			"release_id": null,
+			"expected": "Communication / Communication: switch: /.+/u / /.+/u",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/customers?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Add customer / Add customer",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/user-attributes?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Include in ID Token Body / Inclure dans le corps du token ID",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/referrals?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "No referrals yet / No referrals yet",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/directory/users?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Invite User / Inviter un utilisateur",
+			"status": "passed",
+			"api_responses": 6,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/roles?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Note / Remarque",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/scopes?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Client Type / Type de client",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/orgs?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Slug / Identifiant",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/saml?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "SAML / SAML",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/installations?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Installed / Date d’installation",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/views?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Tracked views / Vues suivies",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/dimensions?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Platforms & versions / Plateformes et versions",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/cohorts?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create cohort / Créer une cohorte",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/alerts?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create alert / Créer une alerte",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/crashes?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "combobox: Crash status / État du plantage",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/analytics/feedback?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "columnheader: Comment / Commentaire",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/auth/access-key?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create Access Key / Create Access Key",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/libraries?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "SuperBoard Flutter / SuperBoard Flutter",
+			"status": "passed",
+			"api_responses": 1,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/web-setup?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Application domain / Application domain",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/ios-setup?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Apple Team ID / Apple Team ID",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/android-setup?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "SHA-256 certificate / SHA-256 certificate",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/infrastructure?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "Latest observed service health / Dernier état observé des services",
+			"status": "passed",
+			"api_responses": 7,
+			"limitations": [
+				"Cloudflare Analytics Engine metrics are unconfigured in the isolated local instance"
+			]
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/audit?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Create immutable archive / Créer une archive immuable",
+			"status": "passed",
+			"api_responses": 2,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/gateway?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Save draft route / Enregistrer la route brouillon",
+			"status": "passed",
+			"api_responses": 3,
+			"limitations": []
+		},
+		{
+			"url": "http://127.0.0.1:61047/core/mcp?lang=fr",
+			"locale": "fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"expected": "button: Run tool / Exécuter l’outil",
+			"status": "passed",
+			"api_responses": 4,
+			"limitations": []
+		}
+	],
+	"faults": [
+		{
+			"name": "statistics-empty",
+			"expected": "passed",
+			"locale": "en",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "passed",
+			"symptoms": []
+		},
+		{
+			"name": "missing-route",
+			"expected": "failed",
+			"locale": "en",
+			"url": "http://127.0.0.1:61047/_emdash/admin/issue76-missing-view?lang=en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "failed",
+			"symptoms": [
+				{
+					"kind": "assertion",
+					"symptom": "expect(locator).toBeVisible() failed\n\nLocator: locator('main').getByText('impression', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 5000ms\n  - waiting for locator('main').getByText('impression', { exact: true })\n"
+				}
+			]
+		},
+		{
+			"name": "statistics-empty",
+			"expected": "passed",
+			"locale": "fr",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "passed",
+			"symptoms": []
+		},
+		{
+			"name": "missing-route",
+			"expected": "failed",
+			"locale": "fr",
+			"url": "http://127.0.0.1:61047/_emdash/admin/issue76-missing-view?lang=fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "failed",
+			"symptoms": [
+				{
+					"kind": "assertion",
+					"symptom": "expect(locator).toBeVisible() failed\n\nLocator: locator('main').getByText('impression', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 5000ms\n  - waiting for locator('main').getByText('impression', { exact: true })\n"
+				}
+			]
+		},
+		{
+			"name": "editor-is-not-statistics",
+			"expected": "failed",
+			"locale": "en",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls?item=c259e8c2-217a-4761-8a17-81741570a936&lang=en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "failed",
+			"symptoms": [
+				{
+					"kind": "assertion",
+					"symptom": "expect(locator).toBeVisible() failed\n\nLocator: locator('main').getByText('impression', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 5000ms\n  - waiting for locator('main').getByText('impression', { exact: true })\n"
+				}
+			]
+		},
+		{
+			"name": "editor-is-not-statistics",
+			"expected": "failed",
+			"locale": "fr",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls?item=c259e8c2-217a-4761-8a17-81741570a936&lang=fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "failed",
+			"symptoms": [
+				{
+					"kind": "assertion",
+					"symptom": "expect(locator).toBeVisible() failed\n\nLocator: locator('main').getByText('impression', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 5000ms\n  - waiting for locator('main').getByText('impression', { exact: true })\n"
+				}
+			]
+		},
+		{
+			"name": "render-failure",
+			"expected": "failed",
+			"locale": "en",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "failed",
+			"symptoms": [
+				{
+					"kind": "render",
+					"symptom": "[astro-island] Error hydrating /private/var/folders/5g/wfjc5yhd0vg4ft1j_3mwy4pc0000gn/T/superboard-menu-Ylou6e/apps/site/src/components/NativeFrontApp.js Error: ISSUE76_RENDER_FAILURE\n    at http://127.0.0.1:61047/src/components/NativeFrontControls.tsx?t=1790186272485:208:7"
+				},
+				{
+					"kind": "assertion",
+					"symptom": "[astro-island] Error hydrating /private/var/folders/5g/wfjc5yhd0vg4ft1j_3mwy4pc0000gn/T/superboard-menu-Ylou6e/apps/site/src/components/NativeFrontApp.js Error: ISSUE76_RENDER_FAILURE\n    at http://127.0.0.1:61047/src/components/NativeFrontControls.tsx?t=1790186272485:208:7"
+				}
+			]
+		},
+		{
+			"name": "render-failure",
+			"expected": "failed",
+			"locale": "fr",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "failed",
+			"symptoms": [
+				{
+					"kind": "render",
+					"symptom": "[astro-island] Error hydrating /private/var/folders/5g/wfjc5yhd0vg4ft1j_3mwy4pc0000gn/T/superboard-menu-Ylou6e/apps/site/src/components/NativeFrontApp.js Error: ISSUE76_RENDER_FAILURE\n    at http://127.0.0.1:61047/src/components/NativeFrontControls.tsx?t=1790186272485:208:7"
+				},
+				{
+					"kind": "assertion",
+					"symptom": "[astro-island] Error hydrating /private/var/folders/5g/wfjc5yhd0vg4ft1j_3mwy4pc0000gn/T/superboard-menu-Ylou6e/apps/site/src/components/NativeFrontApp.js Error: ISSUE76_RENDER_FAILURE\n    at http://127.0.0.1:61047/src/components/NativeFrontControls.tsx?t=1790186272485:208:7"
+				}
+			]
+		},
+		{
+			"name": "render-restored",
+			"expected": "passed",
+			"locale": "en",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "passed",
+			"symptoms": []
+		},
+		{
+			"name": "render-restored",
+			"expected": "passed",
+			"locale": "fr",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "passed",
+			"symptoms": []
+		},
+		{
+			"name": "api-failure",
+			"expected": "failed",
+			"locale": "en",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "failed",
+			"symptoms": [
+				{
+					"kind": "http",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"symptom": "HTTP 500"
+				},
+				{
+					"kind": "api",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"symptom": "{\"code\":\"paywalls_internal_error\",\"message\":\"Paywalls is temporarily unavailable\",\"status\":500,\"request_id\":\"4313c958-5326-4f27-a16a-06cd7a05c439\"}"
+				},
+				{
+					"kind": "alert",
+					"symptom": "Paywalls is temporarily unavailable"
+				},
+				{
+					"kind": "assertion",
+					"symptom": "Necessary view API did not complete successfully"
+				}
+			]
+		},
+		{
+			"name": "api-failure",
+			"expected": "failed",
+			"locale": "fr",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "failed",
+			"symptoms": [
+				{
+					"kind": "http",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"symptom": "HTTP 500"
+				},
+				{
+					"kind": "api",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"symptom": "{\"code\":\"paywalls_internal_error\",\"message\":\"Paywalls is temporarily unavailable\",\"status\":500,\"request_id\":\"012039b8-49d1-4d80-bd4b-e36c2090b260\"}"
+				},
+				{
+					"kind": "alert",
+					"symptom": "Paywalls is temporarily unavailable"
+				},
+				{
+					"kind": "assertion",
+					"symptom": "Necessary view API did not complete successfully"
+				}
+			]
+		},
+		{
+			"name": "store-restored",
+			"expected": "passed",
+			"locale": "en",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "passed",
+			"symptoms": []
+		},
+		{
+			"name": "store-restored",
+			"expected": "passed",
+			"locale": "fr",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "passed",
+			"symptoms": []
+		},
+		{
+			"name": "blocked-api",
+			"expected": "failed",
+			"locale": "en",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "failed",
+			"symptoms": [
+				{
+					"kind": "assertion",
+					"symptom": "expect(received).toBe(expected) // Object.is equality\n\nExpected: 0\nReceived: 1\n\nCall Log:\n- Timeout 1500ms exceeded while waiting on the predicate"
+				},
+				{
+					"kind": "loading",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-09-16%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"symptom": "Request still pending at the page deadline"
+				}
+			]
+		},
+		{
+			"name": "blocked-api",
+			"expected": "failed",
+			"locale": "fr",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "failed",
+			"symptoms": [
+				{
+					"kind": "assertion",
+					"symptom": "expect(received).toBe(expected) // Object.is equality\n\nExpected: 0\nReceived: 1\n\nCall Log:\n- Timeout 1500ms exceeded while waiting on the predicate"
+				},
+				{
+					"kind": "loading",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-09-16%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"symptom": "Request still pending at the page deadline"
+				}
+			]
+		},
+		{
+			"name": "api-restored",
+			"expected": "passed",
+			"locale": "en",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=en",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "passed",
+			"symptoms": []
+		},
+		{
+			"name": "api-restored",
+			"expected": "passed",
+			"locale": "fr",
+			"url": "http://127.0.0.1:61047/acquisition/paywalls/statistics?lang=fr",
+			"release_id": "037244B5DCFFF45F58AB7C58D9",
+			"status": "passed",
+			"symptoms": []
+		}
+	],
+	"full_report": "test-results/published-menu-704ac741-9b0b-42fd-bd2e-924b0bab2604.json",
+	"full_report_sha256": "82478952957b7667bf735af63e2012d54e9ce6a613391ba5d40b6fa001ceee36",
+	"checks": {
+		"report_and_process_tests": "6 passed",
+		"platform_status_tests": "26 passed",
+		"site_typecheck": "119 files, 0 errors, 0 warnings",
+		"worker_typecheck": "passed",
+		"review_standards": "no remaining findings",
+		"review_specification": "no remaining findings"
+	},
+	"repository_checks": {
+		"lint": "69 diagnostics; pre-existing failures remain; no diagnostics in the task files",
+		"lint_quick": "3 existing react-hooks/set-state-in-effect diagnostics in SupportSettingsPage.tsx",
+		"test": "Stopped at useTableParams.native.test.tsx: keeps a later sort when a pending search debounce updates the URL (expected spring, received null). This file and its implementation were not changed."
+	},
+	"limitations": [
+		"Local instance, no remote deployment",
+		"Cloudflare Analytics Engine credentials and public-domain probes are not configured",
+		"The check verifies rendered content in both locales, not exhaustive translation of legacy screens",
+		"Validation used the current working tree, including pre-existing staged changes"
+	]
+}
