@@ -91,8 +91,8 @@ export class AdminPage {
 	 * Wait for React hydration to complete.
 	 * Astro removes the `ssr` attribute from `<astro-island>` after hydration.
 	 */
-	async waitForHydration(): Promise<void> {
-		await this.page.waitForSelector("astro-island:not([ssr])", { timeout: 15000 });
+	async waitForHydration(timeout = 15000): Promise<void> {
+		await this.page.waitForSelector("astro-island:not([ssr])", { timeout });
 	}
 
 	/**

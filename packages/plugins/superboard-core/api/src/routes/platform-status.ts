@@ -857,7 +857,7 @@ export function workerTopology(env: Env): WorkerTopology {
 			}
 			workers.set(candidate.id, candidate);
 		}
-		if (WORKERS.some(({ id }) => !workers.has(id))) {
+		if (WORKERS.some(({ id }) => id !== "messaging" && !workers.has(id))) {
 			return failed("Worker catalog is incomplete");
 		}
 		const customDependencies: Array<{ binding: string; workerName: string }> = [];
