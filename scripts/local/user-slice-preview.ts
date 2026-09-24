@@ -125,7 +125,7 @@ function escapeSql(value: string): string {
 async function loadNativePlugins() {
 	const directory = join(root, "packages/plugins");
 	const sources = readdirSync(directory)
-		.filter((name) => name.startsWith("supbrd-"))
+		.filter((name) => name.startsWith("superboard-"))
 		.flatMap((name) => {
 			const src = join(directory, name, "src");
 			return readdirSync(src)

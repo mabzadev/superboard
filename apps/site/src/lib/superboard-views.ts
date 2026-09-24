@@ -1,12 +1,12 @@
+import { canonicalFrontPath } from "@superboard/contracts/front-paths";
 import { applySeed, SchemaRegistry, validateSeed, type SeedFile } from "emdash";
 
 import seedJson from "../../seed/seed.json";
 import { ensureNativeFrontMenus } from "./native-front-menu-bootstrap.js";
 import { nativeFrontPluginCatalog } from "./native-front-plugins.js";
-import { superBoardRuntimePluginCatalog } from "./superboard-plugin-catalog.js";
 
 const VIEWS_BOOTSTRAP_KEY = Symbol.for("superboard:views-bootstrap");
-const VIEWS_BOOTSTRAP_VERSION = "7.0.0";
+const VIEWS_BOOTSTRAP_VERSION = "10.2.2";
 const seed = readSeedFile(seedJson);
 
 interface ViewsBootstrapState {
@@ -16,6 +16,9 @@ interface ViewsBootstrapState {
 
 interface ViewBootstrapRow {
 	id: string;
+	plugin_id: string;
+	deleted_at: string | null;
+	locale: string;
 	route_id: string;
 	path: string;
 	renderer_id: string | null;
@@ -59,13 +62,33 @@ async function bootstrapSuperBoardViews(db: Parameters<typeof applySeed>[0]): Pr
 	if (viewCollection.length !== 1 || viewContent.length === 0) {
 		throw new Error("SUPERBOARD_VIEWS_SEED_INVALID");
 	}
+	const existingPaths = new Set<string>();
+	if (await registry.getCollection("views")) {
+		const locales = [
+			...new Set(viewContent.map((view) => view.locale ?? seed.defaultLocale ?? "en")),
+		];
+		const existingViews = await db
+			.$extendTables<{ ec_views: ViewBootstrapRow }>()
+			.selectFrom("ec_views")
+			.select(["path", "locale"])
+			.where("locale", "in", locales)
+			.execute();
+		for (const view of existingViews)
+			existingPaths.add(`${view.locale}:${canonicalFrontPath(view.path)}`);
+	}
+	const missingViews = viewContent.filter(
+		(view) =>
+			!existingPaths.has(
+				`${view.locale ?? seed.defaultLocale ?? "en"}:${canonicalFrontPath(String(view.data.path))}`,
+			),
+	);
 	await applySeed(
 		db,
 		{
 			version: seed.version,
 			defaultLocale: seed.defaultLocale,
 			collections: viewCollection,
-			content: { views: viewContent },
+			content: { views: missingViews },
 		},
 		{ includeContent: true, onConflict: "skip" },
 	);
@@ -78,6 +101,7 @@ async function bootstrapSuperBoardViews(db: Parameters<typeof applySeed>[0]): Pr
 			defaultValue: "",
 		});
 	}
+	await registry.updateCollection("views", { admin: viewCollection[0]?.admin });
 	await registry.updateField("views", "renderer_id", { sortOrder: 5 });
 	await registry.updateField("views", "presentation", {
 		label: "Additional content",
@@ -109,40 +133,51 @@ async function installPluginViews(db: Parameters<typeof applySeed>[0]): Promise<
 	const viewsDb = db.$extendTables<{ ec_views: ViewBootstrapRow }>();
 	const existing = await viewsDb
 		.selectFrom("ec_views")
-		.select(["id", "route_id", "path"])
+		.select(["id", "route_id", "path", "locale", "plugin_id", "deleted_at"])
 		.execute();
 	const surfaces = new Map(
 		nativeFrontPluginCatalog().flatMap((plugin) =>
-			plugin.surfaces.map((surface) => [surface.route_id, surface] as const),
+			plugin.surfaces.map(
+				(surface) => [`${plugin.plugin_id}:${surface.path_pattern}`, surface] as const,
+			),
 		),
 	);
-	const legacyPaths = new Map(
-		seedJson.content.views.map((view) => [view.data.route_id, view.data.path]),
+	const canonicalRows = new Map(
+		existing
+			.filter((row) => !row.deleted_at && row.path === canonicalFrontPath(row.path))
+			.map((row) => [`${row.locale}:${row.plugin_id}:${row.path}`, row]),
 	);
-	for (const row of existing) {
-		const surface = surfaces.get(String(row.route_id));
-		if (
-			surface &&
-			row.path === legacyPaths.get(String(row.route_id)) &&
-			row.path !== surface.path_pattern
-		) {
+	for (const row of existing.filter((entry) => !entry.deleted_at)) {
+		const path = canonicalFrontPath(row.path);
+		const surface = surfaces.get(`${row.plugin_id}:${path}`);
+		if (!surface) continue;
+		const key = `${row.locale}:${row.plugin_id}:${path}`;
+		const current = canonicalRows.get(key);
+		if (current && current.id !== row.id) {
 			await viewsDb
 				.updateTable("ec_views")
-				.set({ path: surface.path_pattern })
+				.set({ deleted_at: new Date().toISOString() })
 				.where("id", "=", row.id)
+				.where("locale", "=", row.locale)
 				.execute();
-			row.path = surface.path_pattern;
+			continue;
+		}
+		canonicalRows.set(key, row);
+		if (row.path !== path || row.route_id !== surface.route_id) {
+			await viewsDb
+				.updateTable("ec_views")
+				.set({ path, route_id: surface.route_id })
+				.where("id", "=", row.id)
+				.where("locale", "=", row.locale)
+				.execute();
+			row.path = path;
+			row.route_id = surface.route_id;
 		}
 	}
 	const routes = new Set(existing.map((view) => String(view.route_id)));
 	const paths = new Set(existing.map((view) => String(view.path)));
-	const manifests = new Map(
-		superBoardRuntimePluginCatalog().plugins.map(({ manifest }) => [manifest.plugin_id, manifest]),
-	);
 	const views = nativeFrontPluginCatalog().flatMap((plugin) => {
 		if (plugin.plugin_id === "supbrd-core") return [];
-		const manifest = manifests.get(plugin.plugin_id);
-		if (!manifest) throw new Error(`PLUGIN_VIEW_MANIFEST_MISSING:${plugin.plugin_id}`);
 		return plugin.surfaces
 			.filter((surface) => !routes.has(surface.route_id) && !paths.has(surface.path_pattern))
 			.map((surface) => ({
@@ -158,8 +193,8 @@ async function installPluginViews(db: Parameters<typeof applySeed>[0]): Promise<
 					renderer_id: surface.renderer_id,
 					presentation: { schema_version: "1.0.0", blocks: [] },
 					bindings: {
-						data_sources: manifest.data_sources.map((source) => source.data_source_id),
-						commands: manifest.commands.map((command) => command.command_id),
+						data_sources: [],
+						commands: [],
 					},
 				},
 			}));
@@ -176,7 +211,7 @@ async function upgradeViewRenderers(db: Parameters<typeof applySeed>[0]): Promis
 	const viewsDb = db.$extendTables<{ ec_views: ViewBootstrapRow }>();
 	const currentViews = await viewsDb
 		.selectFrom("ec_views")
-		.select(["path", "renderer_id", "bindings", "presentation"])
+		.select(["path", "renderer_id", "presentation"])
 		.execute();
 	const byPath = new Map(currentViews.map((view) => [String(view.path), view]));
 
@@ -184,20 +219,15 @@ async function upgradeViewRenderers(db: Parameters<typeof applySeed>[0]): Promis
 		const current = byPath.get(definition.data.path);
 		if (!current) continue;
 		const rendererId = String(current.renderer_id ?? "").trim();
-		const bindings = jsonRecord(current.bindings);
-		const updateBindings =
-			!bindings ||
-			(array(bindings.data_sources).length === 0 && array(bindings.commands).length === 0);
 		const updatePresentation =
 			definition.data.path === "/analytics/remote-config" &&
 			isLegacyRemoteConfigPresentation(current.presentation);
-		if (rendererId && !updateBindings && !updatePresentation) continue;
+		if (rendererId && !updatePresentation) continue;
 
 		await viewsDb
 			.updateTable("ec_views")
 			.set({
 				...(rendererId ? {} : { renderer_id: definition.data.renderer_id }),
-				...(updateBindings ? { bindings: JSON.stringify(definition.data.bindings) } : {}),
 				...(updatePresentation
 					? { presentation: JSON.stringify(definition.data.presentation) }
 					: {}),

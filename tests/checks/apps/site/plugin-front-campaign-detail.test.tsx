@@ -5,7 +5,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import LinksPageContent from "../../../../packages/plugins/supbrd-plug-communication/src/front/dynamic-links/components/dynamic_links/links/LinksPageContent.js";
+import LinksPageContent from "../../../../packages/plugins/superboard-acquisition/src/front/dynamic-links/components/dynamic_links/links/LinksPageContent.js";
 import { TooltipProvider } from "../../../../packages/supbrd-front-ui/src/shared/components/ui/tooltip.js";
 import { ProjectSelectionProvider } from "../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js";
 
@@ -109,7 +109,7 @@ describe("Dynamic Links campaign detail", () => {
 		expect(container.textContent).not.toContain("Campaign not found");
 		expect(
 			[...container.querySelectorAll("button")].some((button) =>
-				button.textContent?.includes("Create Link"),
+				button.textContent?.includes("Add Link To Campaign"),
 			),
 		).toBe(true);
 	});

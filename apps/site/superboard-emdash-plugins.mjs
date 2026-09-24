@@ -16,26 +16,23 @@ export const SUPERBOARD_PLUGIN_TEMPLATES = Object.freeze(
 export function configureSuperBoardPlugins(plugins) {
 	return plugins
 		.filter(({ manifest }) => !manifest.plugin_id.includes("*"))
-		.map(({ manifest, label, kind }) => {
-			const displayName = label ?? pluginDisplayName(manifest.plugin_id);
+		.map(({ manifest, directory }) => {
 			const settingsSchema = emdashSettingsSchema(manifest.settings.schema.properties);
 			const entrypoint = fileURLToPath(
-				new URL(`../../packages/plugins/${manifest.plugin_id}/dist/index.js`, import.meta.url),
+				new URL(
+					`../../packages/plugins/${directory ?? manifest.plugin_id}/dist/index.js`,
+					import.meta.url,
+				),
 			);
 			return {
 				id: manifest.plugin_id,
 				version: manifest.plugin_version,
-				defaultEnabled: kind === "core",
+				defaultEnabled: true,
 				lifecycleManaged: true,
 				lifecycleEnablePath: `/_emdash/api/superboard/plugins/${encodeURIComponent(manifest.plugin_id)}/enable`,
 				lifecycleDisablePath: `/_emdash/api/superboard/plugins/${encodeURIComponent(manifest.plugin_id)}/disable`,
 				entrypoint,
-				adminPages: [
-					{ path: "/", label: displayName, icon: "settings" },
-					...(manifest.plugin_id === "supbrd-core"
-						? [{ path: "/configuration", label: "Configuration", icon: "settings" }]
-						: []),
-				],
+				adminPages: [],
 				settingsSchema,
 				format: "standard",
 				capabilities: [],

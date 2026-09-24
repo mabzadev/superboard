@@ -1,4 +1,5 @@
 import { pluginPackageOwner } from "@superboard/contracts/plugin-packages";
+import { parsePluginWorkerHealthReport } from "@superboard/contracts/plugin-worker-health";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 import { signSiteOperatorRequest } from "@superboard/contracts/site-operator";
 import { sha256Canonical } from "@superboard/supbrd-core";
@@ -78,7 +79,7 @@ export async function verifySuperBoardPluginResources(
 	return evidence;
 }
 
-export async function probeSuperBoardPluginWorker(
+export async function probeSuperBoardPluginWorkerReport(
 	env: SuperBoardSiteEnv,
 	pluginId: string,
 	operator: Parameters<typeof signSiteOperatorRequest>[1],
@@ -92,8 +93,18 @@ export async function probeSuperBoardPluginWorker(
 	const response = await env.API_SERVICE.fetch(
 		new Request(unsigned, { headers, signal: AbortSignal.timeout(10000) }),
 	);
-	const health = await readJsonObjectLimited(response, 65536);
-	if (!response.ok || health.status !== "ready" || health.plugin_id !== pluginId)
+	const health = parsePluginWorkerHealthReport(await readJsonObjectLimited(response, 65536));
+	if ((!response.ok && health.status === "ready") || health.plugin_id !== pluginId)
 		throw new Error(`PLUGIN_WORKER_HEALTH_FAILED:${pluginId}`);
 	return health;
+}
+
+export async function probeSuperBoardPluginWorker(
+	env: SuperBoardSiteEnv,
+	pluginId: string,
+	operator: Parameters<typeof signSiteOperatorRequest>[1],
+) {
+	const report = await probeSuperBoardPluginWorkerReport(env, pluginId, operator);
+	if (report.status !== "ready") throw new Error(`PLUGIN_WORKER_HEALTH_FAILED:${pluginId}`);
+	return report;
 }

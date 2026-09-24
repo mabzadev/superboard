@@ -94,13 +94,13 @@ test("adds and removes plugin presentation only through the Release plugin lock"
 			),
 		);
 
-	expect(routeIds(withoutMarketing)).not.toContain("superboard.marketing_campaigns");
-	expect(navigationRouteIds(withoutMarketing)).not.toContain("superboard.marketing_campaigns");
-	expect(routeIds(withMarketing)).toContain("superboard.marketing_campaigns");
-	expect(navigationRouteIds(withMarketing)).toContain("superboard.marketing_campaigns");
+	expect(routeIds(withoutMarketing)).not.toContain("superboard.communication_campaigns");
+	expect(navigationRouteIds(withoutMarketing)).not.toContain("superboard.communication_campaigns");
+	expect(routeIds(withMarketing)).toContain("superboard.communication_campaigns");
+	expect(navigationRouteIds(withMarketing)).toContain("superboard.communication_campaigns");
 	expect(
 		withMarketing.presentation.pages.some(
-			({ page_id }) => page_id === "page.superboard_marketing_campaigns",
+			({ page_id }) => page_id === "page.superboard_communication_campaigns",
 		),
 	).toBe(true);
 });
@@ -114,7 +114,7 @@ test("the Site composes a permission-filtered user slice from plugin contributio
 	expect(
 		resolveFrontRequest({
 			last_verified_release: runtime,
-			requested_path: "/login",
+			requested_path: "/auth/login",
 			admin_session: "absent",
 			permissions: [],
 			dependency_health: { "dependency.supbrd_plug_user": "ready" },
@@ -123,7 +123,7 @@ test("the Site composes a permission-filtered user slice from plugin contributio
 	expect(
 		resolveFrontRequest({
 			last_verified_release: runtime,
-			requested_path: "/app/users",
+			requested_path: "/auth/users",
 			admin_session: "absent",
 			application_token_audience: "reference-production.application",
 			permissions: ["users.read"],
@@ -139,7 +139,7 @@ test("the Site composes a permission-filtered user slice from plugin contributio
 		expect.arrayContaining([
 			{ route_id: "superboard.app_customers", label: "Customers" },
 			{ route_id: "superboard.users", label: "Users" },
-			{ route_id: "superboard.identity_by_lang_dashboard", label: "Overview" },
+			{ route_id: "superboard.auth_settings", label: "Settings" },
 		]),
 	);
 });

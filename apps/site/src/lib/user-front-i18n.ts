@@ -1,3 +1,4 @@
+import { canonicalFrontHref } from "@superboard/contracts/front-paths";
 import { createFrontI18n } from "@superboard/front-ui/i18n";
 
 import {
@@ -18,7 +19,12 @@ export function isUserFrontLocale(value: unknown): value is UserFrontLocale {
 }
 
 export function localizeFrontPath(path: string, locale: UserFrontLocale): string {
-	return path.replace(identityPath, `$1${locale}`);
+	const canonical = canonicalFrontHref(path.replace(identityPath, `$1${locale}`));
+	if (!canonical.startsWith("/") || canonical.startsWith("//")) return canonical;
+	const url = new URL(canonical, "https://superboard.invalid");
+	if (!url.searchParams.has("lang")) return canonical;
+	url.searchParams.set("lang", locale);
+	return `${url.pathname}${url.search}${url.hash}`;
 }
 
 export function resolveUserFrontRequestLocale(request: Request): UserFrontLocale {

@@ -4,8 +4,8 @@
 		{
 			"id": "supbrd-core",
 			"kind": "core",
-			"label": "SuperBoard",
-			"label_fr": "SuperBoard",
+			"label": "Core",
+			"label_fr": "Core",
 			"components": [
 				"supbrd-plug-settings",
 				"supbrd-plug-audit",
@@ -18,51 +18,58 @@
 				"supbrd-plug-audit",
 				"supbrd-plugmod-gateway",
 				"supbrd-plugmod-observability"
-			]
+			],
+			"directory": "superboard-core"
 		},
 		{
 			"id": "supbrd-plug-identity",
 			"kind": "business",
-			"label": "Identity",
-			"label_fr": "Identité",
+			"label": "Authentification",
+			"label_fr": "Authentification",
 			"components": ["supbrd-plug-user"],
-			"required_components": []
+			"required_components": [],
+			"directory": "superboard-authentification"
 		},
 		{
 			"id": "supbrd-plug-data",
 			"kind": "business",
-			"label": "Data and files",
-			"label_fr": "Données et fichiers",
+			"label": "Data",
+			"label_fr": "Data",
 			"components": ["supbrd-plug-content", "supbrd-plugmod-files"],
-			"required_components": []
+			"required_components": [],
+			"directory": "superboard-data"
 		},
 		{
 			"id": "supbrd-plug-commerce",
 			"kind": "business",
-			"label": "Commerce",
-			"label_fr": "Commerce",
-			"components": ["supbrd-plug-products", "supbrd-plugmod-billing", "supbrd-plugmod-paywalls"],
-			"required_components": []
+			"label": "Monetization",
+			"label_fr": "Monetization",
+			"components": ["supbrd-plug-products", "supbrd-plugmod-billing"],
+			"required_components": [],
+			"directory": "superboard-monetization"
 		},
 		{
 			"id": "supbrd-plug-communication",
 			"kind": "business",
 			"label": "Communication",
 			"label_fr": "Communication",
-			"components": [
-				"supbrd-plugmod-marketing",
-				"supbrd-plugmod-email",
-				"supbrd-plugmod-dynamic-links"
-			],
-			"required_components": []
+			"components": ["supbrd-plugmod-marketing", "supbrd-plugmod-email"],
+			"required_components": [],
+			"directory": "superboard-communication"
 		},
 		{
 			"id": "supbrd-plug-journeys",
 			"kind": "business",
-			"label": "Journeys",
-			"label_fr": "Parcours",
-			"components": ["supbrd-plugmod-onboardings", "supbrd-plugmod-flows"],
-			"required_components": []
+			"label": "Acquisition",
+			"label_fr": "Acquisition",
+			"components": [
+				"supbrd-plugmod-paywalls",
+				"supbrd-plugmod-onboardings",
+				"supbrd-plugmod-flows",
+				"supbrd-plugmod-dynamic-links"
+			],
+			"required_components": [],
+			"directory": "superboard-acquisition"
 		},
 		{
 			"id": "supbrd-plug-support",
@@ -70,15 +77,17 @@
 			"label": "Support",
 			"label_fr": "Support",
 			"components": ["supbrd-plugmod-support"],
-			"required_components": []
+			"required_components": [],
+			"directory": "superboard-support"
 		},
 		{
 			"id": "supbrd-plug-analytics",
 			"kind": "business",
-			"label": "Statistics",
-			"label_fr": "Statistiques",
+			"label": "Analytics",
+			"label_fr": "Analytics",
 			"components": ["supbrd-plugmod-analytics"],
-			"required_components": []
+			"required_components": [],
+			"directory": "superboard-analytics"
 		}
 	]
 }

@@ -1,10 +1,10 @@
 # SuperBoard workers
 
-`workers/` contains the source packages used by registered targets in
+The plugin service directories contain the source packages used by registered targets in
 `infra/targets/`. Run `pnpm workers:inventory` to list them and detect unused
 packages, missing entrypoints and stale workspace declarations.
 
-The `mbza-development` target uses 17 packages here. Its console lives in
+The `mbza-development` target references service packages inside the plugins and the reference application. Its console lives in
 `apps/site`. The consolidated deployment profile groups these sources as follows:
 
 | Deployment group    | Source packages                                                             |

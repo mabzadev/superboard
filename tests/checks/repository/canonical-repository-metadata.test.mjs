@@ -65,7 +65,7 @@ test("private Site and Front workspaces inherit the canonical root repository", 
 	for (const path of [
 		"apps/site/package.json",
 		"packages/supbrd-front-ui/package.json",
-		"packages/plugins/supbrd-core/package.json",
+		"packages/plugins/superboard-core/package.json",
 	]) {
 		const metadata = JSON.parse(await readFile(new URL(path, repositoryRoot), "utf8"));
 		if (metadata.repository) {

@@ -53,7 +53,7 @@ test("environment form creates a real isolated development environment", async (
 	const project = await projectRef(page);
 	const name = unique("Browser environment");
 	const key = unique("browser-env");
-	await ready(page, "/flows/settings/environments");
+	await ready(page, "/acquisition/settings?tab=environments");
 	await page.getByRole("button", { name: "New environment", exact: true }).click();
 	await field(page, "Name").fill(name);
 	await field(page, "Identifier").fill(key);
@@ -85,7 +85,7 @@ test("localization saves language fallback rules and reloads the selected group"
 }) => {
 	const project = await projectRef(page);
 	const name = unique("Locales");
-	await ready(page, "/flows/settings/localization");
+	await ready(page, "/acquisition/settings?tab=localization");
 	await page.getByRole("button", { name: "New group", exact: true }).click();
 	await field(page, "Name").fill(name);
 	await page.getByPlaceholder("en, fr, de").fill("en, fr, fr-CH");
@@ -118,11 +118,11 @@ test("SDK examples use and copy the selected real project environment", async ({
 }) => {
 	const f = await flowFixture(page);
 	await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-	await ready(page, "/flows/settings/sdk");
+	await ready(page, "/acquisition/settings?tab=sdk");
 	await page.locator("main").getByRole("combobox").click();
 	await page.getByRole("option", { name: f.environment.name, exact: true }).click();
 	await page.getByRole("tab", { name: "React", exact: true }).click();
-	const panel = page.getByRole("tabpanel");
+	const panel = page.getByRole("tabpanel", { name: "React", exact: true });
 	await panel.getByRole("button", { name: "Copy code", exact: true }).last().click();
 	const copied = await page.evaluate(() => navigator.clipboard.readText());
 	expect(copied).toContain(f.project);

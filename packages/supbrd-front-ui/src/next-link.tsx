@@ -1,3 +1,4 @@
+import { canonicalFrontHref } from "@superboard/contracts/front-paths";
 import { forwardRef, type AnchorHTMLAttributes, type MouseEvent } from "react";
 
 type Href = string | URL | { hash?: string; pathname?: string; query?: Record<string, unknown> };
@@ -30,7 +31,7 @@ const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 	},
 	ref,
 ) {
-	const resolvedHref = linkHref(href);
+	const resolvedHref = canonicalFrontHref(linkHref(href));
 	return (
 		<a
 			{...props}

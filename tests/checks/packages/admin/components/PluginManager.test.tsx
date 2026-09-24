@@ -159,6 +159,20 @@ describe("PluginManager", () => {
 
 	afterEach(() => i18n.loadAndActivate({ locale: "en", messages: {} }));
 
+	it("keeps the confirmed state while the plugin list is refreshing", async () => {
+		const plugin = makePlugin({ enabled: false, status: "inactive", lifecycleManaged: true });
+		mockFetchPlugins.mockResolvedValueOnce([plugin]);
+		mockFetchPlugins.mockImplementation(() => new Promise(() => {}));
+		mockEnablePlugin.mockResolvedValue({ ...plugin, enabled: true, status: "active" });
+		const screen = await render(
+			<Wrapper>
+				<PluginManager />
+			</Wrapper>,
+		);
+		await screen.getByRole("switch", { name: "Enable plugin" }).click();
+		await expect.element(screen.getByRole("switch", { name: "Disable plugin" })).toBeChecked();
+	});
+
 	it("cancelling verification leaves the plugin disabled", async () => {
 		mockFetchPlugins.mockResolvedValue([
 			makePlugin({ enabled: false, status: "inactive", lifecycleManaged: true }),

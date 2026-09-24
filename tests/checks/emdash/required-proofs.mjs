@@ -24,7 +24,7 @@ export function buildRequiredProofPlan(matrix) {
 		...new Set(matrix.rows.filter(({ required }) => required).map(({ test }) => test)),
 	].toSorted((left, right) => left.localeCompare(right));
 	const apiProofs = requiredProofs.filter((path) =>
-		path.startsWith("tests/checks/plugins/supbrd-core/api/"),
+		path.startsWith("tests/checks/plugins/superboard-core/api/"),
 	);
 	const workerRuntimeProofs = requiredProofs.filter(
 		(path) =>
@@ -70,13 +70,13 @@ export function buildRequiredProofPlan(matrix) {
 			command: "pnpm",
 			args: [
 				"--dir",
-				"packages/plugins/supbrd-core/api",
+				"packages/plugins/superboard-core/api",
 				"exec",
 				"vitest",
 				"run",
 				"--config",
 				"vitest.config.ts",
-				...apiProofs.map((path) => relative("packages/plugins/supbrd-core/api", path)),
+				...apiProofs.map((path) => relative("packages/plugins/superboard-core/api", path)),
 			],
 			cwd: root,
 		},

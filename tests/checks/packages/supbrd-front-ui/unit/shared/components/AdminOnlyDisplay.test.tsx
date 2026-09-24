@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import AdminOnlyDisplay from "../../../../../../../packages/plugins/supbrd-core/src/front/settings/lib/adminOnlyDisplay.js";
+import AdminOnlyDisplay from "../../../../../../../packages/plugins/superboard-core/src/front/settings/lib/adminOnlyDisplay.js";
 import { render, screen } from "../../../render.js";
 
 const mocks = vi.hoisted(() => ({

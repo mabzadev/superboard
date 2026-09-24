@@ -41,7 +41,10 @@ export function requirePluginOperator(
 	options: { mutation?: boolean } = {},
 ): Response | null {
 	if (!context.locals.user) return errorResponse("AUTHENTICATION_REQUIRED", 401);
-	if (!hasPermission(context.locals.user, "settings:manage")) {
+	if (
+		!hasPermission(context.locals.user, "settings:manage") ||
+		!hasPermission(context.locals.user, "plugins:manage")
+	) {
 		return errorResponse("OPERATOR_REQUIRED", 403);
 	}
 	if (options.mutation) {

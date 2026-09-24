@@ -168,6 +168,11 @@ export default centralTests(
 			}),
 		],
 		test: {
+			deps: {
+				optimizer: {
+					ssr: { enabled: true, include: ["@superboard/front-ui > @cloudflare/kumo"] },
+				},
+			},
 			include: ["../../tests/checks/apps/site/runtime/**/*.test.ts"],
 			exclude: ["../../tests/checks/apps/site/runtime/plugin-packages.runtime.test.ts"],
 			setupFiles: ["../../tests/checks/apps/site/runtime/apply-migrations.ts"],

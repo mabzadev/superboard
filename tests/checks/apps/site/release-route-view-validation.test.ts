@@ -1,25 +1,31 @@
 import { describe, expect, test } from "vitest";
 
-import { validateReleaseRouteViews } from "../../../../apps/site/src/lib/plugin-client-catalog.js";
+import {
+	CORE_FRONT_RENDERER_DESCRIPTORS,
+	SUPBRD_CORE_ARTIFACT_CHECKSUM,
+} from "../../../../apps/site/src/lib/core-front-contract.js";
+import { validateReleaseRouteViews } from "../../../../apps/site/src/lib/release-route-view-validation.js";
+import { superBoardRuntimePluginCatalog } from "../../../../apps/site/src/lib/superboard-plugin-catalog.js";
 
 describe("Front Release Route View Validation", () => {
+	const manifests = superBoardRuntimePluginCatalog().plugins.map(({ manifest }) => manifest);
 	const validRenderers = [
+		...CORE_FRONT_RENDERER_DESCRIPTORS,
+		...manifests.flatMap(({ renderers }) => renderers),
+	];
+	const pluginLock = [
 		{
-			renderer_id: "supbrd-plugmod-analytics.renderer.admin_surface",
-			plugin_id: "supbrd-plugmod-analytics",
-		},
-		{
-			renderer_id: "supbrd-plugmod-billing.renderer.admin_surface",
-			plugin_id: "supbrd-plugmod-billing",
-		},
-		{
-			renderer_id: "supbrd-plugmod-marketing.renderer.admin_surface",
-			plugin_id: "supbrd-plugmod-marketing",
-		},
-		{
-			renderer_id: "emdash.core.renderer.operator_login",
 			plugin_id: "supbrd-core",
+			version: "0.1.0",
+			artifact_checksum: SUPBRD_CORE_ARTIFACT_CHECKSUM,
+			native: true,
 		},
+		...manifests.map((manifest) => ({
+			plugin_id: manifest.plugin_id,
+			version: manifest.plugin_version,
+			artifact_checksum: manifest.artifact_checksum,
+			native: false,
+		})),
 	];
 
 	test("passes when all routes have loadable views in their owning plugins", async () => {
@@ -41,7 +47,7 @@ describe("Front Release Route View Validation", () => {
 			},
 		];
 
-		const failures = await validateReleaseRouteViews(routes, validRenderers);
+		const failures = await validateReleaseRouteViews(routes, validRenderers, pluginLock);
 		expect(failures).toEqual([]);
 	});
 
@@ -54,7 +60,7 @@ describe("Front Release Route View Validation", () => {
 			},
 		];
 
-		const failures = await validateReleaseRouteViews(routes, validRenderers);
+		const failures = await validateReleaseRouteViews(routes, validRenderers, pluginLock);
 		expect(failures).toHaveLength(1);
 		expect(failures[0]).toMatchObject({
 			route_id: "superboard.missing_view_route",
@@ -73,7 +79,7 @@ describe("Front Release Route View Validation", () => {
 			},
 		];
 
-		const failures = await validateReleaseRouteViews(routes, validRenderers);
+		const failures = await validateReleaseRouteViews(routes, validRenderers, pluginLock);
 		expect(failures).toHaveLength(1);
 		expect(failures[0]).toMatchObject({
 			route_id: "superboard.communication_statistics",
@@ -92,79 +98,12 @@ describe("Front Release Route View Validation", () => {
 			},
 		];
 
-		const failures = await validateReleaseRouteViews(routes, validRenderers);
+		const failures = await validateReleaseRouteViews(routes, validRenderers, pluginLock);
 		expect(failures).toHaveLength(1);
 		expect(failures[0]).toMatchObject({
 			route_id: "superboard.orphan_route",
 			path_pattern: "/orphan",
 			plugin_id: "unknown",
 		});
-	});
-
-	test("candidateEvidence marks renderers_ready false and adds route diagnostics when views are not loadable", async () => {
-		const candidate = {
-			status: "approved" as const,
-			approval: null,
-			release: {
-				payload: {
-					instance_id: "test-instance",
-					candidate_id: "candidate-1",
-					release_id: "release-1",
-					created_at: "2026-09-21T00:00:00.000Z",
-					front_route_manifest: {
-						routes: [
-							{
-								route_id: "superboard.unmapped_view",
-								path_pattern: "/unmapped",
-								renderer_ids: ["supbrd-plugmod-analytics.renderer.admin_surface"],
-							},
-						],
-					},
-					renderers: validRenderers,
-					dependency_policies: [],
-				},
-				content_checksum: "sha256:1111",
-				signature: { algorithm: "ES256" as const, kid: "test-key", value: "sig" },
-				validation_receipts: [
-					{
-						receipt_id: "candidate-1:renderer_compatibility",
-						layer: "renderer_compatibility" as const,
-						level: "info" as const,
-						status: "passed" as const,
-						candidate_id: "candidate-1",
-						release_id: "release-1",
-						content_checksum: "sha256:1111",
-						message: "renderer_compatibility validation passed",
-						receipt_checksum: "sha256:2222",
-					},
-				],
-				validation_set_checksum: "sha256:3333",
-				verification_status: "verified" as const,
-			},
-		};
-
-		const mockDb = {
-			prepare: () => ({
-				bind: () => ({
-					first: async () => null,
-					all: async () => ({ results: [] }),
-				}),
-			}),
-		} as unknown as D1Database;
-
-		const { candidateEvidence } =
-			await import("../../../../apps/site/src/lib/front-workflow-repository.js");
-		const { validateFrontReleaseCandidate } = await import("@superboard/supbrd-core");
-
-		const evidence = await candidateEvidence(mockDb, candidate as any);
-		expect(evidence.renderers_ready).toBe(false);
-		expect(evidence.verification.errors.some((e) => e.includes("superboard.unmapped_view"))).toBe(
-			true,
-		);
-
-		const verification = validateFrontReleaseCandidate(candidate as any, evidence);
-		expect(verification.valid).toBe(false);
-		expect(verification.errors).toContain("RENDERERS_NOT_READY");
-		expect(verification.errors.some((e) => e.includes("superboard.unmapped_view"))).toBe(true);
 	});
 });

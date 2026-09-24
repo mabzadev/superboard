@@ -126,5 +126,5 @@ Les APIs, les webhooks, les signatures, les téléchargements signés et les con
 - [Catalogue des plugins](../../scripts/config/emdash-plugin-topology.json).
 - [Groupes de workers](../../scripts/cloudflare/deployment-groups.mjs).
 - [Cible MBZA](../../infra/targets/mbza-development.json) et [cible Vocostar](../../infra/targets/vocostar.json).
-- [Routage des sous-domaines](../../packages/plugins/supbrd-core/api/src/index.ts) et [générateur Cloudflare](../../scripts/cloudflare/config.mjs).
-- [RP ID Identity](../../packages/plugins/supbrd-plug-identity/worker/src/melody/utils/crypto.ts), [découverte Identity](../../packages/plugins/supbrd-plug-identity/worker/src/melody/handlers/other.ts) et [passkeys EmDash](../../packages/core/src/auth/passkey-config.ts).
+- [Routage des sous-domaines](../../packages/plugins/superboard-core/api/src/index.ts) et [générateur Cloudflare](../../scripts/cloudflare/config.mjs).
+- [RP ID Identity](../../packages/plugins/superboard-authentification/worker/src/melody/utils/crypto.ts), [découverte Identity](../../packages/plugins/superboard-authentification/worker/src/melody/handlers/other.ts) et [passkeys EmDash](../../packages/core/src/auth/passkey-config.ts).

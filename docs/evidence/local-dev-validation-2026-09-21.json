@@ -1,0 +1,2045 @@
+{
+	"date": "2026-09-21",
+	"branch": "dev",
+	"release_id": "06C5369B003A54D96B1E8B1F69",
+	"scope": "Local instance only. Navigation and actions were verified in separate runs on the same published release. This is not acceptance of every criterion of every GitHub issue.",
+	"navigation": {
+		"source_run": "pnpm local:test:navigation; page checks passed, old action assertions failed before their correction",
+		"pages": [
+			{
+				"path": "/app/android-setup",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Android Setup"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/ios-setup",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["iOS Setup"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/superboard-system/home",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Overview"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Analytics", "Dashboard"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/auth/users",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Application users"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/auth/apps",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Apps"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/auth/settings",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Authentication settings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/auth/logs",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Logs", "Email Logs", "SMS Logs", "Sign-in Logs"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/data/content",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Content"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/data/files",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Files"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/data/settings",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Data Settings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/monetization/customers",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Customers"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/monetization/products",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Products"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/monetization/offerings",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Offerings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/monetization/entitlements",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Entitlements"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/monetization/settings",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Monetization Settings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/campaigns",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Campaigns"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/in-app-messages",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": [],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/marketing-email",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Marketing email"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/notifications",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Push notifications"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/channels",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Marketing channels"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/statistics",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Marketing statistics"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/email",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Emails"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/journeys",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Marketing journeys"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/paywalls",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paywalls"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/onboardings",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Onboardings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/workflows",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Workflows"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/launchpad",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Launchpad"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/components",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Components"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/settings/environments",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Acquisition settings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Dynamic links"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/inbox",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Inbox"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/contacts",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Contacts"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/workforce",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Workforce"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/channels",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Channels"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/automations",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Automations"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/proactive-support",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Proactive Support"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/help-center",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Help Center"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/captain",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Captain"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/integrations",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Integrations"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/quality",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Quality"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/reports",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Reports"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/settings",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Settings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/configuration",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Settings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Analytics"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/users",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Users & sessions"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/events",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Event explorer"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/insights",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Funnels & retention"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/purchases",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Verified purchases"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/reports",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Reports & data operations"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/remote-config",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Remote Config"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/project-settings",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Instance configuration"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/_emdash/admin/plugins-manager",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Plugins"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/access-key",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Access Key"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/libraries",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Libraries"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/web-setup",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Web Setup"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/infrastructure",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Infrastructure"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/system/audit",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Audit ledger"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/system/gateway",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Gateway"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/mcp",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["MCP tools"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/customers",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Customers"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/user-attributes",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["User Attributes"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/referrals",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Referrals"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/users",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Users"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/roles",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Roles"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/scopes",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Scopes"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/orgs",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Orgs"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/saml",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["SAML"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/settings",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Marketing settings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/paywalls/statistics",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paywall statistics"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/onboardings/statistics",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Onboarding statistics"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/flows",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Flows overview"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/flows/settings/localization",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Acquisition settings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/flows/settings/sdk",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Acquisition settings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links/campaigns",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Campaigns"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links/redirect-rules",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Redirect Rules"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links/domain",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Domain"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links/social-media-preview",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Social Media Preview"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links/tracking",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Tracking"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/installations",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Installations"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/views",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Views"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/dimensions",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Technology & location"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/cohorts",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Cohorts"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/alerts",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Alerts"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/crashes",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Crashes"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/feedback",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Feedback"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/settings",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Analytics settings"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/android-setup",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Android Setup"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/ios-setup",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["iOS Setup"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/superboard-system/home",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Vue d’ensemble"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Statistiques", "Dashboard"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/auth/users",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Application users"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/auth/apps",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Applications"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/auth/settings",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paramètres d’authentification"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/auth/logs",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": [
+					"Journaux",
+					"Journaux des emails",
+					"Journaux des SMS",
+					"Journaux de connexion"
+				],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/data/content",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Contenu"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/data/files",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Fichiers"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/data/settings",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paramètres Data"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/monetization/customers",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Clients"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/monetization/products",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Produits"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/monetization/offerings",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Offres"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/monetization/entitlements",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Droits d’accès"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/monetization/settings",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paramètres de monétisation"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/campaigns",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Campagnes"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/in-app-messages",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": [],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/marketing-email",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["E-mails marketing"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/notifications",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Notifications push"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/channels",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Canaux marketing"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/statistics",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Résultats marketing"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/email",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Emails"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/journeys",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Parcours marketing"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/paywalls",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paywalls"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/onboardings",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Parcours d’accueil"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/workflows",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Workflows"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/launchpad",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Launchpad"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/components",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Composants"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/settings/environments",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paramètres d’acquisition"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Dynamic links"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/inbox",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Inbox"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/contacts",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Contacts"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/workforce",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Workforce"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/channels",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Channels"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/automations",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Automations"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/proactive-support",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Proactive Support"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/help-center",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Help Center"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/captain",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Captain"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/integrations",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Integrations"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/quality",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Quality"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/reports",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Reports"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/settings",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paramètres"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/support/configuration",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paramètres"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Statistiques"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/users",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Utilisateurs et sessions"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/events",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Explorateur d’événements"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/insights",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Entonnoirs et rétention"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/purchases",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Achats vérifiés"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/reports",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Rapports et opérations de données"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/remote-config",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Configuration à distance"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/project-settings",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Configuration de l’instance"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/_emdash/admin/plugins-manager",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Plugins"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/access-key",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Access Key"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/libraries",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Libraries"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/web-setup",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Web Setup"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/infrastructure",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Infrastructure"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/system/audit",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Journal d’audit"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/system/gateway",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Passerelle"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/mcp",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Outils MCP"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/customers",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Customers"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/user-attributes",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Attributs utilisateur"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/app/referrals",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Referrals"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/users",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Utilisateurs"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/roles",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Rôles"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/scopes",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Portées"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/orgs",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Organisations"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/en/saml",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["SAML"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/communication/settings",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paramètres marketing"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/paywalls/statistics",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Résultats des paywalls"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/onboardings/statistics",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Résultats des parcours d’accueil"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/flows",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Vue d’ensemble Flows"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/flows/settings/localization",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paramètres d’acquisition"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/flows/settings/sdk",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paramètres d’acquisition"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links/campaigns",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Campaigns"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links/redirect-rules",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Redirect Rules"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links/domain",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Domain"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links/social-media-preview",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Social Media Preview"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/acquisition/dynamic-links/tracking",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Tracking"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/installations",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Installations"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/views",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Pages et écrans"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/dimensions",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Technologie et localisation"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/cohorts",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Cohortes"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/alerts",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Alertes"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/crashes",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Plantages"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/feedback",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Avis"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/analytics/settings",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Paramètres des statistiques"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/fr/user-attributes",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Attributs utilisateur"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/fr/users",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Utilisateurs"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/fr/roles",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Rôles"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/fr/scopes",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Portées"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/fr/orgs",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["Organisations"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			},
+			{
+				"path": "/identity/fr/saml",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"status": 200,
+				"headings": ["SAML"],
+				"errors": [],
+				"failures": [],
+				"alerts": []
+			}
+		]
+	},
+	"actions": {
+		"source_run": "SUPERBOARD_NAVIGATION_ACTIONS_ONLY=1 pnpm local:test:navigation",
+		"results": [
+			{
+				"action": "search_user",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"expected": "Find a fixture user and exclude a nonmatching fixture",
+				"observed": "The API and rendered table include the matching fixture and exclude the other fixture",
+				"success": true
+			},
+			{
+				"action": "refresh_statistics",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"expected": "Statistics refreshed with real network query",
+				"observed": "The statistics API returned successfully and its series count is rendered",
+				"success": true
+			},
+			{
+				"action": "save_and_reload_setting",
+				"locale": "en",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"expected": "Setting updated, saved and verified after reload",
+				"observed": "Value persisted after reload and original value restored; values omitted from this report.",
+				"success": true
+			},
+			{
+				"action": "search_user",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"expected": "Find a fixture user and exclude a nonmatching fixture",
+				"observed": "The API and rendered table include the matching fixture and exclude the other fixture",
+				"success": true
+			},
+			{
+				"action": "refresh_statistics",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"expected": "Statistics refreshed with real network query",
+				"observed": "The statistics API returned successfully and its series count is rendered",
+				"success": true
+			},
+			{
+				"action": "save_and_reload_setting",
+				"locale": "fr",
+				"release_id": "06C5369B003A54D96B1E8B1F69",
+				"expected": "Setting updated, saved and verified after reload",
+				"observed": "Value persisted after reload and original value restored; values omitted from this report.",
+				"success": true
+			}
+		]
+	},
+	"settings": {
+		"source_run": "pnpm local:test:settings",
+		"results": [
+			{
+				"url": "http://127.0.0.1:4321/auth/settings?lang=en",
+				"locale": "en",
+				"pluginId": "supbrd-plug-identity",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:47.127Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/data/settings?lang=en",
+				"locale": "en",
+				"pluginId": "supbrd-plug-data",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:47.825Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/monetization/settings?lang=en",
+				"locale": "en",
+				"pluginId": "supbrd-plug-commerce",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:49.022Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/communication/settings?lang=en",
+				"locale": "en",
+				"pluginId": "supbrd-plug-communication",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:49.836Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/acquisition/settings?lang=en",
+				"locale": "en",
+				"pluginId": "supbrd-plug-journeys",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:50.541Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/support/settings?lang=en",
+				"locale": "en",
+				"pluginId": "supbrd-plug-support",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:51.296Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/analytics/settings?lang=en",
+				"locale": "en",
+				"pluginId": "supbrd-plug-analytics",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:52.002Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/auth/settings?lang=fr",
+				"locale": "fr",
+				"pluginId": "supbrd-plug-identity",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:52.790Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/data/settings?lang=fr",
+				"locale": "fr",
+				"pluginId": "supbrd-plug-data",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:53.881Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/monetization/settings?lang=fr",
+				"locale": "fr",
+				"pluginId": "supbrd-plug-commerce",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:54.604Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/communication/settings?lang=fr",
+				"locale": "fr",
+				"pluginId": "supbrd-plug-communication",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:55.292Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/acquisition/settings?lang=fr",
+				"locale": "fr",
+				"pluginId": "supbrd-plug-journeys",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:55.969Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/support/settings?lang=fr",
+				"locale": "fr",
+				"pluginId": "supbrd-plug-support",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:56.706Z"
+				},
+				"errors": []
+			},
+			{
+				"url": "http://127.0.0.1:4321/analytics/settings?lang=fr",
+				"locale": "fr",
+				"pluginId": "supbrd-plug-analytics",
+				"releaseId": "06C5369B003A54D96B1E8B1F69",
+				"health": {
+					"status": "ready",
+					"checkedAt": "2026-09-21T16:38:57.442Z"
+				},
+				"errors": []
+			}
+		]
+	},
+	"additional_checks": {
+		"typecheck": "passed",
+		"site_typecheck": "passed",
+		"lint_quick": "passed",
+		"diagnostic_runtime_tests": 10,
+		"client_view_catalog_tests": 170
+	},
+	"remaining_failures": [
+		"Full lint: 189 diagnostics reported (205 before changes).",
+		"Three managed-plugin-lifecycle assertions about retired function pages/APIs still fail.",
+		"Views bootstrap suite retains seven failing assertions involving historical route paths and a fixed count of 123 views."
+	],
+	"commit_status": {
+		"created": false,
+		"reason": "The pre-commit hook failed after formatting existing staged code. Automatic formatting changes were restored to the pre-hook snapshot; functional fixes remain staged.",
+		"formatter_regression_test": "Pure renames preserve their bytes; edited and new files remain subject to formatting."
+	}
+}

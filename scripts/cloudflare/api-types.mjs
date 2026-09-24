@@ -29,7 +29,7 @@ if (configResult.status !== 0) process.exit(configResult.status ?? 1);
 
 const temporaryDirectory = await mkdtemp(resolve(tmpdir(), "superboard-api-types-"));
 const temporaryTypes = resolve(temporaryDirectory, "generated-env.d.ts");
-const output = resolve(root, "packages/plugins/supbrd-core/api/src/generated-env.d.ts");
+const output = resolve(root, "packages/plugins/superboard-core/api/src/generated-env.d.ts");
 try {
 	const result = spawnSync(
 		"npx",
@@ -45,7 +45,7 @@ try {
 			config,
 		],
 		{
-			cwd: resolve(root, "packages/plugins/supbrd-core/api"),
+			cwd: resolve(root, "packages/plugins/superboard-core/api"),
 			encoding: "utf8",
 			stdio: ["ignore", "pipe", "inherit"],
 		},
@@ -76,7 +76,7 @@ try {
 		].join("\n"),
 		{ mode: 0o600 },
 	);
-	console.log("packages/plugins/supbrd-core/api/src/generated-env.d.ts");
+	console.log("packages/plugins/superboard-core/api/src/generated-env.d.ts");
 } finally {
 	await rm(temporaryDirectory, { recursive: true, force: true });
 }

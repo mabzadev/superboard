@@ -7,7 +7,7 @@ import {
 	toOnboardingDefinition,
 	toPaywallDefinition,
 	validateExperienceDocument,
-} from "../../../../../../../../packages/plugins/supbrd-plug-journeys/src/front/onboardings/components/experience-editor/model.js";
+} from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/onboardings/components/experience-editor/model.js";
 
 describe("experience editor model", () => {
 	it("creates a valid editable document", () => {

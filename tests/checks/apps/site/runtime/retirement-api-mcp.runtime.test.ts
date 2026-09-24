@@ -4,7 +4,7 @@ import { expect, test } from "vitest";
 import {
 	issueMcpToken,
 	tokenDigest,
-} from "../../../../../packages/plugins/supbrd-core/api/src/lib/mcp-oauth.js";
+} from "../../../../../packages/plugins/superboard-core/api/src/lib/mcp-oauth.js";
 import {
 	apiCommand,
 	apiRead,

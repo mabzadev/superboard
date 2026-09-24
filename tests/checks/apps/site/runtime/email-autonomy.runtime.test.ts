@@ -9,14 +9,14 @@ import {
 	synchronizeSuperBoardPluginCatalog,
 	superBoardRuntimePluginCatalog,
 } from "../../../../../apps/site/src/lib/superboard-plugin-catalog.js";
-import api from "../../../../../packages/plugins/supbrd-core/api/src/index.js";
-import type { Env as ApiEnv } from "../../../../../packages/plugins/supbrd-core/api/src/types.js";
-import { decryptJson as decryptEmail } from "../../../../../packages/plugins/supbrd-plug-communication/email/src/admin-secrets.js";
-import { handleEmailAdmin } from "../../../../../packages/plugins/supbrd-plug-communication/email/src/admin.js";
-import email from "../../../../../packages/plugins/supbrd-plug-communication/email/src/index.js";
-import marketing from "../../../../../packages/plugins/supbrd-plug-communication/marketing/src/index.js";
-import { encryptJson as encryptLegacy } from "../../../../../packages/plugins/supbrd-plug-communication/marketing/src/secrets.js";
-import { deliverySenders } from "../../../../../packages/plugins/supbrd-plug-communication/marketing/src/sender-profiles.js";
+import { decryptJson as decryptEmail } from "../../../../../packages/plugins/superboard-communication/email/src/admin-secrets.js";
+import { handleEmailAdmin } from "../../../../../packages/plugins/superboard-communication/email/src/admin.js";
+import email from "../../../../../packages/plugins/superboard-communication/email/src/index.js";
+import marketing from "../../../../../packages/plugins/superboard-communication/marketing/src/index.js";
+import { encryptJson as encryptLegacy } from "../../../../../packages/plugins/superboard-communication/marketing/src/secrets.js";
+import { deliverySenders } from "../../../../../packages/plugins/superboard-communication/marketing/src/sender-profiles.js";
+import api from "../../../../../packages/plugins/superboard-core/api/src/index.js";
+import type { Env as ApiEnv } from "../../../../../packages/plugins/superboard-core/api/src/types.js";
 
 const stores = env as typeof env & {
 	HEALTH_EMAIL_DB: D1Database;

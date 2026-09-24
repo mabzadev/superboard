@@ -6,7 +6,6 @@ import { proxyOperatorApiRequest } from "../../../../../apps/site/src/lib/operat
 import {
 	migratePluginPackages,
 	packageActionComponents,
-	setPluginFeaturePreference,
 	syncInstalledPluginPackages,
 } from "../../../../../apps/site/src/lib/plugin-package-state.js";
 
@@ -84,14 +83,14 @@ beforeEach(async () => {
 	}
 });
 
-test("migration keeps disabled functions and re-enabling a package does not enable them", async () => {
+test("enabling a package includes all deployed functions despite legacy disabled preferences", async () => {
 	await migratePluginPackages(env.DB, scope, [onboarding, flows]);
 	const action = await packageActionComponents(env.DB, scope, {
 		packageId: "supbrd-plug-journeys",
 		action: "enable",
 		targetComponents: [onboarding, flows],
 	});
-	expect(action.components).toEqual([onboarding]);
+	expect(action.components).toEqual([onboarding, flows]);
 	const packages = await syncInstalledPluginPackages(env.DB, scope);
 	expect(packages.find((row) => row.plugin_id === "supbrd-plug-journeys")?.status).toBe("active");
 	expect(
@@ -110,7 +109,7 @@ test("migration keeps disabled functions and re-enabling a package does not enab
 				targetComponents: [onboarding, flows],
 			})
 		).components,
-	).toEqual([onboarding]);
+	).toEqual([onboarding, flows]);
 });
 
 test("migration and retries preserve settings in their existing storage", async () => {
@@ -132,7 +131,7 @@ test("migration and retries preserve settings in their existing storage", async 
 	).toBe("8");
 });
 
-test("a function change is scoped to its instance and checks package ownership", async () => {
+test("package selection respects the deployment and rejects individual function actions", async () => {
 	await migratePluginPackages(env.DB, scope, [onboarding, flows]);
 	await setPluginFeaturePreference(env.DB, scope, flows, true);
 	expect(
@@ -144,6 +143,15 @@ test("a function change is scoped to its instance and checks package ownership",
 			})
 		).components,
 	).toEqual([onboarding, flows]);
+	await expect(
+		packageActionComponents(env.DB, scope, {
+			packageId: "supbrd-plug-journeys",
+			featureId: flows,
+			action: "disable",
+			targetComponents: [onboarding, flows],
+		}),
+	).rejects.toThrow("PLUGIN_FEATURE_NOT_FOUND");
+
 	await expect(
 		packageActionComponents(env.DB, scope, {
 			packageId: "supbrd-plug-commerce",
@@ -180,7 +188,7 @@ test("a function change is scoped to its instance and checks package ownership",
 });
 
 test("a first installation selects declared functions without treating availability as an explicit disable", async () => {
-	const components = ["supbrd-plug-products", "supbrd-plugmod-billing", "supbrd-plugmod-paywalls"];
+	const components = ["supbrd-plug-products", "supbrd-plugmod-billing"];
 	await migratePluginPackages(env.DB, scope, components);
 	expect(
 		(
@@ -191,6 +199,38 @@ test("a first installation selects declared functions without treating availabil
 			})
 		).components,
 	).toEqual(components);
+});
+
+test("Acquisition includes transferred functions despite legacy activation preferences", async () => {
+	const paywalls = "supbrd-plugmod-paywalls";
+	const links = "supbrd-plugmod-dynamic-links";
+	await env.DB.prepare(
+		"INSERT INTO superboard_plugin_package_migrations (instance_id,target,migration_id,completed_at) VALUES (?,?,'packages-v1',?)",
+	)
+		.bind(scope.instance_id, scope.target, new Date().toISOString())
+		.run();
+	await setPluginFeaturePreference(env.DB, scope, paywalls, false);
+	await setPluginFeaturePreference(env.DB, scope, links, true);
+	expect(await migratePluginPackages(env.DB, scope, [paywalls, links])).toBe(true);
+	const selected = await packageActionComponents(env.DB, scope, {
+		packageId: "supbrd-plug-journeys",
+		action: "enable",
+		targetComponents: [paywalls, links],
+	});
+	expect(selected.components).toEqual([paywalls, links]);
+	for (const [packageId, featureId] of [
+		["supbrd-plug-commerce", paywalls],
+		["supbrd-plug-communication", links],
+	])
+		await expect(
+			packageActionComponents(env.DB, scope, {
+				packageId: packageId!,
+				featureId,
+				action: "enable",
+				targetComponents: [paywalls, links],
+			}),
+		).rejects.toThrow("PLUGIN_FEATURE_NOT_FOUND");
+	expect(await migratePluginPackages(env.DB, scope, [paywalls, links])).toBe(false);
 });
 
 test("resuming before the completion receipt preserves changed feature preferences", async () => {
@@ -223,4 +263,33 @@ test("unregistered application packages are not built into the platform", async 
 			targetComponents: [component],
 		}),
 	).rejects.toThrow("PLUGIN_NOT_FOUND");
+});
+
+async function setPluginFeaturePreference(
+	db: D1Database,
+	preferenceScope: typeof scope,
+	componentId: string,
+	enabled: boolean,
+) {
+	await db
+		.prepare(
+			"INSERT OR REPLACE INTO superboard_plugin_feature_preferences (instance_id,target,component_id,enabled,updated_at) VALUES (?,?,?,?,?)",
+		)
+		.bind(
+			preferenceScope.instance_id,
+			preferenceScope.target,
+			componentId,
+			Number(enabled),
+			new Date().toISOString(),
+		)
+		.run();
+}
+
+test("canonical product identifiers select every component of the same package", async () => {
+	const selection = await packageActionComponents(env.DB, scope, {
+		packageId: "superboard-acquisition",
+		action: "enable",
+		targetComponents: [onboarding, flows],
+	});
+	expect(selection.components).toEqual([onboarding, flows]);
 });

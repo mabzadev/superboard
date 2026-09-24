@@ -96,6 +96,7 @@
     "@lingui/babel-plugin-lingui-macro": "catalog:",
     "@lingui/cli": "catalog:",
     "@lingui/macro": "catalog:",
+    "@superboard/contracts": "workspace:*",
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/typography": "^0.5.20",
     "@testing-library/react": "^16.3.0",

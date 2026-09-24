@@ -3,8 +3,8 @@ import { createProjectContextHeaders } from "@superboard/contracts/project-conte
 import { createExecutionContext, createMessageBatch, env, getQueueResult } from "cloudflare:test";
 import { expect } from "vitest";
 
-import analyticsWorker from "../../../../../packages/plugins/supbrd-plug-analytics/worker/src/index.js";
-import type { Env } from "../../../../../packages/plugins/supbrd-plug-analytics/worker/src/types.js";
+import analyticsWorker from "../../../../../packages/plugins/superboard-analytics/worker/src/index.js";
+import type { Env } from "../../../../../packages/plugins/superboard-analytics/worker/src/types.js";
 import { dispatchLifecycleApi, pluginTaskContext } from "./lifecycle-health-services.js";
 import { jsonResult, pluginDatabase } from "./retirement-api-helpers.js";
 

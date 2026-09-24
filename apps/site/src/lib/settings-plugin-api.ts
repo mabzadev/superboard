@@ -2,6 +2,7 @@ import {
 	pluginSettingLocation,
 	pluginPackage,
 	componentSettingKey,
+	canonicalPluginId,
 } from "@superboard/contracts/plugin-packages";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 import type { APIContext } from "astro";
@@ -14,6 +15,8 @@ import {
 } from "emdash/api/plugin-settings";
 import * as settings from "emdash/routes/api/admin/plugins/_id_/settings";
 
+import { resolveConfiguredPluginSettingKey } from "./configured-plugin.js";
+
 export async function dispatchSettingsPluginApi(
 	context: APIContext,
 	request: Request,
@@ -21,7 +24,8 @@ export async function dispatchSettingsPluginApi(
 ): Promise<Response> {
 	const url = new URL(request.url);
 	const owner = pluginPackage(pluginId);
-	const aliased = owner && owner.id !== pluginId;
+	const aliased = owner && owner.components.includes(pluginId) && owner.id !== pluginId;
+	const canonical = pluginId === owner?.directory;
 	if (url.pathname === "/_emdash/api/superboard/settings/versions" && request.method === "GET") {
 		const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 50));
 		let query = context.locals.emdash.db
@@ -99,7 +103,11 @@ export async function dispatchSettingsPluginApi(
 			return Response.json({ error: { code: "INVALID_REQUEST" } }, { status: 422 });
 		const values = Object.fromEntries(
 			Object.entries(body.values).map(([key, value]) => [
-				aliased ? pluginSettingLocation(pluginId, key).key : key,
+				aliased
+					? pluginSettingLocation(pluginId, key).key
+					: canonical
+						? resolveConfiguredPluginSettingKey(pluginId, key)
+						: key,
 				value,
 			]),
 		);
@@ -112,7 +120,7 @@ export async function dispatchSettingsPluginApi(
 			await handlePluginSettingsGet(runtime.db, owner.id, schema, keyForSetting),
 		);
 	if (response) {
-		if (!response.ok || !aliased) return response;
+		if (!response.ok || (!aliased && !canonical)) return response;
 		const body = await readJsonObjectLimited(response, 1_000_000);
 		if (body.data && typeof body.data === "object" && !Array.isArray(body.data)) {
 			const prefix = `${pluginId}__`;
@@ -124,8 +132,11 @@ export async function dispatchSettingsPluginApi(
 						key,
 						Object.fromEntries(
 							Object.entries(value)
-								.filter(([name]) => name.startsWith(prefix))
-								.map(([name, setting]) => [name.slice(prefix.length), setting]),
+								.filter(([name]) => canonical || name.startsWith(prefix))
+								.map(([name, setting]) => [
+									canonical ? canonicalPluginId(name) : name.slice(prefix.length),
+									setting,
+								]),
 						),
 					);
 			}

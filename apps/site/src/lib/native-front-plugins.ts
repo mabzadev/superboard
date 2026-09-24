@@ -1,3 +1,4 @@
+import { canonicalPluginId } from "@superboard/contracts/plugin-packages";
 import type {
 	FrontNavigationGroup,
 	NativeFrontPluginModule,
@@ -10,7 +11,7 @@ import type {
 import compatibility from "../../../../scripts/config/superboard-plugin-compatibility.json";
 
 const discoveredModules = import.meta.glob<{ nativeFrontPlugin: NativeFrontPluginModule }>(
-	["../front-plugins/*.ts", "../../../../packages/plugins/supbrd-*/src/front-*.ts"],
+	["../front-plugins/*.ts", "../../../../packages/plugins/superboard-*/src/front-*.ts"],
 	{ eager: true },
 );
 
@@ -100,16 +101,18 @@ export function mountNativeFrontRenderer(input: {
 	mount: NativeRendererMountInput;
 	plugin_lock: readonly PluginLockEntry[];
 }): NativeRendererDocument {
-	const plugin = assertNativeFrontRenderer(input.mount.renderer, input.plugin_lock);
-	const document = plugin.mount_renderer(input.mount);
+	const renderer = resolveNativeRendererAlias(input.mount.renderer);
+	const plugin = assertNativeFrontRenderer(renderer, input.plugin_lock);
+	const document = plugin.mount_renderer({ ...input.mount, renderer });
 	if (!document) throw new Error(`Native renderer rejected: ${input.mount.renderer.renderer_id}`);
 	return document;
 }
 
 export function assertNativeFrontRenderer(
-	renderer: RendererDescriptor,
+	requestedRenderer: RendererDescriptor,
 	pluginLock: readonly PluginLockEntry[],
 ): NativeFrontPluginModule {
+	const renderer = resolveNativeRendererAlias(requestedRenderer);
 	const pluginId = renderer.plugin_id;
 	if (!pluginLock.some(({ plugin_id: lockedPluginId }) => lockedPluginId === pluginId)) {
 		throw new Error(`Renderer plugin is not locked by the Release: ${pluginId}`);
@@ -125,4 +128,16 @@ export function assertNativeFrontRenderer(
 		throw new Error(`Native renderer build is unavailable: ${renderer.renderer_id}`);
 	}
 	return plugin;
+}
+
+function resolveNativeRendererAlias(renderer: RendererDescriptor): RendererDescriptor {
+	if (plugins.has(renderer.plugin_id)) return renderer;
+	for (const plugin of plugins.values()) {
+		if (canonicalPluginId(plugin.plugin_id) !== renderer.plugin_id) continue;
+		const id = plugin.renderer_ids.find(
+			(candidate) => canonicalPluginId(candidate) === renderer.renderer_id,
+		);
+		if (id) return { ...renderer, plugin_id: plugin.plugin_id, renderer_id: id };
+	}
+	return renderer;
 }

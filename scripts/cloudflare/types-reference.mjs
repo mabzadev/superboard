@@ -80,7 +80,7 @@ export async function main(argv = process.argv.slice(2), env = process.env, exec
 		selection.managedServices.map((service) => ({ ...selection, service })),
 	);
 	const outputs = [
-		resolve(root, "packages/plugins/supbrd-core/api/src/generated-env.d.ts"),
+		resolve(root, "packages/plugins/superboard-core/api/src/generated-env.d.ts"),
 		...services.map((service) =>
 			service === "site"
 				? resolve(root, "apps", "site", "worker-configuration.d.ts")

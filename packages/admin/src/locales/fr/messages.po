@@ -9839,3 +9839,198 @@ msgstr "YouTube"
 #: packages/admin/src/components/editor/codeBlockLanguages.ts:60
 msgid "Zig"
 msgstr ""
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "API Routes"
+msgstr "Routes API"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Artifact Checksum"
+msgstr "Somme de contrôle de l’artefact"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Associated Services & Workers"
+msgstr "Services et Workers associés"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Checked At"
+msgstr "Vérifié le"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Checking..."
+msgstr "Vérification…"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Configuration"
+msgstr "Configuration"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Configured"
+msgstr "Configuré"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Declared Configuration"
+msgstr "Configuration déclarée"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Dependencies"
+msgstr "Dépendances"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Dependency"
+msgstr "Dépendance"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Deployment Group"
+msgstr "Groupe de déploiement"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Draining"
+msgstr "Arrêt en cours"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Expired"
+msgstr "Périmé"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Expires"
+msgstr "Expiration"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Failed to load plugin configuration"
+msgstr "Impossible de charger la configuration du plugin"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Health Status"
+msgstr "État de santé"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Health re-check failed"
+msgstr "Échec de la vérification de santé"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Hide Schema"
+msgstr "Masquer le schéma"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Last Changed"
+msgstr "Dernière modification"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Method"
+msgstr "Méthode"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "No capabilities declared"
+msgstr "Aucune capacité déclarée"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "No items"
+msgstr "Aucun élément"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Page {0} of {count}"
+msgstr "Page {0} sur {count}"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Physical Worker"
+msgstr "Worker physique"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Plan ID"
+msgstr "Identifiant du plan"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Plugin ID"
+msgstr "Identifiant du plugin"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Plugin Lifecycle"
+msgstr "Cycle de vie du plugin"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Plugin configuration does not match the requested plugin"
+msgstr "La configuration ne correspond pas au plugin demandé"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Purged"
+msgstr "Purgé"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Quarantined"
+msgstr "En quarantaine"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Re-check Health"
+msgstr "Vérifier à nouveau"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Reads"
+msgstr "Lectures"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Reason"
+msgstr "Raison"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Release ID"
+msgstr "Identifiant de version"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Route ID"
+msgstr "Identifiant de route"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Service"
+msgstr "Service"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Setting"
+msgstr "Paramètre"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Shared with"
+msgstr "Partagé avec"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Staged"
+msgstr "Préparé"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "State"
+msgstr "État"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Unavailable"
+msgstr "Indisponible"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Value"
+msgstr "Valeur"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Verified Health"
+msgstr "Santé vérifiée"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "View Schema"
+msgstr "Voir le schéma"
+
+#: packages/admin/src/components/PluginConfiguration.tsx
+msgid "Writes"
+msgstr "Écritures"
+
+msgid "Available"
+msgstr "Disponible"
+
+msgid "Views"
+msgstr "Vues"
+
+msgid "Applying..."
+msgstr "Application…"
+
+msgid "This plugin still has running tasks. Wait for them to finish before disabling it."
+msgstr "Des tâches de ce plugin sont encore en cours. Attendez leur fin avant de le désactiver."
+
+msgid "Another plugin change is in progress. Please try again when it has finished."
+msgstr "Un autre changement de plugin est en cours. Réessayez une fois terminé."

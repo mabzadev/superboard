@@ -94,7 +94,7 @@ test("production Worker sources reject unsafe runtime anti-patterns", () => {
 	}
 	assert.deepEqual(
 		cloudflareRestCallers,
-		["packages/plugins/supbrd-core/observability/src/index.ts"],
+		["packages/plugins/superboard-core/observability/src/index.ts"],
 		"Only Analytics Engine SQL reads may use the Cloudflare API; services with bindings must use them",
 	);
 });

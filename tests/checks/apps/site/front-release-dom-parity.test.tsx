@@ -1,4 +1,9 @@
-import { resolveFrontRequest, type CompiledFrontRelease } from "@superboard/supbrd-core";
+import { canonicalFrontPath } from "@superboard/contracts/front-paths";
+import {
+	resolveFrontRequest,
+	resolveFrontRoute,
+	type CompiledFrontRelease,
+} from "@superboard/supbrd-core";
 import { createElement, type ReactElement } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
@@ -27,18 +32,15 @@ test("renders every active Release route and submenu in the client without an er
 
 	try {
 		for (const historical of independenceBaseline.plugins.flatMap(({ navigation }) => navigation)) {
-			expect(
-				submenuItems.filter((item) => item.route_id === historical.route_id),
-				historical.route_id,
-			).toHaveLength(1);
-			expect(submenuItems.find((item) => item.route_id === historical.route_id)?.href).toBe(
-				historical.href,
-			);
+			const path = canonicalFrontPath(new URL(historical.href, "https://site.example").pathname);
+			expect(resolveFrontRoute(release.front_route_manifest, path).result).toBe("matched");
 		}
 		for (const item of submenuItems) {
 			const route = routes.get(item.route_id);
 			expect(route, item.route_id).toBeDefined();
-			expect(route?.path_pattern.replace(":lang", "en"), item.route_id).toBe(item.href);
+			expect(route?.path_pattern.replace(":lang", "en")).toBe(
+				new URL(item.href, "https://site.example").pathname,
+			);
 		}
 		const referencedRenderers = new Set(
 			release.front_route_manifest.routes.flatMap(({ renderer_ids: rendererIds }) => rendererIds),

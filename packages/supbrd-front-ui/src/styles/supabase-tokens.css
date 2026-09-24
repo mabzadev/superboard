@@ -1,0 +1,1437 @@
+/* Supabase Design System - Authentic Tokens & Styles */
+
+/*
+ * Radix/scale/brand --color-* CSS variables, with per-theme values inlined.
+ *
+ * Hand-edited. Source palette: @radix-ui/colors (light/dark hue scales) plus a
+ * curated brand scale. The Supabase `scale` namespace maps to slate in light
+ * and gray in dark (scale-1100 dark is the hard-coded #bbbbbb override that
+ * predates the migration).
+ *
+ * Brand steps 200..600 stay as hsl(var(--brand-{step})) because those tokens
+ * are semantic — light/dark values live in the theme files (light.css /
+ * dark.css), not here.
+ *
+ * theme.css references these vars from its @theme inline block so Tailwind v4
+ * generates the bg-/text-/border-/ring- utilities.
+ */
+
+:root {
+	--color-amber-100: hsl(39, 70%, 99%);
+	--color-amber-200: hsl(40, 100%, 96.5%);
+	--color-amber-300: hsl(44, 100%, 91.7%);
+	--color-amber-400: hsl(43, 100%, 86.8%);
+	--color-amber-500: hsl(42, 100%, 81.8%);
+	--color-amber-600: hsl(38, 99.7%, 76.3%);
+	--color-amber-700: hsl(36, 86.1%, 67.1%);
+	--color-amber-800: hsl(35, 85.2%, 55.1%);
+	--color-amber-900: hsl(39, 100%, 57%);
+	--color-amber-1000: hsl(35, 100%, 55.5%);
+	--color-amber-1100: hsl(30, 100%, 34%);
+	--color-amber-1200: hsl(20, 80%, 17%);
+	--color-blue-100: hsl(206, 100%, 99.2%);
+	--color-blue-200: hsl(210, 100%, 98%);
+	--color-blue-300: hsl(209, 100%, 96.5%);
+	--color-blue-400: hsl(210, 98.8%, 94%);
+	--color-blue-500: hsl(209, 95%, 90.1%);
+	--color-blue-600: hsl(209, 81.2%, 84.5%);
+	--color-blue-700: hsl(208, 77.5%, 76.9%);
+	--color-blue-800: hsl(206, 81.9%, 65.3%);
+	--color-blue-900: hsl(206, 100%, 50%);
+	--color-blue-1000: hsl(208, 100%, 47.3%);
+	--color-blue-1100: hsl(211, 100%, 43.2%);
+	--color-blue-1200: hsl(211, 100%, 15%);
+	--color-crimson-100: hsl(332, 100%, 99.4%);
+	--color-crimson-200: hsl(330, 100%, 98.4%);
+	--color-crimson-300: hsl(331, 85.6%, 96.6%);
+	--color-crimson-400: hsl(331, 78.1%, 94.2%);
+	--color-crimson-500: hsl(332, 72.1%, 91.1%);
+	--color-crimson-600: hsl(333, 67%, 86.7%);
+	--color-crimson-700: hsl(335, 63.5%, 80.4%);
+	--color-crimson-800: hsl(336, 62.3%, 72.9%);
+	--color-crimson-900: hsl(336, 80%, 57.8%);
+	--color-crimson-1000: hsl(336, 73.7%, 53.5%);
+	--color-crimson-1100: hsl(336, 75%, 47.2%);
+	--color-crimson-1200: hsl(340, 65%, 14.5%);
+	--color-gold-100: hsl(50, 20%, 99.1%);
+	--color-gold-200: hsl(47, 52.9%, 96.7%);
+	--color-gold-300: hsl(46, 38.2%, 93.7%);
+	--color-gold-400: hsl(44, 32.7%, 90.1%);
+	--color-gold-500: hsl(43, 29.9%, 85.7%);
+	--color-gold-600: hsl(41, 28.3%, 79.8%);
+	--color-gold-700: hsl(39, 27.6%, 71.9%);
+	--color-gold-800: hsl(36, 27.2%, 61.8%);
+	--color-gold-900: hsl(36, 20%, 49.5%);
+	--color-gold-1000: hsl(36, 19.8%, 45.7%);
+	--color-gold-1100: hsl(36, 20%, 39%);
+	--color-gold-1200: hsl(36, 16%, 20%);
+	--color-gray-100: hsl(0, 0%, 99%);
+	--color-gray-200: hsl(0, 0%, 97.3%);
+	--color-gray-300: hsl(0, 0%, 95.1%);
+	--color-gray-400: hsl(0, 0%, 93%);
+	--color-gray-500: hsl(0, 0%, 90.9%);
+	--color-gray-600: hsl(0, 0%, 88.7%);
+	--color-gray-700: hsl(0, 0%, 85.8%);
+	--color-gray-800: hsl(0, 0%, 78%);
+	--color-gray-900: hsl(0, 0%, 56.1%);
+	--color-gray-1000: hsl(0, 0%, 52.3%);
+	--color-gray-1100: hsl(0, 0%, 43.5%);
+	--color-gray-1200: hsl(0, 0%, 9%);
+	--color-green-100: hsl(136, 50%, 98.9%);
+	--color-green-200: hsl(138, 62.5%, 96.9%);
+	--color-green-300: hsl(139, 55.2%, 94.5%);
+	--color-green-400: hsl(140, 48.7%, 91%);
+	--color-green-500: hsl(141, 43.7%, 86%);
+	--color-green-600: hsl(143, 40.3%, 79%);
+	--color-green-700: hsl(146, 38.5%, 69%);
+	--color-green-800: hsl(151, 40.2%, 54.1%);
+	--color-green-900: hsl(151, 55%, 41.5%);
+	--color-green-1000: hsl(152, 57.5%, 37.6%);
+	--color-green-1100: hsl(153, 67%, 28.5%);
+	--color-green-1200: hsl(155, 40%, 14%);
+	--color-indigo-100: hsl(225, 60%, 99.4%);
+	--color-indigo-200: hsl(223, 100%, 98.6%);
+	--color-indigo-300: hsl(223, 98.4%, 97.1%);
+	--color-indigo-400: hsl(223, 92.9%, 95%);
+	--color-indigo-500: hsl(224, 87.1%, 92%);
+	--color-indigo-600: hsl(224, 81.9%, 87.8%);
+	--color-indigo-700: hsl(225, 77.4%, 82.1%);
+	--color-indigo-800: hsl(226, 75.4%, 74.5%);
+	--color-indigo-900: hsl(226, 70%, 55.5%);
+	--color-indigo-1000: hsl(226, 58.6%, 51.3%);
+	--color-indigo-1100: hsl(226, 55%, 45%);
+	--color-indigo-1200: hsl(226, 62%, 17%);
+	--color-orange-100: hsl(24, 70%, 99%);
+	--color-orange-200: hsl(24, 83.3%, 97.6%);
+	--color-orange-300: hsl(24, 100%, 95.3%);
+	--color-orange-400: hsl(25, 100%, 92.2%);
+	--color-orange-500: hsl(25, 100%, 88.2%);
+	--color-orange-600: hsl(25, 100%, 82.8%);
+	--color-orange-700: hsl(24, 100%, 75.3%);
+	--color-orange-800: hsl(24, 94.5%, 64.3%);
+	--color-orange-900: hsl(24, 94%, 50%);
+	--color-orange-1000: hsl(24, 100%, 46.5%);
+	--color-orange-1100: hsl(24, 100%, 37%);
+	--color-orange-1200: hsl(15, 60%, 17%);
+	--color-pink-100: hsl(322, 100%, 99.4%);
+	--color-pink-200: hsl(323, 100%, 98.4%);
+	--color-pink-300: hsl(323, 86.3%, 96.5%);
+	--color-pink-400: hsl(323, 78.7%, 94.2%);
+	--color-pink-500: hsl(323, 72.2%, 91.1%);
+	--color-pink-600: hsl(323, 66.3%, 86.6%);
+	--color-pink-700: hsl(323, 62%, 80.1%);
+	--color-pink-800: hsl(323, 60.3%, 72.4%);
+	--color-pink-900: hsl(322, 65%, 54.5%);
+	--color-pink-1000: hsl(322, 63.9%, 50.7%);
+	--color-pink-1100: hsl(322, 75%, 46%);
+	--color-pink-1200: hsl(320, 70%, 13.5%);
+	--color-purple-100: hsl(280, 65%, 99.4%);
+	--color-purple-200: hsl(276, 100%, 99%);
+	--color-purple-300: hsl(276, 83.1%, 97%);
+	--color-purple-400: hsl(275, 76.4%, 94.7%);
+	--color-purple-500: hsl(275, 70.8%, 91.8%);
+	--color-purple-600: hsl(274, 65.4%, 87.8%);
+	--color-purple-700: hsl(273, 61%, 81.7%);
+	--color-purple-800: hsl(272, 60%, 73.5%);
+	--color-purple-900: hsl(272, 51%, 54%);
+	--color-purple-1000: hsl(272, 46.8%, 50.3%);
+	--color-purple-1100: hsl(272, 50%, 45.8%);
+	--color-purple-1200: hsl(272, 66%, 16%);
+	--color-red-100: hsl(359, 100%, 99.4%);
+	--color-red-200: hsl(359, 100%, 98.6%);
+	--color-red-300: hsl(360, 100%, 96.8%);
+	--color-red-400: hsl(360, 97.9%, 94.8%);
+	--color-red-500: hsl(360, 90.2%, 91.9%);
+	--color-red-600: hsl(360, 81.7%, 87.8%);
+	--color-red-700: hsl(359, 74.2%, 81.7%);
+	--color-red-800: hsl(359, 69.5%, 74.3%);
+	--color-red-900: hsl(358, 75%, 59%);
+	--color-red-1000: hsl(358, 69.4%, 55.2%);
+	--color-red-1100: hsl(358, 65%, 48.7%);
+	--color-red-1200: hsl(354, 50%, 14.6%);
+	--color-slate-100: hsl(206, 30%, 98.8%);
+	--color-slate-200: hsl(210, 16.7%, 97.6%);
+	--color-slate-300: hsl(209, 13.3%, 95.3%);
+	--color-slate-400: hsl(209, 12.2%, 93.2%);
+	--color-slate-500: hsl(208, 11.7%, 91.1%);
+	--color-slate-600: hsl(208, 11.3%, 88.9%);
+	--color-slate-700: hsl(207, 11.1%, 85.9%);
+	--color-slate-800: hsl(205, 10.7%, 78%);
+	--color-slate-900: hsl(206, 6%, 56.1%);
+	--color-slate-1000: hsl(206, 5.8%, 52.3%);
+	--color-slate-1100: hsl(206, 6%, 43.5%);
+	--color-slate-1200: hsl(206, 24%, 9%);
+	--color-tomato-100: hsl(10, 100%, 99.4%);
+	--color-tomato-200: hsl(8, 100%, 98.4%);
+	--color-tomato-300: hsl(8, 100%, 96.6%);
+	--color-tomato-400: hsl(8, 100%, 94.3%);
+	--color-tomato-500: hsl(8, 92.8%, 91%);
+	--color-tomato-600: hsl(9, 84.7%, 86.3%);
+	--color-tomato-700: hsl(10, 77.3%, 79.5%);
+	--color-tomato-800: hsl(10, 71.6%, 71%);
+	--color-tomato-900: hsl(10, 78%, 54%);
+	--color-tomato-1000: hsl(10, 71.5%, 50%);
+	--color-tomato-1100: hsl(10, 82%, 43.5%);
+	--color-tomato-1200: hsl(10, 50%, 13.5%);
+	--color-violet-100: hsl(255, 65%, 99.4%);
+	--color-violet-200: hsl(252, 100%, 99%);
+	--color-violet-300: hsl(252, 96.9%, 97.4%);
+	--color-violet-400: hsl(252, 91.5%, 95.5%);
+	--color-violet-500: hsl(252, 85.1%, 93%);
+	--color-violet-600: hsl(252, 77.8%, 89.4%);
+	--color-violet-700: hsl(252, 71%, 83.7%);
+	--color-violet-800: hsl(252, 68.6%, 76.3%);
+	--color-violet-900: hsl(252, 56%, 57.5%);
+	--color-violet-1000: hsl(251, 48.1%, 53.5%);
+	--color-violet-1100: hsl(250, 43%, 48%);
+	--color-violet-1200: hsl(254, 60%, 18.5%);
+	--color-yellow-100: hsl(60, 54%, 98.5%);
+	--color-yellow-200: hsl(52, 100%, 95.5%);
+	--color-yellow-300: hsl(55, 100%, 90.9%);
+	--color-yellow-400: hsl(54, 100%, 86.6%);
+	--color-yellow-500: hsl(52, 97.9%, 82%);
+	--color-yellow-600: hsl(50, 89.4%, 76.1%);
+	--color-yellow-700: hsl(47, 80.4%, 68%);
+	--color-yellow-800: hsl(48, 100%, 46.1%);
+	--color-yellow-900: hsl(53, 92%, 50%);
+	--color-yellow-1000: hsl(50, 100%, 48.5%);
+	--color-yellow-1100: hsl(42, 100%, 29%);
+	--color-yellow-1200: hsl(40, 55%, 13.5%);
+	--color-scale-100: hsl(206, 30%, 98.8%);
+	--color-scale-200: hsl(210, 16.7%, 97.6%);
+	--color-scale-300: hsl(209, 13.3%, 95.3%);
+	--color-scale-400: hsl(209, 12.2%, 93.2%);
+	--color-scale-500: hsl(208, 11.7%, 91.1%);
+	--color-scale-600: hsl(208, 11.3%, 88.9%);
+	--color-scale-700: hsl(207, 11.1%, 85.9%);
+	--color-scale-800: hsl(205, 10.7%, 78%);
+	--color-scale-900: hsl(206, 6%, 56.1%);
+	--color-scale-1000: hsl(206, 5.8%, 52.3%);
+	--color-scale-1100: hsl(206, 6%, 43.5%);
+	--color-scale-1200: hsl(206, 24%, 9%);
+	--color-brand-100: hsla(153, 80%, 99%, 1);
+	--color-brand-200: hsl(var(--brand-200));
+	--color-brand-300: hsl(var(--brand-300));
+	--color-brand-400: hsl(var(--brand-400));
+	--color-brand-500: hsl(var(--brand-500));
+	--color-brand-600: hsl(var(--brand-600));
+	--color-brand-700: hsla(149, 43%, 69%, 1);
+	--color-brand-800: hsla(154, 55%, 45%, 1);
+	--color-brand-900: hsla(153, 60%, 53%, 1);
+	--color-brand-1000: hsla(153, 50%, 50%, 1);
+	--color-brand-1100: hsla(153, 50%, 34%, 1);
+	--color-brand-1200: hsla(153, 40%, 12%, 1);
+}
+
+[data-theme*="dark"],
+[data-mode="dark"],
+.dark,
+.classic-dark {
+	--color-amber-100: hsl(36, 100%, 6.1%);
+	--color-amber-200: hsl(35, 100%, 7.6%);
+	--color-amber-300: hsl(32, 100%, 10.2%);
+	--color-amber-400: hsl(32, 100%, 12.4%);
+	--color-amber-500: hsl(33, 100%, 14.6%);
+	--color-amber-600: hsl(35, 100%, 17.1%);
+	--color-amber-700: hsl(35, 91%, 21.6%);
+	--color-amber-800: hsl(36, 100%, 25.5%);
+	--color-amber-900: hsl(39, 100%, 57%);
+	--color-amber-1000: hsl(43, 100%, 64%);
+	--color-amber-1100: hsl(39, 90%, 49.8%);
+	--color-amber-1200: hsl(39, 97%, 93.2%);
+	--color-blue-100: hsl(212, 35%, 9.2%);
+	--color-blue-200: hsl(216, 50%, 11.8%);
+	--color-blue-300: hsl(214, 59.4%, 15.3%);
+	--color-blue-400: hsl(214, 65.8%, 17.9%);
+	--color-blue-500: hsl(213, 71.2%, 20.2%);
+	--color-blue-600: hsl(212, 77.4%, 23.1%);
+	--color-blue-700: hsl(211, 85.1%, 27.4%);
+	--color-blue-800: hsl(211, 89.7%, 34.1%);
+	--color-blue-900: hsl(206, 100%, 50%);
+	--color-blue-1000: hsl(209, 100%, 60.6%);
+	--color-blue-1100: hsl(210, 100%, 66.1%);
+	--color-blue-1200: hsl(206, 98%, 95.8%);
+	--color-crimson-100: hsl(335, 20%, 9.6%);
+	--color-crimson-200: hsl(335, 32.2%, 11.6%);
+	--color-crimson-300: hsl(335, 42.5%, 16.5%);
+	--color-crimson-400: hsl(335, 47.2%, 19.3%);
+	--color-crimson-500: hsl(335, 50.9%, 21.8%);
+	--color-crimson-600: hsl(335, 55.7%, 25.3%);
+	--color-crimson-700: hsl(336, 62.9%, 30.8%);
+	--color-crimson-800: hsl(336, 74.9%, 39%);
+	--color-crimson-900: hsl(336, 80%, 57.8%);
+	--color-crimson-1000: hsl(339, 84.1%, 62.6%);
+	--color-crimson-1100: hsl(341, 90%, 67.3%);
+	--color-crimson-1200: hsl(332, 87%, 96%);
+	--color-gold-100: hsl(44, 9%, 8.3%);
+	--color-gold-200: hsl(43, 14.3%, 9.6%);
+	--color-gold-300: hsl(42, 15.5%, 13%);
+	--color-gold-400: hsl(41, 16.4%, 15.6%);
+	--color-gold-500: hsl(41, 16.9%, 17.8%);
+	--color-gold-600: hsl(40, 17.6%, 20.8%);
+	--color-gold-700: hsl(38, 18.5%, 26.4%);
+	--color-gold-800: hsl(36, 19.6%, 35.1%);
+	--color-gold-900: hsl(36, 20%, 49.5%);
+	--color-gold-1000: hsl(36, 22.3%, 54.5%);
+	--color-gold-1100: hsl(35, 30%, 64%);
+	--color-gold-1200: hsl(49, 52%, 93.8%);
+	--color-gray-100: hsl(0, 0%, 8.5%);
+	--color-gray-200: hsl(0, 0%, 11%);
+	--color-gray-300: hsl(0, 0%, 13.6%);
+	--color-gray-400: hsl(0, 0%, 15.8%);
+	--color-gray-500: hsl(0, 0%, 17.9%);
+	--color-gray-600: hsl(0, 0%, 20.5%);
+	--color-gray-700: hsl(0, 0%, 24.3%);
+	--color-gray-800: hsl(0, 0%, 31.2%);
+	--color-gray-900: hsl(0, 0%, 43.9%);
+	--color-gray-1000: hsl(0, 0%, 49.4%);
+	--color-gray-1100: hsl(0, 0%, 62.8%);
+	--color-gray-1200: hsl(0, 0%, 93%);
+	--color-green-100: hsl(146, 30%, 7.4%);
+	--color-green-200: hsl(155, 44.2%, 8.4%);
+	--color-green-300: hsl(155, 46.7%, 10.9%);
+	--color-green-400: hsl(154, 48.4%, 12.9%);
+	--color-green-500: hsl(154, 49.7%, 14.9%);
+	--color-green-600: hsl(154, 50.9%, 17.6%);
+	--color-green-700: hsl(153, 51.8%, 21.8%);
+	--color-green-800: hsl(151, 51.7%, 28.4%);
+	--color-green-900: hsl(151, 55%, 41.5%);
+	--color-green-1000: hsl(151, 49.3%, 46.5%);
+	--color-green-1100: hsl(151, 50%, 53.2%);
+	--color-green-1200: hsl(137, 72%, 94%);
+	--color-indigo-100: hsl(229, 24%, 10%);
+	--color-indigo-200: hsl(230, 36.4%, 12.9%);
+	--color-indigo-300: hsl(228, 43.3%, 17.5%);
+	--color-indigo-400: hsl(227, 47.2%, 21%);
+	--color-indigo-500: hsl(227, 50%, 24.1%);
+	--color-indigo-600: hsl(226, 52.9%, 28.2%);
+	--color-indigo-700: hsl(226, 56%, 34.5%);
+	--color-indigo-800: hsl(226, 58.2%, 44.1%);
+	--color-indigo-900: hsl(226, 70%, 55.5%);
+	--color-indigo-1000: hsl(227, 75.2%, 61.6%);
+	--color-indigo-1100: hsl(228, 100%, 75.9%);
+	--color-indigo-1200: hsl(226, 83%, 96.3%);
+	--color-orange-100: hsl(30, 70%, 7.2%);
+	--color-orange-200: hsl(28, 100%, 8.4%);
+	--color-orange-300: hsl(26, 91.1%, 11.6%);
+	--color-orange-400: hsl(25, 88.3%, 14.1%);
+	--color-orange-500: hsl(24, 87.6%, 16.6%);
+	--color-orange-600: hsl(24, 88.6%, 19.8%);
+	--color-orange-700: hsl(24, 92.4%, 24%);
+	--color-orange-800: hsl(25, 100%, 29%);
+	--color-orange-900: hsl(24, 94%, 50%);
+	--color-orange-1000: hsl(24, 100%, 58.5%);
+	--color-orange-1100: hsl(24, 100%, 62.2%);
+	--color-orange-1200: hsl(24, 97%, 93.2%);
+	--color-pink-100: hsl(318, 25%, 9.6%);
+	--color-pink-200: hsl(319, 32.2%, 11.6%);
+	--color-pink-300: hsl(319, 41%, 16%);
+	--color-pink-400: hsl(320, 45.4%, 18.7%);
+	--color-pink-500: hsl(320, 49%, 21.1%);
+	--color-pink-600: hsl(321, 53.6%, 24.4%);
+	--color-pink-700: hsl(321, 61.1%, 29.7%);
+	--color-pink-800: hsl(322, 74.9%, 37.5%);
+	--color-pink-900: hsl(322, 65%, 54.5%);
+	--color-pink-1000: hsl(323, 72.8%, 59.2%);
+	--color-pink-1100: hsl(325, 90%, 66.4%);
+	--color-pink-1200: hsl(322, 90%, 95.8%);
+	--color-purple-100: hsl(284, 20%, 9.6%);
+	--color-purple-200: hsl(283, 30%, 11.8%);
+	--color-purple-300: hsl(281, 37.5%, 16.5%);
+	--color-purple-400: hsl(280, 41.2%, 20%);
+	--color-purple-500: hsl(279, 43.8%, 23.3%);
+	--color-purple-600: hsl(277, 46.4%, 27.5%);
+	--color-purple-700: hsl(275, 49.3%, 34.6%);
+	--color-purple-800: hsl(272, 52.1%, 45.9%);
+	--color-purple-900: hsl(272, 51%, 54%);
+	--color-purple-1000: hsl(273, 57.3%, 59.1%);
+	--color-purple-1100: hsl(275, 80%, 71%);
+	--color-purple-1200: hsl(279, 75%, 95.7%);
+	--color-red-100: hsl(353, 23%, 9.8%);
+	--color-red-200: hsl(357, 34.4%, 12%);
+	--color-red-300: hsl(356, 43.4%, 16.4%);
+	--color-red-400: hsl(356, 47.6%, 19.2%);
+	--color-red-500: hsl(356, 51.1%, 21.9%);
+	--color-red-600: hsl(356, 55.2%, 25.9%);
+	--color-red-700: hsl(357, 60.2%, 31.8%);
+	--color-red-800: hsl(358, 65%, 40.4%);
+	--color-red-900: hsl(358, 75%, 59%);
+	--color-red-1000: hsl(358, 85.3%, 64%);
+	--color-red-1100: hsl(358, 100%, 69.5%);
+	--color-red-1200: hsl(351, 89%, 96%);
+	--color-slate-100: hsl(200, 7%, 8.8%);
+	--color-slate-200: hsl(195, 7.1%, 11%);
+	--color-slate-300: hsl(197, 6.8%, 13.6%);
+	--color-slate-400: hsl(198, 6.6%, 15.8%);
+	--color-slate-500: hsl(199, 6.4%, 17.9%);
+	--color-slate-600: hsl(201, 6.2%, 20.5%);
+	--color-slate-700: hsl(203, 6%, 24.3%);
+	--color-slate-800: hsl(207, 5.6%, 31.6%);
+	--color-slate-900: hsl(206, 6%, 43.9%);
+	--color-slate-1000: hsl(206, 5.2%, 49.5%);
+	--color-slate-1100: hsl(206, 6%, 63%);
+	--color-slate-1200: hsl(210, 6%, 93%);
+	--color-tomato-100: hsl(10, 23%, 9.4%);
+	--color-tomato-200: hsl(9, 44.8%, 11.4%);
+	--color-tomato-300: hsl(8, 52%, 15.3%);
+	--color-tomato-400: hsl(7, 56.3%, 18%);
+	--color-tomato-500: hsl(7, 60.1%, 20.6%);
+	--color-tomato-600: hsl(8, 64.8%, 24%);
+	--color-tomato-700: hsl(8, 71.2%, 29.1%);
+	--color-tomato-800: hsl(10, 80.2%, 35.7%);
+	--color-tomato-900: hsl(10, 78%, 54%);
+	--color-tomato-1000: hsl(10, 81.7%, 59%);
+	--color-tomato-1100: hsl(10, 85%, 62.8%);
+	--color-tomato-1200: hsl(10, 89%, 96%);
+	--color-violet-100: hsl(250, 20%, 10.2%);
+	--color-violet-200: hsl(255, 30.3%, 12.9%);
+	--color-violet-300: hsl(253, 37%, 18.4%);
+	--color-violet-400: hsl(252, 40.1%, 22.5%);
+	--color-violet-500: hsl(252, 42.2%, 26.2%);
+	--color-violet-600: hsl(251, 44.3%, 31.1%);
+	--color-violet-700: hsl(250, 46.8%, 38.9%);
+	--color-violet-800: hsl(250, 51.8%, 51.2%);
+	--color-violet-900: hsl(252, 56%, 57.5%);
+	--color-violet-1000: hsl(251, 63.2%, 63.2%);
+	--color-violet-1100: hsl(250, 95%, 76.8%);
+	--color-violet-1200: hsl(252, 87%, 96.4%);
+	--color-yellow-100: hsl(45, 100%, 5.5%);
+	--color-yellow-200: hsl(46, 100%, 6.7%);
+	--color-yellow-300: hsl(45, 100%, 8.7%);
+	--color-yellow-400: hsl(45, 100%, 10.4%);
+	--color-yellow-500: hsl(47, 100%, 12.1%);
+	--color-yellow-600: hsl(49, 100%, 14.3%);
+	--color-yellow-700: hsl(49, 90.3%, 18.4%);
+	--color-yellow-800: hsl(50, 100%, 22%);
+	--color-yellow-900: hsl(53, 92%, 50%);
+	--color-yellow-1000: hsl(54, 100%, 68%);
+	--color-yellow-1100: hsl(48, 100%, 47%);
+	--color-yellow-1200: hsl(53, 100%, 91%);
+	--color-scale-100: hsl(0, 0%, 8.5%);
+	--color-scale-200: hsl(0, 0%, 11%);
+	--color-scale-300: hsl(0, 0%, 13.6%);
+	--color-scale-400: hsl(0, 0%, 15.8%);
+	--color-scale-500: hsl(0, 0%, 17.9%);
+	--color-scale-600: hsl(0, 0%, 20.5%);
+	--color-scale-700: hsl(0, 0%, 24.3%);
+	--color-scale-800: hsl(0, 0%, 31.2%);
+	--color-scale-900: hsl(0, 0%, 43.9%);
+	--color-scale-1000: hsl(0, 0%, 49.4%);
+	--color-scale-1100: #bbbbbb;
+	--color-scale-1200: hsl(0, 0%, 93%);
+	--color-brand-100: hsla(153, 75%, 6%, 1);
+	--color-brand-200: hsl(var(--brand-200));
+	--color-brand-300: hsl(var(--brand-300));
+	--color-brand-400: hsl(var(--brand-400));
+	--color-brand-500: hsl(var(--brand-500));
+	--color-brand-600: hsl(var(--brand-600));
+	--color-brand-700: hsla(154, 62%, 22%, 1);
+	--color-brand-800: hsla(153, 60%, 28%, 1);
+	--color-brand-900: hsla(153, 60%, 53%, 1);
+	--color-brand-1000: hsla(153, 60%, 70%, 1);
+	--color-brand-1100: hsla(153, 60%, 50%, 1);
+	--color-brand-1200: hsla(153, 60%, 95%, 1);
+}
+
+/*
+ * Core semantic color system.
+ *
+ * Themes override the small set of inputs below; every semantic color is then
+ * derived from them in OKLCH. The stepped numeric scales (brand / warning /
+ * destructive / secondary) are NOT derived here — they live as per-theme values
+ * in the theme files and are mapped to utilities in packages/config/css/theme.css.
+ */
+
+:root {
+	/*
+   * Hue inputs. A single --hue used to drive both the neutral surface/text ramp
+   * and the brand, so the two could never drift apart. They are now split so a
+   * theme can run, say, a cool-gray surface against the green brand:
+   *   --surface-hue  tints backgrounds, text and borders (the neutral ramp)
+   *   --primary-hue  is the brand hue that --primary is built from
+   * Both default to --hue (Supabase green ≈159° in OKLCH), so a theme that only
+   * sets --hue keeps surfaces and brand locked together as before; override
+   * either one to let them diverge. */
+	--hue: 159;
+	--surface-hue: var(--hue);
+	--primary-hue: var(--hue);
+	/* Root defaults mirror the dark theme (the app's default appearance). */
+	--chroma: 0.016;
+	--surface: 0.17;
+
+	--foreground-lightness: 0.95;
+	/* How far muted/tertiary text sits from --surface toward --foreground-lightness
+     (0 = surface, 1 = full foreground) at --contrast 0.5; themes override. */
+	--muted-foreground-level: 0.8;
+	--tertiary-foreground-level: 0.65;
+
+	/*
+   * Global contrast knob, 0 to 1. Default 0.5 is the comfortable baseline; 0 keeps
+   * borders and accent barely visible over muted surfaces; 1 pushes them to full
+   * strength. Foreground hits --foreground-lightness at 0.5; below that it eases
+   * toward the surface down to --contrast-text-floor at 0. Muted and tertiary
+   * foreground lightness sits at the theme base level (a surface→foreground mix) at
+   * 0.5 and eases up toward foreground or down toward half that base as contrast moves.
+   *
+   * --contrast-delta is -1 at 0, 0 at 0.5, +1 at 1 — shared offset from baseline;
+   * --contrast-up / --contrast-down are its positive / negative halves.
+   * --contrast-border ramps [floor, 1] over --contrast and squares it so most of
+   * the range lives toward full strength. ((delta + 1) / 2 simplifies to contrast.)
+   */
+	--contrast: 0.5;
+	--contrast-delta: calc((var(--contrast) - 0.5) / 0.5);
+	/* positive and negative halves of the delta, reused below */
+	--contrast-up: max(0, var(--contrast-delta));
+	--contrast-down: max(0, calc(var(--contrast-delta) * -1));
+	--contrast-text-floor: 0.9;
+	--contrast-border-floor: 0.05;
+	--contrast-text: calc(1 - (1 - var(--contrast-text-floor)) * var(--contrast-down));
+	--contrast-border-linear: calc(
+		var(--contrast-border-floor) + (1 - var(--contrast-border-floor)) * var(--contrast)
+	);
+	--contrast-border: calc(var(--contrast-border-linear) * var(--contrast-border-linear));
+
+	/*
+   * Surface elevation. Each surface steps its lightness away from --background
+   * by `--elevation-step * ratio`, where the ratios are shared across themes and
+   * the step is signed: positive brightens as surfaces rise, negative darkens.
+   *
+   * The default step reproduces the historical behavior (≈3% per level mixed
+   * toward the foreground): dark themes brighten and the light baseline darkens.
+   * The light theme overrides --elevation-step (and lowers --surface for
+   * headroom) so its higher surfaces brighten toward white instead — giving a
+   * single "higher = lighter" model in both modes. 0 = flat (no elevation).
+   */
+	--elevation-1: 1;
+	--elevation-2: 1.5;
+	--elevation-3: 2;
+	--elevation-4: 3;
+	/* Signed span surface→foreground (+ in dark, − in light). */
+	--tone-span: calc(var(--foreground-lightness) - var(--surface));
+	--elevation-step: calc(var(--tone-span) * 0.04);
+	/*
+   * Foreground overlays for muted / accent / tertiary. Alpha is tuned so each level
+   * matches the lightness delta of the same elevation ratio on --background; a
+   * translucent --foreground layer then composites with whatever surface sits
+   * beneath (lightens in dark, darkens in light). Steps: muted (e1) → accent
+   * (e2) → tertiary (e3).
+   */
+	/* max(span, -span) is equivalent to abs(span), but works across the browser
+     versions supported by Tailwind v4. */
+	--surface-overlay-unit: calc(
+		var(--elevation-step) / max(var(--tone-span), calc(var(--tone-span) * -1))
+	);
+	--muted-alpha: calc(var(--surface-overlay-unit) * var(--elevation-1));
+	--accent-alpha: calc(var(--surface-overlay-unit) * var(--elevation-2));
+	--tertiary-alpha: calc(var(--surface-overlay-unit) * var(--elevation-3));
+
+	/*
+   * Status hues stay anchored to amber / red but pull a fraction of the way
+   * toward the brand --primary-hue for harmony, then clamp to their perceptual
+   * category so "warning" always reads amber and "destructive" always reads red
+   * no matter what --primary-hue is. --status-hue-pull: 0 = fixed amber/red,
+   * 1 = fully brand-relative. At the default --primary-hue the pull term is 0, so
+   * these resolve to their bases (warning 75 / destructive 25 / info 288).
+   * --brand-hue-reference is the --primary-hue at which pull is zero; keep it
+   * equal to the default brand hue.
+   * Warning sits at 75 (amber), not higher toward yellow — yellow can't darken
+   * without going olive, so it loses contrast on light surfaces. Info is a violet
+   * (matching the "no additional charge" badge); like the others it pulls a touch
+   * with the brand --primary-hue but clamps so it always reads violet.
+   */
+	--brand-hue-reference: 159;
+	--status-hue-pull: 0.15;
+	--warning-hue: clamp(
+		65,
+		calc(75 + (var(--primary-hue) - var(--brand-hue-reference)) * var(--status-hue-pull)),
+		95
+	);
+	--destructive-hue: clamp(
+		12,
+		calc(25 + (var(--primary-hue) - var(--brand-hue-reference)) * var(--status-hue-pull)),
+		42
+	);
+	--info-hue: clamp(
+		272,
+		calc(288 + (var(--primary-hue) - var(--brand-hue-reference)) * var(--status-hue-pull)),
+		302
+	);
+	/*
+   * Expressive (status) colors are deliberately NOT derived from the neutral
+   * surface→foreground span the way text and surfaces are. An expressive color
+   * has its own identity; tying its lightness to the theme's text ramp is what
+   * left warning under-saturated in light mode and too dark in dark mode.
+   *
+   * Instead each is anchored to a fixed target lightness near its hue's chroma
+   * peak and a single shared --expressive-chroma. That chroma is a flat constant,
+   * deliberately NOT derived from the neutral --chroma knob: status colors must
+   * stay legible even when the brand is dialed toward grayscale. It sits inside
+   * sRGB at these lightnesses, so no gamut mapping is required.
+   *
+   * The dark-mode lightness anchors live here; light mode runs darker (set in
+   * light.css) so the fills hold contrast against the near-white surface.
+   */
+	--expressive-chroma: 0.14;
+	--warning-lightness: 0.8;
+	--destructive-lightness: 0.75;
+	--info-lightness: 0.7;
+
+	/* shadcn semantic pairs */
+	--background: oklch(var(--surface) calc(var(--chroma) * 0.5) var(--surface-hue));
+	--foreground-chroma: calc(var(--chroma) * 0.55);
+	--foreground: oklch(
+		calc(var(--surface) + var(--tone-span) * var(--contrast-text)) var(--foreground-chroma)
+			var(--surface-hue)
+	);
+	/* Inverse of --foreground: canvas-coloured text for use on inverted fills
+     (bg-foreground, bg-black / dark:bg-white, etc). Not the same as
+     --primary-foreground, which stays dark for the vivid primary fill. */
+	--foreground-contrast: oklch(var(--surface) calc(var(--chroma) * 0.55) var(--surface-hue));
+
+	--card: oklch(from var(--background) calc(l + var(--elevation-step) * var(--elevation-1)) c h);
+	--card-foreground: var(--foreground);
+	--popover: oklch(from var(--background) calc(l + var(--elevation-step) * var(--elevation-2)) c h);
+	--popover-foreground: var(--foreground);
+
+	/* Primary is the brand-derived accent: a fixed, vivid Supabase green on
+     --primary-hue, mode-invariant and decoupled from the --chroma knob so it
+     holds its identity even as neutrals desaturate. NOTE: the `brand` utility
+     (--color-brand in theme.css) is deliberately NOT this — it maps to the
+     per-theme --brand-default scale (master behavior) while we resolve how
+     `brand` is used across the interface. */
+	--primary: oklch(0.76 0.15 var(--primary-hue));
+	--primary-foreground: oklch(
+		min(var(--surface), var(--foreground-lightness)) calc(var(--chroma) * 0.45) var(--primary-hue)
+	);
+
+	--secondary: oklch(
+		from var(--background) calc(l + var(--elevation-step) * var(--elevation-3)) c h
+	);
+	--secondary-foreground: var(--foreground);
+	--tertiary: oklch(from var(--foreground) l c h / var(--tertiary-alpha));
+	--tertiary-foreground-mix: calc(
+		var(--tertiary-foreground-level) + (1 - var(--tertiary-foreground-level)) * var(--contrast-up) -
+			var(--tertiary-foreground-level) * 0.5 * var(--contrast-down)
+	);
+	--tertiary-foreground: oklch(
+		calc(var(--surface) + var(--tone-span) * var(--tertiary-foreground-mix))
+			var(--foreground-chroma) var(--surface-hue)
+	);
+	--muted: oklch(from var(--foreground) l c h / var(--muted-alpha));
+	--muted-foreground-mix: calc(
+		var(--muted-foreground-level) + (1 - var(--muted-foreground-level)) * var(--contrast-up) -
+			var(--muted-foreground-level) * 0.5 * var(--contrast-down)
+	);
+	--muted-foreground: oklch(
+		calc(var(--surface) + var(--tone-span) * var(--muted-foreground-mix)) var(--foreground-chroma)
+			var(--surface-hue)
+	);
+	--accent: oklch(from var(--foreground) l c h / var(--accent-alpha));
+	--accent-foreground: var(--foreground);
+
+	/*
+   * Control surface roles (design sync: sunk fields + raised choosers):
+   *   --field          sunk text entry (Input, Textarea, filled MultiSelect)
+   *   --control-raised raised chooser plate (Select, empty MultiSelect)
+   *   --control        alias of --control-raised
+   *
+   * Alpha overlays relative to the local plate (page, sheet, card) — not solids
+   * from --background. Page-relative solids sit between canvas (e0) and Sheet
+   * (popover e2) and vanish on light near the white ceiling.
+   *
+   * Field soft always-sink via black. --field-alpha is a theme input (stronger in
+   * dark.css) because the same absolute opacity is obvious on light plates and
+   * near-invisible on dark ones. Default is softer than the old foreground/[.026]
+   * wash. Raised is a soft white lift so selects read button-like without stark
+   * wells. Borders carry most hover chrome (--border-control-hover). Light raises
+   * still have little headroom on sheets; sheets matching app background would
+   * widen that later.
+   *
+   * Default Button stays opaque card/popover for occluding chrome (DEPR-636).
+   * Floating clusters can wrap in a solid Popover as a follow-up.
+   */
+	--field-alpha: 0.015;
+	--field: oklch(0 0 0 / var(--field-alpha));
+	--control-raised: oklch(1 0 0 / calc(var(--muted-alpha) * 0.65));
+	--control: var(--control-raised);
+
+	--warning: oklch(var(--warning-lightness) var(--expressive-chroma) var(--warning-hue));
+	--destructive: oklch(
+		var(--destructive-lightness) var(--expressive-chroma) var(--destructive-hue)
+	);
+	/*
+   * Text that sits on the solid fill: dark ink on light fills (amber), white on
+   * dark fills (red). The clamp turns the fill's own lightness into a hard flip
+   * around L≈0.62 — (0.62 − l) is negative for light fills (→ floor 0.12) and
+   * positive for dark fills (→ ceil 0.99) — so on-colors stay legible and keep
+   * flipping correctly if the anchors are retuned. A trace of hue chroma keeps
+   * the ink from reading as flat gray.
+   */
+	--warning-foreground: oklch(
+		from var(--warning) clamp(0.12, calc((0.62 - l) * 100), 0.99) calc(c * 0.08) h
+	);
+	--destructive-foreground: oklch(
+		from var(--destructive) clamp(0.12, calc((0.62 - l) * 100), 0.99) calc(c * 0.08) h
+	);
+	--info: oklch(var(--info-lightness) var(--expressive-chroma) var(--info-hue));
+	--info-foreground: oklch(
+		from var(--info) clamp(0.12, calc((0.62 - l) * 100), 0.99) calc(c * 0.08) h
+	);
+
+	/* Status border tokens for subtle / tinted surfaces */
+	--border-destructive: oklch(from var(--destructive) l c h / 30%);
+	--border-warning: oklch(from var(--warning) l c h / 30%);
+	--border-info: oklch(from var(--info) l c h / 30%);
+	--border-brand: oklch(from var(--primary) l c h / 30%);
+
+	--border: oklch(
+		from var(--foreground) l calc(c * 0.54) h / calc(2% + 20% * var(--contrast-border))
+	);
+	--input: oklch(
+		from var(--foreground) l calc(c * 0.5) h / calc(3% + 38% * var(--contrast-border))
+	);
+	/*
+   * Shared interactive border for control chrome (inputs, selects, default /
+   * dashed Button, radio cards). Pairs with rest --border-control / --border-strong.
+   * Stronger than --border-stronger; softer than a full muted-foreground stroke.
+   */
+	--border-control-hover: oklch(
+		from var(--foreground) l calc(c * 0.5) h / calc(12% + 58% * var(--contrast-border))
+	);
+	--ring: oklch(from var(--primary) l c h / 55%);
+}
+
+[data-theme="dark"],
+[data-mode="dark"],
+.dark {
+	--helpers-os-appearance: Dark;
+	--hue: 159;
+	--chroma: 0.005;
+	--surface: 0.19;
+	--elevation-step: 0.025;
+	--contrast: 0.5;
+	--foreground-lightness: 0.95;
+	--muted-foreground-level: 0.8;
+	--tertiary-foreground-level: 0.65;
+	/* Light default --field-alpha (0.015) disappears on dark plates; dig harder. */
+	--field-alpha: 0.12;
+
+	--code-block-5: 13.8deg 89.7% 69.6%;
+	--code-block-4: 276.1deg 67.7% 74.5%;
+	--code-block-3: 83.8deg 61.7% 63.1%;
+	--code-block-2: 33.2deg 90.3% 75.7%;
+	--code-block-1: 170.8deg 43.1% 61.4%;
+
+	/* Stepped numeric scales (per-theme literals; mapped in theme.css) */
+	--secondary-default: 247.8deg 100% 70%;
+	--secondary-400: 248.3deg 54.5% 25.9%;
+	--secondary-200: 248deg 53.6% 11%;
+	--brand-link: 155deg 100% 38.6%;
+	--brand-default: 153.1deg 60.2% 52.7%;
+	--brand-600: 154.9deg 59.5% 70%;
+	--brand-500: 154.9deg 100% 19.2%;
+	--brand-400: 155.5deg 100% 9.6%;
+	--brand-300: 155.1deg 100% 8%;
+	--brand-200: 162deg 100% 2%;
+	--warning-default: 38.9deg 100% 42.9%;
+	--warning-600: 38.9deg 100% 42.9%;
+	--warning-500: 34.8deg 90.9% 21.6%;
+	--warning-400: 33.2deg 100% 14.5%;
+	--warning-300: 32.3deg 100% 10.2%;
+	--warning-200: 36.6deg 100% 8%;
+	--destructive-default: 10.2deg 77.9% 53.9%;
+	--destructive-600: 9.7deg 85.2% 62.9%;
+	--destructive-500: 7.9deg 71.6% 29%;
+	--destructive-400: 6.7deg 60% 20.6%;
+	--destructive-300: 7.5deg 51.3% 15.3%;
+	--destructive-200: 10.9deg 23.4% 9.2%;
+}
+
+[data-theme="classic-dark"],
+.classic-dark {
+	--helpers-os-appearance: Dark;
+	--hue: 159;
+	--chroma: 0.014;
+	--surface: 0.205;
+	--foreground-lightness: 0.97;
+	--muted-foreground-level: 0.72;
+	--tertiary-foreground-level: 0.52;
+
+	--code-block-5: 13.8deg 89.7% 69.6%;
+	--code-block-4: 276.1deg 67.7% 74.5%;
+	--code-block-3: 83.8deg 61.7% 63.1%;
+	--code-block-2: 33.2deg 90.3% 75.7%;
+	--code-block-1: 170.8deg 43.1% 61.4%;
+
+	/* Stepped numeric scales (per-theme literals; mapped in theme.css) */
+	--secondary-default: 0deg 0% 100%;
+	--secondary-400: 0deg 0% 100%;
+	--secondary-200: 0deg 0% 100%;
+	--brand-link: 153.1deg 60.2% 52.7%;
+	--brand-default: 153.1deg 60.2% 52.7%;
+	--brand-600: 153deg 59.5% 70%;
+	--brand-500: 153.5deg 61.8% 21.6%;
+	--brand-400: 153.3deg 65.2% 13.5%;
+	--brand-300: 153.8deg 69.6% 9%;
+	--brand-200: 152.5deg 75% 6.3%;
+	--warning-default: 38.9deg 100% 57.1%;
+	--warning-600: 38.9deg 89.8% 49.8%;
+	--warning-500: 34.8deg 90.9% 21.6%;
+	--warning-400: 33.2deg 100% 14.5%;
+	--warning-300: 32.3deg 100% 10.2%;
+	--warning-200: 36.8deg 100% 6.1%;
+	--destructive-default: 10.2deg 77.9% 53.9%;
+	--destructive-600: 9.7deg 85.2% 62.9%;
+	--destructive-500: 7.9deg 71.6% 29%;
+	--destructive-400: 6.7deg 60% 20.6%;
+	--destructive-300: 7.5deg 51.3% 15.3%;
+	--destructive-200: 10.9deg 23.4% 9.2%;
+}
+
+:root:where(
+	:not(.dark):not(.classic-dark):not([data-theme="dark"]):not([data-theme="classic-dark"]):not(
+		[data-mode="dark"]
+	)
+),
+[data-theme="light"],
+.light {
+	--helpers-os-appearance: Light;
+	--hue: 159;
+	--surface-hue: 34;
+	--chroma: 0;
+	/*
+   * Soft-gray canvas (not pure white) so elevated surfaces have headroom to
+   * brighten toward white. --elevation-step is positive here: higher surfaces
+   * get lighter, matching dark mode's direction. Tuned literal (previously
+   * derived from 1 - surface); retune alongside --surface.
+   */
+	--surface: 0.995;
+	--elevation-step: 0.024;
+	--contrast: 0.53;
+	--foreground-lightness: 0.1;
+	--muted-foreground-level: 0.65;
+	--tertiary-foreground-level: 0.5;
+	/*
+   * Expressive fills run darker than the dark-theme anchors so they hold contrast
+   * against the near-white surface (a light amber on white disappears). Lightness
+   * is mode-aware; chroma is the shared --expressive-chroma from semantic.css.
+   */
+	--warning-lightness: 0.68;
+	--destructive-lightness: 0.52;
+	--info-lightness: 0.54;
+
+	--code-block-5: 14deg 80.4% 58%;
+	--code-block-4: 276.3deg 60% 52.9%;
+	--code-block-3: 83.8deg 61.6% 48%;
+	--code-block-2: 33.1deg 80% 52.9%;
+	--code-block-1: 170.6deg 43.2% 51%;
+
+	--code-token-string: #c46a0a;
+	--code-token-string-expression: #c46a0a;
+
+	/* Stepped numeric scales (per-theme literals; mapped in theme.css) */
+	--secondary-default: 247.8deg 100% 70%;
+	--secondary-400: 248.3deg 54.5% 25.9%;
+	--secondary-200: 248deg 53.6% 11%;
+	--brand-link: 153.4deg 86.5% 27.8%;
+	--brand-default: 152.9deg 60% 52.9%;
+	--brand-600: 156.5deg 86.5% 26.1%;
+	--brand-500: 155.3deg 78.4% 40%;
+	--brand-400: 151.3deg 66.9% 66.9%;
+	--brand-300: 147.5deg 72% 80.4%;
+	--brand-200: 147.6deg 72.5% 90%;
+	/* --warning-default: 30.3deg 80.3% 47.8%; */
+	--warning-600: 30.3deg 80.3% 47.8%;
+	--warning-500: 36.3deg 85.7% 67.1%;
+	--warning-400: 41.9deg 100% 81.8%;
+	--warning-300: 44.3deg 100% 91.8%;
+	--warning-200: 40deg 81.8% 97.8%;
+	--destructive-default: 10.2deg 77.9% 53.9%;
+	--destructive-600: 9.9deg 82% 43.5%;
+	--destructive-500: 10.4deg 77.1% 79.4%;
+	--destructive-400: 7.1deg 91.3% 91%;
+	--destructive-300: 7.1deg 100% 96.7%;
+	--destructive-200: 0deg 100% 99.4%;
+}
+
+/*
+ * Backwards-compatibility aliases.
+ *
+ * These map the old token names onto the semantic system in semantic.css so
+ * components can migrate gradually. Nothing new should reference them — they
+ * exist only so un-migrated call sites keep resolving. Delete entries as their
+ * consumers move to the semantic tokens; the file goes away once it is empty.
+ *
+ * Kept separate from semantic.css so the core model reads as just inputs →
+ * derivations. Must be imported after semantic.css (see tailwind.config.css).
+ */
+
+:root {
+	/* Legacy foreground aliases */
+	--foreground-default: var(--foreground);
+	--foreground-light: var(--muted-foreground);
+	--foreground-lighter: var(--tertiary-foreground);
+	--foreground-muted: var(--tertiary-foreground);
+	/* --foreground-contrast lives in semantic.css — do not remap to --primary-foreground */
+
+	/* Legacy background aliases */
+	--background-default: var(--background);
+	--background-200: var(--card);
+	--background-alternative-default: var(--background);
+	--background-alternative-200: var(--card);
+	--background-selection: var(--accent);
+	--background-control: var(--accent);
+	--background-surface-75: var(--card);
+	--background-surface-100: var(--card);
+	--background-surface-200: var(--muted);
+	--background-surface-300: var(--secondary);
+	--background-surface-400: var(--tertiary);
+	--background-overlay-default: var(--secondary);
+	--background-overlay-hover: var(--accent);
+	--background-muted: var(--muted);
+	--background-button-default: var(--secondary);
+	--background-dialog-default: var(--popover);
+	--background-dash-sidebar: var(--background);
+	--background-dash-canvas: var(--background);
+
+	/* Legacy border aliases */
+	--border-default: var(--border);
+	--border-muted: var(--border);
+	--border-secondary: var(--border-muted);
+	--border-overlay: oklch(
+		from var(--foreground) l calc(c * 0.5) h / calc(4% + 34% * var(--contrast-border))
+	);
+	--border-control: var(--input);
+	--border-alternative: var(--border);
+	--border-strong: var(--input);
+	--border-stronger: oklch(
+		from var(--foreground) l calc(c * 0.5) h / calc(5% + 45% * var(--contrast-border))
+	);
+	--border-button-default: var(--border);
+	--border-button-hover: var(--border-stronger);
+}
+
+/*
+ * Tailwind v4 animation tokens + the @keyframes they reference.
+ *
+ * Each --animate-* token in @theme generates an `animate-{name}` utility.
+ * Keyframes live outside @theme since they're @-rules, not design tokens.
+ *
+ * Migrated from packages/config/ui.config.js (theme.extend.keyframes /
+ * theme.extend.animation) and packages/config/tailwind.config.js
+ * (theme.extend.keyframes / theme.extend.animation).
+ */
+
+@theme {
+	--ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-move: cubic-bezier(0.87, 0, 0.13, 1);
+
+	--animate-fade-in: fadeIn 300ms both;
+	--animate-fade-out: fadeOut 300ms both;
+
+	/* may be unused — verify before pruning */
+	--animate-dropdown-content-show: overlayContentShow 100ms var(--ease-enter);
+	/* may be unused — verify before pruning */
+	--animate-dropdown-content-hide: overlayContentHide 100ms var(--ease-enter);
+
+	--animate-overlay-show: overlayContentShow 300ms var(--ease-enter);
+	--animate-overlay-hide: overlayContentHide 300ms var(--ease-enter);
+
+	/* may be unused — verify before pruning */
+	--animate-fade-in-overlay-bg: fadeInOverlayBg 300ms;
+	/* may be unused — verify before pruning */
+	--animate-fade-out-overlay-bg: fadeOutOverlayBg 300ms;
+
+	--animate-slide-down: slideDown 300ms var(--ease-move);
+	--animate-slide-up: slideUp 300ms var(--ease-move);
+
+	--animate-slide-down-normal: slideDownNormal 300ms var(--ease-move);
+	--animate-slide-up-normal: slideUpNormal 300ms var(--ease-move);
+
+	/* may be unused — verify before pruning */
+	--animate-panel-slide-left-out: panelSlideLeftOut 200ms var(--ease-move);
+	/* may be unused — verify before pruning */
+	--animate-panel-slide-left-in: panelSlideLeftIn 250ms var(--ease-move);
+	/* may be unused — verify before pruning */
+	--animate-panel-slide-right-out: panelSlideRightOut 200ms var(--ease-move);
+	/* may be unused — verify before pruning */
+	--animate-panel-slide-right-in: panelSlideRightIn 250ms var(--ease-move);
+
+	--animate-line-loading: lineLoading 1.8s infinite;
+	--animate-line-loading-slower: lineLoading 2.3s infinite;
+
+	/* may be unused — verify before pruning */
+	--animate-dropdownFadeIn: dropdownFadeIn 0.1s ease-out;
+	/* may be unused — verify before pruning */
+	--animate-dropdownFadeOut: dropdownFadeOut 0.1s ease-out;
+
+	--animate-flash-code: flash-code 1s forwards;
+	--animate-flash-code-slow: flash-code 2s forwards;
+
+	--animate-accordion-down: accordion-down 0.15s ease-out;
+	--animate-accordion-up: accordion-up 0.15s ease-out;
+
+	--animate-collapsible-down: collapsible-down 0.1s ease-out;
+	--animate-collapsible-up: collapsible-up 0.1s ease-out;
+}
+
+@keyframes fadeIn {
+	0% {
+		transform: scale(0.95);
+		opacity: 0;
+	}
+	100% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes fadeOut {
+	0% {
+		transform: scale(1);
+		opacity: 1;
+	}
+	100% {
+		transform: scale(0.95);
+		opacity: 0;
+	}
+}
+
+@keyframes overlayContentShow {
+	0% {
+		opacity: 0;
+		transform: translate(0%, -2%) scale(1);
+	}
+	100% {
+		opacity: 1;
+		transform: translate(0%, 0%) scale(1);
+	}
+}
+
+@keyframes overlayContentHide {
+	0% {
+		opacity: 1;
+		transform: translate(0%, 0%) scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: translate(0%, -2%) scale(1);
+	}
+}
+
+@keyframes dropdownFadeIn {
+	0% {
+		transform: scale(0.95);
+		opacity: 0;
+	}
+	100% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes dropdownFadeOut {
+	0% {
+		transform: scale(1);
+		opacity: 1;
+	}
+	100% {
+		transform: scale(0.95);
+		opacity: 0;
+	}
+}
+
+@keyframes fadeInOverlayBg {
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 0.75;
+	}
+}
+
+@keyframes fadeOutOverlayBg {
+	0% {
+		opacity: 0.75;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+
+@keyframes slideDown {
+	0% {
+		height: 0;
+		opacity: 0;
+	}
+	100% {
+		height: var(--radix-accordion-content-height, var(--radix-collapsible-content-height));
+		opacity: 1;
+	}
+}
+
+@keyframes slideUp {
+	0% {
+		height: var(--radix-accordion-content-height, var(--radix-collapsible-content-height));
+		opacity: 1;
+	}
+	100% {
+		height: 0;
+		opacity: 0;
+	}
+}
+
+@keyframes slideDownNormal {
+	0% {
+		height: 0;
+		opacity: 0;
+	}
+	100% {
+		height: inherit;
+		opacity: 1;
+	}
+}
+
+@keyframes slideUpNormal {
+	0% {
+		height: inherit;
+		opacity: 1;
+	}
+	100% {
+		height: 0;
+		opacity: 0;
+	}
+}
+
+@keyframes panelSlideLeftOut {
+	0% {
+		transform: translateX(-100%);
+		opacity: 0;
+	}
+	100% {
+		transform: translateX(0);
+		opacity: 1;
+	}
+}
+
+@keyframes panelSlideLeftIn {
+	0% {
+		transform: translateX(0);
+		opacity: 1;
+	}
+	100% {
+		transform: translateX(-100%);
+		opacity: 0;
+	}
+}
+
+@keyframes panelSlideRightOut {
+	0% {
+		transform: translateX(100%);
+		opacity: 0;
+	}
+	100% {
+		transform: translateX(0);
+		opacity: 1;
+	}
+}
+
+@keyframes panelSlideRightIn {
+	0% {
+		transform: translateX(0);
+		opacity: 1;
+	}
+	100% {
+		transform: translateX(100%);
+		opacity: 0;
+	}
+}
+
+@keyframes lineLoading {
+	0% {
+		margin-left: -10%;
+		width: 80px;
+	}
+	25% {
+		width: 240px;
+	}
+	50% {
+		margin-left: 100%;
+		width: 80px;
+	}
+	75% {
+		width: 240px;
+	}
+	100% {
+		margin-left: -10%;
+		width: 80px;
+	}
+}
+
+@keyframes flash-code {
+	0% {
+		background-color: rgba(63, 207, 142, 0.1);
+	}
+	100% {
+		background-color: transparent;
+	}
+}
+
+@keyframes accordion-down {
+	from {
+		height: 0;
+	}
+	to {
+		height: var(--radix-accordion-content-height);
+	}
+}
+
+@keyframes accordion-up {
+	from {
+		height: var(--radix-accordion-content-height);
+	}
+	to {
+		height: 0;
+	}
+}
+
+@keyframes collapsible-down {
+	from {
+		height: 0;
+	}
+	to {
+		height: var(--radix-collapsible-content-height);
+	}
+}
+
+@keyframes collapsible-up {
+	from {
+		height: var(--radix-collapsible-content-height);
+	}
+	to {
+		height: 0;
+	}
+}
+
+@keyframes tw-shimmer {
+	from {
+		background-position: 100% 0;
+	}
+	to {
+		background-position: 0 0;
+	}
+}
+
+/*
+ * Custom Tailwind v4 utilities migrated from packages/config/ui.config.js
+ * (addUtilities + matchUtilities) and packages/config/tailwind.config.js
+ * (the .bg legacy shim).
+ */
+
+/*
+ * The `bg` class worked in Tailwind v3 but stopped working in v4. Restored as
+ * an alias for `bg-default` to avoid a wide rename across the codebase.
+ * Should be deprecated in favor of `bg-default`.
+ */
+@utility bg {
+	background-color: var(--background);
+}
+
+/*
+ * Soft shimmer gradient used by LoadingLine.
+ */
+@utility line-loading-bg {
+	background: rgb(0, 0, 0);
+	background: linear-gradient(
+		90deg,
+		rgba(0, 0, 0, 0) 0%,
+		rgba(255, 255, 255, 0.65) 50%,
+		rgba(0, 0, 0, 0) 100%
+	);
+}
+@utility line-loading-bg-light {
+	background: rgb(0, 0, 0);
+	background: linear-gradient(
+		90deg,
+		rgba(0, 0, 0, 0) 0%,
+		rgba(33, 33, 33, 0.65) 50%,
+		rgba(0, 0, 0, 0) 100%
+	);
+}
+
+/* may be unused — verify before pruning */
+@utility mask-fadeout-right {
+	-webkit-mask-image: linear-gradient(to right, white 98%, transparent 100%);
+	mask-image: linear-gradient(to right, white 98%, transparent 100%);
+}
+/* may be unused — verify before pruning */
+@utility mask-fadeout-left {
+	-webkit-mask-image: linear-gradient(to left, white 98%, transparent 100%);
+	mask-image: linear-gradient(to left, white 98%, transparent 100%);
+}
+
+/*
+ * Functional color utilities. The `--value(--color-*)` token accepts any
+ * registered --color-* design token (e.g. highlight-foreground-light).
+ */
+/* may be unused — verify before pruning */
+@utility highlight-* {
+	box-shadow: inset 0 1px 0 0 --value(--color-*);
+}
+/* may be unused — verify before pruning */
+@utility subhighlight-* {
+	box-shadow: inset 0 -1px 0 0 --value(--color-*);
+}
+
+/*
+ * Inline-SVG grid background. Used by ProjectLinker as bg-grid-black/5 and
+ * bg-grid-white/5 for the integrations onboarding visuals.
+ */
+@utility bg-grid-* {
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='--value(--color-*)'><path d='M0 .5H31.5V32'/></svg>");
+}
+
+@utility no-scrollbar {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+	&::-webkit-scrollbar {
+		display: none; /* Chrome, Safari, Opera */
+	}
+}
+
+/*
+ * Text shimmer (shadcn shimmer utility, inlined so we don't pull in the full
+ * shadcn CSS package). Apply `shimmer` to text to draw attention.
+ */
+@property --shimmer-angle {
+	syntax: "<angle>";
+	inherits: true;
+	initial-value: 20deg;
+}
+@property --shimmer-image {
+	syntax: "*";
+	inherits: false;
+}
+@property --shimmer-text-fill {
+	syntax: "*";
+	inherits: false;
+}
+
+@utility shimmer {
+	--_spread: var(--shimmer-spread, calc(3ch + 40px));
+	--_base: currentColor;
+	--_highlight: var(--shimmer-color, oklch(from currentColor l c h / calc(alpha* 0.2)));
+
+	background-image: var(
+		--shimmer-image,
+		linear-gradient(
+			calc(90deg + var(--shimmer-angle)),
+			var(--_base) calc(50% - var(--_spread)),
+			color-mix(in oklch, var(--_highlight), var(--_base) 50%) calc(50% - var(--_spread) * 0.5),
+			var(--_highlight) 50%,
+			color-mix(in oklch, var(--_highlight), var(--_base) 50%) calc(50% + var(--_spread) * 0.5),
+			var(--_base) calc(50% + var(--_spread))
+		)
+	);
+	background-repeat: no-repeat;
+	background-size: calc(200% + var(--_spread) * 2) 100%;
+	background-position: 0 0;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: var(--shimmer-text-fill, transparent);
+	animation: tw-shimmer var(--shimmer-duration, 2s) linear infinite;
+	transition: -webkit-text-fill-color 0.5s ease;
+
+	/* Fade to solid text on dismiss — keep the gradient until fill is opaque */
+	&[data-shimmer-fading] {
+		-webkit-text-fill-color: currentColor;
+		animation-play-state: paused;
+	}
+
+	@variant dark {
+		--_highlight: var(
+			--shimmer-color,
+			oklch(from currentColor max(0.8, calc(l + 0.4)) c h / calc(alpha + 0.4))
+		);
+	}
+
+	&:where([dir="rtl"], [dir="rtl"] *) {
+		animation-direction: reverse;
+	}
+}
+
+@utility shimmer-once {
+	animation-iteration-count: 1;
+}
+
+@utility shimmer-reverse {
+	animation-direction: reverse;
+}
+
+@utility shimmer-none {
+	--shimmer-image: none;
+	--shimmer-text-fill: currentColor;
+	background-image: none;
+	-webkit-text-fill-color: currentColor;
+}
+
+@utility shimmer-color-* {
+	--shimmer-color: --value(--color-*, [color]);
+	--shimmer-color: color-mix(
+		in oklch,
+		--value(--color-*, [color]) calc(--modifier(integer) * 1%),
+		transparent
+	);
+}
+
+@utility shimmer-duration-* {
+	--shimmer-duration: calc(--value(integer) * 1ms);
+}
+
+@utility shimmer-spread-* {
+	--shimmer-spread: calc(var(--spacing) * --value(integer));
+	--shimmer-spread: --value([length], [percentage]);
+}
+
+@utility shimmer-angle-* {
+	--shimmer-angle: calc(--value(integer) * 1deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.shimmer {
+		animation: none;
+		background-image: none;
+		-webkit-text-fill-color: currentColor;
+	}
+}
+
+/*
+ * Canonical keyboard focus rings. Prefer these over inventing local ring/outline
+ * stacks.
+ *
+ * - focus-ring: default offset ring (buttons, inputs, most controls).
+ *   `outline-hidden` stays always-on so mouse click does not show the browser
+ *   default; the ring is `:focus-visible` only.
+ * - focus-inset: dense/flush surfaces such as interactive <tr>s. Must use
+ *   outline (not ring/box-shadow) — box-shadow on table-row is unreliable,
+ *   especially in Safari. Do NOT pair with outline-hidden: that sets
+ *   outline-style: none and suppresses the focus outline.
+ */
+@utility focus-ring {
+	@apply outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+@utility focus-inset {
+	/* Reserve outline geometry up front so focus never flashes the browser default. */
+	outline: 2px solid transparent;
+	outline-offset: -2px;
+	/* Call sites often add `transition`/`transition-all`; keep outline instant. */
+	transition-property:
+		color, background-color, border-color, text-decoration-color, fill, stroke, opacity, transform,
+		filter, backdrop-filter, box-shadow;
+
+	&:focus-visible {
+		outline-color: var(--ring);
+		border-radius: var(--radius-md, 0.375rem);
+	}
+}

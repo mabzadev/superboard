@@ -12,20 +12,20 @@ import {
 	synchronizeSuperBoardPluginCatalog,
 	superBoardRuntimePluginCatalog,
 } from "../../../../../apps/site/src/lib/superboard-plugin-catalog.js";
-import apiInitialSchema from "../../../../../packages/plugins/supbrd-core/api/migrations/0001_initial_schema.sql?raw";
-import apiParitySchema from "../../../../../packages/plugins/supbrd-core/api/migrations/0004_grovs_full_parity_schema.sql?raw";
-import apiParityColumns from "../../../../../packages/plugins/supbrd-core/api/migrations/0005_grovs_production_column_parity.sql?raw";
-import billingDeadLetters from "../../../../../packages/plugins/supbrd-core/api/migrations/0044_billing_dead_letter_quarantine.sql?raw";
-import scopeMigration from "../../../../../packages/plugins/supbrd-core/api/migrations/0063_site_operator_scope.sql?raw";
-import mcpSiteGrantSchema from "../../../../../packages/plugins/supbrd-core/api/migrations/0064_mcp_site_operator_grants.sql?raw";
-import api from "../../../../../packages/plugins/supbrd-core/api/src/index.js";
-import { getRequestAuthContext } from "../../../../../packages/plugins/supbrd-core/api/src/lib/auth.js";
-import type { Env } from "../../../../../packages/plugins/supbrd-core/api/src/types.js";
-import billing from "../../../../../packages/plugins/supbrd-plug-commerce/billing/src/index.js";
-import paywallsInitial from "../../../../../packages/plugins/supbrd-plug-commerce/paywalls/migrations/0001_paywalls.sql?raw";
-import paywallsDomain from "../../../../../packages/plugins/supbrd-plug-commerce/paywalls/migrations/0002_paywalls_domain.sql?raw";
-import paywallsAudit from "../../../../../packages/plugins/supbrd-plug-commerce/paywalls/migrations/0003_audit_context.sql?raw";
-import paywalls from "../../../../../packages/plugins/supbrd-plug-commerce/paywalls/src/index.js";
+import paywallsInitial from "../../../../../packages/plugins/superboard-acquisition/paywalls/migrations/0001_paywalls.sql?raw";
+import paywallsDomain from "../../../../../packages/plugins/superboard-acquisition/paywalls/migrations/0002_paywalls_domain.sql?raw";
+import paywallsAudit from "../../../../../packages/plugins/superboard-acquisition/paywalls/migrations/0003_audit_context.sql?raw";
+import paywalls from "../../../../../packages/plugins/superboard-acquisition/paywalls/src/index.js";
+import apiInitialSchema from "../../../../../packages/plugins/superboard-core/api/migrations/0001_initial_schema.sql?raw";
+import apiParitySchema from "../../../../../packages/plugins/superboard-core/api/migrations/0004_grovs_full_parity_schema.sql?raw";
+import apiParityColumns from "../../../../../packages/plugins/superboard-core/api/migrations/0005_grovs_production_column_parity.sql?raw";
+import billingDeadLetters from "../../../../../packages/plugins/superboard-core/api/migrations/0044_billing_dead_letter_quarantine.sql?raw";
+import scopeMigration from "../../../../../packages/plugins/superboard-core/api/migrations/0063_site_operator_scope.sql?raw";
+import mcpSiteGrantSchema from "../../../../../packages/plugins/superboard-core/api/migrations/0064_mcp_site_operator_grants.sql?raw";
+import api from "../../../../../packages/plugins/superboard-core/api/src/index.js";
+import { getRequestAuthContext } from "../../../../../packages/plugins/superboard-core/api/src/lib/auth.js";
+import type { Env } from "../../../../../packages/plugins/superboard-core/api/src/types.js";
+import billing from "../../../../../packages/plugins/superboard-monetization/billing/src/index.js";
 
 test("accepts an EmDash operator without an account in the historical users table", async () => {
 	const secret = "site-operator-runtime-secret";

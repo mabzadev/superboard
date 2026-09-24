@@ -977,7 +977,7 @@
 							"expression": "application_sign_in"
 						},
 						{
-							"file": "packages/plugins/supbrd-plug-identity/worker/src/index.ts",
+							"file": "packages/plugins/superboard-authentification/worker/src/index.ts",
 							"line": 395,
 							"symbol": "applicationUserOperation",
 							"expression": "/internal/v1/application-plugin/:kind/:id"
@@ -1003,7 +1003,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-identity/worker/src/user-administration.ts",
+							"file": "packages/plugins/superboard-authentification/worker/src/user-administration.ts",
 							"line": 5,
 							"symbol": "userAdministration",
 							"expression": "userAdministration"
@@ -1028,7 +1028,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-identity/worker/src/user-administration.ts",
+							"file": "packages/plugins/superboard-authentification/worker/src/user-administration.ts",
 							"line": 5,
 							"symbol": "userAdministration",
 							"expression": "userAdministration"
@@ -1059,7 +1059,7 @@
 							"expression": "link_provider"
 						},
 						{
-							"file": "packages/plugins/supbrd-plug-identity/worker/src/index.ts",
+							"file": "packages/plugins/superboard-authentification/worker/src/index.ts",
 							"line": 395,
 							"symbol": "applicationUserOperation",
 							"expression": "/internal/v1/application-plugin/:kind/:id"
@@ -1091,7 +1091,7 @@
 							"expression": "revoke_application_session"
 						},
 						{
-							"file": "packages/plugins/supbrd-plug-identity/worker/src/index.ts",
+							"file": "packages/plugins/superboard-authentification/worker/src/index.ts",
 							"line": 395,
 							"symbol": "applicationUserOperation",
 							"expression": "/internal/v1/application-plugin/:kind/:id"
@@ -1117,7 +1117,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-identity/worker/src/user-administration.ts",
+							"file": "packages/plugins/superboard-authentification/worker/src/user-administration.ts",
 							"line": 5,
 							"symbol": "userAdministration",
 							"expression": "userAdministration"
@@ -1142,7 +1142,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-identity/worker/src/user-administration.ts",
+							"file": "packages/plugins/superboard-authentification/worker/src/user-administration.ts",
 							"line": 5,
 							"symbol": "userAdministration",
 							"expression": "userAdministration"
@@ -1173,7 +1173,7 @@
 							"expression": "linked_providers"
 						},
 						{
-							"file": "packages/plugins/supbrd-plug-identity/worker/src/index.ts",
+							"file": "packages/plugins/superboard-authentification/worker/src/index.ts",
 							"line": 395,
 							"symbol": "applicationUserOperation",
 							"expression": "/internal/v1/application-plugin/:kind/:id"
@@ -1205,7 +1205,7 @@
 							"expression": "active_sessions"
 						},
 						{
-							"file": "packages/plugins/supbrd-plug-identity/worker/src/index.ts",
+							"file": "packages/plugins/superboard-authentification/worker/src/index.ts",
 							"line": 395,
 							"symbol": "applicationUserOperation",
 							"expression": "/internal/v1/application-plugin/:kind/:id"
@@ -2021,7 +2021,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 310,
 							"symbol": "migrateProductsLedger",
 							"expression": "projectPath(projectRef, \"/migrate-products\")",
@@ -2047,7 +2047,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 307,
 							"symbol": "getBillingMigrationStatus",
 							"expression": "projectPath(projectRef, \"/migration/status\")",
@@ -2074,7 +2074,7 @@
 					"body_expression": "input",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 225,
 							"symbol": "createPurchase",
 							"expression": "projectPath(projectRef, \"/purchases\")",
@@ -2101,7 +2101,7 @@
 					"body_expression": "input",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 231,
 							"symbol": "createRefund",
 							"expression": "projectPath(projectRef, `/purchases/${purchaseId}/refunds`)",
@@ -2128,7 +2128,7 @@
 					"body_expression": "input",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 241,
 							"symbol": "updateRefund",
 							"expression": "projectPath(projectRef, `/refunds/${refundId}`)",
@@ -2155,7 +2155,7 @@
 					"body_expression": "input",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 264,
 							"symbol": "updateSubscription",
 							"expression": "projectPath(projectRef, `/subscriptions/${id}`)",
@@ -2181,7 +2181,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/billing/billingService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/billing/billingService.ts",
 							"line": 879,
 							"symbol": "reconcileBillingStore",
 							"expression": "reconcileBillingStore",
@@ -2207,7 +2207,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 221,
 							"symbol": "getPurchases",
 							"expression": "`${projectPath(projectRef, \"/purchases\")}${query}`",
@@ -2233,7 +2233,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 228,
 							"symbol": "getPurchase",
 							"expression": "projectPath(projectRef, `/purchases/${purchaseId}`)",
@@ -2259,7 +2259,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 238,
 							"symbol": "getRefunds",
 							"expression": "projectPath(projectRef, \"/refunds\")",
@@ -2285,7 +2285,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 256,
 							"symbol": "getSubscriptions",
 							"expression": "`${projectPath(projectRef, \"/subscriptions\")}${productQuery(filters)}`",
@@ -2311,7 +2311,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/products/productsService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/products/productsService.ts",
 							"line": 248,
 							"symbol": "getFinancialCustomerEntitlements",
 							"expression": "projectPath( projectRef, `/customers/${encodeURIComponent(customerId)}/entitlements` )",
@@ -2337,7 +2337,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-commerce/src/front/billing/api/billing/billingService.ts",
+							"file": "packages/plugins/superboard-monetization/src/front/billing/api/billing/billingService.ts",
 							"line": 882,
 							"symbol": "getBillingLedger",
 							"expression": "getBillingLedger",
@@ -2744,7 +2744,7 @@
 							"transport_method": "POST"
 						},
 						{
-							"file": "packages/plugins/supbrd-plug-communication/dynamic-links/src/index.ts",
+							"file": "packages/plugins/superboard-acquisition/dynamic-links/src/index.ts",
 							"line": 252,
 							"symbol": "app.post",
 							"expression": "app.post(\"/internal/v1/links/:slug/resolve\""
@@ -2796,7 +2796,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/dynamic-links/src/index.ts",
+							"file": "packages/plugins/superboard-acquisition/dynamic-links/src/index.ts",
 							"line": 653,
 							"symbol": "app.get",
 							"expression": "app.get(\"/internal/v1/campaign-analytics\"",
@@ -2953,7 +2953,7 @@
 					"body_expression": "payload",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 72,
 							"symbol": "sendTransactionalEmail",
 							"expression": "path(projectRef, \"/transactional\")",
@@ -2980,7 +2980,7 @@
 					"body_expression": "payload",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 85,
 							"symbol": "saveSmtpSettings",
 							"expression": "path(projectRef, \"/settings/smtp\")",
@@ -3006,7 +3006,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 94,
 							"symbol": "deleteSmtpSettings",
 							"expression": "path(projectRef, `/settings/smtp/${id}`)",
@@ -3033,7 +3033,7 @@
 					"body_expression": "{ profile_id: profileId, recipient, }",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 98,
 							"symbol": "testSmtpSettings",
 							"expression": "path(projectRef, \"/settings/smtp/test\")",
@@ -3060,7 +3060,7 @@
 					"body_expression": "{}",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 111,
 							"symbol": "verifySmtpDomain",
 							"expression": "path(projectRef, `/settings/smtp/${profileId}/verify-domain`)",
@@ -3087,7 +3087,7 @@
 					"body_expression": "{}",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 155,
 							"symbol": "retryDeliveryOutbox",
 							"expression": "path(projectRef, `/settings/delivery-outbox/${id}/retry`)",
@@ -3114,7 +3114,7 @@
 					"body_expression": "{}",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 167,
 							"symbol": "replayEmailDeadLetter",
 							"expression": "path(projectRef, `/settings/dead-letters/${id}/replay`)",
@@ -3141,7 +3141,7 @@
 					"body_expression": "{}",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 176,
 							"symbol": "discardEmailDeadLetter",
 							"expression": "path(projectRef, `/settings/dead-letters/${id}/discard`)",
@@ -3167,7 +3167,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 81,
 							"symbol": "getSmtpSettings",
 							"expression": "path(projectRef, \"/settings/smtp\")",
@@ -3193,7 +3193,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 149,
 							"symbol": "getDeliveryOutbox",
 							"expression": "path(projectRef, \"/settings/delivery-outbox\")",
@@ -3219,7 +3219,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 161,
 							"symbol": "getEmailDeadLetters",
 							"expression": "path(projectRef, \"/settings/dead-letters\")",
@@ -3245,7 +3245,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 128,
 							"symbol": "getProviderWebhooks",
 							"expression": "path(projectRef, \"/settings/provider-webhooks\")",
@@ -3271,7 +3271,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.ts",
+							"file": "packages/plugins/superboard-communication/src/front/email/api/email/emailService.ts",
 							"line": 184,
 							"symbol": "getProviderEvents",
 							"expression": "path(projectRef, \"/provider-events\")",
@@ -3297,7 +3297,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"file": "packages/plugins/superboard-data/worker/src/operator.ts",
 							"line": 15,
 							"symbol": "handleOperatorFiles",
 							"expression": "handleOperatorFiles"
@@ -3322,7 +3322,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"file": "packages/plugins/superboard-data/worker/src/operator.ts",
 							"line": 15,
 							"symbol": "handleOperatorFiles",
 							"expression": "handleOperatorFiles"
@@ -3347,7 +3347,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"file": "packages/plugins/superboard-data/worker/src/operator.ts",
 							"line": 15,
 							"symbol": "handleOperatorFiles",
 							"expression": "handleOperatorFiles"
@@ -3372,7 +3372,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"file": "packages/plugins/superboard-data/worker/src/operator.ts",
 							"line": 15,
 							"symbol": "handleOperatorFiles",
 							"expression": "handleOperatorFiles"
@@ -3397,7 +3397,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"file": "packages/plugins/superboard-data/worker/src/operator.ts",
 							"line": 15,
 							"symbol": "handleOperatorFiles",
 							"expression": "handleOperatorFiles"
@@ -3422,7 +3422,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"file": "packages/plugins/superboard-data/worker/src/operator.ts",
 							"line": 15,
 							"symbol": "handleOperatorFiles",
 							"expression": "handleOperatorFiles"
@@ -3447,7 +3447,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"file": "packages/plugins/superboard-data/worker/src/operator.ts",
 							"line": 15,
 							"symbol": "handleOperatorFiles",
 							"expression": "handleOperatorFiles"
@@ -3472,7 +3472,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-data/worker/src/operator.ts",
+							"file": "packages/plugins/superboard-data/worker/src/operator.ts",
 							"line": 15,
 							"symbol": "handleOperatorFiles",
 							"expression": "handleOperatorFiles"
@@ -3893,7 +3893,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/gateway-admin.ts",
 							"line": 24,
 							"symbol": "gatewayAdmin",
 							"expression": "gatewayAdmin"
@@ -3918,7 +3918,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/gateway-admin.ts",
 							"line": 24,
 							"symbol": "gatewayAdmin",
 							"expression": "gatewayAdmin"
@@ -3943,7 +3943,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/gateway-admin.ts",
 							"line": 24,
 							"symbol": "gatewayAdmin",
 							"expression": "gatewayAdmin"
@@ -3968,7 +3968,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/gateway-admin.ts",
 							"line": 24,
 							"symbol": "gatewayAdmin",
 							"expression": "gatewayAdmin"
@@ -3993,7 +3993,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/gateway-admin.ts",
 							"line": 24,
 							"symbol": "gatewayAdmin",
 							"expression": "gatewayAdmin"
@@ -4018,7 +4018,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/gateway-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/gateway-admin.ts",
 							"line": 24,
 							"symbol": "gatewayAdmin",
 							"expression": "gatewayAdmin"
@@ -4629,7 +4629,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/mcp-operator.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/mcp-operator.ts",
 							"line": 17,
 							"symbol": "mcpOperator",
 							"expression": "mcpOperator"
@@ -4680,7 +4680,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/mcp-operator.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/mcp-operator.ts",
 							"line": 17,
 							"symbol": "mcpOperator",
 							"expression": "mcpOperator"
@@ -4705,7 +4705,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/mcp-operator.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/mcp-operator.ts",
 							"line": 17,
 							"symbol": "mcpOperator",
 							"expression": "mcpOperator"
@@ -4730,7 +4730,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/observability-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/observability-admin.ts",
 							"line": 52,
 							"symbol": "observabilityAdmin",
 							"expression": "observabilityAdmin"
@@ -4755,7 +4755,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/observability-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/observability-admin.ts",
 							"line": 52,
 							"symbol": "observabilityAdmin",
 							"expression": "observabilityAdmin"
@@ -4887,7 +4887,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/observability-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/observability-admin.ts",
 							"line": 52,
 							"symbol": "observabilityAdmin",
 							"expression": "observabilityAdmin"
@@ -4912,7 +4912,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/observability-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/observability-admin.ts",
 							"line": 52,
 							"symbol": "observabilityAdmin",
 							"expression": "observabilityAdmin"
@@ -4937,7 +4937,7 @@
 					"body": "none",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-core/api/src/routes/observability-admin.ts",
+							"file": "packages/plugins/superboard-core/api/src/routes/observability-admin.ts",
 							"line": 52,
 							"symbol": "observabilityAdmin",
 							"expression": "observabilityAdmin"
@@ -6634,7 +6634,7 @@
 					"body": "passthrough",
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/marketing/adapters.ts",
+							"file": "packages/plugins/superboard-communication/src/front/marketing/adapters.ts",
 							"line": 1,
 							"symbol": "adapters",
 							"expression": "/api/v1/projects/:projectRef/notifications"
@@ -6660,7 +6660,7 @@
 					"read_only": true,
 					"sources": [
 						{
-							"file": "packages/plugins/supbrd-plug-communication/src/front/marketing/adapters.ts",
+							"file": "packages/plugins/superboard-communication/src/front/marketing/adapters.ts",
 							"line": 1,
 							"symbol": "adapters",
 							"expression": "/api/v1/projects/:projectRef/notifications/search"

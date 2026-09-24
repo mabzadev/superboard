@@ -4,7 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import DashboardPageContent from "../../../../packages/plugins/supbrd-plug-analytics/src/front/components/dashboard/DashboardPageContent.js";
+import DashboardPageContent from "../../../../packages/plugins/superboard-analytics/src/front/components/dashboard/DashboardPageContent.js";
 import { TooltipProvider } from "../../../../packages/supbrd-front-ui/src/shared/components/ui/tooltip.js";
 import { ProjectSelectionProvider } from "../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js";
 
@@ -147,7 +147,7 @@ describe("Analytics with optional frontend integrations", () => {
 		expect(container.textContent).toContain("Unique people");
 		expect(
 			container.querySelector(
-				'a[href^="/app/"], a[href^="/products/"], a[href^="/dynamic-links/"]',
+				'a[href^="/app/"], a[href^="/products/"], a[href^="/dynamic-links/"], a[href^="/acquisition/dynamic-links/"]',
 			),
 		).toBeNull();
 		expect(container.textContent).not.toContain("Some module data is temporarily unavailable");
@@ -162,11 +162,11 @@ describe("Analytics with optional frontend integrations", () => {
 		).toBe(true);
 		expect(network.paths.some((path) => /\/api\/v1\/(?:app|products)\//u.test(path))).toBe(false);
 		expect(container.textContent).toContain("Campaign landing");
-		expect(container.querySelector('a[href^="/dynamic-links/"]')).not.toBeNull();
+		expect(container.querySelector('a[href^="/acquisition/dynamic-links/"]')).not.toBeNull();
 		network.paths.length = 0;
 		await render();
 		expect(network.paths.some((path) => path.includes("/dynamic-links/"))).toBe(false);
-		expect(container.querySelector('a[href^="/dynamic-links/"]')).toBeNull();
+		expect(container.querySelector('a[href^="/acquisition/dynamic-links/"]')).toBeNull();
 		expect(container.textContent).toContain("137");
 	});
 
@@ -202,7 +202,7 @@ describe("Analytics with optional frontend integrations", () => {
 			network.rejectLinkStatistics?.(new Error("Stale link provider failure"));
 		});
 		expect(container.textContent).not.toContain("Stale link provider failure");
-		expect(container.querySelector('a[href^="/dynamic-links/"]')).toBeNull();
+		expect(container.querySelector('a[href^="/acquisition/dynamic-links/"]')).toBeNull();
 		expect(container.textContent).toContain("137");
 	});
 

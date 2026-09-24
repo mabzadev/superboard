@@ -205,7 +205,7 @@ inventory are documented in `docs/ARCHITECTURE_CIBLE_FR.md`,
 The evidence-backed implementation
 and external-readiness status is in `docs/IMPLEMENTATION_AUDIT_2026-08-08.md`.
 The pinned Support behavior inventory and its publication-leak gate are kept in
-the build-excluded `packages/plugins/supbrd-plug-support/scripts/support-audit` workspace.
+the build-excluded `packages/plugins/superboard-support/scripts/support-audit` workspace.
 The value-free cross-Worker secret graph, production provenance rules and
 rotation protocol are in `docs/SECRET_MANAGEMENT.md`.
 

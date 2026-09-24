@@ -1,6 +1,8 @@
+import type { APIContext } from "astro";
 import { env } from "cloudflare:test";
 import { expect, test } from "vitest";
 
+import { dispatchSettingsPluginApi } from "../../../../../apps/site/src/lib/settings-plugin-api.js";
 import { createCmsApi } from "./retirement-api-cms.js";
 import {
 	apiCommand,
@@ -12,6 +14,54 @@ import {
 } from "./retirement-api-helpers.js";
 const plugin = "supbrd-plug-settings";
 const file = "retirement-api-settings.runtime.test.ts";
+
+test("current settings identifiers read and update existing plugin storage", async () => {
+	const cms = await createCmsApi();
+	try {
+		const storedKey = "plugin:supbrd-plug-settings:settings:site_name";
+		await cms.runtime.db
+			.insertInto("options")
+			.values({ name: storedKey, value: JSON.stringify("Existing name") })
+			.onConflict((conflict) =>
+				conflict.column("name").doUpdateSet({ value: JSON.stringify("Existing name") }),
+			)
+			.execute();
+		const request = async (id: string, values?: Record<string, unknown>) => {
+			const url = new URL(`https://site.example/_emdash/api/admin/plugins/${id}/settings`);
+			const input = new Request(url, {
+				method: values ? "PUT" : "GET",
+				headers: { "Content-Type": "application/json" },
+				...(values ? { body: JSON.stringify({ values }) } : {}),
+			});
+			const context = {
+				request: input,
+				url,
+				params: {},
+				locals: { emdash: cms.runtime, user: { id: "operator-1", role: 50 } },
+			} as unknown as APIContext;
+			return dispatchSettingsPluginApi(context, input, id);
+		};
+		const currentKey = "superboard-core.setting.settings_site_name";
+		const initial = await request("superboard-core");
+		expect(initial.status).toBe(200);
+		expect(await initial.json()).toMatchObject({
+			data: { values: { [currentKey]: "Existing name" } },
+		});
+		const saved = await request("superboard-core", { [currentKey]: "Updated name" });
+		expect(saved.status).toBe(200);
+		const stored = await cms.runtime.db
+			.selectFrom("options")
+			.select("value")
+			.where("name", "=", storedKey)
+			.executeTakeFirstOrThrow();
+		expect(JSON.parse(stored.value)).toBe("Updated name");
+		expect(await (await request("supbrd-plug-settings")).json()).toMatchObject({
+			data: { values: { site_name: "Updated name" } },
+		});
+	} finally {
+		await cms.close();
+	}
+});
 test("canonical Settings APIs retain changed values, versions and verified SDK configuration", async () => {
 	const scope = await prepareApiPlugin(plugin);
 	const cms = await createCmsApi();

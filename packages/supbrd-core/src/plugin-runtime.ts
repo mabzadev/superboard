@@ -120,12 +120,7 @@ export function createConfiguredSuperBoardPlugin(input: unknown, label: string) 
 		},
 		admin: {
 			settingsSchema,
-			pages: [
-				{ path: "/", label: label, icon: "settings" },
-				...(manifest.plugin_id === "supbrd-core" || manifest.plugin_id === "supbrd-plug-settings"
-					? [{ path: "/configuration", label: "Configuration", icon: "settings" }]
-					: []),
-			],
+			pages: [{ path: "/", label: label, icon: "settings" }],
 		},
 	};
 }

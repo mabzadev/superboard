@@ -939,7 +939,7 @@ export async function buildReadiness({
 				existsSync(
 					resolve(
 						root,
-						"packages/plugins/supbrd-core/api/migrations/0056_oauth_client_secret_overlap.sql",
+						"packages/plugins/superboard-core/api/migrations/0056_oauth_client_secret_overlap.sql",
 					),
 				) && existsSync(resolve(root, "scripts/cloudflare/rotate-oauth.mjs")),
 			migration: "0056_oauth_client_secret_overlap.sql",

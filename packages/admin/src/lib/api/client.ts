@@ -127,6 +127,7 @@ export interface AdminManifest {
 					kind: string;
 					label?: string;
 					required?: boolean;
+					readOnly?: boolean;
 					widget?: string;
 					/**
 					 * For `select` / `multiSelect`: the list of enum choices.

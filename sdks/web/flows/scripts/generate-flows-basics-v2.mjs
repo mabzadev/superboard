@@ -14,7 +14,7 @@ const sourcePath = resolve(
 const cssPath = resolve(root, "sdks/web/flows/upstream/packages/styles/src/vars.css");
 const outputPath = resolve(
 	root,
-	"packages/plugins/supbrd-plug-journeys/flows/src/components/basics-v2.generated.ts",
+	"packages/plugins/superboard-acquisition/flows/src/components/basics-v2.generated.ts",
 );
 const checkOnly = process.argv.includes("--check");
 

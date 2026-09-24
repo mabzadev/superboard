@@ -5,7 +5,7 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "../..");
 const upstreamBackend = "upstream/superboard/backend";
-const workerRoot = "packages/plugins/supbrd-core/api";
+const workerRoot = "packages/plugins/superboard-core/api";
 
 const read = (file) => readFileSync(path.join(root, file), "utf8");
 const listFiles = (dir, suffix) => {

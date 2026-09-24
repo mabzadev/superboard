@@ -16,12 +16,12 @@ const sourcePattern = /(?:\.[cm]?[jt]sx?|\.astro)$/u;
 const generatedPattern =
 	/(?:^|\/)(?:dist|node_modules|generated|\.next|\.open-next|\.wrangler|coverage)\//u;
 const workerEslintRoots = [
-	"packages/plugins/supbrd-plug-analytics/worker",
-	"packages/plugins/supbrd-plug-journeys/flows",
-	"packages/plugins/supbrd-plug-communication/marketing",
-	"packages/plugins/supbrd-plug-support/worker",
+	"packages/plugins/superboard-analytics/worker",
+	"packages/plugins/superboard-acquisition/flows",
+	"packages/plugins/superboard-communication/marketing",
+	"packages/plugins/superboard-support/worker",
 ];
-const emdashPackagePattern = /^packages\/(?:plugins\/)?supbrd-[^/]+\//u;
+const emdashPackagePattern = /^packages\/(?:plugins\/)?(?:supbrd|superboard|superbard)-[^/]+\//u;
 
 function sourceOwnerPath(path) {
 	if (path.startsWith("tests/checks/plugins/"))
@@ -74,7 +74,7 @@ export function classifyLintSources(paths, upstreamPaths) {
 			group = path.endsWith(".astro") ? "astro" : "declarations";
 		} else if (
 			sourcePath.startsWith("packages/supbrd-front-ui/") ||
-			(sourcePath.startsWith("packages/plugins/supbrd-") && sourcePath.includes("/src/front/"))
+			(sourcePath.startsWith("packages/plugins/") && sourcePath.includes("/src/front/"))
 		) {
 			group = "frontend";
 		} else if (sourcePath.startsWith("apps/mcp/src/")) {
@@ -87,7 +87,7 @@ export function classifyLintSources(paths, upstreamPaths) {
 				([service, root]) => service !== "site" && sourcePath.startsWith(`${root}/`),
 			) ||
 			sourcePath.startsWith("apps/reference/worker/") ||
-			(sourcePath.startsWith("packages/plugins/supbrd-") && sourcePath.includes("/scripts/"))
+			(sourcePath.startsWith("packages/plugins/") && sourcePath.includes("/scripts/"))
 		) {
 			group = "native";
 		} else if (path.startsWith("sdks/web/flows/upstream/")) {

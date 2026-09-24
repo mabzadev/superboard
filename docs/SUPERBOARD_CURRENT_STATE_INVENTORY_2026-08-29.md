@@ -242,7 +242,7 @@ L’application `apps/reference` matérialise 16 parcours : bootstrap, auth, cr�
 ### 4.3 Autres consommateurs
 
 - la famille Identity conserve cinq SDK Melody : Web, React, Vue, Angular et Next.js. Ils ciblent le même Worker Identity, utilisent OAuth code + PKCE et sont testés par `identity-sdks:check`, mais ils ne figurent pas dans le catalogue de release SuperBoard à 7 entrées. Leur politique de publication/compatibilité est donc une lacune à clarifier avant EmDash ; [sources : README][identity-sdks], [packages][identity-sdk-tree]
-- `apps/mcp` est un serveur/adaptateur local tandis que `packages/plugins/supbrd-core/mcp` est le Worker distant stateless lié à l’API ; les deux consomment le même contrat opérateur ; [sources : app][mcp-app], [Worker][mcp-worker]
+- `apps/mcp` est un serveur/adaptateur local tandis que `packages/plugins/superboard-core/mcp` est le Worker distant stateless lié à l’API ; les deux consomment le même contrat opérateur ; [sources : app][mcp-app], [Worker][mcp-worker]
 - VocoStar est déclaré comme unique application FlutterFlow externe. Son plan compte 7 phases, 10 work items, 35 checks et 36 symboles de remplacement, mais sa source n’est pas dans le dépôt ; le readiness offline la marque `source-not-inspected`. [Sources : application][flutterflow-applications], [plan][flutterflow-vocostar-plan]
 - les anciens repos `superboard-platform` et `superboard-reference` sont déclarés legacy ; l’autorité est le monorepo actuel. [Sources : gouvernance][platform-governance], [provenance][history-migration].
 
@@ -376,14 +376,14 @@ Au 29 août 2026, le checkout partagé comparé à `d1850233` contient **172 ent
 
 Les ensembles les plus structurants sont :
 
-| Ensemble local                         | Paths observés                                                                                                                                                                                                                                             | Classification                                                                                 |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Flows                                  | `packages/plugins/supbrd-plug-journeys/flows/`, `sdks/web/flows/`, `apps/dashboard/src/app/(protected)/flows/`, `apps/dashboard/src/api/flows/`, `packages/contracts/src/flows.ts`, migration API `0061_flows_legacy_cutover.sql`, scripts de sync/cutover | **Checkout non validé.** Verticale apparemment complète, totalement absente du SHA.            |
-| Support étendu                         | nouvelles pages `automations`, `captain`, `channels`, `help-center`, `integrations`, `proactive-support`, `reports`, `settings`, `workforce`; migrations Support `0010` à `0023`; nouveaux contrats/SDK/tests/runtime                                      | **Checkout non validé.** Ne pas l’inclure dans la parité livrée sans commit reviewé.           |
-| Notifications Support et Email inbound | `support-notifications.*`, migration API `0062`, gateway Support, `packages/plugins/supbrd-plug-communication/email/src/inbound.ts`, changements Push/Email                                                                                                | **Checkout non validé.**                                                                       |
-| SDK                                    | nouveaux clients Flutter Flows/Support, FlutterFlow Flows, typings/support JavaScript, changements de catalogue/release                                                                                                                                    | **Checkout non validé.**                                                                       |
-| Contrôle Cloudflare                    | modifications targets, schéma, services, bootstrap, secrets, D1, contrôle GitHub et readiness                                                                                                                                                              | **Checkout non validé.** Peut changer la topologie ; ne pas mélanger avec le baseline.         |
-| Documentation de domaine et hooks      | `CONTEXT*.md`, `docs/agents/`, `AGENTS.md`, Husky/lint-staged/Prettier                                                                                                                                                                                     | **Checkout non validé.** Ces fichiers expliquent le travail en cours, pas l’état livré du SHA. |
+| Ensemble local                         | Paths observés                                                                                                                                                                                                                                               | Classification                                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Flows                                  | `packages/plugins/superboard-acquisition/flows/`, `sdks/web/flows/`, `apps/dashboard/src/app/(protected)/flows/`, `apps/dashboard/src/api/flows/`, `packages/contracts/src/flows.ts`, migration API `0061_flows_legacy_cutover.sql`, scripts de sync/cutover | **Checkout non validé.** Verticale apparemment complète, totalement absente du SHA.            |
+| Support étendu                         | nouvelles pages `automations`, `captain`, `channels`, `help-center`, `integrations`, `proactive-support`, `reports`, `settings`, `workforce`; migrations Support `0010` à `0023`; nouveaux contrats/SDK/tests/runtime                                        | **Checkout non validé.** Ne pas l’inclure dans la parité livrée sans commit reviewé.           |
+| Notifications Support et Email inbound | `support-notifications.*`, migration API `0062`, gateway Support, `packages/plugins/superboard-communication/email/src/inbound.ts`, changements Push/Email                                                                                                   | **Checkout non validé.**                                                                       |
+| SDK                                    | nouveaux clients Flutter Flows/Support, FlutterFlow Flows, typings/support JavaScript, changements de catalogue/release                                                                                                                                      | **Checkout non validé.**                                                                       |
+| Contrôle Cloudflare                    | modifications targets, schéma, services, bootstrap, secrets, D1, contrôle GitHub et readiness                                                                                                                                                                | **Checkout non validé.** Peut changer la topologie ; ne pas mélanger avec le baseline.         |
+| Documentation de domaine et hooks      | `CONTEXT*.md`, `docs/agents/`, `AGENTS.md`, Husky/lint-staged/Prettier                                                                                                                                                                                       | **Checkout non validé.** Ces fichiers expliquent le travail en cours, pas l’état livré du SHA. |
 
 Il faut prendre une décision explicite avant la conception finale EmDash : soit rebaser l’inventaire sur un futur commit reviewé contenant ces travaux, soit maintenir `d1850233` comme baseline et traiter Flows/Support étendu comme une migration parallèle. Mélanger les deux créerait une parité impossible à auditer.
 
@@ -476,26 +476,26 @@ La voie EmDash ne doit commencer la construction qu’après cinq décisions : b
 
 [adr-canonical]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/ADR-001-CANONICAL-SUPERBOARD-SOURCE.md
 [analytics-contract]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/contracts/src/analytics.ts
-[analytics-http]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-analytics/worker/src/http.ts
-[analytics-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-analytics/worker/migrations
-[analytics-operations]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-analytics/worker/src/operations.ts
-[analytics-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-analytics/worker/src/index.ts
-[api-auth]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/lib/auth.ts
-[api-auth-middleware]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/middleware/auth.ts
-[api-index]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/index.ts
-[api-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/migrations
-[api-routes-tree]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/routes
-[app-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/app/migrations
-[app-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/app/src/index.ts
+[analytics-http]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-analytics/worker/src/http.ts
+[analytics-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-analytics/worker/migrations
+[analytics-operations]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-analytics/worker/src/operations.ts
+[analytics-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-analytics/worker/src/index.ts
+[api-auth]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/api/src/lib/auth.ts
+[api-auth-middleware]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/api/src/middleware/auth.ts
+[api-index]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/api/src/index.ts
+[api-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/api/migrations
+[api-routes-tree]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/api/src/routes
+[app-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/app/migrations
+[app-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/app/src/index.ts
 [architecture]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/ARCHITECTURE_CIBLE_FR.md
 [auth-refresh-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/dashboard/src/app/api/auth/refresh/route.ts
 [auth-revoke-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/dashboard/src/app/api/auth/revoke/route.ts
 [auth-token-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/dashboard/src/app/api/auth/token/route.ts
 [backoffice-policy]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/backoffice-policy.test.mjs
 [billing-cutover]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/BILLING_WORKER_CUTOVER.md
-[billing-routes]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/routes
-[billing-types]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/types.ts
-[billing-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-commerce/billing/src/index.ts
+[billing-routes]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/api/src/routes
+[billing-types]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/api/src/types.ts
+[billing-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-monetization/billing/src/index.ts
 [bootstrap-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-bootstrap.mjs
 [ci-workflow]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/.github/workflows/ci.yml
 [cloudflare-doc]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/CLOUDFLARE.md
@@ -551,50 +551,50 @@ La voie EmDash ne doit commencer la construction qu’après cinq décisions : b
 [deploy-workflow]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/.github/workflows/deploy-cloudflare.yml
 [deployment-doc]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/DEPLOYMENT.md
 [deployment-matrix]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/cloudflare-deployments.json
-[domain-gateway]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/lib/domain-modules.ts
-[dynamic-links-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/dynamic-links/migrations
-[dynamic-links-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/dynamic-links/src/index.ts
+[domain-gateway]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/api/src/lib/domain-modules.ts
+[dynamic-links-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-acquisition/dynamic-links/migrations
+[dynamic-links-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-acquisition/dynamic-links/src/index.ts
 [email-contract]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/contracts/src/email.ts
-[email-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/email/migrations
+[email-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-communication/email/migrations
 [email-transport]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/email-transport/src/index.ts
-[email-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/email/src/index.ts
-[files-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-data/worker/migrations
-[files-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-data/worker/src/index.ts
+[email-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-communication/email/src/index.ts
+[files-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-data/worker/migrations
+[files-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-data/worker/src/index.ts
 [flutterflow-applications]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/flutterflow-applications.json
 [flutterflow-library]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/flutterflow-library.json
 [flutterflow-library-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/tools/flutterflow-library/scripts/flutterflow-library-contract.mjs
 [flutterflow-vocostar-plan]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/flutterflow-migrations/vocostar.json
 [github-control-plane]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/github-control-plane.json
 [history-migration]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/HISTORY_MIGRATION.md
-[identity-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-identity/worker/migrations
+[identity-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-authentification/worker/migrations
 [identity-sdk-tree]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/sdks/identity
 [identity-sdks]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/sdks/web/identity/README.md
-[identity-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-identity/worker/src/index.ts
+[identity-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-authentification/worker/src/index.ts
 [implementation-audit]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/IMPLEMENTATION_AUDIT_2026-08-08.md
 [inventory-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/superboard-inventory.mjs
 [inventory-tests]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/superboard-inventory.test.mjs
 [local-storage]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/dashboard/src/lib/LocalStorage.ts
-[marketing-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/marketing/migrations
-[marketing-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-communication/marketing/src/index.ts
+[marketing-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-communication/marketing/migrations
+[marketing-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-communication/marketing/src/index.ts
 [mcp-app]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/mcp
-[mcp-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/mcp/src/index.ts
+[mcp-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/mcp/src/index.ts
 [medias-orchestrator]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/custom/vocostar/orchestrators/medias/src/index.ts
 [messaging-architecture]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/MESSAGING_ARCHITECTURE.md
 [messaging-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/workers/messaging/migrations
 [migration-batch]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-migration-batch.mjs
 [module-cutover]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/MODULE_CUTOVER_RUNBOOK.md
-[observability-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/observability/src/index.ts
-[onboardings-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-journeys/onboardings/migrations
-[onboardings-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-journeys/onboardings/src/index.ts
+[observability-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/observability/src/index.ts
+[onboardings-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-acquisition/onboardings/migrations
+[onboardings-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-acquisition/onboardings/src/index.ts
 [openchat-convergence]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/OPENCHAT_SUPPORT_CONVERGENCE.md
 [packages-tree]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages
-[paywalls-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-commerce/paywalls/migrations
-[paywalls-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-commerce/paywalls/src/index.ts
+[paywalls-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-acquisition/paywalls/migrations
+[paywalls-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-acquisition/paywalls/src/index.ts
 [platform-governance]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/config/platform-governance.json
 [platform-readiness-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/platform-readiness.mjs
-[platform-status-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-core/api/src/routes/platform-status.ts
-[products-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-commerce/products/migrations
-[products-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-commerce/products/src/index.ts
+[platform-status-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-core/api/src/routes/platform-status.ts
+[products-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-monetization/products/migrations
+[products-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-monetization/products/src/index.ts
 [project-context]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/contracts/src/project-context.ts
 [protected-route]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/apps/dashboard/src/lib/ProtectedRoute.tsx
 [public-routing]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/PUBLIC_ROUTING_CUTOVER.md
@@ -608,8 +608,8 @@ La voie EmDash ne doit commencer la construction qu’après cinq décisions : b
 [sdk-catalog-script]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/sdk-catalog.mjs
 [secret-management]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/docs/SECRET_MANAGEMENT.md
 [service-registry]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-services.mjs
-[support-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-support/worker/migrations
-[support-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/supbrd-plug-support/worker/src/index.ts
+[support-migrations]: https://github.com/mabzadev/superboard/tree/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-support/worker/migrations
+[support-worker]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/packages/plugins/superboard-support/worker/src/index.ts
 [target-mbza]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/mbza-development.json
 [target-schema]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/schema.json
 [target-vocostar]: https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/vocostar.json

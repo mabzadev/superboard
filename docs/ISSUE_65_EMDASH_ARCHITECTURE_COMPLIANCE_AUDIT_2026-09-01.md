@@ -310,13 +310,13 @@ La data source de plugin lit ces Stores dans `apps/site/src/pages/_superboard/ap
 
 Les routes `apps/site/src/pages/api/v1/[...path].ts:8-16` et `api/v2/[...path].ts:8-16` transmettent toutes les requêtes au proxy. Les lectures vont directement à `API_SERVICE` (`apps/site/src/lib/operator-api-proxy.ts:61-65`). Pour une mutation, le Site chiffre et insère la requête dans `superboard_plugin_command_operations`, puis appelle quand même `API_SERVICE` et conserve sa réponse (`:86-145`; `plugin-command-authority.ts:40-145`). Cette table est un journal de commande et de réponse ; elle ne met pas à jour `superboard_plugin_store_records`.
 
-Les Workers effectuent encore les écritures métier. Un exemple complet apparaît dans `packages/plugins/supbrd-core/api/src/routes/links.ts:35-104,119-142`, qui insère, met à jour et supprime directement dans `redirect_configs`, `links` et `custom_redirects` via `c.env.DB`.
+Les Workers effectuent encore les écritures métier. Un exemple complet apparaît dans `packages/plugins/superboard-core/api/src/routes/links.ts:35-104,119-142`, qui insère, met à jour et supprime directement dans `redirect_configs`, `links` et `custom_redirects` via `c.env.DB`.
 
 La recherche suivante trouve 115 fichiers source Worker hors tests contenant une écriture SQL directe :
 
 ```text
 $ git grep -l -E 'INSERT INTO|UPDATE [a-zA-Z_]+ SET|DELETE FROM' 35aad4c \
-    -- packages/plugins/supbrd-core/api/src workers/*/src | rg -v '\.(test|spec)\.' | wc -l
+    -- packages/plugins/superboard-core/api/src workers/*/src | rg -v '\.(test|spec)\.' | wc -l
 115
 ```
 
@@ -326,7 +326,7 @@ Le test `plugin-store-authority.runtime.test.ts:178-230` appelle cette approche 
 
 1. Raccorder les commands de chaque manifest à `putPluginStoreRecord` ou à un repository de Store typé équivalent avant toute exécution Worker. Le point de passage actuel `operator-api-proxy.ts:86-145` ne persiste qu’un journal de commande.
 2. Remplacer les lectures directes `API_SERVICE` de `operator-api-proxy.ts:61-65` par les data sources des Stores, avec un mode de compatibilité borné uniquement pendant migration.
-3. Migrer les écritures directes des routes Worker, dont `packages/plugins/supbrd-core/api/src/routes/links.ts:35-142`, vers des commands consommant un état déjà autoritatif. Le Worker peut produire un effet ou un callback, mais ne doit plus posséder la ligne métier canonique.
+3. Migrer les écritures directes des routes Worker, dont `packages/plugins/superboard-core/api/src/routes/links.ts:35-142`, vers des commands consommant un état déjà autoritatif. Le Worker peut produire un effet ou un callback, mais ne doit plus posséder la ligne métier canonique.
 4. Utiliser les leases et callbacks de `plugin-store-repository.ts:380-420` pour rapporter les effets d’exécution sans donner au Worker l’autorité de présentation ou de stockage.
 5. Ajouter des tests produit qui créent, lisent, modifient et suppriment une entité par le Front, puis prouvent que le Store est l’unique source et que le Worker peut être reconstruit depuis celle-ci.
 
@@ -358,15 +358,15 @@ Deux data sources sont en outre rattachées au mauvais Store. `active_gateway_ma
 
 Le runtime de Release omet le Gateway Manifest (`packages/supbrd-core/src/front-runtime.ts:4-7`), et `apps/site/src/lib/release-source.ts:168-179` ne transmet que le Front Route Manifest et les dependency policies.
 
-Le Worker API enregistre en revanche ses routes, redirections et middlewares dans `packages/plugins/supbrd-core/api/src/index.ts:95-145,314-534`. Ses destinations et politiques restent codées dans `packages/plugins/supbrd-core/api/src/lib/domain-modules.ts:15-73,177-324`.
+Le Worker API enregistre en revanche ses routes, redirections et middlewares dans `packages/plugins/superboard-core/api/src/index.ts:95-145,314-534`. Ses destinations et politiques restent codées dans `packages/plugins/superboard-core/api/src/lib/domain-modules.ts:15-73,177-324`.
 
 Les commandes au SHA mesurent le décalage :
 
 ```text
-$ git show 35aad4c:packages/plugins/supbrd-core/api/src/index.ts \
+$ git show 35aad4c:packages/plugins/superboard-core/api/src/index.ts \
     | grep -Ec '^\s*app\.(get|post|put|patch|delete|options|all|route|use)\('
 63
-$ git grep -l 'gateway_manifest' 35aad4c -- packages/plugins/supbrd-core/api/src | wc -l
+$ git grep -l 'gateway_manifest' 35aad4c -- packages/plugins/superboard-core/api/src | wc -l
 0
 ```
 
@@ -446,8 +446,8 @@ Ce résultat suit directement `release-compiler.ts:237-258`, qui construit chaqu
 3. Remplacer `routes: []` dans `apps/site/src/lib/user-front-release.ts:161-165` par la composition déterministe du snapshot Gateway de l’Instance et des plugins actifs.
 4. Valider dans `packages/supbrd-core/src/release-compiler.ts` les collisions méthode + chemin, destinations, bindings, scopes, politiques, timeouts et références de Store.
 5. Ajouter le Gateway Manifest vérifié à `LastVerifiedFrontRelease` (`front-runtime.ts:4-7`) et à `release-source.ts:168-179`.
-6. Remplacer le routage de `packages/plugins/supbrd-core/api/src/index.ts:314-534` et `packages/plugins/supbrd-core/api/src/lib/domain-modules.ts:15-73` par un matcher du manifest actif. Les modules existants peuvent rester des adaptateurs de destination métier.
-7. Fournir au Gateway un binding vers le manifest actif ou son cache signé dans `scripts/cloudflare/config.mjs:331-392` et `packages/plugins/supbrd-core/api/src/types.ts:30-98`, sans ajouter une lecture D1 par requête.
+6. Remplacer le routage de `packages/plugins/superboard-core/api/src/index.ts:314-534` et `packages/plugins/superboard-core/api/src/lib/domain-modules.ts:15-73` par un matcher du manifest actif. Les modules existants peuvent rester des adaptateurs de destination métier.
+7. Fournir au Gateway un binding vers le manifest actif ou son cache signé dans `scripts/cloudflare/config.mjs:331-392` et `packages/plugins/superboard-core/api/src/types.ts:30-98`, sans ajouter une lecture D1 par requête.
 
 ## 7. Compilateur de target et parité des environnements
 
@@ -530,7 +530,7 @@ Le bloc suivant résume la sortie de la commande ; il regroupe les seize sous-te
 
 ```text
 $ node --test tests/checks/database/d1-schema.test.mjs
-✔ api: packages/plugins/supbrd-core/api/migrations
+✔ api: packages/plugins/superboard-core/api/migrations
 ✔ site: apps/site/migrations
 ✔ email, identity, files, custom, app, products, dynamic-links
 ✔ support, analytics, marketing, flows, paywalls, onboardings

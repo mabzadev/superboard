@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test, vi } from "vitest";
 
-import { useFlowI18n } from "../../../../packages/plugins/supbrd-plug-journeys/src/front/flows/features/flows/i18n.js";
+import { useFlowI18n } from "../../../../packages/plugins/superboard-acquisition/src/front/flows/features/flows/i18n.js";
 
 const context = vi.hoisted(() => ({ locale: "en" }));
 vi.mock("@superboard/front-ui/context", () => ({ useFrontContext: () => context }));

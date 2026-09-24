@@ -48,6 +48,7 @@ import { MarketplacePluginDetail } from "./components/MarketplacePluginDetail";
 import { MediaLibrary } from "./components/MediaLibrary";
 import { MenuEditor } from "./components/MenuEditor";
 import { MenuList } from "./components/MenuList";
+import { PluginConfiguration } from "./components/PluginConfiguration.js";
 import { PluginManager } from "./components/PluginManager";
 import { PluginSettings } from "./components/PluginSettings";
 import { Redirects } from "./components/Redirects";
@@ -2381,6 +2382,17 @@ function PluginSettingsPage() {
 	return <PluginSettings pluginId={pluginId} />;
 }
 
+const pluginConfigurationRoute = createRoute({
+	getParentRoute: () => adminLayoutRoute,
+	path: "/plugins-manager/$pluginId/configuration",
+	component: PluginConfigurationPage,
+});
+
+function PluginConfigurationPage() {
+	const { pluginId } = useParams({ from: "/_admin/plugins-manager/$pluginId/configuration" });
+	return <PluginConfiguration key={pluginId} pluginId={pluginId} />;
+}
+
 // Plugin page route
 const pluginRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
@@ -2426,6 +2438,7 @@ const adminRoutes = adminLayoutRoute.addChildren([
 	menuEditorRoute,
 	pluginManagerRoute,
 	pluginSettingsRoute,
+	pluginConfigurationRoute,
 	marketplaceDetailRoute,
 	marketplaceBrowseRoute,
 	themeMarketplaceBrowseRoute,

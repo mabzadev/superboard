@@ -118,9 +118,9 @@ the application.
 Run from the `superboard` monorepo root:
 
 ```bash
-npm --prefix packages/plugins/supbrd-core/api run typecheck
-npm --prefix packages/plugins/supbrd-plug-communication/marketing run typecheck
-npm --prefix packages/plugins/supbrd-plug-communication/marketing test
+npm --prefix packages/plugins/superboard-core/api run typecheck
+npm --prefix packages/plugins/superboard-communication/marketing run typecheck
+npm --prefix packages/plugins/superboard-communication/marketing test
 npm run sdk:catalog:check
 npm run sdk:catalog:test
 ```

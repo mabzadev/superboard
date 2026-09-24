@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { resolve } from "node:path";
 import test from "node:test";
 
@@ -126,19 +126,19 @@ const examples = [
 	],
 	[
 		"superboard/package-boundaries",
-		"packages/plugins/supbrd-core/src/example.ts",
+		"packages/plugins/superboard-core/src/example.ts",
 		'import { x } from "../../supbrd-plug-support/src/private.js";',
 		'import { x } from "@superboard/plugin-support";',
 	],
 	[
 		"superboard/worker-io",
-		"packages/plugins/supbrd-core/api/src/example.ts",
+		"packages/plugins/superboard-core/api/src/example.ts",
 		"const response=await fetch(url,{signal});",
 		"export async function handle(url,signal){return fetch(url,{signal});}",
 	],
 	[
 		"superboard/worker-io",
-		"packages/plugins/supbrd-core/api/src/example.ts",
+		"packages/plugins/superboard-core/api/src/example.ts",
 		"export async function handle(url){return fetch(url);}",
 		"export async function handle(url,signal){return fetch(url,{signal});}",
 	],
@@ -391,6 +391,27 @@ test("central tests use their owner's dependencies without allowing undeclared i
 	);
 });
 
+test("Cloudflare's virtual test module requires its test runtime and is not a bare npm import", (context) => {
+	const directory = mkdtempSync(join(tmpdir(), "cloudflare-test-module-"));
+	context.after(() => rmSync(directory, { recursive: true, force: true }));
+	const owner = join(directory, "packages/plugins/example/worker");
+	const filename = "tests/checks/plugins/example/worker/runtime/settings.test.ts";
+	mkdirSync(owner, { recursive: true });
+	mkdirSync(dirname(join(directory, filename)), { recursive: true });
+	writeFileSync(
+		join(owner, "package.json"),
+		JSON.stringify({ devDependencies: { "@cloudflare/vitest-pool-workers": "1" } }),
+	);
+	writeFileSync(
+		join(directory, filename),
+		'import { env } from "cloudflare:test";\nimport cloudflare from "cloudflare";\n',
+	);
+	assert.equal(testDependencyDeclared(filename, "cloudflare", directory, 1), true);
+	assert.equal(testDependencyDeclared(filename, "cloudflare", directory, 2), false);
+	writeFileSync(join(owner, "package.json"), JSON.stringify({ devDependencies: { vitest: "1" } }));
+	assert.equal(testDependencyDeclared(filename, "cloudflare", directory, 1), false);
+});
+
 test("handwritten declarations and Astro receive coverage while vendor bundles do not", () => {
 	const paths = [
 		"sdks/web/src/index.d.ts",
@@ -491,4 +512,55 @@ test("directory-level diagnostics remain visible without trying to read a direct
 	assert.equal(result.total, 1);
 	const baseline = captureBaseline([item]);
 	assert.equal(baseline.entries[baselineKey(item)], 1);
+});
+
+test("source relocations preserve existing findings but never suppress changed code", () => {
+	const before = {
+		filename: "packages/plugins/supbrd-plug-commerce/paywalls/src/example.ts",
+		code: "quality-example",
+		message: "Existing finding",
+		labels: [{ span: { line: 1 } }],
+	};
+	const after = {
+		...before,
+		filename: "packages/plugins/superboard-acquisition/paywalls/src/example.ts",
+	};
+	const baseline = { entries: { [baselineKey(before, "existing();")]: 1 } };
+	assert.equal(applyBaseline([after], baseline, () => "existing();").diagnostics.length, 0);
+	assert.equal(applyBaseline([after], baseline, () => "changed();").diagnostics.length, 1);
+	assert.equal(applyBaseline([after, after], baseline, () => "existing();").diagnostics.length, 1);
+});
+
+test("a relocated migration must retain its exact bytes", (t) => {
+	const directory = mkdtempSync(join(tmpdir(), "migration-relocation-"));
+	t.after(() => rmSync(directory, { recursive: true, force: true }));
+	const git = (...args) => {
+		const result = spawnSync("git", args, { cwd: directory, encoding: "utf8" });
+		assert.equal(result.status, 0, result.stderr);
+	};
+	const oldPath = "packages/plugins/supbrd-plug-commerce/paywalls/migrations/0001_initial.sql";
+	const newPath = "packages/plugins/superboard-acquisition/paywalls/migrations/0001_initial.sql";
+	for (const path of [oldPath, newPath])
+		mkdirSync(dirname(join(directory, path)), { recursive: true });
+	writeFileSync(join(directory, oldPath), "CREATE TABLE example (id TEXT);\n");
+	git("init", "-q");
+	git("add", ".");
+	git(
+		"-c",
+		"user.name=Test",
+		"-c",
+		"user.email=test@example.invalid",
+		"-c",
+		"core.hooksPath=/dev/null",
+		"commit",
+		"-qm",
+		"initial",
+	);
+	writeFileSync(join(directory, newPath), readFileSync(join(directory, oldPath)));
+	rmSync(join(directory, oldPath));
+	assert.deepEqual(lintMigrations("HEAD", directory), []);
+	writeFileSync(join(directory, newPath), "DROP TABLE example;\n");
+	assert.equal(lintMigrations("HEAD", directory).length, 1);
+	rmSync(join(directory, newPath));
+	assert.equal(lintMigrations("HEAD", directory).length, 1);
 });

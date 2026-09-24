@@ -26,9 +26,9 @@ test("application code and container packaging cannot return to the platform", (
 		rmSync(join(root, "apps/vocostar/worker"), { recursive: true });
 		rmSync(join(root, "fixtures"), { recursive: true });
 		rmSync(join(root, "compose.yaml"));
-		mkdirSync(join(root, "packages/plugins/supbrd-core/api/migrations"), { recursive: true });
+		mkdirSync(join(root, "packages/plugins/superboard-core/api/migrations"), { recursive: true });
 		writeFileSync(
-			join(root, "packages/plugins/supbrd-core/api/migrations/0001_legacy_vocostar.sql"),
+			join(root, "packages/plugins/superboard-core/api/migrations/0001_legacy_vocostar.sql"),
 			"-- immutable migration",
 		);
 		assert.deepEqual(lintPlatformSeparation(root), []);

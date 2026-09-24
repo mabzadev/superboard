@@ -106,7 +106,7 @@ forensic tool when immutable historical sources are supplied.
    implemented yet, back it with the upstream-shaped tables and make the missing
    behavior explicit in follow-up work.
 4. Do not edit restored `upstream/superboard/*` comparison sources for product
-   work. Port behavior into `packages/plugins/supbrd-core/api`, the domain Workers and
+   work. Port behavior into `packages/plugins/superboard-core/api`, the domain Workers and
    `apps/dashboard`.
 5. Prefer Cloudflare-native replacements for infrastructure:
    - D1 for PostgreSQL tables that fit relational storage.

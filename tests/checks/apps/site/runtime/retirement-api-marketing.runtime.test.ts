@@ -43,11 +43,14 @@ test("push notification search excludes in-app-only messages through the canonic
 	);
 	expect(result.total_entries).toBe(1);
 	expect(result.data.map(({ title }) => title)).toEqual([`${prefix}-push`]);
-	const wildcard = await jsonResult<{ data: Array<{ title: string }> }>(await apiRead(plugin, "notifications", {
-		method: "POST", path: `${base}/search`, body: { send_push: true, term: "%-push" },
-	}));
+	const wildcard = await jsonResult<{ data: Array<{ title: string }> }>(
+		await apiRead(plugin, "notifications", {
+			method: "POST",
+			path: `${base}/search`,
+			body: { send_push: true, term: "%-push" },
+		}),
+	);
 	expect(wildcard.data.map(({ title }) => title)).toContain(`${prefix}-push`);
-
 });
 
 test("canonical Marketing APIs preserve subscribers, campaign scheduling, journeys, enrollments and connectors", async () => {
@@ -270,4 +273,41 @@ test("canonical Marketing APIs preserve subscribers, campaign scheduling, journe
 			.first(),
 	).toBeNull();
 	proveApi(plugin, "delete_marketing_channel_connector", "mutation", file, [connector.id]);
+});
+
+test("notification table sorting and page size apply to the full result set", async () => {
+	const scope = await prepareApiPlugin(plugin);
+	const base = `/api/v1/projects/${scope.production_project_ref}/notifications`;
+	const prefix = `sort-${crypto.randomUUID()}`;
+	for (const suffix of ["Zulu", "Alpha", "Mike"]) {
+		await jsonResult(
+			await apiCommand(plugin, "create_notification", {
+				method: "POST",
+				path: base,
+				body: {
+					title: `${prefix}-${suffix}`,
+					subtitle: "Fixture",
+					send_push: false,
+					new_users: true,
+					existing_users: false,
+					platforms: ["ios"],
+				},
+			}),
+			201,
+		);
+	}
+	const read = async (page: number, ascending: boolean) =>
+		jsonResult<{ data: Array<{ title: string }>; total_entries: number; total_pages: number }>(
+			await apiRead(plugin, "notifications", {
+				method: "POST",
+				path: `${base}/search`,
+				body: { term: prefix, per_page: 1, page, sort_by: "title", ascending },
+			}),
+		);
+	const first = await read(1, true);
+	expect(first.total_entries).toBe(3);
+	expect(first.total_pages).toBe(3);
+	expect(first.data.map((item) => item.title)).toEqual([`${prefix}-Alpha`]);
+	expect((await read(2, true)).data.map((item) => item.title)).toEqual([`${prefix}-Mike`]);
+	expect((await read(1, false)).data.map((item) => item.title)).toEqual([`${prefix}-Zulu`]);
 });

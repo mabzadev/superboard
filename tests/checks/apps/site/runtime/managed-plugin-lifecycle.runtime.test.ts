@@ -51,59 +51,65 @@ afterEach(async () => {
 	await env.DB.exec("DROP TRIGGER IF EXISTS reject_test_activation;");
 });
 
-test("native package controls retain the Arabic admin locale", async () => {
+test("the retired function page redirects to the plugin manager", async () => {
 	const response = await SELF.fetch(
-		"https://site.example/_emdash/api/plugins/supbrd-plug-journeys/admin",
+		"https://site.example/_emdash/admin/plugins/supbrd-plug-commerce",
+		{ headers, redirect: "manual" },
+	);
+	expect(response.status).toBe(302);
+	expect(response.headers.get("Location")).toBe(
+		"https://site.example/_emdash/admin/plugins-manager",
+	);
+});
+
+test("the retired function page API is no longer available", async () => {
+	const response = await SELF.fetch(
+		"https://site.example/_emdash/api/plugins/supbrd-plug-commerce/admin",
 		{
 			method: "POST",
-			headers: { ...headers, "Content-Type": "application/json", "Accept-Language": "ar" },
+			headers: { ...headers, "Content-Type": "application/json" },
 			body: JSON.stringify({ type: "page_load", page: "/" }),
 		},
 	);
-	expect(response.status, await response.clone().text()).toBe(200);
-	const body = await response.json<{
-		data: { blocks: Array<{ type: string; elements?: Array<{ label: string }> }> };
-	}>();
-	expect(
-		body.data.blocks
-			.filter((block) => block.type === "actions")
-			.flatMap((block) => block.elements?.map((element) => element.label) ?? []),
-	).toEqual(["تفعيل", "تفعيل"]);
+	expect(response.status).toBe(404);
 });
 
-test("a function disabled through the native package page stays disabled after re-enabling its package", async () => {
+test("a retired function action cannot bypass retirement by naming the configuration page", async () => {
+	const response = await SELF.fetch(
+		"https://site.example/_emdash/api/plugins/supbrd-plug-commerce/admin",
+		{
+			method: "POST",
+			headers: { ...headers, "Content-Type": "application/json" },
+			body: JSON.stringify({
+				type: "block_action",
+				page: "/configuration",
+				action_id: "package-feature:supbrd-plug-products:disable",
+			}),
+		},
+	);
+	expect(response.status).toBe(404);
+});
+
+test("retired function actions cannot partially disable a package", async () => {
 	const owner = "supbrd-plug-journeys";
 	const flows = "supbrd-plugmod-flows";
 	const enabled = await action(owner, "enable");
 	expect(enabled.status, await enabled.clone().text()).toBe(201);
-	const previousPreference = await env.DB.prepare(
-		"SELECT enabled FROM superboard_plugin_feature_preferences WHERE instance_id='reference-production' AND target='local' AND component_id=?",
-	)
-		.bind(flows)
-		.first<{ enabled: number }>();
-	try {
-		const changed = await SELF.fetch(`https://site.example/_emdash/api/plugins/${owner}/admin`, {
-			method: "POST",
-			headers: { ...headers, "Content-Type": "application/json" },
-			body: JSON.stringify({ type: "block_action", action_id: `package-feature:${flows}:disable` }),
-		});
-		expect(changed.status, await changed.clone().text()).toBe(200);
-		expect((await action(owner, "disable")).status).toBe(201);
-		expect((await action(owner, "enable")).status).toBe(201);
-		const states = await env.DB.prepare(
-			"SELECT plugin_id,state FROM superboard_plugin_lifecycle WHERE instance_id='reference-production' AND target='local' AND plugin_id IN ('supbrd-plugmod-flows','supbrd-plugmod-onboardings') ORDER BY plugin_id",
-		).all();
-		expect(states.results).toEqual([
-			{ plugin_id: flows, state: "disabled" },
-			{ plugin_id: "supbrd-plugmod-onboardings", state: "active" },
-		]);
-	} finally {
-		await env.DB.prepare(
-			"UPDATE superboard_plugin_feature_preferences SET enabled=? WHERE instance_id='reference-production' AND target='local' AND component_id=?",
-		)
-			.bind(previousPreference?.enabled ?? 1, flows)
-			.run();
-	}
+	const changed = await SELF.fetch(`https://site.example/_emdash/api/plugins/${owner}/admin`, {
+		method: "POST",
+		headers: { ...headers, "Content-Type": "application/json" },
+		body: JSON.stringify({ type: "block_action", action_id: `package-feature:${flows}:disable` }),
+	});
+	expect(changed.status).toBe(404);
+	expect((await action(owner, "disable")).status).toBe(201);
+	expect((await action(owner, "enable")).status).toBe(201);
+	const states = await env.DB.prepare(
+		"SELECT plugin_id,state FROM superboard_plugin_lifecycle WHERE instance_id='reference-production' AND target='local' AND plugin_id IN ('supbrd-plugmod-flows','supbrd-plugmod-onboardings') ORDER BY plugin_id",
+	).all();
+	expect(states.results).toEqual([
+		{ plugin_id: flows, state: "active" },
+		{ plugin_id: "supbrd-plugmod-onboardings", state: "active" },
+	]);
 });
 
 async function lifecycle() {
@@ -171,12 +177,7 @@ test("concurrent plugin changes cannot overwrite another completed activation", 
 		"SELECT plugin_id FROM superboard_plugin_lifecycle WHERE state = 'active' ORDER BY plugin_id",
 	).all();
 	expect(active.results).toEqual(
-		[
-			"supbrd-plug-products",
-			"supbrd-plug-user",
-			"supbrd-plugmod-billing",
-			"supbrd-plugmod-paywalls",
-		]
+		["supbrd-plug-products", "supbrd-plug-user", "supbrd-plugmod-billing"]
 			.toSorted()
 			.map((plugin_id) => ({ plugin_id })),
 	);

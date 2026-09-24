@@ -1,12 +1,12 @@
 import type { OperatorProjectScope } from "@superboard/contracts/site-operator";
 import { FrontContextProvider } from "@superboard/front-ui/context";
+import { ProjectSelectionProvider } from "@superboard/front-ui/context/useProjectSelection.js";
 import { NavigationProvider } from "@superboard/front-ui/navigation";
 import { QueryClient, QueryClientProvider } from "@superboard/front-ui/query";
 import { ThemeProvider } from "@superboard/front-ui/theme";
 import { Toaster } from "@superboard/front-ui/toaster";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-import { ProjectSelectionProvider } from "../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
 import { parseOperatorProjectScopeResponse } from "../lib/operator-project-scope-response.js";
 

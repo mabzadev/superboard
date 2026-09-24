@@ -11,8 +11,8 @@ import {
 	verifyFrontRelease,
 } from "@superboard/supbrd-core";
 
-import { validateReleaseRouteViews } from "./plugin-client-catalog.js";
 import { createD1FrontReleaseRepository } from "./release-repository.js";
+import { validateReleaseRouteViews } from "./release-route-view-validation.js";
 
 interface DraftRow {
 	front_draft_id: string;
@@ -365,6 +365,7 @@ export async function candidateEvidence(
 	const viewFailures = await validateReleaseRouteViews(
 		candidate.release.payload.front_route_manifest?.routes ?? [],
 		candidate.release.payload.renderers ?? [],
+		candidate.release.payload.plugin_lock ?? [],
 	);
 	for (const failure of viewFailures) {
 		verification.errors.push(
