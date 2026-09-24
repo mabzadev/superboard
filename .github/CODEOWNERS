@@ -3,5 +3,5 @@
 /infra/targets/ @mabzadev
 /packages/plugins/ @mabzadev
 /apps/reference/ @mabzadev
-/packages/plugins/supbrd-core/api/migrations/ @mabzadev
+/packages/plugins/superboard-core/api/migrations/ @mabzadev
 /.github/workflows/ @mabzadev

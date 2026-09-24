@@ -5,6 +5,19 @@ import { createConfiguredSuperBoardPlugin } from "../../../../apps/site/src/lib/
 import { superBoardRuntimePluginCatalog } from "../../../../apps/site/src/lib/superboard-plugin-catalog.js";
 import packageCatalog from "../../../../scripts/config/superboard-plugin-catalog.json";
 
+test("current plugin names expose complete verifiable canonical contracts", async () => {
+	for (const { directory, manifest: legacy } of packageCatalog.plugins) {
+		const plugin = createConfiguredSuperBoardPlugin(directory);
+		const contract = await plugin.routes.contract.handler();
+		expect(contract.plugin_id).toBe(directory);
+		expect((await verifySuperBoardPluginManifest(contract)).errors).toEqual([]);
+		expect(contract.commands).toHaveLength(legacy.commands.length);
+		expect(
+			contract.commands.every((command) => command.command_id.startsWith(`${directory}.command.`)),
+		).toBe(true);
+	}
+});
+
 test("each package exposes a verifiable contract including its legacy contributions", async () => {
 	for (const { manifest } of packageCatalog.plugins) {
 		const result = await verifySuperBoardPluginManifest(manifest);
@@ -24,8 +37,7 @@ test("every SuperBoard plugin exposes its validated sandbox contract without inv
 		expect(plugin.admin.pages).toEqual(
 			expect.arrayContaining([expect.objectContaining({ path: "/" })]),
 		);
-		if (manifest.plugin_id === "supbrd-plug-settings")
-			expect(plugin.admin.pages.some((page) => page.path === "/configuration")).toBe(true);
+		expect(plugin.admin.pages.some((page) => page.path === "/configuration")).toBe(false);
 		expect(Object.keys(plugin.routes)).toEqual(
 			expect.arrayContaining([
 				"admin",

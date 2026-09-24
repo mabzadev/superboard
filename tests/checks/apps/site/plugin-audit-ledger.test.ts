@@ -7,7 +7,7 @@ import {
 	appendAuditEntry,
 	archiveAuditLedger,
 	verifyAuditLedger,
-} from "../../../../packages/plugins/supbrd-core/src/audit.js";
+} from "../../../../packages/plugins/superboard-core/src/audit.js";
 import type { PluginSqlStore } from "../../../../packages/supbrd-core/src/plugin-sql-store.js";
 
 test("Audit verifies persisted receipts, preserves history in archives, and detects corruption", async () => {

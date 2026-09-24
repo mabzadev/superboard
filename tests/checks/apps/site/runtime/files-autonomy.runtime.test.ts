@@ -2,7 +2,7 @@ import { createProjectContextHeaders } from "@superboard/contracts/project-conte
 import { env } from "cloudflare:workers";
 import { expect, test } from "vitest";
 
-import files from "../../../../../packages/plugins/supbrd-plug-data/worker/src/index.js";
+import files from "../../../../../packages/plugins/superboard-data/worker/src/index.js";
 
 const bindings = env as typeof env & { HEALTH_FILES_DB: D1Database; HEALTH_FILES_R2: R2Bucket };
 const secret = "files-autonomy-secret";

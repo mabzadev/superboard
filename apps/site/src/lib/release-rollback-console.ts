@@ -21,19 +21,20 @@ export function renderReleaseRollbackConsole(model: ReleaseRollbackConsoleModel)
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rollback de Release — SuperBoard</title>
   <style>
-    :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, sans-serif; }
-    body { margin: 0; background: #0b1020; color: #eef2ff; }
+    :root { color-scheme: light dark; font-family: Inter, system-ui, sans-serif; }
+    body { margin: 0; background: #171717; color: #ededed; }
     main { max-width: 58rem; margin: 0 auto; padding: 3rem 1.25rem; }
-    a { color: #93c5fd; }
-    .card { background: #111936; border: 1px solid #334155; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 1.5rem 4rem #02061780; }
-    .eyebrow { color: #fca5a5; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-    h1 { margin: .5rem 0 1.5rem; font-size: clamp(1.8rem, 5vw, 3rem); }
+    a { color: #3ecf8e; }
+    .card { background: #1c1c1c; border: 1px solid #282828; border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 1rem 3rem rgba(0,0,0,0.5); }
+    .eyebrow { color: #f43f5e; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: .5rem 0 1.5rem; font-size: clamp(1.8rem, 5vw, 3rem); font-family: Manrope, system-ui, sans-serif; }
     dl { display: grid; grid-template-columns: minmax(12rem, 17rem) 1fr; gap: .75rem 1rem; }
-    dt { color: #a5b4fc; font-weight: 700; }
-    dd { margin: 0; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
-    .ready { margin: 1.5rem 0; padding: 1rem; border-radius: .75rem; background: ${model.reauthentication_ready ? "#052e2b" : "#3b1d16"}; border: 1px solid ${model.reauthentication_ready ? "#0f766e" : "#b45309"}; }
-    .impact { margin: 1.5rem 0; padding: 1rem; border-radius: .75rem; background: #450a0a; border: 1px solid #dc2626; }
-    button { width: 100%; border: 0; border-radius: .75rem; padding: .9rem 1rem; background: #b91c1c; color: white; font-size: 1rem; font-weight: 800; cursor: pointer; }
+    dt { color: #9e9e9e; font-weight: 700; }
+    dd { margin: 0; overflow-wrap: anywhere; font-family: "Source Code Pro", "Geist Mono", monospace; }
+    .ready { margin: 1.5rem 0; padding: 1rem; border-radius: .5rem; background: ${model.reauthentication_ready ? "#064e3b" : "#451a03"}; border: 1px solid ${model.reauthentication_ready ? "#3ecf8e" : "#f59e0b"}; }
+    .impact { margin: 1.5rem 0; padding: 1rem; border-radius: .5rem; background: #2c1518; border: 1px solid #f43f5e; }
+    button { width: 100%; border: 1px solid #f43f5e; border-radius: .5rem; padding: .9rem 1rem; background: #f43f5e; color: white; font-size: 1rem; font-weight: 700; cursor: pointer; }
+    button:hover { background: #e11d48; }
     button:disabled { cursor: not-allowed; opacity: .5; }
     #result { min-height: 1.5rem; margin-top: 1rem; white-space: pre-wrap; }
     .back { display: inline-block; margin-top: 1.25rem; }

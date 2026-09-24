@@ -61,7 +61,7 @@ test("the injected secret inventory is derived from common and custom registries
 test("shared source rejects target domains, resource ids and workstation paths", () => {
 	const resourceId = "02001526-c44d-47e5-8b1d-df47a3b68d69";
 	const occurrences = findForbiddenSharedOccurrences({
-		path: "packages/plugins/supbrd-core/api/src/example.ts",
+		path: "packages/plugins/superboard-core/api/src/example.ts",
 		source: [
 			'fetch("https://api.reference.example/v1")',
 			`const databaseId = "${resourceId}";`,
@@ -86,7 +86,7 @@ test("shared source rejects target domains, resource ids and workstation paths",
 
 test("common provider and service-binding URLs remain allowed", () => {
 	const occurrences = findForbiddenSharedOccurrences({
-		path: "packages/plugins/supbrd-core/api/src/example.ts",
+		path: "packages/plugins/superboard-core/api/src/example.ts",
 		source: [
 			'fetch("https://billing.internal/internal/v1/health")',
 			'fetch("https://appleid.apple.com/auth/keys")',
@@ -155,7 +155,7 @@ test("root scripts cannot silently select one application target", () => {
 test("the public short-link social preview never constructs an HTTP URL", async () => {
 	const source = await readFile(
 		new URL(
-			"../../../packages/plugins/supbrd-plug-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkSocialMediaPreview.tsx",
+			"../../../packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkSocialMediaPreview.tsx",
 			import.meta.url,
 		),
 		"utf8",

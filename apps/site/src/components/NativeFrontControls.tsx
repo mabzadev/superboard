@@ -1,10 +1,10 @@
 import { useFrontContext } from "@superboard/front-ui/context";
+import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { Select, Popover } from "@superboard/front-ui/kumo";
 import { useTheme } from "@superboard/front-ui/theme";
+import { Button } from "@superboard/front-ui/ui";
 import { useState } from "react";
 
-import { Button } from "../../../../packages/supbrd-front-ui/src/shared/components/ui/button.js";
-import { useProjectSelection } from "../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js";
 import { localizeFrontPath, type UserFrontLocale } from "../lib/user-front-i18n.js";
 
 export function NativeFrontControls({
@@ -71,7 +71,7 @@ export function NativeFrontControls({
 							en: message("site.front.language.en"),
 							fr: message("site.front.language.fr"),
 						}}
-						onValueChange={(value) => {
+						onValueChange={(value: UserFrontLocale | null) => {
 							if (!value || value === locale) return;
 							const url = new URL(window.location.href);
 							url.pathname = localizeFrontPath(url.pathname, value);
@@ -85,10 +85,10 @@ export function NativeFrontControls({
 						</a>
 					))}
 					{activePluginIds.includes("supbrd-plug-user") && (
-						<a href="/account">{message("site.front.account")}</a>
+						<a href="/auth/account">{message("site.front.account")}</a>
 					)}
 					{activePluginIds.includes("supbrd-plug-settings") && (
-						<a href="/project-settings">{message("site.front.project_settings")}</a>
+						<a href="/core/settings">{message("site.front.project_settings")}</a>
 					)}
 					<Button
 						variant="ghost"

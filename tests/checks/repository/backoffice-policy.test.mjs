@@ -100,15 +100,15 @@ test("each target has one explicit automatic Cloudflare deployment authority", (
 test("runtime and plugin Front do not expose legacy SuperBoard SaaS controls", () => {
 	const runtimeFiles = [
 		"scripts/cloudflare/config.mjs",
-		"packages/plugins/supbrd-core/api/src/lib/deployment.ts",
-		"packages/plugins/supbrd-core/api/src/lib/jobs.ts",
-		"packages/plugins/supbrd-core/api/src/lib/maintenance.ts",
-		"packages/plugins/supbrd-core/api/src/routes/admin.ts",
-		"packages/plugins/supbrd-core/api/src/routes/instances.ts",
-		"packages/plugins/supbrd-core/api/src/routes/redirect.ts",
+		"packages/plugins/superboard-core/api/src/lib/deployment.ts",
+		"packages/plugins/superboard-core/api/src/lib/jobs.ts",
+		"packages/plugins/superboard-core/api/src/lib/maintenance.ts",
+		"packages/plugins/superboard-core/api/src/routes/admin.ts",
+		"packages/plugins/superboard-core/api/src/routes/instances.ts",
+		"packages/plugins/superboard-core/api/src/routes/redirect.ts",
 		"packages/supbrd-front-ui/src/shared/lib/config.ts",
 		"packages/supbrd-front-ui/src/shared/lib/queryKeys.ts",
-		"packages/plugins/supbrd-core/src/front/settings/app/(protected)/project-settings/page.tsx",
+		"packages/plugins/superboard-core/src/front/settings/app/(protected)/project-settings/page.tsx",
 	];
 	const forbidden = [
 		"SUPERBOARD_ACCESS_MODE",
@@ -132,19 +132,19 @@ test("runtime and plugin Front do not expose legacy SuperBoard SaaS controls", (
 	}
 
 	for (const removedPath of [
-		"packages/plugins/supbrd-core/src/front/settings/components/settings/PlanSection.tsx",
-		"packages/plugins/supbrd-core/src/front/settings/components/settings/EnterpriseDialog.tsx",
-		"packages/plugins/supbrd-core/src/front/settings/hooks/queries/usePaymentsQueries.ts",
-		"packages/plugins/supbrd-core/src/front/settings/api/payments/paymentsService.ts",
-		"packages/plugins/supbrd-core/src/front/settings/lib/edition.ts",
+		"packages/plugins/superboard-core/src/front/settings/components/settings/PlanSection.tsx",
+		"packages/plugins/superboard-core/src/front/settings/components/settings/EnterpriseDialog.tsx",
+		"packages/plugins/superboard-core/src/front/settings/hooks/queries/usePaymentsQueries.ts",
+		"packages/plugins/superboard-core/src/front/settings/api/payments/paymentsService.ts",
+		"packages/plugins/superboard-core/src/front/settings/lib/edition.ts",
 	]) {
 		assert.equal(existsSync(join(root, removedPath)), false, `${removedPath} still exists`);
 	}
 });
 
 test("store purchases remain an application capability", () => {
-	const deployment = read("packages/plugins/supbrd-core/api/src/lib/deployment.ts");
-	const purchases = read("packages/plugins/supbrd-core/api/src/routes/purchases-sdk.ts");
+	const deployment = read("packages/plugins/superboard-core/api/src/lib/deployment.ts");
+	const purchases = read("packages/plugins/superboard-core/api/src/routes/purchases-sdk.ts");
 	const target = JSON.parse(read("infra/targets/mbza-development.json"));
 
 	assert.match(deployment, /configured === true \|\| Number\(configured\) === 1/);
@@ -154,10 +154,10 @@ test("store purchases remain an application capability", () => {
 
 test("copyable SDK setup uses target-owned public origins", () => {
 	const setup = read(
-		"packages/plugins/supbrd-core/src/front/settings/components/app/SdkSetupWizard.tsx",
+		"packages/plugins/superboard-core/src/front/settings/components/app/SdkSetupWizard.tsx",
 	);
 	const preview = read(
-		"packages/plugins/supbrd-plug-communication/src/front/dynamic-links/components/dynamic_links/social-preview/SocialPreviewPageContent.tsx",
+		"packages/plugins/superboard-acquisition/src/front/dynamic-links/components/dynamic_links/social-preview/SocialPreviewPageContent.tsx",
 	);
 
 	assert.equal(setup.includes("sdk.example.com"), false);
@@ -171,7 +171,7 @@ test("Site and Front ship without PostHog runtime or environment variables", () 
 	for (const path of [
 		"apps/site/package.json",
 		"packages/supbrd-front-ui/package.json",
-		"packages/plugins/supbrd-core/package.json",
+		"packages/plugins/superboard-core/package.json",
 	]) {
 		const metadata = JSON.parse(read(path));
 		assert.equal(metadata.dependencies?.["posthog-js"], undefined, path);
@@ -179,7 +179,7 @@ test("Site and Front ship without PostHog runtime or environment variables", () 
 	for (const path of [
 		...sourceFiles("apps/site/src"),
 		...sourceFiles("packages/supbrd-front-ui/src"),
-		...sourceFiles("packages/plugins/supbrd-core/src/front"),
+		...sourceFiles("packages/plugins/superboard-core/src/front"),
 	])
 		assert.doesNotMatch(read(path), /from\s+["']posthog-js["']|POSTHOG/u, path);
 	assert.doesNotMatch(read("apps/site/wrangler.jsonc"), /POSTHOG/u);
@@ -207,7 +207,7 @@ test("reusable platform source and examples contain no application hostname or e
 			"sdks/web/README.md",
 			"sdks/tauri/README.md",
 			"sdks/web/public/index.html",
-			"packages/plugins/supbrd-plug-communication/email/README.md",
+			"packages/plugins/superboard-communication/email/README.md",
 		]),
 	];
 
@@ -228,23 +228,23 @@ test("reusable platform source and examples contain no application hostname or e
 });
 
 test("back-office health includes transactional, newsletter and delivery-job state", () => {
-	const email = read("packages/plugins/supbrd-plug-communication/email/src/index.ts");
+	const email = read("packages/plugins/superboard-communication/email/src/index.ts");
 	assert.match(email, /messages_transactional/u);
 	assert.match(email, /messages_marketing/u);
 	assert.match(email, /deliveries_failed/u);
 
-	const marketing = read("packages/plugins/supbrd-plug-communication/marketing/src/index.ts");
+	const marketing = read("packages/plugins/superboard-communication/marketing/src/index.ts");
 	assert.match(marketing, /deliveries_bounced/u);
 	assert.match(marketing, /deliveries_complained/u);
 	assert.match(marketing, /outbox_dead_letter/u);
 
-	const platform = read("packages/plugins/supbrd-core/api/src/routes/platform-status.ts");
+	const platform = read("packages/plugins/superboard-core/api/src/routes/platform-status.ts");
 	assert.match(platform, /serviceJobMetrics\(serviceChecks\)/u);
 	assert.match(platform, /campaignsScheduled/u);
 	assert.match(platform, /deliveriesFailed/u);
 	assert.match(
 		read(
-			"packages/plugins/supbrd-core/src/front/observability/app/(protected)/infrastructure/page.tsx",
+			"packages/plugins/superboard-core/src/front/observability/app/(protected)/infrastructure/page.tsx",
 		),
 		/Background jobs/u,
 	);
@@ -257,7 +257,7 @@ test("MCP is a target-configured back-office adapter with no legacy SaaS gate", 
 		"apps/mcp/README.md",
 		"apps/mcp/server.json",
 		...sourceFiles("apps/mcp/plugin"),
-		...sourceFiles("packages/plugins/supbrd-core/mcp/src"),
+		...sourceFiles("packages/plugins/superboard-core/mcp/src"),
 	];
 	const forbidden = [
 		/mcp\.superboard\.io/iu,
@@ -280,14 +280,17 @@ test("MCP is a target-configured back-office adapter with no legacy SaaS gate", 
 	const apiClient = read("apps/mcp/src/api-client.ts");
 	assert.match(apiClient, /env\.SUPERBOARD_API_URL/u);
 	assert.match(apiClient, /normalizeApiBaseUrl\(env\.SUPERBOARD_API_URL/u);
-	assert.match(read("packages/plugins/supbrd-core/mcp/src/index.ts"), /env\.API_SERVICE\.fetch/u);
+	assert.match(
+		read("packages/plugins/superboard-core/mcp/src/index.ts"),
+		/env\.API_SERVICE\.fetch/u,
+	);
 	assert.match(read("scripts/cloudflare/config.mjs"), /PUBLIC_MCP_URL: publicMcpUrl\(target\)/u);
 	assert.match(read("scripts/cloudflare/config.mjs"), /SUPERBOARD_PUBLIC_ENDPOINTS_JSON/u);
 	assert.match(
 		read("apps/site/src/lib/front-page.ts"),
 		/parsePublicEndpoints\(env\.SUPERBOARD_PUBLIC_ENDPOINTS_JSON\)/u,
 	);
-	const oauth = read("packages/plugins/supbrd-core/api/src/routes/mcp-oauth.ts");
+	const oauth = read("packages/plugins/superboard-core/api/src/routes/mcp-oauth.ts");
 	assert.match(oauth, /MCP consent URL is not configured/u);
 	assert.equal(oauth.includes("originFor(c)"), false);
 	for (const targetPath of [
@@ -301,12 +304,12 @@ test("MCP is a target-configured back-office adapter with no legacy SaaS gate", 
 });
 
 test("internal operator credentials are header-only and timing-safe", () => {
-	const automation = read("packages/plugins/supbrd-core/api/src/routes/automation.ts");
-	const diagnostics = read("packages/plugins/supbrd-core/api/src/routes/diagnostics.ts");
-	const sdkAuthentication = read("packages/plugins/supbrd-core/api/src/middleware/auth.ts");
-	const push = read("packages/plugins/supbrd-core/api/src/routes/push.ts");
-	const iap = read("packages/plugins/supbrd-core/api/src/routes/iap.ts");
-	const sso = read("packages/plugins/supbrd-core/api/src/routes/identity-sso.ts");
+	const automation = read("packages/plugins/superboard-core/api/src/routes/automation.ts");
+	const diagnostics = read("packages/plugins/superboard-core/api/src/routes/diagnostics.ts");
+	const sdkAuthentication = read("packages/plugins/superboard-core/api/src/middleware/auth.ts");
+	const push = read("packages/plugins/superboard-core/api/src/routes/push.ts");
+	const iap = read("packages/plugins/superboard-core/api/src/routes/iap.ts");
+	const sso = read("packages/plugins/superboard-core/api/src/routes/identity-sso.ts");
 
 	assert.match(automation, /timingSafeEqual\(provided, expected\)/u);
 	assert.equal(automation.includes("c.req.query('key')"), false);

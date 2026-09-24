@@ -148,7 +148,7 @@ test("does not let a front permission grant bypass EmDash operator authorization
 			"INSERT INTO superboard_front_permission_grants (instance_id, role, permission) VALUES (?, ?, '*')",
 		)
 		.run(instanceId, Role.SUBSCRIBER);
-	const model = await resolveSiteFrontPage(env, "/app/profile", {
+	const model = await resolveSiteFrontPage(env, "/auth/profile", {
 		...operator,
 		role: Role.SUBSCRIBER,
 	});
@@ -174,7 +174,7 @@ test("redirects an anonymous console request to the EmDash login", async () => {
 });
 
 test("renders the console and permitted account page using the active EmDash administrator", async () => {
-	for (const path of [homePath, "/app/profile"]) {
+	for (const path of [homePath, "/auth/profile"]) {
 		const model = await resolveSiteFrontPage(env, path, operator);
 		expect(model.resolution.result).toBe("rendered");
 		expect(model.operator).toEqual(operator);
@@ -183,12 +183,12 @@ test("renders the console and permitted account page using the active EmDash adm
 
 test.each([
 	"/_emdash/admin/login",
-	"/login",
-	"/register",
-	"/register/with_email",
-	"/new_password",
-	"/reset_password",
-	"/accept-invite",
+	"/auth/login",
+	"/auth/register",
+	"/auth/register/with-email",
+	"/auth/new-password",
+	"/auth/reset-password",
+	"/auth/accept-invite",
 ])("keeps the published anonymous authentication route %s available", async (path) => {
 	const model = await resolveSiteFrontPage(env, path, undefined);
 	expect(model.resolution.result).toBe("rendered");
@@ -207,9 +207,9 @@ test("applies the same EmDash authorization when resolving a preview", async () 
 	expect((await resolvePreviewFrontPage(env, release, homePath, operator)).resolution.result).toBe(
 		"rendered",
 	);
-	expect((await resolvePreviewFrontPage(env, release, "/login", undefined)).resolution.result).toBe(
-		"rendered",
-	);
+	expect(
+		(await resolvePreviewFrontPage(env, release, "/auth/login", undefined)).resolution.result,
+	).toBe("rendered");
 });
 
 test("denies an unauthorized home before the first release while preserving the administrator fallback", async () => {

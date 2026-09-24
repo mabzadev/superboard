@@ -16,7 +16,7 @@ test("brand lint rejects retired namespaces in workers, SDKs, tests and filename
 	context.after(() => rm(fixture, { recursive: true, force: true }));
 	const retired = ["open", "grow"].join("");
 	const paths = [
-		"packages/plugins/supbrd-core/api/src/env.ts",
+		"packages/plugins/superboard-core/api/src/env.ts",
 		"tests/checks/sdks/flutter/client_test.dart",
 		`scripts/${retired}-helper.mjs`,
 	];
@@ -115,7 +115,7 @@ test("brand checks reject untracked UI and catalogue labels while preserving SDK
 	}
 	execFileSync("git", ["init", "--quiet"], { cwd: fixture });
 	execFileSync("git", ["add", "."], { cwd: fixture });
-	const source = join(fixture, "packages/plugins/supbrd-core/src/front/NewPage.tsx");
+	const source = join(fixture, "packages/plugins/superboard-core/src/front/NewPage.tsx");
 	await mkdir(join(source, ".."), { recursive: true });
 	for (const name of ["Open-Flow", "OpenFlow", "Openflow", "OPENFLOW", "open-grow", "Superboard"]) {
 		await writeFile(source, `export const title = "${name}";`);

@@ -2,7 +2,7 @@ import { createProjectContextHeaders } from "@superboard/contracts/project-conte
 import { createExecutionContext, env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
-import appWorker from "../../../../../packages/plugins/supbrd-core/app/src/index.js";
+import appWorker from "../../../../../packages/plugins/superboard-core/app/src/index.js";
 import { dispatchLifecycleApi } from "./lifecycle-health-services.js";
 import {
 	apiHeaders,

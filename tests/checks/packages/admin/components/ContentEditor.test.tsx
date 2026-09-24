@@ -244,6 +244,76 @@ function installMatchMedia(initialMatches: boolean) {
 }
 
 describe("ContentEditor", () => {
+	it("omits derived values from autosave and does not autosave again after acknowledgement", async () => {
+		vi.useFakeTimers();
+		try {
+			const onAutosave = vi.fn();
+			const props: ContentEditorProps = {
+				collection: "views",
+				collectionLabel: "View",
+				isNew: false,
+				item: makeItem({ data: { title: "My View", bindings: { commands: ["live.command"] } } }),
+				fields: {
+					title: { kind: "string", label: "Title" },
+					bindings: { kind: "json", label: "Connections", readOnly: true },
+				},
+				onAutosave,
+			};
+			const screen = await render(<ContentEditor {...props} />);
+			await screen.getByLabelText("Title").fill("Edited title");
+			await vi.advanceTimersByTimeAsync(2000);
+			expect(onAutosave).toHaveBeenCalledExactlyOnceWith(
+				expect.objectContaining({ data: { title: "Edited title" } }),
+			);
+			await screen.rerender(<ContentEditor {...props} autosaveCompletionToken={1} />);
+			await vi.advanceTimersByTimeAsync(2500);
+			expect(onAutosave).toHaveBeenCalledTimes(1);
+			await expect
+				.element(screen.getByLabelText("Connections"))
+				.toHaveValue(JSON.stringify({ commands: ["live.command"] }, null, 2));
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("keeps automatically resolved fields readable but prevents manual edits", async () => {
+		const onSave = vi.fn();
+		const screen = await renderEditor({
+			isNew: false,
+			item: makeItem({
+				data: { title: "My View", plugin: "plugin-id", bindings: { commands: ["live.command"] } },
+			}),
+			fields: {
+				title: { kind: "string", label: "Title" },
+				plugin: {
+					kind: "select",
+					label: "Plugin",
+					readOnly: true,
+					options: [{ value: "plugin-id", label: "Current plugin" }],
+				},
+				bindings: { kind: "json", label: "Connections", readOnly: true },
+			},
+			onSave,
+		});
+		await expect.element(screen.getByLabelText("Plugin")).toHaveValue("Current plugin");
+		await expect.element(screen.getByLabelText("Plugin")).toHaveAttribute("readonly");
+		await expect.element(screen.getByLabelText("Connections")).toHaveAttribute("readonly");
+		await screen.getByLabelText("Connections").click();
+		await userEvent.keyboard("tampered");
+		await expect
+			.element(screen.getByLabelText("Connections"))
+			.toHaveValue(JSON.stringify({ commands: ["live.command"] }, null, 2));
+		await screen.getByLabelText("Title").fill("Updated View");
+		await screen.getByRole("button", { name: "Save", exact: true }).first().click();
+		expect(onSave).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: {
+					title: "Updated View",
+				},
+			}),
+		);
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 		portableTextMountCount = 0;

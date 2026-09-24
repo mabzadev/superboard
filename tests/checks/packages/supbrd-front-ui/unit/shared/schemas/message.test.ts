@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { messageSchema } from "../../../../../../../packages/plugins/supbrd-plug-communication/src/front/marketing/schemas/message.js";
+import { messageSchema } from "../../../../../../../packages/plugins/superboard-communication/src/front/marketing/schemas/message.js";
 
 describe("messageSchema", () => {
 	const validMessage = {

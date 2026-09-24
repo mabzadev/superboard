@@ -2,7 +2,7 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { OperatorProfile } from "../../../../packages/plugins/supbrd-plug-identity/src/front/OperatorProfile.js";
+import { OperatorProfile } from "../../../../packages/plugins/superboard-authentification/src/front/OperatorProfile.js";
 const state = vi.hoisted(() => ({ keys: [] as { id: string; name: string }[] }));
 vi.mock("@superboard/front-ui/context", () => ({
 	useFrontContext: () => ({
@@ -10,19 +10,22 @@ vi.mock("@superboard/front-ui/context", () => ({
 		operator: { id: "operator-1", email: "owner@example.test", name: "Owner", role: 50 },
 	}),
 }));
-vi.mock("../../../../packages/plugins/supbrd-plug-identity/src/front/transport.js", () => ({
+vi.mock("../../../../packages/plugins/superboard-authentification/src/front/transport.js", () => ({
 	PUT: async (_path: string, body: { name: string; email: string }) => ({
 		data: { data: { item: { ...body, name: body.name.trim() } } },
 	}),
 	DELETE: async () => ({}),
 }));
-vi.mock("../../../../packages/plugins/supbrd-plug-identity/src/front/operator-passkey.js", () => ({
-	operatorGet: async () => ({ items: state.keys }),
-	operatorPost: async () => ({}),
-	registerOperatorPasskey: async (_options: string, _verify: string, body: { name: string }) => {
-		state.keys.push({ id: "registered-key", name: body.name });
-	},
-}));
+vi.mock(
+	"../../../../packages/plugins/superboard-authentification/src/front/operator-passkey.js",
+	() => ({
+		operatorGet: async () => ({ items: state.keys }),
+		operatorPost: async () => ({}),
+		registerOperatorPasskey: async (_options: string, _verify: string, body: { name: string }) => {
+			state.keys.push({ id: "registered-key", name: body.name });
+		},
+	}),
+);
 let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {

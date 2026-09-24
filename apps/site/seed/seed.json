@@ -16,7 +16,11 @@
 			"routable": false,
 			"titleField": "name",
 			"sortOrder": 0,
-			"supports": ["drafts", "revisions", "search"],
+			"supports": [
+				"drafts",
+				"revisions",
+				"search"
+			],
 			"fields": [
 				{
 					"slug": "name",
@@ -77,7 +81,6 @@
 	],
 	"menus": [
 		{
-			"id": "front-menu:en",
 			"name": "superboard-admin",
 			"label": "Front navigation",
 			"locale": "en",
@@ -85,404 +88,274 @@
 				{
 					"type": "custom",
 					"label": "Overview",
-					"url": "/superboard-system/home",
-					"cssClasses": "sb-icon-home",
-					"children": []
+					"url": "/analytics/home",
+					"cssClasses": "sb-icon-home"
 				},
 				{
 					"type": "custom",
-					"label": "Users and access",
-					"url": "/app/users",
+					"label": "Authentification",
+					"url": "/auth/users",
 					"cssClasses": "sb-icon-users",
 					"children": [
 						{
 							"type": "custom",
-							"label": "Application users",
-							"url": "/app/users"
-						},
-						{
-							"type": "custom",
-							"label": "Profiles and installations",
-							"url": "/app/customers"
-						},
-						{
-							"type": "custom",
-							"label": "Sign-in and security",
-							"url": "/identity/en/dashboard",
+							"label": "Users",
+							"url": "/auth/users",
 							"children": [
 								{
 									"type": "custom",
-									"label": "Sign-in and security",
-									"url": "/identity/en/dashboard"
+									"label": "Accounts",
+									"url": "/auth/users"
 								},
 								{
 									"type": "custom",
-									"label": "Sign-in accounts",
-									"url": "/identity/en/users"
+									"label": "Profiles and installations",
+									"url": "/auth/customers"
 								},
 								{
 									"type": "custom",
-									"label": "OAuth applications",
-									"url": "/identity/en/apps"
+									"label": "Attributes",
+									"url": "/auth/user-attributes?lang=en"
 								},
 								{
 									"type": "custom",
-									"label": "API permissions",
-									"url": "/identity/en/scopes"
-								},
-								{
-									"type": "custom",
-									"label": "Enterprise SSO",
-									"url": "/identity/en/saml"
-								},
-								{
-									"type": "custom",
-									"label": "Account policies",
-									"url": "/identity/en/account"
-								},
-								{
-									"type": "custom",
-									"label": "User attributes",
-									"url": "/identity/en/user-attributes"
+									"label": "Referrals",
+									"url": "/auth/referrals"
 								}
 							]
 						},
 						{
 							"type": "custom",
-							"label": "Organizations",
-							"url": "/identity/en/orgs"
+							"label": "Access",
+							"url": "/auth/apps?lang=en",
+							"children": [
+								{
+									"type": "custom",
+									"label": "Applications",
+									"url": "/auth/apps?lang=en"
+								},
+								{
+									"type": "custom",
+									"label": "Sign-in directory",
+									"url": "/auth/directory/users?lang=en"
+								},
+								{
+									"type": "custom",
+									"label": "Roles",
+									"url": "/auth/roles?lang=en"
+								},
+								{
+									"type": "custom",
+									"label": "Permissions",
+									"url": "/auth/scopes?lang=en"
+								},
+								{
+									"type": "custom",
+									"label": "Organizations",
+									"url": "/auth/orgs?lang=en"
+								},
+								{
+									"type": "custom",
+									"label": "SSO",
+									"url": "/auth/saml?lang=en"
+								}
+							]
 						},
 						{
 							"type": "custom",
-							"label": "Roles and permissions",
-							"url": "/identity/en/roles"
+							"label": "Settings",
+							"url": "/auth/settings?lang=en"
 						},
 						{
 							"type": "custom",
-							"label": "Sign-in logs",
-							"url": "/identity/en/logs"
+							"label": "Activity",
+							"url": "/auth/logs?lang=en"
 						}
 					]
 				},
 				{
 					"type": "custom",
-					"label": "Data and content",
-					"url": "/system/content",
+					"label": "Data",
+					"url": "/data/content",
 					"cssClasses": "sb-icon-data",
 					"children": [
 						{
 							"type": "custom",
 							"label": "Content",
-							"url": "/system/content"
+							"url": "/data/content"
 						},
 						{
 							"type": "custom",
 							"label": "Files and media",
-							"url": "/system/files"
+							"url": "/data/files"
+						},
+						{
+							"type": "custom",
+							"label": "Settings",
+							"url": "/data/settings"
 						}
 					]
 				},
 				{
 					"type": "custom",
-					"label": "Sales and subscriptions",
-					"url": "/products/purchases",
+					"label": "Monetization",
+					"url": "/monetization/customers",
 					"cssClasses": "sb-icon-sales",
 					"children": [
 						{
 							"type": "custom",
-							"label": "Purchases and subscriptions",
-							"url": "/products/purchases"
+							"label": "Customers",
+							"url": "/monetization/customers"
 						},
 						{
 							"type": "custom",
-							"label": "Paying customers",
-							"url": "/products/customers"
+							"label": "Products",
+							"url": "/monetization/products"
 						},
 						{
 							"type": "custom",
-							"label": "Products and offers",
-							"url": "/products/offerings"
+							"label": "Offerings",
+							"url": "/monetization/offerings"
 						},
 						{
 							"type": "custom",
-							"label": "Purchased access rights",
-							"url": "/products/entitlements"
+							"label": "Entitlements",
+							"url": "/monetization/entitlements"
 						},
 						{
 							"type": "custom",
-							"label": "Subscription screens",
-							"url": "/paywalls",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Subscription screens",
-									"url": "/paywalls"
-								},
-								{
-									"type": "custom",
-									"label": "Subscription screen results",
-									"url": "/paywalls/statistics"
-								}
-							]
+							"label": "Settings",
+							"url": "/monetization/settings"
 						}
 					]
 				},
 				{
 					"type": "custom",
 					"label": "Communication",
-					"url": "/marketing/campaigns",
+					"url": "/communication/campaigns",
 					"cssClasses": "sb-icon-communication",
 					"children": [
 						{
 							"type": "custom",
-							"label": "Campaigns and newsletters",
-							"url": "/marketing/campaigns"
+							"label": "Campaign email",
+							"url": "/communication/campaigns"
+						},
+						{
+							"type": "custom",
+							"label": "Transactional email",
+							"url": "/communication/email"
 						},
 						{
 							"type": "custom",
 							"label": "In-app messages",
-							"url": "/marketing/in-app-messages"
+							"url": "/communication/in-app-messages"
 						},
 						{
 							"type": "custom",
-							"label": "Email and marketing contacts",
-							"url": "/marketing/email"
-						},
-						{
-							"type": "custom",
-							"label": "Push notifications",
-							"url": "/notifications"
-						},
-						{
-							"type": "custom",
-							"label": "Marketing channels and settings",
-							"url": "/marketing/channels",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Delivery channels",
-									"url": "/marketing/channels"
-								},
-								{
-									"type": "custom",
-									"label": "Marketing settings",
-									"url": "/marketing/settings"
-								}
-							]
-						},
-						{
-							"type": "custom",
-							"label": "Campaign results",
-							"url": "/marketing/statistics"
-						},
-						{
-							"type": "custom",
-							"label": "Referrals",
-							"url": "/app/referrals"
-						},
-						{
-							"type": "custom",
-							"label": "Links and attribution",
-							"url": "/dynamic-links/links",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Links",
-									"url": "/dynamic-links/links"
-								},
-								{
-									"type": "custom",
-									"label": "Link campaigns",
-									"url": "/dynamic-links/campaigns"
-								},
-								{
-									"type": "custom",
-									"label": "Redirect rules",
-									"url": "/dynamic-links/redirect-rules"
-								},
-								{
-									"type": "custom",
-									"label": "Link domains",
-									"url": "/dynamic-links/domain"
-								},
-								{
-									"type": "custom",
-									"label": "Social previews",
-									"url": "/dynamic-links/social-media-preview"
-								},
-								{
-									"type": "custom",
-									"label": "Click tracking",
-									"url": "/dynamic-links/tracking"
-								}
-							]
-						},
-						{
-							"type": "custom",
-							"label": "Customer service",
-							"url": "/support/inbox",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Conversations",
-									"url": "/support/inbox"
-								},
-								{
-									"type": "custom",
-									"label": "Contacts",
-									"url": "/support/contacts"
-								},
-								{
-									"type": "custom",
-									"label": "Agents and teams",
-									"url": "/support/workforce"
-								},
-								{
-									"type": "custom",
-									"label": "Contact channels",
-									"url": "/support/channels"
-								},
-								{
-									"type": "custom",
-									"label": "Automation rules",
-									"url": "/support/automations"
-								},
-								{
-									"type": "custom",
-									"label": "Proactive help",
-									"url": "/support/proactive-support"
-								},
-								{
-									"type": "custom",
-									"label": "Help center",
-									"url": "/support/help-center"
-								},
-								{
-									"type": "custom",
-									"label": "Support AI assistant",
-									"url": "/support/captain"
-								},
-								{
-									"type": "custom",
-									"label": "Support integrations",
-									"url": "/support/integrations"
-								},
-								{
-									"type": "custom",
-									"label": "Satisfaction and quality",
-									"url": "/support/quality"
-								},
-								{
-									"type": "custom",
-									"label": "Support reports",
-									"url": "/support/reports"
-								},
-								{
-									"type": "custom",
-									"label": "Support settings",
-									"url": "/support/settings"
-								},
-								{
-									"type": "custom",
-									"label": "Support configuration",
-									"url": "/support/configuration"
-								}
-							]
-						},
-						{
-							"type": "custom",
-							"label": "Transactional deliveries",
-							"url": "/system/email"
+							"label": "Settings",
+							"url": "/communication/settings"
 						}
 					]
 				},
 				{
 					"type": "custom",
-					"label": "Journeys and automations",
-					"url": "/onboardings",
+					"label": "Acquisition",
+					"url": "/acquisition/paywalls",
 					"cssClasses": "sb-icon-automations",
 					"children": [
 						{
 							"type": "custom",
-							"label": "Welcome journeys",
-							"url": "/onboardings",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Welcome journeys",
-									"url": "/onboardings"
-								},
-								{
-									"type": "custom",
-									"label": "Welcome journey results",
-									"url": "/onboardings/statistics"
-								}
-							]
+							"label": "Paywalls",
+							"url": "/acquisition/paywalls"
 						},
 						{
 							"type": "custom",
-							"label": "Automated scenarios",
-							"url": "/flows/workflows",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Automated scenarios",
-									"url": "/flows/workflows"
-								},
-								{
-									"type": "custom",
-									"label": "Automation overview",
-									"url": "/flows"
-								}
-							]
+							"label": "Onboardings",
+							"url": "/acquisition/onboardings"
 						},
 						{
 							"type": "custom",
-							"label": "Triggers and releases",
-							"url": "/flows/launchpad"
+							"label": "Dynamic links",
+							"url": "/acquisition/dynamic-links"
 						},
 						{
 							"type": "custom",
-							"label": "Marketing journeys",
-							"url": "/marketing/journeys"
-						},
-						{
-							"type": "custom",
-							"label": "Journey components",
-							"url": "/flows/components"
-						},
-						{
-							"type": "custom",
-							"label": "Participant tracking",
-							"url": "/flows/users"
-						},
-						{
-							"type": "custom",
-							"label": "Journey settings",
-							"url": "/flows/settings/environments",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Journey environments",
-									"url": "/flows/settings/environments"
-								},
-								{
-									"type": "custom",
-									"label": "Journey translations",
-									"url": "/flows/settings/localization"
-								},
-								{
-									"type": "custom",
-									"label": "Journey integration",
-									"url": "/flows/settings/sdk"
-								}
-							]
+							"label": "Settings",
+							"url": "/acquisition/settings"
 						}
 					]
 				},
 				{
 					"type": "custom",
-					"label": "Statistics",
+					"label": "Support",
+					"url": "/support/inbox",
+					"cssClasses": "sb-icon-support",
+					"children": [
+						{
+							"type": "custom",
+							"label": "Inbox",
+							"url": "/support/inbox"
+						},
+						{
+							"type": "custom",
+							"label": "Contacts",
+							"url": "/support/contacts"
+						},
+						{
+							"type": "custom",
+							"label": "Workforce",
+							"url": "/support/workforce"
+						},
+						{
+							"type": "custom",
+							"label": "Channels",
+							"url": "/support/channels"
+						},
+						{
+							"type": "custom",
+							"label": "Automations",
+							"url": "/support/automations"
+						},
+						{
+							"type": "custom",
+							"label": "Proactive Support",
+							"url": "/support/proactive-support"
+						},
+						{
+							"type": "custom",
+							"label": "Help center",
+							"url": "/support/help-center"
+						},
+						{
+							"type": "custom",
+							"label": "Support AI assistant",
+							"url": "/support/captain"
+						},
+						{
+							"type": "custom",
+							"label": "Support integrations",
+							"url": "/support/integrations"
+						},
+						{
+							"type": "custom",
+							"label": "Satisfaction and quality",
+							"url": "/support/quality"
+						},
+						{
+							"type": "custom",
+							"label": "Support reports",
+							"url": "/support/reports"
+						},
+						{
+							"type": "custom",
+							"label": "Support settings",
+							"url": "/support/settings"
+						}
+					]
+				},
+				{
+					"type": "custom",
+					"label": "Analytics",
 					"url": "/analytics",
 					"cssClasses": "sb-icon-analytics",
 					"children": [
@@ -562,84 +435,76 @@
 									"type": "custom",
 									"label": "User feedback",
 									"url": "/analytics/feedback"
-								},
-								{
-									"type": "custom",
-									"label": "Statistics settings",
-									"url": "/analytics/settings"
 								}
 							]
+						},
+						{
+							"type": "custom",
+							"label": "Remote configuration",
+							"url": "/analytics/remote-config"
+						},
+						{
+							"type": "custom",
+							"label": "Settings",
+							"url": "/analytics/settings"
 						}
 					]
 				},
 				{
 					"type": "custom",
 					"label": "Environment settings",
-					"url": "/project-settings",
+					"url": "/core/settings",
 					"cssClasses": "sb-icon-settings sb-nav-local",
 					"children": [
 						{
 							"type": "custom",
 							"label": "Environment settings",
-							"url": "/project-settings"
+							"url": "/core/settings"
 						},
 						{
 							"type": "custom",
 							"label": "API keys",
-							"url": "/app/access-key"
+							"url": "/auth/access-key"
 						},
 						{
 							"type": "custom",
 							"label": "SDK libraries",
-							"url": "/app/libraries"
+							"url": "/core/libraries"
 						},
 						{
 							"type": "custom",
 							"label": "Web setup",
-							"url": "/app/web-setup"
+							"url": "/core/web-setup"
 						},
 						{
 							"type": "custom",
 							"label": "iOS setup",
-							"url": "/app/ios-setup"
+							"url": "/core/ios-setup"
 						},
 						{
 							"type": "custom",
 							"label": "Android setup",
-							"url": "/app/android-setup"
+							"url": "/core/android-setup"
 						},
 						{
 							"type": "custom",
-							"label": "Remote configuration",
-							"url": "/analytics/remote-config"
-						}
-					]
-				},
-				{
-					"type": "custom",
-					"label": "Operations",
-					"url": "/infrastructure",
-					"cssClasses": "sb-icon-operations sb-nav-local",
-					"children": [
-						{
-							"type": "custom",
 							"label": "Service health",
-							"url": "/infrastructure"
+							"url": "/core/infrastructure"
 						},
 						{
 							"type": "custom",
 							"label": "Audit log",
-							"url": "/system/audit"
+							"url": "/core/audit"
 						},
 						{
 							"type": "custom",
 							"label": "API routing",
-							"url": "/system/gateway"
+							"url": "/core/gateway"
 						},
 						{
 							"type": "custom",
 							"label": "AI assistant access",
-							"url": "/mcp"
+							"url": "/core/mcp"
 						}
 					]
 				},
@@ -652,413 +517,281 @@
 			]
 		},
 		{
-			"id": "front-menu:fr",
 			"name": "superboard-admin",
 			"label": "Navigation du front",
 			"locale": "fr",
-			"translationOf": "front-menu:en",
 			"items": [
 				{
 					"type": "custom",
 					"label": "Vue d’ensemble",
-					"url": "/superboard-system/home",
-					"cssClasses": "sb-icon-home",
-					"children": []
+					"url": "/analytics/home",
+					"cssClasses": "sb-icon-home"
 				},
 				{
 					"type": "custom",
-					"label": "Utilisateurs et accès",
-					"url": "/app/users",
+					"label": "Authentification",
+					"url": "/auth/users",
 					"cssClasses": "sb-icon-users",
 					"children": [
 						{
 							"type": "custom",
-							"label": "Utilisateurs de l’application",
-							"url": "/app/users"
-						},
-						{
-							"type": "custom",
-							"label": "Profils et installations",
-							"url": "/app/customers"
-						},
-						{
-							"type": "custom",
-							"label": "Connexion et sécurité",
-							"url": "/identity/fr/dashboard",
+							"label": "Utilisateurs",
+							"url": "/auth/users",
 							"children": [
 								{
 									"type": "custom",
-									"label": "Connexion et sécurité",
-									"url": "/identity/fr/dashboard"
+									"label": "Comptes",
+									"url": "/auth/users"
 								},
 								{
 									"type": "custom",
-									"label": "Comptes de connexion",
-									"url": "/identity/fr/users"
+									"label": "Profils et installations",
+									"url": "/auth/customers"
 								},
 								{
 									"type": "custom",
-									"label": "Applications OAuth",
-									"url": "/identity/fr/apps"
+									"label": "Attributs",
+									"url": "/auth/user-attributes?lang=fr"
 								},
 								{
 									"type": "custom",
-									"label": "Permissions API",
-									"url": "/identity/fr/scopes"
-								},
-								{
-									"type": "custom",
-									"label": "SSO d’entreprise",
-									"url": "/identity/fr/saml"
-								},
-								{
-									"type": "custom",
-									"label": "Règles des comptes",
-									"url": "/identity/fr/account"
-								},
-								{
-									"type": "custom",
-									"label": "Attributs utilisateur",
-									"url": "/identity/fr/user-attributes"
+									"label": "Parrainages",
+									"url": "/auth/referrals"
 								}
 							]
 						},
 						{
 							"type": "custom",
-							"label": "Organisations",
-							"url": "/identity/fr/orgs"
+							"label": "Accès",
+							"url": "/auth/apps?lang=fr",
+							"children": [
+								{
+									"type": "custom",
+									"label": "Applications",
+									"url": "/auth/apps?lang=fr"
+								},
+								{
+									"type": "custom",
+									"label": "Annuaire de connexion",
+									"url": "/auth/directory/users?lang=fr"
+								},
+								{
+									"type": "custom",
+									"label": "Rôles",
+									"url": "/auth/roles?lang=fr"
+								},
+								{
+									"type": "custom",
+									"label": "Permissions",
+									"url": "/auth/scopes?lang=fr"
+								},
+								{
+									"type": "custom",
+									"label": "Organisations",
+									"url": "/auth/orgs?lang=fr"
+								},
+								{
+									"type": "custom",
+									"label": "SSO",
+									"url": "/auth/saml?lang=fr"
+								}
+							]
 						},
 						{
 							"type": "custom",
-							"label": "Rôles et autorisations",
-							"url": "/identity/fr/roles"
+							"label": "Paramètres",
+							"url": "/auth/settings?lang=fr"
 						},
 						{
 							"type": "custom",
-							"label": "Journal des connexions",
-							"url": "/identity/fr/logs"
+							"label": "Journal",
+							"url": "/auth/logs?lang=fr"
 						}
 					]
 				},
 				{
 					"type": "custom",
-					"label": "Données et contenus",
-					"url": "/system/content",
+					"label": "Data",
+					"url": "/data/content",
 					"cssClasses": "sb-icon-data",
 					"children": [
 						{
 							"type": "custom",
 							"label": "Contenus",
-							"url": "/system/content"
+							"url": "/data/content"
 						},
 						{
 							"type": "custom",
 							"label": "Fichiers et médias",
-							"url": "/system/files"
+							"url": "/data/files"
+						},
+						{
+							"type": "custom",
+							"label": "Paramètres",
+							"url": "/data/settings"
 						}
 					]
 				},
 				{
 					"type": "custom",
-					"label": "Ventes et abonnements",
-					"url": "/products/purchases",
+					"label": "Monétisation",
+					"url": "/monetization/customers",
 					"cssClasses": "sb-icon-sales",
 					"children": [
 						{
 							"type": "custom",
-							"label": "Achats et abonnements",
-							"url": "/products/purchases"
+							"label": "Clients",
+							"url": "/monetization/customers"
 						},
 						{
 							"type": "custom",
-							"label": "Clients payants",
-							"url": "/products/customers"
+							"label": "Produits",
+							"url": "/monetization/products"
 						},
 						{
 							"type": "custom",
-							"label": "Produits et offres",
-							"url": "/products/offerings"
+							"label": "Offres",
+							"url": "/monetization/offerings"
 						},
 						{
 							"type": "custom",
-							"label": "Droits d’accès achetés",
-							"url": "/products/entitlements"
+							"label": "Droits d’accès",
+							"url": "/monetization/entitlements"
 						},
 						{
 							"type": "custom",
-							"label": "Écrans d’abonnement",
-							"url": "/paywalls",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Écrans d’abonnement",
-									"url": "/paywalls"
-								},
-								{
-									"type": "custom",
-									"label": "Résultats des écrans d’abonnement",
-									"url": "/paywalls/statistics"
-								}
-							]
+							"label": "Paramètres",
+							"url": "/monetization/settings"
 						}
 					]
 				},
 				{
 					"type": "custom",
 					"label": "Communication",
-					"url": "/marketing/campaigns",
+					"url": "/communication/campaigns",
 					"cssClasses": "sb-icon-communication",
 					"children": [
 						{
 							"type": "custom",
-							"label": "Campagnes et newsletters",
-							"url": "/marketing/campaigns"
+							"label": "E-mails de campagne",
+							"url": "/communication/campaigns"
+						},
+						{
+							"type": "custom",
+							"label": "E-mails transactionnels",
+							"url": "/communication/email"
 						},
 						{
 							"type": "custom",
 							"label": "Messages dans l’application",
-							"url": "/marketing/in-app-messages"
+							"url": "/communication/in-app-messages"
 						},
 						{
 							"type": "custom",
-							"label": "E-mails et contacts marketing",
-							"url": "/marketing/email"
-						},
-						{
-							"type": "custom",
-							"label": "Notifications push",
-							"url": "/notifications"
-						},
-						{
-							"type": "custom",
-							"label": "Canaux et paramètres marketing",
-							"url": "/marketing/channels",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Canaux de diffusion",
-									"url": "/marketing/channels"
-								},
-								{
-									"type": "custom",
-									"label": "Paramètres marketing",
-									"url": "/marketing/settings"
-								}
-							]
-						},
-						{
-							"type": "custom",
-							"label": "Résultats des campagnes",
-							"url": "/marketing/statistics"
-						},
-						{
-							"type": "custom",
-							"label": "Parrainages",
-							"url": "/app/referrals"
-						},
-						{
-							"type": "custom",
-							"label": "Liens et attribution",
-							"url": "/dynamic-links/links",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Liens",
-									"url": "/dynamic-links/links"
-								},
-								{
-									"type": "custom",
-									"label": "Campagnes de liens",
-									"url": "/dynamic-links/campaigns"
-								},
-								{
-									"type": "custom",
-									"label": "Règles de redirection",
-									"url": "/dynamic-links/redirect-rules"
-								},
-								{
-									"type": "custom",
-									"label": "Domaines des liens",
-									"url": "/dynamic-links/domain"
-								},
-								{
-									"type": "custom",
-									"label": "Aperçus sociaux",
-									"url": "/dynamic-links/social-media-preview"
-								},
-								{
-									"type": "custom",
-									"label": "Suivi des clics",
-									"url": "/dynamic-links/tracking"
-								}
-							]
-						},
-						{
-							"type": "custom",
-							"label": "Service client",
-							"url": "/support/inbox",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Conversations",
-									"url": "/support/inbox"
-								},
-								{
-									"type": "custom",
-									"label": "Contacts",
-									"url": "/support/contacts"
-								},
-								{
-									"type": "custom",
-									"label": "Agents et équipes",
-									"url": "/support/workforce"
-								},
-								{
-									"type": "custom",
-									"label": "Canaux de contact",
-									"url": "/support/channels"
-								},
-								{
-									"type": "custom",
-									"label": "Règles automatiques",
-									"url": "/support/automations"
-								},
-								{
-									"type": "custom",
-									"label": "Aide proactive",
-									"url": "/support/proactive-support"
-								},
-								{
-									"type": "custom",
-									"label": "Centre d’aide",
-									"url": "/support/help-center"
-								},
-								{
-									"type": "custom",
-									"label": "Assistant IA du support",
-									"url": "/support/captain"
-								},
-								{
-									"type": "custom",
-									"label": "Intégrations du support",
-									"url": "/support/integrations"
-								},
-								{
-									"type": "custom",
-									"label": "Satisfaction et qualité",
-									"url": "/support/quality"
-								},
-								{
-									"type": "custom",
-									"label": "Rapports du support",
-									"url": "/support/reports"
-								},
-								{
-									"type": "custom",
-									"label": "Paramètres du support",
-									"url": "/support/settings"
-								},
-								{
-									"type": "custom",
-									"label": "Configuration du service client",
-									"url": "/support/configuration"
-								}
-							]
-						},
-						{
-							"type": "custom",
-							"label": "Envois transactionnels",
-							"url": "/system/email"
+							"label": "Paramètres",
+							"url": "/communication/settings"
 						}
 					]
 				},
 				{
 					"type": "custom",
-					"label": "Parcours et automatisations",
-					"url": "/onboardings",
+					"label": "Acquisition",
+					"url": "/acquisition/paywalls",
 					"cssClasses": "sb-icon-automations",
 					"children": [
 						{
 							"type": "custom",
+							"label": "Écrans d’abonnement",
+							"url": "/acquisition/paywalls"
+						},
+						{
+							"type": "custom",
 							"label": "Parcours d’accueil",
-							"url": "/onboardings",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Parcours d’accueil",
-									"url": "/onboardings"
-								},
-								{
-									"type": "custom",
-									"label": "Résultats des parcours d’accueil",
-									"url": "/onboardings/statistics"
-								}
-							]
+							"url": "/acquisition/onboardings"
 						},
 						{
 							"type": "custom",
-							"label": "Scénarios automatisés",
-							"url": "/flows/workflows",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Scénarios automatisés",
-									"url": "/flows/workflows"
-								},
-								{
-									"type": "custom",
-									"label": "Vue d’ensemble des automatisations",
-									"url": "/flows"
-								}
-							]
+							"label": "Liens dynamiques",
+							"url": "/acquisition/dynamic-links"
 						},
 						{
 							"type": "custom",
-							"label": "Déclenchements et publications",
-							"url": "/flows/launchpad"
-						},
-						{
-							"type": "custom",
-							"label": "Parcours marketing",
-							"url": "/marketing/journeys"
-						},
-						{
-							"type": "custom",
-							"label": "Composants de parcours",
-							"url": "/flows/components"
-						},
-						{
-							"type": "custom",
-							"label": "Suivi des participants",
-							"url": "/flows/users"
-						},
-						{
-							"type": "custom",
-							"label": "Paramètres des parcours",
-							"url": "/flows/settings/environments",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Environnements des parcours",
-									"url": "/flows/settings/environments"
-								},
-								{
-									"type": "custom",
-									"label": "Traductions des parcours",
-									"url": "/flows/settings/localization"
-								},
-								{
-									"type": "custom",
-									"label": "Intégration des parcours",
-									"url": "/flows/settings/sdk"
-								}
-							]
+							"label": "Paramètres",
+							"url": "/acquisition/settings"
 						}
 					]
 				},
 				{
 					"type": "custom",
-					"label": "Statistiques",
+					"label": "Support",
+					"url": "/support/inbox",
+					"cssClasses": "sb-icon-support",
+					"children": [
+						{
+							"type": "custom",
+							"label": "Inbox",
+							"url": "/support/inbox"
+						},
+						{
+							"type": "custom",
+							"label": "Contacts",
+							"url": "/support/contacts"
+						},
+						{
+							"type": "custom",
+							"label": "Agents et équipes",
+							"url": "/support/workforce"
+						},
+						{
+							"type": "custom",
+							"label": "Canaux de contact",
+							"url": "/support/channels"
+						},
+						{
+							"type": "custom",
+							"label": "Règles automatiques",
+							"url": "/support/automations"
+						},
+						{
+							"type": "custom",
+							"label": "Aide proactive",
+							"url": "/support/proactive-support"
+						},
+						{
+							"type": "custom",
+							"label": "Centre d’aide",
+							"url": "/support/help-center"
+						},
+						{
+							"type": "custom",
+							"label": "Assistant IA du support",
+							"url": "/support/captain"
+						},
+						{
+							"type": "custom",
+							"label": "Intégrations du support",
+							"url": "/support/integrations"
+						},
+						{
+							"type": "custom",
+							"label": "Satisfaction et qualité",
+							"url": "/support/quality"
+						},
+						{
+							"type": "custom",
+							"label": "Rapports du support",
+							"url": "/support/reports"
+						},
+						{
+							"type": "custom",
+							"label": "Paramètres du support",
+							"url": "/support/settings"
+						}
+					]
+				},
+				{
+					"type": "custom",
+					"label": "Analytics",
 					"url": "/analytics",
 					"cssClasses": "sb-icon-analytics",
 					"children": [
@@ -1138,84 +871,76 @@
 									"type": "custom",
 									"label": "Retours utilisateur",
 									"url": "/analytics/feedback"
-								},
-								{
-									"type": "custom",
-									"label": "Paramètres des statistiques",
-									"url": "/analytics/settings"
 								}
 							]
+						},
+						{
+							"type": "custom",
+							"label": "Configuration distante",
+							"url": "/analytics/remote-config"
+						},
+						{
+							"type": "custom",
+							"label": "Paramètres",
+							"url": "/analytics/settings"
 						}
 					]
 				},
 				{
 					"type": "custom",
 					"label": "Paramètres de l’environnement",
-					"url": "/project-settings",
+					"url": "/core/settings",
 					"cssClasses": "sb-icon-settings sb-nav-local",
 					"children": [
 						{
 							"type": "custom",
 							"label": "Paramètres de l’environnement",
-							"url": "/project-settings"
+							"url": "/core/settings"
 						},
 						{
 							"type": "custom",
 							"label": "Clés API",
-							"url": "/app/access-key"
+							"url": "/auth/access-key"
 						},
 						{
 							"type": "custom",
 							"label": "Bibliothèques SDK",
-							"url": "/app/libraries"
+							"url": "/core/libraries"
 						},
 						{
 							"type": "custom",
 							"label": "Configurer le Web",
-							"url": "/app/web-setup"
+							"url": "/core/web-setup"
 						},
 						{
 							"type": "custom",
 							"label": "Configurer iOS",
-							"url": "/app/ios-setup"
+							"url": "/core/ios-setup"
 						},
 						{
 							"type": "custom",
 							"label": "Configurer Android",
-							"url": "/app/android-setup"
+							"url": "/core/android-setup"
 						},
 						{
 							"type": "custom",
-							"label": "Configuration distante",
-							"url": "/analytics/remote-config"
-						}
-					]
-				},
-				{
-					"type": "custom",
-					"label": "Exploitation",
-					"url": "/infrastructure",
-					"cssClasses": "sb-icon-operations sb-nav-local",
-					"children": [
-						{
-							"type": "custom",
 							"label": "État des services",
-							"url": "/infrastructure"
+							"url": "/core/infrastructure"
 						},
 						{
 							"type": "custom",
 							"label": "Journal d’audit",
-							"url": "/system/audit"
+							"url": "/core/audit"
 						},
 						{
 							"type": "custom",
 							"label": "Routage de l’API",
-							"url": "/system/gateway"
+							"url": "/core/gateway"
 						},
 						{
 							"type": "custom",
 							"label": "Accès des assistants IA",
-							"url": "/mcp"
+							"url": "/core/mcp"
 						}
 					]
 				},
@@ -1237,8 +962,8 @@
 				"data": {
 					"name": "Dashboard",
 					"plugin_id": "supbrd-plugmod-analytics",
-					"route_id": "superboard.dashboard",
-					"path": "/dashboard",
+					"route_id": "superboard.analytics",
+					"path": "/analytics",
 					"description": "A cross-module view of acquisition, engagement and product performance.",
 					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
 					"presentation": {
@@ -1246,40 +971,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1291,7 +984,7 @@
 					"name": "Customers",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.app_customers",
-					"path": "/app/customers",
+					"path": "/auth/customers",
 					"description": "Acquisition identities and their complete app engagement history.",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1299,19 +992,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1323,7 +1005,7 @@
 					"name": "Users",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.users",
-					"path": "/app/users",
+					"path": "/auth/users",
 					"description": "Authentication, linked Google or Apple identities, sessions, subscriptions, entitlements and paywall activity.",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1331,19 +1013,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1355,7 +1026,7 @@
 					"name": "Referrals",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.app_referrals",
-					"path": "/app/referrals",
+					"path": "/auth/referrals",
 					"description": "Referral codes, attributed customers and the complete conversion lifecycle.",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1363,19 +1034,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1387,7 +1047,7 @@
 					"name": "Access Key",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.app_access_key",
-					"path": "/app/access-key",
+					"path": "/auth/access-key",
 					"description": "Authenticate public SuperBoard SDK requests without exposing an administrative session.",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1395,19 +1055,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1419,7 +1068,7 @@
 					"name": "Libraries",
 					"plugin_id": "supbrd-plug-settings",
 					"route_id": "superboard.app_libraries",
-					"path": "/app/libraries",
+					"path": "/core/libraries",
 					"description": "Git-owned SDK versions, immutable release references and reusable FlutterFlow custom code.",
 					"renderer_id": "supbrd-plug-settings.renderer.admin_surface",
 					"presentation": {
@@ -1427,16 +1076,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-settings.data_source.effective_settings",
-							"supbrd-plug-settings.data_source.settings_versions",
-							"supbrd-plug-settings.data_source.sdk_configurations"
-						],
-						"commands": [
-							"supbrd-plug-settings.command.update_effective_settings",
-							"supbrd-plug-settings.command.save_sdk_configuration",
-							"supbrd-plug-settings.command.test_sdk_configuration"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1448,7 +1089,7 @@
 					"name": "Android Setup",
 					"plugin_id": "supbrd-plug-settings",
 					"route_id": "superboard.app_android_setup",
-					"path": "/app/android-setup",
+					"path": "/core/android-setup",
 					"description": "Complete the five-step Android SDK integration and verify it against this project.",
 					"renderer_id": "supbrd-plug-settings.renderer.admin_surface",
 					"presentation": {
@@ -1456,16 +1097,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-settings.data_source.effective_settings",
-							"supbrd-plug-settings.data_source.settings_versions",
-							"supbrd-plug-settings.data_source.sdk_configurations"
-						],
-						"commands": [
-							"supbrd-plug-settings.command.update_effective_settings",
-							"supbrd-plug-settings.command.save_sdk_configuration",
-							"supbrd-plug-settings.command.test_sdk_configuration"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1477,7 +1110,7 @@
 					"name": "iOS Setup",
 					"plugin_id": "supbrd-plug-settings",
 					"route_id": "superboard.app_ios_setup",
-					"path": "/app/ios-setup",
+					"path": "/core/ios-setup",
 					"description": "Complete the five-step iOS SDK integration and verify it against this project.",
 					"renderer_id": "supbrd-plug-settings.renderer.admin_surface",
 					"presentation": {
@@ -1485,16 +1118,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-settings.data_source.effective_settings",
-							"supbrd-plug-settings.data_source.settings_versions",
-							"supbrd-plug-settings.data_source.sdk_configurations"
-						],
-						"commands": [
-							"supbrd-plug-settings.command.update_effective_settings",
-							"supbrd-plug-settings.command.save_sdk_configuration",
-							"supbrd-plug-settings.command.test_sdk_configuration"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1506,7 +1131,7 @@
 					"name": "Web Setup",
 					"plugin_id": "supbrd-plug-settings",
 					"route_id": "superboard.app_web_setup",
-					"path": "/app/web-setup",
+					"path": "/core/web-setup",
 					"description": "Complete the five-step Web SDK integration and verify it against this project.",
 					"renderer_id": "supbrd-plug-settings.renderer.admin_surface",
 					"presentation": {
@@ -1514,16 +1139,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-settings.data_source.effective_settings",
-							"supbrd-plug-settings.data_source.settings_versions",
-							"supbrd-plug-settings.data_source.sdk_configurations"
-						],
-						"commands": [
-							"supbrd-plug-settings.command.update_effective_settings",
-							"supbrd-plug-settings.command.save_sdk_configuration",
-							"supbrd-plug-settings.command.test_sdk_configuration"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1534,8 +1151,8 @@
 				"data": {
 					"name": "Overview",
 					"plugin_id": "supbrd-plug-user",
-					"route_id": "superboard.identity_by_lang_dashboard",
-					"path": "/identity/en/dashboard",
+					"route_id": "superboard.auth_settings",
+					"path": "/auth/settings",
 					"description": "",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1543,19 +1160,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1567,7 +1173,7 @@
 					"name": "Users",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.identity_by_lang_users",
-					"path": "/identity/en/users",
+					"path": "/auth/directory/users",
 					"description": "",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1575,19 +1181,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1599,7 +1194,7 @@
 					"name": "User Attributes",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.identity_by_lang_user_attributes",
-					"path": "/identity/en/user-attributes",
+					"path": "/auth/user-attributes",
 					"description": "",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1607,19 +1202,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1631,7 +1215,7 @@
 					"name": "Roles",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.identity_by_lang_roles",
-					"path": "/identity/en/roles",
+					"path": "/auth/roles",
 					"description": "",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1639,19 +1223,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1662,8 +1235,8 @@
 				"data": {
 					"name": "Applications",
 					"plugin_id": "supbrd-plug-user",
-					"route_id": "superboard.identity_by_lang_apps",
-					"path": "/identity/en/apps",
+					"route_id": "superboard.auth_apps",
+					"path": "/auth/apps",
 					"description": "",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1671,19 +1244,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1695,7 +1257,7 @@
 					"name": "Scopes",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.identity_by_lang_scopes",
-					"path": "/identity/en/scopes",
+					"path": "/auth/scopes",
 					"description": "",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1703,19 +1265,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1727,7 +1278,7 @@
 					"name": "Organizations",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.identity_by_lang_orgs",
-					"path": "/identity/en/orgs",
+					"path": "/auth/orgs",
 					"description": "",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1735,19 +1286,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1758,8 +1298,8 @@
 				"data": {
 					"name": "Logs",
 					"plugin_id": "supbrd-plug-user",
-					"route_id": "superboard.identity_by_lang_logs",
-					"path": "/identity/en/logs",
+					"route_id": "superboard.auth_logs",
+					"path": "/auth/logs",
 					"description": "",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1767,19 +1307,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1791,7 +1320,7 @@
 					"name": "SAML SSO",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.identity_by_lang_saml",
-					"path": "/identity/en/saml",
+					"path": "/auth/saml",
 					"description": "",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1799,19 +1328,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1823,7 +1341,7 @@
 					"name": "Account Policies",
 					"plugin_id": "supbrd-plug-user",
 					"route_id": "superboard.identity_by_lang_account",
-					"path": "/identity/en/account",
+					"path": "/auth/account-policies",
 					"description": "",
 					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
 					"presentation": {
@@ -1831,19 +1349,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-user.data_source.current_profile",
-							"supbrd-plug-user.data_source.members",
-							"supbrd-plug-user.data_source.linked_providers",
-							"supbrd-plug-user.data_source.active_sessions"
-						],
-						"commands": [
-							"supbrd-plug-user.command.application_sign_in",
-							"supbrd-plug-user.command.update_profile",
-							"supbrd-plug-user.command.suspend_member",
-							"supbrd-plug-user.command.link_provider",
-							"supbrd-plug-user.command.revoke_application_session"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1854,8 +1361,8 @@
 				"data": {
 					"name": "Purchases",
 					"plugin_id": "supbrd-plugmod-billing",
-					"route_id": "superboard.products_purchases",
-					"path": "/products/purchases",
+					"route_id": "superboard.monetization_purchases",
+					"path": "/monetization/purchases",
 					"description": "Purchases, subscriptions, restorations, refunds and financial history.",
 					"renderer_id": "supbrd-plugmod-billing.renderer.admin_surface",
 					"presentation": {
@@ -1863,23 +1370,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-billing.data_source.purchases",
-							"supbrd-plugmod-billing.data_source.purchase",
-							"supbrd-plugmod-billing.data_source.refunds",
-							"supbrd-plugmod-billing.data_source.subscriptions",
-							"supbrd-plugmod-billing.data_source.financial_customer_entitlements",
-							"supbrd-plugmod-billing.data_source.billing_ledger",
-							"supbrd-plugmod-billing.data_source.migration_status"
-						],
-						"commands": [
-							"supbrd-plugmod-billing.command.create_purchase",
-							"supbrd-plugmod-billing.command.create_refund",
-							"supbrd-plugmod-billing.command.update_refund",
-							"supbrd-plugmod-billing.command.update_subscription",
-							"supbrd-plugmod-billing.command.reconcile_store",
-							"supbrd-plugmod-billing.command.migrate_products"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1890,8 +1382,8 @@
 				"data": {
 					"name": "Customers",
 					"plugin_id": "supbrd-plugmod-billing",
-					"route_id": "superboard.products_customers",
-					"path": "/products/customers",
+					"route_id": "superboard.monetization_customers",
+					"path": "/monetization/customers",
 					"description": "Application identities, subscriptions, entitlements, balances, transactions and paywall activity.",
 					"renderer_id": "supbrd-plugmod-billing.renderer.admin_surface",
 					"presentation": {
@@ -1899,23 +1391,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-billing.data_source.purchases",
-							"supbrd-plugmod-billing.data_source.purchase",
-							"supbrd-plugmod-billing.data_source.refunds",
-							"supbrd-plugmod-billing.data_source.subscriptions",
-							"supbrd-plugmod-billing.data_source.financial_customer_entitlements",
-							"supbrd-plugmod-billing.data_source.billing_ledger",
-							"supbrd-plugmod-billing.data_source.migration_status"
-						],
-						"commands": [
-							"supbrd-plugmod-billing.command.create_purchase",
-							"supbrd-plugmod-billing.command.create_refund",
-							"supbrd-plugmod-billing.command.update_refund",
-							"supbrd-plugmod-billing.command.update_subscription",
-							"supbrd-plugmod-billing.command.reconcile_store",
-							"supbrd-plugmod-billing.command.migrate_products"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1926,8 +1403,8 @@
 				"data": {
 					"name": "Offerings",
 					"plugin_id": "supbrd-plug-products",
-					"route_id": "superboard.products_offerings",
-					"path": "/products/offerings",
+					"route_id": "superboard.monetization_offerings",
+					"path": "/monetization/offerings",
 					"description": "Manage the store catalog, packages and SDK-resolved offerings.",
 					"renderer_id": "supbrd-plug-products.renderer.admin_surface",
 					"presentation": {
@@ -1935,29 +1412,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plug-products.data_source.products",
-							"supbrd-plug-products.data_source.packages",
-							"supbrd-plug-products.data_source.offerings",
-							"supbrd-plug-products.data_source.entitlements",
-							"supbrd-plug-products.data_source.product_statistics",
-							"supbrd-plug-products.data_source.store_sync_runs"
-						],
-						"commands": [
-							"supbrd-plug-products.command.create_product",
-							"supbrd-plug-products.command.update_product",
-							"supbrd-plug-products.command.archive_product",
-							"supbrd-plug-products.command.create_package",
-							"supbrd-plug-products.command.update_package",
-							"supbrd-plug-products.command.archive_package",
-							"supbrd-plug-products.command.create_offering",
-							"supbrd-plug-products.command.update_offering",
-							"supbrd-plug-products.command.archive_offering",
-							"supbrd-plug-products.command.create_entitlement",
-							"supbrd-plug-products.command.update_entitlement",
-							"supbrd-plug-products.command.archive_entitlement",
-							"supbrd-plug-products.command.sync_store_catalog"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -1968,8 +1424,8 @@
 				"data": {
 					"name": "Entitlements",
 					"plugin_id": "supbrd-plugmod-billing",
-					"route_id": "superboard.products_entitlements",
-					"path": "/products/entitlements",
+					"route_id": "superboard.monetization_entitlements",
+					"path": "/monetization/entitlements",
 					"description": "Define SDK access rights and the products that unlock each right.",
 					"renderer_id": "supbrd-plugmod-billing.renderer.admin_surface",
 					"presentation": {
@@ -1977,23 +1433,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-billing.data_source.purchases",
-							"supbrd-plugmod-billing.data_source.purchase",
-							"supbrd-plugmod-billing.data_source.refunds",
-							"supbrd-plugmod-billing.data_source.subscriptions",
-							"supbrd-plugmod-billing.data_source.financial_customer_entitlements",
-							"supbrd-plugmod-billing.data_source.billing_ledger",
-							"supbrd-plugmod-billing.data_source.migration_status"
-						],
-						"commands": [
-							"supbrd-plugmod-billing.command.create_purchase",
-							"supbrd-plugmod-billing.command.create_refund",
-							"supbrd-plugmod-billing.command.update_refund",
-							"supbrd-plugmod-billing.command.update_subscription",
-							"supbrd-plugmod-billing.command.reconcile_store",
-							"supbrd-plugmod-billing.command.migrate_products"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2005,7 +1446,7 @@
 					"name": "Overview",
 					"plugin_id": "supbrd-plugmod-flows",
 					"route_id": "superboard.flows",
-					"path": "/flows",
+					"path": "/acquisition/overview",
 					"description": "Monitor active workflows, user activity and runtime incidents.",
 					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
 					"presentation": {
@@ -2013,25 +1454,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-flows.data_source.overview",
-							"supbrd-plugmod-flows.data_source.components",
-							"supbrd-plugmod-flows.data_source.workflows",
-							"supbrd-plugmod-flows.data_source.workflow",
-							"supbrd-plugmod-flows.data_source.environments",
-							"supbrd-plugmod-flows.data_source.localization",
-							"supbrd-plugmod-flows.data_source.users",
-							"supbrd-plugmod-flows.data_source.user_details"
-						],
-						"commands": [
-							"supbrd-plugmod-flows.command.create_workflow",
-							"supbrd-plugmod-flows.command.update_workflow",
-							"supbrd-plugmod-flows.command.publish_workflow",
-							"supbrd-plugmod-flows.command.activate_version",
-							"supbrd-plugmod-flows.command.create_environment",
-							"supbrd-plugmod-flows.command.rotate_environment_key",
-							"supbrd-plugmod-flows.command.save_localization"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2042,8 +1466,8 @@
 				"data": {
 					"name": "Workflows",
 					"plugin_id": "supbrd-plugmod-flows",
-					"route_id": "superboard.flows_workflows",
-					"path": "/flows/workflows",
+					"route_id": "superboard.acquisition_workflows",
+					"path": "/acquisition/workflows",
 					"description": "Create, version, publish and analyze product experiences.",
 					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
 					"presentation": {
@@ -2051,25 +1475,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-flows.data_source.overview",
-							"supbrd-plugmod-flows.data_source.components",
-							"supbrd-plugmod-flows.data_source.workflows",
-							"supbrd-plugmod-flows.data_source.workflow",
-							"supbrd-plugmod-flows.data_source.environments",
-							"supbrd-plugmod-flows.data_source.localization",
-							"supbrd-plugmod-flows.data_source.users",
-							"supbrd-plugmod-flows.data_source.user_details"
-						],
-						"commands": [
-							"supbrd-plugmod-flows.command.create_workflow",
-							"supbrd-plugmod-flows.command.update_workflow",
-							"supbrd-plugmod-flows.command.publish_workflow",
-							"supbrd-plugmod-flows.command.activate_version",
-							"supbrd-plugmod-flows.command.create_environment",
-							"supbrd-plugmod-flows.command.rotate_environment_key",
-							"supbrd-plugmod-flows.command.save_localization"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2080,8 +1487,8 @@
 				"data": {
 					"name": "Launchpad",
 					"plugin_id": "supbrd-plugmod-flows",
-					"route_id": "superboard.flows_launchpad",
-					"path": "/flows/launchpad",
+					"route_id": "superboard.acquisition_launchpad",
+					"path": "/acquisition/launchpad",
 					"description": "Order workflow groups, priorities and concurrency for every environment.",
 					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
 					"presentation": {
@@ -2089,25 +1496,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-flows.data_source.overview",
-							"supbrd-plugmod-flows.data_source.components",
-							"supbrd-plugmod-flows.data_source.workflows",
-							"supbrd-plugmod-flows.data_source.workflow",
-							"supbrd-plugmod-flows.data_source.environments",
-							"supbrd-plugmod-flows.data_source.localization",
-							"supbrd-plugmod-flows.data_source.users",
-							"supbrd-plugmod-flows.data_source.user_details"
-						],
-						"commands": [
-							"supbrd-plugmod-flows.command.create_workflow",
-							"supbrd-plugmod-flows.command.update_workflow",
-							"supbrd-plugmod-flows.command.publish_workflow",
-							"supbrd-plugmod-flows.command.activate_version",
-							"supbrd-plugmod-flows.command.create_environment",
-							"supbrd-plugmod-flows.command.rotate_environment_key",
-							"supbrd-plugmod-flows.command.save_localization"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2118,8 +1508,8 @@
 				"data": {
 					"name": "Users",
 					"plugin_id": "supbrd-plugmod-flows",
-					"route_id": "superboard.flows_users",
-					"path": "/flows/users",
+					"route_id": "superboard.acquisition_users",
+					"path": "/acquisition/users",
 					"description": "Inspect user properties, workflow state and the complete activity journal.",
 					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
 					"presentation": {
@@ -2127,25 +1517,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-flows.data_source.overview",
-							"supbrd-plugmod-flows.data_source.components",
-							"supbrd-plugmod-flows.data_source.workflows",
-							"supbrd-plugmod-flows.data_source.workflow",
-							"supbrd-plugmod-flows.data_source.environments",
-							"supbrd-plugmod-flows.data_source.localization",
-							"supbrd-plugmod-flows.data_source.users",
-							"supbrd-plugmod-flows.data_source.user_details"
-						],
-						"commands": [
-							"supbrd-plugmod-flows.command.create_workflow",
-							"supbrd-plugmod-flows.command.update_workflow",
-							"supbrd-plugmod-flows.command.publish_workflow",
-							"supbrd-plugmod-flows.command.activate_version",
-							"supbrd-plugmod-flows.command.create_environment",
-							"supbrd-plugmod-flows.command.rotate_environment_key",
-							"supbrd-plugmod-flows.command.save_localization"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2156,8 +1529,8 @@
 				"data": {
 					"name": "Components",
 					"plugin_id": "supbrd-plugmod-flows",
-					"route_id": "superboard.flows_components",
-					"path": "/flows/components",
+					"route_id": "superboard.acquisition_components",
+					"path": "/acquisition/components",
 					"description": "Manage Basics V2 and custom component libraries without silently updating instances.",
 					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
 					"presentation": {
@@ -2165,25 +1538,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-flows.data_source.overview",
-							"supbrd-plugmod-flows.data_source.components",
-							"supbrd-plugmod-flows.data_source.workflows",
-							"supbrd-plugmod-flows.data_source.workflow",
-							"supbrd-plugmod-flows.data_source.environments",
-							"supbrd-plugmod-flows.data_source.localization",
-							"supbrd-plugmod-flows.data_source.users",
-							"supbrd-plugmod-flows.data_source.user_details"
-						],
-						"commands": [
-							"supbrd-plugmod-flows.command.create_workflow",
-							"supbrd-plugmod-flows.command.update_workflow",
-							"supbrd-plugmod-flows.command.publish_workflow",
-							"supbrd-plugmod-flows.command.activate_version",
-							"supbrd-plugmod-flows.command.create_environment",
-							"supbrd-plugmod-flows.command.rotate_environment_key",
-							"supbrd-plugmod-flows.command.save_localization"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2194,8 +1550,8 @@
 				"data": {
 					"name": "Environments",
 					"plugin_id": "supbrd-plugmod-flows",
-					"route_id": "superboard.flows_settings_environments",
-					"path": "/flows/settings/environments",
+					"route_id": "superboard.acquisition_settings_environments",
+					"path": "/acquisition/settings/environments",
 					"description": "Manage isolated release environments and their rotatable SDK keys.",
 					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
 					"presentation": {
@@ -2203,25 +1559,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-flows.data_source.overview",
-							"supbrd-plugmod-flows.data_source.components",
-							"supbrd-plugmod-flows.data_source.workflows",
-							"supbrd-plugmod-flows.data_source.workflow",
-							"supbrd-plugmod-flows.data_source.environments",
-							"supbrd-plugmod-flows.data_source.localization",
-							"supbrd-plugmod-flows.data_source.users",
-							"supbrd-plugmod-flows.data_source.user_details"
-						],
-						"commands": [
-							"supbrd-plugmod-flows.command.create_workflow",
-							"supbrd-plugmod-flows.command.update_workflow",
-							"supbrd-plugmod-flows.command.publish_workflow",
-							"supbrd-plugmod-flows.command.activate_version",
-							"supbrd-plugmod-flows.command.create_environment",
-							"supbrd-plugmod-flows.command.rotate_environment_key",
-							"supbrd-plugmod-flows.command.save_localization"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2232,8 +1571,8 @@
 				"data": {
 					"name": "Localization",
 					"plugin_id": "supbrd-plugmod-flows",
-					"route_id": "superboard.flows_settings_localization",
-					"path": "/flows/settings/localization",
+					"route_id": "superboard.acquisition_settings_localization",
+					"path": "/acquisition/settings/localization",
 					"description": "Configure language groups, default languages and fallback chains.",
 					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
 					"presentation": {
@@ -2241,25 +1580,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-flows.data_source.overview",
-							"supbrd-plugmod-flows.data_source.components",
-							"supbrd-plugmod-flows.data_source.workflows",
-							"supbrd-plugmod-flows.data_source.workflow",
-							"supbrd-plugmod-flows.data_source.environments",
-							"supbrd-plugmod-flows.data_source.localization",
-							"supbrd-plugmod-flows.data_source.users",
-							"supbrd-plugmod-flows.data_source.user_details"
-						],
-						"commands": [
-							"supbrd-plugmod-flows.command.create_workflow",
-							"supbrd-plugmod-flows.command.update_workflow",
-							"supbrd-plugmod-flows.command.publish_workflow",
-							"supbrd-plugmod-flows.command.activate_version",
-							"supbrd-plugmod-flows.command.create_environment",
-							"supbrd-plugmod-flows.command.rotate_environment_key",
-							"supbrd-plugmod-flows.command.save_localization"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2270,8 +1592,8 @@
 				"data": {
 					"name": "SDK",
 					"plugin_id": "supbrd-plugmod-flows",
-					"route_id": "superboard.flows_settings_sdk",
-					"path": "/flows/settings/sdk",
+					"route_id": "superboard.acquisition_settings_sdk",
+					"path": "/acquisition/settings/sdk",
 					"description": "Install JavaScript, React, Flutter or FlutterFlow against the SuperBoard API.",
 					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
 					"presentation": {
@@ -2279,25 +1601,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-flows.data_source.overview",
-							"supbrd-plugmod-flows.data_source.components",
-							"supbrd-plugmod-flows.data_source.workflows",
-							"supbrd-plugmod-flows.data_source.workflow",
-							"supbrd-plugmod-flows.data_source.environments",
-							"supbrd-plugmod-flows.data_source.localization",
-							"supbrd-plugmod-flows.data_source.users",
-							"supbrd-plugmod-flows.data_source.user_details"
-						],
-						"commands": [
-							"supbrd-plugmod-flows.command.create_workflow",
-							"supbrd-plugmod-flows.command.update_workflow",
-							"supbrd-plugmod-flows.command.publish_workflow",
-							"supbrd-plugmod-flows.command.activate_version",
-							"supbrd-plugmod-flows.command.create_environment",
-							"supbrd-plugmod-flows.command.rotate_environment_key",
-							"supbrd-plugmod-flows.command.save_localization"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2308,8 +1613,8 @@
 				"data": {
 					"name": "Links",
 					"plugin_id": "supbrd-plugmod-dynamic-links",
-					"route_id": "superboard.dynamic_links_links",
-					"path": "/dynamic-links/links",
+					"route_id": "superboard.acquisition_dynamic_links",
+					"path": "/acquisition/dynamic-links",
 					"description": "Create, route and measure links across every platform and acquisition source.",
 					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
 					"presentation": {
@@ -2317,32 +1622,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-dynamic-links.data_source.links",
-							"supbrd-plugmod-dynamic-links.data_source.resolved_link",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaigns",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
-							"supbrd-plugmod-dynamic-links.data_source.redirect_rules",
-							"supbrd-plugmod-dynamic-links.data_source.domains",
-							"supbrd-plugmod-dynamic-links.data_source.social_preview",
-							"supbrd-plugmod-dynamic-links.data_source.tracking",
-							"supbrd-plugmod-dynamic-links.data_source.link_statistics"
-						],
-						"commands": [
-							"supbrd-plugmod-dynamic-links.command.create_link",
-							"supbrd-plugmod-dynamic-links.command.update_link",
-							"supbrd-plugmod-dynamic-links.command.delete_link",
-							"supbrd-plugmod-dynamic-links.command.create_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.delete_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.create_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.update_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.create_domain",
-							"supbrd-plugmod-dynamic-links.command.verify_domain",
-							"supbrd-plugmod-dynamic-links.command.delete_domain",
-							"supbrd-plugmod-dynamic-links.command.save_social_preview",
-							"supbrd-plugmod-dynamic-links.command.save_tracking"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2353,8 +1634,8 @@
 				"data": {
 					"name": "Campaigns",
 					"plugin_id": "supbrd-plugmod-dynamic-links",
-					"route_id": "superboard.dynamic_links_campaigns",
-					"path": "/dynamic-links/campaigns",
+					"route_id": "superboard.acquisition_dynamic_links_campaigns",
+					"path": "/acquisition/dynamic-links/campaigns",
 					"description": "Measure every acquisition campaign from link view to referred customer and revenue.",
 					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
 					"presentation": {
@@ -2362,32 +1643,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-dynamic-links.data_source.links",
-							"supbrd-plugmod-dynamic-links.data_source.resolved_link",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaigns",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
-							"supbrd-plugmod-dynamic-links.data_source.redirect_rules",
-							"supbrd-plugmod-dynamic-links.data_source.domains",
-							"supbrd-plugmod-dynamic-links.data_source.social_preview",
-							"supbrd-plugmod-dynamic-links.data_source.tracking",
-							"supbrd-plugmod-dynamic-links.data_source.link_statistics"
-						],
-						"commands": [
-							"supbrd-plugmod-dynamic-links.command.create_link",
-							"supbrd-plugmod-dynamic-links.command.update_link",
-							"supbrd-plugmod-dynamic-links.command.delete_link",
-							"supbrd-plugmod-dynamic-links.command.create_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.delete_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.create_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.update_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.create_domain",
-							"supbrd-plugmod-dynamic-links.command.verify_domain",
-							"supbrd-plugmod-dynamic-links.command.delete_domain",
-							"supbrd-plugmod-dynamic-links.command.save_social_preview",
-							"supbrd-plugmod-dynamic-links.command.save_tracking"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2398,8 +1655,8 @@
 				"data": {
 					"name": "Redirect Rules",
 					"plugin_id": "supbrd-plugmod-dynamic-links",
-					"route_id": "superboard.dynamic_links_redirect_rules",
-					"path": "/dynamic-links/redirect-rules",
+					"route_id": "superboard.acquisition_dynamic_links_redirect_rules",
+					"path": "/acquisition/dynamic-links/redirect-rules",
 					"description": "Resolve the first matching platform rule by priority, then fall back to the link destination.",
 					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
 					"presentation": {
@@ -2407,32 +1664,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-dynamic-links.data_source.links",
-							"supbrd-plugmod-dynamic-links.data_source.resolved_link",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaigns",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
-							"supbrd-plugmod-dynamic-links.data_source.redirect_rules",
-							"supbrd-plugmod-dynamic-links.data_source.domains",
-							"supbrd-plugmod-dynamic-links.data_source.social_preview",
-							"supbrd-plugmod-dynamic-links.data_source.tracking",
-							"supbrd-plugmod-dynamic-links.data_source.link_statistics"
-						],
-						"commands": [
-							"supbrd-plugmod-dynamic-links.command.create_link",
-							"supbrd-plugmod-dynamic-links.command.update_link",
-							"supbrd-plugmod-dynamic-links.command.delete_link",
-							"supbrd-plugmod-dynamic-links.command.create_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.delete_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.create_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.update_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.create_domain",
-							"supbrd-plugmod-dynamic-links.command.verify_domain",
-							"supbrd-plugmod-dynamic-links.command.delete_domain",
-							"supbrd-plugmod-dynamic-links.command.save_social_preview",
-							"supbrd-plugmod-dynamic-links.command.save_tracking"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2443,8 +1676,8 @@
 				"data": {
 					"name": "Domain",
 					"plugin_id": "supbrd-plugmod-dynamic-links",
-					"route_id": "superboard.dynamic_links_domain",
-					"path": "/dynamic-links/domain",
+					"route_id": "superboard.acquisition_dynamic_links_domain",
+					"path": "/acquisition/dynamic-links/domain",
 					"description": "Serve branded dynamic links only after ownership has been verified through DNS.",
 					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
 					"presentation": {
@@ -2452,32 +1685,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-dynamic-links.data_source.links",
-							"supbrd-plugmod-dynamic-links.data_source.resolved_link",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaigns",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
-							"supbrd-plugmod-dynamic-links.data_source.redirect_rules",
-							"supbrd-plugmod-dynamic-links.data_source.domains",
-							"supbrd-plugmod-dynamic-links.data_source.social_preview",
-							"supbrd-plugmod-dynamic-links.data_source.tracking",
-							"supbrd-plugmod-dynamic-links.data_source.link_statistics"
-						],
-						"commands": [
-							"supbrd-plugmod-dynamic-links.command.create_link",
-							"supbrd-plugmod-dynamic-links.command.update_link",
-							"supbrd-plugmod-dynamic-links.command.delete_link",
-							"supbrd-plugmod-dynamic-links.command.create_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.delete_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.create_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.update_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.create_domain",
-							"supbrd-plugmod-dynamic-links.command.verify_domain",
-							"supbrd-plugmod-dynamic-links.command.delete_domain",
-							"supbrd-plugmod-dynamic-links.command.save_social_preview",
-							"supbrd-plugmod-dynamic-links.command.save_tracking"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2488,8 +1697,8 @@
 				"data": {
 					"name": "Social Media Preview",
 					"plugin_id": "supbrd-plugmod-dynamic-links",
-					"route_id": "superboard.dynamic_links_social_media_preview",
-					"path": "/dynamic-links/social-media-preview",
+					"route_id": "superboard.acquisition_dynamic_links_social_media_preview",
+					"path": "/acquisition/dynamic-links/social-media-preview",
 					"description": "Design the default Open Graph card shown when a dynamic link is shared.",
 					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
 					"presentation": {
@@ -2497,32 +1706,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-dynamic-links.data_source.links",
-							"supbrd-plugmod-dynamic-links.data_source.resolved_link",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaigns",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
-							"supbrd-plugmod-dynamic-links.data_source.redirect_rules",
-							"supbrd-plugmod-dynamic-links.data_source.domains",
-							"supbrd-plugmod-dynamic-links.data_source.social_preview",
-							"supbrd-plugmod-dynamic-links.data_source.tracking",
-							"supbrd-plugmod-dynamic-links.data_source.link_statistics"
-						],
-						"commands": [
-							"supbrd-plugmod-dynamic-links.command.create_link",
-							"supbrd-plugmod-dynamic-links.command.update_link",
-							"supbrd-plugmod-dynamic-links.command.delete_link",
-							"supbrd-plugmod-dynamic-links.command.create_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.delete_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.create_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.update_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.create_domain",
-							"supbrd-plugmod-dynamic-links.command.verify_domain",
-							"supbrd-plugmod-dynamic-links.command.delete_domain",
-							"supbrd-plugmod-dynamic-links.command.save_social_preview",
-							"supbrd-plugmod-dynamic-links.command.save_tracking"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2533,8 +1718,8 @@
 				"data": {
 					"name": "Tracking",
 					"plugin_id": "supbrd-plugmod-dynamic-links",
-					"route_id": "superboard.dynamic_links_tracking",
-					"path": "/dynamic-links/tracking",
+					"route_id": "superboard.acquisition_dynamic_links_tracking",
+					"path": "/acquisition/dynamic-links/tracking",
 					"description": "Inspect attributed link events and control consent-aware collection by project.",
 					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
 					"presentation": {
@@ -2542,32 +1727,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-dynamic-links.data_source.links",
-							"supbrd-plugmod-dynamic-links.data_source.resolved_link",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaigns",
-							"supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
-							"supbrd-plugmod-dynamic-links.data_source.redirect_rules",
-							"supbrd-plugmod-dynamic-links.data_source.domains",
-							"supbrd-plugmod-dynamic-links.data_source.social_preview",
-							"supbrd-plugmod-dynamic-links.data_source.tracking",
-							"supbrd-plugmod-dynamic-links.data_source.link_statistics"
-						],
-						"commands": [
-							"supbrd-plugmod-dynamic-links.command.create_link",
-							"supbrd-plugmod-dynamic-links.command.update_link",
-							"supbrd-plugmod-dynamic-links.command.delete_link",
-							"supbrd-plugmod-dynamic-links.command.create_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.delete_link_campaign",
-							"supbrd-plugmod-dynamic-links.command.create_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.update_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
-							"supbrd-plugmod-dynamic-links.command.create_domain",
-							"supbrd-plugmod-dynamic-links.command.verify_domain",
-							"supbrd-plugmod-dynamic-links.command.delete_domain",
-							"supbrd-plugmod-dynamic-links.command.save_social_preview",
-							"supbrd-plugmod-dynamic-links.command.save_tracking"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2587,37 +1748,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2637,37 +1769,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2687,37 +1790,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2737,37 +1811,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2787,37 +1832,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2837,37 +1853,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2887,37 +1874,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2937,37 +1895,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -2987,37 +1916,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3037,37 +1937,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3087,37 +1958,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-support.data_source.support_settings",
-							"supbrd-plugmod-support.data_source.unified_inbox_items",
-							"supbrd-plugmod-support.data_source.inbox_conversations",
-							"supbrd-plugmod-support.data_source.inbox_messages",
-							"supbrd-plugmod-support.data_source.support_channels",
-							"supbrd-plugmod-support.data_source.support_providers",
-							"supbrd-plugmod-support.data_source.support_integrations",
-							"supbrd-plugmod-support.data_source.support_portals",
-							"supbrd-plugmod-support.data_source.support_categories",
-							"supbrd-plugmod-support.data_source.support_folders",
-							"supbrd-plugmod-support.data_source.support_articles",
-							"supbrd-plugmod-support.data_source.support_assistant_tasks"
-						],
-						"commands": [
-							"supbrd-plugmod-support.command.update_support_settings",
-							"supbrd-plugmod-support.command.create_support_configuration",
-							"supbrd-plugmod-support.command.update_support_configuration",
-							"supbrd-plugmod-support.command.delete_support_configuration",
-							"supbrd-plugmod-support.command.rotate_support_webhook_secret",
-							"supbrd-plugmod-support.command.revoke_support_webhook_secret",
-							"supbrd-plugmod-support.command.send_inbox_message",
-							"supbrd-plugmod-support.command.update_inbox_conversation",
-							"supbrd-plugmod-support.command.create_support_provider",
-							"supbrd-plugmod-support.command.update_support_provider",
-							"supbrd-plugmod-support.command.delete_support_provider",
-							"supbrd-plugmod-support.command.create_support_integration",
-							"supbrd-plugmod-support.command.update_support_integration",
-							"supbrd-plugmod-support.command.delete_support_integration",
-							"supbrd-plugmod-support.command.publish_support_article"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3128,8 +1970,8 @@
 				"data": {
 					"name": "In-app Messages",
 					"plugin_id": "supbrd-plugmod-marketing",
-					"route_id": "superboard.marketing_in_app_messages",
-					"path": "/marketing/in-app-messages",
+					"route_id": "superboard.communication_in_app_messages",
+					"path": "/communication/in-app-messages",
 					"description": "",
 					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
 					"presentation": {
@@ -3137,32 +1979,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-marketing.data_source.notifications",
-							"supbrd-plugmod-marketing.data_source.email_subscribers",
-							"supbrd-plugmod-marketing.data_source.subscriber_lists",
-							"supbrd-plugmod-marketing.data_source.subscriber_segments",
-							"supbrd-plugmod-marketing.data_source.email_templates",
-							"supbrd-plugmod-marketing.data_source.email_campaigns",
-							"supbrd-plugmod-marketing.data_source.marketing_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_journeys",
-							"supbrd-plugmod-marketing.data_source.journey_enrollments",
-							"supbrd-plugmod-marketing.data_source.journey_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_channel_connectors"
-						],
-						"commands": [
-							"supbrd-plugmod-marketing.command.create_notification",
-							"supbrd-plugmod-marketing.command.create_email_campaign",
-							"supbrd-plugmod-marketing.command.update_email_campaign",
-							"supbrd-plugmod-marketing.command.transition_email_campaign",
-							"supbrd-plugmod-marketing.command.schedule_email_campaign",
-							"supbrd-plugmod-marketing.command.create_marketing_journey",
-							"supbrd-plugmod-marketing.command.update_marketing_journey",
-							"supbrd-plugmod-marketing.command.transition_marketing_journey",
-							"supbrd-plugmod-marketing.command.create_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.update_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.delete_marketing_channel_connector"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3173,8 +1991,8 @@
 				"data": {
 					"name": "Email",
 					"plugin_id": "supbrd-plugmod-marketing",
-					"route_id": "superboard.marketing_email",
-					"path": "/marketing/email",
+					"route_id": "superboard.communication_marketing_email",
+					"path": "/communication/marketing-email",
 					"description": "Subscribers, consent, lists, double opt-in, segmentation and bulk operations.",
 					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
 					"presentation": {
@@ -3182,32 +2000,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-marketing.data_source.notifications",
-							"supbrd-plugmod-marketing.data_source.email_subscribers",
-							"supbrd-plugmod-marketing.data_source.subscriber_lists",
-							"supbrd-plugmod-marketing.data_source.subscriber_segments",
-							"supbrd-plugmod-marketing.data_source.email_templates",
-							"supbrd-plugmod-marketing.data_source.email_campaigns",
-							"supbrd-plugmod-marketing.data_source.marketing_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_journeys",
-							"supbrd-plugmod-marketing.data_source.journey_enrollments",
-							"supbrd-plugmod-marketing.data_source.journey_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_channel_connectors"
-						],
-						"commands": [
-							"supbrd-plugmod-marketing.command.create_notification",
-							"supbrd-plugmod-marketing.command.create_email_campaign",
-							"supbrd-plugmod-marketing.command.update_email_campaign",
-							"supbrd-plugmod-marketing.command.transition_email_campaign",
-							"supbrd-plugmod-marketing.command.schedule_email_campaign",
-							"supbrd-plugmod-marketing.command.create_marketing_journey",
-							"supbrd-plugmod-marketing.command.update_marketing_journey",
-							"supbrd-plugmod-marketing.command.transition_marketing_journey",
-							"supbrd-plugmod-marketing.command.create_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.update_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.delete_marketing_channel_connector"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3218,8 +2012,8 @@
 				"data": {
 					"name": "Campaigns",
 					"plugin_id": "supbrd-plugmod-marketing",
-					"route_id": "superboard.marketing_campaigns",
-					"path": "/marketing/campaigns",
+					"route_id": "superboard.communication_campaigns",
+					"path": "/communication/campaigns",
 					"description": "Templates, media, previews, scheduled campaigns, transactional email and delivery controls.",
 					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
 					"presentation": {
@@ -3227,32 +2021,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-marketing.data_source.notifications",
-							"supbrd-plugmod-marketing.data_source.email_subscribers",
-							"supbrd-plugmod-marketing.data_source.subscriber_lists",
-							"supbrd-plugmod-marketing.data_source.subscriber_segments",
-							"supbrd-plugmod-marketing.data_source.email_templates",
-							"supbrd-plugmod-marketing.data_source.email_campaigns",
-							"supbrd-plugmod-marketing.data_source.marketing_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_journeys",
-							"supbrd-plugmod-marketing.data_source.journey_enrollments",
-							"supbrd-plugmod-marketing.data_source.journey_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_channel_connectors"
-						],
-						"commands": [
-							"supbrd-plugmod-marketing.command.create_notification",
-							"supbrd-plugmod-marketing.command.create_email_campaign",
-							"supbrd-plugmod-marketing.command.update_email_campaign",
-							"supbrd-plugmod-marketing.command.transition_email_campaign",
-							"supbrd-plugmod-marketing.command.schedule_email_campaign",
-							"supbrd-plugmod-marketing.command.create_marketing_journey",
-							"supbrd-plugmod-marketing.command.update_marketing_journey",
-							"supbrd-plugmod-marketing.command.transition_marketing_journey",
-							"supbrd-plugmod-marketing.command.create_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.update_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.delete_marketing_channel_connector"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3263,8 +2033,8 @@
 				"data": {
 					"name": "Journeys",
 					"plugin_id": "supbrd-plugmod-marketing",
-					"route_id": "superboard.marketing_journeys",
-					"path": "/marketing/journeys",
+					"route_id": "superboard.communication_journeys",
+					"path": "/communication/journeys",
 					"description": "Turn product events into versioned, resumable email and omnichannel customer journeys.",
 					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
 					"presentation": {
@@ -3272,32 +2042,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-marketing.data_source.notifications",
-							"supbrd-plugmod-marketing.data_source.email_subscribers",
-							"supbrd-plugmod-marketing.data_source.subscriber_lists",
-							"supbrd-plugmod-marketing.data_source.subscriber_segments",
-							"supbrd-plugmod-marketing.data_source.email_templates",
-							"supbrd-plugmod-marketing.data_source.email_campaigns",
-							"supbrd-plugmod-marketing.data_source.marketing_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_journeys",
-							"supbrd-plugmod-marketing.data_source.journey_enrollments",
-							"supbrd-plugmod-marketing.data_source.journey_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_channel_connectors"
-						],
-						"commands": [
-							"supbrd-plugmod-marketing.command.create_notification",
-							"supbrd-plugmod-marketing.command.create_email_campaign",
-							"supbrd-plugmod-marketing.command.update_email_campaign",
-							"supbrd-plugmod-marketing.command.transition_email_campaign",
-							"supbrd-plugmod-marketing.command.schedule_email_campaign",
-							"supbrd-plugmod-marketing.command.create_marketing_journey",
-							"supbrd-plugmod-marketing.command.update_marketing_journey",
-							"supbrd-plugmod-marketing.command.transition_marketing_journey",
-							"supbrd-plugmod-marketing.command.create_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.update_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.delete_marketing_channel_connector"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3308,8 +2054,8 @@
 				"data": {
 					"name": "Channels",
 					"plugin_id": "supbrd-plugmod-marketing",
-					"route_id": "superboard.marketing_channels",
-					"path": "/marketing/channels",
+					"route_id": "superboard.communication_channels",
+					"path": "/communication/channels",
 					"description": "Connect secure HTTPS destinations for SMS, push, WhatsApp, Slack and custom webhooks.",
 					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
 					"presentation": {
@@ -3317,32 +2063,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-marketing.data_source.notifications",
-							"supbrd-plugmod-marketing.data_source.email_subscribers",
-							"supbrd-plugmod-marketing.data_source.subscriber_lists",
-							"supbrd-plugmod-marketing.data_source.subscriber_segments",
-							"supbrd-plugmod-marketing.data_source.email_templates",
-							"supbrd-plugmod-marketing.data_source.email_campaigns",
-							"supbrd-plugmod-marketing.data_source.marketing_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_journeys",
-							"supbrd-plugmod-marketing.data_source.journey_enrollments",
-							"supbrd-plugmod-marketing.data_source.journey_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_channel_connectors"
-						],
-						"commands": [
-							"supbrd-plugmod-marketing.command.create_notification",
-							"supbrd-plugmod-marketing.command.create_email_campaign",
-							"supbrd-plugmod-marketing.command.update_email_campaign",
-							"supbrd-plugmod-marketing.command.transition_email_campaign",
-							"supbrd-plugmod-marketing.command.schedule_email_campaign",
-							"supbrd-plugmod-marketing.command.create_marketing_journey",
-							"supbrd-plugmod-marketing.command.update_marketing_journey",
-							"supbrd-plugmod-marketing.command.transition_marketing_journey",
-							"supbrd-plugmod-marketing.command.create_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.update_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.delete_marketing_channel_connector"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3353,8 +2075,8 @@
 				"data": {
 					"name": "Statistics",
 					"plugin_id": "supbrd-plugmod-marketing",
-					"route_id": "superboard.marketing_statistics",
-					"path": "/marketing/statistics",
+					"route_id": "superboard.communication_statistics",
+					"path": "/communication/statistics",
 					"description": "Delivery, opens, clicks, bounces, complaints, unsubscribes and campaign progression.",
 					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
 					"presentation": {
@@ -3362,32 +2084,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-marketing.data_source.notifications",
-							"supbrd-plugmod-marketing.data_source.email_subscribers",
-							"supbrd-plugmod-marketing.data_source.subscriber_lists",
-							"supbrd-plugmod-marketing.data_source.subscriber_segments",
-							"supbrd-plugmod-marketing.data_source.email_templates",
-							"supbrd-plugmod-marketing.data_source.email_campaigns",
-							"supbrd-plugmod-marketing.data_source.marketing_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_journeys",
-							"supbrd-plugmod-marketing.data_source.journey_enrollments",
-							"supbrd-plugmod-marketing.data_source.journey_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_channel_connectors"
-						],
-						"commands": [
-							"supbrd-plugmod-marketing.command.create_notification",
-							"supbrd-plugmod-marketing.command.create_email_campaign",
-							"supbrd-plugmod-marketing.command.update_email_campaign",
-							"supbrd-plugmod-marketing.command.transition_email_campaign",
-							"supbrd-plugmod-marketing.command.schedule_email_campaign",
-							"supbrd-plugmod-marketing.command.create_marketing_journey",
-							"supbrd-plugmod-marketing.command.update_marketing_journey",
-							"supbrd-plugmod-marketing.command.transition_marketing_journey",
-							"supbrd-plugmod-marketing.command.create_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.update_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.delete_marketing_channel_connector"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3398,8 +2096,8 @@
 				"data": {
 					"name": "Settings",
 					"plugin_id": "supbrd-plugmod-marketing",
-					"route_id": "superboard.marketing_settings",
-					"path": "/marketing/settings",
+					"route_id": "superboard.communication_settings",
+					"path": "/communication/settings",
 					"description": "Sender identities, AWS SES delivery, quotas, domain authentication, provider events and retries.",
 					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
 					"presentation": {
@@ -3407,138 +2105,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-marketing.data_source.notifications",
-							"supbrd-plugmod-marketing.data_source.email_subscribers",
-							"supbrd-plugmod-marketing.data_source.subscriber_lists",
-							"supbrd-plugmod-marketing.data_source.subscriber_segments",
-							"supbrd-plugmod-marketing.data_source.email_templates",
-							"supbrd-plugmod-marketing.data_source.email_campaigns",
-							"supbrd-plugmod-marketing.data_source.marketing_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_journeys",
-							"supbrd-plugmod-marketing.data_source.journey_enrollments",
-							"supbrd-plugmod-marketing.data_source.journey_statistics",
-							"supbrd-plugmod-marketing.data_source.marketing_channel_connectors"
-						],
-						"commands": [
-							"supbrd-plugmod-marketing.command.create_notification",
-							"supbrd-plugmod-marketing.command.create_email_campaign",
-							"supbrd-plugmod-marketing.command.update_email_campaign",
-							"supbrd-plugmod-marketing.command.transition_email_campaign",
-							"supbrd-plugmod-marketing.command.schedule_email_campaign",
-							"supbrd-plugmod-marketing.command.create_marketing_journey",
-							"supbrd-plugmod-marketing.command.update_marketing_journey",
-							"supbrd-plugmod-marketing.command.transition_marketing_journey",
-							"supbrd-plugmod-marketing.command.create_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.update_marketing_channel_connector",
-							"supbrd-plugmod-marketing.command.delete_marketing_channel_connector"
-						]
-					}
-				}
-			},
-			{
-				"id": "view:analytics",
-				"slug": "analytics",
-				"status": "published",
-				"data": {
-					"name": "Overview",
-					"plugin_id": "supbrd-plugmod-analytics",
-					"route_id": "superboard.analytics",
-					"path": "/analytics",
-					"description": "A single, privacy-aware view of product usage, installations and verified revenue.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
-					"presentation": {
-						"schema_version": "1.0.0",
-						"blocks": []
-					},
-					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
-					}
-				}
-			},
-			{
-				"id": "view:analytics--dashboards",
-				"slug": "analytics--dashboards",
-				"status": "published",
-				"data": {
-					"name": "Dashboards",
-					"plugin_id": "supbrd-plugmod-analytics",
-					"route_id": "superboard.analytics_dashboards",
-					"path": "/analytics/dashboards",
-					"description": "Build project dashboards from reusable product, revenue, stability and audience widgets.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
-					"presentation": {
-						"schema_version": "1.0.0",
-						"blocks": []
-					},
-					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3558,40 +2126,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3611,40 +2147,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3664,40 +2168,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3717,40 +2189,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3770,40 +2210,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3823,40 +2231,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3876,40 +2252,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3929,40 +2273,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -3982,40 +2294,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -4035,40 +2315,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -4088,40 +2336,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -4141,40 +2357,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -4194,40 +2378,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			},
@@ -4247,40 +2399,8 @@
 						"blocks": []
 					},
 					"bindings": {
-						"data_sources": [
-							"supbrd-plugmod-analytics.data_source.analytics_overview",
-							"supbrd-plugmod-analytics.data_source.analytics_events",
-							"supbrd-plugmod-analytics.data_source.analytics_event_analysis",
-							"supbrd-plugmod-analytics.data_source.analytics_installations",
-							"supbrd-plugmod-analytics.data_source.analytics_purchases",
-							"supbrd-plugmod-analytics.data_source.analytics_retention",
-							"supbrd-plugmod-analytics.data_source.analytics_reports",
-							"supbrd-plugmod-analytics.data_source.analytics_dashboards",
-							"supbrd-plugmod-analytics.data_source.analytics_sessions",
-							"supbrd-plugmod-analytics.data_source.analytics_profiles",
-							"supbrd-plugmod-analytics.data_source.analytics_views",
-							"supbrd-plugmod-analytics.data_source.analytics_dimensions",
-							"supbrd-plugmod-analytics.data_source.analytics_crashes",
-							"supbrd-plugmod-analytics.data_source.analytics_feedback",
-							"supbrd-plugmod-analytics.data_source.analytics_cohorts",
-							"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-							"supbrd-plugmod-analytics.data_source.analytics_alerts",
-							"supbrd-plugmod-analytics.data_source.analytics_settings"
-						],
-						"commands": [
-							"supbrd-plugmod-analytics.command.create_analytics_report",
-							"supbrd-plugmod-analytics.command.update_analytics_report",
-							"supbrd-plugmod-analytics.command.delete_analytics_report",
-							"supbrd-plugmod-analytics.command.create_analytics_operation",
-							"supbrd-plugmod-analytics.command.create_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.update_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.delete_analytics_dashboard",
-							"supbrd-plugmod-analytics.command.create_analytics_cohort",
-							"supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
-							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-							"supbrd-plugmod-analytics.command.create_analytics_alert",
-							"supbrd-plugmod-analytics.command.update_analytics_settings"
-						]
+						"data_sources": [],
+						"commands": []
 					}
 				}
 			}

@@ -3,23 +3,29 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import McpToolsPage from "../../../../packages/plugins/supbrd-core/src/front/mcp/McpToolsPage.js";
-import EmailPage from "../../../../packages/plugins/supbrd-plug-communication/src/front/email/EmailPage.js";
-import FilesPage from "../../../../packages/plugins/supbrd-plug-data/src/front/files/FilesPage.js";
+import { EmailEditor } from "../../../../packages/plugins/superboard-communication/src/front/marketing/studio/EmailEditor.js";
+import McpToolsPage from "../../../../packages/plugins/superboard-core/src/front/mcp/McpToolsPage.js";
+import FilesPage from "../../../../packages/plugins/superboard-data/src/front/files/FilesPage.js";
 
 const selection = vi.hoisted(() => ({ selectedProject: { id: "42-prod" } }));
 vi.mock("../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => selection,
 }));
 vi.mock(
-	"../../../../packages/plugins/supbrd-plug-communication/src/front/email/components/modules/EmailAdministration.js",
-	() => ({ EmailAdministration: () => null }),
+	"../../../../packages/plugins/superboard-communication/src/front/marketing/studio/service.js",
+	() => ({
+		testStudioEmail: async () => ({ queued: true }),
+		getEmailVersions: async () => [],
+		publishStudioTemplate: async () => ({}),
+		translateStudioEmail: async () => ({}),
+		getSharedEmailBlocks: async () => [],
+		createSharedEmailBlock: async () => ({}),
+		updateSharedEmailBlock: async () => ({}),
+		getSharedEmailBlockUsage: async () => [],
+		applySharedEmailBlock: async () => ({}),
+	}),
 );
-vi.mock(
-	"../../../../packages/plugins/supbrd-plug-communication/src/front/email/api/email/emailService.js",
-	() => ({ sendTransactionalEmail: async () => ({ id: "queued-message" }) }),
-);
-vi.mock("../../../../packages/plugins/supbrd-plug-data/src/front/files/transport.js", () => ({
+vi.mock("../../../../packages/plugins/superboard-data/src/front/files/transport.js", () => ({
 	GET: async (path: string) => ({
 		data: {
 			data: path.endsWith("/usage") ? { files: 0, bytes: 0 } : { items: [], next_cursor: null },
@@ -29,7 +35,7 @@ vi.mock("../../../../packages/plugins/supbrd-plug-data/src/front/files/transport
 	PUT: async () => ({}),
 	DELETE: async () => ({}),
 }));
-vi.mock("../../../../packages/plugins/supbrd-core/src/front/mcp/transport.js", () => ({
+vi.mock("../../../../packages/plugins/superboard-core/src/front/mcp/transport.js", () => ({
 	GET: async () => ({
 		data: {
 			data: { tools: [{ name: "get_status", inputSchema: {} }], items: [], next_cursor: null },
@@ -109,16 +115,23 @@ test("clicking Upload submits the chosen file and displays completion", async ()
 	expect(container.querySelector('[role="status"]')?.textContent).toBe("File saved");
 });
 
-test("clicking Send submits the email and displays its accepted state", async () => {
-	await render(<EmailPage />);
-	await click("Compose");
-	await fill('[name="recipient"]', "recipient@example.test");
-	await fill('[name="subject"]', "Delivery test");
-	await fill('[name="body"]', "A real button submission");
-	await click("Send");
-	expect(container.querySelector('[role="status"]')?.textContent).toBe(
-		"Message accepted for delivery",
+test("clicking Send a test submits the email and displays its accepted state", async () => {
+	await render(
+		<EmailEditor
+			project="42-prod"
+			template={{ id: "template-1", name: "Delivery test" } as never}
+			onSave={async () => ({}) as never}
+			onBack={() => {}}
+		/>,
 	);
+	await click("Preview");
+	await fill('input[type="email"]', "recipient@example.test");
+	await click("Send a test");
+	expect(
+		[...container.querySelectorAll('[role="status"]')].some(
+			(item) => item.textContent === "Test sent",
+		),
+	).toBe(true);
 });
 
 test("clicking Run tool displays the completed invocation", async () => {

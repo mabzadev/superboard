@@ -16,6 +16,7 @@ import type { FrontPageModel } from "./front-page.js";
 import { groupNativeFrontNavigation } from "./native-front-plugins.js";
 import { canAccessOperatorConsole } from "./operator-access.js";
 import { USER_FRONT_CATALOGS, type UserFrontLocale } from "./user-front-i18n.js";
+import { pluginViewBindings } from "./view-connections.js";
 
 const nativeAdminPath = /^\/_emdash\/admin(?:\/|$)/u;
 
@@ -276,7 +277,7 @@ function mountInput(
 		view_title: viewTitle,
 		view_description: view ? (view.description?.trim() ?? "") : null,
 		view_blocks: view?.blocks,
-		view_bindings: view?.bindings,
+		view_bindings: pluginViewBindings(model.release?.release.payload ?? null, renderer.plugin_id),
 		parameters,
 		operator: model.operator,
 	};

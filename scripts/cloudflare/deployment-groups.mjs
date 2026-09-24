@@ -85,7 +85,7 @@ export function consolidateWorkerConfigurations(entries) {
 			config: {
 				name: `${api.config.name}-push-transport`,
 				sourceWorkerName: api.config.name,
-				main: "../../packages/plugins/supbrd-plug-communication/email/src/push-consumer.ts",
+				main: "../../packages/plugins/superboard-communication/email/src/push-consumer.ts",
 				compatibility_date: api.config.compatibility_date,
 				compatibility_flags: api.config.compatibility_flags,
 				vars: Object.fromEntries(

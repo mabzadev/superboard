@@ -53,6 +53,9 @@ export interface GetRevenueParams {
 }
 
 export interface GetMessagingParams {
+	per_page?: number;
+	sort_by?: string;
+	ascending?: boolean;
 	page: number;
 	for_new_users: boolean | null;
 	archived: boolean;

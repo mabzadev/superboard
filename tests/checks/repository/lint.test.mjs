@@ -62,20 +62,20 @@ test("navigation rejects orphan links and missing view files without rejecting l
 
 test("new executable sources receive a linter without a manually maintained allowlist", () => {
 	const paths = [
-		"packages/plugins/supbrd-core/api/src/new-module.ts",
+		"packages/plugins/superboard-core/api/src/new-module.ts",
 		"packages/new-package/src/test.ts",
 		"scripts/new-script.mjs",
 		"apps/site/src/new-view.tsx",
 		"packages/supbrd-front-ui/src/new-page.tsx",
 		"tests/e2e/site/new-page.spec.ts",
-		"tests/checks/plugins/supbrd-plug-support/worker/runtime/new.runtime.test.ts",
+		"tests/checks/plugins/superboard-support/worker/runtime/new.runtime.test.ts",
 	];
 	const { groups, excluded } = classifyLintSources(paths, new Set());
 	assert.deepEqual(excluded, []);
 	assert.deepEqual(groups.get("native"), paths.slice(0, 3));
 	assert.deepEqual(groups.get("emdash"), [paths[3], paths[5]]);
 	assert.deepEqual(groups.get("frontend"), [paths[4]]);
-	assert.deepEqual(groups.get("eslint:packages/plugins/supbrd-plug-support/worker"), [paths[6]]);
+	assert.deepEqual(groups.get("eslint:packages/plugins/superboard-support/worker"), [paths[6]]);
 	assert.deepEqual([...groups.values()].flat().toSorted(), paths.toSorted());
 });
 
@@ -97,8 +97,8 @@ test("reference snippets stay outside executable lint while imported SDK runtime
 test("plugin-owned client components retain the frontend lint contract after migration", () => {
 	const paths = [
 		"packages/supbrd-front-ui/src/button.tsx",
-		"packages/plugins/supbrd-plug-commerce/src/front/products/Offering.tsx",
-		"packages/plugins/supbrd-plug-commerce/src/front-products.ts",
+		"packages/plugins/superboard-monetization/src/front/products/Offering.tsx",
+		"packages/plugins/superboard-monetization/src/front-products.ts",
 	];
 	const { groups } = classifyLintSources(paths, new Set());
 	assert.deepEqual(groups.get("frontend"), paths.slice(0, 2));
@@ -108,7 +108,7 @@ test("plugin-owned client components retain the frontend lint contract after mig
 test("new upstream tests retain EmDash rules and generated outputs are reported separately", () => {
 	const upstream = "tests/checks/packages/core/unit/example.test.ts";
 	const newUpstream = "packages/plugin-cli/src/new-command.ts";
-	const generated = "packages/plugins/supbrd-plug-journeys/flows/worker-configuration.d.ts";
+	const generated = "packages/plugins/superboard-acquisition/flows/worker-configuration.d.ts";
 	const { groups, excluded } = classifyLintSources(
 		[upstream, newUpstream, generated],
 		new Set([upstream, "packages/plugin-cli/src/index.ts"]),

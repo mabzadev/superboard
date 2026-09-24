@@ -2,6 +2,7 @@ import type {
 	NativeRendererBlock,
 	NativeRendererCard,
 	NativeRendererField,
+	FrontReleasePayload,
 } from "@superboard/supbrd-core";
 import type { Menu, MenuItem } from "emdash";
 
@@ -11,6 +12,7 @@ import type {
 	NativeFrontEditableView,
 	NativeFrontViewBindings,
 } from "./native-front-presentation.js";
+import { resolveViewConnections } from "./view-connections.js";
 
 const menuClassSeparator = /\s+/u;
 const PATH_SUFFIX_PATTERN = /[?#]/u;
@@ -42,9 +44,12 @@ export function editableNavigationFromMenu(
 	});
 }
 
-export function editableViewFromEntry(entry: unknown): NativeFrontEditableView | null {
+export function editableViewFromEntry(
+	entry: unknown,
+	release?: FrontReleasePayload | null,
+): NativeFrontEditableView | null {
 	if (!isRecord(entry) || !isRecord(entry.data)) return null;
-	const data = entry.data;
+	const data = release === undefined ? entry.data : resolveViewConnections(entry.data, release);
 	if (
 		typeof data.route_id !== "string" ||
 		!data.route_id ||

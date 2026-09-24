@@ -7,8 +7,10 @@ import { POST as initializeOperatorContext } from "../../../../../apps/site/src/
 import { POST as executePluginCommand } from "../../../../../apps/site/src/pages/_superboard/api/plugins/[pluginId]/commands/[commandId].js";
 import { POST as postDataSource } from "../../../../../apps/site/src/pages/_superboard/api/plugins/[pluginId]/data-sources/[dataSourceId].js";
 import { GET as queryDataSource } from "../../../../../apps/site/src/pages/_superboard/api/plugins/[pluginId]/data-sources/[dataSourceId].js";
+import { GET as getPluginDiagnostic } from "../../../../../apps/site/src/pages/_superboard/api/plugins/[pluginId]/diagnostic.js";
 import { POST as disableManagedPlugin } from "../../../../../apps/site/src/pages/_superboard/api/plugins/[pluginId]/disable.js";
 import { POST as enableManagedPlugin } from "../../../../../apps/site/src/pages/_superboard/api/plugins/[pluginId]/enable.js";
+import { POST as postPluginHealth } from "../../../../../apps/site/src/pages/_superboard/api/plugins/[pluginId]/health.js";
 import { POST as synchronizePlugins } from "../../../../../apps/site/src/pages/_superboard/api/plugins/sync.js";
 import { POST as activateRelease } from "../../../../../apps/site/src/pages/_superboard/api/releases/activate.js";
 import { POST as approveRelease } from "../../../../../apps/site/src/pages/_superboard/api/releases/approve.js";
@@ -36,6 +38,8 @@ const routes = new Map<string, APIRoute>([
 const commandPath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/commands\/([^/]+)$/u;
 const dataSourcePath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/data-sources\/([^/]+)$/u;
 const managedPluginActionPath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/(enable|disable)$/u;
+const pluginDiagnosticPath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/diagnostic$/u;
+const pluginHealthRecheckPath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/health$/u;
 const pluginHealthPath = /^\/_emdash\/api\/plugins\/([^/]+)\/health$/u;
 const packageAdminPath = /^\/_emdash\/api\/plugins\/([^/]+)\/admin$/u;
 
@@ -51,12 +55,17 @@ export default {
 		const managedPluginAction = url.pathname.match(managedPluginActionPath);
 		const pluginHealth = url.pathname.match(pluginHealthPath);
 		const packageAdmin = url.pathname.match(packageAdminPath);
+		const pluginDiagnostic = url.pathname.match(pluginDiagnosticPath);
+		const pluginHealthRecheck = url.pathname.match(pluginHealthRecheckPath);
 		if (pluginHealth && request.method === "GET") {
 			const plugin = createConfiguredSuperBoardPlugin(decodeURIComponent(pluginHealth[1]!));
 			return Response.json(await plugin.routes.health.handler(pluginRuntimeContext(workerEnv)));
 		}
 		const handler: APIRoute | undefined =
-			(packageAdmin && request.method === "POST"
+			(pluginDiagnostic && request.method === "GET" ? getPluginDiagnostic : null) ??
+			(pluginHealthRecheck && request.method === "POST" ? postPluginHealth : null) ??
+			((packageAdmin && request.method === "POST") ||
+			(url.pathname.startsWith("/_emdash/admin/plugins/") && request.method === "GET")
 				? (context) =>
 						packageMiddleware(context, async () =>
 							Response.json({ error: { code: "NOT_FOUND" } }, { status: 404 }),
@@ -89,16 +98,24 @@ export default {
 		const context = {
 			request,
 			url,
-			params: command
-				? { pluginId: decodeURIComponent(command[1]!), commandId: decodeURIComponent(command[2]!) }
-				: managedPluginAction
-					? { pluginId: decodeURIComponent(managedPluginAction[1]!) }
-					: dataSource
-						? {
-								pluginId: decodeURIComponent(dataSource[1]!),
-								dataSourceId: decodeURIComponent(dataSource[2]!),
-							}
-						: {},
+			params:
+				pluginDiagnostic && pluginDiagnostic[1]
+					? { pluginId: decodeURIComponent(pluginDiagnostic[1]) }
+					: pluginHealthRecheck && pluginHealthRecheck[1]
+						? { pluginId: decodeURIComponent(pluginHealthRecheck[1]) }
+						: command && command[1] && command[2]
+							? {
+									pluginId: decodeURIComponent(command[1]),
+									commandId: decodeURIComponent(command[2]),
+								}
+							: managedPluginAction && managedPluginAction[1]
+								? { pluginId: decodeURIComponent(managedPluginAction[1]) }
+								: dataSource && dataSource[1] && dataSource[2]
+									? {
+											pluginId: decodeURIComponent(dataSource[1]),
+											dataSourceId: decodeURIComponent(dataSource[2]),
+										}
+									: {},
 			locals: {
 				user: operator
 					? {

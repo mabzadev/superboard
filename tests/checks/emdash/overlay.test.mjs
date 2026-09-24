@@ -50,7 +50,7 @@ const overlay = {
 	package: {
 		metadata: { name: "superboard", private: true },
 		scripts: { test: "superboard-test", "site:test": "site-test" },
-		workspaces: ["apps/site", "packages/plugins/supbrd-core/api", "sdks/web"],
+		workspaces: ["apps/site", "packages/plugins/superboard-core/api", "sdks/web"],
 		overrides: { postcss: "8.5.26", "glob@12.0.0": { minimatch: "10.2.6" } },
 		catalogs: { workers: { typescript: "5.9.3", hono: "4.13.5" } },
 		devDependencies: { prettier: "overlay", eslint: "overlay-eslint" },
@@ -158,7 +158,7 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 	assert.equal(workspace.catalog.zod, "4.4.1");
 	assert.deepEqual(workspace.catalogs, overlay.package.catalogs);
 	assert.ok(!result.includes("  - apps/site\n"));
-	assert.ok(result.includes("  - packages/plugins/supbrd-core/api"));
+	assert.ok(result.includes("  - packages/plugins/superboard-core/api"));
 	assert.ok(result.includes("  - sdks/web"));
 	assert.ok(result.includes('"eslint-import-resolver-typescript": "4.4.5"'));
 	assert.ok(result.includes('"glob@12.0.0>minimatch": "10.2.6"'));
@@ -237,13 +237,13 @@ void test("local SuperBoard packages cannot fall back to the npm registry", () =
 
 void test("workspace dependency normalization excludes vendored examples", () => {
 	const exact = new Set([
-		"packages/plugins/supbrd-core/api",
+		"packages/plugins/superboard-core/api",
 		"sdks/web/flows/upstream/packages/js",
 	]);
 
 	assert.equal(isIntegratedWorkspaceDirectory("apps/site", exact), true);
 	assert.equal(isIntegratedWorkspaceDirectory("packages/contracts", exact), true);
-	assert.equal(isIntegratedWorkspaceDirectory("packages/plugins/supbrd-core/api", exact), true);
+	assert.equal(isIntegratedWorkspaceDirectory("packages/plugins/superboard-core/api", exact), true);
 	assert.equal(isIntegratedWorkspaceDirectory("sdks/web/flows/upstream/packages/js", exact), true);
 	assert.equal(
 		isIntegratedWorkspaceDirectory(
@@ -257,8 +257,8 @@ void test("workspace dependency normalization excludes vendored examples", () =>
 void test("SuperBoard root scripts execute through pnpm", () => {
 	assert.equal(normalizePnpmScript("npm run worker:test"), "pnpm run worker:test");
 	assert.equal(
-		normalizePnpmScript("npm --prefix packages/plugins/supbrd-plug-support/worker run typecheck"),
-		"pnpm --dir packages/plugins/supbrd-plug-support/worker run typecheck",
+		normalizePnpmScript("npm --prefix packages/plugins/superboard-support/worker run typecheck"),
+		"pnpm --dir packages/plugins/superboard-support/worker run typecheck",
 	);
 	assert.equal(
 		normalizePnpmScript("npm --prefix apps/reference ci"),

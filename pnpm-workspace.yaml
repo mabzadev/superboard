@@ -103,7 +103,6 @@ overrides:
   "eslint-config-prettier": "10.1.8"
   "eslint-plugin-prettier": "5.5.6"
   "fast-xml-parser": "5.7.0"
-  "image-size@^1.0.2": "1.2.1"
   "ip-address": "10.3.1"
   "joi@^17.2.1": "17.13.4"
   "lodash": "4.18.1"
@@ -118,7 +117,7 @@ overrides:
   "@flue/runtime@2.0.3>hono": "4.12.27"
 patchedDependencies:
   # SuperBoard retained dependency patches.
-  "image-size@1.2.1": patches/image-size-npm-1.2.1-e285f3c080.patch
+  "miniflare@5.20260815.0-alpha": patches/miniflare@5.20260815.0-alpha.patch
   "@sigstore/core@4.0.1": patches/@sigstore__core@4.0.1.patch
   image-size@2.0.2: patches/image-size@2.0.2.patch
   partysocket@1.1.18: patches/partysocket@1.1.18.patch
@@ -135,22 +134,22 @@ packages:
   - i18n
   - infra/*
   # SuperBoard overlay workspaces.
-  - packages/plugins/supbrd-core/api
-  - packages/plugins/supbrd-plug-commerce/billing
-  - packages/plugins/supbrd-core/app
-  - packages/plugins/supbrd-plug-commerce/products
-  - packages/plugins/supbrd-plug-commerce/paywalls
-  - packages/plugins/supbrd-plug-communication/dynamic-links
-  - packages/plugins/supbrd-plug-support/worker
-  - packages/plugins/supbrd-plug-analytics/worker
-  - packages/plugins/supbrd-plug-communication/marketing
-  - packages/plugins/supbrd-plug-journeys/onboardings
-  - packages/plugins/supbrd-plug-journeys/flows
-  - packages/plugins/supbrd-plug-communication/email
-  - packages/plugins/supbrd-plug-identity/worker
-  - packages/plugins/supbrd-plug-data/worker
-  - packages/plugins/supbrd-core/observability
-  - packages/plugins/supbrd-core/mcp
+  - packages/plugins/superboard-core/api
+  - packages/plugins/superboard-monetization/billing
+  - packages/plugins/superboard-core/app
+  - packages/plugins/superboard-monetization/products
+  - packages/plugins/superboard-acquisition/paywalls
+  - packages/plugins/superboard-acquisition/dynamic-links
+  - packages/plugins/superboard-support/worker
+  - packages/plugins/superboard-analytics/worker
+  - packages/plugins/superboard-communication/marketing
+  - packages/plugins/superboard-acquisition/onboardings
+  - packages/plugins/superboard-acquisition/flows
+  - packages/plugins/superboard-communication/email
+  - packages/plugins/superboard-authentification/worker
+  - packages/plugins/superboard-data/worker
+  - packages/plugins/superboard-core/observability
+  - packages/plugins/superboard-core/mcp
   - apps/reference/worker
   - sdks/web/flows/upstream/packages/shared
   - sdks/web/flows/upstream/packages/styles

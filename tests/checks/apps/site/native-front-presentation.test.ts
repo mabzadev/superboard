@@ -18,6 +18,12 @@ import {
 } from "../../../../apps/site/src/lib/native-front-views.js";
 import { superBoardRuntimePluginCatalog } from "../../../../apps/site/src/lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../../../../apps/site/src/lib/user-front-release.js";
+import {
+	resolveViewConnections,
+	withViewConnections,
+} from "../../../../apps/site/src/lib/view-connections.js";
+import { canonicalPluginId } from "../../../../packages/contracts/src/plugin-packages.js";
+import packageCatalog from "../../../../scripts/config/superboard-plugin-catalog.json";
 import compatibility from "../../../../scripts/config/superboard-plugin-compatibility.json";
 
 const identifiers = {
@@ -31,6 +37,164 @@ const identifiers = {
 	previous_release_id: null,
 	created_at: "2026-09-01T12:00:00.000Z",
 };
+
+test("every released View resolves its connections from the active plugin instead of saved JSON", async () => {
+	const lock = superBoardRuntimePluginCatalog().plugins.map(({ manifest }) => ({
+		plugin_id: manifest.plugin_id,
+		version: manifest.plugin_version,
+		artifact_checksum: manifest.artifact_checksum,
+		native: manifest.execution.backend === "native",
+	}));
+	const release = await compile(lock, "01J00000000000000000000420");
+	const permissions = release.payload.front_route_manifest.routes.map(
+		(route) => route.permission_expression,
+	);
+	let checked = 0;
+	for (const route of release.payload.front_route_manifest.routes) {
+		if (
+			route.audience !== "superboard_front" ||
+			route.route_kind !== "page" ||
+			route.auth_policy !== "authenticated"
+		)
+			continue;
+		const renderer = release.payload.renderers.find((entry) =>
+			route.renderer_ids.includes(entry.renderer_id),
+		);
+		if (!renderer || renderer.plugin_id === "supbrd-core") continue;
+		const output = JSON.parse(
+			render(release, route.path_pattern, permissions, {
+				view: {
+					route_id: route.route_id,
+					plugin_id: renderer.plugin_id,
+					renderer_id: renderer.renderer_id,
+					path: route.path_pattern,
+					title: "My edited title",
+					description: "My edited description",
+					blocks: [],
+					bindings: { data_sources: ["obsolete.source"], commands: ["obsolete.command"] },
+				},
+			}),
+		);
+		const mount = output.projection.content_mounts[0];
+		expect(mount).toBeDefined();
+		expect(mount.view_title).toBe("My edited title");
+		expect(mount.view_bindings.data_sources).not.toContain("obsolete.source");
+		expect(mount.view_bindings.commands).not.toContain("obsolete.command");
+		const resolved = resolveViewConnections(
+			{
+				path: route.path_pattern,
+				plugin_id: "obsolete-plugin",
+				renderer_id: "obsolete-renderer",
+				route_id: "obsolete-route",
+				name: "Custom title",
+				bindings: { commands: ["obsolete.command"] },
+			},
+			release.payload,
+		);
+		expect(resolved).toMatchObject({
+			plugin_id: renderer.plugin_id,
+			renderer_id: renderer.renderer_id,
+			route_id: route.route_id,
+			name: "Custom title",
+			bindings: mount.view_bindings,
+		});
+		const editable = editableViewFromEntry(
+			{
+				data: {
+					path: route.path_pattern,
+					name: "My edited title",
+					renderer_id: "removed.renderer",
+					plugin_id: "removed.plugin",
+					route_id: "removed.route",
+					presentation: { blocks: [] },
+					bindings: { commands: ["obsolete.command"] },
+				},
+			},
+			release.payload,
+		);
+		expect(editable).toMatchObject({
+			plugin_id: renderer.plugin_id,
+			renderer_id: renderer.renderer_id,
+			route_id: route.route_id,
+			title: "My edited title",
+			bindings: mount.view_bindings,
+		});
+		const commands = release.payload.gateway_manifest.routes.filter(
+			(entry) =>
+				entry.destination === renderer.plugin_id &&
+				entry.audience === "superboard_front" &&
+				entry.path_pattern.includes("/commands/"),
+		);
+		for (const command of commands)
+			expect(mount.view_bindings.commands).toContain(
+				canonicalPluginId(command.path_pattern.split("/").at(-1)!),
+			);
+		expect(
+			[...mount.view_bindings.commands, ...mount.view_bindings.data_sources].every((id: string) =>
+				id.startsWith("superboard-"),
+			),
+		).toBe(true);
+		checked++;
+	}
+	expect(checked).toBeGreaterThan(50);
+	const view = seed.content.views.find((entry) => entry.data.path === "/acquisition/workflows")!;
+	const original = {
+		...view,
+		data: { ...view.data, bindings: { commands: ["obsolete.command"] } },
+	};
+	const response = () => Response.json({ data: { item: original, _rev: "unchanged-revision" } });
+	const before = await (await withViewConnections(response(), release.payload)).json();
+	expect(before.data.item.data.plugin_id).toBe("superboard-acquisition");
+	expect(before.data.item.data.renderer_id).toBe(
+		"superboard-acquisition.renderer.flows_admin_surface",
+	);
+	expect(before.data.item.data.bindings.commands).toContain(
+		"superboard-acquisition.command.create_workflow",
+	);
+	const canonicalRenderer = packageCatalog.plugins
+		.find((plugin) => plugin.directory === "superboard-acquisition")!
+		.canonical_manifest.renderers.find(
+			(renderer) => renderer.renderer_id === "superboard-acquisition.renderer.flows_admin_surface",
+		)!;
+	const runtimeRenderer = release.payload.renderers.find(
+		(renderer) => renderer.renderer_id === view.data.renderer_id,
+	)!;
+	const native = mountNativeFrontRenderer({
+		mount: {
+			renderer: {
+				...runtimeRenderer,
+				plugin_id: canonicalRenderer.plugin_id,
+				renderer_id: canonicalRenderer.renderer_id,
+			},
+			route_id: view.data.route_id,
+			path: view.data.path,
+			parameters: {},
+			view_title: "Canonical View",
+			operator: null,
+		},
+		plugin_lock: release.payload.plugin_lock,
+	});
+	expect(native).toBeTruthy();
+	const newRoute = structuredClone(
+		release.payload.gateway_manifest.routes.find(
+			(entry) =>
+				entry.destination === "supbrd-plugmod-flows" && entry.path_pattern.includes("/commands/"),
+		)!,
+	);
+	newRoute.path_pattern =
+		"/_emdash/api/superboard/plugins/supbrd-plugmod-flows/commands/new.live.command";
+	release.payload.gateway_manifest.routes = [newRoute];
+	const after = await (await withViewConnections(response(), release.payload)).json();
+	expect(before.data.item.data.bindings.commands).not.toContain("new.live.command");
+	expect(after.data.item.data.bindings).toEqual({
+		commands: ["new.live.command"],
+		data_sources: [],
+	});
+	expect(after.data._rev).toBe("unchanged-revision");
+	expect(original.data.bindings.commands).toEqual(["obsolete.command"]);
+	const unavailable = await (await withViewConnections(response(), null)).json();
+	expect(unavailable.data.item.data.bindings).toEqual({ commands: [], data_sources: [] });
+});
 
 test("EmDash menu and View records become editable Front configuration", () => {
 	const navigation = editableNavigationFromMenu({
@@ -169,8 +333,8 @@ test("the editable Remote Config View supplies its Dashboard renderer bindings",
 
 	expect(output).toContain("Remote Config");
 	expect(output).toContain("supbrd-plugmod-analytics.renderer.admin_surface");
-	expect(output).toContain("supbrd-plugmod-analytics.data_source.analytics_remote_config");
-	expect(output).toContain("supbrd-plugmod-analytics.command.upsert_analytics_remote_config");
+	expect(output).toContain("superboard-analytics.data_source.analytics_remote_config");
+	expect(output).toContain("superboard-analytics.command.upsert_analytics_remote_config");
 	expect(output).toContain('"group_id":"analytics"');
 });
 
@@ -407,8 +571,6 @@ test("keeps an active legacy Release renderable during the native Front upgrade"
 					"sha256:d7b1bda9489908a0fc50539a8a305d0c18e8c54f92fac05980ec30af32f28ba2",
 				"supbrd-plug-user.renderer.login_form":
 					"sha256:fb7093abcf297a8b10024c579ec6faeb0336a91e3551e0c397a670ead659d9d9",
-				"supbrd-plug-user.renderer.members_table":
-					"sha256:83e314240c11dfd0118ed0a0d2496e1589513f2c18b199e65e6e791ea430d0cb",
 				"supbrd-plug-user.renderer.profile_card":
 					"sha256:a6ca9335d1dc37ecaabddcce6f5c6add578ec1bdd2b5b637e44b97606825d86d",
 			};
@@ -426,8 +588,15 @@ test("keeps an active legacy Release renderable during the native Front upgrade"
 		({ page_id: pageId }) => pageId === "page.superboard_users",
 	);
 	if (!legacyUsersRoute || !legacyUsersPage) throw new Error("Missing legacy Users surface");
-	legacyUsersRoute.renderer_ids = ["supbrd-plug-user.renderer.members_table"];
-	legacyUsersPage.root_renderer_id = "supbrd-plug-user.renderer.members_table";
+	legacyUsersRoute.path_pattern = "/app/users";
+	const legacyIdentityRoute = legacyRelease.payload.front_route_manifest.routes.find(
+		(route) => route.path_pattern === "/auth/settings",
+	);
+	if (!legacyIdentityRoute) throw new Error("Missing legacy Identity surface");
+	legacyIdentityRoute.path_pattern = "/identity/:lang/dashboard";
+	legacyIdentityRoute.parameters = { lang: { type: "string", required: true } };
+	legacyUsersRoute.renderer_ids = ["supbrd-plug-user.renderer.admin_surface"];
+	legacyUsersPage.root_renderer_id = "supbrd-plug-user.renderer.admin_surface";
 
 	expect(() => assertReleasePresentation(legacyRelease.payload)).not.toThrow();
 	const legacyMarkup = render(legacyRelease, "/app/users", ["users.read"], {

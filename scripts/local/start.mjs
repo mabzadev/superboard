@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { mkdir, readFile, writeFile, open, rm } from "node:fs/promises";
+import { mkdir, readFile, writeFile, open, rm, rename } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +19,7 @@ import {
 	materializeTarget,
 } from "../cloudflare/target-compiler.mjs";
 import { loadTarget, parseArgs, root } from "../cloudflare/target.mjs";
+import { recoverStoppedLocalPluginTasks } from "./plugin-task-recovery.mjs";
 
 const args = parseArgs();
 const project = JSON.parse(await readFile(resolve(root, "superboard.project.json"), "utf8"));
@@ -130,6 +131,13 @@ async function start() {
 		}
 		await writeFile(secretsPath, `${JSON.stringify(secrets, null, 2)}\n`, { mode: 0o600 });
 	}
+	const encryptionKey = normalizeLocalEncryptionKey(secrets.site.EMDASH_ENCRYPTION_KEY);
+	if (encryptionKey !== secrets.site.EMDASH_ENCRYPTION_KEY) {
+		secrets.site.EMDASH_ENCRYPTION_KEY = encryptionKey;
+		const temporary = `${secretsPath}.upgrade.tmp`;
+		await writeFile(temporary, `${JSON.stringify(secrets, null, 2)}\n`, { mode: 0o600 });
+		await rename(temporary, secretsPath);
+	}
 	for (const service of materialization.services) {
 		const values = secrets[service.id] ?? {};
 		const configPath =
@@ -173,6 +181,16 @@ async function start() {
 			state,
 		]);
 	}
+	await recoverStoppedLocalPluginTasks({
+		directory: resolve(state, "v3/d1"),
+		instanceId: compiled.target,
+		ports: [
+			Number(args.port ?? 4321),
+			...materialization.services
+				.filter((service) => service.id !== "site")
+				.map((service) => service.localEndpoint.port),
+		],
+	});
 	const children = [];
 	let closing = false;
 	const stop = () => {
@@ -357,4 +375,23 @@ export async function waitForLocalListener(
 		);
 	}
 	throw new Error(`Local service did not become ready: ${url}`);
+}
+
+export function normalizeLocalEncryptionKey(value) {
+	if (!value) return value;
+	return value
+		.split(",")
+		.map((entry) => {
+			const key = entry.trim();
+			const prefix = "emdash_enc_v1_";
+			const body = key.startsWith(prefix) ? key.slice(prefix.length) : key;
+			const bytes = Buffer.from(body, "base64url");
+			if (
+				bytes.length !== 32 ||
+				![bytes.toString("base64"), bytes.toString("base64url")].includes(body)
+			)
+				throw new Error("Invalid local encryption key; the stored key was not changed");
+			return `${prefix}${bytes.toString("base64url")}`;
+		})
+		.join(",");
 }

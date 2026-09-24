@@ -16,10 +16,10 @@ tests/fixtures/packages/registry-moderation/tests/label-crypto.json:generic-api-
 tests/fixtures/packages/registry-moderation/tests/label-crypto.json:generic-api-key:4
 tests/fixtures/packages/registry-moderation/tests/label-crypto.json:generic-api-key:5
 tests/fixtures/packages/registry-moderation/tests/p256-label-v1.json:generic-api-key:16
-tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:9
-tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:13
-tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:14
-tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:25
+tests/checks/plugins/superboard-acquisition/flows/unit/services/crypto.test.ts:generic-api-key:9
+tests/checks/plugins/superboard-acquisition/flows/unit/services/crypto.test.ts:generic-api-key:13
+tests/checks/plugins/superboard-acquisition/flows/unit/services/crypto.test.ts:generic-api-key:14
+tests/checks/plugins/superboard-acquisition/flows/unit/services/crypto.test.ts:generic-api-key:25
 
 # Historical forms of the same verified EmDash documentation and test fixtures.
 15154ab3384e93945db104aff6724023a4138522:apps/labeler/docs/runbooks.md:generic-api-key:418
@@ -30,7 +30,7 @@ f7ee61d812bc5deb3e02a60a2eb36874751ad478:docs/src/content/docs/reference/rest-ap
 43fcb9a13132016aef63cd0d77434c62f7e7631a:packages/core/tests/unit/preview/urls.test.ts:generic-api-key:101
 
 # Deterministic test fixtures after source relocation.
-tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:10
-tests/checks/plugins/supbrd-plug-journeys/flows/unit/services/crypto.test.ts:generic-api-key:15
+tests/checks/plugins/superboard-acquisition/flows/unit/services/crypto.test.ts:generic-api-key:10
+tests/checks/plugins/superboard-acquisition/flows/unit/services/crypto.test.ts:generic-api-key:15
 tests/checks/sdks/flutter/unit/customer_info_verifier_test.dart:jwt:21
 tests/checks/sdks/web/identity/react/unit/Provider.test.tsx:generic-api-key:116

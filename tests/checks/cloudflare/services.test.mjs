@@ -1209,7 +1209,7 @@ test("generated MCP config is public only on its target domain and uses a privat
 		),
 	);
 	assert.equal(config.name, "superboard-mcp-dev");
-	assert.equal(config.main, "../../packages/plugins/supbrd-core/mcp/src/index.ts");
+	assert.equal(config.main, "../../packages/plugins/superboard-core/mcp/src/index.ts");
 	assert.equal(config.workers_dev, false);
 	assert.equal(config.vars.PUBLIC_API_URL, "https://api.mbza.dev");
 	assert.equal(config.vars.PUBLIC_MCP_URL, "https://board.mbza.dev/mcp");
@@ -1260,7 +1260,7 @@ test("generated identity and files configs are private and parameterized", () =>
 		["EMAIL_SERVICE", "FILES_SERVICE"],
 	);
 	assert.deepEqual(identity.assets, {
-		directory: "../../packages/plugins/supbrd-plug-identity/worker/dist",
+		directory: "../../packages/plugins/superboard-authentification/worker/dist",
 		binding: "ASSETS",
 		run_worker_first: true,
 	});

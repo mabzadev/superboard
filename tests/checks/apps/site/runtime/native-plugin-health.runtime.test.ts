@@ -1,7 +1,65 @@
 import { env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
-import { inspectSitePluginWorkerHealth } from "../../../../../packages/plugins/supbrd-core/api/src/lib/site-plugin-health.js";
+import { inspectSitePluginWorkerHealth } from "../../../../../packages/plugins/superboard-core/api/src/lib/site-plugin-health.js";
+
+test("a missing identity binding retains the successful app Worker observation", async () => {
+	const response = await inspectSitePluginWorkerHealth(
+		{
+			DB: env.DB,
+			KV: env.RELEASE_CACHE,
+			D1_EXPECTED_MIGRATION: env.D1_EXPECTED_MIGRATION,
+			ENVIRONMENT: "local",
+			APP_MODULE: {
+				fetch: async () => Response.json({ status: "ready", schema: { status: "current" } }),
+			},
+		} as never,
+		"supbrd-plug-user",
+	);
+	expect(response.status).toBe(503);
+	const report = await response.json<{
+		services: Array<{ service: string; status: string; reason: string | null }>;
+	}>();
+	expect(report.services).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({ service: "app", status: "ready", reason: null }),
+			expect.objectContaining({
+				service: "identity",
+				status: "unavailable",
+				reason: "WORKER_BINDING_UNAVAILABLE",
+			}),
+		]),
+	);
+});
+
+test("a failed Worker does not erase other observations or expose its response body", async () => {
+	const response = await inspectSitePluginWorkerHealth(
+		{
+			DB: env.DB,
+			KV: env.RELEASE_CACHE,
+			D1_EXPECTED_MIGRATION: env.D1_EXPECTED_MIGRATION,
+			ENVIRONMENT: "local",
+			APP_MODULE: {
+				fetch: async () =>
+					Response.json({ status: "unavailable", reason: "private-worker-value" }, { status: 503 }),
+			},
+			IDENTITY_SERVICE: {
+				fetch: async () => Response.json({ status: "ready", schema: { status: "current" } }),
+			},
+		} as never,
+		"supbrd-plug-user",
+	);
+	expect(response.status).toBe(503);
+	const text = await response.text();
+	expect(text).not.toContain("private-worker-value");
+	const report: { services: Array<{ service: string; status: string }> } = JSON.parse(text);
+	expect(report.services).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({ service: "app", status: "unavailable" }),
+			expect.objectContaining({ service: "identity", status: "ready" }),
+		]),
+	);
+});
 
 test.each(["supbrd-plug-user", "supbrd-plug-products", "supbrd-plug-settings"])(
 	"%s cannot activate when its required Worker binding is missing",

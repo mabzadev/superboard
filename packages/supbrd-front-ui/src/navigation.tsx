@@ -1,3 +1,4 @@
+import { canonicalFrontHref } from "@superboard/contracts/front-paths";
 import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
 
 interface NavigationState {
@@ -68,7 +69,7 @@ export function notFound(): never {
 
 function navigate(href: string, replace: boolean) {
 	if (!globalThis.location) return;
-	const url = new URL(href, globalThis.location.href);
+	const url = new URL(canonicalFrontHref(href), globalThis.location.href);
 	if (url.protocol !== "https:" && url.protocol !== "http:")
 		throw new Error("Invalid navigation URL");
 	if (url.origin !== globalThis.location.origin || url.pathname !== globalThis.location.pathname) {

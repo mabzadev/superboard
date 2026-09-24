@@ -2,9 +2,9 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import AuditPage from "../../../../packages/plugins/supbrd-core/src/front/audit/AuditPage.js";
-import GatewayPage from "../../../../packages/plugins/supbrd-core/src/front/gateway/GatewayPage.js";
-import ContentPage from "../../../../packages/plugins/supbrd-plug-data/src/front/content/ContentPage.js";
+import AuditPage from "../../../../packages/plugins/superboard-core/src/front/audit/AuditPage.js";
+import GatewayPage from "../../../../packages/plugins/superboard-core/src/front/gateway/GatewayPage.js";
+import ContentPage from "../../../../packages/plugins/superboard-data/src/front/content/ContentPage.js";
 
 const state = vi.hoisted(() => ({
 	archives: [] as Record<string, unknown>[],
@@ -12,7 +12,7 @@ const state = vi.hoisted(() => ({
 	items: [] as Record<string, unknown>[],
 }));
 vi.mock("@superboard/front-ui/context", () => ({ useFrontContext: () => ({ locale: "en" }) }));
-vi.mock("../../../../packages/plugins/supbrd-core/src/front/audit/transport.js", () => ({
+vi.mock("../../../../packages/plugins/superboard-core/src/front/audit/transport.js", () => ({
 	GET: async (path: string) => ({
 		data: {
 			data: { items: path.endsWith("/archives") ? state.archives : [], next_cursor: null },
@@ -29,7 +29,7 @@ vi.mock("../../../../packages/plugins/supbrd-core/src/front/audit/transport.js",
 		return { data: { data: state.archives.at(-1) } };
 	},
 }));
-vi.mock("../../../../packages/plugins/supbrd-core/src/front/gateway/transport.js", () => ({
+vi.mock("../../../../packages/plugins/superboard-core/src/front/gateway/transport.js", () => ({
 	GET: async (path: string) => ({
 		data: {
 			data: path.endsWith("/routes") ? state.routes : path.endsWith("/active-manifest") ? null : [],
@@ -44,22 +44,26 @@ vi.mock("../../../../packages/plugins/supbrd-core/src/front/gateway/transport.js
 		data: { data: { ...body, revision: 2 } },
 	}),
 }));
-vi.mock("../../../../packages/plugins/supbrd-plug-data/src/front/content/transport.js", () => {
+vi.mock("../../../../packages/plugins/superboard-data/src/front/content/transport.js", () => {
 	const save = async (_path: string, body: Record<string, unknown>) => {
 		const item = { ...body, id: "document-1", status: "draft", _rev: "revision-2" };
 		state.items = [item];
 		return { data: { data: { item } } };
 	};
 	return {
-		GET: async (path: string) => ({
-			data: {
-				data: {
-					items: path.includes("/schema/")
-						? [{ slug: "documents", label: "Documents" }]
-						: state.items,
-				},
-			},
-		}),
+		GET: async (path: string) => {
+			if (path.includes("/schema/"))
+				return {
+					data: {
+						data: path.endsWith("/fields")
+							? { items: [], next_cursor: null }
+							: { items: [{ slug: "documents", label: "Documents" }] },
+					},
+				};
+			const selected = state.items.find((item) => path.includes(String(item.id)));
+			if (selected) return { data: { data: { item: selected, _rev: selected._rev } } };
+			return { data: { data: { items: state.items, next_cursor: null } } };
+		},
 		POST: save,
 		PUT: save,
 	};
@@ -106,6 +110,13 @@ async function fill(label: string, value: string) {
 		input.dispatchEvent(new Event("input", { bubbles: true }));
 	});
 }
+async function check(label: string) {
+	const parent = [...container.querySelectorAll("label")].find((item) =>
+		item.textContent?.includes(label),
+	)!;
+	const input = parent.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+	await act(async () => input.click());
+}
 test("clicking Create immutable archive creates an archive after ledger verification", async () => {
 	await render(<AuditPage />);
 	await click("Synchronize and verify");
@@ -134,13 +145,21 @@ test("clicking Update access policy shows the saved operator policy", async () =
 });
 test("clicking Create and Save document persists the edited content in the list", async () => {
 	await render(<ContentPage />);
+	await click("New document");
 	await fill("Slug", "test-document");
-	await fill("Document fields (JSON)", '{"title":"Created document"}');
+	await check("JSON editing");
+	await fill("Fields", '{"title":"Created document"}');
 	await click("Create document");
-	expect(container.querySelector('[role="status"]')?.textContent).toBe("Document saved");
-	expect(container.textContent).toContain("Created document · draft");
-	await fill("Document fields (JSON)", '{"title":"Edited document"}');
-	await click("Save document");
-	expect(container.textContent).toContain("Edited document · draft");
-	expect(container.textContent).not.toContain("Created document · draft");
+	await vi.waitFor(() => {
+		if (![...container.querySelectorAll("button")].some((b) => b.textContent === "Save"))
+			throw new Error("created document is not selected for editing");
+	});
+	await check("JSON editing");
+	await fill("Fields", '{"title":"Edited document"}');
+	await click("Save");
+	await click("Back to documents");
+	await vi.waitFor(() => {
+		expect(container.textContent).toContain("Edited document");
+	});
+	expect(container.textContent).toContain("Draft");
 });

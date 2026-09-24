@@ -16,6 +16,52 @@ const topology = JSON.parse(
 	),
 );
 
+test("every package declares canonical contributions while preserving its legacy contract", () => {
+	const catalog = buildPluginPackages(topology);
+	for (const plugin of catalog.plugins) {
+		const manifest = plugin.canonical_manifest;
+		assert.ok(manifest, plugin.directory);
+		assert.equal(manifest.plugin_id, plugin.directory);
+		assert.ok(
+			Object.keys(manifest.settings.schema.properties).every((key) =>
+				key.startsWith(`${plugin.directory}.setting.`),
+			),
+		);
+		assert.ok(
+			manifest.settings.schema.required.every((key) =>
+				Object.hasOwn(manifest.settings.schema.properties, key),
+			),
+		);
+		for (const [collection, key] of [
+			["commands", "command_id"],
+			["data_sources", "data_source_id"],
+			["renderers", "renderer_id"],
+		]) {
+			assert.equal(manifest[collection].length, plugin.manifest[collection].length);
+			assert.equal(
+				new Set(manifest[collection].map((entry) => entry[key])).size,
+				manifest[collection].length,
+			);
+			assert.ok(
+				manifest[collection].every((entry) => entry[key].startsWith(`${plugin.directory}.`)),
+			);
+		}
+	}
+	const acquisition = catalog.plugins.find(
+		(plugin) => plugin.directory === "superboard-acquisition",
+	);
+	assert.ok(
+		acquisition.canonical_manifest.commands.some(
+			(command) => command.command_id === "superboard-acquisition.command.create_workflow",
+		),
+	);
+	assert.ok(
+		acquisition.canonical_manifest.renderers.some(
+			(renderer) => renderer.renderer_id === "superboard-acquisition.renderer.flows_admin_surface",
+		),
+	);
+});
+
 test("seven installable business packages retain every component contract and store", () => {
 	const catalog = buildPluginPackages(topology);
 	assert.equal(catalog.plugins.filter((plugin) => plugin.kind === "business").length, 7);
@@ -87,9 +133,9 @@ test("lint blocks a stale package catalogue and a restored standalone component 
 			join(root, "scripts/config/superboard-plugin-catalog.json"),
 			JSON.stringify(catalog),
 		);
-		for (const { manifest } of catalog.plugins) {
-			mkdirSync(join(entries, manifest.plugin_id, "src"), { recursive: true });
-			writeFileSync(join(entries, manifest.plugin_id, "src/index.ts"), "");
+		for (const { directory } of catalog.plugins) {
+			mkdirSync(join(entries, directory, "src"), { recursive: true });
+			writeFileSync(join(entries, directory, "src/index.ts"), "");
 		}
 		expectClean();
 		mkdirSync(join(entries, "supbrd-plugmod-flows"));

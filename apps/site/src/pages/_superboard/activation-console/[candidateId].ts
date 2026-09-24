@@ -3,8 +3,8 @@ import type { APIRoute } from "astro";
 
 import { getFrontReleaseCandidate } from "../../../lib/front-workflow-repository.js";
 import { recentOperatorReauthentication } from "../../../lib/operator-guard.js";
-import { createD1FrontReleaseRepository } from "../../../lib/release-repository.js";
 import { renderReleaseActivationConsole } from "../../../lib/release-activation-console.js";
+import { createD1FrontReleaseRepository } from "../../../lib/release-repository.js";
 import { isUlid } from "../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../lib/site-env.js";
 
@@ -25,9 +25,7 @@ export const GET: APIRoute = async (context) => {
 	if (!candidate || candidate.release.payload.instance_id !== env.SUPERBOARD_INSTANCE_ID) {
 		return textResponse("Candidate not found", 404);
 	}
-	const active = await createD1FrontReleaseRepository(env.DB).getActive(
-		env.SUPERBOARD_INSTANCE_ID,
-	);
+	const active = await createD1FrontReleaseRepository(env.DB).getActive(env.SUPERBOARD_INSTANCE_ID);
 	const now = new Date().toISOString();
 	const reauthentication = await recentOperatorReauthentication(context, {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,

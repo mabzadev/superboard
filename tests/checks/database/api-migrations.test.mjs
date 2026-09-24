@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
-const migrationsDirectory = resolve(root, "packages/plugins/supbrd-core/api/migrations");
+const migrationsDirectory = resolve(root, "packages/plugins/superboard-core/api/migrations");
 
 test("the complete central API migration chain creates one healthy fresh D1 schema", (t) => {
 	const temporary = mkdtempSync(join(tmpdir(), "superboard-api-migrations-"));

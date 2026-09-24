@@ -88,13 +88,13 @@
 		"localOnlyPathSegments": ["/example/", "/fixtures/", "/runtime-tests/", "/test/", "/tests/"],
 		"localOnlyFileMarkers": [".test.", ".spec.", "wrangler.test.jsonc"],
 		"localWranglerTemplates": [
-			"packages/plugins/supbrd-core/app/wrangler.jsonc",
-			"packages/plugins/supbrd-plug-communication/dynamic-links/wrangler.jsonc",
-			"packages/plugins/supbrd-plug-journeys/flows/wrangler.jsonc",
-			"packages/plugins/supbrd-plug-identity/worker/wrangler.jsonc",
-			"packages/plugins/supbrd-plug-journeys/onboardings/wrangler.jsonc",
-			"packages/plugins/supbrd-plug-commerce/paywalls/wrangler.jsonc",
-			"packages/plugins/supbrd-plug-commerce/products/wrangler.jsonc",
+			"packages/plugins/superboard-core/app/wrangler.jsonc",
+			"packages/plugins/superboard-acquisition/dynamic-links/wrangler.jsonc",
+			"packages/plugins/superboard-acquisition/flows/wrangler.jsonc",
+			"packages/plugins/superboard-authentification/worker/wrangler.jsonc",
+			"packages/plugins/superboard-acquisition/onboardings/wrangler.jsonc",
+			"packages/plugins/superboard-acquisition/paywalls/wrangler.jsonc",
+			"packages/plugins/superboard-monetization/products/wrangler.jsonc",
 			"packages/marketplace/wrangler.jsonc"
 		]
 	}

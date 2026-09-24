@@ -7,10 +7,10 @@ import { signSiteOperatorRequest } from "@superboard/contracts/site-operator";
 import { env } from "cloudflare:workers";
 import { expect, test } from "vitest";
 
-import api from "../../../../../packages/plugins/supbrd-core/api/src/index.js";
-import type { Env as ApiEnv } from "../../../../../packages/plugins/supbrd-core/api/src/types.js";
-import billing from "../../../../../packages/plugins/supbrd-plug-commerce/billing/src/index.js";
-import products from "../../../../../packages/plugins/supbrd-plug-commerce/products/src/index.js";
+import api from "../../../../../packages/plugins/superboard-core/api/src/index.js";
+import type { Env as ApiEnv } from "../../../../../packages/plugins/superboard-core/api/src/types.js";
+import billing from "../../../../../packages/plugins/superboard-monetization/billing/src/index.js";
+import products from "../../../../../packages/plugins/superboard-monetization/products/src/index.js";
 
 const stores = env as typeof env & { HEALTH_API_DB: D1Database; HEALTH_PRODUCTS_DB: D1Database };
 const db = stores.HEALTH_API_DB;

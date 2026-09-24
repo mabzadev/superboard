@@ -61,7 +61,8 @@ test.each(selections)("publishes $label without another business plugin", async 
 	expect(input.renderers.every(({ plugin_id }) => owners.has(plugin_id))).toBe(true);
 	const pluginId = plugins[0]?.manifest.plugin_id;
 	if (pluginId === "supbrd-plugmod-paywalls" || pluginId === "supbrd-plugmod-onboardings") {
-		const prefix = pluginId === "supbrd-plugmod-paywalls" ? "/paywalls" : "/onboardings";
+		const prefix =
+			pluginId === "supbrd-plugmod-paywalls" ? "/acquisition/paywalls" : "/acquisition/onboardings";
 		const links = parseFrontNavigation(
 			input.presentation.navigation,
 			input.front_route_manifest.routes,

@@ -142,7 +142,7 @@ if (service === "identity") {
 		"npm",
 		["run", "build:client"],
 		targetCloudflareEnv,
-		resolve(root, "packages/plugins/supbrd-plug-identity/worker"),
+		resolve(root, "packages/plugins/superboard-authentification/worker"),
 	);
 }
 

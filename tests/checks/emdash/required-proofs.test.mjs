@@ -39,6 +39,6 @@ void test("Worker health proofs complete before the Site Instance consumes their
 	}
 	assert.equal(
 		matrix.rows.find(({ id }) => id === "release:worker-health:supbrd-plugmod-billing")?.test,
-		"tests/checks/plugins/supbrd-plug-commerce/billing/runtime/billing-authority.runtime.test.ts",
+		"tests/checks/plugins/superboard-monetization/billing/runtime/billing-authority.runtime.test.ts",
 	);
 });

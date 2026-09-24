@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import { PurchasesPage } from "../../../../packages/plugins/supbrd-plug-commerce/src/front/billing/components/modules/ProductsPages.js";
+import { PurchasesPage } from "../../../../packages/plugins/superboard-monetization/src/front/billing/components/modules/ProductsPages.js";
 import { ProjectSelectionProvider } from "../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js";
 
 const network = vi.hoisted(() => ({ complete: false, progress: 0, unavailable: false }));

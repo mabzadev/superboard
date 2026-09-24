@@ -2,27 +2,30 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { OperatorAccess } from "../../../../packages/plugins/supbrd-plug-identity/src/front/OperatorAccess.js";
+import { OperatorAccess } from "../../../../packages/plugins/superboard-authentification/src/front/OperatorAccess.js";
 const state = vi.hoisted(() => ({ fail: false }));
 vi.mock("@superboard/front-ui/context", () => ({ useFrontContext: () => ({ locale: "en" }) }));
 vi.mock("@superboard/front-ui/navigation", () => ({
 	useSearchParams: () => new URLSearchParams({ backTo: "/account" }),
 }));
-vi.mock("../../../../packages/plugins/supbrd-plug-identity/src/front/operator-passkey.js", () => ({
-	operatorGet: async () => {
-		if (state.fail) throw new Error("Metadata unavailable");
-		return {
-			providers: [
-				{ id: "google", label: "Google" },
-				{ id: "github", label: "GitHub" },
-				{ id: "custom", label: "Company SSO" },
-			],
-		};
-	},
-	operatorPost: async () => ({}),
-	registerOperatorPasskey: async () => {},
-	signInWithOperatorPasskey: async () => {},
-}));
+vi.mock(
+	"../../../../packages/plugins/superboard-authentification/src/front/operator-passkey.js",
+	() => ({
+		operatorGet: async () => {
+			if (state.fail) throw new Error("Metadata unavailable");
+			return {
+				providers: [
+					{ id: "google", label: "Google" },
+					{ id: "github", label: "GitHub" },
+					{ id: "custom", label: "Company SSO" },
+				],
+			};
+		},
+		operatorPost: async () => ({}),
+		registerOperatorPasskey: async () => {},
+		signInWithOperatorPasskey: async () => {},
+	}),
+);
 let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {

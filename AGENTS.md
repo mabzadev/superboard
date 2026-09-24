@@ -8,11 +8,15 @@ When writing, revising, or reviewing documentation, load the `writing-emdash-doc
 
 # Rules
 
+**Verify before announcing.** Never declare a server, service, URL, or fix ready without an automated verification check (e.g. `curl -f -I http://...`, test suite run, or process probe) confirming success in the same turn.
+
+**Canonical docs over runtime guessing.** Never deduce platform architecture from process lists (`ps`) or transient command outputs. Always consult and cite authoritative documents (`CONTEXT.md`, `packages/plugins/WORKERS.md`, target manifests in `infra/targets/`).
+
 **Backwards compatibility matters.** EmDash is published and in active use, pre-1.0. Prefer additive changes (new fields, new routes, new options with defaults). Breaking changes need an explicit decision, a package bump, and a changeset that calls the break out clearly. Database migrations are forward-only -- never write one that leaves existing content inaccessible. When in doubt, open a Discussion.
 
 **TDD for bugs.** Failing test -> fix -> verify. A bug without a reproducing test is not fixed.
 
-**Localize everything user-facing.** All admin UI strings, aria labels, and toast messages go through Lingui. All admin layout uses RTL-safe logical Tailwind classes. See [Localization](#admin-ui-localization-lingui) and [RTL](#admin-ui-rtl-safe-tailwind).
+**Localize everything user-facing.** All UI strings, aria labels, dialogs, form fields, and toast messages must be localized (via Lingui in admin, or the plugin's `use*I18n()` / `t(...)` hook in SuperBoard Front). Never hardcode English strings. Navigation menus (`_emdash_menu_items`, menu seeds) must provide translated labels per locale (`en` and `fr`). Always verify rendering in both French (`?lang=fr`) and English before declaring work complete. All admin layout uses RTL-safe logical Tailwind classes. See [Localization](#admin-ui-localization-lingui) and [RTL](#admin-ui-rtl-safe-tailwind).
 
 **Scope discipline.** No drive-by refactors, no bulk lint/type cleanups, no "while I'm here" edits in unrelated files. If you see a systemic issue, open a Discussion. See [CONTRIBUTING.md § Contribution Policy](CONTRIBUTING.md#contribution-policy).
 
@@ -459,4 +463,8 @@ Avant de trier ou d’étiqueter un ticket, lisez le mapping des cinq rôles dan
 
 ### Documentation du domaine
 
-Le dépôt utilise des contextes multiples. Avant d’explorer le code ou de proposer une décision architecturale, lisez `docs/agents/domain.md`.
+Le dépôt utilise des contextes multiples (`CONTEXT-MAP.md`). Avant d’explorer le code ou de proposer une décision architecturale, lisez `docs/agents/domain.md`.
+
+### Journal d’amélioration
+
+Activé : les retours d’usage se capturent sous `.agents/feedback/` et s’intègrent par `/improve-mabza`. Voir `.agents/feedback/README.md`.

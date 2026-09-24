@@ -3,8 +3,8 @@ import { writeFile } from "node:fs/promises";
 
 import { chromium } from "@playwright/test";
 
-import { runPublishedBusinessActions } from "../../fixtures/site-browser/business-actions.mjs";
 import { AdminPage } from "../../fixtures/emdash-browser/admin.ts";
+import { runPublishedBusinessActions } from "../../fixtures/site-browser/business-actions.mjs";
 
 const origin = new URL(process.env.SUPERBOARD_LOCAL_URL ?? "http://127.0.0.1:4321");
 assert(["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname));
@@ -39,8 +39,8 @@ try {
 	for (const [retired, canonical] of [
 		["/dashboard", "/analytics"],
 		["/analytics/dashboards", "/analytics"],
-		["/app/members", "/app/users"],
-		["/app/members/", "/app/users"],
+		["/app/members", "/auth/users"],
+		["/app/members/", "/auth/users"],
 	]) {
 		const response = await context.request.get(new URL(`${retired}?lang=fr`, origin).href, {
 			maxRedirects: 0,

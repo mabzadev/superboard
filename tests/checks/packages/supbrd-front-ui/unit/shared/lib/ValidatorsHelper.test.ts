@@ -7,7 +7,7 @@ import {
 	httpUrlSchema,
 	bundleIdSchema,
 	shaSchema,
-} from "../../../../../../../packages/plugins/supbrd-core/src/front/settings/schemas/shared.js";
+} from "../../../../../../../packages/plugins/superboard-core/src/front/settings/schemas/shared.js";
 import {
 	hasText,
 	isRedirectUrlValid,

@@ -2,7 +2,7 @@ import { signPluginTaskRequest } from "@superboard/contracts/plugin-task";
 import { createExecutionContext, env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
-import observabilityWorker from "../../../../../packages/plugins/supbrd-core/observability/src/index.js";
+import observabilityWorker from "../../../../../packages/plugins/superboard-core/observability/src/index.js";
 import { dispatchLifecycleApi, pluginTaskContext } from "./lifecycle-health-services.js";
 
 const plugin = "supbrd-plugmod-observability";

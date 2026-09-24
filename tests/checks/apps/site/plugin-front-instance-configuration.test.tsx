@@ -5,7 +5,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import InstanceConfiguration from "../../../../packages/plugins/supbrd-core/src/front/settings/InstanceConfiguration.js";
+import InstanceConfiguration from "../../../../packages/plugins/superboard-core/src/front/settings/InstanceConfiguration.js";
 import { SectionNavigationProvider } from "../../../../packages/supbrd-front-ui/src/section-navigation.js";
 
 test("the French settings view follows configuration returned by the running API", async () => {
@@ -28,7 +28,22 @@ test("the French settings view follows configuration returned by the running API
 	};
 	vi.stubGlobal(
 		"fetch",
-		vi.fn(async () => Response.json({ configuration })),
+		vi.fn(async () =>
+			Response.json({
+				configuration,
+				routesStatus: "loaded",
+				routes: [
+					{
+						method: "GET",
+						path: "/users",
+						surface: "sdk",
+						url: "https://api.mbza.dev/users",
+						worker: "api",
+						clients: ["web"],
+					},
+				],
+			}),
+		),
 	);
 	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 	const container = document.createElement("div");
@@ -77,11 +92,10 @@ test("the French settings view follows configuration returned by the running API
 		expect(
 			Boolean(heading.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING),
 		).toBe(true);
-		expect(
-			container
-				.querySelector('a[href="/_emdash/admin/plugins/supbrd-plug-settings/configuration"]')
-				?.getAttribute("href"),
-		).toBe("/_emdash/admin/plugins/supbrd-plug-settings/configuration");
+		expect(container.querySelector('a[href*="/_emdash/admin/plugins/"]')).toBeNull();
+		expect(container.textContent).toContain("https://api.mbza.dev/users");
+		expect(container.textContent).toContain("site-local");
+		expect(container.textContent).toContain("https://auth.mbza.dev");
 		configuration = {
 			...configuration,
 			checksum: "updated",

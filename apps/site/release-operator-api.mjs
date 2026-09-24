@@ -44,6 +44,21 @@ export function superboardReleaseOperatorApi() {
 					),
 				});
 				injectRoute({
+					pattern: "/_emdash/api/superboard/plugins/[pluginId]/diagnostic",
+					entrypoint: fileURLToPath(
+						new URL(
+							"./src/pages/_superboard/api/plugins/[pluginId]/diagnostic.ts",
+							import.meta.url,
+						),
+					),
+				});
+				injectRoute({
+					pattern: "/_emdash/api/superboard/plugins/[pluginId]/health",
+					entrypoint: fileURLToPath(
+						new URL("./src/pages/_superboard/api/plugins/[pluginId]/health.ts", import.meta.url),
+					),
+				});
+				injectRoute({
 					pattern: "/_emdash/api/superboard/plugins/stores",
 					entrypoint: fileURLToPath(
 						new URL("./src/pages/_superboard/api/plugins/stores.ts", import.meta.url),

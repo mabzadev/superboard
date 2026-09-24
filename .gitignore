@@ -126,7 +126,7 @@ yarn-error.log*
 .turbo/
 /.ci-reference-contract/
 /.flows-cutover/
-/packages/plugins/supbrd-plug-support/scripts/support-audit/generated/
+/packages/plugins/superboard-support/scripts/support-audit/generated/
 
 !sdks/web/flows/upstream/reference/product-docs/assets/sdk/debug-mode.png
 

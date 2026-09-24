@@ -6,7 +6,24 @@ import { fileURLToPath } from "node:url";
 
 import { ESLint } from "eslint";
 
+import relocations from "../../scripts/config/superboard-source-relocations.json" with { type: "json" };
 import { diagnostic, lintRepository, maintainedFile, trackedFiles } from "./repository.mjs";
+
+const historicalPaths = Object.entries(relocations).sort((a, b) => b[1].length - a[1].length);
+const relocatedPaths = Object.entries(relocations).sort((a, b) => b[0].length - a[0].length);
+
+function historicalSource(value) {
+	for (const [previous, current] of historicalPaths) value = value.replaceAll(current, previous);
+	for (const [previous, current] of historicalPaths)
+		if (previous.split("/").length === 3 && current.split("/").length === 3)
+			value = value.replaceAll(`/${current.split("/").at(-1)}/`, `/${previous.split("/").at(-1)}/`);
+	return value;
+}
+
+function relocatedSource(filename) {
+	const match = relocatedPaths.find(([previous]) => filename.startsWith(`${previous}/`));
+	return match ? match[1] + filename.slice(match[0].length) : filename;
+}
 
 const root = resolve(import.meta.dirname, "../..");
 const baselinePath = resolve(root, "tests/lints/baseline.json");
@@ -38,12 +55,12 @@ export function parseToolResult(result, name) {
 
 export function baselineKey(item, source = "") {
 	const line = item.labels?.[0]?.span?.line;
-	const excerpt = line ? (source.split("\n")[line - 1]?.trim() ?? "") : "";
+	const excerpt = historicalSource(line ? (source.split("\n")[line - 1]?.trim() ?? "") : "");
 	const message = item.code.includes("react-hooks/")
 		? item.message.replace(/\n\n(?:\/|[A-Za-z]:[\\/])[^\n]+:\d+:\d+\n[\s\S]*$/u, "")
 		: item.message;
 	const hash = createHash("sha256").update(`${message}\0${excerpt}`).digest("hex").slice(0, 20);
-	return `${item.filename}|${item.code}|${hash}`;
+	return `${historicalSource(item.filename)}|${item.code}|${hash}`;
 }
 
 function readDiagnosticSource(filename) {
@@ -109,6 +126,22 @@ export function lintMigrations(baseRef, workspaceRoot = root) {
 		.filter(Boolean)
 		.flatMap((line) => {
 			const [status, filename] = line.split("\t");
+			const destination = relocatedSource(filename);
+			if (
+				status === "D" &&
+				destination !== filename &&
+				existsSync(resolve(workspaceRoot, destination))
+			) {
+				const original = spawnSync("git", ["show", `${baseRef}:${filename}`], {
+					cwd: workspaceRoot,
+					maxBuffer: 32 * 1024 * 1024,
+				});
+				if (
+					original.status === 0 &&
+					original.stdout.equals(readFileSync(resolve(workspaceRoot, destination)))
+				)
+					return [];
+			}
 			return status === "M" || status === "D"
 				? [
 						diagnostic(
@@ -254,8 +287,18 @@ export function normalizeKnip(report) {
 	return diagnostics;
 }
 
-export function testDependencyDeclared(filename, name, workspaceRoot = root) {
+const cloudflareTestImport = /\bfrom\s+["']cloudflare:test["']/u;
+
+export function testDependencyDeclared(filename, name, workspaceRoot = root, line) {
 	if (!filename.startsWith("tests/checks/")) return false;
+	const source = resolve(workspaceRoot, filename);
+	const dependency =
+		name === "cloudflare" &&
+		Number.isSafeInteger(line) &&
+		existsSync(source) &&
+		cloudflareTestImport.test(readFileSync(source, "utf8").split("\n")[line - 1] ?? "")
+			? "@cloudflare/vitest-pool-workers"
+			: name;
 	const path = filename.slice("tests/checks/".length).replace(/^plugins\//u, "packages/plugins/");
 	if (!/^(?:apps|packages|sdks|infra)\//u.test(path)) return false;
 	let directory = resolve(workspaceRoot, path, "..");
@@ -264,9 +307,9 @@ export function testDependencyDeclared(filename, name, workspaceRoot = root) {
 		if (existsSync(manifestPath)) {
 			const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 			return (
-				name === manifest.name ||
+				dependency === manifest.name ||
 				["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].some(
-					(section) => Object.hasOwn(manifest[section] ?? {}, name),
+					(section) => Object.hasOwn(manifest[section] ?? {}, dependency),
 				)
 			);
 		}
@@ -291,7 +334,12 @@ function lintKnip() {
 	return reported.filter(
 		(item) =>
 			item.code !== "quality(knip-unlisted)" ||
-			!testDependencyDeclared(item.filename, item.message.slice("unlisted: ".length)),
+			!testDependencyDeclared(
+				item.filename,
+				item.message.slice("unlisted: ".length),
+				root,
+				item.labels?.[0]?.span?.line,
+			),
 	);
 }
 

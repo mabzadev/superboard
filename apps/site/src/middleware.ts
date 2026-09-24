@@ -1,3 +1,4 @@
+import { canonicalFrontHref } from "@superboard/contracts/front-paths";
 import { defineMiddleware } from "astro:middleware";
 
 import { retiredFrontPageDestination } from "./lib/retired-front-pages.js";
@@ -18,8 +19,10 @@ export const onRequest = defineMiddleware(({ request, url, cookies }, next) => {
 			maxAge: 31536000,
 		});
 	}
-	const destination = retiredFrontPageDestination(url.pathname);
-	if (destination && (request.method === "GET" || request.method === "HEAD"))
-		return Response.redirect(new URL(`${destination}${url.search}`, url), 308);
+	const retired = retiredFrontPageDestination(url.pathname);
+	const requested = `${url.pathname}${url.search}`;
+	const destination = canonicalFrontHref(retired ? `${retired}${url.search}` : requested);
+	if (destination !== requested && (request.method === "GET" || request.method === "HEAD"))
+		return Response.redirect(new URL(destination, url), 308);
 	return next();
 });

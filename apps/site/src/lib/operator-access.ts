@@ -11,7 +11,8 @@ export function canAccessOperatorConsole(
 ): user is OperatorAccessUser {
 	if (!user?.id || user.disabled) return false;
 	try {
-		return hasPermission({ role: toRoleLevel(user.role) }, "settings:manage");
+		const operator = { role: toRoleLevel(user.role) };
+		return hasPermission(operator, "settings:manage") && hasPermission(operator, "plugins:manage");
 	} catch {
 		return false;
 	}

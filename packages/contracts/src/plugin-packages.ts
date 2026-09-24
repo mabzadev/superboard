@@ -1,9 +1,16 @@
 import definitions from "../../../scripts/config/superboard-plugin-packages.json";
+import { canonicalPluginIdentifier } from "./plugin-identifiers.js";
 
 export const pluginPackages = definitions.packages;
 
+export function canonicalPluginId(id: string): string {
+	return canonicalPluginIdentifier(id, pluginPackages);
+}
+
 export function pluginPackage(id: string) {
-	return pluginPackages.find((item) => item.id === id || item.components.includes(id));
+	return pluginPackages.find(
+		(item) => item.id === id || item.directory === id || item.components.includes(id),
+	);
 }
 
 export function pluginPackageOwner(id: string): string {
