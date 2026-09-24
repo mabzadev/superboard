@@ -24,19 +24,20 @@ export function renderReleaseActivationConsole(model: ReleaseActivationConsoleMo
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Activation de Release — SuperBoard</title>
   <style>
-    :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, sans-serif; }
-    body { margin: 0; background: #0b1020; color: #eef2ff; }
+    :root { color-scheme: light dark; font-family: Inter, system-ui, sans-serif; }
+    body { margin: 0; background: #171717; color: #ededed; }
     main { max-width: 58rem; margin: 0 auto; padding: 3rem 1.25rem; }
-    a { color: #93c5fd; }
-    .card { background: #111936; border: 1px solid #334155; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 1.5rem 4rem #02061780; }
-    .eyebrow { color: #fbbf24; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-    h1 { margin: .5rem 0 1.5rem; font-size: clamp(1.8rem, 5vw, 3rem); }
+    a { color: #3ecf8e; }
+    .card { background: #1c1c1c; border: 1px solid #282828; border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 1rem 3rem rgba(0,0,0,0.5); }
+    .eyebrow { color: #3ecf8e; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: .5rem 0 1.5rem; font-size: clamp(1.8rem, 5vw, 3rem); font-family: Manrope, system-ui, sans-serif; }
     dl { display: grid; grid-template-columns: minmax(12rem, 17rem) 1fr; gap: .75rem 1rem; }
-    dt { color: #a5b4fc; font-weight: 700; }
-    dd { margin: 0; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
-    .ready { margin: 1.5rem 0; padding: 1rem; border-radius: .75rem; background: ${canActivate ? "#052e2b" : "#3b1d16"}; border: 1px solid ${canActivate ? "#0f766e" : "#b45309"}; }
-    .impact { margin: 1.5rem 0; padding: 1rem; border-radius: .75rem; background: #422006; border: 1px solid #d97706; }
-    button { width: 100%; border: 0; border-radius: .75rem; padding: .9rem 1rem; background: #b45309; color: white; font-size: 1rem; font-weight: 800; cursor: pointer; }
+    dt { color: #9e9e9e; font-weight: 700; }
+    dd { margin: 0; overflow-wrap: anywhere; font-family: "Source Code Pro", "Geist Mono", monospace; }
+    .ready { margin: 1.5rem 0; padding: 1rem; border-radius: .5rem; background: ${canActivate ? "#064e3b" : "#451a03"}; border: 1px solid ${canActivate ? "#3ecf8e" : "#f59e0b"}; }
+    .impact { margin: 1.5rem 0; padding: 1rem; border-radius: .5rem; background: #451a03; border: 1px solid #f59e0b; }
+    button { width: 100%; border: 1px solid #3ecf8e; border-radius: .5rem; padding: .9rem 1rem; background: #3ecf8e; color: #002715; font-size: 1rem; font-weight: 700; cursor: pointer; }
+    button:hover { background: #34b27b; }
     button:disabled { cursor: not-allowed; opacity: .5; }
     #result { min-height: 1.5rem; margin-top: 1rem; white-space: pre-wrap; }
     .back { display: inline-block; margin-top: 1.25rem; }
@@ -62,10 +63,10 @@ export function renderReleaseActivationConsole(model: ReleaseActivationConsoleMo
       </div>
       <div class="ready" role="status">
         ${
-				canActivate
-					? "Strong reauthentication d’activation récente détectée. L’activation est disponible."
-					: "Strong reauthentication d’activation requise ou candidat non approuvé. Reconnectez-vous par lien e-mail puis rechargez cette page."
-			}
+					canActivate
+						? "Strong reauthentication d’activation récente détectée. L’activation est disponible."
+						: "Strong reauthentication d’activation requise ou candidat non approuvé. Reconnectez-vous par lien e-mail puis rechargez cette page."
+				}
       </div>
       <button id="activate" type="button"${canActivate ? "" : " disabled"}>Activer cette Release</button>
       <div id="result" role="status" aria-live="polite"></div>

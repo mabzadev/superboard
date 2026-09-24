@@ -102,11 +102,15 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 		return true;
 	};
 	const lifecycleError = (err: unknown) =>
-		err instanceof ApiResponseError && err.code === "RELEASE_OPERATIONS_DISABLED"
-			? t`Plugin activation is unavailable in this deployment. Contact the administrator to complete the console configuration.`
-			: err instanceof Error
-				? err.message
-				: t`An error occurred`;
+		err instanceof ApiResponseError && err.code === "PLUGIN_OPERATIONS_IN_PROGRESS"
+			? t`This plugin still has running tasks. Wait for them to finish before disabling it.`
+			: err instanceof ApiResponseError && err.code === "PLUGIN_OPERATION_IN_PROGRESS"
+				? t`Another plugin change is in progress. Please try again when it has finished.`
+				: err instanceof ApiResponseError && err.code === "RELEASE_OPERATIONS_DISABLED"
+					? t`Plugin activation is unavailable in this deployment. Contact the administrator to complete the console configuration.`
+					: err instanceof Error
+						? err.message
+						: t`An error occurred`;
 
 	const {
 		data: plugins,
@@ -129,11 +133,19 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 
 	const enableMutation = useMutation({
 		mutationFn: (plugin: PluginInfo) => enablePlugin(plugin),
-		onSuccess: (plugin) => {
+		onSuccess: async (plugin) => {
+			await queryClient.cancelQueries({ queryKey: ["plugins"] });
+			queryClient.setQueryData<PluginInfo[]>(["plugins"], (current) =>
+				current?.map((item) => (item.id === plugin.id ? plugin : item)),
+			);
+			queryClient.setQueryData(["plugins", plugin.id], plugin);
 			void queryClient.invalidateQueries({ queryKey: ["plugins"] });
 			void queryClient.invalidateQueries({ queryKey: ["manifest"] });
 			void queryClient.invalidateQueries({ queryKey: ["content"] });
 			void queryClient.invalidateQueries({ queryKey: ["content-picker"] });
+			void queryClient
+				.invalidateQueries({ queryKey: ["plugin-configuration"] })
+				.catch(() => undefined);
 			toastManager.add({
 				title: t`Plugin enabled`,
 				description: t`${plugin.name} is now active`,
@@ -151,11 +163,19 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 
 	const disableMutation = useMutation({
 		mutationFn: (plugin: PluginInfo) => disablePlugin(plugin),
-		onSuccess: (plugin) => {
+		onSuccess: async (plugin) => {
+			await queryClient.cancelQueries({ queryKey: ["plugins"] });
+			queryClient.setQueryData<PluginInfo[]>(["plugins"], (current) =>
+				current?.map((item) => (item.id === plugin.id ? plugin : item)),
+			);
+			queryClient.setQueryData(["plugins", plugin.id], plugin);
 			void queryClient.invalidateQueries({ queryKey: ["plugins"] });
 			void queryClient.invalidateQueries({ queryKey: ["manifest"] });
 			void queryClient.invalidateQueries({ queryKey: ["content"] });
 			void queryClient.invalidateQueries({ queryKey: ["content-picker"] });
+			void queryClient
+				.invalidateQueries({ queryKey: ["plugin-configuration"] })
+				.catch(() => undefined);
 			toastManager.add({
 				title: t`Plugin disabled`,
 				description: t`${plugin.name} has been deactivated`,
@@ -261,6 +281,10 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 						onEnable={() => enableMutation.mutate(plugin)}
 						onDisable={() => disableMutation.mutate(plugin)}
 						isToggling={enableMutation.isPending || disableMutation.isPending}
+						isChanging={
+							(enableMutation.isPending && enableMutation.variables?.id === plugin.id) ||
+							(disableMutation.isPending && disableMutation.variables?.id === plugin.id)
+						}
 						hasMarketplace={hasMarketplace}
 					/>
 				))}
@@ -289,6 +313,7 @@ interface PluginCardProps {
 	onEnable: () => void;
 	onDisable: () => void;
 	isToggling: boolean;
+	isChanging: boolean;
 	/** Whether the marketplace is configured (controls "View in Marketplace" link) */
 	hasMarketplace: boolean;
 }
@@ -299,6 +324,7 @@ function PluginCard({
 	onEnable,
 	onDisable,
 	isToggling,
+	isChanging,
 	hasMarketplace,
 }: PluginCardProps) {
 	const { t } = useLingui();
@@ -456,6 +482,10 @@ function PluginCard({
 							)}
 						</div>
 
+						{plugin.configurationId && (
+							<p className="mt-1 text-xs text-kumo-subtle font-mono">{plugin.configurationId}</p>
+						)}
+
 						{/* Description */}
 						{plugin.description && (
 							<p className="mt-0.5 text-sm text-kumo-subtle line-clamp-1">{plugin.description}</p>
@@ -532,16 +562,28 @@ function PluginCard({
 							</RouterLinkButton>
 						)}
 
-						{plugin.hasSettings && (plugin.enabled || plugin.configurationWhileDisabled) && (
+						{plugin.configurationId && (
 							<RouterLinkButton
-								to="/plugins-manager/$pluginId/settings"
-								params={{ pluginId: plugin.id }}
-								aria-label={t`Settings`}
+								to="/plugins-manager/$pluginId/configuration"
+								params={{ pluginId: plugin.configurationId }}
 								variant="ghost"
-								shape="square"
 								icon={<Gear />}
-							/>
+							>
+								{t`Configuration`}
+							</RouterLinkButton>
 						)}
+						{!plugin.configurationId &&
+							plugin.hasSettings &&
+							(plugin.enabled || plugin.configurationWhileDisabled) && (
+								<RouterLinkButton
+									to="/plugins-manager/$pluginId/settings"
+									params={{ pluginId: plugin.id }}
+									aria-label={t`Settings`}
+									variant="ghost"
+									shape="square"
+									icon={<Gear />}
+								/>
+							)}
 
 						{plugin.hasAdminPages && (plugin.enabled || plugin.configurationWhileDisabled) && (
 							<RouterLinkButton
@@ -554,6 +596,9 @@ function PluginCard({
 							/>
 						)}
 
+						{isChanging && (
+							<span role="status" className="text-sm text-kumo-subtle">{t`Applying...`}</span>
+						)}
 						<Switch
 							checked={plugin.enabled}
 							onCheckedChange={handleToggle}

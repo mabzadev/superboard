@@ -1,4 +1,4 @@
 {
-	"*.astro": "prettier --write",
-	"*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,yaml,yml,css,md,mdx}": "oxfmt --ignore-path .gitignore --write"
+	"*.astro": "node scripts/emdash/format-staged.mjs astro",
+	"*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,yaml,yml,css,md,mdx}": "node scripts/emdash/format-staged.mjs code"
 }

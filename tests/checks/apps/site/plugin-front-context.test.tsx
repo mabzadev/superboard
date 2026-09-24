@@ -4,7 +4,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useAuth } from "../../../../packages/plugins/supbrd-plug-identity/src/front/identity/melody-react.js";
+import { useAuth } from "../../../../packages/plugins/superboard-authentification/src/front/identity/melody-react.js";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
 

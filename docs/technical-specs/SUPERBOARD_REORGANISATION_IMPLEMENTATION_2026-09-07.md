@@ -56,7 +56,7 @@ Les réglages sont conservés par EmDash dans l’environnement. L’API lit un 
 
 La valeur de coût laissée vide conserve le contrat de tarification historique. Les fournisseurs, ressources, modèles de conteneurs et paramètres de déploiement restent déclarés dans la cible. Les données métier et pipelines Vocostar existants sont conservés ; ce changement ne remplace pas la migration de leurs données historiques.
 
-Sources : [vues](../../packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar), [façade administrative](../../packages/plugins/supbrd-core/api/src/routes/application-module-admin.ts), [réglages exécutés](../../workers/custom/vocostar/src/settings.ts), [worker métier](../../workers/custom/vocostar/src/index.ts).
+Sources : [vues](../../packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-vocostar), [façade administrative](../../packages/plugins/superboard-core/api/src/routes/application-module-admin.ts), [réglages exécutés](../../workers/custom/vocostar/src/settings.ts), [worker métier](../../workers/custom/vocostar/src/index.ts).
 
 ## Callbacks et WebSockets Vocostar
 
@@ -70,7 +70,7 @@ Les liaisons `VOCOSTAR_USER_VOCALS_ROOM` et `VOCOSTAR_USER_MEDIAS_ROOM` pointent
 
 Les orchestrateurs et conteneurs transmettent `project_ref`, `job_id` et `subject` lorsqu’ils sont fournis. Un ancien identifiant de queue n’est pas transformé en identifiant de job SuperBoard. Les erreurs HTTP des callbacks déclenchent les reprises configurées dans les Workflows ; si toutes les tentatives échouent, le résultat du traitement terminé est conservé et l’échec de notification est journalisé.
 
-Sources : [bridge](../../workers/custom/vocostar/src/runtime-bridge.ts), [associations d’identité](../../workers/custom/vocostar/src/runtime-identity.ts), [façade API](../../packages/plugins/supbrd-core/api/src/routes/vocostar-runtime.ts), [tests des connexions et callbacks](../../workers/custom/vocostar/runtime-tests/runtime-bridge.runtime.test.ts), [tests API avec D1](../../scripts/vocostar-api-runtime.test.mjs).
+Sources : [bridge](../../workers/custom/vocostar/src/runtime-bridge.ts), [associations d’identité](../../workers/custom/vocostar/src/runtime-identity.ts), [façade API](../../packages/plugins/superboard-core/api/src/routes/vocostar-runtime.ts), [tests des connexions et callbacks](../../workers/custom/vocostar/runtime-tests/runtime-bridge.runtime.test.ts), [tests API avec D1](../../scripts/vocostar-api-runtime.test.mjs).
 
 ## Services regroupés
 

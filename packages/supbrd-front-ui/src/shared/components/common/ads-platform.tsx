@@ -55,6 +55,7 @@ const AdsPlatformSelect = ({
 			<PopoverTrigger asChild>
 				<Button
 					role="combobox"
+					aria-label={title ?? selectListTitle ?? getValueLabelFromList(selectedAdsPlatform)}
 					className={cn(
 						"cursor-pointer border-dashed whitespace-nowrap",
 						changeBgColorForNonDefaultValues(),

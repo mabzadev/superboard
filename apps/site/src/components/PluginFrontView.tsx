@@ -1,32 +1,10 @@
 import { useFrontContext, type PluginViewProps } from "@superboard/front-ui/context";
-import { Component, lazy, Suspense, useMemo, type ComponentType, type ReactNode } from "react";
+import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
+import { Component, lazy, Suspense, useMemo, type ReactNode } from "react";
 
-import { useProjectSelection } from "../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js";
-import pluginPackages from "../../../../scripts/config/superboard-plugin-packages.json";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
+import { loadPluginClientView } from "../lib/plugin-client-catalog.js";
 import { useFrontRuntimeState } from "./FrontRuntimeProviders.js";
-
-interface PluginClientModule {
-	pluginId: string;
-	views: Record<string, () => Promise<{ default: ComponentType<PluginViewProps> }>>;
-	Providers?: ComponentType<PluginViewProps & { children: ReactNode }>;
-}
-
-const componentPrefix = /^supbrd-(?:plug|plugmod)-/u;
-const modules = import.meta.glob<PluginClientModule>([
-	"../../../../packages/plugins/supbrd-*/src/front/index.ts",
-	"../../../../packages/plugins/supbrd-*/src/front/*/index.ts",
-]);
-const byPlugin = new Map(
-	pluginPackages.packages.flatMap((definition) =>
-		definition.components.map((pluginId) => {
-			const short = pluginId.replace(componentPrefix, "");
-			const directory = definition.components.length > 1 ? `/${short}` : "";
-			const path = `../../../../packages/plugins/${definition.id}/src/front${directory}/index.ts`;
-			return [pluginId, modules[path]] as const;
-		}),
-	),
-);
 
 export function PluginFrontView({
 	projection,
@@ -44,15 +22,7 @@ export function PluginFrontView({
 	const View = useMemo(
 		() =>
 			lazy(async () => {
-				const load = byPlugin.get(pluginId);
-				if (!load) throw new Error(`Plugin client unavailable: ${pluginId}`);
-				const plugin = await load();
-				if (plugin.pluginId !== pluginId) throw new Error("Plugin client ownership mismatch");
-				const loadView = plugin.views[routeId];
-				if (!loadView) throw new Error(`View is not registered by ${pluginId}: ${routeId}`);
-				const module = await loadView();
-				const Providers = plugin.Providers;
-				const Page = module.default;
+				const { Page, Providers } = await loadPluginClientView(pluginId, routeId);
 				return {
 					default: (props: PluginViewProps) =>
 						Providers ? (

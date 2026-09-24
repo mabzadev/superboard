@@ -1,11 +1,11 @@
 import { env, createExecutionContext } from "cloudflare:test";
 import { expect, test, vi } from "vitest";
 
-import filesWorker from "../../../../../packages/plugins/supbrd-plug-data/worker/src/index.js";
 import {
 	issueAccessToken,
 	publicJwks,
-} from "../../../../../packages/plugins/supbrd-plug-identity/worker/src/crypto.js";
+} from "../../../../../packages/plugins/superboard-authentification/worker/src/crypto.js";
+import filesWorker from "../../../../../packages/plugins/superboard-data/worker/src/index.js";
 
 test("Files stores SDK uploads with known or streamed length in real R2 and refuses missing storage at health check", async () => {
 	const bindings = env as unknown as {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { getRedirectType } from "../../../../../../../packages/plugins/supbrd-plug-analytics/src/front/lib/redirectsHelpers.js";
+import { getRedirectType } from "../../../../../../../packages/plugins/superboard-analytics/src/front/lib/redirectsHelpers.js";
 
 describe("getRedirectType", () => {
 	it('returns "default" for null/undefined', () => {

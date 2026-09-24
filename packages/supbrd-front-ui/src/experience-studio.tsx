@@ -63,9 +63,9 @@ export function createStudioDocument(
 	return {
 		schema_version: 1,
 		theme: {
-			accent_color: "#6366f1",
-			background_color: "#ffffff",
-			text_color: "#111827",
+			accent_color: "#3ecf8e",
+			background_color: "#fafafa",
+			text_color: "#171717",
 			font_family: "Inter",
 			corner_radius: 14,
 		},

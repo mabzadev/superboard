@@ -6,8 +6,49 @@ import { initializeOperatorProjectScope } from "../../../../../apps/site/src/lib
 import { matchPluginApiAdapter } from "../../../../../apps/site/src/lib/plugin-api-adapter.js";
 import { resolveRepositoryCommandScope } from "../../../../../apps/site/src/lib/plugin-command-authority.js";
 import { importPluginStoreEncryptionKey } from "../../../../../apps/site/src/lib/plugin-store-repository.js";
+import { canonicalPluginId } from "../../../../../packages/contracts/src/plugin-packages.js";
+import registry from "../../../../../scripts/config/superboard-plugin-api-adapters.json";
 
 const pluginId = "supbrd-plugmod-paywalls";
+
+test("all canonical contribution names select exactly the same verified operation as their legacy names", () => {
+	let checked = 0;
+	for (const adapter of registry.adapters) {
+		if (
+			adapter.status !== "verified" ||
+			("audience" in adapter && adapter.audience === "application_client")
+		)
+			continue;
+		for (const operation of adapter.operations) {
+			const allowed = operation.parameter_values as Record<string, string[]>;
+			const path = operation.path.replace(
+				/:([A-Za-z][A-Za-z0-9_]*)/gu,
+				(_, key: string) => allowed[key]?.[0] ?? "example",
+			);
+			const envelope = { method: operation.method, path };
+			const kind = adapter.kind === "command" ? "command" : "data_source";
+			const legacy = matchPluginApiAdapter(adapter.plugin_id, adapter.id, kind, envelope);
+			const canonical = matchPluginApiAdapter(
+				canonicalPluginId(adapter.plugin_id),
+				canonicalPluginId(adapter.id),
+				kind,
+				envelope,
+			);
+			expect(canonical.adapter).toEqual(legacy.adapter);
+			expect(canonical.operation).toEqual(legacy.operation);
+			checked++;
+		}
+	}
+	expect(checked).toBeGreaterThan(100);
+	expect(() =>
+		matchPluginApiAdapter(
+			"superboard-support",
+			"superboard-acquisition.command.create_paywall",
+			"command",
+			{ method: "POST", path: "/api/v1/paywalls/projects/example" },
+		),
+	).toThrow("PLUGIN_ADAPTER_NOT_FOUND");
+});
 const headers = {
 	Origin: "https://site.example",
 	"X-EmDash-Request": "1",
@@ -46,6 +87,37 @@ function command(
 		},
 	);
 }
+
+test("canonical package commands execute and share idempotency with their historical aliases", async () => {
+	const identifier = `renamed-${crypto.randomUUID()}`;
+	const payload = {
+		method: "POST",
+		path: `/api/v1/paywalls/projects/${projectRef}`,
+		body: { identifier, display_name: "Renamed plugin" },
+	};
+	const key = crypto.randomUUID();
+	const response = await SELF.fetch(
+		"https://site.example/_emdash/api/superboard/plugins/superboard-acquisition/commands/superboard-acquisition.command.create_paywall",
+		{
+			method: "POST",
+			headers: { ...headers, "Idempotency-Key": key },
+			body: JSON.stringify(payload),
+		},
+	);
+	expect(response.status).toBe(201);
+	const result = await response.json();
+	expect(await (await command(payload, key)).json()).toEqual(result);
+	const url = new URL(
+		"https://site.example/_emdash/api/superboard/plugins/superboard-acquisition/data-sources/superboard-acquisition.data_source.paywalls",
+	);
+	url.searchParams.set(
+		"request",
+		JSON.stringify({ method: "GET", path: `/api/v1/paywalls/projects/${projectRef}` }),
+	);
+	const listed = await SELF.fetch(url, { headers });
+	expect(listed.status).toBe(200);
+	expect(await listed.text()).toContain(identifier);
+});
 
 test("Settings configures and verifies an SDK with User disabled", async () => {
 	const root = "https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings";

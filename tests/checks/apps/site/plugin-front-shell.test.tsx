@@ -259,9 +259,9 @@ test("section links follow the page title and retain their active destination", 
 		Boolean(heading!.compareDocumentPosition(navigation!) & Node.DOCUMENT_POSITION_FOLLOWING),
 	).toBe(true);
 	expect(navigation!.querySelector('a[aria-current="page"]')?.getAttribute("href")).toBe(
-		"/products/offerings",
+		"/monetization/offerings",
 	);
-	expect(navigation!.querySelector('a[href="/products/catalog"]')).not.toBeNull();
+	expect(navigation!.querySelector('a[href="/monetization/catalog"]')).not.toBeNull();
 });
 async function click(name: string) {
 	const button = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
@@ -295,8 +295,8 @@ test("account controls expose active plugin destinations and report a failed log
 	);
 	await render();
 	await click("Open Ada account menu");
-	expect(document.querySelector('a[href="/account"]')).not.toBeNull();
-	expect(document.querySelector('a[href="/project-settings"]')).not.toBeNull();
+	expect(document.querySelector('a[href="/auth/account"]')).not.toBeNull();
+	expect(document.querySelector('a[href="/core/settings"]')).not.toBeNull();
 	await click("Log out");
 	expect(container.querySelector('[role="alert"]')?.textContent).toContain("Sign out failed");
 	vi.unstubAllGlobals();
@@ -340,9 +340,9 @@ test("opening another section closes the previous section and a reduced menu reo
 	await act(async () => other!.click());
 	expect(container.querySelectorAll("details[open]")).toHaveLength(1);
 	expect(container.querySelector('a[href="/other"]')?.closest("details")?.open).toBe(true);
-	expect(container.querySelector('a[href="/products/offerings"]')?.closest("details")?.open).toBe(
-		false,
-	);
+	expect(
+		container.querySelector('a[href="/monetization/offerings"]')?.closest("details")?.open,
+	).toBe(false);
 	await click("Collapse sidebar");
 	await act(async () => other!.click());
 	expect(container.querySelector('button[aria-label="Collapse sidebar"]')).not.toBeNull();

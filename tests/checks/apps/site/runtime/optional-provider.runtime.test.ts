@@ -1,9 +1,9 @@
 import { createExecutionContext, env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
-import { deliverMarketingSignal } from "../../../../../packages/plugins/supbrd-plug-analytics/worker/src/marketing-signals.js";
-import email from "../../../../../packages/plugins/supbrd-plug-communication/email/src/index.js";
-import marketing from "../../../../../packages/plugins/supbrd-plug-communication/marketing/src/index.js";
+import { deliverMarketingSignal } from "../../../../../packages/plugins/superboard-analytics/worker/src/marketing-signals.js";
+import email from "../../../../../packages/plugins/superboard-communication/email/src/index.js";
+import marketing from "../../../../../packages/plugins/superboard-communication/marketing/src/index.js";
 import { dispatchLifecycleApi, pluginTaskContext } from "./lifecycle-health-services.js";
 
 const headers = {

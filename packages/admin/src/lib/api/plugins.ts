@@ -32,6 +32,7 @@ export interface PluginInfo {
 	/** Host route that performs the complete managed deactivation workflow. */
 	lifecycleDisablePath?: string;
 	configurationWhileDisabled?: boolean;
+	configurationId?: string;
 	lifecycleLocked?: boolean;
 	/** Installed marketplace version (set when source = 'marketplace') */
 	marketplaceVersion?: string;

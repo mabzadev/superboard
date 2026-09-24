@@ -49,7 +49,7 @@ export function inspectWorkerDirectories(repositoryRoot, targets) {
 	const pluginsRoot = resolve(repositoryRoot, "packages/plugins");
 	if (existsSync(pluginsRoot)) {
 		for (const entry of readdirSync(pluginsRoot, { withFileTypes: true }))
-			if (entry.isDirectory() && entry.name.startsWith("supbrd-"))
+			if (entry.isDirectory() && entry.name.startsWith("superboard-"))
 				containers.add(`packages/plugins/${entry.name}`);
 	}
 	for (const directory of containers) {

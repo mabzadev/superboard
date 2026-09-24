@@ -1,4 +1,8 @@
-import { pluginComponentForContribution } from "@superboard/contracts/plugin-packages";
+import {
+	canonicalPluginId,
+	pluginPackage,
+	pluginComponentForContribution,
+} from "@superboard/contracts/plugin-packages";
 import {
 	readJsonObjectLimited,
 	readBytesLimited,
@@ -49,8 +53,23 @@ interface Adapter {
 	operations: AdapterOperation[];
 }
 const adapters = new Map<string, Adapter>(
-	registry.adapters.map((adapter): [string, Adapter] => [adapter.id, adapter]),
+	registry.adapters.flatMap((adapter): [string, Adapter][] => [
+		[adapter.id, adapter],
+		[canonicalPluginId(adapter.id), adapter],
+	]),
 );
+
+function ownedAdapter(pluginId: string, contributionId: string): Adapter | undefined {
+	const adapter = adapters.get(contributionId);
+	if (!adapter) return undefined;
+	const owner = pluginPackage(pluginId);
+	return adapter.plugin_id === pluginId ||
+		(owner &&
+			(pluginId === owner.directory || pluginId === owner.id) &&
+			owner.components.includes(adapter.plugin_id))
+		? adapter
+		: undefined;
+}
 function isAdapterMethod(value: unknown): value is PluginApiAdapterEnvelope["method"] {
 	return (
 		value === "GET" ||
@@ -81,8 +100,8 @@ export function matchPluginApiAdapter(
 	kind: PluginApiAdapterKind,
 	value: unknown,
 ) {
-	const adapter = adapters.get(contributionId);
-	if (!adapter || adapter.plugin_id !== pluginId || adapter.kind !== kind)
+	const adapter = ownedAdapter(pluginId, contributionId);
+	if (!adapter || adapter.kind !== kind)
 		throw new PluginApiAdapterError("PLUGIN_ADAPTER_NOT_FOUND", 404);
 	if (adapter.audience === "application_client")
 		throw new PluginApiAdapterError("APPLICATION_CREDENTIALS_REQUIRED", 403);
@@ -108,7 +127,9 @@ export function matchPluginApiAdapter(
 		!(
 			url.pathname.startsWith("/api/v1/") ||
 			url.pathname.startsWith("/api/v2/") ||
-			(["supbrd-plug-content", "supbrd-plug-audit", "supbrd-plug-settings"].includes(pluginId) &&
+			(["supbrd-plug-content", "supbrd-plug-audit", "supbrd-plug-settings"].includes(
+				adapter.plugin_id,
+			) &&
 				url.pathname.startsWith("/_emdash/api/"))
 		)
 	)
@@ -157,8 +178,14 @@ export async function dispatchPluginApiAdapter(
 	const env = envOverride ?? getSiteEnv();
 	const localId =
 		(kind === "command" ? context.params.commandId : context.params.dataSourceId) ?? "";
-	const pluginId = pluginComponentForContribution(context.params.pluginId ?? "", localId);
-	const contributionId = localId.includes(`.${kind}.`) ? localId : `${pluginId}.${kind}.${localId}`;
+	const requestedPlugin = context.params.pluginId ?? "";
+	const alias = ownedAdapter(
+		requestedPlugin,
+		localId.includes(`.${kind}.`) ? localId : `${requestedPlugin}.${kind}.${localId}`,
+	);
+	const pluginId = alias?.plugin_id ?? pluginComponentForContribution(requestedPlugin, localId);
+	const contributionId =
+		alias?.id ?? (localId.includes(`.${kind}.`) ? localId : `${pluginId}.${kind}.${localId}`);
 	const inactive = await requireActiveSuperBoardPlugin(env.DB, {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT),

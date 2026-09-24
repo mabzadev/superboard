@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { canonicalFrontPath } from "../../packages/contracts/src/front-paths.ts";
 import { servicePackagePath, serviceTestDirectory } from "../cloudflare/services.mjs";
 import { buildPluginPackages } from "./plugin-packages.mjs";
 
@@ -12,9 +13,29 @@ const topologyPath = join(root, "scripts/config/emdash-plugin-topology.json");
 const parityReleasePath = join(root, "scripts/config/superboard-parity-release.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "scripts/config/superboard-front-bundle.json");
-const manifestMigrationPath = join(root, "apps/site/migrations/0036_compiled_front_catalogs.sql");
+const manifestMigrationPath = join(
+	root,
+	"apps/site/migrations/0053_user_members_renderer_retirement.sql",
+);
 const compatibilityPath = join(root, "scripts/config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0052_acquisition_item_navigation.sql"),
+	join(root, "apps/site/migrations/0051_front_path_contract.sql"),
+	join(root, "apps/site/migrations/0050_canonical_plugin_routes.sql"),
+	join(root, "apps/site/migrations/0049_acquisition_settings_navigation.sql"),
+	join(root, "apps/site/migrations/0048_formatted_front_bundle.sql"),
+	join(root, "apps/site/migrations/0047_seed_route_consistency.sql"),
+	join(root, "apps/site/migrations/0046_purchases_localization.sql"),
+	join(root, "apps/site/migrations/0045_client_adapter_catalog.sql"),
+	join(root, "apps/site/migrations/0044_local_settings_routes.sql"),
+	join(root, "apps/site/migrations/0043_authentication_navigation.sql"),
+	join(root, "apps/site/migrations/0042_authentication_settings.sql"),
+	join(root, "apps/site/migrations/0041_monetization_directory.sql"),
+	join(root, "apps/site/migrations/0040_configuration_refresh_contract.sql"),
+	join(root, "apps/site/migrations/0039_plugin_front_release.sql"),
+	join(root, "apps/site/migrations/0038_front_instance_configuration.sql"),
+	join(root, "apps/site/migrations/0037_plugin_navigation_layout.sql"),
+	join(root, "apps/site/migrations/0036_compiled_front_catalogs.sql"),
 	join(root, "apps/site/migrations/0035_front_runtime_compatibility.sql"),
 	join(root, "apps/site/migrations/0034_test_source_layout_manifests.sql"),
 	join(root, "apps/site/migrations/0033_script_layout_manifests.sql"),
@@ -540,7 +561,9 @@ export function buildParityMatrix() {
 	const implementations = JSON.parse(
 		readFileSync(join(root, "scripts/config/superboard-front-view-implementations.json"), "utf8"),
 	);
-	const views = new Map(implementations.views.map((view) => [view.route_id, view]));
+	const views = new Map(
+		implementations.views.map((view) => [`${view.plugin_id}:${view.path}`, view]),
+	);
 	const historicalRoutes = baseline.plugins.flatMap((plugin) =>
 		plugin.routes.map((route) => ({ ...route, plugin_id: plugin.plugin_id })),
 	);
@@ -553,10 +576,10 @@ export function buildParityMatrix() {
 		throw new Error("Frozen Front inventory is incomplete");
 	const dashboardRows = historicalRoutes.map(
 		({ path: route, route_id: routeId, plugin_id: pluginId }) => {
-			const implementation = views.get(routeId);
+			const implementation = views.get(`${pluginId}:${canonicalFrontPath(route)}`);
 			if (
 				!implementation ||
-				implementation.path !== route ||
+				implementation.path !== canonicalFrontPath(route) ||
 				implementation.plugin_id !== pluginId ||
 				!existsSync(join(root, implementation.module))
 			)
@@ -600,7 +623,7 @@ export function buildParityMatrix() {
 		row({
 			id: `api:${namespace}`,
 			kind: "api",
-			baseline: "packages/plugins/supbrd-core/api/src/index.ts",
+			baseline: "packages/plugins/superboard-core/api/src/index.ts",
 			target: "supbrd-plugmod-gateway",
 			test: apiProof(namespace),
 			sourceStatus: namespace.includes("support") ? "unvalidated" : "delivered",
@@ -1195,6 +1218,8 @@ function stableBuildId(value) {
 
 function buildFrontBundleReceipt() {
 	const explicit = [
+		join(root, "packages/contracts/src/front-paths.ts"),
+		join(root, "packages/supbrd-core/src/plugin-front-runtime.ts"),
 		join(root, "apps/site/dashboard-vite-aliases.mjs"),
 		join(root, "apps/site/src/components/FrontPage.astro"),
 		join(root, "apps/site/src/components/NativeFrontApp.tsx"),
@@ -1208,15 +1233,15 @@ function buildFrontBundleReceipt() {
 		join(root, "apps/site/src/styles/dashboard-views.css"),
 		join(root, "apps/site/src/styles/native-front.css"),
 		join(root, "packages/supbrd-core/src/native-front.ts"),
-		join(root, "packages/plugins/supbrd-plug-identity/src/user.ts"),
-		join(root, "packages/plugins/supbrd-plug-identity/src/front-user.ts"),
+		join(root, "packages/plugins/superboard-authentification/src/user.ts"),
+		join(root, "packages/plugins/superboard-authentification/src/front-user.ts"),
 	];
 	const sourceFiles = [
 		...explicit,
 		...walk(join(root, "packages/supbrd-front-ui/src"), isFrontBundleSource),
 		...walk(join(root, "apps/site/src/front-plugins"), (path) => path.endsWith(".ts")),
 		...readdirSync(join(root, "packages/plugins"))
-			.filter((name) => name.startsWith("supbrd-"))
+			.filter((name) => name.startsWith("superboard-"))
 			.flatMap((name) => walk(join(root, "packages/plugins", name, "src"), isFrontBundleSource)),
 	]
 		.filter((path, index, all) => existsSync(path) && all.indexOf(path) === index)
@@ -1318,46 +1343,46 @@ function row({ id, kind, baseline, target, test, sourceStatus = "delivered", blo
 
 function apiProof(namespace) {
 	if (namespace.includes("support"))
-		return "tests/checks/plugins/supbrd-core/api/unit/lib/support-gateway.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/lib/support-gateway.test.ts";
 	if (
 		namespace.includes("billing") ||
 		namespace.includes("purchases") ||
 		namespace.includes("iap")
 	) {
-		return "tests/checks/plugins/supbrd-core/api/unit/lib/purchases-v2.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/lib/purchases-v2.test.ts";
 	}
 	if (namespace.includes("mcp"))
-		return "tests/checks/plugins/supbrd-core/api/unit/routes/mcp.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/routes/mcp.test.ts";
 	if (namespace.includes("marketing"))
-		return "tests/checks/plugins/supbrd-core/api/unit/routes/marketing-sdk.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/routes/marketing-sdk.test.ts";
 	if (namespace.includes("platform"))
-		return "tests/checks/plugins/supbrd-core/api/unit/routes/platform-status.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/routes/platform-status.test.ts";
 	if (
 		namespace.includes("admin") ||
 		namespace.includes("automation") ||
 		namespace.includes("diagnostics")
 	) {
-		return "tests/checks/plugins/supbrd-core/api/unit/routes/admin-cutover-flows-routing.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/routes/admin-cutover-flows-routing.test.ts";
 	}
 	if (
 		namespace.includes("instances") ||
 		namespace.includes("projects") ||
 		namespace.includes("links")
 	) {
-		return "tests/checks/plugins/supbrd-core/api/unit/routes/projects-visitors.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/routes/projects-visitors.test.ts";
 	}
 	if (namespace.includes("sdk"))
-		return "tests/checks/plugins/supbrd-core/api/unit/routes/sdk-auth.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/routes/sdk-auth.test.ts";
 	if (namespace.includes("oauth") || namespace.includes("users")) {
-		return "tests/checks/plugins/supbrd-core/api/unit/routes/auth-routes.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/routes/auth-routes.test.ts";
 	}
 	if (namespace === "/auth/*")
-		return "tests/checks/plugins/supbrd-core/api/unit/routes/providers.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/routes/providers.test.ts";
 	if (namespace.includes("{domain}"))
-		return "tests/checks/plugins/supbrd-core/api/unit/lib/domain-modules.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/lib/domain-modules.test.ts";
 	if (namespace.includes("short-links"))
-		return "tests/checks/plugins/supbrd-core/api/unit/routes/redirect.test.ts";
-	return "tests/checks/plugins/supbrd-core/api/unit/index.test.ts";
+		return "tests/checks/plugins/superboard-core/api/unit/routes/redirect.test.ts";
+	return "tests/checks/plugins/superboard-core/api/unit/index.test.ts";
 }
 
 function workerProof(worker) {

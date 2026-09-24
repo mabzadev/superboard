@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
 	resolveRedirects,
 	type LinkRedirectsInput,
-} from "../../../../../../../packages/plugins/supbrd-plug-analytics/src/front/hooks/useResolvedRedirects.js";
+} from "../../../../../../../packages/plugins/superboard-analytics/src/front/hooks/useResolvedRedirects.js";
 import { DEFAULT } from "../../../../../../../packages/supbrd-front-ui/src/shared/constants/OptionsConstants.js";
 import type { RedirectConfig } from "../../../../../../../packages/supbrd-front-ui/src/shared/types/index.js";
 

@@ -1,1 +1,120 @@
+@layer theme, base, components, utilities;
+
 @import "@cloudflare/kumo/styles/standalone";
+
+:root {
+	--color-kumo-brand: var(--primary);
+	--color-kumo-brand-hover: var(--primary);
+	--color-kumo-canvas: var(--background);
+	--color-kumo-base: var(--card);
+	--color-kumo-elevated: var(--popover);
+	--color-kumo-recessed: var(--muted);
+	--color-kumo-contrast: var(--foreground);
+	--color-kumo-control: var(--control-raised);
+	--color-kumo-line: var(--border);
+	--color-kumo-hairline: var(--border);
+	--color-kumo-fill: var(--muted);
+	--color-kumo-tint: var(--muted);
+	--color-kumo-fill-hover: var(--accent);
+	--color-kumo-focus: var(--ring);
+	--color-kumo-success: var(--valid-green);
+	--color-kumo-success-tint: var(--valid-green-light-2);
+	--color-kumo-danger: var(--destructive);
+	--color-kumo-danger-tint: var(--destructive-secondary);
+	--color-kumo-warning: var(--warning);
+	--color-kumo-info: var(--info);
+	--text-color-kumo-default: var(--foreground);
+	--text-color-kumo-strong: var(--foreground);
+	--text-color-kumo-subtle: var(--muted-foreground);
+	--text-color-kumo-inactive: var(--tertiary-foreground);
+	--text-color-kumo-disabled: var(--tertiary-foreground);
+	--text-color-kumo-brand: var(--valid-green);
+	--text-color-kumo-link: var(--valid-green);
+	--text-color-kumo-inverse: var(--foreground-contrast);
+	--text-color-kumo-placeholder: var(--tertiary-foreground);
+	--text-color-kumo-success: var(--valid-green);
+	--text-color-kumo-danger: var(--destructive);
+	--text-color-kumo-warning: var(--warning);
+	--text-color-kumo-info: var(--info);
+	--color-kumo-overlay: rgb(0 0 0 / 50%);
+	--color-kumo-warning-tint: color-mix(in srgb, var(--warning) 10%, var(--background));
+	--color-kumo-info-tint: color-mix(in srgb, var(--info) 10%, var(--background));
+	--kumo-button-emphasis-bg: var(--primary);
+	--kumo-button-emphasis-gradient-start: var(--primary);
+	--kumo-button-emphasis-gradient-end: var(--primary);
+	--kumo-button-emphasis-ring: var(--border-brand);
+}
+
+.front-input,
+.front-select {
+	min-width: 0;
+	height: 34px;
+	border: 1px solid var(--border-control);
+	border-radius: var(--radius);
+	padding-inline: 0.75rem;
+	font-family: var(--font-sans);
+	font-size: var(--text-sm);
+	font-weight: 400;
+	color: var(--foreground);
+	background: var(--field);
+	box-shadow: none;
+}
+
+.front-select {
+	background: var(--control-raised);
+}
+
+.front-textarea {
+	height: auto;
+	min-height: 5rem;
+	padding-block: 0.5rem;
+}
+
+.front-input:hover,
+.front-select:hover {
+	border-color: var(--border-control-hover);
+}
+
+.front-input:focus-visible,
+.front-select:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}
+
+.front-input[aria-invalid="true"],
+.front-input[data-invalid],
+.front-select[data-invalid] {
+	border-color: var(--destructive);
+}
+
+:where(div:has(> .front-input), div:has(> .front-select)) > label,
+div:has(> .front-select) > [id$="-label"],
+[data-kumo-component="Select"][data-kumo-part="option"] {
+	font-size: var(--text-sm);
+	font-weight: 400;
+}
+
+.front-dialog {
+	border: 1px solid var(--border-overlay);
+	border-radius: var(--radius);
+	background: var(--popover);
+	color: var(--popover-foreground);
+	font-size: var(--text-sm);
+	max-height: calc(100svh - 2rem);
+	overflow-y: auto;
+}
+
+[data-kumo-component="Checkbox"][data-checked],
+[data-kumo-component="Checkbox"][data-indeterminate] {
+	background: var(--primary);
+	box-shadow: 0 0 0 1px var(--primary);
+}
+
+[data-kumo-component="Checkbox"] > span {
+	color: var(--primary-foreground);
+}
+
+[data-kumo-component="Checkbox"]:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}

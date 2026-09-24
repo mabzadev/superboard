@@ -41,7 +41,7 @@ The installable SuperBoard packages are `supbrd-core`, `supbrd-plug-identity`,
 `supbrd-plug-data`, `supbrd-plug-commerce`, `supbrd-plug-communication`,
 `supbrd-plug-journeys`, `supbrd-plug-support` and `supbrd-plug-analytics`.
 The library `packages/supbrd-core` provides shared mechanisms; the package
-`packages/plugins/supbrd-core` supplies the platform plugin.
+`packages/plugins/superboard-core` supplies the platform plugin.
 
 `scripts/config/superboard-plugin-packages.json` assigns components to plugins.
 `scripts/cloudflare/services.mjs` records the source package of each logical

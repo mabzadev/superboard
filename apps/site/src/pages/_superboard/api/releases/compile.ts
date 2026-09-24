@@ -5,8 +5,8 @@ import { handleError } from "emdash/api/error";
 import { loadDraftSnapshot, recordCompilation } from "../../../../lib/front-workflow-repository.js";
 import { requireManagedPluginOperationAccess } from "../../../../lib/managed-plugin-operation.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
-import { validateReleaseRouteViews } from "../../../../lib/plugin-client-catalog.js";
 import { stageCompiledFrontRelease } from "../../../../lib/release-repository.js";
+import { validateReleaseRouteViews } from "../../../../lib/release-route-view-validation.js";
 import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 
@@ -87,6 +87,7 @@ export const POST: APIRoute = async (context) => {
 		const viewFailures = await validateReleaseRouteViews(
 			input.front_route_manifest.routes,
 			input.renderers,
+			input.plugin_lock,
 		);
 		if (viewFailures.length > 0) {
 			if (failedCompilation) {

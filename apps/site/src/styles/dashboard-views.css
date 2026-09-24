@@ -1,15 +1,16 @@
-@import "../../../../packages/supbrd-front-ui/src/styles/superboard-tokens.css";
-@import "../../../../packages/supbrd-front-ui/src/styles/globals.css";
+@import "@superboard/front-ui/styles/superboard-tokens.css";
+@import "@superboard/front-ui/styles/globals.css";
 
+@source "..";
 @source "../../../../packages/supbrd-front-ui/src";
-@source "../../../../packages/plugins/supbrd-core/src/front";
-@source "../../../../packages/plugins/supbrd-plug-identity/src/front";
-@source "../../../../packages/plugins/supbrd-plug-data/src/front";
-@source "../../../../packages/plugins/supbrd-plug-commerce/src/front";
-@source "../../../../packages/plugins/supbrd-plug-communication/src/front";
-@source "../../../../packages/plugins/supbrd-plug-journeys/src/front";
-@source "../../../../packages/plugins/supbrd-plug-support/src/front";
-@source "../../../../packages/plugins/supbrd-plug-analytics/src/front";
+@source "../../../../packages/plugins/superboard-core/src/front";
+@source "../../../../packages/plugins/superboard-authentification/src/front";
+@source "../../../../packages/plugins/superboard-data/src/front";
+@source "../../../../packages/plugins/superboard-monetization/src/front";
+@source "../../../../packages/plugins/superboard-communication/src/front";
+@source "../../../../packages/plugins/superboard-acquisition/src/front";
+@source "../../../../packages/plugins/superboard-support/src/front";
+@source "../../../../packages/plugins/superboard-analytics/src/front";
 
 .native-front-dashboard-view {
 	width: 100%;
@@ -23,9 +24,10 @@
 
 .native-front-dashboard-additions {
 	display: grid;
-	gap: 20px;
+	gap: var(--space-5, 1.25rem);
 	width: 100%;
 	max-width: 90rem;
 	margin-inline: auto;
-	padding: 0 var(--page-padding-x, 24px) var(--page-padding-y, 24px);
+	padding: 0 var(--page-padding-x, var(--space-6, 1.5rem))
+		var(--page-padding-y, var(--space-6, 1.5rem));
 }

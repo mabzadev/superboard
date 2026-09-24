@@ -1,4 +1,4 @@
-import { pluginPackage, pluginPackages } from "@superboard/contracts/plugin-packages";
+import { pluginPackage } from "@superboard/contracts/plugin-packages";
 
 import catalog from "../../../../scripts/config/superboard-plugin-catalog.json";
 
@@ -10,11 +10,11 @@ export interface PluginPackageScope {
 export async function migratePluginPackages(
 	db: D1Database,
 	scope: PluginPackageScope,
-	targetComponents: readonly string[],
+	_targetComponents: readonly string[],
 ) {
 	const migration = await db
 		.prepare(
-			"SELECT 1 FROM superboard_plugin_package_migrations WHERE instance_id = ? AND target = ? AND migration_id = 'packages-v1'",
+			"SELECT 1 FROM superboard_plugin_package_migrations WHERE instance_id = ? AND target = ? AND migration_id = 'packages-v2'",
 		)
 		.bind(scope.instance_id, scope.target)
 		.first();
@@ -26,36 +26,11 @@ export async function migratePluginPackages(
 		.bind(scope.instance_id)
 		.first();
 	if (busy) throw new Error("PLUGIN_OPERATION_IN_PROGRESS");
-	const states = await db
-		.prepare(
-			"SELECT plugin_id, state FROM superboard_plugin_lifecycle WHERE instance_id = ? AND target = ?",
-		)
-		.bind(scope.instance_id, scope.target)
-		.all<{ plugin_id: string; state: string }>();
-	const current = new Map(states.results.map((row) => [row.plugin_id, row.state]));
 	const now = new Date().toISOString();
-	const statements: D1PreparedStatement[] = [];
-	for (const owner of pluginPackages) {
-		for (const component of owner.components) {
-			const state = current.get(component);
-			const enabled =
-				state === "active" ||
-				((!state || ["available", "staged", "installed"].includes(state)) &&
-					targetComponents.includes(component));
-			statements.push(
-				db
-					.prepare(
-						"INSERT OR IGNORE INTO superboard_plugin_feature_preferences (instance_id,target,component_id,enabled,updated_at) VALUES (?,?,?,?,?)",
-					)
-					.bind(scope.instance_id, scope.target, component, Number(enabled), now),
-			);
-		}
-	}
-	await db.batch(statements);
 	await syncInstalledPluginPackages(db, scope);
 	await db
 		.prepare(
-			"INSERT OR IGNORE INTO superboard_plugin_package_migrations (instance_id,target,migration_id,completed_at) VALUES (?,?,'packages-v1',?)",
+			"INSERT OR IGNORE INTO superboard_plugin_package_migrations (instance_id,target,migration_id,completed_at) VALUES (?,?,'packages-v2',?)",
 		)
 		.bind(scope.instance_id, scope.target, now)
 		.run();
@@ -115,8 +90,8 @@ export async function syncInstalledPluginPackages(db: D1Database, scope: PluginP
 }
 
 export async function packageActionComponents(
-	db: D1Database,
-	scope: PluginPackageScope,
+	_db: D1Database,
+	_scope: PluginPackageScope,
 	input: {
 		packageId: string;
 		action: "enable" | "disable";
@@ -126,46 +101,13 @@ export async function packageActionComponents(
 ) {
 	const owner = pluginPackage(input.packageId);
 	if (!owner) throw new Error("PLUGIN_NOT_FOUND");
-	if (input.featureId && !owner.components.includes(input.featureId))
-		throw new Error("PLUGIN_FEATURE_NOT_FOUND");
-	if (
-		input.action === "disable" &&
-		owner.kind === "core" &&
-		(!input.featureId || owner.required_components.includes(input.featureId))
-	)
+	if (input.featureId) throw new Error("PLUGIN_FEATURE_NOT_FOUND");
+	if (input.action === "disable" && owner.kind === "core")
 		throw new Error("CORE_COMPONENT_REQUIRED");
-	if (input.featureId) {
-		if (input.action === "enable" && !input.targetComponents.includes(input.featureId))
-			throw new Error("PLUGIN_FEATURE_NOT_IN_TARGET");
-		return { owner, components: [input.featureId] };
-	}
 	if (input.action === "disable") return { owner, components: owner.components };
-	const preferences = await db
-		.prepare(
-			"SELECT component_id,enabled FROM superboard_plugin_feature_preferences WHERE instance_id = ? AND target = ?",
-		)
-		.bind(scope.instance_id, scope.target)
-		.all<{ component_id: string; enabled: number }>();
-	const enabled = new Map(preferences.results.map((row) => [row.component_id, row.enabled === 1]));
-	const components = owner.components.filter(
-		(id) => input.targetComponents.includes(id) && (enabled.get(id) ?? true),
-	);
+	const components = owner.components.filter((id) => input.targetComponents.includes(id));
 	if (!components.length) throw new Error("PLUGIN_NO_ENABLED_FEATURES");
 	return { owner, components };
-}
-
-export async function setPluginFeaturePreference(
-	db: D1Database,
-	scope: PluginPackageScope,
-	componentId: string,
-	enabled: boolean,
-) {
-	await db
-		.prepare(
-			"INSERT INTO superboard_plugin_feature_preferences (instance_id,target,component_id,enabled,updated_at) VALUES (?,?,?,?,?) ON CONFLICT(instance_id,target,component_id) DO UPDATE SET enabled=excluded.enabled,updated_at=excluded.updated_at",
-		)
-		.bind(scope.instance_id, scope.target, componentId, Number(enabled), new Date().toISOString())
-		.run();
 }
 
 export async function syncPluginPackageRuntime(

@@ -140,7 +140,7 @@ test.describe("Flows workflow editor on the owning Worker", () => {
 		test(`SDK settings use the selected project in ${locale}`, async ({
 			authenticatedPage: page,
 		}) => {
-			await ready(page, `/flows/settings/sdk?lang=${locale}`);
+			await ready(page, `/acquisition/settings?tab=sdk&lang=${locale}`);
 			await expect(page.getByText(label, { exact: true })).toBeVisible();
 			await expect(
 				page

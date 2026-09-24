@@ -40,7 +40,7 @@ privacy-first application operations control plane. It provides:
 
 The deployment account, region, public origins and enabled capabilities are
 owned by the selected application target. See the
-[Worker source](https://github.com/mabzadev/superboard/tree/main/packages/plugins/supbrd-core/api)
+[Worker source](https://github.com/mabzadev/superboard/tree/main/packages/plugins/superboard-core/api)
 and target manifests for self-hosting.
 
 ## What is this MCP server?
@@ -165,7 +165,7 @@ Copy `.env.example` to `.env` for local development.
 MCP client
     │  stateless Streamable HTTP + OAuth bearer token
     ▼
-Cloudflare Worker (`packages/plugins/supbrd-core/mcp`)
+Cloudflare Worker (`packages/plugins/superboard-core/mcp`)
     ├── validates Host, Origin and bearer token
     ├── exposes only `/mcp`, `/health` and OAuth resource metadata
     └── calls the API through a private `API_SERVICE` binding

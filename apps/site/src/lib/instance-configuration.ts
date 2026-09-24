@@ -5,10 +5,10 @@ import {
 	type DeploymentRoute,
 } from "@superboard/contracts/deployment-configuration";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
+import { deploymentI18n } from "@superboard/front-ui/deployment-i18n.js";
 
 import { resolveLocale } from "../../../../packages/admin/src/locales/config.js";
 import type { Block, BlockResponse } from "../../../../packages/blocks/src/types.js";
-import { deploymentI18n } from "../../../../packages/supbrd-front-ui/src/deployment-i18n.js";
 import { proxyOperatorApiRequest, type OperatorApiProxyEnv } from "./operator-api-proxy.js";
 
 interface ConfigurationEnv extends OperatorApiProxyEnv {

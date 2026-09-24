@@ -37,6 +37,14 @@
 				"dist/flows/**/*.mjs",
 				"dist/**/*.d.ts"
 			]
+		},
+		"packages/plugins/superboard-monetization/billing": {
+			"vitest": {
+				"config": ["vitest*.config.ts"]
+			},
+			"wrangler": {
+				"config": ["wrangler*.jsonc"]
+			}
 		}
 	},
 	"ignore": [

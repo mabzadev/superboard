@@ -19,7 +19,7 @@ for (const definition of definitions) {
 		const directory = resolve(
 			root,
 			"packages/plugins",
-			definition.id,
+			definition.directory ?? definition.id,
 			"src/front",
 			definition.components.length > 1 ? short : "",
 		);

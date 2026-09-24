@@ -16,8 +16,8 @@ const sourceRoots = [
 	"sdks/flutter/ios/Classes",
 	"sdks/web/src",
 	"sdks/flutter/native/android/SuperBoard/SuperBoard/src/main",
-	"packages/plugins/supbrd-core/api/src",
-	"packages/plugins/supbrd-plug-commerce/billing/src",
+	"packages/plugins/superboard-core/api/src",
+	"packages/plugins/superboard-monetization/billing/src",
 ];
 // Engineering documentation and migration runbooks are intentionally excluded:
 // they may be localized and may name the deployment they document. This gate is

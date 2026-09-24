@@ -8,7 +8,7 @@ import test from "node:test";
 function fixture(context, source) {
 	const root = mkdtempSync(join(tmpdir(), "superboard-copy-"));
 	context.after(() => rmSync(root, { recursive: true, force: true }));
-	const path = join(root, "packages/plugins/supbrd-plug-support/src/front/Page.tsx");
+	const path = join(root, "packages/plugins/superboard-support/src/front/Page.tsx");
 	mkdirSync(resolve(path, ".."), { recursive: true });
 	writeFileSync(path, source);
 	return () =>

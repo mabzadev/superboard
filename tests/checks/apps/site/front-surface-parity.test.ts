@@ -6,6 +6,7 @@ import { expect, test } from "vitest";
 import { nativeFrontPluginCatalog } from "../../../../apps/site/src/lib/native-front-plugins.js";
 import { superBoardRuntimePluginCatalog } from "../../../../apps/site/src/lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../../../../apps/site/src/lib/user-front-release.js";
+import { canonicalFrontPath } from "../../../../packages/contracts/src/front-paths.js";
 
 interface DashboardParityRow {
 	id: string;
@@ -64,11 +65,13 @@ test("every required Dashboard surface is a real target route backed by its decl
 		.filter((permission) => permission !== "allow");
 
 	for (const row of requiredRows) {
-		const path = row.id
-			.slice("dashboard:".length)
-			.replaceAll("[lang]", ":lang")
-			.replaceAll("[id]", ":id")
-			.replaceAll("[authId]", ":authId");
+		const path = canonicalFrontPath(
+			row.id
+				.slice("dashboard:".length)
+				.replaceAll("[lang]", ":lang")
+				.replaceAll("[id]", ":id")
+				.replaceAll("[authId]", ":authId"),
+		);
 		const route = routesByPath.get(path);
 		expect(route, `missing target route for ${row.id}`).toBeDefined();
 		expect(route?.renderer_ids.length, `route without renderer: ${row.id}`).toBeGreaterThan(0);

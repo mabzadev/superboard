@@ -37,7 +37,7 @@ if (model.resolution.result === "rendered" && model.operator) {
 	if (Astro.cache?.enabled) Astro.cache.set(viewResult.cacheHint);
 	configuration = {
 		navigation: editableNavigationFromMenu(menu),
-		view: editableViewFromEntry(viewResult.entry),
+		view: editableViewFromEntry(viewResult.entry, model.release?.release.payload ?? null),
 	};
 }
 const projection = projectNativeFrontPresentation(model, locale, configuration);

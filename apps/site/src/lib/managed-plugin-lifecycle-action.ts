@@ -25,7 +25,6 @@ import {
 import {
 	migratePluginPackages,
 	packageActionComponents,
-	setPluginFeaturePreference,
 	syncPluginPackageRuntime,
 } from "./plugin-package-state.js";
 import { wakePendingPluginWorkflows } from "./plugin-task-wakeup.js";
@@ -80,7 +79,6 @@ export async function runManagedPluginLifecycleAction(
 	}
 	const pluginId = selection.owner.id;
 	const componentIds = selection.components;
-	const selected = new Set(componentIds);
 	const operationId = context.request.headers.get("Idempotency-Key") ?? crypto.randomUUID();
 	if (!operationIdPattern.test(operationId))
 		return jsonResponse({ error: { code: "INVALID_IDEMPOTENCY_KEY" } }, 422);
@@ -88,7 +86,7 @@ export async function runManagedPluginLifecycleAction(
 		operation_id: operationId,
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		target,
-		plugin_id: context.params.featureId ?? pluginId,
+		plugin_id: pluginId,
 		action,
 	});
 	if ("response" in started) return started.response;
@@ -178,8 +176,6 @@ export async function runManagedPluginLifecycleAction(
 			response = jsonResponse({ error: { code: "PLUGIN_LIFECYCLE_ACTION_FAILED" } }, 500);
 		}
 	}
-	if (response.ok && context.params.featureId && selected.has(context.params.featureId))
-		await setPluginFeaturePreference(env.DB, scope, context.params.featureId, action === "enable");
 	if (response.ok) {
 		const body: unknown = await response.json();
 		if (body && typeof body === "object" && !Array.isArray(body))
@@ -188,7 +184,6 @@ export async function runManagedPluginLifecycleAction(
 					...body,
 					plugin_id: context.params.pluginId ?? pluginId,
 					package_id: pluginId,
-					...(context.params.featureId ? { feature_id: context.params.featureId } : {}),
 				},
 				response.status,
 			);

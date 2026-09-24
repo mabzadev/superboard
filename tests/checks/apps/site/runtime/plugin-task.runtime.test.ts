@@ -15,8 +15,8 @@ import {
 } from "cloudflare:test";
 import { beforeAll, expect, test } from "vitest";
 
-import analyticsWorker from "../../../../../packages/plugins/supbrd-plug-analytics/worker/src/index.js";
-import { ingestAnalyticsEvents } from "../../../../../packages/plugins/supbrd-plug-analytics/worker/src/ingestion.js";
+import analyticsWorker from "../../../../../packages/plugins/superboard-analytics/worker/src/index.js";
+import { ingestAnalyticsEvents } from "../../../../../packages/plugins/superboard-analytics/worker/src/ingestion.js";
 import { dispatchLifecycleApi, pluginTaskContext } from "./lifecycle-health-services.js";
 
 const pluginId = "supbrd-plugmod-analytics";

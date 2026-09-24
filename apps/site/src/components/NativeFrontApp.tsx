@@ -3,6 +3,7 @@ import {
 	SectionNavigation,
 	SectionNavigationProvider,
 } from "@superboard/front-ui/section-navigation";
+import { Button } from "@superboard/front-ui/ui";
 import type {
 	NativeRendererBlock,
 	NativeRendererCard,
@@ -10,7 +11,6 @@ import type {
 } from "@superboard/supbrd-core";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
-import { Button } from "../../../../packages/supbrd-front-ui/src/shared/components/ui/button.js";
 import { mountNativeFrontRenderer } from "../lib/native-front-plugins.js";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
 import { organizeProductNavigation } from "../lib/product-navigation.js";

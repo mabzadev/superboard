@@ -1,7 +1,7 @@
 import { env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
-import { buildPlatformStatus } from "../../../../../packages/plugins/supbrd-core/api/src/routes/platform-status.js";
+import { buildPlatformStatus } from "../../../../../packages/plugins/superboard-core/api/src/routes/platform-status.js";
 import catalogFixture from "../../../../fixtures/apps/site/runtime-tests/platform-site-catalog.generated.json";
 import { pluginDatabase, prepareApiPlugin } from "./retirement-api-helpers.js";
 

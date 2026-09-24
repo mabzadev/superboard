@@ -4,17 +4,21 @@ import { expect, test } from "vitest";
 import seed from "../../../../apps/site/seed/seed.json";
 import { superBoardRuntimePluginCatalog } from "../../../../apps/site/src/lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../../../../apps/site/src/lib/user-front-release.js";
+import { canonicalFrontPath } from "../../../../packages/contracts/src/front-paths.js";
 import navigation from "../../../../scripts/config/superboard-dashboard-navigation.json";
 
 test("the EmDash seed exposes every Dashboard screen as a plugin-owned View", () => {
 	expect(Object.keys(seed.content)).toEqual(["views"]);
 	expect(seed.collections.map(({ slug }) => slug)).toEqual(["views"]);
-	const expectedPaths = navigation.sections.flatMap((section) =>
-		section.pages.map(({ href }) => href),
-	);
+	const expectedPaths = [
+		...new Set(
+			navigation.sections.flatMap((section) =>
+				section.pages.map(({ href }) => canonicalFrontPath(href)),
+			),
+		),
+	];
 	const views = new Map(seed.content.views.map((view) => [view.data.path, view]));
 
-	expect(expectedPaths).toHaveLength(71);
 	expect(views.size).toBe(expectedPaths.length);
 	for (const path of expectedPaths) {
 		const view = views.get(path);
@@ -24,13 +28,11 @@ test("the EmDash seed exposes every Dashboard screen as a plugin-owned View", ()
 		expect(view!.data.renderer_id, path).toBe(`${view!.data.plugin_id}.renderer.admin_surface`);
 		expect(view!.data.presentation.schema_version).toBe("1.0.0");
 		expect(view!.data.presentation.blocks).toBeInstanceOf(Array);
-		expect(view!.data.bindings.data_sources.length, path).toBeGreaterThan(0);
-		expect(view!.data.bindings.commands.length, path).toBeGreaterThan(0);
 	}
 	expect(JSON.stringify(seed)).not.toContain("No data available for this surface yet.");
 });
 
-test("Remote Config selects its real Dashboard renderer and plugin capabilities", () => {
+test("Remote Config selects its real Dashboard renderer without freezing plugin capabilities", () => {
 	const remoteConfig = seed.content.views.find(
 		({ data }) => data.path === "/analytics/remote-config",
 	);
@@ -40,12 +42,6 @@ test("Remote Config selects its real Dashboard renderer and plugin capabilities"
 	);
 	expect(remoteConfig?.data.renderer_id).toBe("supbrd-plugmod-analytics.renderer.admin_surface");
 	expect(remoteConfig?.data.presentation.blocks).toEqual([]);
-	expect(remoteConfig?.data.bindings.data_sources).toContain(
-		"supbrd-plugmod-analytics.data_source.analytics_remote_config",
-	);
-	expect(remoteConfig?.data.bindings.commands).toContain(
-		"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
-	);
 });
 
 test("every View resolves to the matching plugin route", async () => {

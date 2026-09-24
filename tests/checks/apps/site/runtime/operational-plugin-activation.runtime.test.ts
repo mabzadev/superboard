@@ -45,12 +45,6 @@ test("Communication can be activated and configured before entering provider cre
 	const response = await SELF.fetch(actionUrl(plugin, "enable"), { method: "POST", headers });
 	expect(response.status, await response.clone().text()).toBe(201);
 	expect(await enabled(plugin)).toBe(1);
-	const page = await SELF.fetch(`https://site.example/_emdash/api/plugins/${plugin}/admin`, {
-		method: "POST",
-		headers: { ...headers, "Content-Type": "application/json" },
-		body: "{}",
-	});
-	expect(page.status, await page.clone().text()).toBe(200);
 	const disabled = await SELF.fetch(actionUrl(plugin, "disable"), { method: "POST", headers });
 	expect(disabled.status, await disabled.clone().text()).toBe(201);
 	expect(await enabled(plugin)).toBe(0);

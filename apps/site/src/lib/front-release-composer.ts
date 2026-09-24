@@ -217,10 +217,10 @@ export function composeFrontReleaseInput(
 			theme: {
 				theme_id: "theme.superboard",
 				tokens: {
-					accent: "#2f81f7",
-					background: "#070b14",
-					foreground: "#f4f7fb",
-					panel: "#0d1524",
+					accent: "#3ecf8e",
+					background: "#fafafa",
+					foreground: "#171717",
+					panel: "#ffffff",
 				},
 			},
 		},

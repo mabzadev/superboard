@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { parseQueueConsumer } from "../../packages/plugins/supbrd-plug-commerce/scripts/billing-consumer.mjs";
+import { parseQueueConsumer } from "../../packages/plugins/superboard-monetization/scripts/billing-consumer.mjs";
 import { captureConsoleArtifact, verifyConsoleArtifact } from "./console-artifact.mjs";
 import { deploymentOrder } from "./deploy-plan.mjs";
 import { consolidateWorkerConfigurations } from "./deployment-groups.mjs";

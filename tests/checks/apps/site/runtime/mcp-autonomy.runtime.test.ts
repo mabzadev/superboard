@@ -1,8 +1,8 @@
 import { createExecutionContext, env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
-import { dispatchMcpInstanceIntegration } from "../../../../../packages/plugins/supbrd-core/api/src/lib/mcp-instance-integrations.js";
-import appWorker from "../../../../../packages/plugins/supbrd-core/app/src/index.js";
+import { dispatchMcpInstanceIntegration } from "../../../../../packages/plugins/superboard-core/api/src/lib/mcp-instance-integrations.js";
+import appWorker from "../../../../../packages/plugins/superboard-core/app/src/index.js";
 
 const plugin = "supbrd-plugmod-mcp";
 const headers = {

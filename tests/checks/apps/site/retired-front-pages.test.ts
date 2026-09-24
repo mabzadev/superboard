@@ -5,7 +5,7 @@ import { retiredFrontPageDestination } from "../../../../apps/site/src/lib/retir
 test.each(["/app/members", "/app/members/"])(
 	"redirects the retired members page %s to application users",
 	(path) => {
-		expect(retiredFrontPageDestination(path)).toBe("/app/users");
+		expect(retiredFrontPageDestination(path)).toBe("/auth/users");
 	},
 );
 

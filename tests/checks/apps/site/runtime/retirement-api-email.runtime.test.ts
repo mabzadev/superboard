@@ -3,8 +3,8 @@ import { Buffer } from "node:buffer";
 import { env, SELF } from "cloudflare:test";
 import { afterAll, expect, test, vi } from "vitest";
 
-import { receiveEmailProviderWebhook } from "../../../../../packages/plugins/supbrd-plug-communication/email/src/admin.js";
-import { quarantineEmailDeadLetter } from "../../../../../packages/plugins/supbrd-plug-communication/email/src/index.js";
+import { receiveEmailProviderWebhook } from "../../../../../packages/plugins/superboard-communication/email/src/admin.js";
+import { quarantineEmailDeadLetter } from "../../../../../packages/plugins/superboard-communication/email/src/index.js";
 import {
 	apiHeaders,
 	apiCommand,

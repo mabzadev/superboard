@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { canonicalPluginIdentifier } from "../../packages/contracts/src/plugin-identifiers.ts";
 import definitions from "../config/superboard-plugin-packages.json" with { type: "json" };
 
 function canonical(value) {
@@ -19,6 +20,50 @@ function checksum(value) {
 }
 function settingKey(component, key) {
 	return `${component}__${key}`;
+}
+
+function canonicalManifest(manifest, definition) {
+	function rewrite(value) {
+		if (typeof value === "string") return canonicalPluginIdentifier(value, definitions.packages);
+		if (Array.isArray(value)) return value.map(rewrite);
+		if (value && typeof value === "object")
+			return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, rewrite(item)]));
+		return value;
+	}
+	const result = rewrite(manifest);
+	result.settings.schema.properties = Object.fromEntries(
+		Object.entries(manifest.settings.schema.properties).map(([key, value]) => [
+			canonicalPluginIdentifier(key, definitions.packages),
+			rewrite(value),
+		]),
+	);
+	result.plugin_id = definition.directory;
+	result.artifact_id = `${definition.directory}@${manifest.plugin_version}`;
+	for (const collection of ["stores", "schemas", "commands", "data_sources"]) {
+		result[collection] = result[collection].map(({ checksum: _, ...content }) => ({
+			...content,
+			checksum: checksum(content),
+		}));
+	}
+	const schemas = new Map(result.schemas.map((schema) => [schema.schema_id, schema.checksum]));
+	for (const renderer of result.renderers)
+		renderer.props_schema.checksum =
+			schemas.get(renderer.props_schema.schema_id) ?? renderer.props_schema.checksum;
+	for (const [collection, key] of [
+		["stores", "store_id"],
+		["schemas", "schema_id"],
+		["renderers", "renderer_id"],
+		["commands", "command_id"],
+		["data_sources", "data_source_id"],
+	]) {
+		const ids = result[collection].map((entry) => entry[key]);
+		if (new Set(ids).size !== ids.length)
+			throw new Error(`CANONICAL_CONTRIBUTION_COLLISION:${definition.directory}:${collection}`);
+		for (const item of manifest[collection])
+			result.aliases[item[key]] = canonicalPluginIdentifier(item[key], definitions.packages);
+	}
+	const { artifact_checksum: _, ...content } = result;
+	return { ...content, artifact_checksum: checksum(content) };
 }
 
 export function buildPluginPackages(topology) {
@@ -95,10 +140,12 @@ export function buildPluginPackages(topology) {
 		};
 		return {
 			kind: definition.kind,
+			directory: definition.directory,
 			label: definition.label,
 			label_fr: definition.label_fr,
 			components: definition.components,
 			required_components: definition.required_components,
+			canonical_manifest: canonicalManifest(manifest, definition),
 			component_artifacts: manifests.map((item) => ({
 				id: item.plugin_id,
 				version: item.plugin_version,
@@ -128,9 +175,9 @@ export function lintPluginPackageProject(root) {
 			readFileSync(join(root, "scripts/config/superboard-plugin-catalog.json"), "utf8"),
 		);
 		if (canonical(actual) !== canonical(expected)) throw new Error("PLUGIN_PACKAGE_CATALOG_STALE");
-		const expectedEntries = expected.plugins.map(({ manifest }) => manifest.plugin_id).sort();
+		const expectedEntries = expected.plugins.map(({ directory }) => directory).sort();
 		const entries = readdirSync(join(root, "packages/plugins"))
-			.filter((name) => name.startsWith("supbrd-"))
+			.filter((name) => /^(?:supbrd|superboard|superbard)-/u.test(name))
 			.sort();
 		if (canonical(entries) !== canonical(expectedEntries))
 			throw new Error("PLUGIN_PACKAGE_ENTRYPOINTS_INVALID");

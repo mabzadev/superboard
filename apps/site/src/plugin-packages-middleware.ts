@@ -1,17 +1,19 @@
 import { pluginPackage, componentSettingKey } from "@superboard/contracts/plugin-packages";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
-import { createFrontI18n } from "@superboard/front-ui/i18n";
 import type { MiddlewareHandler } from "astro";
+import { GET as getPlugin } from "emdash/routes/api/admin/plugins/_id_/index";
 
 import { resolveLocale } from "../../../packages/admin/src/locales/config.js";
-import { createConfiguredSuperBoardPlugin } from "./lib/configured-plugin.js";
+import {
+	createConfiguredSuperBoardPlugin,
+	resolveConfiguredPluginSettingKey,
+} from "./lib/configured-plugin.js";
 import {
 	runManagedPluginLifecycleAction,
 	recoverExpiredManagedPluginOperation,
 } from "./lib/managed-plugin-lifecycle-action.js";
 import { canAccessOperatorConsole } from "./lib/operator-access.js";
 import { requireActiveSuperBoardPlugin } from "./lib/plugin-availability.js";
-import { packageFeatureBlocks } from "./lib/plugin-package-blocks.js";
 import { migratePluginPackages, syncPluginPackageRuntime } from "./lib/plugin-package-state.js";
 import { dispatchSettingsPluginApi } from "./lib/settings-plugin-api.js";
 import { getSiteEnv } from "./lib/site-env.js";
@@ -20,43 +22,9 @@ import {
 	resolveSuperBoardTargetPluginIds,
 } from "./lib/superboard-plugin-catalog.js";
 
-const messages = {
-	en: {
-		features: "Functions",
-		enabled: "Enabled",
-		disabled: "Disabled",
-		enable: "Enable",
-		disable: "Disable",
-		required: "Required",
-		settings: "Plugin settings",
-		description:
-			"Functions share one installation and update. Their settings and activation preferences are preserved.",
-		unavailable: "This function is not included in the deployment configuration.",
-	},
-	fr: {
-		features: "Fonctions",
-		enabled: "Activée",
-		disabled: "Désactivée",
-		enable: "Activer",
-		disable: "Désactiver",
-		required: "Obligatoire",
-		settings: "Réglages du plugin",
-		description:
-			"Les fonctions partagent une installation et une mise à jour. Leurs réglages et leurs préférences d’activation sont conservés.",
-		unavailable: "Cette fonction ne figure pas dans la configuration du déploiement.",
-	},
-	ar: {
-		features: "الوظائف",
-		enabled: "مفعّلة",
-		disabled: "معطّلة",
-		enable: "تفعيل",
-		disable: "تعطيل",
-		required: "مطلوبة",
-		settings: "إعدادات الإضافة",
-		description: "تشترك الوظائف في تثبيت وتحديث واحد مع الاحتفاظ بإعداداتها وتفضيلات تفعيلها.",
-		unavailable: "هذه الوظيفة غير مدرجة في إعدادات النشر.",
-	},
-};
+const detailPathPattern = /^\/_emdash\/api\/admin\/plugins\/([^/]+)$/u;
+const managerSettingsPattern =
+	/^\/_emdash\/admin\/plugins-manager\/([^/]+)\/(settings|configuration)$/u;
 const settingPathPattern = /^\/_emdash\/api\/admin\/plugins\/([^/]+)\/(settings|enable|disable)$/u;
 const apiPathPattern =
 	/^\/_emdash\/api\/plugins\/([^/]+)\/(admin|contract|health|settings\/effective|commands\/catalog|data-sources\/catalog)$/u;
@@ -65,19 +33,52 @@ const pagePathPattern = /^\/_emdash\/admin\/plugins\/([^/]+)(\/.*)?$/u;
 export const onRequest = (async (context, next) => {
 	const path = context.url.pathname;
 	const setting = path.match(settingPathPattern);
+	const detail = path.match(detailPathPattern);
+	const managerSettings = path.match(managerSettingsPattern);
 	const api = path.match(apiPathPattern);
 	const page = path.match(pagePathPattern);
 	const adminPage = path.startsWith("/_emdash/admin");
 	const list = path === "/_emdash/api/admin/plugins" && context.request.method === "GET";
-	if (!setting && !api && !adminPage && !list) return next();
+	if (!setting && !detail && !api && !adminPage && !list) return next();
 	if (!canAccessOperatorConsole(context.locals.user)) return next();
+	const requestedPackage = pluginPackage(
+		setting?.[1] ?? detail?.[1] ?? api?.[1] ?? page?.[1] ?? managerSettings?.[1] ?? "",
+	);
+	if (
+		managerSettings &&
+		requestedPackage &&
+		(managerSettings[2] === "settings" || managerSettings[1] !== requestedPackage.directory)
+	) {
+		const destination = new URL(
+			`/_emdash/admin/plugins-manager/${requestedPackage.directory}/configuration`,
+			context.url,
+		);
+		destination.search = context.url.search;
+		return Response.redirect(destination, 302);
+	}
+	if (requestedPackage && requestedPackage.kind !== "application") {
+		if (page && context.request.method === "GET" && (!page[2] || page[2] === "/")) {
+			const destination = new URL("/_emdash/admin/plugins-manager", context.url);
+			destination.search = context.url.search;
+			return Response.redirect(destination, 302);
+		}
+		if (api?.[2] === "admin" && context.request.method === "POST") {
+			const body = await readJsonObjectLimited(context.request.clone(), 65536);
+			const configurationLoad = body.type === "page_load" && body.page === "/configuration";
+			const configurationAction =
+				body.type === "block_action" &&
+				(body.action_id === "deployment-refresh" || body.action_id === "deployment-routes-page");
+			if (requestedPackage.kind !== "core" || (!configurationLoad && !configurationAction))
+				return Response.json({ error: { code: "PLUGIN_ADMIN_PAGE_NOT_FOUND" } }, { status: 404 });
+		}
+	}
 	const env = getSiteEnv();
 	const scope = {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT),
 	};
 	const targetComponents = resolveSuperBoardTargetPluginIds(env.SUPERBOARD_PLUGIN_IDS);
-	const requestedPackage = pluginPackage(setting?.[1] ?? api?.[1] ?? page?.[1] ?? "");
+
 	if (
 		requestedPackage?.kind === "application" &&
 		!requestedPackage.components.some((id) => targetComponents.includes(id))
@@ -93,8 +94,11 @@ export const onRequest = (async (context, next) => {
 			return Response.json({ error: { code: error.message } }, { status: 409 });
 		throw error;
 	}
-	if (list) {
-		const response = await next();
+	if (list || (detail && requestedPackage && context.request.method === "GET")) {
+		const response =
+			detail && requestedPackage
+				? await getPlugin({ ...context, params: { ...context.params, id: requestedPackage.id } })
+				: await next();
 		if (!response.ok) return response;
 		const body = await readJsonObjectLimited(response, 2_000_000);
 		const locale = resolveLocale(context.request);
@@ -114,17 +118,11 @@ export const onRequest = (async (context, next) => {
 					!owner.components.some((id) => targetComponents.includes(id))
 				)
 					return [];
-				return [
-					{
-						...item,
-						name: locale === "fr" ? owner.label_fr : owner.label,
-						packageKind: owner.kind,
-						configurationWhileDisabled: true,
-						lifecycleLocked: owner.kind === "core",
-					},
-				];
+				return [managerPlugin(item, locale)];
 			});
 		}
+		if (body.data && typeof body.data === "object" && "item" in body.data)
+			body.data.item = managerPlugin(body.data.item, locale);
 		return Response.json(body, { headers: { "Cache-Control": "private, no-store" } });
 	}
 	if (page && context.request.method === "GET") {
@@ -147,62 +145,11 @@ export const onRequest = (async (context, next) => {
 			);
 	}
 	if (!api) return next();
-	const id = api.at(1) ?? "";
-	const owner = pluginPackage(id);
+	const requestedId = api.at(1) ?? "";
+	const owner = pluginPackage(requestedId);
 	if (!owner) return next();
-	if (api[2] === "admin") {
-		if (context.request.method !== "POST") return next();
-		const body = await readJsonObjectLimited(context.request.clone(), 65536);
-		if (
-			body.page === "/configuration" ||
-			body.action_id === "deployment-refresh" ||
-			body.action_id === "deployment-routes-page"
-		)
-			return next();
-		if (typeof body.action_id === "string" && body.action_id.startsWith("package-feature:")) {
-			const [, featureId, action] = body.action_id.split(":");
-			if (
-				!featureId ||
-				!owner.components.includes(featureId) ||
-				(action !== "enable" && action !== "disable")
-			)
-				return Response.json({ error: { code: "PLUGIN_FEATURE_NOT_FOUND" } }, { status: 404 });
-			const result = await runManagedPluginLifecycleAction(
-				{ ...context, params: { pluginId: owner.id, featureId } },
-				action,
-			);
-			if (!result.ok) return result;
-			await result.body?.cancel();
-		}
-		const requestedLocale = resolveLocale(context.request);
-		const locale = requestedLocale === "fr" || requestedLocale === "ar" ? requestedLocale : "en";
-		const i18n = createFrontI18n({ locale, messages: { [locale]: messages[locale] } });
-		const t = (key: string) => i18n._(key);
-		const states = await env.DB.prepare(
-			"SELECT plugin_id,state FROM superboard_plugin_lifecycle WHERE instance_id=? AND target=?",
-		)
-			.bind(scope.instance_id, scope.target)
-			.all<{ plugin_id: string; state: string }>();
-		const active = new Set(
-			states.results.filter((row) => row.state === "active").map((row) => row.plugin_id),
-		);
-		const data = packageFeatureBlocks({
-			owner,
-			active,
-			available: targetComponents,
-			labels: {
-				title: locale === "fr" ? owner.label_fr : owner.label,
-				description: t("description"),
-				enabled: t("enabled"),
-				disabled: t("disabled"),
-				required: t("required"),
-				unavailable: t("unavailable"),
-				enable: t("enable"),
-				disable: t("disable"),
-			},
-		});
-		return Response.json({ data }, { headers: { "Cache-Control": "private, no-store" } });
-	}
+	const id = requestedId === owner.directory ? owner.id : requestedId;
+	if (api[2] === "admin") return next();
 	if (owner.id === id) {
 		const state = await env.DB.prepare(
 			"SELECT enabled FROM superboard_plugin_packages WHERE instance_id=? AND target=? AND package_id=?",
@@ -215,13 +162,35 @@ export const onRequest = (async (context, next) => {
 		const denied = await requireActiveSuperBoardPlugin(env.DB, { ...scope, plugin_id: id });
 		if (denied) return denied;
 	}
-	const component = createConfiguredSuperBoardPlugin(id);
+	const component = createConfiguredSuperBoardPlugin(
+		requestedId === owner.directory ? requestedId : id,
+	);
+	const storageKey = (key: string) => {
+		const legacyKey = resolveConfiguredPluginSettingKey(owner.id, key);
+		const location = owner.id === id ? componentSettingKey(owner.id, legacyKey) : null;
+		return `plugin:${location?.component ?? id}:settings:${location?.key ?? legacyKey}`;
+	};
 	const kv = {
+		list: async (prefix = "") => {
+			const keys = Object.keys(component.admin.settingsSchema)
+				.map((key) => ({ key: `settings:${key}`, storage: storageKey(key) }))
+				.filter((entry) => entry.key.startsWith(prefix));
+			if (!keys.length) return [];
+			const rows = await env.DB.prepare(
+				`SELECT name,value FROM options WHERE name IN (${keys.map(() => "?").join(",")})`,
+			)
+				.bind(...keys.map((entry) => entry.storage))
+				.all<{ name: string; value: string }>();
+			const values = new Map(rows.results.map((row) => [row.name, row.value]));
+			return keys.flatMap((entry) => {
+				const value = values.get(entry.storage);
+				return value === undefined ? [] : [{ key: entry.key, value: JSON.parse(value) }];
+			});
+		},
 		get: async (key: string): Promise<unknown> => {
 			if (!key.startsWith("settings:")) return null;
-			const location = owner.id === id ? componentSettingKey(owner.id, key.slice(9)) : null;
 			const value = await env.DB.prepare("SELECT value FROM options WHERE name=?")
-				.bind(`plugin:${location?.component ?? id}:settings:${location?.key ?? key.slice(9)}`)
+				.bind(storageKey(key.slice(9)))
 				.first<string>("value");
 			return value === null ? null : JSON.parse(value);
 		},
@@ -238,3 +207,21 @@ export const onRequest = (async (context, next) => {
 						: await component.routes["data-sources/catalog"].handler();
 	return Response.json({ data: result }, { headers: { "Cache-Control": "private, no-store" } });
 }) satisfies MiddlewareHandler;
+
+function managerPlugin(item: unknown, locale: string): unknown {
+	if (!item || typeof item !== "object" || !("id" in item) || typeof item.id !== "string")
+		return item;
+	const owner = pluginPackage(item.id);
+	if (!owner) return item;
+	return {
+		...item,
+		id: owner.directory,
+		name: locale === "fr" ? owner.label_fr : owner.label,
+		configurationId: owner.directory,
+		packageKind: owner.kind,
+		configurationWhileDisabled: true,
+		lifecycleLocked: owner.kind === "core",
+		lifecycleEnablePath: `/_emdash/api/admin/plugins/${owner.directory}/enable`,
+		lifecycleDisablePath: `/_emdash/api/admin/plugins/${owner.directory}/disable`,
+	};
+}

@@ -9,7 +9,7 @@ afterEach(() => {
 });
 it("keeps a later sort when a pending search debounce updates the URL", () => {
 	vi.useFakeTimers();
-	window.history.replaceState({}, "", "/app/referrals");
+	window.history.replaceState({}, "", "/auth/referrals");
 	const { result } = renderHook(() => useTableParams({ defaultSortKey: "date" }));
 	act(() => result.current.setSearchTerm("spring"));
 	act(() => result.current.setSort({ sortKey: "id", ascending: true }));

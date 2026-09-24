@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { createLinkSchema } from "../../../../../../../packages/plugins/supbrd-plug-analytics/src/front/schemas/link.js";
+import { createLinkSchema } from "../../../../../../../packages/plugins/superboard-analytics/src/front/schemas/link.js";
 
 describe("createLinkSchema", () => {
 	const validLink = {

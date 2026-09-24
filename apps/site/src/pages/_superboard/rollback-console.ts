@@ -18,9 +18,7 @@ export const GET: APIRoute = async (context) => {
 	if (String(env.SUPERBOARD_RELEASE_OPERATIONS) !== "enabled") {
 		return textResponse("Release operations disabled", 503);
 	}
-	const active = await createD1FrontReleaseRepository(env.DB).getActive(
-		env.SUPERBOARD_INSTANCE_ID,
-	);
+	const active = await createD1FrontReleaseRepository(env.DB).getActive(env.SUPERBOARD_INSTANCE_ID);
 	if (!active?.previous_release_id) return textResponse("Rollback target unavailable", 409);
 	const target = await getCandidateByReleaseId(env.DB, active.previous_release_id);
 	if (!target?.approval) return textResponse("Rollback target unavailable", 409);

@@ -39,11 +39,11 @@ void test("keeps a module available in the catalog while its Worker is not ready
 	);
 });
 
-void test("registers the canonical settings, Admin page and functional contract for every plugin", () => {
+void test("registers plugin settings and contracts without nested component pages", () => {
 	for (const plugin of superboardConfiguredPlugins) {
 		assert.equal(plugin.format, "standard", `${plugin.id} is not sandbox-compatible`);
 		assert.equal(plugin.adminEntry, undefined, `${plugin.id} exposes a trusted React Admin entry`);
-		assert.ok(plugin.adminPages?.length, `${plugin.id} is missing its Admin page`);
+		assert.deepEqual(plugin.adminPages, []);
 		assert.ok(Object.keys(plugin.settingsSchema ?? {}).length, `${plugin.id} has no settings`);
 		assert.ok(plugin.superboardManifest, `${plugin.id} is missing its SuperBoard manifest`);
 		assert.ok(plugin.superboardManifest.commands.length, `${plugin.id} has no commands`);

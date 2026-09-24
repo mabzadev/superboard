@@ -2,8 +2,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ExperienceEditor } from "../../../../../../../../packages/plugins/supbrd-plug-journeys/src/front/onboardings/components/experience-editor/ExperienceEditor.js";
-import { createExperienceDocument } from "../../../../../../../../packages/plugins/supbrd-plug-journeys/src/front/onboardings/components/experience-editor/model.js";
+import { ExperienceEditor } from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/onboardings/components/experience-editor/ExperienceEditor.js";
+import { createExperienceDocument } from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/onboardings/components/experience-editor/model.js";
 import { ProjectSelectionProvider } from "../../../../../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js";
 import { fireEvent, render as renderWithContext, screen } from "../../../../render.js";
 

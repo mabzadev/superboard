@@ -108,6 +108,7 @@ export interface FieldDescriptor {
 	kind: string;
 	label?: string;
 	required?: boolean;
+	readOnly?: boolean;
 	/**
 	 * For `select` / `multiSelect`: the list of enum choices.
 	 * For `json` fields driven by a plugin `widget`: arbitrary widget config.
@@ -396,7 +397,10 @@ export function ContentEditor({
 		}
 	}, [item?.updatedAt, itemDataString, itemBylinesString, item?.slug, item?.status]);
 
-	const activeBylines = isNew ? (selectedBylines ?? []) : internalBylines;
+	const activeBylines = React.useMemo(
+		() => (isNew ? (selectedBylines ?? []) : internalBylines),
+		[isNew, selectedBylines, internalBylines],
+	);
 	const unsupportedPortableTextMarks = React.useMemo(() => {
 		const unsupported = new Set<string>();
 		for (const [name, field] of Object.entries(fields)) {
@@ -494,12 +498,12 @@ export function ContentEditor({
 				slug?: string;
 				bylines?: BylineCreditInput[];
 			} = {
-				data: formDataRef.current,
+				data: editableFieldData(formDataRef.current, fields),
 				slug: slugRef.current || undefined,
 			};
 			if (bylinesTouched) payload.bylines = activeBylines;
 			pendingAutosaveStateRef.current = serializeEditorState({
-				data: payload.data,
+				data: formDataRef.current,
 				slug: payload.slug || "",
 				bylines: activeBylines,
 			});
@@ -523,6 +527,7 @@ export function ContentEditor({
 		bylinesTouched,
 		hasInvalidUrls,
 		hasUnsupportedPortableTextMarks,
+		fields,
 	]);
 
 	// Cancel pending autosave on manual save
@@ -539,7 +544,7 @@ export function ContentEditor({
 			slug?: string;
 			bylines?: BylineCreditInput[];
 		} = {
-			data: formData,
+			data: editableFieldData(formData, fields),
 			slug: slug || undefined,
 		};
 		if (isNew || bylinesTouched) payload.bylines = activeBylines;
@@ -1183,6 +1188,10 @@ interface FieldRendererProps {
 	manifest?: import("../lib/api/client.js").AdminManifest | null;
 }
 
+function editableFieldData(data: Record<string, unknown>, fields: Record<string, FieldDescriptor>) {
+	return Object.fromEntries(Object.entries(data).filter(([name]) => !fields[name]?.readOnly));
+}
+
 /**
  * Render field based on type
  */
@@ -1205,6 +1214,19 @@ function FieldRenderer({
 	const labelClass = minimal ? "text-kumo-subtle/50 text-xs font-normal" : undefined;
 
 	const handleChange = React.useCallback((v: unknown) => onChange(name, v), [onChange, name]);
+	if (field.readOnly) {
+		const option = Array.isArray(field.options)
+			? field.options.find((entry) => entry.value === value)
+			: undefined;
+		const text =
+			option?.label ??
+			(typeof value === "string" ? value : value == null ? "" : JSON.stringify(value, null, 2));
+		return field.kind === "json" || field.kind === "text" ? (
+			<InputArea id={id} label={label} value={text} readOnly rows={8} dir="auto" />
+		) : (
+			<Input id={id} label={label} value={text} readOnly dir="auto" />
+		);
+	}
 
 	// Check for plugin field widget override
 	if (field.widget) {

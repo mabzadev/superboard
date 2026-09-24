@@ -1,7 +1,7 @@
-import { FlowRealtimeHub } from "../../../../../packages/plugins/supbrd-plug-journeys/flows/src/runtime/realtime-hub.js";
-import { FlowUserRuntime } from "../../../../../packages/plugins/supbrd-plug-journeys/flows/src/runtime/user-runtime.js";
-import type { Env } from "../../../../../packages/plugins/supbrd-plug-journeys/flows/src/types.js";
-import { FlowMaintenanceExecution } from "../../../../../packages/plugins/supbrd-plug-journeys/flows/src/workflows/maintenance.js";
+import { FlowRealtimeHub } from "../../../../../packages/plugins/superboard-acquisition/flows/src/runtime/realtime-hub.js";
+import { FlowUserRuntime } from "../../../../../packages/plugins/superboard-acquisition/flows/src/runtime/user-runtime.js";
+import type { Env } from "../../../../../packages/plugins/superboard-acquisition/flows/src/types.js";
+import { FlowMaintenanceExecution } from "../../../../../packages/plugins/superboard-acquisition/flows/src/workflows/maintenance.js";
 type Bindings = Env & { HEALTH_FLOWS_DB: D1Database; WORKFLOW_API_SERVICE: Env["API_SERVICE"] };
 function flowBindings(env: Bindings): Env {
 	return {

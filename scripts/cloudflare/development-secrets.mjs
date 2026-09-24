@@ -6,11 +6,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { generateIdentityKeyset } from "../../packages/plugins/supbrd-plug-identity/scripts/generate-identity-keyset.mjs";
+import { generateIdentityKeyset } from "../../packages/plugins/superboard-authentification/scripts/generate-identity-keyset.mjs";
 import {
 	generateMelodyAuthSecrets,
 	serializeMelodyAuthSecrets,
-} from "../../packages/plugins/supbrd-plug-identity/scripts/generate-melody-auth-secrets.mjs";
+} from "../../packages/plugins/superboard-authentification/scripts/generate-melody-auth-secrets.mjs";
 import { requiredSecretInventory } from "./secret-inventory.mjs";
 import {
 	cloudflareAccountId,

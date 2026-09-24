@@ -46,7 +46,12 @@ export function d1Descriptor(
 		),
 	};
 	if (service === "api") {
-		return descriptor(common, resources.d1, "DB", "packages/plugins/supbrd-core/api/migrations");
+		return descriptor(
+			common,
+			resources.d1,
+			"DB",
+			"packages/plugins/superboard-core/api/migrations",
+		);
 	}
 	if (service === "site") {
 		return descriptor(common, resources.siteD1, "DB", "apps/site/migrations");
@@ -64,7 +69,7 @@ export function d1Descriptor(
 			common,
 			resources.emailD1,
 			"DB",
-			"packages/plugins/supbrd-plug-communication/email/migrations",
+			"packages/plugins/superboard-communication/email/migrations",
 		);
 	}
 	if (service === "identity") {
@@ -72,7 +77,7 @@ export function d1Descriptor(
 			common,
 			resources.identityD1,
 			"DB",
-			"packages/plugins/supbrd-plug-identity/worker/migrations",
+			"packages/plugins/superboard-authentification/worker/migrations",
 		);
 	}
 	if (service === "files") {
@@ -80,7 +85,7 @@ export function d1Descriptor(
 			common,
 			resources.filesD1,
 			"DB",
-			"packages/plugins/supbrd-plug-data/worker/migrations",
+			"packages/plugins/superboard-data/worker/migrations",
 		);
 	}
 	if (service === "custom") {

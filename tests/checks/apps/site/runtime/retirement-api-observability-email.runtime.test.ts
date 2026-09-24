@@ -1,7 +1,7 @@
 import { SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
-import { quarantineEmailDeadLetter } from "../../../../../packages/plugins/supbrd-plug-communication/email/src/index.js";
+import { quarantineEmailDeadLetter } from "../../../../../packages/plugins/superboard-communication/email/src/index.js";
 import {
 	apiCommand,
 	apiHeaders,

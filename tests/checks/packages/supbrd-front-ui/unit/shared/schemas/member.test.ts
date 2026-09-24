@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { addMemberSchema } from "../../../../../../../packages/plugins/supbrd-core/src/front/settings/schemas/member.js";
+import { addMemberSchema } from "../../../../../../../packages/plugins/superboard-core/src/front/settings/schemas/member.js";
 
 describe("addMemberSchema", () => {
 	it("accepts valid member", () => {

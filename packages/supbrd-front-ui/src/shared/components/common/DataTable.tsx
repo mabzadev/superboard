@@ -30,6 +30,8 @@ export interface DataTableProps<T> {
 	skeletonCellClassName?: string;
 }
 
+const SKELETON_ROWS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5"] as const;
+
 const DataTable = <T,>({
 	columns,
 	data,
@@ -68,7 +70,8 @@ const DataTable = <T,>({
 		getCoreRowModel: getCoreRowModel(),
 	});
 
-	const defaultContainerClass = "rounded-md border overflow-hidden border-sidebar-border";
+	const defaultContainerClass =
+		"rounded-[var(--radius)] border border-border overflow-hidden bg-card";
 
 	return (
 		<div
@@ -79,12 +82,13 @@ const DataTable = <T,>({
 			<Table aria-label={ariaLabel}>
 				<TableHeader className={stickyHeader ? "sticky top-0 z-10" : undefined}>
 					{table.getHeaderGroups().map((headerGroup) => (
-						<TableRow key={headerGroup.id} className="bg-table-header w-auto">
+						<TableRow key={headerGroup.id} className="bg-muted/40 border-b border-border w-auto">
 							{headerGroup.headers.map((header) => (
 								<TableHead
 									key={header.id}
 									className={cn(
-										stickyHeader ? "bg-table-header text-foreground p-2" : "text-foreground p-2",
+										"h-10 px-4 py-2.5 text-start align-middle font-medium text-xs text-muted-foreground uppercase tracking-wider",
+										stickyHeader && "bg-muted/90 backdrop-blur-xs",
 										headerClassName?.(header.column.id),
 									)}
 								>
@@ -98,8 +102,8 @@ const DataTable = <T,>({
 				</TableHeader>
 				<TableBody>
 					{loading && !data?.length ? (
-						Array.from({ length: 5 }).map((_, i) => (
-							<TableRow key={`skeleton-${i}`} className="bg-background border-sidebar-border">
+						SKELETON_ROWS.map((rowKey) => (
+							<TableRow key={rowKey} className="border-b border-border">
 								{table.getVisibleFlatColumns().map((col) => (
 									<TableCell key={col.id} className={skeletonCellClassName}>
 										<Skeleton className="h-4 w-3/4" />
@@ -128,7 +132,7 @@ const DataTable = <T,>({
 										: undefined
 								}
 								className={cn(
-									"bg-background border-sidebar-border",
+									"border-b border-border hover:bg-muted/50 transition-colors",
 									onRowClick && "cursor-pointer",
 									loading && "opacity-50 pointer-events-none",
 								)}

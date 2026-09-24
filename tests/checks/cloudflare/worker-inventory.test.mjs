@@ -30,17 +30,17 @@ test("worker inventory accepts packages used by registered targets", (t) => {
 
 test("worker inventory reports unused directories and missing workspace declarations", (t) => {
 	const { root, targets } = fixture(t);
-	mkdirSync(join(root, "packages/plugins/supbrd-core", "unused"));
-	writeFileSync(join(root, "packages/plugins/supbrd-core", "unused", "package.json"), "{}");
+	mkdirSync(join(root, "packages/plugins/superboard-core", "unused"));
+	writeFileSync(join(root, "packages/plugins/superboard-core", "unused", "package.json"), "{}");
 	const result = inspectWorkerDirectories(root, targets);
 	assert.ok(
 		result.diagnostics.some((message) =>
-			message.includes("packages/plugins/supbrd-core/unused: no registered target"),
+			message.includes("packages/plugins/superboard-core/unused: no registered target"),
 		),
 	);
 	assert.ok(
 		result.diagnostics.some((message) =>
-			message.includes("packages/plugins/supbrd-core/unused: missing pnpm"),
+			message.includes("packages/plugins/superboard-core/unused: missing pnpm"),
 		),
 	);
 });
@@ -52,20 +52,20 @@ test("worker inventory catches broken sources and workspace entries", (t) => {
 	const result = inspectWorkerDirectories(root, targets);
 	assert.ok(
 		result.diagnostics.some((message) =>
-			message.includes("packages/plugins/supbrd-core/api: registered entrypoint is missing"),
+			message.includes("packages/plugins/superboard-core/api: registered entrypoint is missing"),
 		),
 	);
 	assert.ok(
 		result.diagnostics.some((message) =>
 			message.includes(
-				"packages/plugins/supbrd-plug-data/worker: workspace points to a missing worker",
+				"packages/plugins/superboard-data/worker: workspace points to a missing worker",
 			),
 		),
 	);
 	assert.ok(
 		result.diagnostics.some((message) =>
 			message.includes(
-				"packages/plugins/supbrd-plug-data/worker: registered worker package is missing",
+				"packages/plugins/superboard-data/worker: registered worker package is missing",
 			),
 		),
 	);
@@ -75,19 +75,19 @@ test("worker inventory respects workspace exclusions and detects empty leftover 
 	const { root, targets } = fixture(t);
 	writeFileSync(
 		join(root, "pnpm-workspace.yaml"),
-		'packages: ["packages/plugins/*/*", "!packages/plugins/supbrd-plug-data/worker"]\n',
+		'packages: ["packages/plugins/*/*", "!packages/plugins/superboard-data/worker"]\n',
 	);
-	mkdirSync(join(root, "packages/plugins/supbrd-core", "leftover"));
+	mkdirSync(join(root, "packages/plugins/superboard-core", "leftover"));
 	const result = inspectWorkerDirectories(root, targets);
 	assert.ok(
 		result.diagnostics.some((message) =>
-			message.includes("packages/plugins/supbrd-plug-data/worker: missing pnpm"),
+			message.includes("packages/plugins/superboard-data/worker: missing pnpm"),
 		),
 	);
 	assert.ok(
 		result.diagnostics.some((message) =>
 			message.includes(
-				"packages/plugins/supbrd-core/leftover: directory contains no worker package",
+				"packages/plugins/superboard-core/leftover: directory contains no worker package",
 			),
 		),
 	);
@@ -105,7 +105,7 @@ test("worker inventory keeps an optional worker used by another target", (t) => 
 	assert.deepEqual(result.diagnostics, []);
 	assert.deepEqual(
 		result.workers.find(
-			({ directory }) => directory === "packages/plugins/supbrd-plug-support/worker",
+			({ directory }) => directory === "packages/plugins/superboard-support/worker",
 		).targets,
 		["second"],
 	);

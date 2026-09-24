@@ -1,0 +1,27 @@
+diff --git a/dist/src/workers/d1/database.worker.js b/dist/src/workers/d1/database.worker.js
+index 88bd59ff2f176b3284f820e3cb8eae1176c3f9ea..49b75c3d2afbcae46fb4b9706d7946c34923cd9f 100644
+--- a/dist/src/workers/d1/database.worker.js
++++ b/dist/src/workers/d1/database.worker.js
+@@ -191,9 +191,20 @@ var D1DatabaseObject = class extends MiniflareDurableObject {
+     let { searchParams } = new URL(req.url), resultsFormat = D1ResultsFormatSchema.parse(
+       searchParams.get("resultsFormat")
+     );
+-    return Response.json(this.#txn(queries, resultsFormat), {
++    const results = this.#txn(queries, resultsFormat);
++    let bookmark;
++    for (let attempt = 0; attempt < 5; attempt++) {
++      try {
++        bookmark = await this.state.storage.getCurrentBookmark();
++        break;
++      } catch (error) {
++        if (attempt === 4) throw new D1Error(error);
++        await new Promise((resolve) => setTimeout(resolve, 25 * 2 ** attempt));
++      }
++    }
++    return Response.json(results, {
+       headers: {
+-        [D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]: await this.state.storage.getCurrentBookmark()
++        [D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]: bookmark
+       }
+     });
+   };

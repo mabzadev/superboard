@@ -325,7 +325,7 @@ function apiConfig() {
 	const appUrl = publicDashboardUrl(target);
 	const config = {
 		...baseConfig(),
-		main: "../../packages/plugins/supbrd-core/api/src/index.ts",
+		main: "../../packages/plugins/superboard-core/api/src/index.ts",
 		vars: {
 			SUPERBOARD_TARGET: targetName,
 			...d1SchemaVars(),
@@ -375,7 +375,7 @@ function apiConfig() {
 				binding: "DB",
 				database_name: resources.d1.name,
 				database_id: resourceId(resources.d1, "d1"),
-				migrations_dir: "../../packages/plugins/supbrd-core/api/migrations",
+				migrations_dir: "../../packages/plugins/superboard-core/api/migrations",
 				migrations_table: "d1_migrations",
 			},
 		],
@@ -610,7 +610,7 @@ function billingConfig() {
 	const config = {
 		...baseConfig(),
 		workers_dev: false,
-		main: "../../packages/plugins/supbrd-plug-commerce/billing/src/index.ts",
+		main: "../../packages/plugins/superboard-monetization/billing/src/index.ts",
 		vars: {
 			ENVIRONMENT: environment,
 			API_DOMAIN: apiDomain,
@@ -659,7 +659,7 @@ function emailConfig() {
 	const config = {
 		...baseConfig(),
 		workers_dev: false,
-		main: "../../packages/plugins/supbrd-plug-communication/email/src/index.ts",
+		main: "../../packages/plugins/superboard-communication/email/src/index.ts",
 		services: [{ ...taskApiServiceBinding("email"), service: target.workers.api[environment] }],
 		vars: {
 			ENVIRONMENT: environment,
@@ -683,7 +683,7 @@ function emailConfig() {
 				binding: "DB",
 				database_name: resources.emailD1.name,
 				database_id: resourceId(resources.emailD1, "d1"),
-				migrations_dir: "../../packages/plugins/supbrd-plug-communication/email/migrations",
+				migrations_dir: "../../packages/plugins/superboard-communication/email/migrations",
 				migrations_table: "d1_migrations",
 			},
 		],
@@ -713,8 +713,8 @@ function identityConfig() {
 	return {
 		...baseConfig(),
 		workers_dev: false,
-		main: "../../packages/plugins/supbrd-plug-identity/worker/src/index.ts",
-		alias: melodyAliases("./packages/plugins/supbrd-plug-identity/worker/src/melody"),
+		main: "../../packages/plugins/superboard-authentification/worker/src/index.ts",
+		alias: melodyAliases("./packages/plugins/superboard-authentification/worker/src/melody"),
 		vars: {
 			ENVIRONMENT: environment,
 			...d1SchemaVars(),
@@ -815,7 +815,7 @@ function identityConfig() {
 				binding: "DB",
 				database_name: resources.identityD1.name,
 				database_id: resourceId(resources.identityD1, "identityD1"),
-				migrations_dir: "../../packages/plugins/supbrd-plug-identity/worker/migrations",
+				migrations_dir: "../../packages/plugins/superboard-authentification/worker/migrations",
 				migrations_table: "d1_migrations",
 			},
 		],
@@ -824,7 +824,7 @@ function identityConfig() {
 			{ binding: "FILES_SERVICE", service: target.workers.files[environment] },
 		],
 		assets: {
-			directory: "../../packages/plugins/supbrd-plug-identity/worker/dist",
+			directory: "../../packages/plugins/superboard-authentification/worker/dist",
 			binding: "ASSETS",
 			run_worker_first: true,
 		},
@@ -855,7 +855,7 @@ function filesConfig() {
 	return {
 		...baseConfig(),
 		workers_dev: false,
-		main: "../../packages/plugins/supbrd-plug-data/worker/src/index.ts",
+		main: "../../packages/plugins/superboard-data/worker/src/index.ts",
 		vars: {
 			ENVIRONMENT: environment,
 			...d1SchemaVars(),
@@ -872,7 +872,7 @@ function filesConfig() {
 				binding: "DB",
 				database_name: resources.filesD1.name,
 				database_id: resourceId(resources.filesD1, "filesD1"),
-				migrations_dir: "../../packages/plugins/supbrd-plug-data/worker/migrations",
+				migrations_dir: "../../packages/plugins/superboard-data/worker/migrations",
 				migrations_table: "d1_migrations",
 			},
 		],
@@ -1012,7 +1012,7 @@ function observabilityConfig() {
 			{ ...taskApiServiceBinding("observability"), service: target.workers.api[environment] },
 		],
 		workers_dev: false,
-		main: "../../packages/plugins/supbrd-core/observability/src/index.ts",
+		main: "../../packages/plugins/superboard-core/observability/src/index.ts",
 		vars: {
 			ENVIRONMENT: environment,
 			ANALYTICS_DATASET: resources.analyticsDataset,
@@ -1025,7 +1025,7 @@ function mcpConfig() {
 	return {
 		...baseConfig(),
 		workers_dev: false,
-		main: "../../packages/plugins/supbrd-core/mcp/src/index.ts",
+		main: "../../packages/plugins/superboard-core/mcp/src/index.ts",
 		vars: {
 			ENVIRONMENT: environment,
 			SUPERBOARD_TARGET: targetName,

@@ -1,6 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 
+import {
+	canonicalFrontHref,
+	canonicalFrontPath,
+} from "../../packages/contracts/src/front-paths.ts";
+
 const root = resolve(import.meta.dirname, "../..");
 const navigationPath = join(root, "scripts/config/superboard-dashboard-navigation.json");
 const parityPath = join(root, "scripts/config/emdash-parity-matrix.json");
@@ -12,11 +17,11 @@ const nativeMenus = JSON.parse(
 const navigation = JSON.parse(readFileSync(navigationPath, "utf8"));
 const parity = JSON.parse(readFileSync(parityPath, "utf8"));
 const topology = JSON.parse(readFileSync(topologyPath, "utf8"));
+const compiledRoutes = JSON.parse(
+	readFileSync(join(root, "scripts/config/superboard-parity-release.json"), "utf8"),
+).release.payload.front_route_manifest.routes;
 const PATH_EDGE_SLASH_PATTERN = /^\/+|\/+$/gu;
 const IDENTITY_LOCALE_PATTERN = /^\/identity\/en(?=\/|$)/u;
-const VIEW_PARAMETER_PATTERN = /[:*]/gu;
-const VIEW_SEPARATOR_PATTERN = /[^a-zA-Z0-9]+/gu;
-const VIEW_EDGE_SEPARATOR_PATTERN = /^_+|_+$/gu;
 const VIEW_DESCRIPTIONS = {
 	"/dashboard": "A cross-module view of acquisition, engagement and product performance.",
 	"/app/customers": "Acquisition identities and their complete app engagement history.",
@@ -127,9 +132,14 @@ if (!Array.isArray(parity.rows)) {
 	throw new TypeError("Dashboard parity rows are missing");
 }
 
-const views = navigation.sections.flatMap((section) =>
-	section.pages.map((page) => ({ ...page, section: section.label })),
-);
+const views = navigation.sections
+	.flatMap((section) => section.pages.map((page) => ({ ...page, section: section.label })))
+	.filter(
+		(view, index, all) =>
+			all.findIndex(
+				(candidate) => canonicalFrontPath(candidate.href) === canonicalFrontPath(view.href),
+			) === index,
+	);
 const hrefs = new Set(views.map(({ href }) => href));
 if (hrefs.size !== views.length) {
 	throw new TypeError("Dashboard navigation contains duplicate View URLs");
@@ -192,7 +202,7 @@ const seed = {
 			],
 		},
 	],
-	menus: nativeMenus,
+	menus: nativeMenus.map((menu) => ({ ...menu, items: canonicalMenuItems(menu.items) })),
 	content: {
 		views: views.map((view) => {
 			const pluginId = pluginForView(view.href);
@@ -204,11 +214,11 @@ const seed = {
 					name: view.label,
 					plugin_id: pluginId,
 					route_id: routeId(view.href),
-					path: view.href,
+					path: canonicalFrontPath(view.href),
 					description: VIEW_DESCRIPTIONS[view.href] ?? "",
 					renderer_id: viewRenderer(pluginId),
 					presentation: viewPresentation(),
-					bindings: viewBindings(view.href, pluginId),
+					bindings: { data_sources: [], commands: [] },
 				},
 			};
 		}),
@@ -237,18 +247,10 @@ function pluginForView(href) {
 }
 
 function routeId(href) {
-	if (href === "/app/users") return "superboard.users";
-	const pattern = href.replace(IDENTITY_LOCALE_PATTERN, "/identity/:lang");
-	return `superboard.${surfaceName(pattern)}`;
-}
-
-function surfaceName(path) {
-	return path
-		.slice(1)
-		.replaceAll(VIEW_PARAMETER_PATTERN, "by_")
-		.replaceAll(VIEW_SEPARATOR_PATTERN, "_")
-		.replaceAll(VIEW_EDGE_SEPARATOR_PATTERN, "")
-		.toLowerCase();
+	const pattern = canonicalFrontPath(href.replace(IDENTITY_LOCALE_PATTERN, "/identity/:lang"));
+	const route = compiledRoutes.find((item) => item.path_pattern === pattern);
+	if (!route) throw new Error(`Dashboard View route is missing: ${href}`);
+	return route.route_id;
 }
 
 function viewPresentation() {
@@ -256,6 +258,14 @@ function viewPresentation() {
 		schema_version: "1.0.0",
 		blocks: [],
 	};
+}
+
+function canonicalMenuItems(items) {
+	return items.map((item) => ({
+		...item,
+		...(item.url ? { url: canonicalFrontHref(item.url) } : {}),
+		...(item.children ? { children: canonicalMenuItems(item.children) } : {}),
+	}));
 }
 
 function viewRenderer(pluginId) {
@@ -268,14 +278,6 @@ function viewRenderer(pluginId) {
 		throw new TypeError(`Dashboard View renderer is ambiguous: ${pluginId}`);
 	}
 	return adminRenderer[0].renderer_id;
-}
-
-function viewBindings(_href, pluginId) {
-	const pluginManifest = pluginManifestFor(pluginId);
-	return {
-		data_sources: pluginManifest.data_sources.map(({ data_source_id }) => data_source_id),
-		commands: pluginManifest.commands.map(({ command_id }) => command_id),
-	};
 }
 
 function pluginManifestFor(pluginId) {

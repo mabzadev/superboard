@@ -18,18 +18,18 @@ const temporary = mkdtempSync(join(tmpdir(), "superboard-cutover-schema-"));
 const databases = {};
 
 before(() => {
-	databases.api = createDatabase("api", "packages/plugins/supbrd-core/api/migrations");
+	databases.api = createDatabase("api", "packages/plugins/superboard-core/api/migrations");
 	databases.billing = databases.api;
 	databases.messaging = createDatabase("messaging", "scripts/database/legacy-messaging-migrations");
 	databases.identity = createDatabase(
 		"identity",
-		"packages/plugins/supbrd-plug-identity/worker/migrations",
+		"packages/plugins/superboard-authentification/worker/migrations",
 	);
 	databases.email = createDatabase(
 		"email",
-		"packages/plugins/supbrd-plug-communication/email/migrations",
+		"packages/plugins/superboard-communication/email/migrations",
 	);
-	databases.files = createDatabase("files", "packages/plugins/supbrd-plug-data/worker/migrations");
+	databases.files = createDatabase("files", "packages/plugins/superboard-data/worker/migrations");
 	databases.site = createDatabase("site", "apps/site/migrations");
 	execute(
 		databases.site,

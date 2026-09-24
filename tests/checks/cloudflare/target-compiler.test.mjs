@@ -625,7 +625,7 @@ test("plugin Stores cannot escape the compiled migration graph", async () => {
 		({ manifest }) => manifest.plugin_id === "supbrd-plugmod-gateway",
 	);
 	gateway.manifest.stores[0].migrations.push(
-		"packages/plugins/supbrd-core/api/migrations/9999_unknown.sql",
+		"packages/plugins/superboard-core/api/migrations/9999_unknown.sql",
 	);
 	await assert.rejects(
 		compileTarget(target, "development", { pluginTopology: topology }),

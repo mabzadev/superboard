@@ -4,16 +4,16 @@ import { createRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import McpTokensSection from "../../../../packages/plugins/supbrd-core/src/front/mcp/components/account/McpTokensSection.js";
-import SdkSetupWizard from "../../../../packages/plugins/supbrd-core/src/front/settings/components/app/SdkSetupWizard.js";
-import SocialPreview from "../../../../packages/plugins/supbrd-plug-communication/src/front/dynamic-links/components/dynamic_links/social-preview/SocialPreviewPageContent.js";
+import SocialPreview from "../../../../packages/plugins/superboard-acquisition/src/front/dynamic-links/components/dynamic_links/social-preview/SocialPreviewPageContent.js";
+import McpTokensSection from "../../../../packages/plugins/superboard-core/src/front/mcp/components/account/McpTokensSection.js";
+import SdkSetupWizard from "../../../../packages/plugins/superboard-core/src/front/settings/components/app/SdkSetupWizard.js";
 
 const selection = vi.hoisted(() => ({ selectedProject: { id: "42-prod" } }));
 vi.mock("../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => selection,
 }));
 vi.mock(
-	"../../../../packages/plugins/supbrd-core/src/front/settings/api/app/appService.js",
+	"../../../../packages/plugins/superboard-core/src/front/settings/api/app/appService.js",
 	() => ({
 		getSdkConfiguration: async () => null,
 		getAccessKey: async () => null,
@@ -23,14 +23,14 @@ vi.mock(
 	}),
 );
 vi.mock(
-	"../../../../packages/plugins/supbrd-core/src/front/mcp/hooks/queries/useMcpQueries.js",
+	"../../../../packages/plugins/superboard-core/src/front/mcp/hooks/queries/useMcpQueries.js",
 	() => ({
 		useMcpTokensQuery: () => ({ data: [], isLoading: false }),
 		useRevokeMcpTokenMutation: () => ({ mutateAsync: async () => undefined }),
 	}),
 );
 vi.mock(
-	"../../../../packages/plugins/supbrd-plug-communication/src/front/dynamic-links/api/dynamic-links/dynamicLinksService.js",
+	"../../../../packages/plugins/superboard-acquisition/src/front/dynamic-links/api/dynamic-links/dynamicLinksService.js",
 	() => ({ getSocialPreview: async () => null, saveSocialPreview: async () => null }),
 );
 function tree(child: ReactNode, target?: string) {
