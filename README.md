@@ -7,12 +7,6 @@ and never fork this code.
 - Canonical repository: <https://github.com/mabzadev/superboard>
 - Archived-repository record: [`docs/LEGACY_REPOSITORIES.md`](docs/LEGACY_REPOSITORIES.md)
 - FlutterFlow reference application: [`apps/reference`](apps/reference)
-- Development reference app: <https://reference.mbza.dev>
-- Development Front: <https://board.mbza.dev>
-- Development API: <https://api.mbza.dev>
-- Development short links: <https://in.mbza.dev>
-- Development MCP: <https://mcp.mbza.dev/mcp>
-- Development mail preview: <https://mail.mbza.dev>
 
 ## Integrated EmDash foundation
 
