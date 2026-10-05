@@ -1,4 +1,5 @@
 import type { RoleLevel } from "@emdash-cms/auth";
+import { canonicalFrontPath } from "@superboard/contracts/front-paths";
 import type { PublicEndpoints, ConsoleEnvironment } from "@superboard/front-ui/context";
 import {
 	assertRendererCompatibility,
@@ -78,9 +79,10 @@ export async function resolvePreviewFrontPage(
 async function resolveFrontPageFromRelease(
 	env: SuperBoardSiteEnv,
 	release: LoadedFrontRelease | null,
-	requestedPath: string,
+	path: string,
 	user: EmDashUser | undefined,
 ): Promise<FrontPageModel> {
+	const requestedPath = path === "/" ? path : canonicalFrontPath(path);
 	const authorizedUser = canAccessOperatorConsole(user) ? user : undefined;
 	const matchedRoute = release
 		? resolveFrontRoute(release.runtime_release.front_route_manifest, requestedPath)

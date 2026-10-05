@@ -1,3 +1,4 @@
+import { canonicalFrontPath } from "@superboard/contracts/front-paths";
 import { env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
@@ -39,7 +40,7 @@ async function assertContribution(plugin: (typeof baseline.plugins)[number], pre
 		// The historical login transition now belongs to the always-available operator core.
 		if (route.path === "/login") continue;
 		expect(
-			routes.some((candidate) => candidate.route_id === route.route_id),
+			routes.some((candidate) => candidate.path_pattern === canonicalFrontPath(route.path)),
 			`${plugin.plugin_id}: ${route.path}`,
 		).toBe(present);
 	}

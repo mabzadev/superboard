@@ -5,6 +5,8 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
 
+import { instanceBuildConfiguration } from "../cloudflare/workers-builds-config.mjs";
+
 const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
 export async function loadDeploymentMatrix() {
@@ -77,6 +79,23 @@ export function validateDeploymentConfiguration(configuration) {
 			throw new Error("Cloudflare deployment authority is invalid");
 		}
 		if (authority === "cloudflare-workers-builds") {
+			if (deployment.automaticDeployment.mode === "per-instance") {
+				const expected = instanceBuildConfiguration();
+				if (
+					Object.keys(deployment.automaticDeployment).length !== Object.keys(expected).length ||
+					Object.entries(expected).some(
+						([key, value]) =>
+							JSON.stringify(deployment.automaticDeployment[key]) !== JSON.stringify(value),
+					)
+				)
+					throw new Error("Invalid Cloudflare instance build configuration");
+				if (
+					typeof deployment.referenceAcceptance !== "boolean" ||
+					(deployment.referenceAcceptance && deployment.branch !== "dev")
+				)
+					throw new Error("Reference acceptance must belong to a dev deployment");
+				continue;
+			}
 			const expectedBuildCommand =
 				"npm ci && npm --prefix apps/reference ci && node --test tests/checks/repository/backoffice-policy.test.mjs tests/checks/github/deployment-matrix.test.mjs tests/checks/github/deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test";
 			const expectedDeployCommand =
@@ -192,6 +211,11 @@ export function resolveDeploymentBranch({ explicitBranch, githubRefName, current
 export function validateControlPlaneCoverage(configuration, controlPlane) {
 	const platformEnvironments = controlPlane.repositories?.platform?.environments ?? {};
 	for (const deployment of configuration.deployments) {
+		if (
+			deployment.automaticDeployment.authority === "cloudflare-workers-builds" &&
+			deployment.automaticDeployment.mode === "per-instance"
+		)
+			continue;
 		const environment = platformEnvironments[deployment.githubEnvironment];
 		if (!environment) {
 			throw new Error(

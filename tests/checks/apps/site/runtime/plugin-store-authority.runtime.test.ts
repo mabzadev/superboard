@@ -88,7 +88,7 @@ describe("EmDash plugin Store authority", () => {
 		});
 		expect(
 			fullPresentation.front_route_manifest.routes.some(
-				({ path_pattern: path }) => path === "/marketing/campaigns",
+				({ path_pattern: path }) => path === "/communication/campaigns",
 			),
 		).toBe(true);
 
@@ -149,7 +149,7 @@ describe("EmDash plugin Store authority", () => {
 		});
 		expect(
 			reducedPresentation.front_route_manifest.routes.some(
-				({ path_pattern: path }) => path === "/marketing/campaigns",
+				({ path_pattern: path }) => path === "/communication/campaigns",
 			),
 		).toBe(false);
 	});

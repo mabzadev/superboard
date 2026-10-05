@@ -689,6 +689,17 @@
 					}
 				}
 			}
+		},
+		"freshInstallation": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["id"],
+			"properties": {
+				"id": {
+					"type": "string",
+					"pattern": "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+				}
+			}
 		}
 	},
 	"allOf": [
@@ -712,7 +723,14 @@
 				}
 			},
 			"then": {
-				"required": ["productionCutover"]
+				"anyOf": [
+					{
+						"required": ["productionCutover"]
+					},
+					{
+						"required": ["freshInstallation"]
+					}
+				]
 			}
 		}
 	],

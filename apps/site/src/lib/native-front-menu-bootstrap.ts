@@ -52,6 +52,11 @@ export async function ensureNativeFrontMenus(
 			});
 		if (locale === "en") sourceId = menu.id;
 		const items = await repository.findItems(menu.id);
+		if (
+			menu.label !== pendingLabel &&
+			JSON.stringify(storedItems(items)) === JSON.stringify(seedItems(definition.items))
+		)
+			continue;
 		const untouchedLegacy =
 			locale === "en" &&
 			menu.label === legacyMenu.label &&

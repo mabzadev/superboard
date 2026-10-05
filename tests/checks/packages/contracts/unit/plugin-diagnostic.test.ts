@@ -1,9 +1,10 @@
+import { expect, test } from "vitest";
+
 import {
 	parsePluginDiagnostic,
 	parsePluginHealth,
 	type PluginDiagnosticData,
-} from "@superboard/contracts/plugin-diagnostic";
-import { expect, test } from "vitest";
+} from "../../../../../packages/contracts/src/plugin-diagnostic.js";
 
 const diagnostic: PluginDiagnosticData = {
 	pluginId: "supbrd-plug-identity",
