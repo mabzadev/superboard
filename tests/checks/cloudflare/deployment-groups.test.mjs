@@ -24,6 +24,57 @@ const worker = (service, extras = {}) => ({
 	},
 });
 
+test("grouped services can read the deployed version through their original binding names", async () => {
+	const directory = await mkdtemp(join(tmpdir(), "superboard-grouped-version-"));
+	let runtime;
+	try {
+		await writeFile(
+			join(directory, "api.mjs"),
+			'export default { fetch(request, env) { return Response.json({ version: env.API_VERSION.id, foreign: "APP_VERSION" in env }); } };',
+		);
+		await writeFile(
+			join(directory, "app.mjs"),
+			'export default { fetch(request, env) { return Response.json({ version: env.APP_VERSION.id, foreign: "API_VERSION" in env }); } };',
+		);
+		const result = consolidateWorkerConfigurations([
+			worker("api", {
+				main: "./api.mjs",
+				version_metadata: { binding: "API_VERSION" },
+				routes: [{ pattern: "api.example", custom_domain: true }],
+			}),
+			worker("app", {
+				main: "./app.mjs",
+				version_metadata: { binding: "APP_VERSION" },
+				routes: [{ pattern: "app.example", custom_domain: true }],
+			}),
+		]);
+		await writeFile(join(directory, "entry.mjs"), result.groups[0].source);
+		await build({
+			entryPoints: [join(directory, "entry.mjs")],
+			outfile: join(directory, "bundle.mjs"),
+			bundle: true,
+			format: "esm",
+			platform: "neutral",
+			external: ["cloudflare:workers"],
+			logLevel: "silent",
+		});
+		runtime = new Miniflare({
+			modules: true,
+			script: await readFile(join(directory, "bundle.mjs"), "utf8"),
+			compatibilityDate: "2026-08-08",
+			bindings: { [result.groups[0].config.version_metadata.binding]: { id: "version-fixture" } },
+		});
+		for (const host of ["api.example", "app.example"])
+			assert.deepEqual(await (await runtime.dispatchFetch(`https://${host}`)).json(), {
+				version: "version-fixture",
+				foreign: false,
+			});
+	} finally {
+		await runtime?.dispose();
+		await rm(directory, { recursive: true, force: true });
+	}
+});
+
 test("a complete platform groups its real service dependencies into ten deployments", () => {
 	const roles = [
 		"site",

@@ -177,7 +177,7 @@ export default centralTests(
 			exclude: ["../../tests/checks/apps/site/runtime/plugin-packages.runtime.test.ts"],
 			setupFiles: ["../../tests/checks/apps/site/runtime/apply-migrations.ts"],
 			sequence: { concurrent: false },
-			maxWorkers: 3,
+			maxWorkers: 1,
 			testTimeout: 30000,
 			hookTimeout: 60000,
 		},

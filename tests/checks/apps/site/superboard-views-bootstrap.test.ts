@@ -730,7 +730,7 @@ test("Support navigation groups its operational destinations under one section",
 			items
 				.filter((item) => item.parentId === support!.id)
 				.map((item) => item.customUrl)
-				.toSorted(),
+				.toSorted((a, b) => (a ?? "").localeCompare(b ?? "")),
 		).toEqual([
 			"/support/automations",
 			"/support/captain",

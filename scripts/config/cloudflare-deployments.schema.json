@@ -117,6 +117,42 @@
 										"const": "github-actions"
 									}
 								}
+							},
+							{
+								"type": "object",
+								"additionalProperties": false,
+								"required": [
+									"authority",
+									"mode",
+									"buildCommand",
+									"deployCommand",
+									"buildVariables",
+									"nonProductionBranchBuilds"
+								],
+								"properties": {
+									"authority": {
+										"const": "cloudflare-workers-builds"
+									},
+									"mode": {
+										"const": "per-instance"
+									},
+									"buildCommand": {
+										"const": "pnpm install --frozen-lockfile && pnpm cloudflare:builds:build"
+									},
+									"deployCommand": {
+										"const": "pnpm cloudflare:builds:deploy"
+									},
+									"buildVariables": {
+										"const": [
+											"CLOUDFLARE_ACCOUNT_ID",
+											"SUPERBOARD_ENVIRONMENT",
+											"SUPERBOARD_TARGET"
+										]
+									},
+									"nonProductionBranchBuilds": {
+										"const": false
+									}
+								}
 							}
 						]
 					},

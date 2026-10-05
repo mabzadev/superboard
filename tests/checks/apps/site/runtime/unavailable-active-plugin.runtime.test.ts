@@ -21,9 +21,10 @@ test("receipt renewal does not clear an unavailable active plugin", async () => 
 		.run();
 
 	const identityDb = (env as unknown as { HEALTH_IDENTITY_DB: D1Database }).HEALTH_IDENTITY_DB;
-	await identityDb
-		.prepare("DELETE FROM d1_migrations WHERE name='0150_application_user_administration.sql'")
+	const removed = await identityDb
+		.prepare("DELETE FROM d1_migrations WHERE name = (SELECT MAX(name) FROM d1_migrations)")
 		.run();
+	expect(removed.meta.changes).toBe(1);
 
 	const rejected = await SELF.fetch(
 		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings/enable",

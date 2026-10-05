@@ -45,17 +45,17 @@ pnpm flows:check
 
 ## Layout
 
-| Path                | Purpose                                                                           |
-| ------------------- | --------------------------------------------------------------------------------- |
-| `apps/`             | Executable applications, including the Site and reference client                  |
-| `packages/`         | EmDash foundation and shared libraries                                            |
-| `packages/plugins/` | Plugins, their Front sources and their service packages                           |
-| `sdks/`             | Client libraries; lifecycle and versions are recorded in the SDK catalogue        |
-| `scripts/config/`   | Global configuration and its validation schemas                                   |
-| `infra/targets/`    | Deployment target manifests                                                       |
-| `infra/generated/`  | Generated deployment output                                                       |
-| `scripts/`          | Commands grouped by usage; see [the scripts guide](scripts/README.md)             |
-| `tests/`            | E2E journeys, fixtures, linters and checks; see [the test guide](tests/README.md) |
+| Path | Purpose |
+| --- | --- |
+| `apps/` | Executable applications, including the Site and reference client |
+| `packages/` | EmDash foundation and shared libraries |
+| `packages/plugins/` | Plugins, their Front sources and their service packages |
+| `sdks/` | Client libraries; lifecycle and versions are recorded in the SDK catalogue |
+| `scripts/config/` | Global configuration and its validation schemas |
+| `infra/targets/` | Deployment target manifests |
+| `infra/generated/` | Generated deployment output |
+| `scripts/` | Commands grouped by usage; see [the scripts guide](scripts/README.md) |
+| `tests/` | E2E journeys, fixtures, linters and checks; see [the test guide](tests/README.md) |
 
 The root `Package.swift` exposes the iOS SDK from `sdks/ios`.
 See [the monorepo guide](docs/MONOREPO.md) for the remaining EmDash directories,
@@ -213,12 +213,12 @@ rotation protocol are in `docs/SECRET_MANAGEMENT.md`.
 
 The four application SDKs are:
 
-| SDK         | Source             | Use                                                       |
-| ----------- | ------------------ | --------------------------------------------------------- |
-| Flutter     | `sdks/flutter`     | Flutter applications                                      |
-| FlutterFlow | `sdks/flutterflow` | FlutterFlow actions and widgets built on Flutter          |
-| Web         | `sdks/web`         | JavaScript and TypeScript browser applications            |
-| Tauri       | `sdks/tauri`       | Desktop applications using the Web client and native HTTP |
+| SDK | Source | Use |
+| --- | --- | --- |
+| Flutter | `sdks/flutter` | Flutter applications |
+| FlutterFlow | `sdks/flutterflow` | FlutterFlow actions and widgets built on Flutter |
+| Web | `sdks/web` | JavaScript and TypeScript browser applications |
+| Tauri | `sdks/tauri` | Desktop applications using the Web client and native HTTP |
 
 Flutter owns its native implementations in `sdks/flutter/native/`.
 Web owns the Identity and Flows components in `sdks/web/identity/` and

@@ -160,7 +160,7 @@ describe("SuperBoard plugin lifecycle", () => {
 		});
 		expect(
 			presentation.front_route_manifest.routes.some(
-				({ path_pattern: path }) => path === "/marketing/campaigns",
+				({ path_pattern: path }) => path === "/communication/campaigns",
 			),
 		).toBe(true);
 	});
@@ -213,7 +213,7 @@ describe("SuperBoard plugin lifecycle", () => {
 		});
 		expect(
 			presentation.front_route_manifest.routes.some(
-				({ path_pattern: path }) => path === "/marketing/campaigns",
+				({ path_pattern: path }) => path === "/communication/campaigns",
 			),
 		).toBe(false);
 		expect(

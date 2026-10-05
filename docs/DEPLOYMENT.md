@@ -2,13 +2,11 @@
 
 This document is the deployment source of truth for the unified SuperBoard dashboard and its isolated Cloudflare Workers.
 
-Pull-request GitHub Actions validate without deploying. The separate protected
-deployment workflow publishes the exact `dev` or `main` revision only after its
-aggregate `CI gate` succeeds and its GitHub Environment gate is satisfied. A
-superseded automatic revision is not deployed. A `workflow_dispatch` run is
-accepted only when GitHub already contains a successful `CI gate` for the exact
-selected branch SHA; it cannot replace or bypass CI. See
-[Continuous integration and deployment ownership](./CI_OPERATIONS.md).
+Cloudflare Workers Builds validates and deploys each instance from its selected
+branch: `dev` for Mabza and `main` for production installations. The build checks
+run in Cloudflare before deployment; this path does not wait for a GitHub Actions
+workflow. See [installation and automatic updates](./CLOUDFLARE_BUILDS.md) for
+account registration, first installation and deployment prerequisites.
 
 Repository creation is a separate, explicitly confirmed operation. Run
 `npm run github:bootstrap` for the read-only plan, create or grant the declared

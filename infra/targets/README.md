@@ -1,5 +1,7 @@
 # Cloudflare console deployment
 
+For account registration, first installation and automatic updates from `dev` or `main`, see [Cloudflare Builds](../../docs/CLOUDFLARE_BUILDS.md).
+
 SuperBoard runs locally and on Cloudflare without Docker. Application-specific Workers, containers, manifests, and deployment targets belong in separate addon workspaces.
 
 An active SuperBoard console enables the signed release operations used by plugin activation. Provision `SUPERBOARD_RELEASE_PRIVATE_JWK` on the Site Worker before deploying it. The development secret generator creates an independent ES256 signing key for this purpose; retain the private key in the deployment secret store across upgrades.

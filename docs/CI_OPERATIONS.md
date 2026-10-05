@@ -157,42 +157,16 @@ FlutterFlow manifest or generated Dart source.
 
 ## Cloudflare deployment
 
-The versioned deployment contract is
-`scripts/config/cloudflare-deployments.json`. `dev` selects `mbza-development` and
-declares Cloudflare Workers Builds as its authority; `main` selects
-`vocostar-production` and declares GitHub Actions. The production workflow asks
-the matrix selector only for `github-actions` entries, and is triggered only for
-`main`, so it can neither require a development API token nor duplicate a native
-MBZA deployment.
-The target name is committed in the matrix and must exactly match the
-`SUPERBOARD_TARGET` variable of the selected GitHub Environment. This redundant
-selection is intentional: a mutable Environment variable cannot redirect an
-approved revision to another target or account boundary.
+Cloudflare Workers Builds owns instance validation and deployment. The checked-in
+matrix selects `mbza-development` from `dev`. Additional production accounts
+store their installation configuration in Cloudflare and follow `main`; they do
+not require a GitHub Environment or a central matrix entry.
 
-Immediately before upload, the workflow regenerates and compares every
-Cloudflare binding type, reads only the configured Cloudflare secret names for
-each enabled Worker, and fails if the target-specific required contract is
-incomplete. Secret values are never downloaded or printed. Run the same
-read-only check manually with:
-
-```bash
-npm run cloudflare:secrets:check -- \
-  --target <target> --environment <environment>
-```
-
-Each target has exactly one automatic deployment authority. The production
-workflow provisions nothing implicitly: resource creation remains an explicit bootstrap operation whose
-resolved non-secret IDs are reviewed in the target manifest. On deployment it
-applies tracked D1 migrations, deploys every enabled Worker in dependency order,
-and publishes the dashboard last. A production rollout exports every enabled D1
-before the first migration, verifies the complete migration batch and its
-digest, then starts deploying Workers. The workflow encrypts complete or
-recoverable failure artifacts with the protected Environment key before
-retention. GitHub Environment reviewers and branch protection are the release
-approval boundary.
-
-Pull-request CI remains read-only: Wrangler dry runs do not upload Workers,
-apply migrations, change Queues or publish routes.
+See [installation and automatic updates](./CLOUDFLARE_BUILDS.md) for the source
+commands, credentials, initial installation, backups and failure handling.
+Existing GitHub checks and SDK automations remain separate from this deployment
+path. No successful GitHub check can substitute for the checks inside the
+Cloudflare build.
 
 Before a Billing cutover, run:
 

@@ -38,6 +38,11 @@ if (args["skip-backup"]) {
 const targetName = targetNameFromArgs(args);
 const environment = environmentFromArgs(args);
 const { target } = await loadTarget(targetName);
+if (
+	args["initial-install"] &&
+	(!target.freshInstallation || process.env.SUPERBOARD_INITIAL_INSTALL !== "1")
+)
+	throw new Error("FRESH_INSTALLATION_BUILD_REQUIRED");
 const consolidated =
 	!args["legacy-layout"] && (args.consolidated || target.deploymentProfile === "consolidated");
 const compiledTarget = await compiledTargetFromArgs(target, environment, args);
@@ -103,6 +108,9 @@ const consolidatedInput = {
 	noRoutes: Boolean(args["no-routes"]),
 	uploadOnly: Boolean(args["upload-only"]),
 	initialInstall: Boolean(args["initial-install"]),
+	...(args["initial-install"]
+		? { serviceSecrets: JSON.parse(process.env.SUPERBOARD_INSTALLATION_KEYS) }
+		: {}),
 	readOnlyConsole: Boolean(args["read-only-console"]),
 	targetArtifactPath: args["target-artifact"],
 	targetArtifactChecksum: args["target-artifact-checksum"],
