@@ -226,6 +226,7 @@ function mergeGroup(group, entries, legacyPrimary) {
 	const queues = {};
 	const publicHosts = {};
 	const schedules = {};
+	const versionBindings = {};
 	for (const { service, config: original } of entries) {
 		if (
 			original.assets ||
@@ -259,7 +260,11 @@ function mergeGroup(group, entries, legacyPrimary) {
 				service,
 			});
 		}
-		for (const key of ["ai", "images", "version_metadata", "browser"]) {
+		if (original.version_metadata) {
+			versionBindings[service] = original.version_metadata.binding;
+			config.version_metadata = { binding: "SUPERBOARD_GROUP_VERSION" };
+		}
+		for (const key of ["ai", "images", "browser"]) {
 			if (original[key]) throw new Error(`UNSUPPORTED_SHARED_BINDING:${service}:${key}`);
 		}
 		config.queues.producers.push(
@@ -306,9 +311,12 @@ const scopes = ${JSON.stringify(Object.fromEntries(entries.map(({ service }) => 
 const hosts = ${JSON.stringify(publicHosts)};
 const queues = ${JSON.stringify(queues)};
 const schedules = ${JSON.stringify(schedules)};
+const versionBindings = ${JSON.stringify(versionBindings)};
 function scope(service, env) {
 	const prefix = scopes[service];
-	return Object.fromEntries(Object.entries(env).filter(([key]) => key.startsWith(prefix)).map(([key, value]) => [key.slice(prefix.length), value]));
+	const scoped = Object.fromEntries(Object.entries(env).filter(([key]) => key.startsWith(prefix)).map(([key, value]) => [key.slice(prefix.length), value]));
+	if (versionBindings[service]) scoped[versionBindings[service]] = env.SUPERBOARD_GROUP_VERSION;
+	return scoped;
 }
 ${entries
 	.map(

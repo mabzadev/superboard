@@ -210,7 +210,9 @@ describe("SeoPanel", () => {
 		expect((titleInput.element() as HTMLInputElement).value).toBe("Newest local value");
 	});
 
-	it("resets when switching to a different content item", async () => {
+	it("resets when switching to a different content item", async ({ onTestFinished }) => {
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		onTestFinished(() => vi.useRealTimers());
 		const onChange = vi.fn();
 
 		function Host() {
@@ -251,8 +253,8 @@ describe("SeoPanel", () => {
 			</QueryWrapper>,
 		);
 		const titleInput = screen.getByLabelText("SEO Title");
-		await userEvent.clear(titleInput);
-		await userEvent.type(titleInput, "Unsaved local edit");
+		await titleInput.fill("Unsaved local edit");
+		expect(onChange).not.toHaveBeenCalled();
 
 		await userEvent.click(screen.getByRole("button", { name: "Switch content" }));
 
@@ -264,7 +266,7 @@ describe("SeoPanel", () => {
 		});
 		expect((titleInput.element() as HTMLInputElement).value).toBe("Second post");
 
-		await new Promise((resolve) => setTimeout(resolve, 700));
+		await vi.advanceTimersByTimeAsync(700);
 		expect(onChange).toHaveBeenCalledTimes(1);
 	});
 

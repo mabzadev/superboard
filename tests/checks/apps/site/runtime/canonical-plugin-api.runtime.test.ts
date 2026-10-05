@@ -64,7 +64,7 @@ beforeAll(async () => {
 		crypto.randomUUID(),
 	);
 	projectRef = scope.production_project_ref;
-	for (const id of [pluginId, "supbrd-plug-settings"]) {
+	for (const id of [pluginId, "supbrd-plug-settings", "supbrd-plug-products"]) {
 		const enabled = await SELF.fetch(
 			`https://site.example/_emdash/api/superboard/plugins/${id}/enable`,
 			{ method: "POST", headers },

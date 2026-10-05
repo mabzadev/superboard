@@ -27,15 +27,19 @@ export function parseArgs(argv = process.argv.slice(2)) {
 	return args;
 }
 
-export async function loadTarget(targetName) {
+export async function loadTarget(targetName, env = process.env) {
 	if (!/^[a-z][a-z0-9-]{1,30}$/.test(targetName ?? "")) {
 		throw new Error("--target must contain only lowercase letters, numbers and hyphens");
 	}
+	if (env.SUPERBOARD_TARGET_MANIFEST) {
+		const target = JSON.parse(env.SUPERBOARD_TARGET_MANIFEST);
+		if (target.target !== targetName) throw new Error("BUILD_TARGET_MANIFEST_MISMATCH");
+		await validateTarget(target);
+		return { path: null, target };
+	}
 	const directories = [
 		resolve(root, "infra", "targets"),
-		...(process.env.SUPERBOARD_ADDITIONAL_TARGET_DIRECTORIES ?? "")
-			.split(delimiter)
-			.filter(Boolean),
+		...(env.SUPERBOARD_ADDITIONAL_TARGET_DIRECTORIES ?? "").split(delimiter).filter(Boolean),
 	];
 	const candidates = [];
 	for (const directory of new Set(directories.map((directory) => resolve(directory)))) {
@@ -66,6 +70,18 @@ export async function validateTarget(target) {
 		throw new Error(`Invalid target manifest: ${details}`);
 	}
 	const environments = Object.keys(target.environments ?? {});
+	if (
+		target.freshInstallation &&
+		(!target.target.endsWith(`-${target.freshInstallation.id.slice(0, 8)}`) ||
+			environments.length !== 1 ||
+			environments[0] !== "production" ||
+			target.customWorker ||
+			target.productionCutover ||
+			Object.values(target.workers).some(
+				(worker) => !worker.production.startsWith(`superboard-${target.target}-`),
+			))
+	)
+		throw new Error("FRESH_INSTALLATION_IDENTITY_INVALID");
 	if (environments.length === 0) {
 		throw new Error("Invalid target manifest: at least one environment is required");
 	}

@@ -72,6 +72,46 @@ const manifest = {
 	queueTransfers: [],
 };
 
+test("initial installation keeps same-named credentials isolated between dedicated workers", async () => {
+	const installationManifest = {
+		...manifest,
+		groups: [
+			{
+				...group("auth"),
+				secrets: [
+					{ name: "INTERNAL_API_TOKEN", sourceName: "INTERNAL_API_TOKEN", service: "identity" },
+				],
+			},
+			{
+				...group("automations"),
+				secrets: [
+					{ name: "INTERNAL_API_TOKEN", sourceName: "INTERNAL_API_TOKEN", service: "flows" },
+				],
+			},
+		],
+	};
+	const serviceSecrets = {
+		identity: { INTERNAL_API_TOKEN: "identity-fixture" },
+		flows: { INTERNAL_API_TOKEN: "flows-fixture" },
+	};
+	const input = {
+		manifest: installationManifest,
+		initialInstall: true,
+		uploadOnly: true,
+		serviceSecrets,
+		env: {},
+	};
+	const readiness = assertConsolidatedDeploymentReady(installationManifest, input, () => "[]");
+	const uploads = new Map();
+	await runConsolidatedDeployment({ ...input, readiness }, (_command, args) => {
+		const path = args[args.indexOf("--secrets-file") + 1];
+		uploads.set(args[args.indexOf("--config") + 1], JSON.parse(readFileSync(path, "utf8")));
+		return "";
+	});
+	assert.deepEqual(uploads.get("auth.jsonc"), { INTERNAL_API_TOKEN: "identity-fixture" });
+	assert.deepEqual(uploads.get("automations.jsonc"), { INTERNAL_API_TOKEN: "flows-fixture" });
+});
+
 test("readiness checks the active version after a successful consolidation", () => {
 	const old = {
 		created_on: "2026-09-07T00:00:00Z",

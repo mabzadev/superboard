@@ -33,43 +33,19 @@ secret of its own.
 
 ## Automatic deployment authority
 
-`scripts/config/cloudflare-deployments.json` enforces one automatic deployment authority per target:
+There is one automatic deployment authority per target.
 
-- `mbza-development` is deployed from `dev` by Cloudflare Workers Builds. Each
-  declared Worker has its own native Git connection to `mabzadev/superboard`.
-  Every connection uses the same source and build gate, but receives one exact
-  `SUPERBOARD_SERVICE` value and runs only `cloudflare:deploy --service`. This
-  matches Cloudflare's Worker-scoped build token and prevents one connected
-  Worker from overwriting another. Non-production branch builds are disabled.
+Cloudflare Workers Builds runs validation and deployment for each instance.
+`dev` deploys `mbza-development`; production installations follow `main` in
+their own Cloudflare accounts. One Site Worker connection deploys the complete
+instance after its build checks pass. The deployment token must cover every
+Worker and resource owned by that instance.
 
-- `vocostar-production` is deployed from `main` by
-  `.github/workflows/deploy-cloudflare.yml`, after the successful aggregate CI
-  gate. Its protected GitHub Environment supplies the production account,
-  least-privilege token and D1 backup encryption key.
-
-Cloudflare Workers Builds injects a connected Worker identity. The generated
-target manifest and `SUPERBOARD_SERVICE` must resolve to that same Worker. The
-deploy command is deliberately mono-service; multi-Worker production rollout
-remains owned by the protected GitHub Actions workflow.
-
-Cloudflare generates and retains the Workers Builds token. The selected MBZA
-account ID is a non-secret `CLOUDFLARE_ACCOUNT_ID` build variable in Cloudflare,
-not a GitHub secret and not a value committed to the repository. Consequently,
-the platform `development` GitHub Environment contains no Cloudflare deployment
-credential. The exact source-owned Workers Builds contract is:
-
-```text
-repository: mabzadev/superboard
-production branch: dev
-build command: npm ci && npm --prefix apps/reference ci && node --test tests/checks/repository/backoffice-policy.test.mjs tests/checks/github/deployment-matrix.test.mjs tests/checks/github/deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test
-deploy command: npm run cloudflare:deploy -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT" --service "$SUPERBOARD_SERVICE"
-build variables: CLOUDFLARE_ACCOUNT_ID, SUPERBOARD_TARGET=mbza-development, SUPERBOARD_ENVIRONMENT=development, SUPERBOARD_SERVICE=<one declared service>
-non-production branch builds: disabled
-```
-
-Create the same connection for: `observability`, `email`, `files`, `identity`,
-`app`, `products`, `paywalls`, `dynamic-links`, `support`, `analytics`, `marketing`,
-`onboardings`, `billing`, `custom`, `api`, `mcp`, and `dashboard`.
+See [installation and automatic updates](./CLOUDFLARE_BUILDS.md) for the
+installer, additional accounts, migration from per-service connections, and
+production backup requirements. GitHub deployment environments are not required
+for this path. Older `github-actions` and per-service matrix entries remain
+readable for compatibility; the current development entry uses `per-instance`.
 
 ## Private back-office registration
 

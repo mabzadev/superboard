@@ -141,7 +141,7 @@ async function listExpectedWorkerNamesWithWrangler(target, environment, execute 
 	return existing;
 }
 
-async function createPrivateWorkerShell(worker, target) {
+export async function createPrivateWorkerShell(worker, target, env = process.env) {
 	const directory = await mkdtemp(join(tmpdir(), "superboard-worker-shell-"));
 	const sourcePath = join(directory, "index.mjs");
 	const configPath = join(directory, "wrangler.jsonc");
@@ -170,7 +170,7 @@ ${(worker.entrypoints ?? []).map((name) => `export class ${name} extends WorkerE
 		);
 		const result = spawnSync("npx", ["wrangler", "deploy", "--config", configPath], {
 			cwd: root,
-			env: cloudflareEnv(target),
+			env: cloudflareEnv(target, env),
 			encoding: "utf8",
 			stdio: ["ignore", "pipe", "pipe"],
 			shell: false,

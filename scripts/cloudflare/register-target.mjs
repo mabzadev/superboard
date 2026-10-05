@@ -64,7 +64,7 @@ run("node", [
 
 console.log(
 	apply
-		? `Target ${target} resources are provisioned for ${selectedEnvironment}. Commit the non-secret identifiers, configure secrets, pass the remote secret preflight, then deploy through the protected workflow.`
+		? `Target ${target} resources are provisioned for ${selectedEnvironment}. Configure runtime secrets and connect Cloudflare Workers Builds before deploying.`
 		: args.remote
 			? `Target ${target} remote inventory was planned without mutation. Re-run with --apply and the exact emitted --confirm value to provision it.`
 			: `Target ${target} validated locally. Re-run with --remote and scoped Cloudflare credentials to inspect the account before provisioning.`,

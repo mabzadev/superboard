@@ -37,6 +37,17 @@ export function assertPublicRoutingReady(
 		};
 	}
 	const cutover = target.productionCutover;
+	if (target.freshInstallation && !cutover) {
+		return {
+			schemaVersion: 1,
+			ready: true,
+			routesEnabled: true,
+			target: target.target,
+			environment,
+			mode: "fresh-production-instance",
+			clientReceiptVerified: false,
+		};
+	}
 	if (!cutover) {
 		throw new Error(
 			`Production public routing for ${target.target} requires a reviewed client cutover receipt`,
