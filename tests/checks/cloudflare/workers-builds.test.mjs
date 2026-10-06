@@ -4,6 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import {
+	encodeBuildVariables,
+	readBuildVariable,
+} from "../../../scripts/cloudflare/build-variables.mjs";
 import { installInstanceUpdates } from "../../../scripts/cloudflare/install-updates.mjs";
 import { loadTarget } from "../../../scripts/cloudflare/target.mjs";
 import {
@@ -22,6 +26,41 @@ const target = JSON.parse(
 	await readFile(new URL("../../../infra/targets/mbza-development.json", import.meta.url), "utf8"),
 );
 const uuid = "12345678-1234-1234-1234-123456789012";
+
+test("large build secrets round-trip Unicode and reject missing or mixed chunks", async () => {
+	const value = JSON.stringify({ secret: "clé🔑".repeat(2000) });
+	const variables = await encodeBuildVariables({
+		SUPERBOARD_INSTALLATION_KEYS: { value, is_secret: true },
+	});
+	for (const entry of Object.values(variables)) {
+		assert.ok(Buffer.byteLength(entry.value) <= 5120);
+		assert.equal(entry.is_secret, true);
+	}
+	const env = Object.fromEntries(
+		Object.entries(variables).map(([name, entry]) => [name, entry.value]),
+	);
+	assert.equal(await readBuildVariable(env, "SUPERBOARD_INSTALLATION_KEYS"), value);
+	await assert.rejects(
+		readBuildVariable(
+			{ ...env, SUPERBOARD_INSTALLATION_KEYS__PART_0: undefined },
+			"SUPERBOARD_INSTALLATION_KEYS",
+		),
+		/BUILD_VARIABLE_INCOMPLETE/u,
+	);
+	await assert.rejects(
+		readBuildVariable(
+			{ ...env, SUPERBOARD_INSTALLATION_KEYS__PART_0: "YQ==" },
+			"SUPERBOARD_INSTALLATION_KEYS",
+		),
+	);
+	assert.equal(
+		await readBuildVariable(
+			{ SUPERBOARD_INSTALLATION_KEYS: value },
+			"SUPERBOARD_INSTALLATION_KEYS",
+		),
+		value,
+	);
+});
 
 function installation(accountId = "a".repeat(32)) {
 	return {
@@ -117,7 +156,10 @@ test("new accounts have isolated triggers and reinstalling does not duplicate th
 		assert.deepEqual(state.triggers[0].branch_includes, ["dev"]);
 		assert.deepEqual(state.triggers[0].branch_excludes, []);
 		assert.equal(state.variables.CLOUDFLARE_ACCOUNT_ID.value, account);
-		assert.deepEqual(JSON.parse(state.variables.SUPERBOARD_TARGET_MANIFEST.value), target);
+		const env = Object.fromEntries(
+			Object.entries(state.variables).map(([name, entry]) => [name, entry.value]),
+		);
+		assert.deepEqual((await loadTarget(target.target, env)).target, target);
 	}
 });
 

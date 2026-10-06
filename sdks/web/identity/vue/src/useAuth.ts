@@ -40,10 +40,11 @@ export function useAuth() {
 		if (state.isAuthenticated && (!props?.policy || props?.policy === "sign_in_or_sign_up"))
 			throw new Error("Already authenticated, please logout first");
 		try {
-			triggerLogin(method, state.config, {
+			await triggerLogin(method, state.config, {
 				...props,
-				authorizePopupHandler: ({ state: requestState, code }) =>
-					handleTokenExchangeByAuthCode(code, requestState, state, props?.locale),
+				authorizePopupHandler: ({ state: requestState, code }) => {
+					handleTokenExchangeByAuthCode(code, requestState, state, props?.locale);
+				},
 			});
 		} catch (e) {
 			const msg = handleError(e, ErrorType.LoginFailed);

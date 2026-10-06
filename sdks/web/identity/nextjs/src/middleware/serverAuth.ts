@@ -1,13 +1,12 @@
-import {
-	StorageKey,
-	isValidTokens,
-	IdTokenStorage,
-	AccessTokenStorage,
-	RefreshTokenStorage,
-} from "@melody-auth/shared";
+import { StorageKey, isValidTokens, AccessTokenStorage } from "@melody-auth/shared";
 import { exchangeTokenByRefreshToken } from "@melody-auth/web";
 
 import { CookieStorage } from "../storage/cookieAdapter";
+import {
+	readAccessTokenStorage,
+	readIdTokenStorage,
+	readRefreshTokenStorage,
+} from "../validation.js";
 
 /**
  * Configuration options for server-side authentication
@@ -73,20 +72,19 @@ export async function getServerSession(options: ServerAuthOptions): Promise<Auth
 
 	try {
 		// Get tokens from cookies
-		const idTokenStr = storage.getItem(StorageKey.IdToken);
-		const accessTokenStr = storage.getItem(StorageKey.AccessToken);
-		const refreshTokenStr = storage.getItem(StorageKey.RefreshToken);
+		const idTokenStr = await storage.getItemAsync(StorageKey.IdToken);
+		const accessTokenStr = await storage.getItemAsync(StorageKey.AccessToken);
+		const refreshTokenStr = await storage.getItemAsync(StorageKey.RefreshToken);
 
 		// Access token is required for authentication
 		if (!accessTokenStr) {
 			return null;
 		}
 
-		const idTokenStorage: IdTokenStorage | null = idTokenStr ? JSON.parse(idTokenStr) : null;
-		const accessTokenStorage: AccessTokenStorage = JSON.parse(accessTokenStr);
-		const refreshTokenStorage: RefreshTokenStorage | null = refreshTokenStr
-			? JSON.parse(refreshTokenStr)
-			: null;
+		const idTokenStorage = readIdTokenStorage(idTokenStr);
+		const accessTokenStorage = readAccessTokenStorage(accessTokenStr);
+		if (idTokenStr && !idTokenStorage) return null;
+		const refreshTokenStorage = readRefreshTokenStorage(refreshTokenStr);
 
 		// Check token validity
 		const { hasValidIdToken, hasValidAccessToken, hasValidRefreshToken } = isValidTokens(
@@ -114,7 +112,7 @@ export async function getServerSession(options: ServerAuthOptions): Promise<Auth
 					expiresOn: newTokens.expiresOn,
 				};
 
-				storage.setItem(StorageKey.AccessToken, JSON.stringify(newAccessTokenStorage));
+				await storage.setItemAsync(StorageKey.AccessToken, JSON.stringify(newAccessTokenStorage));
 
 				return {
 					userId: idTokenStorage?.account.sub,
@@ -131,7 +129,7 @@ export async function getServerSession(options: ServerAuthOptions): Promise<Auth
 		}
 
 		// Access token is required, ID token is optional
-		if (!hasValidAccessToken) {
+		if (!hasValidAccessToken || !accessTokenStorage) {
 			return null;
 		}
 

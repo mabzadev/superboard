@@ -13,6 +13,10 @@ import {
 	installationDeploymentEnvironment,
 	finishInstanceInitialization,
 } from "./initialize-instance.mjs";
+import {
+	installationRunRequest,
+	validateInstallationRunContext,
+} from "./installation-run-context.mjs";
 import { targetForEnvironment } from "./target-environments.mjs";
 import { cloudflareEnv, loadTarget, root } from "./target.mjs";
 import { validateBuildContext } from "./workers-builds-config.mjs";
@@ -36,7 +40,9 @@ export function validationEnvironment(env) {
 }
 
 export async function buildInstance(env = process.env, execute = run) {
-	const context = validateBuildContext(env);
+	const context = env.SUPERBOARD_INSTALLATION_RUN_ID
+		? validateInstallationRunContext(env)
+		: validateBuildContext(env);
 	let { target } = await loadTarget(context.target, env);
 	let deploymentEnv = cloudflareEnv(target, env);
 	if (deploymentEnv.CLOUDFLARE_ACCOUNT_ID !== context.accountId)
@@ -46,6 +52,7 @@ export async function buildInstance(env = process.env, execute = run) {
 	await rm(receiptPath, { force: true });
 	const testEnv = validationEnvironment(env);
 	await execute("pnpm", ["--filter", "@emdash-cms/admin...", "build"], testEnv);
+	await execute("pnpm", ["--dir", "sdks/web", "build"], testEnv);
 	for (const script of [
 		"build",
 		"lint",
@@ -56,6 +63,12 @@ export async function buildInstance(env = process.env, execute = run) {
 		"cloudflare:builds:test",
 	])
 		await execute("pnpm", [script], testEnv);
+	if (env.SUPERBOARD_INSTALLATION_RUN_ID) {
+		const authorization = await installationRunRequest(env, "context");
+		env.CLOUDFLARE_API_TOKEN = authorization.token;
+		env.SUPERBOARD_SETUP_API_TOKEN = authorization.token;
+		deploymentEnv = cloudflareEnv(target, env);
+	}
 	if (env.SUPERBOARD_INITIAL_INSTALL === "1") {
 		target = await initializeInstance(env);
 		deploymentEnv = cloudflareEnv(target, env);
@@ -131,7 +144,9 @@ export async function retainProductionBackups({
 }
 
 export async function deployInstance(env = process.env, execute = run) {
-	const context = validateBuildContext(env);
+	const context = env.SUPERBOARD_INSTALLATION_RUN_ID
+		? validateInstallationRunContext(env)
+		: validateBuildContext(env);
 	const manifest = `infra/generated/${context.target}-${context.environment}-deployments.json`;
 	if (env.SUPERBOARD_INITIAL_INSTALL === "1") {
 		const initial = JSON.parse(

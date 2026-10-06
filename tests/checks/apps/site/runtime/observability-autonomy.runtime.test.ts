@@ -174,3 +174,63 @@ test("the actual tail handler persists sanitized observations without observing 
 	expect(JSON.stringify(rows.results)).not.toContain("private");
 	expect(rows.results[0]).toMatchObject({ exceptions: 1, http_status: 500, cpu_ms: 3 });
 });
+
+test("production supervision reads persisted instance metrics without Cloudflare API credentials", async () => {
+	await toggle("enable");
+	const service = "oauth-installed-instance";
+	expect(
+		(
+			await ingest({
+				instance_id: "reference-production",
+				observation_id: crypto.randomUUID(),
+				service,
+				event_type: "fetch",
+				outcome: "ok",
+				status: 200,
+				exceptions: 0,
+				truncated: true,
+				cpu_ms: 4,
+				wall_ms: 12,
+				observed_at: new Date().toISOString(),
+			})
+		).status,
+	).toBe(201);
+	const context = pluginTaskContext(createExecutionContext(), plugin);
+	const bindings = {
+		ENVIRONMENT: "production",
+		SUPERBOARD_OBSERVABILITY_SOURCE: "emdash",
+		SUPERBOARD_INSTANCE_ID: "reference-production",
+		OBSERVABILITY_INTERNAL_TOKEN: "runtime-observability-secret",
+		API_SERVICE: {
+			fetch: (request: Request) =>
+				dispatchLifecycleApi(request, env as Record<string, unknown>, context),
+		},
+	};
+	const response = await observabilityWorker.fetch!(
+		new Request("https://observability.internal/internal/v1/summary?window=15", {
+			headers: { "x-observability-token": "runtime-observability-secret" },
+		}),
+		bindings as never,
+		context,
+	);
+	expect(response.status).toBe(200);
+	expect(await response.json()).toMatchObject({
+		status: "ok",
+		source: "emdash",
+		windowMinutes: 15,
+		rows: expect.arrayContaining([
+			{
+				service,
+				eventType: "fetch",
+				outcome: "ok",
+				invocations: 1,
+				exceptions: 0,
+				truncated: 1,
+				averageCpuMs: 4,
+				averageWallMs: 12,
+				maximumCpuMs: 4,
+				maximumWallMs: 12,
+			},
+		]),
+	});
+});

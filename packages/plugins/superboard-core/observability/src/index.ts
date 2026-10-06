@@ -14,6 +14,7 @@ interface ObservabilitySecrets {
 	OBSERVABILITY_INTERNAL_TOKEN_PREVIOUS?: string;
 	CLOUDFLARE_ANALYTICS_ACCOUNT_ID?: string;
 	CLOUDFLARE_ANALYTICS_TOKEN?: string;
+	SUPERBOARD_OBSERVABILITY_SOURCE?: "emdash" | "analytics-engine";
 }
 
 type ObservabilityEnv = Env & ObservabilitySecrets;
@@ -22,7 +23,11 @@ const lifecycleWorker = {
 	async tail(events: TraceItem[], env: ObservabilityEnv): Promise<void> {
 		for (const trace of events) {
 			const event = classifyEvent(trace.event);
-			if (event.path === "/internal/observability/observations") continue;
+			if (
+				event.path === "/internal/observability/observations" ||
+				event.path === "/internal/observability/summary"
+			)
+				continue;
 			env.ANALYTICS.writeDataPoint({
 				indexes: [bounded(trace.scriptName || "unknown", 96)],
 				blobs: [
@@ -56,6 +61,7 @@ const lifecycleWorker = {
 						outcome: bounded(trace.outcome || "unknown", 64),
 						status: Number(event.status || 0),
 						exceptions: trace.exceptions.length,
+						truncated: trace.truncated,
 						cpu_ms: Math.max(0, finite(trace.cpuTime)),
 						wall_ms: Math.max(0, finite(trace.wallTime)),
 						observed_at: new Date(trace.eventTimestamp ?? Date.now()).toISOString(),
@@ -108,6 +114,19 @@ async function runtimeSummary(
 	env: ObservabilityEnv,
 	windowMinutes: ObservabilityWindowMinutes,
 ): Promise<Response> {
+	if (
+		env.SUPERBOARD_OBSERVABILITY_SOURCE === "emdash" &&
+		env.API_SERVICE &&
+		env.SUPERBOARD_INSTANCE_ID
+	) {
+		const request = new Request(
+			`https://api.internal/internal/observability/summary?window=${windowMinutes}`,
+		);
+		const headers = await signPluginTaskRequest(request, env.OBSERVABILITY_INTERNAL_TOKEN);
+		return env.API_SERVICE.fetch(
+			new Request(request, { headers, signal: AbortSignal.timeout(10_000) }),
+		);
+	}
 	if (!configured(env)) {
 		const optionalInDevelopment = env.ENVIRONMENT === "development";
 		const summary: ObservabilitySummary = {
@@ -275,6 +294,8 @@ function parseWindow(value: string | null): ObservabilityWindowMinutes {
 }
 
 function configured(env: ObservabilityEnv): boolean {
+	if (env.SUPERBOARD_OBSERVABILITY_SOURCE === "emdash")
+		return Boolean(env.API_SERVICE && env.SUPERBOARD_INSTANCE_ID);
 	return (
 		/^[a-f0-9]{32}$/i.test(env.CLOUDFLARE_ANALYTICS_ACCOUNT_ID || "") &&
 		Boolean(env.CLOUDFLARE_ANALYTICS_TOKEN)

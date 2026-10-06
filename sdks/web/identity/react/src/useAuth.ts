@@ -9,11 +9,12 @@ import {
 import { triggerLogin, logout, exchangeTokenByRefreshToken, getUserInfo } from "@melody-auth/web";
 import { useCallback, useContext, useMemo } from "react";
 
-import authContext, { AuthContext } from "./context";
+import authContext from "./context";
 import { handleTokenExchangeByAuthCode } from "./utils";
 
 export const useAuth = () => {
-	const context = useContext<AuthContext>(authContext);
+	const context = useContext(authContext);
+	if (!context) throw new Error("AuthProvider is required");
 	const { state, dispatch } = context;
 
 	const accessToken = useMemo(
@@ -40,14 +41,17 @@ export const useAuth = () => {
 			try {
 				triggerLogin(method, state.config, {
 					...props,
-					authorizePopupHandler: ({ state: requestState, code }) =>
+					authorizePopupHandler: ({ state: requestState, code }) => {
 						handleTokenExchangeByAuthCode(
 							code,
 							requestState,
 							state.config,
 							dispatch,
 							props?.locale,
-						),
+						);
+					},
+				}).catch((error: unknown) => {
+					dispatch({ type: "setLoginError", payload: handleError(error, ErrorType.LoginFailed) });
 				});
 			} catch (e) {
 				const msg = handleError(e, ErrorType.LoginFailed);

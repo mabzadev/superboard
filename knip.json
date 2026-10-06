@@ -6,7 +6,9 @@
 				"tests/checks/**/*.test.{ts,tsx,mjs}",
 				"tests/e2e/**/*.{ts,mjs}",
 				"tests/lints/*.{mjs,ts}",
-				"scripts/**/*.{mjs,ts}"
+				"scripts/**/*.{mjs,ts}",
+				"tests/fixtures/site-browser/business-actions.mjs",
+				"tests/checks/**/env.d.ts"
 			],
 			"project": ["tests/**/*.{ts,tsx,mjs}", "scripts/**/*.{ts,mjs}"]
 		},
@@ -45,6 +47,15 @@
 			"wrangler": {
 				"config": ["wrangler*.jsonc"]
 			}
+		},
+		"packages/plugins/superboard-authentification/worker": {
+			"entry": ["src/index.ts", "src/melody/node.tsx"],
+			"wrangler": {
+				"config": ["wrangler.jsonc"]
+			},
+			"vitest": {
+				"config": ["vitest*.config.ts"]
+			}
 		}
 	},
 	"ignore": [
@@ -58,7 +69,8 @@
 		"**/.symlinks/**",
 		"**/Pods/**",
 		"**/.dart_tool/**",
-		"**/build/**"
+		"**/build/**",
+		"!tests/checks/**/env.d.ts"
 	],
 	"ignoreDependencies": ["@changesets/cli"],
 	"ignoreWorkspaces": ["sdks/flutter/example", "sdks/web/flows/upstream/**"],

@@ -256,7 +256,7 @@ describe("AuthService", () => {
 			const testCode = "abc123";
 
 			// Invoke the authorizePopupHandler.
-			const result = thirdArg.authorizePopupHandler({
+			thirdArg.authorizePopupHandler({
 				state: testRequestState,
 				code: testCode,
 			});
@@ -268,7 +268,6 @@ describe("AuthService", () => {
 				fakeAuthContext.state,
 				props.locale,
 			);
-			expect(result).toBe("exchanged-token");
 
 			handleTokenExchangeSpy.mockRestore();
 		});

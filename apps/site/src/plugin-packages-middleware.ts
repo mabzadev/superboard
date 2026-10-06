@@ -184,7 +184,8 @@ export const onRequest = (async (context, next) => {
 			const values = new Map(rows.results.map((row) => [row.name, row.value]));
 			return keys.flatMap((entry) => {
 				const value = values.get(entry.storage);
-				return value === undefined ? [] : [{ key: entry.key, value: JSON.parse(value) }];
+				const parsed: unknown = value === undefined ? undefined : JSON.parse(value);
+				return value === undefined ? [] : [{ key: entry.key, value: parsed }];
 			});
 		},
 		get: async (key: string): Promise<unknown> => {

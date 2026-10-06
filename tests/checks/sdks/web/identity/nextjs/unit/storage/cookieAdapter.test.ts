@@ -16,6 +16,11 @@ describe("CookieStorage", () => {
 	});
 
 	describe("getItem", () => {
+		it("awaits cookie reads in server contexts", async () => {
+			vi.mocked(cookiesNext.getCookie).mockResolvedValueOnce("server-cookie");
+			const storage = new CookieStorage();
+			expect(await storage.getItemAsync("session")).toBe("server-cookie");
+		});
 		it("should retrieve a cookie value", () => {
 			const mockValue = "test-value";
 			vi.mocked(cookiesNext.getCookie).mockReturnValue(mockValue);

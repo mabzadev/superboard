@@ -3,7 +3,9 @@ import { resolve } from "node:path";
 
 import { applyCloudflareBootstrapPlan, buildCloudflareBootstrapPlan } from "./bootstrap-core.mjs";
 import { cloudflareClient, fetchCloudflareBootstrapInventories } from "./bootstrap.mjs";
+import { encodeBuildVariables, readBuildVariable } from "./build-variables.mjs";
 import { fetchAppleRootG3, generateDevelopmentSecretAssignments } from "./development-secrets.mjs";
+import { installationRunRequest } from "./installation-run-context.mjs";
 import { root, validateTarget } from "./target.mjs";
 import {
 	applyWorkerShellPlan,
@@ -12,6 +14,25 @@ import {
 } from "./worker-shells.mjs";
 
 export async function installationBuildRequest(env, suffix, method, body) {
+	if (env.SUPERBOARD_INSTALLATION_RUN_ID) {
+		if (suffix === "/environment_variables" && method === "PATCH")
+			return installationRunRequest(env, "state", body);
+		if (suffix === "/environment_variables" && method === "GET") {
+			const context = await installationRunRequest(env, "context");
+			return context.keys
+				? { SUPERBOARD_INSTALLATION_KEYS: { value: context.keys, is_secret: true } }
+				: {};
+		}
+		if (suffix.startsWith("/environment_variables/") && method === "DELETE")
+			return installationRunRequest(env, "state", {
+				[suffix.slice("/environment_variables/".length)]: null,
+			});
+		if (suffix === "" && method === "PATCH" && Array.isArray(body.branch_includes))
+			return { status: "configured" };
+		throw new Error("INSTALLATION_STATE_OPERATION_INVALID");
+	}
+	if (method === "PATCH" && suffix === "/environment_variables")
+		body = await encodeBuildVariables(body);
 	if (
 		!/^[a-f0-9]{32}$/iu.test(env.CLOUDFLARE_ACCOUNT_ID ?? "") ||
 		!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iu.test(
@@ -40,7 +61,7 @@ export async function installationBuildRequest(env, suffix, method, body) {
 }
 
 export async function initializeInstance(env) {
-	const target = JSON.parse(env.SUPERBOARD_TARGET_MANIFEST);
+	const target = JSON.parse(await readBuildVariable(env, "SUPERBOARD_TARGET_MANIFEST"));
 	await validateTarget(target);
 	if (!target.freshInstallation || env.SUPERBOARD_ENVIRONMENT !== "production")
 		throw new Error("FRESH_INSTALLATION_REQUIRED");
@@ -75,8 +96,10 @@ export async function initializeInstance(env) {
 		create: (worker) => createPrivateWorkerShell(worker, target, env),
 	});
 	let assignments;
-	if (env.SUPERBOARD_INSTALLATION_KEYS) assignments = JSON.parse(env.SUPERBOARD_INSTALLATION_KEYS);
-	else {
+	if (env.SUPERBOARD_INSTALLATION_KEYS) {
+		env.SUPERBOARD_INSTALLATION_KEYS = await readBuildVariable(env, "SUPERBOARD_INSTALLATION_KEYS");
+		assignments = JSON.parse(env.SUPERBOARD_INSTALLATION_KEYS);
+	} else {
 		assignments = await generateDevelopmentSecretAssignments({
 			target,
 			environment: "production",
@@ -111,6 +134,10 @@ export async function finishInstanceInitialization(env) {
 	await installationBuildRequest(env, "/environment_variables", "PATCH", {
 		SUPERBOARD_INITIAL_INSTALL: { value: "0", is_secret: false },
 	});
+	const variables = await installationBuildRequest(env, "/environment_variables", "GET");
+	for (const name of Object.keys(variables))
+		if (/^SUPERBOARD_INSTALLATION_KEYS__PART_[0-9]+$/u.test(name))
+			await installationBuildRequest(env, `/environment_variables/${name}`, "DELETE");
 	await installationBuildRequest(env, "", "PATCH", {
 		branch_includes: ["main"],
 		branch_excludes: env.SUPERBOARD_AUTOMATIC_UPDATES === "1" ? [] : ["*"],

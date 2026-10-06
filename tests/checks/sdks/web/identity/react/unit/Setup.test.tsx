@@ -22,7 +22,7 @@ if (typeof window.history.pushState !== "function") {
 }
 
 // Create a mock for the useAuth hook and its acquireToken function
-const mockAcquireToken = vi.fn();
+const mockAcquireToken = vi.fn(async () => undefined);
 vi.mock("../../../../../../../sdks/web/identity/react/src/useAuth", () => {
 	return { useAuth: () => ({ acquireToken: mockAcquireToken }) };
 });

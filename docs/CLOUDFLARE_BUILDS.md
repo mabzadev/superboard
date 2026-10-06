@@ -1,128 +1,155 @@
 # Installation et mises à jour dans Cloudflare
 
-Cloudflare Workers Builds exécute les vérifications, prépare les artefacts et
-déploie chaque Instance SuperBoard. `dev` alimente `mbza-development` ; les
-installations de production suivent `main`. GitHub héberge le code. Les
-déploiements n'attendent pas un workflow GitHub Actions.
+SuperBoard utilise l’autorisation OAuth de Cloudflare pour installer une instance
+complète et maintenir ses services. Le navigateur ne demande aucun jeton API.
+Le déploiement s’exécute depuis le dépôt canonique avec GitHub Actions : une
+installation ne crée pas de copie du dépôt à synchroniser.
 
-## Publier l’installateur
+## Installer une instance
 
-L’installateur est un Worker indépendant dans `infra/cloudflare-installer`.
-Il propose le choix du compte, du domaine et du jeton Builds, puis lance une
-installation dans le compte sélectionné. Son interface existe en français
-(`?lang=fr`) et en anglais (`?lang=en`).
+1. Ouvrez le parcours d’installation depuis GitHub. Cloudflare vous demande de
+   vous connecter, de choisir le compte autorisé et d’accepter les permissions.
+2. De retour dans SuperBoard, choisissez le compte, un domaine actif, un nom
+   d’instance et l’adresse de son administrateur.
+3. Choisissez si les publications de `main` doivent mettre à jour cette instance,
+   puis cliquez sur **Installer SuperBoard**.
+4. Suivez l’exécution dans **Vos installations**. **En attente** signifie que le
+   travail est enregistré ; **Installée** apparaît après le déploiement et ses
+   contrôles HTTP. Le lien GitHub donne accès aux journaux de l’exécution.
+5. Ouvrez SuperBoard et terminez la création du compte administrateur dans le Site.
 
-Publiez d’abord les sources de cette fonctionnalité dans `main`. Dans le
-compte destiné à héberger l’installateur, configurez `CLOUDFLARE_ACCOUNT_ID` et
-les accès Wrangler, puis lancez :
+L’interface existe en français (`?lang=fr`) et en anglais (`?lang=en`).
+**Autoriser un autre compte** ouvre un nouveau consentement Cloudflare.
+Les installations déjà enregistrées restent visibles pour le même utilisateur.
+Un nom et un identifiant propres à chaque installation séparent les Workers,
+les bases, les files, les buckets et les sous-domaines. Le provisionnement refuse
+de remplacer un Worker ou une route déjà utilisés.
 
-```sh
-pnpm cloudflare:installer:check
-pnpm cloudflare:installer:deploy
-```
+Un domaine actif dans le compte est nécessaire. Les adresses suivent la forme
+`instance-identifiant-board.example.com`, avec des adresses distinctes pour
+l’API, l’authentification et les liens courts. Aucun domaine privé n’est nécessaire
+dans le bouton GitHub. Les quotas et les produits Cloudflare requis doivent être
+disponibles dans le compte choisi.
 
-Ouvrez l’adresse retournée par Wrangler. `pnpm cloudflare:installer:dev`
-démarre le même Worker localement avec les API Cloudflare réelles : les
-actions d’installation y créent donc de vraies ressources.
+Le déploiement crée les ressources, initialise les clés, applique les migrations
+et publie l’ensemble des services. Les fournisseurs externes restent à configurer
+selon l’usage : messagerie sortante, boutiques mobiles, paiements ou fournisseurs
+d’identité. La supervision des nouvelles instances utilise les observations D1
+de l’instance et ne demande pas de jeton Analytics supplémentaire.
 
-## Installer dans un compte supplémentaire
+## Mises à jour
 
-L’autorisation initiale de l’application GitHub de Cloudflare doit donner accès
-à `mabzadev/superboard`. Une copie du dépôt n’hérite pas des futurs pushes du
-dépôt d’origine. Configurez cette autorisation dans chaque compte avant
-d’utiliser l’installateur. Consultez la
-[procédure Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/).
+Le workflow `cloudflare-installations.yml` traite les publications de `main` et
+`dev`, les déclenchements manuels et les installations en attente lors de son
+passage périodique. GitHub peut retarder les exécutions planifiées.
 
-Le jeton API de configuration doit être un jeton utilisateur, avec accès aux
-comptes concernés, aux domaines et à Workers Builds. Le provisionnement
-nécessite aussi les droits de création des Workers, D1, KV, R2, Queues et
-Vectorize. Le jeton de déploiement choisi dans Builds doit couvrir tous les
-services et ressources de l’instance, ainsi que ses routes ; un jeton limité
-au seul Worker Site ne suffit pas.
+| Installation                          | Source | Déclenchement                           |
+| ------------------------------------- | ------ | --------------------------------------- |
+| Développement raccordé                | `dev`  | Publications et vérification périodique |
+| Production avec automatisme activé    | `main` | Publications et vérification périodique |
+| Production avec automatisme désactivé | `main` | **Mettre à jour maintenant**            |
 
-La supervision de production demande aussi un jeton Cloudflare Analytics
-distinct, limité à la lecture du compte. L’installateur le demande séparément
-et le transmet au Worker de supervision ; il ne réutilise pas le jeton de
-configuration pour les requêtes analytiques.
+Décochez **Mises à jour automatiques** pour suspendre les publications futures.
+Une mise à jour encore en attente est annulée ; une exécution déjà commencée
+termine son déploiement. **Réessayer** reprend une exécution en échec. Si
+l’autorisation a expiré ou a été révoquée, reconnectez le compte dans Cloudflare,
+puis réessayez. Les secrets initiaux restent disponibles pour reprendre une
+première installation partiellement terminée ; ils ne sont pas régénérés.
 
-1. Connectez le compte avec son jeton API.
-2. Choisissez un domaine actif, un nom d’instance et l’adresse de
-   l’administrateur. Les adresses `board.`, `sdk.`, `api.` et `in.` doivent être
-   libres sur ce domaine.
-3. Sélectionnez le jeton Builds et l’option de mise à jour automatique.
-4. Cliquez sur **Installer dans ce compte**. Suivez le résultat dans Cloudflare
-   Builds. L’affichage « installation lancée » confirme l’acceptation du build,
-   pas la réussite du déploiement.
-5. Utilisez **Ajouter un autre compte** pour une autre installation.
+Le contrôleur associe chaque exécution à un compte, une instance, une branche et
+un commit. L’identité OIDC de GitHub doit provenir du workflow canonique sur
+`main` ou `dev`. Une exécution issue de `dev` ne peut pas réclamer au contrôleur
+un déploiement de production. Chaque instance ne peut avoir qu’un déploiement actif.
+Les permissions OAuth restent celles des comptes autorisés dans Cloudflare.
+Pour séparer aussi ces permissions, autorisez chaque compte séparément et utilisez
+des comptes distincts pour le développement et la production.
 
-Chaque installation reçoit un identifiant et des noms de ressources propres.
-Elle ne nécessite aucune entrée supplémentaire dans le dépôt central. La
-configuration est conservée dans les variables Builds de son compte. Le jeton
-de configuration et les clés initiales sont des secrets temporaires de Builds ;
-leurs copies sont supprimées à la fin d’une installation réussie. En cas
-d’échec, ils restent disponibles pour reprendre le build. Révoquez le jeton si
-vous abandonnez l’installation. Le navigateur ne conserve aucun jeton.
+## Raccorder le développement existant
 
-Le déploiement initialise les ressources et les secrets, applique les migrations
-et publie les services. Configurez ensuite les fournisseurs externes nécessaires
-à vos usages, par exemple l’envoi d’e-mails et les boutiques mobiles.
+L’exploitant du contrôleur configure `INSTALLER_DEVELOPMENT_TARGET` avec un objet
+JSON contenant `id` (UUID stable), `accountId` et `target` (le manifeste complet
+déjà provisionné). Il ne contient aucun secret de service.
+Si cette valeur dépasse 4 000 octets, encodez-la avec `encodeBuildVariables` dans
+`scripts/cloudflare/build-variables.mjs` et conservez les variables `__PART_*`
+produites avec le marqueur principal. Le contrôleur vérifie leur empreinte avant
+de lire le manifeste ; chaque liaison reste sous la limite Cloudflare de 5 Ko.
 
-## Raccorder une instance existante
+Après autorisation de ce compte, **Raccorder le développement existant aux mises
+à jour de dev** enregistre le manifeste. Le contrôleur vérifie la présence du
+Worker Site. L’exécution réutilise les ressources et les secrets existants et
+applique uniquement les migrations et déploiements nécessaires. Elle n’exécute
+pas l’initialisation d’une nouvelle instance.
 
-`pnpm cloudflare:builds:install` prépare ou applique la connexion aux mises à
-jour. Placez un fichier de configuration hors du dépôt. Il contient
-`schemaVersion: 1`, `accountId`, `environment`, `automaticUpdates`,
-`repoConnectionUuid`, `buildTokenUuid` et `target` (le manifeste complet de
-l’instance, avec ses ressources provisionnées). La production demande aussi
-`backupBucket`, un bucket R2 privé existant.
+Avant ce raccordement, inspectez les anciens déclencheurs Workers Builds pour
+éviter deux pipelines actifs sur les mêmes services. Le contrôleur ne supprime
+pas les anciennes connexions automatiquement.
 
-Définissez `CLOUDFLARE_API_TOKEN` pour le compte concerné. En production,
-conservez et réutilisez `SUPERBOARD_BACKUP_ENCRYPTION_KEY`, une clé de 32 octets
-encodée en base64, pour pouvoir restaurer les sauvegardes historiques.
+## Héberger le contrôleur
 
-```sh
-pnpm cloudflare:builds:install --installation /chemin/prive/instance.json
-pnpm cloudflare:builds:install --installation /chemin/prive/instance.json --apply
-```
+Le Worker `infra/cloudflare-installer` conserve le registre et les autorisations
+chiffrées dans une base D1 dédiée. Il requiert :
 
-La commande vérifie le Worker Site, détecte les connexions concurrentes,
-configure les variables, puis active les pushes sur la branche attendue.
-Pour suspendre les mises à jour, réappliquez le fichier avec
-`automaticUpdates: false`. La connexion reste disponible pour un build manuel.
+- `INSTALLER_DB`, liaison vers la base avec les migrations du dossier `migrations` ;
+- `INSTALLER_ORIGIN`, origine HTTPS exacte du contrôleur ;
+- `INSTALLER_SESSION_KEY`, secret de 32 octets aléatoires encodé en base64 ;
+- `CLOUDFLARE_OAUTH_CLIENT_ID` et `CLOUDFLARE_OAUTH_SCOPES` ;
+- `INSTALLER_RUNNER_ENABLED=1`, après publication et vérification des sources.
 
-Pour migrer Mabza, retirez ses anciennes connexions Builds par service avant
-d’enregistrer la connexion par instance sur le Worker Site. L’outil refuse les
-connexions concurrentes et ne les supprime pas automatiquement.
+Enregistrez un [client OAuth Cloudflare](https://developers.cloudflare.com/fundamentals/oauth/create-an-oauth-client/)
+avec les grants `authorization_code` et `refresh_token`, PKCE et l’URI exacte
+`https://<origine-du-controleur>/oauth/callback`. Le client public doit avoir son
+domaine éditeur vérifié. Les scopes utilisés sont `account-settings.read`,
+`user-details.read`, `zone.read`, `dns.write`, `workers-scripts.write`,
+`workers-kv-storage.write`, `workers-r2.write`, `workers-routes.write`, `d1.write`,
+`queues.write`, `vectorize.write` et `offline_access`.
 
-## Ordre d’un déploiement
+La session du navigateur utilise un cookie opaque, HttpOnly et Secure. Les
+autorisations durables sont chiffrées côté serveur. Le contrôleur renouvelle les
+accès OAuth ; il ne crée pas de jeton API de compte. Les runners reçoivent un
+accès temporaire limité à l’autorisation Cloudflare de leur installation.
+Conservez la clé du contrôleur pour pouvoir déchiffrer son registre sauvegardé.
+Se déconnecter de l’interface n’interrompt pas les mises à jour autorisées.
+Cloudflare permet de révoquer l’accès dans les applications connectées du profil.
 
-Le build vérifie la branche (`dev` ou `main`), exécute lint, contrats, types et
-tests locaux, puis prépare le déploiement. Un reçu lie cette préparation au
-commit, au compte et au manifeste. La commande de déploiement refuse une
-préparation modifiée ou provenant d’un autre compte.
+Utilisez une configuration Wrangler privée dans `infra/generated/` pour les
+identifiants de ressources. Appliquez ses migrations D1, définissez le secret
+avec Wrangler et déployez ce Worker. La variable GitHub
+`SUPERBOARD_INSTALLER_ORIGIN` doit correspondre à son origine HTTPS.
+Le workflow `installer-launcher.yml` publie la redirection GitHub Pages vers
+`/oauth/start`. Activez GitHub Pages avec la source **GitHub Actions**.
 
-En production, les exports D1 sont chiffrés et envoyés dans le bucket de
-sauvegarde. Chaque objet est relu pour vérifier son intégrité avant les
-migrations. Les sauvegardes R2 ne sont pas supprimées par le pipeline ;
-configurez leur rétention et conservez la clé de chiffrement. Les mises à jour
-réutilisent les secrets déjà installés. Elles ne régénèrent pas les clés de
-signature ou de chiffrement.
+`/api/readiness` vérifie la configuration, l’activation du runner et la présence
+des sources publiées. Sa réponse ne prouve ni la disponibilité des produits d’un
+compte ni la réussite d’une installation.
 
-La première installation garde les pushes automatiques désactivés jusqu’à la
-fin du déploiement. Les contrôles HTTP finaux couvrent les réponses du Site en
-français et en anglais ; ils ne remplacent pas les parcours métier dans le
-navigateur. Une erreur de validation ou de déploiement fait échouer Builds.
-Le déploiement de plusieurs Workers n’est pas transactionnel : une erreur peut
-laisser des services déjà mis à jour. Consultez le journal avant de relancer.
+## Vérifications et reprise
 
-## Vérification locale
+Avant de provisionner, le pipeline construit les packages et le SDK Web, puis
+exécute lint, contrats, types, tests locaux et tests d’installation. Il renouvelle
+l’accès OAuth après ces contrôles. Un reçu lie les artefacts préparés au compte,
+au manifeste et au commit ; le déploiement refuse un reçu incompatible.
+
+En production, les exports D1 sont chiffrés dans un bucket privé et relus pour
+vérifier leur intégrité avant les migrations. La clé est conservée dans le
+registre chiffré. Les sauvegardes ne sont pas supprimées automatiquement.
+Les mises à jour conservent les clés de signature et de chiffrement des services.
+
+Le déploiement de plusieurs Workers n’est pas transactionnel. Une erreur peut
+laisser des services déjà mis à jour ; consultez le journal avant de réessayer.
+Les contrôles HTTP français et anglais ne remplacent pas la vérification des
+parcours métier dans le navigateur.
 
 ```sh
 pnpm cloudflare:builds:test
 pnpm cloudflare:installer:check
 ```
 
-`node tests/fixtures/cloudflare/installer.mjs` sert l’interface sur
-`http://127.0.0.1:4768` avec une API Cloudflare simulée. Ce parcours permet de
-tester les langues, la sélection des comptes et le lancement sans toucher un
-compte distant. Il ne prouve pas qu’une installation réelle est opérationnelle.
+Les tests OAuth et du registre utilisent SQLite et des API simulées. Ils couvrent
+notamment les comptes distincts, le rejeu OAuth, les renouvellements concurrents,
+les mises à jour et l’isolation `dev`/production. Une installation vierge et sa
+mise à jour doivent aussi être vérifiées avec les API et le navigateur réels.
+
+Les commandes historiques `cloudflare:builds:install` et le protocole API avec
+Bearer restent disponibles pour les connexions Workers Builds existantes. Elles
+ne constituent pas le parcours du bouton GitHub. Le [bouton natif Cloudflare](https://developers.cloudflare.com/workers/platform/deploy-buttons/)
+clone un dépôt et ne déploie pas ensemble tous les Workers de ce monorepo.

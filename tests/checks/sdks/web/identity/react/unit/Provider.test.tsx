@@ -6,9 +6,10 @@ import { beforeEach, describe, it, expect, vi } from "vitest";
 
 import authContext from "../../../../../../../sdks/web/identity/react/src/context";
 import { AuthProvider, reducer } from "../../../../../../../sdks/web/identity/react/src/Provider";
+import { identityClaims } from "../../../../../../fixtures/identity/claims.js";
 
 // --- Mock the Setup component so that it doesn't interfere ---
-vi.mock("../../../../../../sdks/web/identity/react/Setup", () => ({
+vi.mock("../../../../../../../sdks/web/identity/react/src/Setup", () => ({
 	default: () => <div data-testid="setup">Setup</div>,
 }));
 
@@ -45,11 +46,12 @@ describe("AuthProvider", () => {
 		// Create a valid token that expires in 60 sec (now + 60) so that it passes the ">= now + 5" check.
 		const validToken = {
 			refreshToken: "valid-token",
+			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
-			account: { username: "testuser" },
+			account: identityClaims({ username: "testuser" }),
 		};
 
 		// Save token and account into localStorage using keys from shared.
@@ -106,6 +108,7 @@ describe("AuthProvider", () => {
 		// Create an invalid token by setting expiresOn to a time less than "now + 5"
 		const expiredToken = {
 			refreshToken: "expired-token",
+			expiresIn: 60,
 			expiresOn: now + 3,
 		};
 		window.localStorage.setItem(StorageKey.RefreshToken, JSON.stringify(expiredToken));
@@ -114,7 +117,7 @@ describe("AuthProvider", () => {
 			StorageKey.IdToken,
 			JSON.stringify({
 				idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature",
-				account: { username: "testuser" }, // gitleaks:allow -- deterministic test JWT
+				account: identityClaims({ username: "testuser" }), // gitleaks:allow -- deterministic test JWT
 			}),
 		);
 
@@ -134,7 +137,7 @@ describe("AuthProvider", () => {
 			const accounts = screen.getAllByTestId("account");
 			expect(checkedStorages[checkedStorages.length - 1].textContent).toBe("true");
 			expect(accounts[accounts.length - 1].textContent).toBe(
-				JSON.stringify({ username: "testuser" }),
+				JSON.stringify(identityClaims({ username: "testuser" })),
 			);
 			const refreshTokenStorages = screen.getAllByTestId("refreshTokenStorage");
 			expect(refreshTokenStorages[accounts.length - 1].textContent).toBe("null");
@@ -145,14 +148,12 @@ describe("AuthProvider", () => {
 		const now = Math.floor(Date.now() / 1000);
 		const validToken = {
 			refreshToken: "valid-token",
+			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
-			account: {
-				sub: "user123",
-				exp: now + 6,
-			},
+			account: identityClaims({ sub: "user123", exp: now + 6 }),
 		};
 
 		window.sessionStorage.setItem(StorageKey.RefreshToken, JSON.stringify(validToken));
@@ -187,6 +188,7 @@ describe("AuthProvider", () => {
 		const now = Math.floor(Date.now() / 1000);
 		const validToken = {
 			refreshToken: "valid-token",
+			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		window.sessionStorage.setItem(StorageKey.RefreshToken, JSON.stringify(validToken));
@@ -221,10 +223,7 @@ describe("AuthProvider", () => {
 
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
-			account: {
-				sub: "user123",
-				exp: now + 6,
-			},
+			account: identityClaims({ sub: "user123", exp: now + 6 }),
 		};
 
 		window.sessionStorage.setItem(StorageKey.IdToken, JSON.stringify(idTokenBody));
@@ -256,14 +255,12 @@ describe("AuthProvider", () => {
 		const now = Math.floor(Date.now() / 1000);
 		const validToken = {
 			refreshToken: "valid-token",
+			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
-			account: {
-				sub: "user123",
-				exp: now,
-			},
+			account: identityClaims({ sub: "user123", exp: now }),
 		};
 
 		window.sessionStorage.setItem(StorageKey.RefreshToken, JSON.stringify(validToken));
@@ -298,6 +295,7 @@ describe("AuthProvider", () => {
 		const now = Math.floor(Date.now() / 1000);
 		const validToken = {
 			refreshToken: "valid-token",
+			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		// Set valid token in localStorage, but do not set a stored account.
@@ -335,7 +333,7 @@ describe("AuthProvider", () => {
 			value: { search: searchQuery },
 			configurable: true,
 		});
-		const account = { username: "urlUser" };
+		const account = identityClaims({ username: "urlUser" });
 		window.localStorage.setItem(StorageKey.Account, JSON.stringify(account));
 		render(
 			<AuthProvider

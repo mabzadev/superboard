@@ -26,6 +26,7 @@
 		"environments"
 	],
 	"properties": {
+		"observabilitySource": { "enum": ["emdash", "analytics-engine"] },
 		"$schema": {
 			"type": "string"
 		},
