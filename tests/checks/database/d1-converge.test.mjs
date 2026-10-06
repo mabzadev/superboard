@@ -1,5 +1,6 @@
 import "../../fixtures/cloudflare/targets.mjs";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import { loadTarget } from "../../../scripts/cloudflare/target.mjs";
@@ -12,6 +13,36 @@ import {
 	parseWranglerD1MigrationList,
 } from "../../../scripts/database/d1-converge.mjs";
 import { targetWithoutResourceIds } from "../../fixtures/cloudflare/factories.mjs";
+
+test("large migration progress does not interrupt an otherwise successful migration batch", () => {
+	const progressCommand =
+		"process.stdout.write('x'.repeat(2*1024*1024),()=>process.stdout.write('\\nAPPLY_FINISHED\\n'))";
+	const source = `
+await import(${JSON.stringify(new URL("../../fixtures/cloudflare/targets.mjs", import.meta.url).href)});
+const {loadTarget}=await import(${JSON.stringify(new URL("../../../scripts/cloudflare/target.mjs", import.meta.url).href)});
+const {applyD1Convergence,executeCommand}=await import(${JSON.stringify(new URL("../../../scripts/database/d1-converge.mjs", import.meta.url).href)});
+const {target}=await loadTarget('mbza-development');
+try {
+const result=await applyD1Convergence({target,targetName:'mbza-development',environment:'development',serviceSelector:'api',env:{},execute:(_command,args,options)=>{
+ if(args.includes('apply')) return executeCommand(process.execPath,['-e',${JSON.stringify(progressCommand)}],options);
+ return {status:0,stdout:args.includes('list')?'No migrations to apply':''};
+}});
+if(!result.converged) throw new Error('BATCH_INCOMPLETE');
+console.log('MIGRATIONS_COMPLETED');
+} catch(error) { console.error(error.message.slice(0,100)); process.exitCode=1; }
+`;
+	const result = spawnSync(process.execPath, ["--input-type=module", "-e", source], {
+		encoding: "utf8",
+		maxBuffer: 8 * 1024 * 1024,
+	});
+	assert.equal(
+		result.status,
+		0,
+		`Large migration progress interrupted the batch: ${result.stderr.slice(-300)}`,
+	);
+	assert.ok(result.stdout.includes("APPLY_FINISHED"));
+	assert.ok(result.stdout.includes("MIGRATIONS_COMPLETED"));
+});
 
 test("D1 convergence plans every enabled schema owner without remote access", async () => {
 	const { target: source } = await loadTarget("mbza-development");
