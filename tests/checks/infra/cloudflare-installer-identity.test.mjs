@@ -105,6 +105,8 @@ test("runner identities require a GitHub signature and the canonical workflow an
 		iss: "https://token.actions.githubusercontent.com",
 		aud: "superboard-installer",
 		repository: "mabzadev/superboard",
+		repository_id: "1307937671",
+		repository_owner_id: "95926658",
 		ref: "refs/heads/main",
 		workflow_ref:
 			"mabzadev/superboard/.github/workflows/cloudflare-installations.yml@refs/heads/main",
@@ -135,8 +137,23 @@ test("runner identities require a GitHub signature and the canonical workflow an
 		return Response.json({ keys: [jwk] });
 	};
 	assert.equal((await runnerIdentity(await request(base), fetchKeys)).ref, "refs/heads/main");
+	assert.equal(
+		(
+			await runnerIdentity(
+				await request({
+					...base,
+					sub: "repo:mabzadev@95926658/superboard@1307937671:ref:refs/heads/main",
+				}),
+				fetchKeys,
+			)
+		).ref,
+		"refs/heads/main",
+	);
 	for (const change of [
 		{ repository: "another/repository" },
+		{ repository_id: "999" },
+		{ repository_owner_id: "999" },
+		{ sub: "repo:mabzadev@999/superboard@1307937671:ref:refs/heads/main" },
 		{ ref: "refs/pull/12/merge" },
 		{ workflow_ref: "mabzadev/superboard/.github/workflows/other.yml@refs/heads/main" },
 		{ aud: "another-app" },
