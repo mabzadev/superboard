@@ -1,5 +1,7 @@
 const issuer = "https://token.actions.githubusercontent.com";
 const repository = "mabzadev/superboard";
+const repositoryId = "1307937671";
+const ownerId = "95926658";
 
 function decode(value) {
 	return Uint8Array.from(atob(value.replaceAll("-", "+").replaceAll("_", "/")), (char) =>
@@ -23,16 +25,22 @@ export async function runnerIdentity(request, fetchImpl = fetch) {
 	}
 	const now = Date.now() / 1000;
 	const refs = ["refs/heads/main", "refs/heads/dev"];
+	const subjects = [
+		`repo:${repository}:ref:${claims.ref}`,
+		`repo:mabzadev@${ownerId}/superboard@${repositoryId}:ref:${claims.ref}`,
+	];
 	if (
 		header.alg !== "RS256" ||
 		typeof header.kid !== "string" ||
 		claims.iss !== issuer ||
 		claims.aud !== "superboard-installer" ||
 		claims.repository !== repository ||
+		claims.repository_id !== repositoryId ||
+		claims.repository_owner_id !== ownerId ||
 		!refs.includes(claims.ref) ||
 		claims.workflow_ref !==
 			`${repository}/.github/workflows/cloudflare-installations.yml@${claims.ref}` ||
-		claims.sub !== `repo:${repository}:ref:${claims.ref}` ||
+		!subjects.includes(claims.sub) ||
 		claims.runner_environment !== "github-hosted" ||
 		!["push", "schedule", "workflow_dispatch"].includes(claims.event_name) ||
 		!Number.isFinite(claims.exp) ||
@@ -45,7 +53,7 @@ export async function runnerIdentity(request, fetchImpl = fetch) {
 		throw new Error("INSTALLATION_RUNNER_UNAUTHORIZED");
 	const response = await fetchImpl(`${issuer}/.well-known/jwks`, {
 		signal: AbortSignal.timeout(10_000),
-		redirect: "error",
+		redirect: "manual",
 	});
 	if (!response.ok) throw new Error("INSTALLATION_RUNNER_KEYS_UNAVAILABLE");
 	const text = await response.text();
