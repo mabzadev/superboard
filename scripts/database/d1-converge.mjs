@@ -247,7 +247,7 @@ export async function applyD1Convergence({
 				"--config",
 				descriptor.configPath,
 			],
-			{ env, capture: true },
+			{ env, capture: false },
 		);
 		const verification = execute(
 			"npx",
@@ -331,7 +331,7 @@ function generateConfig(
 	);
 }
 
-function executeCommand(command, args, { env = process.env, capture = false } = {}) {
+export function executeCommand(command, args, { env = process.env, capture = false } = {}) {
 	const result = spawnSync(command, args, {
 		cwd: root,
 		env,
@@ -339,6 +339,7 @@ function executeCommand(command, args, { env = process.env, capture = false } = 
 		stdio: capture ? "pipe" : "inherit",
 		shell: false,
 	});
+	if (result.error) throw new Error(`${command} failed: ${result.error.code ?? "PROCESS_ERROR"}`);
 	if (result.status !== 0) {
 		const details = capture ? String(result.stderr || result.stdout || "").trim() : "";
 		throw new Error(`${command} failed${details ? `: ${details}` : ""}`);

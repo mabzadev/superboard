@@ -265,6 +265,52 @@ test("development cannot claim a production run and renewed consent repairs a fa
 	assert.equal((await registry.context(request(next.lease), next.runId)).token, "renewed-access");
 });
 
+test("a completed GitHub job can be retried before its lease expires without replacing a live run", async (t) => {
+	const { env, database } = oauthFixture();
+	t.after(() => database.close());
+	const api = cloudflareInstallerFixture();
+	let status = "in_progress";
+	let delayed = false;
+	const waiting = Promise.withResolvers();
+	const release = Promise.withResolvers();
+	const registry = installationRegistry(env, async (url, init) => {
+		if (url.includes("/commits/")) return Response.json({ sha: revision });
+		if (url.includes("/actions/runs/")) {
+			if (delayed) {
+				waiting.resolve();
+				await release.promise;
+			}
+			return Response.json({ jobs: [{ name: `Install ${id}`, status }] });
+		}
+		return api.fetchImpl(url, init);
+	});
+	await registry.register(input, authorization, owner);
+	const first = await registry.claim(id, revision, { ref: "refs/heads/main", runId: "123" });
+	const retry = () => registry.configure(id, owner, { automaticUpdates: true, retry: true });
+	await assert.rejects(retry(), /INSTALLATION_ALREADY_RUNNING/u);
+	status = "completed";
+	assert.equal((await retry()).status, "queued");
+	const second = await registry.claim(id, revision, { ref: "refs/heads/main", runId: "124" });
+	delayed = true;
+	const staleRetry = retry();
+	await waiting.promise;
+	delayed = false;
+	await retry();
+	const current = await registry.claim(id, revision, { ref: "refs/heads/main", runId: "125" });
+	release.resolve();
+	await staleRetry;
+	const request = (lease) =>
+		new Request("https://install.example.com/runner", {
+			headers: { Authorization: `Bearer ${lease}` },
+		});
+	assert.equal((await registry.context(request(current.lease), current.runId)).revision, revision);
+	for (const previous of [first, second])
+		await assert.rejects(
+			registry.context(request(previous.lease), previous.runId),
+			/INSTALLATION_RUN_/u,
+		);
+});
+
 test("runner waits for a concurrent authorization refresh instead of failing the deployment", async () => {
 	const env = {
 		GITHUB_ACTIONS: "true",

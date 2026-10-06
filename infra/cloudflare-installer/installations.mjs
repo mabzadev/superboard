@@ -278,17 +278,17 @@ export function installationRegistry(env, fetchImpl = fetch) {
 			if (typeof input.automaticUpdates !== "boolean")
 				throw new Error("INSTALLATION_INPUT_INVALID");
 			if (input.retry || input.update) {
-				if (row.status === "deploying") throw new Error("INSTALLATION_ALREADY_RUNNING");
-				if (!(await runFinished(row))) throw new Error("INSTALLATION_ALREADY_RUNNING");
+				if ((row.status === "deploying" && !row.github_run_id) || !(await runFinished(row)))
+					throw new Error("INSTALLATION_ALREADY_RUNNING");
 				if (authorization) await reauthorize(row, authorization);
 				const revision = input.update
 					? await sourceRevision(row.environment, fetchImpl)
 					: row.desired_revision;
 				await db
 					.prepare(
-						"UPDATE installer_installations SET status='queued',desired_revision=?,run_id=NULL,lease_hash=NULL,lease_expires=NULL,error_code=NULL,updated_at=? WHERE id=? AND status!='deploying'",
+						"UPDATE installer_installations SET status='queued',desired_revision=?,run_id=NULL,lease_hash=NULL,lease_expires=NULL,error_code=NULL,updated_at=? WHERE id=? AND (status!='deploying' OR run_id=?)",
 					)
-					.bind(revision, Date.now(), id)
+					.bind(revision, Date.now(), id, row.run_id)
 					.run();
 			}
 			const pause = !input.automaticUpdates && !input.retry && !input.update;
