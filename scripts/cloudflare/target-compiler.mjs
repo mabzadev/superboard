@@ -806,7 +806,7 @@ function compileLogicalRoutes(target) {
 		...(target.features.messaging
 			? [{ id: "messaging", service: "messaging", surface: "messaging" }]
 			: []),
-		...(target.features.support
+		...(target.features.support && !target.freshInstallation
 			? [{ id: "support", service: "api", surface: "gateway-module" }]
 			: []),
 	];
@@ -1125,13 +1125,17 @@ function expectedRoutePatterns(compiledTarget, service, { routesEnabled, sitePre
 		if (compiledTarget.environment === "production" && support) {
 			return support.mode === "active" ? [support.pattern] : [];
 		}
-		return routes
-			.filter(
-				({ id, surface }) =>
-					["api", "auth", "shortlinks", "sdk", "files"].includes(id) ||
-					surface === "legacy-shortlinks",
-			)
-			.map(({ pattern }) => pattern);
+		return [
+			...new Set(
+				routes
+					.filter(
+						({ id, surface }) =>
+							["api", "auth", "shortlinks", "sdk", "files"].includes(id) ||
+							surface === "legacy-shortlinks",
+					)
+					.map(({ pattern }) => pattern),
+			),
+		];
 	}
 	if (service === "site") {
 		return sitePreviewRoute
