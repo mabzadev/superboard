@@ -217,6 +217,29 @@ test("failed validation stops before preparation or deployment", async () => {
 	assert.equal(validationEnvironment(env).CLOUDFLARE_ACCOUNT_ID, undefined);
 });
 
+test("fresh build validation prepares framework declarations before linting", async () => {
+	const env = {
+		WORKERS_CI: "1",
+		WORKERS_CI_BRANCH: "dev",
+		WORKERS_CI_COMMIT_SHA: "a".repeat(40),
+		CLOUDFLARE_ACCOUNT_ID: "b".repeat(32),
+		SUPERBOARD_TARGET: "cold-build-test",
+		SUPERBOARD_ENVIRONMENT: "development",
+		SUPERBOARD_TARGET_MANIFEST: JSON.stringify({ ...target, target: "cold-build-test" }),
+	};
+	let declarationsReady = false;
+	await assert.rejects(
+		buildInstance(env, (_command, args) => {
+			if (args[0] === "typecheck") declarationsReady = true;
+			if (args[0] === "lint") {
+				if (!declarationsReady) throw new Error("FRAMEWORK_DECLARATIONS_MISSING");
+				throw new Error("FRESH_VALIDATION_REACHED");
+			}
+		}),
+		/FRESH_VALIDATION_REACHED/u,
+	);
+});
+
 test("a prepared build cannot be deployed into a different account or revision", () => {
 	const context = { accountId: "a".repeat(32), revision: "b".repeat(40) };
 	assert.throws(
