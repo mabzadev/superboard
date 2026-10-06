@@ -149,6 +149,19 @@ variables TOML de ce lanceur ; il ne valide pas le serveur Node complet.
 Les tests iOS et les tests Android sur appareil exigent
 également les plateformes et simulateurs correspondants.
 
+Le contrôle `checks/cloudflare/installation-artifacts.test.mjs` construit les
+bundles d’une installation complète avec Wrangler en mode `--dry-run` et vérifie
+les secrets initiaux requis. Il utilise une copie isolée avec les dépendances et
+packages compilés, mais sans les assets de connexion déjà construits. Sans la
+variable suivante, ce contrôle d’intégration est ignoré.
+
+Exécutez le contrôle depuis le dépôt en indiquant le chemin de cette copie :
+
+```bash
+SUPERBOARD_INSTALLATION_ARTIFACT_CHECKOUT=/tmp/superboard-clean-checkout \
+  node --test tests/checks/cloudflare/installation-artifacts.test.mjs
+```
+
 ## Lints et qualité
 
 `pnpm lint` exécute les tests des analyseurs, les règles existantes et les

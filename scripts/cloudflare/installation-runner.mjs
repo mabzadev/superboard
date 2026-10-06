@@ -62,7 +62,12 @@ export function redactedCommandOutput(values) {
 		...new Set(values.filter((value) => typeof value === "string" && value.length >= 4)),
 	].sort((a, b) => b.length - a.length);
 	return (value) =>
-		secrets.reduce((text, secret) => text.replaceAll(secret, "[redacted]"), String(value));
+		secrets
+			.reduce((text, secret) => text.replaceAll(secret, "[redacted]"), String(value))
+			.replace(
+				/https?:\/\/[^\s"'<>]*[?&](?:x-amz-[^=\s&]+|token|signature|credential)=[^\s"'<>]*/giu,
+				"[redacted-url]",
+			);
 }
 
 function executor(redact) {
