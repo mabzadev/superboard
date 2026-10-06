@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { promisify } from "node:util";
 
+import { consolidateWorkerConfigurations } from "../../../scripts/cloudflare/deployment-groups.mjs";
+import { installationTarget } from "../../../scripts/cloudflare/installation-target.mjs";
 import {
 	ALL_SERVICES,
 	DOMAIN_SERVICES,
@@ -21,6 +23,57 @@ import {
 } from "../../../scripts/database/d1-registry.mjs";
 
 const execFileAsync = promisify(execFile);
+
+test("fresh production routes remain reachable after Worker consolidation", () => {
+	const target = installationTarget({
+		name: "route-test",
+		domain: "example.com",
+		email: "owner@example.com",
+		workersDevSubdomain: "example",
+		installationId: "12345678-1234-1234-1234-123456789abc",
+		hostPrefix: "route-test",
+	});
+	const entries = ["api", "mcp"].map((service) => {
+		execFileSync(
+			process.execPath,
+			[
+				"scripts/cloudflare/config.mjs",
+				"--service",
+				service,
+				"--target",
+				target.target,
+				"--environment",
+				"production",
+				"--allow-unprovisioned",
+			],
+			{
+				cwd: new URL("../../..", import.meta.url),
+				env: { ...process.env, SUPERBOARD_TARGET_MANIFEST: JSON.stringify(target) },
+				stdio: "pipe",
+			},
+		);
+		return {
+			service,
+			config: JSON.parse(
+				readFileSync(
+					new URL(
+						`../../../infra/generated/${target.target}-${service}-production.jsonc`,
+						import.meta.url,
+					),
+					"utf8",
+				),
+			),
+		};
+	});
+	const result = consolidateWorkerConfigurations(entries);
+	const routes = result.groups.find(({ id }) => id === "api").config.routes;
+	assert.deepEqual(
+		new Set(routes.map(({ pattern }) => pattern)),
+		new Set([target.domains.api, target.domains.sdk, target.domains.shortlinks]),
+	);
+	assert.equal(routes.length, 3);
+	assert.ok(routes.every(({ custom_domain }) => custom_domain === true));
+});
 
 test("the declarative registry exposes exactly nine domain services", () => {
 	assert.deepEqual(DOMAIN_SERVICES, [

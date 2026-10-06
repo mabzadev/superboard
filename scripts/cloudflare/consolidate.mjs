@@ -214,6 +214,11 @@ function queueOwner(transfer, manifest, env, run) {
 export async function prepareConsolidatedDeployment(input, run = execute) {
 	const env = input.env ?? process.env;
 	run(
+		"pnpm",
+		["--dir", "packages/plugins/superboard-authentification/worker", "run", "build:client"],
+		{ stdio: "inherit", env },
+	);
+	run(
 		process.execPath,
 		[
 			"scripts/cloudflare/site-build.mjs",

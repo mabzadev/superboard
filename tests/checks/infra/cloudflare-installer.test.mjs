@@ -11,12 +11,24 @@ import { installerOAuth } from "../../../infra/cloudflare-installer/oauth.mjs";
 import { installerPage } from "../../../infra/cloudflare-installer/page.mjs";
 import { createInstaller, startInstallation } from "../../../infra/cloudflare-installer/worker.mjs";
 import { desiredCloudflareResources } from "../../../scripts/cloudflare/bootstrap-core.mjs";
+import { redactedCommandOutput } from "../../../scripts/cloudflare/installation-runner.mjs";
 import { installationTarget } from "../../../scripts/cloudflare/installation-target.mjs";
 import { loadTarget, validateTarget } from "../../../scripts/cloudflare/target.mjs";
 import { cloudflareInstallerFixture } from "../../fixtures/cloudflare/installer.mjs";
 import { oauthFixture } from "../../fixtures/cloudflare/oauth.mjs";
 
 const id = "12345678-1234-1234-1234-123456789012";
+
+test("runner logs hide signed backup downloads while keeping public links useful", () => {
+	const redact = redactedCommandOutput(["access-secret"]);
+	const output = redact(
+		"Download https://storage.example/export.sql?X-Amz-Signature=private-signature&X-Amz-Credential=private-credential using access-secret; help https://example.com/?lang=fr",
+	);
+	assert.ok(!output.includes("private-signature"));
+	assert.ok(!output.includes("private-credential"));
+	assert.ok(!output.includes("access-secret"));
+	assert.ok(output.includes("https://example.com/?lang=fr"));
+});
 const input = {
 	name: "vocostar",
 	domain: "example.com",
