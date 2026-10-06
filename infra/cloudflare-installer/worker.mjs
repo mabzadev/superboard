@@ -1,3 +1,9 @@
+import { readBuildVariable } from "../../scripts/cloudflare/build-variables.mjs";
+import { installerApi } from "./cloudflare-api.mjs";
+import { installationRegistry } from "./installations.mjs";
+import { installerOAuth, oauthConfigured } from "./oauth.mjs";
+import { runnerIdentity } from "./runner-identity.mjs";
+export { installerApi } from "./cloudflare-api.mjs";
 import { installationTarget } from "../../scripts/cloudflare/installation-target.mjs";
 import { instanceBuildConfiguration } from "../../scripts/cloudflare/workers-builds-config.mjs";
 import { installerPage } from "./page.mjs";
@@ -5,54 +11,16 @@ import { installerPage } from "./page.mjs";
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u;
 const account = /^[a-f0-9]{32}$/u;
 
-async function installationSourceAvailable(fetchImpl) {
+async function installationSourceAvailable(fetchImpl, source = "workers-builds.mjs") {
 	try {
 		const response = await fetchImpl(
-			"https://raw.githubusercontent.com/mabzadev/superboard/main/scripts/cloudflare/workers-builds.mjs",
+			`https://raw.githubusercontent.com/mabzadev/superboard/main/scripts/cloudflare/${source}`,
 			{ method: "HEAD", signal: AbortSignal.timeout(10_000) },
 		);
 		return response.ok;
 	} catch {
 		return false;
 	}
-}
-
-export function installerApi(token, fetchImpl = fetch) {
-	return {
-		async request(path, method = "GET", body) {
-			const multipart = body instanceof FormData;
-			const response = await fetchImpl(`https://api.cloudflare.com/client/v4${path}`, {
-				method,
-				headers: {
-					Authorization: `Bearer ${token}`,
-					...(!multipart ? { "Content-Type": "application/json" } : {}),
-				},
-				...(body ? { body: multipart ? body : JSON.stringify(body) } : {}),
-				signal: AbortSignal.timeout(30_000),
-			});
-			if (!response.ok) throw new Error(`CLOUDFLARE_API_${response.status}`);
-			const payload = await response.json();
-			if (!payload.success) throw new Error("CLOUDFLARE_API_FAILED");
-			return payload;
-		},
-		async list(path) {
-			const items = [];
-			for (let page = 1; page <= 1000; page += 1) {
-				const payload = await this.request(
-					`${path}${path.includes("?") ? "&" : "?"}page=${page}&per_page=100`,
-				);
-				if (!Array.isArray(payload.result)) throw new Error("CLOUDFLARE_LIST_INVALID");
-				items.push(...payload.result);
-				if (
-					payload.result_info?.total_pages != null
-						? page >= payload.result_info.total_pages
-						: payload.result.length < 100
-				)
-					return items;
-			}
-			throw new Error("CLOUDFLARE_PAGINATION_LIMIT");
-		},
-	};
 }
 
 export async function startInstallation(input, token, fetchImpl = fetch) {
@@ -242,71 +210,191 @@ export async function startInstallation(input, token, fetchImpl = fetch) {
 
 export function createInstaller(fetchImpl = fetch) {
 	return {
-		async fetch(request) {
+		async fetch(request, env = {}) {
 			const url = new URL(request.url);
 			const headers = {
 				"Cache-Control": "no-store",
 				"X-Content-Type-Options": "nosniff",
 				"Referrer-Policy": "no-referrer",
 			};
-			if (request.method === "GET" && url.pathname === "/api/readiness")
-				return Response.json(
-					{ available: await installationSourceAvailable(fetchImpl) },
-					{ headers },
-				);
-			if (request.method === "GET" && url.pathname === "/")
-				return new Response(installerPage(url.searchParams.get("lang")), {
-					headers: {
-						...headers,
-						"Content-Type": "text/html; charset=utf-8",
-						"Content-Security-Policy":
-							"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
-					},
-				});
-			if (
-				request.method !== "POST" ||
-				request.headers.get("Origin") !== url.origin ||
-				request.headers.get("X-SuperBoard-Request") !== "1"
-			)
-				return Response.json({ error: "INSTALLATION_REQUEST_REJECTED" }, { status: 403, headers });
-			const authorization = request.headers.get("Authorization") ?? "";
-			if (!/^Bearer [A-Za-z0-9_-]{20,256}$/u.test(authorization))
-				return Response.json({ error: "INSTALLATION_TOKEN_REQUIRED" }, { status: 401, headers });
 			try {
-				const text = await request.text();
-				if (text.length > 4096)
-					return Response.json({ error: "INSTALLATION_INPUT_TOO_LARGE" }, { status: 413, headers });
-				const input = JSON.parse(text);
-				const token = authorization.slice(7);
+				if (request.method === "GET" && url.pathname === "/api/readiness")
+					return Response.json(
+						{
+							available:
+								oauthConfigured(env) &&
+								env.INSTALLER_RUNNER_ENABLED === "1" &&
+								(await installationSourceAvailable(fetchImpl, "installation-runner.mjs")),
+						},
+						{ headers },
+					);
+				if (request.method === "GET" && url.pathname === "/")
+					return new Response(installerPage(url.searchParams.get("lang")), {
+						headers: {
+							...headers,
+							"Content-Type": "text/html; charset=utf-8",
+							"Content-Security-Policy":
+								"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+						},
+					});
+				if (request.method === "GET" && url.pathname === "/oauth/start")
+					return await installerOAuth(env, fetchImpl).start(request);
+				if (request.method === "GET" && url.pathname === "/oauth/callback")
+					return await installerOAuth(env, fetchImpl).callback(request);
+				if (url.pathname.startsWith("/runner/")) {
+					if (env.INSTALLER_RUNNER_ENABLED !== "1")
+						throw new Error("INSTALLATION_RUNNER_UNAVAILABLE");
+					const registry = installationRegistry(env, fetchImpl);
+					if (url.pathname === "/runner/jobs" && request.method === "GET") {
+						const identity = await runnerIdentity(request, fetchImpl);
+						return Response.json({ result: await registry.jobs(identity) }, { headers });
+					}
+					if (url.pathname === "/runner/claim" && request.method === "POST") {
+						const identity = await runnerIdentity(request, fetchImpl);
+						const input = await readInput(request);
+						return Response.json(
+							{ result: await registry.claim(input.id, input.revision, identity) },
+							{ headers },
+						);
+					}
+					const match = url.pathname.match(
+						/^\/runner\/runs\/([a-f0-9-]{36})\/(context|state|complete)$/u,
+					);
+					if (!match || request.method !== "POST")
+						return Response.json(
+							{ error: "INSTALLATION_ROUTE_NOT_FOUND" },
+							{ status: 404, headers },
+						);
+					const result =
+						match[2] === "context"
+							? await registry.context(request, match[1])
+							: match[2] === "state"
+								? await registry.persist(request, match[1], await readInput(request))
+								: await registry.complete(request, match[1], await readInput(request));
+					return Response.json({ result }, { headers });
+				}
+				if (request.method === "GET" && url.pathname === "/api/session") {
+					const authorization = await installerOAuth(env, fetchImpl).authorization(request);
+					const api = installerApi(authorization.token, fetchImpl);
+					const user = (await api.request("/user")).result;
+					return Response.json(
+						{
+							result: {
+								authenticated: true,
+								email: user.email,
+								accounts: (await api.list("/accounts")).map(({ id, name }) => ({ id, name })),
+							},
+						},
+						{ headers },
+					);
+				}
+				if (
+					request.method !== "POST" ||
+					request.headers.get("Origin") !== url.origin ||
+					request.headers.get("X-SuperBoard-Request") !== "1"
+				)
+					return Response.json(
+						{ error: "INSTALLATION_REQUEST_REJECTED" },
+						{ status: 403, headers },
+					);
+				if (url.pathname === "/api/logout")
+					return await installerOAuth(env, fetchImpl).logout(request);
+				const bearer = request.headers.get("Authorization") ?? "";
+				const legacy = /^Bearer [A-Za-z0-9_-]{20,256}$/u.test(bearer);
+				const authorization = legacy
+					? null
+					: await installerOAuth(env, fetchImpl).authorization(request);
+				const token = legacy ? bearer.slice(7) : authorization.token;
+				const input = await readInput(request, 4096);
 				const api = installerApi(token, fetchImpl);
 				let result;
 				if (url.pathname === "/api/accounts")
 					result = (await api.list("/accounts")).map(({ id, name }) => ({ id, name }));
 				else if (url.pathname === "/api/options" && account.test(input.accountId ?? ""))
 					result = {
-						zones: (await api.list(`/zones?account.id=${input.accountId}`))
+						development: await (async () => {
+							const configured = JSON.parse(
+								(await readBuildVariable(env, "INSTALLER_DEVELOPMENT_TARGET")) ?? "null",
+							);
+							return configured?.accountId === input.accountId ? configured.target.target : null;
+						})(),
+						zones: (await api.list("/zones?account.id=" + input.accountId))
 							.filter(({ status }) => status === "active")
 							.map(({ name }) => name),
-						tokens: (await api.list(`/accounts/${input.accountId}/builds/tokens`)).map(
-							({ build_token_uuid, build_token_name }) => ({
-								id: build_token_uuid,
-								name: build_token_name,
-							}),
-						),
+						...(legacy
+							? {
+									tokens: (await api.list("/accounts/" + input.accountId + "/builds/tokens")).map(
+										({ build_token_uuid, build_token_name }) => ({
+											id: build_token_uuid,
+											name: build_token_name,
+										}),
+									),
+								}
+							: {}),
 					};
-				else if (url.pathname === "/api/install")
+				else if (url.pathname === "/api/install" && legacy)
 					result = await startInstallation(input, token, fetchImpl);
-				else
+				else if (
+					authorization &&
+					[
+						"/api/install",
+						"/api/instances",
+						"/api/instances/configure",
+						"/api/instances/development",
+					].includes(url.pathname)
+				) {
+					if (env.INSTALLER_RUNNER_ENABLED !== "1")
+						throw new Error("INSTALLATION_RUNNER_UNAVAILABLE");
+					const registry = installationRegistry(env, fetchImpl);
+					const owner = await registry.owner(authorization);
+					result =
+						url.pathname === "/api/instances/development"
+							? await registry.adoptDevelopment(input, authorization, owner)
+							: url.pathname === "/api/install"
+								? await registry.register(input, authorization, owner)
+								: url.pathname === "/api/instances"
+									? await registry.list(owner)
+									: await registry.configure(input.id, owner, input, authorization);
+				} else
 					return Response.json({ error: "INSTALLATION_ROUTE_NOT_FOUND" }, { status: 404, headers });
 				return Response.json({ result }, { headers });
 			} catch (error) {
 				const code = /^(?:INSTALLATION|CLOUDFLARE)_[A-Z0-9_]+$/u.test(error.message)
 					? error.message
 					: "INSTALLATION_FAILED";
-				return Response.json({ error: code }, { status: 400, headers });
+				const status = /SESSION_|UNAUTHORIZED/u.test(code)
+					? 401
+					: /NOT_CONFIGURED|UNAVAILABLE$|AUTHORIZATION_BUSY$/u.test(code)
+						? 503
+						: /ALREADY_RUNNING|CONFLICT$/u.test(code)
+							? 409
+							: 400;
+				return Response.json({ error: code }, { status, headers });
 			}
 		},
 	};
+}
+
+async function readInput(request, maximum = 250_000) {
+	const reader = request.body?.getReader();
+	if (!reader) throw new Error("INSTALLATION_INPUT_INVALID");
+	const decoder = new TextDecoder();
+	let text = "";
+	let size = 0;
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		size += value.byteLength;
+		if (size > maximum) {
+			await reader.cancel();
+			throw new Error("INSTALLATION_INPUT_TOO_LARGE");
+		}
+		text += decoder.decode(value, { stream: true });
+	}
+	const value = JSON.parse(text + decoder.decode());
+	if (!value || typeof value !== "object" || Array.isArray(value))
+		throw new Error("INSTALLATION_INPUT_INVALID");
+	return value;
 }
 
 export default createInstaller();

@@ -1,13 +1,17 @@
 import { execSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 
 import { compileFrontRelease } from "../../packages/supbrd-core/dist/index.js";
 
 const root = resolve(import.meta.dirname, "../..");
-const siteEnvPath = "/Users/appmonster/.local/share/superboard/local/mbza-development/site.env";
+const siteEnvPath = resolve(homedir(), ".local/share/superboard/local/mbza-development/site.env");
 const dbPaths = [
-	"/Users/appmonster/.local/share/superboard/local/mbza-development/state/v3/d1/miniflare-D1DatabaseObject/e7352547963de7050bd7d94658afc4fe78b61811b7815da12d90be8e863abf4d.sqlite",
+	resolve(
+		homedir(),
+		".local/share/superboard/local/mbza-development/state/v3/d1/miniflare-D1DatabaseObject/e7352547963de7050bd7d94658afc4fe78b61811b7815da12d90be8e863abf4d.sqlite",
+	),
 	resolve(
 		root,
 		"apps/site/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/e7352547963de7050bd7d94658afc4fe78b61811b7815da12d90be8e863abf4d.sqlite",

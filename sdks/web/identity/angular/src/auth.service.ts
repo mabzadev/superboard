@@ -79,10 +79,11 @@ export class AuthService {
 			throw new Error("Already authenticated, please logout first");
 		}
 		try {
-			triggerLogin(method, state.config, {
+			await triggerLogin(method, state.config, {
 				...props,
-				authorizePopupHandler: ({ state: requestState, code }) =>
-					handleTokenExchangeByAuthCode(code, requestState, this.authContext.state, props?.locale),
+				authorizePopupHandler: ({ state: requestState, code }) => {
+					handleTokenExchangeByAuthCode(code, requestState, this.authContext.state, props?.locale);
+				},
 			});
 		} catch (e: any) {
 			const msg = handleError(e, ErrorType.LoginFailed);

@@ -30,13 +30,13 @@ export type DispatchAction =
 	| { type: "setLoginError"; payload: string }
 	| { type: "setLogoutError"; payload: string };
 
-export type AuthDispatch = Dispatch<DispatchAction>;
+type AuthDispatch = Dispatch<DispatchAction>;
 
-export interface AuthContext {
+interface AuthContext {
 	state: AuthState;
 	dispatch: AuthDispatch;
 }
 
-const authContext = createContext<AuthContext>({} as AuthContext);
+const authContext = createContext<AuthContext | null>(null);
 
 export default authContext;

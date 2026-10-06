@@ -6,6 +6,7 @@ import { createApp } from "vue";
 import { melodyAuthInjectionKey } from "../../../../../../../sdks/web/identity/vue/src/context";
 import { AuthProvider } from "../../../../../../../sdks/web/identity/vue/src/plugin";
 import * as utils from "../../../../../../../sdks/web/identity/vue/src/utils";
+import { identityClaims } from "../../../../../../fixtures/identity/claims.js";
 
 // Mock the external modules
 vi.mock("@melody-auth/web", () => ({
@@ -17,7 +18,7 @@ vi.mock("@melody-auth/web", () => ({
 
 vi.mock("../../../../../../../sdks/web/identity/vue/src/utils", () => ({
 	handleTokenExchangeByAuthCode: vi.fn(),
-	acquireToken: vi.fn(),
+	acquireToken: vi.fn(async () => undefined),
 	loadRefreshTokenStorageFromParams: vi.fn().mockReturnValue(null),
 }));
 
@@ -109,16 +110,13 @@ describe("AuthProvider Plugin", () => {
 	it("should initialize with storage if valid refresh token exists", () => {
 		const mockRefreshToken = JSON.stringify({
 			refreshToken: "test-refresh-token",
-			expiresAt: Date.now() + 3600000, // 1 hour from now
+			expiresIn: 3600,
+			expiresOn: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
 		});
 
 		const mockedIdToken = JSON.stringify({
 			idToken: "test-id-token",
-			account: {
-				sub: "user-123",
-				name: "Test User",
-				email: "test@example.com",
-			},
+			account: identityClaims({ sub: "user-123", name: "Test User", email: "test@example.com" }),
 		});
 
 		shared.checkStorage.mockReturnValue({
@@ -151,18 +149,17 @@ describe("AuthProvider Plugin", () => {
 		// Check that the state was initialized correctly
 		expect(capturedState).not.toBeNull();
 		expect(capturedState?.refreshTokenStorage).toEqual(JSON.parse(mockRefreshToken));
-		expect(capturedState?.account).toStrictEqual({
-			sub: "user-123",
-			name: "Test User",
-			email: "test@example.com",
-		});
+		expect(capturedState?.account).toStrictEqual(
+			identityClaims({ sub: "user-123", name: "Test User", email: "test@example.com" }),
+		);
 		expect(capturedState?.checkedStorage).toBe(true);
 	});
 
 	it("should not initialize with storage if refresh token is invalid", () => {
 		const mockRefreshToken = JSON.stringify({
 			refreshToken: "test-refresh-token",
-			expiresAt: Date.now() - 3600000, // 1 hour ago (expired)
+			expiresIn: 3600,
+			expiresOn: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago (expired)
 		});
 
 		shared.checkStorage.mockReturnValue({

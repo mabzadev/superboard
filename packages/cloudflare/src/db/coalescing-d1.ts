@@ -19,7 +19,6 @@ import {
 	type QueryResult,
 	SqliteAdapter,
 } from "kysely";
-import type { D1DialectConfig } from "kysely-d1";
 
 import { D1Adapter, EmDashD1Dialect } from "./d1-dialect.js";
 
@@ -297,7 +296,7 @@ class CoalescingD1Adapter extends D1Adapter {
 export class CoalescingD1Dialect extends EmDashD1Dialect {
 	#database: D1Database;
 
-	constructor(config: D1DialectConfig) {
+	constructor(config: { database: D1Database }) {
 		super(config);
 		this.#database = config.database;
 	}

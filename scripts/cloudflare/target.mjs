@@ -3,6 +3,7 @@ import { delimiter, resolve } from "node:path";
 
 import Ajv from "ajv/dist/2020.js";
 
+import { readBuildVariable } from "./build-variables.mjs";
 import { superboardEnvironmentValue } from "./environment.mjs";
 import { assertTargetPhysicalResourceNames, resourceIdentity } from "./resource-identity.mjs";
 import { DOMAIN_SERVICE_REGISTRY } from "./services.mjs";
@@ -32,7 +33,7 @@ export async function loadTarget(targetName, env = process.env) {
 		throw new Error("--target must contain only lowercase letters, numbers and hyphens");
 	}
 	if (env.SUPERBOARD_TARGET_MANIFEST) {
-		const target = JSON.parse(env.SUPERBOARD_TARGET_MANIFEST);
+		const target = JSON.parse(await readBuildVariable(env, "SUPERBOARD_TARGET_MANIFEST"));
 		if (target.target !== targetName) throw new Error("BUILD_TARGET_MANIFEST_MISMATCH");
 		await validateTarget(target);
 		return { path: null, target };

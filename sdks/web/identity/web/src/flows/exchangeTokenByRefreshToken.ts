@@ -13,6 +13,6 @@ export const exchangeTokenByRefreshToken = async (config: ProviderConfig, refres
 
 		return accessTokenStorage;
 	} catch (e) {
-		throw new Error(`Failed to exchange access_token by refresh_token: ${e}`);
+		throw new Error(`Failed to exchange access_token by refresh_token: ${String(e)}`);
 	}
 };

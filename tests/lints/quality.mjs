@@ -289,8 +289,35 @@ export function normalizeKnip(report) {
 
 const cloudflareTestImport = /\bfrom\s+["']cloudflare:test["']/u;
 
+export function reconcileTestDependencies(items, workspaceRoot = root) {
+	const declared = new Set();
+	const ownedImports = new Set();
+	for (const item of items) {
+		if (item.code !== "quality(knip-unlisted)") continue;
+		const owner = testDependencyOwner(
+			item.filename,
+			item.message.slice("unlisted: ".length),
+			workspaceRoot,
+			item.labels?.[0]?.span?.line,
+		);
+		if (!owner) continue;
+		declared.add(`${owner.filename}|${owner.dependency}`);
+		ownedImports.add(item);
+	}
+	return items.filter((item) => {
+		if (ownedImports.has(item)) return false;
+		if (!/^quality\(knip-(?:dependencies|devDependencies|optionalDependencies)\)$/u.test(item.code))
+			return true;
+		return !declared.has(`${item.filename}|${item.message.slice(item.message.indexOf(": ") + 2)}`);
+	});
+}
+
 export function testDependencyDeclared(filename, name, workspaceRoot = root, line) {
-	if (!filename.startsWith("tests/checks/")) return false;
+	return testDependencyOwner(filename, name, workspaceRoot, line) !== null;
+}
+
+function testDependencyOwner(filename, name, workspaceRoot = root, line) {
+	if (!filename.startsWith("tests/checks/")) return null;
 	const source = resolve(workspaceRoot, filename);
 	const dependency =
 		name === "cloudflare" &&
@@ -300,22 +327,24 @@ export function testDependencyDeclared(filename, name, workspaceRoot = root, lin
 			? "@cloudflare/vitest-pool-workers"
 			: name;
 	const path = filename.slice("tests/checks/".length).replace(/^plugins\//u, "packages/plugins/");
-	if (!/^(?:apps|packages|sdks|infra)\//u.test(path)) return false;
+	if (!/^(?:apps|packages|sdks|infra)\//u.test(path)) return null;
 	let directory = resolve(workspaceRoot, path, "..");
 	while (directory !== workspaceRoot && directory.startsWith(`${workspaceRoot}/`)) {
 		const manifestPath = resolve(directory, "package.json");
 		if (existsSync(manifestPath)) {
 			const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-			return (
+			const declared =
 				dependency === manifest.name ||
 				["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].some(
 					(section) => Object.hasOwn(manifest[section] ?? {}, dependency),
-				)
-			);
+				);
+			return declared
+				? { filename: relative(workspaceRoot, manifestPath).replaceAll("\\", "/"), dependency }
+				: null;
 		}
 		directory = resolve(directory, "..");
 	}
-	return false;
+	return null;
 }
 
 function lintKnip() {
@@ -331,16 +360,7 @@ function lintKnip() {
 	);
 	if (result.status && !reported.length)
 		throw new Error(result.stderr || "Knip failed without reporting an issue");
-	return reported.filter(
-		(item) =>
-			item.code !== "quality(knip-unlisted)" ||
-			!testDependencyDeclared(
-				item.filename,
-				item.message.slice("unlisted: ".length),
-				root,
-				item.labels?.[0]?.span?.line,
-			),
-	);
+	return reconcileTestDependencies(reported);
 }
 
 export async function lintQuality({

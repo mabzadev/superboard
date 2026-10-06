@@ -164,9 +164,13 @@ export default function SupportSettingsPage() {
 	useEffect(() => {
 		if (activeTab !== "general") return;
 		let active = true;
-		Promise.resolve().then(() => {
-			if (active) void loadSettings();
-		});
+		Promise.resolve()
+			.then(async () => {
+				if (active) await loadSettings();
+			})
+			.catch((cause: unknown) => {
+				setError(moduleErrorMessage(cause));
+			});
 		return () => {
 			active = false;
 		};
@@ -174,9 +178,13 @@ export default function SupportSettingsPage() {
 	useEffect(() => {
 		if (activeTab !== "operations") return;
 		let active = true;
-		Promise.resolve().then(() => {
-			if (active) void loadOperations();
-		});
+		Promise.resolve()
+			.then(async () => {
+				if (active) await loadOperations();
+			})
+			.catch((cause: unknown) => {
+				setError(moduleErrorMessage(cause));
+			});
 		return () => {
 			active = false;
 		};
@@ -184,9 +192,13 @@ export default function SupportSettingsPage() {
 	useEffect(() => {
 		if (activeTab !== "notifications") return;
 		let active = true;
-		Promise.resolve().then(() => {
-			if (active) void loadNotifications();
-		});
+		Promise.resolve()
+			.then(async () => {
+				if (active) await loadNotifications();
+			})
+			.catch((cause: unknown) => {
+				setNotificationError(moduleErrorMessage(cause));
+			});
 		return () => {
 			active = false;
 		};

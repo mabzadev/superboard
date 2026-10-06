@@ -1,6 +1,19 @@
 {
 	"useTabs": true,
 	"experimentalSortImports": {},
+	"overrides": [
+		{
+			"files": [
+				"packages/plugins/superboard-authentification/worker/src/melody/node.tsx",
+				"tests/checks/plugins/superboard-authentification/worker/unit/melody/helpers/setup.ts"
+			],
+			"options": {
+				"semi": false,
+				"singleQuote": true,
+				"sortImports": false
+			}
+		}
+	],
 	"ignorePatterns": [
 		"**/dist/**",
 		"**/node_modules/**",

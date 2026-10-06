@@ -19,7 +19,7 @@ export const logout = async (
 			});
 			if (logoutUri) redirectUri = logoutUri;
 		} catch (e) {
-			console.error(`Failed to logout remotely: ${e}`);
+			console.error(`Failed to logout remotely: ${String(e)}`);
 		}
 	}
 

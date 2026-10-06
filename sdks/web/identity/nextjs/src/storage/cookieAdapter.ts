@@ -54,7 +54,7 @@ export interface CookieOptions {
 export class CookieStorage {
 	private storage: SharedCookieStorage;
 
-	constructor(options: CookieOptions = {}) {
+	constructor(private options: CookieOptions = {}) {
 		const isSecure = options.secure ?? shouldUseSecureCookies(options.request);
 
 		// Create shared storage with Next.js specific cookie handlers
@@ -68,35 +68,64 @@ export class CookieStorage {
 			cookieGetter: (key: string) => {
 				const req = options.request;
 				const res = options.response;
-				return (
-					(getCookie(key, {
-						req,
-						res,
-					}) as string) || null
-				);
+				const value = getCookie(key, { req, res });
+				if (value instanceof Promise) {
+					value.catch(() => {
+						console.error("Cookie read failed");
+					});
+					return null;
+				}
+				return typeof value === "string" ? value || null : null;
 			},
 			cookieSetter: (key: string, value: string) => {
 				const req = options.request;
 				const res = options.response;
 				if (value === "") {
-					deleteCookie(key, {
-						req,
-						res,
+					Promise.resolve(
+						deleteCookie(key, {
+							req,
+							res,
+						}),
+					).catch(() => {
+						console.error("Cookie deletion failed");
 					});
 				} else {
-					setCookie(key, value, {
-						req,
-						res,
-						httpOnly: options.httpOnly ?? true,
-						secure: isSecure,
-						sameSite: options.sameSite ?? "lax",
-						path: options.path ?? "/",
-						domain: options.domain,
-						maxAge: options.maxAge,
+					Promise.resolve(
+						setCookie(key, value, {
+							req,
+							res,
+							httpOnly: options.httpOnly ?? true,
+							secure: isSecure,
+							sameSite: options.sameSite ?? "lax",
+							path: options.path ?? "/",
+							domain: options.domain,
+							maxAge: options.maxAge,
+						}),
+					).catch(() => {
+						console.error("Cookie update failed");
 					});
 				}
 			},
 		});
+	}
+
+	async getItemAsync(key: string): Promise<string | null> {
+		const value = await getCookie(key, { req: this.options.request, res: this.options.response });
+		return typeof value === "string" ? value || null : null;
+	}
+	async setItemAsync(key: string, value: string): Promise<void> {
+		const options = {
+			req: this.options.request,
+			res: this.options.response,
+			httpOnly: this.options.httpOnly ?? true,
+			secure: this.options.secure ?? shouldUseSecureCookies(this.options.request),
+			sameSite: this.options.sameSite ?? "lax",
+			path: this.options.path ?? "/",
+			domain: this.options.domain,
+			maxAge: this.options.maxAge,
+		};
+		if (value === "") await deleteCookie(key, options);
+		else await setCookie(key, value, options);
 	}
 
 	getItem(key: string): string | null {
