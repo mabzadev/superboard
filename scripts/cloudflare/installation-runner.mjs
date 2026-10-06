@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { appendFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { setTimeout } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 
 import { installationRunRequest } from "./installation-run-context.mjs";
@@ -19,7 +20,7 @@ function parseArgs() {
 	return args;
 }
 
-async function githubIdentity(env) {
+async function githubIdentity(env, fetchImpl = fetch) {
 	if (
 		env.GITHUB_ACTIONS !== "true" ||
 		!env.ACTIONS_ID_TOKEN_REQUEST_URL ||
@@ -30,7 +31,7 @@ async function githubIdentity(env) {
 	if (url.protocol !== "https:" || !url.hostname.endsWith(".actions.githubusercontent.com"))
 		throw new Error("INSTALLATION_IDENTITY_URL_INVALID");
 	url.searchParams.set("audience", "superboard-installer");
-	const response = await fetch(url, {
+	const response = await fetchImpl(url, {
 		headers: { Authorization: `Bearer ${env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` },
 		signal: AbortSignal.timeout(30_000),
 		redirect: "error",
@@ -41,20 +42,30 @@ async function githubIdentity(env) {
 	return token;
 }
 
-async function request(env, path, body) {
+export async function runnerControlRequest(
+	env,
+	path,
+	body,
+	{ fetchImpl = fetch, wait = setTimeout } = {},
+) {
 	const origin = new URL(env.SUPERBOARD_INSTALLER_ORIGIN);
 	if (origin.protocol !== "https:" || origin.origin !== env.SUPERBOARD_INSTALLER_ORIGIN)
 		throw new Error("INSTALLATION_ORIGIN_INVALID");
-	const token = await githubIdentity(env);
-	const response = await fetch(`${origin.origin}${path}`, {
-		method: body ? "POST" : "GET",
-		headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-		...(body ? { body: JSON.stringify(body) } : {}),
-		signal: AbortSignal.timeout(30_000),
-		redirect: "error",
-	});
-	if (!response.ok) throw new Error(`INSTALLATION_RUN_API:${response.status}`);
-	return (await response.json()).result;
+	const token = await githubIdentity(env, fetchImpl);
+	for (let attempt = 0; ; attempt++) {
+		const response = await fetchImpl(`${origin.origin}${path}`, {
+			method: body ? "POST" : "GET",
+			headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+			...(body ? { body: JSON.stringify(body) } : {}),
+			signal: AbortSignal.timeout(30_000),
+			redirect: "error",
+		});
+		if (response.ok) return (await response.json()).result;
+		if (body || attempt >= 3 || ![502, 503, 504].includes(response.status))
+			throw new Error(`INSTALLATION_RUN_API:${response.status}`);
+		await response.body?.cancel();
+		await wait(1000 * 2 ** attempt);
+	}
 }
 
 export function redactedCommandOutput(values) {
@@ -106,7 +117,7 @@ function executor(redact) {
 
 async function deploy(args, processEnvironment) {
 	const { buildInstance, deployInstance } = await import("./workers-builds.mjs");
-	const claim = await request(processEnvironment, "/runner/claim", {
+	const claim = await runnerControlRequest(processEnvironment, "/runner/claim", {
 		id: args.id,
 		revision: args.revision,
 	});
@@ -201,7 +212,7 @@ async function deploy(args, processEnvironment) {
 async function main() {
 	const args = parseArgs();
 	if (args.plan) {
-		const jobs = await request(process.env, "/runner/jobs");
+		const jobs = await runnerControlRequest(process.env, "/runner/jobs");
 		await appendFile(
 			process.env.GITHUB_OUTPUT,
 			`matrix=${JSON.stringify({ include: jobs })}\nhas_jobs=${jobs.length > 0}\n`,
