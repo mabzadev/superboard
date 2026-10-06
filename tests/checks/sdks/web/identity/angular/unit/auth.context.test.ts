@@ -13,6 +13,7 @@ import {
 	acquireToken,
 	handleTokenExchangeByAuthCode,
 } from "../../../../../../../sdks/web/identity/angular/src/utils";
+import { identityClaims } from "../../../../../../fixtures/identity/claims.js";
 
 // MOCK external dependencies
 vi.mock("@melody-auth/shared", () => ({
@@ -25,7 +26,7 @@ vi.mock("@melody-auth/shared", () => ({
 vi.mock("@melody-auth/web", () => ({ loadCodeAndStateFromUrl: vi.fn() }));
 
 vi.mock("../../../../../../../sdks/web/identity/angular/src/utils", () => ({
-	acquireToken: vi.fn(),
+	acquireToken: vi.fn(async () => undefined),
 	handleTokenExchangeByAuthCode: vi.fn(),
 }));
 
@@ -50,10 +51,14 @@ describe("AuthContext", () => {
 	it("should initialize state with valid stored token and call acquireToken", () => {
 		// Setup mocks for a valid stored token scenario
 		(checkStorage as Mock).mockReturnValue({
-			storedRefreshToken: JSON.stringify({ token: "dummy-refresh" }),
+			storedRefreshToken: JSON.stringify({
+				refreshToken: "dummy-refresh",
+				expiresIn: 3600,
+				expiresOn: 4000000000,
+			}),
 			storedIdToken: JSON.stringify({
 				idToken: "dummy-id-token",
-				account: { id: "dummy-account" },
+				account: identityClaims({ id: "dummy-account" }),
 			}),
 		});
 		(isValidTokens as Mock).mockReturnValue({
@@ -70,8 +75,12 @@ describe("AuthContext", () => {
 
 		const stateValue = authContext.state();
 		expect(stateValue.config).toEqual(dummyConfig);
-		expect(stateValue.refreshTokenStorage).toEqual({ token: "dummy-refresh" });
-		expect(stateValue.account).toStrictEqual({ id: "dummy-account" });
+		expect(stateValue.refreshTokenStorage).toEqual({
+			refreshToken: "dummy-refresh",
+			expiresIn: 3600,
+			expiresOn: 4000000000,
+		});
+		expect(stateValue.account).toStrictEqual(identityClaims({ id: "dummy-account" }));
 		expect(stateValue.checkedStorage).toBe(true);
 
 		expect(acquireTokenMock).toHaveBeenCalledTimes(1);
@@ -82,7 +91,11 @@ describe("AuthContext", () => {
 	it("should initialize state with valid stored token and null stored account and call acquireToken", () => {
 		// Setup mocks for a valid stored token scenario with storedAccount set to null
 		(checkStorage as Mock).mockReturnValue({
-			storedRefreshToken: JSON.stringify({ token: "dummy-refresh-null-account" }),
+			storedRefreshToken: JSON.stringify({
+				refreshToken: "dummy-refresh-null-account",
+				expiresIn: 3600,
+				expiresOn: 4000000000,
+			}),
 			storedAccount: null,
 		});
 		(isValidTokens as Mock).mockReturnValue({
@@ -99,7 +112,11 @@ describe("AuthContext", () => {
 		const stateValue = authContext.state();
 
 		expect(stateValue.config).toEqual(dummyConfig);
-		expect(stateValue.refreshTokenStorage).toEqual({ token: "dummy-refresh-null-account" });
+		expect(stateValue.refreshTokenStorage).toEqual({
+			refreshToken: "dummy-refresh-null-account",
+			expiresIn: 3600,
+			expiresOn: 4000000000,
+		});
 		expect(stateValue.account).toBeNull();
 		expect(stateValue.checkedStorage).toBe(true);
 
@@ -199,7 +216,11 @@ describe("AuthContext", () => {
 			token: "dummy-token-from-params",
 		});
 		(checkStorage as Mock).mockReturnValue({
-			storedRefreshToken: JSON.stringify({ token: "dummy-refresh" }),
+			storedRefreshToken: JSON.stringify({
+				refreshToken: "dummy-refresh",
+				expiresIn: 3600,
+				expiresOn: 4000000000,
+			}),
 		});
 		(isValidTokens as Mock).mockReturnValue({
 			hasValidIdToken: false,

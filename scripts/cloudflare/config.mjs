@@ -1016,6 +1016,7 @@ function observabilityConfig() {
 		vars: {
 			ENVIRONMENT: environment,
 			ANALYTICS_DATASET: resources.analyticsDataset,
+			SUPERBOARD_OBSERVABILITY_SOURCE: target.observabilitySource ?? "analytics-engine",
 		},
 		analytics_engine_datasets: [{ binding: "ANALYTICS", dataset: resources.analyticsDataset }],
 	};

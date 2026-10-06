@@ -1,10 +1,6 @@
-import {
-	ProviderConfig,
-	GetUserInfoRes,
-	AuthorizeMethod,
-	PostTokenByAuthCodeRes,
-	PostTokenByRefreshTokenRes,
-} from "@melody-auth/shared";
+import { ProviderConfig, AuthorizeMethod } from "@melody-auth/shared";
+
+import { isRecord, isUserInfo, isRefreshResponse, isAuthorizationResponse } from "./validation.js";
 
 export const getAuthorize = async (
 	{ serverUri, clientId, scopes = [], redirectUri }: ProviderConfig,
@@ -63,11 +59,17 @@ export const getAuthorize = async (
 			authWindow.focus();
 		}
 
-		const onMessage = (event: MessageEvent) => {
+		const onMessage = (event: MessageEvent<unknown>) => {
 			const data = event.data;
-			if (data && data.state && data.code) {
+			if (
+				isRecord(data) &&
+				typeof data.state === "string" &&
+				typeof data.code === "string" &&
+				data.state &&
+				data.code
+			) {
 				if (authorizePopupHandler) {
-					authorizePopupHandler(data);
+					authorizePopupHandler({ state: data.state, code: data.code });
 				}
 
 				if (authWindow && !authWindow.closed) {
@@ -103,7 +105,8 @@ export const getUserInfo = async (
 		throw new Error(text);
 	}
 
-	const data: GetUserInfoRes = await res.json();
+	const data: unknown = await res.json();
+	if (!isUserInfo(data)) throw new Error("Invalid user info response");
 	return data;
 };
 
@@ -140,8 +143,10 @@ export const postLogout = async (
 		throw new Error(text);
 	}
 
-	const result = await res.json();
-	return (result?.redirectUri as string) ?? postLogoutRedirectUri;
+	const result: unknown = await res.json();
+	return isRecord(result) && typeof result.redirectUri === "string"
+		? result.redirectUri
+		: postLogoutRedirectUri;
 };
 
 export const postTokenByAuthCode = async (
@@ -174,7 +179,8 @@ export const postTokenByAuthCode = async (
 		throw new Error(text);
 	}
 
-	const data: PostTokenByAuthCodeRes = await res.json();
+	const data: unknown = await res.json();
+	if (!isAuthorizationResponse(data)) throw new Error("Invalid authorization response");
 	return data;
 };
 
@@ -204,7 +210,8 @@ export const postTokenByRefreshToken = async (
 		throw new Error(text);
 	}
 
-	const data: PostTokenByRefreshTokenRes = await res.json();
+	const data: unknown = await res.json();
+	if (!isRefreshResponse(data)) throw new Error("Invalid refresh response");
 
 	return data;
 };

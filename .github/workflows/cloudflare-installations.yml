@@ -1,0 +1,73 @@
+name: SuperBoard installations
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: superboard-installations-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  SUPERBOARD_INSTALLER_ORIGIN: ${{ vars.SUPERBOARD_INSTALLER_ORIGIN }}
+
+jobs:
+  wake-development:
+    if: github.event_name == 'schedule' && github.ref == 'refs/heads/main' && vars.SUPERBOARD_INSTALLER_ORIGIN != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Check pending development installations with the development identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST repos/mabzadev/superboard/actions/workflows/cloudflare-installations.yml/dispatches -f ref=dev
+  plan:
+    if: vars.SUPERBOARD_INSTALLER_ORIGIN != ''
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_jobs: ${{ steps.plan.outputs.has_jobs }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+      - id: plan
+        run: node scripts/cloudflare/installation-runner.mjs --plan
+  deploy:
+    name: Install ${{ matrix.id }}
+    needs: plan
+    if: needs.plan.outputs.has_jobs == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    concurrency:
+      group: superboard-installation-${{ matrix.id }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ matrix.revision }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install or update the instance
+        env:
+          INSTALLATION_ID: ${{ matrix.id }}
+          INSTALLATION_REVISION: ${{ matrix.revision }}
+        run: node scripts/cloudflare/installation-runner.mjs --id "$INSTALLATION_ID" --revision "$INSTALLATION_REVISION"

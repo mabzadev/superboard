@@ -1,3 +1,4 @@
+import { OBSERVABILITY_WINDOWS_MINUTES } from "@superboard/contracts/observability";
 import {
 	runPluginTask,
 	PluginTaskUnavailable,
@@ -19,6 +20,7 @@ const observation = z.object({
 	outcome: z.string().min(1).max(64),
 	status: z.number().int().min(0).max(599),
 	exceptions: z.number().int().nonnegative().max(100000),
+	truncated: z.boolean().optional().default(false),
 	cpu_ms: z.number().finite().nonnegative(),
 	wall_ms: z.number().finite().nonnegative(),
 	observed_at: z.string().datetime(),
@@ -101,8 +103,57 @@ export async function receiveObservabilityObservation(
 						incidentId,
 					),
 				);
+				statements.push(
+					c.env.DB.prepare(
+						"INSERT OR IGNORE INTO observability_observation_details(instance_id,observation_id,truncated) VALUES (?,?,?)",
+					).bind(value.instance_id, value.observation_id, value.truncated ? 1 : 0),
+				);
 				await c.env.DB.batch(statements);
 				return json({ observation_id: value.observation_id, incident_id: incidentId }, 201);
+			},
+		);
+		return admitted.ran ? admitted.value : fail(404, "PLUGIN_NOT_ACTIVE");
+	} catch (error) {
+		return failure(error);
+	}
+}
+
+export async function readObservabilitySummary(c: Context<{ Bindings: Env }>): Promise<Response> {
+	try {
+		const props: unknown = c.executionCtx.props;
+		if (
+			!props ||
+			typeof props !== "object" ||
+			!("superboard_plugin_id" in props) ||
+			props.superboard_plugin_id !== pluginId
+		)
+			return fail(403, "OBSERVABILITY_PRODUCER_FORBIDDEN");
+		if (!(await verifyPluginTaskRequest(c.req.raw, c.env.OBSERVABILITY_INTERNAL_TOKEN ?? "")))
+			return fail(401, "OBSERVABILITY_SIGNATURE_INVALID");
+		const minutes =
+			OBSERVABILITY_WINDOWS_MINUTES.find((value) => value === Number(c.req.query("window"))) ?? 60;
+		const admitted = await runPluginTask(
+			c.env,
+			pluginId,
+			{ kind: "runtime", task_id: `summary:${crypto.randomUUID()}`, duration_ms: 30000 },
+			async () => {
+				const result = await c.env.DB.prepare(
+					"SELECT o.service,o.outcome,o.event_type AS eventType,COUNT(*) AS invocations,SUM(o.exceptions) AS exceptions,SUM(COALESCE(d.truncated,0)) AS truncated,AVG(o.cpu_ms) AS averageCpuMs,AVG(o.wall_ms) AS averageWallMs,MAX(o.cpu_ms) AS maximumCpuMs,MAX(o.wall_ms) AS maximumWallMs FROM observability_observations o LEFT JOIN observability_observation_details d ON d.instance_id=o.instance_id AND d.observation_id=o.observation_id WHERE o.instance_id=? AND o.observed_at>=? GROUP BY o.service,o.outcome,o.event_type ORDER BY o.service,o.outcome,o.event_type LIMIT 1000",
+				)
+					.bind(c.env.SUPERBOARD_INSTANCE_ID, new Date(Date.now() - minutes * 60000).toISOString())
+					.all();
+				return Response.json(
+					{
+						status: "ok",
+						source: "emdash",
+						environment: c.env.ENVIRONMENT,
+						dataset: "observability_observations",
+						windowMinutes: minutes,
+						generatedAt: new Date().toISOString(),
+						rows: result.results,
+					},
+					{ headers: { "Cache-Control": "private, no-store" } },
+				);
 			},
 		);
 		return admitted.ran ? admitted.value : fail(404, "PLUGIN_NOT_ACTIVE");

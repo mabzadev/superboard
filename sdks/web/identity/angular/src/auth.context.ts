@@ -1,15 +1,18 @@
 import { Inject, Injectable, signal } from "@angular/core";
 import {
 	getParams,
+	handleError,
+	ErrorType,
 	checkStorage,
 	loadRefreshTokenStorageFromParams,
 	isValidTokens,
 } from "@melody-auth/shared";
-import type { AuthState, IdTokenStorage, ProviderConfig } from "@melody-auth/shared";
+import type { AuthState, ProviderConfig } from "@melody-auth/shared";
 import { loadCodeAndStateFromUrl } from "@melody-auth/web";
 
 import { PROVIDER_CONFIG } from "./auth.provider";
 import { acquireToken, handleTokenExchangeByAuthCode } from "./utils";
+import { readRefreshTokenStorage, readIdTokenStorage } from "./validation.js";
 
 @Injectable({ providedIn: "root" })
 export class AuthContext {
@@ -55,10 +58,10 @@ export class AuthContext {
 		const { storedRefreshToken, storedIdToken } = checkStorage(this.state().config.storage);
 
 		if (!parsedRefreshToken && storedRefreshToken) {
-			parsedRefreshToken = JSON.parse(storedRefreshToken);
+			parsedRefreshToken = readRefreshTokenStorage(storedRefreshToken);
 		}
 
-		const parsedIdToken: IdTokenStorage = storedIdToken ? JSON.parse(storedIdToken) : null;
+		const parsedIdToken = readIdTokenStorage(storedIdToken);
 
 		if (parsedRefreshToken || parsedIdToken) {
 			const { hasValidIdToken, hasValidRefreshToken } = isValidTokens(
@@ -74,7 +77,7 @@ export class AuthContext {
 					...prev,
 					refreshTokenStorage: hasValidRefreshToken ? parsedRefreshToken : null,
 					account: account ?? null,
-					idToken: hasValidIdToken ? parsedIdToken.idToken : null,
+					idToken: hasValidIdToken && parsedIdToken ? parsedIdToken.idToken : null,
 					checkedStorage: true,
 				}));
 				return;
@@ -96,7 +99,12 @@ export class AuthContext {
 		}
 
 		if (!containsCode && this.state().refreshTokenStorage && !this.state().accessTokenStorage) {
-			acquireToken(this.state);
+			acquireToken(this.state).catch((error: unknown) => {
+				this.state.update((previous) => ({
+					...previous,
+					acquireTokenError: handleError(error, ErrorType.ExchangeAccessToken),
+				}));
+			});
 			return;
 		}
 

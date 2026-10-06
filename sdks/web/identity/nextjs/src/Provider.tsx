@@ -14,14 +14,14 @@ export interface NextAuthProviderProps extends Omit<ProviderConfig, "serverUri" 
 export const NextAuthProvider = ({
 	children,
 	serverUrl,
-	storage = "cookieStorage" as StorageType,
+	storage = "cookieStorage",
 	...config
 }: NextAuthProviderProps) => {
-	const reactConfig = {
+	const reactConfig: ProviderConfig = {
 		...config,
 		serverUri: serverUrl,
 		storage,
-	} as ProviderConfig;
+	};
 
 	return <ReactAuthProvider {...reactConfig}>{children}</ReactAuthProvider>;
 };

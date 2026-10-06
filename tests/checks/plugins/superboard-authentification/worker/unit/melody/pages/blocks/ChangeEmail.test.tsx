@@ -191,7 +191,7 @@ describe("ChangeEmail Component", () => {
 		const firstCodeInput = container.querySelector('input[aria-label="Code input 1"]');
 		expect(firstCodeInput).toBeDefined();
 
-		fireEvent.input(firstCodeInput as HTMLInputElement, { target: { value: "1" } });
+		fireEvent.input(firstCodeInput, { target: { value: "1" } });
 
 		expect(defaultProps.onChange).toHaveBeenCalledWith("mfaCode", ["1", "", "", "", "", ""]);
 	});

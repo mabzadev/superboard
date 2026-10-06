@@ -76,6 +76,7 @@ import oauthRoutes from "./routes/oauth";
 import {
 	observabilityAdmin,
 	receiveObservabilityObservation,
+	readObservabilitySummary,
 } from "./routes/observability-admin.js";
 import platformStatusRoutes, { workerTopology } from "./routes/platform-status";
 import pluginTasks from "./routes/plugin-tasks.js";
@@ -412,6 +413,7 @@ app.route("/api/v1/diagnostics", diagnosticsRoutes);
 app.route("/api/v1/admin", adminRoutes);
 app.route("/api/v1/platform", platformStatusRoutes);
 app.post("/internal/observability/observations", receiveObservabilityObservation);
+app.get("/internal/observability/summary", readObservabilitySummary);
 app.all("/api/v1/observability/*", observabilityAdmin);
 app.route("/api/v1/application-users/projects", applicationUsersAdminRoutes);
 app.all("/api/v1/application-identity/:kind/:id", applicationPluginApi);

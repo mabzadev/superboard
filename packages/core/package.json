@@ -322,7 +322,8 @@
     "vite": "^6.0.0",
     "vitest": "catalog:",
     "zod-openapi": "^5.4.6",
-    "astro": "catalog:"
+    "astro": "catalog:",
+    "@types/babel__core": "7.20.5"
   },
   "repository": {
     "type": "git",

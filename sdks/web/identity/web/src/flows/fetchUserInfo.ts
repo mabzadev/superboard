@@ -8,6 +8,6 @@ export const fetchUserInfo = async (config: ProviderConfig, accessToken: string)
 
 		return result;
 	} catch (e) {
-		throw new Error(`Failed to fetch user info: ${e}`);
+		throw new Error(`Failed to fetch user info: ${String(e)}`);
 	}
 };

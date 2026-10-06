@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { backupEncryptionKey } from "../database/d1-backup-crypto.mjs";
+import { encodeBuildVariables } from "./build-variables.mjs";
 import { parseArgs, validateTarget } from "./target.mjs";
 import { instanceBranch, instanceBuildConfiguration } from "./workers-builds-config.mjs";
 
@@ -41,6 +42,8 @@ export async function installInstanceUpdates(input, { token, backupKey, fetchImp
 	if (input.environment === "production") backupEncryptionKey(backupKey);
 	const base = `https://api.cloudflare.com/client/v4/accounts/${plan.accountId}`;
 	async function request(path, method = "GET", body) {
+		if (method === "PATCH" && path.endsWith("/environment_variables"))
+			body = await encodeBuildVariables(body);
 		const response = await fetchImpl(`${base}${path}`, {
 			method,
 			headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

@@ -1,14 +1,15 @@
-import { getParams } from "@melody-auth/shared";
+import { getParams, handleError, ErrorType } from "@melody-auth/shared";
 import { loadCodeAndStateFromUrl } from "@melody-auth/web";
 import { useContext, useEffect, useRef } from "react";
 
-import authContext, { AuthContext } from "./context";
+import authContext from "./context";
 import { useAuth } from "./useAuth";
 import { handleTokenExchangeByAuthCode } from "./utils";
 
 const Setup = () => {
 	const { acquireToken } = useAuth();
-	const context = useContext<AuthContext>(authContext);
+	const context = useContext(authContext);
+	if (!context) throw new Error("AuthProvider is required");
 	const { state, dispatch } = context;
 
 	const initialized = useRef(false);
@@ -24,7 +25,12 @@ const Setup = () => {
 		if (state.accessTokenStorage) return;
 
 		if (!containCode && state.refreshTokenStorage && !state.accessTokenStorage) {
-			acquireToken();
+			acquireToken().catch((error: unknown) => {
+				dispatch({
+					type: "setAcquireTokenError",
+					payload: handleError(error, ErrorType.ExchangeAccessToken),
+				});
+			});
 			return;
 		}
 

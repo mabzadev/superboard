@@ -3,12 +3,12 @@ import {
 	ProviderConfig,
 	isValidTokens,
 	loadRefreshTokenStorageFromParams,
-	IdTokenStorage,
 } from "@melody-auth/shared";
 import { ReactNode, useEffect, useReducer } from "react";
 
 import authContext, { AuthState, DispatchAction } from "./context";
 import Setup from "./Setup";
+import { readRefreshTokenStorage, readIdTokenStorage } from "./validation.js";
 
 export interface ProviderProps extends ProviderConfig {
 	children: ReactNode;
@@ -120,10 +120,10 @@ export const AuthProvider = ({ children, ...config }: ProviderProps) => {
 		const { storedRefreshToken, storedIdToken } = checkStorage(config.storage);
 
 		if (!parsedRefreshToken && storedRefreshToken) {
-			parsedRefreshToken = JSON.parse(storedRefreshToken);
+			parsedRefreshToken = readRefreshTokenStorage(storedRefreshToken);
 		}
 
-		const parsedIdToken: IdTokenStorage = storedIdToken ? JSON.parse(storedIdToken) : null;
+		const parsedIdToken = readIdTokenStorage(storedIdToken);
 
 		if (parsedRefreshToken || parsedIdToken) {
 			const { hasValidIdToken, hasValidRefreshToken } = isValidTokens(
@@ -139,7 +139,7 @@ export const AuthProvider = ({ children, ...config }: ProviderProps) => {
 					payload: {
 						refreshTokenStorage: hasValidRefreshToken ? parsedRefreshToken : null,
 						idTokenBody: account ?? null,
-						idToken: hasValidIdToken ? parsedIdToken.idToken : null,
+						idToken: hasValidIdToken && parsedIdToken ? parsedIdToken.idToken : null,
 					},
 				});
 				return;

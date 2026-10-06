@@ -31,6 +31,6 @@ export const triggerLogin = async (
 			authorizePopupHandler: additionalProps?.authorizePopupHandler,
 		});
 	} catch (e) {
-		throw new Error(`Failed to initial authorize flow: ${e}`);
+		throw new Error(`Failed to initial authorize flow: ${String(e)}`);
 	}
 };
