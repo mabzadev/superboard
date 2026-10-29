@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 
 import { cloudflareEnv } from "../../../../../scripts/cloudflare/target.mjs";
 import { canonicalJson, sha256 } from "./core-primitives.mjs";
-import { assertMbzaDevelopment, parseProjectRef } from "./core.mjs";
+import { assertMabzaDevelopment, parseProjectRef } from "./core.mjs";
 import { FLOW_SOURCE_QUERIES } from "./registry.mjs";
 
 export class FixtureFlowsCutoverAdapter {
@@ -121,7 +121,7 @@ export class RemoteFlowsCutoverAdapter {
 		directMaintenance = false,
 		commandRunner = runCommand,
 	}) {
-		assertMbzaDevelopment(targetName, environment);
+		assertMabzaDevelopment(targetName, environment);
 		this.root = root;
 		this.target = target;
 		this.targetName = targetName;
@@ -132,7 +132,7 @@ export class RemoteFlowsCutoverAdapter {
 		this.flowUserHashKey = flowUserHashKey;
 		this.directMaintenance = directMaintenance;
 		this.commandRunner = commandRunner;
-		if (!this.resources) throw new Error("MBZA development resources are missing");
+		if (!this.resources) throw new Error("MABZA development resources are missing");
 	}
 
 	async resolveProject(projectRef) {
@@ -242,14 +242,14 @@ INSERT OR IGNORE INTO flow_environments
 			String(live.project_id) !== String(snapshot?.project?.project_id) ||
 			live.instance_id !== Number(snapshot?.project?.instance_id)
 		) {
-			throw new Error("Snapshot project identity does not match the live MBZA API registry");
+			throw new Error("Snapshot project identity does not match the live MABZA API registry");
 		}
 		for (const source of ["paywalls", "onboardings"]) {
 			const expected = this.requireProvisionedDatabase(source);
 			const actual = snapshot?.sources?.[source];
 			if (actual?.database_name !== expected.name || actual?.database_id !== expected.id) {
 				throw new Error(
-					`Snapshot ${source} database identity does not match the MBZA target manifest`,
+					`Snapshot ${source} database identity does not match the MABZA target manifest`,
 				);
 			}
 		}
@@ -262,16 +262,16 @@ INSERT OR IGNORE INTO flow_environments
 			String(live.project_id) !== String(plan?.project?.project_id) ||
 			live.instance_id !== Number(plan?.project?.instance_id)
 		) {
-			throw new Error("Protected plan project identity does not match the live MBZA API registry");
+			throw new Error("Protected plan project identity does not match the live MABZA API registry");
 		}
 		for (const source of ["paywalls", "onboardings"]) {
 			if (plan.source_databases?.[source] !== this.requireProvisionedDatabase(source).name) {
 				throw new Error(
-					`Protected plan ${source} database identity does not match the MBZA target manifest`,
+					`Protected plan ${source} database identity does not match the MABZA target manifest`,
 				);
 			}
 			if (plan.source_database_ids?.[source] !== this.requireProvisionedDatabase(source).id) {
-				throw new Error(`Protected plan ${source} D1 id does not match the MBZA target manifest`);
+				throw new Error(`Protected plan ${source} D1 id does not match the MABZA target manifest`);
 			}
 		}
 		const expectedDefaultEnvironmentId = defaultFlowEnvironmentId(
@@ -302,14 +302,14 @@ INSERT OR IGNORE INTO flow_environments
 						String(rows[0].key) !== live.environment))
 			) {
 				throw new Error(
-					"Protected plan Flows project/default environment conflicts with the live MBZA scope",
+					"Protected plan Flows project/default environment conflicts with the live MABZA scope",
 				);
 			}
 			return true;
 		}
 		const scope = await this.resolveFlowEnvironment(live, { environmentId: plan.environment_id });
 		if (scope.environment_id !== plan.environment_id) {
-			throw new Error("Protected plan Flows environment no longer matches MBZA");
+			throw new Error("Protected plan Flows environment no longer matches MABZA");
 		}
 		return true;
 	}
@@ -323,12 +323,12 @@ INSERT OR IGNORE INTO flow_environments
 			const artifact = receipt?.artifacts?.find((candidate) => candidate.logical_name === source);
 			if (artifact?.database_name !== expected.name || artifact?.database_id !== expected.id) {
 				throw new Error(
-					`Backup receipt ${source} D1 identity does not match the live MBZA target manifest`,
+					`Backup receipt ${source} D1 identity does not match the live MABZA target manifest`,
 				);
 			}
 			if (artifact.r2_bucket !== this.resources.moduleR2?.flows?.name) {
 				throw new Error(
-					`Backup receipt ${source} archive bucket does not match the live MBZA target manifest`,
+					`Backup receipt ${source} archive bucket does not match the live MABZA target manifest`,
 				);
 			}
 		}
@@ -753,9 +753,9 @@ INSERT INTO flows_legacy_cutover_commands
 		if (!database?.name || !database?.id) {
 			const suffix =
 				source === "flows"
-					? "; provision it first with: node scripts/cloudflare/bootstrap.mjs --target mbza-development --environment development --remote (then execute only the exact confirmation printed by that command)"
+					? "; provision it first with: node scripts/cloudflare/bootstrap.mjs --target mabza-development --environment development --remote (then execute only the exact confirmation printed by that command)"
 					: "";
-			throw new Error(`MBZA ${source} D1 is not fully provisioned${suffix}`);
+			throw new Error(`MABZA ${source} D1 is not fully provisioned${suffix}`);
 		}
 		return database;
 	}
@@ -763,7 +763,7 @@ INSERT INTO flows_legacy_cutover_commands
 	requireProvisionedApiDatabase() {
 		const database = this.resources.d1;
 		if (!database?.name || !database?.id) {
-			throw new Error("MBZA API D1 is not fully provisioned");
+			throw new Error("MABZA API D1 is not fully provisioned");
 		}
 		return database;
 	}

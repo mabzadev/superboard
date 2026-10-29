@@ -2,180 +2,180 @@ import type { PluginApiAdapter } from "@superboard/front-ui/api";
 
 export const adapters = [
 	{
-		id: "supbrd-plugmod-dynamic-links.command.create_link",
+		id: "superboard-dynamic-links.command.create_link",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/dynamic-links/projects/:projectRef/links",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:POST:/internal/v1/links",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.update_link",
+		id: "superboard-dynamic-links.command.update_link",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/dynamic-links/projects/:projectRef/links/:id",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:PUT:/internal/v1/links/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.delete_link",
+		id: "superboard-dynamic-links.command.delete_link",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/dynamic-links/projects/:projectRef/links/:id",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:DELETE:/internal/v1/links/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.create_link_campaign",
+		id: "superboard-dynamic-links.command.create_link_campaign",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/dynamic-links/projects/:projectRef/campaigns",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:POST:/internal/v1/campaigns",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.delete_link_campaign",
+		id: "superboard-dynamic-links.command.delete_link_campaign",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/dynamic-links/projects/:projectRef/campaigns/:id",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:DELETE:/internal/v1/campaigns/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.create_redirect_rule",
+		id: "superboard-dynamic-links.command.create_redirect_rule",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/dynamic-links/projects/:projectRef/redirect-rules",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:POST:/internal/v1/redirect-rules",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.update_redirect_rule",
+		id: "superboard-dynamic-links.command.update_redirect_rule",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/dynamic-links/projects/:projectRef/redirect-rules/:id",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:PUT:/internal/v1/redirect-rules/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
+		id: "superboard-dynamic-links.command.delete_redirect_rule",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/dynamic-links/projects/:projectRef/redirect-rules/:id",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:DELETE:/internal/v1/redirect-rules/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.create_domain",
+		id: "superboard-dynamic-links.command.create_domain",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/dynamic-links/projects/:projectRef/domains",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:POST:/internal/v1/domains",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.verify_domain",
+		id: "superboard-dynamic-links.command.verify_domain",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/dynamic-links/projects/:projectRef/domains/:id/verify",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:POST:/internal/v1/domains/:id/verify",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.delete_domain",
+		id: "superboard-dynamic-links.command.delete_domain",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/dynamic-links/projects/:projectRef/domains/:id",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:DELETE:/internal/v1/domains/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.save_social_preview",
+		id: "superboard-dynamic-links.command.save_social_preview",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/dynamic-links/projects/:projectRef/social-preview",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:PUT:/internal/v1/social-preview",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.command.save_tracking",
+		id: "superboard-dynamic-links.command.save_tracking",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/dynamic-links/projects/:projectRef/tracking",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:PUT:/internal/v1/tracking",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.data_source.links",
+		id: "superboard-dynamic-links.data_source.links",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/dynamic-links/projects/:projectRef/links",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:GET:/internal/v1/links",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.data_source.resolved_link",
+		id: "superboard-dynamic-links.data_source.resolved_link",
 		kind: "data_source",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/dynamic-links/projects/:projectRef/links/:slug/resolve",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:POST:/internal/v1/links/:slug/resolve",
 				query: "none",
 				body: "passthrough",
 				read_only: true,
@@ -183,84 +183,84 @@ export const adapters = [
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.data_source.link_campaigns",
+		id: "superboard-dynamic-links.data_source.link_campaigns",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/dynamic-links/projects/:projectRef/campaigns",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:GET:/internal/v1/campaigns",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
+		id: "superboard-dynamic-links.data_source.link_campaign_analytics",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/dynamic-links/projects/:projectRef/campaign-analytics",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:GET:/internal/v1/campaign-analytics",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.data_source.redirect_rules",
+		id: "superboard-dynamic-links.data_source.redirect_rules",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/dynamic-links/projects/:projectRef/redirect-rules",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:GET:/internal/v1/redirect-rules",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.data_source.domains",
+		id: "superboard-dynamic-links.data_source.domains",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/dynamic-links/projects/:projectRef/domains",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:GET:/internal/v1/domains",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.data_source.social_preview",
+		id: "superboard-dynamic-links.data_source.social_preview",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/dynamic-links/projects/:projectRef/social-preview",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:GET:/internal/v1/social-preview",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.data_source.tracking",
+		id: "superboard-dynamic-links.data_source.tracking",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/dynamic-links/projects/:projectRef/tracking",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:GET:/internal/v1/tracking",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-dynamic-links.data_source.link_statistics",
+		id: "superboard-dynamic-links.data_source.link_statistics",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/dynamic-links/projects/:projectRef/statistics",
+				route_id:
+					"api:dynamic-links:operator-proxy->dynamic-links:index.app:GET:/internal/v1/statistics",
 				query: "passthrough",
 				body: "none",
 			},

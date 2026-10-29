@@ -26,7 +26,18 @@ import {
 	TableRow,
 } from "@superboard/front-ui/ui/table.js";
 import { useDraftAutosave } from "@superboard/front-ui/use-draft-autosave";
-import { FlaskConical, MapPin, Pencil, Plus, Rocket, Target, Trash2 } from "lucide-react";
+import {
+	ArrowLeft,
+	History,
+	Save,
+	FlaskConical,
+	MapPin,
+	Pencil,
+	Plus,
+	Rocket,
+	Target,
+	Trash2,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -258,7 +269,7 @@ export function OnboardingsPage() {
 			const version = await createOnboardingVersion(selectedProject.id, selected.id, {
 				configuration: toOnboardingDefinition(document),
 			});
-			showSuccessNotification(`Draft v${version.version} saved`);
+			showSuccessNotification(t("Draft version saved") + ` · v${version.version}`);
 			await open(selected);
 			return true;
 		} catch (cause) {
@@ -425,10 +436,75 @@ export function OnboardingsPage() {
 								))}
 							</nav>
 							<Card
-								className="border-kumo-line bg-kumo-base"
+								className={
+									studioTab === "Design" ? "paywall-builder-shell" : "border-kumo-line bg-kumo-base"
+								}
 								hidden={!["Design", "Versions"].includes(studioTab)}
 							>
-								<CardHeader>
+								{studioTab === "Design" && (
+									<header className="paywall-builder-header">
+										<div className="flex min-w-0 items-center gap-3">
+											<Button
+												variant="ghost"
+												size="sm"
+												aria-label={t("Exit editor")}
+												title={t("Exit editor")}
+												onClick={() => {
+													setStudioTab("Versions");
+												}}
+											>
+												<ArrowLeft size={18} />
+											</Button>
+											<h1 className="truncate text-sm font-semibold">{selected.display_name}</h1>
+											<span className="rounded-md border border-kumo-line px-2 py-1 text-xs text-kumo-subtle">
+												{t("draft")}
+											</span>
+										</div>
+										<div className="flex flex-wrap items-center gap-2">
+											<span role="status" className="me-2 text-xs text-kumo-subtle">
+												{t(draftStatus)}
+											</span>
+											<Button
+												variant="ghost"
+												size="sm"
+												title={t("Version history")}
+												onClick={() => {
+													setStudioTab("Versions");
+												}}
+											>
+												<History size={16} />
+												{t("Version history")}
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
+												disabled={busy || editorLoading || !documentValid}
+												onClick={() => void save()}
+											>
+												<Save size={16} />
+												{t("Save draft")}
+											</Button>
+											<Button
+												size="sm"
+												variant="primary"
+												disabled={busy || editorLoading || !documentValid}
+												onClick={() => {
+													void save()
+														.then((saved) => {
+															if (saved) setStudioTab("Versions");
+														})
+														.catch((cause: unknown) => {
+															showErrorNotification(errorMessage(cause));
+														});
+												}}
+											>
+												<Rocket size={16} />
+												{t("Review and publish")}
+											</Button>
+										</div>
+									</header>
+								)}
+								<CardHeader hidden={studioTab === "Design"}>
 									<CardTitle>
 										{selected
 											? `${t("Edit")} ${selected.display_name}`
@@ -441,12 +517,12 @@ export function OnboardingsPage() {
 									</CardDescription>
 								</CardHeader>
 								<CardContent
-									className="space-y-4"
+									className={studioTab === "Design" ? "paywall-builder-content" : "space-y-4"}
 									inert={busy || editorLoading}
 									aria-busy={busy || editorLoading}
 								>
 									{selected && (
-										<details>
+										<details hidden={studioTab === "Design"}>
 											<summary className="cursor-pointer py-2 text-sm text-kumo-subtle">
 												{t("Details")}
 											</summary>
@@ -494,10 +570,14 @@ export function OnboardingsPage() {
 											</div>
 										</details>
 									)}
-									<p role="status" className="text-xs text-kumo-subtle">
+									<p
+										hidden={studioTab === "Design"}
+										role="status"
+										className="text-xs text-kumo-subtle"
+									>
 										{t(selected ? draftStatus : "Create to save")}
 									</p>
-									<div hidden={studioTab !== "Design"}>
+									<div hidden={studioTab !== "Design"} className="h-full">
 										<ExperienceEditor
 											key={editorKey}
 											kind="onboarding"
@@ -509,6 +589,7 @@ export function OnboardingsPage() {
 										/>
 									</div>
 									<Button
+										hidden={studioTab === "Design"}
 										disabled={!selected || busy || editorLoading || !documentValid}
 										onClick={() => void save()}
 									>
