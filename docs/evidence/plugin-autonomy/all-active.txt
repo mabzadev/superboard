@@ -55,82 +55,82 @@ v1.0.0
 Hooks
 1 permission
 Expand details
-supbrd-plug-user
+superboard-user
 v1.4.0
 Pages
 Expand details
-supbrd-plug-settings
+superboard-settings
 v1.0.0
 Pages
 Expand details
-supbrd-plug-content
+superboard-content
 v1.0.0
 Pages
 Expand details
-supbrd-plug-products
+superboard-products
 v1.0.0
 Pages
 Expand details
-supbrd-plug-audit
+superboard-audit
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-gateway
+superboard-gateway
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-billing
+superboard-billing
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-support
+superboard-support
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-flows
+superboard-flows
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-analytics
+superboard-analytics
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-marketing
+superboard-marketing
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-email
+superboard-email
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-dynamic-links
+superboard-dynamic-links
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-files
+superboard-files
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-paywalls
+superboard-paywalls
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-onboardings
+superboard-onboardings
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-observability
+superboard-observability
 v1.0.0
 Pages
 Expand details
-supbrd-plugmod-mcp
+superboard-mcp
 v1.0.0
 Pages
 Expand details
 Plugin enabled
 
-supbrd-plugmod-email is now active
+superboard-email is now active
 
 Plugin enabled
 
-supbrd-plug-user is now active
+superboard-user is now active

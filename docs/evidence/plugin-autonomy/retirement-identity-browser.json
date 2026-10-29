@@ -1,6 +1,6 @@
 [
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity",
     "scenario": "functional",
     "status": "passed",
@@ -14,7 +14,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang",
     "scenario": "functional",
     "status": "passed",
@@ -28,7 +28,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_dashboard",
     "scenario": "functional",
     "status": "passed",
@@ -42,7 +42,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_users",
     "scenario": "functional",
     "status": "passed",
@@ -56,7 +56,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_logs",
     "scenario": "functional",
     "status": "passed",
@@ -72,7 +72,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_account",
     "scenario": "functional",
     "status": "passed",
@@ -86,7 +86,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_roles_new",
     "scenario": "functional",
     "status": "passed",
@@ -100,7 +100,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_roles_by_id",
     "scenario": "functional",
     "status": "passed",
@@ -114,7 +114,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_roles",
     "scenario": "functional",
     "status": "passed",
@@ -128,7 +128,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_scopes_new",
     "scenario": "functional",
     "status": "passed",
@@ -142,7 +142,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_scopes_by_id",
     "scenario": "functional",
     "status": "passed",
@@ -156,7 +156,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_scopes",
     "scenario": "functional",
     "status": "passed",
@@ -170,7 +170,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_orgs_new",
     "scenario": "functional",
     "status": "passed",
@@ -184,7 +184,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_orgs_by_id",
     "scenario": "functional",
     "status": "passed",
@@ -198,7 +198,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_orgs",
     "scenario": "functional",
     "status": "passed",
@@ -212,7 +212,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_user_attributes_new",
     "scenario": "functional",
     "status": "passed",
@@ -226,7 +226,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_user_attributes_by_id",
     "scenario": "functional",
     "status": "passed",
@@ -240,7 +240,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_user_attributes",
     "scenario": "functional",
     "status": "passed",
@@ -254,7 +254,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_apps_new",
     "scenario": "functional",
     "status": "passed",
@@ -268,7 +268,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_apps_by_id",
     "scenario": "functional",
     "status": "passed",
@@ -282,7 +282,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_apps",
     "scenario": "functional",
     "status": "passed",
@@ -296,7 +296,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_apps_banners_new",
     "scenario": "functional",
     "status": "passed",
@@ -310,7 +310,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_apps_banners_by_id",
     "scenario": "functional",
     "status": "passed",
@@ -324,7 +324,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_saml_new",
     "scenario": "functional",
     "status": "passed",
@@ -338,7 +338,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_saml_by_id",
     "scenario": "functional",
     "status": "passed",
@@ -352,7 +352,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.identity_by_lang_saml",
     "scenario": "functional",
     "status": "passed",

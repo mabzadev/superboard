@@ -1283,12 +1283,12 @@
 			"symptoms": [
 				{
 					"kind": "http",
-					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/superboard-paywalls/data-sources/superboard-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
 					"symptom": "HTTP 500"
 				},
 				{
 					"kind": "api",
-					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/superboard-paywalls/data-sources/superboard-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
 					"symptom": "{\"code\":\"paywalls_internal_error\",\"message\":\"Paywalls is temporarily unavailable\",\"status\":500,\"request_id\":\"4313c958-5326-4f27-a16a-06cd7a05c439\"}"
 				},
 				{
@@ -1311,12 +1311,12 @@
 			"symptoms": [
 				{
 					"kind": "http",
-					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/superboard-paywalls/data-sources/superboard-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
 					"symptom": "HTTP 500"
 				},
 				{
 					"kind": "api",
-					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/superboard-paywalls/data-sources/superboard-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-08-24%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
 					"symptom": "{\"code\":\"paywalls_internal_error\",\"message\":\"Paywalls is temporarily unavailable\",\"status\":500,\"request_id\":\"012039b8-49d1-4d80-bd4b-e36c2090b260\"}"
 				},
 				{
@@ -1361,7 +1361,7 @@
 				},
 				{
 					"kind": "loading",
-					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-09-16%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/superboard-paywalls/data-sources/superboard-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-09-16%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
 					"symptom": "Request still pending at the page deadline"
 				}
 			]
@@ -1380,7 +1380,7 @@
 				},
 				{
 					"kind": "loading",
-					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/data-sources/supbrd-plugmod-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-09-16%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
+					"url": "http://127.0.0.1:61047/_emdash/api/superboard/plugins/superboard-paywalls/data-sources/superboard-paywalls.data_source.paywall_statistics?request=%7B%22method%22%3A%22GET%22%2C%22path%22%3A%22%2Fapi%2Fv1%2Fpaywalls%2Fprojects%2F1-prod%2Fstatistics%3Ffrom%3D2026-09-16%26to%3D2026-09-23%26timezone%3DEurope%252FZurich%26interval%3Dday%26platform%3D%26placement_id%3D%26version_id%3D%26experience_id%3D%26variant_id%3D%22%7D",
 					"symptom": "Request still pending at the page deadline"
 				}
 			]

@@ -2,7 +2,7 @@
   "captured_at": "2026-09-07T07:29:01.570Z",
   "results": [
     {
-      "plugin_id": "supbrd-plug-audit",
+      "plugin_id": "superboard-audit",
       "status": "passed",
       "front_path": "/system/content",
       "historical_menu_count": 0,
@@ -21,7 +21,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plug-content",
+      "plugin_id": "superboard-content",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 0,
@@ -40,7 +40,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plug-products",
+      "plugin_id": "superboard-products",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 1,
@@ -59,7 +59,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plug-settings",
+      "plugin_id": "superboard-settings",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 4,
@@ -90,7 +90,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 14,
@@ -161,7 +161,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 17,
@@ -244,7 +244,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-billing",
+      "plugin_id": "superboard-billing",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 3,
@@ -271,7 +271,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 6,
@@ -310,7 +310,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-email",
+      "plugin_id": "superboard-email",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 0,
@@ -329,7 +329,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-files",
+      "plugin_id": "superboard-files",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 0,
@@ -348,7 +348,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 8,
@@ -395,7 +395,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-gateway",
+      "plugin_id": "superboard-gateway",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 0,
@@ -414,7 +414,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-marketing",
+      "plugin_id": "superboard-marketing",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 7,
@@ -457,7 +457,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-mcp",
+      "plugin_id": "superboard-mcp",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 0,
@@ -476,7 +476,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-observability",
+      "plugin_id": "superboard-observability",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 0,
@@ -495,7 +495,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-onboardings",
+      "plugin_id": "superboard-onboardings",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 0,
@@ -518,7 +518,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-paywalls",
+      "plugin_id": "superboard-paywalls",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 0,
@@ -541,7 +541,7 @@
       "core_admin_navigation_worked": true
     },
     {
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "front_path": "/system/audit",
       "historical_menu_count": 11,

@@ -7,8 +7,8 @@ All 10 files and 27 tests in this run passed.
 Recorded observations (emitted after semantic and persistence assertions):
 [
   {
-    "plugin_id": "supbrd-plug-content",
-    "route_id": "gateway.supbrd-plug-content.command.create_document",
+    "plugin_id": "superboard-content",
+    "route_id": "gateway.superboard-content.command.create_document",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -19,8 +19,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-content",
-    "route_id": "gateway.supbrd-plug-content.data_source.documents",
+    "plugin_id": "superboard-content",
+    "route_id": "gateway.superboard-content.data_source.documents",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -31,8 +31,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-content",
-    "route_id": "gateway.supbrd-plug-content.command.update_document",
+    "plugin_id": "superboard-content",
+    "route_id": "gateway.superboard-content.command.update_document",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -44,8 +44,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-content",
-    "route_id": "gateway.supbrd-plug-content.command.publish_document",
+    "plugin_id": "superboard-content",
+    "route_id": "gateway.superboard-content.command.publish_document",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -56,8 +56,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-content",
-    "route_id": "gateway.supbrd-plug-content.data_source.revisions",
+    "plugin_id": "superboard-content",
+    "route_id": "gateway.superboard-content.data_source.revisions",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -68,8 +68,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-content",
-    "route_id": "gateway.supbrd-plug-content.data_source.taxonomies",
+    "plugin_id": "superboard-content",
+    "route_id": "gateway.superboard-content.data_source.taxonomies",
     "scenario": "read",
     "status": "passed",
     "type": "integration",

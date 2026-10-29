@@ -1,8 +1,8 @@
 Canonical operator API and real Workers with persisted and reread identifiers.
 [
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.data_source.email_subscribers",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.data_source.email_subscribers",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -13,8 +13,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.data_source.subscriber_lists",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.data_source.subscriber_lists",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -25,8 +25,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.data_source.subscriber_segments",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.data_source.subscriber_segments",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -37,8 +37,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.data_source.email_templates",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.data_source.email_templates",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -49,8 +49,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.command.create_email_campaign",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.command.create_email_campaign",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -61,8 +61,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.command.update_email_campaign",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.command.update_email_campaign",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -73,8 +73,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.data_source.email_campaigns",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.data_source.email_campaigns",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -85,8 +85,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.command.schedule_email_campaign",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.command.schedule_email_campaign",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -97,8 +97,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.command.transition_email_campaign",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.command.transition_email_campaign",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -109,8 +109,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.data_source.marketing_statistics",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.data_source.marketing_statistics",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -122,8 +122,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.command.create_marketing_journey",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.command.create_marketing_journey",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -134,8 +134,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.command.update_marketing_journey",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.command.update_marketing_journey",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -146,8 +146,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.command.transition_marketing_journey",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.command.transition_marketing_journey",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -158,8 +158,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.data_source.marketing_journeys",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.data_source.marketing_journeys",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -170,8 +170,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.data_source.journey_enrollments",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.data_source.journey_enrollments",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -182,8 +182,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.data_source.journey_statistics",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.data_source.journey_statistics",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -194,8 +194,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.command.create_marketing_channel_connector",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.command.create_marketing_channel_connector",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -206,8 +206,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.command.update_marketing_channel_connector",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.command.update_marketing_channel_connector",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -218,8 +218,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.data_source.marketing_channel_connectors",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.data_source.marketing_channel_connectors",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -230,8 +230,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.command.delete_marketing_channel_connector",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.command.delete_marketing_channel_connector",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
