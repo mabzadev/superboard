@@ -1,82 +1,79 @@
 import type {
-	IdTokenBody,
 	GetUserInfoBase,
 	GetUserInfoRes,
 	PostTokenByAuthCodeRes,
 	PostTokenByRefreshTokenRes,
 } from "@melody-auth/shared";
+import type { IdTokenBody } from "@melody-auth/shared";
 
-function record(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
 }
-function strings(value: unknown): value is string[] {
-	return Array.isArray(value) && value.every((item: unknown) => typeof item === "string");
+function isStringMap(value: unknown): value is Record<string, string> {
+	return isRecord(value) && Object.values(value).every((entry) => typeof entry === "string");
 }
-function attributes(value: unknown) {
+export function isIdTokenBody(value: unknown): value is IdTokenBody {
+	if (!isRecord(value)) return false;
 	return (
-		value === undefined ||
-		(record(value) && Object.values(value).every((item) => typeof item === "string"))
-	);
-}
-function idBody(value: unknown): value is IdTokenBody {
-	return (
-		record(value) &&
 		["iss", "sub", "azp", "aud", "locale"].every((key) => typeof value[key] === "string") &&
-		["exp", "iat"].every((key) => typeof value[key] === "number") &&
+		["exp", "iat"].every((key) => typeof value[key] === "number" && Number.isFinite(value[key])) &&
 		["email", "first_name", "last_name"].every(
 			(key) => value[key] === null || typeof value[key] === "string",
 		) &&
-		(value.roles === undefined || strings(value.roles)) &&
-		attributes(value.attributes)
+		(value.roles === undefined ||
+			(Array.isArray(value.roles) && value.roles.every((entry) => typeof entry === "string"))) &&
+		(value.attributes === undefined || isStringMap(value.attributes))
 	);
 }
-export function parseIdTokenBody(value: unknown): IdTokenBody {
-	if (!idBody(value)) throw new Error("Invalid identity token claims");
-	return value;
+
+function optionalStrings(value: Record<string, unknown>, keys: string[]) {
+	return keys.every((key) => value[key] === undefined || typeof value[key] === "string");
 }
-function user(value: unknown): value is GetUserInfoBase {
+function optionalNumbers(value: Record<string, unknown>, keys: string[]) {
+	return keys.every(
+		(key) =>
+			value[key] === undefined || (typeof value[key] === "number" && Number.isFinite(value[key])),
+	);
+}
+function userInfoBase(value: unknown): value is GetUserInfoBase {
 	return (
-		record(value) &&
+		isRecord(value) &&
 		["authId", "locale", "createdAt", "updatedAt"].every((key) => typeof value[key] === "string") &&
 		(value.email === null || typeof value.email === "string") &&
+		typeof value.emailVerified === "boolean" &&
+		Array.isArray(value.roles) &&
+		value.roles.every((entry) => typeof entry === "string") &&
 		["firstName", "lastName"].every(
-			(key) => value[key] == null || typeof value[key] === "string",
-		) &&
-		strings(value.roles) &&
-		typeof value.emailVerified === "boolean"
+			(key) => value[key] === undefined || value[key] === null || typeof value[key] === "string",
+		)
 	);
 }
-export function parseUserInfo(value: unknown): GetUserInfoRes {
-	if (
-		!user(value) ||
-		!("linkedAccount" in value) ||
-		(value.linkedAccount !== null && !user(value.linkedAccount)) ||
-		("attributes" in value && !attributes(value.attributes))
-	)
-		throw new Error("Invalid user information response");
-	return { ...value, linkedAccount: value.linkedAccount };
-}
-function token(value: unknown): value is PostTokenByRefreshTokenRes {
+export function isUserInfo(value: unknown): value is GetUserInfoRes {
 	return (
-		record(value) &&
-		typeof value.access_token === "string" &&
-		typeof value.expires_in === "number" &&
-		typeof value.expires_on === "number" &&
-		value.token_type === "Bearer"
+		userInfoBase(value) &&
+		isRecord(value) &&
+		(value.linkedAccount === null || userInfoBase(value.linkedAccount)) &&
+		(value.attributes === undefined || isStringMap(value.attributes))
 	);
 }
-export function parseRefreshResponse(value: unknown): PostTokenByRefreshTokenRes {
-	if (!token(value)) throw new Error("Invalid token response");
-	return value;
+export function isRefreshResponse(value: unknown): value is PostTokenByRefreshTokenRes {
+	return (
+		isRecord(value) &&
+		typeof value.access_token === "string" &&
+		value.token_type === "Bearer" &&
+		typeof value.expires_in === "number" &&
+		Number.isFinite(value.expires_in) &&
+		typeof value.expires_on === "number" &&
+		Number.isFinite(value.expires_on)
+	);
 }
-export function parseAuthorizationResponse(value: unknown): PostTokenByAuthCodeRes {
-	if (
-		!token(value) ||
-		!("not_before" in value) ||
-		typeof value.not_before !== "number" ||
-		!("scope" in value) ||
-		typeof value.scope !== "string"
-	)
-		throw new Error("Invalid authorization response");
-	return { ...value, not_before: value.not_before, scope: value.scope };
+export function isAuthorizationResponse(value: unknown): value is PostTokenByAuthCodeRes {
+	return (
+		isRefreshResponse(value) &&
+		isRecord(value) &&
+		typeof value.not_before === "number" &&
+		typeof value.scope === "string" &&
+		optionalStrings(value, ["refresh_token", "id_token"]) &&
+		optionalNumbers(value, ["refresh_token_expires_in", "refresh_token_expires_on"])
+	);
 }

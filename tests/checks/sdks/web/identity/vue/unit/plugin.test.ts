@@ -18,6 +18,7 @@ import { createApp } from "vue";
 import { melodyAuthInjectionKey } from "../../../../../../../sdks/web/identity/vue/src/context";
 import { AuthProvider } from "../../../../../../../sdks/web/identity/vue/src/plugin";
 import * as utils from "../../../../../../../sdks/web/identity/vue/src/utils";
+import { identityClaims } from "../../../../../../fixtures/identity/claims.js";
 
 // Mock the external modules
 vi.mock("@melody-auth/web", () => ({
@@ -29,7 +30,7 @@ vi.mock("@melody-auth/web", () => ({
 
 vi.mock("../../../../../../../sdks/web/identity/vue/src/utils", () => ({
 	handleTokenExchangeByAuthCode: vi.fn(),
-	acquireToken: vi.fn(),
+	acquireToken: vi.fn(async () => undefined),
 	loadRefreshTokenStorageFromParams: vi.fn().mockReturnValue(null),
 }));
 
@@ -127,12 +128,7 @@ describe("AuthProvider Plugin", () => {
 
 		const mockedIdToken = JSON.stringify({
 			idToken: "test-id-token",
-			account: {
-				...identityClaims,
-				sub: "user-123",
-				name: "Test User",
-				email: "test@example.com",
-			},
+			account: identityClaims({ sub: "user-123", name: "Test User", email: "test@example.com" }),
 		});
 
 		shared.checkStorage.mockReturnValue({
@@ -165,12 +161,9 @@ describe("AuthProvider Plugin", () => {
 		// Check that the state was initialized correctly
 		expect(capturedState).not.toBeNull();
 		expect(capturedState?.refreshTokenStorage).toEqual(JSON.parse(mockRefreshToken));
-		expect(capturedState?.account).toStrictEqual({
-			...identityClaims,
-			sub: "user-123",
-			name: "Test User",
-			email: "test@example.com",
-		});
+		expect(capturedState?.account).toStrictEqual(
+			identityClaims({ sub: "user-123", name: "Test User", email: "test@example.com" }),
+		);
 		expect(capturedState?.checkedStorage).toBe(true);
 	});
 

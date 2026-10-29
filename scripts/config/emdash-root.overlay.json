@@ -269,9 +269,9 @@
 			"cloudflare:builds:build": "node scripts/cloudflare/workers-builds.mjs build",
 			"cloudflare:builds:deploy": "node scripts/cloudflare/workers-builds.mjs deploy",
 			"cloudflare:builds:install": "node scripts/cloudflare/install-updates.mjs",
-			"cloudflare:builds:test": "node --test tests/checks/cloudflare/workers-builds.test.mjs tests/checks/infra/cloudflare-installer.test.mjs",
+			"cloudflare:builds:test": "node --test tests/checks/cloudflare/workers-builds.test.mjs tests/checks/infra/cloudflare-installer*.test.mjs",
 			"cloudflare:installer:dev": "wrangler dev --config infra/cloudflare-installer/wrangler.jsonc",
-			"cloudflare:installer:test": "node --test tests/checks/infra/cloudflare-installer.test.mjs",
+			"cloudflare:installer:test": "node --test tests/checks/infra/cloudflare-installer*.test.mjs",
 			"cloudflare:installer:check": "pnpm cloudflare:installer:test && wrangler deploy --dry-run --config infra/cloudflare-installer/wrangler.jsonc",
 			"cloudflare:installer:deploy": "pnpm cloudflare:installer:test && wrangler deploy --config infra/cloudflare-installer/wrangler.jsonc"
 		},
@@ -353,7 +353,11 @@
 			"jsonc-parser": "3.3.1",
 			"eslint-plugin-astro": "1.6.0",
 			"yaml": "2.9.0",
-			"shell-quote": "1.8.3"
+			"shell-quote": "1.8.3",
+			"miniflare": "5.20260801.1-alpha",
+			"esbuild": "0.28.1",
+			"@types/validator": "13.15.10",
+			"eslint-import-resolver-typescript": "4.4.1"
 		},
 		"optionalDependencies": {
 			"@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260421.2"

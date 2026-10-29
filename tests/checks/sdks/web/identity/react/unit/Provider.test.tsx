@@ -18,9 +18,10 @@ import { beforeEach, describe, it, expect, vi } from "vitest";
 
 import authContext from "../../../../../../../sdks/web/identity/react/src/context";
 import { AuthProvider, reducer } from "../../../../../../../sdks/web/identity/react/src/Provider";
+import { identityClaims } from "../../../../../../fixtures/identity/claims.js";
 
 // --- Mock the Setup component so that it doesn't interfere ---
-vi.mock("../../../../../../sdks/web/identity/react/Setup", () => ({
+vi.mock("../../../../../../../sdks/web/identity/react/src/Setup", () => ({
 	default: () => <div data-testid="setup">Setup</div>,
 }));
 
@@ -62,7 +63,7 @@ describe("AuthProvider", () => {
 		};
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
-			account: { ...identityClaims, username: "testuser" },
+			account: identityClaims({ username: "testuser" }),
 		};
 
 		// Save token and account into localStorage using keys from shared.
@@ -128,7 +129,7 @@ describe("AuthProvider", () => {
 			StorageKey.IdToken,
 			JSON.stringify({
 				idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature",
-				account: { ...identityClaims, username: "testuser" }, // gitleaks:allow -- deterministic test JWT
+				account: identityClaims({ username: "testuser" }), // gitleaks:allow -- deterministic test JWT
 			}),
 		);
 
@@ -148,7 +149,7 @@ describe("AuthProvider", () => {
 			const accounts = screen.getAllByTestId("account");
 			expect(checkedStorages[checkedStorages.length - 1].textContent).toBe("true");
 			expect(accounts[accounts.length - 1].textContent).toBe(
-				JSON.stringify({ ...identityClaims, username: "testuser" }),
+				JSON.stringify(identityClaims({ username: "testuser" })),
 			);
 			const refreshTokenStorages = screen.getAllByTestId("refreshTokenStorage");
 			expect(refreshTokenStorages[accounts.length - 1].textContent).toBe("null");
@@ -164,11 +165,7 @@ describe("AuthProvider", () => {
 		};
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
-			account: {
-				...identityClaims,
-				sub: "user123",
-				exp: now + 6,
-			},
+			account: identityClaims({ sub: "user123", exp: now + 6 }),
 		};
 
 		window.sessionStorage.setItem(StorageKey.RefreshToken, JSON.stringify(validToken));
@@ -238,11 +235,7 @@ describe("AuthProvider", () => {
 
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
-			account: {
-				...identityClaims,
-				sub: "user123",
-				exp: now + 6,
-			},
+			account: identityClaims({ sub: "user123", exp: now + 6 }),
 		};
 
 		window.sessionStorage.setItem(StorageKey.IdToken, JSON.stringify(idTokenBody));
@@ -279,11 +272,7 @@ describe("AuthProvider", () => {
 		};
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
-			account: {
-				...identityClaims,
-				sub: "user123",
-				exp: now,
-			},
+			account: identityClaims({ sub: "user123", exp: now }),
 		};
 
 		window.sessionStorage.setItem(StorageKey.RefreshToken, JSON.stringify(validToken));
@@ -356,7 +345,7 @@ describe("AuthProvider", () => {
 			value: { search: searchQuery },
 			configurable: true,
 		});
-		const account = { username: "urlUser" };
+		const account = identityClaims({ username: "urlUser" });
 		window.localStorage.setItem(StorageKey.Account, JSON.stringify(account));
 		render(
 			<AuthProvider

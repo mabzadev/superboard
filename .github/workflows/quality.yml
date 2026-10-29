@@ -40,13 +40,16 @@ jobs:
           fi
           echo "SUPERBOARD_LINT_BASE=$base" >> "$GITHUB_ENV"
       - name: Build type declarations
-        run: pnpm --filter '@superboard/site^...' --workspace-concurrency=1 -r build
-      - name: Check analyzers, source, dependencies and repository contracts
-        run: pnpm lint && pnpm lint:contracts
+        run: |
+          pnpm --filter '@emdash-cms/admin...' build
+          pnpm --dir sdks/web build
+          pnpm build
       - name: Check package and Site types
         run: pnpm typecheck
       - name: Check runtime route registrations and references
         run: pnpm routes:check
+      - name: Check analyzers, source, dependencies and repository contracts
+        run: pnpm lint && pnpm lint:contracts
       - name: Check navigation permissions and settings links
         run: pnpm test:navigation
 
@@ -113,7 +116,7 @@ jobs:
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
       - name: Resolve SDK analyzer dependencies
         run: |
-          for sdk in flutter flutterflow flutterflow_messaging; do
+          for sdk in flutter flutterflow; do
             (cd "sdks/$sdk" && flutter pub get)
           done
       - run: pnpm lint:dart

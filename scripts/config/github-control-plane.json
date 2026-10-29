@@ -20,7 +20,7 @@
 				"deleteBranchOnMerge": true
 			},
 			"visibility": "public",
-			"defaultBranch": "dev",
+			"defaultBranch": "main",
 			"workflowPermissions": {
 				"default": "read",
 				"canApprovePullRequestReviews": true

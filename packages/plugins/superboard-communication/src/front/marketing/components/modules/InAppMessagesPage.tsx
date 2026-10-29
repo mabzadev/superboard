@@ -97,8 +97,8 @@ const MessagingPage = () => {
 	};
 
 	const getMessages = () => {
-		notificationsQuery.refetch().catch((cause: unknown) => {
-			console.error(cause);
+		notificationsQuery.refetch().catch(() => {
+			console.error("[notifications] refresh failed");
 		});
 		if (isAddNewMessageOpen) {
 			setIsAddNewMessageOpen(false);
@@ -115,8 +115,8 @@ const MessagingPage = () => {
 					{t("Loading failed")}{" "}
 					<Button
 						onClick={() => {
-							notificationsQuery.refetch().catch((cause: unknown) => {
-								console.error(cause);
+							notificationsQuery.refetch().catch(() => {
+								console.error("[notifications] refresh failed");
 							});
 						}}
 					>

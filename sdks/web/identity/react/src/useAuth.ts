@@ -9,11 +9,12 @@ import {
 import { triggerLogin, logout, exchangeTokenByRefreshToken, getUserInfo } from "@melody-auth/web";
 import { useCallback, useContext, useMemo } from "react";
 
-import authContext, { AuthContext } from "./context";
+import authContext from "./context";
 import { handleTokenExchangeByAuthCode } from "./utils";
 
 export const useAuth = () => {
-	const context = useContext<AuthContext>(authContext);
+	const context = useContext(authContext);
+	if (!context) throw new Error("AuthProvider is required");
 	const { state, dispatch } = context;
 
 	const accessToken = useMemo(
@@ -38,21 +39,19 @@ export const useAuth = () => {
 			if (state.isAuthenticated && (!props?.policy || props?.policy === "sign_in_or_sign_up"))
 				throw new Error("Already authenticated, please logout first");
 			try {
-				Promise.resolve(
-					triggerLogin(method, state.config, {
-						...props,
-						authorizePopupHandler: ({ state: requestState, code }) => {
-							handleTokenExchangeByAuthCode(
-								code,
-								requestState,
-								state.config,
-								dispatch,
-								props?.locale,
-							);
-						},
-					}),
-				).catch((cause: unknown) => {
-					dispatch({ type: "setLoginError", payload: handleError(cause, ErrorType.LoginFailed) });
+				triggerLogin(method, state.config, {
+					...props,
+					authorizePopupHandler: ({ state: requestState, code }) => {
+						handleTokenExchangeByAuthCode(
+							code,
+							requestState,
+							state.config,
+							dispatch,
+							props?.locale,
+						);
+					},
+				}).catch((error: unknown) => {
+					dispatch({ type: "setLoginError", payload: handleError(error, ErrorType.LoginFailed) });
 				});
 			} catch (e) {
 				const msg = handleError(e, ErrorType.LoginFailed);

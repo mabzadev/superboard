@@ -16,12 +16,56 @@ import {
 	captureBaseline,
 	lintMigrations,
 	normalizeKnip,
+	reconcileTestDependencies,
 	parseToolResult,
 	qualitySources,
 	testDependencyDeclared,
 	lintBaselineChanges,
 } from "../../lints/quality.mjs";
 import { lintCommandPaths, lintConfigurationSource } from "../../lints/repository.mjs";
+
+test("central test imports count as usage only for their owning package", (context) => {
+	const directory = mkdtempSync(join(tmpdir(), "superboard-test-dependency-owner-"));
+	context.after(() => rmSync(directory, { recursive: true, force: true }));
+	mkdirSync(join(directory, "packages/sample"), { recursive: true });
+	mkdirSync(join(directory, "tests/checks/packages/sample"), { recursive: true });
+	writeFileSync(
+		join(directory, "packages/sample/package.json"),
+		JSON.stringify({ name: "sample", devDependencies: { used: "1", unused: "1" } }),
+	);
+	writeFileSync(
+		join(directory, "tests/checks/packages/sample/import.test.ts"),
+		'import value from "used";\n',
+	);
+	const report = normalizeKnip({
+		files: [],
+		issues: [
+			{
+				file: "packages/sample/package.json",
+				devDependencies: [{ name: "used" }, { name: "unused" }],
+			},
+			{ file: "packages/other/package.json", devDependencies: [{ name: "used" }] },
+			{
+				file: "tests/checks/packages/sample/import.test.ts",
+				unlisted: [
+					{ name: "used", line: 1 },
+					{ name: "undeclared", line: 2 },
+				],
+			},
+		],
+	});
+	const result = reconcileTestDependencies(report, directory);
+	assert.deepEqual(
+		result.map(({ filename, message }) => [filename, message]),
+		[
+			["packages/sample/package.json", "devDependencies: unused"],
+			["packages/other/package.json", "devDependencies: used"],
+			["tests/checks/packages/sample/import.test.ts", "unlisted: undeclared"],
+		],
+	);
+	const withoutUsage = report.filter(({ filename }) => !filename.startsWith("tests/"));
+	assert.deepEqual(reconcileTestDependencies(withoutUsage, directory), withoutUsage);
+});
 
 test("script validation catches relocated and empty test globs without executing commands", (context) => {
 	const root = mkdtempSync(join(tmpdir(), "superboard-command-lint-"));

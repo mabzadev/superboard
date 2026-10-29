@@ -197,7 +197,7 @@ export default function SupportSettingsPage() {
 				if (active) await loadNotifications();
 			})
 			.catch((cause: unknown) => {
-				setError(moduleErrorMessage(cause));
+				setNotificationError(moduleErrorMessage(cause));
 			});
 		return () => {
 			active = false;

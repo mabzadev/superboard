@@ -96,7 +96,9 @@ function linguiMacroPlugin(adminSourcePath: string, adminDistPath: string): Plug
 		},
 		async transform(code, id) {
 			if (!id.startsWith(adminSourcePath) || !code.includes("@lingui")) return;
-			const babelCore: typeof import("@babel/core") = await import(babelCorePath);
+			const loaded: unknown = await import(babelCorePath);
+			if (!isBabelTransform(loaded)) throw new Error("Babel transform is unavailable");
+			const babelCore = loaded;
 			const { transformAsync } = babelCore;
 			const result = await transformAsync(code, {
 				filename: id,
@@ -567,4 +569,15 @@ export function createViteConfig(
 			exclude: cloudflare ? ["virtual:emdash"] : [...NODE_NATIVE_EXTERNALS, "virtual:emdash"],
 		},
 	};
+}
+
+function isBabelTransform(
+	value: unknown,
+): value is Pick<typeof import("@babel/core"), "transformAsync"> {
+	return (
+		value !== null &&
+		typeof value === "object" &&
+		"transformAsync" in value &&
+		typeof value.transformAsync === "function"
+	);
 }

@@ -17,11 +17,11 @@ export const NextAuthProvider = ({
 	storage = "cookieStorage",
 	...config
 }: NextAuthProviderProps) => {
-	const reactConfig = {
+	const reactConfig: ProviderConfig = {
 		...config,
 		serverUri: serverUrl,
 		storage,
-	} as ProviderConfig;
+	};
 
 	return <ReactAuthProvider {...reactConfig}>{children}</ReactAuthProvider>;
 };

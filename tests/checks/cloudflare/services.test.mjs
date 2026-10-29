@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { promisify } from "node:util";
 
+import { consolidateWorkerConfigurations } from "../../../scripts/cloudflare/deployment-groups.mjs";
+import { installationTarget } from "../../../scripts/cloudflare/installation-target.mjs";
 import {
 	ALL_SERVICES,
 	DOMAIN_SERVICES,
@@ -21,6 +23,57 @@ import {
 } from "../../../scripts/database/d1-registry.mjs";
 
 const execFileAsync = promisify(execFile);
+
+test("fresh production routes remain reachable after Worker consolidation", () => {
+	const target = installationTarget({
+		name: "route-test",
+		domain: "example.com",
+		email: "owner@example.com",
+		workersDevSubdomain: "example",
+		installationId: "12345678-1234-1234-1234-123456789abc",
+		hostPrefix: "route-test",
+	});
+	const entries = ["api", "mcp"].map((service) => {
+		execFileSync(
+			process.execPath,
+			[
+				"scripts/cloudflare/config.mjs",
+				"--service",
+				service,
+				"--target",
+				target.target,
+				"--environment",
+				"production",
+				"--allow-unprovisioned",
+			],
+			{
+				cwd: new URL("../../..", import.meta.url),
+				env: { ...process.env, SUPERBOARD_TARGET_MANIFEST: JSON.stringify(target) },
+				stdio: "pipe",
+			},
+		);
+		return {
+			service,
+			config: JSON.parse(
+				readFileSync(
+					new URL(
+						`../../../infra/generated/${target.target}-${service}-production.jsonc`,
+						import.meta.url,
+					),
+					"utf8",
+				),
+			),
+		};
+	});
+	const result = consolidateWorkerConfigurations(entries);
+	const routes = result.groups.find(({ id }) => id === "api").config.routes;
+	assert.deepEqual(
+		new Set(routes.map(({ pattern }) => pattern)),
+		new Set([target.domains.api, target.domains.sdk, target.domains.shortlinks]),
+	);
+	assert.equal(routes.length, 3);
+	assert.ok(routes.every(({ custom_domain }) => custom_domain === true));
+});
 
 test("the declarative registry exposes exactly nine domain services", () => {
 	assert.deepEqual(DOMAIN_SERVICES, [
@@ -497,7 +550,7 @@ test("generated Flows config declares its native Cloudflare runtime", () => {
 		),
 	);
 	assert.equal(config.vars.SERVICE_NAME, "flows");
-	assert.equal(config.vars.PUBLIC_API_URL, "https://api.mabza.dev");
+	assert.equal(config.vars.PUBLIC_API_URL, "https://sdk.mabza.dev");
 	assert.equal(Object.hasOwn(config.vars, "PUBLIC_DASHBOARD_URL"), false);
 	assert.deepEqual(config.r2_buckets, [
 		{
@@ -1102,13 +1155,12 @@ test("staged production API stays private while exposing service bindings", asyn
 	assert.deepEqual(workerCatalog.customDependencies, []);
 	assert.deepEqual(JSON.parse(mabza.vars.CORS_ORIGINS_JSON), [
 		"https://board.mabza.dev",
-		"https://auth.mabza.dev",
+		"https://sdk.mabza.dev",
 		"https://reference.mabza.dev",
-		"https://site.mabza.dev",
 	]);
 	assert.deepEqual(
 		publicSurfaces.map(({ id }) => id),
-		["api", "sdk", "shortlinks", "files", "site", "mcp", "site-preview", "reference"],
+		["api", "sdk", "shortlinks", "files", "site", "mcp", "reference"],
 	);
 	assert.deepEqual(
 		publicSurfaces.find(({ id }) => id === "reference"),
@@ -1217,11 +1269,11 @@ test("generated MCP config is public only on its target domain and uses a privat
 	assert.equal(config.name, "superboard-mcp-dev");
 	assert.equal(config.main, "../../packages/plugins/superboard-core/mcp/src/index.ts");
 	assert.equal(config.workers_dev, false);
-	assert.equal(config.vars.PUBLIC_API_URL, "https://api.mabza.dev");
+	assert.equal(config.vars.PUBLIC_API_URL, "https://sdk.mabza.dev");
 	assert.equal(config.vars.PUBLIC_MCP_URL, "https://board.mabza.dev/mcp");
 	assert.equal(config.vars.MCP_DOMAIN, "board.mabza.dev");
 	assert.deepEqual(config.services, [{ binding: "API_SERVICE", service: "superboard-api-dev" }]);
-	assert.deepEqual(config.routes, [{ pattern: "mcp.mabza.dev", custom_domain: true }]);
+	assert.deepEqual(config.routes, []);
 	assert.deepEqual(config.tail_consumers, [{ service: "superboard-observability-dev" }]);
 });
 
@@ -1273,12 +1325,12 @@ test("generated identity and files configs are private and parameterized", () =>
 		binding: "ASSETS",
 		run_worker_first: true,
 	});
-	assert.equal(identity.vars.AUTH_SERVER_URL, "https://auth.mabza.dev");
+	assert.equal(identity.vars.AUTH_SERVER_URL, "https://sdk.mabza.dev/v1/auth");
 	assert.equal(identity.vars.EMAIL_PROVIDER_NAME, "superboard");
 	assert.equal(identity.vars.ENABLE_SAML_SSO_AS_SP, true);
 	assert.equal(files.workers_dev, false);
-	assert.equal(files.vars.AUTH_GATEWAY_JWKS_URL, "https://auth.mabza.dev/.well-known/jwks.json");
-	assert.equal(files.vars.FILES_PUBLIC_ORIGIN, "https://files.mabza.dev");
+	assert.equal(files.vars.AUTH_GATEWAY_JWKS_URL, "https://sdk.mabza.dev/v1/auth/.well-known/application-jwks.json");
+	assert.equal(files.vars.FILES_PUBLIC_ORIGIN, "https://sdk.mabza.dev/v1/data");
 	assert.equal(files.vars.DOWNLOAD_TICKET_TTL_SECONDS, "600");
 	assert.equal(files.d1_databases[0].database_name, "superboard-dev-files-db");
 	assert.equal(files.r2_buckets[0].bucket_name, "superboard-dev-files");

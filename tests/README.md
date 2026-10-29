@@ -141,11 +141,26 @@ contrôle les destinations des menus déclarés et l'existence des fichiers de
 vue. Ces règles sont aussi exécutées par `pnpm lint` et `pnpm lint:quick`.
 
 Les tests hérités de Melody dans
-`checks/plugins/supbrd-plug-identity/worker/unit/melody/` sont conservés. Leur
+`checks/plugins/superboard-authentification/worker/unit/melody/` sont conservés. Leur
 ancien environnement Node, Redis et PostgreSQL n'est pas raccordé aux commandes
 actuelles du Worker Cloudflare. Une réussite de ces commandes ne valide donc
-pas cette suite héritée. Les tests iOS et les tests Android sur appareil exigent
+pas cette suite héritée. Un contrôle unitaire couvre uniquement la lecture des
+variables TOML de ce lanceur ; il ne valide pas le serveur Node complet.
+Les tests iOS et les tests Android sur appareil exigent
 également les plateformes et simulateurs correspondants.
+
+Le contrôle `checks/cloudflare/installation-artifacts.test.mjs` construit les
+bundles d’une installation complète avec Wrangler en mode `--dry-run` et vérifie
+les secrets initiaux requis. Il utilise une copie isolée avec les dépendances et
+packages compilés, mais sans les assets de connexion déjà construits. Sans la
+variable suivante, ce contrôle d’intégration est ignoré.
+
+Exécutez le contrôle depuis le dépôt en indiquant le chemin de cette copie :
+
+```bash
+SUPERBOARD_INSTALLATION_ARTIFACT_CHECKOUT=/tmp/superboard-clean-checkout \
+  node --test tests/checks/cloudflare/installation-artifacts.test.mjs
+```
 
 ## Lints et qualité
 

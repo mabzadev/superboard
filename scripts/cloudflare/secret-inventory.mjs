@@ -107,7 +107,7 @@ export function requiredSecretInventory(target, environment) {
 	add("files", ["FILES_INTERNAL_TOKEN", "FILES_DOWNLOAD_SIGNING_KEY"]);
 	add(
 		"observability",
-		environment === "production"
+		environment === "production" && target.observabilitySource !== "emdash"
 			? [
 					"OBSERVABILITY_INTERNAL_TOKEN",
 					"CLOUDFLARE_ANALYTICS_ACCOUNT_ID",

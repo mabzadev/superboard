@@ -4,6 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import {
+	encodeBuildVariables,
+	readBuildVariable,
+} from "../../../scripts/cloudflare/build-variables.mjs";
 import { installInstanceUpdates } from "../../../scripts/cloudflare/install-updates.mjs";
 import { loadTarget } from "../../../scripts/cloudflare/target.mjs";
 import {
@@ -22,6 +26,41 @@ const target = JSON.parse(
 	await readFile(new URL("../../../infra/targets/mabza-development.json", import.meta.url), "utf8"),
 );
 const uuid = "12345678-1234-1234-1234-123456789012";
+
+test("large build secrets round-trip Unicode and reject missing or mixed chunks", async () => {
+	const value = JSON.stringify({ secret: "clé🔑".repeat(2000) });
+	const variables = await encodeBuildVariables({
+		SUPERBOARD_INSTALLATION_KEYS: { value, is_secret: true },
+	});
+	for (const entry of Object.values(variables)) {
+		assert.ok(Buffer.byteLength(entry.value) <= 5120);
+		assert.equal(entry.is_secret, true);
+	}
+	const env = Object.fromEntries(
+		Object.entries(variables).map(([name, entry]) => [name, entry.value]),
+	);
+	assert.equal(await readBuildVariable(env, "SUPERBOARD_INSTALLATION_KEYS"), value);
+	await assert.rejects(
+		readBuildVariable(
+			{ ...env, SUPERBOARD_INSTALLATION_KEYS__PART_0: undefined },
+			"SUPERBOARD_INSTALLATION_KEYS",
+		),
+		/BUILD_VARIABLE_INCOMPLETE/u,
+	);
+	await assert.rejects(
+		readBuildVariable(
+			{ ...env, SUPERBOARD_INSTALLATION_KEYS__PART_0: "YQ==" },
+			"SUPERBOARD_INSTALLATION_KEYS",
+		),
+	);
+	assert.equal(
+		await readBuildVariable(
+			{ SUPERBOARD_INSTALLATION_KEYS: value },
+			"SUPERBOARD_INSTALLATION_KEYS",
+		),
+		value,
+	);
+});
 
 function installation(accountId = "a".repeat(32)) {
 	return {
@@ -117,7 +156,10 @@ test("new accounts have isolated triggers and reinstalling does not duplicate th
 		assert.deepEqual(state.triggers[0].branch_includes, ["dev"]);
 		assert.deepEqual(state.triggers[0].branch_excludes, []);
 		assert.equal(state.variables.CLOUDFLARE_ACCOUNT_ID.value, account);
-		assert.deepEqual(JSON.parse(state.variables.SUPERBOARD_TARGET_MANIFEST.value), target);
+		const env = Object.fromEntries(
+			Object.entries(state.variables).map(([name, entry]) => [name, entry.value]),
+		);
+		assert.deepEqual((await loadTarget(target.target, env)).target, target);
 	}
 });
 
@@ -173,6 +215,29 @@ test("failed validation stops before preparation or deployment", async () => {
 	assert.equal(calls, 1);
 	assert.equal(validationEnvironment(env).SUPERBOARD_TARGET_MANIFEST, undefined);
 	assert.equal(validationEnvironment(env).CLOUDFLARE_ACCOUNT_ID, undefined);
+});
+
+test("fresh build validation prepares framework declarations before linting", async () => {
+	const env = {
+		WORKERS_CI: "1",
+		WORKERS_CI_BRANCH: "dev",
+		WORKERS_CI_COMMIT_SHA: "a".repeat(40),
+		CLOUDFLARE_ACCOUNT_ID: "b".repeat(32),
+		SUPERBOARD_TARGET: "cold-build-test",
+		SUPERBOARD_ENVIRONMENT: "development",
+		SUPERBOARD_TARGET_MANIFEST: JSON.stringify({ ...target, target: "cold-build-test" }),
+	};
+	let declarationsReady = false;
+	await assert.rejects(
+		buildInstance(env, (_command, args) => {
+			if (args[0] === "typecheck") declarationsReady = true;
+			if (args[0] === "lint") {
+				if (!declarationsReady) throw new Error("FRAMEWORK_DECLARATIONS_MISSING");
+				throw new Error("FRESH_VALIDATION_REACHED");
+			}
+		}),
+		/FRESH_VALIDATION_REACHED/u,
+	);
 });
 
 test("a prepared build cannot be deployed into a different account or revision", () => {

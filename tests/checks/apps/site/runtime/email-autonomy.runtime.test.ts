@@ -530,7 +530,7 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		locals: { user: { id: "canonical-email-owner", email: "operator@example.test", role: 50 } },
 	} as APIContext;
 	const response = await dispatchPluginApiAdapter(context, "command", dispatchEnv);
-	expect(response.status, await response.clone().text()).toBe(202);
+	expect(response.status).toBe(202);
 	expect(
 		await env.DB.prepare(
 			"SELECT plugin_id,command_id,project_ref FROM superboard_plugin_command_operations WHERE operation_id='canonical-email-command'",

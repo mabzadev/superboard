@@ -142,6 +142,26 @@ describe("requests", () => {
 			global.fetch = vi.fn();
 		});
 
+		it("rejects incomplete successful authentication responses", async () => {
+			vi.mocked(fetch).mockResolvedValueOnce(Response.json({ access_token: "incomplete" }));
+			await expect(
+				postTokenByAuthCode(mockProviderConfig, { code: "code", codeVerifier: "verifier" }),
+			).rejects.toThrow();
+			vi.mocked(fetch).mockResolvedValueOnce(
+				Response.json({
+					access_token: 123,
+					token_type: "Bearer",
+					expires_in: 3600,
+					expires_on: 1700003600,
+				}),
+			);
+			await expect(
+				postTokenByRefreshToken(mockProviderConfig, { refreshToken: "refresh" }),
+			).rejects.toThrow();
+			vi.mocked(fetch).mockResolvedValueOnce(Response.json({ email: "person@example.com" }));
+			await expect(getUserInfo(mockProviderConfig, { accessToken: "access" })).rejects.toThrow();
+		});
+
 		describe("getUserInfo", () => {
 			it("should fetch user info with access token", async () => {
 				const mockResponse = {
@@ -240,10 +260,10 @@ describe("requests", () => {
 			it("should exchange auth code for tokens", async () => {
 				const mockResponse = {
 					access_token: "new-access-token",
-					expires_in: 3600,
-					expires_on: 2000000000,
 					token_type: "Bearer",
-					not_before: 0,
+					expires_in: 3600,
+					expires_on: 1700003600,
+					not_before: 1700000000,
 					scope: "openid",
 					refresh_token: "new-refresh-token",
 				};
@@ -284,10 +304,10 @@ describe("requests", () => {
 			it("should refresh tokens", async () => {
 				const mockResponse = {
 					access_token: "new-access-token",
-					expires_in: 3600,
-					expires_on: 2000000000,
 					token_type: "Bearer",
-					not_before: 0,
+					expires_in: 3600,
+					expires_on: 1700003600,
+					not_before: 1700000000,
 					scope: "openid",
 					refresh_token: "new-refresh-token",
 				};

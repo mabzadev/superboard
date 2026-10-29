@@ -16,6 +16,7 @@
 		"../../../tests/checks/plugins/superboard-monetization/front",
 		"../../../tests/checks/plugins/superboard-monetization/unit",
 		"../../../tests/checks/plugins/superboard-monetization/integration",
-		"../../../tests/checks/plugins/superboard-monetization/env.d.ts"
+		"../../../tests/checks/plugins/superboard-monetization/env.d.ts",
+		"../../supbrd-front-ui/src/styles.d.ts"
 	]
 }

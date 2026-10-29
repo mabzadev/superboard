@@ -296,7 +296,7 @@ describe("useSmsMfaForm hook", () => {
 			.spyOn(global, "fetch")
 			.mockResolvedValue(fakeSetupResponse as Response);
 
-		const fakeEvent = { preventDefault: vi.fn() } as unknown as Event;
+		const fakeEvent = { preventDefault: vi.fn() };
 		await act(async () => {
 			result.current.handleSubmit(fakeEvent);
 			await Promise.resolve();
@@ -341,7 +341,7 @@ describe("useSmsMfaForm hook", () => {
 				onSwitch(View.Consent);
 			});
 
-		const fakeEvent = { preventDefault: vi.fn() } as unknown as Event;
+		const fakeEvent = new Event("submit", { cancelable: true });
 		await act(async () => {
 			result.current.handleSubmit(fakeEvent);
 			await Promise.resolve();
@@ -375,7 +375,7 @@ describe("useSmsMfaForm hook", () => {
 			result.current.handleChange("phoneNumber", "+11234567890");
 			result.current.handleChange("mfaCode", ["1", "2", "3", "4", "5", "6"]);
 		});
-		const fakeEvent = { preventDefault: vi.fn() } as unknown as Event;
+		const fakeEvent = new Event("submit", { cancelable: true });
 		const fetchError = new Error("Process error");
 		const processFetchSpy = vi.spyOn(global, "fetch").mockRejectedValue(fetchError);
 
@@ -501,7 +501,7 @@ describe("useSmsMfaForm hook", () => {
 		// Spy on fetch to ensure it's not called
 		const fetchSpy = vi.spyOn(global, "fetch");
 
-		const fakeEvent = { preventDefault: vi.fn() } as unknown as Event;
+		const fakeEvent = new Event("submit", { cancelable: true });
 		await act(async () => {
 			result.current.handleSubmit(fakeEvent);
 			await Promise.resolve();
@@ -545,7 +545,7 @@ describe("useSmsMfaForm hook", () => {
 
 		// Set touched to true to make error visible
 		act(() => {
-			result.current.handleSubmit({ preventDefault: vi.fn() } as unknown as Event);
+			result.current.handleSubmit(new Event("submit", { cancelable: true }));
 		});
 
 		// Verify error exists

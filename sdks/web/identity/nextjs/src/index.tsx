@@ -18,4 +18,4 @@ export type { ServerAuthOptions, AuthSession } from "./middleware/serverAuth";
 export { CookieStorage } from "./storage";
 export type { CookieOptions } from "./storage";
 
-export { useRouter, useAppRouter, usePagesRouter } from "./hooks/useRouter.js";
+export { useRouter, useAppRouter, usePagesRouter } from "./hooks/useRouter";

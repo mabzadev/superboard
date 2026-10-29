@@ -1,10 +1,10 @@
-import { parseRefreshTokenStorage, parseIdTokenStorage } from "./validation.js";
 import {
 	ProviderConfig,
 	getParams,
+	handleError,
+	ErrorType,
 	checkStorage,
 	loadRefreshTokenStorageFromParams,
-	IdTokenStorage,
 	isValidTokens,
 } from "@melody-auth/shared";
 import { loadCodeAndStateFromUrl } from "@melody-auth/web";
@@ -12,6 +12,7 @@ import { App, reactive } from "vue";
 
 import { AuthState, melodyAuthInjectionKey } from "./context";
 import { acquireToken, handleTokenExchangeByAuthCode } from "./utils";
+import { readRefreshTokenStorage, readIdTokenStorage } from "./validation.js";
 
 export const AuthProvider = {
 	install(app: App, config: ProviderConfig) {
@@ -42,12 +43,10 @@ export const AuthProvider = {
 			const { storedRefreshToken, storedIdToken } = checkStorage(config.storage);
 
 			if (!parsedRefreshToken && storedRefreshToken) {
-				parsedRefreshToken = parseRefreshTokenStorage(storedRefreshToken);
+				parsedRefreshToken = readRefreshTokenStorage(storedRefreshToken);
 			}
 
-			const parsedIdToken: IdTokenStorage | null = storedIdToken
-				? parseIdTokenStorage(storedIdToken)
-				: null;
+			const parsedIdToken = readIdTokenStorage(storedIdToken);
 
 			if (parsedRefreshToken || parsedIdToken) {
 				const { hasValidIdToken, hasValidRefreshToken } = isValidTokens(
@@ -80,8 +79,8 @@ export const AuthProvider = {
 				if (state.accessTokenStorage) return;
 
 				if (!containCode && state.refreshTokenStorage && !state.accessTokenStorage) {
-					Promise.resolve(acquireToken(state)).catch((cause: unknown) => {
-						console.error(cause);
+					acquireToken(state).catch((error: unknown) => {
+						state.acquireTokenError = handleError(error, ErrorType.ExchangeAccessToken);
 					});
 					return;
 				}

@@ -109,7 +109,7 @@ describe("SocialSettings", () => {
 		expect(dirtyButtons).toHaveLength(2);
 		for (const button of dirtyButtons) await expect.element(button).toBeEnabled();
 
-		await userEvent.click(dirtyButtons[0]);
+		await screen.getByRole("button", { name: "Save", exact: true }).nth(0).click();
 		await vi.waitFor(() => {
 			expect(mockUpdateSettings).toHaveBeenCalledWith({
 				...defaultSettings,

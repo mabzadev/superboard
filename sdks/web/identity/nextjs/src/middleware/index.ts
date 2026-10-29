@@ -1,17 +1,10 @@
-import { parseIdTokenStorage, parseAccessTokenStorage } from "../validation.js";
-import { StorageKey, isValidTokens, IdTokenStorage, AccessTokenStorage } from "@melody-auth/shared";
-import {
-	jwtVerify,
-	importSPKI,
-	importX509,
-	importJWK,
-	JWTPayload,
-	type JWK,
-	type KeyLike,
-} from "jose";
+import { StorageKey, isValidTokens } from "@melody-auth/shared";
+import { jwtVerify, importSPKI, importX509, importJWK } from "jose";
+import type { JWTPayload, JWK, KeyLike } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
 import { CookieStorage } from "../storage/cookieAdapter";
+import { readAccessTokenStorage, readIdTokenStorage, isRecord } from "../validation.js";
 
 /**
  * Configuration options for the Melody Auth middleware
@@ -107,21 +100,8 @@ async function getPublicKey(config: MelodyAuthMiddlewareConfig): Promise<KeyLike
 			}
 
 			const jwks: unknown = await response.json();
-			if (!jwks || typeof jwks !== "object" || !("keys" in jwks) || !Array.isArray(jwks.keys))
-				throw new Error("Invalid JWKS");
-			const keys = jwks.keys.filter(
-				(key: unknown): key is JWK =>
-					!!key &&
-					typeof key === "object" &&
-					"kty" in key &&
-					key.kty === "RSA" &&
-					"use" in key &&
-					key.use === "sig" &&
-					(("n" in key && typeof key.n === "string" && "e" in key && typeof key.e === "string") ||
-						("x5c" in key &&
-							Array.isArray(key.x5c) &&
-							key.x5c.every((certificate: unknown) => typeof certificate === "string"))),
-			);
+			if (!isRecord(jwks) || !Array.isArray(jwks.keys)) throw new Error("Invalid JWKS response");
+			const keys = jwks.keys.filter(isSigningJwk);
 			jwksCache = {
 				keys,
 				timestamp: Date.now(),
@@ -186,10 +166,9 @@ export function createMelodyAuthMiddleware(config: MelodyAuthMiddlewareConfig) {
 				return redirectToLogin(request, config.redirectPath);
 			}
 
-			const idTokenStorage: IdTokenStorage | null = idTokenStr
-				? parseIdTokenStorage(idTokenStr)
-				: null;
-			const accessTokenStorage: AccessTokenStorage = parseAccessTokenStorage(accessTokenStr);
+			const idTokenStorage = readIdTokenStorage(idTokenStr);
+			const accessTokenStorage = readAccessTokenStorage(accessTokenStr);
+			if (idTokenStr && !idTokenStorage) return redirectToLogin(request, config.redirectPath);
 
 			// Validate tokens
 			const { hasValidIdToken, hasValidAccessToken } = isValidTokens(
@@ -199,7 +178,7 @@ export function createMelodyAuthMiddleware(config: MelodyAuthMiddlewareConfig) {
 			);
 
 			// Access token is required, ID token is optional
-			if (!hasValidAccessToken) {
+			if (!hasValidAccessToken || !accessTokenStorage) {
 				return redirectToLogin(request, config.redirectPath);
 			}
 
@@ -210,7 +189,7 @@ export function createMelodyAuthMiddleware(config: MelodyAuthMiddlewareConfig) {
 
 			// Verify JWT signature if ID token exists and public key is configured
 			let userId: string | undefined;
-			let account: any | undefined;
+			let account: JWTPayload | undefined;
 
 			if (idTokenStorage && (config.publicKey || config.jwksUri)) {
 				const publicKey = await getPublicKey(config);
@@ -220,7 +199,7 @@ export function createMelodyAuthMiddleware(config: MelodyAuthMiddlewareConfig) {
 			} else if (idTokenStorage) {
 				// If no public key configured but ID token exists, use the stored account info
 				userId = idTokenStorage.account.sub;
-				account = idTokenStorage.account;
+				account = { ...idTokenStorage.account };
 			}
 
 			// Add auth info to request headers
@@ -300,7 +279,7 @@ export function withAuth(
 			const authenticatedRequest = request as AuthenticatedRequest;
 			authenticatedRequest.auth = {
 				userId: userId || "unknown",
-				account: accountStr ? JSON.parse(accountStr) : {},
+				account: readAccount(accountStr),
 				accessToken,
 			};
 
@@ -308,5 +287,51 @@ export function withAuth(
 		}
 
 		return authResponse;
+	};
+}
+
+function isSigningJwk(value: unknown): value is JWK {
+	return (
+		isRecord(value) &&
+		value.kty === "RSA" &&
+		value.use === "sig" &&
+		["alg", "kid", "n", "e", "d", "p", "q", "dp", "dq", "qi", "x5t", "x5t#S256"].every(
+			(key) => value[key] === undefined || typeof value[key] === "string",
+		) &&
+		(value.x5c === undefined ||
+			(Array.isArray(value.x5c) && value.x5c.every((item) => typeof item === "string"))) &&
+		(value.key_ops === undefined ||
+			(Array.isArray(value.key_ops) && value.key_ops.every((item) => typeof item === "string")))
+	);
+}
+function readAccount(raw: string | null): JWTPayload {
+	if (!raw) return {};
+	const value: unknown = JSON.parse(raw);
+	if (!isRecord(value)) throw new Error("Invalid account payload");
+	if (
+		!["iss", "sub", "jti"].every(
+			(key) => value[key] === undefined || typeof value[key] === "string",
+		) ||
+		!["exp", "iat", "nbf"].every(
+			(key) => value[key] === undefined || typeof value[key] === "number",
+		)
+	)
+		throw new Error("Invalid account payload");
+	const aud = value.aud;
+	if (
+		aud !== undefined &&
+		typeof aud !== "string" &&
+		!(Array.isArray(aud) && aud.every((entry) => typeof entry === "string"))
+	)
+		throw new Error("Invalid account audience");
+	return {
+		...value,
+		iss: typeof value.iss === "string" ? value.iss : undefined,
+		sub: typeof value.sub === "string" ? value.sub : undefined,
+		jti: typeof value.jti === "string" ? value.jti : undefined,
+		exp: typeof value.exp === "number" ? value.exp : undefined,
+		iat: typeof value.iat === "number" ? value.iat : undefined,
+		nbf: typeof value.nbf === "number" ? value.nbf : undefined,
+		aud,
 	};
 }

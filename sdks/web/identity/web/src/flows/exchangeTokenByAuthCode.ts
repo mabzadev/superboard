@@ -1,4 +1,3 @@
-import { parseIdTokenBody } from "../validation.js";
 import {
 	ProviderConfig,
 	AccessTokenStorage,
@@ -11,6 +10,7 @@ import {
 } from "@melody-auth/shared";
 
 import { postTokenByAuthCode } from "../requests";
+import { isIdTokenBody } from "../validation.js";
 
 const base64UrlDecode = (str: string) => {
 	str = str.replace(/-/g, "+").replace(/_/g, "/");
@@ -95,8 +95,8 @@ export const exchangeTokenByAuthCode = async (
 		if (result.id_token) {
 			const payloadRaw = result.id_token.split(".")[1];
 			const payload = base64UrlDecode(payloadRaw);
-			const claims: unknown = JSON.parse(payload);
-			const account = parseIdTokenBody(claims);
+			const account: unknown = JSON.parse(payload);
+			if (!isIdTokenBody(account)) throw new Error("Invalid ID token claims");
 			idTokenStorage = {
 				idToken: result.id_token,
 				account,

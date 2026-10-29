@@ -16,6 +16,7 @@
 		"../../../tests/checks/plugins/superboard-acquisition/front",
 		"../../../tests/checks/plugins/superboard-acquisition/unit",
 		"../../../tests/checks/plugins/superboard-acquisition/integration",
-		"../../../tests/checks/plugins/superboard-acquisition/env.d.ts"
+		"../../../tests/checks/plugins/superboard-acquisition/env.d.ts",
+		"../../supbrd-front-ui/src/styles.d.ts"
 	]
 }

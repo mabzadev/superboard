@@ -15,6 +15,10 @@ export default [
 	},
 	...astro.configs["flat/recommended"],
 	{
+		files: ["**/*.astro"],
+		languageOptions: { parserOptions: { parser: typescript.parser } },
+	},
+	{
 		files: ["**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,astro}"],
 		plugins: { superboard, import: imports },
 		linterOptions: { reportUnusedDisableDirectives: "off" },

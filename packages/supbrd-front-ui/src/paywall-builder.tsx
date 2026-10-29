@@ -1,4 +1,3 @@
-/// <reference path="./styles.d.ts" />
 import {
 	ArrowDown,
 	ArrowUp,

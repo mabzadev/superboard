@@ -458,7 +458,7 @@ function apiConfig() {
 		}
 	}
 	if (publicRoutesEnabled) {
-		if (environment === "production" && resources.supportRouting) {
+		if (environment === "production" && resources.supportRouting && !target.freshInstallation) {
 			if (resources.supportRouting.mode === "active") {
 				config.routes = [
 					{
@@ -469,19 +469,17 @@ function apiConfig() {
 			}
 		} else {
 			config.routes = [
-				{ pattern: target.domains.api, custom_domain: true },
-				...(target.domains.auth !== target.domains.sdk
-					? [{ pattern: target.domains.auth, custom_domain: true }]
-					: []),
-				{ pattern: target.domains.shortlinks, custom_domain: true },
-				{ pattern: target.domains.sdk, custom_domain: true },
-				...(target.domains.files !== target.domains.sdk
-					? [{ pattern: target.domains.files, custom_domain: true }]
-					: []),
-				...(target.domainAliases ?? [])
-					.filter((alias) => alias.surface === "shortlinks")
-					.map((alias) => ({ pattern: alias.hostname, custom_domain: true })),
-			];
+				...new Set([
+					target.domains.api,
+					target.domains.auth,
+					target.domains.shortlinks,
+					target.domains.sdk,
+					target.domains.files,
+					...(target.domainAliases ?? [])
+						.filter((alias) => alias.surface === "shortlinks")
+						.map((alias) => alias.hostname),
+				]),
+			].map((pattern) => ({ pattern, custom_domain: true }));
 		}
 	}
 	return config;
@@ -1036,6 +1034,7 @@ function observabilityConfig() {
 		vars: {
 			ENVIRONMENT: environment,
 			ANALYTICS_DATASET: resources.analyticsDataset,
+			SUPERBOARD_OBSERVABILITY_SOURCE: target.observabilitySource ?? "analytics-engine",
 		},
 		analytics_engine_datasets: [{ binding: "ANALYTICS", dataset: resources.analyticsDataset }],
 	};

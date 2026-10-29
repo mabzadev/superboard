@@ -1,9 +1,9 @@
 import { expect, test } from "vitest";
 import {
-	parseRefreshResponse,
-	parseAuthorizationResponse,
-	parseIdTokenBody,
-	parseUserInfo,
+	isAuthorizationResponse,
+	isIdTokenBody,
+	isRefreshResponse,
+	isUserInfo,
 } from "../../../../../../../sdks/web/identity/web/src/validation.js";
 
 const token = {
@@ -13,8 +13,8 @@ const token = {
 	token_type: "Bearer",
 };
 test("token responses reject invalid expiration and preserve authorization tokens", () => {
-	expect(parseRefreshResponse(token)).toEqual(token);
-	expect(() => parseRefreshResponse({ ...token, expires_on: "tomorrow" })).toThrow();
+	expect(isRefreshResponse(token)).toBe(true);
+	expect(isRefreshResponse({ ...token, expires_on: "tomorrow" })).toBe(false);
 	const authorization = {
 		...token,
 		not_before: 0,
@@ -22,10 +22,10 @@ test("token responses reject invalid expiration and preserve authorization token
 		id_token: "identity",
 		refresh_token: "refresh",
 	};
-	expect(parseAuthorizationResponse(authorization)).toEqual(authorization);
-	expect(() => parseAuthorizationResponse({ ...authorization, scope: 1 })).toThrow();
+	expect(isAuthorizationResponse(authorization)).toBe(true);
+	expect(isAuthorizationResponse({ ...authorization, scope: 1 })).toBe(false);
 });
 test("invalid identity and user information cannot be stored as authenticated accounts", () => {
-	expect(() => parseIdTokenBody({ sub: "user", exp: "forever" })).toThrow();
-	expect(() => parseUserInfo({ authId: "user", roles: [1] })).toThrow();
+	expect(isIdTokenBody({ sub: "user", exp: "forever" })).toBe(false);
+	expect(isUserInfo({ authId: "user", roles: [1] })).toBe(false);
 });
