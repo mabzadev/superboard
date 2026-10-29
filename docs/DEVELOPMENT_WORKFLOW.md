@@ -11,7 +11,7 @@ for local validation and the prerequisites for remote suites.
 | Git branch     | GitHub Environment                  | Cloudflare environment | Default target                |
 | -------------- | ----------------------------------- | ---------------------- | ----------------------------- |
 | feature branch | none                                | none                   | local validation only         |
-| `dev`          | `development`                       | `development`          | `mbza-development`            |
+| `dev`          | `development`                       | `development`          | `mabza-development`           |
 | `main`         | one or more production Environments | `production`           | configured production targets |
 
 Inspect the exact branch-to-Environment matrix without contacting Cloudflare:
@@ -29,7 +29,7 @@ Git branch. Any value other than `dev` or `main` is rejected; feature branches
 therefore cannot select a deployment.
 
 Feature branches open a pull request into `dev`. After review and automated
-checks, merging to `dev` deploys the development account and the `mbza.dev`
+checks, merging to `dev` deploys the development account and the `mabza.dev`
 domains. Validation in the FlutterFlow reference application happens against
 that environment. A pull request from `dev` to `main` promotes the same Git
 commit; merging it deploys production. There is no persistent staging or
@@ -45,12 +45,10 @@ Requiring this stable aggregate check avoids a branch rule
 that silently misses a conditional job or waits forever for a job that was
 correctly skipped.
 
-The Cloudflare deployment workflow normally starts only from a successful CI
-`workflow_run`. Its manual dispatch path is reserved for redeploying an exact
-long-lived-branch revision and queries GitHub Actions before continuing; a SHA
-without a successful aggregate `CI gate` is refused. Cross-repository reference
-dispatches additionally prove that the requested platform SHA belongs to the
-official platform `dev` history before resolving local packages or deploying.
+Cloudflare Workers Builds runs its own validation before deployment. Production
+installations follow `main` in their own accounts. See
+[installation and automatic updates](./CLOUDFLARE_BUILDS.md). GitHub branch
+protections and SDK release workflows remain separate repository controls.
 
 ## GitHub Environment configuration
 
@@ -233,64 +231,24 @@ as a manual prerequisite and cannot apply reviewer, timer or branch/tag rules.
 After the current publication sequence, add the required second trusted human,
 change the reviewed intent to `enforced`, apply the exact confirmed plan with no
 pending jobs, then disable administrator bypass in the GitHub Environment UI.
-For the production GitHub Actions environment:
-
-- variable `SUPERBOARD_TARGET`: target manifest name; it must equal the `target`
-  field of that Environment's versioned deployment-matrix entry or the job
-  fails before any Cloudflare operation;
-- secret `CLOUDFLARE_ACCOUNT_ID`: account selected for that environment;
-- secret `CLOUDFLARE_API_TOKEN`: least-privilege deployment token for only that
-  account; it must also be able to read the target zones, DNS records and Worker
-  custom domains for the non-mutating ownership gate.
-- optional development secret `CLOUDFLARE_ANALYTICS_TOKEN`: a separate,
-  read-only Account Analytics token enables advanced runtime summaries. It is
-  not required to deploy or run SuperBoard in development, and the deployment
-  token is never reused as a runtime secret.
-- production secret `SUPERBOARD_BACKUP_ENCRYPTION_KEY`: base64 encoding of 32
-  random bytes, retained independently for D1 recovery.
-
-The reference application is versioned under `apps/reference` and validated by
-the root CI against the same commit as the platform. Its future live build
-requires `SUPERBOARD_PROJECT_KEY` and `SUPERBOARD_PROJECT_ID` from a protected
-environment; neither value belongs in the Git tree. `reference.mbza.dev` is not
-yet published, so these values are not currently configured on GitHub.
-
-Recommended values are `mbza-development` for development and `vocostar` only
-while VocoStar remains the selected production migration target. Other
-applications add one matrix entry, target manifest and GitHub Environment. They
-do not copy the workflow or edit Worker source constants.
-
-Cloudflare Workers Builds is the automatic deployment authority for
-`mbza-development` on `dev`. Each of the sixteen declared Workers owns one
-connection to `mabzadev/superboard`, one exact `SUPERBOARD_SERVICE` value and a
-mono-service deploy command. Non-production branch builds are disabled,
-Cloudflare manages each build token, and the non-secret account ID is supplied
-in the Cloudflare build environment. No `CLOUDFLARE_API_TOKEN` or
-`CLOUDFLARE_ACCOUNT_ID` is required in the `development` GitHub Environment.
-
-`.github/workflows/deploy-cloudflare.yml` remains the automatic deployment
-authority for VocoStar production only. It starts after successful `CI` on
-`main`, checks out that exact SHA, selects only `github-actions` matrix entries,
-proves that the mutable Environment target equals the reviewed matrix target
-and rejects a superseded revision.
-It validates the target and common extension services, runs platform
-typechecks/tests, then deploys every enabled Worker in dependency order:
-observability/email/files/identity, domain modules, billing/custom, API and
-MCP, then dashboard. The dashboard is always last because it depends on the API. A
-production deployment encrypts all pre-migration D1 backups before artifact
-retention; a missing encryption key blocks that release evidence.
+Instance deployment credentials belong to Cloudflare Builds. Configure one
+connection per instance, with `dev` for Mabza and `main` for production.
+Production also requires a private R2 backup bucket and a retained backup
+encryption key. Additional accounts register through the installer; no central
+GitHub Environment or application-specific source constant is required. Follow
+[the Cloudflare installation guide](./CLOUDFLARE_BUILDS.md).
 
 The root CI is the validation authority for the acceptance application under
 `apps/reference`. Pull requests and both long-lived branches run its manifest,
 Dart, Flutter and Web-build checks from the same repository revision. Its
 non-secret deployment contract is `apps/reference/reference.project.json`.
-Publication to `reference.mbza.dev` is not active yet and must be added as a
+Publication to `reference.mabza.dev` is not active yet and must be added as a
 reviewed, mono-repository deployment before the domain is attached.
 
 ## Local procedure
 
 Every operational command requires `--target` or `SUPERBOARD_TARGET`. SuperBoard
-never selects VocoStar, mbza.dev or any Cloudflare account implicitly.
+never selects VocoStar, mabza.dev or any Cloudflare account implicitly.
 
 ### Enregistrer une nouvelle application
 
@@ -402,18 +360,18 @@ npm test
 
 # Inspect the exact deployment without remote mutation
 npm run cloudflare:deploy:all -- \
-  --target mbza-development --environment development --plan
+  --target mabza-development --environment development --plan
 
 # Inspect resources that would be provisioned
 npm run cloudflare:bootstrap -- \
-  --target mbza-development --environment development
+  --target mabza-development --environment development
 ```
 
 Inspect local D1 histories without contacting Cloudflare:
 
 ```bash
 npm run cloudflare:d1:plan -- \
-  --target mbza-development --environment development --service all
+  --target mabza-development --environment development --service all
 ```
 
 Add `--remote-read` for a value-free Cloudflare comparison. The resulting JSON
@@ -435,7 +393,7 @@ claims `ok` without a valid current schema contract.
 
 ```bash
 npm run cloudflare:d1:plan -- \
-  --target mbza-development --environment development --service all \
+  --target mabza-development --environment development --service all \
   --remote-read
 ```
 
@@ -451,10 +409,10 @@ la commande CI.
 The first authorized bootstrap requires both the scoped account ID and token:
 
 ```bash
-CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT=... \
+CLOUDFLARE_ACCOUNT_ID_MABZA_DEVELOPMENT=... \
 CLOUDFLARE_API_TOKEN=... \
 npm run cloudflare:bootstrap -- \
-  --target mbza-development --environment development --apply
+  --target mabza-development --environment development --apply
 ```
 
 Bootstrap writes the newly resolved non-secret resource IDs into the manifest.
@@ -583,8 +541,8 @@ generator creates a new file exclusively with mode `0600`, never prints the
 private JWK, and refuses any destination inside the Git checkout:
 
 ```bash
-npm run identity:keyset -- --output /absolute/secure/path/mbza-development-identity-keyset.json
-npm run cloudflare:secrets:upload -- --target mbza-development \
+npm run identity:keyset -- --output /absolute/secure/path/mabza-development-identity-keyset.json
+npm run cloudflare:secrets:upload -- --target mabza-development \
   --environment development --contracts identity-identity-keyset
 ```
 
@@ -599,9 +557,9 @@ longer than the maximum token TTL, then remove the retired key.
 Before merging `dev` to `main`:
 
 1. all unit/runtime/type tests pass;
-2. `board.mbza.dev/infrastructure` shows enabled Workers healthy and all public
-   surface monitors, including `reference.mbza.dev`, reachable;
-3. transactional mail appears in `mail.mbza.dev` and never reaches external
+2. `board.mabza.dev/infrastructure` shows enabled Workers healthy and all public
+   surface monitors, including `reference.mabza.dev`, reachable;
+3. transactional mail appears in `mail.mabza.dev` and never reaches external
    recipients in capture mode;
 4. upload, notification, Google/Apple authentication, paywall and support flows
    pass in `apps/reference`;
@@ -683,7 +641,7 @@ Après une modification de bibliothèque :
 2. mettre `sourceVersion` à cette version mais conserver
    `latestReleaseVersion` et le tag déjà publiés; le statut devient
    `pending-release`;
-3. valider la bibliothèque, `npm run sdk:catalog:check` et la référence MBZA;
+3. valider la bibliothèque, `npm run sdk:catalog:check` et la référence MABZA;
 4. lancer `Prepare immutable SDK release` sur le commit `dev` relu.
    L'Environment
    GitHub `sdk-release` protège la création du tag; le workflow de publication

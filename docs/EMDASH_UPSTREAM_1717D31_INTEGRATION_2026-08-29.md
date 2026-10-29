@@ -297,6 +297,6 @@ La première unité de travail sûre n’est donc pas encore le CMS ou un plugin
 
 [^upstream-cloudflare-demo]: [Wrangler de la démo, lignes 1–57](https://github.com/emdash-cms/emdash/blob/1717d31b351164a5f78e95fe004ee582c7c50f40/demos/cloudflare/wrangler.jsonc#L1-L57), [configuration Astro](https://github.com/emdash-cms/emdash/blob/1717d31b351164a5f78e95fe004ee582c7c50f40/demos/cloudflare/astro.config.mjs) et [entrypoint Worker](https://github.com/emdash-cms/emdash/blob/1717d31b351164a5f78e95fe004ee582c7c50f40/demos/cloudflare/src/worker.ts).
 
-[^local-services]: [`scripts/cloudflare/services.mjs`, registres domain/platform, lignes 1–176](../scripts/cloudflare-services.mjs#L1-L176) et [`infra/targets/mbza-development.json`](../infra/targets/mbza-development.json), commit local `a7c879b76e14fa5c20598f8ff6bbe56a87ad0553`.
+[^local-services]: [`scripts/cloudflare/services.mjs`, registres domain/platform, lignes 1–176](../scripts/cloudflare-services.mjs#L1-L176) et [`infra/targets/mabza-development.json`](../infra/targets/mabza-development.json), commit local `a7c879b76e14fa5c20598f8ff6bbe56a87ad0553`.
 
 [^upstream-ci]: [`.github/workflows/ci.yml` EmDash au SHA](https://github.com/emdash-cms/emdash/blob/1717d31b351164a5f78e95fe004ee582c7c50f40/.github/workflows/ci.yml).

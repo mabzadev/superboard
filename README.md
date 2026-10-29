@@ -7,12 +7,6 @@ and never fork this code.
 - Canonical repository: <https://github.com/mabzadev/superboard>
 - Archived-repository record: [`docs/LEGACY_REPOSITORIES.md`](docs/LEGACY_REPOSITORIES.md)
 - FlutterFlow reference application: [`apps/reference`](apps/reference)
-- Development reference app: <https://reference.mbza.dev>
-- Development Front: <https://board.mbza.dev>
-- Development API: <https://api.mbza.dev>
-- Development short links: <https://in.mbza.dev>
-- Development MCP: <https://mcp.mbza.dev/mcp>
-- Development mail preview: <https://mail.mbza.dev>
 
 ## Integrated EmDash foundation
 
@@ -45,17 +39,17 @@ pnpm flows:check
 
 ## Layout
 
-| Path                | Purpose                                                                           |
-| ------------------- | --------------------------------------------------------------------------------- |
-| `apps/`             | Executable applications, including the Site and reference client                  |
-| `packages/`         | EmDash foundation and shared libraries                                            |
-| `packages/plugins/` | Plugins, their Front sources and their service packages                           |
-| `sdks/`             | Client libraries; lifecycle and versions are recorded in the SDK catalogue        |
-| `scripts/config/`   | Global configuration and its validation schemas                                   |
-| `infra/targets/`    | Deployment target manifests                                                       |
-| `infra/generated/`  | Generated deployment output                                                       |
-| `scripts/`          | Commands grouped by usage; see [the scripts guide](scripts/README.md)             |
-| `tests/`            | E2E journeys, fixtures, linters and checks; see [the test guide](tests/README.md) |
+| Path | Purpose |
+| --- | --- |
+| `apps/` | Executable applications, including the Site and reference client |
+| `packages/` | EmDash foundation and shared libraries |
+| `packages/plugins/` | Plugins, their Front sources and their service packages |
+| `sdks/` | Client libraries; lifecycle and versions are recorded in the SDK catalogue |
+| `scripts/config/` | Global configuration and its validation schemas |
+| `infra/targets/` | Deployment target manifests |
+| `infra/generated/` | Generated deployment output |
+| `scripts/` | Commands grouped by usage; see [the scripts guide](scripts/README.md) |
+| `tests/` | E2E journeys, fixtures, linters and checks; see [the test guide](tests/README.md) |
 
 The root `Package.swift` exposes the iOS SDK from `sdks/ios`.
 See [the monorepo guide](docs/MONOREPO.md) for the remaining EmDash directories,
@@ -114,23 +108,23 @@ be audited offline with `pnpm run configuration:check`.
 
 ```bash
 # Validate the SuperBoard development target (no remote write)
-pnpm run cloudflare:bootstrap -- --target mbza-development --environment development
+pnpm run cloudflare:bootstrap -- --target mabza-development --environment development
 
 # Compare the complete paginated remote inventory with a target-scoped token
-CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
+CLOUDFLARE_ACCOUNT_ID_MABZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
   pnpm run cloudflare:bootstrap -- \
-  --target mbza-development --environment development --remote
+  --target mabza-development --environment development --remote
 
 # Apply only the unchanged reviewed plan and its emitted exact confirmation
-CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
+CLOUDFLARE_ACCOUNT_ID_MABZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
   pnpm run cloudflare:bootstrap -- \
-  --target mbza-development --environment development --apply \
-  --confirm "CLOUDFLARE:BOOTSTRAP:mbza-development:development:<plan-digest>"
+  --target mabza-development --environment development --apply \
+  --confirm "CLOUDFLARE:BOOTSTRAP:mabza-development:development:<plan-digest>"
 
 # Generate and deploy
-pnpm run cloudflare:deploy -- --target mbza-development --service api --environment development
-pnpm run cloudflare:deploy -- --target mbza-development --service mcp --environment development
-pnpm run cloudflare:deploy -- --target mbza-development --service site --environment development
+pnpm run cloudflare:deploy -- --target mabza-development --service api --environment development
+pnpm run cloudflare:deploy -- --target mabza-development --service mcp --environment development
+pnpm run cloudflare:deploy -- --target mabza-development --service site --environment development
 ```
 
 Google/Apple audiences, web origins and numeric Support project IDs can be
@@ -138,7 +132,7 @@ planned and updated without editing a Worker or hardcoding an application:
 
 ```bash
 pnpm run target:configure-application -- \
-  --target mbza-development --environment development \
+  --target mabza-development --environment development \
   --google-audiences <public-google-client-id> \
   --apple-audiences <public-apple-service-id> \
   --support-project-ids <numeric-project-id>
@@ -161,7 +155,7 @@ never written into Git:
 
 ```bash
 pnpm run cloudflare:deploy:all -- \
-  --target mbza-development --environment development \
+  --target mabza-development --environment development \
   --backup-directory /secure/superboard/d1
 ```
 
@@ -172,10 +166,10 @@ command; the checkout never receives a secret file:
 
 ```bash
 pnpm run cloudflare:secrets:upload -- \
-  --target mbza-development --environment development --contracts api-jwt-secret
+  --target mabza-development --environment development --contracts api-jwt-secret
 
 <approved-secret-manager-export> | pnpm run cloudflare:secrets:upload -- \
-  --target mbza-development --environment development --contracts api-jwt-secret \
+  --target mabza-development --environment development --contracts api-jwt-secret \
   --apply --confirm CLOUDFLARE:SECRET-BUNDLE:<target>:<environment>:<digest>
 ```
 
@@ -213,12 +207,12 @@ rotation protocol are in `docs/SECRET_MANAGEMENT.md`.
 
 The four application SDKs are:
 
-| SDK         | Source             | Use                                                       |
-| ----------- | ------------------ | --------------------------------------------------------- |
-| Flutter     | `sdks/flutter`     | Flutter applications                                      |
-| FlutterFlow | `sdks/flutterflow` | FlutterFlow actions and widgets built on Flutter          |
-| Web         | `sdks/web`         | JavaScript and TypeScript browser applications            |
-| Tauri       | `sdks/tauri`       | Desktop applications using the Web client and native HTTP |
+| SDK | Source | Use |
+| --- | --- | --- |
+| Flutter | `sdks/flutter` | Flutter applications |
+| FlutterFlow | `sdks/flutterflow` | FlutterFlow actions and widgets built on Flutter |
+| Web | `sdks/web` | JavaScript and TypeScript browser applications |
+| Tauri | `sdks/tauri` | Desktop applications using the Web client and native HTTP |
 
 Flutter owns its native implementations in `sdks/flutter/native/`.
 Web owns the Identity and Flows components in `sdks/web/identity/` and
@@ -246,6 +240,6 @@ issues through the private process documented in [SECURITY.md](./SECURITY.md).
 
 Run `pnpm local:start` to build SuperBoard, apply local migrations and start EmDash at `http://127.0.0.1:4321` with its local Workers. Stop the services with `pnpm local:stop`.
 
-Local databases, generated secrets and service logs are stored under `~/.local/share/superboard/local/mbza-development/`. Restarting preserves this data. The command uses the platform development target and does not load application addons.
+Local databases, generated secrets and service logs are stored under `~/.local/share/superboard/local/mabza-development/`. Restarting preserves this data. The command uses the platform development target and does not load application addons.
 
 Run `pnpm local:test` against the running local server to verify plugin activation, deactivation and persistence in the browser. The test restores Communication to its initial state.

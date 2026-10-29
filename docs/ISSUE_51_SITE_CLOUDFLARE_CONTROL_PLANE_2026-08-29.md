@@ -25,7 +25,7 @@ and deploys `apps/site/dist/server/wrangler.json`. The artifact keeps
   `apps/site/worker-configuration.d.ts`.
 - Target artifact dry-run: 429 modules, 9,585.32 KiB upload and 2,418.47 KiB
   gzip; all Site bindings are present and no route is attached.
-- Generated configuration tests cover both `mbza-development/development` and
+- Generated configuration tests cover both `mabza-development/development` and
   `vocostar/production` with validation-only placeholder IDs where the target is
   intentionally unprovisioned.
 
@@ -33,14 +33,14 @@ and deploys `apps/site/dist/server/wrangler.json`. The artifact keeps
 
 No mutation was performed and no credential value is included below.
 
-### mbza-development / development
+### mabza-development / development
 
 - Mode: `remote-read-only`.
 - Account fingerprint: `b25745e5a154`.
 - Inventory: 46 resources; 13 planned operations; 0 blockers.
 - Site resources absent and creatable: `siteD1`, `siteSessionKv`,
   `siteReleaseKv`, `siteMedia`.
-- Exact plan confirmation: `CLOUDFLARE:BOOTSTRAP:mbza-development:development:e50e38670e8e`.
+- Exact plan confirmation: `CLOUDFLARE:BOOTSTRAP:mabza-development:development:e50e38670e8e`.
 - The plan is applicable but was deliberately not applied in #51.
 
 ### vocostar / production

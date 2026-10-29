@@ -72,7 +72,7 @@ Le code couvre les communications transactionnelles, les campagnes et les conver
 
 ## Parcours, statistiques et données
 
-Les familles Analytics et Flows sont activées dans la cible MBZA et désactivées dans la cible Vocostar examinée.
+Les familles Analytics et Flows sont activées dans la cible MABZA et désactivées dans la cible Vocostar examinée.
 
 | Domaine              | Fonctionnalités relevées                                                                                                        | Sources                                                                                                                                                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -131,7 +131,7 @@ L’application de référence Flutter/FlutterFlow, les Custom Actions et Librar
 
 Les tableaux suivants sont des extractions des manifestes et catalogues. Ils complètent l’inventaire fonctionnel avec les identifiants techniques nécessaires à une migration sans perte.
 
-| Rôle actuel     | MBZA                     | Vocostar                 | Destination proposée                     |
+| Rôle actuel     | MABZA                     | Vocostar                 | Destination proposée                     |
 | --------------- | ------------------------ | ------------------------ | ---------------------------------------- |
 | `api`           | Activé dans le manifeste | Activé dans le manifeste | API                                      |
 | `site`          | Activé dans le manifeste | Activé dans le manifeste | Console                                  |
@@ -287,7 +287,7 @@ Les chemins actuels sont conservés dans la première étape. Les intitulés ci-
 
 La topologie déclare les commandes et lectures ci-dessous. Les noms sont conservés pour identifier précisément la couverture de migration ; ils ne sont pas des libellés à afficher aux utilisateurs. Cette extraction ne vaut pas validation de chaque branche d’exécution.
 
-### `supbrd-plug-user`
+### `superboard-user`
 
 Type : `full`. Aucun Worker propre dans ce descripteur.
 
@@ -295,7 +295,7 @@ Commandes : `application_sign_in`, `update_profile`, `suspend_member`, `link_pro
 
 Lectures : `current_profile`, `members`, `linked_providers`, `active_sessions`.
 
-### `supbrd-plug-settings`
+### `superboard-settings`
 
 Type : `full`. Aucun Worker propre dans ce descripteur.
 
@@ -303,7 +303,7 @@ Commandes : `update_effective_settings`, `save_sdk_configuration`, `test_sdk_con
 
 Lectures : `effective_settings`, `settings_versions`, `sdk_configurations`.
 
-### `supbrd-plug-content`
+### `superboard-content`
 
 Type : `full`. Aucun Worker propre dans ce descripteur.
 
@@ -311,7 +311,7 @@ Commandes : `create_document`, `update_document`, `publish_document`.
 
 Lectures : `documents`, `taxonomies`, `revisions`.
 
-### `supbrd-plug-products`
+### `superboard-products`
 
 Type : `full`. Aucun Worker propre dans ce descripteur.
 
@@ -319,7 +319,7 @@ Commandes : `create_product`, `update_product`, `archive_product`, `create_packa
 
 Lectures : `products`, `packages`, `offerings`, `entitlements`, `product_statistics`, `store_sync_runs`.
 
-### `supbrd-plug-audit`
+### `superboard-audit`
 
 Type : `full`. Aucun Worker propre dans ce descripteur.
 
@@ -327,7 +327,7 @@ Commandes : `archive_ledger`, `verify_ledger`.
 
 Lectures : `ledger`, `ledger_search`, `archives`.
 
-### `supbrd-plugmod-gateway`
+### `superboard-gateway`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-core/api`, état de catalogue `ready`.
 
@@ -335,7 +335,7 @@ Commandes : `publish_gateway_manifest`, `update_gateway_route`, `rotate_access_p
 
 Lectures : `active_gateway_manifest`, `gateway_routes`, `rate_limits`.
 
-### `supbrd-plugmod-billing`
+### `superboard-billing`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-monetization/billing`, état de catalogue `ready`.
 
@@ -343,7 +343,7 @@ Commandes : `create_purchase`, `create_refund`, `update_refund`, `update_subscri
 
 Lectures : `purchases`, `purchase`, `refunds`, `subscriptions`, `financial_customer_entitlements`, `billing_ledger`, `migration_status`.
 
-### `supbrd-plugmod-support`
+### `superboard-support`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-support/worker`, état de catalogue `ready`.
 
@@ -351,7 +351,7 @@ Commandes : `update_support_settings`, `create_support_configuration`, `update_s
 
 Lectures : `support_settings`, `unified_inbox_items`, `inbox_conversations`, `inbox_messages`, `support_channels`, `support_providers`, `support_integrations`, `support_portals`, `support_categories`, `support_folders`, `support_articles`, `support_assistant_tasks`.
 
-### `supbrd-plugmod-flows`
+### `superboard-flows`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-acquisition/flows`, état de catalogue `ready`.
 
@@ -359,7 +359,7 @@ Commandes : `create_workflow`, `update_workflow`, `publish_workflow`, `activate_
 
 Lectures : `overview`, `components`, `workflows`, `workflow`, `environments`, `localization`, `users`, `user_details`.
 
-### `supbrd-plugmod-analytics`
+### `superboard-analytics`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-analytics/worker`, état de catalogue `ready`.
 
@@ -367,7 +367,7 @@ Commandes : `create_analytics_report`, `update_analytics_report`, `delete_analyt
 
 Lectures : `analytics_overview`, `analytics_events`, `analytics_event_analysis`, `analytics_installations`, `analytics_purchases`, `analytics_retention`, `analytics_reports`, `analytics_dashboards`, `analytics_sessions`, `analytics_profiles`, `analytics_views`, `analytics_dimensions`, `analytics_crashes`, `analytics_feedback`, `analytics_cohorts`, `analytics_remote_config`, `analytics_alerts`, `analytics_settings`.
 
-### `supbrd-plugmod-marketing`
+### `superboard-marketing`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-communication/marketing`, état de catalogue `ready`.
 
@@ -375,7 +375,7 @@ Commandes : `create_email_campaign`, `update_email_campaign`, `transition_email_
 
 Lectures : `email_subscribers`, `subscriber_lists`, `subscriber_segments`, `email_templates`, `email_campaigns`, `marketing_statistics`, `marketing_journeys`, `journey_enrollments`, `journey_statistics`, `marketing_channel_connectors`.
 
-### `supbrd-plugmod-email`
+### `superboard-email`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-communication/email`, état de catalogue `ready`.
 
@@ -383,7 +383,7 @@ Commandes : `send_transactional_email`, `save_smtp_settings`, `delete_smtp_setti
 
 Lectures : `smtp_settings`, `delivery_outbox`, `dead_letters`, `provider_webhooks`, `provider_events`.
 
-### `supbrd-plugmod-dynamic-links`
+### `superboard-dynamic-links`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-acquisition/dynamic-links`, état de catalogue `ready`.
 
@@ -391,7 +391,7 @@ Commandes : `create_link`, `update_link`, `delete_link`, `create_link_campaign`,
 
 Lectures : `links`, `resolved_link`, `link_campaigns`, `link_campaign_analytics`, `redirect_rules`, `domains`, `social_preview`, `tracking`, `link_statistics`.
 
-### `supbrd-plugmod-files`
+### `superboard-files`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-data/worker`, état de catalogue `ready`.
 
@@ -399,7 +399,7 @@ Commandes : `create_upload_ticket`, `complete_upload`, `delete_object`, `collect
 
 Lectures : `objects`, `object_metadata`, `download_ticket`, `storage_usage`.
 
-### `supbrd-plugmod-paywalls`
+### `superboard-paywalls`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-acquisition/paywalls`, état de catalogue `ready`.
 
@@ -407,7 +407,7 @@ Commandes : `create_paywall`, `update_paywall`, `archive_paywall`, `create_paywa
 
 Lectures : `paywalls`, `paywall_versions`, `paywall_placements`, `paywall_experiences`, `paywall_statistics`.
 
-### `supbrd-plugmod-onboardings`
+### `superboard-onboardings`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-acquisition/onboardings`, état de catalogue `ready`.
 
@@ -415,7 +415,7 @@ Commandes : `create_onboarding`, `update_onboarding`, `delete_onboarding`, `crea
 
 Lectures : `onboardings`, `onboarding_versions`, `onboarding_placements`, `onboarding_targeting_rules`, `onboarding_experiences`, `onboarding_statistics`.
 
-### `supbrd-plugmod-observability`
+### `superboard-observability`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-core/observability`, état de catalogue `ready`.
 
@@ -423,7 +423,7 @@ Commandes : `acknowledge_incident`, `resolve_incident`, `retry_custom_job`, `rep
 
 Lectures : `platform_status`, `runtime_metrics`, `service_health`, `incidents`, `platform_custom_jobs`, `platform_email_operations`.
 
-### `supbrd-plugmod-mcp`
+### `superboard-mcp`
 
 Type : `module`. Worker déclaré : `packages/plugins/superboard-core/mcp`, état de catalogue `ready`.
 
