@@ -1,3 +1,5 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { mountRegisteredRouter, registerRouter } from "@superboard/contracts/route-registry";
 import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import { readBytesLimited } from "@superboard/contracts/request-body";
 import {
@@ -9,7 +11,7 @@ import { Hono, type Context, type Next } from "hono";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
 import { FilesInputError } from "./errors.js";
-import { handleOperatorFiles } from "./operator.js";
+import { handleOperatorFiles, operatorFileRoutes } from "./operator.js";
 
 export type FilesEnv = Cloudflare.Env;
 
@@ -27,9 +29,9 @@ type FileRow = {
 };
 
 const jwks = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
-const app = new Hono<{ Bindings: FilesEnv; Variables: Variables }>();
+const app = registerRouter(new Hono<{ Bindings: FilesEnv; Variables: Variables }>(), {"service":"files","module":"index.app","pluginId":"superboard-files","surface":"internal","access":"framework"});
 
-app.all("/internal/v1/operator/*", (c) =>
+mountRegisteredRouter(app, operatorFileRoutes, (c: FilesContext) =>
 	handleOperatorFiles(c.req.raw, c.env, {
 		maximum: maximumBytes(c.env),
 		filename: safeFilename,
@@ -307,7 +309,7 @@ app.post("/internal/v1/files/:id/download-ticket", async (c) => {
 	return json({
 		file: fileJson(row),
 		download: {
-			url: `${filesPublicOrigin(c.env)}/v1/downloads/${ticket}`,
+			url: `${filesPublicOrigin(c.env)}${new URL(c.env.FILES_PUBLIC_ORIGIN).pathname === "/v1/data" ? "" : "/v1"}/downloads/${ticket}`,
 			expires_at: new Date(expiresAt * 1000).toISOString(),
 		},
 	});
@@ -423,13 +425,13 @@ function filesPublicOrigin(env: FilesEnv): string {
 		url.protocol !== "https:" ||
 		url.username ||
 		url.password ||
-		url.pathname !== "/" ||
+		(url.pathname !== "/" && url.pathname !== "/v1/data") ||
 		url.search ||
 		url.hash
 	) {
 		throw new Error("FILES_PUBLIC_ORIGIN_invalid");
 	}
-	return url.origin;
+	return url.pathname === "/v1/data" ? `${url.origin}/v1/data` : url.origin;
 }
 
 function downloadTicketTtl(env: FilesEnv): number {
@@ -625,7 +627,7 @@ function json(value: unknown, status = 200) {
 	});
 }
 
-export default app;
+export default withRouteManifest((app), [app], {"service":"files","pluginId":"superboard-files"});
 export {
 	allowedContentTypes,
 	assertAllowedContentType,

@@ -62,7 +62,7 @@ describe("AnalyticsSettingsPage", () => {
 		window.history.replaceState(null, "", "/analytics/settings?lang=en&tab=collection");
 		const user = userEvent.setup();
 		const view = render(<AnalyticsSettingsPage />);
-		expect(screen.getByRole("tab", { name: "Data collection" })).toHaveAttribute(
+		expect(screen.getByRole("tab", { name: "Analytics processing" })).toHaveAttribute(
 			"aria-selected",
 			"true",
 		);
@@ -79,7 +79,7 @@ describe("AnalyticsSettingsPage", () => {
 
 		expect(screen.getByText("Analytics settings")).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Applications" })).toBeInTheDocument();
-		expect(screen.getByRole("tab", { name: "Data collection" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Analytics processing" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Webhooks" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Annotations" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Configuration" })).toBeInTheDocument();
@@ -102,13 +102,13 @@ describe("AnalyticsSettingsPage", () => {
 			<FrontContextProvider
 				value={{
 					instanceId: "1",
-					pluginId: "supbrd-plugmod-analytics",
+					pluginId: "superboard-analytics",
 					path: "/analytics/settings",
 					parameters: {},
 					locale: "fr",
 					operator: null,
 					projectScope: null,
-					activePluginIds: ["supbrd-plugmod-analytics"],
+					activePluginIds: ["superboard-analytics"],
 				}}
 			>
 				<AnalyticsSettingsPage />

@@ -100,10 +100,10 @@ function viewsSeries(statistics: LinkStatistics): DailyViews[] {
 
 export default function DashboardPageContent() {
 	const { selectedProject } = useProjectSelection();
-	const userEnabled = usePluginEnabled("supbrd-plug-user");
-	const settingsEnabled = usePluginEnabled("supbrd-plug-settings");
-	const linksEnabled = usePluginEnabled("supbrd-plugmod-dynamic-links");
-	const productsEnabled = usePluginEnabled("supbrd-plug-products");
+	const userEnabled = usePluginEnabled("superboard-user");
+	const settingsEnabled = usePluginEnabled("superboard-settings");
+	const linksEnabled = usePluginEnabled("superboard-dynamic-links");
+	const productsEnabled = usePluginEnabled("superboard-products");
 	const hasIntegrations = userEnabled || linksEnabled || productsEnabled;
 	const generation = useRef(0);
 	const { dateRange, setDateRange, platform, setPlatform } = useTableParams();

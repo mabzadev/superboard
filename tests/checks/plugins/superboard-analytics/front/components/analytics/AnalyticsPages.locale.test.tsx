@@ -68,10 +68,10 @@ function Page({ kind, locale }: { kind: AnalyticsPageKind; locale: "en" | "fr" }
 		path: `/analytics/${kind}`,
 		parameters: {},
 		instanceId: "instance-1",
-		pluginId: "supbrd-plugmod-analytics",
+		pluginId: "superboard-analytics",
 		operator: null,
 		projectScope: null,
-		activePluginIds: ["supbrd-plugmod-analytics"],
+		activePluginIds: ["superboard-analytics"],
 	};
 	return (
 		<FrontContextProvider value={context}>
