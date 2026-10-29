@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	PROJECT_CONTEXT_HEADERS,
 	signProjectContext,
@@ -12,7 +13,7 @@ import type { Env } from "../types";
 
 type AdminContext = Context<{ Bindings: Env }>;
 
-const routes = new Hono<{ Bindings: Env }>();
+const routes = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.identity-admin.routes","pluginId":"superboard-user","surface":"internal","access":"operator"});
 const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "DELETE"]);
 const MAX_ADMIN_BODY_BYTES = 1_048_576;
 

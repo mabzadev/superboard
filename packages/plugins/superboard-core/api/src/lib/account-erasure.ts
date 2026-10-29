@@ -7,6 +7,7 @@ import {
 } from "@superboard/contracts/project-context";
 
 import type { Env } from "../types";
+import { eraseCollectedSubject } from "./core-collection.js";
 
 export type AccountErasureProject = {
 	projectId: number;
@@ -201,6 +202,14 @@ async function runClaimedErasure(
 }
 
 const ERASURE_STEPS: readonly Step[] = Object.freeze([
+	{
+		id: "core_collection",
+		enabled: () => true,
+		async run(env, _operation, project, userId) {
+			await eraseCollectedSubject(env.DB, project.projectId, userId);
+			return Response.json({ data: { erased: true } });
+		},
+	},
 	domainStep("app", "APP_MODULE"),
 	domainStep("analytics", "ANALYTICS_MODULE"),
 	domainStep("marketing", "MARKETING_MODULE"),

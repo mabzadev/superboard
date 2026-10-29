@@ -18,7 +18,7 @@ describe("platform status", () => {
 		catalog.workers = catalog.workers.filter((entry: { id: string }) => entry.id !== "messaging");
 		const parseCatalog = () =>
 			workerTopology({
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				ENVIRONMENT: "development",
 				PLATFORM_WORKERS_JSON: JSON.stringify(catalog),
 			} as never);
@@ -89,7 +89,7 @@ describe("platform status", () => {
 				Response.json({
 					status: "ok",
 					environment: "development",
-					dataset: "superboard_mbza_development",
+					dataset: "superboard_mabza_development",
 					windowMinutes: 60,
 					generatedAt: "2026-08-08T00:00:00.000Z",
 					rows: [
@@ -119,16 +119,16 @@ describe("platform status", () => {
 				KV: {},
 				R2: {},
 				ENVIRONMENT: "development",
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				PLATFORM_WORKERS_JSON: workerCatalog(),
 				SUPERBOARD_RELEASE: "abcdef123456",
 				D1_EXPECTED_MIGRATION: "0057_application_account_erasure.sql",
 				PUBLIC_ROUTING_MODE: "active",
-				API_DOMAIN: "api.mbza.dev",
-				SDK_DOMAIN: "sdk.mbza.dev",
-				SHORTLINK_DOMAIN: "in.mbza.dev",
-				APP_URL: "https://board.mbza.dev",
-				FILES_DOMAIN: "files.mbza.dev",
+				API_DOMAIN: "api.mabza.dev",
+				SDK_DOMAIN: "sdk.mabza.dev",
+				SHORTLINK_DOMAIN: "in.mabza.dev",
+				APP_URL: "https://board.mabza.dev",
+				FILES_DOMAIN: "files.mabza.dev",
 				BILLING: healthy,
 				EMAIL_SERVICE: email,
 				MARKETING_MODULE: marketing,
@@ -138,7 +138,7 @@ describe("platform status", () => {
 		);
 		const body = (await response.json()) as any;
 		expect(response.status).toBe(200);
-		expect(body.endpoints.shortLinks).toBe("https://in.mbza.dev");
+		expect(body.endpoints.shortLinks).toBe("https://in.mabza.dev");
 		expect(body.publicSurfaces).toEqual([]);
 		expect(body.metrics.users).toBe(3);
 		expect(body.metrics.pushDevices).toBe(3);
@@ -174,14 +174,14 @@ describe("platform status", () => {
 			deadLettersQuarantined: 2,
 		});
 		expect(body.deployment).toEqual({
-			target: "mbza-development",
+			target: "mabza-development",
 			release: "abcdef123456",
 			publicRouting: "active",
 		});
 		expect(body.catalog).toEqual({
 			schemaVersion: 1,
 			status: "ok",
-			target: "mbza-development",
+			target: "mabza-development",
 			environment: "development",
 		});
 		expect(body.services).toHaveLength(JSON.parse(workerCatalog()).workers.length);
@@ -254,7 +254,7 @@ describe("platform status", () => {
 			{
 				DB: database(),
 				ENVIRONMENT: "development",
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				PLATFORM_WORKERS_JSON: workerCatalog(),
 			} as never,
 		);
@@ -285,7 +285,7 @@ describe("platform status", () => {
 			{
 				DB: database(),
 				ENVIRONMENT: "development",
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				PLATFORM_WORKERS_JSON: workerCatalog([managed]),
 				MANAGED_VOCALS_ORCHESTRATOR: managedBinding,
 			} as never,
@@ -325,7 +325,7 @@ describe("platform status", () => {
 			{
 				DB: database(),
 				ENVIRONMENT: "development",
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				PLATFORM_WORKERS_JSON: '{"schemaVersion":1,"target":"other"}',
 			} as never,
 		);
@@ -368,12 +368,12 @@ describe("platform status", () => {
 				CUSTOM_WORKER: custom,
 				CUSTOM_WORKER_TOKEN: "custom-secret",
 				ENVIRONMENT: "development",
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				SUPERBOARD_RELEASE: "test",
-				API_DOMAIN: "api.mbza.dev",
-				SDK_DOMAIN: "sdk.mbza.dev",
-				SHORTLINK_DOMAIN: "in.mbza.dev",
-				APP_URL: "https://board.mbza.dev",
+				API_DOMAIN: "api.mabza.dev",
+				SDK_DOMAIN: "sdk.mabza.dev",
+				SHORTLINK_DOMAIN: "in.mabza.dev",
+				APP_URL: "https://board.mabza.dev",
 			} as never,
 		);
 		const body = (await response.json()) as any;
@@ -381,7 +381,7 @@ describe("platform status", () => {
 		expect(body.status).toBe("degraded");
 		expect(body.custom).toMatchObject({
 			status: "incompatible",
-			error: "Expected custom protocol v2 for mbza-development",
+			error: "Expected custom protocol v2 for mabza-development",
 		});
 	});
 
@@ -393,7 +393,7 @@ describe("platform status", () => {
 				if (path.endsWith("/manifest")) {
 					return Response.json({
 						protocolVersion: 2,
-						appKey: "mbza-development",
+						appKey: "mabza-development",
 						capabilities: "not-an-array",
 					});
 				}
@@ -408,12 +408,12 @@ describe("platform status", () => {
 				CUSTOM_WORKER: custom,
 				CUSTOM_WORKER_TOKEN: "custom-secret",
 				ENVIRONMENT: "development",
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				SUPERBOARD_RELEASE: "test",
-				API_DOMAIN: "api.mbza.dev",
-				SDK_DOMAIN: "sdk.mbza.dev",
-				SHORTLINK_DOMAIN: "in.mbza.dev",
-				APP_URL: "https://board.mbza.dev",
+				API_DOMAIN: "api.mabza.dev",
+				SDK_DOMAIN: "sdk.mabza.dev",
+				SHORTLINK_DOMAIN: "in.mabza.dev",
+				APP_URL: "https://board.mabza.dev",
 			} as never,
 		);
 		const body = (await response.json()) as any;
@@ -434,7 +434,7 @@ describe("platform status", () => {
 				if (path.endsWith("/manifest")) {
 					return Response.json({
 						protocolVersion: 2,
-						appKey: "mbza-development",
+						appKey: "mabza-development",
 						service: "custom-reference",
 						version: "1.2.0",
 						description: "Reference custom Worker",
@@ -463,12 +463,12 @@ describe("platform status", () => {
 				CUSTOM_WORKER: custom,
 				CUSTOM_WORKER_TOKEN: "custom-secret",
 				ENVIRONMENT: "development",
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				SUPERBOARD_RELEASE: "test",
-				API_DOMAIN: "api.mbza.dev",
-				SDK_DOMAIN: "sdk.mbza.dev",
-				SHORTLINK_DOMAIN: "in.mbza.dev",
-				APP_URL: "https://board.mbza.dev",
+				API_DOMAIN: "api.mabza.dev",
+				SDK_DOMAIN: "sdk.mabza.dev",
+				SHORTLINK_DOMAIN: "in.mabza.dev",
+				APP_URL: "https://board.mabza.dev",
 			} as never,
 		);
 		const body = (await response.json()) as any;
@@ -930,7 +930,7 @@ describe("platform status", () => {
 				DB: database(),
 				CUSTOM_WORKER: custom,
 				CUSTOM_WORKER_TOKEN: "custom-secret",
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 			} as never,
 		);
 		const body = (await response.json()) as any;
@@ -1221,7 +1221,7 @@ function workerCatalog(managedWorkers: unknown[] = []) {
 	];
 	return JSON.stringify({
 		schemaVersion: 1,
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		workers: [
 			...ids.map((id) => ({

@@ -4,6 +4,7 @@ import {
 	type ProjectContext,
 } from "@superboard/contracts/project-context";
 import { readJsonObjectLimited, RequestBodyError } from "@superboard/contracts/request-body";
+import { resolveRouteDestination, type RouteOptions } from "@superboard/contracts/route-registry";
 import type { Context, Next } from "hono";
 
 import type { Env } from "../types.js";
@@ -11,6 +12,18 @@ import { getRequestAuthContext } from "./auth.js";
 import { domainError, resolveAuthorizedProjectContext } from "./domain-modules.js";
 
 type GatewayContext = Context<{ Bindings: Env }>;
+const ledgerPath = "/api/v1/billing/projects/:projectRef/ledger";
+export const billingLedgerRoute = {
+	id: "api:billing:ledger-proxy",
+	pluginId: "superboard-billing",
+	surface: "internal",
+	access: "operator",
+	transport: "fallback",
+	path: `${ledgerPath}/:rest{.+}`,
+	rootPath: ledgerPath,
+	destination: { service: "billing", path: "/internal/v1/catalog-ledger/:rest{.+}?", sourcePath: `${ledgerPath}/:rest{.+}?` },
+} satisfies RouteOptions & { path: string; rootPath: string };
+
 export async function proxyBillingLedger(c: GatewayContext): Promise<Response> {
 	const requestId = c.req.header("X-Request-Id") || crypto.randomUUID();
 	const auth = await getRequestAuthContext(c.env, c.req.raw.headers, { request: c.req.raw });
@@ -33,10 +46,9 @@ export async function proxyBillingLedger(c: GatewayContext): Promise<Response> {
 	if (!["GET", "HEAD"].includes(c.req.method) && !c.req.header("Idempotency-Key"))
 		return domainError(requestId, 400, "idempotency_key_required", "Idempotency-Key is required");
 	const source = new URL(c.req.url);
-	const base = `/api/v1/billing/projects/${encodeURIComponent(projectRef)}/ledger`;
-	const target = new URL(
-		`https://billing.internal/internal/v1/catalog-ledger${source.pathname.slice(base.length)}${source.search}`,
-	);
+	const destination = resolveRouteDestination(billingLedgerRoute, source.pathname);
+	if (!destination) return domainError(requestId, 404, "not_found", "Ledger route not found");
+	const target = new URL(`https://billing.internal${destination.path}${source.search}`);
 	const context = {
 		...project.context,
 		actorId: auth.userId,

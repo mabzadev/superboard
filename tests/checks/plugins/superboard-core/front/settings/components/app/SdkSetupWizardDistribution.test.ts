@@ -27,12 +27,12 @@ describe("SDK setup distribution contract", () => {
 		const blocks = sdkInstallCode("web");
 
 		expect(blocks.map(({ filename }) => filename)).toEqual([".npmrc", "Terminal"]);
-		expect(blocks[0]?.code).toContain("@mbzadev:registry=https://npm.pkg.github.com");
+		expect(blocks[0]?.code).toContain("@mabzadev:registry=https://npm.pkg.github.com");
 		expect(blocks[0]?.code).toContain(
 			"//npm.pkg.github.com/:_authToken=${SUPERBOARD_GITHUB_PACKAGES_TOKEN}",
 		);
 		expect(blocks[1]?.code).toBe(
-			'test -n "${SUPERBOARD_GITHUB_PACKAGES_TOKEN:-}" \\\n  && npm install @mbzadev/superboard-js-sdk@1.0.2',
+			`test -n "\${SUPERBOARD_GITHUB_PACKAGES_TOKEN:-}" \\\n  && npm install @mabzadev/superboard-js-sdk@1.0.2`,
 		);
 	});
 
@@ -55,7 +55,7 @@ describe("SDK setup distribution contract", () => {
 		);
 		expect(blocks[1]?.code).toBe('implementation("io.superboard:superboard-android-sdk:1.0.3")');
 		expect(blocks[2]?.code).toBe(
-			'test -n "${SUPERBOARD_GITHUB_PACKAGES_USER:-}" \\\n  && test -n "${SUPERBOARD_GITHUB_PACKAGES_TOKEN:-}" \\\n  && ./gradlew assemble',
+			`test -n "\${SUPERBOARD_GITHUB_PACKAGES_USER:-}" \\\n  && test -n "\${SUPERBOARD_GITHUB_PACKAGES_TOKEN:-}" \\\n  && ./gradlew assemble`,
 		);
 	});
 

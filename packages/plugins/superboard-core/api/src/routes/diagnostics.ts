@@ -1,9 +1,10 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono, type Context } from 'hono';
 import { Env } from '../types';
 import { timingSafeEqual } from '../lib/secrets';
 import { readJsonObjectLimited } from '@superboard/contracts/request-body';
 
-const diagnostics = new Hono<{ Bindings: Env }>();
+const diagnostics = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.diagnostics.diagnostics","pluginId":"superboard-observability","surface":"internal","access":"operator"});
 
 async function params(c: any): Promise<Record<string, any>> {
   const query = Object.fromEntries(new URL(c.req.url).searchParams.entries());

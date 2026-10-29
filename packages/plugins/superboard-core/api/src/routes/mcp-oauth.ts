@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
 import { Hono } from "hono";
 
@@ -14,7 +15,7 @@ import {
 } from "../lib/mcp-oauth";
 import { Env } from "../types";
 
-const mcpOauth = new Hono<{ Bindings: Env }>();
+const mcpOauth = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.mcp-oauth.mcpOauth","pluginId":"superboard-mcp","surface":"internal","access":"framework"});
 
 async function readBody(c: any): Promise<Record<string, any>> {
 	return readRequestObjectLimited(c.req.raw, 1024 * 1024);

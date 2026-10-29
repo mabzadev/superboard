@@ -52,7 +52,7 @@ describe("LibrariesPageContent", () => {
 					lifecycle: "archived",
 					displayName: "SuperBoard JavaScript",
 					ecosystem: "npm",
-					packageName: "@mbzadev/superboard-js-sdk",
+					packageName: "@mabzadev/superboard-js-sdk",
 					sourcePath: "sdks/web",
 					license: "MIT",
 					licensePath: "sdks/web/LICENSE",
@@ -62,7 +62,7 @@ describe("LibrariesPageContent", () => {
 					releaseRef: "sdk-js-v1.0.2",
 					releaseStatus: "released",
 					releaseSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-					install: "npm install @mbzadev/superboard-js-sdk@1.0.2",
+					install: "npm install @mabzadev/superboard-js-sdk@1.0.2",
 					distribution: {
 						registryKind: "github-packages-npm",
 						registry: "https://npm.pkg.github.com",

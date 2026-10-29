@@ -31,7 +31,7 @@ export async function drainPluginWorkflowWakeups(
 			!("waiter_id" in value) ||
 			typeof value.waiter_id !== "string" ||
 			!("plugin_id" in value) ||
-			value.plugin_id !== "supbrd-plugmod-flows"
+			value.plugin_id !== "superboard-flows"
 		)
 			continue;
 		const token = flowsInternalToken(env);

@@ -10,7 +10,7 @@ const app = navigationGroup({
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
-	plugin_id: "supbrd-plug-settings",
+	plugin_id: "superboard-settings",
 	plugin_label: "Settings",
 	description:
 		"Configure the Instance and its application SDK integrations from the verified plugin surface.",

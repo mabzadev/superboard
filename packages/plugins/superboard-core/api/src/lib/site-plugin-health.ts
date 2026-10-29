@@ -136,13 +136,13 @@ async function inspectWorker(
 	const payload = await readJsonObjectLimited(response, 65536);
 	const health = isRecord(payload.data) ? payload.data : payload;
 	const optionalAnalytics =
-		pluginId === "supbrd-plugmod-observability" &&
+		pluginId === "superboard-observability" &&
 		env.ENVIRONMENT !== "production" &&
 		health.status === "degraded" &&
 		health.analyticsQueryConfigured === false;
 	if (!response.ok || (health.status !== "ok" && health.status !== "ready" && !optionalAnalytics))
 		throw new ProbeFailure("WORKER_NOT_READY");
-	if (pluginId === "supbrd-plugmod-billing" && health.credential_copies === null)
+	if (pluginId === "superboard-billing" && health.credential_copies === null)
 		throw new ProbeFailure("WORKER_DATABASE_NOT_READY");
 	if (isRecord(health.schema) && health.schema.status !== "current")
 		throw new ProbeFailure("WORKER_SCHEMA_NOT_CURRENT");

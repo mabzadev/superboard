@@ -2,60 +2,55 @@ import type { PluginApiAdapter } from "@superboard/front-ui/api";
 
 export const adapters = [
 	{
-		id: "supbrd-plug-audit.command.archive_ledger",
+		id: "superboard-audit.command.archive_ledger",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/_emdash/api/superboard/audit/archives",
+				route_id: "site:audit:archive",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-audit.command.verify_ledger",
+		id: "superboard-audit.command.verify_ledger",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/_emdash/api/superboard/audit/verify",
+				route_id: "site:audit:verify",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-audit.data_source.ledger",
+		id: "superboard-audit.data_source.ledger",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/_emdash/api/superboard/audit/ledger",
+				route_id: "site:audit:ledger",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-audit.data_source.ledger_search",
+		id: "superboard-audit.data_source.ledger_search",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/_emdash/api/superboard/audit/ledger/search",
+				route_id: "site:audit:ledger@internal:/_emdash/api/superboard/audit/ledger/search",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-audit.data_source.archives",
+		id: "superboard-audit.data_source.archives",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/_emdash/api/superboard/audit/archives",
+				route_id: "site:audit:archives-list",
 				query: "passthrough",
 				body: "none",
 			},

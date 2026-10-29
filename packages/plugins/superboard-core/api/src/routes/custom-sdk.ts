@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	CUSTOM_WORKER_JOB_CANCEL_SUFFIX,
 	CUSTOM_WORKER_JOB_PATH,
@@ -13,7 +14,7 @@ import { applicationModuleSettings } from "../lib/application-module-settings.js
 import { verifiedAppUserId } from "../lib/billing-identity";
 import type { AppVariables, Env } from "../types";
 
-const customSdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+const customSdk = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.custom-sdk.customSdk","ownerBinding":"CUSTOM_WORKER_PLUGIN_ID","pluginId":"supbrd-core","surface":"internal","access":"sdk-key","public":{"surface":"custom-api","prefix":"/custom/v1"}});
 
 class CustomSdkIdentityRejectedError extends Error {}
 class CustomSdkDependencyUnavailableError extends Error {}
