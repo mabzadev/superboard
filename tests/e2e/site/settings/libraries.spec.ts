@@ -4,7 +4,7 @@ import { evidence, ready, siteApi } from "../../../fixtures/site-browser/site-ap
 test("the library catalogue refreshes and copies the published release and installation", async ({
 	authenticatedPage: page,
 }) => {
-	const plugin = "supbrd-plug-settings";
+	const plugin = "superboard-settings";
 	await ready(page, "/app/libraries");
 	const catalog = await siteApi(page.request, plugin, "GET", "/api/v1/platform/libraries");
 	const library = catalog.libraries.find(

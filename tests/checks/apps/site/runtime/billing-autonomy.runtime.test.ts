@@ -31,7 +31,7 @@ async function request(
 	const context = {
 		module: "billing" as const,
 		method,
-		pathname: path,
+		pathname: new URL(path, "https://billing.internal").pathname,
 		projectId,
 		projectRef: projectId === 81 ? "42-prod" : "43-prod",
 		instanceId: projectId === 81 ? 42 : 43,
@@ -164,6 +164,21 @@ test("Billing owns purchase/refund/subscription operations when Products has no 
 	expect(await statistics.json()).toMatchObject({
 		data: { totals: { purchases: 1, refunded_micros: 9_990_000 } },
 	});
+	const gatewayEnv = {
+		DB: db,
+		SUPERBOARD_TARGET: "billing-alone",
+		SITE_OPERATOR_BRIDGE_TOKEN: "billing-proxy-bridge",
+		MODULE_INTERNAL_TOKEN: secret,
+		BILLING: { fetch: (forwarded: Request) => billing.fetch(forwarded, billingEnv) },
+	} as unknown as ApiEnv;
+	for (const suffix of ["", "/statistics?from=2026-09-01&to=2026-09-30"]) {
+		const proxyRequest = new Request(`https://api.internal/api/v1/billing/projects/42-prod/ledger${suffix}`);
+		const headers = await signSiteOperatorRequest(proxyRequest, { instance_id: "billing-alone", operator_id: "billing-only-operator", role: 50 }, "billing-proxy-bridge");
+		const proxied = await api.fetch(new Request(proxyRequest, { headers }), gatewayEnv);
+		expect({ status: proxied.status, error: proxied.ok ? undefined : await proxied.clone().text() }).toEqual({ status: 200, error: undefined });
+		const direct = await request("GET", `/internal/v1/catalog-ledger${suffix}`);
+		expect(await proxied.json()).toEqual(await direct.json());
+	}
 });
 
 test("Billing reconciliation only updates the selected project", async () => {

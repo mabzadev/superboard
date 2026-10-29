@@ -175,7 +175,7 @@ describe("Site Front Release D1 workflow", () => {
 					query: {},
 					page_id: "page.unmapped",
 					layout_ids: [],
-					renderer_ids: ["supbrd-plugmod-analytics.renderer.admin_surface"],
+					renderer_ids: ["superboard-analytics.renderer.admin_surface"],
 					state_policies: {
 						loading: "emdash.core.state.loading",
 						empty: "emdash.core.state.empty",
@@ -192,8 +192,8 @@ describe("Site Front Release D1 workflow", () => {
 		};
 		invalidCandidate.payload.renderers = [
 			{
-				renderer_id: "supbrd-plugmod-analytics.renderer.admin_surface",
-				plugin_id: "supbrd-plugmod-analytics",
+				renderer_id: "superboard-analytics.renderer.admin_surface",
+				plugin_id: "superboard-analytics",
 				plugin_version: "1.0.0",
 				build_id: "b1",
 				build_checksum: "c1",

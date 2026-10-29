@@ -204,7 +204,11 @@ async function executeManagedPluginLifecycleAction(
 	const denied = requireReleaseOperator(context, env);
 	if (denied) return denied;
 	const pluginId = context.params.pluginId;
-	if (!pluginId || !pluginId.startsWith("supbrd-") || pluginId.includes("*")) {
+	if (
+		!pluginId ||
+		(!pluginId.startsWith("supbrd-") && !pluginId.startsWith("superboard-")) ||
+		pluginId.includes("*")
+	) {
 		return jsonResponse({ error: { code: "INVALID_PLUGIN_ID" } }, 422);
 	}
 

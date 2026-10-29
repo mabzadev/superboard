@@ -8,7 +8,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plug-audit";
+const plugin = "superboard-audit";
 const file = "retirement-api-audit.runtime.test.ts";
 
 test("canonical Audit APIs import technical facts, verify their chain and retain a readable archive", async () => {

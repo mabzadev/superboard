@@ -34,9 +34,9 @@ import { buildPluginTopology } from "../../../scripts/emdash/parity-matrix.mjs";
 const exampleEntity = {
 	id: "app.example",
 	module: "app",
-	pluginId: "supbrd-plug-user",
-	storeId: "supbrd-plug-user.store.example",
-	repositoryId: "supbrd-plug-user.repository.example",
+	pluginId: "superboard-user",
+	storeId: "superboard-user.store.example",
+	repositoryId: "superboard-user.repository.example",
 	columns: ["id", "project_id", "payload_json", "updated_at"],
 	jsonColumns: ["payload_json"],
 	keys: ["id"],
@@ -532,7 +532,7 @@ test("the remote adapter rejects every mutation while write authority is disable
 test("the remote adapter writes Stores under the canonical target instance id", async () => {
 	const adapter = new RemoteD1Adapter({
 		root: "/tmp",
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		commandRunner: () =>
 			'[{"success":true,"results":[{"project_id":2,"instance_id":1,"identifier":"test","is_test":1}]}]',
@@ -550,7 +550,7 @@ test("the remote adapter writes Stores under the canonical target instance id", 
 	});
 
 	const project = await adapter.resolveProject(parseProjectRef("1-test"));
-	assert.equal(project.instance_id, "mbza-development");
+	assert.equal(project.instance_id, "mabza-development");
 	assert.equal(project.legacy_instance_id, 1);
 });
 
@@ -558,7 +558,7 @@ test("the remote adapter uses Support v2 when legacy Messaging is decommissioned
 	let invokedArgs = [];
 	const adapter = new RemoteD1Adapter({
 		root: "/tmp",
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		commandRunner: (_command, args) => {
 			invokedArgs = args;
@@ -695,10 +695,10 @@ test("Products never owns Billing customers, purchases, subscriptions, refunds o
 	for (const entity of MODULE_CUTOVER_REGISTRY.filter(({ target }) =>
 		billingTables.has(target.table),
 	)) {
-		assert.equal(entity.pluginId, "supbrd-plugmod-billing", entity.id);
+		assert.equal(entity.pluginId, "superboard-billing", entity.id);
 	}
 	for (const entity of MODULE_CUTOVER_REGISTRY.filter(
-		({ pluginId }) => pluginId === "supbrd-plug-products",
+		({ pluginId }) => pluginId === "superboard-products",
 	)) {
 		assert.equal(billingTables.has(entity.target.table), false, entity.id);
 	}

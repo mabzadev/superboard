@@ -8,7 +8,7 @@ test("receipt renewal does not clear an unavailable active plugin", async () => 
 		"X-Parity-Operator": "1",
 	};
 	const enabled = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-user/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-user/enable",
 		{ method: "POST", headers },
 	);
 	expect(enabled.status, await enabled.clone().text()).toBe(201);
@@ -17,7 +17,7 @@ test("receipt renewal does not clear an unavailable active plugin", async () => 
 		 SET status = 'unavailable', expires_at = '2000-01-01T00:00:00.000Z'
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 	)
-		.bind("reference-production", "supbrd-plug-user")
+		.bind("reference-production", "superboard-user")
 		.run();
 
 	const identityDb = (env as unknown as { HEALTH_IDENTITY_DB: D1Database }).HEALTH_IDENTITY_DB;
@@ -26,7 +26,7 @@ test("receipt renewal does not clear an unavailable active plugin", async () => 
 		.run();
 
 	const rejected = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-settings/enable",
 		{ method: "POST", headers },
 	);
 	expect(rejected.status).toBe(500);
@@ -35,7 +35,7 @@ test("receipt renewal does not clear an unavailable active plugin", async () => 
 		`SELECT status FROM superboard_plugin_runtime_health
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 	)
-		.bind("reference-production", "supbrd-plug-user")
+		.bind("reference-production", "superboard-user")
 		.first();
 	expect(health).toMatchObject({ status: "unavailable" });
 });

@@ -49,7 +49,7 @@ const diagnostic: PluginDiagnosticData = {
 		{
 			service: "identity",
 			workerName: "identity",
-			physicalName: "mbza-dev-auth",
+			physicalName: "mabza-dev-auth",
 			deploymentGroup: "auth",
 			modules: ["identity"],
 			isShared: false,

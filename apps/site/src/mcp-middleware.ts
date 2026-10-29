@@ -1,9 +1,11 @@
 import type { MiddlewareHandler } from "astro";
 
-import { isMcpPath, proxyMcpRequest } from "./lib/mcp-proxy.js";
+import { isMcpPath, mcpProxyRoutes, proxyMcpRequest } from "./lib/mcp-proxy.js";
 import { parsePublicEndpoints } from "./lib/public-endpoints.js";
 import { getSiteEnv } from "./lib/site-env.js";
+import { registerSiteRouteSource } from "./lib/site-route-registry.js";
 
+registerSiteRouteSource("mcp-proxy", mcpProxyRoutes);
 export const onRequest: MiddlewareHandler = async (context, next) => {
 	if (!isMcpPath(context.url.pathname)) return next();
 	const env = getSiteEnv();

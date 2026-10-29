@@ -34,7 +34,7 @@ describe("SuperBoard plugin lifecycle", () => {
 			target: "local" as const,
 			approved_by: "operator-1",
 			target_artifact_checksum: `sha256:${"7".repeat(64)}`,
-			target_plugin_ids: ["supbrd-plug-user"],
+			target_plugin_ids: ["superboard-user"],
 			checked_at: "2026-09-05T08:00:00.000Z",
 			expires_at: "2999-09-05T08:00:00.000Z",
 		};
@@ -51,7 +51,7 @@ describe("SuperBoard plugin lifecycle", () => {
 			oldLock,
 			oldTarget.checked_at,
 		);
-		const addedPluginIds = ["supbrd-plugmod-paywalls", "supbrd-plugmod-onboardings"];
+		const addedPluginIds = ["superboard-paywalls", "superboard-onboardings"];
 		const expandedTarget = {
 			...oldTarget,
 			target_artifact_checksum: `sha256:${"8".repeat(64)}`,
@@ -59,7 +59,7 @@ describe("SuperBoard plugin lifecycle", () => {
 			checked_at: "2026-09-05T08:10:00.000Z",
 		};
 		expect(await loadActiveSuperBoardPluginIdsRequiringValidation(env.DB, expandedTarget)).toEqual([
-			"supbrd-plug-user",
+			"superboard-user",
 		]);
 		await installSuperBoardPluginCatalog(env.DB, {
 			...expandedTarget,
@@ -67,13 +67,13 @@ describe("SuperBoard plugin lifecycle", () => {
 		});
 		const lock = await loadSelectedSuperBoardPluginLock(env.DB, expandedTarget, addedPluginIds);
 		expect(lock.map(({ plugin_id }) => plugin_id).toSorted()).toEqual([
-			"supbrd-plug-user",
-			"supbrd-plugmod-onboardings",
-			"supbrd-plugmod-paywalls",
+			"superboard-user",
+			"superboard-onboardings",
+			"superboard-paywalls",
 		]);
 		const active = await env.DB.prepare(
 			`SELECT state, activated_release_id FROM superboard_plugin_lifecycle
-			 WHERE instance_id = ? AND target = 'local' AND plugin_id = 'supbrd-plug-user'`,
+			 WHERE instance_id = ? AND target = 'local' AND plugin_id = 'superboard-user'`,
 		)
 			.bind(oldTarget.instance_id)
 			.first();
@@ -110,7 +110,7 @@ describe("SuperBoard plugin lifecycle", () => {
 		expect(plan.plugins).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({
-					plugin_id: "supbrd-plugmod-analytics",
+					plugin_id: "superboard-analytics",
 					state: "installed",
 					derived: expect.objectContaining({
 						stores: expect.any(Array),
@@ -182,14 +182,14 @@ describe("SuperBoard plugin lifecycle", () => {
 		);
 		await transitionSuperBoardPluginLifecycle(env.DB, {
 			...scope,
-			plugin_id: "supbrd-plugmod-marketing",
+			plugin_id: "superboard-marketing",
 			to_state: "draining",
 			changed_at: "2026-09-02T09:10:00.000Z",
 			reason: "operator disable",
 		});
 		await transitionSuperBoardPluginLifecycle(env.DB, {
 			...scope,
-			plugin_id: "supbrd-plugmod-analytics",
+			plugin_id: "superboard-analytics",
 			to_state: "quarantined",
 			changed_at: "2026-09-02T09:12:00.000Z",
 			reason: "integrity violation",
@@ -236,7 +236,7 @@ describe("SuperBoard plugin lifecycle", () => {
 		await env.DB.prepare(
 			`UPDATE superboard_plugin_installation_items
 			 SET derived_contract_json = json_set(derived_contract_json, '$.settings_checksum', ?)
-			 WHERE plan_id = ? AND plugin_id = 'supbrd-plug-user'`,
+			 WHERE plan_id = ? AND plugin_id = 'superboard-user'`,
 		)
 			.bind(`sha256:${"f".repeat(64)}`, plan.plan_id)
 			.run();
@@ -257,7 +257,7 @@ describe("SuperBoard plugin lifecycle", () => {
 				plugin_lock: tamperedLock,
 				prepared_at: "2026-09-02T10:05:00.000Z",
 			}),
-		).rejects.toThrow("PLUGIN_INSTALLATION_PLAN_CONTRACT_INVALID:supbrd-plug-user");
+		).rejects.toThrow("PLUGIN_INSTALLATION_PLAN_CONTRACT_INVALID:superboard-user");
 	});
 
 	test("cannot activate plugins before the corresponding Front Release is active", async () => {
@@ -346,7 +346,7 @@ describe("SuperBoard plugin lifecycle", () => {
 		});
 		await transitionSuperBoardPluginLifecycle(env.DB, {
 			...staleScope,
-			plugin_id: "supbrd-plug-user",
+			plugin_id: "superboard-user",
 			to_state: "quarantined",
 			changed_at: "2026-09-02T12:01:00.000Z",
 			reason: "integrity changed after preparation",
@@ -359,7 +359,7 @@ describe("SuperBoard plugin lifecycle", () => {
 	test("keeps plugins outside the compiled target available but not releasable", async () => {
 		const targetPluginIds = targetProof.target_plugin_ids.filter(
 			(pluginId) =>
-				pluginId !== "supbrd-plugmod-paywalls" && pluginId !== "supbrd-plugmod-onboardings",
+				pluginId !== "superboard-paywalls" && pluginId !== "superboard-onboardings",
 		);
 		const targetScope = {
 			instance_id: "feature-scoped-instance",

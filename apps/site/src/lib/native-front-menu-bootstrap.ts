@@ -52,6 +52,11 @@ export async function ensureNativeFrontMenus(
 			});
 		if (locale === "en") sourceId = menu.id;
 		const items = await repository.findItems(menu.id);
+		if (
+			menu.label !== pendingLabel &&
+			JSON.stringify(storedItems(items)) === JSON.stringify(seedItems(definition.items))
+		)
+			continue;
 		const untouchedLegacy =
 			locale === "en" &&
 			menu.label === legacyMenu.label &&
@@ -421,25 +426,67 @@ export async function ensureNativeFrontMenus(
 					});
 				}
 			}
-			const authenticationSettings = items.find((item) =>
-				item.customUrl?.startsWith("/auth/settings?"),
-			);
-			const authenticationActivity = items.find(
+			const authentication = items.find(
 				(item) =>
-					item.customUrl?.startsWith("/auth/logs?") &&
-					item.parentId === authenticationSettings?.parentId,
+					item.parentId === null &&
+					item.customUrl === "/auth/users" &&
+					(item.cssClasses === "sb-icon-users" ||
+						["Authentification", "Authentication"].includes(item.label)),
 			);
-			if (
-				authenticationSettings &&
-				authenticationActivity &&
-				authenticationSettings.sortOrder < authenticationActivity.sortOrder
-			) {
-				await repository.updateItem(menu.id, authenticationSettings.id, {
-					sortOrder: authenticationActivity.sortOrder,
-				});
-				await repository.updateItem(menu.id, authenticationActivity.id, {
-					sortOrder: authenticationSettings.sortOrder,
-				});
+			if (authentication) {
+				const descendants = new Set<string>();
+				const collect = (parent: string) => {
+					for (const item of items.filter((entry) => entry.parentId === parent)) {
+						descendants.add(item.id);
+						collect(item.id);
+					}
+				};
+				collect(authentication.id);
+				const retained = new Set<string>();
+				const definitions = [
+					["/auth/users", locale === "fr" ? "Utilisateurs" : "Users"],
+					[`/auth/settings?lang=${locale}`, locale === "fr" ? "Paramètres" : "Settings"],
+				] as const;
+				for (const [sortOrder, [customUrl, label]] of definitions.entries()) {
+					const existing = items.find(
+						(item) =>
+							descendants.has(item.id) &&
+							item.customUrl === customUrl &&
+							item.parentId === authentication.id,
+					);
+					if (existing) {
+						retained.add(existing.id);
+						if (existing.label !== label || existing.sortOrder !== sortOrder)
+							await repository.updateItem(menu.id, existing.id, { label, sortOrder });
+					} else {
+						const created = await repository.createItem(menu.id, locale, {
+							type: "custom",
+							customUrl,
+							label,
+							parentId: authentication.id,
+							sortOrder,
+						});
+						retained.add(created.id);
+					}
+				}
+				const obsolete = items.filter(
+					(item) =>
+						descendants.has(item.id) &&
+						!retained.has(item.id) &&
+						item.customUrl?.startsWith("/auth/"),
+				);
+				for (const item of items) {
+					if (
+						item.parentId &&
+						obsolete.some((entry) => entry.id === item.parentId) &&
+						!obsolete.includes(item)
+					)
+						await repository.updateItem(menu.id, item.id, { parentId: authentication.id });
+				}
+				for (const item of obsolete.toReversed()) await repository.deleteItem(menu.id, item.id);
+				const label = locale === "fr" ? "Authentification" : "Authentication";
+				if (authentication.label !== label)
+					await repository.updateItem(menu.id, authentication.id, { label });
 			}
 			const supportSettings = items.find((item) => item.customUrl === "/support/settings");
 			if (

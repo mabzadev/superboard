@@ -10,7 +10,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-onboardings";
+const plugin = "superboard-onboardings";
 const file = "retirement-api-onboardings.runtime.test.ts";
 test("canonical Onboardings APIs publish a version, target an experiment, measure completion and preserve CRUD effects", async () => {
 	const scope = await prepareApiPlugin(plugin);

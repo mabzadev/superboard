@@ -73,7 +73,7 @@ function statusResponse(response: BrowserResponse) {
 	return (
 		response.request().method() === "GET" &&
 		(pathname === "/api/v1/platform/status" ||
-			pathname.endsWith("/supbrd-plugmod-observability.data_source.platform_status"))
+			pathname.endsWith("/superboard-observability.data_source.platform_status"))
 	);
 }
 async function assertVisibleStatus(page: Page, value: Infrastructure) {
@@ -185,7 +185,7 @@ test("Infrastructure displays real health, target endpoints and metrics then ref
 		}),
 	});
 	await evidence(
-		"supbrd-plugmod-observability",
+		"superboard-observability",
 		"superboard.infrastructure",
 		[current.deployment.target, ...current.dataStores.map((store) => store.id)],
 		`Compared rendered health badges, project count, explicit unavailable historical metrics, configured endpoint links and a real D1 schema with canonical Worker responses, then clicked Refresh and verified a newer response. Non-healthy or disabled services remained explicit: ${JSON.stringify(unavailable)}. External Custom status: ${current.custom.status}.`,

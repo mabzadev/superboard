@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { test, expect } from "../../../fixtures/site-browser/base-fixtures.js";
 import { evidence, projectRef, ready, siteApi } from "../../../fixtures/site-browser/site-api.js";
 
-const plugin = "supbrd-plug-user";
+const plugin = "superboard-user";
 const usersUrl = /\/identity\/fr\/users\/?$/;
 const logsUrl = /\/identity\/fr\/logs\/?$/;
 type IdentityFixture = {

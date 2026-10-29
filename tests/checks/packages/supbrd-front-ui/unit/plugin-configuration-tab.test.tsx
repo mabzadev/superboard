@@ -85,14 +85,14 @@ describe("PluginConfigurationTab", () => {
 			});
 		});
 		const context: FrontContextValue = {
-			pluginId: "supbrd-plugmod-flows",
+			pluginId: "superboard-flows",
 			path: "/acquisition/settings",
 			locale: "en",
 			parameters: {},
 			instanceId: "local",
 			operator: null,
 			projectScope: null,
-			activePluginIds: ["supbrd-plugmod-flows", "supbrd-plugmod-analytics"],
+			activePluginIds: ["superboard-flows", "superboard-analytics"],
 		};
 		const view = render(
 			<FrontContextProvider value={context}>
@@ -102,7 +102,7 @@ describe("PluginConfigurationTab", () => {
 		expect(await screen.findByText("superboard-acquisition")).toBeInTheDocument();
 		view.rerender(
 			<FrontContextProvider
-				value={{ ...context, pluginId: "supbrd-plugmod-analytics", path: "/analytics/settings" }}
+				value={{ ...context, pluginId: "superboard-analytics", path: "/analytics/settings" }}
 			>
 				<PluginConfigurationTab />
 			</FrontContextProvider>,
@@ -162,6 +162,7 @@ describe("PluginConfigurationTab", () => {
 		globalThis.fetch = vi.fn().mockResolvedValue({
 			ok: true,
 			status: 200,
+			headers: new Headers(),
 			json: async () => mockDiagnosticData,
 		});
 
@@ -206,7 +207,7 @@ describe("PluginConfigurationTab", () => {
 				Promise.resolve(Response.json({ error: { code: "PLUGIN_NOT_ACTIVE" } }, { status: 404 })),
 			);
 
-		render(<PluginConfigurationTab pluginId="supbrd-plugmod-paywalls" locale="en" />);
+		render(<PluginConfigurationTab pluginId="superboard-paywalls" locale="en" />);
 
 		await waitFor(() => {
 			expect(screen.getByText("Plugin Disabled")).toBeInTheDocument();
@@ -220,6 +221,7 @@ describe("PluginConfigurationTab", () => {
 		globalThis.fetch = vi.fn().mockResolvedValue({
 			ok: true,
 			status: 200,
+			headers: new Headers(),
 			json: async () => mockDiagnosticData,
 		});
 
@@ -254,12 +256,14 @@ describe("PluginConfigurationTab", () => {
 		fetchMock.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
+			headers: new Headers(),
 			json: async () => mockDiagnosticData,
 		});
 		// Second fetch: health POST
 		fetchMock.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
+			headers: new Headers(),
 			json: async () => ({
 				status: "ready",
 				checkedAt: "2026-09-01T12:10:00.000Z",
@@ -270,6 +274,7 @@ describe("PluginConfigurationTab", () => {
 		fetchMock.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
+			headers: new Headers(),
 			json: async () => ({
 				...mockDiagnosticData,
 				health: {

@@ -18,19 +18,19 @@ const discoveredModules = import.meta.glob<{ nativeFrontPlugin: NativeFrontPlugi
 const plugins = new Map<string, NativeFrontPluginModule>();
 const compatibleLegacyBuilds = new Map<string, Set<string>>([
 	[
-		"supbrd-plug-user.renderer.admin_surface",
+		"superboard-user.renderer.admin_surface",
 		new Set(["sha256:d7b1bda9489908a0fc50539a8a305d0c18e8c54f92fac05980ec30af32f28ba2"]),
 	],
 	[
-		"supbrd-plug-user.renderer.login_form",
+		"superboard-user.renderer.login_form",
 		new Set(["sha256:fb7093abcf297a8b10024c579ec6faeb0336a91e3551e0c397a670ead659d9d9"]),
 	],
 	[
-		"supbrd-plug-user.renderer.members_table",
+		"superboard-user.renderer.members_table",
 		new Set(["sha256:83e314240c11dfd0118ed0a0d2496e1589513f2c18b199e65e6e791ea430d0cb"]),
 	],
 	[
-		"supbrd-plug-user.renderer.profile_card",
+		"superboard-user.renderer.profile_card",
 		new Set(["sha256:a6ca9335d1dc37ecaabddcce6f5c6add578ec1bdd2b5b637e44b97606825d86d"]),
 	],
 ]);

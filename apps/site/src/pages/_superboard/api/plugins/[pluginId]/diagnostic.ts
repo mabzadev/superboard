@@ -6,6 +6,7 @@ import {
 	PluginDisabledError,
 	PluginNotFoundError,
 	resolvePluginDiagnostic,
+	pluginDiagnosticEtag,
 } from "../../../../../lib/plugin-diagnostic.js";
 import { getSiteEnv } from "../../../../../lib/site-env.js";
 
@@ -19,9 +20,19 @@ export const GET: APIRoute = async (context) => {
 		const diagnostic = await resolvePluginDiagnostic(env, pluginId, context.locals.user, {
 			includeDisabled: context.url.searchParams.get("include_disabled") === "1",
 		});
-		return jsonResponse(
-			context.url.searchParams.get("envelope") === "1" ? { data: diagnostic } : diagnostic,
-		);
+		const representation =
+			context.url.searchParams.get("envelope") === "1" ? { data: diagnostic } : diagnostic;
+		const etag = await pluginDiagnosticEtag(diagnostic, context.url.searchParams.get("envelope"));
+		const headers = {
+			ETag: etag,
+			"Cache-Control": "private, no-cache",
+			"X-SuperBoard-Observed-At": new Date().toISOString(),
+		};
+		if (context.request.headers.get("if-none-match") === etag)
+			return new Response(null, { status: 304, headers });
+		const response = jsonResponse(representation);
+		for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
+		return response;
 	} catch (error) {
 		if (error instanceof DiagnosticAuthorizationError) {
 			return jsonResponse({ error: { code: error.code } }, error.status);

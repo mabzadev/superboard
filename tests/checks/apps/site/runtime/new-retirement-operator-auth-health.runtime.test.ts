@@ -19,7 +19,7 @@ const routes = [
 
 test("core operator aliases remain usable after their plugin Worker receipt expires", async () => {
 	const enabled = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-user/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-user/enable",
 		{ method: "POST", headers },
 	);
 	expect(enabled.ok).toBe(true);
@@ -53,7 +53,7 @@ test("core operator aliases remain usable after their plugin Worker receipt expi
 			.first(),
 	).toEqual({ expires_at: "2000-01-01T00:00:00.000Z" });
 	const disabled = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-user/disable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-user/disable",
 		{ method: "POST", headers },
 	);
 	expect(disabled.ok).toBe(true);

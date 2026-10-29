@@ -43,6 +43,37 @@ const prefixes = [
 ] as const;
 const identityPath = /^\/identity\/(?:[a-z]{2}(?:-[A-Za-z]+)?|:lang)(\/.*)?$/u;
 
+const authenticationTabs: Readonly<Record<string, readonly [string, string, string?]>> = {
+	"/auth": ["users", "accounts"],
+	"/auth/customers": ["users", "profiles"],
+	"/auth/referrals": ["users", "referrals"],
+	"/auth/directory/users": ["users", "accounts", "directory"],
+	"/auth/apps": ["settings", "apps"],
+	"/auth/roles": ["settings", "roles"],
+	"/auth/scopes": ["settings", "permissions"],
+	"/auth/orgs": ["settings", "organizations"],
+	"/auth/user-attributes": ["settings", "fields"],
+	"/auth/logs": ["settings", "logs"],
+	"/auth/saml": ["settings", "login", "sso"],
+	"/auth/account-policies": ["settings", "security", "policies"],
+	"/auth/access-key": ["settings", "security", "keys"],
+};
+
+const authenticationEditors: Readonly<Record<string, readonly [string, string, string, string?]>> =
+	{
+		"/auth/apps": ["settings", "apps", "apps"],
+		"/auth/apps/banners": ["settings", "apps", "banners"],
+		"/auth/roles": ["settings", "roles", "roles"],
+		"/auth/scopes": ["settings", "permissions", "scopes"],
+		"/auth/orgs": ["settings", "organizations", "orgs"],
+		"/auth/user-attributes": ["settings", "fields", "fields"],
+		"/auth/saml": ["settings", "login", "saml", "sso"],
+		"/auth/directory/users": ["users", "accounts", "users", "directory"],
+		"/auth/logs/email": ["settings", "logs", "email"],
+		"/auth/logs/sms": ["settings", "logs", "sms"],
+		"/auth/logs/sign-in": ["settings", "logs", "sign-in"],
+	};
+
 export function canonicalFrontPath(path: string): string {
 	const exact = exactPaths[path];
 	if (exact) return exact;
@@ -64,9 +95,46 @@ export function canonicalFrontHref(href: string): string {
 	if (!href.startsWith("/") || href.startsWith("//")) return href;
 	const url = new URL(href, "https://superboard.invalid");
 	const canonical = canonicalFrontPath(url.pathname.replace(/\/$/u, "") || "/");
-	if (canonical === url.pathname) return href;
+	const authentication = authenticationTabs[canonical];
+	const editor = authenticationEditors[canonical.slice(0, canonical.lastIndexOf("/"))];
+	const account = canonical === "/auth/account" || canonical === "/auth/profile";
+	const duplicateRegistration = canonical === "/auth/register/with-email";
+	if (
+		canonical === url.pathname &&
+		!authentication &&
+		!editor &&
+		!account &&
+		!duplicateRegistration
+	)
+		return href;
 	const language = /^\/identity\/([a-z]{2}(?:-[A-Za-z]+)?)(?:\/|$)/u.exec(url.pathname)?.[1];
 	url.pathname = canonical;
+	if (authentication) {
+		url.pathname = `/auth/${authentication[0]}`;
+		url.searchParams.set("tab", authentication[1]);
+		if (authentication[2]) url.searchParams.set("section", authentication[2]);
+	}
+	if (editor) {
+		url.pathname = `/auth/${editor[0]}`;
+		url.searchParams.set("tab", editor[1]);
+		url.searchParams.set("editor", editor[2]);
+		try {
+			url.searchParams.set(
+				"id",
+				decodeURIComponent(canonical.slice(canonical.lastIndexOf("/") + 1)),
+			);
+		} catch {
+			return href;
+		}
+		if (editor[3]) url.searchParams.set("section", editor[3]);
+	}
+	if (account) {
+		url.pathname = "/auth/settings";
+		url.searchParams.set("tab", "security");
+		url.searchParams.set("editor", canonical === "/auth/account" ? "account" : "profile");
+		url.searchParams.delete("id");
+	}
+	if (duplicateRegistration) url.pathname = "/auth/register";
 	if (language && !url.searchParams.has("lang")) url.searchParams.set("lang", language);
 	return `${url.pathname}${url.search}${url.hash}`;
 }

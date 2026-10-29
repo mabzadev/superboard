@@ -11,7 +11,7 @@ test("a published renderer remains usable after the navigation upgrade while unk
 	);
 	const row = [
 		...migration.matchAll(
-			/VALUES \('(sha256:[a-f0-9]{64})', 'supbrd-plugmod-analytics', '((?:[^']|'')*)', '[^']+'\)/gu,
+			/VALUES \('(sha256:[a-f0-9]{64})', 'superboard-analytics', '((?:[^']|'')*)', '[^']+'\)/gu,
 		),
 	][0];
 	if (!row) throw new Error("Published Analytics manifest is missing");
@@ -25,7 +25,7 @@ test("a published renderer remains usable after the navigation upgrade while unk
 			native: false,
 		},
 	];
-	expect(assertNativeFrontRenderer(renderer, lock).plugin_id).toBe("supbrd-plugmod-analytics");
+	expect(assertNativeFrontRenderer(renderer, lock).plugin_id).toBe("superboard-analytics");
 	expect(() =>
 		assertNativeFrontRenderer({ ...renderer, build_checksum: `sha256:${"0".repeat(64)}` }, lock),
 	).toThrow("Native renderer build is unavailable");

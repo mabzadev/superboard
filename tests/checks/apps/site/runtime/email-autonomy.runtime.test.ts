@@ -459,7 +459,7 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		),
 	});
 	await env.DB.prepare(
-		"UPDATE superboard_plugin_lifecycle SET state='active' WHERE instance_id=? AND plugin_id='supbrd-plugmod-email'",
+		"UPDATE superboard_plugin_lifecycle SET state='active' WHERE instance_id=? AND plugin_id='superboard-email'",
 	)
 		.bind(instanceId)
 		.run();
@@ -478,7 +478,7 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: env.SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY,
 		API_SERVICE: { fetch: (forwarded: Request) => api.fetch(forwarded, apiEnv) },
 	};
-	const pluginId = "supbrd-plugmod-email";
+	const pluginId = "superboard-email";
 	const body = {
 		method: "POST",
 		path: "/api/v1/email/projects/42-prod/transactional",

@@ -131,7 +131,9 @@ function pluginSelection(value: unknown): string[] | undefined | null {
 		value.length > 100 ||
 		value.some(
 			(pluginId) =>
-				typeof pluginId !== "string" || !pluginId.startsWith("supbrd-") || pluginId.includes("*"),
+				typeof pluginId !== "string" ||
+				(!pluginId.startsWith("supbrd-") && !pluginId.startsWith("superboard-")) ||
+				pluginId.includes("*"),
 		) ||
 		new Set(value).size !== value.length
 	) {

@@ -40,7 +40,7 @@ test("Remote Config selects its real Dashboard renderer without freezing plugin 
 	expect(remoteConfig?.data.description).toBe(
 		"Publish versioned JSON values with deterministic rollouts for the selected environment.",
 	);
-	expect(remoteConfig?.data.renderer_id).toBe("supbrd-plugmod-analytics.renderer.admin_surface");
+	expect(remoteConfig?.data.renderer_id).toBe("superboard-analytics.renderer.admin_surface");
 	expect(remoteConfig?.data.presentation.blocks).toEqual([]);
 });
 

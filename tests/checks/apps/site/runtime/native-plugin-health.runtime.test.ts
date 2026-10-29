@@ -14,7 +14,7 @@ test("a missing identity binding retains the successful app Worker observation",
 				fetch: async () => Response.json({ status: "ready", schema: { status: "current" } }),
 			},
 		} as never,
-		"supbrd-plug-user",
+		"superboard-user",
 	);
 	expect(response.status).toBe(503);
 	const report = await response.json<{
@@ -47,7 +47,7 @@ test("a failed Worker does not erase other observations or expose its response b
 				fetch: async () => Response.json({ status: "ready", schema: { status: "current" } }),
 			},
 		} as never,
-		"supbrd-plug-user",
+		"superboard-user",
 	);
 	expect(response.status).toBe(503);
 	const text = await response.text();
@@ -61,7 +61,7 @@ test("a failed Worker does not erase other observations or expose its response b
 	);
 });
 
-test.each(["supbrd-plug-user", "supbrd-plug-products", "supbrd-plug-settings"])(
+test.each(["superboard-user", "superboard-products", "superboard-settings"])(
 	"%s cannot activate when its required Worker binding is missing",
 	async (pluginId) => {
 		const values = env as unknown as { HEALTH_API_DB: D1Database; HEALTH_MIGRATIONS_JSON: string };
@@ -83,7 +83,7 @@ test.each(["supbrd-plug-user", "supbrd-plug-products", "supbrd-plug-settings"])(
 
 test("an expired activation receipt rechecks the Worker before rendering the active plugin", async () => {
 	const enabled = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plugmod-paywalls/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-paywalls/enable",
 		{
 			method: "POST",
 			headers: {

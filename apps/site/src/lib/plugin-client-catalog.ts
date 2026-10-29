@@ -10,7 +10,7 @@ interface PluginClientModule {
 }
 
 const legacyRouteSuffix = /_legacy$/u;
-const componentPrefix = /^supbrd-(?:plug|plugmod)-/u;
+const componentPrefix = /^(?:supbrd-(?:plug|plugmod)|superboard)-/u;
 const modules = import.meta.glob<PluginClientModule>([
 	"../../../../packages/plugins/superboard-*/src/front/index.ts",
 	"../../../../packages/plugins/superboard-*/src/front/*/index.ts",

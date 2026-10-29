@@ -38,7 +38,7 @@ void test("Worker health proofs complete before the Site Instance consumes their
 		assert.ok(proofIndex >= 0 && proofIndex < siteIndex, proof);
 	}
 	assert.equal(
-		matrix.rows.find(({ id }) => id === "release:worker-health:supbrd-plugmod-billing")?.test,
+		matrix.rows.find(({ id }) => id === "release:worker-health:superboard-billing")?.test,
 		"tests/checks/plugins/superboard-monetization/billing/runtime/billing-authority.runtime.test.ts",
 	);
 });

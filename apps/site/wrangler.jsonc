@@ -2,6 +2,9 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "superboard-site-local",
   "main": "./src/worker.ts",
+  "version_metadata": {
+    "binding": "SUPERBOARD_WORKER_VERSION"
+  },
   "compatibility_date": "2026-08-08",
   "compatibility_flags": [
     "nodejs_compat"
@@ -57,7 +60,7 @@
         "mabzadev@gmail.com"
       ],
       "allowed_sender_addresses": [
-        "noreply@mbza.dev"
+        "noreply@mabza.dev"
       ]
     }
   ],
@@ -70,15 +73,16 @@
     ]
   },
   "vars": {
-    "SUPERBOARD_INSTANCE_ID": "mbza-development",
+    "SUPERBOARD_INSTANCE_ID": "mabza-development",
+    "SUPERBOARD_CONSOLE_ENVIRONMENTS_JSON": "[{\"id\":\"mabza-development.development\",\"application\":\"mabza-development\",\"label\":\"development\",\"environment\":\"development\",\"apiUrl\":\"https://sdk.mabza.dev\",\"consoleUrl\":\"https://board.mabza.dev\"},{\"id\":\"mabza-development.local\",\"application\":\"mabza-development\",\"label\":\"local\",\"environment\":\"local\",\"apiUrl\":\"https://api.mabza.dev\",\"consoleUrl\":\"https://board.mabza.dev\"}]",
     "SUPERBOARD_PLUGIN_LIFECYCLE": "required",
     "SUPERBOARD_ENVIRONMENT": "local",
-    "SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON": "{\"schemaVersion\":1,\"target\":\"mbza-development\",\"environment\":\"local\",\"profile\":\"consolidated\",\"source\":\"infra/targets/mbza-development.json\",\"publicRouting\":\"staged\",\"endpoints\":[{\"surface\":\"console\",\"url\":\"https://board.mbza.dev\",\"worker\":\"console\",\"clients\":[\"operator\"]},{\"surface\":\"custom-api\",\"url\":\"https://api.mbza.dev\",\"worker\":\"api → custom\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"auth\",\"url\":\"https://auth.mbza.dev\",\"worker\":\"api → auth\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"files\",\"url\":\"https://files.mbza.dev\",\"worker\":\"api → files\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"links\",\"url\":\"https://in.mbza.dev\",\"worker\":\"api\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"sdk\",\"url\":\"https://sdk.mbza.dev\",\"worker\":\"api\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"mcp\",\"url\":\"https://board.mbza.dev/mcp\",\"worker\":\"console → api (MCP)\",\"clients\":[\"assistant\"]}],\"workers\":[{\"id\":\"console\",\"name\":\"superboard-site-local\",\"modules\":[\"site\"]},{\"id\":\"api\",\"name\":\"superboard-api-local\",\"modules\":[\"api\",\"app\",\"products\",\"paywalls\",\"onboardings\",\"dynamic-links\",\"mcp\"]},{\"id\":\"auth\",\"name\":\"superboard-identity-local\",\"modules\":[\"identity\"]},{\"id\":\"files\",\"name\":\"superboard-files-local\",\"modules\":[\"files\"]},{\"id\":\"payments\",\"name\":\"superboard-billing-local\",\"modules\":[\"billing\"]},{\"id\":\"communications\",\"name\":\"superboard-email-local\",\"modules\":[\"email\",\"marketing\"]},{\"id\":\"automations\",\"name\":\"superboard-flows-local\",\"modules\":[\"flows\"]},{\"id\":\"support\",\"name\":\"superboard-support-local\",\"modules\":[\"support\"]},{\"id\":\"analytics\",\"name\":\"superboard-analytics-local\",\"modules\":[\"analytics\"]},{\"id\":\"monitoring\",\"name\":\"superboard-observability-local\",\"modules\":[\"observability\"]},{\"id\":\"custom\",\"name\":\"superboard-custom-reference-local\",\"modules\":[\"custom\"]}],\"aliases\":[{\"surface\":\"console\",\"hostname\":\"site.mbza.dev\"},{\"surface\":\"mcp\",\"hostname\":\"mcp.mbza.dev\"},{\"surface\":\"mailPreview\",\"hostname\":\"mail.mbza.dev\"}],\"webOrigins\":[\"https://board.mbza.dev\",\"https://auth.mbza.dev\",\"https://reference.mbza.dev\",\"https://site.mbza.dev\"],\"customCapabilities\":[\"reference.echo\",\"reference.acceptance\"],\"authIssuer\":\"https://auth.mbza.dev\",\"checksum\":\"sha256:1b357665e894a3283d89d21fe88776700f9315cb8a4fa32af2295f56ca749179\"}",
-    "SUPERBOARD_PUBLIC_ENDPOINTS_JSON": "{\"api\":\"https://api.mbza.dev\",\"auth\":\"https://auth.mbza.dev\",\"shortlinks\":\"https://in.mbza.dev\",\"sdk\":\"https://sdk.mbza.dev\",\"files\":\"https://files.mbza.dev\",\"site\":\"https://board.mbza.dev\",\"mcp\":\"https://board.mbza.dev/mcp\"}",
-    "SUPERBOARD_PLUGIN_IDS": "[\"supbrd-plug-audit\",\"supbrd-plug-content\",\"supbrd-plug-products\",\"supbrd-plug-settings\",\"supbrd-plug-user\",\"supbrd-plugmod-analytics\",\"supbrd-plugmod-billing\",\"supbrd-plugmod-dynamic-links\",\"supbrd-plugmod-email\",\"supbrd-plugmod-files\",\"supbrd-plugmod-flows\",\"supbrd-plugmod-gateway\",\"supbrd-plugmod-marketing\",\"supbrd-plugmod-mcp\",\"supbrd-plugmod-observability\",\"supbrd-plugmod-onboardings\",\"supbrd-plugmod-paywalls\",\"supbrd-plugmod-support\"]",
+    "SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON": "{\"schemaVersion\":1,\"target\":\"mabza-development\",\"environment\":\"local\",\"profile\":\"consolidated\",\"source\":\"infra/targets/mabza-development.json\",\"publicRouting\":\"staged\",\"endpoints\":[{\"surface\":\"console\",\"url\":\"https://board.mabza.dev\",\"worker\":\"console\",\"clients\":[\"operator\"]},{\"surface\":\"custom-api\",\"url\":\"https://api.mabza.dev\",\"worker\":\"api → custom\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"auth\",\"url\":\"https://sdk.mabza.dev/v1/auth\",\"worker\":\"api → auth\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"files\",\"url\":\"https://sdk.mabza.dev/v1/data/files\",\"worker\":\"api → files\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"links\",\"url\":\"https://in.mabza.dev\",\"worker\":\"api\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"sdk\",\"url\":\"https://sdk.mabza.dev\",\"worker\":\"api\",\"clients\":[\"mobile\",\"web\"]},{\"surface\":\"mcp\",\"url\":\"https://board.mabza.dev/mcp\",\"worker\":\"console → api (MCP)\",\"clients\":[\"assistant\"]}],\"workers\":[{\"id\":\"console\",\"name\":\"superboard-site-local\",\"modules\":[\"site\"]},{\"id\":\"api\",\"name\":\"superboard-api-local\",\"modules\":[\"api\",\"app\",\"products\",\"paywalls\",\"onboardings\",\"dynamic-links\",\"mcp\"]},{\"id\":\"auth\",\"name\":\"superboard-identity-local\",\"modules\":[\"identity\"]},{\"id\":\"files\",\"name\":\"superboard-files-local\",\"modules\":[\"files\"]},{\"id\":\"payments\",\"name\":\"superboard-billing-local\",\"modules\":[\"billing\"]},{\"id\":\"communications\",\"name\":\"superboard-email-local\",\"modules\":[\"email\",\"marketing\"]},{\"id\":\"automations\",\"name\":\"superboard-flows-local\",\"modules\":[\"flows\"]},{\"id\":\"support\",\"name\":\"superboard-support-local\",\"modules\":[\"support\"]},{\"id\":\"analytics\",\"name\":\"superboard-analytics-local\",\"modules\":[\"analytics\"]},{\"id\":\"monitoring\",\"name\":\"superboard-observability-local\",\"modules\":[\"observability\"]},{\"id\":\"custom\",\"name\":\"superboard-custom-reference-local\",\"modules\":[\"custom\"]}],\"aliases\":[],\"webOrigins\":[\"https://board.mabza.dev\",\"https://sdk.mabza.dev\",\"https://reference.mabza.dev\"],\"customCapabilities\":[\"reference.echo\",\"reference.acceptance\"],\"authIssuer\":\"https://sdk.mabza.dev/v1/auth\",\"checksum\":\"sha256:30c7d7f94e0f9b1c5f099cdf02053c30bd9e123c75b8eddebc407fef974f1de0\"}",
+    "SUPERBOARD_PUBLIC_ENDPOINTS_JSON": "{\"api\":\"https://api.mabza.dev\",\"shortlinks\":\"https://in.mabza.dev\",\"sdk\":\"https://sdk.mabza.dev\",\"site\":\"https://board.mabza.dev\",\"mcp\":\"https://board.mabza.dev/mcp\"}",
+    "SUPERBOARD_PLUGIN_IDS": "[\"superboard-analytics\",\"superboard-audit\",\"superboard-billing\",\"superboard-content\",\"superboard-dynamic-links\",\"superboard-email\",\"superboard-files\",\"superboard-flows\",\"superboard-gateway\",\"superboard-marketing\",\"superboard-mcp\",\"superboard-observability\",\"superboard-onboardings\",\"superboard-paywalls\",\"superboard-products\",\"superboard-settings\",\"superboard-support\",\"superboard-user\"]",
     "SUPERBOARD_RELEASE_OPERATIONS": "enabled",
-    "D1_EXPECTED_MIGRATION": "0053_user_members_renderer_retirement.sql",
-    "TARGET_ARTIFACT_CHECKSUM": "sha256:b65e8196b12fda878dc11f5d6280bc1a274d580896a17f6400d3fdad01811da9"
+    "D1_EXPECTED_MIGRATION": "0057_authentication_editors.sql",
+    "TARGET_ARTIFACT_CHECKSUM": "sha256:702f59bd682a98293887b54b76e099a82f056d106a5104d7816ede6a80413d12"
   },
   "triggers": {
     "crons": [

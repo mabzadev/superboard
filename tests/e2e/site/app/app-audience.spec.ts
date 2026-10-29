@@ -8,7 +8,7 @@ import {
 	siteApi,
 	unique,
 } from "../../../fixtures/site-browser/site-api.js";
-const plugin = "supbrd-plug-user";
+const plugin = "superboard-user";
 
 for (const [path, route] of [["/app/users", "superboard.users"]] as const) {
 	test(`Application audience ${path} searches and saves a native profile`, async ({

@@ -1,34 +1,35 @@
-import type { APIContext, APIRoute } from "astro";
-import * as document from "emdash/routes/api/content/_collection_/_id_";
-import * as publish from "emdash/routes/api/content/_collection_/_id_/publish";
-import * as revisions from "emdash/routes/api/content/_collection_/_id_/revisions";
-import * as documents from "emdash/routes/api/content/_collection_/index";
-import * as taxonomies from "emdash/routes/api/taxonomies/index";
+import { selectRouteReference } from "@superboard/contracts/route-reference";
+import { matchRouteParameters, resolveManifestRoute } from "@superboard/contracts/route-registry";
+import type { APIContext } from "astro";
 
-const documentPath =
-	/^\/_emdash\/api\/content\/([a-z][a-z0-9_]*)(?:\/([^/]+)(?:\/(publish|revisions))?)?$/u;
+import { executeAstroRoute, executingAstroRoutes } from "./astro-route-integration.js";
+
+const collectionName = /^[a-z][a-z0-9_]*$/u;
 
 export async function dispatchContentPluginApi(
 	context: APIContext,
 	request: Request,
+	routeId?: string,
 ): Promise<Response> {
 	const url = new URL(request.url);
-	const match = documentPath.exec(url.pathname);
-	let params: Record<string, string | undefined> = {};
-	let routes: Partial<Record<string, APIRoute>>;
-	if (url.pathname === "/_emdash/api/taxonomies") routes = { GET: taxonomies.GET };
-	else if (match && match[1] !== "views") {
-		params = { collection: match[1], id: match[2] ? decodeURIComponent(match[2]) : undefined };
-		routes =
-			match[3] === "publish"
-				? { POST: publish.POST }
-				: match[3] === "revisions"
-					? { GET: revisions.GET }
-					: match[2]
-						? { GET: document.GET, PUT: document.PUT }
-						: { GET: documents.GET, POST: documents.POST };
-	} else return Response.json({ error: { code: "NOT_FOUND" } }, { status: 404 });
-	const handler = routes[request.method];
-	if (!handler) return Response.json({ error: { code: "METHOD_NOT_ALLOWED" } }, { status: 405 });
-	return handler({ ...context, params, request, url });
+	const routes = (await executingAstroRoutes()).filter(
+		(route) => route.pluginId === "superboard-content",
+	);
+	const route = routeId
+		? selectRouteReference(routes, routeId, "superboard-content")
+		: resolveManifestRoute(routes, request.method, "board", url.pathname)?.route;
+	if (!route) return Response.json({ error: { code: "NOT_FOUND" } }, { status: 404 });
+	if (route.method !== request.method)
+		return Response.json({ error: { code: "METHOD_NOT_ALLOWED" } }, { status: 405 });
+	const matched = matchRouteParameters(route.path, url.pathname);
+	if (
+		!matched ||
+		matched.collection === "views" ||
+		(matched.collection && !collectionName.test(matched.collection))
+	)
+		return Response.json({ error: { code: "NOT_FOUND" } }, { status: 404 });
+	const params = Object.fromEntries(
+		Object.entries(matched).map(([name, value]) => [name, decodeURIComponent(value)]),
+	);
+	return executeAstroRoute(route.id, route.method, { ...context, params, request, url });
 }

@@ -11,11 +11,12 @@ import { root } from "../../../scripts/cloudflare/target.mjs";
 
 const execute = promisify(execFile);
 const wrangler = join(root, "node_modules/wrangler/bin/wrangler.js");
-const STATISTICS_DATA_SOURCE = "supbrd-plugmod-marketing.data_source.marketing_statistics";
+const STATISTICS_DATA_SOURCE = "superboard-marketing.data_source.marketing_statistics";
 
-export async function readServedReleaseId(page) {
+async function readServedReleaseId(page) {
 	return page.evaluate(
-		() => document.querySelector('meta[name="superboard-release-id"]')?.getAttribute("content") || "",
+		() =>
+			document.querySelector('meta[name="superboard-release-id"]')?.getAttribute("content") || "",
 	);
 }
 
@@ -23,7 +24,10 @@ async function waitForPublishedFront(page) {
 	await page
 		.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])')
 		.waitFor({ timeout: 60000 });
-	await page.locator("main h1, main input, main table, main form").first().waitFor({ timeout: 60000 });
+	await page
+		.locator("main h1, main input, main table, main form")
+		.first()
+		.waitFor({ timeout: 60000 });
 }
 
 function queryParameter(response, name) {
@@ -110,7 +114,8 @@ async function searchUserAction(page, { origin, locale, releaseId, users }) {
 }
 
 async function refreshStatisticsAction(page, { origin, locale, releaseId, expected }) {
-	const expectation = "Refresh triggers the real statistics data source and renders its measured buckets";
+	const expectation =
+		"Refresh triggers the real statistics data source and renders its measured buckets";
 	const statisticsResponse = () =>
 		page.waitForResponse((response) => response.url().includes(STATISTICS_DATA_SOURCE));
 	const initial = statisticsResponse().catch(() => null);
@@ -136,9 +141,12 @@ async function refreshStatisticsAction(page, { origin, locale, releaseId, expect
 		);
 	const buckets = Array.isArray(statistics.series) ? statistics.series.length : 0;
 	await expect(
-		page.getByText(`${buckets} ${locale === "fr" ? "périodes mesurées" : "measured event buckets"}`, {
-			exact: true,
-		}),
+		page.getByText(
+			`${buckets} ${locale === "fr" ? "périodes mesurées" : "measured event buckets"}`,
+			{
+				exact: true,
+			},
+		),
 	).toBeVisible();
 	return actionRecord(
 		"refresh_statistics",
@@ -187,7 +195,11 @@ async function saveAndReloadSettingAction(page, { origin, locale, releaseId, ope
 	} finally {
 		const restore = profileSave().catch(() => null);
 		await nameInput.fill(originalName).catch(() => {});
-		await page.locator('main button[type="submit"]').first().click().catch(() => {});
+		await page
+			.locator('main button[type="submit"]')
+			.first()
+			.click()
+			.catch(() => {});
 		await restore;
 	}
 	await page.reload();
@@ -235,7 +247,9 @@ export async function runPublishedBusinessActions(
 	const records = [];
 	try {
 		const operatorId = await resolveOperatorId(page, origin);
-		const selected = only ? businessActions.filter(([name]) => only.includes(name)) : businessActions;
+		const selected = only
+			? businessActions.filter(([name]) => only.includes(name))
+			: businessActions;
 		assert.ok(selected.length, "At least one business action must be selected");
 		for (const locale of locales) {
 			for (const [name, run] of selected) {
@@ -371,7 +385,7 @@ export async function prepareBusinessActionFixtures(instance, request, { origin,
 				Origin: origin,
 				"X-EmDash-Request": "1",
 				"Idempotency-Key": crypto.randomUUID(),
-				"X-SuperBoard-Plugin-Id": "supbrd-plugmod-marketing",
+				"X-SuperBoard-Plugin-Id": "superboard-marketing",
 			},
 			data: { name: "Issue 77 statistics fixture", subject: "Issue 77 known campaign" },
 		},
@@ -395,7 +409,11 @@ export async function exerciseBusinessActionFaults(
 		report.push({ name, expected: expectedOutcome, result: record });
 		await saveReport();
 		console.log(`Action fault ${name} (${record.locale}): ${record.success ? "passed" : "failed"}`);
-		assert.equal(record.success, expectedOutcome === "passed", `${name}: ${JSON.stringify(record)}`);
+		assert.equal(
+			record.success,
+			expectedOutcome === "passed",
+			`${name}: ${JSON.stringify(record)}`,
+		);
 	}
 
 	const page = await context.newPage();

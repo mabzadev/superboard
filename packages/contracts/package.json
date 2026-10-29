@@ -23,16 +23,22 @@
 		"./url-security": "./src/url-security.ts",
 		"./dead-letter": "./src/dead-letter.ts",
 		"./analytics": "./src/analytics.ts",
+		"./core-collection": "./src/core-collection.ts",
 		"./flows": "./src/flows.ts",
 		"./support": "./src/support.ts",
 		"./support-notifications": "./src/support-notifications.ts",
 		"./billing-catalog": "./src/billing-catalog.ts",
 		"./application-plugin-api": "./src/application-plugin-api.ts",
-		"./plugin-api-owner": "./src/plugin-api-owner.ts",
 		"./deployment-configuration": "./src/deployment-configuration.ts",
 		"./plugin-packages": "./src/plugin-packages.ts",
 		"./authentication-settings": "./src/authentication-settings.ts",
 		"./plugin-diagnostic": "./src/plugin-diagnostic.ts",
-		"./plugin-worker-health": "./src/plugin-worker-health.ts"
+		"./plugin-worker-health": "./src/plugin-worker-health.ts",
+		"./route-registry": "./src/route-registry.ts",
+		"./route-manifest": "./src/route-manifest.ts",
+		"./route-services": "./src/route-services.ts",
+		"./route-inventory": "./src/route-inventory.ts",
+		"./internal-request-signature": "./src/internal-request-signature.ts",
+		"./route-reference": "./src/route-reference.ts"
 	}
 }

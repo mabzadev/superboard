@@ -28,7 +28,7 @@ const headers = {
 	"X-EmDash-Request": "1",
 	"X-Parity-Operator": "1",
 };
-const plugin = "supbrd-plug-user";
+const plugin = "superboard-user";
 
 function action(pluginId: string, name: string) {
 	return SELF.fetch(`https://site.example/_emdash/api/superboard/plugins/${pluginId}/${name}`, {
@@ -83,7 +83,7 @@ test("a retired function action cannot bypass retirement by naming the configura
 			body: JSON.stringify({
 				type: "block_action",
 				page: "/configuration",
-				action_id: "package-feature:supbrd-plug-products:disable",
+				action_id: "package-feature:superboard-products:disable",
 			}),
 		},
 	);
@@ -92,7 +92,7 @@ test("a retired function action cannot bypass retirement by naming the configura
 
 test("retired function actions cannot partially disable a package", async () => {
 	const owner = "supbrd-plug-journeys";
-	const flows = "supbrd-plugmod-flows";
+	const flows = "superboard-flows";
 	const enabled = await action(owner, "enable");
 	expect(enabled.status, await enabled.clone().text()).toBe(201);
 	const changed = await SELF.fetch(`https://site.example/_emdash/api/plugins/${owner}/admin`, {
@@ -104,11 +104,11 @@ test("retired function actions cannot partially disable a package", async () => 
 	expect((await action(owner, "disable")).status).toBe(201);
 	expect((await action(owner, "enable")).status).toBe(201);
 	const states = await env.DB.prepare(
-		"SELECT plugin_id,state FROM superboard_plugin_lifecycle WHERE instance_id='reference-production' AND target='local' AND plugin_id IN ('supbrd-plugmod-flows','supbrd-plugmod-onboardings') ORDER BY plugin_id",
+		"SELECT plugin_id,state FROM superboard_plugin_lifecycle WHERE instance_id='reference-production' AND target='local' AND plugin_id IN ('superboard-flows','superboard-onboardings') ORDER BY plugin_id",
 	).all();
 	expect(states.results).toEqual([
 		{ plugin_id: flows, state: "active" },
-		{ plugin_id: "supbrd-plugmod-onboardings", state: "active" },
+		{ plugin_id: "superboard-onboardings", state: "active" },
 	]);
 });
 
@@ -164,20 +164,18 @@ test("failed activation restores lifecycle and health exactly", async () => {
 test("concurrent plugin changes cannot overwrite another completed activation", async () => {
 	const results = await Promise.all([
 		action(plugin, "enable"),
-		action("supbrd-plug-products", "enable"),
+		action("superboard-products", "enable"),
 	]);
-	for (const [index, result] of results.entries()) {
-		if (result.status === 409)
-			expect((await action(index === 0 ? plugin : "supbrd-plug-products", "enable")).status).toBe(
-				201,
-			);
-		else expect(result.status, await result.clone().text()).toBe(201);
-	}
+	const statuses = results.map((result) => result.status).toSorted();
+	expect(statuses).toEqual([201, 409]);
+	const conflictIndex = results.findIndex((result) => result.status === 409);
+	const retryResult = await action(conflictIndex === 0 ? plugin : "superboard-products", "enable");
+	expect(retryResult.status).toBe(201);
 	const active = await env.DB.prepare(
 		"SELECT plugin_id FROM superboard_plugin_lifecycle WHERE state = 'active' ORDER BY plugin_id",
 	).all();
 	expect(active.results).toEqual(
-		["supbrd-plug-products", "supbrd-plug-user", "supbrd-plugmod-billing"]
+		["superboard-products", "superboard-user", "superboard-billing"]
 			.toSorted()
 			.map((plugin_id) => ({ plugin_id })),
 	);
@@ -227,7 +225,7 @@ test.each([
 		const pointer = await env.DB.prepare("SELECT * FROM superboard_front_active_releases").all();
 		await env.DB.exec(trigger);
 		try {
-			const failed = await action("supbrd-plug-products", "enable");
+			const failed = await action("superboard-products", "enable");
 			expect(failed.status).toBeGreaterThanOrEqual(400);
 			expect((await lifecycle()).results).toEqual(state.results);
 			expect(
@@ -244,7 +242,7 @@ test.each([
 		} finally {
 			await env.DB.exec("DROP TRIGGER reject_test_activation;");
 		}
-		expect((await action("supbrd-plug-products", "enable")).status).toBe(201);
+		expect((await action("superboard-products", "enable")).status).toBe(201);
 	},
 );
 
@@ -317,7 +315,7 @@ test("replays an idempotency key and rejects reuse for another plugin", async ()
 	expect(again.status).toBe(201);
 	expect(await again.json()).toEqual(await first.json());
 	const conflict = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-products/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-products/enable",
 		{ method: "POST", headers: replayHeaders },
 	);
 	expect(conflict.status).toBe(409);
@@ -349,11 +347,11 @@ test("rejects a stale module database and permits disabling an unhealthy plugin"
 		.bind(migration!.name)
 		.run();
 	try {
-		const failed = await action("supbrd-plugmod-paywalls", "enable");
+		const failed = await action("superboard-paywalls", "enable");
 		expect(failed.status).toBeGreaterThanOrEqual(400);
 		expect(
 			await env.DB.prepare(
-				"SELECT plugin_id FROM superboard_plugin_lifecycle WHERE plugin_id = 'supbrd-plugmod-paywalls' AND state = 'active'",
+				"SELECT plugin_id FROM superboard_plugin_lifecycle WHERE plugin_id = 'superboard-paywalls' AND state = 'active'",
 			).first(),
 		).toBeNull();
 	} finally {
@@ -362,16 +360,16 @@ test("rejects a stale module database and permits disabling an unhealthy plugin"
 			.bind(migration!.name)
 			.run();
 	}
-	expect((await action("supbrd-plugmod-paywalls", "enable")).status).toBe(201);
+	expect((await action("superboard-paywalls", "enable")).status).toBe(201);
 	await database
 		.prepare("UPDATE d1_migrations SET name = '0000_missing_test_schema.sql' WHERE name = ?")
 		.bind(migration!.name)
 		.run();
 	await env.DB.prepare(
-		"UPDATE superboard_plugin_runtime_health SET status = 'unavailable' WHERE plugin_id = 'supbrd-plugmod-paywalls'",
+		"UPDATE superboard_plugin_runtime_health SET status = 'unavailable' WHERE plugin_id = 'superboard-paywalls'",
 	).run();
 	try {
-		expect((await action("supbrd-plugmod-paywalls", "disable")).status).toBe(201);
+		expect((await action("superboard-paywalls", "disable")).status).toBe(201);
 	} finally {
 		await database
 			.prepare("UPDATE d1_migrations SET name = ? WHERE name = '0000_missing_test_schema.sql'")
@@ -452,10 +450,10 @@ test("compensates a permanently failing new plugin after the Release pointer com
 		"SELECT * FROM superboard_plugin_runtime_health ORDER BY plugin_id",
 	).all();
 	await env.DB.exec(
-		"CREATE TRIGGER fail_runtime_activation BEFORE INSERT ON _plugin_state WHEN NEW.status = 'active' AND NEW.plugin_id = 'supbrd-plugmod-paywalls' BEGIN SELECT RAISE(ABORT, 'injected runtime status failure'); END;",
+		"CREATE TRIGGER fail_runtime_activation BEFORE INSERT ON _plugin_state WHEN NEW.status = 'active' AND NEW.plugin_id = 'superboard-paywalls' BEGIN SELECT RAISE(ABORT, 'injected runtime status failure'); END;",
 	);
 	try {
-		const failed = await action("supbrd-plugmod-paywalls", "enable");
+		const failed = await action("superboard-paywalls", "enable");
 		expect(failed.status, await failed.clone().text()).toBe(500);
 		expect(await failed.json()).toMatchObject({ error: { code: "PLUGIN_ACTIVATION_COMPENSATED" } });
 		expect(
@@ -480,7 +478,7 @@ test("compensates a permanently failing new plugin after the Release pointer com
 	} finally {
 		await env.DB.exec("DROP TRIGGER IF EXISTS fail_runtime_activation;");
 	}
-	expect((await action("supbrd-plugmod-paywalls", "enable")).status).toBe(201);
+	expect((await action("superboard-paywalls", "enable")).status).toBe(201);
 });
 
 test("recovers an interrupted compensation without retrying the failing plugin activation", async () => {
@@ -489,19 +487,19 @@ test("recovers an interrupted compensation without retrying the failing plugin a
 	);
 	expect((await action(plugin, "enable")).status).toBe(201);
 	const previousPluginState = await env.DB.prepare(
-		"SELECT state FROM superboard_plugin_lifecycle WHERE plugin_id = 'supbrd-plugmod-paywalls'",
+		"SELECT state FROM superboard_plugin_lifecycle WHERE plugin_id = 'superboard-paywalls'",
 	).first();
 	const previous = await env.DB.prepare(
 		"SELECT active_release_id FROM superboard_front_active_releases",
 	).first();
 	await env.DB.exec(
-		"CREATE TRIGGER fail_runtime_activation BEFORE INSERT ON _plugin_state WHEN NEW.status = 'active' AND NEW.plugin_id = 'supbrd-plugmod-paywalls' BEGIN SELECT RAISE(ABORT, 'injected runtime status failure'); END;",
+		"CREATE TRIGGER fail_runtime_activation BEFORE INSERT ON _plugin_state WHEN NEW.status = 'active' AND NEW.plugin_id = 'superboard-paywalls' BEGIN SELECT RAISE(ABORT, 'injected runtime status failure'); END;",
 	);
 	await env.DB.exec(
 		"CREATE TRIGGER fail_compensation BEFORE UPDATE ON superboard_front_active_releases WHEN NEW.activation_id LIKE 'plugin-compensation:%' BEGIN SELECT RAISE(ABORT, 'injected compensation failure'); END;",
 	);
 	try {
-		const failed = await action("supbrd-plugmod-paywalls", "enable");
+		const failed = await action("superboard-paywalls", "enable");
 		expect(failed.status, await failed.clone().text()).toBe(503);
 		expect(
 			await env.DB.prepare(
@@ -555,7 +553,7 @@ test("recovers an interrupted compensation without retrying the failing plugin a
 		).toEqual(previous);
 		expect(
 			await env.DB.prepare(
-				"SELECT state FROM superboard_plugin_lifecycle WHERE plugin_id = 'supbrd-plugmod-paywalls'",
+				"SELECT state FROM superboard_plugin_lifecycle WHERE plugin_id = 'superboard-paywalls'",
 			).first(),
 		).toEqual(previousPluginState);
 	} finally {

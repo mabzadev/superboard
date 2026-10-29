@@ -12,13 +12,13 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plug-settings";
+const plugin = "superboard-settings";
 const file = "retirement-api-settings.runtime.test.ts";
 
 test("current settings identifiers read and update existing plugin storage", async () => {
 	const cms = await createCmsApi();
 	try {
-		const storedKey = "plugin:supbrd-plug-settings:settings:site_name";
+		const storedKey = "plugin:superboard-settings:settings:site_name";
 		await cms.runtime.db
 			.insertInto("options")
 			.values({ name: storedKey, value: JSON.stringify("Existing name") })
@@ -55,7 +55,7 @@ test("current settings identifiers read and update existing plugin storage", asy
 			.where("name", "=", storedKey)
 			.executeTakeFirstOrThrow();
 		expect(JSON.parse(stored.value)).toBe("Updated name");
-		expect(await (await request("supbrd-plug-settings")).json()).toMatchObject({
+		expect(await (await request("superboard-settings")).json()).toMatchObject({
 			data: { values: { site_name: "Updated name" } },
 		});
 	} finally {
@@ -67,7 +67,7 @@ test("canonical Settings APIs retain changed values, versions and verified SDK c
 	const cms = await createCmsApi();
 	try {
 		const name = `API proof ${crypto.randomUUID()}`;
-		const settingsPath = "/_emdash/api/admin/plugins/supbrd-plug-settings/settings";
+		const settingsPath = "/_emdash/api/admin/plugins/superboard-settings/settings";
 		await jsonResult(
 			await cms.command(plugin, "update_effective_settings", {
 				method: "PUT",

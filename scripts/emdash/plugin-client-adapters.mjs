@@ -15,7 +15,7 @@ const check = process.argv.includes("--check");
 const failures = [];
 for (const definition of definitions) {
 	for (const pluginId of definition.components) {
-		const short = pluginId.replace(/^supbrd-(?:plug|plugmod)-/u, "");
+		const short = pluginId.replace(/^(?:supbrd-(?:plug|plugmod)|superboard)-/u, "");
 		const directory = resolve(
 			root,
 			"packages/plugins",
@@ -34,8 +34,7 @@ for (const definition of definitions) {
 				id: adapter.id,
 				kind: adapter.kind,
 				operations: adapter.operations.map((operation) => ({
-					method: operation.method,
-					path: operation.path,
+					...(operation.route_id ? { route_id: operation.route_id } : { method: operation.method, path: operation.path }),
 					query: operation.query,
 					body: operation.body,
 					...(Object.keys(operation.parameter_values ?? {}).length

@@ -33,12 +33,12 @@ describe("Front Release Route View Validation", () => {
 			{
 				route_id: "superboard.analytics",
 				path_pattern: "/analytics",
-				renderer_ids: ["supbrd-plugmod-analytics.renderer.admin_surface"],
+				renderer_ids: ["superboard-analytics.renderer.admin_surface"],
 			},
 			{
 				route_id: "superboard.communication_statistics",
 				path_pattern: "/communication/statistics",
-				renderer_ids: ["supbrd-plugmod-marketing.renderer.admin_surface"],
+				renderer_ids: ["superboard-marketing.renderer.admin_surface"],
 			},
 			{
 				route_id: "emdash.core.operator_login",
@@ -56,7 +56,7 @@ describe("Front Release Route View Validation", () => {
 			{
 				route_id: "superboard.missing_view_route",
 				path_pattern: "/missing-view",
-				renderer_ids: ["supbrd-plugmod-analytics.renderer.admin_surface"],
+				renderer_ids: ["superboard-analytics.renderer.admin_surface"],
 			},
 		];
 
@@ -65,9 +65,9 @@ describe("Front Release Route View Validation", () => {
 		expect(failures[0]).toMatchObject({
 			route_id: "superboard.missing_view_route",
 			path_pattern: "/missing-view",
-			plugin_id: "supbrd-plugmod-analytics",
+			plugin_id: "superboard-analytics",
 		});
-		expect(failures[0]?.error).toContain("View is not registered by supbrd-plugmod-analytics");
+		expect(failures[0]?.error).toContain("View is not registered by superboard-analytics");
 	});
 
 	test("fails with diagnostic identifying plugin and route when route is attached to the wrong plugin", async () => {
@@ -75,7 +75,7 @@ describe("Front Release Route View Validation", () => {
 			{
 				route_id: "superboard.communication_statistics",
 				path_pattern: "/communication/statistics",
-				renderer_ids: ["supbrd-plugmod-billing.renderer.admin_surface"],
+				renderer_ids: ["superboard-billing.renderer.admin_surface"],
 			},
 		];
 
@@ -84,9 +84,9 @@ describe("Front Release Route View Validation", () => {
 		expect(failures[0]).toMatchObject({
 			route_id: "superboard.communication_statistics",
 			path_pattern: "/communication/statistics",
-			plugin_id: "supbrd-plugmod-billing",
+			plugin_id: "superboard-billing",
 		});
-		expect(failures[0]?.error).toContain("View is not registered by supbrd-plugmod-billing");
+		expect(failures[0]?.error).toContain("View is not registered by superboard-billing");
 	});
 
 	test("fails when renderer descriptor is missing", async () => {

@@ -9,7 +9,7 @@ import {
 	unique,
 } from "../../../fixtures/site-browser/site-api.js";
 
-const plugin = "supbrd-plugmod-dynamic-links";
+const plugin = "superboard-dynamic-links";
 
 test("a branded domain remains pending until its DNS is verified", async ({
 	authenticatedPage: page,

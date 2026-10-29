@@ -33,19 +33,19 @@ const declaredViews = nativeFrontPluginCatalog()
 test("plugin routes have one canonical namespace and no duplicate destination", async () => {
 	db = await setupTestDatabase();
 	const prefixes: Record<string, string> = {
-		"supbrd-plug-user": "/auth",
-		"supbrd-plug-content": "/data",
-		"supbrd-plugmod-files": "/data",
-		"supbrd-plug-products": "/monetization",
-		"supbrd-plugmod-billing": "/monetization",
-		"supbrd-plugmod-marketing": "/communication",
-		"supbrd-plugmod-email": "/communication",
-		"supbrd-plugmod-flows": "/acquisition",
-		"supbrd-plugmod-paywalls": "/acquisition",
-		"supbrd-plugmod-onboardings": "/acquisition",
-		"supbrd-plugmod-dynamic-links": "/acquisition",
-		"supbrd-plugmod-support": "/support",
-		"supbrd-plugmod-analytics": "/analytics",
+		"superboard-user": "/auth",
+		"superboard-content": "/data",
+		"superboard-files": "/data",
+		"superboard-products": "/monetization",
+		"superboard-billing": "/monetization",
+		"superboard-marketing": "/communication",
+		"superboard-email": "/communication",
+		"superboard-flows": "/acquisition",
+		"superboard-paywalls": "/acquisition",
+		"superboard-onboardings": "/acquisition",
+		"superboard-dynamic-links": "/acquisition",
+		"superboard-support": "/support",
+		"superboard-analytics": "/analytics",
 	};
 	const destinations = new Set<string>();
 	for (const view of declaredViews) {
@@ -56,7 +56,7 @@ test("plugin routes have one canonical namespace and no duplicate destination", 
 	}
 });
 
-test("upgrading renamed views keeps canonical records and does not recreate trashed aliases", async () => {
+test("grouping authentication archives redundant views and keeps their historical records", async () => {
 	db = await setupTestDatabase();
 	await applySeed(db, seedJson as unknown as SeedFile, { includeContent: true });
 	const view = seedJson.content.views.find((entry) => entry.data.path === "/auth/referrals");
@@ -86,9 +86,9 @@ test("upgrading renamed views keeps canonical records and does not recreate tras
 		.where("locale", "=", "en")
 		.where("route_id", "=", view.data.route_id)
 		.execute();
-	expect(rows.filter((row) => row.deleted_at === null)).toEqual([
-		{ path: "/auth/referrals", deleted_at: null },
-	]);
+	expect(rows.filter((row) => row.deleted_at === null)).toEqual([]);
+	expect(rows.find((row) => row.path === "/auth/referrals")?.deleted_at).toBeTruthy();
+	expect(canonicalFrontHref("/auth/referrals")).toBe("/auth/users?tab=referrals");
 	expect(rows.find((row) => row.path === "/app/referrals")?.deleted_at).toBeTruthy();
 	await ensureSuperBoardViews(db);
 	expect(
@@ -127,9 +127,7 @@ test("a views upgrade preserves an operator's existing Flows view and navigation
 			onConflict: "skip",
 		},
 	);
-	const flow = seedJson.content.views.find(
-		(view) => view.data.plugin_id === "supbrd-plugmod-flows",
-	);
+	const flow = seedJson.content.views.find((view) => view.data.plugin_id === "superboard-flows");
 	if (!flow) throw new Error("Flows fixture not found");
 	await applySeed(
 		db,
@@ -205,7 +203,9 @@ test("existing product menus use canonical destinations while historical links r
 		);
 		expect(section("/support/inbox")).toBe("Support");
 		expect(section("/communication/campaigns")).toBe("Communication");
-		expect(section("/auth/referrals")).toBe("Authentification");
+		expect(section("/auth/users")).toBe(
+			menu.locale === "fr" ? "Authentification" : "Authentication",
+		);
 		expect(section("/analytics/remote-config")).toBe("Analytics");
 		for (const item of before.filter((entry) => !entry.customUrl?.endsWith("/account"))) {
 			const destination = retiredFrontPageDestination(item.customUrl ?? "") ?? item.customUrl;
@@ -220,24 +220,24 @@ test("existing product menus use canonical destinations while historical links r
 	}
 });
 
-test("authentication navigation groups users and access, exposes settings and preserves custom menus", async () => {
+test("authentication navigation exposes only users and settings in both languages", async () => {
 	db = await setupTestDatabase();
 	await applySeed(db, { version: "1", menus: legacyAuthenticationMenus });
 	await ensureNativeFrontMenus(db, seedJson.menus);
 	const repo = new MenuRepository(db);
 	for (const menu of await repo.findByName("superboard-admin")) {
 		const items = await repo.findItems(menu.id);
-		const auth = items.find((item) => item.label === "Authentification");
+		const auth = items.find(
+			(item) => item.label === (menu.locale === "fr" ? "Authentification" : "Authentication"),
+		);
 		expect(auth).toBeDefined();
 		const entries = items.filter((item) => item.parentId === auth?.id);
 		expect(entries.map((item) => item.customUrl)).toEqual([
 			"/auth/users",
-			`/auth/apps?lang=${menu.locale}`,
 			`/auth/settings?lang=${menu.locale}`,
-			`/auth/logs?lang=${menu.locale}`,
 		]);
-		const users = entries[0];
-		expect(items.find((item) => item.customUrl === "/auth/customers")?.parentId).toBe(users?.id);
+		expect(items.some((item) => item.customUrl === "/auth/customers")).toBe(false);
+		expect(canonicalFrontHref("/auth/customers")).toBe("/auth/users?tab=profiles");
 		expect(items.some((item) => item.customUrl === `/identity/${menu.locale}/account`)).toBe(false);
 		expect(retiredFrontPageDestination(`/identity/${menu.locale}/dashboard`)).toBe(
 			`/identity/${menu.locale}/settings`,
@@ -395,7 +395,7 @@ test("the Views bootstrap preserves editorial edits without copying plugin conne
 		.set({
 			bindings: JSON.stringify({
 				commands: [],
-				data_sources: ["supbrd-plugmod-analytics.data_source.operator_custom"],
+				data_sources: ["superboard-analytics.data_source.operator_custom"],
 			}),
 			name: "Edited Analytics Views",
 		})
@@ -429,7 +429,7 @@ test("the Views bootstrap preserves editorial edits without copying plugin conne
 	expect(unedited.flatMap((entry) => JSON.parse(String(entry.bindings)).data_sources)).toEqual([]);
 	expect(edited?.name).toBe("Edited Analytics Views");
 	expect(JSON.parse(String(edited?.bindings)).data_sources).toEqual([
-		"supbrd-plugmod-analytics.data_source.operator_custom",
+		"superboard-analytics.data_source.operator_custom",
 	]);
 	expect(marker?.value).toEqual(expect.any(String));
 	expect(marker?.value).not.toBe(JSON.stringify("1.0.0"));
@@ -452,7 +452,7 @@ test("only active plugin Views are paginated and disabling preserves customizati
 		.where("path", "=", "/analytics/views")
 		.execute();
 	const url = new URL("https://site.test/_emdash/api/content/views?limit=1&locale=en");
-	restrictSuperBoardViewFilters(url, ["supbrd-plugmod-analytics"]);
+	restrictSuperBoardViewFilters(url, ["superboard-analytics"]);
 	const first = await handleContentList(
 		db,
 		"views",
@@ -461,7 +461,7 @@ test("only active plugin Views are paginated and disabling preserves customizati
 	expect(first.success).toBe(true);
 	if (!first.success) throw new Error("content list failed");
 	expect(first.data.items).toHaveLength(1);
-	expect(first.data.items.every((item) => item.data.plugin_id === "supbrd-plugmod-analytics")).toBe(
+	expect(first.data.items.every((item) => item.data.plugin_id === "superboard-analytics")).toBe(
 		true,
 	);
 	const disabled = new URL("https://site.test/_emdash/api/content/views?locale=en");
@@ -473,7 +473,7 @@ test("only active plugin Views are paginated and disabling preserves customizati
 	);
 	expect(hidden.success && hidden.data.items).toEqual([]);
 	const active = new URL("https://site.test/_emdash/api/content/views?limit=100&locale=en");
-	restrictSuperBoardViewFilters(active, ["supbrd-plugmod-analytics"]);
+	restrictSuperBoardViewFilters(active, ["superboard-analytics"]);
 	const restored = await handleContentList(
 		db,
 		"views",
@@ -492,9 +492,9 @@ test("a caller cannot opt a disabled plugin into the Views list", async () => {
 	const url = new URL("https://site.test/_emdash/api/content/views?locale=en");
 	url.searchParams.set(
 		"fieldFilters",
-		JSON.stringify({ plugin_id: { in: ["supbrd-plugmod-paywalls", "supbrd-plug-settings"] } }),
+		JSON.stringify({ plugin_id: { in: ["superboard-paywalls", "superboard-settings"] } }),
 	);
-	restrictSuperBoardViewFilters(url, ["supbrd-plugmod-analytics"]);
+	restrictSuperBoardViewFilters(url, ["superboard-analytics"]);
 	const result = await handleContentList(
 		db,
 		"views",
@@ -602,7 +602,7 @@ test("retiring members upgrades installed menus while preserving user links and 
 		expect(items.map(({ customUrl }) => customUrl)).toEqual([
 			"/auth/users",
 			"/auth/users",
-			"/auth/customers",
+			"/auth/users?tab=profiles",
 		]);
 		expect(items.map(({ label }) => label)).toEqual(["My users", "My group", "My customers"]);
 		expect(items[2]?.parentId).toBe(items[1]?.id);
@@ -730,7 +730,7 @@ test("Support navigation groups its operational destinations under one section",
 			items
 				.filter((item) => item.parentId === support!.id)
 				.map((item) => item.customUrl)
-				.toSorted(),
+				.toSorted((a, b) => (a ?? "").localeCompare(b ?? "")),
 		).toEqual([
 			"/support/automations",
 			"/support/captain",
@@ -749,5 +749,39 @@ test("Support navigation groups its operational destinations under one section",
 		expect(
 			(await repository.findItems(menu.id)).filter((item) => item.parentId === support!.id),
 		).toEqual(items.filter((item) => item.parentId === support!.id));
+	}
+});
+
+test("authentication keeps two management views and five access screens while archiving its editors", async () => {
+	db = await setupTestDatabase();
+	await ensureSuperBoardViews(db);
+	const rows = await db
+		.selectFrom(db.dynamic.ref("ec_views"))
+		.select(["path", "deleted_at"])
+		.where("plugin_id", "=", "superboard-user")
+		.where("locale", "=", "en")
+		.execute();
+	expect(
+		rows
+			.filter((row) => row.deleted_at === null)
+			.map((row) => row.path)
+			.toSorted(),
+	).toEqual([
+		"/auth/accept-invite",
+		"/auth/login",
+		"/auth/new-password",
+		"/auth/register",
+		"/auth/reset-password",
+		"/auth/settings",
+		"/auth/users",
+	]);
+	for (const path of [
+		"/auth/roles/:id",
+		"/auth/apps/new",
+		"/auth/directory/users/:authId",
+		"/auth/account",
+		"/auth/register/with-email",
+	]) {
+		expect(rows.find((row) => row.path === path)?.deleted_at).toBeTruthy();
 	}
 });

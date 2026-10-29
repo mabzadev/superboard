@@ -48,9 +48,9 @@ test("D1 backups refuse repository paths and unprovisioned resources", async () 
 		() => assertProtectedBackupDirectory(resolve(root, "backups")),
 		/inside the Git repository/u,
 	);
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	const target = targetWithoutResourceIds(source, "development");
-	const descriptor = d1Descriptor(target, "mbza-development", "development", "identity");
+	const descriptor = d1Descriptor(target, "mabza-development", "development", "identity");
 	await assert.rejects(
 		() =>
 			createD1Backup({

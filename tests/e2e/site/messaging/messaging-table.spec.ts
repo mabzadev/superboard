@@ -32,7 +32,7 @@ test("creates an in-app message without external push and filters the persisted 
 		.locator("..")
 		.dragTo(page.locator("[data-craft-canvas] > div").first());
 	await page.getByRole("button", { name: "Publish", exact: true }).click();
-	const id = await savedByClick(page, "Confirm Publish", "supbrd-plugmod-marketing");
+	const id = await savedByClick(page, "Confirm Publish", "superboard-marketing");
 	await expect(page.getByRole("dialog")).toHaveCount(0);
 	await page.getByPlaceholder("Search message").fill(title);
 	await expect(page.getByRole("cell", { name: title, exact: true })).toBeVisible();
@@ -40,7 +40,7 @@ test("creates an in-app message without external push and filters the persisted 
 	await expect(page.getByRole("cell", { name: title, exact: true })).toBeVisible();
 	const result = await siteApi(
 		page.request,
-		"supbrd-plugmod-marketing",
+		"superboard-marketing",
 		"POST",
 		`/api/v1/projects/${project}/notifications/search`,
 		{ term: title, page: 1, archived: false },
@@ -53,7 +53,7 @@ test("creates an in-app message without external push and filters the persisted 
 		send_push: false,
 	});
 	await evidence(
-		"supbrd-plugmod-marketing",
+		"superboard-marketing",
 		"superboard.marketing_in_app_messages",
 		[id],
 		"Published an in-app message with push explicitly disabled, searched it, reloaded the table and checked its persisted delivery flags.",

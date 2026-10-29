@@ -14,11 +14,11 @@ import {
 import { targetWithoutResourceIds } from "../../fixtures/cloudflare/factories.mjs";
 
 test("D1 convergence plans every enabled schema owner without remote access", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	const target = targetWithoutResourceIds(source, "development");
 	const plan = await buildD1ConvergencePlan({
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		serviceSelector: "all",
 	});
@@ -75,17 +75,17 @@ test("Wrangler D1 migration output becomes a strict structured status", () => {
 });
 
 test("remote D1 plans expose exact reviewed pending migrations and global convergence", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const plan = await buildD1ConvergencePlan({
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		serviceSelector: "api,custom",
 	});
 	await attachRemoteMigrationStatus({
 		plan,
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		serviceSelector: "api,custom",
 		env: {},
@@ -121,10 +121,10 @@ test("remote D1 plans expose exact reviewed pending migrations and global conver
 });
 
 test("remote D1 plans reject a migration outside the reviewed local chain", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const plan = await buildD1ConvergencePlan({
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		serviceSelector: "api",
 	});
@@ -132,7 +132,7 @@ test("remote D1 plans reject a migration outside the reviewed local chain", asyn
 		attachRemoteMigrationStatus({
 			plan,
 			target,
-			targetName: "mbza-development",
+			targetName: "mabza-development",
 			environment: "development",
 			serviceSelector: "api",
 			env: {},
@@ -236,11 +236,11 @@ test("production convergence backs up every database before applying any migrati
 });
 
 test("D1 apply fails closed when post-apply verification is not converged", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	await assert.rejects(
 		applyD1Convergence({
 			target,
-			targetName: "mbza-development",
+			targetName: "mabza-development",
 			environment: "development",
 			serviceSelector: "custom",
 			env: {},

@@ -1,4 +1,4 @@
-const pluginIdPattern = /^supbrd-(?:plug|plugmod)-[a-z0-9-]+$/u;
+const pluginIdPattern = /^(?:supbrd-(?:plug|plugmod)-|superboard-)[a-z0-9-]+$/u;
 
 export function watchPluginLifecycle(): () => void {
 	if (typeof BroadcastChannel === "undefined") return () => {};

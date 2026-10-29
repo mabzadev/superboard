@@ -125,13 +125,16 @@ export function buildPluginPackages(topology) {
 				...manifests.map((item) => item.aliases),
 				Object.fromEntries(definition.components.map((id) => [id, definition.id])),
 			),
-			stores: manifests.flatMap((item) =>
-				item.stores.map((store) => {
-					const { checksum: _, ...content } = store;
-					content.authority = definition.id;
-					return { ...content, checksum: checksum(content) };
-				}),
-			),
+			stores: [
+				...manifests.flatMap((item) =>
+					item.stores.map((store) => {
+						const { checksum: _, ...content } = store;
+						content.authority = definition.id;
+						return { ...content, checksum: checksum(content) };
+					}),
+				),
+				...(definition.kind === "core" ? [coreCollectionStore(definition.id)] : []),
+			],
 			schemas: manifests.flatMap((item) => item.schemas),
 			renderers: manifests.flatMap((item) => item.renderers),
 			commands: manifests.flatMap((item) => item.commands),
@@ -163,6 +166,29 @@ export function buildPluginPackages(topology) {
 	for (const id of components.keys())
 		if (!owners.has(id)) throw new Error(`UNASSIGNED_COMPONENT:${id}`);
 	return { schema_version: 1, plugins };
+}
+
+function coreCollectionStore(pluginId) {
+	const appMigrations = "packages/plugins/superboard-core/app/migrations";
+	const root = fileURLToPath(new URL("../../", import.meta.url));
+	const content = {
+		store_id: `${pluginId}.store.sdk_collection`,
+		kind: "d1",
+		authority: pluginId,
+		schema_version: "1",
+		migrations: [
+			"packages/plugins/superboard-core/api/migrations/0071_core_collection.sql",
+			...readdirSync(join(root, appMigrations))
+				.filter((file) => file.endsWith(".sql"))
+				.sort((a, b) => a.localeCompare(b))
+				.map((file) => `${appMigrations}/${file}`),
+		],
+		availability: "required",
+		classification: "restricted",
+		encryption: "required",
+		version: "1.0.0",
+	};
+	return { ...content, checksum: checksum(content) };
 }
 
 export function lintPluginPackageProject(root) {

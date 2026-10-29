@@ -53,7 +53,7 @@ describe("EmDash plugin Store authority", () => {
 		expect(receipt.installed).toHaveLength(18);
 		expect(receipt.templates).toEqual(["supbrd-plugmod-custom-*"]);
 		expect(
-			receipt.installed.find(({ plugin_id }) => plugin_id === "supbrd-plug-user"),
+			receipt.installed.find(({ plugin_id }) => plugin_id === "superboard-user"),
 		).toMatchObject({
 			plugin_version: "1.4.0",
 			status: "installed",
@@ -93,7 +93,7 @@ describe("EmDash plugin Store authority", () => {
 		).toBe(true);
 
 		const compatibleAnalyticsChecksum = Object.entries(compatibility.artifacts).find(
-			([, value]) => value.plugin_id === "supbrd-plugmod-analytics",
+			([, value]) => value.plugin_id === "superboard-analytics",
 		)?.[0];
 		expect(compatibleAnalyticsChecksum).toBeDefined();
 		const previousAnalytics = await env.DB.prepare(
@@ -106,42 +106,42 @@ describe("EmDash plugin Store authority", () => {
 		expect(previousAnalytics).not.toBeNull();
 		await env.DB.batch([
 			env.DB.prepare(
-				"UPDATE superboard_plugin_lifecycle SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
+				"UPDATE superboard_plugin_lifecycle SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'superboard-analytics'",
 			).bind(previousAnalytics!.artifact_checksum, scope.instance_id, scope.target),
 			env.DB.prepare(
-				"UPDATE superboard_plugin_runtime_health SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
+				"UPDATE superboard_plugin_runtime_health SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'superboard-analytics'",
 			).bind(previousAnalytics!.artifact_checksum, scope.instance_id, scope.target),
 		]);
 		await expect(loadActiveSuperBoardPluginLock(env.DB, scope)).rejects.toThrow(
 			/PLUGIN_INSTALLATION_PLAN_CONTRACT_MISSING:.*analytics/u,
 		);
 		const currentAnalytics = superBoardRuntimePluginCatalog().plugins.find(
-			({ manifest }) => manifest.plugin_id === "supbrd-plugmod-analytics",
+			({ manifest }) => manifest.plugin_id === "superboard-analytics",
 		)?.manifest.artifact_checksum;
 		await env.DB.batch([
 			env.DB.prepare(
-				"UPDATE superboard_plugin_lifecycle SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
+				"UPDATE superboard_plugin_lifecycle SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'superboard-analytics'",
 			).bind(currentAnalytics, scope.instance_id, scope.target),
 			env.DB.prepare(
-				"UPDATE superboard_plugin_runtime_health SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
+				"UPDATE superboard_plugin_runtime_health SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'superboard-analytics'",
 			).bind(currentAnalytics, scope.instance_id, scope.target),
 		]);
 		const restoredLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
 		expect(
-			restoredLock.find(({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-analytics")
+			restoredLock.find(({ plugin_id: pluginId }) => pluginId === "superboard-analytics")
 				?.artifact_checksum,
 		).toBe(currentAnalytics);
 
 		await env.DB.prepare(
 			`DELETE FROM superboard_plugin_lifecycle
-			 WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-marketing'`,
+			 WHERE instance_id = ? AND target = ? AND plugin_id = 'superboard-marketing'`,
 		)
 			.bind(scope.instance_id, scope.target)
 			.run();
 		const reducedLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
 		expect(reducedLock).toHaveLength(17);
 		expect(
-			reducedLock.some(({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-marketing"),
+			reducedLock.some(({ plugin_id: pluginId }) => pluginId === "superboard-marketing"),
 		).toBe(false);
 		const reducedPresentation = await composeUserFrontReleaseInput({
 			...releaseIdentifiers,
@@ -216,8 +216,8 @@ describe("EmDash plugin Store authority", () => {
 			"decrypt",
 		]);
 		const input = {
-			plugin_id: "supbrd-plug-user",
-			store_id: "supbrd-plug-user.store.user_directory",
+			plugin_id: "superboard-user",
+			store_id: "superboard-user.store.user_directory",
 			projectId: "reference-production",
 			pid: "reference-production",
 			project_ref: "10-test",
@@ -275,7 +275,7 @@ describe("EmDash plugin Store authority", () => {
 			putPluginStoreRecord(env.DB, {
 				...input,
 				operation_id: "operation-cross-store",
-				store_id: "supbrd-plug-settings.store.settings",
+				store_id: "superboard-settings.store.settings",
 			}),
 		).rejects.toThrow(/AUTHORITY_REJECTED|NAMESPACE_REJECTED/u);
 	});
@@ -294,18 +294,19 @@ describe("EmDash plugin Store authority", () => {
 		]);
 		const scope = resolveRepositoryCommandScope(
 			new URL("https://site.example.test/api/v1/analytics/10-test/reports"),
+			"superboard-analytics",
 		);
 		expect(scope).toEqual({
-			plugin_id: "supbrd-plugmod-analytics",
+			plugin_id: "superboard-analytics",
 			project_ref: "10-test",
-			adapter_operation: "api-v1:supbrd-plugmod-analytics",
+			adapter_operation: "api-v1:superboard-analytics",
 		});
 		const input = {
 			operation_id: "operation-analytics-report-1",
 			instance_id: "reference-production",
 			project_ref: scope.project_ref,
 			plugin_id: scope.plugin_id,
-			command_id: "supbrd-plugmod-analytics.command.create_analytics_report",
+			command_id: "superboard-analytics.command.create_analytics_report",
 			adapter_operation: scope.adapter_operation,
 			method: "POST" as const,
 			request_path: "/api/v1/analytics/10-test/reports",
@@ -360,7 +361,7 @@ describe("EmDash plugin Store authority", () => {
 			expires_at: "2999-08-31T09:10:00.000Z",
 		});
 		await env.DB.prepare(
-			"UPDATE superboard_plugin_lifecycle SET state = 'active' WHERE instance_id = 'reference-production' AND plugin_id = 'supbrd-plugmod-analytics'",
+			"UPDATE superboard_plugin_lifecycle SET state = 'active' WHERE instance_id = 'reference-production' AND plugin_id = 'superboard-analytics'",
 		).run();
 		const rawKey = crypto.getRandomValues(new Uint8Array(32));
 		const encodedKey = btoa(String.fromCodePoint(...rawKey));
@@ -385,7 +386,7 @@ describe("EmDash plugin Store authority", () => {
 					"X-EmDash-Request": "1",
 					"Content-Type": "application/json",
 					"Idempotency-Key": "operation-gateway-report-1",
-					"X-SuperBoard-Command-Id": "supbrd-plugmod-analytics.command.create_analytics_report",
+					"X-SuperBoard-Command-Id": "superboard-analytics.command.create_analytics_report",
 				},
 				body: JSON.stringify({ name: "Repository first" }),
 			});
@@ -419,7 +420,7 @@ describe("EmDash plugin Store authority", () => {
 	test("fails shadow mismatches closed with metrics that contain no payload", async () => {
 		await expect(
 			verifyPluginStoreShadowRead(env.DB, {
-				plugin_id: "supbrd-plug-user",
+				plugin_id: "superboard-user",
 				entity_type: "user",
 				source: [{ email: "private@example.com" }],
 				target: [{ email: "different@example.com" }],
@@ -439,8 +440,8 @@ describe("EmDash plugin Store authority", () => {
 			"decrypt",
 		]);
 		await putPluginStoreRecord(env.DB, {
-			plugin_id: "supbrd-plug-settings",
-			store_id: "supbrd-plug-settings.store.settings",
+			plugin_id: "superboard-settings",
+			store_id: "superboard-settings.store.settings",
 			instance_id: "reference-production",
 			entity_type: "settings",
 			entity_id: "settings-1",
@@ -451,7 +452,7 @@ describe("EmDash plugin Store authority", () => {
 			encryption_key: encryptionKey,
 		});
 		const delta = await exportPluginStoreReverseDelta(env.DB, {
-			plugin_id: "supbrd-plug-settings",
+			plugin_id: "superboard-settings",
 			instance_id: "reference-production",
 			updated_after: "2026-08-30T01:59:00.000Z",
 			encryption_key: encryptionKey,
@@ -470,7 +471,7 @@ describe("EmDash plugin Store authority", () => {
 		const callbackPublicJwk = await crypto.subtle.exportKey("jwk", callbackKeys.publicKey);
 		await issueWorkerExecutionLease(env.DB, {
 			attempt_id: "attempt-billing-1",
-			plugin_id: "supbrd-plugmod-billing",
+			plugin_id: "superboard-billing",
 			operation_id: "billing-operation-1",
 			callback_token: "callback-secret",
 			callback_public_jwk: callbackPublicJwk,
@@ -480,7 +481,7 @@ describe("EmDash plugin Store authority", () => {
 		await expect(
 			acceptWorkerCallback(env.DB, {
 				attempt_id: "attempt-billing-1",
-				plugin_id: "supbrd-plugmod-billing",
+				plugin_id: "superboard-billing",
 				callback_token: "wrong",
 				payload_checksum: `sha256:${"a".repeat(64)}`,
 				signature: "invalid",
@@ -489,7 +490,7 @@ describe("EmDash plugin Store authority", () => {
 		).rejects.toThrow(/CALLBACK_REJECTED/u);
 		await issueWorkerExecutionLease(env.DB, {
 			attempt_id: "attempt-billing-2",
-			plugin_id: "supbrd-plugmod-billing",
+			plugin_id: "superboard-billing",
 			operation_id: "billing-operation-1",
 			callback_token: "replacement-secret",
 			callback_public_jwk: callbackPublicJwk,
@@ -499,7 +500,7 @@ describe("EmDash plugin Store authority", () => {
 		await expect(
 			acceptWorkerCallback(env.DB, {
 				attempt_id: "attempt-billing-1",
-				plugin_id: "supbrd-plugmod-billing",
+				plugin_id: "superboard-billing",
 				callback_token: "callback-secret",
 				payload_checksum: `sha256:${"a".repeat(64)}`,
 				signature: "invalid",
@@ -510,7 +511,7 @@ describe("EmDash plugin Store authority", () => {
 		const payloadChecksum = `sha256:${"a".repeat(64)}`;
 		const signature = await signWorkerCallback(callbackKeys.privateKey, {
 			attempt_id: "attempt-billing-2",
-			plugin_id: "supbrd-plugmod-billing",
+			plugin_id: "superboard-billing",
 			operation_id: "billing-operation-1",
 			payload_checksum: payloadChecksum,
 			completed_at: completedAt,
@@ -518,7 +519,7 @@ describe("EmDash plugin Store authority", () => {
 		expect(
 			await acceptWorkerCallback(env.DB, {
 				attempt_id: "attempt-billing-2",
-				plugin_id: "supbrd-plugmod-billing",
+				plugin_id: "superboard-billing",
 				callback_token: "replacement-secret",
 				payload_checksum: payloadChecksum,
 				signature,
@@ -528,7 +529,7 @@ describe("EmDash plugin Store authority", () => {
 		await expect(
 			acceptWorkerCallback(env.DB, {
 				attempt_id: "attempt-billing-2",
-				plugin_id: "supbrd-plugmod-billing",
+				plugin_id: "superboard-billing",
 				callback_token: "replacement-secret",
 				payload_checksum: payloadChecksum,
 				signature,
