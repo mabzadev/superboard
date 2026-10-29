@@ -6,7 +6,7 @@ import {
 const support = navigationGroup({ group_id: "support", group_label: "Support", group_order: 6 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
-	plugin_id: "supbrd-plugmod-support",
+	plugin_id: "superboard-support",
 	plugin_label: "Support",
 	description:
 		"Operate support conversations, contacts, automations, knowledge, and quality workflows.",

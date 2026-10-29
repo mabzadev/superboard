@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 import {
   EmailInboundContractError,
@@ -9,7 +10,7 @@ import { readBytesLimited } from "./validation";
 import type { Env } from "./types";
 
 const MAX_PROVIDER_EVENT_BYTES = 512 * 1024;
-const providers = new Hono<{ Bindings: Env }>();
+const providers = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"support","module":"providers.providers","pluginId":"superboard-support","surface":"internal","access":"framework"});
 
 const supportedProviders = new Set([
   "email_google",
