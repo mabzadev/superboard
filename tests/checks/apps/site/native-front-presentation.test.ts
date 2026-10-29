@@ -494,8 +494,8 @@ test("keeps an active multi-plugin Release renderable across renderer upgrades",
 		"sha256:085d9fc3afdf6e893295f7f2701dfb84e1668c73ba0df6c03d9a713578fdd769",
 		...new Set(
 			Object.values(compatibility.artifacts).flatMap(({ plugin_id: pluginId, renderer_builds }) =>
-				pluginId === "superboard-analytics"
-					? [renderer_builds["superboard-analytics.renderer.admin_surface"]]
+				pluginId === "superboard-analytics" || pluginId === "supbrd-plugmod-analytics"
+					? [renderer_builds[`${pluginId}.renderer.admin_surface`]]
 					: [],
 			),
 		),

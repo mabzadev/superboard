@@ -16,6 +16,13 @@ const discoveredModules = import.meta.glob<{ nativeFrontPlugin: NativeFrontPlugi
 );
 
 const plugins = new Map<string, NativeFrontPluginModule>();
+const legacyComponentPrefix = /^supbrd-(?:plug|plugmod)-/u;
+
+// Releases published before the superboard-* namespace keep their original ids.
+function currentComponentId(id: string): string {
+	return id.replace(legacyComponentPrefix, "superboard-");
+}
+
 const compatibleLegacyBuilds = new Map<string, Set<string>>([
 	[
 		"superboard-user.renderer.admin_surface",
@@ -36,9 +43,10 @@ const compatibleLegacyBuilds = new Map<string, Set<string>>([
 ]);
 for (const artifact of Object.values(compatibility.artifacts)) {
 	for (const [rendererId, checksum] of Object.entries(artifact.renderer_builds)) {
-		const builds = compatibleLegacyBuilds.get(rendererId) ?? new Set<string>();
+		const current = currentComponentId(rendererId);
+		const builds = compatibleLegacyBuilds.get(current) ?? new Set<string>();
 		builds.add(checksum);
-		compatibleLegacyBuilds.set(rendererId, builds);
+		compatibleLegacyBuilds.set(current, builds);
 	}
 }
 for (const [source, module] of Object.entries(discoveredModules)) {
@@ -114,7 +122,12 @@ export function assertNativeFrontRenderer(
 ): NativeFrontPluginModule {
 	const renderer = resolveNativeRendererAlias(requestedRenderer);
 	const pluginId = renderer.plugin_id;
-	if (!pluginLock.some(({ plugin_id: lockedPluginId }) => lockedPluginId === pluginId)) {
+	if (
+		!pluginLock.some(
+			({ plugin_id: lockedPluginId }) =>
+				lockedPluginId === pluginId || currentComponentId(lockedPluginId) === pluginId,
+		)
+	) {
 		throw new Error(`Renderer plugin is not locked by the Release: ${pluginId}`);
 	}
 	const plugin = plugins.get(pluginId);
@@ -132,6 +145,10 @@ export function assertNativeFrontRenderer(
 
 function resolveNativeRendererAlias(renderer: RendererDescriptor): RendererDescriptor {
 	if (plugins.has(renderer.plugin_id)) return renderer;
+	const current = plugins.get(currentComponentId(renderer.plugin_id));
+	const currentRendererId = currentComponentId(renderer.renderer_id);
+	if (current?.renderer_ids.includes(currentRendererId))
+		return { ...renderer, plugin_id: current.plugin_id, renderer_id: currentRendererId };
 	for (const plugin of plugins.values()) {
 		if (canonicalPluginId(plugin.plugin_id) !== renderer.plugin_id) continue;
 		const id = plugin.renderer_ids.find(

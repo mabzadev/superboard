@@ -1470,10 +1470,14 @@ function manifestRegistryMigration(topology) {
 }
 
 function pluginCompatibilityRegistry() {
+	// Published Releases keep the plugin ids they were compiled with, so the
+	// legacy supbrd-plug(mod)-* manifests stay registered beside the canonical ones.
 	const bundled = new Set([
-		...fullPlugins.map((id) => `superboard-${id}`),
-		...modulePlugins.map(([id]) =>
-			id === "custom-*" ? "supbrd-plugmod-custom-*" : `superboard-${id}`,
+		...fullPlugins.flatMap((id) => [`superboard-${id}`, `supbrd-plug-${id}`]),
+		...modulePlugins.flatMap(([id]) =>
+			id === "custom-*"
+				? ["supbrd-plugmod-custom-*"]
+				: [`superboard-${id}`, `supbrd-plugmod-${id}`],
 		),
 	]);
 	const artifacts = Object.fromEntries(
