@@ -1,3 +1,15 @@
+const identityClaims = {
+	iss: "https://auth.example.test",
+	sub: "user-1",
+	azp: "client",
+	aud: "client",
+	exp: 0,
+	iat: 0,
+	email: null,
+	first_name: null,
+	last_name: null,
+	locale: "en",
+};
 // Import the mocked functions for easy access in tests
 import {
 	getParams,
@@ -50,10 +62,14 @@ describe("AuthContext", () => {
 	it("should initialize state with valid stored token and call acquireToken", () => {
 		// Setup mocks for a valid stored token scenario
 		(checkStorage as Mock).mockReturnValue({
-			storedRefreshToken: JSON.stringify({ token: "dummy-refresh" }),
+			storedRefreshToken: JSON.stringify({
+				refreshToken: "dummy-refresh",
+				expiresIn: 60,
+				expiresOn: 2000000000,
+			}),
 			storedIdToken: JSON.stringify({
 				idToken: "dummy-id-token",
-				account: { id: "dummy-account" },
+				account: { ...identityClaims, id: "dummy-account" },
 			}),
 		});
 		(isValidTokens as Mock).mockReturnValue({
@@ -70,8 +86,12 @@ describe("AuthContext", () => {
 
 		const stateValue = authContext.state();
 		expect(stateValue.config).toEqual(dummyConfig);
-		expect(stateValue.refreshTokenStorage).toEqual({ token: "dummy-refresh" });
-		expect(stateValue.account).toStrictEqual({ id: "dummy-account" });
+		expect(stateValue.refreshTokenStorage).toEqual({
+			refreshToken: "dummy-refresh",
+			expiresIn: 60,
+			expiresOn: 2000000000,
+		});
+		expect(stateValue.account).toStrictEqual({ ...identityClaims, id: "dummy-account" });
 		expect(stateValue.checkedStorage).toBe(true);
 
 		expect(acquireTokenMock).toHaveBeenCalledTimes(1);
@@ -82,7 +102,11 @@ describe("AuthContext", () => {
 	it("should initialize state with valid stored token and null stored account and call acquireToken", () => {
 		// Setup mocks for a valid stored token scenario with storedAccount set to null
 		(checkStorage as Mock).mockReturnValue({
-			storedRefreshToken: JSON.stringify({ token: "dummy-refresh-null-account" }),
+			storedRefreshToken: JSON.stringify({
+				refreshToken: "dummy-refresh-null-account",
+				expiresIn: 60,
+				expiresOn: 2000000000,
+			}),
 			storedAccount: null,
 		});
 		(isValidTokens as Mock).mockReturnValue({
@@ -99,7 +123,11 @@ describe("AuthContext", () => {
 		const stateValue = authContext.state();
 
 		expect(stateValue.config).toEqual(dummyConfig);
-		expect(stateValue.refreshTokenStorage).toEqual({ token: "dummy-refresh-null-account" });
+		expect(stateValue.refreshTokenStorage).toEqual({
+			refreshToken: "dummy-refresh-null-account",
+			expiresIn: 60,
+			expiresOn: 2000000000,
+		});
 		expect(stateValue.account).toBeNull();
 		expect(stateValue.checkedStorage).toBe(true);
 
@@ -199,7 +227,11 @@ describe("AuthContext", () => {
 			token: "dummy-token-from-params",
 		});
 		(checkStorage as Mock).mockReturnValue({
-			storedRefreshToken: JSON.stringify({ token: "dummy-refresh" }),
+			storedRefreshToken: JSON.stringify({
+				refreshToken: "dummy-refresh",
+				expiresIn: 60,
+				expiresOn: 2000000000,
+			}),
 		});
 		(isValidTokens as Mock).mockReturnValue({
 			hasValidIdToken: false,

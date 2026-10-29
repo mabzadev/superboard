@@ -4,11 +4,6 @@ Canonical FlutterFlow reference application for the SuperBoard platform.
 
 - Platform and library source: <https://github.com/mabzadev/superboard>
 - This repository: <https://github.com/mabzadev/superboard>
-- Development reference app: <https://reference.mbza.dev>
-- Development back office: <https://board.mbza.dev>
-- Development API: <https://api.mbza.dev>
-- Development short links: <https://in.mbza.dev>
-- Development mail preview: <https://mail.mbza.dev>
 
 This repository contains an executable Flutter reference shell and the
 FlutterFlow import contract. It demonstrates integration without copying
@@ -61,7 +56,7 @@ changes working-copy resolution to local paths; never commit that override.
 Remove `pubspec_overrides.yaml` and run `flutter pub get` again before proposing
 a dependency update.
 
-`config/development.json` contains public `mbza.dev` endpoints only. Live mode
+`config/development.json` defines the development endpoints. Live mode
 requires a SuperBoard client project key and ID supplied by a separate ignored
 config or CI environment. The client key is necessarily embedded in the Web
 application, but it is never hardcoded in Git; server authorization continues
@@ -71,10 +66,10 @@ registered in the SuperBoard back office. Server secrets and user tokens never
 belong in this file. GitHub CI checks out the public platform repository without
 a repository read token.
 
-The MBZA development endpoint contract is closed: `reference.mbza.dev`,
-`board.mbza.dev`, `api.mbza.dev`, `sdk.mbza.dev`, `in.mbza.dev`,
-`files.mbza.dev`, `mail.mbza.dev`, and the single Support path
-`api.mbza.dev/api/v1/support-client`. The project schema, build tooling and
+The development endpoint contract covers the reference application, back office,
+API, SDK, short links, files and mail preview, plus the Support path
+`/api/v1/support-client` on the API host. The project configuration defines the
+allowed endpoints. The project schema, build tooling and
 runtime validation reject HTTP, embedded URL credentials, query strings,
 fragments and every other path. `config/development.json` is also a strict
 allowlist of reviewed Dart defines; adding a key or changing an endpoint fails
@@ -91,17 +86,17 @@ standalone Support dependency; partial promotion is rejected. All coverage reads
 are public and secretless.
 
 After validation, a push to `dev` publishes the Flutter Web acceptance app to
-`https://reference.mbza.dev` as a Cloudflare Static Assets Worker. Deployment
+the configured reference domain as a Cloudflare Static Assets Worker. Deployment
 configuration is generated from `reference.project.json`; no account ID, API
 token or project identity is committed. The GitHub `development` environment
 provides `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`,
 `SUPERBOARD_PROJECT_KEY` and `SUPERBOARD_PROJECT_ID` as encrypted values.
 Deprecated build-variable aliases are accepted only as CI input compatibility;
 they are never emitted into the client or displayed in the application. Pull
-requests and `main` never deploy this MBZA test application. To verify the exact
+requests and `main` never deploy this development application. To verify the exact
 Worker bundle without publishing it, run `npm run cloudflare:dry-run`.
 Before a real publish, the script reads the zone, DNS and Worker custom-domain
-state. It proceeds only when `reference.mbza.dev` is unused or already attached
+state. It proceeds only when the configured reference domain is unused or already attached
 to the registered Reference Worker; it never adopts or removes an occupied
 record. `superboard-reference` is the logical deployment name; the physical
 Worker resource name remains an infrastructure-only deployment detail so
@@ -111,7 +106,7 @@ For a first account bootstrap, `npm run cloudflare:deploy:private` uploads the
 same tested Static Assets Worker with `workers.dev` and preview URLs disabled
 and with no route at all. `npm run cloudflare:dry-run:private` proves that
 configuration without writing. This private bootstrap does not replace the
-GitHub deployment flow and cannot make `reference.mbza.dev` public.
+GitHub deployment flow and does not publish the configured reference domain.
 
 The root CI records the exact monorepo SHA used for the platform and reference
 application, then builds both from that immutable revision. The application

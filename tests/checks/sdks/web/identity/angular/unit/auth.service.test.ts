@@ -242,7 +242,7 @@ describe("AuthService", () => {
 			const utils = await import("../../../../../../../sdks/web/identity/angular/src/utils");
 			const handleTokenExchangeSpy = vi
 				.spyOn(utils, "handleTokenExchangeByAuthCode")
-				.mockReturnValue("exchanged-token");
+				.mockReturnValue(undefined);
 
 			// Act: Call login so that triggerLogin is invoked with the merged options.
 			await authService.login("popup", props);
@@ -268,7 +268,7 @@ describe("AuthService", () => {
 				fakeAuthContext.state,
 				props.locale,
 			);
-			expect(result).toBe("exchanged-token");
+			expect(result).toBeUndefined();
 
 			handleTokenExchangeSpy.mockRestore();
 		});

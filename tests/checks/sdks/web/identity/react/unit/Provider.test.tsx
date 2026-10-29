@@ -1,3 +1,15 @@
+const identityClaims = {
+	iss: "https://auth.example.test",
+	sub: "user-1",
+	azp: "client",
+	aud: "client",
+	exp: 0,
+	iat: 0,
+	email: null,
+	first_name: null,
+	last_name: null,
+	locale: "en",
+};
 import { StorageKey } from "@melody-auth/shared";
 import { render as rtlRender, screen, waitFor } from "@testing-library/react";
 import { useContext } from "react";
@@ -45,11 +57,12 @@ describe("AuthProvider", () => {
 		// Create a valid token that expires in 60 sec (now + 60) so that it passes the ">= now + 5" check.
 		const validToken = {
 			refreshToken: "valid-token",
+			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
-			account: { username: "testuser" },
+			account: { ...identityClaims, username: "testuser" },
 		};
 
 		// Save token and account into localStorage using keys from shared.
@@ -106,6 +119,7 @@ describe("AuthProvider", () => {
 		// Create an invalid token by setting expiresOn to a time less than "now + 5"
 		const expiredToken = {
 			refreshToken: "expired-token",
+			expiresIn: 60,
 			expiresOn: now + 3,
 		};
 		window.localStorage.setItem(StorageKey.RefreshToken, JSON.stringify(expiredToken));
@@ -114,7 +128,7 @@ describe("AuthProvider", () => {
 			StorageKey.IdToken,
 			JSON.stringify({
 				idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature",
-				account: { username: "testuser" }, // gitleaks:allow -- deterministic test JWT
+				account: { ...identityClaims, username: "testuser" }, // gitleaks:allow -- deterministic test JWT
 			}),
 		);
 
@@ -134,7 +148,7 @@ describe("AuthProvider", () => {
 			const accounts = screen.getAllByTestId("account");
 			expect(checkedStorages[checkedStorages.length - 1].textContent).toBe("true");
 			expect(accounts[accounts.length - 1].textContent).toBe(
-				JSON.stringify({ username: "testuser" }),
+				JSON.stringify({ ...identityClaims, username: "testuser" }),
 			);
 			const refreshTokenStorages = screen.getAllByTestId("refreshTokenStorage");
 			expect(refreshTokenStorages[accounts.length - 1].textContent).toBe("null");
@@ -145,11 +159,13 @@ describe("AuthProvider", () => {
 		const now = Math.floor(Date.now() / 1000);
 		const validToken = {
 			refreshToken: "valid-token",
+			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
 			account: {
+				...identityClaims,
 				sub: "user123",
 				exp: now + 6,
 			},
@@ -187,6 +203,7 @@ describe("AuthProvider", () => {
 		const now = Math.floor(Date.now() / 1000);
 		const validToken = {
 			refreshToken: "valid-token",
+			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		window.sessionStorage.setItem(StorageKey.RefreshToken, JSON.stringify(validToken));
@@ -222,6 +239,7 @@ describe("AuthProvider", () => {
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
 			account: {
+				...identityClaims,
 				sub: "user123",
 				exp: now + 6,
 			},
@@ -256,11 +274,13 @@ describe("AuthProvider", () => {
 		const now = Math.floor(Date.now() / 1000);
 		const validToken = {
 			refreshToken: "valid-token",
+			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		const idTokenBody = {
 			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
 			account: {
+				...identityClaims,
 				sub: "user123",
 				exp: now,
 			},
@@ -298,6 +318,7 @@ describe("AuthProvider", () => {
 		const now = Math.floor(Date.now() / 1000);
 		const validToken = {
 			refreshToken: "valid-token",
+			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		// Set valid token in localStorage, but do not set a stored account.

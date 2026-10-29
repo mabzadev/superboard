@@ -657,7 +657,7 @@ class SuperBoardSupportClient {
     );
     final uri = _baseUri.replace(
       scheme: _baseUri.scheme == 'https' ? 'wss' : 'ws',
-      path: '/api/v1/support/realtime/${Uri.encodeComponent(ticket)}',
+      path: '/v1/communication/support/realtime/${Uri.encodeComponent(ticket)}',
       query: null,
       fragment: null,
     );
@@ -842,7 +842,7 @@ class SuperBoardSupportClient {
 typedef SuperBoardMessagingException = SuperBoardSupportException;
 
 @Deprecated(
-  'Use SuperBoardSupportClient with the /api/v1/support-client gateway URL.',
+  'Use SuperBoardSupportClient with the /v1/communication/support/client gateway URL.',
 )
 class SuperBoardMessagingClient extends SuperBoardSupportClient {
   SuperBoardMessagingClient({

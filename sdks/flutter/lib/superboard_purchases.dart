@@ -1028,6 +1028,7 @@ class SuperBoardPurchases {
         'IDENTIFIER': _platformIdentifier!,
         'X-SuperBoard-Anonymous-ID': _anonymousId!,
         'X-SuperBoard-SDK-Version': _sdkVersion,
+        'X-SuperBoard-Language': PlatformDispatcher.instance.locale.toLanguageTag(),
         if (_appVersion.isNotEmpty) 'X-SuperBoard-App-Version': _appVersion,
         if (_buildNumber.isNotEmpty) 'X-SuperBoard-Build-Number': _buildNumber,
         if (_storefront.isNotEmpty) 'X-SuperBoard-Storefront': _storefront,

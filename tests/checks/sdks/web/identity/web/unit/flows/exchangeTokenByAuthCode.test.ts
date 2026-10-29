@@ -1,3 +1,15 @@
+const identityClaims = {
+	iss: "https://auth.example.test",
+	sub: "user-1",
+	azp: "client",
+	aud: "client",
+	exp: 0,
+	iat: 0,
+	email: null,
+	first_name: null,
+	last_name: null,
+	locale: "en",
+};
 // Import any necessary types and key constants from your shared module
 import type { ProviderConfig } from "@melody-auth/shared";
 import { SessionStorageKey, StorageKey } from "@melody-auth/shared";
@@ -108,7 +120,7 @@ describe("exchangeTokenByAuthCode", () => {
 		window.sessionStorage.setItem(SessionStorageKey.CodeVerifier, "verifierValue");
 
 		// Prepare fake token result with refresh_token and id_token
-		const fakePayload = '{"sub":"12345"}';
+		const fakePayload = JSON.stringify({ ...identityClaims, sub: "12345" });
 		const encodedPayload = btoa(fakePayload); // creates a base64 string
 		const fakeTokenResult = {
 			access_token: "access123",
@@ -140,7 +152,7 @@ describe("exchangeTokenByAuthCode", () => {
 				expiresOn: "refreshExpiry",
 			},
 			idTokenStorage: {
-				idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
+				idToken: fakeTokenResult.id_token, // gitleaks:allow -- deterministic test JWT
 				account: JSON.parse(fakePayload),
 			},
 		});
@@ -162,7 +174,7 @@ describe("exchangeTokenByAuthCode", () => {
 		const storedIdToken = window.sessionStorage.getItem(StorageKey.IdToken);
 		expect(storedIdToken).toBe(
 			JSON.stringify({
-				idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
+				idToken: fakeTokenResult.id_token, // gitleaks:allow -- deterministic test JWT
 				account: JSON.parse(fakePayload),
 			}),
 		);
@@ -225,6 +237,7 @@ describe("exchangeTokenByAuthCode", () => {
 		// Prepare a fake token result with an id_token that uses URL-safe base64 encoding,
 		// removing any "=" padding.
 		const payloadObj = {
+			...identityClaims,
 			foo: "bar",
 			num: 42,
 		};
@@ -246,9 +259,7 @@ describe("exchangeTokenByAuthCode", () => {
 		const result = await exchangeTokenByAuthCode("authCode", "validState", config);
 
 		// Validate that the idTokenBody is correctly decoded from our URL-safe base64 string.
-		expect(result?.idTokenStorage?.idToken).toEqual(
-			"header.eyJmb28iOiJiYXIiLCJudW0iOjQyfQ.signature",
-		);
+		expect(result?.idTokenStorage?.idToken).toEqual(`header.${urlSafeB64}.signature`);
 		expect(result?.idTokenStorage?.account).toEqual(payloadObj);
 	});
 
@@ -277,7 +288,7 @@ describe("exchangeTokenByAuthCode", () => {
 		window.sessionStorage.setItem(SessionStorageKey.CodeVerifier, "localVerifier");
 
 		// Prepare fake token result with both refresh_token and id_token.
-		const payloadObj = { local: "value" };
+		const payloadObj = { ...identityClaims, local: "value" };
 		const payloadStr = JSON.stringify(payloadObj);
 		const encodedPayload = btoa(payloadStr);
 
@@ -310,8 +321,8 @@ describe("exchangeTokenByAuthCode", () => {
 				expiresOn: "refreshExpireLocal",
 			},
 			idTokenStorage: {
-				idToken: "header.eyJsb2NhbCI6InZhbHVlIn0=.signature", // gitleaks:allow -- deterministic test JWT
-				account: { local: "value" },
+				idToken: fakeTokenResult.id_token, // gitleaks:allow -- deterministic test JWT
+				account: { ...identityClaims, local: "value" },
 			},
 		});
 
@@ -325,8 +336,8 @@ describe("exchangeTokenByAuthCode", () => {
 		);
 		expect(window.localStorage.getItem(StorageKey.IdToken)).toBe(
 			JSON.stringify({
-				idToken: "header.eyJsb2NhbCI6InZhbHVlIn0=.signature", // gitleaks:allow -- deterministic test JWT
-				account: { local: "value" },
+				idToken: fakeTokenResult.id_token, // gitleaks:allow -- deterministic test JWT
+				account: { ...identityClaims, local: "value" },
 			}),
 		);
 

@@ -333,6 +333,10 @@ void buildStarterEditFlow(
     name: 'authGatewayBaseUrl',
     key: 'superboard_auth_gateway_base_url',
   );
+  final customApiBaseUrlId = FFIdentifier(
+    name: 'customApiBaseUrl',
+    key: 'superboard_custom_api_base_url',
+  );
   final filesBaseUrlId = FFIdentifier(
     name: 'filesBaseUrl',
     key: 'superboard_files_base_url',
@@ -396,6 +400,7 @@ void buildStarterEditFlow(
     ensureLibraryParameter(project, sdkBaseUrlId, stringType);
     ensureLibraryParameter(project, authGatewayBaseUrlId, stringType);
     ensureLibraryParameter(project, filesBaseUrlId, stringType);
+    ensureLibraryParameter(project, customApiBaseUrlId, stringType);
     ensureLibraryParameter(project, applicationIdentifierId, stringType);
     ensureLibraryParameter(
       project,
@@ -799,6 +804,9 @@ Future<bool> superboardApplicationInitialize() {
   return superboard.superboardApplicationInitialize(
     apiBaseUrl: apiBaseUrl,
     filesBaseUrl: filesBaseUrl,
+    customApiBaseUrl: (values.customApiBaseUrl?.trim().isEmpty ?? true)
+        ? null
+        : values.customApiBaseUrl?.trim(),
     projectKey: projectKey,
     platform: kIsWeb ? 'web' : defaultTargetPlatform.name,
     identifier: identifier,

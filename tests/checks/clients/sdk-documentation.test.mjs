@@ -139,7 +139,7 @@ test("registry documentation separates public metadata from authenticated instal
 	}
 
 	for (const source of [javascript, reactNative]) {
-		assert.match(source, /@mbzadev:registry=https:\/\/npm\.pkg\.github\.com/u);
+		assert.match(source, /@mabzadev:registry=https:\/\/npm\.pkg\.github\.com/u);
 		assert.match(
 			source,
 			/\/\/npm\.pkg\.github\.com\/:_authToken=\$\{SUPERBOARD_GITHUB_PACKAGES_TOKEN\}/u,
@@ -157,8 +157,8 @@ test("registry documentation separates public metadata from authenticated instal
 		);
 	}
 
-	assert.match(javascript, /npm install @mbzadev\/superboard-js-sdk@1\.0\.2/u);
-	assert.match(reactNative, /npm install @mbzadev\/superboard-react-native-sdk@1\.0\.2/u);
+	assert.match(javascript, /npm install @mabzadev\/superboard-js-sdk@1\.0\.2/u);
+	assert.match(reactNative, /npm install @mabzadev\/superboard-react-native-sdk@1\.0\.2/u);
 	assert.match(android, /\.\/gradlew assemble/u);
 	assert.match(reactNative, /cd android && \.\/gradlew assemble/u);
 	assert.match(
@@ -309,7 +309,7 @@ test("retired npm and Gradle coordinates fail outside generated sections", async
 	const androidPath = "sdks/flutter/native/android/README.md";
 	documents.set(
 		jsPath,
-		`${documents.get(jsPath)}\nimport SuperBoard from "@mbzadev/superboard-js";\n`,
+		`${documents.get(jsPath)}\nimport SuperBoard from "@mabzadev/superboard-js";\n`,
 	);
 	documents.set(
 		androidPath,

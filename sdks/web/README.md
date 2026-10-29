@@ -15,13 +15,17 @@ Source version 0.1.0 is not published. Use the monorepo workspace during develop
 
 <!-- superboard-sdk-documentation:web:end -->
 
+Use the SDK origin for application authentication, data, purchases, communication,
+acquisition and analytics. Paths are grouped under `/v1`; see the
+[public endpoint contract](../../docs/PUBLIC_ENDPOINTS.md) for migration and custom API origins.
+
 ## Application authentication
 
 ```typescript
 import { SuperBoardClient } from "@superboard/web/client";
 
 const client = new SuperBoardClient({
-	apiUrl: "https://api.example.com",
+	apiUrl: "https://sdk.example.com",
 	projectKey: "YOUR_PROJECT_KEY",
 	appId: "app.example.com",
 });

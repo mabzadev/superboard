@@ -34,6 +34,7 @@ SuperBoardApplicationSessionManager get _sessionManager {
 Future<bool> superboardApplicationInitialize({
   required String apiBaseUrl,
   required String filesBaseUrl,
+  String? customApiBaseUrl,
   String applicationAccessToken = '',
   String projectKey = '',
   String platform = '',
@@ -45,6 +46,7 @@ Future<bool> superboardApplicationInitialize({
   final client = SuperBoardApplicationClient(
     apiBaseUrl: apiBaseUrl,
     filesBaseUrl: filesBaseUrl,
+    customApiBaseUrl: customApiBaseUrl,
     applicationAccessToken: applicationAccessToken,
     projectKey: projectKey,
     platform: platform,

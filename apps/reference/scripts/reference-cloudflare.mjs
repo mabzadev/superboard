@@ -35,8 +35,8 @@ function requireHttpsOrigin(value, field) {
 
 export function buildReferenceWorkerConfig(project, { includeRoutes = true } = {}) {
   assertReferenceEndpointContract(project?.endpoints);
-  if (project?.environment !== "development" || project?.target !== "mbza-development") {
-    throw new Error("The reference deployment must target mbza-development.");
+  if (project?.environment !== "development" || project?.target !== "mabza-development") {
+    throw new Error("The reference deployment must target mabza-development.");
   }
   if (project?.deployment?.branch !== "dev" || project?.deployment?.environment !== "development") {
     throw new Error("The reference deployment must be restricted to the dev branch and development environment.");

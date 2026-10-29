@@ -6,10 +6,10 @@
 	"referenceRepository": "https://github.com/mabzadev/superboard",
 	"referencePath": "apps/reference",
 	"environment": "development",
-	"target": "mbza-development",
+	"target": "mabza-development",
 	"sdkApplication": {
 		"platform": "web",
-		"identifier": "reference.mbza.dev",
+		"identifier": "reference.mabza.dev",
 		"projectEnvironment": "test"
 	},
 	"deployment": {
@@ -21,14 +21,14 @@
 		"compatibilityDate": "2026-08-08"
 	},
 	"endpoints": {
-		"referenceWeb": "https://reference.mbza.dev",
-		"dashboard": "https://board.mbza.dev",
-		"api": "https://api.mbza.dev",
-		"sdk": "https://sdk.mbza.dev",
-		"shortLinks": "https://in.mbza.dev",
-		"files": "https://files.mbza.dev",
-		"mailPreview": "https://mail.mbza.dev",
-		"support": "https://api.mbza.dev/api/v1/support-client"
+		"referenceWeb": "https://reference.mabza.dev",
+		"dashboard": "https://board.mabza.dev",
+		"api": "https://api.mabza.dev",
+		"sdk": "https://sdk.mabza.dev",
+		"shortLinks": "https://in.mabza.dev",
+		"files": "https://files.mabza.dev",
+		"mailPreview": "https://mail.mabza.dev",
+		"support": "https://api.mabza.dev/api/v1/support-client"
 	},
 	"sdkCatalogue": {
 		"schemaVersion": 4,

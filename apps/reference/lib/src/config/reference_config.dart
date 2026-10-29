@@ -178,12 +178,12 @@ class ReferenceConfig {
 final _gitRevision = RegExp(r'^[0-9a-f]{40}$');
 
 const _endpointContract = <String, String>{
-  'API': 'https://api.mbza.dev',
-  'SDK': 'https://sdk.mbza.dev',
-  'Support': 'https://api.mbza.dev/api/v1/support-client',
-  'Short links': 'https://in.mbza.dev',
-  'Files': 'https://files.mbza.dev',
-  'Mail preview': 'https://mail.mbza.dev',
+  'API': 'https://api.mabza.dev',
+  'SDK': 'https://sdk.mabza.dev',
+  'Support': 'https://api.mabza.dev/api/v1/support-client',
+  'Short links': 'https://in.mabza.dev',
+  'Files': 'https://files.mabza.dev',
+  'Mail preview': 'https://mail.mabza.dev',
 };
 
 String _shortRevision(String value) =>

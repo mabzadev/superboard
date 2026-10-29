@@ -62,9 +62,9 @@ test("reference project matches its strict versioned schema", () => {
 	assert.equal(validate(project), true, JSON.stringify(validate.errors));
 });
 
-test("the project schema pins every MBZA endpoint to its exact public URL", () => {
+test("the project schema pins every MABZA endpoint to its exact public URL", () => {
 	assert.equal(project.schemaVersion, 4);
-	assert.equal(project.target, "mbza-development");
+	assert.equal(project.target, "mabza-development");
 	assert.deepEqual(project.endpoints, referenceEndpointContract);
 	assert.deepEqual(
 		Object.fromEntries(
@@ -80,16 +80,16 @@ test("the project schema pins every MBZA endpoint to its exact public URL", () =
 
 test("endpoint contracts reject HTTP, credentials, query, fragment and paths", () => {
 	const unsafeEndpoints = [
-		["referenceWeb", "http://reference.mbza.dev"],
-		["dashboard", "https://operator:secret@board.mbza.dev"],
-		["api", "https://api.mbza.dev?debug=true"],
-		["sdk", "https://sdk.mbza.dev#unreviewed"],
-		["shortLinks", "https://in.mbza.dev/redirect"],
-		["files", "https://files.mbza.dev/upload"],
-		["mailPreview", "https://mail.mbza.dev/inbox"],
-		["support", "https://api.mbza.dev"],
-		["support", "https://api.mbza.dev/api/v1/support-admin"],
-		["support", "https://api.mbza.dev/api/v1/support-client?debug=true"],
+		["referenceWeb", "http://reference.mabza.dev"],
+		["dashboard", "https://operator:secret@board.mabza.dev"],
+		["api", "https://api.mabza.dev?debug=true"],
+		["sdk", "https://sdk.mabza.dev#unreviewed"],
+		["shortLinks", "https://in.mabza.dev/redirect"],
+		["files", "https://files.mabza.dev/upload"],
+		["mailPreview", "https://mail.mabza.dev/inbox"],
+		["support", "https://api.mabza.dev"],
+		["support", "https://api.mabza.dev/api/v1/support-admin"],
+		["support", "https://api.mabza.dev/api/v1/support-client?debug=true"],
 	];
 	for (const [key, value] of unsafeEndpoints) {
 		const drifted = structuredClone(project);
@@ -128,8 +128,8 @@ test("every runtime endpoint is derived from the same reference project manifest
 test("coordinated project and development drift still fails closed", () => {
 	const driftedProject = structuredClone(project);
 	const driftedDevelopment = structuredClone(development);
-	driftedProject.endpoints.api = "https://api-next.mbza.dev";
-	driftedProject.endpoints.support = "https://api-next.mbza.dev/api/v1/support-client";
+	driftedProject.endpoints.api = "https://api-next.mabza.dev";
+	driftedProject.endpoints.support = "https://api-next.mabza.dev/api/v1/support-client";
 	driftedDevelopment.SUPERBOARD_API_URL = driftedProject.endpoints.api;
 	driftedDevelopment.SUPERBOARD_SUPPORT_URL = driftedProject.endpoints.support;
 
@@ -139,7 +139,7 @@ test("coordinated project and development drift still fails closed", () => {
 	assert.equal(validate(driftedProject), false);
 	assert.throws(
 		() => assertCoordinatedReferenceConfig(driftedProject, driftedDevelopment),
-		/endpoints\.api must be "https:\/\/api\.mbza\.dev"/u,
+		/endpoints\.api must be "https:\/\/api\.mabza\.dev"/u,
 	);
 });
 
@@ -192,8 +192,8 @@ test("the executable development profile has public endpoints but no credential"
 	assert.deepEqual(development, developmentDartDefineContract);
 	assert.deepEqual(Object.keys(development).sort(), [...developmentDartDefineKeys].sort());
 	assertDevelopmentDartDefineContract(development);
-	assert.equal(development.SUPERBOARD_SHORT_LINKS_URL, "https://in.mbza.dev");
-	assert.equal(development.SUPERBOARD_SUPPORT_URL, "https://api.mbza.dev/api/v1/support-client");
+	assert.equal(development.SUPERBOARD_SHORT_LINKS_URL, "https://in.mabza.dev");
+	assert.equal(development.SUPERBOARD_SUPPORT_URL, "https://api.mabza.dev/api/v1/support-client");
 	assert.equal(development.SUPERBOARD_LIVE_MODE, "false");
 	assert.equal(development.SUPERBOARD_PROJECT_KEY, "");
 	assert.equal(development.SUPERBOARD_PLATFORM_REVISION, "local");
@@ -237,9 +237,9 @@ test("development Dart defines use a strict, complete key allowlist", () => {
 		() =>
 			assertDevelopmentDartDefineContract({
 				...development,
-				SUPERBOARD_FILES_URL: "https://files.mbza.dev/private",
+				SUPERBOARD_FILES_URL: "https://files.mabza.dev/private",
 			}),
-		/SUPERBOARD_FILES_URL must be "https:\/\/files\.mbza\.dev"/u,
+		/SUPERBOARD_FILES_URL must be "https:\/\/files\.mabza\.dev"/u,
 	);
 });
 
@@ -339,7 +339,7 @@ test("reference deployment is restricted to the development branch and custom do
 		directory: "./build/web",
 		not_found_handling: "single-page-application",
 	});
-	assert.deepEqual(config.routes, [{ pattern: "reference.mbza.dev", custom_domain: true }]);
+	assert.deepEqual(config.routes, [{ pattern: "reference.mabza.dev", custom_domain: true }]);
 	assert.equal(config.account_id, undefined);
 	assert.ok(!JSON.stringify(config).match(/TOKEN|SECRET|PASSWORD/));
 });
@@ -375,7 +375,7 @@ test("reference deployment rejects a branch or hostname that escapes the manifes
 					referenceWeb: "https://elsewhere.example/path",
 				},
 			}),
-		/endpoints\.referenceWeb must be "https:\/\/reference\.mbza\.dev"/u,
+		/endpoints\.referenceWeb must be "https:\/\/reference\.mabza\.dev"/u,
 	);
 });
 
@@ -386,7 +386,7 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
 	assert.match(workflow, /git merge-base --is-ancestor HEAD "origin\/\$DEPLOYMENT_BRANCH"/);
 	assert.doesNotMatch(workflow, /gh pr (?:merge|review)/);
 	assert.match(workflow, /name: Secret scan/);
-	assert.match(workflow, /name: Validate exact MBZA endpoints and the Dart-define allowlist/);
+	assert.match(workflow, /name: Validate exact MABZA endpoints and the Dart-define allowlist/);
 	assert.match(workflow, /gitleaks\/gitleaks-action@[0-9a-f]{40}/);
 	assert.match(workflow, /name: Make the root commit scannable for a reviewed history bridge/);
 	assert.match(workflow, /name: Validate the exact reviewed history bridge/);
@@ -558,9 +558,9 @@ test("GitHub CI metadata is derived from the strict project manifest", () => {
 
 test("reference custom domain deployment refuses DNS or Worker takeover", () => {
 	const common = {
-		hostname: "reference.mbza.dev",
+		hostname: "reference.mabza.dev",
 		service: "superboard-reference-app-dev",
-		zones: [{ id: "zone", name: "mbza.dev" }],
+		zones: [{ id: "zone", name: "mabza.dev" }],
 	};
 	assert.deepEqual(
 		evaluateReferenceDomainOwnership({

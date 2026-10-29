@@ -77,7 +77,7 @@
 		{
 			"id": "javascript",
 			"lifecycle": "archived",
-			"packageName": "@mbzadev/superboard-js-sdk",
+			"packageName": "@mabzadev/superboard-js-sdk",
 			"sourcePath": "sdks/javascript",
 			"sourceVersion": "1.0.2",
 			"baselineVersion": "1.0.2",
@@ -90,7 +90,7 @@
 		{
 			"id": "react-native",
 			"lifecycle": "archived",
-			"packageName": "@mbzadev/superboard-react-native-sdk",
+			"packageName": "@mabzadev/superboard-react-native-sdk",
 			"sourcePath": "sdks/react-native",
 			"sourceVersion": "1.0.2",
 			"baselineVersion": "1.0.2",

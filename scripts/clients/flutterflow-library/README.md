@@ -58,5 +58,5 @@ flutterflow ai run dsl/edit.dart --project-id "$FF_LIBRARY_PROJECT_ID" \
 ```
 
 The SDK dependencies must exist as immutable Git tags before a remote push.
-Application targets configure their own values; for the MBZA development
-target the short-link value is `in.mbza.dev`.
+Application targets configure their own values. Use your deployment's short-link
+hostname, for example `links.example.com`.

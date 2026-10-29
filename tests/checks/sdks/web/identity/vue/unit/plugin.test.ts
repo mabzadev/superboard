@@ -1,3 +1,15 @@
+const identityClaims = {
+	iss: "https://auth.example.test",
+	sub: "user-1",
+	azp: "client",
+	aud: "client",
+	exp: 0,
+	iat: 0,
+	email: null,
+	first_name: null,
+	last_name: null,
+	locale: "en",
+};
 import * as shared from "@melody-auth/shared";
 import * as webModule from "@melody-auth/web";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -109,12 +121,14 @@ describe("AuthProvider Plugin", () => {
 	it("should initialize with storage if valid refresh token exists", () => {
 		const mockRefreshToken = JSON.stringify({
 			refreshToken: "test-refresh-token",
-			expiresAt: Date.now() + 3600000, // 1 hour from now
+			expiresIn: 3600,
+			expiresOn: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
 		});
 
 		const mockedIdToken = JSON.stringify({
 			idToken: "test-id-token",
 			account: {
+				...identityClaims,
 				sub: "user-123",
 				name: "Test User",
 				email: "test@example.com",
@@ -152,6 +166,7 @@ describe("AuthProvider Plugin", () => {
 		expect(capturedState).not.toBeNull();
 		expect(capturedState?.refreshTokenStorage).toEqual(JSON.parse(mockRefreshToken));
 		expect(capturedState?.account).toStrictEqual({
+			...identityClaims,
 			sub: "user-123",
 			name: "Test User",
 			email: "test@example.com",
@@ -162,7 +177,8 @@ describe("AuthProvider Plugin", () => {
 	it("should not initialize with storage if refresh token is invalid", () => {
 		const mockRefreshToken = JSON.stringify({
 			refreshToken: "test-refresh-token",
-			expiresAt: Date.now() - 3600000, // 1 hour ago (expired)
+			expiresIn: 3600,
+			expiresOn: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago (expired)
 		});
 
 		shared.checkStorage.mockReturnValue({
