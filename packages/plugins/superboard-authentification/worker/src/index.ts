@@ -1,4 +1,16 @@
-import { applicationUserOperation } from "@superboard/contracts/application-plugin-api";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerImportedRouter } from "@superboard/contracts/route-registry";
+import {
+	createFetchRouter,
+	resolveRegisteredRoute,
+	mountRegisteredRouter,
+	registerRouter,
+} from "@superboard/contracts/route-registry";
+import {
+	APPLICATION_USER_ROUTES,
+	applicationUserRoute,
+	type ApplicationUserOperation,
+} from "@superboard/contracts/application-plugin-api";
 import { EMAIL_SERVICE_SEND_PATH, type EmailServiceMessage } from "@superboard/contracts/email";
 import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import { verifyInternalProjectContextRequest } from "@superboard/contracts/project-context";
@@ -26,12 +38,18 @@ import {
 import melodyApp from "./melody";
 import { integratedIdentityEnv, melodyBindings } from "./melody-runtime";
 import type { IdentityEnv, IdentityUser } from "./types";
-import { userAdministration } from "./user-administration.js";
+import { userAdministration, userAdministrationRoutes } from "./user-administration.js";
 
 type Variables = { userId: string; sessionId: string; projectId: number };
 type IdentityContext = Context<{ Bindings: IdentityEnv; Variables: Variables }>;
 
-const app = new Hono<{ Bindings: IdentityEnv; Variables: Variables }>();
+const app = registerRouter(new Hono<{ Bindings: IdentityEnv; Variables: Variables }>(), {
+	service: "identity",
+	module: "index.app",
+	pluginId: "superboard-user",
+	surface: "internal",
+	access: "framework",
+});
 
 type IdentityAdminUserRow = {
 	id: string;
@@ -380,12 +398,10 @@ async function operatorUserAdministration(c: IdentityContext) {
 	if (project instanceof Response) return project;
 	return userAdministration(c.req.raw, c.env.DB, project, c.env.IDENTITY_REALM);
 }
-app.get("/internal/v1/admin/members", operatorUserAdministration);
-app.all("/internal/v1/admin/profiles/*", operatorUserAdministration);
+mountRegisteredRouter(app, userAdministrationRoutes, operatorUserAdministration);
 
-app.all("/internal/v1/application-plugin/:kind/:id", async (c) => {
-	const operation = applicationUserOperation(c.req.param("kind"), c.req.param("id"));
-	if (!operation || operation.method !== c.req.method)
+async function handleApplicationOperation(c: IdentityContext, operation: ApplicationUserOperation) {
+	if (operation.method !== c.req.method)
 		return error("application_operation_not_found", "Application operation was not found", 404);
 	const project = await internalProject(c);
 	if (project instanceof Response) return project;
@@ -434,7 +450,19 @@ app.all("/internal/v1/application-plugin/:kind/:id", async (c) => {
 		c.env,
 		c.executionCtx,
 	);
-});
+}
+
+for (const operation of Object.values(APPLICATION_USER_ROUTES)) {
+	const definition = applicationUserRoute(operation, "identity");
+	app
+		.defineRoute(definition)
+		.on(definition.method, definition.path, (c) => handleApplicationOperation(c, operation));
+}
+app
+	.defineRoute({ transport: "fallback" })
+	.all("/internal/v1/application-plugin/:kind/:id", () =>
+		error("application_operation_not_found", "Application operation was not found", 404),
+	);
 
 app.get("/internal/v1/admin/users", async (c) => {
 	const project = await internalProject(c);
@@ -1532,23 +1560,38 @@ function response(value: unknown, status = 200): Response {
 	});
 }
 
+const hostedAssets = createFetchRouter<IdentityEnv>({
+	service: "identity",
+	module: "hosted-assets",
+	pluginId: "superboard-user",
+	surface: "internal",
+	access: "framework",
+});
+const hostedAssetPaths = ["/client.js", "/client.css"];
+const hostedAssetHandler = async ({ request, env }: { request: Request; env: IdentityEnv }) => {
+	const response = await integratedIdentityEnv(env).ASSETS.fetch(request);
+	const headers = new Headers(response.headers);
+	headers.set("x-content-type-options", "nosniff");
+	headers.set("cache-control", "public, max-age=300, must-revalidate");
+	return new Response(response.body, {
+		status: response.status,
+		statusText: response.statusText,
+		headers,
+	});
+};
+hostedAssets.on(["GET", "HEAD"], hostedAssetPaths, hostedAssetHandler);
+hostedAssets.defineRoute({ transport: "fallback" }).on("ALL", hostedAssetPaths, hostedAssetHandler);
+
 const integratedWorker = {
 	async fetch(request: Request, env: IdentityEnv, executionContext: ExecutionContext) {
 		const url = new URL(request.url);
 		const gatewayRequest = request.headers.get("x-superboard-auth-gateway") === "1";
 
-		if (gatewayRequest && (url.pathname === "/client.js" || url.pathname === "/client.css")) {
-			const assets = integratedIdentityEnv(env).ASSETS;
-			const response = await assets.fetch(request);
-			const headers = new Headers(response.headers);
-			headers.set("x-content-type-options", "nosniff");
-			headers.set("cache-control", "public, max-age=300, must-revalidate");
-			return new Response(response.body, {
-				status: response.status,
-				statusText: response.statusText,
-				headers,
-			});
-		}
+		if (
+			gatewayRequest &&
+			resolveRegisteredRoute(hostedAssets, request.method, "internal", url.pathname)
+		)
+			return hostedAssets.fetch(request, env);
 
 		const hosted = gatewayRequest && !legacyIdentityPath(url.pathname);
 		const needsConfiguration =
@@ -1593,4 +1636,18 @@ function legacyIdentityPath(pathname: string): boolean {
 	);
 }
 
-export default integratedWorker;
+export default withRouteManifest(
+	integratedWorker,
+	[
+		app,
+		hostedAssets,
+		registerImportedRouter(melodyApp, {
+			service: "identity",
+			module: "embedded-melody",
+			pluginId: "superboard-user",
+			surface: "internal",
+			access: "framework",
+		}),
+	],
+	{ service: "identity", pluginId: "superboard-user" },
+);

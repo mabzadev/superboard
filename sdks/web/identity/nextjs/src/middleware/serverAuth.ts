@@ -1,4 +1,9 @@
 import {
+	parseIdTokenStorage,
+	parseAccessTokenStorage,
+	parseRefreshTokenStorage,
+} from "../validation.js";
+import {
 	StorageKey,
 	isValidTokens,
 	IdTokenStorage,
@@ -7,7 +12,7 @@ import {
 } from "@melody-auth/shared";
 import { exchangeTokenByRefreshToken } from "@melody-auth/web";
 
-import { CookieStorage } from "../storage/cookieAdapter";
+import { getCookie, setCookie } from "cookies-next";
 
 /**
  * Configuration options for server-side authentication
@@ -69,23 +74,23 @@ export interface AuthSession {
  * ```
  */
 export async function getServerSession(options: ServerAuthOptions): Promise<AuthSession | null> {
-	const storage = new CookieStorage({ ...options.cookieOptions });
-
 	try {
 		// Get tokens from cookies
-		const idTokenStr = storage.getItem(StorageKey.IdToken);
-		const accessTokenStr = storage.getItem(StorageKey.AccessToken);
-		const refreshTokenStr = storage.getItem(StorageKey.RefreshToken);
+		const idTokenStr = await getCookie(StorageKey.IdToken);
+		const accessTokenStr = await getCookie(StorageKey.AccessToken);
+		const refreshTokenStr = await getCookie(StorageKey.RefreshToken);
 
 		// Access token is required for authentication
 		if (!accessTokenStr) {
 			return null;
 		}
 
-		const idTokenStorage: IdTokenStorage | null = idTokenStr ? JSON.parse(idTokenStr) : null;
-		const accessTokenStorage: AccessTokenStorage = JSON.parse(accessTokenStr);
+		const idTokenStorage: IdTokenStorage | null = idTokenStr
+			? parseIdTokenStorage(idTokenStr)
+			: null;
+		const accessTokenStorage: AccessTokenStorage = parseAccessTokenStorage(accessTokenStr);
 		const refreshTokenStorage: RefreshTokenStorage | null = refreshTokenStr
-			? JSON.parse(refreshTokenStr)
+			? parseRefreshTokenStorage(refreshTokenStr)
 			: null;
 
 		// Check token validity
@@ -114,7 +119,13 @@ export async function getServerSession(options: ServerAuthOptions): Promise<Auth
 					expiresOn: newTokens.expiresOn,
 				};
 
-				storage.setItem(StorageKey.AccessToken, JSON.stringify(newAccessTokenStorage));
+				await setCookie(StorageKey.AccessToken, JSON.stringify(newAccessTokenStorage), {
+					httpOnly: true,
+					secure: true,
+					sameSite: "lax",
+					path: "/",
+					...options.cookieOptions,
+				});
 
 				return {
 					userId: idTokenStorage?.account.sub,

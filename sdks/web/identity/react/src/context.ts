@@ -37,6 +37,13 @@ export interface AuthContext {
 	dispatch: AuthDispatch;
 }
 
-const authContext = createContext<AuthContext>({} as AuthContext);
+const authContext = createContext<AuthContext>({
+	get state(): AuthState {
+		throw new Error("AuthProvider is required");
+	},
+	dispatch: () => {
+		throw new Error("AuthProvider is required");
+	},
+});
 
 export default authContext;

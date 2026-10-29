@@ -12,7 +12,7 @@ import type {
 
 import frontBundle from "../../../../scripts/config/superboard-front-bundle.json";
 
-const pluginId = "supbrd-plug-user";
+const pluginId = "superboard-user";
 const pluginVersion = "1.4.0";
 const rendererRuntime = { abi_version: "1.0.0", runtime_version: "0.1.0" } as const;
 

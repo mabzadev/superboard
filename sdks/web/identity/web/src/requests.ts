@@ -1,3 +1,4 @@
+import { parseUserInfo, parseAuthorizationResponse, parseRefreshResponse } from "./validation.js";
 import {
 	ProviderConfig,
 	GetUserInfoRes,
@@ -64,10 +65,17 @@ export const getAuthorize = async (
 		}
 
 		const onMessage = (event: MessageEvent) => {
-			const data = event.data;
-			if (data && data.state && data.code) {
+			const data: unknown = event.data;
+			if (
+				data &&
+				typeof data === "object" &&
+				"state" in data &&
+				typeof data.state === "string" &&
+				"code" in data &&
+				typeof data.code === "string"
+			) {
 				if (authorizePopupHandler) {
-					authorizePopupHandler(data);
+					authorizePopupHandler({ state: data.state, code: data.code });
 				}
 
 				if (authWindow && !authWindow.closed) {
@@ -103,7 +111,7 @@ export const getUserInfo = async (
 		throw new Error(text);
 	}
 
-	const data: GetUserInfoRes = await res.json();
+	const data: GetUserInfoRes = parseUserInfo(await res.json());
 	return data;
 };
 
@@ -140,8 +148,13 @@ export const postLogout = async (
 		throw new Error(text);
 	}
 
-	const result = await res.json();
-	return (result?.redirectUri as string) ?? postLogoutRedirectUri;
+	const result: unknown = await res.json();
+	return result &&
+		typeof result === "object" &&
+		"redirectUri" in result &&
+		typeof result.redirectUri === "string"
+		? result.redirectUri
+		: postLogoutRedirectUri;
 };
 
 export const postTokenByAuthCode = async (
@@ -174,7 +187,7 @@ export const postTokenByAuthCode = async (
 		throw new Error(text);
 	}
 
-	const data: PostTokenByAuthCodeRes = await res.json();
+	const data: PostTokenByAuthCodeRes = parseAuthorizationResponse(await res.json());
 	return data;
 };
 
@@ -204,7 +217,7 @@ export const postTokenByRefreshToken = async (
 		throw new Error(text);
 	}
 
-	const data: PostTokenByRefreshTokenRes = await res.json();
+	const data: PostTokenByRefreshTokenRes = parseRefreshResponse(await res.json());
 
 	return data;
 };

@@ -1,3 +1,4 @@
+import { parseIdTokenBody } from "../validation.js";
 import {
 	ProviderConfig,
 	AccessTokenStorage,
@@ -94,7 +95,8 @@ export const exchangeTokenByAuthCode = async (
 		if (result.id_token) {
 			const payloadRaw = result.id_token.split(".")[1];
 			const payload = base64UrlDecode(payloadRaw);
-			const account = JSON.parse(payload);
+			const claims: unknown = JSON.parse(payload);
+			const account = parseIdTokenBody(claims);
 			idTokenStorage = {
 				idToken: result.id_token,
 				account,
@@ -119,6 +121,6 @@ export const exchangeTokenByAuthCode = async (
 
 		return response;
 	} catch (e) {
-		throw new Error(`Failed to exchange token by auth code: ${e}`);
+		throw new Error(`Failed to exchange token by auth code: ${String(e)}`);
 	}
 };

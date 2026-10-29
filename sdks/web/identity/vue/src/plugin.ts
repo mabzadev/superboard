@@ -1,3 +1,4 @@
+import { parseRefreshTokenStorage, parseIdTokenStorage } from "./validation.js";
 import {
 	ProviderConfig,
 	getParams,
@@ -41,10 +42,12 @@ export const AuthProvider = {
 			const { storedRefreshToken, storedIdToken } = checkStorage(config.storage);
 
 			if (!parsedRefreshToken && storedRefreshToken) {
-				parsedRefreshToken = JSON.parse(storedRefreshToken);
+				parsedRefreshToken = parseRefreshTokenStorage(storedRefreshToken);
 			}
 
-			const parsedIdToken: IdTokenStorage = storedIdToken ? JSON.parse(storedIdToken) : null;
+			const parsedIdToken: IdTokenStorage | null = storedIdToken
+				? parseIdTokenStorage(storedIdToken)
+				: null;
 
 			if (parsedRefreshToken || parsedIdToken) {
 				const { hasValidIdToken, hasValidRefreshToken } = isValidTokens(
@@ -57,7 +60,7 @@ export const AuthProvider = {
 				if (hasValidRefreshToken || !!account) {
 					state.refreshTokenStorage = hasValidRefreshToken ? parsedRefreshToken : null;
 					state.account = account ?? null;
-					state.idToken = hasValidIdToken ? parsedIdToken.idToken : null;
+					state.idToken = hasValidIdToken && parsedIdToken ? parsedIdToken.idToken : null;
 					state.checkedStorage = true;
 					return;
 				}
@@ -77,7 +80,9 @@ export const AuthProvider = {
 				if (state.accessTokenStorage) return;
 
 				if (!containCode && state.refreshTokenStorage && !state.accessTokenStorage) {
-					acquireToken(state);
+					Promise.resolve(acquireToken(state)).catch((cause: unknown) => {
+						console.error(cause);
+					});
 					return;
 				}
 

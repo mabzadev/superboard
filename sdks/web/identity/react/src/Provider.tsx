@@ -1,3 +1,4 @@
+import { parseRefreshTokenStorage, parseIdTokenStorage } from "./validation.js";
 import {
 	checkStorage,
 	ProviderConfig,
@@ -120,10 +121,12 @@ export const AuthProvider = ({ children, ...config }: ProviderProps) => {
 		const { storedRefreshToken, storedIdToken } = checkStorage(config.storage);
 
 		if (!parsedRefreshToken && storedRefreshToken) {
-			parsedRefreshToken = JSON.parse(storedRefreshToken);
+			parsedRefreshToken = parseRefreshTokenStorage(storedRefreshToken);
 		}
 
-		const parsedIdToken: IdTokenStorage = storedIdToken ? JSON.parse(storedIdToken) : null;
+		const parsedIdToken: IdTokenStorage | null = storedIdToken
+			? parseIdTokenStorage(storedIdToken)
+			: null;
 
 		if (parsedRefreshToken || parsedIdToken) {
 			const { hasValidIdToken, hasValidRefreshToken } = isValidTokens(
@@ -139,7 +142,7 @@ export const AuthProvider = ({ children, ...config }: ProviderProps) => {
 					payload: {
 						refreshTokenStorage: hasValidRefreshToken ? parsedRefreshToken : null,
 						idTokenBody: account ?? null,
-						idToken: hasValidIdToken ? parsedIdToken.idToken : null,
+						idToken: hasValidIdToken && parsedIdToken ? parsedIdToken.idToken : null,
 					},
 				});
 				return;

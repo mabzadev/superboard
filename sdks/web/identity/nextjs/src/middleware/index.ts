@@ -1,5 +1,14 @@
+import { parseIdTokenStorage, parseAccessTokenStorage } from "../validation.js";
 import { StorageKey, isValidTokens, IdTokenStorage, AccessTokenStorage } from "@melody-auth/shared";
-import { jwtVerify, importSPKI, importX509, importJWK, JWTPayload } from "jose";
+import {
+	jwtVerify,
+	importSPKI,
+	importX509,
+	importJWK,
+	JWTPayload,
+	type JWK,
+	type KeyLike,
+} from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
 import { CookieStorage } from "../storage/cookieAdapter";
@@ -42,18 +51,18 @@ export interface AuthenticatedRequest extends NextRequest {
 }
 
 // Cache for public keys to avoid repeated imports/fetches
-let cachedPublicKey: CryptoKey | null = null;
-let jwksCache: { keys: any[]; timestamp: number } | null = null;
+let cachedPublicKey: KeyLike | Uint8Array | null = null;
+let jwksCache: { keys: JWK[]; timestamp: number } | null = null;
 const JWKS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Imports a JWK key using the appropriate method based on available data
  */
-async function importJWKKey(jwk: any): Promise<CryptoKey> {
+async function importJWKKey(jwk: JWK): Promise<KeyLike | Uint8Array> {
 	// First try to import directly as JWK
 	if (jwk.n && jwk.e) {
 		const key = await importJWK(jwk, "RS256");
-		return key as CryptoKey;
+		return key;
 	}
 
 	// If x5c is available, use X.509 certificate
@@ -61,7 +70,7 @@ async function importJWKKey(jwk: any): Promise<CryptoKey> {
 		// x5c[0] contains the base64-encoded X.509 certificate
 		const certPEM = `-----BEGIN CERTIFICATE-----\n${jwk.x5c[0]}\n-----END CERTIFICATE-----`;
 		const key = await importX509(certPEM, "RS256");
-		return key as CryptoKey;
+		return key;
 	}
 
 	throw new Error("JWK key format not supported - missing n/e or x5c");
@@ -72,13 +81,13 @@ async function importJWKKey(jwk: any): Promise<CryptoKey> {
  * Supports both direct public key configuration and JWKS URI
  * Implements caching to improve performance
  */
-async function getPublicKey(config: MelodyAuthMiddlewareConfig): Promise<CryptoKey> {
+async function getPublicKey(config: MelodyAuthMiddlewareConfig): Promise<KeyLike | Uint8Array> {
 	if (cachedPublicKey) return cachedPublicKey;
 
 	if (config.publicKey) {
 		const spki = await importSPKI(config.publicKey, "RS256");
-		cachedPublicKey = spki as CryptoKey;
-		return spki as CryptoKey;
+		cachedPublicKey = spki;
+		return spki;
 	}
 
 	if (config.jwksUri) {
@@ -97,14 +106,29 @@ async function getPublicKey(config: MelodyAuthMiddlewareConfig): Promise<CryptoK
 				throw new Error(`Failed to fetch JWKS: ${response.statusText}`);
 			}
 
-			const jwks = await response.json();
+			const jwks: unknown = await response.json();
+			if (!jwks || typeof jwks !== "object" || !("keys" in jwks) || !Array.isArray(jwks.keys))
+				throw new Error("Invalid JWKS");
+			const keys = jwks.keys.filter(
+				(key: unknown): key is JWK =>
+					!!key &&
+					typeof key === "object" &&
+					"kty" in key &&
+					key.kty === "RSA" &&
+					"use" in key &&
+					key.use === "sig" &&
+					(("n" in key && typeof key.n === "string" && "e" in key && typeof key.e === "string") ||
+						("x5c" in key &&
+							Array.isArray(key.x5c) &&
+							key.x5c.every((certificate: unknown) => typeof certificate === "string"))),
+			);
 			jwksCache = {
-				keys: jwks.keys,
+				keys,
 				timestamp: Date.now(),
 			};
 
 			// Find RSA signing key
-			const rsaKey = jwks.keys.find((key: any) => key.kty === "RSA" && key.use === "sig");
+			const rsaKey = keys.find((key) => key.kty === "RSA" && key.use === "sig");
 			if (!rsaKey) {
 				throw new Error("No RSA signing key found in JWKS");
 			}
@@ -162,8 +186,10 @@ export function createMelodyAuthMiddleware(config: MelodyAuthMiddlewareConfig) {
 				return redirectToLogin(request, config.redirectPath);
 			}
 
-			const idTokenStorage: IdTokenStorage | null = idTokenStr ? JSON.parse(idTokenStr) : null;
-			const accessTokenStorage: AccessTokenStorage = JSON.parse(accessTokenStr);
+			const idTokenStorage: IdTokenStorage | null = idTokenStr
+				? parseIdTokenStorage(idTokenStr)
+				: null;
+			const accessTokenStorage: AccessTokenStorage = parseAccessTokenStorage(accessTokenStr);
 
 			// Validate tokens
 			const { hasValidIdToken, hasValidAccessToken } = isValidTokens(

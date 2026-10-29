@@ -68,31 +68,43 @@ export class CookieStorage {
 			cookieGetter: (key: string) => {
 				const req = options.request;
 				const res = options.response;
-				return (
-					(getCookie(key, {
-						req,
-						res,
-					}) as string) || null
-				);
+				if (req?.cookies) return req.cookies.get(key)?.value ?? null;
+				const value = getCookie(key, { req, res });
+				if (typeof value === "string") return value || null;
+				if (value instanceof Promise) {
+					value.catch((cause: unknown) => {
+						console.error(cause);
+					});
+					throw new Error("Synchronous cookie storage requires a request or a browser");
+				}
+				return null;
 			},
 			cookieSetter: (key: string, value: string) => {
 				const req = options.request;
 				const res = options.response;
 				if (value === "") {
-					deleteCookie(key, {
-						req,
-						res,
+					Promise.resolve(
+						deleteCookie(key, {
+							req,
+							res,
+						}),
+					).catch((cause: unknown) => {
+						console.error(cause);
 					});
 				} else {
-					setCookie(key, value, {
-						req,
-						res,
-						httpOnly: options.httpOnly ?? true,
-						secure: isSecure,
-						sameSite: options.sameSite ?? "lax",
-						path: options.path ?? "/",
-						domain: options.domain,
-						maxAge: options.maxAge,
+					Promise.resolve(
+						setCookie(key, value, {
+							req,
+							res,
+							httpOnly: options.httpOnly ?? true,
+							secure: isSecure,
+							sameSite: options.sameSite ?? "lax",
+							path: options.path ?? "/",
+							domain: options.domain,
+							maxAge: options.maxAge,
+						}),
+					).catch((cause: unknown) => {
+						console.error(cause);
 					});
 				}
 			},

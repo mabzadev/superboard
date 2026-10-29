@@ -1,3 +1,4 @@
+import { parseRefreshTokenStorage, parseIdTokenStorage } from "./validation.js";
 import { Inject, Injectable, signal } from "@angular/core";
 import {
 	getParams,
@@ -55,10 +56,12 @@ export class AuthContext {
 		const { storedRefreshToken, storedIdToken } = checkStorage(this.state().config.storage);
 
 		if (!parsedRefreshToken && storedRefreshToken) {
-			parsedRefreshToken = JSON.parse(storedRefreshToken);
+			parsedRefreshToken = parseRefreshTokenStorage(storedRefreshToken);
 		}
 
-		const parsedIdToken: IdTokenStorage = storedIdToken ? JSON.parse(storedIdToken) : null;
+		const parsedIdToken: IdTokenStorage | null = storedIdToken
+			? parseIdTokenStorage(storedIdToken)
+			: null;
 
 		if (parsedRefreshToken || parsedIdToken) {
 			const { hasValidIdToken, hasValidRefreshToken } = isValidTokens(
@@ -74,7 +77,7 @@ export class AuthContext {
 					...prev,
 					refreshTokenStorage: hasValidRefreshToken ? parsedRefreshToken : null,
 					account: account ?? null,
-					idToken: hasValidIdToken ? parsedIdToken.idToken : null,
+					idToken: hasValidIdToken && parsedIdToken ? parsedIdToken.idToken : null,
 					checkedStorage: true,
 				}));
 				return;
@@ -96,7 +99,9 @@ export class AuthContext {
 		}
 
 		if (!containsCode && this.state().refreshTokenStorage && !this.state().accessTokenStorage) {
-			acquireToken(this.state);
+			Promise.resolve(acquireToken(this.state)).catch((cause: unknown) => {
+				console.error(cause);
+			});
 			return;
 		}
 

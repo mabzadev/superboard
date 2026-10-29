@@ -24,7 +24,9 @@ const Setup = () => {
 		if (state.accessTokenStorage) return;
 
 		if (!containCode && state.refreshTokenStorage && !state.accessTokenStorage) {
-			acquireToken();
+			Promise.resolve(acquireToken()).catch((cause: unknown) => {
+				console.error(cause);
+			});
 			return;
 		}
 

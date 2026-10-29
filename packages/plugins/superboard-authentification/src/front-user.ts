@@ -28,7 +28,7 @@ const anonymous = {
 const userRendererIds = new Set<string>(Object.values(USER_RENDERER_IDS));
 
 const contribution = defineNativeFrontPlugin({
-	plugin_id: "supbrd-plug-user",
+	plugin_id: "superboard-user",
 	plugin_label: "Identity",
 	description:
 		"Manage operator access, application users, and identity resources through the active plugin contract.",
@@ -210,7 +210,7 @@ export const nativeFrontPlugin = {
 			title: input.view_title ?? "Identity",
 			description: input.view_description ?? view.description_message_id,
 			details: [
-				{ label: "Plugin", value: "supbrd-plug-user" },
+				{ label: "Plugin", value: "superboard-user" },
 				{ label: "Renderer", value: view.renderer_id },
 				{ label: "Path", value: input.path },
 			],
