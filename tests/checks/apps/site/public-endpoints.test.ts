@@ -8,6 +8,16 @@ describe("server-owned public endpoints", () => {
 		).toEqual({ sdk: "https://sdk.example.test", mcp: "https://mcp.example.test" });
 		expect(parsePublicEndpoints(undefined)).toEqual({});
 	});
+	it("preserves the hosted auth prefix while validating its origin", () => {
+		expect(
+			parsePublicEndpoints(
+				'{"auth":"https://sdk.example.test/v1/auth","sdk":"https://sdk.example.test"}',
+			),
+		).toEqual({ auth: "https://sdk.example.test/v1/auth", sdk: "https://sdk.example.test" });
+		expect(() => parsePublicEndpoints('{"auth":"https://sdk.example.test/internal"}')).toThrow(
+			"PUBLIC_ENDPOINTS_INVALID",
+		);
+	});
 	it("rejects credentials, paths, scripts and malformed configuration", () => {
 		for (const value of [
 			"[]",
