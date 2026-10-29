@@ -1,3 +1,4 @@
+import { INTERNAL_ROUTE_OWNER_PATH } from "@superboard/contracts/route-reference";
 import { userPluginManifest } from "@superboard/plugin-identity/user";
 import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
 import { env } from "cloudflare:workers";
@@ -88,7 +89,7 @@ describe("EmDash plugin Store authority", () => {
 		});
 		expect(
 			fullPresentation.front_route_manifest.routes.some(
-				({ path_pattern: path }) => path === "/marketing/campaigns",
+				({ path_pattern: path }) => path === "/communication/campaigns",
 			),
 		).toBe(true);
 
@@ -149,7 +150,7 @@ describe("EmDash plugin Store authority", () => {
 		});
 		expect(
 			reducedPresentation.front_route_manifest.routes.some(
-				({ path_pattern: path }) => path === "/marketing/campaigns",
+				({ path_pattern: path }) => path === "/communication/campaigns",
 			),
 		).toBe(false);
 	});
@@ -171,7 +172,7 @@ describe("EmDash plugin Store authority", () => {
 			plugin_id: userPluginManifest.plugin_id,
 			plugin_version: userPluginManifest.plugin_version,
 			artifact_checksum: userPluginManifest.artifact_checksum,
-			dependency_id: "dependency.supbrd_plug_user",
+			dependency_id: "dependency.superboard_user",
 			status: "installed",
 		});
 		expect(receipt.evidence_checksum).toMatch(/^sha256:[a-f0-9]{64}$/u);
@@ -367,7 +368,12 @@ describe("EmDash plugin Store authority", () => {
 		const encodedKey = btoa(String.fromCodePoint(...rawKey));
 		let dispatches = 0;
 		const apiService = {
-			fetch: async () => {
+			fetch: async (request: Request) => {
+				if (new URL(request.url).pathname === INTERNAL_ROUTE_OWNER_PATH)
+					return Response.json({
+						pluginId: "superboard-analytics",
+						routeId: "api:analytics:reports",
+					});
 				dispatches += 1;
 				const accepted = await env.DB.prepare(
 					"SELECT state FROM superboard_plugin_command_operations WHERE operation_id = ?",

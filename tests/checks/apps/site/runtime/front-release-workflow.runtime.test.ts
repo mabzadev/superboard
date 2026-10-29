@@ -1,3 +1,4 @@
+import { canonicalFrontPath } from "@superboard/contracts/front-paths";
 import { userPluginManifest } from "@superboard/plugin-identity/user";
 import {
 	compileFrontRelease,
@@ -52,7 +53,7 @@ function release(): CompiledFrontRelease {
 
 describe("Site Front Release D1 workflow", () => {
 	test("serves maintenance before the Instance has an active release", async () => {
-		expect((await resolveSiteFrontPage(env, "/login", undefined)).resolution).toEqual({
+		expect((await resolveSiteFrontPage(env, canonicalFrontPath("/login"), undefined)).resolution).toEqual({
 			result: "maintenance",
 			route_id: null,
 			state_renderer_id: null,
@@ -307,12 +308,12 @@ describe("Site Front Release D1 workflow", () => {
 		);
 		if (!loadedPreview) throw new Error("preview missing");
 		expect(
-			(await resolvePreviewFrontPage(env, loadedPreview.candidate.release, "/login", undefined))
+			(await resolvePreviewFrontPage(env, loadedPreview.candidate.release, canonicalFrontPath("/login"), undefined))
 				.resolution.result,
 		).toBe("rendered");
 		expect(
 			(
-				await resolvePreviewFrontPage(env, loadedPreview.candidate.release, "/app/profile", {
+				await resolvePreviewFrontPage(env, loadedPreview.candidate.release, canonicalFrontPath("/app/profile"), {
 					id: "operator-admin",
 					email: "admin@example.com",
 					name: "Admin",
@@ -323,7 +324,7 @@ describe("Site Front Release D1 workflow", () => {
 		).toBe("rendered");
 		expect(
 			(
-				await resolvePreviewFrontPage(env, loadedPreview.candidate.release, "/app/profile", {
+				await resolvePreviewFrontPage(env, loadedPreview.candidate.release, canonicalFrontPath("/app/profile"), {
 					id: "operator-editor",
 					email: "editor@example.com",
 					name: "Editor",

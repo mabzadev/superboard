@@ -67,9 +67,9 @@ describe("SuperBoard plugin lifecycle", () => {
 		});
 		const lock = await loadSelectedSuperBoardPluginLock(env.DB, expandedTarget, addedPluginIds);
 		expect(lock.map(({ plugin_id }) => plugin_id).toSorted()).toEqual([
-			"superboard-user",
 			"superboard-onboardings",
 			"superboard-paywalls",
+			"superboard-user",
 		]);
 		const active = await env.DB.prepare(
 			`SELECT state, activated_release_id FROM superboard_plugin_lifecycle
@@ -160,7 +160,7 @@ describe("SuperBoard plugin lifecycle", () => {
 		});
 		expect(
 			presentation.front_route_manifest.routes.some(
-				({ path_pattern: path }) => path === "/marketing/campaigns",
+				({ path_pattern: path }) => path === "/communication/campaigns",
 			),
 		).toBe(true);
 	});
@@ -213,7 +213,7 @@ describe("SuperBoard plugin lifecycle", () => {
 		});
 		expect(
 			presentation.front_route_manifest.routes.some(
-				({ path_pattern: path }) => path === "/marketing/campaigns",
+				({ path_pattern: path }) => path === "/communication/campaigns",
 			),
 		).toBe(false);
 		expect(

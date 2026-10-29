@@ -1,3 +1,4 @@
+import { canonicalFrontPath } from "@superboard/contracts/front-paths";
 import { env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
@@ -97,7 +98,7 @@ test("an expired activation receipt rechecks the Worker before rendering the act
 	await env.DB.prepare(
 		"UPDATE superboard_dependency_health SET expires_at = ? WHERE dependency_id = ?",
 	)
-		.bind("2000-01-01T00:00:00.000Z", "dependency.supbrd_plugmod_paywalls")
+		.bind("2000-01-01T00:00:00.000Z", "dependency.superboard_paywalls")
 		.run();
 	const { resolveSiteFrontPage } = await import("../../../../../apps/site/src/lib/front-page.js");
 	const user = {
@@ -107,11 +108,11 @@ test("an expired activation receipt rechecks the Worker before rendering the act
 		role: 50 as const,
 		disabled: false,
 	};
-	const page = await resolveSiteFrontPage(env, "/paywalls", user);
+	const page = await resolveSiteFrontPage(env, canonicalFrontPath("/paywalls"), user);
 	expect(page.resolution.result).toBe("rendered");
 	const unavailable = await resolveSiteFrontPage(
 		{ ...env, API_SERVICE: undefined } as never,
-		"/paywalls",
+		canonicalFrontPath("/paywalls"),
 		user,
 	);
 	expect(unavailable.resolution.result).toBe("unavailable");

@@ -120,7 +120,7 @@ export async function dispatchLifecycleApi(
 												? "superboard-user"
 												: binding === "PRODUCTS_MODULE"
 													? "superboard-products"
-													: `supbrd-plugmod-${name}`,
+													: `superboard-${name}`,
 									),
 								),
 						},

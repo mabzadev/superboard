@@ -1,4 +1,5 @@
 import { PROJECT_CONTEXT_HEADERS, signProjectContext } from "@superboard/contracts/project-context";
+import { INTERNAL_ROUTE_REFERENCES_PATH } from "@superboard/contracts/route-reference";
 import { signSiteOperatorRequest } from "@superboard/contracts/site-operator";
 import type { APIContext } from "astro";
 import { env } from "cloudflare:workers";
@@ -468,7 +469,17 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		SUPERBOARD_TARGET: instanceId,
 		SITE_OPERATOR_BRIDGE_TOKEN: "canonical-email-bridge",
 		EMAIL_INTERNAL_TOKEN: secret,
-		EMAIL_SERVICE: { fetch: (forwarded: Request) => email.fetch(forwarded, emailEnv) },
+		EMAIL_SERVICE: {
+			// Only the route manifest carries the instance identity; the command itself
+			// runs without the plugin task lifecycle, like the other Email checks here.
+			fetch: (forwarded: Request) =>
+				email.fetch(
+					forwarded,
+					new URL(forwarded.url).pathname === "/internal/route-manifest/v1"
+						? { ...emailEnv, SUPERBOARD_INSTANCE_ID: instanceId, SUPERBOARD_ENVIRONMENT: "local" }
+						: emailEnv,
+				),
+		},
 	} as unknown as ApiEnv;
 	const dispatchEnv = {
 		DB: env.DB,
@@ -476,7 +487,17 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		SUPERBOARD_ENVIRONMENT: "local",
 		SITE_OPERATOR_BRIDGE_TOKEN: "canonical-email-bridge",
 		SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: env.SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY,
-		API_SERVICE: { fetch: (forwarded: Request) => api.fetch(forwarded, apiEnv) },
+		// Route references are resolved with the instance identity; the command runs
+		// without the plugin task lifecycle, like the other Email checks here.
+		API_SERVICE: {
+			fetch: (forwarded: Request) =>
+				api.fetch(
+					forwarded,
+					new URL(forwarded.url).pathname === INTERNAL_ROUTE_REFERENCES_PATH
+						? { ...apiEnv, SUPERBOARD_INSTANCE_ID: instanceId, SUPERBOARD_ENVIRONMENT: "local" }
+						: apiEnv,
+				),
+		},
 	};
 	const pluginId = "superboard-email";
 	const body = {
@@ -509,7 +530,7 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		locals: { user: { id: "canonical-email-owner", email: "operator@example.test", role: 50 } },
 	} as APIContext;
 	const response = await dispatchPluginApiAdapter(context, "command", dispatchEnv);
-	expect(response.status).toBe(202);
+	expect(response.status, await response.clone().text()).toBe(202);
 	expect(
 		await env.DB.prepare(
 			"SELECT plugin_id,command_id,project_ref FROM superboard_plugin_command_operations WHERE operation_id='canonical-email-command'",

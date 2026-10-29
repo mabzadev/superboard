@@ -22,7 +22,7 @@ test("receipt renewal does not clear an unavailable active plugin", async () => 
 
 	const identityDb = (env as unknown as { HEALTH_IDENTITY_DB: D1Database }).HEALTH_IDENTITY_DB;
 	await identityDb
-		.prepare("DELETE FROM d1_migrations WHERE name='0150_application_user_administration.sql'")
+		.prepare("DELETE FROM d1_migrations WHERE id=(SELECT MAX(id) FROM d1_migrations)")
 		.run();
 
 	const rejected = await SELF.fetch(

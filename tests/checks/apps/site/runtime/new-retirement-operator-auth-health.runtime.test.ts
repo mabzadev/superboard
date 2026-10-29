@@ -1,3 +1,4 @@
+import { canonicalFrontPath } from "@superboard/contracts/front-paths";
 import { env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
@@ -24,11 +25,11 @@ test("core operator aliases remain usable after their plugin Worker receipt expi
 	);
 	expect(enabled.ok).toBe(true);
 	await env.DB.prepare("UPDATE superboard_dependency_health SET expires_at=? WHERE dependency_id=?")
-		.bind("2000-01-01T00:00:00.000Z", "dependency.supbrd_plug_user")
+		.bind("2000-01-01T00:00:00.000Z", "dependency.superboard_user")
 		.run();
 	const unavailableWorker = { ...env, API_SERVICE: undefined };
 	for (const path of routes) {
-		const page = await resolveSiteFrontPage(unavailableWorker, path);
+		const page = await resolveSiteFrontPage(unavailableWorker, canonicalFrontPath(path));
 		expect(page.resolution.result, path).toBe("rendered");
 	}
 	const user = {
@@ -39,17 +40,17 @@ test("core operator aliases remain usable after their plugin Worker receipt expi
 		disabled: false,
 	};
 	for (const path of ["/account", "/app/profile"])
-		expect((await resolveSiteFrontPage(unavailableWorker, path, user)).resolution.result).toBe(
+		expect((await resolveSiteFrontPage(unavailableWorker, canonicalFrontPath(path), user)).resolution.result).toBe(
 			"rendered",
 		);
 	expect(
-		(await resolveSiteFrontPage(unavailableWorker, "/identity/en/users", user)).resolution.result,
+		(await resolveSiteFrontPage(unavailableWorker, canonicalFrontPath("/identity/en/users"), user)).resolution.result,
 	).toBe("unavailable");
 	expect(
 		await env.DB.prepare(
 			"SELECT expires_at FROM superboard_dependency_health WHERE dependency_id=?",
 		)
-			.bind("dependency.supbrd_plug_user")
+			.bind("dependency.superboard_user")
 			.first(),
 	).toEqual({ expires_at: "2000-01-01T00:00:00.000Z" });
 	const disabled = await SELF.fetch(
@@ -58,7 +59,7 @@ test("core operator aliases remain usable after their plugin Worker receipt expi
 	);
 	expect(disabled.ok).toBe(true);
 	for (const path of routes)
-		expect((await resolveSiteFrontPage(unavailableWorker, path)).resolution.result).toBe(
+		expect((await resolveSiteFrontPage(unavailableWorker, canonicalFrontPath(path))).resolution.result).toBe(
 			"not_found",
 		);
 });
