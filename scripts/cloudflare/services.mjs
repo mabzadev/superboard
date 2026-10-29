@@ -29,13 +29,13 @@ export function serviceTestDirectory(service) {
 }
 
 const TASK_SERVICE_PLUGINS = Object.freeze({
-	billing: "supbrd-plugmod-billing",
-	email: "supbrd-plugmod-email",
-	support: "supbrd-plugmod-support",
-	analytics: "supbrd-plugmod-analytics",
-	marketing: "supbrd-plugmod-marketing",
-	flows: "supbrd-plugmod-flows",
-	observability: "supbrd-plugmod-observability",
+	billing: "superboard-billing",
+	email: "superboard-email",
+	support: "superboard-support",
+	analytics: "superboard-analytics",
+	marketing: "superboard-marketing",
+	flows: "superboard-flows",
+	observability: "superboard-observability",
 });
 
 export function taskApiServiceBinding(service) {
@@ -45,7 +45,12 @@ export function taskApiServiceBinding(service) {
 }
 
 export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
-	app: domainService("APP_MODULE", "app"),
+	app: domainService("APP_MODULE", "app", {
+		crons: ["* * * * *"],
+		services: [
+			{ binding: "API_SERVICE", service: "api", props: { superboard_plugin_id: "supbrd-core" } },
+		],
+	}),
 	products: domainService("PRODUCTS_MODULE", "products"),
 	paywalls: domainService("PAYWALLS_MODULE", "paywalls"),
 	"dynamic-links": domainService("DYNAMIC_LINKS_MODULE", "dynamicLinks"),

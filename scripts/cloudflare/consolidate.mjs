@@ -138,7 +138,9 @@ export function assertConsolidatedDeploymentReady(manifest, input = {}, run = ex
 					}),
 				),
 			);
-			const missing = group.secrets.filter(({ name }) => !env[name] && !names.has(name));
+			const missing = group.secrets.filter(
+				(secret) => !deploymentSecret(secret, input, env) && !names.has(secret.name),
+			);
 			if (missing.length)
 				throw new Error(`GROUPED_SECRETS_REQUIRED:${missing.map(({ name }) => name).join(",")}`);
 		}
@@ -183,6 +185,14 @@ export function assertConsolidatedDeploymentReady(manifest, input = {}, run = ex
 			});
 		}
 	return { consolidated, groupLayouts };
+}
+
+function deploymentSecret(secret, input, env) {
+	return (
+		input.serviceSecrets?.[secret.service === "push" ? "api" : secret.service]?.[
+			secret.sourceName
+		] ?? env[secret.name]
+	);
 }
 
 function queueOwner(transfer, manifest, env, run) {
@@ -254,7 +264,10 @@ export async function runConsolidatedDeployment(input, run = execute) {
 	const deploy = async (group, path) => {
 		if (consoleArtifact) await verifyConsoleArtifact(consoleArtifact);
 		const values = Object.fromEntries(
-			group.secrets.filter(({ name }) => env[name]).map(({ name }) => [name, env[name]]),
+			group.secrets.flatMap((secret) => {
+				const value = deploymentSecret(secret, input, env);
+				return value ? [[secret.name, value]] : [];
+			}),
 		);
 		let secretDirectory;
 		try {

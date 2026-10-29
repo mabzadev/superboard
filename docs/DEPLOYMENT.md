@@ -1,14 +1,39 @@
 # SuperBoard deployment
 
+## MABZA development installation
+
+The development target and instance identity are `mabza-development`. Use
+`infra/targets/mabza-development.json`, the `mabza.dev` public domains and
+`CLOUDFLARE_ACCOUNT_ID_MABZA_DEVELOPMENT` for the scoped account variable.
+`CLOUDFLARE_ACCOUNT_ID` remains available as a deployment-environment fallback.
+
+The local data directory is `~/.local/share/superboard/local/mabza-development`.
+An existing installation needs a backup, transfer of its plugin state and a
+new verified release signed for the destination identity. Keep original signed
+releases as history; do not reuse their approval receipts for the renamed
+instance. Regenerate Wrangler configurations and restart the local services
+before checking the browser.
+
+Cloudflare DNS, the account's `workers.dev` subdomain, registered OAuth clients
+and Analytics Engine datasets require a separate remote cutover. Updating
+source files does not perform that cutover. Historical deployment receipts are
+invalidated for the renamed target until its remote checks are rerun.
+
+Start the local installation with its canonical target:
+
+```sh
+pnpm local:start --target mabza-development
+```
+
+## Deployment workflow
+
 This document is the deployment source of truth for the unified SuperBoard dashboard and its isolated Cloudflare Workers.
 
-Pull-request GitHub Actions validate without deploying. The separate protected
-deployment workflow publishes the exact `dev` or `main` revision only after its
-aggregate `CI gate` succeeds and its GitHub Environment gate is satisfied. A
-superseded automatic revision is not deployed. A `workflow_dispatch` run is
-accepted only when GitHub already contains a successful `CI gate` for the exact
-selected branch SHA; it cannot replace or bypass CI. See
-[Continuous integration and deployment ownership](./CI_OPERATIONS.md).
+Cloudflare Workers Builds validates and deploys each instance from its selected
+branch: `dev` for Mabza and `main` for production installations. The build checks
+run in Cloudflare before deployment; this path does not wait for a GitHub Actions
+workflow. See [installation and automatic updates](./CLOUDFLARE_BUILDS.md) for
+account registration, first installation and deployment prerequisites.
 
 Repository creation is a separate, explicitly confirmed operation. Run
 `npm run github:bootstrap` for the read-only plan, create or grant the declared
@@ -37,7 +62,7 @@ bridge.
 SDK automation follows the same protection boundary. A successful immutable
 tag release opens a catalogue PR instead of pushing `dev`. Once the complete
 FlutterFlow and Support set is reviewed and merged, GitHub verifies every tag
-and GitHub release, synchronizes the MBZA FlutterFlow library from the exact
+and GitHub release, synchronizes the MABZA FlutterFlow library from the exact
 catalogue SHA, and opens one dependency PR for `apps/reference` in the
 canonical monorepo. The
 workflows can create PRs but contain no approval or merge operation.

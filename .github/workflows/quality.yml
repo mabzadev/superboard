@@ -45,6 +45,8 @@ jobs:
         run: pnpm lint && pnpm lint:contracts
       - name: Check package and Site types
         run: pnpm typecheck
+      - name: Check runtime route registrations and references
+        run: pnpm routes:check
       - name: Check navigation permissions and settings links
         run: pnpm test:navigation
 

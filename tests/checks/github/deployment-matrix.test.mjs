@@ -94,8 +94,8 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
 	);
 	assert.deepEqual(development.matrix.include, [
 		{
-			id: "mbza-development",
-			target: "mbza-development",
+			id: "mabza-development",
+			target: "mabza-development",
 			deploymentAuthority: "cloudflare-workers-builds",
 			githubEnvironment: "development",
 			cloudflareEnvironment: "development",
@@ -118,44 +118,28 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
 
 test("development uses native Git connections without an application production deployment", async () => {
 	const configuration = await loadDeploymentMatrix();
-	const development = configuration.deployments.find(({ id }) => id === "mbza-development");
+	const development = configuration.deployments.find(({ id }) => id === "mabza-development");
 	const production = configuration.deployments.find(
 		({ id }) => id === "reference-production-production",
 	);
 
-	assert.deepEqual(development.automaticDeployment, {
-		authority: "cloudflare-workers-builds",
-		mode: "per-service",
-		services: [
-			"observability",
-			"email",
-			"files",
-			"identity",
-			"app",
-			"products",
-			"dynamic-links",
-			"support",
-			"analytics",
-			"marketing",
-			"flows",
-			"billing",
-			"custom",
-			"api",
-			"mcp",
-			"site",
-		],
-		buildCommand:
-			"npm ci && npm --prefix apps/reference ci && node --test tests/checks/repository/backoffice-policy.test.mjs tests/checks/github/deployment-matrix.test.mjs tests/checks/github/deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test",
-		deployCommand:
-			'npm run cloudflare:deploy -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT" --service "$SUPERBOARD_SERVICE"',
-		buildVariables: [
-			"CLOUDFLARE_ACCOUNT_ID",
-			"SUPERBOARD_ENVIRONMENT",
-			"SUPERBOARD_SERVICE",
-			"SUPERBOARD_TARGET",
-		],
-		nonProductionBranchBuilds: false,
-	});
+	assert.equal(development.automaticDeployment.authority, "cloudflare-workers-builds");
+	assert.throws(
+		() =>
+			validateDeploymentConfiguration({
+				...configuration,
+				deployments: [
+					{
+						...development,
+						automaticDeployment: {
+							...development.automaticDeployment,
+							deployCommand: "pnpm exec wrangler deploy",
+						},
+					},
+				],
+			}),
+		/Invalid Cloudflare instance build configuration/u,
+	);
 	assert.equal(production, undefined);
 
 	const packageConfiguration = JSON.parse(

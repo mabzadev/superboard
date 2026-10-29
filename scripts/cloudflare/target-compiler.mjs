@@ -17,7 +17,7 @@ import {
 	managedWorkerOperationalBinding,
 	workerNameForService,
 } from "./services.mjs";
-import { targetForEnvironment } from "./target-environments.mjs";
+import { consoleEnvironmentCatalog, targetForEnvironment } from "./target-environments.mjs";
 import { root } from "./target.mjs";
 
 const ADAPTERS = new Set(["local", "cloudflare"]);
@@ -101,6 +101,7 @@ export async function compileTarget(target, environment, options = {}) {
 		schedules: compilePhysicalSchedules(target, environment),
 		queueConsumers: compilePhysicalQueueConsumers(target, environment, physicalResources),
 		site: {
+			consoleEnvironments: consoleEnvironmentCatalog(target, environment),
 			workerLoaderBinding: target.siteRuntime.workerLoaderBinding,
 			crons: [...target.siteRuntime.crons],
 			observability: target.siteRuntime.observability,
@@ -114,7 +115,7 @@ export async function compileTarget(target, environment, options = {}) {
 		target: target.target,
 		environment,
 		instance: {
-			id: target.target,
+			id: target.instanceId ?? target.target,
 			zone: target.zoneName,
 		},
 		release: {
@@ -309,6 +310,7 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 		$schema: "../../node_modules/wrangler/config-schema.json",
 		name: workers.get("site"),
 		main: "./src/worker.ts",
+		version_metadata: { binding: "SUPERBOARD_WORKER_VERSION" },
 		compatibility_date: "2026-08-08",
 		compatibility_flags: ["nodejs_compat"],
 		d1_databases: [
@@ -347,7 +349,10 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 			].toSorted(),
 		},
 		vars: {
-			SUPERBOARD_INSTANCE_ID: compiledTarget.target,
+			SUPERBOARD_INSTANCE_ID: compiledTarget.instance.id,
+			SUPERBOARD_CONSOLE_ENVIRONMENTS_JSON: JSON.stringify(
+				compiledTarget.materialization.site.consoleEnvironments,
+			),
 			SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 			SUPERBOARD_ENVIRONMENT: compiledTarget.environment,
 			SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON: JSON.stringify(
@@ -391,9 +396,9 @@ export function assertTargetServiceConfiguration(
 	if (configuration.vars?.SUPERBOARD_PLUGIN_LIFECYCLE !== "required") {
 		throw new Error(`Target configuration drift for ${service}: plugin lifecycle must be required`);
 	}
-	if (configuration.vars?.SUPERBOARD_INSTANCE_ID !== compiledTarget.target) {
+	if (configuration.vars?.SUPERBOARD_INSTANCE_ID !== compiledTarget.instance.id) {
 		throw new Error(
-			`Target configuration drift for ${service}: instance must be ${compiledTarget.target}`,
+			`Target configuration drift for ${service}: instance must be ${compiledTarget.instance.id}`,
 		);
 	}
 	const actualBindings = configuredBindings(configuration);
@@ -628,6 +633,7 @@ function compileBindings(target, environment, physicalResources) {
 	for (const component of managedWorkerDefinitions(target)) {
 		const managedService = `managed-${component.id}`;
 		addService("api", managedWorkerOperationalBinding(component), managedService);
+		addService(managedService, "API_SERVICE", "api");
 		addResource(managedService, component.d1Binding, "customD1");
 		addRuntime(managedService, component.workflow.binding);
 		for (const container of component.containers) {
@@ -750,15 +756,15 @@ function pluginEnabled(target, pluginId, environment) {
 	const configured = target.environments[environment]?.plugins?.[pluginId];
 	if (configured === false) return false;
 	const featureByPlugin = {
-		"supbrd-plug-products": "products",
-		"supbrd-plugmod-billing": "billing",
-		"supbrd-plugmod-support": "support",
-		"supbrd-plugmod-flows": "flows",
-		"supbrd-plugmod-analytics": "analytics",
-		"supbrd-plugmod-marketing": "marketing",
-		"supbrd-plugmod-dynamic-links": "dynamic-links",
-		"supbrd-plugmod-paywalls": "paywalls",
-		"supbrd-plugmod-onboardings": "onboardings",
+		"superboard-products": "products",
+		"superboard-billing": "billing",
+		"superboard-support": "support",
+		"superboard-flows": "flows",
+		"superboard-analytics": "analytics",
+		"superboard-marketing": "marketing",
+		"superboard-dynamic-links": "dynamic-links",
+		"superboard-paywalls": "paywalls",
+		"superboard-onboardings": "onboardings",
 	};
 	if (pluginId === "supbrd-plugmod-custom-*") return Boolean(target.customWorker);
 	const feature = featureByPlugin[pluginId];
@@ -768,10 +774,14 @@ function pluginEnabled(target, pluginId, environment) {
 function compileLogicalRoutes(target) {
 	return [
 		{ id: "api", service: "api", surface: "gateway" },
-		{ id: "auth", service: "api", surface: "identity-gateway" },
+		...(target.domains.auth !== target.domains.sdk
+			? [{ id: "auth", service: "api", surface: "identity-gateway" }]
+			: []),
 		{ id: "shortlinks", service: "api", surface: "shortlinks" },
 		{ id: "sdk", service: "api", surface: "sdk" },
-		{ id: "files", service: "api", surface: "files" },
+		...(target.domains.files !== target.domains.sdk
+			? [{ id: "files", service: "api", surface: "files" }]
+			: []),
 		{ id: "site", service: "site", surface: "front" },
 		...(target.domains.dashboard && target.domains.dashboard !== target.domains.site
 			? [{ id: "dashboard", service: "site", surface: "front-alias" }]

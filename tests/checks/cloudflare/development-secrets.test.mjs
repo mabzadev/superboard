@@ -89,7 +89,7 @@ test("generated release keys sign verifiable plugin releases without reusing an 
 });
 
 test("development secret plan is value-free, account-scoped and deterministic", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const plan = buildDevelopmentSecretPlan({
 		target,
 		environment: "development",
@@ -108,7 +108,7 @@ test("development secret plan is value-free, account-scoped and deterministic", 
 });
 
 test("development installation does not wait for AWS credentials", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const plan = buildDevelopmentSecretPlan({
 		target,
 		environment: "development",
@@ -133,7 +133,7 @@ test("development installation does not wait for AWS credentials", async () => {
 });
 
 test("development secret plan refuses production and treats analytics credentials as optional", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	assert.throws(
 		() =>
 			buildDevelopmentSecretPlan({
@@ -157,7 +157,7 @@ test("development secret plan refuses production and treats analytics credential
 });
 
 test("generated assignments satisfy every private cross-service contract without operator secrets", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const assignments = await generateDevelopmentSecretAssignments({
 		target,
 		environment: "development",
@@ -206,7 +206,7 @@ test("generated assignments satisfy every private cross-service contract without
 });
 
 test("development assignments include analytics credentials only when supplied", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const assignments = await generateDevelopmentSecretAssignments({
 		target,
 		environment: "development",
@@ -226,7 +226,7 @@ test("development assignments include analytics credentials only when supplied",
 
 test("secret bootstrap always creates an inactive secret version", () => {
 	assert.deepEqual(
-		versionedSecretBulkArgs("/tmp/generated.jsonc", "mbza-development", "development", "email"),
+		versionedSecretBulkArgs("/tmp/generated.jsonc", "mabza-development", "development", "email"),
 		[
 			"wrangler",
 			"versions",
@@ -235,7 +235,7 @@ test("secret bootstrap always creates an inactive secret version", () => {
 			"--config",
 			"/tmp/generated.jsonc",
 			"--message",
-			"SuperBoard generated secrets for mbza-development/development/email",
+			"SuperBoard generated secrets for mabza-development/development/email",
 		],
 	);
 });

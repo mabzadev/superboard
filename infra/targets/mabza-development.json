@@ -1,16 +1,16 @@
 {
 	"$schema": "./schema.json",
 	"schemaVersion": 17,
-	"target": "mbza-development",
-	"accountAlias": "mbza-development",
+	"target": "mabza-development",
+	"accountAlias": "mabza-development",
 	"resourceIdentity": {
 		"logicalName": "superboard",
 		"physicalName": "superboard",
 		"previousNames": [],
 		"migrationStrategy": "canonical"
 	},
-	"workersDevSubdomain": "mbza",
-	"zoneName": "mbza.dev",
+	"workersDevSubdomain": "mabza",
+	"zoneName": "mabza.dev",
 	"registrationMode": "allowlist",
 	"ssoEnabled": false,
 	"features": {
@@ -28,10 +28,10 @@
 	},
 	"applicationIdentity": {
 		"registrationMode": "open",
-		"applicationAudience": "mbza-development.application",
+		"applicationAudience": "mabza-development.application",
 		"googleAudiences": [],
 		"appleAudiences": [],
-		"webOrigins": ["https://reference.mbza.dev"]
+		"webOrigins": ["https://reference.mabza.dev"]
 	},
 	"filePolicy": {
 		"maxBytes": 10485760,
@@ -51,25 +51,55 @@
 		"awsRegion": "eu-central-1",
 		"configurationSet": "superboard-development",
 		"fromName": "SuperBoard Development",
-		"fromAddress": "noreply@mbza.dev",
-		"replyToAddress": "support@mbza.dev"
+		"fromAddress": "noreply@mabza.dev",
+		"replyToAddress": "support@mabza.dev"
 	},
 	"domains": {
-		"api": "api.mbza.dev",
-		"auth": "auth.mbza.dev",
-		"shortlinks": "in.mbza.dev",
-		"sdk": "sdk.mbza.dev",
-		"dashboard": "board.mbza.dev",
-		"site": "board.mbza.dev",
-		"files": "files.mbza.dev",
-		"mcp": "board.mbza.dev"
+		"api": "api.mabza.dev",
+		"auth": "sdk.mabza.dev",
+		"shortlinks": "in.mabza.dev",
+		"sdk": "sdk.mabza.dev",
+		"dashboard": "board.mabza.dev",
+		"site": "board.mabza.dev",
+		"files": "sdk.mabza.dev",
+		"mcp": "board.mabza.dev"
 	},
 	"retiredDomains": [
 		{
-			"hostname": "grow.mbza.dev",
+			"hostname": "grow.mabza.dev",
 			"formerSurface": "dashboard",
 			"policy": "must-be-unassigned",
-			"reason": "Previous back-office hostname replaced by board.mbza.dev."
+			"reason": "Previous back-office hostname replaced by board.mabza.dev."
+		},
+		{
+			"hostname": "auth.mabza.dev",
+			"formerSurface": "auth",
+			"policy": "must-be-unassigned",
+			"reason": "SDK endpoints are served by sdk.mabza.dev under /v1."
+		},
+		{
+			"hostname": "files.mabza.dev",
+			"formerSurface": "files",
+			"policy": "must-be-unassigned",
+			"reason": "SDK endpoints are served by sdk.mabza.dev under /v1."
+		},
+		{
+			"hostname": "site.mabza.dev",
+			"formerSurface": "site",
+			"policy": "must-be-unassigned",
+			"reason": "The console is served only by board.mabza.dev."
+		},
+		{
+			"hostname": "mcp.mabza.dev",
+			"formerSurface": "mcp",
+			"policy": "must-be-unassigned",
+			"reason": "SuperBoard public entrypoints are sdk, board and in; api is reserved for extensions."
+		},
+		{
+			"hostname": "mail.mabza.dev",
+			"formerSurface": "mail-preview",
+			"policy": "must-be-unassigned",
+			"reason": "SuperBoard public entrypoints are sdk, board and in; api is reserved for extensions."
 		}
 	],
 	"workers": {
@@ -149,7 +179,7 @@
 	"customWorker": {
 		"source": "apps/reference/worker/src/index.ts",
 		"packagePath": "apps/reference/worker",
-		"description": "SuperBoard reference extension used to validate the custom Worker protocol on mbza.dev.",
+		"description": "SuperBoard reference extension used to validate the custom Worker protocol on mabza.dev.",
 		"capabilities": ["reference.echo", "reference.acceptance"],
 		"secrets": ["CUSTOM_WORKER_TOKEN"],
 		"vars": {
@@ -162,12 +192,12 @@
 		}
 	},
 	"oauth": {
-		"dashboardClientId": "superboard-mbza-development"
+		"dashboardClientId": "superboard-mabza-development"
 	},
 	"authGateway": {
-		"issuer": "https://auth.mbza.dev",
+		"issuer": "https://sdk.mabza.dev/v1/auth",
 		"audience": "superboard",
-		"jwksUrl": "https://auth.mbza.dev/.well-known/jwks.json"
+		"jwksUrl": "https://sdk.mabza.dev/v1/auth/.well-known/application-jwks.json"
 	},
 	"siteRuntime": {
 		"workerLoaderBinding": "LOADER",
@@ -187,22 +217,16 @@
 	},
 	"publicSurfaceMonitors": [
 		{
-			"id": "site-preview",
-			"url": "https://site.mbza.dev",
-			"healthUrl": "https://site.mbza.dev/superboard-system/health",
-			"description": "Legacy console alias retained during identity migration"
-		},
-		{
 			"id": "reference",
-			"url": "https://reference.mbza.dev",
-			"healthUrl": "https://reference.mbza.dev/",
+			"url": "https://reference.mabza.dev",
+			"healthUrl": "https://reference.mabza.dev/",
 			"description": "Executable Flutter Web acceptance application for the common SuperBoard journeys"
 		}
 	],
 	"operator": {
 		"docsUrl": "https://github.com/mabzadev/superboard/tree/dev/docs",
 		"email": "mabzadev@gmail.com",
-		"supportEmail": "support@mbza.dev"
+		"supportEmail": "support@mabza.dev"
 	},
 	"environments": {
 		"development": {
@@ -248,7 +272,7 @@
 				"name": "superboard-dev-custom-reference-db",
 				"id": "65c7edb8-d3fc-4a26-8317-96c511558679"
 			},
-			"analyticsDataset": "superboard_mbza_development",
+			"analyticsDataset": "superboard_mabza_development",
 			"supportProjectIds": [],
 			"moduleD1": {
 				"app": {
@@ -337,7 +361,7 @@
 				}
 			},
 			"supportRouting": {
-				"pattern": "api.mbza.dev/api/v1/support*",
+				"pattern": "api.mabza.dev/api/v1/support*",
 				"worker": "superboard-api-dev",
 				"mode": "active"
 			},
@@ -399,7 +423,7 @@
 				"name": "superboard-local-custom-reference-db",
 				"id": null
 			},
-			"analyticsDataset": "superboard_mbza_local",
+			"analyticsDataset": "superboard_mabza_local",
 			"supportProjectIds": [],
 			"moduleD1": {
 				"app": {
@@ -488,7 +512,7 @@
 				}
 			},
 			"supportRouting": {
-				"pattern": "api.mbza.dev/api/v1/support*",
+				"pattern": "api.mabza.dev/api/v1/support*",
 				"worker": "superboard-api-local",
 				"mode": "staged"
 			},
@@ -509,21 +533,5 @@
 		}
 	},
 	"deploymentProfile": "consolidated",
-	"domainAliases": [
-		{
-			"surface": "console",
-			"hostname": "site.mbza.dev",
-			"reason": "Compatibility during client and identity migration"
-		},
-		{
-			"surface": "mcp",
-			"hostname": "mcp.mbza.dev",
-			"reason": "Compatibility during client and identity migration"
-		},
-		{
-			"surface": "mailPreview",
-			"hostname": "mail.mbza.dev",
-			"reason": "Compatibility during client and identity migration"
-		}
-	]
+	"domainAliases": []
 }

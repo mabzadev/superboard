@@ -144,7 +144,9 @@ const config =
 											: domainConfig();
 config.vars = {
 	...config.vars,
-	SUPERBOARD_INSTANCE_ID: target.target,
+	SUPERBOARD_RELEASE:
+		superboardEnvironmentValue("SUPERBOARD_RELEASE") || process.env.GITHUB_SHA || "local",
+	SUPERBOARD_INSTANCE_ID: compiledTarget.instance.id,
 	SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 };
 assertTargetServiceConfiguration(compiledTarget, service, config, {
@@ -196,6 +198,7 @@ function baseConfig() {
 			service === "site" ? ["nodejs_compat"] : ["nodejs_compat", "global_fetch_strictly_public"],
 		workers_dev: false,
 		preview_urls: false,
+		version_metadata: { binding: "SUPERBOARD_WORKER_VERSION" },
 		observability: {
 			enabled: true,
 			logs: { enabled: true, head_sampling_rate: 1, invocation_logs: true },
@@ -239,7 +242,7 @@ function siteConfig() {
 		rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
 		assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
 		vars: {
-			SUPERBOARD_INSTANCE_ID: target.target,
+			SUPERBOARD_INSTANCE_ID: compiledTarget.instance.id,
 			SUPERBOARD_ENVIRONMENT: environment,
 			SUPERBOARD_CONSOLE_ENVIRONMENTS_JSON: JSON.stringify([
 				...consoleEnvironmentCatalog(loadedTarget, environment),
@@ -255,7 +258,18 @@ function siteConfig() {
 				Object.fromEntries(
 					["api", "auth", "sdk", "shortlinks", "files", "mcp", "site"].flatMap((key) =>
 						target.domains[key]
-							? [[key, key === "mcp" ? publicMcpUrl(target) : `https://${target.domains[key]}`]]
+							? [
+									[
+										key,
+										key === "mcp"
+											? publicMcpUrl(target)
+											: key === "api"
+												? publicApiUrl(target)
+												: key === "auth"
+													? publicAuthUrl(target)
+													: `https://${target.domains[key]}`,
+									],
+								]
 							: [],
 					),
 				),
@@ -456,10 +470,14 @@ function apiConfig() {
 		} else {
 			config.routes = [
 				{ pattern: target.domains.api, custom_domain: true },
-				{ pattern: target.domains.auth, custom_domain: true },
+				...(target.domains.auth !== target.domains.sdk
+					? [{ pattern: target.domains.auth, custom_domain: true }]
+					: []),
 				{ pattern: target.domains.shortlinks, custom_domain: true },
 				{ pattern: target.domains.sdk, custom_domain: true },
-				{ pattern: target.domains.files, custom_domain: true },
+				...(target.domains.files !== target.domains.sdk
+					? [{ pattern: target.domains.files, custom_domain: true }]
+					: []),
 				...(target.domainAliases ?? [])
 					.filter((alias) => alias.surface === "shortlinks")
 					.map((alias) => ({ pattern: alias.hostname, custom_domain: true })),
@@ -863,7 +881,7 @@ function filesConfig() {
 			APPLICATION_AUDIENCE: target.applicationIdentity.applicationAudience,
 			AUTH_GATEWAY_JWKS_URL: target.authGateway.jwksUrl,
 			MAX_FILE_BYTES: String(target.filePolicy.maxBytes),
-			FILES_PUBLIC_ORIGIN: `https://${target.domains.files}`,
+			FILES_PUBLIC_ORIGIN: `https://${target.domains.files}${target.domains.files === target.domains.sdk ? "/v1/data" : ""}`,
 			DOWNLOAD_TICKET_TTL_SECONDS: String(target.filePolicy.downloadTicketTtlSeconds),
 			ALLOWED_FILE_CONTENT_TYPES_JSON: JSON.stringify(target.filePolicy.allowedContentTypes),
 		},
@@ -888,6 +906,7 @@ function customConfig() {
 		main: `../../${target.customWorker.source}`,
 		vars: {
 			APP_KEY: target.target,
+			CUSTOM_WORKER_PLUGIN_ID: target.customWorker.pluginId ?? "",
 			ENVIRONMENT: environment,
 			CUSTOM_WORKER_CAPABILITIES: target.customWorker.capabilities.join(","),
 			...(target.customWorker.runtimeBridge
@@ -959,6 +978,7 @@ function managedWorkerConfig() {
 	return {
 		...baseConfig(),
 		main: `../../${managedWorker.source}`,
+		services: [{ binding: "API_SERVICE", service: target.workers.api[environment] }],
 		vars: {
 			...commonVars,
 			...managedWorker.vars,

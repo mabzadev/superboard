@@ -1,5 +1,7 @@
 # Cloudflare console deployment
 
+For account registration, first installation and automatic updates from `dev` or `main`, see [Cloudflare Builds](../../docs/CLOUDFLARE_BUILDS.md).
+
 SuperBoard runs locally and on Cloudflare without Docker. Application-specific Workers, containers, manifests, and deployment targets belong in separate addon workspaces.
 
 An active SuperBoard console enables the signed release operations used by plugin activation. Provision `SUPERBOARD_RELEASE_PRIVATE_JWK` on the Site Worker before deploying it. The development secret generator creates an independent ES256 signing key for this purpose; retain the private key in the deployment secret store across upgrades.
@@ -15,8 +17,8 @@ Prepare the console before deploying it. Preparation builds the Worker and brows
 The following commands prepare the development target, run its regression checks, and deploy the prepared artifact. Configure the target's Cloudflare account and required secrets first.
 
 ```sh
-pnpm cloudflare:prepare --target mbza-development --environment development
-pnpm cloudflare:deploy:all --target mbza-development --environment development --prepared-deployment infra/generated/mbza-development-development-deployments.json
+pnpm cloudflare:prepare --target mabza-development --environment development
+pnpm cloudflare:deploy:all --target mabza-development --environment development --prepared-deployment infra/generated/mabza-development-development-deployments.json
 ```
 
 To deploy only the console, use `pnpm cloudflare:deploy --service site` with the same target, environment, and `--prepared-deployment` arguments. Both active deployments and version uploads require the prepared manifest. Routing and read-only options must be selected during preparation because deployment preserves the validated configuration.

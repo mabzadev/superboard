@@ -203,13 +203,9 @@ function validateReferenceTarget(reference, contract, errors) {
 			errors.push(`${reference.path} domains.${role} must belong to ${suffix}`);
 		}
 	}
-	const authOrigin = `https://${target.domains?.auth ?? ""}`;
-	if (target.authGateway?.issuer !== authOrigin) {
-		errors.push(`${reference.path} authGateway.issuer must derive from domains.auth`);
-	}
-	if (target.authGateway?.jwksUrl !== `${authOrigin}/.well-known/jwks.json`) {
-		errors.push(`${reference.path} authGateway.jwksUrl must derive from domains.auth`);
-	}
+	errors.push(
+		...authenticationSurfaceErrors(target).map((message) => `${reference.path} ${message}`),
+	);
 	for (const address of [target.mail?.fromAddress, target.mail?.replyToAddress]) {
 		if (address && !hostnameBelongsToSuffix(address.split("@").at(-1), suffix)) {
 			errors.push(`${reference.path} mail addresses must belong to ${suffix}`);
@@ -661,4 +657,20 @@ async function main() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
 	await main();
+}
+
+export function authenticationSurfaceErrors(target) {
+	const errors = [];
+	const consolidatedAuth = target.domains?.auth === target.domains?.sdk;
+	const authOrigin = `https://${target.domains?.auth ?? ""}${consolidatedAuth ? "/v1/auth" : ""}`;
+	if (target.authGateway?.issuer !== authOrigin) {
+		errors.push("authGateway.issuer must derive from the configured authentication surface");
+	}
+	if (
+		target.authGateway?.jwksUrl !==
+		`${authOrigin}/.well-known/${consolidatedAuth ? "application-jwks" : "jwks"}.json`
+	) {
+		errors.push("authGateway.jwksUrl must derive from the configured authentication surface");
+	}
+	return errors;
 }

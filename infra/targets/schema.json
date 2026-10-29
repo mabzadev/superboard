@@ -36,6 +36,11 @@
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9-]{1,30}$"
 		},
+		"instanceId": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9-]{1,30}$",
+			"description": "Persistent instance identity. Defaults to target and remains unchanged when a deployment is renamed."
+		},
 		"accountAlias": {
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9-]{1,30}$"
@@ -689,6 +694,17 @@
 					}
 				}
 			}
+		},
+		"freshInstallation": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["id"],
+			"properties": {
+				"id": {
+					"type": "string",
+					"pattern": "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+				}
+			}
 		}
 	},
 	"allOf": [
@@ -712,7 +728,14 @@
 				}
 			},
 			"then": {
-				"required": ["productionCutover"]
+				"anyOf": [
+					{
+						"required": ["productionCutover"]
+					},
+					{
+						"required": ["freshInstallation"]
+					}
+				]
 			}
 		}
 	],

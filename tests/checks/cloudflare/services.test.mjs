@@ -74,7 +74,7 @@ test("the declarative registry exposes exactly nine domain services", () => {
 	assert.equal(PLATFORM_SERVICE_SECRETS.email.includes("FLOWS_EMAIL_INTERNAL_TOKEN"), false);
 	for (const secrets of Object.values(PLATFORM_SERVICE_SECRETS)) {
 		assert.equal(
-			secrets.some((name) => /reference-production|mbza/i.test(name)),
+			secrets.some((name) => /reference-production|mabza/i.test(name)),
 			false,
 			"common secret names must not contain an application or environment brand",
 		);
@@ -110,7 +110,7 @@ test("validation-only local D1 resources receive stable distinct ids", () => {
 				"--service",
 				service,
 				"--target",
-				"mbza-development",
+				"mabza-development",
 				"--environment",
 				"local",
 				"--allow-unprovisioned",
@@ -121,7 +121,7 @@ test("validation-only local D1 resources receive stable distinct ids", () => {
 		const config = JSON.parse(
 			readFileSync(
 				new URL(
-					`../../../infra/generated/mbza-development-${service}-local.jsonc`,
+					`../../../infra/generated/mabza-development-${service}-local.jsonc`,
 					import.meta.url,
 				),
 				"utf8",
@@ -139,7 +139,7 @@ test("validation-only local D1 resources receive stable distinct ids", () => {
 			"--service",
 			"dynamic-links",
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			"local",
 			"--allow-unprovisioned",
@@ -150,7 +150,7 @@ test("validation-only local D1 resources receive stable distinct ids", () => {
 	const repeated = JSON.parse(
 		readFileSync(
 			new URL(
-				"../../../infra/generated/mbza-development-dynamic-links-local.jsonc",
+				"../../../infra/generated/mabza-development-dynamic-links-local.jsonc",
 				import.meta.url,
 			),
 			"utf8",
@@ -161,7 +161,7 @@ test("validation-only local D1 resources receive stable distinct ids", () => {
 
 test("generated Site config uses target resources and follows public routing activation", async () => {
 	for (const [targetName, environment] of [
-		["mbza-development", "development"],
+		["mabza-development", "development"],
 		["reference-production", "production"],
 	]) {
 		execFileSync(
@@ -190,7 +190,7 @@ test("generated Site config uses target resources and follows public routing act
 			),
 		);
 
-		assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, target.target);
+		assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, target.instanceId ?? target.target);
 		assert.equal(
 			config.vars.SUPERBOARD_RELEASE_OPERATIONS,
 			resources.publicRouting === "active" ? "enabled" : "disabled",
@@ -280,7 +280,7 @@ test("development Site preview routing is explicit and only acquires the canonic
 			"--service",
 			"site",
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			"development",
 			"--site-preview-route",
@@ -289,16 +289,16 @@ test("development Site preview routing is explicit and only acquires the canonic
 	);
 	const config = JSON.parse(
 		readFileSync(
-			new URL("../../../infra/generated/mbza-development-site-development.jsonc", import.meta.url),
+			new URL("../../../infra/generated/mabza-development-site-development.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
-	assert.deepEqual(config.routes, [{ pattern: "board.mbza.dev", custom_domain: true }]);
-	assert.equal(JSON.stringify(config.routes).includes("site.mbza.dev"), false);
+	assert.deepEqual(config.routes, [{ pattern: "board.mabza.dev", custom_domain: true }]);
+	assert.equal(JSON.stringify(config.routes).includes("site.mabza.dev"), false);
 
 	for (const extraArgs of [
 		["--target", "reference-production", "--environment", "production", "--allow-unprovisioned"],
-		["--target", "mbza-development", "--environment", "development", "--no-routes"],
+		["--target", "mabza-development", "--environment", "development", "--no-routes"],
 	]) {
 		assert.throws(
 			() =>
@@ -326,7 +326,7 @@ test("explicit release operations preserve preview validation and cannot bypass 
 			"--service",
 			"site",
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			"development",
 			"--site-preview-route",
@@ -336,14 +336,14 @@ test("explicit release operations preserve preview validation and cannot bypass 
 	);
 	const config = JSON.parse(
 		readFileSync(
-			new URL("../../../infra/generated/mbza-development-site-development.jsonc", import.meta.url),
+			new URL("../../../infra/generated/mabza-development-site-development.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
 	assert.equal(config.vars.SUPERBOARD_RELEASE_OPERATIONS, "enabled");
 
 	for (const extraArgs of [
-		["--target", "mbza-development", "--environment", "development", "--no-routes"],
+		["--target", "mabza-development", "--environment", "development", "--no-routes"],
 		[
 			"--target",
 			"reference-production",
@@ -372,7 +372,7 @@ test("explicit release operations preserve preview validation and cannot bypass 
 });
 
 test("every D1 Worker receives the reviewed latest migration automatically", async () => {
-	const targetName = "mbza-development";
+	const targetName = "mabza-development";
 	const environment = "development";
 	const { target } = await loadTarget(targetName);
 	const descriptors = targetD1Descriptors(target, targetName, environment, "all");
@@ -414,7 +414,7 @@ test("generated Analytics config declares its complete durable pipeline", () => 
 			"--service",
 			"analytics",
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			"development",
 			"--allow-unprovisioned",
@@ -424,7 +424,7 @@ test("generated Analytics config declares its complete durable pipeline", () => 
 	const config = JSON.parse(
 		readFileSync(
 			new URL(
-				"../../../infra/generated/mbza-development-analytics-development.jsonc",
+				"../../../infra/generated/mabza-development-analytics-development.jsonc",
 				import.meta.url,
 			),
 			"utf8",
@@ -467,7 +467,7 @@ test("generated Analytics config declares its complete durable pipeline", () => 
 		{
 			binding: "API_SERVICE",
 			service: "superboard-api-dev",
-			props: { superboard_plugin_id: "supbrd-plugmod-analytics" },
+			props: { superboard_plugin_id: "superboard-analytics" },
 		},
 	]);
 });
@@ -480,7 +480,7 @@ test("generated Flows config declares its native Cloudflare runtime", () => {
 			"--service",
 			"flows",
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			"development",
 			"--allow-unprovisioned",
@@ -489,12 +489,15 @@ test("generated Flows config declares its native Cloudflare runtime", () => {
 	);
 	const config = JSON.parse(
 		readFileSync(
-			new URL("../../../infra/generated/mbza-development-flows-development.jsonc", import.meta.url),
+			new URL(
+				"../../../infra/generated/mabza-development-flows-development.jsonc",
+				import.meta.url,
+			),
 			"utf8",
 		),
 	);
 	assert.equal(config.vars.SERVICE_NAME, "flows");
-	assert.equal(config.vars.PUBLIC_API_URL, "https://api.mbza.dev");
+	assert.equal(config.vars.PUBLIC_API_URL, "https://api.mabza.dev");
 	assert.equal(Object.hasOwn(config.vars, "PUBLIC_DASHBOARD_URL"), false);
 	assert.deepEqual(config.r2_buckets, [
 		{
@@ -536,7 +539,7 @@ test("generated Flows config declares its native Cloudflare runtime", () => {
 		{
 			binding: "API_SERVICE",
 			service: "superboard-api-dev",
-			props: { superboard_plugin_id: "supbrd-plugmod-flows" },
+			props: { superboard_plugin_id: "superboard-flows" },
 		},
 	]);
 	assert.deepEqual(DOMAIN_SERVICE_REGISTRY.flows.secrets, [
@@ -591,7 +594,7 @@ test("generated domain config is private and has no static project allowlist", (
 		{
 			binding: "API_SERVICE",
 			service: "superboard-api",
-			props: { superboard_plugin_id: "supbrd-plugmod-marketing" },
+			props: { superboard_plugin_id: "superboard-marketing" },
 		},
 	]);
 	assert.deepEqual(DOMAIN_SERVICE_REGISTRY.marketing.secrets, [
@@ -676,7 +679,7 @@ test("generated Support config includes its stateful runtime resources", () => {
 		{
 			binding: "API_SERVICE",
 			service: "superboard-api",
-			props: { superboard_plugin_id: "supbrd-plugmod-support" },
+			props: { superboard_plugin_id: "superboard-support" },
 		},
 	]);
 	assert.deepEqual(config.triggers, { crons: ["* * * * *"] });
@@ -702,7 +705,7 @@ test("generated Support config includes its stateful runtime resources", () => {
 
 test("generated Files config enforces the selected target upload policy", () => {
 	for (const [target, environment] of [
-		["mbza-development", "development"],
+		["mabza-development", "development"],
 		["reference-production", "production"],
 	]) {
 		execFileSync(
@@ -722,7 +725,10 @@ test("generated Files config enforces the selected target upload policy", () => 
 	}
 	const development = JSON.parse(
 		readFileSync(
-			new URL("../../../infra/generated/mbza-development-files-development.jsonc", import.meta.url),
+			new URL(
+				"../../../infra/generated/mabza-development-files-development.jsonc",
+				import.meta.url,
+			),
 			"utf8",
 		),
 	);
@@ -806,7 +812,7 @@ test("generated Email and Marketing configs quarantine terminal queue failures",
 		{
 			binding: "API_SERVICE",
 			service: "superboard-api",
-			props: { superboard_plugin_id: "supbrd-plugmod-marketing" },
+			props: { superboard_plugin_id: "superboard-marketing" },
 		},
 	]);
 });
@@ -949,7 +955,7 @@ test("generated observability config attaches an Analytics Engine dataset and no
 			"--service",
 			"observability",
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			"development",
 			"--allow-unprovisioned",
@@ -959,7 +965,7 @@ test("generated observability config attaches an Analytics Engine dataset and no
 	const config = JSON.parse(
 		readFileSync(
 			new URL(
-				"../../../infra/generated/mbza-development-observability-development.jsonc",
+				"../../../infra/generated/mabza-development-observability-development.jsonc",
 				import.meta.url,
 			),
 			"utf8",
@@ -969,7 +975,7 @@ test("generated observability config attaches an Analytics Engine dataset and no
 	assert.equal(config.workers_dev, false);
 	assert.equal(config.tail_consumers, undefined);
 	assert.deepEqual(config.analytics_engine_datasets, [
-		{ binding: "ANALYTICS", dataset: "superboard_mbza_development" },
+		{ binding: "ANALYTICS", dataset: "superboard_mabza_development" },
 	]);
 });
 
@@ -1053,7 +1059,7 @@ test("staged production API stays private while exposing service bindings", asyn
 			"--service",
 			"api",
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			"development",
 			"--allow-unprovisioned",
@@ -1067,15 +1073,15 @@ test("staged production API stays private while exposing service bindings", asyn
 			},
 		},
 	);
-	const mbza = JSON.parse(
+	const mabza = JSON.parse(
 		readFileSync(
-			new URL("../../../infra/generated/mbza-development-api-development.jsonc", import.meta.url),
+			new URL("../../../infra/generated/mabza-development-api-development.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
-	const publicSurfaces = JSON.parse(mbza.vars.PUBLIC_SURFACES_JSON);
-	const workerCatalog = JSON.parse(mbza.vars.PLATFORM_WORKERS_JSON);
-	assert.equal(mbza.vars.SUPERBOARD_RELEASE, "superboard-test-release");
+	const publicSurfaces = JSON.parse(mabza.vars.PUBLIC_SURFACES_JSON);
+	const workerCatalog = JSON.parse(mabza.vars.PLATFORM_WORKERS_JSON);
+	assert.equal(mabza.vars.SUPERBOARD_RELEASE, "superboard-test-release");
 	assert.deepEqual(
 		workerCatalog.workers.map(({ id }) => id),
 		ALL_SERVICES,
@@ -1094,11 +1100,11 @@ test("staged production API stays private while exposing service bindings", asyn
 		undefined,
 	);
 	assert.deepEqual(workerCatalog.customDependencies, []);
-	assert.deepEqual(JSON.parse(mbza.vars.CORS_ORIGINS_JSON), [
-		"https://board.mbza.dev",
-		"https://auth.mbza.dev",
-		"https://reference.mbza.dev",
-		"https://site.mbza.dev",
+	assert.deepEqual(JSON.parse(mabza.vars.CORS_ORIGINS_JSON), [
+		"https://board.mabza.dev",
+		"https://auth.mabza.dev",
+		"https://reference.mabza.dev",
+		"https://site.mabza.dev",
 	]);
 	assert.deepEqual(
 		publicSurfaces.map(({ id }) => id),
@@ -1108,8 +1114,8 @@ test("staged production API stays private while exposing service bindings", asyn
 		publicSurfaces.find(({ id }) => id === "reference"),
 		{
 			id: "reference",
-			url: "https://reference.mbza.dev",
-			healthUrl: "https://reference.mbza.dev/",
+			url: "https://reference.mabza.dev",
+			healthUrl: "https://reference.mabza.dev/",
 			description:
 				"Executable Flutter Web acceptance application for the common SuperBoard journeys",
 		},
@@ -1196,7 +1202,7 @@ test("generated MCP config is public only on its target domain and uses a privat
 			"--service",
 			"mcp",
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			"development",
 		],
@@ -1204,18 +1210,18 @@ test("generated MCP config is public only on its target domain and uses a privat
 	);
 	const config = JSON.parse(
 		readFileSync(
-			new URL("../../../infra/generated/mbza-development-mcp-development.jsonc", import.meta.url),
+			new URL("../../../infra/generated/mabza-development-mcp-development.jsonc", import.meta.url),
 			"utf8",
 		),
 	);
 	assert.equal(config.name, "superboard-mcp-dev");
 	assert.equal(config.main, "../../packages/plugins/superboard-core/mcp/src/index.ts");
 	assert.equal(config.workers_dev, false);
-	assert.equal(config.vars.PUBLIC_API_URL, "https://api.mbza.dev");
-	assert.equal(config.vars.PUBLIC_MCP_URL, "https://board.mbza.dev/mcp");
-	assert.equal(config.vars.MCP_DOMAIN, "board.mbza.dev");
+	assert.equal(config.vars.PUBLIC_API_URL, "https://api.mabza.dev");
+	assert.equal(config.vars.PUBLIC_MCP_URL, "https://board.mabza.dev/mcp");
+	assert.equal(config.vars.MCP_DOMAIN, "board.mabza.dev");
 	assert.deepEqual(config.services, [{ binding: "API_SERVICE", service: "superboard-api-dev" }]);
-	assert.deepEqual(config.routes, [{ pattern: "mcp.mbza.dev", custom_domain: true }]);
+	assert.deepEqual(config.routes, [{ pattern: "mcp.mabza.dev", custom_domain: true }]);
 	assert.deepEqual(config.tail_consumers, [{ service: "superboard-observability-dev" }]);
 });
 
@@ -1228,7 +1234,7 @@ test("generated identity and files configs are private and parameterized", () =>
 				"--service",
 				service,
 				"--target",
-				"mbza-development",
+				"mabza-development",
 				"--environment",
 				"development",
 				"--allow-unprovisioned",
@@ -1239,7 +1245,7 @@ test("generated identity and files configs are private and parameterized", () =>
 	const identity = JSON.parse(
 		readFileSync(
 			new URL(
-				"../../../infra/generated/mbza-development-identity-development.jsonc",
+				"../../../infra/generated/mabza-development-identity-development.jsonc",
 				import.meta.url,
 			),
 			"utf8",
@@ -1247,12 +1253,15 @@ test("generated identity and files configs are private and parameterized", () =>
 	);
 	const files = JSON.parse(
 		readFileSync(
-			new URL("../../../infra/generated/mbza-development-files-development.jsonc", import.meta.url),
+			new URL(
+				"../../../infra/generated/mabza-development-files-development.jsonc",
+				import.meta.url,
+			),
 			"utf8",
 		),
 	);
 	assert.equal(identity.workers_dev, false);
-	assert.equal(identity.vars.APPLICATION_AUDIENCE, "mbza-development.application");
+	assert.equal(identity.vars.APPLICATION_AUDIENCE, "mabza-development.application");
 	assert.equal(identity.vars.GOOGLE_AUDIENCES_JSON, "[]");
 	assert.equal(identity.d1_databases[0].database_name, "superboard-dev-identity-db");
 	assert.deepEqual(
@@ -1264,12 +1273,12 @@ test("generated identity and files configs are private and parameterized", () =>
 		binding: "ASSETS",
 		run_worker_first: true,
 	});
-	assert.equal(identity.vars.AUTH_SERVER_URL, "https://auth.mbza.dev");
+	assert.equal(identity.vars.AUTH_SERVER_URL, "https://auth.mabza.dev");
 	assert.equal(identity.vars.EMAIL_PROVIDER_NAME, "superboard");
 	assert.equal(identity.vars.ENABLE_SAML_SSO_AS_SP, true);
 	assert.equal(files.workers_dev, false);
-	assert.equal(files.vars.AUTH_GATEWAY_JWKS_URL, "https://auth.mbza.dev/.well-known/jwks.json");
-	assert.equal(files.vars.FILES_PUBLIC_ORIGIN, "https://files.mbza.dev");
+	assert.equal(files.vars.AUTH_GATEWAY_JWKS_URL, "https://auth.mabza.dev/.well-known/jwks.json");
+	assert.equal(files.vars.FILES_PUBLIC_ORIGIN, "https://files.mabza.dev");
 	assert.equal(files.vars.DOWNLOAD_TICKET_TTL_SECONDS, "600");
 	assert.equal(files.d1_databases[0].database_name, "superboard-dev-files-db");
 	assert.equal(files.r2_buckets[0].bucket_name, "superboard-dev-files");
@@ -1330,7 +1339,7 @@ test("generated custom config preserves target service bindings", () => {
 
 test("generated reference custom config owns its durable D1 job store", () => {
 	const target = JSON.parse(
-		readFileSync(new URL("../../../infra/targets/mbza-development.json", import.meta.url), "utf8"),
+		readFileSync(new URL("../../../infra/targets/mabza-development.json", import.meta.url), "utf8"),
 	);
 	execFileSync(
 		process.execPath,
@@ -1339,7 +1348,7 @@ test("generated reference custom config owns its durable D1 job store", () => {
 			"--service",
 			"custom",
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			"development",
 			"--allow-unprovisioned",
@@ -1349,7 +1358,7 @@ test("generated reference custom config owns its durable D1 job store", () => {
 	const config = JSON.parse(
 		readFileSync(
 			new URL(
-				"../../../infra/generated/mbza-development-custom-development.jsonc",
+				"../../../infra/generated/mabza-development-custom-development.jsonc",
 				import.meta.url,
 			),
 			"utf8",
