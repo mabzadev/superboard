@@ -1,5 +1,5 @@
-import { ProductsPage } from "../components/modules/ProductsPages.js";
+import MobileCatalogPage from "../../billing/components/modules/MobileCatalogPage.js";
 
 export default function View() {
-	return <ProductsPage />;
+	return <MobileCatalogPage section="products" />;
 }

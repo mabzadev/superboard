@@ -2,156 +2,155 @@ import type { PluginApiAdapter } from "@superboard/front-ui/api";
 
 export const adapters = [
 	{
-		id: "supbrd-plugmod-billing.command.migrate_products",
+		id: "superboard-billing.command.migrate_products",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/billing/projects/:projectRef/ledger/migrate-products",
+				route_id: "api:billing:migrate-products",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.data_source.migration_status",
+		id: "superboard-billing.data_source.migration_status",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/billing/projects/:projectRef/ledger/migration/status",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:GET:/internal/v1/catalog-ledger/migration/status",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.command.create_purchase",
+		id: "superboard-billing.command.create_purchase",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/billing/projects/:projectRef/ledger/purchases",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:POST:/internal/v1/catalog-ledger/purchases",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.command.create_refund",
+		id: "superboard-billing.command.create_refund",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/billing/projects/:projectRef/ledger/purchases/:purchaseId/refunds",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:POST:/internal/v1/catalog-ledger/purchases/:id/refunds",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.command.update_refund",
+		id: "superboard-billing.command.update_refund",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/billing/projects/:projectRef/ledger/refunds/:refundId",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:PUT:/internal/v1/catalog-ledger/refunds/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.command.update_subscription",
+		id: "superboard-billing.command.update_subscription",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/billing/projects/:projectRef/ledger/subscriptions/:id",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:PUT:/internal/v1/catalog-ledger/subscriptions/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.command.reconcile_store",
+		id: "superboard-billing.command.reconcile_store",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/billing/projects/:projectRef/ledger/reconcile",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:POST:/internal/v1/catalog-ledger/reconcile",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.data_source.purchases",
+		id: "superboard-billing.data_source.purchases",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/billing/projects/:projectRef/ledger/purchases",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:GET:/internal/v1/catalog-ledger/purchases",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.data_source.purchase",
+		id: "superboard-billing.data_source.purchase",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/billing/projects/:projectRef/ledger/purchases/:purchaseId",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:GET:/internal/v1/catalog-ledger/purchases/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.data_source.refunds",
+		id: "superboard-billing.data_source.refunds",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/billing/projects/:projectRef/ledger/refunds",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:GET:/internal/v1/catalog-ledger/refunds",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.data_source.subscriptions",
+		id: "superboard-billing.data_source.subscriptions",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/billing/projects/:projectRef/ledger/subscriptions",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:GET:/internal/v1/catalog-ledger/subscriptions",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.data_source.financial_customer_entitlements",
+		id: "superboard-billing.data_source.financial_customer_entitlements",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/billing/projects/:projectRef/ledger/customers/:customerId/entitlements",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:GET:/internal/v1/catalog-ledger/customers/:customerId/entitlements",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-billing.data_source.billing_ledger",
+		id: "superboard-billing.data_source.billing_ledger",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/billing/projects/:projectRef/ledger",
+				route_id:
+					"api:billing:ledger-proxy->billing:catalog-ledger.app:GET:/internal/v1/catalog-ledger",
 				query: "none",
 				body: "none",
 			},

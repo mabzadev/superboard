@@ -3,6 +3,54 @@ import { createFrontI18n } from "@superboard/front-ui/i18n";
 import { useMemo } from "react";
 
 const french: Record<string, string> = {
+	"Stripe web payments": "Paiements web Stripe",
+	"Application origin": "Origine de l’application",
+	"Stripe webhook endpoint": "Adresse de notification Stripe",
+	"Enable Checkout session, subscription, invoice payment and charge refund events on this endpoint.":
+		"Activez les événements Checkout, abonnement, paiement de facture et remboursement sur cette adresse.",
+	"Unable to load Stripe settings.": "Impossible de charger les paramètres Stripe.",
+	"Unable to save Stripe settings. Check the keys and application origin.":
+		"Impossible d’enregistrer les paramètres Stripe. Vérifiez les clés et l’origine de l’application.",
+	"Synchronize Stripe prices": "Synchroniser les prix Stripe",
+	Country: "Pays",
+	Language: "Langue",
+	"App version": "Version de l’application",
+	"SDK version": "Version du SDK",
+
+	"Configure store credentials in the iOS or Android application settings, then test the connection here.":
+		"Configurez les identifiants du store dans les paramètres de votre application iOS ou Android, puis testez la connexion ici.",
+	"Configure store": "Configurer le store",
+	"Test connection": "Tester la connexion",
+	"Store connection verified.": "Connexion au store vérifiée.",
+	"Store connection failed. Check the application credentials and try again.":
+		"La connexion au store a échoué. Vérifiez les identifiants de l’application et réessayez.",
+
+	"App Store / Google Play": "App Store / Google Play",
+	"Configure the products, offers and access used by your mobile app.":
+		"Configurez les produits, les offres et les accès utilisés par votre application mobile.",
+	"Some stores could not be synchronized. Check the store credentials.":
+		"Certains stores n’ont pas pu être synchronisés. Vérifiez leurs identifiants de connexion.",
+	"No mobile products configured. Add the exact product identifier from your store or synchronize the catalog.":
+		"Aucun produit mobile configuré. Ajoutez l’identifiant exact du produit dans votre store ou synchronisez le catalogue.",
+	"Current offering": "Offre courante",
+	"Alternative offering": "Offre alternative",
+	"Add a package to make products available in this offering.":
+		"Ajoutez un package pour proposer des produits dans cette offre.",
+	"Add package": "Ajouter un package",
+	"Remove package": "Retirer le package",
+	"Store product identifier": "Identifiant du produit dans le store",
+	"Package duration": "Durée du package",
+	"Select one equivalent product per store.": "Sélectionnez un produit équivalent par store.",
+	weekly: "Hebdomadaire",
+	monthly: "Mensuel",
+	two_month: "Deux mois",
+	three_month: "Trois mois",
+	six_month: "Six mois",
+	annual: "Annuel",
+	lifetime: "À vie",
+	custom: "Personnalisé",
+	Refresh: "Actualiser",
+
 	Purchases: "Achats",
 	"Purchases, subscriptions, restorations, refunds and financial history.":
 		"Achats, abonnements, restaurations, remboursements et historique financier.",

@@ -18,7 +18,7 @@ export function BillingLedgerMigration({
 	onComplete(): void;
 }) {
 	const { locale } = useFrontContext();
-	const sourceEnabled = usePluginEnabled("supbrd-plug-products");
+	const sourceEnabled = usePluginEnabled("superboard-products");
 	const [status, setStatus] = useState<BillingMigrationStatus>();
 	const [pending, setPending] = useState(false);
 	const [started, setStarted] = useState(false);
