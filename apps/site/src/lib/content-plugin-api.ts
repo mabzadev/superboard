@@ -1,3 +1,4 @@
+import { pluginPackageOwner } from "@superboard/contracts/plugin-packages";
 import { selectRouteReference } from "@superboard/contracts/route-reference";
 import { matchRouteParameters, resolveManifestRoute } from "@superboard/contracts/route-registry";
 import type { APIContext } from "astro";
@@ -13,7 +14,7 @@ export async function dispatchContentPluginApi(
 ): Promise<Response> {
 	const url = new URL(request.url);
 	const routes = (await executingAstroRoutes()).filter(
-		(route) => route.pluginId === "superboard-content",
+		(route) => pluginPackageOwner(route.pluginId) === pluginPackageOwner("superboard-content"),
 	);
 	const route = routeId
 		? selectRouteReference(routes, routeId, "superboard-content")

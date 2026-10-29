@@ -11,7 +11,7 @@ test("a published renderer remains usable after the navigation upgrade while unk
 	);
 	const row = [
 		...migration.matchAll(
-			/VALUES \('(sha256:[a-f0-9]{64})', 'superboard-analytics', '((?:[^']|'')*)', '[^']+'\)/gu,
+			/VALUES \('(sha256:[a-f0-9]{64})', 'supbrd-plugmod-analytics', '((?:[^']|'')*)', '[^']+'\)/gu,
 		),
 	][0];
 	if (!row) throw new Error("Published Analytics manifest is missing");

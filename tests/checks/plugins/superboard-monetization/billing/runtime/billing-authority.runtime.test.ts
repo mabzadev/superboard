@@ -87,22 +87,20 @@ describe("Billing authority in the Workers runtime", () => {
 		});
 
 		const row = await testEnv.DB.prepare(
-			`SELECT COUNT(*) AS total, MIN(status) AS status,
+			`SELECT COUNT(*) AS total,
         MIN(json_extract(payload_json, '$.event_name')) AS event_name,
         MIN(json_extract(payload_json, '$.properties.store_transaction_id')) AS store_transaction_id
-       FROM analytics_fact_outbox
-       WHERE project_id = ? AND fact_key LIKE 'purchase:%'`,
+       FROM core_collected_events
+       WHERE project_id = ? AND collection_key LIKE 'fact:purchase:%'`,
 		)
 			.bind(projectId)
 			.first<{
 				total: number;
-				status: string;
 				event_name: string;
 				store_transaction_id: string;
 			}>();
 		expect(row).toEqual({
 			total: 1,
-			status: "delivered",
 			event_name: "superboard.analytics.purchase.verified.v1",
 			store_transaction_id: purchase.storeTransactionId,
 		});

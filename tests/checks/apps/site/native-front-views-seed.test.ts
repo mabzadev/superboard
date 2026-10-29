@@ -23,7 +23,7 @@ test("the EmDash seed exposes every Dashboard screen as a plugin-owned View", ()
 	for (const path of expectedPaths) {
 		const view = views.get(path);
 		expect(view, path).toBeDefined();
-		expect(view!.data.plugin_id).toMatch(/^supbrd-(?:plug|plugmod)-/u);
+		expect(view!.data.plugin_id).toMatch(/^(?:supbrd-(?:plug|plugmod)|superboard)-/u);
 		expect(view!.data.route_id).toMatch(/^superboard\./u);
 		expect(view!.data.renderer_id, path).toBe(`${view!.data.plugin_id}.renderer.admin_surface`);
 		expect(view!.data.presentation.schema_version).toBe("1.0.0");

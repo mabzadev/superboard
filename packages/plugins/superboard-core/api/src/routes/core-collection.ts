@@ -112,7 +112,11 @@ const collection = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api
 
 collection.use("/:plugin/*", async (c, next) => {
 	const plugin = c.req.param("plugin");
-	if (!/^supbrd-(?:core|(?:plug|plugmod)-[a-z0-9]+(?:-[a-z0-9]+)*)$/u.test(plugin))
+	if (
+		!/^(?:supbrd-(?:core|(?:plug|plugmod)-[a-z0-9]+(?:-[a-z0-9]+)*)|superboard-[a-z0-9]+(?:-[a-z0-9]+)*)$/u.test(
+			plugin,
+		)
+	)
 		return c.json({ error: { code: "COLLECTION_CONSUMER_INVALID" } }, 403);
 	let verified = false;
 	for (const secret of configuredSecrets(
