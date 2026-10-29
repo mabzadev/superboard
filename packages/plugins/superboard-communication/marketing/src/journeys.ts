@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	AnalyticsContractError,
 	parseMarketingSignalV1,
@@ -117,7 +118,7 @@ type SubscriberRow = {
 
 const NODE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/u;
 const EVENT_NAME = /^(?:\*|[A-Za-z0-9][A-Za-z0-9._:-]{0,254})$/u;
-const journeyRoutes = new Hono<JourneyBindings>();
+const journeyRoutes = registerRouter(new Hono<JourneyBindings>(), {"service":"marketing","module":"journeys.journeyRoutes","pluginId":"superboard-marketing","surface":"internal","access":"internal"});
 
 journeyRoutes.get("/journeys", async (c) => {
 	const projectId = c.get("project").projectId;
@@ -396,11 +397,24 @@ journeyRoutes.get("/journeys/:journeyId/statistics", async (c) => {
 
 journeyRoutes.post("/signals", async (c) => {
 	const project = c.get("project");
-	if (project.role.toLowerCase() !== "system") {
-		throw failure("signal_role_forbidden", "Only Analytics may publish Marketing signals", 403);
-	}
+	if (project.role.toLowerCase() !== "system")
+		throw failure(
+			"signal_role_forbidden",
+			"Only trusted services may publish Marketing signals",
+			403,
+		);
 	const signal = validateSignal(await readJsonObject(c.req.raw, 1_048_576));
-	const claimed = await c.env.DB.prepare(
+	const data = await acceptMarketingSignal(c.env, project, signal);
+	return c.json({ data }, data.duplicate ? 200 : 202);
+});
+
+export async function acceptMarketingSignal(
+	env: Env,
+	project: ProjectContext,
+	signal: MarketingSignalV1,
+	source = "analytics",
+): Promise<{ duplicate: boolean; matched_journeys: number }> {
+	const claimed = await env.DB.prepare(
 		`INSERT INTO marketing_signal_receipts
       (project_id, event_id, event_name, application_id, subject_hash,
        properties_json, occurred_at)
@@ -418,10 +432,15 @@ journeyRoutes.post("/signals", async (c) => {
 		)
 		.first();
 	if (!claimed) {
-		return c.json({ data: { duplicate: true, matched_journeys: 0 } });
+		const existing = await env.DB.prepare(
+			"SELECT status FROM marketing_signal_receipts WHERE project_id=? AND event_id=?",
+		)
+			.bind(project.projectId, signal.event_id)
+			.first<{ status: string }>();
+		if (existing?.status !== "received") return { duplicate: true, matched_journeys: 0 };
 	}
 	const subscriber = signal.subject_hash
-		? await c.env.DB.prepare(
+		? await env.DB.prepare(
 				`SELECT subscriber.* FROM subscriber_identity_aliases identity
          JOIN subscribers subscriber ON subscriber.id = identity.subscriber_id
          WHERE identity.project_id = ? AND identity.identity_hash = ?
@@ -432,10 +451,10 @@ journeyRoutes.post("/signals", async (c) => {
 				.first<SubscriberRow>()
 		: null;
 	if (!subscriber) {
-		await completeSignal(c.env.DB, project.projectId, signal.event_id, 0, "unmatched");
-		return c.json({ data: { duplicate: false, matched_journeys: 0 } }, 202);
+		await completeSignal(env.DB, project.projectId, signal.event_id, 0, "unmatched");
+		return { duplicate: false, matched_journeys: 0 };
 	}
-	const journeys = await c.env.DB.prepare(
+	const journeys = await env.DB.prepare(
 		`SELECT * FROM marketing_journeys
      WHERE project_id = ? AND status = 'active'
        AND (trigger_event_name = ? OR trigger_event_name = '*')
@@ -454,25 +473,31 @@ journeyRoutes.post("/signals", async (c) => {
 		}
 		if (
 			journey.entry_segment_id &&
-			!(await segmentContains(c.env.DB, project.projectId, journey.entry_segment_id, subscriber.id))
+			!(await segmentContains(env.DB, project.projectId, journey.entry_segment_id, subscriber.id))
 		) {
 			continue;
 		}
-		const result = await enrollSubscriber(c.env, journey, subscriber.id, signal.event_id, {
-			source: "analytics",
+		const result = await enrollSubscriber(env, journey, subscriber.id, signal.event_id, {
+			source,
 			signal,
 		});
 		if (result.enrolled) matched += 1;
 	}
+	const persisted = await env.DB.prepare(
+		"SELECT COUNT(*) count FROM marketing_journey_enrollments WHERE project_id=? AND entry_event_id=?",
+	)
+		.bind(project.projectId, signal.event_id)
+		.first<{ count: number }>();
+	matched = Number(persisted?.count ?? matched);
 	await completeSignal(
-		c.env.DB,
+		env.DB,
 		project.projectId,
 		signal.event_id,
 		matched,
 		matched ? "matched" : "unmatched",
 	);
-	return c.json({ data: { duplicate: false, matched_journeys: matched } }, 202);
-});
+	return { duplicate: false, matched_journeys: matched };
+}
 
 journeyRoutes.get("/signals", async (c) => {
 	const rows = await c.env.DB.prepare(

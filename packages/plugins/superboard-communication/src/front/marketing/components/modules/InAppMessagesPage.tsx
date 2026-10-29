@@ -97,7 +97,9 @@ const MessagingPage = () => {
 	};
 
 	const getMessages = () => {
-		void notificationsQuery.refetch();
+		notificationsQuery.refetch().catch((cause: unknown) => {
+			console.error(cause);
+		});
 		if (isAddNewMessageOpen) {
 			setIsAddNewMessageOpen(false);
 		}
@@ -113,7 +115,9 @@ const MessagingPage = () => {
 					{t("Loading failed")}{" "}
 					<Button
 						onClick={() => {
-							void notificationsQuery.refetch();
+							notificationsQuery.refetch().catch((cause: unknown) => {
+								console.error(cause);
+							});
 						}}
 					>
 						{t("Retry")}
