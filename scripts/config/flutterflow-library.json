@@ -18,8 +18,8 @@
 		{
 			"catalogId": "flutterflow",
 			"packageName": "superboard_flutterflow",
-			"sourceVersion": "3.0.0",
-			"requiredRef": "sdk-flutterflow-v3.0.0"
+			"sourceVersion": "3.0.1",
+			"requiredRef": "sdk-flutterflow-v3.0.1"
 		}
 	],
 	"libraryValues": [

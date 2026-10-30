@@ -134,6 +134,12 @@ export function inspectCoverage() {
 	const config = JSON.parse(
 		readFileSync(resolve(repositoryRoot, "scripts/config/emdash-integration.json"), "utf8"),
 	);
+	// EmDash is integrated as a pinned copy: fetch its commit when the checkout lacks it.
+	const present = spawnSync("git", ["cat-file", "-e", `${config.upstream.commit}^{commit}`], {
+		cwd: repositoryRoot,
+	});
+	if (present.status !== 0)
+		gitLines(["fetch", "--no-tags", "--depth=1", config.upstream.remote, config.upstream.commit]);
 	const upstream = new Set(
 		gitLines(["ls-tree", "-r", "--name-only", "-z", config.upstream.commit]),
 	);
