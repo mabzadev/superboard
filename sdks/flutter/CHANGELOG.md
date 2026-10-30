@@ -1,3 +1,7 @@
+## 3.0.1
+
+* Republished the 3.0.0 SDK under a new immutable release tag; no code changes.
+
 ## 3.0.0
 
 * Added the native Flows client, HTTP/WebSocket contracts, encrypted cache, reconnection, slots, overlays, anchors, navigation adapter, and debug panel

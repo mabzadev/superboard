@@ -1,3 +1,7 @@
+## 3.0.1
+
+- Republished the 3.0.0 SDK under a new immutable release tag; no code changes.
+
 ## 3.0.0
 
 - Added FlutterFlow actions and widgets for the native Flows SDK, including
