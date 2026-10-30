@@ -624,24 +624,22 @@ export async function expectedGeneratedFiles() {
 	]);
 }
 
-async function verifyUpstreamAncestry(config) {
+// The upstream EmDash revision is integrated as a pinned copy, not as Git ancestry,
+// so its commit is fetched from the recorded remote when the checkout lacks it.
+async function ensureUpstreamCommit(config) {
+	const present = runGit(["cat-file", "-e", `${config.upstream.commit}^{commit}`], repositoryRoot, {
+		allowFailure: true,
+	});
+	if (present.status !== 0)
+		runGit(["fetch", "--no-tags", "--depth=1", config.upstream.remote, config.upstream.commit]);
 	const object = runGit(["cat-file", "-t", config.upstream.commit]).stdout.trim();
 	if (object !== "commit") {
 		throw new Error(`Pinned upstream object is ${object}, expected commit`);
 	}
-	const ancestry = runGit(
-		["merge-base", "--is-ancestor", config.upstream.commit, "HEAD"],
-		repositoryRoot,
-		{
-			allowFailure: true,
-		},
-	);
-	if (ancestry.status !== 0) {
-		throw new Error(`Pinned upstream commit ${config.upstream.commit} is not an ancestor of HEAD`);
-	}
 }
 
 export async function applyOverlay() {
+	await ensureUpstreamCommit(await readIntegrationConfig());
 	const expected = await expectedGeneratedFiles();
 	const changed = [];
 	for (const [path, contents] of expected) {
@@ -657,7 +655,7 @@ export async function applyOverlay() {
 
 export async function checkOverlay() {
 	const config = await readIntegrationConfig();
-	await verifyUpstreamAncestry(config);
+	await ensureUpstreamCommit(config);
 	const expected = await expectedGeneratedFiles();
 	const mismatches = [];
 	for (const [path, contents] of expected) {
