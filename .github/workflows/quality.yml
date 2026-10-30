@@ -35,7 +35,8 @@ jobs:
       - name: Select migration comparison
         run: |
           base="$BASE_SHA"
-          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] ||
+            ! git cat-file -e "$base^{commit}" 2>/dev/null; then
             base="$(git rev-parse HEAD^)"
           fi
           echo "SUPERBOARD_LINT_BASE=$base" >> "$GITHUB_ENV"
