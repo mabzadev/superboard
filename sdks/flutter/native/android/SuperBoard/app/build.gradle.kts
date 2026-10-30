@@ -9,11 +9,17 @@ val superBoardApiKey = providers.gradleProperty("SUPERBOARD_API_KEY").orElse("")
 android {
     sourceSets {
         getByName("test") {
-            java.setSrcDirs(listOf("../../../../../../tests/checks/sdks/flutter/native/android/sample/unit/java", "../../../../tests/checks/sdks/flutter/native/android/sample/unit/kotlin"))
+            java.setSrcDirs(listOf(
+                "../../../../../../tests/checks/sdks/flutter/native/android/sample/unit/java",
+                "../../../../tests/checks/sdks/flutter/native/android/sample/unit/kotlin",
+            ))
             resources.setSrcDirs(listOf("../../../../tests/checks/sdks/flutter/native/android/sample/unit/resources"))
         }
         getByName("androidTest") {
-            java.setSrcDirs(listOf("../../../../../../tests/checks/sdks/flutter/native/android/sample/device/java", "../../../../tests/checks/sdks/flutter/native/android/sample/device/kotlin"))
+            java.setSrcDirs(listOf(
+                "../../../../../../tests/checks/sdks/flutter/native/android/sample/device/java",
+                "../../../../tests/checks/sdks/flutter/native/android/sample/device/kotlin",
+            ))
             resources.setSrcDirs(listOf("../../../../tests/checks/sdks/flutter/native/android/sample/device/resources"))
         }
     }
