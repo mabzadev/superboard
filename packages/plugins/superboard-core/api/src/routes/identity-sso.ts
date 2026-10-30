@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { hashPassword, verifyToken } from '../lib/crypto';
@@ -9,7 +10,7 @@ import { readJsonObjectLimited } from '../lib/http-limits';
 import { issueDbBackedTokens } from '../lib/auth';
 import { tokenDigest } from '../lib/token-storage';
 
-const sso = new Hono<{ Bindings: Env }>();
+const sso = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.identity-sso.sso","pluginId":"superboard-user","surface":"internal","access":"framework"});
 const STATE_TTL_SECONDS = 10 * 60;
 
 async function readBody(c: any): Promise<Record<string, any>> {

@@ -78,7 +78,7 @@ test("a remembered French choice wins over an old Identity URL", () => {
 
 test("Identity links keep the view, parameters and fragment when localized", () => {
 	expect(localizeFrontPath("/identity/en/users/member%2F42?tab=roles#details", "fr")).toBe(
-		"/auth/directory/users/member%2F42?tab=roles&lang=fr#details",
+		"/auth/users?tab=accounts&editor=users&id=member%2F42&section=directory&lang=fr#details",
 	);
 	expect(localizeFrontPath("/superboard-preview/preview1/identity/en/users", "fr")).toBe(
 		"/superboard-preview/preview1/identity/fr/users",

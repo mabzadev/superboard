@@ -24,42 +24,42 @@ import retrofit2.http.Query
 
 interface SuperBoardApi {
 
-    @POST("data_for_device")
+    @POST("acquisition/data_for_device")
     suspend fun payloadFor(@Body request: AppDetails): Response<DeeplinkDetails>
 
-    @POST("data_for_device_and_url")
+    @POST("acquisition/data_for_device_and_url")
     suspend fun payloadWithLinkFor(@Body request: AppDetails): Response<DeeplinkDetails>
 
-    @POST("authenticate")
+    @POST("data/authenticate")
     suspend fun authenticate(@Body request: AppDetails): Response<AuthenticationResponse>
 
-    @POST("create_link")
+    @POST("acquisition/create_link")
     suspend fun generateLink(@Body request: GenerateLinkRequest): Response<GenerateLinkResponse>
 
-    @POST("link_details")
+    @POST("acquisition/link_details")
     suspend fun linkDetails(@Body request: LinkDetailsRequest): Response<ResponseBody>
 
-    @POST("event")
+    @POST("data/event")
     suspend fun addEvent(@Body request: Event): Response<Unit>
 
-    @POST("add_payment_event")
+    @POST("monetization/add_payment_event")
     suspend fun addPaymentEvent(@Body request: PaymentEvent): Response<Unit>
 
-    @POST("visitor_attributes")
+    @POST("data/visitor_attributes")
     suspend fun updateAttributes(@Body request: UpdateAttributesRequest): Response<Unit>
 
-    @GET("device_for_vendor_id")
+    @GET("data/device_for_vendor_id")
     suspend fun getDeviceFor(@Query("vendor_id") page: String): Response<GetDeviceResponse>
 
-    @POST("notifications_for_device")
+    @POST("communication/notifications_for_device")
     suspend fun notifications(@Body request: NotificationsRequest): Response<NotificationsResponse>
 
-    @GET("number_of_unread_notifications")
+    @GET("communication/number_of_unread_notifications")
     suspend fun numberOfUnreadNotifications(): Response<NumberOfUnreadNotificationsResponse>
 
-    @POST("mark_notification_as_read")
+    @POST("communication/mark_notification_as_read")
     suspend fun markNotificationAsRead(@Body request: MarkNotificationAsReadRequest): Response<Unit>
 
-    @GET("notifications_to_display_automatically")
+    @GET("communication/notifications_to_display_automatically")
     suspend fun notificationsToDisplayAutomatically(): Response<NotificationsResponse>
 }

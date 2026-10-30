@@ -631,7 +631,7 @@
       </h1>
       <p class="lede">
         Cette démo pilotable représente
-        <code>supbrd-plugmod-analytics</code> dans un Site EmDash. Elle rend
+        <code>superboard-analytics</code> dans un Site EmDash. Elle rend
         visibles l’installation, les contributions du Front SuperBoard,
         l’isolation du Worker, les contrats partagés et chaque Validation
         Receipt du gate de Release Front.
@@ -775,20 +775,20 @@
         <summary>Contrats représentatifs intégrés à la preuve</summary>
         <ul class="compact-list">
           <li>
-            Plugin&nbsp;: <code>supbrd-plugmod-analytics@1.4.0</code>, backend
+            Plugin&nbsp;: <code>superboard-analytics@1.4.0</code>, backend
             <code>sandboxed</code>, Worker <code>dedicated</code>.
           </li>
           <li>
             Élément&nbsp;:
-            <code>supbrd-plugmod-analytics.renderer.overview_chart</code>.
+            <code>superboard-analytics.renderer.overview_chart</code>.
           </li>
           <li>
             Action&nbsp;:
-            <code>supbrd-plugmod-analytics.command.export_report</code>.
+            <code>superboard-analytics.command.export_report</code>.
           </li>
           <li>
             Source&nbsp;:
-            <code>supbrd-plugmod-analytics.data_source.event_series</code>.
+            <code>superboard-analytics.data_source.event_series</code>.
           </li>
           <li>
             Appels&nbsp;: schémas fermés, checksum de contrat identique,
@@ -824,7 +824,7 @@
       const PluginModulePrototype = (() => {
         const manifest = Object.freeze({
           schemaVersion: "1.0.0",
-          pluginId: "supbrd-plugmod-analytics",
+          pluginId: "superboard-analytics",
           pluginKind: "module",
           pluginVersion: "1.4.0",
           publisher: "superboard",
@@ -845,7 +845,7 @@
           resources: ["SUPERBOARD_PLUGIN_REPOSITORY", "ANALYTICS_QUEUE"],
           stores: [
             {
-              id: "supbrd-plugmod-analytics.store.analytics_events",
+              id: "superboard-analytics.store.analytics_events",
               kind: "d1",
               authority: "emdash",
               schemaVersion: "2",
@@ -881,9 +881,9 @@
           },
           migrations: ["0001_create_event_store", "0002_add_daily_projection"],
           contributions: {
-            renderers: ["supbrd-plugmod-analytics.renderer.overview_chart"],
-            commands: ["supbrd-plugmod-analytics.command.export_report"],
-            dataSources: ["supbrd-plugmod-analytics.data_source.event_series"],
+            renderers: ["superboard-analytics.renderer.overview_chart"],
+            commands: ["superboard-analytics.command.export_report"],
+            dataSources: ["superboard-analytics.data_source.event_series"],
           },
           failurePolicies: {
             writes: "fail_closed",

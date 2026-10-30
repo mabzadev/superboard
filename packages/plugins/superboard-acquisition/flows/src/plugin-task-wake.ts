@@ -12,7 +12,7 @@ export async function wakePluginWorkflow(request: Request, env: Env): Promise<Re
 	const body = await readJsonObjectLimited(request, 16384);
 	if (
 		body.instance_id !== env.SUPERBOARD_INSTANCE_ID ||
-		body.plugin_id !== "supbrd-plugmod-flows" ||
+		body.plugin_id !== "superboard-flows" ||
 		!["FLOW_DELAY_EXECUTION", "FLOW_MAINTENANCE_EXECUTION"].includes(
 			String(body.workflow_binding),
 		) ||
@@ -30,7 +30,7 @@ export async function wakePluginWorkflow(request: Request, env: Env): Promise<Re
 		return Response.json({ delivered: true });
 	await instance.sendEvent({
 		type: body.event_type,
-		payload: { plugin_id: "supbrd-plugmod-flows" },
+		payload: { plugin_id: "superboard-flows" },
 	});
 	return Response.json({ delivered: true });
 }

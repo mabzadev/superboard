@@ -7,8 +7,8 @@ All 10 files and 27 tests in this run passed.
 Recorded observations (emitted after semantic and persistence assertions):
 [
   {
-    "plugin_id": "supbrd-plugmod-gateway",
-    "route_id": "gateway.supbrd-plugmod-gateway.command.update_gateway_route",
+    "plugin_id": "superboard-gateway",
+    "route_id": "gateway.superboard-gateway.command.update_gateway_route",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -19,8 +19,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-gateway",
-    "route_id": "gateway.supbrd-plugmod-gateway.data_source.gateway_routes",
+    "plugin_id": "superboard-gateway",
+    "route_id": "gateway.superboard-gateway.data_source.gateway_routes",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -31,8 +31,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-gateway",
-    "route_id": "gateway.supbrd-plugmod-gateway.command.publish_gateway_manifest",
+    "plugin_id": "superboard-gateway",
+    "route_id": "gateway.superboard-gateway.command.publish_gateway_manifest",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -43,8 +43,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-gateway",
-    "route_id": "gateway.supbrd-plugmod-gateway.data_source.active_gateway_manifest",
+    "plugin_id": "superboard-gateway",
+    "route_id": "gateway.superboard-gateway.data_source.active_gateway_manifest",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -55,8 +55,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-gateway",
-    "route_id": "gateway.supbrd-plugmod-gateway.data_source.rate_limits",
+    "plugin_id": "superboard-gateway",
+    "route_id": "gateway.superboard-gateway.data_source.rate_limits",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -67,8 +67,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-gateway",
-    "route_id": "gateway.supbrd-plugmod-gateway.command.rotate_access_policy",
+    "plugin_id": "superboard-gateway",
+    "route_id": "gateway.superboard-gateway.command.rotate_access_policy",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",

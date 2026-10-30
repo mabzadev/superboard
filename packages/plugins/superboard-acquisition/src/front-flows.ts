@@ -6,7 +6,7 @@ import {
 const flows = navigationGroup({ group_id: "flows", group_label: "Flows", group_order: 4 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
-	plugin_id: "supbrd-plugmod-flows",
+	plugin_id: "superboard-flows",
 	plugin_label: "Flows",
 	description:
 		"Design workflows, components, launch configurations, and runtime settings from the Flows plugin.",

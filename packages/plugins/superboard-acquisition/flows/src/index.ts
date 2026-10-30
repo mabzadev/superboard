@@ -1,3 +1,5 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { mountRegisteredRouter, registerRouter } from "@superboard/contracts/route-registry";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
 import { Hono, type Context } from "hono";
@@ -31,7 +33,7 @@ import {
 	setLaunchpadWorkflows,
 	updateLaunchpadGroup,
 } from "./launchpad/service";
-import { legacyRequest } from "./legacy/service";
+import { createLegacyRouter } from "./legacy/service";
 import { wakePluginWorkflow } from "./plugin-task-wake";
 import {
 	createEnvironment,
@@ -62,11 +64,18 @@ import {
 } from "./workflows/service";
 
 export { FlowUserRuntime } from "./runtime/user-runtime";
-export { FlowRealtimeHub } from "./runtime/realtime-hub";
+import { FlowRealtimeHub } from "./runtime/realtime-hub";
+export { FlowRealtimeHub };
 export { FlowDelayExecution } from "./workflows/delay";
 export { FlowMaintenanceExecution } from "./workflows/maintenance";
 
-const app = new Hono<FlowApp>();
+const app = registerRouter(new Hono<FlowApp>(), {
+	service: "flows",
+	module: "index.app",
+	pluginId: "superboard-flows",
+	surface: "internal",
+	access: "framework",
+});
 
 app.onError((error, context) => errorResponse(error, context));
 app.options(
@@ -100,10 +109,12 @@ app.use("/internal/v1/legacy/*", async (context, next) => {
 	context.set("flowProject", await ensureFlowProject(context));
 	await next();
 });
-app.all("/internal/v1/legacy/paywalls", (context) => legacyRequest(context, "paywalls"));
-app.all("/internal/v1/legacy/paywalls/*", (context) => legacyRequest(context, "paywalls"));
-app.all("/internal/v1/legacy/onboardings", (context) => legacyRequest(context, "onboardings"));
-app.all("/internal/v1/legacy/onboardings/*", (context) => legacyRequest(context, "onboardings"));
+for (const source of ["paywalls", "onboardings"] as const) {
+	const router = createLegacyRouter(source);
+	mountRegisteredRouter(app, router, (context: Context<FlowApp>) =>
+		router.fetch(context.req.raw, context),
+	);
+}
 
 const base = "/internal/v1/projects/:projectRef";
 app.use(`${base}/*`, async (context, next) => {
@@ -362,4 +373,8 @@ const worker = {
 	},
 } satisfies ExportedHandler<Env>;
 
-export default withPluginTaskLifecycle("supbrd-plugmod-flows", worker);
+export default withRouteManifest(
+	withPluginTaskLifecycle("superboard-flows", worker),
+	[app, FlowRealtimeHub.routes],
+	{ service: "flows", pluginId: "superboard-flows" },
+);

@@ -24,12 +24,12 @@ test.each(endpoints)("Acquisition refuses an editor: %s %s", async (path, method
 test.each(["diagnostic", "health"])(
 	"disabled Acquisition refuses %s without removing settings",
 	async (action) => {
-		const key = "plugin:supbrd-plugmod-flows:settings:default_locale";
+		const key = "plugin:superboard-flows:settings:default_locale";
 		await env.DB.prepare("INSERT OR REPLACE INTO options (name, value) VALUES (?, ?)")
 			.bind(key, JSON.stringify("fr-CH"))
 			.run();
 		await env.DB.prepare(
-			"INSERT OR REPLACE INTO superboard_plugin_lifecycle (instance_id, target, plugin_id, artifact_checksum, state, state_changed_at) SELECT ?, 'local', ?, artifact_checksum, 'disabled', datetime('now') FROM superboard_plugin_manifest_artifacts WHERE plugin_id = 'supbrd-plugmod-flows' LIMIT 1",
+			"INSERT OR REPLACE INTO superboard_plugin_lifecycle (instance_id, target, plugin_id, artifact_checksum, state, state_changed_at) SELECT ?, 'local', ?, artifact_checksum, 'disabled', datetime('now') FROM superboard_plugin_manifest_artifacts WHERE plugin_id = 'superboard-flows' LIMIT 1",
 		)
 			.bind(env.SUPERBOARD_INSTANCE_ID, pluginId)
 			.run();
@@ -53,7 +53,7 @@ test("disabled Flows refuses its settings APIs", async () => {
 	await env.DB.prepare(
 		"UPDATE superboard_plugin_lifecycle SET state = 'disabled' WHERE instance_id = ? AND target = 'local' AND plugin_id = ?",
 	)
-		.bind(env.SUPERBOARD_INSTANCE_ID, "supbrd-plugmod-flows")
+		.bind(env.SUPERBOARD_INSTANCE_ID, "superboard-flows")
 		.run();
 	for (const [path, method] of endpoints.filter(([candidate]) =>
 		candidate?.startsWith("/api/v1/flows/"),

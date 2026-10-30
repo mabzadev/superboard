@@ -1,3 +1,5 @@
+import { createFetchRouter } from "@superboard/contracts/route-registry";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
 import {
 	OBSERVABILITY_HEALTH_PATH,
 	OBSERVABILITY_SUMMARY_PATH,
@@ -18,6 +20,36 @@ interface ObservabilitySecrets {
 }
 
 type ObservabilityEnv = Env & ObservabilitySecrets;
+
+const routes = createFetchRouter<ObservabilityEnv>({ service: "observability", module: "http", pluginId: "superboard-observability", surface: "internal", access: "internal" });
+routes.use("*", async ({ request, env }, next) => {
+ if (!(await authorized(request, env))) return json({ error: "unauthorized" }, 401);
+ if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+ return next();
+});
+routes.get(OBSERVABILITY_HEALTH_PATH, async ({ env }) => {
+			const analyticsQueryConfigured = configured(env);
+			const optionalOutsideProduction =
+				env.ENVIRONMENT !== "production" && !analyticsQueryConfigured;
+			return json(
+				{
+					service: "observability",
+					status: analyticsQueryConfigured
+						? "ok"
+						: optionalOutsideProduction
+							? "degraded"
+							: "misconfigured",
+					environment: env.ENVIRONMENT,
+					dataset: env.ANALYTICS_DATASET,
+					analyticsQueryConfigured,
+					timestamp: new Date().toISOString(),
+				},
+				analyticsQueryConfigured || optionalOutsideProduction ? 200 : 503,
+			);
+		});
+routes.get(OBSERVABILITY_SUMMARY_PATH, async ({ env, url }) => {
+			return runtimeSummary(env, parseWindow(url.searchParams.get("window")));
+		});
 
 const lifecycleWorker = {
 	async tail(events: TraceItem[], env: ObservabilityEnv): Promise<void> {
@@ -78,36 +110,7 @@ const lifecycleWorker = {
 		}
 	},
 
-	async fetch(request: Request, env: ObservabilityEnv): Promise<Response> {
-		if (!(await authorized(request, env))) return json({ error: "unauthorized" }, 401);
-		if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
-
-		const url = new URL(request.url);
-		if (url.pathname === OBSERVABILITY_HEALTH_PATH) {
-			const analyticsQueryConfigured = configured(env);
-			const optionalOutsideProduction =
-				env.ENVIRONMENT !== "production" && !analyticsQueryConfigured;
-			return json(
-				{
-					service: "observability",
-					status: analyticsQueryConfigured
-						? "ok"
-						: optionalOutsideProduction
-							? "degraded"
-							: "misconfigured",
-					environment: env.ENVIRONMENT,
-					dataset: env.ANALYTICS_DATASET,
-					analyticsQueryConfigured,
-					timestamp: new Date().toISOString(),
-				},
-				analyticsQueryConfigured || optionalOutsideProduction ? 200 : 503,
-			);
-		}
-		if (url.pathname === OBSERVABILITY_SUMMARY_PATH) {
-			return runtimeSummary(env, parseWindow(url.searchParams.get("window")));
-		}
-		return json({ error: "not_found" }, 404);
-	},
+	async fetch(request: Request, env: ObservabilityEnv): Promise<Response> { return routes.fetch(request, env); },
 } satisfies ExportedHandler<ObservabilityEnv>;
 
 async function runtimeSummary(
@@ -366,4 +369,4 @@ function json(value: unknown, status = 200): Response {
 	});
 }
 
-export default withPluginTaskLifecycle("supbrd-plugmod-observability", lifecycleWorker);
+export default withRouteManifest(withPluginTaskLifecycle("superboard-observability", lifecycleWorker), [routes], { service: "observability", pluginId: "superboard-observability" });

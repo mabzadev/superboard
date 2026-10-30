@@ -6,7 +6,7 @@ import catalogFixture from "../../../../fixtures/apps/site/runtime-tests/platfor
 import { pluginDatabase, prepareApiPlugin } from "./retirement-api-helpers.js";
 
 test("the current generated target catalog accepts Site health without a Dashboard Worker or invented Site storage metrics", async () => {
-	const scope = await prepareApiPlugin("supbrd-plugmod-observability");
+	const scope = await prepareApiPlugin("superboard-observability");
 	const result = await buildPlatformStatus(
 		{
 			...env,

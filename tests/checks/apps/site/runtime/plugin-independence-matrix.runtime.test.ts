@@ -1,9 +1,10 @@
-import { canonicalFrontPath } from "@superboard/contracts/front-paths";
+import { canonicalFrontHref } from "@superboard/contracts/front-paths";
 import { env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
 import { resolveSiteFrontPage } from "../../../../../apps/site/src/lib/front-page.js";
 import { loadLastVerifiedFrontRelease } from "../../../../../apps/site/src/lib/release-source.js";
+import { retiredFrontPageDestination } from "../../../../../apps/site/src/lib/retired-front-pages.js";
 import baseline from "../../../../../scripts/config/superboard-plugin-independence-baseline.json";
 
 const headers = {
@@ -39,8 +40,17 @@ async function assertContribution(plugin: (typeof baseline.plugins)[number], pre
 	for (const route of plugin.routes) {
 		// The historical login transition now belongs to the always-available operator core.
 		if (route.path === "/login") continue;
+		// Historical pages relocated by the Front path contract are served at their new path.
+		const relocated = new URL(
+			canonicalFrontHref(retiredFrontPageDestination(route.path) ?? route.path),
+			"https://superboard.invalid",
+		).pathname;
 		expect(
-			routes.some((candidate) => candidate.path_pattern === canonicalFrontPath(route.path)),
+			routes.some(
+				(candidate) =>
+					candidate.route_id === route.route_id ||
+					(relocated !== route.path && candidate.path_pattern === relocated),
+			),
 			`${plugin.plugin_id}: ${route.path}`,
 		).toBe(present);
 	}

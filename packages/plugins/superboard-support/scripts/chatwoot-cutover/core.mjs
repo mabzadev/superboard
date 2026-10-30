@@ -17,7 +17,7 @@ const CONFIGURATION_TYPES = Object.freeze({
 	agent_bots: "agent_bot",
 });
 
-const SUPPORT_PLUGIN_ID = "supbrd-plugmod-support";
+const SUPPORT_PLUGIN_ID = "superboard-support";
 const SUPPORT_STORE_BY_ENTITY = Object.freeze({
 	contacts: "contacts",
 	configuration: "conversations",

@@ -5,7 +5,7 @@ import {
 	type SuperBoardPluginTarget,
 } from "./superboard-plugin-catalog.js";
 
-const USER_DEPENDENCY_ID = "dependency.supbrd_plug_user";
+const USER_DEPENDENCY_ID = "dependency.superboard_user";
 
 export async function installCompiledUserPlugin(
 	db: D1Database,

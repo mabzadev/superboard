@@ -15,10 +15,14 @@ export function expectedDomainOwners(target, environment) {
 	}
 	const entries = [
 		["api", target.domains.api, target.workers.api?.[environment]],
-		["auth", target.domains.auth, target.workers.api?.[environment]],
+		...(target.domains.auth !== target.domains.sdk
+			? [["auth", target.domains.auth, target.workers.api?.[environment]]]
+			: []),
 		["shortlinks", target.domains.shortlinks, target.workers.api?.[environment]],
 		["sdk", target.domains.sdk, target.workers.api?.[environment]],
-		["files", target.domains.files, target.workers.api?.[environment]],
+		...(target.domains.files !== target.domains.sdk
+			? [["files", target.domains.files, target.workers.api?.[environment]]]
+			: []),
 		...(target.domains.dashboard && target.domains.dashboard !== target.domains.site
 			? [["dashboard", target.domains.dashboard, target.workers.site?.[environment]]]
 			: []),

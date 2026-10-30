@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
 import { Hono } from "hono";
 
@@ -13,7 +14,7 @@ import { siteOperatorAdapter, type SiteAdapterVariables } from "../lib/site-oper
 import { tokenDigest } from "../lib/token-storage";
 import { Env } from "../types";
 
-const instances = new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>();
+const instances = registerRouter(new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>(), {"service":"api","module":"routes.instances.instances","pluginId":"supbrd-core","surface":"internal","access":"operator"});
 instances.use("*", siteOperatorAdapter("instances"));
 
 async function getAuthUserId(c: any): Promise<number | null> {
@@ -1578,10 +1579,11 @@ instances.put("/:id/configurations/ios/api_access_key", async (c) => {
 export function buildGoogleConfigurationScript(params: {
 	instanceId: number;
 	apiDomain: string;
+	unified?: boolean;
 	projectId: string;
 	serviceAccountEmail: string;
 }) {
-	const endpoint = `https://${params.apiDomain}/api/v1/iap/google/${params.instanceId}`;
+	const endpoint = `https://${params.apiDomain}${params.unified ? "/v1/monetization/iap/google" : "/api/v1/iap/google"}/${params.instanceId}`;
 	return `#!/bin/bash
 set -e
 
@@ -1655,7 +1657,8 @@ instances.get("/:id/configurations/android/google_configuration_script", async (
 	return c.text(
 		buildGoogleConfigurationScript({
 			instanceId,
-			apiDomain: c.env.API_DOMAIN,
+			apiDomain: c.env.AUTH_DOMAIN === c.env.SDK_DOMAIN ? c.env.SDK_DOMAIN : c.env.API_DOMAIN,
+			unified: Boolean(c.env.SDK_DOMAIN) && c.env.AUTH_DOMAIN === c.env.SDK_DOMAIN,
 			projectId,
 			serviceAccountEmail,
 		}),

@@ -38,6 +38,11 @@ export class SuperBoardClient {
 			IDENTIFIER: options.appId,
 			PLATFORM: options.platform ?? "web",
 			ENVIRONMENT: options.environment ?? "production",
+			"X-SuperBoard-SDK-Version": "0.1.0",
+			...(options.appVersion ? { "X-SuperBoard-App-Version": options.appVersion } : {}),
+			...((options.language ?? globalThis.navigator?.language)
+				? { "X-SuperBoard-Language": options.language ?? globalThis.navigator.language }
+				: {}),
 		};
 	}
 
@@ -80,24 +85,24 @@ export class SuperBoardClient {
 	}
 
 	register(input) {
-		return this.#authenticate("/auth/register", input);
+		return this.#authenticate("/v1/auth/register", input);
 	}
 	signIn(email, password) {
-		return this.#authenticate("/auth/signin/password", { email, password });
+		return this.#authenticate("/v1/auth/signin/password", { email, password });
 	}
 	signInAnonymously(installationId) {
-		return this.#authenticate("/auth/anonymous", { installation_id: installationId });
+		return this.#authenticate("/v1/auth/anonymous", { installation_id: installationId });
 	}
 	signInWithProvider(provider, input) {
 		if (!["google", "apple"].includes(provider))
 			throw new TypeError("Unsupported identity provider.");
-		return this.#authenticate(`/auth/signin/${provider}`, input);
+		return this.#authenticate(`/v1/auth/signin/${provider}`, input);
 	}
 	getProfile() {
-		return this.request("/auth/me");
+		return this.request("/v1/auth/me");
 	}
 	updateProfile(profile) {
-		return this.request("/auth/me", { method: "PUT", body: profile });
+		return this.request("/v1/auth/me", { method: "PUT", body: profile });
 	}
 
 	async refreshSession() {
@@ -106,7 +111,7 @@ export class SuperBoardClient {
 			throw new SuperBoardError("session_required", "Sign in before refreshing the session.");
 		const generation = this.#generation;
 		const refreshToken = this.#session.refresh_token;
-		const operation = this.request("/auth/refresh", {
+		const operation = this.request("/v1/auth/refresh", {
 			method: "POST",
 			body: { refresh_token: refreshToken },
 			authenticated: false,
@@ -131,7 +136,7 @@ export class SuperBoardClient {
 	async logout() {
 		const generation = this.#generation;
 		try {
-			if (this.#session) await this.request("/auth/logout", { method: "POST", body: {} });
+			if (this.#session) await this.request("/v1/auth/logout", { method: "POST", body: {} });
 		} finally {
 			if (generation === this.#generation) this.clearSession();
 		}
@@ -141,7 +146,7 @@ export class SuperBoardClient {
 		if (this.#applicationToken && this.#applicationToken.expiresAt > Date.now() + 10000)
 			return this.#applicationToken.value;
 		const generation = this.#generation;
-		const result = await this.request("/auth/superboard-token", { method: "POST", body: {} });
+		const result = await this.request("/v1/auth/superboard-token", { method: "POST", body: {} });
 		if (generation !== this.#generation)
 			throw new SuperBoardError(
 				"session_changed",
@@ -157,6 +162,93 @@ export class SuperBoardClient {
 			expiresAt: Date.now() + result.expires_in * 1000,
 		};
 		return result.access_token;
+	}
+
+	getPurchaseOfferings(placement = "default") {
+		return this.request(
+			`/v1/monetization/purchases/offerings?placement=${encodeURIComponent(placement)}`,
+			{
+				applicationToken: true,
+			},
+		);
+	}
+	async getPurchaseCustomerInfo() {
+		const generation = this.#generation;
+		const response = await this.request("/v1/monetization/purchases/customer-info", {
+			applicationToken: true,
+		});
+		const parts = typeof response.signature === "string" ? response.signature.split(".") : [];
+		const decode = (value) =>
+			Uint8Array.from(atob(value.replaceAll("-", "+").replaceAll("_", "/")), (character) =>
+				character.charCodeAt(0),
+			);
+		try {
+			if (parts.length !== 3) throw new Error("Invalid signature");
+			const header = JSON.parse(new TextDecoder().decode(decode(parts[0])));
+			const claims = JSON.parse(new TextDecoder().decode(decode(parts[1])));
+			if (
+				header.alg !== "ES256" ||
+				header.kid !== response.signature_key_id ||
+				claims.iss !== "superboard-purchases" ||
+				claims.aud !== "superboard-sdk" ||
+				!Number.isFinite(claims.exp) ||
+				claims.exp * 1000 <= Date.now() ||
+				claims.sub !== response.original_app_user_id
+			)
+				throw new Error("Invalid claims");
+			const keyset = await this.request("/.well-known/purchases-jwks.json", {
+				authenticated: false,
+			});
+			const jwk = keyset.keys?.find(
+				(key) => key.kid === header.kid && key.kty === "EC" && key.crv === "P-256" && !key.d,
+			);
+			if (!jwk) throw new Error("Unknown signing key");
+			const key = await crypto.subtle.importKey(
+				"jwk",
+				jwk,
+				{ name: "ECDSA", namedCurve: "P-256" },
+				false,
+				["verify"],
+			);
+			if (
+				!(await crypto.subtle.verify(
+					{ name: "ECDSA", hash: "SHA-256" },
+					key,
+					decode(parts[2]),
+					new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
+				))
+			)
+				throw new Error("Invalid signature");
+			if (generation !== this.#generation) throw new Error("Session changed");
+			if (!claims.customer_info || claims.customer_info.customer_id !== response.customer_id)
+				throw new Error("Invalid customer");
+			return {
+				...claims.customer_info,
+				signature: response.signature,
+				signature_algorithm: "ES256",
+				signature_key_id: header.kid,
+			};
+		} catch {
+			throw new SuperBoardError(
+				"customer_info_unverified",
+				"Customer access could not be verified.",
+			);
+		}
+	}
+	createCheckoutSession(input, idempotencyKey = crypto.randomUUID()) {
+		return this.request("/v1/monetization/purchases/stripe/checkout", {
+			method: "POST",
+			body: input,
+			applicationToken: true,
+			idempotencyKey,
+		});
+	}
+	createBillingPortalSession(returnUrl) {
+		return this.request("/v1/monetization/purchases/stripe/portal", {
+			method: "POST",
+			body: { return_url: returnUrl },
+			applicationToken: true,
+		});
 	}
 
 	async request(path, options = {}) {

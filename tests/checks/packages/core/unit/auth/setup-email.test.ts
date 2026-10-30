@@ -29,7 +29,7 @@ describe("Admin email setup", () => {
 	it("creates the first admin only after the single-use email link is verified", async () => {
 		await requestAdminEmailSetup(
 			{
-				baseUrl: "https://site.mbza.dev",
+				baseUrl: "https://site.mabza.dev",
 				siteName: "SuperBoard",
 				email: sendEmail,
 			},

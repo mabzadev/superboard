@@ -11,10 +11,10 @@ describe("standard SuperBoard plugin runtime", () => {
 		try {
 			const factory = new PluginContextFactory({ db });
 			const context = factory.createContext(
-				definePlugin({ id: "supbrd-plugmod-paywalls", version: "1.0.0" }),
+				definePlugin({ id: "superboard-paywalls", version: "1.0.0" }),
 			);
 			await context.kv.set("settings:default_locale", "fr");
-			const plugin = createConfiguredSuperBoardPlugin("supbrd-plugmod-paywalls");
+			const plugin = createConfiguredSuperBoardPlugin("superboard-paywalls");
 			const route = {
 				input: { default_locale: "untrusted" },
 				request: { method: "GET", url: "http://localhost/health", headers: {} },
@@ -35,10 +35,10 @@ describe("standard SuperBoard plugin runtime", () => {
 		const db = await setupTestDatabase();
 		try {
 			const context = new PluginContextFactory({ db }).createContext(
-				definePlugin({ id: "supbrd-plugmod-email", version: "1.0.0" }),
+				definePlugin({ id: "superboard-email", version: "1.0.0" }),
 			);
 			await context.kv.set("settings:password", "test-only-private-password");
-			const plugin = createConfiguredSuperBoardPlugin("supbrd-plugmod-email");
+			const plugin = createConfiguredSuperBoardPlugin("superboard-email");
 			const native = await plugin.routes.health.handler(context);
 			const sandboxed = await plugin.routes.health.handler({ input: {} }, context);
 			expect(native.settings).toEqual(sandboxed.settings);

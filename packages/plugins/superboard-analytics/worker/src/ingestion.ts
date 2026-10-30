@@ -17,6 +17,7 @@ export async function ingestAnalyticsEvents(
   env: Env,
   project: ProjectContext,
   events: AnalyticsEventV1[],
+  options: { coreCollection?: boolean } = {},
 ): Promise<AnalyticsIngestResultV1[]> {
   const projectId = String(project.projectId);
   if (
@@ -44,7 +45,7 @@ export async function ingestAnalyticsEvents(
       });
       continue;
     }
-    const result = await ingestOne(env, project, event);
+    const result = await ingestOne(env, project, event, options.coreCollection === true);
     results.push(result);
     if (result.status === "accepted") accepted.push(event.event_id);
   }
@@ -89,13 +90,17 @@ async function ingestOne(
   env: Env,
   project: ProjectContext,
   event: AnalyticsEventV1,
+  coreCollection: boolean,
 ): Promise<AnalyticsIngestResultV1> {
   const projectId = String(project.projectId);
   const payloadHash = await analyticsPayloadHash(event);
   const existing = await receipt(env.DB, projectId, event.event_id);
   if (existing) return replayResult(existing, payloadHash);
 
-  const stored = await pseudonymizeEvent(env, projectId, event);
+  const stored = {
+    ...await pseudonymizeEvent(env, projectId, event),
+    ...(coreCollection ? { core_collection: true } : {}),
+  };
   const outboxId = crypto.randomUUID();
   try {
     await env.DB.batch([
@@ -162,7 +167,7 @@ async function receipt(
     .first<EventReceipt>();
 }
 
-export async function dispatchOutboxEvents(
+async function dispatchOutboxEvents(
   env: Env,
   projectId: string,
   eventIds: string[],

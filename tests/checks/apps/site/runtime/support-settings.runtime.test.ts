@@ -25,12 +25,12 @@ test.each(endpoints)("Support refuses an editor: %s %s", async (path, method) =>
 test.each(["diagnostic", "health"])(
 	"disabled Support refuses %s without removing settings",
 	async (action) => {
-		const key = "plugin:supbrd-plugmod-support:settings:business_name";
+		const key = "plugin:superboard-support:settings:business_name";
 		await env.DB.prepare("INSERT OR REPLACE INTO options (name, value) VALUES (?, ?)")
 			.bind(key, JSON.stringify("Preserved sender"))
 			.run();
 		await env.DB.prepare(
-			"INSERT OR REPLACE INTO superboard_plugin_lifecycle (instance_id, target, plugin_id, artifact_checksum, state, state_changed_at) SELECT ?, 'local', ?, artifact_checksum, 'disabled', datetime('now') FROM superboard_plugin_manifest_artifacts WHERE plugin_id = 'supbrd-plugmod-support' LIMIT 1",
+			"INSERT OR REPLACE INTO superboard_plugin_lifecycle (instance_id, target, plugin_id, artifact_checksum, state, state_changed_at) SELECT ?, 'local', ?, artifact_checksum, 'disabled', datetime('now') FROM superboard_plugin_manifest_artifacts WHERE plugin_id = 'superboard-support' LIMIT 1",
 		)
 			.bind(env.SUPERBOARD_INSTANCE_ID, pluginId)
 			.run();
@@ -54,7 +54,7 @@ test("disabled Support refuses settings reads and writes", async () => {
 	await env.DB.prepare(
 		"UPDATE superboard_plugin_lifecycle SET state = 'disabled' WHERE instance_id = ? AND target = 'local' AND plugin_id = ?",
 	)
-		.bind(env.SUPERBOARD_INSTANCE_ID, "supbrd-plugmod-support")
+		.bind(env.SUPERBOARD_INSTANCE_ID, "superboard-support")
 		.run();
 	for (const [path, method] of endpoints.filter(([candidate]) => candidate?.startsWith("/api/"))) {
 		const response = await SELF.fetch(origin + path, { method, headers });

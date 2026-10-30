@@ -342,7 +342,7 @@ class SuperBoardExperienceClient {
   };
 
   Uri _uri(SuperBoardExperienceKind kind, String resource) => Uri.parse(
-    '${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/${kind == SuperBoardExperienceKind.paywall ? 'paywalls' : 'onboardings'}/$resource',
+    '${Uri.parse(baseUrl).origin}/v1/${kind == SuperBoardExperienceKind.paywall ? 'monetization/paywalls' : 'acquisition/onboardings'}/$resource',
   );
 
   Map<String, dynamic> _decode(http.Response response) {

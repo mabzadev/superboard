@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	CUSTOM_WORKER_JOB_PATH,
 	CUSTOM_WORKER_MANIFEST_PATH,
@@ -24,7 +25,7 @@ import { getRequestAuthContext } from "../lib/auth";
 import { readJsonObjectLimited, readTextLimited } from "../lib/http-limits";
 import type { Env } from "../types";
 
-const platform = new Hono<{ Bindings: Env }>();
+const platform = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.platform-status.platform","pluginId":"superboard-observability","surface":"internal","access":"operator"});
 
 const OBSERVABILITY_SUMMARY_MAX_BYTES = 512 * 1024;
 const CUSTOM_MANIFEST_MAX_BYTES = 64 * 1024;

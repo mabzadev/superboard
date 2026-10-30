@@ -12,7 +12,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-observability";
+const plugin = "superboard-observability";
 const file = "retirement-api-observability.runtime.test.ts";
 test("canonical Observability APIs preserve real observations and incident transitions and reject unsupported retries without changing Custom jobs", async () => {
 	const scope = await prepareApiPlugin(plugin);

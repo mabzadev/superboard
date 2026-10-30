@@ -1,8 +1,8 @@
 Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
 [
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.update_support_settings",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.update_support_settings",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -13,8 +13,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.support_settings",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.support_settings",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -25,8 +25,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.create_support_configuration",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.create_support_configuration",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -37,8 +37,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.update_support_configuration",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.update_support_configuration",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -49,8 +49,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.rotate_support_webhook_secret",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.rotate_support_webhook_secret",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -61,8 +61,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.revoke_support_webhook_secret",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.revoke_support_webhook_secret",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -73,8 +73,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.create_support_provider",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.create_support_provider",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -85,8 +85,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.update_support_provider",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.update_support_provider",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -97,8 +97,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.support_providers",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.support_providers",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -109,8 +109,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.support_channels",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.support_channels",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -122,8 +122,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.create_support_integration",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.create_support_integration",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -134,8 +134,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.update_support_integration",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.update_support_integration",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -146,8 +146,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.support_integrations",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.support_integrations",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -158,8 +158,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.send_inbox_message",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.send_inbox_message",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -170,8 +170,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.inbox_messages",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.inbox_messages",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -182,8 +182,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.update_inbox_conversation",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.update_inbox_conversation",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -194,8 +194,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.inbox_conversations",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.inbox_conversations",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -206,8 +206,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.unified_inbox_items",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.unified_inbox_items",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -218,8 +218,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.publish_support_article",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.publish_support_article",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -230,8 +230,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.support_portals",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.support_portals",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -242,8 +242,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.support_categories",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.support_categories",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -254,8 +254,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.support_folders",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.support_folders",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -266,8 +266,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.support_articles",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.support_articles",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -278,8 +278,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.data_source.support_assistant_tasks",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.data_source.support_assistant_tasks",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -290,8 +290,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.delete_support_provider",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.delete_support_provider",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -302,8 +302,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.delete_support_integration",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.delete_support_integration",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -314,8 +314,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.command.delete_support_configuration",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.command.delete_support_configuration",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",

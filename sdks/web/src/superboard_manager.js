@@ -31,7 +31,7 @@ class SuperBoardManager {
 		// Set API key and environment in the context
 		SuperBoardContext.API_KEY = APIKey;
 		SuperBoardContext.testEnvironment = testEnvironment;
-		SuperBoardContext.API_BASE_URL = `${parsedBaseURL.origin}/api/v1/sdk`;
+		SuperBoardContext.API_BASE_URL = `${parsedBaseURL.origin}/v1`;
 
 		// Initialize callback for handling links
 		this.linkHandlingCallback = linkHandlingCallback;

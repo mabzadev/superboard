@@ -386,7 +386,11 @@ function publicSupportResponse(response: Response, requestId: string): Response 
 }
 
 function canonicalProviderUrl(env: Env, request: Request): string {
-	const domain = String(env.API_DOMAIN || "").trim();
+	const domain = String(
+		(Boolean(env.SDK_DOMAIN) && env.AUTH_DOMAIN === env.SDK_DOMAIN
+			? env.SDK_DOMAIN
+			: env.API_DOMAIN) || "",
+	).trim();
 	if (!domain) {
 		throw new SupportEmailNormalizationError(
 			503,
@@ -410,6 +414,7 @@ function canonicalProviderUrl(env: Env, request: Request): string {
 		);
 	}
 	const canonical = new URL(request.url);
+	canonical.pathname = request.headers.get("x-superboard-public-path") || canonical.pathname;
 	canonical.protocol = "https:";
 	canonical.host = configured.host;
 	canonical.username = "";

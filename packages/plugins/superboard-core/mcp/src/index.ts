@@ -1,3 +1,5 @@
+import { createFetchRouter } from "@superboard/contracts/route-registry";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
 import {
 	createMcpHandler,
 	hostHeaderValidationResponse,
@@ -24,7 +26,57 @@ const MCP_ROUTE = "/mcp";
 const RESOURCE_METADATA_PATH = "/.well-known/oauth-protected-resource";
 const LOCAL_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
 
-export default {
+const routes = createFetchRouter<{ env: Env; runtime: RuntimeConfig }>({ service: "mcp", module: "http", pluginId: "superboard-mcp", surface: "internal", access: "operator" });
+routes.defineRoute({ access: "public" }).on("GET", ["/health", "/mcp/health"], async ({ env: { env, runtime } }) => {
+			return Response.json(
+				{
+					status: "ok",
+					service: "mcp",
+					target: deploymentTarget(env),
+					environment: env.ENVIRONMENT,
+					transport: "streamable-http",
+					stateless: true,
+					api: runtime.apiUrl,
+				},
+				{ headers: { "cache-control": "no-store" } },
+			);
+		});
+routes.defineRoute({ access: "public" }).on("GET", [RESOURCE_METADATA_PATH, `${RESOURCE_METADATA_PATH}${MCP_ROUTE}`], async ({ env: { runtime } }) => {
+			return Response.json(
+				{
+					resource: runtime.mcpUrl,
+					authorization_servers: [runtime.apiUrl],
+					bearer_methods_supported: ["header"],
+					scopes_supported: ["mcp:full"],
+					resource_documentation: `${runtime.apiUrl}/api/v1/mcp/status`,
+				},
+				{ headers: { "cache-control": "public, max-age=300" } },
+			);
+		});
+routes.defineRoute({ access: "public" }).options(MCP_ROUTE, ({ request, env: { runtime } }) => preflightResponse(request, runtime.mcpDomain));
+routes.all(MCP_ROUTE, async ({ request, env: { env, runtime } }) => { const auth = await validateBearer(request, env, runtime);
+if (auth instanceof Response) return auth;
+const apiClient = createApiClient({
+			baseUrl: runtime.apiUrl,
+			fetcher: (input, init) => fetchInternalApi(env, input, init),
+		});
+const handler = createMcpHandler(() => createServer(apiClient), {
+			legacy: "stateless",
+			responseMode: "auto",
+			onerror: (error) => {
+				console.error(
+					JSON.stringify({
+						event: "mcp_protocol_error",
+						target: deploymentTarget(env),
+						environment: env.ENVIRONMENT,
+						error: error.message,
+					}),
+				);
+			},
+		});
+return handler.fetch(request, { authInfo: auth }); });
+
+export default withRouteManifest(({
 	async fetch(request: Request, env: Env): Promise<Response> {
 		let runtime = validateRuntime(env);
 		const rejected = validateRequestSource(request, [
@@ -42,67 +94,9 @@ export default {
 				mcpDomain: url.hostname,
 				metadataPath: RESOURCE_METADATA_PATH,
 			};
-		if (
-			(url.pathname === "/health" || url.pathname === "/mcp/health") &&
-			request.method === "GET"
-		) {
-			return Response.json(
-				{
-					status: "ok",
-					service: "mcp",
-					target: deploymentTarget(env),
-					environment: env.ENVIRONMENT,
-					transport: "streamable-http",
-					stateless: true,
-					api: runtime.apiUrl,
-				},
-				{ headers: { "cache-control": "no-store" } },
-			);
-		}
-
-		if (
-			(url.pathname === runtime.metadataPath || url.pathname === RESOURCE_METADATA_PATH) &&
-			request.method === "GET"
-		) {
-			return Response.json(
-				{
-					resource: runtime.mcpUrl,
-					authorization_servers: [runtime.apiUrl],
-					bearer_methods_supported: ["header"],
-					scopes_supported: ["mcp:full"],
-					resource_documentation: `${runtime.apiUrl}/api/v1/mcp/status`,
-				},
-				{ headers: { "cache-control": "public, max-age=300" } },
-			);
-		}
-
-		if (url.pathname !== MCP_ROUTE) return Response.json({ error: "not_found" }, { status: 404 });
-		if (request.method === "OPTIONS") return preflightResponse(request, runtime.mcpDomain);
-
-		const auth = await validateBearer(request, env, runtime);
-		if (auth instanceof Response) return auth;
-
-		const apiClient = createApiClient({
-			baseUrl: runtime.apiUrl,
-			fetcher: (input, init) => env.API_SERVICE.fetch(input, init),
-		});
-		const handler = createMcpHandler(() => createServer(apiClient), {
-			legacy: "stateless",
-			responseMode: "auto",
-			onerror: (error) => {
-				console.error(
-					JSON.stringify({
-						event: "mcp_protocol_error",
-						target: deploymentTarget(env),
-						environment: env.ENVIRONMENT,
-						error: error.message,
-					}),
-				);
-			},
-		});
-		return handler.fetch(request, { authInfo: auth });
+		return routes.fetch(request, { env, runtime });
 	},
-};
+}), [routes], { service: "mcp", pluginId: "superboard-mcp" });
 
 type RuntimeConfig = {
 	apiUrl: string;
@@ -167,6 +161,17 @@ function validateRequestSource(request: Request, mcpDomains: string[]): Response
 	);
 }
 
+function fetchInternalApi(env: Env, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+	const request = new Request(input, init);
+	const url = new URL(request.url);
+	url.protocol = "https:";
+	url.hostname = "api.internal";
+	url.port = "";
+	const headers = new Headers(request.headers);
+	headers.delete("Host");
+	return env.API_SERVICE.fetch(new Request(new Request(url, request), { headers }));
+}
+
 async function validateBearer(
 	request: Request,
 	env: Env,
@@ -180,7 +185,7 @@ async function validateBearer(
 
 	let response: Response;
 	try {
-		response = await env.API_SERVICE.fetch(
+		response = await fetchInternalApi(env,
 			new Request(`${runtime.apiUrl}/api/v1/mcp/validate`, {
 				method: "GET",
 				headers: { authorization: `Bearer ${token}`, accept: "application/json" },

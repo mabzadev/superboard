@@ -57,14 +57,14 @@ export const sdkContracts = Object.freeze({
 	}),
 	javascript: Object.freeze({
 		lifecycle: "archived",
-		packageName: "@mbzadev/superboard-js-sdk",
+		packageName: "@mabzadev/superboard-js-sdk",
 		sourcePath: "sdks/javascript",
 		releasePrefix: "sdk-js-v",
 		coverageMode: "historical-release",
 	}),
 	"react-native": Object.freeze({
 		lifecycle: "archived",
-		packageName: "@mbzadev/superboard-react-native-sdk",
+		packageName: "@mabzadev/superboard-react-native-sdk",
 		sourcePath: "sdks/react-native",
 		releasePrefix: "sdk-react-native-v",
 		coverageMode: "historical-release",

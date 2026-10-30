@@ -261,7 +261,7 @@ class SuperBoardCustomerEventsClient {
   }
 
   Uri get _eventsUri =>
-      Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/app/events');
+      Uri.parse('${Uri.parse(baseUrl).origin}/v1/data/customer-events');
 
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',

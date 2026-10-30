@@ -25,12 +25,12 @@ test.each(["diagnostic", "health"])(
 test.each(["diagnostic", "health"])(
 	"disabled Analytics has no %s and retains its settings",
 	async (action) => {
-		const key = "plugin:supbrd-plugmod-analytics:settings:enabled";
+		const key = "plugin:superboard-analytics:settings:enabled";
 		await env.DB.prepare("INSERT OR REPLACE INTO options (name, value) VALUES (?, ?)")
 			.bind(key, JSON.stringify(true))
 			.run();
 		await env.DB.prepare(
-			"INSERT OR REPLACE INTO superboard_plugin_lifecycle (instance_id, target, plugin_id, artifact_checksum, state, state_changed_at) SELECT ?, 'local', ?, artifact_checksum, 'disabled', datetime('now') FROM superboard_plugin_manifest_artifacts WHERE plugin_id = 'supbrd-plugmod-analytics' LIMIT 1",
+			"INSERT OR REPLACE INTO superboard_plugin_lifecycle (instance_id, target, plugin_id, artifact_checksum, state, state_changed_at) SELECT ?, 'local', ?, artifact_checksum, 'disabled', datetime('now') FROM superboard_plugin_manifest_artifacts WHERE plugin_id = 'superboard-analytics' LIMIT 1",
 		)
 			.bind(env.SUPERBOARD_INSTANCE_ID, pluginId)
 			.run();

@@ -11,7 +11,7 @@ test("a real Workflow waits without business writes while disabled and resumes e
 	};
 	const toggle = (action: string) =>
 		SELF.fetch(
-			`https://site.example/_emdash/api/superboard/plugins/supbrd-plugmod-flows/${action}`,
+			`https://site.example/_emdash/api/superboard/plugins/superboard-flows/${action}`,
 			{ method: "POST", headers },
 		);
 	expect((await toggle("enable")).status).toBe(201);

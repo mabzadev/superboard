@@ -119,7 +119,7 @@ test("source Wrangler templates never pin a Cloudflare account resource", () => 
 test("portable runtime sources never pin an application domain, account id, or workstation path", () => {
 	const forbidden = [
 		[
-			/(?:[a-z0-9-]+\.)*(?:reference-production\.com|mbza\.dev)\b/iu,
+			/(?:[a-z0-9-]+\.)*(?:reference-production\.com|mabza\.dev)\b/iu,
 			"application domains belong in infra/targets manifests",
 		],
 		[

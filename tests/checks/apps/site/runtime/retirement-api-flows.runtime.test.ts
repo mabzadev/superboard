@@ -11,7 +11,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-flows";
+const plugin = "superboard-flows";
 const file = "retirement-api-flows.runtime.test.ts";
 type Items = { items: Array<Record<string, unknown>> };
 test("canonical Flows APIs persist workflows, release versions, rotate real SDK keys and read actual SDK profiles", async () => {

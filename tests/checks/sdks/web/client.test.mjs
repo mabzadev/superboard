@@ -122,3 +122,87 @@ await test("logout clears the session even when the server is unavailable", asyn
 	await assert.rejects(client.logout(), /Unavailable/u);
 	assert.equal(client.session, null);
 });
+
+await test("Stripe checkout uses the application identity and carries SDK context", async () => {
+	const requests = [];
+	const client = new SuperBoardClient({
+		...options,
+		appVersion: "2.0.1",
+		language: "fr-CH",
+		fetch: async (url, init) => {
+			requests.push({ url, init });
+			if (url.endsWith("/auth/superboard-token"))
+				return Response.json({ access_token: "application-token", expires_in: 300 });
+			if (new URL(url).pathname === "/v1/monetization/purchases/stripe/checkout")
+				return Response.json({ id: "checkout", url: "https://checkout.stripe.com/session" });
+			return Response.json(
+				{ error: { code: "not_found", message: "Unknown endpoint" } },
+				{ status: 404 },
+			);
+		},
+	});
+	client.setSession(session);
+	const result = await client.createCheckoutSession(
+		{
+			product_id: "product",
+			success_url: "https://app.example.test/done",
+			cancel_url: "https://app.example.test/cancel",
+		},
+		"stable-attempt",
+	);
+	assert.equal(result.id, "checkout");
+	assert.equal(requests.at(-1).init.headers.get("Authorization"), "Bearer application-token");
+	assert.equal(requests.at(-1).init.headers.get("Idempotency-Key"), "stable-attempt");
+	assert.equal(requests.at(-1).init.headers.get("X-SuperBoard-Language"), "fr-CH");
+	assert.equal(requests.at(-1).init.headers.get("X-SuperBoard-App-Version"), "2.0.1");
+});
+
+await test("purchase access is returned only from a verified CustomerInfo signature", async () => {
+	const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+		"sign",
+		"verify",
+	]);
+	const publicKey = await crypto.subtle.exportKey("jwk", pair.publicKey);
+	const encoded = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
+	const info = {
+		customer_id: "customer",
+		original_app_user_id: "user",
+		entitlements: { premium: { is_active: false } },
+	};
+	const head = encoded({ alg: "ES256", kid: "test-key" });
+	const claims = encoded({
+		iss: "superboard-purchases",
+		aud: "superboard-sdk",
+		sub: "user",
+		exp: Math.floor(Date.now() / 1000) + 60,
+		customer_info: info,
+	});
+	const signature = Buffer.from(
+		await crypto.subtle.sign(
+			{ name: "ECDSA", hash: "SHA-256" },
+			pair.privateKey,
+			new TextEncoder().encode(`${head}.${claims}`),
+		),
+	).toString("base64url");
+	let tampered = false;
+	const client = new SuperBoardClient({
+		...options,
+		fetch: async (url) =>
+			Response.json(
+				url.endsWith("superboard-token")
+					? { access_token: "app-token", expires_in: 300 }
+					: url.endsWith("purchases-jwks.json")
+						? { keys: [{ ...publicKey, kid: "test-key" }] }
+						: {
+								...info,
+								entitlements: { premium: { is_active: true } },
+								signature_key_id: "test-key",
+								signature: `${head}.${tampered ? encoded({ fake: true }) : claims}.${signature}`,
+							},
+			),
+	});
+	client.setSession(session);
+	assert.equal((await client.getPurchaseCustomerInfo()).entitlements.premium.is_active, false);
+	tampered = true;
+	await assert.rejects(client.getPurchaseCustomerInfo(), { code: "customer_info_unverified" });
+});

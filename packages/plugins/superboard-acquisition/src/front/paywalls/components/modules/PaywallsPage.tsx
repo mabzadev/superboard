@@ -27,6 +27,9 @@ import {
 } from "@superboard/front-ui/ui/table.js";
 import { useDraftAutosave } from "@superboard/front-ui/use-draft-autosave";
 import {
+	ArrowLeft,
+	History,
+	Save,
 	Archive,
 	BarChart3,
 	FlaskConical,
@@ -457,10 +460,75 @@ export function PaywallsPage() {
 								))}
 							</nav>
 							<Card
-								className="border-kumo-line bg-kumo-base"
+								className={
+									studioTab === "Design" ? "paywall-builder-shell" : "border-kumo-line bg-kumo-base"
+								}
 								hidden={!["Design", "Versions"].includes(studioTab)}
 							>
-								<CardHeader>
+								{studioTab === "Design" && (
+									<header className="paywall-builder-header">
+										<div className="flex min-w-0 items-center gap-3">
+											<Button
+												variant="ghost"
+												size="sm"
+												aria-label={t("Exit editor")}
+												title={t("Exit editor")}
+												onClick={() => {
+													setStudioTab("Versions");
+												}}
+											>
+												<ArrowLeft size={18} />
+											</Button>
+											<h1 className="truncate text-sm font-semibold">{displayName(selected)}</h1>
+											<span className="rounded-md border border-kumo-line px-2 py-1 text-xs text-kumo-subtle">
+												{t("draft")}
+											</span>
+										</div>
+										<div className="flex flex-wrap items-center gap-2">
+											<span role="status" className="me-2 text-xs text-kumo-subtle">
+												{t(draftStatus)}
+											</span>
+											<Button
+												variant="ghost"
+												size="sm"
+												title={t("Version history")}
+												onClick={() => {
+													setStudioTab("Versions");
+												}}
+											>
+												<History size={16} />
+												{t("Version history")}
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
+												disabled={busy || editorLoading || !documentValid}
+												onClick={() => void saveDraft()}
+											>
+												<Save size={16} />
+												{t("Save draft")}
+											</Button>
+											<Button
+												size="sm"
+												variant="primary"
+												disabled={busy || editorLoading || !documentValid}
+												onClick={() => {
+													void saveDraft()
+														.then((saved) => {
+															if (saved) setStudioTab("Versions");
+														})
+														.catch((cause: unknown) => {
+															showErrorNotification(errorMessage(cause));
+														});
+												}}
+											>
+												<Rocket size={16} />
+												{t("Review and publish")}
+											</Button>
+										</div>
+									</header>
+								)}
+								<CardHeader hidden={studioTab === "Design"}>
 									<CardTitle>
 										{selected
 											? `${t("Edit")} ${displayName(selected)}`
@@ -471,12 +539,12 @@ export function PaywallsPage() {
 									</CardDescription>
 								</CardHeader>
 								<CardContent
-									className="space-y-4"
+									className={studioTab === "Design" ? "paywall-builder-content" : "space-y-4"}
 									inert={busy || editorLoading}
 									aria-busy={busy || editorLoading}
 								>
 									{selected && (
-										<details>
+										<details hidden={studioTab === "Design"}>
 											<summary className="cursor-pointer py-2 text-sm text-kumo-subtle">
 												{t("Details")}
 											</summary>
@@ -485,14 +553,14 @@ export function PaywallsPage() {
 													{t("Identifier")}
 													<Input
 														value={metadata.identifier}
-														onChange={(event) =>
+														onChange={(event) => {
 															setMetadata((value) => ({
 																...value,
 																identifier: event.target.value
 																	.toLowerCase()
 																	.replace(/[^a-z0-9_-]/g, "_"),
-															}))
-														}
+															}));
+														}}
 													/>
 												</label>
 												<label className="space-y-1 text-xs">
@@ -538,10 +606,17 @@ export function PaywallsPage() {
 											</div>
 										</details>
 									)}
-									<p role="status" className="text-xs text-kumo-subtle">
+									<p
+										hidden={studioTab === "Design"}
+										role="status"
+										className="text-xs text-kumo-subtle"
+									>
 										{t(selected ? draftStatus : "Create to save")}
 									</p>
-									<div hidden={studioTab !== "Design"}>
+									<div
+										hidden={studioTab !== "Design"}
+										className={studioTab === "Design" ? "h-full" : undefined}
+									>
 										<ExperienceEditor
 											key={editorKey}
 											kind="paywall"
@@ -552,7 +627,10 @@ export function PaywallsPage() {
 											}}
 										/>
 									</div>
-									<div className="flex flex-wrap items-end gap-2 border-t pt-4">
+									<div
+										hidden={studioTab === "Design"}
+										className="flex flex-wrap items-end gap-2 border-t pt-4"
+									>
 										<label className="min-w-64 flex-1 space-y-1 text-xs">
 											{t("Version notes")}
 											<Input

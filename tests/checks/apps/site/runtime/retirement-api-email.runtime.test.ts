@@ -19,7 +19,7 @@ const smtpCapture = (env as unknown as { TEST_SMTP_CAPTURE: Pick<Fetcher, "fetch
 afterAll(async () => {
 	await smtpCapture.fetch(new Request("https://smtp-capture.test", { method: "DELETE" }));
 });
-const plugin = "supbrd-plugmod-email";
+const plugin = "superboard-email";
 const file = "retirement-api-email.runtime.test.ts";
 
 test("canonical Email APIs preserve encrypted settings, captures, verified DNS and recoverable queue operations", async () => {

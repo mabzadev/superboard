@@ -6,16 +6,16 @@ import SuperBoardContext from "./superboard_context.js";
 class SuperBoardAPIService {
 	// Define endpoint paths as static properties
 	static ENDPOINTS = {
-		AUTHENTICATE: "/authenticate",
-		PAYLOAD: "/data_for_device",
-		CREATE_EVENT: "/event",
-		CREATE_LINK: "/create_link",
-		USER_ATTRIBUTES: "/visitor_attributes",
-		PAYLOAD_FOR_DEVICE_AND_PATH: "/data_for_device_and_path",
-		NOTIFICATIONS_FOR_DEVICE: "/notifications_for_device",
-		MARK_NOTIFICATION_AS_READ: "/mark_notification_as_read",
-		NOTIFICATIONS_TO_DISPLAY_AUTOMATICALLY: "/notifications_to_display_automatically",
-		NUMBER_OF_UNREAD_MESSAGES: "/number_of_unread_notifications",
+		AUTHENTICATE: "/data/authenticate",
+		PAYLOAD: "/acquisition/data_for_device",
+		CREATE_EVENT: "/data/event",
+		CREATE_LINK: "/acquisition/create_link",
+		USER_ATTRIBUTES: "/data/visitor_attributes",
+		PAYLOAD_FOR_DEVICE_AND_PATH: "/acquisition/data_for_device_and_path",
+		NOTIFICATIONS_FOR_DEVICE: "/communication/notifications_for_device",
+		MARK_NOTIFICATION_AS_READ: "/communication/mark_notification_as_read",
+		NOTIFICATIONS_TO_DISPLAY_AUTOMATICALLY: "/communication/notifications_to_display_automatically",
+		NUMBER_OF_UNREAD_MESSAGES: "/communication/number_of_unread_notifications",
 	};
 
 	// Constructor to initialize the API service helper

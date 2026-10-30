@@ -17,7 +17,7 @@ class SuperBoardContext {
 	static testEnvironment = false;
 
 	/**
-	 * Application-provided SuperBoard SDK endpoint, including `/api/v1/sdk`.
+	 * Application-provided SuperBoard SDK endpoint, including `/v1`.
 	 * @type {string|null}
 	 */
 	static API_BASE_URL = null;

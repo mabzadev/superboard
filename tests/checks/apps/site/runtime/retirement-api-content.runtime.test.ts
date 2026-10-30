@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 
 import { createCmsApi } from "./retirement-api-cms.js";
 import { jsonResult, prepareApiPlugin, proveApi } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plug-content";
+const plugin = "superboard-content";
 const file = "retirement-api-content.runtime.test.ts";
 type Document = {
 	id: string;

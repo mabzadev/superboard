@@ -12,6 +12,7 @@ import {
 	resolveRepositoryCommandScope,
 } from "./plugin-command-authority.js";
 import { importPluginStoreEncryptionKey } from "./plugin-store-repository.js";
+import { resolveApiRouteOwner } from "./route-owner.js";
 import { resolveSuperBoardPluginTarget } from "./superboard-plugin-catalog.js";
 
 export interface OperatorApiProxyEnv {
@@ -64,7 +65,15 @@ export async function proxyOperatorApiRequest(input: {
 		if (!origin || origin !== source.origin)
 			return errorResponse(403, "CROSS_ORIGIN_MUTATION_REJECTED");
 	}
-	const owner = input.plugin_context?.plugin_id ?? resolveRepositoryCommandScope(source).plugin_id;
+	let owner: string;
+	try {
+		owner =
+			input.plugin_context?.plugin_id ??
+			(await resolveApiRouteOwner(input.env, input.operator, input.request));
+	} catch {
+		return errorResponse(503, "ROUTE_OWNER_UNAVAILABLE");
+	}
+	const commandScope = resolveRepositoryCommandScope(source, owner);
 	if (owner !== "supbrd-core") {
 		if (!input.env.DB) return errorResponse(503, "PLUGIN_STATE_UNAVAILABLE");
 		const denied = await requireActiveSuperBoardPlugin(input.env.DB, {
@@ -107,7 +116,10 @@ export async function proxyOperatorApiRequest(input: {
 			return Response.json({ error: { code: "METHOD_NOT_ALLOWED" } }, { status: 405 });
 		const commandRequest = forwarded.clone();
 		response = await (input.command_authority ?? executeRepositoryFirstCommand)({
-			plugin_context: input.plugin_context,
+			plugin_context: input.plugin_context ?? {
+				plugin_id: owner,
+				project_ref: commandScope.project_ref,
+			},
 			request_headers: commandRequest.headers,
 			request_body: new Uint8Array(await commandRequest.arrayBuffer()),
 			method,
@@ -152,7 +164,8 @@ export async function executeRepositoryFirstCommand(input: {
 			error instanceof Error ? error.message : "COMMAND_REPOSITORY_UNAVAILABLE",
 		);
 	}
-	const scope = resolveRepositoryCommandScope(input.url);
+	if (!input.plugin_context) return errorResponse(503, "ROUTE_OWNER_UNAVAILABLE");
+	const scope = resolveRepositoryCommandScope(input.url, input.plugin_context.plugin_id);
 	const method = input.method;
 	try {
 		const accepted = await beginRepositoryCommand(db, {

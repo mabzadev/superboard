@@ -1,6 +1,6 @@
 [
   {
-    "plugin_id": "supbrd-plug-products",
+    "plugin_id": "superboard-products",
     "route_id": "superboard.products_offerings",
     "scenario": "functional",
     "status": "passed",

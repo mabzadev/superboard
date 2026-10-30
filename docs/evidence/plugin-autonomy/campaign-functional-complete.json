@@ -1,7 +1,7 @@
 {
   "results": [
     {
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "operation": "campaign_detail",
       "status": "passed",
       "persisted_id": "485cb869-b3ec-4782-8fb4-c205041a37d7",
@@ -9,7 +9,7 @@
       "reloaded": true
     },
     {
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "operation": "link_create",
       "status": "passed",
       "persisted_id": "5968a1d0-c3b2-4e82-a007-7c184bc0e6d4",
@@ -17,7 +17,7 @@
       "reloaded": true
     },
     {
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "operation": "link_create_edit",
       "status": "passed",
       "persisted_id": "5968a1d0-c3b2-4e82-a007-7c184bc0e6d4",
@@ -26,7 +26,7 @@
       "reloaded": true
     },
     {
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "operation": "missing_campaign_and_history",
       "status": "passed",
       "missing_id": "missing-campaign-autonomy",

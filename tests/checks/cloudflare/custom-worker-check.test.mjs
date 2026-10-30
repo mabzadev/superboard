@@ -31,7 +31,7 @@ test("all-target selection finds every declared extension without application co
 });
 
 test("target selection validates only that target custom Worker", async () => {
-	assert.deepEqual(await selectedCustomWorkerPackages({ target: "mbza-development" }, {}), [
+	assert.deepEqual(await selectedCustomWorkerPackages({ target: "mabza-development" }, {}), [
 		"apps/reference/worker",
 	]);
 	assert.deepEqual(await selectedCustomWorkerPackages({ target: "reference-production" }, {}), [
@@ -44,12 +44,12 @@ test("target selection validates only that target custom Worker", async () => {
 test("custom Worker type generation is target and environment driven", async () => {
 	assert.deepEqual(
 		await selectedCustomWorkerTypeSelections(
-			{ target: "mbza-development", environment: "development" },
+			{ target: "mabza-development", environment: "development" },
 			{},
 		),
 		[
 			{
-				targetName: "mbza-development",
+				targetName: "mabza-development",
 				environment: "development",
 				packagePath: "apps/reference/worker",
 				managedServices: [],

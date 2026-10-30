@@ -88,7 +88,7 @@ void test("the built Analytics plugin renders French in a sandbox without Node g
 	await module.evaluate();
 	const response = await module.namespace.default.routes.admin.handler({
 		request: new Request(
-			"https://console.test/_emdash/api/plugins/supbrd-plugmod-analytics/admin",
+			"https://console.test/_emdash/api/plugins/superboard-analytics/admin",
 			{
 				headers: { Cookie: "emdash-locale=fr" },
 			},
@@ -100,7 +100,7 @@ void test("the built Analytics plugin renders French in a sandbox without Node g
 	);
 	const sandboxResponse = await module.namespace.default.routes.admin.handler({
 		request: {
-			url: "https://console.test/_emdash/api/plugins/supbrd-plugmod-analytics/admin",
+			url: "https://console.test/_emdash/api/plugins/superboard-analytics/admin",
 			method: "POST",
 			headers: { "accept-language": "fr" },
 		},

@@ -4,7 +4,7 @@ import { DELETE, GET, PATCH, POST, PUT } from "../../transport.js";
 
 export interface BillingProduct {
 	id: string;
-	store: "apple" | "google";
+	store: "apple" | "google" | "stripe";
 	store_product_id: string;
 	product_type: string;
 	display_name: string;
@@ -21,6 +21,9 @@ export interface BillingEntitlement {
 }
 
 export interface BillingOffering {
+	placement: string;
+	active: number;
+	description?: string | null;
 	id: string;
 	identifier: string;
 	display_name: string;
@@ -73,6 +76,7 @@ export interface BillingOverview {
 }
 
 export type BillingCustomerSummary = {
+	attributes?: string | null;
 	id: string;
 	project_id: string;
 	primary_app_user_id: string;
@@ -161,7 +165,7 @@ export interface BillingStoreSyncResult {
 	stores: Array<{
 		ok: boolean;
 		platform: "ios" | "android";
-		store: "apple" | "google";
+		store: "apple" | "google" | "stripe";
 		imported?: number;
 		error?: string;
 	}>;
@@ -315,7 +319,7 @@ export type BillingHealth = {
 
 export type BillingProviderEvent = {
 	id: string;
-	store: "apple" | "google";
+	store: "apple" | "google" | "stripe";
 	environment: "sandbox" | "production";
 	external_event_id: string;
 	event_type?: string | null;
@@ -882,4 +886,107 @@ export async function reconcileBillingStore(projectRef: string) {
 }
 export async function getBillingLedger(projectRef: string) {
 	return GET(`/api/v1/billing/projects/${encodeURIComponent(projectRef)}/ledger`);
+}
+
+export async function updateBillingProduct(
+	projectId: string,
+	id: string,
+	input: Record<string, unknown>,
+): Promise<unknown> {
+	const data: unknown = (
+		await PATCH(config.apiPath + `/billing/${projectId}/products/${id}`, input)
+	).data;
+	return data;
+}
+export async function updateBillingOffering(
+	projectId: string,
+	id: string,
+	input: Record<string, unknown>,
+): Promise<unknown> {
+	const data: unknown = (
+		await PATCH(config.apiPath + `/billing/${projectId}/offerings/${id}`, input)
+	).data;
+	return data;
+}
+export async function updateBillingEntitlement(
+	projectId: string,
+	id: string,
+	input: Record<string, unknown>,
+): Promise<unknown> {
+	const data: unknown = (
+		await PATCH(config.apiPath + `/billing/${projectId}/entitlements/${id}`, input)
+	).data;
+	return data;
+}
+export async function updateBillingPackage(
+	projectId: string,
+	offeringId: string,
+	id: string,
+	input: Record<string, unknown>,
+): Promise<unknown> {
+	const data: unknown = (
+		await PATCH(
+			config.apiPath + `/billing/${projectId}/offerings/${offeringId}/packages/${id}`,
+			input,
+		)
+	).data;
+	return data;
+}
+export async function removeBillingPackage(
+	projectId: string,
+	offeringId: string,
+	id: string,
+): Promise<unknown> {
+	const data: unknown = (
+		await DELETE(config.apiPath + `/billing/${projectId}/offerings/${offeringId}/packages/${id}`)
+	).data;
+	return data;
+}
+export type StripeConnection = {
+	configured: boolean;
+	environment: string;
+	application_origin: string;
+	last_tested_at: string | null;
+	webhook_path: string;
+};
+export async function getStripeConnection(projectId: string): Promise<StripeConnection> {
+	const data: unknown = (await GET(config.apiPath + `/billing/${projectId}/stripe`)).data;
+	if (
+		!data ||
+		typeof data !== "object" ||
+		!("configured" in data) ||
+		typeof data.configured !== "boolean" ||
+		!("environment" in data) ||
+		typeof data.environment !== "string" ||
+		!("application_origin" in data) ||
+		typeof data.application_origin !== "string" ||
+		!("webhook_path" in data) ||
+		typeof data.webhook_path !== "string"
+	)
+		throw new Error("STRIPE_CONFIGURATION_INVALID");
+	return {
+		configured: data.configured,
+		environment: data.environment,
+		application_origin: data.application_origin,
+		webhook_path: data.webhook_path,
+		last_tested_at:
+			"last_tested_at" in data && typeof data.last_tested_at === "string"
+				? data.last_tested_at
+				: null,
+	};
+}
+export async function saveStripeConnection(
+	projectId: string,
+	input: { secret_key: string; webhook_secret: string; application_origin: string },
+): Promise<unknown> {
+	const data: unknown = (await POST(config.apiPath + `/billing/${projectId}/stripe`, input)).data;
+	return data;
+}
+export async function testStripeConnection(projectId: string): Promise<unknown> {
+	const data: unknown = (await POST(config.apiPath + `/billing/${projectId}/stripe/test`, {})).data;
+	return data;
+}
+export async function syncStripeProducts(projectId: string): Promise<unknown> {
+	const data: unknown = (await POST(config.apiPath + `/billing/${projectId}/stripe/sync`, {})).data;
+	return data;
 }

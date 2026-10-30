@@ -93,7 +93,7 @@ try {
 				]);
 				assert.equal(saved.status(), 200);
 				const values = await read();
-				const prefix = tab === "content" ? "supbrd-plug-content__" : "supbrd-plugmod-files__";
+				const prefix = tab === "content" ? "superboard-content__" : "superboard-files__";
 				for (const [key, value] of Object.entries(updates))
 					assert.equal(values[prefix + key], value);
 				await page.reload();

@@ -1,4 +1,4 @@
-export const pluginId = "supbrd-plug-settings";
+export const pluginId = "superboard-settings";
 export const views = {
 	"superboard.app_android_setup": () => import("./views/superboard.app_android_setup.js"),
 	"superboard.app_ios_setup": () => import("./views/superboard.app_ios_setup.js"),

@@ -10,7 +10,7 @@ const dynamicLinks = navigationGroup({
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
-	plugin_id: "supbrd-plugmod-dynamic-links",
+	plugin_id: "superboard-dynamic-links",
 	plugin_label: "Dynamic links",
 	description:
 		"Manage links, campaigns, domains, redirects, previews, and tracking from the plugin Store.",

@@ -52,12 +52,12 @@ const project = {
 };
 const context: FrontContextValue = {
 	instanceId: "42",
-	pluginId: "supbrd-plugmod-billing",
+	pluginId: "superboard-billing",
 	path: "/products/purchases",
 	parameters: {},
 	locale: "fr",
 	operator: { id: "operator", email: "operator@example.test", name: null, role: 50 },
-	activePluginIds: ["supbrd-plugmod-billing", "supbrd-plug-products"],
+	activePluginIds: ["superboard-billing", "superboard-products"],
 	projectScope: {
 		production_project_ref: project.id,
 		test_project_ref: "42-test",

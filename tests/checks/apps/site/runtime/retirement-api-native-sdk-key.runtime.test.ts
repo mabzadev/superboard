@@ -13,8 +13,8 @@ import {
 } from "./retirement-api-helpers.js";
 
 test("an App-owned rotated key authenticates the real SDK gateway and rejects revoked keys and mismatched scope", async () => {
-	const scope = await prepareApiPlugin("supbrd-plug-user");
-	await prepareApiPlugin("supbrd-plug-settings");
+	const scope = await prepareApiPlugin("superboard-user");
+	await prepareApiPlugin("superboard-settings");
 	const api = pluginDatabase("api");
 	const before = await api
 		.prepare("SELECT api_key FROM instances WHERE id=?")
@@ -26,7 +26,7 @@ test("an App-owned rotated key authenticates the real SDK gateway and rejects re
 		[scope.test_project_ref, domains.test],
 	])
 		await jsonResult(
-			await apiCommand("supbrd-plug-settings", "save_sdk_configuration", {
+			await apiCommand("superboard-settings", "save_sdk_configuration", {
 				method: "PUT",
 				path: `/api/v1/app/projects/${ref}/setup/web`,
 				body: {

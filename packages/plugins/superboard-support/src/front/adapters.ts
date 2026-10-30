@@ -2,324 +2,317 @@ import type { PluginApiAdapter } from "@superboard/front-ui/api";
 
 export const adapters = [
 	{
-		id: "supbrd-plugmod-support.command.update_support_settings",
+		id: "superboard-support.command.update_support_settings",
 		kind: "command",
 		operations: [
 			{
-				method: "PATCH",
-				path: "/api/v1/support/projects/:projectRef/settings",
+				route_id:
+					"api:support:operator-proxy->support:configuration.configuration:PATCH:/:projectId/settings",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.create_support_configuration",
+		id: "superboard-support.command.create_support_configuration",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/support/projects/:projectRef/settings/entities",
+				route_id:
+					"api:support:operator-proxy->support:configuration.configuration:POST:/:projectId/settings/entities",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.update_support_configuration",
+		id: "superboard-support.command.update_support_configuration",
 		kind: "command",
 		operations: [
 			{
-				method: "PATCH",
-				path: "/api/v1/support/projects/:projectRef/settings/entities/:entityId",
+				route_id:
+					"api:support:operator-proxy->support:configuration.configuration:PATCH:/:projectId/settings/entities/:entityId",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.delete_support_configuration",
+		id: "superboard-support.command.delete_support_configuration",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/support/projects/:projectRef/settings/entities/:entityId",
+				route_id:
+					"api:support:operator-proxy->support:configuration.configuration:DELETE:/:projectId/settings/entities/:entityId",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.rotate_support_webhook_secret",
+		id: "superboard-support.command.rotate_support_webhook_secret",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/support/projects/:projectRef/settings/entities/:entityId/secret",
+				route_id:
+					"api:support:operator-proxy->support:configuration.configuration:PUT:/:projectId/settings/entities/:entityId/secret",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.revoke_support_webhook_secret",
+		id: "superboard-support.command.revoke_support_webhook_secret",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/support/projects/:projectRef/settings/entities/:entityId/secret",
+				route_id:
+					"api:support:operator-proxy->support:configuration.configuration:DELETE:/:projectId/settings/entities/:entityId/secret",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.send_inbox_message",
+		id: "superboard-support.command.send_inbox_message",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/support/projects/:projectRef/conversations/:conversationId/messages",
+				route_id:
+					"api:support:operator-proxy->support:index.app:POST:/internal/v1/projects/:projectId/conversations/:conversationId/messages",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.update_inbox_conversation",
+		id: "superboard-support.command.update_inbox_conversation",
 		kind: "command",
 		operations: [
 			{
-				method: "PATCH",
-				path: "/api/v1/support/projects/:projectRef/conversations/:conversationId",
+				route_id:
+					"api:support:operator-proxy->support:index.app:PATCH:/internal/v1/projects/:projectId/conversations/:conversationId",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.create_support_provider",
+		id: "superboard-support.command.create_support_provider",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/support/projects/:projectRef/providers",
+				route_id: "api:support:operator-proxy->support:native.native:POST:/:projectId/providers",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.update_support_provider",
+		id: "superboard-support.command.update_support_provider",
 		kind: "command",
 		operations: [
 			{
-				method: "PATCH",
-				path: "/api/v1/support/projects/:projectRef/providers/:id",
+				route_id:
+					"api:support:operator-proxy->support:native.native:PATCH:/:projectId/providers/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.delete_support_provider",
+		id: "superboard-support.command.delete_support_provider",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/support/projects/:projectRef/providers/:id",
+				route_id:
+					"api:support:operator-proxy->support:native.native:DELETE:/:projectId/providers/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.create_support_integration",
+		id: "superboard-support.command.create_support_integration",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/support/projects/:projectRef/integrations",
+				route_id: "api:support:operator-proxy->support:native.native:POST:/:projectId/integrations",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.update_support_integration",
+		id: "superboard-support.command.update_support_integration",
 		kind: "command",
 		operations: [
 			{
-				method: "PATCH",
-				path: "/api/v1/support/projects/:projectRef/integrations/:id",
+				route_id:
+					"api:support:operator-proxy->support:native.native:PATCH:/:projectId/integrations/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.delete_support_integration",
+		id: "superboard-support.command.delete_support_integration",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/support/projects/:projectRef/integrations/:id",
+				route_id:
+					"api:support:operator-proxy->support:native.native:DELETE:/:projectId/integrations/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.command.publish_support_article",
+		id: "superboard-support.command.publish_support_article",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/support/projects/:projectRef/help-center/articles/:id/publish",
+				route_id:
+					"api:support:operator-proxy->support:native.native:POST:/:projectId/help-center/articles/:id/publish",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.support_settings",
+		id: "superboard-support.data_source.support_settings",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/settings",
+				route_id:
+					"api:support:operator-proxy->support:configuration.configuration:GET:/:projectId/settings",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.unified_inbox_items",
+		id: "superboard-support.data_source.unified_inbox_items",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/items",
+				route_id: "api:support:operator-proxy->support:operations.operations:GET:/:projectId/items",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.inbox_conversations",
+		id: "superboard-support.data_source.inbox_conversations",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/conversations",
+				route_id:
+					"api:support:operator-proxy->support:operations.operations:GET:/:projectId/conversations",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.inbox_messages",
+		id: "superboard-support.data_source.inbox_messages",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/conversations/:conversationId/messages",
+				route_id:
+					"api:support:operator-proxy->support:index.app:GET:/internal/v1/projects/:projectId/conversations/:conversationId/messages",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.support_channels",
+		id: "superboard-support.data_source.support_channels",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/channels",
+				route_id: "api:support:operator-proxy->support:native.native:GET:/:projectId/channels",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.support_providers",
+		id: "superboard-support.data_source.support_providers",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/providers",
+				route_id: "api:support:operator-proxy->support:native.native:GET:/:projectId/providers",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.support_integrations",
+		id: "superboard-support.data_source.support_integrations",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/integrations",
+				route_id: "api:support:operator-proxy->support:native.native:GET:/:projectId/integrations",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.support_portals",
+		id: "superboard-support.data_source.support_portals",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/help-center/portals",
+				route_id:
+					"api:support:operator-proxy->support:native.native:GET:/:projectId/help-center/portals",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.support_categories",
+		id: "superboard-support.data_source.support_categories",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/help-center/categories",
+				route_id:
+					"api:support:operator-proxy->support:native.native:GET:/:projectId/help-center/categories",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.support_folders",
+		id: "superboard-support.data_source.support_folders",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/help-center/folders",
+				route_id:
+					"api:support:operator-proxy->support:native.native:GET:/:projectId/help-center/folders",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.support_articles",
+		id: "superboard-support.data_source.support_articles",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/help-center/articles",
+				route_id:
+					"api:support:operator-proxy->support:native.native:GET:/:projectId/help-center/articles",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-support.data_source.support_assistant_tasks",
+		id: "superboard-support.data_source.support_assistant_tasks",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/support/projects/:projectRef/captain/tasks",
+				route_id: "api:support:operator-proxy->support:native.native:GET:/:projectId/captain/tasks",
 				query: "passthrough",
 				body: "none",
 			},

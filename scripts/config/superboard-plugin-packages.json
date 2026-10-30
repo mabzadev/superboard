@@ -7,17 +7,17 @@
 			"label": "Core",
 			"label_fr": "Core",
 			"components": [
-				"supbrd-plug-settings",
-				"supbrd-plug-audit",
-				"supbrd-plugmod-gateway",
-				"supbrd-plugmod-observability",
-				"supbrd-plugmod-mcp"
+				"superboard-settings",
+				"superboard-audit",
+				"superboard-gateway",
+				"superboard-observability",
+				"superboard-mcp"
 			],
 			"required_components": [
-				"supbrd-plug-settings",
-				"supbrd-plug-audit",
-				"supbrd-plugmod-gateway",
-				"supbrd-plugmod-observability"
+				"superboard-settings",
+				"superboard-audit",
+				"superboard-gateway",
+				"superboard-observability"
 			],
 			"directory": "superboard-core"
 		},
@@ -26,7 +26,7 @@
 			"kind": "business",
 			"label": "Authentification",
 			"label_fr": "Authentification",
-			"components": ["supbrd-plug-user"],
+			"components": ["superboard-user"],
 			"required_components": [],
 			"directory": "superboard-authentification"
 		},
@@ -35,7 +35,7 @@
 			"kind": "business",
 			"label": "Data",
 			"label_fr": "Data",
-			"components": ["supbrd-plug-content", "supbrd-plugmod-files"],
+			"components": ["superboard-content", "superboard-files"],
 			"required_components": [],
 			"directory": "superboard-data"
 		},
@@ -44,7 +44,7 @@
 			"kind": "business",
 			"label": "Monetization",
 			"label_fr": "Monetization",
-			"components": ["supbrd-plug-products", "supbrd-plugmod-billing"],
+			"components": ["superboard-products", "superboard-billing"],
 			"required_components": [],
 			"directory": "superboard-monetization"
 		},
@@ -53,7 +53,7 @@
 			"kind": "business",
 			"label": "Communication",
 			"label_fr": "Communication",
-			"components": ["supbrd-plugmod-marketing", "supbrd-plugmod-email"],
+			"components": ["superboard-marketing", "superboard-email"],
 			"required_components": [],
 			"directory": "superboard-communication"
 		},
@@ -63,10 +63,10 @@
 			"label": "Acquisition",
 			"label_fr": "Acquisition",
 			"components": [
-				"supbrd-plugmod-paywalls",
-				"supbrd-plugmod-onboardings",
-				"supbrd-plugmod-flows",
-				"supbrd-plugmod-dynamic-links"
+				"superboard-paywalls",
+				"superboard-onboardings",
+				"superboard-flows",
+				"superboard-dynamic-links"
 			],
 			"required_components": [],
 			"directory": "superboard-acquisition"
@@ -76,7 +76,7 @@
 			"kind": "business",
 			"label": "Support",
 			"label_fr": "Support",
-			"components": ["supbrd-plugmod-support"],
+			"components": ["superboard-support"],
 			"required_components": [],
 			"directory": "superboard-support"
 		},
@@ -85,7 +85,7 @@
 			"kind": "business",
 			"label": "Analytics",
 			"label_fr": "Analytics",
-			"components": ["supbrd-plugmod-analytics"],
+			"components": ["superboard-analytics"],
 			"required_components": [],
 			"directory": "superboard-analytics"
 		}

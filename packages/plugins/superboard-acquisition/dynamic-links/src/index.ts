@@ -1,3 +1,5 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	verifyInternalProjectContextRequest,
 	type InternalProjectContext,
@@ -20,7 +22,7 @@ class DynamicError extends Error {
 		super(message);
 	}
 }
-const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+const app = registerRouter(new Hono<{ Bindings: Env; Variables: Variables }>(), {"service":"dynamic-links","module":"index.app","pluginId":"superboard-dynamic-links","surface":"internal","access":"internal"});
 
 app.onError((cause, c) => {
 	const error =
@@ -1055,4 +1057,4 @@ function nextDate(value: string) {
 	return d.toISOString().slice(0, 10);
 }
 
-export default app;
+export default withRouteManifest((app), [app], {"service":"dynamic-links","pluginId":"superboard-dynamic-links"});

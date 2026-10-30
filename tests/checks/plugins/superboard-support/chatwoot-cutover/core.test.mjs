@@ -88,9 +88,9 @@ test("Chatwoot entities declare their canonical EmDash support repositories", ()
 		attachments: "messages",
 	};
 	for (const entity of CHATWOOT_TABLES) {
-		assert.equal(entity.pluginId, "supbrd-plugmod-support");
-		assert.equal(entity.storeId, `supbrd-plugmod-support.store.${expectedStores[entity.id]}`);
-		assert.equal(entity.repositoryId, `supbrd-plugmod-support.repository.${entity.target.table}`);
+		assert.equal(entity.pluginId, "superboard-support");
+		assert.equal(entity.storeId, `superboard-support.store.${expectedStores[entity.id]}`);
+		assert.equal(entity.repositoryId, `superboard-support.repository.${entity.target.table}`);
 	}
 });
 

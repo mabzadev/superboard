@@ -34,6 +34,8 @@ export default centralTests(
 					},
 					miniflare: {
 						bindings: {
+							SUPERBOARD_INSTANCE_ID: "identity-runtime",
+							ENVIRONMENT: "test",
 							IDENTITY_KEYSET: JSON.stringify({
 								active_kid: key.kid,
 								keys: [key],

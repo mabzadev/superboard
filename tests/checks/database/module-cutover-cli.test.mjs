@@ -164,7 +164,7 @@ test("backup-plan covers the Site authority and every service/module D1", () => 
 			"--output-directory",
 			"/secure/backups",
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			"development",
 		],

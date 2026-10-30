@@ -1,5 +1,6 @@
 import {
 	parseFrontNavigation,
+	resolveFrontRoute,
 	type FrontReleaseInput,
 	type FrontState,
 	type NativeFrontPluginModule,
@@ -98,14 +99,30 @@ export function composeFrontReleaseInput(
 			dependencies:
 				CORE_OPERATOR_SURFACES.some(({ renderer_id }) => renderer_id === surface.renderer_id) ||
 				(CORE_OPERATOR_ALIASES.has(surface.route_id) &&
-					pluginIdForRenderer(surface.renderer_id, activePlugins) === "supbrd-plug-user")
+					pluginIdForRenderer(surface.renderer_id, activePlugins) === "superboard-user")
 					? []
 					: [
 							`dependency.${pluginIdForRenderer(surface.renderer_id, activePlugins).replaceAll("-", "_")}`,
 						],
 			redirect: null,
 		}));
-	const navigation = composeNavigation(surfaces);
+	const frontRouteManifest: FrontReleaseInput["front_route_manifest"] = {
+		schema_version: "1.0.0",
+		manifest_id: "01J00000000000000000000220",
+		normalization: {
+			unicode: "NFC",
+			case_sensitive: true,
+			trailing_slash: "strip",
+			percent_decoding: "once",
+		},
+		auth_transitions: {
+			login_route_id: "emdash.core.operator_login",
+			authenticated_home_route_id: "emdash.core.operator_home",
+		},
+		system_routes: [],
+		routes,
+	};
+	const navigation = composeNavigation(surfaces, frontRouteManifest);
 	const gatewayRoutes = [
 		{
 			route_id: "gateway.superboard_site.health",
@@ -162,22 +179,7 @@ export function composeFrontReleaseInput(
 		schema_version: "1.0.0",
 		compiler_version: "0.1.0",
 		...input,
-		front_route_manifest: {
-			schema_version: "1.0.0",
-			manifest_id: "01J00000000000000000000220",
-			normalization: {
-				unicode: "NFC",
-				case_sensitive: true,
-				trailing_slash: "strip",
-				percent_decoding: "once",
-			},
-			auth_transitions: {
-				login_route_id: "emdash.core.operator_login",
-				authenticated_home_route_id: "emdash.core.operator_home",
-			},
-			system_routes: [],
-			routes,
-		},
+		front_route_manifest: frontRouteManifest,
 		gateway_manifest: {
 			schema_version: "1.0.0",
 			gateway_manifest_id: "01J00000000000000000000221",
@@ -264,7 +266,10 @@ export function visibleUserNavigation(input: FrontReleaseInput, permissions: rea
 	);
 }
 
-function composeNavigation(surfaces: readonly NativeFrontPluginModule["surfaces"][number][]) {
+function composeNavigation(
+	surfaces: readonly NativeFrontPluginModule["surfaces"][number][],
+	manifest: FrontReleaseInput["front_route_manifest"],
+) {
 	const groups = new Map<
 		string,
 		{
@@ -286,12 +291,16 @@ function composeNavigation(surfaces: readonly NativeFrontPluginModule["surfaces"
 		if (group.label !== contribution.group_label || group.order !== contribution.group_order) {
 			throw new Error(`NAVIGATION_GROUP_CONFLICT:${contribution.group_id}`);
 		}
+		const href = contribution.item_href ?? surface.path_pattern;
+		const destination = resolveFrontRoute(manifest, href);
+		if (destination.result !== "matched")
+			throw new Error(`NAVIGATION_DESTINATION_NOT_FOUND:${href}`);
 		group.items.push({
-			route_id: surface.route_id,
+			route_id: destination.route_id,
 			label: contribution.item_label,
-			permission: surface.permission_expression,
+			permission: destination.route.permission_expression,
 			order: contribution.item_order,
-			href: contribution.item_href ?? surface.path_pattern,
+			href,
 		});
 		groups.set(group.group_id, group);
 	}

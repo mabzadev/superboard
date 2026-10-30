@@ -16,29 +16,37 @@ const discoveredModules = import.meta.glob<{ nativeFrontPlugin: NativeFrontPlugi
 );
 
 const plugins = new Map<string, NativeFrontPluginModule>();
+const legacyComponentPrefix = /^supbrd-(?:plug|plugmod)-/u;
+
+// Releases published before the superboard-* namespace keep their original ids.
+function currentComponentId(id: string): string {
+	return id.replace(legacyComponentPrefix, "superboard-");
+}
+
 const compatibleLegacyBuilds = new Map<string, Set<string>>([
 	[
-		"supbrd-plug-user.renderer.admin_surface",
+		"superboard-user.renderer.admin_surface",
 		new Set(["sha256:d7b1bda9489908a0fc50539a8a305d0c18e8c54f92fac05980ec30af32f28ba2"]),
 	],
 	[
-		"supbrd-plug-user.renderer.login_form",
+		"superboard-user.renderer.login_form",
 		new Set(["sha256:fb7093abcf297a8b10024c579ec6faeb0336a91e3551e0c397a670ead659d9d9"]),
 	],
 	[
-		"supbrd-plug-user.renderer.members_table",
+		"superboard-user.renderer.members_table",
 		new Set(["sha256:83e314240c11dfd0118ed0a0d2496e1589513f2c18b199e65e6e791ea430d0cb"]),
 	],
 	[
-		"supbrd-plug-user.renderer.profile_card",
+		"superboard-user.renderer.profile_card",
 		new Set(["sha256:a6ca9335d1dc37ecaabddcce6f5c6add578ec1bdd2b5b637e44b97606825d86d"]),
 	],
 ]);
 for (const artifact of Object.values(compatibility.artifacts)) {
 	for (const [rendererId, checksum] of Object.entries(artifact.renderer_builds)) {
-		const builds = compatibleLegacyBuilds.get(rendererId) ?? new Set<string>();
+		const current = currentComponentId(rendererId);
+		const builds = compatibleLegacyBuilds.get(current) ?? new Set<string>();
 		builds.add(checksum);
-		compatibleLegacyBuilds.set(rendererId, builds);
+		compatibleLegacyBuilds.set(current, builds);
 	}
 }
 for (const [source, module] of Object.entries(discoveredModules)) {
@@ -114,7 +122,12 @@ export function assertNativeFrontRenderer(
 ): NativeFrontPluginModule {
 	const renderer = resolveNativeRendererAlias(requestedRenderer);
 	const pluginId = renderer.plugin_id;
-	if (!pluginLock.some(({ plugin_id: lockedPluginId }) => lockedPluginId === pluginId)) {
+	if (
+		!pluginLock.some(
+			({ plugin_id: lockedPluginId }) =>
+				lockedPluginId === pluginId || currentComponentId(lockedPluginId) === pluginId,
+		)
+	) {
 		throw new Error(`Renderer plugin is not locked by the Release: ${pluginId}`);
 	}
 	const plugin = plugins.get(pluginId);
@@ -132,6 +145,10 @@ export function assertNativeFrontRenderer(
 
 function resolveNativeRendererAlias(renderer: RendererDescriptor): RendererDescriptor {
 	if (plugins.has(renderer.plugin_id)) return renderer;
+	const current = plugins.get(currentComponentId(renderer.plugin_id));
+	const currentRendererId = currentComponentId(renderer.renderer_id);
+	if (current?.renderer_ids.includes(currentRendererId))
+		return { ...renderer, plugin_id: current.plugin_id, renderer_id: currentRendererId };
 	for (const plugin of plugins.values()) {
 		if (canonicalPluginId(plugin.plugin_id) !== renderer.plugin_id) continue;
 		const id = plugin.renderer_ids.find(

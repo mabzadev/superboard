@@ -61,11 +61,11 @@ test("the D1 registry assigns one migration owner per enabled database", async (
 });
 
 test("a target can select one or several schema owners without hardcoded resources", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	const target = targetWithoutResourceIds(source, "development");
 	const selected = targetD1Descriptors(
 		target,
-		"mbza-development",
+		"mabza-development",
 		"development",
 		"identity,support,identity",
 	);

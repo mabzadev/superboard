@@ -33,12 +33,36 @@ const ROUTE_DRIFT_PATTERN = /configuration drift.*route activation changed/u;
 const QUEUE_DRIFT_PATTERN = /configuration drift.*queue consumers/u;
 const UNDECLARED_SECRET_PATTERN = /unexpected secret contract UNDECLARED_SIGNING_KEY/u;
 
+test("renaming a deployment preserves its persistent instance identity", async () => {
+	const { target } = await loadTarget("mabza-development");
+	const renamed = { ...target, target: "renamed-development", instanceId: "original-instance" };
+	const compiled = await compileTarget(renamed, "local");
+	const configuration = compileLocalSiteConfiguration(compiled);
+	assert.equal(compiled.target, "renamed-development");
+	assert.equal(configuration.vars.SUPERBOARD_INSTANCE_ID, "original-instance");
+	const environments = JSON.parse(configuration.vars.SUPERBOARD_CONSOLE_ENVIRONMENTS_JSON);
+	const current = environments.find((entry) => entry.id === "original-instance.local");
+	assert.equal(current.application, "renamed-development");
+	const endpoints = JSON.parse(configuration.vars.SUPERBOARD_PUBLIC_ENDPOINTS_JSON);
+	assert.equal(current.apiUrl, endpoints.api);
+	assert.equal(current.consoleUrl, endpoints.site);
+	assert.doesNotThrow(() => assertTargetServiceConfiguration(compiled, "site", configuration));
+	configuration.vars.SUPERBOARD_INSTANCE_ID = "renamed-development";
+	assert.throws(
+		() => assertTargetServiceConfiguration(compiled, "site", configuration),
+		/instance/u,
+	);
+	delete renamed.instanceId;
+	const fresh = await compileTarget(renamed, "local");
+	assert.equal(compileLocalSiteConfiguration(fresh).vars.SUPERBOARD_INSTANCE_ID, renamed.target);
+});
+
 test("Site validation omits the publication key only when release operations are disabled", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiled = await compileTarget(target, "development");
 	const path = resolve(
 		root,
-		"infra/generated/mbza-development-site-development-retirement-preflight.jsonc",
+		"infra/generated/mabza-development-site-development-retirement-preflight.jsonc",
 	);
 	try {
 		for (const flag of ["--preflight", "--no-routes", "--read-only-console"]) {
@@ -49,7 +73,7 @@ test("Site validation omits the publication key only when release operations are
 					"--service",
 					"site",
 					"--target",
-					"mbza-development",
+					"mabza-development",
 					"--environment",
 					"development",
 					"--allow-unprovisioned",
@@ -86,7 +110,7 @@ test("Site validation omits the publication key only when release operations are
 });
 
 test("task-producing Workers reach Site authority through a plugin-bound API service", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiled = await compileTarget(target, "local");
 	assert.ok(
 		compiled.graph.bindings.some(
@@ -109,7 +133,7 @@ test("task-producing Workers reach Site authority through a plugin-bound API ser
 			(entry) => entry.service === service && entry.binding === "API_SERVICE",
 		);
 		assert.equal(binding?.targetService, "api", service);
-		assert.equal(binding?.props?.superboard_plugin_id, `supbrd-plugmod-${service}`, service);
+		assert.equal(binding?.props?.superboard_plugin_id, `superboard-${service}`, service);
 		assert.equal(
 			compiled.graph.bindings.some(
 				(entry) => entry.service === service && entry.resourceKey === "siteD1",
@@ -120,7 +144,7 @@ test("task-producing Workers reach Site authority through a plugin-bound API ser
 });
 
 test("generated Site authority configuration rejects disabled leases and another instance", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiled = await compileTarget(target, "local");
 	const config = compileLocalSiteConfiguration(compiled);
 	assert.equal(
@@ -145,7 +169,7 @@ test("generated Site authority configuration rejects disabled leases and another
 });
 
 test("generated task bindings preserve the Site instance and reject another plugin claim", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiled = await compileTarget(target, "local");
 	const configs = new Map();
 	const generated = [];
@@ -168,7 +192,7 @@ test("generated task bindings preserve the Site instance and reject another plug
 					"--service",
 					service,
 					"--target",
-					"mbza-development",
+					"mabza-development",
 					"--environment",
 					"local",
 					"--allow-unprovisioned",
@@ -182,7 +206,7 @@ test("generated task bindings preserve the Site instance and reject another plug
 			const path = resolve(
 				root,
 				"infra/generated",
-				`mbza-development-${service}-local-task-wiring-proof.jsonc`,
+				`mabza-development-${service}-local-task-wiring-proof.jsonc`,
 			);
 			generated.push(path);
 			configs.set(service, JSON.parse(await readFile(path, "utf8")));
@@ -223,7 +247,7 @@ test("generated task bindings preserve the Site instance and reject another plug
 });
 
 test("one target compiles to the same closed graph for local and Cloudflare", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const local = await compileTarget(target, "local");
 	const development = await compileTarget(target, "development");
 
@@ -236,20 +260,18 @@ test("one target compiles to the same closed graph for local and Cloudflare", as
 				service === "site" && binding === "API_SERVICE" && targetService === "api",
 		),
 	);
-	assert.ok(local.graph.plugins.some(({ pluginId }) => pluginId === "supbrd-plugmod-gateway"));
+	assert.ok(local.graph.plugins.some(({ pluginId }) => pluginId === "superboard-gateway"));
 	assert.ok(
 		local.graph.plugins.some(
-			({ pluginId, targetState }) =>
-				pluginId === "supbrd-plugmod-gateway" && targetState === "active",
+			({ pluginId, targetState }) => pluginId === "superboard-gateway" && targetState === "active",
 		),
 	);
 	assert.ok(
 		local.graph.plugins.some(
-			({ pluginId, targetState }) =>
-				pluginId === "supbrd-plugmod-paywalls" && targetState === "active",
+			({ pluginId, targetState }) => pluginId === "superboard-paywalls" && targetState === "active",
 		),
 	);
-	const userPlugin = local.graph.plugins.find(({ pluginId }) => pluginId === "supbrd-plug-user");
+	const userPlugin = local.graph.plugins.find(({ pluginId }) => pluginId === "superboard-user");
 	assert.equal(userPlugin?.version, "1.4.0");
 	assert.deepEqual(
 		userPlugin?.stores.flatMap(({ migrations }) => migrations),
@@ -290,7 +312,7 @@ test("one target compiles to the same closed graph for local and Cloudflare", as
 });
 
 test("target graph drift is rejected before an adapter can run", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiled = await compileTarget(target, "development");
 	const cloudflare = materializeTarget(compiled, "cloudflare");
 	const drifted = structuredClone(materializeTarget(compiled, "local"));
@@ -300,7 +322,7 @@ test("target graph drift is rejected before an adapter can run", async () => {
 });
 
 test("the local Site configuration is generated and guarded by the target artifact", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiled = await compileTarget(target, "local");
 	const config = compileLocalSiteConfiguration(compiled);
 
@@ -314,7 +336,7 @@ test("the local Site configuration is generated and guarded by the target artifa
 		config.kv_namespaces.map(({ binding }) => binding),
 		["SESSION", "RELEASE_CACHE"],
 	);
-	assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, "mbza-development");
+	assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, compiled.instance.id);
 	assert.equal(config.vars.SUPERBOARD_ENVIRONMENT, "local");
 	assert.equal(JSON.parse(config.vars.SUPERBOARD_PLUGIN_IDS).length, 18);
 	assert.match(config.vars.TARGET_ARTIFACT_CHECKSUM, CHECKSUM_PATTERN);
@@ -367,7 +389,7 @@ test("the local Site configuration is generated and guarded by the target artifa
 });
 
 test("the Site can require its declared Release secret while rejecting undeclared secrets", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiled = await compileTarget(target, "local");
 	const config = compileLocalSiteConfiguration(compiled);
 	config.secrets.required.push("SUPERBOARD_RELEASE_PRIVATE_JWK");
@@ -381,7 +403,7 @@ test("the Site can require its declared Release secret while rejecting undeclare
 });
 
 test("enabling optional modules preserves existing local endpoints", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const withoutModules = structuredClone(target);
 	withoutModules.features.paywalls = false;
 	withoutModules.features.onboardings = false;
@@ -403,7 +425,7 @@ test("enabling optional modules preserves existing local endpoints", async () =>
 });
 
 test("one orchestrator plans local and Cloudflare lifecycle operations from the graph", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const local = materializeTarget(await compileTarget(target, "local"), "local");
 	const cloudflare = materializeTarget(await compileTarget(target, "development"), "cloudflare");
 
@@ -425,7 +447,7 @@ test("one orchestrator plans local and Cloudflare lifecycle operations from the 
 	assert.ok(
 		[...localPlan.operations, ...cloudflarePlan.operations].every(
 			({ target: selectedTarget, environment, graphChecksum }) =>
-				selectedTarget === "mbza-development" &&
+				selectedTarget === "mabza-development" &&
 				["local", "development"].includes(environment) &&
 				graphChecksum === local.graphChecksum,
 		),
@@ -439,7 +461,7 @@ test("one orchestrator plans local and Cloudflare lifecycle operations from the 
 });
 
 test("provision, migration and deployment plans bind the compiled target", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiledTarget = await compileTarget(target, "development");
 	const desired = desiredCloudflareResources(target, "development");
 	const inventories = { d1: [], kv: [], r2: [], queue: [], vectorize: [] };
@@ -474,7 +496,7 @@ test("provision, migration and deployment plans bind the compiled target", async
 });
 
 test("operations consume the written artifact and reject later target drift", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiled = await compileTarget(target, "development");
 	const artifactPath = resolve(root, "infra/generated/issue-68-test-target.json");
 	await mkdir(resolve(root, "infra/generated"), { recursive: true });
@@ -499,7 +521,7 @@ test("operations consume the written artifact and reject later target drift", as
 });
 
 test("the same target executes local and Cloudflare configuration adapters", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const local = await compileTarget(target, "local");
 	const development = await compileTarget(target, "development");
 	const localArtifact = resolve(root, "infra/generated/issue-68-local-target.json");
@@ -527,24 +549,27 @@ test("the same target executes local and Cloudflare configuration adapters", asy
 		assert.equal(cloudflareRun.status, 0, cloudflareRun.stderr);
 		assert.equal(routedRun.status, 0, routedRun.stderr);
 		const localConfig = JSON.parse(
-			await readFile(resolve(root, "infra/generated/mbza-development-api-local.jsonc"), "utf8"),
+			await readFile(resolve(root, "infra/generated/mabza-development-api-local.jsonc"), "utf8"),
 		);
 		const developmentConfig = JSON.parse(
 			await readFile(
-				resolve(root, "infra/generated/mbza-development-api-development.jsonc"),
+				resolve(root, "infra/generated/mabza-development-api-development.jsonc"),
 				"utf8",
 			),
 		);
 		const routedConfig = JSON.parse(
 			await readFile(
-				resolve(root, "infra/generated/mbza-development-api-development-routes.jsonc"),
+				resolve(root, "infra/generated/mabza-development-api-development-routes.jsonc"),
 				"utf8",
 			),
 		);
 		assert.equal(local.graphChecksum, development.graphChecksum);
 		assert.equal(localConfig.name, "superboard-api-local");
 		assert.equal(developmentConfig.name, "superboard-api-dev");
-		assert.equal(routedConfig.routes.length, 5);
+		assert.deepEqual(
+			routedConfig.routes.map(({ pattern }) => pattern),
+			["api.mabza.dev", "sdk.mabza.dev", "in.mabza.dev"],
+		);
 
 		const missingRoutes = structuredClone(routedConfig);
 		missingRoutes.routes = [];
@@ -574,7 +599,7 @@ test("the same target executes local and Cloudflare configuration adapters", asy
 });
 
 test("the local adapter gives every unprovisioned D1 and KV resource isolated storage", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiled = await compileTarget(target, "local");
 	const artifactPath = resolve(root, "infra/generated/issue-69-local-target.json");
 	await mkdir(resolve(root, "infra/generated"), { recursive: true });
@@ -610,19 +635,19 @@ test("the local adapter gives every unprovisioned D1 and KV resource isolated st
 async function readIssue69Configuration(service) {
 	return JSON.parse(
 		await readFile(
-			resolve(root, `infra/generated/mbza-development-${service}-local-issue-69.jsonc`),
+			resolve(root, `infra/generated/mabza-development-${service}-local-issue-69.jsonc`),
 			"utf8",
 		),
 	);
 }
 
 test("plugin Stores cannot escape the compiled migration graph", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const topology = JSON.parse(
 		await readFile(resolve(root, "scripts/config/emdash-plugin-topology.json"), "utf8"),
 	);
 	const gateway = topology.plugins.find(
-		({ manifest }) => manifest.plugin_id === "supbrd-plugmod-gateway",
+		({ manifest }) => manifest.plugin_id === "superboard-gateway",
 	);
 	gateway.manifest.stores[0].migrations.push(
 		"packages/plugins/superboard-core/api/migrations/9999_unknown.sql",
@@ -645,7 +670,7 @@ function runConfigurationAdapter(
 		[
 			resolve(root, "scripts/cloudflare/config.mjs"),
 			"--target",
-			"mbza-development",
+			"mabza-development",
 			"--environment",
 			environment,
 			"--service",

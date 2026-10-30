@@ -12,14 +12,14 @@ import {
 	proveApi,
 } from "./retirement-api-helpers.js";
 
-const plugin = "supbrd-plugmod-observability";
+const plugin = "superboard-observability";
 const file = "retirement-api-observability-email.runtime.test.ts";
 test("Observability reads actual Email failures and replays or discards the persisted dead letters", async () => {
-	const scope = await prepareApiPlugin("supbrd-plugmod-email");
+	const scope = await prepareApiPlugin("superboard-email");
 	await prepareApiPlugin(plugin);
 	const db = pluginDatabase("email");
 	const message = await jsonResult<{ id: string }>(
-		await apiCommand("supbrd-plugmod-email", "send_transactional_email", {
+		await apiCommand("superboard-email", "send_transactional_email", {
 			method: "POST",
 			path: `/api/v1/email/projects/${scope.production_project_ref}/transactional`,
 			body: {

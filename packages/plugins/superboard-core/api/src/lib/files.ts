@@ -1,4 +1,5 @@
-import { Env } from '../types';
+import type { Context } from "hono";
+import type { Env } from "../types.js";
 
 type CsvExportOptions = {
   projectId?: number | string | null;
@@ -8,7 +9,8 @@ type CsvExportOptions = {
   expiresInSeconds?: number;
 };
 
-function requestOrigin(c: any) {
+function requestOrigin(c: Pick<Context<{ Bindings: Env }>, "env" | "req">) {
+  if (c.env.SDK_DOMAIN && c.env.AUTH_DOMAIN === c.env.SDK_DOMAIN && c.env.APP_URL) return new URL(c.env.APP_URL).origin;
   if (c.env.API_DOMAIN) {
     const configured = String(c.env.API_DOMAIN);
     return new URL(configured.includes('://') ? configured : `https://${configured}`).origin;
@@ -22,8 +24,8 @@ function csvFileName(prefix: string): string {
   return `${prefix}_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}_${crypto.randomUUID()}.csv`;
 }
 
-export async function storeCsvDownload(c: any, options: CsvExportOptions): Promise<{ name: string; key: string; url: string; downloadPath: string }> {
-  const env = c.env as Env;
+export async function storeCsvDownload(c: Pick<Context<{ Bindings: Env }>, "env" | "req">, options: CsvExportOptions): Promise<{ name: string; key: string; url: string; downloadPath: string }> {
+  const env = c.env;
   if (!env.R2) {
     throw new Error('R2 bucket is not configured');
   }

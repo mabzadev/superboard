@@ -10,6 +10,7 @@ vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 const billing = vi.hoisted(() => ({
 	getBillingOverview: vi.fn(),
 	updateBillingSettings: vi.fn(),
+	getStripeConnection: vi.fn(),
 }));
 vi.mock(
 	"../../../../../packages/plugins/superboard-monetization/src/front/billing/api/billing/billingService.js",
@@ -41,6 +42,13 @@ describe("MonetizationSettingsPage", () => {
 				disconnect() {}
 			},
 		);
+		billing.getStripeConnection.mockResolvedValue({
+			configured: false,
+			environment: "sandbox",
+			application_origin: "",
+			last_tested_at: null,
+			webhook_path: "/stripe/sandbox/1",
+		});
 		billing.getBillingOverview.mockResolvedValue({
 			settings: { purchases_enabled: 0, restore_behavior: "block" },
 			credentials: { ios: { configured: false }, android: { configured: false } },
@@ -48,7 +56,7 @@ describe("MonetizationSettingsPage", () => {
 	});
 
 	it("keeps a multiline secret draft across tabs and clears it after saving", async () => {
-		const key = "supbrd-plugmod-billing__apple_private_key";
+		const key = "superboard-billing__apple_private_key";
 		const pem = "-----BEGIN PRIVATE KEY-----\nexample\n-----END PRIVATE KEY-----";
 		let submitted: Record<string, unknown> | undefined;
 		vi.stubGlobal(
@@ -59,11 +67,11 @@ describe("MonetizationSettingsPage", () => {
 			}),
 		);
 		render(<MonetizationSettingsPage />);
-		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Configuration" }), { key: "Enter" });
 		const secret = await screen.findByLabelText("Apple private key");
 		fireEvent.change(secret, { target: { value: pem } });
 		fireEvent.keyDown(screen.getByRole("tab", { name: "Products" }), { key: "Enter" });
-		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Configuration" }), { key: "Enter" });
 		expect(screen.getByLabelText("Apple private key")).toHaveValue(pem);
 		fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 		await screen.findByText("Settings saved.");
@@ -115,6 +123,7 @@ describe("MonetizationSettingsPage", () => {
 		expect(await screen.findByText("Connected Gateways")).toBeInTheDocument();
 		expect(screen.queryByText("Stripe Payments")).not.toBeInTheDocument();
 		expect(screen.getAllByText("Not configured")).toHaveLength(2);
+		expect(await screen.findByText(/Not configured.*Sandbox/)).toBeInTheDocument();
 		expect(screen.getByText("Apple App Store")).toBeInTheDocument();
 	});
 

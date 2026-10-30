@@ -1,3 +1,5 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import {
 	verifyInternalProjectContextRequest,
@@ -5,6 +7,7 @@ import {
 } from "@superboard/contracts/project-context";
 import { configuredSecrets, matchesAnySecret } from "@superboard/contracts/secret";
 import { Hono, type Context, type Next } from "hono";
+import { collectCustomerProjection } from "./core-collection.js";
 
 type Variables = { projectId: string; projectContext: InternalProjectContext };
 type AppContext = Context<{ Bindings: Env; Variables: Variables }>;
@@ -21,7 +24,7 @@ class AppError extends Error {
 	}
 }
 
-const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+const app = registerRouter(new Hono<{ Bindings: Env; Variables: Variables }>(), {"service":"app","module":"index.app","pluginId":"superboard-user","surface":"internal","access":"internal"});
 
 app.onError((cause, c) => {
 	const error =
@@ -85,7 +88,7 @@ app.get("/internal/v1/health", async (c) => {
 	}
 });
 
-app.post("/internal/v1/sdk-credentials/resolve", async (c) => {
+app.defineRoute({ pluginId: "supbrd-core" }).post("/internal/v1/sdk-credentials/resolve", async (c) => {
 	if (
 		!(await matchesAnySecret(
 			c.req.header("X-Internal-Token") ?? "",
@@ -387,7 +390,7 @@ app.post("/internal/v1/referrals", async (c) =>
 	}),
 );
 
-app.get("/internal/v1/access-key", async (c) => {
+app.defineRoute({ pluginId: "superboard-settings" }).get("/internal/v1/access-key", async (c) => {
 	const key = await c.env.DB.prepare(
 		"SELECT id, prefix, last_used_at, created_at, revoked_at FROM access_keys WHERE project_id = ? ORDER BY created_at DESC LIMIT 1",
 	)
@@ -396,7 +399,7 @@ app.get("/internal/v1/access-key", async (c) => {
 	return c.json({ data: key || null });
 });
 
-app.post("/internal/v1/access-key/rotate", async (c) =>
+app.defineRoute({ pluginId: "superboard-settings" }).post("/internal/v1/access-key/rotate", async (c) =>
 	runMutation(c, "access_key.rotate", async () => {
 		const secret = randomToken("og_app_", 32);
 		const id = crypto.randomUUID();
@@ -418,7 +421,7 @@ app.post("/internal/v1/access-key/rotate", async (c) =>
 	}),
 );
 
-app.get("/internal/v1/setup/:platform", async (c) => {
+app.defineRoute({ pluginId: "superboard-settings" }).get("/internal/v1/setup/:platform", async (c) => {
 	const platform = platformParam(c.req.param("platform"));
 	const row = await c.env.DB.prepare(
 		"SELECT platform, status, configuration_json, verified_at, created_at, updated_at FROM sdk_configurations WHERE project_id=? AND platform=?",
@@ -428,7 +431,7 @@ app.get("/internal/v1/setup/:platform", async (c) => {
 	return c.json({ data: row ? configurationJson(row) : null });
 });
 
-app.post("/internal/v1/runtime-policy/resolve", async (c) => {
+app.defineRoute({ pluginId: "superboard-settings" }).post("/internal/v1/runtime-policy/resolve", async (c) => {
 	const body = await bodyObject(c.req.raw);
 	const platform = platformParam(String(c.req.header("PLATFORM") || body.platform || ""));
 	const appVersion = semanticVersion(body.app_version, "app_version", true)!;
@@ -476,7 +479,7 @@ app.post("/internal/v1/runtime-policy/resolve", async (c) => {
 	});
 });
 
-app.put("/internal/v1/setup/:platform", async (c) =>
+app.defineRoute({ pluginId: "superboard-settings" }).put("/internal/v1/setup/:platform", async (c) =>
 	runMutation(c, "sdk_configuration.save", async () => {
 		const platform = platformParam(c.req.param("platform"));
 		const body = await bodyObject(c.req.raw);
@@ -490,7 +493,7 @@ app.put("/internal/v1/setup/:platform", async (c) =>
 	}),
 );
 
-app.post("/internal/v1/setup/:platform/test", async (c) =>
+app.defineRoute({ pluginId: "superboard-settings" }).post("/internal/v1/setup/:platform/test", async (c) =>
 	runMutation(c, "sdk_configuration.verify", async () => {
 		const platform = platformParam(c.req.param("platform"));
 		const row = await c.env.DB.prepare(
@@ -510,7 +513,7 @@ app.post("/internal/v1/setup/:platform/test", async (c) =>
 	}),
 );
 
-app.delete("/internal/v1/setup/:platform", async (c) =>
+app.defineRoute({ pluginId: "superboard-settings" }).delete("/internal/v1/setup/:platform", async (c) =>
 	runMutation(c, "sdk_configuration.delete", async () => {
 		const platform = platformParam(c.req.param("platform"));
 		await c.env.DB.prepare("DELETE FROM sdk_configurations WHERE project_id=? AND platform=?")
@@ -1023,4 +1026,8 @@ async function sha256(value: string) {
 	return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export default app;
+export default withRouteManifest((Object.assign(app, {
+	scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+		ctx.waitUntil(collectCustomerProjection(env));
+	},
+})), [app], {"service":"app","pluginId":"superboard-user"});

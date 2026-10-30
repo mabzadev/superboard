@@ -19,7 +19,7 @@ describe("Data settings", () => {
 			"fetch",
 			vi.fn(async () => {
 				if (!available) throw new Error("offline");
-				return Response.json({ data: { values: { "supbrd-plug-content__default_locale": "fr" } } });
+				return Response.json({ data: { values: { "superboard-content__default_locale": "fr" } } });
 			}),
 		);
 		render(<DataSettingsPage />);
@@ -32,9 +32,9 @@ describe("Data settings", () => {
 	});
 	it("loads existing content settings and saves only the edited value", async () => {
 		const values = {
-			"supbrd-plug-content__default_locale": "fr",
-			"supbrd-plug-content__required_locales": "fr\nen",
-			"supbrd-plug-content__publishing_mode": "draft_review",
+			"superboard-content__default_locale": "fr",
+			"superboard-content__required_locales": "fr\nen",
+			"superboard-content__publishing_mode": "draft_review",
 		};
 		const writes: unknown[] = [];
 		vi.stubGlobal(
@@ -54,7 +54,7 @@ describe("Data settings", () => {
 		fireEvent.change(locale, { target: { value: "en" } });
 		fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 		expect(await screen.findByRole("status")).toHaveTextContent("Settings saved");
-		expect(writes).toEqual([{ "supbrd-plug-content__default_locale": "en" }]);
+		expect(writes).toEqual([{ "superboard-content__default_locale": "en" }]);
 		expect(screen.getByLabelText("Required languages")).toHaveValue("fr\nen");
 	});
 });

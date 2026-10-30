@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from 'hono';
 import * as QRCode from 'qrcode';
 import { Env } from '../types';
@@ -22,7 +23,7 @@ import { tokenDigest } from '../lib/token-storage';
 import { readOtpSecret, storeOtpSecret } from '../lib/auth-credentials';
 import { consumeDashboardAuthAttempt, dashboardAuthRateLimitResponse } from '../lib/auth-rate-limit';
 
-const users = new Hono<{ Bindings: Env }>();
+const users = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.users.users","pluginId":"superboard-user","surface":"internal","access":"operator"});
 
 type OAuthApplication = { id: number; uid: string };
 type UserRow = {

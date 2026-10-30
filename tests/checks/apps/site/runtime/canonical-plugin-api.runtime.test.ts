@@ -1,15 +1,18 @@
+import { resolveRouteReference } from "@superboard/contracts/route-reference";
+import type { RouteDescriptor } from "@superboard/contracts/route-registry";
+import { resolveApiRouteReferences } from "../../../../../apps/site/src/lib/route-references.js";
 import { SELF, env } from "cloudflare:test";
 import { beforeAll, expect, test } from "vitest";
 
 import { proxyOperatorApiRequest } from "../../../../../apps/site/src/lib/operator-api-proxy.js";
 import { initializeOperatorProjectScope } from "../../../../../apps/site/src/lib/operator-project-scope.js";
 import { matchPluginApiAdapter } from "../../../../../apps/site/src/lib/plugin-api-adapter.js";
-import { resolveRepositoryCommandScope } from "../../../../../apps/site/src/lib/plugin-command-authority.js";
+import { resolveApiRouteOwner } from "../../../../../apps/site/src/lib/route-owner.js";
 import { importPluginStoreEncryptionKey } from "../../../../../apps/site/src/lib/plugin-store-repository.js";
 import { canonicalPluginId } from "../../../../../packages/contracts/src/plugin-packages.js";
 import registry from "../../../../../scripts/config/superboard-plugin-api-adapters.json";
 
-const pluginId = "supbrd-plugmod-paywalls";
+const pluginId = "superboard-paywalls";
 
 test("all canonical contribution names select exactly the same verified operation as their legacy names", () => {
 	let checked = 0;
@@ -19,20 +22,22 @@ test("all canonical contribution names select exactly the same verified operatio
 			("audience" in adapter && adapter.audience === "application_client")
 		)
 			continue;
-		for (const operation of adapter.operations) {
+		for (const reference of adapter.operations) {
+			const operation = resolveRouteReference(reference, routes, adapter.plugin_id);
 			const allowed = operation.parameter_values as Record<string, string[]>;
-			const path = operation.path.replace(
-				/:([A-Za-z][A-Za-z0-9_]*)/gu,
-				(_, key: string) => allowed[key]?.[0] ?? "example",
-			);
+			const path = operation.path
+				.replace(":id{[a-f0-9]{64}}", "a".repeat(64))
+				.replace(":action{replay|discard}", allowed.action?.[0] ?? "replay")
+				.replace(/:([A-Za-z][A-Za-z0-9_]*)/gu, (_, key: string) => allowed[key]?.[0] ?? "example");
 			const envelope = { method: operation.method, path };
 			const kind = adapter.kind === "command" ? "command" : "data_source";
-			const legacy = matchPluginApiAdapter(adapter.plugin_id, adapter.id, kind, envelope);
+			const legacy = matchPluginApiAdapter(adapter.plugin_id, adapter.id, kind, envelope, routes);
 			const canonical = matchPluginApiAdapter(
 				canonicalPluginId(adapter.plugin_id),
 				canonicalPluginId(adapter.id),
 				kind,
 				envelope,
+				routes,
 			);
 			expect(canonical.adapter).toEqual(legacy.adapter);
 			expect(canonical.operation).toEqual(legacy.operation);
@@ -56,15 +61,27 @@ const headers = {
 	"Content-Type": "application/json",
 };
 let projectRef: string;
+let routes: RouteDescriptor[] = [];
 
 beforeAll(async () => {
+	routes = await resolveApiRouteReferences(
+		env,
+		{ id: "operator-1", role: 50 },
+		registry.adapters.flatMap((adapter) =>
+			adapter.operations.flatMap((operation) =>
+				"route_id" in operation && typeof operation.route_id === "string"
+					? [operation.route_id]
+					: [],
+			),
+		),
+	);
 	const scope = await initializeOperatorProjectScope(
 		env,
 		{ id: "operator-1", role: 50 },
 		crypto.randomUUID(),
 	);
 	projectRef = scope.production_project_ref;
-	for (const id of [pluginId, "supbrd-plug-settings", "supbrd-plug-products"]) {
+	for (const id of [pluginId, "superboard-settings"]) {
 		const enabled = await SELF.fetch(
 			`https://site.example/_emdash/api/superboard/plugins/${id}/enable`,
 			{ method: "POST", headers },
@@ -120,7 +137,7 @@ test("canonical package commands execute and share idempotency with their histor
 });
 
 test("Settings configures and verifies an SDK with User disabled", async () => {
-	const root = "https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings";
+	const root = "https://site.example/_emdash/api/superboard/plugins/superboard-settings";
 	const path = `/api/v1/app/projects/${projectRef}/setup/ios`;
 	const body = {
 		bundle_id: "com.example.independent",
@@ -205,8 +222,13 @@ test("blocks paths, methods, query parameters and project scope outside the veri
 		(await command({ method: "POST", path: "/api/v1/paywalls/projects/999-prod", body: {} }))
 			.status,
 	).toBe(403);
+	const products = await SELF.fetch(
+		"https://site.example/_emdash/api/superboard/plugins/superboard-products/enable",
+		{ method: "POST", headers },
+	);
+	expect(products.status).toBe(201);
 	const foreign = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-products/commands/create_product",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-products/commands/create_product",
 		{
 			method: "POST",
 			headers,
@@ -217,12 +239,15 @@ test("blocks paths, methods, query parameters and project scope outside the veri
 			}),
 		},
 	);
-	expect(foreign.status).toBe(403);
+	expect({
+		status: foreign.status,
+		body: foreign.status === 403 ? undefined : await foreign.text(),
+	}).toEqual({ status: 403, body: undefined });
 });
 
 test("declared settings commands reject unrelated paths instead of writing a generic store", async () => {
 	const unresolved = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings/commands/update_effective_settings",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-settings/commands/update_effective_settings",
 		{
 			method: "POST",
 			headers,
@@ -237,10 +262,11 @@ test("declared settings commands reject unrelated paths instead of writing a gen
 
 test("keeps encoded slashes inside an opaque Flows user identifier", () => {
 	const matched = matchPluginApiAdapter(
-		"supbrd-plugmod-flows",
-		"supbrd-plugmod-flows.data_source.user_details",
+		"superboard-flows",
+		"superboard-flows.data_source.user_details",
 		"data_source",
 		{ method: "GET", path: `/api/v1/flows/projects/${projectRef}/users/provider%2Fcustomer` },
+		routes,
 	);
 	expect(matched.parameters.userHash).toBe("provider/customer");
 	expect(matched.url.pathname).toContain("provider%2Fcustomer");
@@ -290,26 +316,22 @@ test("direct App business URLs remain gated when User is inactive", async () => 
 		env,
 	});
 	expect(result.status).toBe(404);
-	expect(
-		resolveRepositoryCommandScope(
-			new URL(`/api/v1/app/projects/${projectRef}/setup/web`, request.url),
-		).plugin_id,
-	).toBe("supbrd-plug-settings");
-	expect(
-		resolveRepositoryCommandScope(
-			new URL(`/api/v1/app/projects/${projectRef}/purchases`, request.url),
-		).plugin_id,
-	).toBe("supbrd-plugmod-billing");
-	expect(
-		resolveRepositoryCommandScope(
-			new URL(`/api/v1/app/projects/${projectRef}/analytics`, request.url),
-		).plugin_id,
-	).toBe("supbrd-plugmod-analytics");
-	expect(
-		resolveRepositoryCommandScope(
-			new URL(`/api/v1/app/projects/${projectRef}/access-key`, request.url),
-		).plugin_id,
-	).toBe("supbrd-plug-settings");
+	for (const suffix of ["setup/web", "access-key"]) {
+		expect(
+			await resolveApiRouteOwner(
+				env,
+				{ id: "operator-1", role: 50 },
+				new Request(new URL(`/api/v1/app/projects/${projectRef}/${suffix}`, request.url)),
+			),
+		).toBe("superboard-settings");
+	}
+	await expect(
+		resolveApiRouteOwner(
+			env,
+			{ id: "operator-1", role: 50 },
+			new Request(new URL(`/api/v1/app/projects/${projectRef}/nonexistent`, request.url)),
+		),
+	).rejects.toThrow("ROUTE_OWNER_UNAVAILABLE");
 });
 
 test("preserves multipart bytes through the command repository and signed Worker request", async () => {

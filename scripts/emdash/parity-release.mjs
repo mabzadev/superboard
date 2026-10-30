@@ -12,10 +12,10 @@ import { compileTarget } from "../cloudflare/target-compiler.mjs";
 const root = resolve(import.meta.dirname, "../..");
 const artifactPath = resolve(root, "scripts/config/superboard-parity-release.json");
 const target = JSON.parse(
-	readFileSync(resolve(root, "infra/targets/mbza-development.json"), "utf8"),
+	readFileSync(resolve(root, "infra/targets/mabza-development.json"), "utf8"),
 );
 const identifiers = {
-	instance_id: "mbza-development",
+	instance_id: target.instanceId ?? target.target,
 	front_draft_id: "01J00000000000000000007001",
 	draft_snapshot_id: "01J00000000000000000007002",
 	compilation_id: "01J00000000000000000007003",

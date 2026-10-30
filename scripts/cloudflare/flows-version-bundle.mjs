@@ -29,7 +29,7 @@ export function buildFlowsVersionBundlePlan({
 	targetName,
 	environment,
 	outputPath = resolve(PROTECTED_DIRECTORY, `${targetName}-flows-${environment}.json`),
-	versionTag = "mbza-flows-project-cutover-v1",
+	versionTag = "mabza-flows-project-cutover-v1",
 }) {
 	assertFlowsVersionScope({ target, targetName, environment });
 	const secretsFile = protectedOutputPath(outputPath);
@@ -115,7 +115,7 @@ export function flowsVersionUploadArgs({ config, secretsFile, versionTag }) {
 		"--tag",
 		String(versionTag),
 		"--message",
-		"SuperBoard Flows MBZA project-scoped cutover",
+		"SuperBoard Flows MABZA project-scoped cutover",
 	];
 }
 
@@ -139,7 +139,7 @@ export function flowsObsoleteSecretBulkArgs({ config, worker, versionTag, obsole
 		"--tag",
 		String(versionTag),
 		"--message",
-		"Remove obsolete Flows Email secret before MBZA activation",
+		"Remove obsolete Flows Email secret before MABZA activation",
 	];
 }
 
@@ -294,13 +294,13 @@ export async function readProtectedFlowUserHashKey(path) {
 
 function assertFlowsVersionScope({ target, targetName, environment }) {
 	if (
-		targetName !== "mbza-development" ||
+		targetName !== "mabza-development" ||
 		environment !== "development" ||
 		target?.target !== targetName ||
 		target?.features?.flows !== true ||
 		!target?.workers?.flows?.[environment]
 	) {
-		throw new Error("Flows version bundle is restricted to enabled MBZA development");
+		throw new Error("Flows version bundle is restricted to enabled MABZA development");
 	}
 }
 
@@ -383,7 +383,7 @@ async function main() {
 		targetName,
 		environment,
 		outputPath,
-		versionTag: args["version-tag"] ?? "mbza-flows-project-cutover-v1",
+		versionTag: args["version-tag"] ?? "mabza-flows-project-cutover-v1",
 	});
 	if (!args.prepare) {
 		process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);

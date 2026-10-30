@@ -15,7 +15,7 @@ app-specific Worker.
 
 The Dashboard receives API, SDK, short-link, MCP, documentation and optional support
 origins from that same target during its Cloudflare build. Copyable integration
-snippets never contain an MBZA, VocoStar or generic example hostname.
+snippets never contain an MABZA, VocoStar or generic example hostname.
 
 The canonical source layout is:
 
@@ -30,25 +30,25 @@ machine-readable surface is `scripts/config/flutterflow-library.json`, and its r
 FlutterFlow project ID/API key come only from the protected GitHub Environment.
 The remote project is never a second source authority.
 
-`mbza.dev` is the development and acceptance deployment of SuperBoard. It is not
+`mabza.dev` is the development and acceptance deployment of SuperBoard. It is not
 the product name and must not appear as a default inside reusable runtime code.
 
 ## Development endpoints
 
-| Surface       | URL                                                | Responsibility                                                                          |
-| ------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Reference app | `https://reference.mbza.dev`                       | Executable Flutter Web acceptance specification                                         |
-| Back office   | `https://board.mbza.dev`                           | SuperBoard administration and infrastructure status                                     |
-| API           | `https://api.mbza.dev`                             | Authenticated API gateway and SDK orchestration                                         |
-| SDK           | `https://sdk.mbza.dev`                             | Mobile and FlutterFlow SDK surface                                                      |
-| Short links   | `https://in.mbza.dev`                              | Redirects, attribution and universal/app links                                          |
-| Files         | `https://files.mbza.dev`                           | Controlled file delivery                                                                |
-| MCP           | `https://mcp.mbza.dev/mcp`                         | OAuth-protected infrastructure status and operator tools over stateless Streamable HTTP |
-| SES feedback  | `https://api.mbza.dev/api/v1/email/aws-ses/events` | Signature-verified Amazon SNS delivery, bounce and complaint ingress                    |
-| Support       | `https://api.mbza.dev/api/v1/support-client`       | Authenticated mobile Support gateway (HTTP, attachments and realtime tickets)           |
+| Surface       | URL                                                 | Responsibility                                                                          |
+| ------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Reference app | `https://reference.mabza.dev`                       | Executable Flutter Web acceptance specification                                         |
+| Back office   | `https://board.mabza.dev`                           | SuperBoard administration and infrastructure status                                     |
+| API           | `https://api.mabza.dev`                             | Authenticated API gateway and SDK orchestration                                         |
+| SDK           | `https://sdk.mabza.dev`                             | Mobile and FlutterFlow SDK surface                                                      |
+| Short links   | `https://in.mabza.dev`                              | Redirects, attribution and universal/app links                                          |
+| Files         | `https://files.mabza.dev`                           | Controlled file delivery                                                                |
+| MCP           | `https://mcp.mabza.dev/mcp`                         | OAuth-protected infrastructure status and operator tools over stateless Streamable HTTP |
+| SES feedback  | `https://api.mabza.dev/api/v1/email/aws-ses/events` | Signature-verified Amazon SNS delivery, bounce and complaint ingress                    |
+| Support       | `https://api.mabza.dev/api/v1/support-client`       | Authenticated mobile Support gateway (HTTP, attachments and realtime tickets)           |
 
 The API and short-link origins are deliberately distinct. Platform endpoints
-come from `infra/targets/mbza-development.json`; the acceptance application's
+come from `infra/targets/mabza-development.json`; the acceptance application's
 own URL and Static Assets Worker come from
 `apps/reference/reference.project.json`. Neither manifest contains a
 Cloudflare account ID or credential.
@@ -57,7 +57,7 @@ Cloudflare account ID or credential.
 
 ```mermaid
 flowchart LR
-  reference["reference.mbza.dev"] --> api["API gateway"]
+  reference["reference.mabza.dev"] --> api["API gateway"]
   ff["Flutter / FlutterFlow app"] --> api
   admin["SuperBoard dashboard"] --> api
   agent["Claude / Cursor / MCP client"] --> mcp["MCP Worker"]
@@ -100,8 +100,8 @@ evaluate journeys and alerts, and Service Bindings carry private traffic.
 The reference application is not a seventeenth business service. It is a
 separately deployed, assets-only Worker whose sole role is end-to-end acceptance
 of the public SDK contracts. Root CI builds and validates it from the same
-SuperBoard commit. Publication to `reference.mbza.dev` is intentionally still
-pending; pull requests never publish the MBZA test site.
+SuperBoard commit. Publication to `reference.mabza.dev` is intentionally still
+pending; pull requests never publish the MABZA test site.
 
 ## Worker catalogue
 
@@ -183,7 +183,7 @@ this order:
 1. `CLOUDFLARE_ACCOUNT_ID_<ACCOUNT_ALIAS>`;
 2. `CLOUDFLARE_ACCOUNT_ID` supplied by the GitHub Environment or operator.
 
-The committed development target is `infra/targets/mbza-development.json`.
+The committed development target is `infra/targets/mabza-development.json`.
 Its resource IDs remain `null` until the first authorized bootstrap. Running
 bootstrap without `--apply` is a local plan and performs no Cloudflare write.
 
@@ -219,7 +219,7 @@ the bearer or trusting client identity headers. Marketing exposes only public
 lists to this role and never permits application traffic to weaken complaint,
 hard-bounce, privacy or manual suppressions.
 
-The MBZA development and VocoStar production targets use managed Amazon SES.
+The MABZA development and VocoStar production targets use managed Amazon SES.
 The target contains only `provider`, AWS region and configuration-set name. The
 regional SMTP username/password and the exact SNS Topic ARN are Cloudflare Worker
 secrets attached only to Email. Generic SMTP and protected capture remain
@@ -353,7 +353,7 @@ no-store `503 degraded` response when readiness is not proven.
 The app-specific Worker protocol is defined by
 `@superboard/contracts/custom-worker`. It exposes a private manifest and a
 versioned job envelope containing a capability, project reference, timestamp and
-idempotency key. `apps/reference/worker` is the template used by `mbza.dev`.
+idempotency key. `apps/reference/worker` is the template used by `mabza.dev`.
 
 Rules:
 
@@ -381,7 +381,7 @@ and cancellation inside the custom Worker; sending only half of that scope is
 rejected. Global inspection, statistics and retry remain owner/admin
 back-office operations.
 
-The MBZA reference Worker exercises the complete public
+The MABZA reference Worker exercises the complete public
 create/list/detail/cancel contract. Because its validation receipts complete
 synchronously, cancellation intentionally proves the terminal
 `job_not_cancellable` response rather than inventing asynchronous work. It
@@ -393,7 +393,7 @@ statistics to the operator surface. Acceptance receipts require all sixteen
 journeys, bounded evidence, a test project, the target identity and exact
 platform/reference Git revisions. Their accepted/rejected decision is derived
 server-side. Its retention window is a
-target variable (`REFERENCE_JOB_RETENTION_DAYS`, 30 on MBZA), is validated before
+target variable (`REFERENCE_JOB_RETENTION_DAYS`, 30 on MABZA), is validated before
 use and is reported by `/health`; expired acceptance jobs are pruned on the next
 creation and by the target-declared daily cron. Custom schedules are explicit
 manifest data; the generator never infers them from capability names. This
@@ -413,7 +413,7 @@ feeds the dashboard `/infrastructure` page. It reports:
 - API environment and configured public URLs;
 - independent routed-HTTPS availability, HTTP status and latency for API, SDK,
   short links, files, Dashboard, MCP, mail preview and manifest-declared external
-  surfaces such as `reference.mbza.dev`;
+  surfaces such as `reference.mabza.dev`;
 - status, purpose and latency for every enabled Service Binding;
 - users, instances, projects and live OAuth token counts;
 - persisted billing export and failed-purchase job counts;

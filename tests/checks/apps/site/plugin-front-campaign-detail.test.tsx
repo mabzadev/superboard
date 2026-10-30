@@ -47,12 +47,12 @@ const project = {
 const testProject = { ...project, id: "42-test", internal_id: "102", is_test: true };
 const context: FrontContextValue = {
 	instanceId: "42",
-	pluginId: "supbrd-plugmod-dynamic-links",
+	pluginId: "superboard-dynamic-links",
 	path: "/dynamic-links/campaigns/campaign-1",
 	parameters: {},
 	locale: "en",
 	operator: { id: "operator-1", email: "operator@example.test", name: "Operator", role: 50 },
-	activePluginIds: ["supbrd-plugmod-dynamic-links"],
+	activePluginIds: ["superboard-dynamic-links"],
 	projectScope: {
 		production_project_ref: project.id,
 		test_project_ref: testProject.id,

@@ -23,15 +23,16 @@ export async function drainPluginWorkflowWakeups(
 	};
 	const page = await sendPluginTaskCommand(env, command);
 	if (!Array.isArray(page.waiters)) throw new Error("PLUGIN_TASK_WAKEUP_RESPONSE_INVALID");
+	const waiters: unknown[] = page.waiters;
 	let delivered = 0;
-	for (const value of page.waiters) {
+	for (const value of waiters) {
 		if (
 			!value ||
 			typeof value !== "object" ||
 			!("waiter_id" in value) ||
 			typeof value.waiter_id !== "string" ||
 			!("plugin_id" in value) ||
-			value.plugin_id !== "supbrd-plugmod-flows"
+			value.plugin_id !== "superboard-flows"
 		)
 			continue;
 		const token = flowsInternalToken(env);
@@ -58,5 +59,5 @@ export async function drainPluginWorkflowWakeups(
 			});
 		}
 	}
-	return { delivered, pending: page.waiters.length - delivered };
+	return { delivered, pending: waiters.length - delivered };
 }

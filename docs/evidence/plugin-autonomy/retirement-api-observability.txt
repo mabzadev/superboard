@@ -2,8 +2,8 @@ Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
 Custom job retry exercises the real VocoStar external adapter with an unavailable downstream orchestrator. It verifies attempts 1→2, preserved queued state/error and no duplicate credit charge; it does not claim successful media processing.
 [
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.data_source.runtime_metrics",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.data_source.runtime_metrics",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -14,8 +14,8 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.data_source.service_health",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.data_source.service_health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -26,8 +26,8 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.data_source.incidents",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.data_source.incidents",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -38,8 +38,8 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.command.acknowledge_incident",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.command.acknowledge_incident",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -50,8 +50,8 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.command.resolve_incident",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.command.resolve_incident",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -62,8 +62,8 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.data_source.platform_status",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.data_source.platform_status",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -75,8 +75,8 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.data_source.platform_custom_jobs",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.data_source.platform_custom_jobs",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -87,8 +87,8 @@ Custom job retry exercises the real VocoStar external adapter with an unavailabl
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.command.retry_custom_job",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.command.retry_custom_job",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",

@@ -94,8 +94,8 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
 	);
 	assert.deepEqual(development.matrix.include, [
 		{
-			id: "mbza-development",
-			target: "mbza-development",
+			id: "mabza-development",
+			target: "mabza-development",
 			deploymentAuthority: "cloudflare-workers-builds",
 			githubEnvironment: "development",
 			cloudflareEnvironment: "development",
@@ -118,7 +118,7 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
 
 test("development uses native Git connections without an application production deployment", async () => {
 	const configuration = await loadDeploymentMatrix();
-	const development = configuration.deployments.find(({ id }) => id === "mbza-development");
+	const development = configuration.deployments.find(({ id }) => id === "mabza-development");
 	const production = configuration.deployments.find(
 		({ id }) => id === "reference-production-production",
 	);

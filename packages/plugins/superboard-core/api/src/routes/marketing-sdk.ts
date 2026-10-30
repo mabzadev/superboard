@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	PROJECT_CONTEXT_HEADERS,
 	signProjectContext,
@@ -8,10 +9,10 @@ import { Hono, type Context } from "hono";
 import { readJsonObjectLimited } from "../lib/http-limits";
 import type { AppVariables, Env } from "../types";
 
-const marketingSdk = new Hono<{
+const marketingSdk = registerRouter(new Hono<{
 	Bindings: Env;
 	Variables: AppVariables;
-}>();
+}>(), {"service":"api","module":"routes.marketing-sdk.marketingSdk","pluginId":"superboard-marketing","surface":"sdk","access":"sdk-key","public":{"surface":"sdk","prefix":"/v1/communication","aliases":["/marketing/v1"]}});
 type MarketingSdkContext = Context<{
 	Bindings: Env;
 	Variables: AppVariables;

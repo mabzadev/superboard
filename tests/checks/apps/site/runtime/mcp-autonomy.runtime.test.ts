@@ -4,7 +4,7 @@ import { expect, test } from "vitest";
 import { dispatchMcpInstanceIntegration } from "../../../../../packages/plugins/superboard-core/api/src/lib/mcp-instance-integrations.js";
 import appWorker from "../../../../../packages/plugins/superboard-core/app/src/index.js";
 
-const plugin = "supbrd-plugmod-mcp";
+const plugin = "superboard-mcp";
 const headers = {
 	"X-Parity-Operator": "1",
 	"X-EmDash-Request": "1",
@@ -116,7 +116,7 @@ test("MCP invokes its real protocol using an ephemeral operator grant and retain
 
 test("MCP link tools use the Dynamic Links authority and preserve custom metadata", async () => {
 	const enabled = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-dynamic-links/enable",
 		{ method: "POST", headers },
 	);
 	expect(enabled.status).toBe(201);
@@ -220,7 +220,7 @@ test("MCP link tools use the Dynamic Links authority and preserve custom metadat
 });
 
 test("MCP SDK settings and usage use the owning Workers with User absent", async () => {
-	for (const id of ["supbrd-plug-settings", "supbrd-plugmod-analytics"])
+	for (const id of ["superboard-settings", "superboard-analytics"])
 		expect(
 			(
 				await SELF.fetch(`https://site.example/_emdash/api/superboard/plugins/${id}/enable`, {
@@ -285,7 +285,7 @@ async function mcpScope() {
 		headers,
 	});
 	await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-dynamic-links/enable",
 		{ method: "POST", headers },
 	);
 	const response = await SELF.fetch(
@@ -428,7 +428,7 @@ test("MCP create_link accepts a native string campaign ID", async () => {
 test("managed Infrastructure and MCP report unavailable historical metrics explicitly", async () => {
 	await mcpScope();
 	await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plugmod-observability/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-observability/enable",
 		{ method: "POST", headers },
 	);
 	for (const path of ["/api/v1/platform/status", "/api/v1/mcp/platform-status"]) {

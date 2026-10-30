@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://board.mbza.dev/schemas/flutterflow-application-bindings.schema.json",
+	"$id": "https://board.mabza.dev/schemas/flutterflow-application-bindings.schema.json",
 	"title": "Resolved SuperBoard FlutterFlow application bindings",
 	"type": "object",
 	"additionalProperties": false,
@@ -179,6 +179,10 @@
 							},
 							"shortLinkHost": {
 								"type": "string"
+							},
+							"customApiBaseUrl": {
+								"type": "string",
+								"pattern": "^https://"
 							}
 						}
 					}

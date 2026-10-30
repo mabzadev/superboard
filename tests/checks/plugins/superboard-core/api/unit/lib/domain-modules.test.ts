@@ -350,7 +350,7 @@ describe("gateway to domain service binding", () => {
 		});
 	});
 
-	it("serves legacy dashboard routes from Flows after the MBZA cutover", async () => {
+	it("serves legacy dashboard routes from Flows after the MABZA cutover", async () => {
 		let internalRequest: Request | undefined;
 		const testEnv = gatewayEnv({
 			FLOWS_MODULE: {
@@ -740,9 +740,7 @@ describe("Access Key SDK module gateway", () => {
 	});
 
 	it.each([
-		["app", "APP_MODULE", "/api/v1/app/events", "/internal/v1/customer-events"],
 		["paywalls", "PAYWALLS_MODULE", "/api/v1/paywalls/events", "/internal/v1/events"],
-		["analytics", "ANALYTICS_MODULE", "/api/v1/analytics/events", "/internal/v1/events"],
 		["onboardings", "ONBOARDINGS_MODULE", "/api/v1/onboardings/events", "/internal/v1/events"],
 	] as const)(
 		"requires and forwards idempotency for %s events",
