@@ -295,7 +295,7 @@ test("Data inventory expands the Files proxy into its executable SDK endpoints",
 				secret: token,
 				binding: {
 					fetch: (manifestRequest: Request) =>
-						worker10.fetch(manifestRequest, bindings as never, {} as ExecutionContext),
+						worker10.fetch(manifestRequest, bindings, {} as ExecutionContext),
 				},
 			},
 		],
