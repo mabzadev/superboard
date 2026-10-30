@@ -319,7 +319,7 @@
 					{
 						"type": "custom",
 						"label": "API keys",
-						"url": "/auth/access-key"
+						"url": "/auth/settings?tab=security&section=keys"
 					},
 					{
 						"type": "custom",
@@ -691,7 +691,7 @@
 					{
 						"type": "custom",
 						"label": "Clés API",
-						"url": "/auth/access-key"
+						"url": "/auth/settings?tab=security&section=keys"
 					},
 					{
 						"type": "custom",

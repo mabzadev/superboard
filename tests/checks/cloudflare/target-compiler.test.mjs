@@ -133,7 +133,7 @@ test("task-producing Workers reach Site authority through a plugin-bound API ser
 			(entry) => entry.service === service && entry.binding === "API_SERVICE",
 		);
 		assert.equal(binding?.targetService, "api", service);
-		assert.equal(binding?.props?.superboard_plugin_id, `supbrd-plugmod-${service}`, service);
+		assert.equal(binding?.props?.superboard_plugin_id, `superboard-${service}`, service);
 		assert.equal(
 			compiled.graph.bindings.some(
 				(entry) => entry.service === service && entry.resourceKey === "siteD1",
@@ -566,7 +566,10 @@ test("the same target executes local and Cloudflare configuration adapters", asy
 		assert.equal(local.graphChecksum, development.graphChecksum);
 		assert.equal(localConfig.name, "superboard-api-local");
 		assert.equal(developmentConfig.name, "superboard-api-dev");
-		assert.equal(routedConfig.routes.length, 5);
+		assert.deepEqual(
+			routedConfig.routes.map(({ pattern }) => pattern),
+			["api.mabza.dev", "sdk.mabza.dev", "in.mabza.dev"],
+		);
 
 		const missingRoutes = structuredClone(routedConfig);
 		missingRoutes.routes = [];
