@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
 import { getOrCreateProject, parseProjectExternalId } from "../lib/db";
@@ -6,7 +7,7 @@ import { siteOperatorProject } from "../lib/site-operator-project";
 import { authMiddleware } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
-const messaging = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+const messaging = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.messaging-admin.messaging","pluginId":"superboard-support","surface":"internal","access":"operator"});
 
 const REALTIME_TICKET_TTL_MS = 60_000;
 

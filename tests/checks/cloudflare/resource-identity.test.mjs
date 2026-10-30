@@ -9,7 +9,7 @@ const siteResources = ["siteD1", "siteSessionKv", "siteReleaseKv", "siteMedia"];
 
 test("Site resources retain physical names while exposing their logical migration identity", async () => {
 	for (const [name, environment] of [
-		["mbza-development", "development"],
+		["mabza-development", "development"],
 		["reference-production", "production"],
 	]) {
 		const { target } = await loadTarget(name);
@@ -33,7 +33,7 @@ test("Site resources retain physical names while exposing their logical migratio
 });
 
 test("Site resources outside the declared physical namespace fail validation", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	for (const key of siteResources) {
 		const target = structuredClone(source);
 		target.environments.development[key].name = "foreign-site-resource";

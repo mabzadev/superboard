@@ -8,8 +8,8 @@ import {
 	unique,
 } from "../../../fixtures/site-browser/site-api.js";
 
-const productsPlugin = "supbrd-plug-products";
-const billingPlugin = "supbrd-plugmod-billing";
+const productsPlugin = "superboard-products";
+const billingPlugin = "superboard-billing";
 
 test("Products offerings retains a linked catalog and archives only the selected offering", async ({
 	authenticatedPage: page,
@@ -91,9 +91,9 @@ test("Billing customers searches a real SDK-created identity and persists block/
 	const ref = await projectRef(page);
 	const identifier = `${unique("billing-sdk")}.example.test`;
 	const setupPath = `/api/v1/app/projects/${ref}/setup/web`;
-	const previousWeb = await siteApi(page.request, "supbrd-plug-settings", "GET", setupPath);
+	const previousWeb = await siteApi(page.request, "superboard-settings", "GET", setupPath);
 	try {
-		await siteApi(page.request, "supbrd-plug-settings", "PUT", setupPath, {
+		await siteApi(page.request, "superboard-settings", "PUT", setupPath, {
 			domain: identifier,
 			minimum_version: "1.0.0",
 			recommended_version: "1.0.0",
@@ -101,7 +101,7 @@ test("Billing customers searches a real SDK-created identity and persists block/
 		});
 		const key = await siteApi(
 			page.request,
-			"supbrd-plug-user",
+			"superboard-user",
 			"POST",
 			`/api/v1/app/projects/${ref}/access-key/rotate`,
 			{},
@@ -187,13 +187,13 @@ test("Billing customers searches a real SDK-created identity and persists block/
 		if (previousWeb?.configuration && previousWeb.status !== "not_configured")
 			await siteApi(
 				page.request,
-				"supbrd-plug-settings",
+				"superboard-settings",
 				"PUT",
 				setupPath,
 				previousWeb.configuration,
 			);
-		else await siteApi(page.request, "supbrd-plug-settings", "DELETE", setupPath);
-		const restoredWeb = await siteApi(page.request, "supbrd-plug-settings", "GET", setupPath);
+		else await siteApi(page.request, "superboard-settings", "DELETE", setupPath);
+		const restoredWeb = await siteApi(page.request, "superboard-settings", "GET", setupPath);
 		expect(restoredWeb?.configuration ?? null).toEqual(previousWeb?.configuration ?? null);
 	}
 });

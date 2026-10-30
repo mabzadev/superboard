@@ -281,7 +281,7 @@ void main() {
       '/api/v1/support-client/help-center/aide/articles/mon-compte',
       '/api/v1/support-client/help-center/aide/articles/mon-compte/views',
       '/api/v1/support-client/conversations/conversation-1/meetings',
-      '/api/v1/support/realtime/ticket-1',
+      '/v1/communication/support/realtime/ticket-1',
     };
     expect(
       server.requests.map((request) => request.path).toSet(),
@@ -333,12 +333,12 @@ class _SupportTestServer {
     );
     final path = request.uri.path;
 
-    if (path == '/api/v1/support/realtime/ticket-1' &&
+    if (path == '/v1/communication/support/realtime/ticket-1' &&
         WebSocketTransformer.isUpgradeRequest(request)) {
       sockets.add(await WebSocketTransformer.upgrade(request));
       return;
     }
-    if (path == '/auth/superboard-token') {
+    if (path == '/v1/auth/superboard-token') {
       return _json(request.response, {'access_token': 'signed-token'});
     }
     if (request.method == 'GET' &&

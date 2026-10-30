@@ -37,6 +37,11 @@
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9-]{1,30}$"
 		},
+		"instanceId": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9-]{1,30}$",
+			"description": "Persistent instance identity. Defaults to target and remains unchanged when a deployment is renamed."
+		},
 		"accountAlias": {
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9-]{1,30}$"

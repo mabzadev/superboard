@@ -1,7 +1,7 @@
 {
   "results": [
     {
-      "plugin_id": "supbrd-plugmod-files",
+      "plugin_id": "superboard-files",
       "path": "/system/files",
       "operation": "file_upload_download_trash_restore",
       "status": "passed",
@@ -12,7 +12,7 @@
       "restored": true
     },
     {
-      "plugin_id": "supbrd-plugmod-mcp",
+      "plugin_id": "superboard-mcp",
       "path": "/mcp",
       "operation": "mcp_call_receipt_reload",
       "status": "passed",

@@ -9,11 +9,13 @@ import { useEffect, useState } from "react";
 
 import {
 	getBillingOverview,
+	testBillingCredentials,
 	updateBillingSettings,
 	type BillingOverview,
 } from "./billing/api/billing/billingService.js";
 import { useMonetizationI18n } from "./i18n.js";
 import { MonetizationSettingsForm } from "./MonetizationSettingsForm.js";
+import StripeSettings from "./StripeSettings.js";
 
 export default function MonetizationSettingsPage() {
 	const { t, locale } = useMonetizationI18n();
@@ -37,6 +39,7 @@ export default function MonetizationSettingsPage() {
 			</header>
 			<SectionNavigation />
 			<Tabs
+				className="min-w-0 gap-5"
 				value={tab}
 				onValueChange={(value) => {
 					setTab(value);
@@ -45,7 +48,10 @@ export default function MonetizationSettingsPage() {
 					window.history.replaceState(null, "", url);
 				}}
 			>
-				<TabsList aria-label={t("Settings sections")}>
+				<TabsList
+					className="h-auto max-w-full flex-wrap justify-start"
+					aria-label={t("Settings sections")}
+				>
 					<TabsTrigger value="general">{t("General")}</TabsTrigger>
 					<TabsTrigger value="products">{t("Products")}</TabsTrigger>
 					<TabsTrigger value="gateways">{t("Gateways")}</TabsTrigger>
@@ -59,7 +65,8 @@ export default function MonetizationSettingsPage() {
 				<TabsContent value="products" forceMount hidden={tab !== "products"}>
 					<MonetizationSettingsForm section="products" />
 				</TabsContent>
-				<TabsContent value="configuration">
+				<TabsContent value="configuration" forceMount hidden={tab !== "configuration"}>
+					<MonetizationSettingsForm section="billing" />
 					<PluginConfigurationTab locale={locale} />
 				</TabsContent>
 			</Tabs>
@@ -68,7 +75,7 @@ export default function MonetizationSettingsPage() {
 }
 
 function BillingSettings({ projectId, tab }: { projectId: string; tab: string }) {
-	const { t } = useMonetizationI18n();
+	const { t, locale } = useMonetizationI18n();
 	const [overview, setOverview] = useState<BillingOverview | null>(null);
 	const [enabled, setEnabled] = useState(false);
 	const [blockTransfer, setBlockTransfer] = useState(false);
@@ -76,6 +83,7 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 	const [busy, setBusy] = useState(false);
 	const [saved, setSaved] = useState(false);
 	const [attempt, setAttempt] = useState(0);
+	const [connectionResult, setConnectionResult] = useState<string | null>(null);
 	useEffect(() => {
 		let active = true;
 		void getBillingOverview(projectId)
@@ -185,14 +193,19 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 					</form>
 				)}
 			</TabsContent>
-			<TabsContent value="gateways" forceMount hidden={tab !== "gateways"}>
-				<MonetizationSettingsForm section="billing" />
+			<TabsContent className="space-y-5" value="gateways" forceMount hidden={tab !== "gateways"}>
+				<StripeSettings key={projectId} projectId={projectId} />
 				{!overview ? (
 					unavailable
 				) : (
 					<div className="space-y-4">
 						<h2>{t("Connected Gateways")}</h2>
-						<p>{t("Credential configuration does not confirm provider availability.")}</p>
+						<p>
+							{t(
+								"Configure store credentials in the iOS or Android application settings, then test the connection here.",
+							)}
+						</p>
+						{connectionResult && <p role="status">{connectionResult}</p>}
 						{(
 							[
 								["ios", "Apple App Store"],
@@ -203,18 +216,49 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 							return (
 								<div
 									key={platform}
-									className="flex items-center justify-between rounded border p-4"
+									className="flex flex-col gap-3 rounded border p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
 								>
-									<span>{t(label)}</span>
-									<Badge variant="secondary">
-										{t(
-											credential
-												? credential.configured
-													? "Configured"
-													: "Not configured"
-												: "Unknown",
-										)}
-									</Badge>
+									<div className="flex flex-wrap items-center gap-2">
+										<span className="font-medium">{t(label)}</span>
+										<Badge variant="secondary">
+											{t(
+												credential
+													? credential.configured
+														? "Configured"
+														: "Not configured"
+													: "Unknown",
+											)}
+										</Badge>
+									</div>
+									<div className="flex flex-wrap items-center gap-2">
+										<Button asChild variant="outline">
+											<a href={`/app/${platform}-setup?lang=${locale}`}>{t("Configure store")}</a>
+										</Button>
+										<Button
+											type="button"
+											disabled={busy}
+											onClick={() => {
+												setBusy(true);
+												setConnectionResult(null);
+												testBillingCredentials(projectId, platform)
+													.then(() => {
+														setConnectionResult(t("Store connection verified."));
+													})
+													.catch(() => {
+														setConnectionResult(
+															t(
+																"Store connection failed. Check the application credentials and try again.",
+															),
+														);
+													})
+													.finally(() => {
+														setBusy(false);
+													});
+											}}
+										>
+											{t("Test connection")}
+										</Button>
+									</div>
 								</div>
 							);
 						})}

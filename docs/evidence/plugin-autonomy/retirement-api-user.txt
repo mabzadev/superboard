@@ -13,8 +13,8 @@ The external Google JWKS response is a local integration-test fixture. Signature
 
 [
   {
-    "plugin_id": "supbrd-plug-user",
-    "route_id": "gateway.supbrd-plug-user.command.application_sign_in",
+    "plugin_id": "superboard-user",
+    "route_id": "gateway.superboard-user.command.application_sign_in",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -26,8 +26,8 @@ The external Google JWKS response is a local integration-test fixture. Signature
     ]
   },
   {
-    "plugin_id": "supbrd-plug-user",
-    "route_id": "gateway.supbrd-plug-user.data_source.active_sessions",
+    "plugin_id": "superboard-user",
+    "route_id": "gateway.superboard-user.data_source.active_sessions",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -39,8 +39,8 @@ The external Google JWKS response is a local integration-test fixture. Signature
     ]
   },
   {
-    "plugin_id": "supbrd-plug-user",
-    "route_id": "gateway.supbrd-plug-user.command.update_profile",
+    "plugin_id": "superboard-user",
+    "route_id": "gateway.superboard-user.command.update_profile",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -51,8 +51,8 @@ The external Google JWKS response is a local integration-test fixture. Signature
     ]
   },
   {
-    "plugin_id": "supbrd-plug-user",
-    "route_id": "gateway.supbrd-plug-user.data_source.current_profile",
+    "plugin_id": "superboard-user",
+    "route_id": "gateway.superboard-user.data_source.current_profile",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -63,8 +63,8 @@ The external Google JWKS response is a local integration-test fixture. Signature
     ]
   },
   {
-    "plugin_id": "supbrd-plug-user",
-    "route_id": "gateway.supbrd-plug-user.data_source.members",
+    "plugin_id": "superboard-user",
+    "route_id": "gateway.superboard-user.data_source.members",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -75,8 +75,8 @@ The external Google JWKS response is a local integration-test fixture. Signature
     ]
   },
   {
-    "plugin_id": "supbrd-plug-user",
-    "route_id": "gateway.supbrd-plug-user.command.link_provider",
+    "plugin_id": "superboard-user",
+    "route_id": "gateway.superboard-user.command.link_provider",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -88,8 +88,8 @@ The external Google JWKS response is a local integration-test fixture. Signature
     ]
   },
   {
-    "plugin_id": "supbrd-plug-user",
-    "route_id": "gateway.supbrd-plug-user.data_source.linked_providers",
+    "plugin_id": "superboard-user",
+    "route_id": "gateway.superboard-user.data_source.linked_providers",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -100,8 +100,8 @@ The external Google JWKS response is a local integration-test fixture. Signature
     ]
   },
   {
-    "plugin_id": "supbrd-plug-user",
-    "route_id": "gateway.supbrd-plug-user.command.revoke_application_session",
+    "plugin_id": "superboard-user",
+    "route_id": "gateway.superboard-user.command.revoke_application_session",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -112,8 +112,8 @@ The external Google JWKS response is a local integration-test fixture. Signature
     ]
   },
   {
-    "plugin_id": "supbrd-plug-user",
-    "route_id": "gateway.supbrd-plug-user.command.suspend_member",
+    "plugin_id": "superboard-user",
+    "route_id": "gateway.superboard-user.command.suspend_member",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",

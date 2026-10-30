@@ -41,7 +41,7 @@ Future<bool> superboardMessagingInitializeAuthenticated({
     try {
       response = await http
           .post(
-            Uri.parse('$base/auth/superboard-token'),
+            Uri.parse('$base/v1/auth/superboard-token'),
             headers: {
               'Authorization': 'Bearer ${applicationAccessToken.trim()}',
               'Accept': 'application/json',

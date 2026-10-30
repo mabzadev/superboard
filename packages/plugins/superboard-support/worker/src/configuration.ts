@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { isSafePublicHttpsUrl } from "@superboard/contracts/url-security";
 import { Hono } from "hono";
 
@@ -239,7 +240,7 @@ export const configurationCatalog = {
 
 export type ConfigurationEntityType = keyof typeof configurationCatalog;
 
-const configuration = new Hono<{ Bindings: Env }>();
+const configuration = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"support","module":"configuration.configuration","pluginId":"superboard-support","surface":"internal","access":"framework"});
 
 configuration.get("/:projectId/settings", async (c) => {
 	const projectId = positiveInt(c.req.param("projectId"));

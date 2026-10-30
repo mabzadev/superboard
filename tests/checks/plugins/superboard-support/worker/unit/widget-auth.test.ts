@@ -47,6 +47,7 @@ async function environment(
 async function signedRequest(
 	options: {
 		path?: string;
+		publicPrefix?: string;
 		method?: string;
 		body?: string;
 		project?: string;
@@ -64,7 +65,7 @@ async function signedRequest(
 	const visitor = options.visitor ?? "visitor-sensitive-value";
 	const timestamp = options.timestamp ?? nowSeconds;
 	const idempotencyKey = options.idempotencyKey ?? "widget-mutation-1";
-	const canonicalPath = `/api/v1/support-widget${path}`;
+	const canonicalPath = `${options.publicPrefix ?? "/api/v1/support-widget"}${path}`;
 	const canonical = [
 		String(timestamp),
 		method.toUpperCase(),
@@ -92,21 +93,24 @@ async function signedRequest(
 }
 
 describe("Support widget authentication", () => {
-	it("accepts the exact canonical HMAC and derives an opaque visitor identity", async () => {
-		const identity = await verifyWidgetIdentity(
-			await environment(),
-			await signedRequest(),
-			nowSeconds,
-		);
+	it.each(["/api/v1/support-widget", "/v1/communication/support/widget"])(
+		"accepts HMAC requests signed for %s",
+		async (publicPrefix) => {
+			const identity = await verifyWidgetIdentity(
+				await environment(),
+				await signedRequest({ publicPrefix }),
+				nowSeconds,
+			);
 
-		expect(identity).toMatchObject({
-			projectId: 12,
-			authentication: "widget_signature",
-		});
-		expect(identity.subject).toMatch(/^widget:[a-f0-9]{64}$/u);
-		expect(identity.subject).not.toContain("visitor-sensitive-value");
-		expect(identity.subject).not.toContain(widgetKey);
-	});
+			expect(identity).toMatchObject({
+				projectId: 12,
+				authentication: "widget_signature",
+			});
+			expect(identity.subject).toMatch(/^widget:[a-f0-9]{64}$/u);
+			expect(identity.subject).not.toContain("visitor-sensitive-value");
+			expect(identity.subject).not.toContain(widgetKey);
+		},
+	);
 
 	it("binds the signature to body, method, public path, project, visitor, and idempotency key", async () => {
 		const env = await environment();

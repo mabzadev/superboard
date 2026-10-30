@@ -51,7 +51,7 @@ describe("reference custom Worker with D1", () => {
 			status: "completed",
 			result: {
 				acceptance: {
-					target: "mbza-development",
+					target: "mabza-development",
 					projectEnvironment: "test",
 					platformRevision: "a".repeat(40),
 					referenceRevision: "b".repeat(40),
@@ -422,7 +422,7 @@ function acceptanceJob(idempotencyKey: string) {
 		capability: "reference.acceptance",
 		payload: {
 			schemaVersion: 1,
-			target: "mbza-development",
+			target: "mabza-development",
 			projectEnvironment: "test",
 			platformRevision: "a".repeat(40),
 			referenceRevision: "b".repeat(40),

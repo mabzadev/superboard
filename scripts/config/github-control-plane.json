@@ -69,7 +69,7 @@
 			"environments": {
 				"development": {
 					"variables": {
-						"SUPERBOARD_TARGET": "mbza-development"
+						"SUPERBOARD_TARGET": "mabza-development"
 					},
 					"secrets": [],
 					"protection": {

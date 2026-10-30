@@ -120,7 +120,7 @@ export async function verifyWidgetIdentity(
     "Widget request body is limited to 1 MB",
   );
   const publicPath = publicWidgetPath(new URL(request.url).pathname);
-  const canonicalInput = [
+  const canonicalParts = [
     timestampText,
     request.method.toUpperCase(),
     publicPath,
@@ -128,9 +128,14 @@ export async function verifyWidgetIdentity(
     visitorId,
     request.headers.get("idempotency-key") || "",
     await sha256Hex(body),
-  ].join("\n");
-  const expected = await hmacHex(signingSecret, canonicalInput);
-  if (!(await matchesAnySecret(signature, configuredSecrets(expected)))) {
+  ];
+  const legacyParts = [...canonicalParts];
+  legacyParts[2] = publicPath.replace("/v1/communication/support/widget", "/api/v1/support-widget");
+  const [expected, legacyExpected] = await Promise.all([
+    hmacHex(signingSecret, canonicalParts.join("\n")),
+    hmacHex(signingSecret, legacyParts.join("\n")),
+  ]);
+  if (!(await matchesAnySecret(signature, configuredSecrets(expected, legacyExpected)))) {
     throw failure(
       "widget_identity_invalid",
       "Widget request authentication failed",
@@ -216,7 +221,7 @@ function publicWidgetPath(pathname: string): string {
   if (pathname !== prefix && !pathname.startsWith(`${prefix}/`)) {
     throw failure("widget_path_invalid", "Widget request path is invalid", 422);
   }
-  return `/api/v1/support-widget${pathname.slice(prefix.length)}`;
+  return `/v1/communication/support/widget${pathname.slice(prefix.length)}`;
 }
 
 function boundedHeader(value: string | null, code: string): string {

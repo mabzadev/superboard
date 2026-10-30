@@ -4,11 +4,16 @@ import type {
 } from "./native-front-presentation.js";
 
 const suffixPattern = /[?#]/u;
+const pathname = (href: string) => href.split(suffixPattern, 1)[0] ?? "";
+const querySpecificity = (href: string) => {
+	const parameters = new URL(href, "https://superboard.invalid").searchParams;
+	parameters.delete("lang");
+	return parameters.size;
+};
 const matchesPath = (path: string, href: string) => {
-	const target = href.split(suffixPattern, 1)[0];
-	return (
-		target !== undefined && (path === target || (target !== "/" && path.startsWith(`${target}/`)))
-	);
+	const current = pathname(path);
+	const target = pathname(href);
+	return current === target || (target !== "/" && current.startsWith(`${target}/`));
 };
 
 export function organizeProductNavigation(
@@ -29,7 +34,8 @@ export function organizeProductNavigation(
 		.filter(({ item }) => matchesPath(path, item.href))
 		.toSorted(
 			(a, b) =>
-				b.item.href.length - a.item.href.length ||
+				pathname(b.item.href).length - pathname(a.item.href).length ||
+				querySpecificity(a.item.href) - querySpecificity(b.item.href) ||
 				Number(Boolean(a.item.children?.length)) - Number(Boolean(b.item.children?.length)),
 		)[0];
 	const localItems = active?.root.children?.length

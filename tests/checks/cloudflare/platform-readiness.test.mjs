@@ -48,26 +48,26 @@ test("reference workspace accepts an explicit absolute CI path", () => {
 });
 
 test("target readiness distinguishes unresolved fixtures from provisioned targets", async () => {
-	const { target: mbzaSource } = await loadTarget("mbza-development");
-	const mbza = targetWithoutResourceIds(mbzaSource, "development");
+	const { target: mabzaSource } = await loadTarget("mabza-development");
+	const mabza = targetWithoutResourceIds(mabzaSource, "development");
 	const { target: referenceApplication } = await loadTarget("reference-production");
-	const mbzaResult = targetReadiness(mbza, "development");
+	const mabzaResult = targetReadiness(mabza, "development");
 	const referenceApplicationResult = targetReadiness(referenceApplication, "production");
 
-	assert.equal(requiredResourceIds(mbza, "development").length, 18);
-	assert.equal(mbzaResult.resourceIds.missing.length, 18);
-	assert.equal(mbzaResult.resourceIdentity.logicalName, "superboard");
-	assert.equal(mbzaResult.resourceIdentity.physicalName, "superboard");
+	assert.equal(requiredResourceIds(mabza, "development").length, 18);
+	assert.equal(mabzaResult.resourceIds.missing.length, 18);
+	assert.equal(mabzaResult.resourceIdentity.logicalName, "superboard");
+	assert.equal(mabzaResult.resourceIdentity.physicalName, "superboard");
 	assert.equal(
-		requiredResourceIds(mbza, "development").every(
+		requiredResourceIds(mabza, "development").every(
 			({ logicalName, physicalName, name }) =>
 				logicalName.startsWith("superboard") && physicalName === name,
 		),
 		true,
 	);
-	assert.equal(mbzaResult.manifestProvisioned, false);
-	assert.equal(mbzaResult.acceptance.frontMediaIsolated, true);
-	assert.equal(mbzaResult.acceptance.legacyMessagingDisabled, true);
+	assert.equal(mabzaResult.manifestProvisioned, false);
+	assert.equal(mabzaResult.acceptance.frontMediaIsolated, true);
+	assert.equal(mabzaResult.acceptance.legacyMessagingDisabled, true);
 	assert.equal(referenceApplicationResult.resourceIds.required, 16);
 	assert.deepEqual(
 		referenceApplicationResult.resourceIds.missing.map(({ key, name }) => ({ key, name })),
@@ -82,7 +82,7 @@ test("target readiness distinguishes unresolved fixtures from provisioned target
 });
 
 test("Site storage IDs block readiness independently and together", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	const keys = ["siteD1", "siteSessionKv", "siteReleaseKv"];
 	assert.equal(targetReadiness(source, "development").manifestProvisioned, true);
 	for (const missingKeys of [...keys.map((key) => [key]), keys]) {
@@ -98,7 +98,7 @@ test("Site storage IDs block readiness independently and together", async () => 
 });
 
 test("Site media isolation requires both named buckets and rejects shared storage", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	const missingSite = structuredClone(source);
 	delete missingSite.environments.development.siteMedia;
 	assert.equal(targetReadiness(missingSite, "development").acceptance.frontMediaIsolated, false);
@@ -278,7 +278,7 @@ test("package-backed SDK readiness verifies public ownership and exact versions"
 			{
 				id: "javascript",
 				lifecycle: "active",
-				packageName: "@mbzadev/superboard-js-sdk",
+				packageName: "@mabzadev/superboard-js-sdk",
 				sourceVersion: "1.0.2",
 				latestReleaseVersion: "1.0.1",
 				releaseRef: "sdk-js-v1.0.1",
@@ -497,7 +497,7 @@ test("governance schema accepts repositories owned by another GitHub account", a
 });
 
 test("reference readiness binds short links and source versions to the target", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const repositories = {
 		platform: { nameWithOwner: "mabzadev/superboard" },
 	};
@@ -505,11 +505,11 @@ test("reference readiness binds short links and source versions to the target", 
 		platformRepository: "https://github.com/mabzadev/superboard",
 		referenceRepository: "https://github.com/mabzadev/superboard",
 		referencePath: "apps/reference",
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		sdkApplication: {
 			platform: "web",
-			identifier: "reference.mbza.dev",
+			identifier: "reference.mabza.dev",
 			projectEnvironment: "test",
 		},
 		deployment: {
@@ -518,14 +518,14 @@ test("reference readiness binds short links and source versions to the target", 
 			workerName: "superboard-reference-app-dev",
 		},
 		endpoints: {
-			referenceWeb: "https://reference.mbza.dev",
-			dashboard: "https://board.mbza.dev",
-			api: "https://api.mbza.dev",
-			sdk: "https://sdk.mbza.dev",
-			shortLinks: "https://in.mbza.dev",
-			files: "https://files.mbza.dev",
+			referenceWeb: "https://reference.mabza.dev",
+			dashboard: "https://board.mabza.dev",
+			api: "https://api.mabza.dev",
+			sdk: "https://sdk.mabza.dev",
+			shortLinks: "https://in.mabza.dev",
+			files: "https://files.mabza.dev",
 			mailPreview: null,
-			support: "https://api.mbza.dev/api/v1/support-client",
+			support: "https://api.mabza.dev/api/v1/support-client",
 		},
 		libraries: {
 			superboard_flutterflow: {
@@ -562,7 +562,7 @@ test("reference readiness binds short links and source versions to the target", 
 });
 
 test("reference readiness derives application URLs and repositories from manifests", async () => {
-	const { target: sourceTarget } = await loadTarget("mbza-development");
+	const { target: sourceTarget } = await loadTarget("mabza-development");
 	const target = structuredClone(sourceTarget);
 	target.target = "sample-development";
 	target.domains = {
@@ -683,10 +683,10 @@ test("git readiness requires a clean committed declared branch and remote", () =
 });
 
 test("credential readiness reports names and presence without secret values", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const secret = "must-never-be-returned";
 	const result = credentialReadiness(target, "development", {
-		CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT: "a".repeat(32),
+		CLOUDFLARE_ACCOUNT_ID_MABZA_DEVELOPMENT: "a".repeat(32),
 		CLOUDFLARE_API_TOKEN: secret,
 	});
 	assert.equal(result.ready, true);
@@ -742,16 +742,16 @@ test("current offline report is fail-closed and contains actionable blockers", a
 	assert.equal(report.ready, false);
 	assert.equal(report.mode, "offline-read-only");
 	assert.equal(
-		report.blockers.some((blocker) => blocker.id === "mbza-development.resource_ids"),
+		report.blockers.some((blocker) => blocker.id === "mabza-development.resource_ids"),
 		false,
 	);
-	assert.deepEqual(report.targets["mbza-development"].resourceIds.missing, []);
-	assert.deepEqual(Object.keys(report.targets), ["mbza-development"]);
+	assert.deepEqual(report.targets["mabza-development"].resourceIds.missing, []);
+	assert.deepEqual(Object.keys(report.targets), ["mabza-development"]);
 	assert.ok(report.blockers.some((blocker) => blocker.id === "github.not_inspected"));
 	for (const id of ["development.google", "development.apple", "development.support_project"]) {
 		const blocker = report.blockers.find((entry) => entry.id === id);
 		assert.match(blocker?.action || "", /target:configure-application/u);
-		assert.match(blocker?.action || "", /--target mbza-development/u);
+		assert.match(blocker?.action || "", /--target mabza-development/u);
 		assert.match(blocker?.action || "", /--environment development/u);
 	}
 	assert.equal(report.stages.historicalParity.ready, true);
@@ -806,9 +806,9 @@ test("current offline report is fail-closed and contains actionable blockers", a
 		})),
 		[
 			{
-				id: "mbza-development",
+				id: "mabza-development",
 				branch: "dev",
-				target: "mbza-development",
+				target: "mabza-development",
 				deploymentAuthority: "cloudflare-workers-builds",
 			},
 		],

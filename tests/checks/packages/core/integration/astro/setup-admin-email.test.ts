@@ -76,7 +76,7 @@ describe("email-verified administrator setup", () => {
 	it("completes setup on transactionless databases such as D1", async () => {
 		const sent: Array<{ text: string }> = [];
 		const sessionValues = new Map<string, unknown>();
-		const request = new Request("https://site.mbza.dev/_emdash/api/setup/admin/email", {
+		const request = new Request("https://site.mabza.dev/_emdash/api/setup/admin/email", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ email: "mabzadev@gmail.com", name: "Mabza" }),
@@ -95,7 +95,7 @@ describe("email-verified administrator setup", () => {
 	it("sends the setup link and creates a strongly reauthenticated admin after verification", async () => {
 		const sent: Array<{ text: string }> = [];
 		const sessionValues = new Map<string, unknown>();
-		const request = new Request("https://site.mbza.dev/_emdash/api/setup/admin/email", {
+		const request = new Request("https://site.mabza.dev/_emdash/api/setup/admin/email", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ email: "mabzadev@gmail.com", name: "Mabza" }),
@@ -132,7 +132,7 @@ describe("email-verified administrator setup", () => {
 		const sent: Array<{ text: string }> = [];
 		const sessionValues = new Map<string, unknown>();
 		const makeRequest = () => {
-			const request = new Request("https://site.mbza.dev/_emdash/api/setup/admin/email", {
+			const request = new Request("https://site.mabza.dev/_emdash/api/setup/admin/email", {
 				method: "POST",
 				headers: { "content-type": "application/json", "CF-Connecting-IP": "192.0.2.1" },
 				body: JSON.stringify({ email: "mabzadev@gmail.com", name: "Mabza" }),

@@ -7,7 +7,6 @@ import {
 import type { BillingEnv } from "../types";
 import {
 	canonicalAnalyticsEventId,
-	deliverAnalyticsFact,
 	enqueueAnalyticsFactStatement,
 } from "./analytics-facts";
 import { entitlementIsActive } from "./billing-state";
@@ -28,7 +27,7 @@ export const BILLING_STATUSES = [
 ] as const;
 
 export type BillingStatus = (typeof BILLING_STATUSES)[number];
-export type BillingStore = "apple" | "google" | "promotional";
+export type BillingStore = "apple" | "google" | "stripe" | "promotional";
 export type BillingEnvironment = "sandbox" | "production";
 
 export type VerifiedPurchase = {
@@ -257,7 +256,7 @@ async function projectCustomerEntitlement(
 		projectId: string;
 		customerId: string;
 		entitlementId: string;
-		fallbackProductId: string;
+		fallbackProductId: string | null;
 		fallbackStartsAt?: string | null;
 		fallbackExpiresAt?: string | null;
 	},
@@ -273,7 +272,7 @@ async function projectCustomerEntitlement(
           ORDER BY datetime(COALESCE(t.event_occurred_at, t.verified_at)) DESC, t.id DESC
         ) AS event_rank
       FROM billing_transactions t
-      JOIN billing_products p ON p.id = t.product_id AND p.product_type = 'non_consumable'
+      JOIN billing_products p ON p.id = t.product_id AND p.product_type IN ('non_consumable', 'consumable')
       JOIN billing_product_entitlements pe
         ON pe.product_id = t.product_id AND pe.entitlement_id = ?
       WHERE t.project_id = ? AND t.customer_id = ?
@@ -339,8 +338,46 @@ async function projectCustomerEntitlement(
 		.run();
 }
 
+export async function refreshCatalogEntitlement(
+	env: BillingEnv,
+	projectId: string,
+	entitlementId: string,
+	environment: BillingEnvironment,
+) {
+	let cursor = "";
+	for (;;) {
+		const customers = await env.DB.prepare(`
+			SELECT c.id FROM billing_customers c WHERE c.project_id=? AND c.id>? AND (
+				EXISTS (SELECT 1 FROM billing_customer_entitlements ce WHERE ce.customer_id=c.id AND ce.entitlement_id=?)
+				OR EXISTS (SELECT 1 FROM billing_transactions tx JOIN billing_product_entitlements pe ON pe.product_id=tx.product_id
+					WHERE tx.customer_id=c.id AND pe.entitlement_id=?)
+			) ORDER BY c.id LIMIT 100
+		`)
+			.bind(projectId, cursor, entitlementId, entitlementId)
+			.all<{ id: string }>();
+		for (const customer of customers.results) {
+			await projectCustomerEntitlement(env.DB, {
+				projectId,
+				customerId: customer.id,
+				entitlementId,
+				fallbackProductId: null,
+			});
+			await queueCustomerEntitlementChanged(env, {
+				projectId,
+				customerId: customer.id,
+				environment,
+				reason: "catalog_mapping_changed",
+			});
+		}
+		if (customers.results.length < 100) break;
+		const last = customers.results.at(-1);
+		if (!last) break;
+		cursor = last.id;
+	}
+}
+
 async function syncEntitlements(db: D1Database, purchase: VerifiedPurchase, productId: string) {
-	if (!purchase.customerId || purchase.productType === "consumable") return [] as string[];
+	if (!purchase.customerId) return [] as string[];
 	const mappings = await db
 		.prepare(
 			`
@@ -348,9 +385,12 @@ async function syncEntitlements(db: D1Database, purchase: VerifiedPurchase, prod
     FROM billing_product_entitlements pe
     JOIN billing_entitlements e ON e.id = pe.entitlement_id
     WHERE pe.product_id = ? AND e.active = 1
+    UNION
+    SELECT entitlement_id AS id FROM billing_customer_entitlements
+    WHERE customer_id = ? AND project_id = ? AND source = 'purchase'
   `,
 		)
-		.bind(productId)
+		.bind(productId, purchase.customerId, String(purchase.projectId))
 		.all<{ id: string }>();
 	for (const entitlement of mappings.results || []) {
 		await projectCustomerEntitlement(db, {
@@ -853,7 +893,6 @@ export async function applyVerifiedPurchase(env: BillingEnv, purchase: VerifiedP
 			reason: "purchase_transferred",
 		});
 	}
-	await deliverAnalyticsFact(env, purchase.projectId, analyticsFactKey);
 	return { transactionId: stored.id, duplicate: insert.meta.changes === 0 };
 }
 
@@ -895,7 +934,7 @@ export async function customerInfo(db: D1Database, projectId: string | number, c
 	const rows = await db
 		.prepare(
 			`
-    SELECT ce.*, e.identifier, p.store_product_id, p.store
+    SELECT ce.*, e.identifier, e.active AS entitlement_active, p.store_product_id, p.store
     FROM billing_customer_entitlements ce
     JOIN billing_entitlements e ON e.id = ce.entitlement_id
     LEFT JOIN billing_products p ON p.id = ce.product_id
@@ -929,10 +968,24 @@ export async function customerInfo(db: D1Database, projectId: string | number, c
 		.bind(customerId)
 		.all<{ currency_identifier: string; balance: number }>();
 	const entitlements: Record<string, unknown> = {};
-	for (const row of rows.results || []) {
+	const active = (row: Record<string, unknown>) =>
+		Number(row.entitlement_active) === 1 &&
+		entitlementIsActive(
+			typeof row.status === "string" ? row.status : "",
+			typeof row.expires_at === "string" ? row.expires_at : null,
+		);
+	const candidates = (rows.results || []).sort((left, right) => {
+		if (active(left) !== active(right)) return Number(active(right)) - Number(active(left));
+		const expiry = (row: Record<string, unknown>) =>
+			typeof row.expires_at === "string" ? Date.parse(row.expires_at) : Number.POSITIVE_INFINITY;
+		if (expiry(left) !== expiry(right)) return expiry(right) - expiry(left);
+		return String(left.source).localeCompare(String(right.source));
+	});
+	for (const row of candidates) {
+		if (Object.hasOwn(entitlements, String(row.identifier))) continue;
 		entitlements[String(row.identifier)] = {
 			identifier: row.identifier,
-			is_active: entitlementIsActive(String(row.status), row.expires_at as string | null),
+			is_active: active(row),
 			status: row.status,
 			product_id: row.store_product_id,
 			store: row.store,
@@ -999,12 +1052,13 @@ export async function offeringsForCustomer(
         AND (
           (? = 'ios' AND p.store = 'apple')
           OR (? = 'android' AND p.store = 'google')
+          OR (? = 'web' AND p.store = 'stripe')
         )
         AND p.environment = ?
       ORDER BY bp.position ASC
     `,
 			)
-			.bind(offering.id, platform, platform, environment)
+			.bind(offering.id, platform, platform, platform, environment)
 			.all<Record<string, unknown>>();
 		result[String(offering.identifier)] = {
 			identifier: offering.identifier,

@@ -23,7 +23,7 @@ import {
 import { validateDeploymentConfiguration } from "../../../scripts/github/deployment-matrix.mjs";
 
 const target = JSON.parse(
-	await readFile(new URL("../../../infra/targets/mbza-development.json", import.meta.url), "utf8"),
+	await readFile(new URL("../../../infra/targets/mabza-development.json", import.meta.url), "utf8"),
 );
 const uuid = "12345678-1234-1234-1234-123456789012";
 
@@ -129,7 +129,7 @@ test("the build refuses another branch, missing Cloudflare context and invalid r
 		WORKERS_CI_BRANCH: "dev",
 		WORKERS_CI_COMMIT_SHA: "a".repeat(40),
 		CLOUDFLARE_ACCOUNT_ID: "b".repeat(32),
-		SUPERBOARD_TARGET: "mbza-development",
+		SUPERBOARD_TARGET: "mabza-development",
 		SUPERBOARD_ENVIRONMENT: "development",
 	};
 	assert.equal(validateBuildContext(env).branch, "dev");
@@ -191,7 +191,7 @@ test("private installation manifests can add an account without editing the cent
 	const privateTarget = { ...target, target: "another-customer", accountAlias: "another-customer" };
 	const env = { SUPERBOARD_TARGET_MANIFEST: JSON.stringify(privateTarget) };
 	assert.deepEqual((await loadTarget("another-customer", env)).target, privateTarget);
-	await assert.rejects(loadTarget("mbza-development", env), /BUILD_TARGET_MANIFEST_MISMATCH/u);
+	await assert.rejects(loadTarget("mabza-development", env), /BUILD_TARGET_MANIFEST_MISMATCH/u);
 });
 
 test("failed validation stops before preparation or deployment", async () => {

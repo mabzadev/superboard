@@ -33,7 +33,7 @@ export async function analyticsFacts(projectRef: string) {
 				dispatchLifecycleApi(
 					request,
 					{ ...env },
-					pluginTaskContext(createExecutionContext(), "supbrd-plugmod-analytics"),
+					pluginTaskContext(createExecutionContext(), "superboard-analytics"),
 				),
 		},
 	} as unknown as Env;

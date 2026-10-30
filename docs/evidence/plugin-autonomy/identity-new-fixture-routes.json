@@ -3,7 +3,7 @@
   "baseline_source_commit": "60ab8f5ed2aa04b171967cec3b656bfdd3f0f717",
   "results": [
     {
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "route_id": "superboard.identity_by_lang_saml_by_id",
       "route_pattern": "/identity/:lang/saml/:id",
       "path": "/identity/en/saml/1",
@@ -45,7 +45,7 @@
       ]
     },
     {
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "route_id": "superboard.identity_by_lang_apps_banners_by_id",
       "route_pattern": "/identity/:lang/apps/banners/:id",
       "path": "/identity/en/apps/banners/1",
@@ -87,7 +87,7 @@
       ]
     },
     {
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "route_id": "superboard.identity_by_lang_user_attributes_by_id",
       "route_pattern": "/identity/:lang/user-attributes/:id",
       "path": "/identity/en/user-attributes/1",

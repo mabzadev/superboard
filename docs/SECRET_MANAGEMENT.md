@@ -3,7 +3,7 @@
 ## Décision d'architecture
 
 Chaque couple `cible/environnement` possède un graphe de secrets indépendant.
-Une valeur de développement MBZA ne doit jamais être réutilisée par VocoStar,
+Une valeur de développement MABZA ne doit jamais être réutilisée par VocoStar,
 et deux applications de production ne doivent jamais partager leurs clés, même
 si elles utilisent exactement les mêmes Workers SuperBoard.
 
@@ -58,7 +58,7 @@ pas être ajouté silencieusement sans propriétaire ni stratégie de rotation.
 
 Les contrats partagés sont propres à une cible. Par exemple,
 `vocostar/production/module-internal-token` et
-`mbza-development/development/module-internal-token` sont deux valeurs
+`mabza-development/development/module-internal-token` sont deux valeurs
 différentes.
 
 ## Contrats propres à une application
@@ -153,13 +153,13 @@ Le dépôt actif `mabzadev/superboard` reste public. Les anciens dépôts
 secrets de déploiement actifs sont attachés aux GitHub Environments ou aux
 Workers Cloudflare, pas au dépôt :
 
-- `development` sélectionne `mbza-development` et le compte Cloudflare MBZA ;
+- `development` sélectionne `mabza-development` et le compte Cloudflare MABZA ;
 - `production` sélectionne `vocostar` et le compte Cloudflare VocoStar ;
 - `scripts/config/cloudflare-deployments.json` permet à une même branche de sélectionner
   plusieurs Environments et donc plusieurs comptes/applications ;
 - `SUPERBOARD_TARGET` est une variable d'Environment qui doit être strictement
   égale à la cible versionnée dans l'entrée de matrice correspondante ;
-- pour `mbza-development`, Cloudflare Workers Builds gère son token de build et
+- pour `mabza-development`, Cloudflare Workers Builds gère son token de build et
   reçoit `CLOUDFLARE_ACCOUNT_ID` comme variable non secrète dans Cloudflare ; le
   GitHub Environment `development` ne requiert aucun secret Cloudflare ;
 - pour la production GitHub Actions, `CLOUDFLARE_ACCOUNT_ID`,

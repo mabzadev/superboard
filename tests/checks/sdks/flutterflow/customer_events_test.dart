@@ -33,7 +33,7 @@ void main() {
     );
 
     expect(accepted, isTrue);
-    expect(captured.url.path, '/api/v1/app/events');
+    expect(captured.url.path, '/v1/data/customer-events');
     expect(captured.headers['PROJECT-KEY'], 'test_access_key');
     expect(captured.headers['PLATFORM'], 'ios');
     expect(captured.headers['IDENTIFIER'], 'com.example.app');

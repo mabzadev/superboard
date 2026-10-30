@@ -9,6 +9,8 @@ export interface SuperBoardClientOptions {
 	apiUrl: string;
 	projectKey: string;
 	appId: string;
+	appVersion?: string;
+	language?: string;
 	platform?: "web" | "desktop";
 	environment?: "production" | "test";
 	fetch?: typeof fetch;
@@ -43,5 +45,12 @@ export class SuperBoardClient {
 	refreshSession(): Promise<SuperBoardSession>;
 	logout(): Promise<void>;
 	getApplicationAccessToken(): Promise<string>;
+	getPurchaseOfferings(placement?: string): Promise<Record<string, unknown>>;
+	getPurchaseCustomerInfo(): Promise<Record<string, unknown>>;
+	createCheckoutSession(
+		input: { product_id: string; success_url: string; cancel_url: string },
+		idempotencyKey?: string,
+	): Promise<{ id: string; url: string }>;
+	createBillingPortalSession(returnUrl: string): Promise<{ url: string }>;
 	request<T = unknown>(path: string, options?: SuperBoardRequestOptions): Promise<T>;
 }

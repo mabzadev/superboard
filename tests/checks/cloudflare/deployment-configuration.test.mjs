@@ -6,18 +6,18 @@ import { deploymentConfiguration } from "../../../scripts/cloudflare/deployment-
 import { expectedDomainOwners } from "../../../scripts/cloudflare/domain-plan-core.mjs";
 import { loadTarget, publicMcpUrl } from "../../../scripts/cloudflare/target.mjs";
 
-for (const targetName of ["mbza-development", "reference-production"])
+for (const targetName of ["mabza-development", "reference-production"])
 	test(`${targetName} generates the requested endpoints and retains its aliases`, async () => {
 		const { target } = await loadTarget(targetName);
 		const environment = targetName === "reference-production" ? "production" : "development";
 		const configuration = deploymentConfiguration(target, environment);
 		assert.equal(
 			new Set(configuration.endpoints.map((item) => new URL(item.url).hostname)).size,
-			6,
+			targetName === "mabza-development" ? 4 : 6,
 		);
 		assert.equal(
 			publicMcpUrl(target),
-			`https://board.${targetName === "reference-production" ? "reference.example" : "mbza.dev"}/mcp`,
+			`https://board.${targetName === "reference-production" ? "reference.example" : "mabza.dev"}/mcp`,
 		);
 		assert.equal(configuration.workers.length, 11);
 		if (targetName !== "reference-production")
@@ -27,6 +27,15 @@ for (const targetName of ["mbza-development", "reference-production"])
 				).length,
 				1,
 			);
+		if (targetName === "mabza-development") {
+			assert.deepEqual(
+				expectedDomainOwners(target, environment)
+					.map((item) => item.hostname)
+					.sort(),
+				["api.mabza.dev", "board.mabza.dev", "in.mabza.dev", "sdk.mabza.dev"],
+			);
+			assert.deepEqual(configuration.aliases, []);
+		}
 		const changed = structuredClone(target);
 		changed.workers.api[environment] = "renamed-api-worker";
 		changed.customWorker.vars.SECRET_TEST_VALUE = "do-not-expose";

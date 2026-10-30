@@ -158,7 +158,7 @@ FlutterFlow manifest or generated Dart source.
 ## Cloudflare deployment
 
 Cloudflare Workers Builds owns instance validation and deployment. The checked-in
-matrix selects `mbza-development` from `dev`. Additional production accounts
+matrix selects `mabza-development` from `dev`. Additional production accounts
 store their installation configuration in Cloudflare and follow `main`; they do
 not require a GitHub Environment or a central matrix entry.
 

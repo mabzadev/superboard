@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
 import { Hono } from "hono";
 
@@ -9,7 +10,7 @@ import { downloadFileMessage, sendMail } from "../lib/mail";
 import { siteOperatorAdapter, type SiteAdapterVariables } from "../lib/site-operator-adapter";
 import { Env } from "../types";
 
-const projects = new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>();
+const projects = registerRouter(new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>(), {"service":"api","module":"routes.projects.projects","pluginId":"supbrd-core","surface":"internal","access":"operator"});
 projects.use("*", siteOperatorAdapter("projects"));
 
 async function currentUserId(c: any): Promise<number | null> {
@@ -1854,8 +1855,8 @@ export async function enqueuePushNotifications(
 	return queued;
 }
 
-projects.post("/:id/notifications/search", async (c) => {
-	const project = await resolveProject(c.env.DB, c.req.param("id"));
+projects.defineRoute({ pluginId: "superboard-marketing" }).post("/:projectRef/notifications/search", async (c) => {
+	const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
 	const body = await readBody(c);
 	const allowedSorts = [
 		"title",
@@ -1954,8 +1955,8 @@ projects.post("/:id/notifications/search", async (c) => {
 	});
 });
 
-projects.post("/:id/notifications", async (c) => {
-	const project = await resolveProject(c.env.DB, c.req.param("id"));
+projects.defineRoute({ pluginId: "superboard-marketing" }).post("/:projectRef/notifications", async (c) => {
+	const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
 	const body = await readRequestObjectLimited(c.req.raw, 1024 * 1024);
 	const platforms = parseJsonArray(body.platforms);
 	const newUsers = toBool(body.new_users ?? body.for_new_users);
@@ -2006,8 +2007,8 @@ projects.post("/:id/notifications", async (c) => {
 	return c.json({ ...serialized, notification: serialized }, 201);
 });
 
-projects.get("/:id/notifications/:notifId", async (c) => {
-	const project = await resolveProject(c.env.DB, c.req.param("id"));
+projects.defineRoute({ pluginId: "superboard-marketing" }).get("/:projectRef/notifications/:notifId", async (c) => {
+	const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
 	const row = await c.env.DB.prepare(`SELECT n.*, nt.platforms, nt.new_users, nt.existing_users,
     EXISTS (SELECT 1 FROM notification_drafts nd WHERE nd.notification_id=n.id) AS draft,
     (SELECT COUNT(*) FROM notification_messages nm WHERE nm.notification_id=n.id AND nm.read=1) AS read_count,
@@ -2028,8 +2029,8 @@ projects.get("/:id/notifications/:notifId", async (c) => {
 	});
 });
 
-projects.patch("/:id/notifications/:notifId", async (c) => {
-	const project = await resolveProject(c.env.DB, c.req.param("id"));
+projects.defineRoute({ pluginId: "superboard-marketing" }).patch("/:projectRef/notifications/:notifId", async (c) => {
+	const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
 	const id = c.req.param("notifId");
 	const body = await readRequestObjectLimited(c.req.raw, 1024 * 1024);
 	const current = await c.env.DB.prepare(
@@ -2069,8 +2070,8 @@ projects.patch("/:id/notifications/:notifId", async (c) => {
 	return c.json({ saved: true });
 });
 
-projects.post("/:id/notifications/:notifId/publish", async (c) => {
-	const project = await resolveProject(c.env.DB, c.req.param("id"));
+projects.defineRoute({ pluginId: "superboard-marketing" }).post("/:projectRef/notifications/:notifId/publish", async (c) => {
+	const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
 	const id = c.req.param("notifId");
 	const row = await c.env.DB.prepare(
 		"SELECT n.*,nt.platforms,nt.existing_users,nt.new_users FROM notifications n JOIN notification_drafts nd ON nd.notification_id=n.id JOIN notification_targets nt ON nt.notification_id=n.id WHERE n.id=? AND n.project_id=?",
@@ -2102,7 +2103,7 @@ projects.post("/:id/notifications/:notifId/publish", async (c) => {
 	return c.json({ published: true });
 });
 
-projects.delete("/:id/notifications/:notifId", async (c) => {
+projects.defineRoute({ pluginId: "superboard-marketing" }).delete("/:projectRef/notifications/:notifId", async (c) => {
 	const notifId = Number(c.req.param("notifId"));
 	const target = await c.env.DB.prepare(
 		"SELECT existing_users FROM notification_targets WHERE notification_id = ? LIMIT 1",

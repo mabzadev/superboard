@@ -10,7 +10,7 @@ import {
 	unique,
 } from "../../../fixtures/site-browser/site-api.js";
 
-const plugin = "supbrd-plugmod-support";
+const plugin = "superboard-support";
 const labelArea = /^Label\s*\d+$/;
 const productionSuffix = /-prod$/;
 async function testProject(page: Page, path: string) {

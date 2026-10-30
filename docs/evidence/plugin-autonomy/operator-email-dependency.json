@@ -1,7 +1,7 @@
 {
   "results": [
     {
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "path": "/login",
       "operation": "operator_email_dependency",
       "http_status": 503,
@@ -11,7 +11,7 @@
       "note": "Core EmDash email pipeline is not configured in QA; successful signup or email recovery is not claimed."
     },
     {
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "path": "/new_password",
       "operation": "operator_email_dependency",
       "http_status": 503,
@@ -21,7 +21,7 @@
       "note": "Core EmDash email pipeline is not configured in QA; successful signup or email recovery is not claimed."
     },
     {
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "path": "/reset_password",
       "operation": "operator_email_dependency",
       "http_status": 503,
@@ -31,7 +31,7 @@
       "note": "Core EmDash email pipeline is not configured in QA; successful signup or email recovery is not claimed."
     },
     {
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "path": "/register",
       "operation": "operator_email_dependency",
       "http_status": 503,
@@ -41,7 +41,7 @@
       "note": "Core EmDash email pipeline is not configured in QA; successful signup or email recovery is not claimed."
     },
     {
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "path": "/register/with_email",
       "operation": "operator_email_dependency",
       "http_status": 503,

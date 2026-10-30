@@ -7,8 +7,8 @@ All 10 files and 27 tests in this run passed.
 Recorded observations (emitted after semantic and persistence assertions):
 [
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.command.create_paywall",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.command.create_paywall",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -19,8 +19,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.data_source.paywalls",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.data_source.paywalls",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -31,8 +31,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.command.update_paywall",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.command.update_paywall",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -43,8 +43,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.command.create_paywall_version",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.command.create_paywall_version",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -56,8 +56,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.command.publish_paywall_version",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.command.publish_paywall_version",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -69,8 +69,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.data_source.paywall_versions",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.data_source.paywall_versions",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -82,8 +82,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.command.save_paywall_placement",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.command.save_paywall_placement",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -94,8 +94,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.data_source.paywall_placements",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.data_source.paywall_placements",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -106,8 +106,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.command.create_paywall_experience",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.command.create_paywall_experience",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -118,8 +118,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.command.update_paywall_experience",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.command.update_paywall_experience",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -130,8 +130,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.data_source.paywall_experiences",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.data_source.paywall_experiences",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -142,8 +142,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.data_source.paywall_statistics",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.data_source.paywall_statistics",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -155,8 +155,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.command.archive_paywall_experience",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.command.archive_paywall_experience",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -167,8 +167,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.command.archive_paywall",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.command.archive_paywall",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",

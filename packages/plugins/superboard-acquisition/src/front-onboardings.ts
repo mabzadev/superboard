@@ -4,36 +4,36 @@ import {
 } from "../../../supbrd-core/src/plugin-front-runtime.js";
 
 const navigation = navigationGroup({
-	group_id: "supbrd-plugmod-onboardings.navigation",
-	group_label: "supbrd-plugmod-onboardings.menu.group",
+	group_id: "superboard-onboardings.navigation",
+	group_label: "superboard-onboardings.menu.group",
 	group_order: 71,
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
-	plugin_id: "supbrd-plugmod-onboardings",
+	plugin_id: "superboard-onboardings",
 	plugin_label: "Onboardings",
 	description: "Build onboarding experiences and inspect their performance from the active plugin.",
 	translations: {
 		en: {
-			"supbrd-plugmod-onboardings.menu.group": "Onboardings",
-			"supbrd-plugmod-onboardings.menu.item_0": "Onboardings",
-			"supbrd-plugmod-onboardings.menu.item_1": "Statistics",
+			"superboard-onboardings.menu.group": "Onboardings",
+			"superboard-onboardings.menu.item_0": "Onboardings",
+			"superboard-onboardings.menu.item_1": "Statistics",
 		},
 		fr: {
-			"supbrd-plugmod-onboardings.menu.group": "Onboardings",
-			"supbrd-plugmod-onboardings.menu.item_0": "Onboardings",
-			"supbrd-plugmod-onboardings.menu.item_1": "Statistiques",
+			"superboard-onboardings.menu.group": "Onboardings",
+			"superboard-onboardings.menu.item_0": "Onboardings",
+			"superboard-onboardings.menu.item_1": "Statistiques",
 		},
 	},
 	surfaces: [
 		{
 			path_pattern: "/onboardings",
-			navigation: navigation("supbrd-plugmod-onboardings.menu.item_0", 0),
+			navigation: navigation("superboard-onboardings.menu.item_0", 0),
 			title: "Onboardings",
 		},
 		{
 			path_pattern: "/onboardings/statistics",
-			navigation: navigation("supbrd-plugmod-onboardings.menu.item_1", 1),
+			navigation: navigation("superboard-onboardings.menu.item_1", 1),
 			title: "Onboarding statistics",
 		},
 	],

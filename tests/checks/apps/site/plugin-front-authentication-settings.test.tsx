@@ -15,8 +15,8 @@ vi.mock("../../../../packages/plugins/superboard-authentification/src/front/tran
 	PUT: api.put,
 }));
 vi.mock("@superboard/front-ui/context", () => ({
-	useFrontContext: () => ({ locale: "fr", pluginId: "supbrd-plug-user" }),
-	useOptionalFrontContext: () => ({ locale: "fr", pluginId: "supbrd-plug-user" }),
+	useFrontContext: () => ({ locale: "fr", pluginId: "superboard-user" }),
+	useOptionalFrontContext: () => ({ locale: "fr", pluginId: "superboard-user" }),
 }));
 vi.mock("../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "1-test" } }),

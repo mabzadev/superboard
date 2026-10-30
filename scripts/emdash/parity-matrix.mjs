@@ -13,12 +13,13 @@ const topologyPath = join(root, "scripts/config/emdash-plugin-topology.json");
 const parityReleasePath = join(root, "scripts/config/superboard-parity-release.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "scripts/config/superboard-front-bundle.json");
-const manifestMigrationPath = join(
-	root,
-	"apps/site/migrations/0053_user_members_renderer_retirement.sql",
-);
+const manifestMigrationPath = join(root, "apps/site/migrations/0057_authentication_editors.sql");
 const compatibilityPath = join(root, "scripts/config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0056_authentication_tabs.sql"),
+	join(root, "apps/site/migrations/0055_core_sdk_collection.sql"),
+	join(root, "apps/site/migrations/0054_monetization_purchase_catalog.sql"),
+	join(root, "apps/site/migrations/0053_user_members_renderer_retirement.sql"),
 	join(root, "apps/site/migrations/0052_acquisition_item_navigation.sql"),
 	join(root, "apps/site/migrations/0051_front_path_contract.sql"),
 	join(root, "apps/site/migrations/0050_canonical_plugin_routes.sql"),
@@ -96,60 +97,60 @@ const modulePlugins = [
 	["custom-*", null],
 ];
 const pluginStores = {
-	"supbrd-plug-user": ["user_directory", "user_credentials", "user_sessions"],
-	"supbrd-plug-settings": ["settings", "versions"],
-	"supbrd-plug-content": ["documents", "taxonomies", "revisions"],
-	"supbrd-plug-products": ["catalog", "offers", "prices"],
-	"supbrd-plug-audit": ["ledger", "archives"],
-	"supbrd-plugmod-gateway": ["route_manifests", "rate_limits"],
-	"supbrd-plugmod-billing": ["purchases", "subscriptions", "ledger"],
-	"supbrd-plugmod-support": ["conversations", "contacts", "messages"],
-	"supbrd-plugmod-flows": ["definitions", "runtime"],
-	"supbrd-plugmod-analytics": ["events", "aggregates"],
-	"supbrd-plugmod-marketing": ["campaigns", "journeys", "consent"],
-	"supbrd-plugmod-email": ["deliveries", "provider_events"],
-	"supbrd-plugmod-dynamic-links": ["links", "attribution"],
-	"supbrd-plugmod-files": ["objects", "tickets"],
-	"supbrd-plugmod-paywalls": ["definitions", "exposures"],
-	"supbrd-plugmod-onboardings": ["definitions", "progress"],
-	"supbrd-plugmod-observability": ["health_projections"],
-	"supbrd-plugmod-mcp": ["sessions", "tool_receipts"],
+	"superboard-user": ["user_directory", "user_credentials", "user_sessions"],
+	"superboard-settings": ["settings", "versions"],
+	"superboard-content": ["documents", "taxonomies", "revisions"],
+	"superboard-products": ["catalog", "offers", "prices"],
+	"superboard-audit": ["ledger", "archives"],
+	"superboard-gateway": ["route_manifests", "rate_limits"],
+	"superboard-billing": ["purchases", "subscriptions", "ledger"],
+	"superboard-support": ["conversations", "contacts", "messages"],
+	"superboard-flows": ["definitions", "runtime"],
+	"superboard-analytics": ["events", "aggregates"],
+	"superboard-marketing": ["campaigns", "journeys", "consent"],
+	"superboard-email": ["deliveries", "provider_events"],
+	"superboard-dynamic-links": ["links", "attribution"],
+	"superboard-files": ["objects", "tickets"],
+	"superboard-paywalls": ["definitions", "exposures"],
+	"superboard-onboardings": ["definitions", "progress"],
+	"superboard-observability": ["health_projections"],
+	"superboard-mcp": ["sessions", "tool_receipts"],
 	"supbrd-plugmod-custom-*": ["operations"],
 };
 
 const pluginSettings = {
-	"supbrd-plug-user": {
+	"superboard-user": {
 		mfa_policy: { type: "string", enum: ["optional", "required"] },
 		allow_anonymous_upgrade: { type: "boolean" },
 		max_active_sessions: { type: "integer", minimum: 1, maximum: 20 },
 	},
-	"supbrd-plug-settings": {
+	"superboard-settings": {
 		site_name: { type: "string", minLength: 1 },
 		site_url: { type: "string", format: "uri" },
 		default_locale: { type: "string", minLength: 2 },
 		timezone: { type: "string", minLength: 1 },
 	},
-	"supbrd-plug-content": {
+	"superboard-content": {
 		default_locale: { type: "string", minLength: 2 },
 		required_locales: { type: "string" },
 		publishing_mode: { type: "string", enum: ["draft_review", "direct"] },
 	},
-	"supbrd-plug-products": {
+	"superboard-products": {
 		default_currency: { type: "string", pattern: "^[A-Z]{3}$" },
 		store_environment: { type: "string", enum: ["sandbox", "production"] },
 		catalog_sync_enabled: { type: "boolean" },
 	},
-	"supbrd-plug-audit": {
+	"superboard-audit": {
 		retention_days: { type: "integer", minimum: 30, maximum: 3650 },
 		archive_enabled: { type: "boolean" },
 		verification_interval_minutes: { type: "integer", minimum: 5, maximum: 1440 },
 	},
-	"supbrd-plugmod-gateway": {
+	"superboard-gateway": {
 		cors_allowed_origins: { type: "string" },
 		default_rate_limit_per_minute: { type: "integer", minimum: 1, maximum: 100000 },
 		default_timeout_ms: { type: "integer", minimum: 100, maximum: 30000 },
 	},
-	"supbrd-plugmod-billing": {
+	"superboard-billing": {
 		apple_issuer_id: { type: "string" },
 		apple_key_id: { type: "string" },
 		apple_private_key: { type: "string", writeOnly: true },
@@ -157,7 +158,7 @@ const pluginSettings = {
 		stripe_secret_key: { type: "string", writeOnly: true },
 		webhook_signing_secret: { type: "string", writeOnly: true },
 	},
-	"supbrd-plugmod-support": {
+	"superboard-support": {
 		business_name: { type: "string", minLength: 1 },
 		locale: { type: "string", minLength: 2 },
 		timezone: { type: "string", minLength: 1 },
@@ -166,24 +167,24 @@ const pluginSettings = {
 		attachment_max_bytes: { type: "integer", minimum: 1024, maximum: 104857600 },
 		allowed_content_types: { type: "string" },
 	},
-	"supbrd-plugmod-flows": {
+	"superboard-flows": {
 		default_locale: { type: "string", minLength: 2 },
 		locales: { type: "string" },
 		default_environment: { type: "string", minLength: 1 },
 		allow_drafts_in_development: { type: "boolean" },
 	},
-	"supbrd-plugmod-analytics": {
+	"superboard-analytics": {
 		hot_retention_days: { type: "integer", minimum: 1, maximum: 3650 },
 		timezone: { type: "string", minLength: 1 },
 		data_collection_enabled: { type: "boolean" },
 	},
-	"supbrd-plugmod-marketing": {
+	"superboard-marketing": {
 		tracking_enabled: { type: "boolean" },
 		default_from_email: { type: "string", format: "email" },
 		default_from_name: { type: "string" },
 		default_reply_to: { type: "string", format: "email" },
 	},
-	"supbrd-plugmod-email": {
+	"superboard-email": {
 		provider: { type: "string", enum: ["smtp", "aws-ses"] },
 		host: { type: "string" },
 		port: { type: "integer", minimum: 1, maximum: 65535 },
@@ -194,33 +195,33 @@ const pluginSettings = {
 		from_name: { type: "string" },
 		reply_to: { type: "string", format: "email" },
 	},
-	"supbrd-plugmod-dynamic-links": {
+	"superboard-dynamic-links": {
 		default_domain: { type: "string", format: "hostname" },
 		tracking_enabled: { type: "boolean" },
 		tracking_provider: { type: "string", enum: ["superboard", "google", "segment", "none"] },
 		tracking_credential: { type: "string", writeOnly: true },
 	},
-	"supbrd-plugmod-files": {
+	"superboard-files": {
 		max_upload_bytes: { type: "integer", minimum: 1024, maximum: 5368709120 },
 		allowed_content_types: { type: "string" },
 		signed_url_ttl_seconds: { type: "integer", minimum: 60, maximum: 86400 },
 	},
-	"supbrd-plugmod-paywalls": {
+	"superboard-paywalls": {
 		default_locale: { type: "string", minLength: 2 },
 		default_environment: { type: "string", enum: ["test", "production"] },
 		cache_ttl_seconds: { type: "integer", minimum: 0, maximum: 86400 },
 	},
-	"supbrd-plugmod-onboardings": {
+	"superboard-onboardings": {
 		default_locale: { type: "string", minLength: 2 },
 		default_environment: { type: "string", enum: ["test", "production"] },
 		progress_retention_days: { type: "integer", minimum: 1, maximum: 3650 },
 	},
-	"supbrd-plugmod-observability": {
+	"superboard-observability": {
 		health_poll_interval_seconds: { type: "integer", minimum: 10, maximum: 3600 },
 		incident_retention_days: { type: "integer", minimum: 1, maximum: 3650 },
 		cloudflare_api_token: { type: "string", writeOnly: true },
 	},
-	"supbrd-plugmod-mcp": {
+	"superboard-mcp": {
 		enabled: { type: "boolean" },
 		allowed_scopes: { type: "string" },
 		session_ttl_seconds: { type: "integer", minimum: 60, maximum: 86400 },
@@ -229,7 +230,7 @@ const pluginSettings = {
 };
 
 const pluginOperations = {
-	"supbrd-plug-user": {
+	"superboard-user": {
 		commands: [
 			"application_sign_in",
 			"update_profile",
@@ -239,15 +240,15 @@ const pluginOperations = {
 		],
 		dataSources: ["current_profile", "members", "linked_providers", "active_sessions"],
 	},
-	"supbrd-plug-settings": {
+	"superboard-settings": {
 		commands: ["update_effective_settings", "save_sdk_configuration", "test_sdk_configuration"],
 		dataSources: ["effective_settings", "settings_versions", "sdk_configurations"],
 	},
-	"supbrd-plug-content": {
+	"superboard-content": {
 		commands: ["create_document", "update_document", "publish_document"],
 		dataSources: ["documents", "taxonomies", "revisions"],
 	},
-	"supbrd-plug-products": {
+	"superboard-products": {
 		commands: [
 			"create_product",
 			"update_product",
@@ -272,15 +273,15 @@ const pluginOperations = {
 			"store_sync_runs",
 		],
 	},
-	"supbrd-plug-audit": {
+	"superboard-audit": {
 		commands: ["archive_ledger", "verify_ledger"],
 		dataSources: ["ledger", "ledger_search", "archives"],
 	},
-	"supbrd-plugmod-gateway": {
+	"superboard-gateway": {
 		commands: ["publish_gateway_manifest", "update_gateway_route", "rotate_access_policy"],
 		dataSources: ["active_gateway_manifest", "gateway_routes", "rate_limits"],
 	},
-	"supbrd-plugmod-billing": {
+	"superboard-billing": {
 		commands: [
 			"create_purchase",
 			"create_refund",
@@ -299,7 +300,7 @@ const pluginOperations = {
 			"migration_status",
 		],
 	},
-	"supbrd-plugmod-support": {
+	"superboard-support": {
 		commands: [
 			"update_support_settings",
 			"create_support_configuration",
@@ -332,7 +333,7 @@ const pluginOperations = {
 			"support_assistant_tasks",
 		],
 	},
-	"supbrd-plugmod-flows": {
+	"superboard-flows": {
 		commands: [
 			"create_workflow",
 			"update_workflow",
@@ -353,7 +354,7 @@ const pluginOperations = {
 			"user_details",
 		],
 	},
-	"supbrd-plugmod-analytics": {
+	"superboard-analytics": {
 		commands: [
 			"create_analytics_report",
 			"update_analytics_report",
@@ -389,7 +390,7 @@ const pluginOperations = {
 			"analytics_settings",
 		],
 	},
-	"supbrd-plugmod-marketing": {
+	"superboard-marketing": {
 		commands: [
 			"create_notification",
 			"create_email_campaign",
@@ -417,7 +418,7 @@ const pluginOperations = {
 			"marketing_channel_connectors",
 		],
 	},
-	"supbrd-plugmod-email": {
+	"superboard-email": {
 		commands: [
 			"send_transactional_email",
 			"save_smtp_settings",
@@ -436,7 +437,7 @@ const pluginOperations = {
 			"provider_events",
 		],
 	},
-	"supbrd-plugmod-dynamic-links": {
+	"superboard-dynamic-links": {
 		commands: [
 			"create_link",
 			"update_link",
@@ -464,11 +465,11 @@ const pluginOperations = {
 			"link_statistics",
 		],
 	},
-	"supbrd-plugmod-files": {
+	"superboard-files": {
 		commands: ["create_upload_ticket", "complete_upload", "delete_object", "collect_garbage"],
 		dataSources: ["objects", "object_metadata", "download_ticket", "storage_usage"],
 	},
-	"supbrd-plugmod-paywalls": {
+	"superboard-paywalls": {
 		commands: [
 			"create_paywall",
 			"update_paywall",
@@ -488,7 +489,7 @@ const pluginOperations = {
 			"paywall_statistics",
 		],
 	},
-	"supbrd-plugmod-onboardings": {
+	"superboard-onboardings": {
 		commands: [
 			"create_onboarding",
 			"update_onboarding",
@@ -509,7 +510,7 @@ const pluginOperations = {
 			"onboarding_statistics",
 		],
 	},
-	"supbrd-plugmod-observability": {
+	"superboard-observability": {
 		commands: [
 			"acknowledge_incident",
 			"resolve_incident",
@@ -526,7 +527,7 @@ const pluginOperations = {
 			"platform_email_operations",
 		],
 	},
-	"supbrd-plugmod-mcp": {
+	"superboard-mcp": {
 		commands: ["approve_consent", "revoke_token", "invoke_tool"],
 		dataSources: ["tokens", "sessions", "tool_receipts"],
 	},
@@ -538,12 +539,16 @@ const pluginOperations = {
 
 export function buildPluginTopology() {
 	const plugins = [
-		...fullPlugins.map((name) => pluginTopologyEntry(`supbrd-plug-${name}`, "full", null)),
+		...fullPlugins.map((name) => pluginTopologyEntry(`superboard-${name}`, "full", null)),
 		...modulePlugins.map(([name, worker]) =>
-			pluginTopologyEntry(`supbrd-plugmod-${name}`, "module", workerRuntimeContract(name, worker)),
+			pluginTopologyEntry(
+				name === "custom-*" ? "supbrd-plugmod-custom-*" : `superboard-${name}`,
+				"module",
+				workerRuntimeContract(name, worker),
+			),
 		),
 	].map((entry) =>
-		entry.manifest.plugin_id === "supbrd-plug-user" && userManifestOverride
+		entry.manifest.plugin_id === "superboard-user" && userManifestOverride
 			? { ...entry, manifest: userManifestOverride }
 			: entry,
 	);
@@ -624,7 +629,7 @@ export function buildParityMatrix() {
 			id: `api:${namespace}`,
 			kind: "api",
 			baseline: "packages/plugins/superboard-core/api/src/index.ts",
-			target: "supbrd-plugmod-gateway",
+			target: "superboard-gateway",
 			test: apiProof(namespace),
 			sourceStatus: namespace.includes("support") ? "unvalidated" : "delivered",
 			blocker: namespace.includes("support") ? "support_extended_gate" : null,
@@ -639,7 +644,7 @@ export function buildParityMatrix() {
 				id: `worker:${worker}`,
 				kind: "worker",
 				baseline: `${servicePackagePath(worker)}/src/index.ts`,
-				target: `supbrd-plugmod-${name}`,
+				target: name === "custom-*" ? "supbrd-plugmod-custom-*" : `superboard-${name}`,
 				test: proof ? relative(root, proof) : "tests/checks/emdash/parity-matrix.test.mjs",
 				sourceStatus: name === "support" || name === "flows" ? "unvalidated" : "delivered",
 				blocker:
@@ -940,7 +945,7 @@ export function validateArtifacts(matrix, topology, options = {}) {
 			errors.push(`WORKER_TRANSITION_CONTRACT_INVALID:${manifest.plugin_id}`);
 		}
 		const { artifact_checksum: artifactChecksum, ...artifact } = manifest;
-		if (manifest.plugin_id !== "supbrd-plug-user" && artifactChecksum !== hash(artifact))
+		if (manifest.plugin_id !== "superboard-user" && artifactChecksum !== hash(artifact))
 			errors.push(`PLUGIN_ARTIFACT_CHECKSUM_INVALID:${manifest.plugin_id}`);
 	}
 	if (matrix.release) {
@@ -1301,11 +1306,14 @@ function workerRuntimeContract(name, worker) {
 
 function migrationInventory(pluginId) {
 	const worker =
-		pluginId === "supbrd-plug-user"
+		pluginId === "superboard-user"
 			? "identity"
-			: pluginId === "supbrd-plug-products"
+			: pluginId === "superboard-products"
 				? "products"
-				: modulePlugins.find(([name]) => `supbrd-plugmod-${name}` === pluginId)?.[1];
+				: modulePlugins.find(
+						([name]) =>
+							(name === "custom-*" ? "supbrd-plugmod-custom-*" : `superboard-${name}`) === pluginId,
+					)?.[1];
 	const migrations = [
 		"apps/site/migrations/0005_plugin_store_authority.sql",
 		"apps/site/migrations/0006_plugin_manifest_registry.sql",
@@ -1462,9 +1470,15 @@ function manifestRegistryMigration(topology) {
 }
 
 function pluginCompatibilityRegistry() {
+	// Published Releases keep the plugin ids they were compiled with, so the
+	// legacy supbrd-plug(mod)-* manifests stay registered beside the canonical ones.
 	const bundled = new Set([
-		...fullPlugins.map((id) => `supbrd-plug-${id}`),
-		...modulePlugins.map(([id]) => `supbrd-plugmod-${id}`),
+		...fullPlugins.flatMap((id) => [`superboard-${id}`, `supbrd-plug-${id}`]),
+		...modulePlugins.flatMap(([id]) =>
+			id === "custom-*"
+				? ["supbrd-plugmod-custom-*"]
+				: [`superboard-${id}`, `supbrd-plugmod-${id}`],
+		),
 	]);
 	const artifacts = Object.fromEntries(
 		compatibilitySourcePaths

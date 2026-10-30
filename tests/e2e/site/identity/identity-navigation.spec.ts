@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { test, expect } from "../../../fixtures/site-browser/base-fixtures.js";
 import { evidence, projectRef, ready, siteApi } from "../../../fixtures/site-browser/site-api.js";
-const plugin = "supbrd-plug-user";
+const plugin = "superboard-user";
 const noUser = "identity_missing_fixture_7c4f983d";
 const policies = [
 	["Update Info", "update_info"],

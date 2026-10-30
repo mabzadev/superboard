@@ -187,10 +187,10 @@ d'alimenter le stockage Messaging que l'architecture veut précisément supprime
 5. garder `chat.vocostar.com` en lecture/écriture tant que la répétition de
    migration n'est pas validée.
 
-### Phase 1 — préparer Support en développement MBZA
+### Phase 1 — préparer Support en développement MABZA
 
 1. utiliser `mabzadev/superboard/dev` comme unique source ;
-2. déployer les Workers privés contre les ressources MBZA development ;
+2. déployer les Workers privés contre les ressources MABZA development ;
 3. exécuter l'export OpenChat avec un token Chatwoot en lecture seule ;
 4. transformer contacts, conversations, messages, labels et pièces jointes ;
 5. importer dans le projet de test Support ;
@@ -206,7 +206,7 @@ d'alimenter le stockage Messaging que l'architecture veut précisément supprime
 4. connecter API, Email et Observability par Service Binding ;
 5. mettre à jour la bibliothèque Support FlutterFlow dans le projet de
    référence, pas encore dans VocoStar ;
-6. obtenir une acceptation complète de la référence MBZA.
+6. obtenir une acceptation complète de la référence MABZA.
 
 ### Phase 3 — répétition VocoStar
 
@@ -255,7 +255,7 @@ vraies :
 - les données OpenChat et l'ancienne source Dokploy sont toutes deux expliquées ;
 - les contacts, conversations, messages et pièces jointes sont réconciliés ;
 - la bibliothèque FlutterFlow ne contient plus d'appel ni d'état Chatwoot ;
-- la référence MBZA et VocoStar passent les parcours appareil ;
+- la référence MABZA et VocoStar passent les parcours appareil ;
 - Grow expose santé, compteurs, erreurs, DLQ et configuration Support ;
 - Email commun gère les notifications nécessaires ;
 - le rollback a été réellement répété ;

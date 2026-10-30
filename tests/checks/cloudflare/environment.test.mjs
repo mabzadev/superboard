@@ -8,11 +8,11 @@ import {
 
 test("canonical variables are trimmed and identify their source", () => {
 	const env = {
-		SUPERBOARD_TARGET: " mbza-development ",
+		SUPERBOARD_TARGET: " mabza-development ",
 		SUPERBOARD_ENVIRONMENT: "development",
 		SUPERBOARD_RELEASE: "revision-1",
 	};
-	assert.equal(superboardEnvironmentValue("SUPERBOARD_TARGET", env), "mbza-development");
+	assert.equal(superboardEnvironmentValue("SUPERBOARD_TARGET", env), "mabza-development");
 	assert.equal(superboardEnvironmentValue("SUPERBOARD_ENVIRONMENT", env), "development");
 	assert.deepEqual(superboardEnvironmentContract(env).SUPERBOARD_RELEASE, {
 		value: "revision-1",

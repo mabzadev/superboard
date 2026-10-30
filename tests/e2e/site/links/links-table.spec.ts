@@ -45,7 +45,7 @@ test.describe("Links table", () => {
 		await expect(page.getByText(link.name, { exact: true })).toBeVisible();
 		const rows = await siteApi(
 			page.request,
-			"supbrd-plugmod-dynamic-links",
+			"superboard-dynamic-links",
 			"GET",
 			`/api/v1/dynamic-links/projects/${link.project}/links?search=${link.slug}&active=false`,
 		);

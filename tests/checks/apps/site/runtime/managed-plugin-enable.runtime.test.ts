@@ -13,7 +13,7 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 		body: JSON.stringify({
 			plan_id: "managed-plugin-prerequisite",
 			expires_in_hours: 1,
-			plugin_ids: ["supbrd-plug-settings"],
+			plugin_ids: ["superboard-settings"],
 		}),
 	});
 	expect(installed.status, await installed.clone().text()).toBe(201);
@@ -22,11 +22,11 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 		 SET expires_at = '2000-01-01T00:00:00.000Z'
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 	)
-		.bind("reference-production", "supbrd-plug-settings")
+		.bind("reference-production", "superboard-settings")
 		.run();
 
 	const response = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-user/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-user/enable",
 		{
 			method: "POST",
 			headers: {
@@ -39,7 +39,7 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 
 	expect(response.status, await response.clone().text()).toBe(201);
 	expect(await response.json()).toMatchObject({
-		plugin_id: "supbrd-plug-user",
+		plugin_id: "superboard-user",
 		status: "active",
 		release_id: expect.any(String),
 	});
@@ -48,7 +48,7 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 		 FROM superboard_plugin_lifecycle
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 	)
-		.bind("reference-production", "supbrd-plug-user")
+		.bind("reference-production", "superboard-user")
 		.first<{ state: string; activated_release_id: string | null }>();
 	expect(lifecycle).toMatchObject({ state: "active", activated_release_id: expect.any(String) });
 	const unrelatedLifecycle = await env.DB.prepare(
@@ -56,12 +56,12 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 		 FROM superboard_plugin_lifecycle
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 	)
-		.bind("reference-production", "supbrd-plug-settings")
+		.bind("reference-production", "superboard-settings")
 		.first<{ state: string; activated_release_id: string | null }>();
 	expect(unrelatedLifecycle).toEqual({ state: "installed", activated_release_id: null });
 
 	const enabledSettings = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-settings/enable",
 		{
 			method: "POST",
 			headers: {
@@ -74,7 +74,7 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 	expect(enabledSettings.status, await enabledSettings.clone().text()).toBe(201);
 
 	const disabledSettings = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings/disable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-settings/disable",
 		{
 			method: "POST",
 			headers: {
@@ -108,10 +108,10 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 		   AND plugin_id IN (?, ?)
 		 ORDER BY plugin_id`,
 	)
-		.bind("reference-production", "supbrd-plug-settings", "supbrd-plug-user")
+		.bind("reference-production", "superboard-settings", "superboard-user")
 		.all<{ plugin_id: string; state: string }>();
 	expect(lifecycleAfterDisable.results).toEqual([
-		{ plugin_id: "supbrd-plug-settings", state: "active" },
-		{ plugin_id: "supbrd-plug-user", state: "disabled" },
+		{ plugin_id: "superboard-settings", state: "active" },
+		{ plugin_id: "superboard-user", state: "disabled" },
 	]);
 });

@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { verifyPassword, hashPassword, generateApiKey } from '../lib/crypto';
@@ -9,7 +10,7 @@ import {
 } from '../lib/deployment';
 import { consumeDashboardAuthAttempt, dashboardAuthRateLimitResponse } from '../lib/auth-rate-limit';
 
-const auth = new Hono<{ Bindings: Env }>();
+const auth = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.auth.auth","pluginId":"supbrd-core","surface":"internal","access":"framework"});
 
 // POST /api/v1/auth/sign_up
 auth.post('/sign_up', async (c) => {

@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 import { readJsonObjectLimited } from "../lib/http-limits";
 import {
@@ -6,10 +7,10 @@ import {
 } from "../lib/account-erasure";
 import type { AppVariables, Env } from "../types";
 
-const accountSdk = new Hono<{
+const accountSdk = registerRouter(new Hono<{
   Bindings: Env;
   Variables: AppVariables;
-}>();
+}>(), {"service":"api","module":"routes.account-sdk.accountSdk","pluginId":"supbrd-core","surface":"sdk","access":"application","public":{"surface":"sdk","prefix":"/v1/auth/account","aliases":["/account/v1"]}});
 
 accountSdk.delete("/", async (c) => {
   const requestId = requestIdFrom(c.req.raw);

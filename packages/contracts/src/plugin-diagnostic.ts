@@ -1,3 +1,7 @@
+import { parseRouteDestinations } from "./route-manifest.js";
+import type { RouteDestination } from "./route-registry.js";
+import { parseRouteInventorySummary, type RouteInventorySummary } from "./route-inventory.js";
+
 export type PluginLifecycleState =
 	| "available"
 	| "staged"
@@ -63,6 +67,14 @@ export interface PluginRouteViewDiagnostic {
 }
 
 export interface PluginRouteApiDiagnostic {
+	transport?: string;
+	executionScope?: string;
+	destinations?: readonly RouteDestination[];
+	id?: string;
+	kind?: string;
+	availability?: string;
+	observedAt?: string;
+	buildId?: string;
 	method: string;
 	path: string;
 	surface?: string;
@@ -71,6 +83,7 @@ export interface PluginRouteApiDiagnostic {
 }
 
 export interface PluginRoutesDiagnostic {
+	inventory?: RouteInventorySummary;
 	views: PluginRouteViewDiagnostic[];
 	api: PluginRouteApiDiagnostic[];
 }
@@ -220,6 +233,9 @@ export function parsePluginDiagnostic(value: unknown): PluginDiagnosticData {
 			};
 		}),
 		routes: {
+			...(routes.inventory === undefined
+				? {}
+				: { inventory: parseRouteInventorySummary(routes.inventory) }),
 			views: diagnosticList(routes.views).map((value) => {
 				const item = diagnosticRecord(value);
 				return {
@@ -232,7 +248,15 @@ export function parsePluginDiagnostic(value: unknown): PluginDiagnosticData {
 				const item = diagnosticRecord(value);
 				return {
 					method: diagnosticText(item.method),
+					destinations: parseRouteDestinations(item.destinations),
+					executionScope: optionalDiagnosticText(item.executionScope),
 					path: diagnosticText(item.path),
+					id: optionalDiagnosticText(item.id),
+					kind: optionalDiagnosticText(item.kind),
+					availability: optionalDiagnosticText(item.availability),
+					transport: optionalDiagnosticText(item.transport),
+					observedAt: optionalDiagnosticText(item.observedAt),
+					buildId: optionalDiagnosticText(item.buildId),
 					surface: optionalDiagnosticText(item.surface),
 					url: optionalDiagnosticText(item.url),
 					worker: optionalDiagnosticText(item.worker),

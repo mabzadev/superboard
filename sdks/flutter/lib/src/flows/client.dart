@@ -807,7 +807,7 @@ class SuperBoardFlowsClient {
   }
 
   Uri _uri(String path) => Uri.parse(
-    '${_apiUrl.replaceFirst(RegExp(r'/+$'), '')}/${path.replaceFirst(RegExp(r'^/+'), '')}',
+    '${Uri.parse(_apiUrl).origin}/v1/acquisition/${path.startsWith('/ws/sdk/') ? 'flows-realtime/${path.substring('/ws/sdk/'.length)}' : 'flows/${path.substring('/v2/sdk/'.length)}'}',
   );
 
   Uri _webSocketUri() {

@@ -368,6 +368,21 @@ function CustomerDetail(props: DetailProps) {
 		);
 	}
 	const { customer, customer_info: info } = props.detail;
+	let clientContext: Record<string, unknown> = {};
+	try {
+		const parsed: unknown = JSON.parse(customer.attributes || "{}");
+		if (
+			parsed &&
+			typeof parsed === "object" &&
+			"sdk_context" in parsed &&
+			parsed.sdk_context &&
+			typeof parsed.sdk_context === "object"
+		)
+			clientContext = Object.fromEntries(Object.entries(parsed.sdk_context));
+	} catch {
+		clientContext = {};
+	}
+
 	return (
 		<div className="space-y-4">
 			<Card>
@@ -388,6 +403,23 @@ function CustomerDetail(props: DetailProps) {
 					</div>
 				</CardHeader>
 				<CardContent className="grid gap-3 sm:grid-cols-2">
+					{[
+						["Country", "country"],
+						["Language", "language"],
+						["Platform", "platform"],
+						["App version", "app_version"],
+						["SDK version", "sdk_version"],
+					].map(([label, key]) => (
+						<Value
+							key={key}
+							label={label ?? ""}
+							value={
+								typeof clientContext[key ?? ""] === "string"
+									? String(clientContext[key ?? ""])
+									: "—"
+							}
+						/>
+					))}
 					<Value label="First seen" value={date(customer.first_seen_at)} />
 					<Value label="Last seen" value={date(customer.last_seen_at)} />
 					<Value
@@ -632,9 +664,10 @@ function RecordTable({
 }
 
 function Value({ label, value }: { label: string; value: string }) {
+	const { t } = useMonetizationI18n();
 	return (
 		<div className="rounded-md border p-3">
-			<p className="text-xs text-muted-foreground">{label}</p>
+			<p className="text-xs text-muted-foreground">{t(label)}</p>
 			<p className="mt-1 break-all text-sm font-medium">{value}</p>
 		</div>
 	);

@@ -1593,7 +1593,7 @@ export function AnalyticsSettingsPage() {
 		<ModulePage
 			title={t("Analytics settings")}
 			description={t(
-				"Manage applications, retention, collection, signed webhooks and timeline annotations.",
+				"Manage applications, retention, processing, signed webhooks and timeline annotations.",
 			)}
 			error={error}
 		>
@@ -1609,7 +1609,7 @@ export function AnalyticsSettingsPage() {
 			>
 				<TabsList aria-label={t("Settings sections")} className="h-auto flex-wrap">
 					<TabsTrigger value="applications">{t("Applications")}</TabsTrigger>
-					<TabsTrigger value="collection">{t("Data collection")}</TabsTrigger>
+					<TabsTrigger value="collection">{t("Analytics processing")}</TabsTrigger>
 					<TabsTrigger value="hooks">{t("Webhooks")}</TabsTrigger>
 					<TabsTrigger value="annotations">{t("Annotations")}</TabsTrigger>
 					<TabsTrigger value="configuration">{t("Configuration")}</TabsTrigger>
@@ -1651,7 +1651,7 @@ export function AnalyticsSettingsPage() {
 											</div>
 											<div className="flex items-center gap-3">
 												<Label htmlFor={`application-${application.application_id}`}>
-													{t("Collect data")}
+													{t("Process events")}
 												</Label>
 												<Switch
 													id={`application-${application.application_id}`}
@@ -1681,21 +1681,21 @@ export function AnalyticsSettingsPage() {
 							{settings && (
 								<Card className="max-w-2xl">
 									<CardHeader>
-										<CardTitle>{t("Collection & retention")}</CardTitle>
+										<CardTitle>{t("Processing & retention")}</CardTitle>
 										<CardDescription>
-											{t("Set the collection policy, hot-event retention and reporting timezone.")}
+											{t("Set Analytics processing, hot-event retention and reporting timezone.")}
 										</CardDescription>
 									</CardHeader>
 									<CardContent className="space-y-5">
 										<div className="flex items-center justify-between rounded-lg border p-4">
 											<div>
-												<div className="font-medium">{t("Collect analytics events")}</div>
+												<div className="font-medium">{t("Process collected events")}</div>
 												<div className="text-sm text-muted-foreground">
-													{t("Applies to the selected project.")}
+													{t("Core collection continues while Analytics processing is paused.")}
 												</div>
 											</div>
 											<Switch
-												aria-label={t("Collect analytics events")}
+												aria-label={t("Process collected events")}
 												checked={settings.data_collection_enabled}
 												onCheckedChange={(data_collection_enabled) =>
 													setSettings({ ...settings, data_collection_enabled })

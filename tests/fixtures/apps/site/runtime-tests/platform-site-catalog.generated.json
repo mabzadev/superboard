@@ -1,11 +1,11 @@
 {
-	"generated_from": "infra/generated/mbza-development-api-local.jsonc",
+	"generated_from": "infra/generated/mabza-development-api-local.jsonc",
 	"generator": "scripts/cloudflare/config.mjs",
-	"target": "mbza-development",
+	"target": "mabza-development",
 	"environment": "local",
 	"catalog": {
 		"schemaVersion": 1,
-		"target": "mbza-development",
+		"target": "mabza-development",
 		"environment": "local",
 		"workers": [
 			{

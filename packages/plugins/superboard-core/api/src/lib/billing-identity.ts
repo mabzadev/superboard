@@ -10,6 +10,7 @@ import {
 
 import type { BillingEnv } from "../types";
 import { customerInfo, findCustomerByAppUserId, getOrCreateCustomer } from "./billing";
+import { parseBillingClientContext, type BillingClientContext } from "./billing-client-context.js";
 import { readJsonObjectLimited } from "./http-limits";
 
 type OidcConfig = {
@@ -177,6 +178,7 @@ export async function resolveSdkCustomer(
 		projectId: string | number;
 		authorization?: string;
 		anonymousId?: string;
+		clientContext?: BillingClientContext;
 	},
 ) {
 	const verified = await verifiedAppUserId(env, params.projectId, params.authorization);
@@ -187,6 +189,18 @@ export async function resolveSdkCustomer(
 		throw new Error("Anonymous ID has an invalid prefix");
 	const customer = await getOrCreateCustomer(env.DB, params.projectId, appUserId, !verified);
 	if (!customer || Number(customer.blocked) === 1) throw new Error("Customer is blocked");
+	const context = parseBillingClientContext(params.clientContext);
+	if (Object.keys(context).length) {
+		await env.DB.prepare(
+			"UPDATE billing_customers SET attributes=json_set(attributes, '$.sdk_context', json_patch(COALESCE(json_extract(attributes, '$.sdk_context'), '{}'), json(?))) WHERE id=? AND project_id=?",
+		)
+			.bind(
+				JSON.stringify({ ...context, observed_at: new Date().toISOString() }),
+				customer.id,
+				String(params.projectId),
+			)
+			.run();
+	}
 	return { customer, appUserId, identified: Boolean(verified) };
 }
 

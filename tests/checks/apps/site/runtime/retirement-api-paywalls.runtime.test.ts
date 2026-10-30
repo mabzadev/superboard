@@ -10,7 +10,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-paywalls";
+const plugin = "superboard-paywalls";
 const file = "retirement-api-paywalls.runtime.test.ts";
 test("canonical Paywalls APIs preserve published designs, placements, experiments and measured events", async () => {
 	const scope = await prepareApiPlugin(plugin);

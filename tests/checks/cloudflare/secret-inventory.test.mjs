@@ -10,7 +10,7 @@ import {
 import { loadTarget } from "../../../scripts/cloudflare/target.mjs";
 
 test("secret inventory includes enabled common and target-specific contracts only", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const inventory = secretInventory(target);
 	assert.equal(
 		inventory.some(({ service }) => service === "messaging"),
@@ -30,7 +30,7 @@ test("secret inventory includes enabled common and target-specific contracts onl
 
 test("secret coordination covers every required binding without values", async () => {
 	for (const [targetName, environment] of [
-		["mbza-development", "development"],
+		["mabza-development", "development"],
 		["reference-production", "production"],
 	]) {
 		const { target } = await loadTarget(targetName);
@@ -48,7 +48,7 @@ test("secret coordination covers every required binding without values", async (
 });
 
 test("analytics query credentials are optional in development and required in production", async () => {
-	const development = (await loadTarget("mbza-development")).target;
+	const development = (await loadTarget("mabza-development")).target;
 	const production = (await loadTarget("reference-production")).target;
 	assert.deepEqual(
 		requiredSecretInventory(development, "development").find(
@@ -110,7 +110,7 @@ test("managed Worker secrets are application-specific and value-free", async () 
 });
 
 test("shared production contracts identify both ends and environment-specific billing ownership", async () => {
-	const development = (await loadTarget("mbza-development")).target;
+	const development = (await loadTarget("mabza-development")).target;
 	const production = (await loadTarget("reference-production")).target;
 	const developmentPlan = secretCoordinationPlan(development, "development");
 	const productionPlan = secretCoordinationPlan(production, "production");

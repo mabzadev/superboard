@@ -12,7 +12,7 @@ import {
 import { loadTarget } from "../../../scripts/cloudflare/target.mjs";
 
 test("application configuration plans public identities without hardcoded target data", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const updates = applicationConfigurationUpdates({
 		"google-audiences": "web-client.apps.googleusercontent.com",
 		"apple-audiences": "dev.example.reference",
@@ -42,11 +42,11 @@ test("application configuration apply is exact-confirmed, atomic and schema-vali
 	const temporary = await mkdtemp(join(tmpdir(), "superboard-app-config-"));
 	t.after(() => rm(temporary, { recursive: true, force: true }));
 	const path = join(temporary, "target.json");
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	await writeFile(path, JSON.stringify(target));
 	const plan = await buildApplicationConfigurationPlan({
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		updates: {
 			googleAudiences: ["web-client.apps.googleusercontent.com"],

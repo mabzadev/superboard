@@ -76,8 +76,8 @@ export function validateSourceSnapshot(snapshot) {
   if (!snapshot || snapshot.schema_version !== 1) {
     throw new Error("Flows source snapshot must use schema_version=1");
   }
-  if (snapshot.target !== "mbza-development" || snapshot.environment !== "development") {
-    throw new Error("Flows cutover snapshots are restricted to mbza-development/development");
+  if (snapshot.target !== "mabza-development" || snapshot.environment !== "development") {
+    throw new Error("Flows cutover snapshots are restricted to mabza-development/development");
   }
   const projectRef = String(snapshot.project?.project_ref || "");
   const match = /^(\d+)-(prod|test)$/u.exec(projectRef);

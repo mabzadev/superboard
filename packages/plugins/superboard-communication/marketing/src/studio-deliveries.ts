@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import type { ProjectContext } from "@superboard/contracts/project-context";
 import { Hono } from "hono";
 
@@ -55,10 +56,10 @@ export async function studioDeliveryStatistics(
 	return { totals, groups: rows.results };
 }
 
-export const studioDeliveryRoutes = new Hono<{
+export const studioDeliveryRoutes = registerRouter(new Hono<{
 	Bindings: Env;
 	Variables: { project: ProjectContext };
-}>();
+}>(), {"service":"marketing","module":"studio-deliveries.studioDeliveryRoutes","pluginId":"superboard-marketing","surface":"internal","access":"internal"});
 studioDeliveryRoutes.get("/", async (c) => {
 	const projectId = c.get("project").projectId;
 	const limit = Math.min(100, Math.max(1, Math.floor(Number(c.req.query("limit")) || 50)));

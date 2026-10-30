@@ -15,9 +15,9 @@
 		"legacyReadOnly": ["mabzadev/superboard-platform", "mabzadev/superboard-reference"]
 	},
 	"developmentDomains": {
-		"dashboard": "board.mbza.dev",
-		"reference": "reference.mbza.dev",
-		"shortLinks": "in.mbza.dev"
+		"dashboard": "board.mabza.dev",
+		"reference": "reference.mabza.dev",
+		"shortLinks": "in.mabza.dev"
 	},
 	"sdkStrategy": {
 		"active": ["flutter", "flutterflow"],

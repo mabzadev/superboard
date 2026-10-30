@@ -3,7 +3,7 @@
   "baseline_source_commit": "60ab8f5ed2aa04b171967cec3b656bfdd3f0f717",
   "results": [
     {
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "route_id": "superboard.flows_users_by_id",
       "route_pattern": "/flows/users/:id",
       "path": "/flows/users/4cdfed89f0136523c6a1c5f8942dc84f217836d6bdb6d5b0e4d39817ae685c5f",

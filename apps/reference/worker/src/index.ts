@@ -1,3 +1,5 @@
+import { createFetchRouter } from "@superboard/contracts/route-registry";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
 import {
   CUSTOM_WORKER_JOB_CANCEL_SUFFIX,
   CUSTOM_WORKER_JOB_PATH,
@@ -38,16 +40,13 @@ const capabilities: CustomWorkerManifest["capabilities"] = [
   {
     id: "reference.acceptance",
     description:
-      "Durable MBZA acceptance receipt bound to exact platform and reference revisions.",
+      "Durable MABZA acceptance receipt bound to exact platform and reference revisions.",
     mode: "request",
   },
 ];
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    try {
-      const url = new URL(request.url);
-      if (request.method === "GET" && url.pathname === "/health") {
+const routes = createFetchRouter<Env>({ service: "custom", module: "reference", pluginId: "supbrd-core", ownerBinding: "CUSTOM_WORKER_PLUGIN_ID", surface: "internal", access: "internal" });
+routes.defineRoute({ access: "public" }).get("/health", async ({ env }) => {
         try {
           const retentionDays = referenceRetentionDays(
             env.REFERENCE_JOB_RETENTION_DAYS,
@@ -83,8 +82,8 @@ export default {
             503,
           );
         }
-      }
-      if (
+      });
+routes.use("*", async ({ request, env }, next) => { if (
         !(await customWorkerAuthorized(
           request,
           configuredSecrets(
@@ -94,38 +93,26 @@ export default {
         ))
       ) {
         return json({ error: "unauthorized" }, 401);
-      }
-
-      const scope = parseCustomWorkerScope(request) ?? undefined;
-      if (
-        request.method === "GET" &&
-        url.pathname === CUSTOM_WORKER_MANIFEST_PATH
-      ) {
+      } return next(); });
+routes.get(CUSTOM_WORKER_MANIFEST_PATH, async ({ request, env }) => { parseCustomWorkerScope(request);
         return json(manifest(env));
-      }
-      if (
-        request.method === "GET" &&
-        url.pathname === CUSTOM_WORKER_STATS_PATH
-      ) {
+      });
+routes.get(CUSTOM_WORKER_STATS_PATH, async ({ request, env }) => { parseCustomWorkerScope(request);
         return json(await referenceStats(env.REFERENCE_DB));
-      }
-      const eraseMatch = url.pathname.match(
-        /^\/internal\/v1\/users\/([^/]+)$/u,
-      );
-      if (request.method === "DELETE" && eraseMatch) {
-        if (!scope || scope.subject !== decodeURIComponent(eraseMatch[1])) {
+      });
+routes.delete("/internal/v1/users/:subject", async ({ request, env, params }) => { const scope = parseCustomWorkerScope(request) ?? undefined;
+        if (!scope || scope.subject !== decodeURIComponent(params.subject)) {
           return json({ error: "scope_required" }, 403);
         }
         return json({
           erased: true,
           jobs_deleted: await eraseReferenceUser(env.REFERENCE_DB, scope),
         });
-      }
-      if (url.pathname === CUSTOM_WORKER_JOB_PATH) {
-        if (request.method === "GET") {
+      });
+routes.get(CUSTOM_WORKER_JOB_PATH, async ({ request, env, url }) => { const scope = parseCustomWorkerScope(request) ?? undefined;
           return json(await listReferenceJobs(url, env.REFERENCE_DB, scope));
-        }
-        if (request.method === "POST") {
+        });
+routes.post(CUSTOM_WORKER_JOB_PATH, async ({ request, env }) => { const scope = parseCustomWorkerScope(request) ?? undefined;
           if (env.ENVIRONMENT !== "development") {
             return json({ error: "reference_capability_disabled" }, 403);
           }
@@ -139,27 +126,22 @@ export default {
             ),
             202,
           );
-        }
-      }
-      const cancelMatch = url.pathname.match(
-        new RegExp(
-          `^${CUSTOM_WORKER_JOB_PATH}/([^/]+)${CUSTOM_WORKER_JOB_CANCEL_SUFFIX}$`,
-        ),
-      );
-      if (request.method === "POST" && cancelMatch) {
+        });
+routes.post(`${CUSTOM_WORKER_JOB_PATH}/:id${CUSTOM_WORKER_JOB_CANCEL_SUFFIX}`, async ({ request, env, params }) => { const scope = parseCustomWorkerScope(request) ?? undefined;
         return json(
-          await cancelReferenceJob(cancelMatch[1], env.REFERENCE_DB, scope),
+          await cancelReferenceJob(params.id, env.REFERENCE_DB, scope),
           202,
         );
-      }
-      const jobMatch = url.pathname.match(/^\/internal\/v1\/jobs\/([^/]+)$/);
-      if (request.method === "GET" && jobMatch) {
+      });
+routes.get(`${CUSTOM_WORKER_JOB_PATH}/:id`, async ({ request, env, params }) => { const scope = parseCustomWorkerScope(request) ?? undefined;
         return json(
-          await getReferenceJob(jobMatch[1], env.REFERENCE_DB, scope),
+          await getReferenceJob(params.id, env.REFERENCE_DB, scope),
         );
-      }
-      return json({ error: "not_found" }, 404);
-    } catch (error) {
+      });
+
+export default withRouteManifest(({
+  async fetch(request: Request, env: Env): Promise<Response> {
+    try { return await routes.fetch(request, env); } catch (error) {
       if (error instanceof RequestBodyError) {
         return json({ error: error.code }, error.status);
       }
@@ -182,7 +164,7 @@ export default {
   ): void {
     ctx.waitUntil(runReferenceMaintenance(env).then(() => undefined));
   },
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Env>), [routes], { service: "custom", pluginId: "supbrd-core" });
 
 export function runReferenceMaintenance(env: Env): Promise<number> {
   return pruneExpiredReferenceJobs(

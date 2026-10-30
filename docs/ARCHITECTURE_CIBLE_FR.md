@@ -1,4 +1,4 @@
-# Architecture cible SuperBoard, MBZA et VocoStar
+# Architecture cible SuperBoard, MABZA et VocoStar
 
 État de la base de référence mis à jour le 9 août 2026. Ce document décrit la cible à
 déployer; l'ancien inventaire de VocoStar reste disponible uniquement comme
@@ -9,7 +9,7 @@ déployer; l'ancien inventaire de VocoStar reste disponible uniquement comme
 SuperBoard devient le back-office et le plan de contrôle commun à toutes les
 applications. Il n'est plus un SaaS autonome. Tout le code commun vit dans le
 monorepo `mabzadev/superboard`; l'application d'acceptation FlutterFlow vit dans
-`apps/reference`. `mbza.dev` est seulement l'environnement de
+`apps/reference`. `mabza.dev` est seulement l'environnement de
 développement et de recette de cette plateforme.
 
 Une application n'obtient jamais une copie modifiée des Workers communs. Elle
@@ -36,7 +36,7 @@ flowchart TB
 
   git --> gha
   gitref --> gha
-  gha -->|"branche dev + cible MBZA"| cfdev
+  gha -->|"branche dev + cible MABZA"| cfdev
   gha -->|"branche main + cible de l'application"| cfprod
   reference --> gateway
   app --> gateway
@@ -47,32 +47,32 @@ flowchart TB
   gateway -->|"contrat versionné privé"| custom
 ```
 
-## Adresses de la recette MBZA
+## Adresses de la recette MABZA
 
-| Surface                  | Adresse                                      | Rôle                                                                                          |
-| ------------------------ | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Application de référence | `https://reference.mbza.dev`                 | recette exécutable Flutter Web des quinze parcours communs et du protocole d'extension custom |
-| Back-office              | `https://board.mbza.dev`                     | administration, données, états et diagnostics                                                 |
-| API                      | `https://api.mbza.dev`                       | façade authentifiée de tous les services                                                      |
-| SDK                      | `https://sdk.mbza.dev`                       | endpoints consommés par les bibliothèques mobiles                                             |
-| Liens courts             | `https://in.mbza.dev`                        | redirection, attribution et app/universal links                                               |
-| Fichiers                 | `https://files.mbza.dev`                     | diffusion contrôlée des fichiers                                                              |
-| MCP                      | `https://mcp.mbza.dev/mcp`                   | outils opérateur OAuth en Streamable HTTP stateless                                           |
-| Prévisualisation email   | `https://mail.mbza.dev`                      | boîte de capture protégée en développement                                                    |
-| Support mobile           | `https://api.mbza.dev/api/v1/support-client` | conversations, pièces jointes, temps réel et CSAT                                             |
+| Surface                  | Adresse                                       | Rôle                                                                                          |
+| ------------------------ | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Application de référence | `https://reference.mabza.dev`                 | recette exécutable Flutter Web des quinze parcours communs et du protocole d'extension custom |
+| Back-office              | `https://board.mabza.dev`                     | administration, données, états et diagnostics                                                 |
+| API                      | `https://api.mabza.dev`                       | façade authentifiée de tous les services                                                      |
+| SDK                      | `https://sdk.mabza.dev`                       | endpoints consommés par les bibliothèques mobiles                                             |
+| Liens courts             | `https://in.mabza.dev`                        | redirection, attribution et app/universal links                                               |
+| Fichiers                 | `https://files.mabza.dev`                     | diffusion contrôlée des fichiers                                                              |
+| MCP                      | `https://mcp.mabza.dev/mcp`                   | outils opérateur OAuth en Streamable HTTP stateless                                           |
+| Prévisualisation email   | `https://mail.mabza.dev`                      | boîte de capture protégée en développement                                                    |
+| Support mobile           | `https://api.mabza.dev/api/v1/support-client` | conversations, pièces jointes, temps réel et CSAT                                             |
 
 Les services de plateforme sont déclarés dans
-`infra/targets/mbza-development.json`. L'adresse de l'application de référence
+`infra/targets/mabza-development.json`. L'adresse de l'application de référence
 et son Worker Static Assets sont déclarés dans
 `apps/reference/reference.project.json`. Ces manifestes ne contiennent ni ID de
 compte Cloudflare ni secret et leurs valeurs ne deviennent jamais des valeurs
 par défaut du code réutilisable.
 
-État public revérifié le 12 août 2026 : `board.mbza.dev` et
-`api.mbza.dev/health` répondent en HTTP 200; `in.mbza.dev`, `sdk.mbza.dev` et
-`files.mbza.dev` sont servis par la façade API, tandis que `mcp.mbza.dev` est
-servi par le Worker MCP. `grow.mbza.dev` est retiré. `reference.mbza.dev` et
-`mail.mbza.dev` ne sont pas encore publiés.
+État public revérifié le 12 août 2026 : `board.mabza.dev` et
+`api.mabza.dev/health` répondent en HTTP 200; `in.mabza.dev`, `sdk.mabza.dev` et
+`files.mabza.dev` sont servis par la façade API, tandis que `mcp.mabza.dev` est
+servi par le Worker MCP. `grow.mabza.dev` est retiré. `reference.mabza.dev` et
+`mail.mabza.dev` ne sont pas encore publiés.
 Le pipeline lit les zones, records DNS et domaines Workers avant de publier,
 avec un token de déploiement explicitement fourni par GitHub Environment. Il
 bloque ces conflits et ne remplacera ni l'ancien record de liens courts ni le
@@ -129,7 +129,7 @@ Ordre de déploiement : Observability, Email, Files, Identity, modules activés,
 Billing, Custom, API, MCP, puis Dashboard. Le Dashboard est publié en dernier, car
 il décrit l'API effectivement déployée.
 
-La source de l'application `reference.mbza.dev` vit dans `apps/reference` et ses
+La source de l'application `reference.mabza.dev` vit dans `apps/reference` et ses
 tests font partie de la CI du monorepo. Son futur Worker d'assets statiques sert
 la recette, pas un rôle métier, et n'entre donc pas dans les seize rôles
 ci-dessus. Le domaine n'est pas encore publié au 12 août 2026.
@@ -193,12 +193,12 @@ Le custom VocoStar applique ce protocole aux jobs voix/média et réconcilie leu
 état historique. Il persiste déjà le payload enrichi et l'identité durable avant
 d'appeler directement les orchestrateurs Workflow/Container; repasser par le
 dispatcher VocoStar historique dupliquerait l'enrichissement et créerait un second
-identifiant pour les jobs voix. Le custom de référence MBZA exécute un écho
+identifiant pour les jobs voix. Le custom de référence MABZA exécute un écho
 durable dans son D1 dédié : création, rejeu idempotent, conflit, liste paginée,
 détail, isolation par projet/utilisateur, statistiques et health check. Il certifie
 ainsi le cycle complet avant l'ajout d'une intégration propre à une application.
 Sa rétention n'est pas codée dans le Worker : la cible déclare
-`REFERENCE_JOB_RETENTION_DAYS` (30 jours sur MBZA), `/health` publie cette valeur
+`REFERENCE_JOB_RETENTION_DAYS` (30 jours sur MABZA), `/health` publie cette valeur
 et une création purge les jobs d'acceptation expirés. Une maintenance quotidienne
 est déclarée dans la cible avec `customWorker.crons`. VocoStar déclare séparément
 son retry chaque minute; aucune fréquence n'est déduite du nom d'une capacité.
@@ -220,7 +220,7 @@ La responsabilité est volontairement séparée :
 4. API/Identity émettent les emails transactionnels par liaison privée :
    vérification, récupération de mot de passe, invitation et export.
 5. En développement, `transport=capture`; aucun email transactionnel de test ne part chez un
-   destinataire réel. `mail.mbza.dev` exige `MAIL_PREVIEW_TOKEN`.
+   destinataire réel. `mail.mabza.dev` exige `MAIL_PREVIEW_TOKEN`.
 6. En production, SMTP et ses identifiants sont des secrets Worker propres à la
    cible; aucun mot de passe n'est commité ni stocké dans l'état FlutterFlow.
 7. Un test SMTP réussi ne suffit pas : le back-office vérifie SPF, le sélecteur
@@ -260,7 +260,7 @@ d'observation, un reçu lié au compte et aux versions exactes autorise le retra
 des anciens bindings, avec rollback automatique. Les secrets ne transitent ni
 par Git, ni par les manifests, ni par FlutterFlow.
 
-## Données et ressources de la base MBZA complète
+## Données et ressources de la base MABZA complète
 
 Après bootstrap, la cible de développement doit posséder :
 
@@ -317,7 +317,7 @@ owner/admin. Elle doit être la source de vérité opérationnelle et afficher :
 - l'environnement, les URL et les capacités exposées par l'API;
 - la disponibilité HTTPS publique, le code HTTP et la latence de l'API, du SDK,
   des liens courts, des fichiers, du Dashboard, du MCP, de la mail-preview et des
-  surfaces externes déclarées comme `reference.mbza.dev`;
+  surfaces externes déclarées comme `reference.mabza.dev`;
 - la description, l'état, la latence et la dernière erreur nettoyée de chaque
   Worker activé;
 - les utilisateurs, projets, instances, sessions et jetons OAuth actifs;
@@ -365,11 +365,11 @@ obtenues via l'API Analytics avec un jeton en lecture seule; elles ne doivent pa
 
 ## Git, branches et comptes Cloudflare
 
-| Branche                   | Environnement GitHub         | Cible                      | Effet                                      |
-| ------------------------- | ---------------------------- | -------------------------- | ------------------------------------------ |
-| branche de fonctionnalité | aucun                        | aucune                     | tests et dry-runs seulement                |
-| `dev`                     | `development`                | `mbza-development`         | déploiement automatique de la recette MBZA |
-| `main`                    | une ou plusieurs productions | manifests des applications | déploiements automatiques multi-comptes    |
+| Branche                   | Environnement GitHub         | Cible                      | Effet                                       |
+| ------------------------- | ---------------------------- | -------------------------- | ------------------------------------------- |
+| branche de fonctionnalité | aucun                        | aucune                     | tests et dry-runs seulement                 |
+| `dev`                     | `development`                | `mabza-development`        | déploiement automatique de la recette MABZA |
+| `main`                    | une ou plusieurs productions | manifests des applications | déploiements automatiques multi-comptes     |
 
 `scripts/config/cloudflare-deployments.json` sélectionne, pour chaque branche, tous les
 GitHub Environments à déployer et fixe la cible attendue pour chacun. Chaque
@@ -386,13 +386,13 @@ protégé est la seule autorité de publication automatique.
 
 `apps/reference` applique la même frontière dans le monorepo : chaque pull
 request valide son manifeste, ses dépendances et Flutter Web contre le même SHA
-SuperBoard. La publication de `reference.mbza.dev` reste un cutover distinct et
+SuperBoard. La publication de `reference.mabza.dev` reste un cutover distinct et
 n'est pas encore active; aucun dépôt ni événement cross-repository n'intervient
 plus dans cette validation.
 
 ## Référence FlutterFlow
 
-`apps/reference`, destiné à être publié sur `https://reference.mbza.dev`, contient
+`apps/reference`, destiné à être publié sur `https://reference.mabza.dev`, contient
 exactement seize parcours d'acceptation : bootstrap,
 connexion, création de compte, récupération de mot de passe, accueil, profil,
 notifications, fichiers, produits, paywall, liens dynamiques, support, consentement
@@ -467,7 +467,7 @@ dans `/infrastructure`. Le contrat complet, les limites de rétention et la
 procédure de recette sont définis dans
 [ACCOUNT_LIFECYCLE.md](./ACCOUNT_LIFECYCLE.md).
 
-Encore externe au dépôt : création des ressources MBZA, affectation des secrets,
+Encore externe au dépôt : création des ressources MABZA, affectation des secrets,
 connexion effective des dépôts GitHub, déploiement Cloudflare, DNS, exécution de
 la migration Chatwoot, rotation des anciennes clés VocoStar et tests mobiles sur
 les toolchains iOS/Android complètes. Ces opérations exigent les comptes, secrets

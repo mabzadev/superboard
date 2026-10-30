@@ -1,4 +1,4 @@
-export const pluginId = "supbrd-plugmod-analytics";
+export const pluginId = "superboard-analytics";
 export const views = {
 	"superboard.home": () => import("./views/superboard.home.js"),
 	"superboard.analytics": () => import("./views/superboard.analytics.js"),

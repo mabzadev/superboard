@@ -8,7 +8,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plug-products";
+const plugin = "superboard-products";
 const file = "retirement-api-products.runtime.test.ts";
 test("canonical Products commands retain catalog relations, archived records and imported store products", async () => {
 	const scope = await prepareApiPlugin(plugin);

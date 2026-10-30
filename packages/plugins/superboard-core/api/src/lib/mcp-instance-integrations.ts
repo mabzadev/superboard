@@ -19,7 +19,7 @@ export async function dispatchMcpInstanceIntegration(
 	operation: "usage" | "sdk",
 	input: ObjectValue = {},
 ): Promise<Response> {
-	const pluginId = operation === "usage" ? "supbrd-plugmod-analytics" : "supbrd-plug-settings";
+	const pluginId = operation === "usage" ? "superboard-analytics" : "superboard-settings";
 	try {
 		const execution = await runPluginTask(
 			env,

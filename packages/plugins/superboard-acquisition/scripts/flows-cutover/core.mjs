@@ -13,7 +13,7 @@ import {
 
 export const FLOWS_CUTOVER_SCHEMA_VERSION = 2;
 export const FLOWS_CUTOVER_TOOL_VERSION = "2.3.0";
-export const FLOWS_CUTOVER_TARGET = "mbza-development";
+export const FLOWS_CUTOVER_TARGET = "mabza-development";
 export const FLOWS_CUTOVER_ENVIRONMENT = "development";
 export const FLOWS_CUTOVER_SOURCES = Object.freeze(["paywalls", "onboardings"]);
 
@@ -22,10 +22,10 @@ export const FLOWS_CUTOVER_SOURCES = Object.freeze(["paywalls", "onboardings"]);
 // disposable: a post-cutover change there blocks automatic rollback.
 const DERIVED_REVERSE_ENTITIES = /\.(?:claims|mappings|users|states|assignments|audit)$/u;
 
-export function assertMbzaDevelopment(target, environment) {
+export function assertMabzaDevelopment(target, environment) {
 	if (target !== FLOWS_CUTOVER_TARGET || environment !== FLOWS_CUTOVER_ENVIRONMENT) {
 		throw new Error(
-			"Flows cutover is restricted to --target mbza-development --environment development; production cutover is intentionally disabled",
+			"Flows cutover is restricted to --target mabza-development --environment development; production cutover is intentionally disabled",
 		);
 	}
 	return true;
@@ -84,7 +84,11 @@ export function routingVerificationEvidence(plan, verification) {
 	};
 }
 
-export function verifyMbzaRoutingGate({ inventory, scopes, checkedAt = new Date().toISOString() }) {
+export function verifyMabzaRoutingGate({
+	inventory,
+	scopes,
+	checkedAt = new Date().toISOString(),
+}) {
 	const requiredScopes = [
 		{ projectId: 1, projectRef: "1-prod" },
 		{ projectId: 2, projectRef: "1-test" },
@@ -105,7 +109,7 @@ export function verifyMbzaRoutingGate({ inventory, scopes, checkedAt = new Date(
 		)
 	) {
 		throw new Error(
-			"MBZA project inventory changed; regenerate the explicit two-scope routing gate before API promotion",
+			"MABZA project inventory changed; regenerate the explicit two-scope routing gate before API promotion",
 		);
 	}
 	const reports = requiredScopes.map((requiredScope) => {
@@ -120,7 +124,7 @@ export function verifyMbzaRoutingGate({ inventory, scopes, checkedAt = new Date(
 			window?.project_ref !== requiredScope.projectRef
 		) {
 			throw new Error(
-				`${requiredScope.projectRef} routing artifacts do not match the fixed MBZA project scope`,
+				`${requiredScope.projectRef} routing artifacts do not match the fixed MABZA project scope`,
 			);
 		}
 		const evidence = routingVerificationEvidence(plan, verification);
@@ -330,7 +334,7 @@ export function assertPlanIntegrity(plan) {
 	) {
 		throw new Error("Unsupported Flows cutover plan schema/tool version");
 	}
-	assertMbzaDevelopment(plan.target, plan.environment);
+	assertMabzaDevelopment(plan.target, plan.environment);
 	parseProjectRef(plan.project?.project_ref);
 	if (
 		Object.hasOwn(plan, "organization_id") ||
@@ -555,7 +559,7 @@ export function createBackupPlan({
 	outputDirectory,
 	generatedAt = new Date().toISOString(),
 }) {
-	assertMbzaDevelopment(target, environment);
+	assertMabzaDevelopment(target, environment);
 	parseProjectRef(projectRef);
 	const archive = resources?.moduleR2?.flows?.name;
 	const databases = [
@@ -584,7 +588,7 @@ export function createBackupPlan({
 		ready: blockers.length === 0,
 		blockers,
 		exact_bootstrap_instruction: blockers.includes("database_id_unprovisioned:flows")
-			? "node scripts/cloudflare/bootstrap.mjs --target mbza-development --environment development --remote"
+			? "node scripts/cloudflare/bootstrap.mjs --target mabza-development --environment development --remote"
 			: null,
 		databases: databases.map((database) => {
 			const identifier = database.id || database.name || "UNPROVISIONED";
@@ -640,7 +644,7 @@ export function validateBackupReceipt(receipt, { projectRef, windowId } = {}) {
 		receipt.target !== FLOWS_CUTOVER_TARGET ||
 		receipt.environment !== FLOWS_CUTOVER_ENVIRONMENT
 	) {
-		throw new Error("A valid MBZA Flows backup receipt is required");
+		throw new Error("A valid MABZA Flows backup receipt is required");
 	}
 	if (projectRef && receipt.project_ref !== projectRef)
 		throw new Error("Backup receipt project_ref mismatch");
@@ -680,7 +684,7 @@ export function validateBackupReceiptForBackupPlan(receipt, backupPlan) {
 	) {
 		throw new Error("A canonical Flows backup plan is required");
 	}
-	assertMbzaDevelopment(backupPlan.target, backupPlan.environment);
+	assertMabzaDevelopment(backupPlan.target, backupPlan.environment);
 	parseProjectRef(backupPlan.project_ref);
 	const expectedPlanId = backupPlanDigest(backupPlan);
 	if (backupPlan.backup_plan_id !== expectedPlanId || receipt.backup_plan_id !== expectedPlanId) {
@@ -723,7 +727,7 @@ export function validateFreezeReceipt(receipt, { projectRef, projectId, windowId
 		receipt.environment !== FLOWS_CUTOVER_ENVIRONMENT ||
 		receipt.enabled !== true
 	) {
-		throw new Error("An active MBZA Flows freeze receipt is required");
+		throw new Error("An active MABZA Flows freeze receipt is required");
 	}
 	if (projectRef && receipt.project_ref !== projectRef)
 		throw new Error("Freeze receipt project_ref mismatch");
@@ -1140,7 +1144,7 @@ function validateWindow(window, projectRef, now) {
 		window.environment !== FLOWS_CUTOVER_ENVIRONMENT ||
 		window.project_ref !== projectRef
 	) {
-		throw new Error("Cutover window does not match MBZA development/project");
+		throw new Error("Cutover window does not match MABZA development/project");
 	}
 	const start = Date.parse(window.starts_at);
 	const end = Date.parse(window.ends_at);

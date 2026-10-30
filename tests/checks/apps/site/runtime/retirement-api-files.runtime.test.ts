@@ -10,7 +10,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-files";
+const plugin = "superboard-files";
 const file = "retirement-api-files.runtime.test.ts";
 const bytes = Uint8Array.from(
 	atob(

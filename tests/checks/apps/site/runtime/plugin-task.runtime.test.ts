@@ -19,7 +19,7 @@ import analyticsWorker from "../../../../../packages/plugins/superboard-analytic
 import { ingestAnalyticsEvents } from "../../../../../packages/plugins/superboard-analytics/worker/src/ingestion.js";
 import { dispatchLifecycleApi, pluginTaskContext } from "./lifecycle-health-services.js";
 
-const pluginId = "supbrd-plugmod-analytics";
+const pluginId = "superboard-analytics";
 const headers = {
 	Origin: "https://site.example",
 	"X-EmDash-Request": "1",
@@ -342,7 +342,7 @@ test("the real Analytics queue defers while disabled and projects the same event
 
 test("the broker rejects cross-plugin and cross-instance task claims", async () => {
 	await expect(
-		sendPluginTaskCommand(moduleEnvironment("supbrd-plugmod-paywalls"), command()),
+		sendPluginTaskCommand(moduleEnvironment("superboard-paywalls"), command()),
 	).rejects.toThrow("PLUGIN_TASK_SCOPE_FORBIDDEN");
 	await expect(
 		sendPluginTaskCommand(moduleEnvironment(), { ...command(), instance_id: "other-instance" }),

@@ -1,10 +1,12 @@
-import { Hono } from "hono";
+import { registerRouter } from "@superboard/contracts/route-registry";
+import { Hono, type Context } from "hono";
 
 import {
 	applyVerifiedPurchase,
 	offeringsForCustomer,
 	type BillingEnvironment,
 } from "../lib/billing";
+import { billingClientContextFromRequest } from "../lib/billing-client-context.js";
 import {
 	billingServiceEnabled,
 	callBillingService,
@@ -28,23 +30,24 @@ import {
 	verifyAppleTransaction,
 	verifyGooglePurchase,
 } from "../lib/store-verification";
+import { createStripeCheckout, createStripePortal } from "../lib/stripe-billing.js";
 import type { AppVariables, Env } from "../types";
 
 function brandedHeader(c: any, suffix: string): string | undefined {
 	return c.req.header(`X-SuperBoard-${suffix}`);
 }
 
-const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+const sdk = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.purchases-v2-sdk.sdk","pluginId":"superboard-billing","surface":"sdk","access":"sdk-key","public":{"surface":"sdk","prefix":"/v1/monetization/purchases","aliases":["/purchases/v2"]}});
 
 async function body(c: any): Promise<Record<string, any>> {
 	return readApiJson(c.req.raw);
 }
 
-async function context(c: any) {
+async function context(c: Context<{ Bindings: Env; Variables: AppVariables }>) {
 	const projectId = c.get("projectId");
 	if (!projectId)
 		throw purchasesError("invalid_sdk_project", "Invalid project for SDK credentials", 403);
-	const project = (await c.env.DB.prepare(`
+	const project = await c.env.DB.prepare(`
     SELECT p.id, p.instance_id, COALESCE(p.is_test, p.test, 0) AS is_test,
            COALESCE(s.purchases_enabled, 0) AS purchases_enabled,
            COALESCE(f.purchases_core, 1) AS purchases_core,
@@ -56,7 +59,7 @@ async function context(c: any) {
     WHERE p.id = ? LIMIT 1
   `)
 		.bind(String(projectId))
-		.first()) as {
+		.first<{
 		id: number;
 		instance_id: number;
 		is_test: number;
@@ -64,7 +67,7 @@ async function context(c: any) {
 		purchases_core: number;
 		paywalls: number;
 		virtual_currencies: number;
-	} | null;
+	}>();
 	if (!project)
 		throw purchasesError("invalid_sdk_project", "Invalid project for SDK credentials", 403);
 	if (!isPurchasesEnabled(c.env, project.purchases_enabled))
@@ -81,6 +84,7 @@ async function context(c: any) {
 		);
 	const resolved = await resolveCustomerFromBillingAuthority(c.env, {
 		projectId,
+		clientContext: billingClientContextFromRequest(c.req.raw),
 		authorization: c.req.header("Authorization"),
 		anonymousId: brandedHeader(c, "Anonymous-ID"),
 	});
@@ -99,7 +103,7 @@ async function context(c: any) {
 	};
 }
 
-function fail(c: any, error: unknown) {
+function fail(c: Context<{ Bindings: Env; Variables: AppVariables }>, error: unknown): Response {
 	const value = error as { status?: number };
 	console.error(
 		JSON.stringify({
@@ -108,10 +112,7 @@ function fail(c: any, error: unknown) {
 			message: (error as Error)?.message || String(error),
 		}),
 	);
-	return c.json(
-		errorEnvelope(error, c.req.header("cf-ray") || crypto.randomUUID()),
-		value?.status || 422,
-	);
+	return Response.json(errorEnvelope(error, c.req.header("cf-ray") || crypto.randomUUID()), { status: value?.status || 422 });
 }
 
 function requestCountry(c: any) {
@@ -460,5 +461,46 @@ sdk.get("/customer-center", async (c) => {
 		return fail(c, error);
 	}
 });
+
+for (const action of ["checkout", "portal"] as const) {
+	sdk.post(`/stripe/${action}`, async (c) => {
+		try {
+			const ctx = await context(c);
+			if (!ctx.identified)
+				throw purchasesError("identity_required", "Sign in before using Stripe", 401);
+			if (c.get("sdkPlatform") !== "web")
+				throw purchasesError("web_platform_required", "Stripe checkout requires the web SDK", 403);
+			const input = await body(c);
+			const key = c.req.header("Idempotency-Key") || "";
+			const result = billingServiceEnabled(c.env)
+				? await callBillingService(c.env, `/internal/v1/stripe/${action}`, {
+						project_id: ctx.projectId,
+						customer_id: String(ctx.customer.id),
+						environment: ctx.environment,
+						input,
+						idempotency_key: key,
+					})
+				: action === "checkout"
+					? await createStripeCheckout(
+							c.env,
+							ctx.projectId,
+							String(ctx.customer.id),
+							ctx.environment,
+							input,
+							key,
+						)
+					: await createStripePortal(
+							c.env,
+							ctx.projectId,
+							String(ctx.customer.id),
+							ctx.environment,
+							input,
+						);
+			return c.json(result, 200, { "Cache-Control": "private, no-store" });
+		} catch (error) {
+			return fail(c, error);
+		}
+	});
+}
 
 export default sdk;

@@ -42,7 +42,7 @@ echo "Using simulator: $SIMULATOR_ID"
 # Build the test filter flag if a class name was provided
 ONLY_TESTING=""
 if [ -n "${1:-}" ]; then
-    ONLY_TESTING="-only-testing:mbzadevsTests/$1"
+    ONLY_TESTING="-only-testing:mabzadevsTests/$1"
     echo "Running only: $1"
 fi
 

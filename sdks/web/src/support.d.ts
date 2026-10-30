@@ -1,5 +1,5 @@
-export const SUPERBOARD_SUPPORT_WIDGET_PATH: "/api/v1/support-widget";
-export const SUPERBOARD_SUPPORT_REALTIME_PATH: "/api/v1/support/realtime";
+export const SUPERBOARD_SUPPORT_WIDGET_PATH: "/v1/communication/support/widget";
+export const SUPERBOARD_SUPPORT_REALTIME_PATH: "/v1/communication/support/realtime";
 
 export type SuperBoardSupportIdentityTokenProvider = () =>
 	| Promise<string | { token: string }>

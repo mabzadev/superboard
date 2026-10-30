@@ -1,8 +1,8 @@
 Canonical operator API and real Workers with persisted and reread identifiers.
 [
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.data_source.components",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.data_source.components",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -22,8 +22,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.command.create_environment",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.command.create_environment",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -34,8 +34,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.data_source.environments",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.data_source.environments",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -46,8 +46,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.command.rotate_environment_key",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.command.rotate_environment_key",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -58,8 +58,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.data_source.users",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.data_source.users",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -70,8 +70,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.data_source.user_details",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.data_source.user_details",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -82,8 +82,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.command.save_localization",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.command.save_localization",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -94,8 +94,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.data_source.localization",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.data_source.localization",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -106,8 +106,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.command.create_workflow",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.command.create_workflow",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -118,8 +118,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.command.update_workflow",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.command.update_workflow",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -130,8 +130,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.data_source.workflows",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.data_source.workflows",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -142,8 +142,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.command.publish_workflow",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.command.publish_workflow",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -154,8 +154,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.command.activate_version",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.command.activate_version",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -168,8 +168,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.data_source.workflow",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.data_source.workflow",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -180,8 +180,8 @@ Canonical operator API and real Workers with persisted and reread identifiers.
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.data_source.overview",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.data_source.overview",
     "scenario": "read",
     "status": "passed",
     "type": "integration",

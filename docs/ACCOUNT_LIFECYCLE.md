@@ -2,14 +2,14 @@
 
 Ce document définit le contrat commun SuperBoard pour la déconnexion et la
 suppression d’un compte dans toutes les applications. Il s’applique à la
-référence MBZA, à VocoStar et aux futures cibles. Une application peut ajouter
+référence MABZA, à VocoStar et aux futures cibles. Une application peut ajouter
 une purge métier dans son Worker custom, mais ne peut pas créer une seconde
 autorité de suppression.
 
 ## Deux opérations différentes
 
-| Opération             | Route commune                                                              | Effet                                                                                                                                   |
-| --------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Opération             | Route commune                                                                | Effet                                                                                                                                   |
+| --------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Déconnexion           | `superboardApplicationLogoutJson`                                            | Révoque la session Identity, vide le stockage sécurisé et déconnecte le fournisseur d’achats. Les données du compte restent intactes.   |
 | Suppression du compte | `DELETE /api/v1/sdk/account/v1` via `superboardApplicationDeleteAccountJson` | Lance l’effacement durable de toutes les données applicatives rattachées à l’identité authentifiée, puis révoque l’identité en dernier. |
 
@@ -77,7 +77,7 @@ opération sans créer une nouvelle fuite de données personnelles.
 
 ## Procédure de validation et de promotion
 
-1. Appliquer toutes les migrations sur les bases de recette MBZA et confirmer
+1. Appliquer toutes les migrations sur les bases de recette MABZA et confirmer
    que l’API attend `0057_application_account_erasure.sql`.
 2. Publier les SDK sous des tags Git immuables. Le client FlutterFlow exige
    `sdk-flutterflow-v2.2.5`; aucun projet distant ne doit être modifié avant que

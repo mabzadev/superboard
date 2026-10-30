@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
 import {
@@ -49,7 +50,7 @@ import { testStoreCredentials } from "../lib/store-verification";
 import { authMiddleware } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
-const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+const admin = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.purchases-v2-admin.admin","pluginId":"superboard-billing","surface":"internal","access":"operator"});
 admin.use("*", authMiddleware);
 
 // Keep historical rows readable, but expose and create only supported providers.

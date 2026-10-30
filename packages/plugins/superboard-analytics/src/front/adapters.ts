@@ -2,360 +2,338 @@ import type { PluginApiAdapter } from "@superboard/front-ui/api";
 
 export const adapters = [
 	{
-		id: "supbrd-plugmod-analytics.command.create_analytics_report",
+		id: "superboard-analytics.command.create_analytics_report",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/analytics/projects/:projectRef/reports",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:POST:/internal/v1/reports",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.update_analytics_report",
+		id: "superboard-analytics.command.update_analytics_report",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/analytics/projects/:projectRef/reports/:id",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:PUT:/internal/v1/reports/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.delete_analytics_report",
+		id: "superboard-analytics.command.delete_analytics_report",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/analytics/projects/:projectRef/reports/:id",
+				route_id:
+					"api:analytics:operator-proxy->analytics:index.app:DELETE:/internal/v1/reports/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.create_analytics_operation",
+		id: "superboard-analytics.command.create_analytics_operation",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/analytics/projects/:projectRef/operations",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:POST:/internal/v1/operations",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.create_analytics_dashboard",
+		id: "superboard-analytics.command.create_analytics_dashboard",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/analytics/projects/:projectRef/dashboards",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:POST:/internal/v1/dashboards",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.update_analytics_dashboard",
+		id: "superboard-analytics.command.update_analytics_dashboard",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/analytics/projects/:projectRef/dashboards/:id",
+				route_id:
+					"api:analytics:operator-proxy->analytics:index.app:PUT:/internal/v1/dashboards/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.delete_analytics_dashboard",
+		id: "superboard-analytics.command.delete_analytics_dashboard",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/analytics/projects/:projectRef/dashboards/:id",
+				route_id:
+					"api:analytics:operator-proxy->analytics:index.app:DELETE:/internal/v1/dashboards/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.create_analytics_cohort",
+		id: "superboard-analytics.command.create_analytics_cohort",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/analytics/projects/:projectRef/cohorts",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:POST:/internal/v1/cohorts",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
+		id: "superboard-analytics.command.evaluate_analytics_cohort",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/analytics/projects/:projectRef/cohorts/:id/evaluate",
+				route_id:
+					"api:analytics:operator-proxy->analytics:index.app:POST:/internal/v1/cohorts/:id/evaluate",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
+		id: "superboard-analytics.command.upsert_analytics_remote_config",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/analytics/projects/:projectRef/remote-config/:key",
+				route_id:
+					"api:analytics:operator-proxy->analytics:index.app:PUT:/internal/v1/remote-config/:key",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.create_analytics_alert",
+		id: "superboard-analytics.command.create_analytics_alert",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/analytics/projects/:projectRef/alerts",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:POST:/internal/v1/alerts",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.command.update_analytics_settings",
+		id: "superboard-analytics.command.update_analytics_settings",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/analytics/projects/:projectRef/settings",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:PUT:/internal/v1/settings",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_overview",
+		id: "superboard-analytics.data_source.analytics_overview",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/overview",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/overview",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_events",
+		id: "superboard-analytics.data_source.analytics_events",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/events",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/events",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_event_analysis",
+		id: "superboard-analytics.data_source.analytics_event_analysis",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/events/analyze",
+				route_id:
+					"api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/events/analyze",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_installations",
+		id: "superboard-analytics.data_source.analytics_installations",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/installations",
+				route_id:
+					"api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/installations",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_purchases",
+		id: "superboard-analytics.data_source.analytics_purchases",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/purchases",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/purchases",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_retention",
+		id: "superboard-analytics.data_source.analytics_retention",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/retention",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/retention",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_reports",
+		id: "superboard-analytics.data_source.analytics_reports",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/reports",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/reports",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_dashboards",
+		id: "superboard-analytics.data_source.analytics_dashboards",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/dashboards",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/dashboards",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_sessions",
+		id: "superboard-analytics.data_source.analytics_sessions",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/sessions",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/sessions",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_profiles",
+		id: "superboard-analytics.data_source.analytics_profiles",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/profiles",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/profiles",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_views",
+		id: "superboard-analytics.data_source.analytics_views",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/views",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/views",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_dimensions",
+		id: "superboard-analytics.data_source.analytics_dimensions",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/dimensions",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/dimensions",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_crashes",
+		id: "superboard-analytics.data_source.analytics_crashes",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/crashes",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/crashes",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_feedback",
+		id: "superboard-analytics.data_source.analytics_feedback",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/feedback",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/feedback",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_cohorts",
+		id: "superboard-analytics.data_source.analytics_cohorts",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/cohorts",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/cohorts",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_remote_config",
+		id: "superboard-analytics.data_source.analytics_remote_config",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/remote-config",
+				route_id:
+					"api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/remote-config",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_alerts",
+		id: "superboard-analytics.data_source.analytics_alerts",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/alerts",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/alerts",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-analytics.data_source.analytics_settings",
+		id: "superboard-analytics.data_source.analytics_settings",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/analytics/projects/:projectRef/settings",
+				route_id: "api:analytics:operator-proxy->analytics:index.app:GET:/internal/v1/settings",
 				query: "none",
 				body: "none",
 			},

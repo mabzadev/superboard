@@ -2,7 +2,7 @@
   "resumed_at": "2026-09-07T06:30:43.952Z",
   "results": [
     {
-      "plugin_id": "supbrd-plug-audit",
+      "plugin_id": "superboard-audit",
       "status": "passed",
       "view_ids": [
         "01M1SW7B4EBFB0V17SDJ667FPK"
@@ -13,7 +13,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plug-content",
+      "plugin_id": "superboard-content",
       "status": "passed",
       "view_ids": [
         "01M1SW7B4W8SQZXDD1K1S28KXQ"
@@ -24,7 +24,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plug-products",
+      "plugin_id": "superboard-products",
       "status": "passed",
       "view_ids": [
         "01M1SF6F9SQFJDN38V6RP0R1HD"
@@ -35,7 +35,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plug-settings",
+      "plugin_id": "superboard-settings",
       "status": "passed",
       "view_ids": [
         "01M1SF6F677WDW2XF5ATCEZCAN",
@@ -50,7 +50,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "view_ids": [
         "01M1SF6F5C1450EDKRD0YXG2AX",
@@ -103,7 +103,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "view_ids": [
         "01M1SF6F4Y9WJ083PT8XA8HBNA",
@@ -132,7 +132,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-billing",
+      "plugin_id": "superboard-billing",
       "status": "passed",
       "view_ids": [
         "01M1SF6F9EKDFTAEGNTY6GAYE4",
@@ -145,7 +145,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "status": "passed",
       "view_ids": [
         "01M1SF6FBQ8FFWA80BWDQC0A43",
@@ -162,7 +162,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-email",
+      "plugin_id": "superboard-email",
       "status": "passed",
       "view_ids": [
         "01M1SW7BBQWYXTNEPWCJYF8E2N"
@@ -173,7 +173,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-files",
+      "plugin_id": "superboard-files",
       "status": "passed",
       "view_ids": [
         "01M1SW7BBWGY8ZFCW7FTZ42PVK"
@@ -184,7 +184,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "status": "passed",
       "view_ids": [
         "01M1SF6FA4QR6FNSA6VK6MJQD9",
@@ -204,7 +204,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-gateway",
+      "plugin_id": "superboard-gateway",
       "status": "passed",
       "view_ids": [
         "01M1SW7BCK9S1W914MSG192A9C"
@@ -215,7 +215,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-marketing",
+      "plugin_id": "superboard-marketing",
       "status": "passed",
       "view_ids": [
         "01M1SF6FF333SR8KC9ZDD4N15K",
@@ -233,7 +233,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-mcp",
+      "plugin_id": "superboard-mcp",
       "status": "passed",
       "view_ids": [
         "01M1SW7BCY8233XE908AC3T3CE",
@@ -245,7 +245,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-observability",
+      "plugin_id": "superboard-observability",
       "status": "passed",
       "view_ids": [
         "01M1SW7BD77TZNYHV7C4771FNH"
@@ -256,7 +256,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-onboardings",
+      "plugin_id": "superboard-onboardings",
       "status": "passed",
       "view_ids": [
         "01M1SW7BDF3M3BZFT8BY3W639Y",
@@ -268,7 +268,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-paywalls",
+      "plugin_id": "superboard-paywalls",
       "status": "passed",
       "view_ids": [
         "01M1SW7BDVQQ4SB2KH478RG7N3",
@@ -280,7 +280,7 @@
       "direct_route_status": 404
     },
     {
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "view_ids": [
         "01M1SF6FCXG1WXQ0G10V9TBRSJ",

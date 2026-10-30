@@ -25,7 +25,7 @@ void test("registers business packages and the core instead of independent compo
 
 void test("keeps a module available in the catalog while its Worker is not ready", () => {
 	const module = topology.plugins.find(
-		({ manifest }) => manifest.plugin_id === "supbrd-plugmod-analytics",
+		({ manifest }) => manifest.plugin_id === "superboard-analytics",
 	);
 	const configured = configureSuperBoardPlugins([
 		{
@@ -35,7 +35,7 @@ void test("keeps a module available in the catalog while its Worker is not ready
 	]);
 	assert.deepEqual(
 		configured.map(({ id }) => id),
-		["supbrd-plugmod-analytics"],
+		["superboard-analytics"],
 	);
 });
 
@@ -57,9 +57,9 @@ void test("registers plugin settings and contracts without nested component page
 				{},
 		).toSorted(),
 		[
-			"supbrd-plug-user__allow_anonymous_upgrade",
-			"supbrd-plug-user__max_active_sessions",
-			"supbrd-plug-user__mfa_policy",
+			"superboard-user__allow_anonymous_upgrade",
+			"superboard-user__max_active_sessions",
+			"superboard-user__mfa_policy",
 		],
 	);
 });

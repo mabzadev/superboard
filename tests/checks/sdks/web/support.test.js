@@ -17,7 +17,7 @@ function json(data, status = 200, headers = {}) {
 test("the widget URL is canonical and its version prefix is applied once", async () => {
 	const requests = [];
 	const client = new SuperBoardSupportClient({
-		baseUrl: "https://api.example.com/api/v1/support-widget/",
+		baseUrl: "https://api.example.com/v1/communication/support/widget/",
 		projectId: 42,
 		identityToken: "identity-token",
 		retryDelaysMs: [],
@@ -31,14 +31,14 @@ test("the widget URL is canonical and its version prefix is applied once", async
 
 	const request = requests[0];
 	const target = new URL(request.url);
-	assert.equal(client.baseUrl, "https://api.example.com/api/v1/support-widget");
-	assert.equal(target.pathname, "/api/v1/support-widget/conversations");
+	assert.equal(client.baseUrl, "https://api.example.com/v1/communication/support/widget");
+	assert.equal(target.pathname, "/v1/communication/support/widget/conversations");
 	assert.equal(target.searchParams.get("cursor"), "next");
 	assert.equal(target.searchParams.get("limit"), "100");
 	assert.equal(request.init.headers.get("Authorization"), "Bearer identity-token");
 	assert.equal(request.init.headers.get("X-SuperBoard-Project-Id"), "42");
-	assert.equal(SUPERBOARD_SUPPORT_WIDGET_PATH, "/api/v1/support-widget");
-	assert.equal(SUPERBOARD_SUPPORT_REALTIME_PATH, "/api/v1/support/realtime");
+	assert.equal(SUPERBOARD_SUPPORT_WIDGET_PATH, "/v1/communication/support/widget");
+	assert.equal(SUPERBOARD_SUPPORT_REALTIME_PATH, "/v1/communication/support/realtime");
 });
 
 test("an origin receives the widget prefix and unrelated URL paths are rejected", () => {
@@ -49,7 +49,7 @@ test("an origin receives the widget prefix and unrelated URL paths are rejected"
 	};
 	assert.equal(
 		new SuperBoardSupportClient({ ...options, baseUrl: "https://api.example.com" }).baseUrl,
-		"https://api.example.com/api/v1/support-widget",
+		"https://api.example.com/v1/communication/support/widget",
 	);
 	assert.throws(
 		() => new SuperBoardSupportClient({ ...options, baseUrl: "https://api.example.com/v1" }),
@@ -186,7 +186,7 @@ test("widget signatures are requested without exposing a signing secret", async 
 
 	assert.equal(signed.length, 1);
 	assert.equal(signed[0].method, "POST");
-	assert.equal(signed[0].path, "/api/v1/support-widget/events");
+	assert.equal(signed[0].path, "/v1/communication/support/widget/events");
 	assert.match(signed[0].bodySha256, /^[a-f0-9]{64}$/u);
 	assert.equal(signed[0].visitorId, "visitor-test");
 	assert.equal(signed[0].idempotencyKey, "event-1");
@@ -195,7 +195,7 @@ test("widget signatures are requested without exposing a signing secret", async 
 		[
 			signed[0].timestamp,
 			"POST",
-			"/api/v1/support-widget/events",
+			"/v1/communication/support/widget/events",
 			"project-ref",
 			"visitor-test",
 			"event-1",
@@ -325,13 +325,13 @@ test("messages, uploads, proactive support, CSAT, Help Center, and meetings use 
 	await client.joinMeeting("conversation-1", { idempotencyKey: "meeting-1" });
 
 	assert.deepEqual(paths, [
-		"/api/v1/support-widget/conversations/conversation-1/messages?limit=50",
-		"/api/v1/support-widget/conversations/conversation-1/messages",
-		"/api/v1/support-widget/conversations/conversation-1/attachments",
-		"/api/v1/support-widget/proactive-support?limit=50",
-		"/api/v1/support-widget/conversations/conversation-1/csat",
-		"/api/v1/support-widget/help-center/docs/search?q=setup&limit=20",
-		"/api/v1/support-widget/conversations/conversation-1/meetings",
+		"/v1/communication/support/widget/conversations/conversation-1/messages?limit=50",
+		"/v1/communication/support/widget/conversations/conversation-1/messages",
+		"/v1/communication/support/widget/conversations/conversation-1/attachments",
+		"/v1/communication/support/widget/proactive-support?limit=50",
+		"/v1/communication/support/widget/conversations/conversation-1/csat",
+		"/v1/communication/support/widget/help-center/docs/search?q=setup&limit=20",
+		"/v1/communication/support/widget/conversations/conversation-1/meetings",
 	]);
 });
 
@@ -380,11 +380,11 @@ test("realtime obtains a new one-use ticket when reconnecting", async () => {
 	await eventually(() => sockets.length === 2);
 
 	assert.deepEqual(ticketPaths, [
-		"/api/v1/support-widget/conversations/conversation-1/realtime-ticket",
-		"/api/v1/support-widget/conversations/conversation-1/realtime-ticket",
+		"/v1/communication/support/widget/conversations/conversation-1/realtime-ticket",
+		"/v1/communication/support/widget/conversations/conversation-1/realtime-ticket",
 	]);
-	assert.equal(new URL(sockets[0].url).pathname, "/api/v1/support/realtime/ticket-1");
-	assert.equal(new URL(sockets[1].url).pathname, "/api/v1/support/realtime/ticket-2");
+	assert.equal(new URL(sockets[0].url).pathname, "/v1/communication/support/realtime/ticket-1");
+	assert.equal(new URL(sockets[1].url).pathname, "/v1/communication/support/realtime/ticket-2");
 	assert.equal(
 		events.some((event) => event.type === "message.created"),
 		true,

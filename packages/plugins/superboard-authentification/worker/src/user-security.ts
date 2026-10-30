@@ -7,9 +7,9 @@ export async function applicationUserSecurity(
 	project: InternalProjectContext,
 	realm: string,
 	userId: string,
-	path: string,
+	operationType: { type: "security" | "resume" | "revoke"; sessionId?: string },
 ): Promise<Response> {
-	if (path === "/security" && request.method === "GET") {
+	if (operationType.type === "security") {
 		const cursor = new URL(request.url).searchParams.get("cursor") ?? "";
 		if (cursor.length > 255) return error(422, "session_cursor_invalid");
 		const [sessions, suspension, bridge] = await Promise.all([
@@ -46,9 +46,7 @@ export async function applicationUserSecurity(
 			nextCursor: sessions.results.length > 50 ? sessions.results[49]?.id : null,
 		});
 	}
-	const session = /^\/sessions\/([A-Za-z0-9._:-]{1,255})\/revoke$/u.exec(path)?.[1];
-	if (request.method !== "POST" || (path !== "/resume" && !session))
-		return error(404, "application_user_route_not_found");
+	const session = operationType.type === "revoke" ? operationType.sessionId : undefined;
 	const key = request.headers.get("Idempotency-Key") ?? "";
 	if (key.length < 8 || key.length > 200) return error(400, "idempotency_key_required");
 	const body = await readJsonObjectLimited(request, 16384);

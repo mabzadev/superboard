@@ -8,14 +8,14 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-billing";
+const plugin = "superboard-billing";
 const file = "retirement-api-billing.runtime.test.ts";
 test("canonical Billing migrates the real Products ledger and retains purchase, access, subscription and refund state", async () => {
-	const scope = await prepareApiPlugin("supbrd-plug-products");
+	const scope = await prepareApiPlugin("superboard-products");
 	const projectRef = scope.production_project_ref;
 	const sourceBase = `/api/v1/products/projects/${projectRef}`;
 	const product = await jsonResult<{ data: { id: string } }>(
-		await apiCommand("supbrd-plug-products", "create_product", {
+		await apiCommand("superboard-products", "create_product", {
 			method: "POST",
 			path: sourceBase + "/catalog/products",
 			body: {
@@ -28,7 +28,7 @@ test("canonical Billing migrates the real Products ledger and retains purchase, 
 		201,
 	);
 	const entitlement = await jsonResult<{ data: { id: string } }>(
-		await apiCommand("supbrd-plug-products", "create_entitlement", {
+		await apiCommand("superboard-products", "create_entitlement", {
 			method: "POST",
 			path: sourceBase + "/entitlements",
 			body: {

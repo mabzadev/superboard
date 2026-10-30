@@ -12,7 +12,7 @@ import {
 	proveApi,
 } from "./retirement-api-helpers.js";
 
-const plugin = "supbrd-plug-user";
+const plugin = "superboard-user";
 const file = "retirement-api-user.runtime.test.ts";
 function applicationCall(id: string, sdk: Record<string, string>, body?: unknown) {
 	const method = body === undefined ? "GET" : "POST";
@@ -35,13 +35,13 @@ function applicationCall(id: string, sdk: Record<string, string>, body?: unknown
 
 test("canonical User operations retain real SDK sessions, operator edits and verified provider links", async () => {
 	const scope = await prepareApiPlugin(plugin);
-	await prepareApiPlugin("supbrd-plugmod-email");
-	await prepareApiPlugin("supbrd-plug-settings");
+	await prepareApiPlugin("superboard-email");
+	await prepareApiPlugin("superboard-settings");
 	const ref = scope.production_project_ref;
 	const domain = "retirement-user.example.test";
 	const db = pluginDatabase("identity");
 	await jsonResult(
-		await apiCommand("supbrd-plug-settings", "save_sdk_configuration", {
+		await apiCommand("superboard-settings", "save_sdk_configuration", {
 			method: "PUT",
 			path: `/api/v1/app/projects/${ref}/setup/web`,
 			body: {

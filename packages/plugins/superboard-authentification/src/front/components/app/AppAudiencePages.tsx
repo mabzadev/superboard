@@ -51,6 +51,8 @@ import {
 	type AppCustomer,
 	type AppReferral,
 } from "../../api/app/appService.js";
+import { useAudienceI18n } from "../../audience-i18n.js";
+import { useAuthenticationI18n } from "../../AuthenticationTabs.js";
 import { checkSortDirection } from "../dynamic_links/links/LinksTableColumns.js";
 
 type AudienceRow = {
@@ -178,11 +180,12 @@ function columns(
 	sort: SortType,
 	setSort: React.Dispatch<React.SetStateAction<SortType>>,
 	referral: boolean,
+	t: (message: string) => string,
 ): AccessorKeyColumnDef<AudienceRow>[] {
 	const result: AccessorKeyColumnDef<AudienceRow>[] = [
 		{
 			accessorKey: "id",
-			header: () => header("Id", "id", sort, setSort),
+			header: () => header(t("Id"), "id", sort, setSort),
 			cell: ({ row }) => (
 				<div className="min-w-32">
 					<p className="font-medium">{row.original.label}</p>
@@ -201,7 +204,7 @@ function columns(
 		},
 		{
 			accessorKey: "sdk_identifier",
-			header: () => header("SDK Identifier", "sdk_identifier", sort, setSort),
+			header: () => header(t("SDK Identifier"), "sdk_identifier", sort, setSort),
 			cell: ({ row }) => (
 				<div className="max-w-56">
 					<p className="truncate">{row.original.sdkIdentifier}</p>
@@ -214,10 +217,10 @@ function columns(
 	if (!referral) {
 		result.push({
 			accessorKey: "platform",
-			header: () => header("Platform", "platform", sort, setSort),
+			header: () => header(t("Platform"), "platform", sort, setSort),
 			cell: ({ row }) => (
 				<Badge variant="outline" className="capitalize">
-					{row.original.platform || "unknown"}
+					{row.original.platform || t("unknown")}
 				</Badge>
 			),
 		});
@@ -235,24 +238,24 @@ function columns(
 			] as const
 		).map(([accessorKey, label, field]) => ({
 			accessorKey,
-			header: () => header(label, field, sort, setSort),
+			header: () => header(t(label), field, sort, setSort),
 			cell: ({ row }: { row: { original: AudienceRow } }) =>
 				row.original[field] ? numberFormatter.format(row.original[field]) : "—",
 		})),
 		{
 			accessorKey: "time_spent",
-			header: () => header("Time spent", "timeSpent", sort, setSort),
+			header: () => header(t("Time spent"), "timeSpent", sort, setSort),
 			cell: ({ row }) => parseSecondsInDaysHoursMinutesSeconds(row.original.timeSpent) || "—",
 		},
 		{
 			accessorKey: "revenue",
-			header: () => header("Revenue", "revenue", sort, setSort),
+			header: () => header(t("Revenue"), "revenue", sort, setSort),
 			cell: ({ row }) =>
 				row.original.revenue ? formatCurrencyFromCents(row.original.revenue) : "—",
 		},
 		{
 			accessorKey: referral ? "last_access" : "date",
-			header: () => header(referral ? "Last access" : "Date", "date", sort, setSort),
+			header: () => header(t(referral ? "Last access" : "Date"), "date", sort, setSort),
 			cell: ({ row }) => formatSlashDate(row.original.date),
 		},
 	);
@@ -284,23 +287,32 @@ function rowSort(left: AudienceRow, right: AudienceRow, sort: SortType) {
 	return sort.ascending ? comparison : -comparison;
 }
 
-export function CustomersAnalyticsPage() {
+export function CustomersAnalyticsPage({
+	mode = "profiles",
+}: { mode?: "profiles" | "devices" } = {}) {
+	const i18n = useAuthenticationI18n();
 	const { selectedProject } = useProjectSelection();
 	const table = useTableParams({ defaultSortKey: "date" });
 	const [customers, setCustomers] = useState<AppCustomer[]>([]);
-	const [selectedColumns, setSelectedColumns] = useState(customerColumns);
+	const [selectedColumns, setSelectedColumns] = useState(
+		mode === "devices"
+			? ["id", "sdk_identifier", "platform", "installs", "reinstalls", "date"]
+			: customerColumns,
+	);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [selected, setSelected] = useState<AppCustomer | null>(null);
 
+	const from = table.dateRange?.from?.toISOString().slice(0, 10);
+	const to = table.dateRange?.to?.toISOString().slice(0, 10);
 	const load = useCallback(async () => {
 		if (!selectedProject) return;
 		setLoading(true);
 		try {
 			const result = await getCustomers(selectedProject.id, table.searchTerm, 0, {
-				from: table.dateRange?.from?.toISOString().slice(0, 10),
-				to: table.dateRange?.to?.toISOString().slice(0, 10),
+				from,
+				to,
 				timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 			});
 			setCustomers(result.items);
@@ -310,10 +322,14 @@ export function CustomersAnalyticsPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [selectedProject, table.dateRange?.from, table.dateRange?.to, table.searchTerm]);
+	}, [selectedProject, from, to, table.searchTerm]);
 
 	useEffect(() => {
-		void load();
+		Promise.resolve()
+			.then(load)
+			.catch((cause: unknown) => {
+				setError(moduleErrorMessage(cause));
+			});
 	}, [load]);
 
 	const rows = useMemo(() => {
@@ -324,8 +340,8 @@ export function CustomersAnalyticsPage() {
 
 	return (
 		<AudiencePage
-			title="Customers"
-			description="Acquisition identities and their complete app engagement history."
+			title={i18n._(mode)}
+			description={i18n._(mode === "devices" ? "deviceDescription" : "profileDescription")}
 			selected={Boolean(selectedProject)}
 			error={error}
 			rows={rows}
@@ -362,6 +378,7 @@ export function CustomersAnalyticsPage() {
 }
 
 export function ReferralsAnalyticsPage() {
+	const i18n = useAudienceI18n();
 	const { selectedProject } = useProjectSelection();
 	const table = useTableParams({ defaultSortKey: "date" });
 	const [referrals, setReferrals] = useState<AppReferral[]>([]);
@@ -369,14 +386,16 @@ export function ReferralsAnalyticsPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	const from = table.dateRange?.from?.toISOString().slice(0, 10);
+	const to = table.dateRange?.to?.toISOString().slice(0, 10);
 	const load = useCallback(async () => {
 		if (!selectedProject) return;
 		setLoading(true);
 		try {
 			setReferrals(
 				await getReferrals(selectedProject.id, {
-					from: table.dateRange?.from?.toISOString().slice(0, 10),
-					to: table.dateRange?.to?.toISOString().slice(0, 10),
+					from,
+					to,
 					timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 				}),
 			);
@@ -386,9 +405,13 @@ export function ReferralsAnalyticsPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [selectedProject, table.dateRange?.from, table.dateRange?.to]);
+	}, [selectedProject, from, to]);
 	useEffect(() => {
-		void load();
+		Promise.resolve()
+			.then(load)
+			.catch((cause: unknown) => {
+				setError(moduleErrorMessage(cause));
+			});
 	}, [load]);
 
 	const rows = useMemo(() => {
@@ -405,8 +428,10 @@ export function ReferralsAnalyticsPage() {
 
 	return (
 		<AudiencePage
-			title="Referrals"
-			description="Referral codes, attributed customers and the complete conversion lifecycle."
+			title={i18n._("Referrals")}
+			description={i18n._(
+				"Referral codes, attributed customers and the complete conversion lifecycle.",
+			)}
 			selected={Boolean(selectedProject)}
 			error={error}
 			rows={rows}
@@ -458,13 +483,12 @@ function AudiencePage({
 	onRow?: (row: AudienceRow) => void;
 	dialog?: React.ReactNode;
 }) {
+	const i18n = useAudienceI18n();
+	const t = (message: string) => i18n._(message);
 	const pageCount = Math.max(1, Math.ceil(rows.length / table.rowsPerPage));
 	const page = Math.min(table.page, pageCount);
 	const visible = rows.slice((page - 1) * table.rowsPerPage, page * table.rowsPerPage);
-	const tableColumns = useMemo(
-		() => columns(table.sort, table.setSort, referral),
-		[referral, table.setSort, table.sort],
-	);
+	const tableColumns = columns(table.sort, table.setSort, referral, t);
 	useEffect(() => {
 		if (table.page > pageCount) table.setPage(pageCount);
 	}, [pageCount, table]);
@@ -478,22 +502,27 @@ function AudiencePage({
 						<div className="flex flex-1 flex-wrap gap-2">
 							<Input
 								className="max-w-72"
-								placeholder={searchPlaceholder}
+								placeholder={t(searchPlaceholder)}
 								value={table.searchTerm}
-								onChange={(event) => table.setSearchTerm(event.currentTarget.value)}
+								onChange={(event) => {
+									table.setSearchTerm(event.currentTarget.value);
+								}}
 							/>
 							<DateRangePicker date={table.dateRange} setDate={table.setDateRange} />
 						</div>
 						<div className="flex gap-2">
 							<CustomizeColumns
-								columnOptions={columnOptions}
+								columnOptions={columnOptions.map((option) => ({
+									...option,
+									label: t(option.label),
+								}))}
 								selectedColumns={selectedColumns}
 								setSelectedColumns={setSelectedColumns}
 							/>
 							{onAction && actionLabel ? (
 								<Button onClick={onAction}>
 									<Plus className="size-4" />
-									{actionLabel}
+									{t(actionLabel)}
 								</Button>
 							) : null}
 						</div>
@@ -504,21 +533,21 @@ function AudiencePage({
 						selectedColumns={selectedColumns}
 						onRowClick={onRow}
 						getRowId={(row) => row.id}
-						getRowAriaLabel={(row) => `View ${row.label}`}
+						getRowAriaLabel={(row) => i18n._("View {name}", { name: row.label })}
 						loading={loading}
 						hasFilters={Boolean(table.searchTerm)}
 						ariaLabel={title}
 						stickyHeader
 						emptyState={
 							<div className="flex flex-col items-center gap-3 bg-sidebar px-4 py-14 text-center">
-								<h3 className="font-semibold">No {title.toLocaleLowerCase()} yet</h3>
+								<h3 className="font-semibold">{t("No records yet")}</h3>
 								<p className="max-w-md text-sm text-muted-foreground">
-									New records will appear here with their engagement and attribution metrics.
+									{t("New records will appear here with their engagement and attribution metrics.")}
 								</p>
 								{onAction && actionLabel ? (
 									<Button onClick={onAction}>
 										<Plus className="size-4" />
-										{actionLabel}
+										{t(actionLabel)}
 									</Button>
 								) : null}
 							</div>
@@ -553,6 +582,8 @@ function CustomerDialog({
 	onSaved: () => Promise<void>;
 }) {
 	const { selectedProject } = useProjectSelection();
+	const i18n = useAudienceI18n();
+	const t = (message: string) => i18n._(message);
 	const [externalId, setExternalId] = useState("");
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
@@ -578,7 +609,7 @@ function CustomerDialog({
 				country_code: country.trim().toUpperCase() || null,
 				attributes: customer?.attributes ?? {},
 			});
-			showSuccessNotification(customer ? "Customer updated" : "Customer created");
+			showSuccessNotification(t(customer ? "Customer updated" : "Customer created"));
 			onOpenChange(false);
 			await onSaved();
 		} catch (cause) {
@@ -592,7 +623,7 @@ function CustomerDialog({
 		setSaving(true);
 		try {
 			await deleteCustomer(selectedProject.id, customer.id);
-			showSuccessNotification("Customer deleted");
+			showSuccessNotification(t("Customer deleted"));
 			onOpenChange(false);
 			await onSaved();
 		} catch (cause) {
@@ -605,45 +636,47 @@ function CustomerDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>{customer ? "Customer details" : "Add customer"}</DialogTitle>
+					<DialogTitle>{t(customer ? "Customer details" : "Add customer")}</DialogTitle>
 					<DialogDescription>
-						The SDK identifier is the stable acquisition identity for this project.
+						{t("The SDK identifier is the stable acquisition identity for this project.")}
 					</DialogDescription>
 				</DialogHeader>
 				<div className="grid gap-4 sm:grid-cols-2">
-					<Field label="SDK identifier" value={externalId} onChange={setExternalId} />
-					<Field label="Name" value={name} onChange={setName} />
-					<Field label="Email" type="email" value={email} onChange={setEmail} />
+					<Field label={t("SDK identifier")} value={externalId} onChange={setExternalId} />
+					<Field label={t("Name")} value={name} onChange={setName} />
+					<Field label={t("Email")} type="email" value={email} onChange={setEmail} />
 					<label className="space-y-2">
-						<Label>Platform</Label>
+						<Label>{t("Platform")}</Label>
 						<Select
 							value={platform || "none"}
-							onValueChange={(value) => setPlatform(value === "none" ? "" : value)}
+							onValueChange={(value) => {
+								setPlatform(value === "none" ? "" : value);
+							}}
 						>
 							<SelectTrigger>
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="none">Unknown</SelectItem>
-								<SelectItem value="ios">iOS</SelectItem>
-								<SelectItem value="android">Android</SelectItem>
-								<SelectItem value="web">Web</SelectItem>
+								<SelectItem value="none">{t("Unknown")}</SelectItem>
+								<SelectItem value="ios">{t("iOS")}</SelectItem>
+								<SelectItem value="android">{t("Android")}</SelectItem>
+								<SelectItem value="web">{t("Web")}</SelectItem>
 							</SelectContent>
 						</Select>
 					</label>
-					<Field label="Country code" value={country} onChange={setCountry} />
+					<Field label={t("Country code")} value={country} onChange={setCountry} />
 				</div>
 				<DialogFooter className="sm:justify-between">
 					{customer ? (
 						<Button variant="destructive" disabled={saving} onClick={() => void remove()}>
 							<Trash2 className="size-4" />
-							Delete
+							{t("Delete")}
 						</Button>
 					) : (
 						<span />
 					)}
 					<Button disabled={saving || !externalId.trim()} onClick={() => void save()}>
-						{saving ? "Saving…" : "Save customer"}
+						{t(saving ? "Saving…" : "Save customer")}
 					</Button>
 				</DialogFooter>
 			</DialogContent>
@@ -665,7 +698,13 @@ function Field({
 	return (
 		<div className="space-y-2">
 			<Label>{label}</Label>
-			<Input type={type} value={value} onChange={(event) => onChange(event.currentTarget.value)} />
+			<Input
+				type={type}
+				value={value}
+				onChange={(event) => {
+					onChange(event.currentTarget.value);
+				}}
+			/>
 		</div>
 	);
 }

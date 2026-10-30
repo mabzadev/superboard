@@ -30,7 +30,7 @@ export async function dispatchMcpDynamicLinks(
 	try {
 		const execution = await runPluginTask(
 			env,
-			"supbrd-plugmod-dynamic-links",
+			"superboard-dynamic-links",
 			{ kind: "runtime", task_id: `mcp-links:${crypto.randomUUID()}`, duration_ms: 30000 },
 			async () => {
 				const source = new URL(request.url);

@@ -1,3 +1,4 @@
+import { createFetchRouter } from "@superboard/contracts/route-registry";
 import { localizeExperienceDefinition } from "@superboard/contracts/experience-localization";
 import type { FlowGraph, FlowQueueEvent } from "@superboard/contracts/flows";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
@@ -21,111 +22,152 @@ type LegacyContext = Context<FlowApp>;
 type Source = "paywalls" | "onboardings";
 type Row = Record<string, unknown>;
 
-export async function legacyRequest(context: LegacyContext, source: Source): Promise<Response> {
-	const response = await routeLegacyRequest(context, source);
-	if (["POST", "PUT", "PATCH", "DELETE"].includes(context.req.method) && response.ok) {
-		await auditLegacyResponse(context, source, response.clone());
-	}
-	return response;
-}
-
-async function routeLegacyRequest(context: LegacyContext, source: Source): Promise<Response> {
+export function createLegacyRouter(source: Source) {
 	const prefix = `/internal/v1/legacy/${source}`;
-	const pathname = new URL(context.req.url).pathname;
-	const path = pathname.slice(prefix.length) || "/";
-	const method = context.req.method;
-
-	if (method === "GET" && path === "/health") {
-		return Response.json({
-			ok: true,
-			service: source,
-			runtime: "flows",
-			compatibility: true,
-		});
-	}
-
-	if (method === "GET" && (path === "/" || path === "/paywalls")) {
-		return legacyData(await listLegacyWorkflows(context, source));
-	}
-	if (method === "POST" && (path === "/" || path === "/paywalls")) {
-		return legacyData(
-			await createLegacyWorkflow(context, source, await readJsonObject(context.req.raw)),
-			201,
+	const router = createFetchRouter<LegacyContext>({
+		service: "flows",
+		module: `legacy.${source}`,
+		pluginId: source === "paywalls" ? "superboard-paywalls" : "superboard-onboardings",
+		surface: "internal",
+		access: "internal",
+	});
+	type Handler = (
+		context: LegacyContext,
+		params: Record<string, string>,
+	) => Promise<Response> | Response;
+	const handler =
+		(execute: Handler) =>
+		async ({ env: context, params }: { env: LegacyContext; params: Record<string, string> }) => {
+			const response = await execute(context, params);
+			if (["POST", "PUT", "PATCH", "DELETE"].includes(context.req.method) && response.ok)
+				await auditLegacyResponse(context, source, response.clone());
+			return response;
+		};
+	const on = (methods: string | string[], suffix: string, execute: Handler) =>
+		router.on(methods, prefix + suffix, handler(execute));
+	on("GET", "/health", (context) => {
+		if (context.req.method !== "GET") throw routeNotFound(source);
+		return Response.json({ ok: true, service: source, runtime: "flows", compatibility: true });
+	});
+	router
+		.defineRoute({
+			exposures: [{ surface: "internal", path: prefix, aliases: [`${prefix}/paywalls`] }],
+		})
+		.on(
+			["GET", "POST"],
+			prefix,
+			handler(async (context) => {
+				if (context.req.method === "GET")
+					return legacyData(await listLegacyWorkflows(context, source));
+				if (context.req.method === "POST")
+					return legacyData(
+						await createLegacyWorkflow(context, source, await readJsonObject(context.req.raw)),
+						201,
+					);
+				throw routeNotFound(source);
+			}),
 		);
-	}
-	if (path === "/resolve" || path === "/placements/resolve") {
-		const request = await readJsonObject(context.req.raw);
-		const resolved = await resolveLegacyPlacement(context, source, request);
-		if (source === "paywalls") {
-			return Response.json(
+	router
+		.defineRoute({
+			exposures: [
 				{
-					data: resolved,
-					meta: resolved
-						? { resolved_at: new Date().toISOString() }
-						: {
-								placement: request.placement ?? null,
-								reason: "no_active_match",
-							},
+					surface: "internal",
+					path: `${prefix}/placements/resolve`,
+					aliases: [`${prefix}/resolve`],
 				},
-				{ headers: { "cache-control": "no-store" } },
-			);
-		}
-		return legacyData(resolved);
-	}
-	if (path === "/events" && method === "POST") {
-		return legacyData(
+			],
+		})
+		.all(
+			`${prefix}/placements/resolve`,
+			handler(async (context) => {
+				const request = await readJsonObject(context.req.raw);
+				const resolved = await resolveLegacyPlacement(context, source, request);
+				return source === "paywalls"
+					? Response.json(
+							{
+								data: resolved,
+								meta: resolved
+									? { resolved_at: new Date().toISOString() }
+									: { placement: request.placement ?? null, reason: "no_active_match" },
+							},
+							{ headers: { "cache-control": "no-store" } },
+						)
+					: legacyData(resolved);
+			}),
+		);
+	on("POST", "/events", async (context) =>
+		legacyData(
 			await ingestLegacyEvents(context, source, await readJsonObject(context.req.raw, 2_359_296)),
 			202,
-		);
-	}
-	if (path === "/statistics" && method === "GET") {
+		),
+	);
+	on("GET", "/statistics", async (context) => {
+		if (context.req.method !== "GET") throw routeNotFound(source);
 		return legacyData(await legacyStatistics(context, source));
+	});
+	on(["GET", "POST"], "/placements", (context) =>
+		legacyPlacements(context, source, null, context.req.method),
+	);
+	on(["GET", "PUT", "PATCH", "DELETE"], "/placements/:id", (context, params) =>
+		legacyPlacements(context, source, params.id ?? null, context.req.method),
+	);
+	on(["GET", "POST"], "/experiences", (context) =>
+		legacyExperiences(context, source, null, false, context.req.method),
+	);
+	on(["GET", "PUT", "PATCH", "DELETE"], "/experiences/:id", (context, params) =>
+		legacyExperiences(context, source, params.id ?? null, false, context.req.method),
+	);
+	on(["GET", "POST", "PUT", "PATCH", "DELETE"], "/experiences/:id/status", (context, params) =>
+		legacyExperiences(context, source, params.id ?? null, true, context.req.method),
+	);
+	if (source === "onboardings") {
+		on(["GET", "POST"], "/targeting-rules", (context) =>
+			legacyTargetingRules(context, null, context.req.method),
+		);
+		on("DELETE", "/targeting-rules/:id", (context, params) =>
+			legacyTargetingRules(context, params.id ?? null, context.req.method),
+		);
 	}
-	if (path === "/placements" || path.startsWith("/placements/")) {
-		return legacyPlacements(context, source, path, method);
+	const workflowPath = source === "paywalls" ? "/paywalls/:id" : "/:id";
+	on(["GET", "POST"], `${workflowPath}/versions`, (context, params) =>
+		legacyVersions(context, source, params.id ?? "", null, null, context.req.method),
+	);
+	if (source === "paywalls") {
+		for (const action of ["publish", "archive"] as const)
+			on("POST", `${workflowPath}/versions/:versionId/${action}`, (context, params) =>
+				legacyVersions(
+					context,
+					source,
+					params.id ?? "",
+					params.versionId ?? null,
+					action,
+					context.req.method,
+				),
+			);
+	} else {
+		on("POST", `${workflowPath}/publish`, async (context, params) => {
+			const body = await readJsonObject(context.req.raw);
+			return legacyData(
+				await publishLegacyVersion(
+					context,
+					source,
+					params.id ?? "",
+					text(body.version_id, "version_id"),
+				),
+			);
+		});
 	}
-	if (path === "/experiences" || path.startsWith("/experiences/")) {
-		return legacyExperiences(context, source, path, method);
-	}
-	if (
-		source === "onboardings" &&
-		(path === "/targeting-rules" || path.startsWith("/targeting-rules/"))
-	) {
-		return legacyTargetingRules(context, path, method);
-	}
+	on(["GET", "PUT", "PATCH", "DELETE"], workflowPath, (context, params) =>
+		legacyWorkflowById(context, source, params.id ?? "", context.req.method),
+	);
+	router.defineRoute({ transport: "fallback" }).all(`${prefix}/*`, () => {
+		throw routeNotFound(source);
+	});
+	return router;
+}
 
-	const versionMatch =
-		source === "paywalls"
-			? /^\/paywalls\/([^/]+)\/versions(?:\/([^/]+)(?:\/(publish|archive))?)?$/u.exec(path)
-			: /^\/([^/]+)\/versions$/u.exec(path);
-	if (versionMatch) {
-		return legacyVersions(
-			context,
-			source,
-			versionMatch[1]!,
-			versionMatch[2] ?? null,
-			versionMatch[3] ?? null,
-			method,
-		);
-	}
-	const onboardingPublish = source === "onboardings" ? /^\/([^/]+)\/publish$/u.exec(path) : null;
-	if (onboardingPublish && method === "POST") {
-		const body = await readJsonObject(context.req.raw);
-		return legacyData(
-			await publishLegacyVersion(
-				context,
-				source,
-				onboardingPublish[1]!,
-				text(body.version_id, "version_id"),
-			),
-		);
-	}
-	const workflowMatch =
-		source === "paywalls" ? /^\/paywalls\/([^/]+)$/u.exec(path) : /^\/([^/]+)$/u.exec(path);
-	if (workflowMatch) {
-		return legacyWorkflowById(context, source, workflowMatch[1]!, method);
-	}
-	throw failure(
+function routeNotFound(source: Source) {
+	return failure(
 		source === "paywalls" ? "paywalls_route_not_found" : "onboardings_route_not_found",
 		`${source === "paywalls" ? "Paywalls" : "Onboardings"} route was not found`,
 		404,
@@ -516,11 +558,10 @@ async function publishLegacyVersion(
 async function legacyPlacements(
 	context: LegacyContext,
 	source: Source,
-	path: string,
+	id: string | null,
 	method: string,
 ): Promise<Response> {
 	const projectId = context.get("project").projectId;
-	const id = /^\/placements\/([^/]+)$/u.exec(path)?.[1] ?? null;
 	const existingPlacement = id ? await ownPlacement(context, source, id) : null;
 	if (method === "GET" && !id) {
 		const rows = await context.env.DB.prepare(
@@ -627,12 +668,11 @@ async function legacyPlacements(
 async function legacyExperiences(
 	context: LegacyContext,
 	source: Source,
-	path: string,
+	id: string | null,
+	statusAction: boolean,
 	method: string,
 ): Promise<Response> {
 	const projectId = context.get("project").projectId;
-	const match = /^\/experiences\/([^/]+)(?:\/(status))?$/u.exec(path);
-	const id = match?.[1] ?? null;
 	const existingExperiment = id ? await ownExperiment(context, source, id) : null;
 	if (method === "GET" && !id) {
 		const rows = await context.env.DB.prepare(
@@ -781,7 +821,7 @@ async function legacyExperiences(
 			variants: variants.results.map(legacyVariantView),
 		});
 	}
-	if (method === "POST" && id && match?.[2] === "status") {
+	if (method === "POST" && id && statusAction) {
 		const body = await readJsonObject(context.req.raw);
 		const status = enumText(
 			body.status,
@@ -814,11 +854,10 @@ async function legacyExperiences(
 
 async function legacyTargetingRules(
 	context: LegacyContext,
-	path: string,
+	id: string | null,
 	method: string,
 ): Promise<Response> {
 	const projectId = context.get("project").projectId;
-	const id = /^\/targeting-rules\/([^/]+)$/u.exec(path)?.[1] ?? null;
 	if (method === "GET" && !id) {
 		const rows = await context.env.DB.prepare(
 			`SELECT r.*, p.legacy_id AS placement_legacy_id
@@ -954,7 +993,10 @@ async function resolveLegacyPlacement(context: LegacyContext, source: Source, bo
 			),
 		);
 		if (!selected) continue;
-		const definition = localizeExperienceDefinition(parseRecord(selected.definition_json),typeof body.locale === "string" ? body.locale : undefined);
+		const definition = localizeExperienceDefinition(
+			parseRecord(selected.definition_json),
+			typeof body.locale === "string" ? body.locale : undefined,
+		);
 		return source === "paywalls"
 			? {
 					placement_id: placement.legacy_id ?? placement.id,

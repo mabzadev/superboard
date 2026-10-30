@@ -84,10 +84,10 @@ export function NativeFrontControls({
 							{message(action.label)}
 						</a>
 					))}
-					{activePluginIds.includes("supbrd-plug-user") && (
+					{activePluginIds.includes("superboard-user") && (
 						<a href="/auth/account">{message("site.front.account")}</a>
 					)}
-					{activePluginIds.includes("supbrd-plug-settings") && (
+					{activePluginIds.includes("superboard-settings") && (
 						<a href="/core/settings">{message("site.front.project_settings")}</a>
 					)}
 					<Button

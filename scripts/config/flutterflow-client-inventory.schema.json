@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://board.mbza.dev/schemas/flutterflow-client-inventory.schema.json",
+	"$id": "https://board.mabza.dev/schemas/flutterflow-client-inventory.schema.json",
 	"title": "SuperBoard FlutterFlow client inventory",
 	"type": "object",
 	"additionalProperties": false,

@@ -223,7 +223,7 @@ test("remote GitHub inspection requires branches, protection, variables and secr
 		},
 		environments: {
 			development: {
-				variables: { SUPERBOARD_TARGET: "mbza-development" },
+				variables: { SUPERBOARD_TARGET: "mabza-development" },
 				secrets: ["CLOUDFLARE_API_TOKEN"],
 			},
 		},
@@ -283,7 +283,7 @@ test("remote GitHub inspection requires branches, protection, variables and secr
 		[
 			"api repos/mabzadev/ready/environments/development/variables",
 			{
-				variables: [{ name: "SUPERBOARD_TARGET", value: "mbza-development" }],
+				variables: [{ name: "SUPERBOARD_TARGET", value: "mabza-development" }],
 			},
 		],
 		[
@@ -314,7 +314,7 @@ test("remote GitHub inspection requires branches, protection, variables and secr
 	assert.equal(state.workflowPermissionsMatch, true);
 	assert.equal(state.security.ready, true);
 	assert.equal(state.releaseProtection.ready, true);
-	assert.equal(JSON.stringify(state).includes("mbza-development"), false);
+	assert.equal(JSON.stringify(state).includes("mabza-development"), false);
 	assert.equal(state.environments[0].variables[0].configured, true);
 	assert.equal(state.environments[0].variables[0].exists, true);
 	assert.equal(state.environments[0].secrets[0].configured, true);

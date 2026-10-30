@@ -4,12 +4,24 @@ import {
 	validateExperienceEditor,
 	localizeExperienceDefinition,
 } from "@superboard/contracts/experience-localization";
+import { GripVertical, Undo2, Redo2, Smartphone, RectangleHorizontal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useFrontContext } from "./context.js";
 import { ExperienceFlowCanvas } from "./experience-flow-canvas.js";
 import { createFrontI18n } from "./i18n.js";
 import { Button, Checkbox, Input, InputArea, Select } from "./kumo.js";
+import { OnboardingSidebar } from "./onboarding-builder.js";
+import { PaywallLayers, StudioCanvas } from "./paywall-builder.js";
+import {
+	PAYWALL_DEVICES,
+	PaywallDevice,
+	deviceDimensions,
+	isPaywallDevice,
+	type PaywallDeviceKey,
+} from "./paywall-device.js";
+import { PaywallDragProvider, PaywallDragItem, PaywallDropEnd } from "./paywall-drag.js";
+import { PaywallProductControls } from "./paywall-product-controls.js";
 import { useProjectSelection } from "./shared/context/useProjectSelection.js";
 import { createPluginApiClient } from "./shared/lib/api.js";
 import { config } from "./shared/lib/config.js";
@@ -159,6 +171,57 @@ export function createStudioDocument(
 	};
 }
 const french: Record<string, string> = {
+	"Draft version saved": "Version brouillon enregistrée",
+	Screens: "Écrans",
+	Elements: "Éléments",
+	Element: "Élément",
+	Styles: "Styles",
+	"Onboarding screens": "Écrans du parcours",
+	"Onboarding canvas": "Canevas du parcours",
+	"Move screen up": "Monter l’écran",
+	"Move screen down": "Descendre l’écran",
+	Retry: "Réessayer",
+	"Device screen": "Écran de l’appareil",
+	"Drop here": "Déposer ici",
+	"Drag component": "Déplacer le composant",
+	"Double-click to edit text": "Double-cliquez pour modifier le texte",
+	"All packages": "Toutes les formules",
+	"No offerings available": "Aucune offre disponible",
+	"No packages available": "Aucune formule disponible",
+	"System font": "Police système",
+	"Product layout": "Présentation des offres",
+	Cards: "Cartes",
+	List: "Liste",
+
+	"Add component": "Ajouter un composant",
+	Add: "Ajouter",
+	"Editor tools": "Outils de création",
+	"Search components": "Rechercher un composant",
+	"Paywall screen": "Écran d’abonnement",
+	"Paywall canvas": "Canevas du paywall",
+	"Canvas controls": "Commandes du canevas",
+	"Select component": "Sélectionner un composant",
+	"Pan canvas": "Déplacer le canevas",
+	"Zoom in": "Agrandir",
+	"Zoom out": "Réduire",
+	Zoom: "Zoom",
+	"Reset canvas": "Recentrer le canevas",
+	"Edit the paywall theme in the properties panel.":
+		"Modifiez le thème du paywall dans le panneau des propriétés.",
+	"Translate your content in the properties panel.":
+		"Traduisez votre contenu dans le panneau des propriétés.",
+	"Preview interactions without making a purchase.":
+		"Simulez les interactions sans effectuer d’achat.",
+	"Layer name": "Nom du calque",
+	"Component properties": "Propriétés du composant",
+	"General properties": "Propriétés générales",
+	Portrait: "Portrait",
+	Landscape: "Paysage",
+	"Save draft": "Enregistrer le brouillon",
+	"Exit editor": "Quitter l’éditeur",
+	"Publish changes": "Publier les modifications",
+	"Review and publish": "Vérifier et publier",
+
 	Details: "Informations",
 	Locale: "Langue",
 	"Minimum app version": "Version minimale de l’application",
@@ -397,7 +460,7 @@ const types: Block["type"][] = [
 	"close",
 ];
 const id = () => crypto.randomUUID();
-const catalogApi = createPluginApiClient("supbrd-plug-products");
+const catalogApi = createPluginApiClient("superboard-products");
 type PreviewPrice = {
 	package_identifier: string;
 	display_name: string;
@@ -453,6 +516,14 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 	);
 	const [languageInput, setLanguageInput] = useState("");
 	const [device, setDevice] = useState("Phone");
+	const [landscape, setLandscape] = useState(false);
+	const [paywallDevice, setPaywallDevice] = useState<PaywallDeviceKey>("iphone-16-pro");
+	const frameSize = deviceDimensions(paywallDevice, landscape);
+	const [editingBlock, setEditingBlock] = useState<string | null>(null);
+	const builder = !previewOnly;
+	const onboarding = kind === "onboarding" && builder;
+	const [panel, setPanel] = useState("Screens");
+	const [inspector, setInspector] = useState("Element");
 	const [outcome, setOutcome] = useState("");
 	const [answers, setAnswers] = useState<Record<string, string | boolean>>({});
 	const [profile, setProfile] = useState({
@@ -533,6 +604,22 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 			value: transform(structuredClone(value.value)),
 			future: [],
 		}));
+	const undo = () => {
+		setHistory((value) => {
+			const previous = value.past.at(-1);
+			return previous
+				? { past: value.past.slice(0, -1), value: previous, future: [value.value, ...value.future] }
+				: value;
+		});
+	};
+	const redo = () => {
+		setHistory((value) => {
+			const next = value.future[0];
+			return next
+				? { past: [...value.past, value.value], value: next, future: value.future.slice(1) }
+				: value;
+		});
+	};
 	const updateScreen = (transform: (value: Screen) => Screen) =>
 		update((value) => ({
 			...value,
@@ -558,7 +645,7 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 				),
 			}));
 	};
-	const add = (type: Block["type"]) => {
+	const add = (type: Block["type"], index = screen?.blocks.length ?? 0) => {
 		const block: Block = {
 			id: id(),
 			type,
@@ -595,7 +682,10 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 													: {}),
 											},
 		};
-		updateScreen((value) => ({ ...value, blocks: [...value.blocks, block] }));
+		updateScreen((value) => {
+			value.blocks.splice(index, 0, block);
+			return value;
+		});
 		setBlockId(block.id);
 	};
 	const move = (target: string, delta: number) =>
@@ -607,6 +697,23 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 			[blocks[from], blocks[to]] = [blocks[to]!, blocks[from]!];
 			return { ...value, blocks };
 		});
+	const addScreen = () => {
+		const next: Screen = {
+			id: id(),
+			name: contentText("Welcome"),
+			blocks: [
+				{ id: id(), type: "heading", props: { text: contentText("Welcome") } },
+				{
+					id: id(),
+					type: "button",
+					props: { text: contentText("Continue"), action: "next" },
+				},
+			],
+		};
+		update((value) => ({ ...value, screens: [...value.screens, next] }));
+		setScreenId(next.id);
+		setBlockId("");
+	};
 	const moveScreen = (delta: number) =>
 		update((value) => {
 			const index = value.screens.findIndex((item) => item.id === screen?.id);
@@ -693,6 +800,7 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 		const props = block.props;
 		const size = typeof props.font_size === "number" ? props.font_size : undefined;
 		const style = {
+			fontFamily: document.theme.font_family,
 			textAlign: (["left", "center", "right"].includes(String(props.align))
 				? props.align
 				: "center") as "left" | "center" | "right",
@@ -703,13 +811,25 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 			String(answers[key] ?? (profile.field === key ? profile.value : token)),
 		);
 		const editable =
-			interactive && mode === "Design" && ["heading", "text", "legal"].includes(block.type);
+			interactive &&
+			mode === "Design" &&
+			(!builder || editingBlock === block.id) &&
+			["heading", "text", "legal"].includes(block.type);
 		const editing = {
 			contentEditable: editable,
 			suppressContentEditableWarning: true,
+			onDoubleClick: (event: React.MouseEvent<HTMLElement>) => {
+				if (!builder || mode !== "Design") return;
+				const element = event.currentTarget;
+				setEditingBlock(block.id);
+				requestAnimationFrame(() => {
+					element.focus();
+				});
+			},
 			onBlur: (event: React.FocusEvent<HTMLElement>) => {
 				if (editable && event.currentTarget.innerText !== text)
 					patch(block, { text: event.currentTarget.innerText });
+				setEditingBlock(null);
 			},
 		};
 		if (block.type === "question") {
@@ -769,7 +889,10 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 					src={String(props.url)}
 					alt={String(props.alt ?? "")}
 					className="w-full object-cover"
-					style={{ borderRadius: document.theme.corner_radius }}
+					style={{
+						borderRadius: document.theme.corner_radius,
+						aspectRatio: typeof props.aspect_ratio === "string" ? props.aspect_ratio : undefined,
+					}}
 				/>
 			) : (
 				<div className="grid h-36 place-items-center rounded-xl border border-dashed opacity-50">
@@ -796,7 +919,9 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 						entries.map((price) => (
 							<div
 								key={price.package_identifier}
-								className="rounded-xl border p-4"
+								className={
+									props.style === "list" ? "rounded-md border-b p-3" : "rounded-xl border p-4"
+								}
 								style={{ borderColor: document.theme.accent_color }}
 							>
 								<p className="font-semibold">{price.display_name}</p>
@@ -835,6 +960,7 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 					className="w-full"
 					variant="primary"
 					style={{
+						...style,
 						background: document.theme.accent_color,
 						borderRadius: document.theme.corner_radius,
 					}}
@@ -917,10 +1043,88 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 					: []),
 			],
 		}));
-	return (
-		<section className="overflow-hidden rounded-xl border border-kumo-line bg-kumo-base text-kumo-default">
+	const selectedText = selected
+		? (translation.locales[language]?.[
+				kind === "onboarding" ? String(screen?.id) + "/" + selected.id : selected.id
+			]?.text ?? selected.props.text)
+		: "";
+	const previewContent = (
+		<div className="space-y-4 p-6" dir={/^(ar|fa|he|ur)(-|$)/.test(language) ? "rtl" : "ltr"}>
+			{outcome ? (
+				<div className="space-y-5 py-20 text-center">
+					<p>{outcome}</p>
+					<Button
+						onClick={() => {
+							setOutcome("");
+							setScreenId(document.screens[0]?.id ?? "");
+						}}
+					>
+						{t("Restart")}
+					</Button>
+				</div>
+			) : (
+				previewScreen?.blocks.map((block, index) => (
+					<PaywallDragItem
+						source={{ kind: "block", value: block.id }}
+						index={index}
+						enabled={builder && mode === "Design" && editingBlock !== block.id}
+						onPick={() => {
+							setBlockId(block.id);
+						}}
+						key={block.id}
+						role={mode === "Design" ? "group" : undefined}
+						tabIndex={mode === "Design" ? 0 : undefined}
+						aria-label={t(block.type)}
+						onClick={() => mode === "Design" && setBlockId(block.id)}
+						onKeyDown={(event) => {
+							if (event.key === "Enter") setBlockId(block.id);
+							if (
+								builder &&
+								mode === "Design" &&
+								event.altKey &&
+								["ArrowUp", "ArrowDown"].includes(event.key)
+							) {
+								event.preventDefault();
+								move(block.id, event.key === "ArrowUp" ? -1 : 1);
+							}
+						}}
+						className={
+							selected?.id === block.id && mode === "Design"
+								? "paywall-preview-block rounded-sm outline-2 outline-offset-4 outline-kumo-brand"
+								: builder && mode === "Design"
+									? "paywall-preview-block"
+									: ""
+						}
+					>
+						{builder && mode === "Design" && selected?.id === block.id && (
+							<span
+								className="paywall-selection-handle"
+								title={t("Drag component")}
+								aria-hidden="true"
+							>
+								<GripVertical size={14} />
+								{t(block.type)}
+							</span>
+						)}
+						{renderedBlock(block)}
+					</PaywallDragItem>
+				))
+			)}
+			{builder && mode === "Design" && (
+				<PaywallDropEnd index={screen?.blocks.length ?? 0} label={t("Drop here")} />
+			)}
+		</div>
+	);
+	const studio = (
+		<section
+			className={
+				builder
+					? "paywall-studio bg-kumo-base text-kumo-default"
+					: "overflow-hidden rounded-xl border border-kumo-line bg-kumo-base text-kumo-default"
+			}
+		>
 			<header
-				style={previewOnly ? { display: "none" } : undefined}
+				style={previewOnly || (builder && !onboarding) ? { display: "none" } : undefined}
 				className="flex flex-wrap items-center justify-between gap-3 border-b border-kumo-line p-3"
 			>
 				<nav className="flex gap-1">
@@ -941,7 +1145,7 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 						),
 					)}
 				</nav>
-				<div className="flex gap-2">
+				<div hidden={onboarding} className="flex gap-2">
 					<Button
 						disabled={!history.past.length}
 						onClick={() =>
@@ -982,42 +1186,6 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 					{issues.map((issue) => (
 						<p key={issue}>{t(issue)}</p>
 					))}
-				</div>
-			)}
-			{kind === "onboarding" && (
-				<div className="flex items-center gap-2 overflow-auto border-b border-kumo-line p-3">
-					{document.screens.map((item, index) => (
-						<Button
-							key={item.id}
-							variant={item.id === screen?.id ? "secondary" : "ghost"}
-							onClick={() => {
-								setScreenId(item.id);
-								setBlockId("");
-							}}
-						>
-							{index + 1}. {item.name}
-						</Button>
-					))}
-					<Button
-						onClick={() => {
-							const next: Screen = {
-								id: id(),
-								name: contentText("Welcome"),
-								blocks: [
-									{ id: id(), type: "heading", props: { text: contentText("Welcome") } },
-									{
-										id: id(),
-										type: "button",
-										props: { text: contentText("Continue"), action: "next" },
-									},
-								],
-							};
-							update((value) => ({ ...value, screens: [...value.screens, next] }));
-							setScreenId(next.id);
-						}}
-					>
-						{t("Add screen")}
-					</Button>
 				</div>
 			)}
 			{mode === "Journey" ? (
@@ -1068,12 +1236,91 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 			) : (
 				<div
 					className={
-						previewOnly
-							? "grid min-h-[640px]"
-							: "grid min-h-[640px] lg:grid-cols-[185px_minmax(300px,1fr)_280px]"
+						builder
+							? "paywall-studio-grid"
+							: previewOnly
+								? "grid min-h-[640px]"
+								: "grid min-h-[640px] lg:grid-cols-[185px_minmax(300px,1fr)_280px]"
 					}
 				>
-					<aside hidden={previewOnly} className="space-y-4 border-e border-kumo-line p-3">
+					{onboarding ? (
+						<OnboardingSidebar
+							screens={document.screens}
+							selectedId={screen?.id}
+							panel={panel}
+							t={t}
+							onPanel={setPanel}
+							onSelect={(id) => {
+								setScreenId(id);
+								setBlockId("");
+								setOutcome("");
+							}}
+							onAdd={addScreen}
+							onReorder={(id, index) => {
+								update((value) => {
+									const from = value.screens.findIndex((item) => item.id === id);
+									if (from < 0 || from === index || from + 1 === index) return value;
+									const [item] = value.screens.splice(from, 1);
+									if (item) value.screens.splice(index > from ? index - 1 : index, 0, item);
+									return value;
+								});
+							}}
+							preview={(id) => (
+								<div
+									className="space-y-4 p-6"
+									style={{
+										background: document.theme.background_color,
+										color: document.theme.text_color,
+										fontFamily: document.theme.font_family,
+									}}
+								>
+									{previewDocument.screens
+										.find((item) => item.id === id)
+										?.blocks.map((block) => (
+											<div key={block.id}>{renderedBlock(block, false)}</div>
+										))}
+								</div>
+							)}
+						>
+							<PaywallLayers
+								compact
+								screenLabel={screen?.name}
+								blocks={screen?.blocks ?? []}
+								selectedId={selected?.id}
+								types={types}
+								t={t}
+								onSelect={setBlockId}
+								onAdd={add}
+								onMove={move}
+								onTemplate={makeTemplate}
+								onMode={setMode}
+							/>
+						</OnboardingSidebar>
+					) : (
+						builder && (
+							<PaywallLayers
+								blocks={screen?.blocks ?? []}
+								selectedId={selected?.id}
+								types={types.filter(
+									(type) => !["benefits", "question", "marketing_consent"].includes(type),
+								)}
+								t={t}
+								onSelect={setBlockId}
+								onAdd={add}
+								onMove={move}
+								onTemplate={makeTemplate}
+								onMode={(value) => {
+									setMode(value);
+									if (value === "Design") setLanguage(translation.source_locale);
+									setOutcome("");
+								}}
+							/>
+						)
+					)}
+					<aside
+						hidden={previewOnly || builder}
+						className="space-y-4 border-e border-kumo-line p-3"
+					>
 						<p className="text-xs font-semibold uppercase tracking-wider text-kumo-subtle">
 							{t("Blocks")}
 						</p>
@@ -1134,58 +1381,118 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 							</Button>
 						))}
 					</aside>
-					<main className="overflow-auto bg-kumo-tint p-5">
-						<div
-							className="mx-auto min-h-[580px] overflow-hidden rounded-[32px] border-4 border-kumo-line shadow-lg"
-							style={{
-								width: device === "Phone" ? 340 : 520,
-								maxWidth: "100%",
-								background: document.theme.background_color,
-								color: document.theme.text_color,
-								fontFamily: document.theme.font_family,
-							}}
-						>
-							<div
-								className="space-y-4 p-6"
-								dir={/^(ar|fa|he|ur)(-|$)/.test(language) ? "rtl" : "ltr"}
+					<StudioCanvas
+						label={onboarding ? t("Onboarding canvas") : undefined}
+						key={builder ? paywallDevice + String(landscape) : "onboarding"}
+						size={{ width: frameSize.outerWidth, height: frameSize.outerHeight }}
+						builder={builder}
+						t={t}
+						controls={
+							<>
+								<Button
+									variant="ghost"
+									shape="square"
+									aria-label={t("Undo")}
+									disabled={!history.past.length}
+									onClick={undo}
+								>
+									<Undo2 size={16} />
+								</Button>
+								<Button
+									variant="ghost"
+									shape="square"
+									aria-label={t("Redo")}
+									disabled={!history.future.length}
+									onClick={redo}
+								>
+									<Redo2 size={16} />
+								</Button>
+								<Select
+									aria-label={t("Device")}
+									value={paywallDevice}
+									onValueChange={(value) => {
+										if (value && isPaywallDevice(value)) setPaywallDevice(value);
+									}}
+									items={Object.fromEntries(
+										Object.entries(PAYWALL_DEVICES).map(([key, value]) => [key, value.name]),
+									)}
+								/>
+								<Button
+									variant="ghost"
+									shape="square"
+									aria-label={t(landscape ? "Portrait" : "Landscape")}
+									onClick={() => {
+										setLandscape(!landscape);
+									}}
+								>
+									{landscape ? <RectangleHorizontal size={16} /> : <Smartphone size={16} />}
+								</Button>
+								<Select
+									aria-label={t("Locale")}
+									value={language}
+									onValueChange={(value) => {
+										if (value) setLanguage(value);
+									}}
+									items={Object.fromEntries(
+										[
+											...new Set([translation.source_locale, ...Object.keys(translation.locales)]),
+										].map((value) => [value, value]),
+									)}
+								/>
+							</>
+						}
+					>
+						{builder ? (
+							<PaywallDevice
+								deviceKey={paywallDevice}
+								landscape={landscape}
+								theme={document.theme}
+								label={t("Device screen")}
 							>
-								{outcome ? (
-									<div className="space-y-5 py-20 text-center">
-										<p>{outcome}</p>
-										<Button
-											onClick={() => {
-												setOutcome("");
-												setScreenId(document.screens[0]?.id ?? "");
-											}}
-										>
-											{t("Restart")}
-										</Button>
-									</div>
+								{previewContent}
+							</PaywallDevice>
+						) : (
+							<div
+								className="mx-auto min-h-[580px] overflow-hidden rounded-[32px] border-4 border-kumo-line shadow-lg"
+								style={{
+									width: device === "Phone" ? 340 : 520,
+									maxWidth: "100%",
+									background: document.theme.background_color,
+									color: document.theme.text_color,
+									fontFamily: document.theme.font_family,
+								}}
+							>
+								{previewContent}
+							</div>
+						)}
+					</StudioCanvas>
+					<aside
+						hidden={previewOnly}
+						aria-label={builder ? t("Component properties") : undefined}
+						className="paywall-properties space-y-4 border-s border-kumo-line p-4"
+					>
+						{builder && (
+							<div className="-mx-4 -mt-4 border-b border-kumo-line px-4 py-5 text-sm font-semibold">
+								{onboarding ? (
+									<nav className="onboarding-panel-tabs" aria-label={t("Component properties")}>
+										{["Element", "Styles"].map((tab) => (
+											<Button
+												key={tab}
+												variant={inspector === tab ? "secondary" : "ghost"}
+												aria-pressed={inspector === tab}
+												onClick={() => {
+													setInspector(tab);
+												}}
+											>
+												{t(tab)}
+											</Button>
+										))}
+									</nav>
 								) : (
-									previewScreen?.blocks.map((block) => (
-										<div
-											key={block.id}
-											role={mode === "Design" ? "group" : undefined}
-											tabIndex={mode === "Design" ? 0 : undefined}
-											aria-label={t(block.type)}
-											onClick={() => mode === "Design" && setBlockId(block.id)}
-											onKeyDown={(event) => {
-												if (event.key === "Enter") setBlockId(block.id);
-											}}
-											className={
-												selected?.id === block.id && mode === "Design"
-													? "rounded-md outline-2 outline-offset-4 outline-kumo-brand"
-													: ""
-											}
-										>
-											{renderedBlock(block)}
-										</div>
-									))
+									t(selected ? "Component properties" : "General properties")
 								)}
 							</div>
-						</div>
-					</main>
-					<aside hidden={previewOnly} className="space-y-4 border-s border-kumo-line p-4">
+						)}
 						{mode === "Languages" ? (
 							<>
 								<div className="space-y-2">
@@ -1323,7 +1630,7 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 							</>
 						) : (
 							<>
-								{kind === "onboarding" && screen && (
+								{kind === "onboarding" && screen && !selected && inspector === "Element" && (
 									<>
 										<Input
 											label={t("Screen name")}
@@ -1349,7 +1656,7 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 										/>
 									</>
 								)}
-								{kind === "onboarding" && screen && (
+								{kind === "onboarding" && screen && !selected && inspector === "Element" && (
 									<details className="space-y-3 rounded-lg border border-kumo-line p-3">
 										<summary>{t("Screen settings")}</summary>
 										<div className="flex flex-wrap gap-1">
@@ -1420,276 +1727,298 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 								{selected ? (
 									<>
 										<h3 className="font-semibold">{t(selected.type)}</h3>
-										{typeof selected.props.text === "string" && (
-											<InputArea
-												label={t("Text")}
-												value={String(
-													translation.locales[language]?.[
-														kind === "onboarding"
-															? String(screen?.id) + "/" + selected.id
-															: selected.id
-													]?.text ?? selected.props.text,
-												)}
-												onChange={(event) => patch(selected, { text: event.target.value })}
-											/>
-										)}{" "}
-										{selected.type === "image" && (
-											<>
+										<div hidden={onboarding && inspector !== "Element"} className="space-y-4">
+											{builder && (
 												<Input
-													label={t("Image URL")}
-													value={String(selected.props.url ?? "")}
-													onChange={(event) => patch(selected, { url: event.target.value })}
-												/>
-												<Input
-													label={t("Alternative text")}
-													value={String(selected.props.alt ?? "")}
-													onChange={(event) => patch(selected, { alt: event.target.value })}
-												/>
-											</>
-										)}
-										{selected.type === "product" && (
-											<>
-												<Input
-													label={t("Offering identifier")}
-													value={String(selected.props.offering_identifier ?? "")}
-													onChange={(event) =>
-														patch(selected, { offering_identifier: event.target.value })
+													label={t("Layer name")}
+													value={
+														typeof selected.props.editor_name === "string"
+															? selected.props.editor_name
+															: ""
 													}
+													placeholder={t(selected.type)}
+													onChange={(event) => {
+														patch(selected, { editor_name: event.target.value });
+													}}
 												/>
-												<Input
-													label={t("Package identifiers")}
-													value={(Array.isArray(selected.props.package_identifiers)
-														? selected.props.package_identifiers
+											)}
+											{typeof selected.props.text === "string" && (
+												<InputArea
+													label={t("Text")}
+													value={typeof selectedText === "string" ? selectedText : ""}
+													onChange={(event) => patch(selected, { text: event.target.value })}
+												/>
+											)}{" "}
+											{selected.type === "image" && (
+												<>
+													<Input
+														label={t("Image URL")}
+														value={String(selected.props.url ?? "")}
+														onChange={(event) => patch(selected, { url: event.target.value })}
+													/>
+													<Input
+														label={t("Alternative text")}
+														value={String(selected.props.alt ?? "")}
+														onChange={(event) => patch(selected, { alt: event.target.value })}
+													/>
+												</>
+											)}
+											{selected.type === "product" && (
+												<PaywallProductControls
+													props={selected.props}
+													t={t}
+													onChange={(values) => {
+														patch(selected, values);
+													}}
+												/>
+											)}
+											{selected.type === "question" && (
+												<div className="space-y-3">
+													<Input
+														label={t("Answer attribute")}
+														value={String(selected.props.attribute ?? "")}
+														onChange={(event) => patch(selected, { attribute: event.target.value })}
+													/>
+													<Checkbox
+														label={t("Required answer")}
+														checked={selected.props.required === true}
+														onCheckedChange={(value) => {
+															patch(selected, { required: value === true });
+														}}
+													/>
+													{(Array.isArray(selected.props.options)
+														? (selected.props.options as Array<Record<string, unknown>>)
 														: []
-													).join(", ")}
+													).map((option, index) => (
+														<div
+															key={String(option.value)}
+															className="space-y-2 rounded-lg border border-kumo-line p-3"
+														>
+															<Input
+																label={t("Option label")}
+																value={String(option.label ?? "")}
+																onChange={(event) =>
+																	patch(selected, {
+																		options: (
+																			selected.props.options as Array<Record<string, unknown>>
+																		).map((item, position) =>
+																			position === index
+																				? { ...item, label: event.target.value }
+																				: item,
+																		),
+																	})
+																}
+															/>
+															<Select
+																label={t("After this answer")}
+																value={String(option.next_screen_id ?? "")}
+																onValueChange={(value) =>
+																	patch(selected, {
+																		options: (
+																			selected.props.options as Array<Record<string, unknown>>
+																		).map((item, position) =>
+																			position === index
+																				? { ...item, next_screen_id: value || undefined }
+																				: item,
+																		),
+																	})
+																}
+																items={{
+																	"": t("Automatic next"),
+																	...Object.fromEntries(
+																		document.screens
+																			.filter((item) => item.id !== screen?.id)
+																			.map((item) => [item.id, item.name]),
+																	),
+																}}
+															/>
+															<Button
+																size="sm"
+																variant="ghost"
+																onClick={() =>
+																	patch(selected, {
+																		options: (
+																			selected.props.options as Array<Record<string, unknown>>
+																		).filter((_, position) => position !== index),
+																	})
+																}
+															>
+																{t("Delete")}
+															</Button>
+														</div>
+													))}
+													<Button
+														onClick={() =>
+															patch(selected, {
+																options: [
+																	...(Array.isArray(selected.props.options)
+																		? selected.props.options
+																		: []),
+																	{ value: id(), label: t("Option label") },
+																],
+															})
+														}
+													>
+														{t("Add option")}
+													</Button>
+												</div>
+											)}
+											{selected.type === "marketing_consent" && (
+												<>
+													<Input
+														label={t("Text")}
+														value={String(selected.props.title ?? "")}
+														onChange={(event) => patch(selected, { title: event.target.value })}
+													/>
+													<InputArea
+														label={t("Description")}
+														value={String(selected.props.body ?? "")}
+														onChange={(event) => patch(selected, { body: event.target.value })}
+													/>
+													<Input
+														label={t("Lists")}
+														value={(Array.isArray(selected.props.list_ids)
+															? selected.props.list_ids
+															: []
+														).join(",")}
+														onChange={(event) =>
+															patch(selected, {
+																list_ids: event.target.value
+																	.split(",")
+																	.map((item) => item.trim())
+																	.filter(Boolean),
+															})
+														}
+													/>
+												</>
+											)}
+											{selected.type === "spacer" && (
+												<Input
+													label={t("Height")}
+													type="number"
+													min={4}
+													max={200}
+													value={Number(selected.props.height ?? 24)}
 													onChange={(event) =>
 														patch(selected, {
-															package_identifiers: event.target.value
-																.split(",")
-																.map((item) => item.trim())
-																.filter(Boolean),
+															height: Math.max(0, Math.min(240, Number(event.target.value) || 0)),
 														})
 													}
 												/>
-											</>
-										)}
-										{selected.type === "question" && (
-											<div className="space-y-3">
+											)}
+											{selected.type === "image" && (
+												<Select
+													label={t("Aspect ratio")}
+													value={String(selected.props.aspect_ratio ?? "16/9")}
+													onValueChange={(value) => patch(selected, { aspect_ratio: value })}
+													items={{ "16/9": "16:9", "4/3": "4:3", "1/1": "1:1", "9/16": "9:16" }}
+												/>
+											)}
+											{selected.type === "close" && (
 												<Input
-													label={t("Answer attribute")}
-													value={String(selected.props.attribute ?? "")}
-													onChange={(event) => patch(selected, { attribute: event.target.value })}
+													label={t("Accessibility label")}
+													value={String(selected.props.accessibility_label ?? t("close"))}
+													onChange={(event) =>
+														patch(selected, { accessibility_label: event.target.value })
+													}
 												/>
-												<Checkbox
-													label={t("Required answer")}
-													checked={selected.props.required === true}
-													onCheckedChange={(value) => patch(selected, { required: value === true })}
+											)}
+											{selected.type === "benefits" && (
+												<InputArea
+													label={t("benefits")}
+													value={(Array.isArray(selected.props.items)
+														? selected.props.items
+														: []
+													).join("\n")}
+													onChange={(event) =>
+														patch(selected, { items: event.target.value.split("\n") })
+													}
 												/>
-												{(Array.isArray(selected.props.options)
-													? (selected.props.options as Array<Record<string, unknown>>)
-													: []
-												).map((option, index) => (
-													<div
-														key={String(option.value)}
-														className="space-y-2 rounded-lg border border-kumo-line p-3"
-													>
-														<Input
-															label={t("Option label")}
-															value={String(option.label ?? "")}
-															onChange={(event) =>
-																patch(selected, {
-																	options: (
-																		selected.props.options as Array<Record<string, unknown>>
-																	).map((item, position) =>
-																		position === index
-																			? { ...item, label: event.target.value }
-																			: item,
-																	),
-																})
-															}
-														/>
-														<Select
-															label={t("After this answer")}
-															value={String(option.next_screen_id ?? "")}
-															onValueChange={(value) =>
-																patch(selected, {
-																	options: (
-																		selected.props.options as Array<Record<string, unknown>>
-																	).map((item, position) =>
-																		position === index
-																			? { ...item, next_screen_id: value || undefined }
-																			: item,
-																	),
-																})
-															}
-															items={{
-																"": t("Automatic next"),
-																...Object.fromEntries(
-																	document.screens
-																		.filter((item) => item.id !== screen?.id)
-																		.map((item) => [item.id, item.name]),
+											)}
+										</div>
+										<div hidden={onboarding && inspector !== "Styles"} className="space-y-4">
+											{["heading", "text", "legal", "button", "benefits"].includes(
+												selected.type,
+											) && (
+												<>
+													<Select
+														label={t("Alignment")}
+														value={String(selected.props.align ?? "center")}
+														onValueChange={(value) => patch(selected, { align: value })}
+														items={{ left: t("left"), center: t("center"), right: t("right") }}
+													/>
+													<Input
+														label={t("Font size")}
+														type="number"
+														min={12}
+														max={64}
+														value={Number(
+															selected.props.font_size ??
+																(selected.type === "heading"
+																	? 30
+																	: selected.type === "legal"
+																		? 12
+																		: 16),
+														)}
+														onChange={(event) => {
+															patch(selected, {
+																font_size: Math.max(
+																	12,
+																	Math.min(64, Number(event.target.value) || 12),
 																),
-															}}
-														/>
-														<Button
-															size="sm"
-															variant="ghost"
-															onClick={() =>
-																patch(selected, {
-																	options: (
-																		selected.props.options as Array<Record<string, unknown>>
-																	).filter((_, position) => position !== index),
-																})
-															}
-														>
-															{t("Delete")}
-														</Button>
-													</div>
-												))}
+															});
+														}}
+													/>
+												</>
+											)}
+										</div>
+										<div hidden={onboarding && inspector !== "Element"} className="space-y-4">
+											{selected.type === "button" && (
+												<Select
+													label={t("Action")}
+													value={String(selected.props.action ?? "next")}
+													onValueChange={(value) => patch(selected, { action: value })}
+													items={Object.fromEntries(
+														["next", "purchase", "restore", "dismiss", "complete"].map((key) => [
+															key,
+															t(key),
+														]),
+													)}
+												/>
+											)}
+											<div className="flex gap-2">
 												<Button
 													onClick={() =>
-														patch(selected, {
-															options: [
-																...(Array.isArray(selected.props.options)
-																	? selected.props.options
-																	: []),
-																{ value: id(), label: t("Option label") },
-															],
-														})
+														updateScreen((value) => ({
+															...value,
+															blocks: [...value.blocks, { ...structuredClone(selected), id: id() }],
+														}))
 													}
 												>
-													{t("Add option")}
+													{t("Duplicate")}
+												</Button>
+												<Button
+													variant="secondary-destructive"
+													onClick={() => {
+														updateScreen((value) => ({
+															...value,
+															blocks: value.blocks.filter((item) => item.id !== selected.id),
+														}));
+														setBlockId("");
+													}}
+												>
+													{t("Delete")}
 												</Button>
 											</div>
-										)}
-										{selected.type === "marketing_consent" && (
-											<>
-												<Input
-													label={t("Text")}
-													value={String(selected.props.title ?? "")}
-													onChange={(event) => patch(selected, { title: event.target.value })}
-												/>
-												<InputArea
-													label={t("Description")}
-													value={String(selected.props.body ?? "")}
-													onChange={(event) => patch(selected, { body: event.target.value })}
-												/>
-												<Input
-													label={t("Lists")}
-													value={(Array.isArray(selected.props.list_ids)
-														? selected.props.list_ids
-														: []
-													).join(",")}
-													onChange={(event) =>
-														patch(selected, {
-															list_ids: event.target.value
-																.split(",")
-																.map((item) => item.trim())
-																.filter(Boolean),
-														})
-													}
-												/>
-											</>
-										)}
-										{selected.type === "spacer" && (
-											<Input
-												label={t("Height")}
-												type="number"
-												min={4}
-												max={200}
-												value={Number(selected.props.height ?? 24)}
-												onChange={(event) =>
-													patch(selected, { height: Number(event.target.value) })
-												}
-											/>
-										)}
-										{selected.type === "image" && (
-											<Select
-												label={t("Aspect ratio")}
-												value={String(selected.props.aspect_ratio ?? "16/9")}
-												onValueChange={(value) => patch(selected, { aspect_ratio: value })}
-												items={{ "16/9": "16:9", "4/3": "4:3", "1/1": "1:1", "9/16": "9:16" }}
-											/>
-										)}
-										{selected.type === "close" && (
-											<Input
-												label={t("Accessibility label")}
-												value={String(selected.props.accessibility_label ?? t("close"))}
-												onChange={(event) =>
-													patch(selected, { accessibility_label: event.target.value })
-												}
-											/>
-										)}
-										{selected.type === "benefits" && (
-											<InputArea
-												label={t("benefits")}
-												value={(Array.isArray(selected.props.items)
-													? selected.props.items
-													: []
-												).join("\n")}
-												onChange={(event) =>
-													patch(selected, { items: event.target.value.split("\n") })
-												}
-											/>
-										)}
-										<Select
-											label={t("Alignment")}
-											value={String(selected.props.align ?? "center")}
-											onValueChange={(value) => patch(selected, { align: value })}
-											items={{ left: t("left"), center: t("center"), right: t("right") }}
-										/>
-										<Input
-											label={t("Font size")}
-											type="number"
-											min={12}
-											max={64}
-											value={Number(selected.props.font_size ?? 16)}
-											onChange={(event) =>
-												patch(selected, { font_size: Number(event.target.value) })
-											}
-										/>
-										{selected.type === "button" && (
-											<Select
-												label={t("Action")}
-												value={String(selected.props.action ?? "next")}
-												onValueChange={(value) => patch(selected, { action: value })}
-												items={Object.fromEntries(
-													["next", "purchase", "restore", "dismiss", "complete"].map((key) => [
-														key,
-														t(key),
-													]),
-												)}
-											/>
-										)}
-										<div className="flex gap-2">
-											<Button
-												onClick={() =>
-													updateScreen((value) => ({
-														...value,
-														blocks: [...value.blocks, { ...structuredClone(selected), id: id() }],
-													}))
-												}
-											>
-												{t("Duplicate")}
-											</Button>
-											<Button
-												variant="secondary-destructive"
-												onClick={() => {
-													updateScreen((value) => ({
-														...value,
-														blocks: value.blocks.filter((item) => item.id !== selected.id),
-													}));
-													setBlockId("");
-												}}
-											>
-												{t("Delete")}
-											</Button>
 										</div>
 									</>
 								) : (
 									<p className="text-sm text-kumo-subtle">{t("Select a block")}</p>
 								)}
-								<div className="space-y-3 border-t border-kumo-line pt-4">
+								<div
+									hidden={onboarding && inspector !== "Styles"}
+									className="space-y-3 border-t border-kumo-line pt-4"
+								>
 									<h3 className="font-semibold">{t("Theme")}</h3>
 									{kind === "onboarding" && (
 										<Checkbox
@@ -1703,15 +2032,30 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 											}
 										/>
 									)}
-									<Input
+									<Select
 										label={t("Font")}
 										value={document.theme.font_family}
-										onChange={(event) =>
-											update((value) => ({
-												...value,
-												theme: { ...value.theme, font_family: event.target.value },
-											}))
-										}
+										items={Object.fromEntries(
+											[
+												...new Set([
+													document.theme.font_family,
+													"Inter",
+													"Arial",
+													"Helvetica",
+													"Georgia",
+													"Times New Roman",
+													"system-ui",
+													"monospace",
+												]),
+											].map((font) => [font, font === "system-ui" ? t("System font") : font]),
+										)}
+										onValueChange={(font) => {
+											if (font)
+												update((value) => ({
+													...value,
+													theme: { ...value.theme, font_family: font },
+												}));
+										}}
 									/>
 									{(
 										[
@@ -1742,7 +2086,10 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 										onChange={(event) =>
 											update((value) => ({
 												...value,
-												theme: { ...value.theme, corner_radius: Number(event.target.value) },
+												theme: {
+													...value.theme,
+													corner_radius: Math.max(0, Math.min(48, Number(event.target.value) || 0)),
+												},
 											}))
 										}
 									/>
@@ -1782,5 +2129,32 @@ export function ExperienceStudio({ kind, initialDocument, onChange, previewOnly 
 				</div>
 			)}
 		</section>
+	);
+	return (
+		<PaywallDragProvider
+			onInsert={(item, index) => {
+				if (!builder || mode !== "Design" || !screen) return;
+				if (item.kind === "component") {
+					const type = types.find(
+						(type) =>
+							type === item.value &&
+							(kind === "onboarding" ||
+								!["benefits", "question", "marketing_consent"].includes(type)),
+					);
+					if (type) add(type, index);
+				} else {
+					const from = screen.blocks.findIndex((block) => block.id === item.value);
+					if (from < 0 || from === index || from + 1 === index) return;
+					updateScreen((value) => {
+						const [block] = value.blocks.splice(from, 1);
+						if (block) value.blocks.splice(index > from ? index - 1 : index, 0, block);
+						return value;
+					});
+					setBlockId(item.value);
+				}
+			}}
+		>
+			{studio}
+		</PaywallDragProvider>
 	);
 }

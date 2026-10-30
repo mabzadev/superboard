@@ -101,7 +101,7 @@ test("the isolated runtime receives both compiled target artifacts", () => {
 		plan.adapters.every(({ artifact_checksum }) => CHECKSUM_PATTERN.test(artifact_checksum)),
 	).toBe(true);
 	expect(plan.adapters[0]?.graph_checksum).toBe(plan.adapters[1]?.graph_checksum);
-	expect(plan.plugins.catalog_ids).toContain("supbrd-plug-user");
+	expect(plan.plugins.catalog_ids).toContain("superboard-user");
 	expect(plan.plugins.installed_ids).toEqual(plan.plugins.catalog_ids);
 	expect(
 		plan.plugins.target_ids.every((pluginId) => plan.plugins.catalog_ids.includes(pluginId)),

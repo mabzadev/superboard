@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono, type Handler } from "hono";
 
 import { recordSlaResolution } from "./service-levels";
@@ -5,7 +6,7 @@ import type { Env } from "./types";
 import { readJsonObject } from "./validation";
 import { executeMacro } from "./workflows";
 
-const operations = new Hono<{ Bindings: Env }>();
+const operations = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"support","module":"operations.operations","pluginId":"superboard-support","surface":"internal","access":"framework"});
 const DEFAULT_PAGE_LIMIT = 50;
 const MAX_PAGE_LIMIT = 100;
 const MAX_TRANSCRIPT_BODY = 8_000;

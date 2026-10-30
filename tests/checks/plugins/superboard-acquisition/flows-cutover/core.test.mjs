@@ -16,7 +16,7 @@ import {
 } from "../../../../../packages/plugins/superboard-acquisition/scripts/flows-cutover/core-primitives.mjs";
 import {
 	applyFlowsCutoverPlan,
-	assertMbzaDevelopment,
+	assertMabzaDevelopment,
 	assertPlanIntegrity,
 	buildFlowsCutoverPlan,
 	buildReverseDelta,
@@ -32,7 +32,7 @@ import {
 	validateApplySafety,
 	validateBackupReceiptForBackupPlan,
 	verifyFlowsCutoverPlan,
-	verifyMbzaRoutingGate,
+	verifyMabzaRoutingGate,
 	FLOWS_CUTOVER_SCHEMA_VERSION,
 } from "../../../../../packages/plugins/superboard-acquisition/scripts/flows-cutover/core.mjs";
 import {
@@ -68,7 +68,7 @@ test("cutover registry is strictly project/environment scoped and excludes SaaS 
 
 test("backup evidence covers API, both legacy sources and Flows before any schema or routing write", () => {
 	const backupPlan = createBackupPlan({
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		projectRef: "42-test",
 		resources: fakeResources(),
@@ -98,7 +98,7 @@ test("backup evidence covers API, both legacy sources and Flows before any schem
 
 test("backup receipt validation fails closed when API D1 evidence is absent", () => {
 	const backupPlan = createBackupPlan({
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		projectRef: "42-test",
 		resources: fakeResources(),
@@ -109,7 +109,7 @@ test("backup receipt validation fails closed when API D1 evidence is absent", ()
 	const receipt = {
 		schema_version: FLOWS_CUTOVER_SCHEMA_VERSION,
 		receipt_id: "backup-without-api",
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		project_ref: "42-test",
 		window_id: "window-1234",
@@ -138,7 +138,7 @@ test("remote environment resolution is bound to project id, project_ref and logi
 	let statement = "";
 	const adapter = new RemoteFlowsCutoverAdapter({
 		root: resolve("."),
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		target: {
 			environments: {
@@ -167,7 +167,7 @@ test("remote environment resolution is bound to project id, project_ref and logi
 test("missing default environment is derived deterministically and bootstrapped only by guarded apply", async () => {
 	const adapter = new RemoteFlowsCutoverAdapter({
 		root: resolve("."),
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		allowWrites: true,
 		target: {
@@ -213,7 +213,7 @@ test("missing default environment is derived deterministically and bootstrapped 
 
 	const readOnly = new RemoteFlowsCutoverAdapter({
 		root: resolve("."),
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		target: {
 			environments: {
@@ -235,7 +235,7 @@ test("missing default environment is derived deterministically and bootstrapped 
 test("freeze identity validation accepts only an absent deterministic default scope", async () => {
 	const adapter = new RemoteFlowsCutoverAdapter({
 		root: resolve("."),
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		target: {
 			environments: {
@@ -292,18 +292,18 @@ test("freeze identity validation accepts only an absent deterministic default sc
 	];
 	await assert.rejects(
 		adapter.validatePlanIdentity(plan, { allowMissingDefaultScope: true }),
-		/conflicts with the live MBZA scope/u,
+		/conflicts with the live MABZA scope/u,
 	);
 });
 
 test("remote user hash resolution is ordered, batched and never receives the HMAC secret", async () => {
 	const adapter = new RemoteFlowsCutoverAdapter({
 		root: resolve("."),
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		gatewayToken: "cutover-token",
 		target: {
-			domains: { api: "api.mbza.dev" },
+			domains: { api: "api.mabza.dev" },
 			environments: { development: {} },
 		},
 	});
@@ -358,7 +358,7 @@ test("routing verification evidence is exact-plan bound and rejects incomplete r
 	assert.throws(() => routingVerificationEvidence(plan, foreign), /exact protected plan\/project/u);
 });
 
-test("the API promotion routing gate requires both fixed MBZA project scopes", async () => {
+test("the API promotion routing gate requires both fixed MABZA project scopes", async () => {
 	const scopeInput = async (projectId, projectRef, environmentId) => {
 		const snapshot = sourceSnapshot();
 		snapshot.project = {
@@ -403,7 +403,7 @@ test("the API promotion routing gate requires both fixed MBZA project scopes", a
 		{ project_id: 1, project_ref: "1-prod" },
 		{ project_id: 2, project_ref: "1-test" },
 	];
-	const report = verifyMbzaRoutingGate({
+	const report = verifyMabzaRoutingGate({
 		inventory,
 		scopes: [prod, testScope],
 		checkedAt: CAPTURED_AT,
@@ -416,7 +416,7 @@ test("the API promotion routing gate requires both fixed MBZA project scopes", a
 
 	testScope.state.enabled = false;
 	assert.equal(
-		verifyMbzaRoutingGate({
+		verifyMabzaRoutingGate({
 			inventory,
 			scopes: [prod, testScope],
 			checkedAt: CAPTURED_AT,
@@ -425,7 +425,7 @@ test("the API promotion routing gate requires both fixed MBZA project scopes", a
 	);
 	assert.throws(
 		() =>
-			verifyMbzaRoutingGate({
+			verifyMabzaRoutingGate({
 				inventory: [...inventory, { project_id: 3, project_ref: "2-prod" }],
 				scopes: [prod, testScope],
 				checkedAt: CAPTURED_AT,
@@ -437,7 +437,7 @@ test("the API promotion routing gate requires both fixed MBZA project scopes", a
 test("remote routing writes are direct, project-scoped, idempotent and evidence-bound", async () => {
 	const adapter = new RemoteFlowsCutoverAdapter({
 		root: resolve("."),
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		allowWrites: true,
 		target: {
@@ -505,7 +505,7 @@ test("remote routing writes are direct, project-scoped, idempotent and evidence-
 test("direct maintenance writes and verifies the API D1 state without an operator token", async () => {
 	const adapter = new RemoteFlowsCutoverAdapter({
 		root: resolve("."),
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		allowWrites: true,
 		directMaintenance: true,
@@ -558,7 +558,7 @@ test("direct maintenance writes and verifies the API D1 state without an operato
 test("a routing receipt is replayed only when its payload and active state still match", async () => {
 	const adapter = new RemoteFlowsCutoverAdapter({
 		root: resolve("."),
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		allowWrites: true,
 		target: {
@@ -616,11 +616,11 @@ test("a routing receipt is replayed only when its payload and active state still
 test("protected local hash resolution matches the Worker without requiring the new API route", async () => {
 	const adapter = new RemoteFlowsCutoverAdapter({
 		root: resolve("."),
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		flowUserHashKey: "server-only-test-key",
 		target: {
-			domains: { api: "api.mbza.dev" },
+			domains: { api: "api.mabza.dev" },
 			environments: { development: {} },
 		},
 	});
@@ -1343,14 +1343,14 @@ test("the same raw legacy event id in both modules stays isolated and reversible
 	assert.deepEqual(claims.map((row) => row.source_module).sort(), ["onboardings", "paywalls"]);
 });
 
-test("apply authority is bound to MBZA, the exact D1 identities, window, freeze and confirmation", async () => {
+test("apply authority is bound to MABZA, the exact D1 identities, window, freeze and confirmation", async () => {
 	const plan = await buildFlowsCutoverPlan({
 		snapshot: sourceSnapshot(),
 		adapter: new FixtureFlowsCutoverAdapter(),
 		environmentId: "env-1",
 	});
 	assert.throws(
-		() => assertMbzaDevelopment("reference-production", "production"),
+		() => assertMabzaDevelopment("reference-production", "production"),
 		/production cutover is intentionally disabled/u,
 	);
 	const window = createCutoverWindow({
@@ -1362,7 +1362,7 @@ test("apply authority is bound to MBZA, the exact D1 identities, window, freeze 
 		windowId: "window-1234",
 	});
 	const backupPlan = createBackupPlan({
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		projectRef: plan.project.project_ref,
 		resources: fakeResources(),
@@ -1373,7 +1373,7 @@ test("apply authority is bound to MBZA, the exact D1 identities, window, freeze 
 	const backupReceipt = {
 		schema_version: FLOWS_CUTOVER_SCHEMA_VERSION,
 		receipt_id: "backup-1",
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		project_ref: plan.project.project_ref,
 		window_id: window.window_id,
@@ -1396,7 +1396,7 @@ test("apply authority is bound to MBZA, the exact D1 identities, window, freeze 
 	const freezeReceipt = {
 		schema_version: FLOWS_CUTOVER_SCHEMA_VERSION,
 		receipt_id: "freeze-1",
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		project_ref: plan.project.project_ref,
 		project_id: plan.project.project_id,
@@ -1499,7 +1499,7 @@ test("reverse delta and rollback simulation preserve evidence and never delete, 
 	assert.equal(onboardingRule.rows[0].placement_id, "onboarding-placement-1");
 
 	const backupPlan = createBackupPlan({
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		projectRef: plan.project.project_ref,
 		resources: fakeResources(),
@@ -1510,7 +1510,7 @@ test("reverse delta and rollback simulation preserve evidence and never delete, 
 	const freezeReceipt = {
 		schema_version: FLOWS_CUTOVER_SCHEMA_VERSION,
 		receipt_id: "freeze-1",
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		project_ref: plan.project.project_ref,
 		project_id: plan.project.project_id,
@@ -1522,7 +1522,7 @@ test("reverse delta and rollback simulation preserve evidence and never delete, 
 	const backupReceipt = {
 		schema_version: FLOWS_CUTOVER_SCHEMA_VERSION,
 		receipt_id: "backup-1",
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		project_ref: plan.project.project_ref,
 		window_id: freezeReceipt.window_id,
@@ -1574,7 +1574,7 @@ test("reverse delta and rollback simulation preserve evidence and never delete, 
 	assert.equal(rollback.steps[1].action, "disable-flows-routing-before-replay");
 
 	const anotherBackupPlan = createBackupPlan({
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		projectRef: "43-test",
 		resources: fakeResources(),
@@ -1799,7 +1799,7 @@ function applySafety(plan) {
 function sourceSnapshot() {
 	return {
 		schema_version: 1,
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		captured_at: CAPTURED_AT,
 		project: { project_id: 7, project_ref: "42-test", instance_id: 42 },

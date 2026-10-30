@@ -91,9 +91,9 @@ const projection: NativeFrontPresentationProjection = {
 	},
 	plugin_lock: [
 		"supbrd-core",
-		"supbrd-plug-products",
-		"supbrd-plug-user",
-		"supbrd-plug-settings",
+		"superboard-products",
+		"superboard-user",
+		"superboard-settings",
 	].map((plugin_id) => ({
 		plugin_id,
 		version: "1.0.0",
@@ -128,7 +128,7 @@ const projection: NativeFrontPresentationProjection = {
 	],
 	content_mounts: [
 		{
-			renderer: { ...CORE_ADMIN_SHELL_DESCRIPTOR!, plugin_id: "supbrd-plug-products" },
+			renderer: { ...CORE_ADMIN_SHELL_DESCRIPTOR!, plugin_id: "superboard-products" },
 			route_id: "products",
 			path: "/products/offerings",
 			view_title: "Products",

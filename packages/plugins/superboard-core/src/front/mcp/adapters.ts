@@ -2,72 +2,66 @@ import type { PluginApiAdapter } from "@superboard/front-ui/api";
 
 export const adapters = [
 	{
-		id: "supbrd-plugmod-mcp.command.approve_consent",
+		id: "superboard-mcp.command.approve_consent",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/mcp/approve_consent",
+				route_id: "api:routes.mcp.mcp:POST:/approve_consent",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-mcp.command.revoke_token",
+		id: "superboard-mcp.command.revoke_token",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/mcp/tokens/:tokenId",
+				route_id: "api:routes.mcp.mcp:DELETE:/tokens/:tokenId",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-mcp.command.invoke_tool",
+		id: "superboard-mcp.command.invoke_tool",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/mcp/operator/invocations",
+				route_id: "api:mcp-operator:invoke",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-mcp.data_source.tokens",
+		id: "superboard-mcp.data_source.tokens",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/mcp/tokens",
+				route_id: "api:routes.mcp.mcp:GET:/tokens",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-mcp.data_source.sessions",
+		id: "superboard-mcp.data_source.sessions",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/mcp/operator/sessions",
+				route_id: "api:mcp-operator:sessions-list",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plugmod-mcp.data_source.tool_receipts",
+		id: "superboard-mcp.data_source.tool_receipts",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/mcp/operator/receipts",
+				route_id: "api:mcp-operator:receipts-list",
 				query: "passthrough",
 				body: "none",
 			},

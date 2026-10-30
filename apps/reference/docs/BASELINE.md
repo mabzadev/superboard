@@ -13,7 +13,7 @@ allowed in shared code.
    values from environment configuration.
 2. **Sign in** — email/password plus Google and Apple sign-in.
 3. **Create account** — registration/allowlist behavior and email verification.
-4. **Password recovery** — transactional email captured at `mail.mbza.dev`.
+4. **Password recovery** — transactional email captured at `mail.mabza.dev`.
 5. **Home** — authenticated user and feature availability summary.
 6. **Profile** — user identity, attributes, sign-out and account deletion.
 7. **Notifications** — push permission, token registration and inbox state.
@@ -56,7 +56,7 @@ allowed in shared code.
 | `lastIntegrationError`    | string      | memory             | sanitized SDK error                     |
 
 Endpoints are required action/widget parameters. The SuperBoard Flutter and
-FlutterFlow libraries intentionally provide no VocoStar or mbza fallback URL.
+FlutterFlow libraries intentionally provide no VocoStar or mabza fallback URL.
 
 ## Data ownership
 
@@ -80,6 +80,6 @@ FlutterFlow libraries intentionally provide no VocoStar or mbza fallback URL.
 6. Run `npm run check` in CI; it includes configuration tests, Flutter analysis,
    widget/unit tests, and a Web release build.
 7. Run the lifecycle-aware SDK gates in [SDK_COVERAGE.md](./SDK_COVERAGE.md), then validate
-   the candidate on `mbza.dev` at the exact platform SHA. The SDK release
+   the candidate on `mabza.dev` at the exact platform SHA. The SDK release
    workflow pins the verified immutable tags and catalogue commits
    automatically before promotion to VocoStar or another application.

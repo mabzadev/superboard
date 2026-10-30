@@ -7,8 +7,8 @@ All 10 files and 27 tests in this run passed.
 Recorded observations (emitted after semantic and persistence assertions):
 [
   {
-    "plugin_id": "supbrd-plug-audit",
-    "route_id": "gateway.supbrd-plug-audit.health",
+    "plugin_id": "superboard-audit",
+    "route_id": "gateway.superboard-audit.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -16,8 +16,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plug-content",
-    "route_id": "gateway.supbrd-plug-content.health",
+    "plugin_id": "superboard-content",
+    "route_id": "gateway.superboard-content.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -25,8 +25,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.health",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -34,8 +34,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plug-settings",
-    "route_id": "gateway.supbrd-plug-settings.health",
+    "plugin_id": "superboard-settings",
+    "route_id": "gateway.superboard-settings.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -43,8 +43,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plug-user",
-    "route_id": "gateway.supbrd-plug-user.health",
+    "plugin_id": "superboard-user",
+    "route_id": "gateway.superboard-user.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -52,8 +52,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.health",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -61,8 +61,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.health",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -70,8 +70,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.health",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -79,8 +79,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.health",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -88,8 +88,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-files",
-    "route_id": "gateway.supbrd-plugmod-files.health",
+    "plugin_id": "superboard-files",
+    "route_id": "gateway.superboard-files.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -97,8 +97,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
-    "route_id": "gateway.supbrd-plugmod-flows.health",
+    "plugin_id": "superboard-flows",
+    "route_id": "gateway.superboard-flows.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -106,8 +106,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-gateway",
-    "route_id": "gateway.supbrd-plugmod-gateway.health",
+    "plugin_id": "superboard-gateway",
+    "route_id": "gateway.superboard-gateway.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -115,8 +115,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
-    "route_id": "gateway.supbrd-plugmod-marketing.health",
+    "plugin_id": "superboard-marketing",
+    "route_id": "gateway.superboard-marketing.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -124,8 +124,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-mcp",
-    "route_id": "gateway.supbrd-plugmod-mcp.health",
+    "plugin_id": "superboard-mcp",
+    "route_id": "gateway.superboard-mcp.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -133,8 +133,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.health",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -142,8 +142,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-onboardings",
-    "route_id": "gateway.supbrd-plugmod-onboardings.health",
+    "plugin_id": "superboard-onboardings",
+    "route_id": "gateway.superboard-onboardings.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -151,8 +151,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
-    "route_id": "gateway.supbrd-plugmod-paywalls.health",
+    "plugin_id": "superboard-paywalls",
+    "route_id": "gateway.superboard-paywalls.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -160,8 +160,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     "test": "tests/checks/apps/site/runtime/retirement-api-health.runtime.test.ts"
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
-    "route_id": "gateway.supbrd-plugmod-support.health",
+    "plugin_id": "superboard-support",
+    "route_id": "gateway.superboard-support.health",
     "scenario": "read",
     "status": "passed",
     "type": "integration",

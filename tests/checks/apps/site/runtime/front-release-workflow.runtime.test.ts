@@ -1,3 +1,4 @@
+import { canonicalFrontPath } from "@superboard/contracts/front-paths";
 import { userPluginManifest } from "@superboard/plugin-identity/user";
 import {
 	compileFrontRelease,
@@ -52,7 +53,7 @@ function release(): CompiledFrontRelease {
 
 describe("Site Front Release D1 workflow", () => {
 	test("serves maintenance before the Instance has an active release", async () => {
-		expect((await resolveSiteFrontPage(env, "/login", undefined)).resolution).toEqual({
+		expect((await resolveSiteFrontPage(env, canonicalFrontPath("/login"), undefined)).resolution).toEqual({
 			result: "maintenance",
 			route_id: null,
 			state_renderer_id: null,
@@ -175,7 +176,7 @@ describe("Site Front Release D1 workflow", () => {
 					query: {},
 					page_id: "page.unmapped",
 					layout_ids: [],
-					renderer_ids: ["supbrd-plugmod-analytics.renderer.admin_surface"],
+					renderer_ids: ["superboard-analytics.renderer.admin_surface"],
 					state_policies: {
 						loading: "emdash.core.state.loading",
 						empty: "emdash.core.state.empty",
@@ -192,8 +193,8 @@ describe("Site Front Release D1 workflow", () => {
 		};
 		invalidCandidate.payload.renderers = [
 			{
-				renderer_id: "supbrd-plugmod-analytics.renderer.admin_surface",
-				plugin_id: "supbrd-plugmod-analytics",
+				renderer_id: "superboard-analytics.renderer.admin_surface",
+				plugin_id: "superboard-analytics",
 				plugin_version: "1.0.0",
 				build_id: "b1",
 				build_checksum: "c1",
@@ -307,12 +308,12 @@ describe("Site Front Release D1 workflow", () => {
 		);
 		if (!loadedPreview) throw new Error("preview missing");
 		expect(
-			(await resolvePreviewFrontPage(env, loadedPreview.candidate.release, "/login", undefined))
+			(await resolvePreviewFrontPage(env, loadedPreview.candidate.release, canonicalFrontPath("/login"), undefined))
 				.resolution.result,
 		).toBe("rendered");
 		expect(
 			(
-				await resolvePreviewFrontPage(env, loadedPreview.candidate.release, "/app/profile", {
+				await resolvePreviewFrontPage(env, loadedPreview.candidate.release, canonicalFrontPath("/app/profile"), {
 					id: "operator-admin",
 					email: "admin@example.com",
 					name: "Admin",
@@ -323,7 +324,7 @@ describe("Site Front Release D1 workflow", () => {
 		).toBe("rendered");
 		expect(
 			(
-				await resolvePreviewFrontPage(env, loadedPreview.candidate.release, "/app/profile", {
+				await resolvePreviewFrontPage(env, loadedPreview.candidate.release, canonicalFrontPath("/app/profile"), {
 					id: "operator-editor",
 					email: "editor@example.com",
 					name: "Editor",

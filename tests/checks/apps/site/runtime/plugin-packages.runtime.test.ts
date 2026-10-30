@@ -2,6 +2,8 @@ import { applyD1Migrations, type D1Migration } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { beforeEach, expect, test } from "vitest";
 
+import { INTERNAL_ROUTE_OWNER_PATH } from "@superboard/contracts/route-reference";
+
 import { proxyOperatorApiRequest } from "../../../../../apps/site/src/lib/operator-api-proxy.js";
 import {
 	migratePluginPackages,
@@ -18,8 +20,8 @@ declare global {
 }
 
 const scope = { instance_id: "package-test", target: "local" as const };
-const onboarding = "supbrd-plugmod-onboardings";
-const flows = "supbrd-plugmod-flows";
+const onboarding = "superboard-onboardings";
+const flows = "superboard-flows";
 
 test("SDK catalogue access follows Settings activation without requiring Observability", async () => {
 	let dispatched = 0;
@@ -33,7 +35,18 @@ test("SDK catalogue access follows Settings activation without requiring Observa
 				SUPERBOARD_ENVIRONMENT: scope.target,
 				SITE_OPERATOR_BRIDGE_TOKEN: "test-catalogue-bridge",
 				API_SERVICE: {
-					fetch: async () => {
+					fetch: async (fetchRequest: Request) => {
+						const url = new URL(fetchRequest.url);
+						if (url.pathname === INTERNAL_ROUTE_OWNER_PATH) {
+							const body = (await fetchRequest.json()) as { path?: string };
+							const targetPath = body.path ?? "";
+							const pluginId = targetPath.startsWith("/api/v1/platform/status")
+								? "superboard-observability"
+								: targetPath.startsWith("/api/v1/platform/libraries-other")
+									? "supbrd-plugmod-other"
+									: "superboard-settings";
+							return Response.json({ pluginId, routeId: `api:${targetPath}` });
+						}
 						dispatched++;
 						return Response.json({ data: { libraries: [] } });
 					},
@@ -43,7 +56,7 @@ test("SDK catalogue access follows Settings activation without requiring Observa
 	expect((await request()).status).toBe(404);
 	expect(dispatched).toBe(0);
 	await env.DB.prepare(
-		"INSERT INTO superboard_plugin_lifecycle (instance_id,target,plugin_id,artifact_checksum,state,state_changed_at) SELECT ?,?,'supbrd-plug-settings',artifact_checksum,'active',? FROM superboard_plugin_manifest_artifacts WHERE plugin_id='supbrd-plug-settings' LIMIT 1",
+		"INSERT INTO superboard_plugin_lifecycle (instance_id,target,plugin_id,artifact_checksum,state,state_changed_at) SELECT ?,?,'superboard-settings',artifact_checksum,'active',? FROM superboard_plugin_manifest_artifacts WHERE plugin_id='superboard-settings' LIMIT 1",
 	)
 		.bind(scope.instance_id, scope.target, new Date().toISOString())
 		.run();
@@ -92,7 +105,11 @@ test("enabling a package includes all deployed functions despite legacy disabled
 	});
 	expect(action.components).toEqual([onboarding, flows]);
 	const packages = await syncInstalledPluginPackages(env.DB, scope);
-	expect(packages.find((row) => row.plugin_id === "supbrd-plug-journeys")?.status).toBe("active");
+	expect(
+		packages.find(
+			(row) => row.plugin_id === "superboard-acquisition" || row.plugin_id === "supbrd-plug-journeys",
+		)?.status,
+	).toBe("active");
 	expect(
 		packages.find((row) => row.plugin_id === "supbrd-plugmod-reference-production"),
 	).toBeUndefined();
@@ -113,9 +130,9 @@ test("enabling a package includes all deployed functions despite legacy disabled
 });
 
 test("migration and retries preserve settings in their existing storage", async () => {
-	const original = "plugin:supbrd-plugmod-flows:settings:max_concurrent_runs";
+	const original = "plugin:superboard-flows:settings:max_concurrent_runs";
 	const destination =
-		"plugin:supbrd-plug-journeys:settings:supbrd-plugmod-flows__max_concurrent_runs";
+		"plugin:supbrd-plug-journeys:settings:superboard-flows__max_concurrent_runs";
 	await env.DB.prepare("INSERT INTO options(name,value) VALUES (?,?)").bind(original, "4").run();
 	await migratePluginPackages(env.DB, scope, [onboarding, flows]);
 	expect(
@@ -188,7 +205,7 @@ test("package selection respects the deployment and rejects individual function 
 });
 
 test("a first installation selects declared functions without treating availability as an explicit disable", async () => {
-	const components = ["supbrd-plug-products", "supbrd-plugmod-billing"];
+	const components = ["superboard-products", "superboard-billing"];
 	await migratePluginPackages(env.DB, scope, components);
 	expect(
 		(
@@ -202,8 +219,8 @@ test("a first installation selects declared functions without treating availabil
 });
 
 test("Acquisition includes transferred functions despite legacy activation preferences", async () => {
-	const paywalls = "supbrd-plugmod-paywalls";
-	const links = "supbrd-plugmod-dynamic-links";
+	const paywalls = "superboard-paywalls";
+	const links = "superboard-dynamic-links";
 	await env.DB.prepare(
 		"INSERT INTO superboard_plugin_package_migrations (instance_id,target,migration_id,completed_at) VALUES (?,?,'packages-v1',?)",
 	)

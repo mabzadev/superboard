@@ -56,7 +56,7 @@ test("usage export produces a retrievable CSV from the chosen dates", async ({
 	for await (const chunk of stream!) chunks.push(chunk);
 	expect(Buffer.concat(chunks).toString()).toContain("date,active_users");
 	await evidence(
-		"supbrd-plug-settings",
+		"superboard-settings",
 		"superboard.project_settings",
 		[],
 		"Clicked usage export with the selected reporting dates and downloaded the generated CSV from its returned location.",

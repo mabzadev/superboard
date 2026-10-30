@@ -65,7 +65,7 @@ test("the choice list follows plugin installation and activation without duplica
 	const response = await withViewPluginLabels(
 		manifestResponse({
 			"supbrd-plug-journeys": { enabled: true },
-			"supbrd-plugmod-flows": { enabled: true },
+			"superboard-flows": { enabled: true },
 			"supbrd-plug-support": { enabled: false },
 			"cloudflare-email": { enabled: true },
 		}),

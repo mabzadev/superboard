@@ -51,7 +51,7 @@ export function withPluginWorkflowLifecycle(
 							async (context: WorkflowStepContext): Promise<Checkpoint> => {
 								const task = await runPluginTask(
 									env,
-									"supbrd-plugmod-flows",
+									"superboard-flows",
 									{
 										kind: "workflow",
 										task_id: `${workflowId}:${name}:${attempt}`,

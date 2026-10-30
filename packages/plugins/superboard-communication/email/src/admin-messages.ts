@@ -1,13 +1,8 @@
-export async function readEmailAdminMessages(
-	request: Request,
-	env: Env,
-	projectId: number,
-): Promise<Response | null> {
-	if (request.method !== "GET") return null;
-	const url = new URL(request.url);
-	const path = url.pathname.slice("/internal/v1/admin".length);
-	const headers = { "Cache-Control": "no-store" };
-	if (path === "/messages") {
+import { createFetchRouter, resolveRegisteredRoute } from "@superboard/contracts/route-registry";
+
+export const emailMessageRoutes = createFetchRouter<{env: Env; projectId: number}>({service:"email",module:"admin-messages",pluginId:"superboard-email",surface:"internal",access:"internal"});
+const headers = { "Cache-Control": "no-store" };
+emailMessageRoutes.get("/internal/v1/admin/messages", async ({url,env:{env,projectId}}) => {
 		const limit = Math.min(
 			100,
 			Math.max(1, Math.floor(Number(url.searchParams.get("limit")) || 50)),
@@ -47,20 +42,21 @@ export async function readEmailAdminMessages(
 			},
 			{ headers },
 		);
-	}
-	const id = /^\/messages\/([^/]+)$/.exec(path)?.[1];
-	if (!id) return null;
-	const message = await env.DB.prepare(
+	});
+emailMessageRoutes.get("/internal/v1/admin/messages/:id", async ({params:{id},env:{env,projectId}}) => {const message = await env.DB.prepare(
 		"SELECT id,subject,kind,status,transport,from_name,from_address,reply_to,text_body,html_body,created_at,sent_at,last_error FROM email_messages WHERE project_id=? AND id=?",
 	)
 		.bind(projectId, id)
 		.first();
-	if (!message)
+if (!message)
 		return Response.json({ error: { code: "EMAIL_MESSAGE_NOT_FOUND" } }, { status: 404, headers });
-	const deliveries = await env.DB.prepare(
+const deliveries = await env.DB.prepare(
 		"SELECT recipient,status,provider_status,provider_event_at,attempt_count,last_error,sent_at FROM email_deliveries WHERE message_id=? ORDER BY recipient",
 	)
 		.bind(id)
 		.all();
-	return Response.json({ data: { ...message, deliveries: deliveries.results } }, { headers });
+return Response.json({ data: { ...message, deliveries: deliveries.results } }, { headers });});
+export async function readEmailAdminMessages(request:Request,env:Env,projectId:number):Promise<Response|null>{
+ if (!resolveRegisteredRoute(emailMessageRoutes, request.method, "internal", new URL(request.url).pathname)) return null;
+ return emailMessageRoutes.fetch(request,{env,projectId});
 }

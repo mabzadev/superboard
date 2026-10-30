@@ -55,7 +55,7 @@ test.describe("Operator registration", () => {
 				expect(user.email).toBe(email);
 				expect(user.name).toBe("Verified Site operator");
 				await evidence(
-					"supbrd-plug-user",
+					"superboard-user",
 					routeId,
 					[user.id],
 					"Captured real verification email, followed its emitted URL, and completed WebAuthn account registration.",

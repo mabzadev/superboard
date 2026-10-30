@@ -46,6 +46,8 @@ jobs:
           pnpm build
       - name: Check package and Site types
         run: pnpm typecheck
+      - name: Check runtime route registrations and references
+        run: pnpm routes:check
       - name: Check analyzers, source, dependencies and repository contracts
         run: pnpm lint && pnpm lint:contracts
       - name: Check navigation permissions and settings links
@@ -114,7 +116,7 @@ jobs:
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
       - name: Resolve SDK analyzer dependencies
         run: |
-          for sdk in flutter flutterflow flutterflow_messaging; do
+          for sdk in flutter flutterflow; do
             (cd "sdks/$sdk" && flutter pub get)
           done
       - run: pnpm lint:dart

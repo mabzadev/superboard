@@ -42,21 +42,21 @@ class APIService: BaseService, APIServiceProtocol {
 
     private struct Constants {
         struct URLs {
-            static let apiPath = "/api/v1/sdk"
+            static let apiPath = "/v1"
 
-            static let authenticate = "/authenticate"
-            static let dataForDevice = "/data_for_device"
-            static let dataForDeviceAndURL = "/data_for_device_and_url"
-            static let generateLink = "/create_link"
-            static let event = "/event"
-            static let attributes = "/visitor_attributes"
+            static let authenticate = "/data/authenticate"
+            static let dataForDevice = "/acquisition/data_for_device"
+            static let dataForDeviceAndURL = "/acquisition/data_for_device_and_url"
+            static let generateLink = "/acquisition/create_link"
+            static let event = "/data/event"
+            static let attributes = "/data/visitor_attributes"
 
-            static let notifications = "/notifications_for_device"
-            static let numberOfUnreadNotifications = "/number_of_unread_notifications"
-            static let markNotificationAsRead = "/mark_notification_as_read"
-            static let notificationsToDisplayAutomatically = "/notifications_to_display_automatically"
-            static let addPaymentEvent = "/add_payment_event"
-            static let linkDetails = "/link_details"
+            static let notifications = "/communication/notifications_for_device"
+            static let numberOfUnreadNotifications = "/communication/number_of_unread_notifications"
+            static let markNotificationAsRead = "/communication/mark_notification_as_read"
+            static let notificationsToDisplayAutomatically = "/communication/notifications_to_display_automatically"
+            static let addPaymentEvent = "/monetization/add_payment_event"
+            static let linkDetails = "/acquisition/link_details"
         }
 
         struct Headers {

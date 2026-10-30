@@ -1,3 +1,6 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
+import { processStripeWebhook } from "../lib/stripe-billing.js";
+import { callBillingService } from "../lib/billing-service.js";
 import { Hono } from "hono";
 import { billingServiceEnabled, ingestProviderEventWithBillingAuthority } from "../lib/billing-service";
 import { ingestBillingProviderEvent } from "../lib/billing-provider-ingress";
@@ -9,7 +12,7 @@ import {
 } from "../lib/provider-http-errors";
 import type { Env } from "../types";
 
-const webhooks = new Hono<{ Bindings: Env }>();
+const webhooks = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.purchases-provider-webhooks.webhooks","pluginId":"superboard-billing","surface":"internal","access":"operator"});
 webhooks.onError((error, c) => providerUnhandledHttpError(c, error));
 
 async function sha256Hex(value: string) {
@@ -135,6 +138,23 @@ webhooks.post("/apple/:environment/:projectId", async (c) => {
       "Apple notification could not be accepted",
     );
   }
+});
+
+webhooks.post("/stripe/:environment/:projectId", async (c) => {
+	const environment = appleEnvironment(c.req.param("environment"));
+	const projectId = c.req.param("projectId");
+	if (!environment || !/^[1-9][0-9]{0,18}$/.test(projectId)) return c.json({ error: "Invalid Stripe target" },404);
+	const payload = await readTextLimited(c.req.raw,1_048_576,"Webhook payload too large");
+	const signature = c.req.header("Stripe-Signature") || "";
+	try {
+		const result = billingServiceEnabled(c.env)
+			? await callBillingService(c.env,"/internal/v1/stripe/webhook",{ project_id: projectId,environment,payload,signature })
+			: await processStripeWebhook(c.env,projectId,environment,payload,signature);
+		return c.json(result);
+	} catch (error) {
+		const status = error && typeof error === "object" && "status" in error ? Number(error.status) : 503;
+		return c.json({ error: "Stripe webhook could not be processed" },status === 400 ? 400 : 503);
+	}
 });
 
 export default webhooks;

@@ -36,30 +36,30 @@ function repositoryJsonEntity(definition) {
 
 function canonicalStoreName(definition, owner, targetTable) {
 	if (definition.storeName) return definition.storeName;
-	if (owner === "supbrd-plug-user") {
+	if (owner === "superboard-user") {
 		return targetTable === "access_keys" ? "user_credentials" : "user_directory";
 	}
-	if (owner === "supbrd-plug-settings") return "settings";
-	if (owner === "supbrd-plug-products") {
+	if (owner === "superboard-settings") return "settings";
+	if (owner === "superboard-products") {
 		if (targetTable === "products") return "catalog";
 		if (targetTable === "store_products") return "prices";
 		return "offers";
 	}
-	if (owner === "supbrd-plugmod-billing") {
+	if (owner === "superboard-billing") {
 		if (targetTable === "purchases" || targetTable === "refunds") return "purchases";
 		if (targetTable === "subscriptions") return "subscriptions";
 		return "ledger";
 	}
-	if (owner === "supbrd-plugmod-paywalls") {
+	if (owner === "superboard-paywalls") {
 		return targetTable === "events" ? "exposures" : "definitions";
 	}
-	if (owner === "supbrd-plugmod-dynamic-links") {
+	if (owner === "superboard-dynamic-links") {
 		return targetTable === "link_events" ? "attribution" : "links";
 	}
-	if (owner === "supbrd-plugmod-analytics") {
+	if (owner === "superboard-analytics") {
 		return targetTable === "daily_metrics" ? "aggregates" : "events";
 	}
-	if (owner === "supbrd-plugmod-support") {
+	if (owner === "superboard-support") {
 		if (/(?:contacts|companies|contact_notes)$/u.test(targetTable)) return "contacts";
 		if (/(?:messages|participants|drafts|notifications)$/u.test(targetTable)) return "messages";
 		return "conversations";
@@ -79,20 +79,20 @@ function pluginOwner(definition) {
 			"refunds",
 		]);
 		return billingTables.has(definition.target?.table)
-			? "supbrd-plugmod-billing"
-			: "supbrd-plug-products";
+			? "superboard-billing"
+			: "superboard-products";
 	}
-	if (definition.module === "paywalls") return "supbrd-plugmod-paywalls";
-	if (definition.module === "dynamic-links") return "supbrd-plugmod-dynamic-links";
-	if (definition.module === "support") return "supbrd-plugmod-support";
-	if (definition.module === "analytics") return "supbrd-plugmod-analytics";
-	if (definition.module === "marketing") return "supbrd-plugmod-marketing";
-	if (definition.module === "onboardings") return "supbrd-plugmod-onboardings";
-	if (definition.id === "app.sdk_configurations") return "supbrd-plug-settings";
+	if (definition.module === "paywalls") return "superboard-paywalls";
+	if (definition.module === "dynamic-links") return "superboard-dynamic-links";
+	if (definition.module === "support") return "superboard-support";
+	if (definition.module === "analytics") return "superboard-analytics";
+	if (definition.module === "marketing") return "superboard-marketing";
+	if (definition.module === "onboardings") return "superboard-onboardings";
+	if (definition.id === "app.sdk_configurations") return "superboard-settings";
 	if (definition.id.includes("events") || definition.id.includes("metrics")) {
-		return "supbrd-plugmod-analytics";
+		return "superboard-analytics";
 	}
-	return "supbrd-plug-user";
+	return "superboard-user";
 }
 
 function copySupport(id, sourceTable, targetTable, columns, options = {}) {
@@ -1465,7 +1465,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "identity.application_sessions",
 		module: "identity",
-		pluginId: "supbrd-plug-user",
+		pluginId: "superboard-user",
 		storeName: "user_sessions",
 		source: {
 			database: "identity",
@@ -1480,7 +1480,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "settings.front_draft_versions",
 		module: "settings",
-		pluginId: "supbrd-plug-settings",
+		pluginId: "superboard-settings",
 		storeName: "versions",
 		source: {
 			database: "site",
@@ -1495,7 +1495,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "content.documents",
 		module: "content",
-		pluginId: "supbrd-plug-content",
+		pluginId: "superboard-content",
 		storeName: "documents",
 		source: {
 			database: "site",
@@ -1509,7 +1509,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "content.revisions",
 		module: "content",
-		pluginId: "supbrd-plug-content",
+		pluginId: "superboard-content",
 		storeName: "revisions",
 		source: {
 			database: "site",
@@ -1523,7 +1523,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "content.taxonomies",
 		module: "content",
-		pluginId: "supbrd-plug-content",
+		pluginId: "superboard-content",
 		storeName: "taxonomies",
 		source: {
 			database: "site",
@@ -1537,7 +1537,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "audit.archives",
 		module: "audit",
-		pluginId: "supbrd-plug-audit",
+		pluginId: "superboard-audit",
 		storeName: "archives",
 		sourceStatus: "new_empty_store",
 		source: {
@@ -1553,7 +1553,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "audit.ledger",
 		module: "audit",
-		pluginId: "supbrd-plug-audit",
+		pluginId: "superboard-audit",
 		storeName: "ledger",
 		source: {
 			database: "site",
@@ -1568,7 +1568,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "gateway.rate_limits",
 		module: "gateway",
-		pluginId: "supbrd-plugmod-gateway",
+		pluginId: "superboard-gateway",
 		storeName: "rate_limits",
 		source: {
 			database: "site",
@@ -1581,7 +1581,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "gateway.route_manifests",
 		module: "gateway",
-		pluginId: "supbrd-plugmod-gateway",
+		pluginId: "superboard-gateway",
 		storeName: "route_manifests",
 		source: {
 			database: "site",
@@ -1597,7 +1597,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "flows.definitions",
 		module: "flows",
-		pluginId: "supbrd-plugmod-flows",
+		pluginId: "superboard-flows",
 		storeName: "definitions",
 		source: {
 			database: "flows",
@@ -1613,7 +1613,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "flows.runtime",
 		module: "flows",
-		pluginId: "supbrd-plugmod-flows",
+		pluginId: "superboard-flows",
 		storeName: "runtime",
 		source: {
 			database: "flows",
@@ -1632,7 +1632,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "analytics.authoritative_events",
 		module: "analytics",
-		pluginId: "supbrd-plugmod-analytics",
+		pluginId: "superboard-analytics",
 		storeName: "events",
 		source: {
 			database: "analytics",
@@ -1649,7 +1649,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "analytics.daily_aggregates",
 		module: "analytics",
-		pluginId: "supbrd-plugmod-analytics",
+		pluginId: "superboard-analytics",
 		storeName: "aggregates",
 		source: {
 			database: "analytics",
@@ -1666,7 +1666,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "marketing.campaigns",
 		module: "marketing",
-		pluginId: "supbrd-plugmod-marketing",
+		pluginId: "superboard-marketing",
 		storeName: "campaigns",
 		source: {
 			database: "marketing",
@@ -1680,7 +1680,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "marketing.consent",
 		module: "marketing",
-		pluginId: "supbrd-plugmod-marketing",
+		pluginId: "superboard-marketing",
 		storeName: "consent",
 		source: {
 			database: "marketing",
@@ -1693,7 +1693,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "marketing.journeys",
 		module: "marketing",
-		pluginId: "supbrd-plugmod-marketing",
+		pluginId: "superboard-marketing",
 		storeName: "journeys",
 		source: {
 			database: "marketing",
@@ -1711,7 +1711,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "email.deliveries",
 		module: "email",
-		pluginId: "supbrd-plugmod-email",
+		pluginId: "superboard-email",
 		storeName: "deliveries",
 		source: {
 			database: "email",
@@ -1730,7 +1730,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "email.provider_events",
 		module: "email",
-		pluginId: "supbrd-plugmod-email",
+		pluginId: "superboard-email",
 		storeName: "provider_events",
 		source: {
 			database: "email",
@@ -1747,7 +1747,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "files.objects",
 		module: "files",
-		pluginId: "supbrd-plugmod-files",
+		pluginId: "superboard-files",
 		storeName: "objects",
 		source: {
 			database: "files",
@@ -1762,7 +1762,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "files.tickets",
 		module: "files",
-		pluginId: "supbrd-plugmod-files",
+		pluginId: "superboard-files",
 		storeName: "tickets",
 		sourceStatus: "new_empty_store",
 		source: {
@@ -1775,7 +1775,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "onboardings.definitions",
 		module: "onboardings",
-		pluginId: "supbrd-plugmod-onboardings",
+		pluginId: "superboard-onboardings",
 		storeName: "definitions",
 		source: {
 			database: "onboardings",
@@ -1789,7 +1789,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "onboardings.progress",
 		module: "onboardings",
-		pluginId: "supbrd-plugmod-onboardings",
+		pluginId: "superboard-onboardings",
 		storeName: "progress",
 		source: {
 			database: "onboardings",
@@ -1805,7 +1805,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "observability.health_projections",
 		module: "observability",
-		pluginId: "supbrd-plugmod-observability",
+		pluginId: "superboard-observability",
 		storeName: "health_projections",
 		source: {
 			database: "site",
@@ -1820,7 +1820,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "mcp.sessions",
 		module: "mcp",
-		pluginId: "supbrd-plugmod-mcp",
+		pluginId: "superboard-mcp",
 		storeName: "sessions",
 		source: {
 			database: "api",
@@ -1837,7 +1837,7 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
 	repositoryJsonEntity({
 		id: "mcp.tool_receipts",
 		module: "mcp",
-		pluginId: "supbrd-plugmod-mcp",
+		pluginId: "superboard-mcp",
 		storeName: "tool_receipts",
 		source: {
 			database: "site",

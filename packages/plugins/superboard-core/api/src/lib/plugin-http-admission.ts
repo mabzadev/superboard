@@ -1,29 +1,18 @@
-import { resolvePluginApiOwner } from "@superboard/contracts/plugin-api-owner";
-import { runPluginTask, PluginTaskUnavailable } from "@superboard/contracts/plugin-task";
+import { delegatedAppOwner } from "./delegated-route-owner.js";
+import { registeredRequestDefinition } from "@superboard/contracts/route-registry";
+import { runPluginTask, PluginTaskUnavailable, pluginTaskManagementRequired } from "@superboard/contracts/plugin-task";
 import type { MiddlewareHandler } from "hono";
 
 import type { Env } from "../types.js";
 
 export const pluginHttpAdmission: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
-	const url = new URL(c.req.url);
-	const host = c.req.header("Host") ?? url.hostname;
-	const applicationRoute =
-		url.pathname === "/custom/v1" ||
-		url.pathname.startsWith("/custom/v1/") ||
-		url.pathname.startsWith("/api/v1/sdk/custom/") ||
-		url.pathname.startsWith("/api/v1/platform/custom/");
-	const plugin =
-		applicationRoute && c.env.CUSTOM_WORKER_PLUGIN_ID
-			? c.env.CUSTOM_WORKER_PLUGIN_ID
-			: host === c.env.AUTH_DOMAIN
-				? "supbrd-plug-user"
-				: host === c.env.FILES_DOMAIN
-					? "supbrd-plugmod-files"
-					: host === c.env.SHORTLINK_DOMAIN
-						? "supbrd-plugmod-dynamic-links"
-						: resolvePluginApiOwner(url.pathname);
-	if (plugin === "supbrd-core" || c.req.method === "OPTIONS") return next();
+	if (c.req.method === "OPTIONS") return next();
+	const definition = registeredRequestDefinition(c.req.matchedRoutes);
+	if (!definition) return c.json({ error: { code: "ROUTE_OWNER_UNAVAILABLE" } }, 503);
 	try {
+		if (definition.delegatedOwner === "app" && !pluginTaskManagementRequired(c.env)) return next();
+		const plugin = definition.delegatedOwner === "app" ? await delegatedAppOwner(c.req.raw, c.env) : definition.ownerBinding ? c.env[definition.ownerBinding] ?? definition.pluginId : definition.pluginId;
+		if (plugin === "supbrd-core") return next();
 		const result = await runPluginTask(
 			c.env,
 			plugin,
