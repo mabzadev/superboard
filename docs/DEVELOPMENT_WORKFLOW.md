@@ -175,11 +175,8 @@ version.
 Security and release integrity are code-first controls. Remote readiness is red
 unless both repositories have vulnerability alerts and unpaused Dependabot
 security updates enabled. It also requires repository release immutability for
-future publications. The Platform additionally requires the exact active
-`SuperBoard immutable SDK tags` tag ruleset, with no bypass actor, covering every
-declared SDK and semantic-version tag and denying tag update and deletion. Tag
-creation remains allowed, so the reviewed release workflow can continue to
-publish a new version.
+future publications. No tag ruleset is required: SDK and version tags are
+managed directly by the repository owner.
 
 An `enabled` but `paused` Dependabot state is a reconciliation blocker, not an
 enabled state. Resolve the outstanding security-update queue and require a

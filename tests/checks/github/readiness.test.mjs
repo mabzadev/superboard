@@ -74,10 +74,7 @@ test("GitHub control-plane manifest is strict and contains names, never secret v
 	assert.deepEqual(manifest.repositories.platform.workflowPermissions, workflowPermissions());
 	assert.deepEqual(manifest.repositories.platform.security, securityPolicy());
 	assert.equal(manifest.repositories.platform.releaseProtection.immutableReleases, true);
-	assert.deepEqual(manifest.repositories.platform.releaseProtection.tagRuleset.rules, [
-		"update",
-		"deletion",
-	]);
+	assert.equal(Object.hasOwn(manifest.repositories.platform.releaseProtection, "tagRuleset"), false);
 	assert.equal(manifest.repositories.platform.visibility, "public");
 	assert.deepEqual(Object.keys(manifest.repositories), ["platform"]);
 	assert.equal(manifest.repositories.platform.branches.dev.requiredCheck, "CI gate");
