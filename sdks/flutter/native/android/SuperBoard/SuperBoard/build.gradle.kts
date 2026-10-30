@@ -35,7 +35,10 @@ val NETWORK_LOGGING_VALUE = if (project.hasProperty("networkLogging")) {
 android {
     sourceSets {
         getByName("test") {
-            java.setSrcDirs(listOf("../../../../../../tests/checks/sdks/flutter/native/android/library/java", "../../../../tests/checks/sdks/flutter/native/android/library/kotlin"))
+            java.setSrcDirs(listOf(
+                "../../../../../../tests/checks/sdks/flutter/native/android/library/java",
+                "../../../../tests/checks/sdks/flutter/native/android/library/kotlin",
+            ))
             resources.setSrcDirs(listOf("../../../../tests/checks/sdks/flutter/native/android/library/resources"))
         }
     }

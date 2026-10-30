@@ -1,11 +1,17 @@
 import {
+	RouteInventoryStatus,
+	routeInventoryLabels,
+	routeDestinationText,
+} from "@superboard/front-ui/route-inventory-status.js";
+import {
 	parseDeploymentConfiguration,
 	parseDeploymentRoutes,
 } from "@superboard/contracts/deployment-configuration";
 import { useFrontContext } from "@superboard/front-ui/context";
 import { deploymentI18n } from "@superboard/front-ui/deployment-i18n.js";
 import { Button, Loader } from "@superboard/front-ui/kumo";
-import { useQuery } from "@superboard/front-ui/query";
+import { useLiveQuery } from "@superboard/front-ui/live-query.js";
+import { parseRouteInventorySummary } from "@superboard/contracts/route-inventory";
 import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
 import {
 	Table as FrontTable,
@@ -20,13 +26,17 @@ import { useState } from "react";
 export default function InstanceConfiguration() {
 	const context = useFrontContext();
 	const t = deploymentI18n(context.locale ?? "en");
+	const routeLabels = routeInventoryLabels(context.locale ?? "en");
 	const [routeLimit, setRouteLimit] = useState(50);
-	const query = useQuery({
-		queryKey: ["deployment-configuration", context.instanceId],
-		queryFn: async () => {
-			const response = await fetch("/_emdash/api/superboard/deployment-configuration", {
-				credentials: "same-origin",
-			});
+	const query = useLiveQuery({
+		key: [
+			"deployment-configuration",
+			context.instanceId,
+			context.deployment?.environment,
+			context.operator?.id,
+		],
+		url: "/_emdash/api/superboard/deployment-configuration",
+		parse: async (response) => {
 			if (!response.ok) throw new Error("DEPLOYMENT_CONFIGURATION_UNAVAILABLE");
 			const body: unknown = await response.json();
 			if (!body || typeof body !== "object" || !("configuration" in body))
@@ -35,9 +45,12 @@ export default function InstanceConfiguration() {
 				...parseDeploymentConfiguration(JSON.stringify(body.configuration)),
 				routes: parseDeploymentRoutes("routes" in body ? body.routes : []),
 				routesLoaded: "routesStatus" in body && body.routesStatus === "loaded",
+				inventory:
+					"routeInventory" in body && body.routeInventory
+						? parseRouteInventorySummary(body.routeInventory)
+						: undefined,
 			};
 		},
-		refetchInterval: 30000,
 	});
 	return (
 		<section className="ds-page space-y-5">
@@ -46,7 +59,7 @@ export default function InstanceConfiguration() {
 			<SectionNavigation />
 			{query.isPending ? (
 				<Loader />
-			) : query.error ? (
+			) : query.error && !query.data ? (
 				<p role="alert">{t("unavailable")}</p>
 			) : query.data ? (
 				<>
@@ -104,10 +117,30 @@ export default function InstanceConfiguration() {
 					<p>{t("mobileWeb")}</p>
 					<ConfigurationTable
 						title={t("routes")}
-						columns={[t("method"), t("url"), t("worker")]}
+						columns={[t("method"), t("url"), t("worker"), routeLabels.status]}
 						rows={query.data.routes
 							.slice(0, routeLimit)
-							.map((route) => [route.method, route.url, route.worker])}
+							.map((route) => [
+								route.method,
+								route.url ?? route.path,
+								[
+									route.worker,
+									route.executionScope,
+									routeDestinationText(
+										route.destinations,
+										query.data?.inventory,
+										context.locale ?? "en",
+									),
+								]
+									.filter(Boolean)
+									.join(" · "),
+								`${route.transport === "websocket" ? `${routeLabels.websocket} · ` : route.transport === "fallback" ? `${routeLabels.fallback} · ` : ""}${route.kind === "alias" ? routeLabels.alias : routeLabels.canonical} · ${route.surface === "internal" ? routeLabels.internal : route.surface} · ${route.availability === "stale" ? routeLabels.expired : routeLabels.current}`,
+							])}
+					/>
+					<RouteInventoryStatus
+						inventory={query.data.inventory}
+						locale={context.locale ?? "en"}
+						failed={!!query.error}
 					/>
 					{!query.data.routesLoaded && <p role="status">{t("routesUnavailable")}</p>}
 					{routeLimit < query.data.routes.length && (
@@ -132,7 +165,6 @@ export default function InstanceConfiguration() {
 			<Button
 				disabled={query.isFetching}
 				onClick={() => {
-					setRouteLimit(50);
 					query.refetch().catch(() => undefined);
 				}}
 			>

@@ -65,7 +65,7 @@ export async function createIsolatedInstance() {
 		if (code !== 0) throw new Error(`${id} failed (${code}); see ${join(logs, `${id}.log`)}`);
 	}
 	try {
-		const { target } = await loadTarget("mbza-development");
+		const { target } = await loadTarget("mabza-development");
 		const compiled = await compileTarget(target, "local");
 		const materialized = materializeTarget(compiled, "local");
 		const names = new Map(

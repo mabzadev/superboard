@@ -7,8 +7,8 @@ All 10 files and 27 tests in this run passed.
 Recorded observations (emitted after semantic and persistence assertions):
 [
   {
-    "plugin_id": "supbrd-plug-audit",
-    "route_id": "gateway.supbrd-plug-audit.command.verify_ledger",
+    "plugin_id": "superboard-audit",
+    "route_id": "gateway.superboard-audit.command.verify_ledger",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -19,8 +19,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-audit",
-    "route_id": "gateway.supbrd-plug-audit.data_source.ledger",
+    "plugin_id": "superboard-audit",
+    "route_id": "gateway.superboard-audit.data_source.ledger",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -31,8 +31,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-audit",
-    "route_id": "gateway.supbrd-plug-audit.data_source.ledger_search",
+    "plugin_id": "superboard-audit",
+    "route_id": "gateway.superboard-audit.data_source.ledger_search",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -43,8 +43,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-audit",
-    "route_id": "gateway.supbrd-plug-audit.command.archive_ledger",
+    "plugin_id": "superboard-audit",
+    "route_id": "gateway.superboard-audit.command.archive_ledger",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -55,8 +55,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-audit",
-    "route_id": "gateway.supbrd-plug-audit.data_source.archives",
+    "plugin_id": "superboard-audit",
+    "route_id": "gateway.superboard-audit.data_source.archives",
     "scenario": "read",
     "status": "passed",
     "type": "integration",

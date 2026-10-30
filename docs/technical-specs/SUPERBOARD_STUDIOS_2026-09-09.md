@@ -61,7 +61,7 @@ Le widget Flutter `SuperBoardOnboarding` comprend les questions, les embrancheme
 
 ## Implémentation et migration locale
 
-Les contrats partagés se trouvent dans `packages/contracts/src/email-studio.ts`, `experience-localization.ts` et `journey-simulation.ts`. L’éditeur partagé est `packages/supbrd-front-ui/src/experience-studio.tsx`. L’espace email est dans le dossier `studio` du plugin `supbrd-plugmod-marketing`.
+Les contrats partagés se trouvent dans `packages/contracts/src/email-studio.ts`, `experience-localization.ts` et `journey-simulation.ts`. L’éditeur partagé est `packages/supbrd-front-ui/src/experience-studio.tsx`. L’espace email est dans le dossier `studio` du plugin `superboard-marketing`.
 
 Le service Marketing expose les nouvelles opérations sous `/internal/v1/studio` : publication, historique, blocs partagés, aperçu, test, vérification de campagne, envois, statistiques, paramètres et traduction. Les routes privées du service Email fournissent les métadonnées des expéditeurs et l’historique des messages sans exposer les secrets SMTP. L’aperçu Produits utilise `/internal/v1/catalog/preview`.
 

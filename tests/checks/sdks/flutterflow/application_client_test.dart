@@ -20,7 +20,7 @@ void main() {
         identifier: 'com.example.app',
         httpClient: MockClient((request) async {
           requests.add(request);
-          if (request.url.path == '/auth/signin/password') {
+          if (request.url.path == '/v1/auth/signin/password') {
             return http.Response(
               jsonEncode({
                 'access_token': 'access-1',
@@ -75,7 +75,7 @@ void main() {
     );
     expect(result['file'], {'id': 'file-1'});
     expect(uploaded.url.origin, 'https://files.example.test');
-    expect(uploaded.url.path, '/v1/files');
+    expect(uploaded.url.path, '/v1/data/files');
     expect(uploaded.headers['x-filename'], 'voice.wav');
     expect(uploaded.bodyBytes, [1, 2, 3]);
   });
@@ -106,7 +106,7 @@ void main() {
       );
       expect(result, {'linked': true, 'provider': 'google'});
       expect(observed.method, 'POST');
-      expect(observed.url.path, '/auth/link/google');
+      expect(observed.url.path, '/v1/auth/link/google');
       expect(observed.headers['authorization'], 'Bearer application-access');
       expect(jsonDecode(observed.body), {'token': 'verified-google-token'});
     },
@@ -136,7 +136,7 @@ void main() {
     );
     final policy = await client.runtimePolicy(appVersion: '1.0.5', build: '1');
     expect(policy['data']['status'], 'update_required');
-    expect(observed.url.path, '/api/v1/app/runtime-policy');
+    expect(observed.url.path, '/v1/data/runtime-policy');
     expect(observed.headers['project-key'], 'test_project-key');
     expect(observed.headers['platform'], 'ios');
     expect(observed.headers['identifier'], 'com.example.app');
@@ -158,7 +158,7 @@ void main() {
         environment: 'production',
         httpClient: MockClient((request) async {
           requests.add(request);
-          if (request.url.path == '/auth/superboard-token') {
+          if (request.url.path == '/v1/auth/superboard-token') {
             return http.Response(
               jsonEncode({
                 'access_token': 'short-lived-identity',
@@ -217,9 +217,9 @@ void main() {
       expect(cancelled, {'id': 'job-1', 'status': 'cancelled'});
 
       expect(requests, hasLength(5));
-      expect(requests[0].url.path, '/auth/superboard-token');
+      expect(requests[0].url.path, '/v1/auth/superboard-token');
       expect(requests[0].headers['authorization'], 'Bearer application-access');
-      expect(requests[1].url.path, '/api/v1/sdk/custom/v1/jobs');
+      expect(requests[1].url.path, '/custom/v1/jobs');
       expect(
         requests[1].headers['authorization'],
         'Bearer short-lived-identity',
@@ -244,12 +244,12 @@ void main() {
         requests[2].headers['authorization'],
         'Bearer short-lived-identity',
       );
-      expect(requests[3].url.path, '/api/v1/sdk/custom/v1/jobs/job-1');
+      expect(requests[3].url.path, '/custom/v1/jobs/job-1');
       expect(
         requests[3].headers['authorization'],
         'Bearer short-lived-identity',
       );
-      expect(requests[4].url.path, '/api/v1/sdk/custom/v1/jobs/job-1/cancel');
+      expect(requests[4].url.path, '/custom/v1/jobs/job-1/cancel');
       expect(requests[4].method, 'POST');
       expect(
         requests[4].headers['authorization'],
@@ -292,7 +292,7 @@ void main() {
 
     expect(requests, hasLength(2));
     for (final request in requests) {
-      expect(request.url.path, '/api/v1/sdk/marketing/v1/preferences');
+      expect(request.url.path, '/v1/communication/preferences');
       expect(request.headers['authorization'], 'Bearer application-access');
       expect(request.headers['project-key'], 'test_project-key');
       expect(request.headers['platform'], 'web');
@@ -339,7 +339,7 @@ void main() {
       final result = await client.deleteAccount();
       expect(result['data']['deleted'], true);
       expect(observed.method, 'DELETE');
-      expect(observed.url.path, '/api/v1/sdk/account/v1');
+      expect(observed.url.path, '/v1/auth/account');
       expect(observed.headers['authorization'], 'Bearer application-access');
       expect(observed.headers['project-key'], 'test_project-key');
       expect(observed.headers['platform'], 'ios');
@@ -361,7 +361,7 @@ void main() {
       platform: 'ios',
       identifier: 'com.example.app',
       httpClient: MockClient((request) async {
-        if (request.url.path == '/auth/superboard-token') {
+        if (request.url.path == '/v1/auth/superboard-token') {
           exchanges += 1;
           if (!exchangeStarted.isCompleted) exchangeStarted.complete();
           await releaseExchange.future;

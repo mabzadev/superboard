@@ -1,20 +1,18 @@
+import { createFetchRouter } from "@superboard/contracts/route-registry";
 import { DurableObject } from "cloudflare:workers";
 import { parseMessageInput, readJsonObject } from "./validation";
 import type { Actor, Conversation, Env } from "./types";
-import {
-  configuredSecrets,
-  matchesAnySecret,
-} from "@superboard/contracts/secret";
+import { configuredSecrets, matchesAnySecret } from "@superboard/contracts/secret";
 import { runConversationAutomations } from "./workflows";
 import { publishSupportEvent } from "./webhooks";
 import { localAttachment, MESSAGE_WITH_ATTACHMENTS } from "./message-records";
 import {
-  SUPPORT_SCHEMA_VERSION,
-  parseSupportRealtimeEvent,
-  type SupportMessageAttachmentDto,
-  type SupportMessageDto,
-  type SupportRealtimeEvent,
-  type SupportRealtimeEventType,
+	SUPPORT_SCHEMA_VERSION,
+	parseSupportRealtimeEvent,
+	type SupportMessageAttachmentDto,
+	type SupportMessageDto,
+	type SupportRealtimeEvent,
+	type SupportRealtimeEventType,
 } from "@superboard/contracts/support";
 import { recordSlaMessage } from "./service-levels";
 import { enqueueAutomaticCaptainTasks } from "./captain";
@@ -22,73 +20,84 @@ import { enqueueAutomaticCaptainTasks } from "./captain";
 type SocketAttachment = Actor & { conversationId: string; expiresAt: number };
 
 export class ConversationRoom extends DurableObject<Env> {
-  constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env);
-    ctx.blockConcurrencyWhile(async () => {
-      this.migrateSqlStorage();
-    });
-  }
+	static readonly routes = ConversationRoom.createRoutes();
+	private static createRoutes() {
+		const routes = createFetchRouter<ConversationRoom>({
+			service: "support",
+			module: "conversation-room",
+			executionScope: "ConversationRoom",
+			pluginId: "superboard-support",
+			surface: "internal",
+			access: "internal",
+		});
+		routes
+			.defineRoute({ transport: "websocket" })
+			.all("/connect", ({ request, env }) => env.connectWebSocket(request));
+		routes.post("/messages", ({ request, env }) => env.createMessage(request));
+		routes.patch("/messages/:messageId", ({ request, params, env }) =>
+			env.updateMessage(request, decodeURIComponent(params.messageId ?? "")),
+		);
+		routes.delete("/messages/:messageId", ({ request, params, env }) =>
+			env.deleteMessage(request, decodeURIComponent(params.messageId ?? "")),
+		);
+		routes.post("/messages/:messageId/retry", ({ request, params, env }) =>
+			env.retryMessage(request, decodeURIComponent(params.messageId ?? "")),
+		);
+		routes.patch("/messages/:messageId/delivery", ({ request, params, env }) =>
+			env.updateDelivery(request, decodeURIComponent(params.messageId ?? "")),
+		);
+		routes.post("/typing", ({ request, env }) => env.typing(request));
+		routes.post("/read", ({ request, env }) => env.markRead(request));
+		routes.delete("/erase", ({ env }) => env.eraseConversation());
+		routes
+			.defineRoute({ transport: "fallback" })
+			.all("/*", () =>
+				Response.json({ code: "not_found", message: "Room operation not found" }, { status: 404 }),
+			);
+		return routes;
+	}
 
-  async fetch(request: Request): Promise<Response> {
-    try {
-      const capability = request.headers.get("x-room-capability") || "";
-      if (
-        !(await matchesAnySecret(
-          capability,
-          configuredSecrets(
-            this.env.INTERNAL_API_TOKEN,
-            this.env.INTERNAL_API_TOKEN_PREVIOUS,
-          ),
-        ))
-      ) {
-        return Response.json(
-          { code: "room_auth_invalid", message: "Room capability rejected" },
-          { status: 401 },
-        );
-      }
-      const url = new URL(request.url);
-      if (url.pathname === "/connect")
-        return await this.connectWebSocket(request);
-      if (url.pathname === "/messages" && request.method === "POST")
-        return await this.createMessage(request);
-      const messageRoute = /^\/messages\/([^/]+)$/.exec(url.pathname);
-      if (messageRoute && request.method === "PATCH")
-        return await this.updateMessage(request, decodeURIComponent(messageRoute[1]));
-      if (messageRoute && request.method === "DELETE")
-        return await this.deleteMessage(request, decodeURIComponent(messageRoute[1]));
-      if (/^\/messages\/[^/]+\/retry$/.test(url.pathname) && request.method === "POST")
-        return await this.retryMessage(request, decodeURIComponent(url.pathname.split("/")[2]));
-      if (/^\/messages\/[^/]+\/delivery$/.test(url.pathname) && request.method === "PATCH")
-        return await this.updateDelivery(request, decodeURIComponent(url.pathname.split("/")[2]));
-      if (url.pathname === "/typing" && request.method === "POST")
-        return await this.typing(request);
-      if (url.pathname === "/read" && request.method === "POST")
-        return await this.markRead(request);
-      if (url.pathname === "/erase" && request.method === "DELETE")
-        return await this.eraseConversation();
-      return Response.json(
-        { code: "not_found", message: "Room operation not found" },
-        { status: 404 },
-      );
-    } catch (error) {
-      const status = Number((error as { status?: number })?.status || 500);
-      return Response.json(
-        {
-          code: (error as { code?: string })?.code || "internal_error",
-          message:
-            status >= 500
-              ? "Conversation services are temporarily unavailable"
-              : error instanceof Error
-                ? error.message
-                : "Request failed",
-          retryable: status >= 500,
-        },
-        { status },
-      );
-    }
-  }
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env);
+		ctx.blockConcurrencyWhile(async () => {
+			this.migrateSqlStorage();
+		});
+	}
 
-  private async connectWebSocket(request: Request): Promise<Response> {
+	async fetch(request: Request): Promise<Response> {
+		try {
+			const capability = request.headers.get("x-room-capability") || "";
+			if (
+				!(await matchesAnySecret(
+					capability,
+					configuredSecrets(this.env.INTERNAL_API_TOKEN, this.env.INTERNAL_API_TOKEN_PREVIOUS),
+				))
+			) {
+				return Response.json(
+					{ code: "room_auth_invalid", message: "Room capability rejected" },
+					{ status: 401 },
+				);
+			}
+			return await ConversationRoom.routes.fetch(request, this);
+		} catch (error) {
+			const status = Number((error as { status?: number })?.status || 500);
+			return Response.json(
+				{
+					code: (error as { code?: string })?.code || "internal_error",
+					message:
+						status >= 500
+							? "Conversation services are temporarily unavailable"
+							: error instanceof Error
+								? error.message
+								: "Request failed",
+					retryable: status >= 500,
+				},
+				{ status },
+			);
+		}
+	}
+
+	private async connectWebSocket(request: Request): Promise<Response> {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
       return Response.json(
         { code: "upgrade_required", message: "WebSocket upgrade required" },
@@ -127,7 +136,7 @@ export class ConversationRoom extends DurableObject<Env> {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  private async createMessage(request: Request): Promise<Response> {
+	private async createMessage(request: Request): Promise<Response> {
     const actor = this.actorFromHeaders(request);
     const conversation = await this.conversation(actor.conversationId);
     if (!conversation)
@@ -351,7 +360,7 @@ export class ConversationRoom extends DurableObject<Env> {
     return Response.json({ data: publicMessage(persisted, conversation.id) });
   }
 
-  private async recordMessageSla(
+	private async recordMessageSla(
     conversation: Conversation,
     message: Record<string, unknown>,
     actor: Actor,
@@ -381,7 +390,7 @@ export class ConversationRoom extends DurableObject<Env> {
     );
   }
 
-  private async typing(request: Request): Promise<Response> {
+	private async typing(request: Request): Promise<Response> {
     const actor = this.actorFromHeaders(request);
     const value = (await readJsonObject(request)) as { active?: unknown };
     this.broadcast(
@@ -395,7 +404,7 @@ export class ConversationRoom extends DurableObject<Env> {
     return new Response(null, { status: 204 });
   }
 
-  private async markRead(request: Request): Promise<Response> {
+	private async markRead(request: Request): Promise<Response> {
     const actor = this.actorFromHeaders(request);
     const field =
       actor.kind === "user" ? "user_last_read_at" : "agent_last_read_at";
@@ -417,7 +426,7 @@ export class ConversationRoom extends DurableObject<Env> {
     return Response.json({ read_at: now });
   }
 
-  private async updateMessage(request: Request, messageId: string): Promise<Response> {
+	private async updateMessage(request: Request, messageId: string): Promise<Response> {
     const actor = this.actorFromHeaders(request);
     const body = await readJsonObject(request);
     const text = typeof body.body === "string" ? body.body.trim() : "";
@@ -443,7 +452,7 @@ export class ConversationRoom extends DurableObject<Env> {
     return Response.json({ data: publicMessage(row, actor.conversationId) });
   }
 
-  private async deleteMessage(request: Request, messageId: string): Promise<Response> {
+	private async deleteMessage(request: Request, messageId: string): Promise<Response> {
     const actor = this.actorFromHeaders(request);
     const row = await this.env.DB.prepare(
       `UPDATE messages SET body = '', deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
@@ -459,7 +468,7 @@ export class ConversationRoom extends DurableObject<Env> {
     return Response.json({ data: row });
   }
 
-  private async retryMessage(request: Request, messageId: string): Promise<Response> {
+	private async retryMessage(request: Request, messageId: string): Promise<Response> {
     const actor = this.actorFromHeaders(request);
     if (actor.kind !== "agent") throw failure("message_retry_forbidden", "Only Support agents can retry delivery", 403);
     const row = await this.env.DB.prepare(
@@ -479,7 +488,7 @@ export class ConversationRoom extends DurableObject<Env> {
     return Response.json({ data: { id: messageId, status: "queued" } }, { status: 202 });
   }
 
-  private async updateDelivery(request: Request, messageId: string): Promise<Response> {
+	private async updateDelivery(request: Request, messageId: string): Promise<Response> {
     const actor = this.actorFromHeaders(request);
     if (actor.kind === "user") throw failure("delivery_update_forbidden", "Delivery state cannot be changed by an end user", 403);
     const body = await readJsonObject(request);
@@ -547,7 +556,7 @@ export class ConversationRoom extends DurableObject<Env> {
     return Response.json({ data: event });
   }
 
-  private async auditMessage(actor: SocketAttachment, messageId: string, eventType: string, payload: unknown) {
+	private async auditMessage(actor: SocketAttachment, messageId: string, eventType: string, payload: unknown) {
     const conversation = await this.conversation(actor.conversationId);
     if (!conversation) return;
     await this.env.DB.prepare(
@@ -558,7 +567,7 @@ export class ConversationRoom extends DurableObject<Env> {
       eventType, actor.kind, actor.id, JSON.stringify({ message_id: messageId, ...asObject(payload) })).run();
   }
 
-  private async enqueueProviderDelivery(
+	private async enqueueProviderDelivery(
     conversation: Conversation,
     messageId: string,
     input: ReturnType<typeof parseMessageInput>,
@@ -598,7 +607,7 @@ export class ConversationRoom extends DurableObject<Env> {
     }
   }
 
-  private async eraseConversation(): Promise<Response> {
+	private async eraseConversation(): Promise<Response> {
     for (const socket of this.ctx.getWebSockets()) {
       try {
         socket.close(4004, "Account erased");
@@ -610,7 +619,7 @@ export class ConversationRoom extends DurableObject<Env> {
     return new Response(null, { status: 204 });
   }
 
-  private actorFromHeaders(request: Request): SocketAttachment {
+	private actorFromHeaders(request: Request): SocketAttachment {
     const id = request.headers.get("x-actor-id") || "";
     const kind = request.headers.get("x-actor-kind") as Actor["kind"] | null;
     const conversationId = request.headers.get("x-conversation-id") || "";
@@ -627,7 +636,7 @@ export class ConversationRoom extends DurableObject<Env> {
     return { id, kind, conversationId, expiresAt };
   }
 
-  private async conversation(id: string) {
+	private async conversation(id: string) {
     return this.env.DB.prepare(
       "SELECT id, project_id, external_user_id, status FROM conversations WHERE id = ?",
     )
@@ -635,7 +644,7 @@ export class ConversationRoom extends DurableObject<Env> {
       .first<Conversation>();
   }
 
-  private async nextSequence(conversationId: string): Promise<number> {
+	private async nextSequence(conversationId: string): Promise<number> {
     const persisted = await this.env.DB.prepare(
       `
       SELECT COALESCE(MAX(sequence), 0) AS sequence FROM messages WHERE conversation_id = ?
@@ -653,7 +662,7 @@ export class ConversationRoom extends DurableObject<Env> {
     });
   }
 
-  private broadcast(
+	private broadcast(
     payload: unknown,
     except?: Actor,
     audience: "all" | "agents" = "all",
@@ -691,7 +700,7 @@ export class ConversationRoom extends DurableObject<Env> {
     }
   }
 
-  webSocketMessage(socket: WebSocket, message: ArrayBuffer | string) {
+	webSocketMessage(socket: WebSocket, message: ArrayBuffer | string) {
     const attachment =
       socket.deserializeAttachment() as SocketAttachment | null;
     if (!attachment || attachment.expiresAt <= Date.now()) {
@@ -732,7 +741,7 @@ export class ConversationRoom extends DurableObject<Env> {
     }
   }
 
-  webSocketClose(socket: WebSocket, code: number, reason: string) {
+	webSocketClose(socket: WebSocket, code: number, reason: string) {
     const attachment =
       socket.deserializeAttachment() as SocketAttachment | null;
     if (attachment) {
@@ -750,7 +759,7 @@ export class ConversationRoom extends DurableObject<Env> {
     }
   }
 
-  webSocketError(socket: WebSocket) {
+	webSocketError(socket: WebSocket) {
     try {
       socket.close(1011, "WebSocket error");
     } catch {
@@ -758,7 +767,7 @@ export class ConversationRoom extends DurableObject<Env> {
     }
   }
 
-  async alarm() {
+	async alarm() {
     const now = Date.now();
     for (const socket of this.ctx.getWebSockets()) {
       const attachment =
@@ -774,7 +783,7 @@ export class ConversationRoom extends DurableObject<Env> {
     await this.scheduleSocketExpiration();
   }
 
-  private async scheduleSocketExpiration() {
+	private async scheduleSocketExpiration() {
     const next = this.ctx
       .getWebSockets()
       .map(
@@ -793,7 +802,7 @@ export class ConversationRoom extends DurableObject<Env> {
     else await this.ctx.storage.setAlarm(next);
   }
 
-  private migrateSqlStorage() {
+	private migrateSqlStorage() {
     this.ctx.storage.sql.exec(`
       CREATE TABLE IF NOT EXISTS _sql_schema_migrations (
         id INTEGER PRIMARY KEY,
@@ -822,7 +831,7 @@ export class ConversationRoom extends DurableObject<Env> {
     }
   }
 
-  private persistRealtimeEvent(
+	private persistRealtimeEvent(
     payload: unknown,
     audience: "all" | "agents",
     encoded: string,

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
+import { retiredFrontPageDestination } from "../../../apps/site/src/lib/retired-front-pages.ts";
+import { canonicalFrontHref } from "../../../packages/contracts/src/front-paths.ts";
+
 const release = JSON.parse(
 	readFileSync(
 		new URL("../../../scripts/config/superboard-parity-release.json", import.meta.url),
@@ -114,8 +117,16 @@ void test("the release graph contains no route or submenu outside the generated 
 				.replaceAll("[id]", ":id")
 				.replaceAll("[authId]", ":authId"),
 		);
+	// Historical Dashboard paths are served at the canonical path the Site redirects them to.
+	const servedPath = (path) =>
+		new URL(
+			canonicalFrontHref(retiredFrontPageDestination(path) ?? path),
+			"https://superboard.invalid",
+		).pathname;
 	assert.deepEqual(
-		activeDashboardPaths.filter((path) => !releasePaths.has(path)),
+		activeDashboardPaths.filter(
+			(path) => !releasePaths.has(path) && !releasePaths.has(servedPath(path)),
+		),
 		[],
 		"an active Dashboard route is coded outside the Front Route Manifest",
 	);

@@ -24,7 +24,7 @@ test("local configuration forwards the Release opt-in and loads its signing secr
 				"scripts/cloudflare/target-orchestrator.mjs",
 				"configure",
 				"--target",
-				"mbza-development",
+				"mabza-development",
 				"--environment",
 				"local",
 				"--adapter",
@@ -35,7 +35,7 @@ test("local configuration forwards the Release opt-in and loads its signing secr
 		);
 		const site = JSON.parse(
 			await readFile(
-				new URL("../../../infra/generated/mbza-development-site-local.jsonc", import.meta.url),
+				new URL("../../../infra/generated/mabza-development-site-local.jsonc", import.meta.url),
 				"utf8",
 			),
 		);
@@ -43,7 +43,7 @@ test("local configuration forwards the Release opt-in and loads its signing secr
 		assert.equal(site.secrets.required.includes("SUPERBOARD_RELEASE_PRIVATE_JWK"), enabled);
 		const gateway = JSON.parse(
 			await readFile(
-				new URL("../../../infra/generated/mbza-development-api-local.jsonc", import.meta.url),
+				new URL("../../../infra/generated/mabza-development-api-local.jsonc", import.meta.url),
 				"utf8",
 			),
 		);
@@ -68,7 +68,7 @@ test("the blank Instance exercise refuses reused or implicit local state", async
 
 test("the local target health gate probes every Worker through its declared contract", async () => {
 	const prepared = await prepareTarget({
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "local",
 		adapter: "local",
 	});
@@ -113,9 +113,9 @@ test("local target start builds the Site with the selected target email settings
 		{
 			target: {
 				mail: {
-					fromAddress: "noreply@mbza.dev",
+					fromAddress: "noreply@mabza.dev",
 					fromName: "SuperBoard Development",
-					replyToAddress: "support@mbza.dev",
+					replyToAddress: "support@mabza.dev",
 				},
 			},
 		},
@@ -128,9 +128,9 @@ test("local target start builds the Site with the selected target email settings
 			command: "pnpm",
 			args: ["--filter", "@superboard/site...", "build"],
 			env: {
-				SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@mbza.dev",
+				SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@mabza.dev",
 				SUPERBOARD_SITE_EMAIL_FROM_NAME: "SuperBoard Development",
-				SUPERBOARD_SITE_EMAIL_REPLY_TO: "support@mbza.dev",
+				SUPERBOARD_SITE_EMAIL_REPLY_TO: "support@mabza.dev",
 			},
 		},
 	]);

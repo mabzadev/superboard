@@ -1,3 +1,15 @@
+const identityClaims = {
+	iss: "https://auth.example.test",
+	sub: "user-1",
+	azp: "client",
+	aud: "client",
+	exp: 0,
+	iat: 0,
+	email: null,
+	first_name: null,
+	last_name: null,
+	locale: "en",
+};
 // Import any necessary types and key constants from your shared module
 import type { ProviderConfig } from "@melody-auth/shared";
 import { SessionStorageKey, StorageKey } from "@melody-auth/shared";

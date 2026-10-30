@@ -1,3 +1,10 @@
+import { parseRouteDescriptors } from "@superboard/contracts/route-manifest";
+import {
+	resolveRouteReference,
+	routeReferenceBatches,
+	ROUTE_REFERENCES_PATH,
+} from "@superboard/contracts/route-reference";
+import { matchRouteParameters, type RouteDescriptor } from "@superboard/contracts/route-registry";
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 
 import { ApiError, getErrorMessage, parseApiErrorPayload } from "./ApiError.js";
@@ -17,8 +24,9 @@ export interface PluginApiAdapter {
 	id: string;
 	kind: "command" | "data_source";
 	operations: readonly {
-		method: string;
-		path: string;
+		route_id?: string;
+		method?: string;
+		path?: string;
 		query: "none" | "passthrough";
 		body: "none" | "passthrough";
 		parameter_values?: Record<string, readonly string[]>;
@@ -57,33 +65,95 @@ function sameOriginUrl(path: string): string {
 	return url.href;
 }
 
+const referencesKey = Symbol.for("superboard.front.route-references.v1");
+const referenceGlobals = globalThis as typeof globalThis & {
+	[referencesKey]?: Map<string, Promise<RouteDescriptor[]>>;
+};
+const referenceRequests = (referenceGlobals[referencesKey] ??= new Map<
+	string,
+	Promise<RouteDescriptor[]>
+>());
+
+async function fetchRouteReferences(
+	ids: readonly string[],
+	signal?: AbortSignal,
+): Promise<RouteDescriptor[]> {
+	const selected = [...new Set(ids)].sort();
+	const key = `${globalThis.location?.origin ?? ""}:${JSON.stringify(selected)}`;
+	let pending = referenceRequests.get(key);
+	if (!pending) {
+		pending = Promise.resolve()
+			.then(async () => {
+				const routes: RouteDescriptor[] = [];
+				for (const batch of routeReferenceBatches(selected)) {
+					const query = new URLSearchParams();
+					for (const id of batch) query.append("route_id", id);
+					const response = await fetch(sameOriginUrl(`${ROUTE_REFERENCES_PATH}?${query}`), {
+						credentials: "same-origin",
+					});
+					if (!response.ok) {
+						await response.body?.cancel();
+						if (response.status === 401 && (await operatorSessionExpired()))
+							globalThis.location?.assign(operatorLoginLocation());
+						throw new ApiError(
+							getErrorMessage(response.status),
+							response.status,
+							"ROUTE_REFERENCE_UNAVAILABLE",
+						);
+					}
+					const payload: unknown = await response.json();
+					if (!payload || typeof payload !== "object" || !("routes" in payload))
+						throw new ApiError(getErrorMessage(503), 503, "ROUTE_REFERENCE_INVALID");
+					routes.push(...parseRouteDescriptors(payload.routes));
+				}
+				return [...new Map(routes.map((route) => [route.id, route])).values()];
+			})
+			.finally(() => {
+				referenceRequests.delete(key);
+			});
+		referenceRequests.set(key, pending);
+	}
+	if (!signal) return pending;
+	if (signal.aborted) throw signal.reason;
+	let abort: (() => void) | undefined;
+	try {
+		return await Promise.race([
+			pending,
+			new Promise<never>((_resolve, reject) => {
+				abort = () => {
+					reject(signal.reason ?? new DOMException("Aborted", "AbortError"));
+				};
+				signal.addEventListener("abort", abort, { once: true });
+			}),
+		]);
+	} finally {
+		if (abort) signal.removeEventListener("abort", abort);
+	}
+}
+
 function findAdapter(
 	adapters: readonly PluginApiAdapter[],
 	method: Method,
 	path: string,
+	routes: readonly RouteDescriptor[],
 ): PluginApiAdapter | undefined {
 	const pathname = path.split("?")[0]!;
-	const segments = pathname.split("/");
 	return adapters.find((adapter) =>
-		adapter.operations.some((operation) => {
+		adapter.operations.some((reference) => {
+			const operation = resolveRouteReference(reference, routes);
 			if (operation.method !== method || (operation.query === "none" && path.includes("?")))
 				return false;
 			if (adapter.kind === "data_source" && method !== "GET" && !operation.read_only) return false;
-			const expected = operation.path.split("/");
-			return (
-				expected.length === segments.length &&
-				expected.every((segment, index) => {
-					const actual = segments[index];
-					if (!segment.startsWith(":")) return segment === actual;
-					if (!actual) return false;
-					try {
-						const values = operation.parameter_values?.[segment.slice(1)];
-						return !values || values.includes(decodeURIComponent(actual));
-					} catch {
-						return false;
-					}
-				})
-			);
+			const parameters = matchRouteParameters(operation.path, pathname);
+			if (!parameters) return false;
+			return Object.entries(parameters).every(([name, actual]) => {
+				try {
+					const values = operation.parameter_values?.[name];
+					return !values || values.includes(decodeURIComponent(actual));
+				} catch {
+					return false;
+				}
+			});
 		}),
 	);
 }
@@ -108,7 +178,16 @@ export function createPluginApiClient(
 			headers.set("X-EmDash-Request", "1");
 			if (!headers.get("Idempotency-Key")) headers.set("Idempotency-Key", crypto.randomUUID());
 		}
-		const adapter = pluginId ? findAdapter(adapters, method, path) : undefined;
+		const references = adapters.flatMap((adapter) =>
+			adapter.operations.flatMap((operation) => (operation.route_id ? [operation.route_id] : [])),
+		);
+		const routes =
+			pluginId && references.length ? await fetchRouteReferences(references, options.signal) : [];
+		const adapter = pluginId
+			? findAdapter(adapters, method, path, [
+					...new Map(routes.map((route) => [route.id, route])).values(),
+				])
+			: undefined;
 		if (adapter && !(data instanceof Blob)) {
 			const base = `/_emdash/api/superboard/plugins/${encodeURIComponent(pluginId!)}/${adapter.kind === "command" ? "commands" : "data-sources"}/${encodeURIComponent(adapter.id)}`;
 			const envelope = { method, path, ...(data === undefined ? {} : { body: data }) };

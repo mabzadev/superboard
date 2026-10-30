@@ -24,6 +24,8 @@
 		"vitest": "catalog:"
 	},
 	"exports": {
-		"./store-verification": "./src/lib/store-verification.ts"
+		"./store-verification": "./src/lib/store-verification.ts",
+		"./stripe-billing": "./src/lib/stripe-billing.ts",
+		"./billing-client-context": "./src/lib/billing-client-context.ts"
 	}
 }

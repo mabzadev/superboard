@@ -1,7 +1,7 @@
 # SuperBoard Reference acceptance runbook
 
 This runbook is the executable acceptance contract for the sixteen reference
-journeys. Run it on `https://reference.mbza.dev` only after the development
+journeys. Run it on `https://reference.mabza.dev` only after the development
 platform revision and reference build revision shown by CI are identical to the
 revisions under review.
 
@@ -12,20 +12,20 @@ paths, private Worker tokens, signatures, retry rules or business policy.
 
 ## Safety preconditions
 
-1. Use the `mbza-development` target and a test project.
-2. Confirm `/infrastructure` on `https://board.mbza.dev` reports the API,
+1. Use the `mabza-development` target and a test project.
+2. Confirm `/infrastructure` on `https://board.mabza.dev` reports the API,
    Identity, Files and each enabled feature Worker as healthy.
 3. Build with `SUPERBOARD_LIVE_MODE=true`, a positive test project ID, the
    registered Web identifier, and the SDK access key supplied through the
    protected GitHub `development` Environment. Never commit that key.
    The live build must also display the exact platform and reference Git SHAs
-   produced by CI; `local` provenance is not accepted for MBZA evidence.
+   produced by CI; `local` provenance is not accepted for MABZA evidence.
 4. Use unique email addresses, idempotency keys, client conversation IDs and
    client message IDs for each manual acceptance run.
 5. Keep provider credentials, access/refresh tokens and reset tokens out of
    screenshots, issues, logs and committed fixtures.
 6. Do not point this build at VocoStar or another production target. Promotion
-   happens only after every applicable row below is accepted on MBZA.
+   happens only after every applicable row below is accepted on MABZA.
 
 ## Recommended sequence
 
@@ -39,7 +39,7 @@ policy.
 
 |   # | Page              | Input or operation                                                                                                                                                                                     | Public library execution                                                                                                              | Acceptance evidence                                                                                                                                                                                                                      |
 | --: | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|   1 | Bootstrap         | `{"app_version":"0.1.0","build":"1"}`                                                                                                                                                                  | application initialization, `superboardInitializeAuto` or authenticated initialization, then `superboardApplicationRuntimePolicyJson` | target diagnostics contain only configured origins; runtime policy resolves; no fallback VocoStar/MBZA hostname exists in reusable code                                                                                                  |
+|   1 | Bootstrap         | `{"app_version":"0.1.0","build":"1"}`                                                                                                                                                                  | application initialization, `superboardInitializeAuto` or authenticated initialization, then `superboardApplicationRuntimePolicyJson` | target diagnostics contain only configured origins; runtime policy resolves; no fallback VocoStar/MABZA hostname exists in reusable code                                                                                                  |
 |   2 | Sign in           | password: `email`, `password`; provider: `provider=google\|apple`, `token`, optional `name`                                                                                                            | `superboardApplicationSignInPasswordJson` or `superboardApplicationSignInProviderJson`                                                | nested Identity user, access token and rotating refresh token are accepted and stored securely; invalid credentials remain sanitized                                                                                                     |
 |   3 | Create account    | `email`, `password`, `name`                                                                                                                                                                            | `superboardApplicationRegisterJson`                                                                                                   | registration policy is enforced; session is created only when policy permits; verification mail is visible in the protected development preview                                                                                          |
 |   4 | Password recovery | `operation=request`, `email`; then `operation=reset`, `token`, `password`                                                                                                                              | request and reset actions                                                                                                             | request is enumeration-safe; development email contains the one-time flow; token reuse/expiry is refused                                                                                                                                 |
@@ -49,7 +49,7 @@ policy.
 |   8 | Files             | `operation=upload` + `filename`, `content_type`, and `text` or `bytes_base64`; then `list`, `download` + `file_id`, `delete` + `file_id`                                                               | four application Files actions                                                                                                        | ownership, MIME/size policy, list visibility, exact downloaded byte count and deletion are proven; the UI includes base64 only below the 64 KiB proof ceiling                                                                            |
 |   9 | Products          | `operation=inspect`, optional `placement`; `operation=restore`                                                                                                                                         | offerings, customer info, last verified customer info and restore                                                                     | server catalogue and signed/verified entitlement state agree; restore returns updated customer state                                                                                                                                     |
 |  10 | Paywall           | `operation=inspect`, `placement`; optional `operation=purchase`, `package_identifier`, `offering_identifier`; click **Render live widget**                                                             | purchase configuration/actions and the real `SuperBoardPaywall` widget                                                                | placement fallback, rendered version, purchase/restore/close/unavailable callbacks and latest verified purchase result are visible                                                                                                       |
-|  11 | Dynamic links     | generate with `title` and `data`; inspect callback with `operation=last`                                                                                                                               | generate-link and last-deep-link actions                                                                                              | returned short URL uses `https://in.mbza.dev`; opening it exercises redirect and attribution without an embedded API hostname                                                                                                            |
+|  11 | Dynamic links     | generate with `title` and `data`; inspect callback with `operation=last`                                                                                                                               | generate-link and last-deep-link actions                                                                                              | returned short URL uses `https://in.mabza.dev`; opening it exercises redirect and attribution without an embedded API hostname                                                                                                            |
 |  12 | Support inbox     | `configuration`, `list`, `open`, `update`, `messages`, `send`, `upload_attachment`, `download_attachment`, `send_attachment`, `mark_read`, `typing`, `connect`, `disconnect`, `realtime_event`, `csat` | authenticated SuperBoard Support actions only                                                                                         | conversation lifecycle, idempotent client IDs, attachment bytes, realtime, read/typing state and CSAT succeed through canonical SuperBoard routes                                                                                        |
 |  13 | Marketing consent | `operation=load`; update with `operation=update`, boolean `consented`, object `attributes`, public `list_ids`, stable `idempotency_key`                                                                | `superboardApplicationMarketingPreferencesJson` and `superboardApplicationUpdateMarketingConsentJson`                                 | only the verified Identity email is used; only public lists are exposed; replay is idempotent; opt-out is recorded; complaint/hard-bounce/privacy suppressions cannot be weakened or re-subscribed by the app                            |
 |  14 | Onboarding        | `placement`, optional `locale` and `attributes`; click **Render live widget**                                                                                                                          | real `SuperBoardOnboarding` widget                                                                                                    | version/targeting resolves; progress, completed/skipped/closed/unavailable callbacks are recorded; unpublished or rolled-back content uses the fallback                                                                                  |
@@ -65,7 +65,7 @@ binary attachments; the example uses text for readability.
 {
 	"operation": "open",
 	"client_conversation_id": "reference-<run>-1",
-	"subject": "MBZA acceptance",
+	"subject": "MABZA acceptance",
 	"custom_attributes": { "source": "reference" }
 }
 ```
@@ -95,7 +95,7 @@ binary attachments; the example uses text for readability.
 	"operation": "csat",
 	"conversation_id": "<conversation-id>",
 	"rating": 5,
-	"feedback": "MBZA acceptance passed"
+	"feedback": "MABZA acceptance passed"
 }
 ```
 

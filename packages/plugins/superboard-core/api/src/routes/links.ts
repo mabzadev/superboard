@@ -1,9 +1,10 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { generateShortCode } from '../lib/crypto';
 
-const links = new Hono<{ Bindings: Env; Variables: { userId: number; instanceId: number } }>();
+const links = registerRouter(new Hono<{ Bindings: Env; Variables: { userId: number; instanceId: number } }>(), {"service":"api","module":"routes.links.links","pluginId":"superboard-dynamic-links","surface":"internal","access":"operator"});
 links.use('*', authMiddleware);
 
 // GET /api/v1/links — list every project link

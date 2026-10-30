@@ -22,7 +22,7 @@ test("package scripts make reference and target validation modes unambiguous", (
 
 test("reference type generation is explicit and rejects operational context", async () => {
 	assert.deepEqual(await cloudflareTypesMode({ reference: true }, {}), {
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		reference: true,
 		mode: "reference",
@@ -34,7 +34,7 @@ test("reference type generation is explicit and rejects operational context", as
 		cloudflareTypesMode(
 			{ reference: true },
 			{
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				SUPERBOARD_ENVIRONMENT: "development",
 			},
 		),
@@ -47,7 +47,7 @@ test("target type generation requires an exact explicit operational selection", 
 		cloudflareTypesMode(
 			{},
 			{
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				SUPERBOARD_ENVIRONMENT: "development",
 			},
 		),
@@ -57,7 +57,7 @@ test("target type generation requires an exact explicit operational selection", 
 		cloudflareTypesMode(
 			{ target: "reference-production", environment: "production" },
 			{
-				SUPERBOARD_TARGET: "mbza-development",
+				SUPERBOARD_TARGET: "mabza-development",
 				SUPERBOARD_ENVIRONMENT: "production",
 			},
 		),

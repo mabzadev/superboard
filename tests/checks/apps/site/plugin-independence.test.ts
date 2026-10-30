@@ -60,16 +60,16 @@ test.each(selections)("publishes $label without another business plugin", async 
 	const owners = new Set(["supbrd-core", ...plugins.map(({ manifest }) => manifest.plugin_id)]);
 	expect(input.renderers.every(({ plugin_id }) => owners.has(plugin_id))).toBe(true);
 	const pluginId = plugins[0]?.manifest.plugin_id;
-	if (pluginId === "supbrd-plugmod-paywalls" || pluginId === "supbrd-plugmod-onboardings") {
+	if (pluginId === "superboard-paywalls" || pluginId === "superboard-onboardings") {
 		const prefix =
-			pluginId === "supbrd-plugmod-paywalls" ? "/acquisition/paywalls" : "/acquisition/onboardings";
+			pluginId === "superboard-paywalls" ? "/acquisition/paywalls" : "/acquisition/onboardings";
 		const links = parseFrontNavigation(
 			input.presentation.navigation,
 			input.front_route_manifest.routes,
 		).flatMap(({ items }) => items.map(({ href }) => href));
 		expect(links).toEqual([prefix, `${prefix}/statistics`]);
 	}
-	if (!plugins.some(({ manifest }) => manifest.plugin_id === "supbrd-plug-user")) {
+	if (!plugins.some(({ manifest }) => manifest.plugin_id === "superboard-user")) {
 		expect(resolveFrontRequest({ ...runtime, requested_path: "/app/users" }).result).toBe(
 			"not_found",
 		);

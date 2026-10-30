@@ -28,7 +28,7 @@ test("creates a link with platform routing and reads its saved values after relo
 	await expect(page.getByText(name, { exact: true })).toBeVisible();
 	const rows = await siteApi(
 		page.request,
-		"supbrd-plugmod-dynamic-links",
+		"superboard-dynamic-links",
 		"GET",
 		`/api/v1/dynamic-links/projects/${project}/links?search=${slug}`,
 	);
@@ -38,7 +38,7 @@ test("creates a link with platform routing and reads its saved values after relo
 		destinations: { ios: "https://example.test/ios", android: "https://example.test/android" },
 	});
 	await evidence(
-		"supbrd-plugmod-dynamic-links",
+		"superboard-dynamic-links",
 		"superboard.dynamic_links_links",
 		[saved.id],
 		"Created a link through its form, then reloaded and verified platform destinations through its owning API.",

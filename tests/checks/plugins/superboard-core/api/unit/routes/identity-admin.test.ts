@@ -91,7 +91,7 @@ describe("Identity administration gateway", () => {
 		const identityFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const request = new Request(input, init);
 			expect(request.url).toBe("https://identity.internal/internal/v1/melody-admin/info");
-			return Response.json({ AUTH_SERVER_URL: "https://auth.mbza.dev" });
+			return Response.json({ AUTH_SERVER_URL: "https://auth.mabza.dev" });
 		});
 		const response = await testApp().request(
 			"/10-prod",

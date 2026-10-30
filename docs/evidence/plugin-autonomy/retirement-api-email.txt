@@ -18,8 +18,8 @@ Grouped run: Products, Billing and Email (3 files, 3 tests passed).
 Recorded successful operations:
 [
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.command.save_smtp_settings",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.command.save_smtp_settings",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -30,8 +30,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.data_source.smtp_settings",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.data_source.smtp_settings",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -42,8 +42,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.command.test_smtp_settings",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.command.test_smtp_settings",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -54,8 +54,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.command.verify_smtp_domain",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.command.verify_smtp_domain",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -66,8 +66,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.command.send_transactional_email",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.command.send_transactional_email",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -78,8 +78,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.data_source.delivery_outbox",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.data_source.delivery_outbox",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -90,8 +90,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.data_source.provider_webhooks",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.data_source.provider_webhooks",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -102,8 +102,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.data_source.provider_events",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.data_source.provider_events",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -114,8 +114,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.data_source.dead_letters",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.data_source.dead_letters",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -127,8 +127,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.command.retry_delivery_outbox",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.command.retry_delivery_outbox",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -139,8 +139,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.command.replay_dead_letter",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.command.replay_dead_letter",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -151,8 +151,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.command.discard_dead_letter",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.command.discard_dead_letter",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -163,8 +163,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-email",
-    "route_id": "gateway.supbrd-plugmod-email.command.delete_smtp_settings",
+    "plugin_id": "superboard-email",
+    "route_id": "gateway.superboard-email.command.delete_smtp_settings",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",

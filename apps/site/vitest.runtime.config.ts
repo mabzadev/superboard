@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
 
+import { injectCoreRoutes } from "../../packages/core/src/astro/integration/routes.js";
 import { servicePackagePath } from "../../scripts/cloudflare/services.mjs";
 import {
 	compileTarget,
@@ -14,9 +15,19 @@ import { d1RuntimeBindings } from "../../scripts/cloudflare/vitest-d1.mjs";
 import { createSmtpCaptureFixture } from "../../tests/checks/apps/site/runtime/retirement-smtp-fixture.js";
 import { buildFreshInstancePlan } from "../../tests/checks/emdash/fresh-instance-proof.mjs";
 import { centralTests } from "../../tests/checks/project-config.mjs";
+import { describeAstroRoutes, routeManifestModuleSource } from "./route-registry.mjs";
+
+const injectedRoutes: Array<{ type: string; pattern: string; entrypoint: string }> = [];
+injectCoreRoutes((route) => {
+	if (!route.entrypoint.endsWith(".astro")) injectedRoutes.push({ ...route, type: "endpoint" });
+});
+const emdashRouteGraph = await describeAstroRoutes(
+	injectedRoutes,
+	fileURLToPath(new URL(".", import.meta.url)),
+);
 
 const localSiteConfiguration = compileLocalSiteConfiguration(
-	await compileTarget((await loadTarget("mbza-development")).target, "local"),
+	await compileTarget((await loadTarget("mabza-development")).target, "local"),
 );
 
 const healthWorkers = [
@@ -64,6 +75,19 @@ export default centralTests(
 	import.meta.url,
 	defineConfig({
 		plugins: [
+			{
+				name: "superboard-runtime-route-graph",
+				resolveId(id) {
+					return id === "virtual:superboard/route-manifest"
+						? "\0virtual:superboard/route-manifest"
+						: null;
+				},
+				load(id) {
+					return id === "\0virtual:superboard/route-manifest"
+						? routeManifestModuleSource(emdashRouteGraph)
+						: null;
+				},
+			},
 			cloudflareTest(async () => {
 				const releaseKeys = await crypto.subtle.generateKey(
 					{ name: "ECDSA", namedCurve: "P-256" },
@@ -133,7 +157,7 @@ export default centralTests(
 							}),
 							HEALTH_MIGRATIONS_JSON: JSON.stringify(healthMigrations),
 							FRESH_INSTANCE_PLAN_JSON: JSON.stringify(
-								await buildFreshInstancePlan("mbza-development"),
+								await buildFreshInstancePlan("mabza-development"),
 							),
 							PARITY_VERIFIED_PROOF_RECEIPTS:
 								process.env.SUPERBOARD_VERIFIED_PROOF_RECEIPTS ??

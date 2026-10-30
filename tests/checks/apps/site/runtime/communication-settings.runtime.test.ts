@@ -30,12 +30,12 @@ test.each(endpoints)("Communication refuses an editor: %s %s", async (path, meth
 test.each(["diagnostic", "health"])(
 	"disabled Communication refuses %s without removing settings",
 	async (action) => {
-		const key = "plugin:supbrd-plugmod-marketing:settings:sender_name";
+		const key = "plugin:superboard-marketing:settings:sender_name";
 		await env.DB.prepare("INSERT OR REPLACE INTO options (name, value) VALUES (?, ?)")
 			.bind(key, JSON.stringify("Preserved sender"))
 			.run();
 		await env.DB.prepare(
-			"INSERT OR REPLACE INTO superboard_plugin_lifecycle (instance_id, target, plugin_id, artifact_checksum, state, state_changed_at) SELECT ?, 'local', ?, artifact_checksum, 'disabled', datetime('now') FROM superboard_plugin_manifest_artifacts WHERE plugin_id = 'supbrd-plugmod-marketing' LIMIT 1",
+			"INSERT OR REPLACE INTO superboard_plugin_lifecycle (instance_id, target, plugin_id, artifact_checksum, state, state_changed_at) SELECT ?, 'local', ?, artifact_checksum, 'disabled', datetime('now') FROM superboard_plugin_manifest_artifacts WHERE plugin_id = 'superboard-marketing' LIMIT 1",
 		)
 			.bind(env.SUPERBOARD_INSTANCE_ID, pluginId)
 			.run();
@@ -55,7 +55,7 @@ test.each(["diagnostic", "health"])(
 	},
 );
 
-test.each(["supbrd-plugmod-marketing", "supbrd-plugmod-email"])(
+test.each(["superboard-marketing", "superboard-email"])(
 	"disabled %s refuses its settings APIs",
 	async (component) => {
 		await env.DB.prepare(
@@ -63,7 +63,7 @@ test.each(["supbrd-plugmod-marketing", "supbrd-plugmod-email"])(
 		)
 			.bind(env.SUPERBOARD_INSTANCE_ID, component)
 			.run();
-		const service = component === "supbrd-plugmod-email" ? "email" : "marketing";
+		const service = component === "superboard-email" ? "email" : "marketing";
 		for (const [path, method] of endpoints.filter(([candidate]) =>
 			candidate?.startsWith("/api/v1/" + service + "/"),
 		)) {

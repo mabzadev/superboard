@@ -11,7 +11,7 @@ test("an EmDash operator reads and saves Support preferences without creating an
 	expect(
 		(
 			await SELF.fetch(
-				"https://site.example/_emdash/api/superboard/plugins/supbrd-plugmod-support/enable",
+				"https://site.example/_emdash/api/superboard/plugins/superboard-support/enable",
 				{ method: "POST", headers },
 			)
 		).status,

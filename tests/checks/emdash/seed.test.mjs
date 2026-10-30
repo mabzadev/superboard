@@ -67,7 +67,7 @@ for (const legacyLocale of [false, true]) {
 			for (const page of navigation.sections.flatMap((section) => section.pages))
 				assert.ok(paths.has(canonicalFrontPath(page.href)), page.href);
 			const identity = seed.content.views.find((view) => view.data.path === "/auth/settings");
-			assert.equal(identity.data.plugin_id, "supbrd-plug-user");
+			assert.equal(identity.data.plugin_id, "superboard-user");
 			assert.equal(identity.data.route_id, "superboard.auth_settings");
 		} finally {
 			await rm(root, { recursive: true, force: true });

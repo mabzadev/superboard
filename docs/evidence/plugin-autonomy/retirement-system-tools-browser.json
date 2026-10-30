@@ -1,6 +1,6 @@
 [
   {
-    "plugin_id": "supbrd-plug-audit",
+    "plugin_id": "superboard-audit",
     "route_id": "superboard.system_audit",
     "scenario": "functional",
     "status": "passed",
@@ -15,7 +15,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-system-tools-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-content",
+    "plugin_id": "superboard-content",
     "route_id": "superboard.system_content",
     "scenario": "functional",
     "status": "passed",
@@ -29,7 +29,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-system-tools-browser.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-gateway",
+    "plugin_id": "superboard-gateway",
     "route_id": "superboard.system_gateway",
     "scenario": "functional",
     "status": "passed",

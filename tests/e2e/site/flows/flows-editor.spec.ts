@@ -49,7 +49,7 @@ test.describe("Flows workflow editor on the owning Worker", () => {
 			saved.releases.some((release: { active: boolean | number }) => Boolean(release.active)),
 		).toBe(true);
 		await evidence(
-			"supbrd-plugmod-flows",
+			"superboard-flows",
 			"superboard.flows_workflows_by_id",
 			[f.workflow.id, saved.versions[0].id],
 			"Added a block, exercised undo/redo, saved the graph, published a real version and activated a release.",
@@ -127,7 +127,7 @@ test.describe("Flows workflow editor on the owning Worker", () => {
 				)
 				.toBe(2);
 		await evidence(
-			"supbrd-plugmod-flows",
+			"superboard-flows",
 			"superboard.flows_components",
 			[f.card.id, f.workflow.id, duplicate.id],
 			"Updated a component version, observed two outdated instances, synchronized them and read both new draft versions.",

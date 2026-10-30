@@ -78,7 +78,7 @@ syncBuiltinESMExports();
 				boundary,
 				"scripts/cloudflare/deploy.mjs",
 				"--target",
-				"mbza-development",
+				"mabza-development",
 				"--environment",
 				"development",
 				"--service",
@@ -88,7 +88,7 @@ syncBuiltinESMExports();
 			{
 				env: {
 					...process.env,
-					CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT: "0".repeat(32),
+					CLOUDFLARE_ACCOUNT_ID_MABZA_DEVELOPMENT: "0".repeat(32),
 					REGRESSION_DEPLOY_MARKER: marker,
 				},
 				encoding: "utf8",
@@ -117,7 +117,7 @@ test("single-console deploy and upload preserve validated bytes and reject later
 		await writeFile(
 			manifestPath,
 			JSON.stringify({
-				target: "mbza-development",
+				target: "mabza-development",
 				environment: "development",
 				groups: [{ id: "console", configPath }],
 				consoleArtifact: await captureConsoleArtifact(configPath),
@@ -156,7 +156,7 @@ syncBuiltinESMExports();
 					boundary,
 					"scripts/cloudflare/deploy.mjs",
 					"--target",
-					"mbza-development",
+					"mabza-development",
 					"--environment",
 					"development",
 					"--service",
@@ -169,7 +169,7 @@ syncBuiltinESMExports();
 				{
 					env: {
 						...process.env,
-						CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT: "0".repeat(32),
+						CLOUDFLARE_ACCOUNT_ID_MABZA_DEVELOPMENT: "0".repeat(32),
 						REGRESSION_DEPLOY_MARKER: marker,
 						REGRESSION_WORKER: worker,
 						REGRESSION_CLIENT: client,

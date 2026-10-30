@@ -22,7 +22,7 @@ export function checkReferenceBrand({ repositoryRoot = root } = {}) {
 	for (const pattern of [
 		"mabzadev/" + "superboard-platform",
 		"mabzadev/" + "superboard-reference",
-		"grow" + ".mbza" + ".dev",
+		"grow" + ".mabza" + ".dev",
 	]) {
 		const matches = gitGrep(repositoryRoot, pattern, [
 			".",
@@ -37,8 +37,8 @@ export function checkReferenceBrand({ repositoryRoot = root } = {}) {
 		name: "SuperBoard Reference",
 		repository: "mabzadev/superboard",
 		platformRepository: "mabzadev/superboard",
-		dashboard: "board.mbza.dev",
-		shortLinks: "in.mbza.dev",
+		dashboard: "board.mabza.dev",
+		shortLinks: "in.mabza.dev",
 	};
 }
 

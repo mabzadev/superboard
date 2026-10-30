@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	parsePluginTaskCommand,
 	PLUGIN_TASK_AUTHORITY_PATH,
@@ -13,7 +14,7 @@ import { flowsInternalToken } from "../lib/flows-internal-auth.js";
 import { drainPluginWorkflowWakeups } from "../lib/plugin-workflow-wake.js";
 import type { Env, AppVariables } from "../types.js";
 
-const pluginTasks = new Hono<{ Bindings: Env & PluginTaskBindings; Variables: AppVariables }>();
+const pluginTasks = registerRouter(new Hono<{ Bindings: Env & PluginTaskBindings; Variables: AppVariables }>(), {"service":"api","module":"routes.plugin-tasks.pluginTasks","pluginId":"supbrd-core","surface":"internal","access":"internal"});
 pluginTasks.post("/", async (c) => {
 	try {
 		const command = parsePluginTaskCommand(await readJsonObjectLimited(c.req.raw.clone(), 16384));
@@ -31,11 +32,11 @@ pluginTasks.post("/", async (c) => {
 		if (command.instance_id !== c.env.SUPERBOARD_INSTANCE_ID)
 			return c.json({ error: { code: "PLUGIN_TASK_INSTANCE_FORBIDDEN" } }, 403);
 		const secrets =
-			command.plugin_id === "supbrd-plugmod-email"
+			command.plugin_id === "superboard-email"
 				? configuredSecrets(c.env.EMAIL_INTERNAL_TOKEN)
-				: command.plugin_id === "supbrd-plugmod-flows"
+				: command.plugin_id === "superboard-flows"
 					? configuredSecrets(flowsInternalToken(c.env))
-					: command.plugin_id === "supbrd-plugmod-observability"
+					: command.plugin_id === "superboard-observability"
 						? configuredSecrets(c.env.OBSERVABILITY_INTERNAL_TOKEN)
 						: configuredSecrets(
 								c.env.MODULE_INTERNAL_TOKEN,

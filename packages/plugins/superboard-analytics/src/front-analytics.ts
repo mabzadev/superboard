@@ -15,7 +15,7 @@ const analytics = navigationGroup({
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
-	plugin_id: "supbrd-plugmod-analytics",
+	plugin_id: "superboard-analytics",
 	plugin_label: "Analytics",
 	description:
 		"Explore the analytics data sources and operational insights selected by this Front Release.",

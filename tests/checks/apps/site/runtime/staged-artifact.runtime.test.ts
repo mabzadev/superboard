@@ -8,7 +8,7 @@ import {
 } from "../../../../../apps/site/src/lib/superboard-plugin-catalog.js";
 
 test("preparing a replacement artifact preserves the active artifact and its health until Release activation", async () => {
-	const pluginId = "supbrd-plugmod-onboardings";
+	const pluginId = "superboard-onboardings";
 	const response = await SELF.fetch(
 		`https://site.example/_emdash/api/superboard/plugins/${pluginId}/enable`,
 		{
@@ -87,7 +87,7 @@ test("preparing a replacement artifact preserves the active artifact and its hea
 });
 
 test("resource verification for an active plugin stages its new proof without replacing the committed proof", async () => {
-	const pluginId = "supbrd-plugmod-paywalls";
+	const pluginId = "superboard-paywalls";
 	const headers = {
 		Origin: "https://site.example",
 		"X-EmDash-Request": "1",

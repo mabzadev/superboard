@@ -47,7 +47,7 @@ test("static plans block disabled or unprovisioned Analytics safely", () => {
 test("reconciliation requires counts, dimensions, and outbox delivery to match", () => {
 	const plan = {
 		schema_version: 1,
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "development",
 		project: parseProjectRef("12-test"),
 		blockers: [],

@@ -39,8 +39,20 @@ export function deploymentConfiguration(input, environment) {
 		endpoints: [
 			endpoint("console", domains.site, "console", ["operator"]),
 			endpoint("custom-api", domains.api, "api → custom", ["mobile", "web"]),
-			endpoint("auth", domains.auth, "api → auth", ["mobile", "web"]),
-			endpoint("files", domains.files, "api → files", ["mobile", "web"]),
+			endpoint(
+				"auth",
+				domains.auth,
+				"api → auth",
+				["mobile", "web"],
+				domains.auth === domains.sdk ? "/v1/auth" : "",
+			),
+			endpoint(
+				"files",
+				domains.files,
+				"api → files",
+				["mobile", "web"],
+				domains.files === domains.sdk ? "/v1/data/files" : "",
+			),
 			endpoint("links", domains.shortlinks, "api", ["mobile", "web"]),
 			endpoint("sdk", domains.sdk, "api", ["mobile", "web"]),
 			{

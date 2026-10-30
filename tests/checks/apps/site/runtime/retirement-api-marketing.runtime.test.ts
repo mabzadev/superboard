@@ -10,7 +10,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-marketing";
+const plugin = "superboard-marketing";
 const file = "retirement-api-marketing.runtime.test.ts";
 
 test("push notification search excludes in-app-only messages through the canonical plugin adapters", async () => {

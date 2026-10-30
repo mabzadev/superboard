@@ -10,7 +10,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-gateway";
+const plugin = "superboard-gateway";
 const file = "retirement-api-gateway.runtime.test.ts";
 test("canonical Gateway APIs persist a published route, enforce its rate limit and rotate operator access", async () => {
 	await prepareApiPlugin(plugin);

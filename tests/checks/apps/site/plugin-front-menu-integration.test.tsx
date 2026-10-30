@@ -48,7 +48,7 @@ async function model(): Promise<FrontPageModel> {
 	]);
 	const locked = superBoardRuntimePluginCatalog()
 		.plugins.filter(({ manifest }) =>
-			["supbrd-plug-user", "supbrd-plugmod-analytics"].includes(manifest.plugin_id),
+			["superboard-user", "superboard-analytics"].includes(manifest.plugin_id),
 		)
 		.map(({ manifest }) => ({
 			plugin_id: manifest.plugin_id,
@@ -71,7 +71,7 @@ async function model(): Promise<FrontPageModel> {
 		}),
 		{ kid: "menu-test", private_key: keys.privateKey },
 	);
-	const permissions = ["users.read", "supbrd-plugmod-analytics.read"];
+	const permissions = ["users.read", "superboard-analytics.read"];
 	const runtime = {
 		front_route_manifest: release.payload.front_route_manifest,
 		dependency_policies: release.payload.dependency_policies,

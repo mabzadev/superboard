@@ -1,6 +1,6 @@
 [
   {
-    "plugin_id": "supbrd-plug-settings",
+    "plugin_id": "superboard-settings",
     "route_id": "superboard.app_libraries",
     "scenario": "functional",
     "status": "passed",

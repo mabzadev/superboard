@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ExperienceEditor } from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/onboardings/components/experience-editor/ExperienceEditor.js";
 import { createExperienceDocument } from "../../../../../../../../packages/plugins/superboard-acquisition/src/front/onboardings/components/experience-editor/model.js";
@@ -10,6 +10,14 @@ import { fireEvent, render as renderWithContext, screen } from "../../../../rend
 const render = (ui: ReactNode) => renderWithContext(ui, { wrapper: ProjectSelectionProvider });
 
 describe("ExperienceEditor", () => {
+	beforeAll(() => {
+		Object.assign(Element.prototype, {
+			setPointerCapture: () => {},
+			hasPointerCapture: () => false,
+			releasePointerCapture: () => {},
+		});
+	});
+
 	it("adds screens and supports undo/redo", async () => {
 		const user = userEvent.setup();
 		render(<ExperienceEditor kind="onboarding" initialDocument={createExperienceDocument()} />);
@@ -31,7 +39,7 @@ describe("ExperienceEditor", () => {
 				onChange={onChange}
 			/>,
 		);
-		await user.click(screen.getByText("Unlock everything"));
+		await user.click(screen.getByRole("button", { name: "Unlock everything" }));
 		const editor = screen.getByRole("textbox", { name: "Text" });
 		fireEvent.change(editor, { target: { value: "" } });
 		expect(await screen.findByText("Text cannot be empty.")).toBeInTheDocument();
@@ -49,7 +57,7 @@ describe("ExperienceEditor", () => {
 		document.theme.accent_color = "#ff0066";
 		render(<ExperienceEditor kind="onboarding" initialDocument={document} />);
 		await user.click(screen.getByRole("button", { name: /preview/i }));
-		expect(screen.getByText("Unlock everything")).toBeInTheDocument();
+		expect(screen.getAllByText("Unlock everything").length).toBeGreaterThan(0);
 		expect(screen.getByRole("button", { name: "Continue" })).toHaveStyle({
 			background: "#ff0066",
 		});
@@ -67,7 +75,7 @@ describe("ExperienceEditor", () => {
 		);
 		await user.click(screen.getByText("Screen settings"));
 		await user.type(screen.getByLabelText("Platform"), "ios");
-		await user.type(screen.getByLabelText("Locale"), "fr-FR");
+		await user.type(screen.getByRole("textbox", { name: "Locale" }), "fr-FR");
 		expect(onChange).toHaveBeenLastCalledWith(
 			expect.objectContaining({
 				screens: [
@@ -90,13 +98,17 @@ describe("ExperienceEditor", () => {
 				onChange={onChange}
 			/>,
 		);
+		await user.click(screen.getByRole("button", { name: "Add component" }));
 		await user.click(screen.getByRole("button", { name: "Product" }));
-		const offering = screen.getByLabelText("Offering identifier");
-		await user.clear(offering);
-		await user.type(offering, "premium");
-		await user.type(screen.getByLabelText("Package identifiers"), "monthly,annual");
+		expect(screen.getByRole("combobox", { name: "Offering identifier" })).toBeInTheDocument();
 		expect(onChange).toHaveBeenLastCalledWith(
-			expect.objectContaining({ screens: expect.any(Array) }),
+			expect.objectContaining({
+				screens: [
+					expect.objectContaining({
+						blocks: expect.arrayContaining([expect.objectContaining({ type: "product" })]),
+					}),
+				],
+			}),
 			true,
 		);
 	});

@@ -7,7 +7,7 @@ import {
 	unique,
 } from "../../../fixtures/site-browser/site-api.js";
 
-const plugin = "supbrd-plugmod-support";
+const plugin = "superboard-support";
 test("contacts save and reopen a real customer record", async ({ authenticatedPage: page }) => {
 	const name = unique("Support contact");
 	await ready(page, "/support/contacts");

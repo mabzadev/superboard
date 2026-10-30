@@ -16,6 +16,7 @@ export type IdentityKind =
 export type StoredAnalyticsEventV1 = {
   event: AnalyticsEventV1;
   identity_hashes: Partial<Record<IdentityKind, string[]>>;
+  core_collection?: boolean;
 };
 
 export type AnalyticsOperationType =

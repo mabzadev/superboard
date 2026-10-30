@@ -1,18 +1,22 @@
-import { applicationUserOperation } from "@superboard/contracts/application-plugin-api";
+import {
+	APPLICATION_USER_ROUTES,
+	applicationUserRoute,
+} from "@superboard/contracts/application-plugin-api";
 import { readJsonObjectLimited, RequestBodyError } from "@superboard/contracts/request-body";
 import type { MiddlewareHandler } from "astro";
 
 import { requireActiveSuperBoardPlugin } from "./lib/plugin-availability.js";
 import { getSiteEnv } from "./lib/site-env.js";
+import { createSiteRouteMiddleware } from "./lib/site-route-registry.js";
 import { resolveSuperBoardPluginTarget } from "./lib/superboard-plugin-catalog.js";
 
-const route =
-	/^\/_emdash\/api\/superboard\/plugins\/supbrd-plug-(?:user|identity)\/(commands|data-sources)\/(?:supbrd-plug-user\.(?:command|data_source)\.)?([a-z_]+)$/u;
-export const onRequest: MiddlewareHandler = async (context, next) => {
-	const match = route.exec(context.url.pathname);
-	const operation = match && applicationUserOperation(match[1], match[2]);
-	if (!operation || (operation.method === "GET" && !context.url.searchParams.has("request")))
-		return next();
+type ApplicationOperation = (typeof APPLICATION_USER_ROUTES)[keyof typeof APPLICATION_USER_ROUTES];
+async function handleApplicationRequest(
+	context: Parameters<MiddlewareHandler>[0],
+	next: Parameters<MiddlewareHandler>[1],
+	operation: ApplicationOperation,
+) {
+	if (operation.method === "GET" && !context.url.searchParams.has("request")) return next();
 	const cors = {
 		"Access-Control-Allow-Origin": "*",
 		"Access-Control-Allow-Headers":
@@ -27,7 +31,7 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
 		const denied = await requireActiveSuperBoardPlugin(env.DB, {
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT),
-			plugin_id: "supbrd-plug-user",
+			plugin_id: "superboard-user",
 		});
 		if (denied) return denied;
 		if (context.request.method !== operation.method)
@@ -44,7 +48,7 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
 			operation.method === "POST"
 				? await readJsonObjectLimited(context.request, 65536)
 				: JSON.parse(context.url.searchParams.get("request") ?? "null");
-		const path = `/api/v1/application-identity/${operation.kind}/${operation.id}`;
+		const path = applicationUserRoute(operation, "api").path;
 		if (
 			!envelope ||
 			typeof envelope !== "object" ||
@@ -103,4 +107,21 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
 			{ status: 503, headers: cors },
 		);
 	}
-};
+}
+
+const routes = createSiteRouteMiddleware({
+	module: "application-plugin",
+	pluginId: "superboard-user",
+	access: "application",
+});
+for (const [key, operation] of Object.entries(APPLICATION_USER_ROUTES)) {
+	const paths = ["superboard-user", "supbrd-plug-identity"].flatMap((plugin) =>
+		[operation.id, `superboard-user.${key}`].map(
+			(id) => `/_emdash/api/superboard/plugins/${plugin}/${operation.kind}/${id}`,
+		),
+	);
+	routes.on([operation.method, "OPTIONS", "ALL"], paths, (context, next) =>
+		handleApplicationRequest(context, next, operation),
+	);
+}
+export const onRequest = routes.onRequest;

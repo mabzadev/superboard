@@ -30,11 +30,11 @@ test("Identity cutover parses one strict remote D1 evidence row", () => {
 });
 
 test("Identity cutover blocks deployment while any legacy row is unscoped", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	await assert.rejects(
 		verifyIdentityProjectCutover({
 			target,
-			targetName: "mbza-development",
+			targetName: "mabza-development",
 			environment: "development",
 			accountId,
 			revision,
@@ -48,12 +48,12 @@ test("Identity cutover blocks deployment while any legacy row is unscoped", asyn
 });
 
 test("Identity cutover writes a mode-0600 receipt bound to target resources and revision", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const migration = await latestIdentityMigration(target);
 	const directory = await mkdtemp(join(tmpdir(), "superboard-identity-gate-"));
 	const result = await verifyIdentityProjectCutover({
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		accountId,
 		revision,
@@ -64,7 +64,7 @@ test("Identity cutover writes a mode-0600 receipt bound to target resources and 
 	assert.equal((await stat(result.path)).mode & 0o777, 0o600);
 	assert.equal(JSON.parse(await readFile(result.path, "utf8")).migration, migration);
 	const receipt = await readIdentityCutoverReceipt(result.path, {
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		accountId,
 		databaseName: "superboard-dev-identity-db",
@@ -84,11 +84,11 @@ test("Identity cutover writes a mode-0600 receipt bound to target resources and 
 });
 
 test("Identity cutover refuses a receipt inside the Git repository", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	await assert.rejects(
 		verifyIdentityProjectCutover({
 			target,
-			targetName: "mbza-development",
+			targetName: "mabza-development",
 			environment: "development",
 			accountId,
 			revision,
@@ -100,13 +100,13 @@ test("Identity cutover refuses a receipt inside the Git repository", async () =>
 });
 
 test("a supplied receipt never bypasses the fresh remote D1 proof", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const migration = await latestIdentityMigration(target);
 	const auditDirectory = await mkdtemp(join(tmpdir(), "superboard-identity-audit-"));
 	const freshDirectory = await mkdtemp(join(tmpdir(), "superboard-identity-fresh-"));
 	const audit = await verifyIdentityProjectCutover({
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		accountId,
 		revision,
@@ -118,7 +118,7 @@ test("a supplied receipt never bypasses the fresh remote D1 proof", async () => 
 		enforceIdentityProjectCutover({
 			suppliedReceipt: { path: audit.path, sha256: audit.sha256 },
 			expected: {
-				targetName: "mbza-development",
+				targetName: "mabza-development",
 				environment: "development",
 				accountId,
 				databaseName: "superboard-dev-identity-db",
@@ -128,7 +128,7 @@ test("a supplied receipt never bypasses the fresh remote D1 proof", async () => 
 			},
 			verification: {
 				target,
-				targetName: "mbza-development",
+				targetName: "mabza-development",
 				environment: "development",
 				accountId,
 				revision,
@@ -145,7 +145,7 @@ test("a supplied receipt never bypasses the fresh remote D1 proof", async () => 
 });
 
 test("Identity cutover rejects a symlinked receipt directory", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const parent = await mkdtemp(join(tmpdir(), "superboard-identity-link-"));
 	const destination = await mkdtemp(join(tmpdir(), "superboard-identity-link-target-"));
 	const linkedDirectory = join(parent, "receipts");
@@ -153,7 +153,7 @@ test("Identity cutover rejects a symlinked receipt directory", async () => {
 	await assert.rejects(
 		verifyIdentityProjectCutover({
 			target,
-			targetName: "mbza-development",
+			targetName: "mabza-development",
 			environment: "development",
 			accountId,
 			revision,
@@ -183,7 +183,7 @@ function remoteEvidence(overrides = {}) {
 }
 
 async function latestIdentityMigration(target) {
-	const descriptor = d1Descriptor(target, "mbza-development", "development", "identity");
+	const descriptor = d1Descriptor(target, "mabza-development", "development", "identity");
 	const migration = (await localMigrationFiles(descriptor)).at(-1);
 	assert.ok(migration, "Identity must have at least one reviewed migration");
 	return migration;

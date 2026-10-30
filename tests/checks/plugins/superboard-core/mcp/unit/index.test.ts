@@ -152,3 +152,20 @@ it("serves the canonical console MCP endpoint and its path-specific discovery", 
 	);
 	expect(rejected.status).toBe(403);
 });
+
+it("uses the internal API binding origin when the public API host serves custom endpoints", async () => {
+	const runtime = env();
+	runtime.API_SERVICE.fetch = vi.fn(async (input) => {
+		const request = input instanceof Request ? input : new Request(input);
+		return new URL(request.url).hostname === "api.internal"
+			? Response.json({ valid: true })
+			: Response.json({ error: "custom_endpoint_not_found" }, { status: 404 });
+	});
+	const response = await worker.fetch(mcpRequest("/mcp", {
+		method: "POST",
+		headers: { authorization: "Bearer valid", accept: "application/json, text/event-stream", "content-type": "application/json" },
+		body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "internal-routing", version: "1" } } }),
+	}), runtime);
+	expect(response.status).toBe(200);
+	expect(await response.text()).toContain('"name":"superboard-mcp"');
+});

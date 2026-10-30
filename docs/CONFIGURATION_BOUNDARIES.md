@@ -41,22 +41,22 @@ La liste des services et des noms de secrets communs appartient à
 elles ne sélectionnent ni un compte, ni une application, ni une ressource
 Cloudflare physique.
 
-### 2. Référence MBZA
+### 2. Référence MABZA
 
 `superboard.project.json#/development/target` sélectionne l’unique profil de
 référence. Sa valeur actuelle pointe vers
-`infra/targets/mbza-development.json`.
+`infra/targets/mabza-development.json`.
 
 Le validateur impose au profil de référence :
 
 - un seul environnement `development` ;
-- des domaines appartenant tous au suffixe `mbza.dev` ;
+- des domaines appartenant tous au suffixe `mabza.dev` ;
 - le transport mail `capture`, sans credentials SMTP ;
 - un issuer et un JWKS dérivés de `domains.api` ;
-- des adresses mail MBZA cohérentes.
+- des adresses mail MABZA cohérentes.
 
 Les endpoints précis restent déclarés une seule fois dans le target. Le
-contrat ne recopie pas `api.mbza.dev`, `in.mbza.dev` ou les identifiants D1 : il
+contrat ne recopie pas `api.mabza.dev`, `in.mabza.dev` ou les identifiants D1 : il
 les découvre depuis cette source canonique.
 
 ### 3. Configuration propre à une application
@@ -104,7 +104,7 @@ comme variables Worker.
 
 Le contrôle échoue si :
 
-- un fichier partagé contient un domaine appartenant à MBZA ou à une
+- un fichier partagé contient un domaine appartenant à MABZA ou à une
   application ;
 - un vrai ID D1/KV ou un nom de ressource physique issu d’un target est recopié
   dans le runtime partagé ;

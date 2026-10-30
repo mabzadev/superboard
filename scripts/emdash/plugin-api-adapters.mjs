@@ -83,8 +83,22 @@ export function validatePluginApiAdapters(registry, baseline, root = repositoryR
 		for (const operation of [...(adapter.operations ?? []), ...(adapter.candidates ?? [])]) {
 			const candidate = !adapter.operations?.includes(operation);
 			const path = operation.path ?? "";
-			if (!methods.has(operation.method)) issue("METHOD_INVALID", id, operation.method);
+			const referenced = operation.route_id !== undefined;
+			if (!referenced) issue("ROUTE_REFERENCE_REQUIRED", id);
 			if (
+				referenced &&
+				(typeof operation.route_id !== "string" ||
+					!operation.route_id.trim() ||
+					operation.route_id.length > 4096 ||
+					operation.method !== undefined ||
+					operation.path !== undefined ||
+					operation.sources !== undefined)
+			)
+				issue("ROUTE_REFERENCE_INVALID", id);
+			if (!referenced && !methods.has(operation.method))
+				issue("METHOD_INVALID", id, operation.method);
+			if (
+				!referenced &&
 				!candidate &&
 				kind === "data_source" &&
 				operation.method !== "GET" &&
@@ -92,14 +106,26 @@ export function validatePluginApiAdapters(registry, baseline, root = repositoryR
 			)
 				issue("DATASOURCE_MUTATION_UNREVIEWED", id, operation.method);
 			if (
-				!/^\/(?:api\/v[12]|_emdash\/api|internal\/v1)(?:\/|$)/u.test(path) ||
-				/[?#*{}\\]/u.test(path) ||
-				path.includes("..")
+				!referenced &&
+				(!/^\/(?:api\/v[12]|_emdash\/api|internal\/v1)(?:\/|$)/u.test(path) ||
+					/[?#*{}\\]/u.test(path) ||
+					path.includes(".."))
 			)
 				issue("PATH_INVALID", id, path);
 			if (!candidate && path.startsWith("/internal/"))
 				issue("INTERNAL_DISPATCH_REQUIRES_ADAPTER", id, path);
-			const parameters = [...path.matchAll(/:([A-Za-z][A-Za-z0-9_]*)/gu)].map((match) => match[1]);
+			const parameters = referenced
+				? (operation.parameters ?? [])
+				: [...path.matchAll(/:([A-Za-z][A-Za-z0-9_]*)/gu)].map((match) => match[1]);
+			if (
+				referenced &&
+				(!parameters.every(
+					(name) => typeof name === "string" && /^[A-Za-z][A-Za-z0-9_]*$/u.test(name),
+				) ||
+					!["none", "passthrough"].includes(operation.query) ||
+					!["none", "passthrough"].includes(operation.body))
+			)
+				issue("ROUTE_REFERENCE_POLICY_INVALID", id);
 			if (!equalSets([...new Set(parameters)], operation.parameters ?? []))
 				issue("PARAMETERS_MISMATCH", id, path);
 			if ((operation.server_bound_parameters ?? []).some((name) => !parameters.includes(name)))
@@ -113,7 +139,7 @@ export function validatePluginApiAdapters(registry, baseline, root = repositoryR
 				)
 					issue("PARAMETER_VALUES_INVALID", id, name);
 			}
-			if (!operation.sources?.length) issue("OPERATION_SOURCE_MISSING", id, path);
+			if (!referenced && !operation.sources?.length) issue("OPERATION_SOURCE_MISSING", id, path);
 			for (const source of operation.sources ?? []) {
 				inspectSource(source, id, operation);
 			}

@@ -60,12 +60,12 @@ final class SuperBoardManagerTests: XCTestCase {
     }
 
     private func setupDefaultHandlers() {
-        MockURLProtocol.requestHandlers["/api/v1/sdk/event"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/event"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: ["status": "ok"])
             return (response, data)
         }
-        MockURLProtocol.requestHandlers["/api/v1/sdk/data_for_device"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/data_for_device"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: ["status": "ok"])
             return (response, data)
@@ -74,7 +74,7 @@ final class SuperBoardManagerTests: XCTestCase {
 
     /// Sets up mock handlers for all endpoints triggered during authentication.
     private func setupAuthenticationHandlers(payloadData: [String: Any]? = nil) {
-        MockURLProtocol.requestHandlers["/api/v1/sdk/authenticate"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             let json: [String: Any] = [
                 "linksquared": "ls-test-id",
                 "uri_scheme": "testapp://",
@@ -86,17 +86,17 @@ final class SuperBoardManagerTests: XCTestCase {
             return (response, data)
         }
         let devicePayload = payloadData ?? ["status": "ok"]
-        MockURLProtocol.requestHandlers["/api/v1/sdk/data_for_device"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/data_for_device"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: devicePayload)
             return (response, data)
         }
-        MockURLProtocol.requestHandlers["/api/v1/sdk/visitor_attributes"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/visitor_attributes"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: ["status": "ok"])
             return (response, data)
         }
-        MockURLProtocol.requestHandlers["/api/v1/sdk/notifications_to_display_automatically"] = { request in
+        MockURLProtocol.requestHandlers["/v1/communication/notifications_to_display_automatically"] = { request in
             let json: [String: Any] = ["notifications": []]
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: json)
@@ -113,7 +113,7 @@ final class SuperBoardManagerTests: XCTestCase {
         if let link = link { json["link"] = link }
         if let tracking = tracking { json["tracking"] = tracking }
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/data_for_device_and_url"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/data_for_device_and_url"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: json)
             return (response, data)
@@ -225,7 +225,7 @@ final class SuperBoardManagerTests: XCTestCase {
     func testAuthenticatedManagerDrainsQueuedGenerateLinkAction() {
         let manager = makeTestableManager()
         setupAuthenticationHandlers()
-        MockURLProtocol.requestHandlers["/api/v1/sdk/create_link"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/create_link"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: ["link": "https://superboard.link/queued"])
             return (response, data)
@@ -417,14 +417,14 @@ final class SuperBoardManagerTests: XCTestCase {
     func testAutoNotificationFetchTriggeredAfterAuth() {
         let pathExp = expectation(description: "notification path requested")
         pathExp.assertForOverFulfill = false
-        MockURLProtocol.pathExpectations["/api/v1/sdk/notifications_to_display_automatically"] = pathExp
+        MockURLProtocol.pathExpectations["/v1/communication/notifications_to_display_automatically"] = pathExp
 
         let manager = makeTestableManager()
         setupAuthenticationHandlers()
         authenticateAndWait(manager)
 
         wait(for: [pathExp], timeout: 10)
-        XCTAssertTrue(MockURLProtocol.requestedPaths.contains("/api/v1/sdk/notifications_to_display_automatically"))
+        XCTAssertTrue(MockURLProtocol.requestedPaths.contains("/v1/communication/notifications_to_display_automatically"))
     }
 
     // MARK: - Edge Cases
@@ -436,7 +436,7 @@ final class SuperBoardManagerTests: XCTestCase {
         authenticateAndWait(manager)
 
         // URL handler returns empty payload (no data/link/tracking)
-        MockURLProtocol.requestHandlers["/api/v1/sdk/data_for_device_and_url"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/data_for_device_and_url"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: [:])
             return (response, data)
@@ -457,7 +457,7 @@ final class SuperBoardManagerTests: XCTestCase {
         setupDefaultHandlers()
 
         // First auth fails
-        MockURLProtocol.requestHandlers["/api/v1/sdk/authenticate"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             return (response, nil)
         }
@@ -480,7 +480,7 @@ final class SuperBoardManagerTests: XCTestCase {
 
         // Set up success handlers and retry
         setupAuthenticationHandlers()
-        MockURLProtocol.requestHandlers["/api/v1/sdk/create_link"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/create_link"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: ["link": "https://superboard.link/retry"])
             return (response, data)
@@ -532,7 +532,7 @@ final class SuperBoardManagerTests: XCTestCase {
         }
 
         // Auth fails (500 on authenticate endpoint)
-        MockURLProtocol.requestHandlers["/api/v1/sdk/authenticate"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             return (response, nil)
         }
@@ -565,7 +565,7 @@ final class SuperBoardManagerTests: XCTestCase {
         }
 
         // Fail auth
-        MockURLProtocol.requestHandlers["/api/v1/sdk/authenticate"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             return (response, nil)
         }
@@ -580,7 +580,7 @@ final class SuperBoardManagerTests: XCTestCase {
 
         // Now succeed auth — old actions should NOT re-fire
         setupAuthenticationHandlers()
-        MockURLProtocol.requestHandlers["/api/v1/sdk/create_link"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/create_link"] = { request in
             XCTFail("Old generateLink action should not re-fire after failed auth cleared the queue")
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: ["link": "https://superboard.link/stale"])
@@ -604,7 +604,7 @@ final class SuperBoardManagerTests: XCTestCase {
             purchaseExp.fulfill()
         }
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/authenticate"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             return (response, nil)
         }
@@ -626,7 +626,7 @@ final class SuperBoardManagerTests: XCTestCase {
             displayExp.fulfill()
         }
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/authenticate"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             return (response, nil)
         }
@@ -645,7 +645,7 @@ final class SuperBoardManagerTests: XCTestCase {
     func testGetNotificationsWorksAfterAuthentication() {
         let manager = makeTestableManager()
         setupAuthenticationHandlers()
-        MockURLProtocol.requestHandlers["/api/v1/sdk/notifications_for_device"] = { request in
+        MockURLProtocol.requestHandlers["/v1/communication/notifications_for_device"] = { request in
             let json: [String: Any] = [
                 "notifications": [
                     ["id": 1, "title": "Notif", "updated_at": "2024-06-15T10:30:00.000+0000",

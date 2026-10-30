@@ -18,8 +18,8 @@ Grouped run: Products, Billing and Email (3 files, 3 tests passed).
 Recorded successful operations:
 [
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.command.migrate_products",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.command.migrate_products",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -31,8 +31,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.data_source.migration_status",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.data_source.migration_status",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -43,8 +43,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.command.create_purchase",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.command.create_purchase",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -55,8 +55,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.data_source.purchases",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.data_source.purchases",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -67,8 +67,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.data_source.purchase",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.data_source.purchase",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -79,8 +79,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.data_source.financial_customer_entitlements",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.data_source.financial_customer_entitlements",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -91,8 +91,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.data_source.subscriptions",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.data_source.subscriptions",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -103,8 +103,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.command.update_subscription",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.command.update_subscription",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -115,8 +115,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.command.create_refund",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.command.create_refund",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -127,8 +127,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.data_source.refunds",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.data_source.refunds",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -139,8 +139,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.command.update_refund",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.command.update_refund",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -151,8 +151,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.command.reconcile_store",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.command.reconcile_store",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -163,8 +163,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-billing",
-    "route_id": "gateway.supbrd-plugmod-billing.data_source.billing_ledger",
+    "plugin_id": "superboard-billing",
+    "route_id": "gateway.superboard-billing.data_source.billing_ledger",
     "scenario": "read",
     "status": "passed",
     "type": "integration",

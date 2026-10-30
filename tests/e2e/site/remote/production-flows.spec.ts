@@ -17,9 +17,9 @@ test("native App key provisions the SDK without a historical Front token", async
 	const project = await projectRef(page);
 	const domain = "native-production-sdk.example.test";
 	const setup = `/api/v1/app/projects/${project}/setup/web`;
-	const previous = await siteApi(page.request, "supbrd-plug-settings", "GET", setup);
+	const previous = await siteApi(page.request, "superboard-settings", "GET", setup);
 	try {
-		await siteApi(page.request, "supbrd-plug-settings", "PUT", setup, {
+		await siteApi(page.request, "superboard-settings", "PUT", setup, {
 			domain,
 			minimum_version: "1.0.0",
 			recommended_version: "1.0.0",
@@ -40,7 +40,7 @@ test("native App key provisions the SDK without a historical Front token", async
 		expect(rotated.status()).toBeLessThan(300);
 		expect(nativeKey.test(key.secret)).toBe(true);
 		const sdkHeaders = {
-			...operatorHeaders("supbrd-plug-user"),
+			...operatorHeaders("superboard-user"),
 			"PROJECT-KEY": key.secret,
 			PLATFORM: "web",
 			IDENTIFIER: domain,
@@ -66,20 +66,20 @@ test("native App key provisions the SDK without a historical Front token", async
 		await expect(page.getByRole("heading", { name: "Access Key", exact: true })).toBeVisible();
 		const keys = await siteApi(
 			page.request,
-			"supbrd-plug-user",
+			"superboard-user",
 			"GET",
 			`/api/v1/app/projects/${project}/access-key`,
 		);
 		expect(JSON.stringify(keys).includes(key.secret)).toBe(false);
 		await evidence(
-			"supbrd-plug-user",
+			"superboard-user",
 			"superboard.app_access_key",
 			[key.id],
 			"Rotated a real App-owned key through the browser confirmation dialog, authenticated the actual SDK runtime-policy and rejected a different application identifier; the read API redacts the stored credential.",
 		);
 	} finally {
 		if (previous?.configuration && previous.status !== "not_configured")
-			await siteApi(page.request, "supbrd-plug-settings", "PUT", setup, previous.configuration);
-		else await siteApi(page.request, "supbrd-plug-settings", "DELETE", setup);
+			await siteApi(page.request, "superboard-settings", "PUT", setup, previous.configuration);
+		else await siteApi(page.request, "superboard-settings", "DELETE", setup);
 	}
 });

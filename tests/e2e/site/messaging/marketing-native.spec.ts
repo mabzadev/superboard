@@ -9,7 +9,7 @@ import {
 	unique,
 } from "../../../fixtures/site-browser/site-api.js";
 
-const plugin = "supbrd-plugmod-marketing";
+const plugin = "superboard-marketing";
 
 test("subscriber search and CSV export contain the subscriber created in the form", async ({
 	authenticatedPage: page,

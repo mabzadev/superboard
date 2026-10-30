@@ -144,13 +144,13 @@ describe("AcquisitionSettingsPage", () => {
 			<FrontContextProvider
 				value={{
 					instanceId: "1",
-					pluginId: "supbrd-plugmod-flows",
+					pluginId: "superboard-flows",
 					path: "/acquisition/settings",
 					parameters: {},
 					locale: "fr",
 					operator: null,
 					projectScope: null,
-					activePluginIds: ["supbrd-plugmod-flows"],
+					activePluginIds: ["superboard-flows"],
 				}}
 			>
 				<AcquisitionSettingsPage />

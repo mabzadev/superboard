@@ -16,7 +16,7 @@ import { loadTarget } from "../../../scripts/cloudflare/target.mjs";
 import { targetWithoutResourceIds } from "../../fixtures/cloudflare/factories.mjs";
 
 test("bootstrap inventory is derived from enabled target features", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const resources = desiredCloudflareResources(target, "development");
 	assert.equal(new Set(resources.map(({ key }) => key)).size, resources.length);
 	assert.equal(
@@ -82,7 +82,7 @@ test("Reference application bootstrap owns the legacy media bucket used by manag
 });
 
 test("canonical remote resources with missing manifest ids are adopted without creation", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	const target = targetWithoutResourceIds(source, "development");
 	const desired = desiredCloudflareResources(target, "development");
 	const plan = buildCloudflareBootstrapPlan({
@@ -100,7 +100,7 @@ test("canonical remote resources with missing manifest ids are adopted without c
 				JSON.stringify(body).includes("superboard"),
 		),
 		true,
-		"the fresh MBZA target must use canonical SuperBoard resource names",
+		"the fresh MABZA target must use canonical SuperBoard resource names",
 	);
 	assert.equal(plan.blockers.length, 0);
 	assert.equal(plan.operations.filter(({ type }) => type === "create").length, 0);
@@ -108,7 +108,7 @@ test("canonical remote resources with missing manifest ids are adopted without c
 	assert.equal(JSON.stringify(plan).includes("a".repeat(32)), false);
 	assert.match(
 		plan.confirmation,
-		/^CLOUDFLARE:BOOTSTRAP:mbza-development:development:[a-f0-9]{12}$/u,
+		/^CLOUDFLARE:BOOTSTRAP:mabza-development:development:[a-f0-9]{12}$/u,
 	);
 	assert.equal(plan.confirmation, cloudflareBootstrapConfirmation(plan));
 });
@@ -230,7 +230,7 @@ test("an unprovisioned Support v2 target can only be applied in fresh mode", asy
 });
 
 test("bootstrap requires the exact plan confirmation and records returned ids", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	const target = targetWithoutResourceIds(source, "development");
 	const plan = buildCloudflareBootstrapPlan({
 		target,

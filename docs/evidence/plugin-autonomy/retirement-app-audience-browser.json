@@ -1,6 +1,6 @@
 [
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.users",
     "scenario": "functional",
     "status": "passed",
@@ -14,7 +14,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.app_members",
     "scenario": "functional",
     "status": "passed",
@@ -28,7 +28,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.app_customers",
     "scenario": "functional",
     "status": "passed",
@@ -42,7 +42,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-app-audience-browser.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.app_referrals",
     "scenario": "functional",
     "status": "passed",

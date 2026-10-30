@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
 import { reconcileBillingState } from "../../../superboard-core/api/src/lib/billing-jobs.js";
@@ -24,7 +25,7 @@ import {
 } from "./catalog-ledger-http.js";
 import { catalogImportStatus, importCatalogBatch } from "./catalog-ledger-import.js";
 type EntityRow = Record<string, unknown> & { id: string };
-const app = new Hono<{ Bindings: WorkerBindings; Variables: WorkerVariables }>();
+const app = registerRouter(new Hono<{ Bindings: WorkerBindings; Variables: WorkerVariables }>(), {"service":"billing","module":"catalog-ledger.app","pluginId":"superboard-billing","surface":"internal","access":"internal"});
 app.use("/internal/v1/catalog-ledger/*", internalAuth());
 app.use("/internal/v1/catalog-ledger", internalAuth());
 app.onError((error, c) => errorResponse(error, c));

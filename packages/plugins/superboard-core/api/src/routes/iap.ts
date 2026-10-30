@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 import { importPKCS8, importX509, jwtVerify, SignJWT } from "jose";
 
@@ -27,7 +28,7 @@ import {
 } from "../lib/store-verification";
 import { Env } from "../types";
 
-const iap = new Hono<{ Bindings: Env }>();
+const iap = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.iap.iap","pluginId":"superboard-billing","surface":"internal","access":"operator"});
 iap.onError((error, c) => providerUnhandledHttpError(c, error));
 
 function b64urlDecode(value: string): any {

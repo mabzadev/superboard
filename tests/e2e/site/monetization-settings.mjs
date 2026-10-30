@@ -98,11 +98,11 @@ try {
 			);
 			let persisted = await read();
 			assert.equal(
-				persisted.values["supbrd-plug-products__default_currency"],
+				persisted.values["superboard-products__default_currency"],
 				locale === "fr" ? "CHF" : "EUR",
 			);
-			assert.equal(persisted.values["supbrd-plug-products__store_environment"], "sandbox");
-			assert.equal(persisted.values["supbrd-plug-products__catalog_sync_enabled"], false);
+			assert.equal(persisted.values["superboard-products__store_environment"], "sandbox");
+			assert.equal(persisted.values["superboard-products__catalog_sync_enabled"], false);
 			await page.reload();
 			await hydrate();
 			await expect(page.locator("#setting-default_currency")).toHaveValue(
@@ -121,7 +121,7 @@ try {
 			];
 			for (const field of secretFields) {
 				await expect(page.locator(`#setting-${field}`)).toHaveValue("");
-				const key = `supbrd-plugmod-billing__${field}`;
+				const key = `superboard-billing__${field}`;
 				if (!original.secretsSet[key]) {
 					restore[key] = null;
 					const secret =
@@ -138,12 +138,12 @@ try {
 			);
 			persisted = await read();
 			assert.equal(
-				persisted.values["supbrd-plugmod-billing__apple_issuer_id"],
+				persisted.values["superboard-billing__apple_issuer_id"],
 				`isolated-${locale}`,
 			);
-			assert.equal(persisted.values["supbrd-plugmod-billing__apple_key_id"], `isolated-${locale}`);
+			assert.equal(persisted.values["superboard-billing__apple_key_id"], `isolated-${locale}`);
 			for (const field of secretFields) {
-				const key = `supbrd-plugmod-billing__${field}`;
+				const key = `superboard-billing__${field}`;
 				assert.equal(persisted.secretsSet[key], true);
 				assert.equal(key in persisted.values, false);
 			}

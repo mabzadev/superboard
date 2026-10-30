@@ -10,7 +10,7 @@ import {
 	unique,
 } from "../../../fixtures/site-browser/site-api.js";
 
-const plugin = "supbrd-plugmod-flows";
+const plugin = "superboard-flows";
 
 test("new workflow dialog persists a draft and the list filters it", async ({
 	authenticatedPage: page,

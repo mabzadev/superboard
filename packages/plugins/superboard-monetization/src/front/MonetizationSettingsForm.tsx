@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { useMonetizationI18n } from "./i18n.js";
 
-const endpoint = "/_emdash/api/admin/plugins/supbrd-plug-commerce/settings";
+const endpoint = "/_emdash/api/admin/plugins/superboard-monetization/settings";
 const fields = {
 	products: [
 		["default_currency", "Default Currency"],
@@ -62,7 +62,7 @@ async function readSettings(response: Response): Promise<Settings> {
 
 export function MonetizationSettingsForm({ section }: { section: keyof typeof fields }) {
 	const { t } = useMonetizationI18n();
-	const prefix = section === "products" ? "supbrd-plug-products__" : "supbrd-plugmod-billing__";
+	const prefix = section === "products" ? "superboard-products__" : "superboard-billing__";
 	const [settings, setSettings] = useState<Settings | null>(null);
 	const [changes, setChanges] = useState<Values>({});
 	const [busy, setBusy] = useState(false);

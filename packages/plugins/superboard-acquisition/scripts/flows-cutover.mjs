@@ -18,7 +18,7 @@ import {
 	FLOWS_CUTOVER_SCHEMA_VERSION,
 	FLOWS_CUTOVER_TARGET,
 	applyFlowsCutoverPlan,
-	assertMbzaDevelopment,
+	assertMabzaDevelopment,
 	assertPlanIntegrity,
 	buildFlowsCutoverPlan,
 	buildReverseDelta,
@@ -38,7 +38,7 @@ import {
 	validateCutoverWindow,
 	validateFreezeReceipt,
 	verifyFlowsCutoverPlan,
-	verifyMbzaRoutingGate,
+	verifyMabzaRoutingGate,
 	writeProtectedJson,
 } from "./flows-cutover/core.mjs";
 import { FLOW_CUTOVER_ENTITY_BY_ID, cutoverRegistrySummary } from "./flows-cutover/registry.mjs";
@@ -75,7 +75,7 @@ export async function main(argv = process.argv.slice(2)) {
 	}
 	const targetName = String(args.target || FLOWS_CUTOVER_TARGET);
 	const environment = String(args.environment || FLOWS_CUTOVER_ENVIRONMENT);
-	assertMbzaDevelopment(targetName, environment);
+	assertMabzaDevelopment(targetName, environment);
 	const projectRef = args["project-ref"];
 	if (!new Set(["registry", "instructions", "routing-gate"]).has(command)) {
 		if (!projectRef) throw new Error("--project-ref is required");
@@ -104,7 +104,7 @@ export async function main(argv = process.argv.slice(2)) {
 					dry_run: true,
 					remote_mutation_performed: false,
 					project_refs: ["1-prod", "1-test"],
-					reason: "add --remote-read to verify both MBZA routing receipts before API promotion",
+					reason: "add --remote-read to verify both MABZA routing receipts before API promotion",
 					automatic_deletion: false,
 				},
 				args,
@@ -597,7 +597,7 @@ async function routingGateCommand(args, adapter) {
 		const state = await adapter.routingStatus(scope.projectRef);
 		scopes.push({ plan, verification, window, state });
 	}
-	const report = verifyMbzaRoutingGate({ inventory, scopes });
+	const report = verifyMabzaRoutingGate({ inventory, scopes });
 	if (args.output) await writeProtectedJson(resolve(args.output), report);
 	await emit({ ...report, protected_output: args.output ? resolve(args.output) : null }, args);
 	if (!report.ready) process.exitCode = 2;
@@ -795,8 +795,8 @@ function instructions(args) {
 			"thaw",
 		],
 		bootstrap_if_flows_d1_is_unprovisioned:
-			"node scripts/cloudflare/bootstrap.mjs --target mbza-development --environment development --remote",
-		note: "Before API cutover, pass --flow-user-hash-bundle .flows-cutover/secrets/mbza-development-flows-development.json so hashes are derived in memory without prematurely routing legacy traffic to Flows. If the non-readable operator token is unavailable, --direct-maintenance applies and verifies the same API D1 state through the authenticated Wrangler session; exact confirmations and backup receipts remain mandatory. Execute only the exact bootstrap confirmation printed by that command. Rollback remains a fail-closed orchestrator; Time Travel restore, deletion and thaw are never automatic.",
+			"node scripts/cloudflare/bootstrap.mjs --target mabza-development --environment development --remote",
+		note: "Before API cutover, pass --flow-user-hash-bundle .flows-cutover/secrets/mabza-development-flows-development.json so hashes are derived in memory without prematurely routing legacy traffic to Flows. If the non-readable operator token is unavailable, --direct-maintenance applies and verifies the same API D1 state through the authenticated Wrangler session; exact confirmations and backup receipts remain mandatory. Execute only the exact bootstrap confirmation printed by that command. Rollback remains a fail-closed orchestrator; Time Travel restore, deletion and thaw are never automatic.",
 		root_command: "node packages/plugins/superboard-acquisition/scripts/flows-cutover.mjs",
 		received_args: args,
 	};

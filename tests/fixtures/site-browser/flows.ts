@@ -146,7 +146,7 @@ export async function flowFixture(
 	const suffix = unique("flow");
 	const base = `/api/v1/flows/projects/${project}`;
 	const request = (method: string, resource: string, body?: unknown) =>
-		siteApi(page.request, "supbrd-plugmod-flows", method, base + resource, body);
+		siteApi(page.request, "superboard-flows", method, base + resource, body);
 	const library = await request("POST", "/component-libraries", {
 		name: `Basics ${suffix}`,
 		identifier: suffix,

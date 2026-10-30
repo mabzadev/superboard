@@ -1,4 +1,5 @@
-import { EntitlementsPage } from "../components/modules/ProductsPages.js";
+import MobileCatalogPage from "../components/modules/MobileCatalogPage.js";
+
 export default function View() {
-	return <EntitlementsPage />;
+	return <MobileCatalogPage section="entitlements" />;
 }

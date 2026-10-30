@@ -115,12 +115,12 @@ export async function dispatchLifecycleApi(
 									pluginTaskContext(
 										execution,
 										binding === "BILLING"
-											? "supbrd-plugmod-billing"
+											? "superboard-billing"
 											: binding === "APP_MODULE" || binding === "IDENTITY_SERVICE"
-												? "supbrd-plug-user"
+												? "superboard-user"
 												: binding === "PRODUCTS_MODULE"
-													? "supbrd-plug-products"
-													: `supbrd-plugmod-${name}`,
+													? "superboard-products"
+													: `superboard-${name}`,
 									),
 								),
 						},

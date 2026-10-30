@@ -12,83 +12,19 @@
 			},
 			{
 				"type": "custom",
-				"label": "Authentification",
+				"label": "Authentication",
 				"url": "/auth/users",
 				"cssClasses": "sb-icon-users",
 				"children": [
 					{
 						"type": "custom",
 						"label": "Users",
-						"url": "/auth/users",
-						"children": [
-							{
-								"type": "custom",
-								"label": "Accounts",
-								"url": "/auth/users"
-							},
-							{
-								"type": "custom",
-								"label": "Profiles and installations",
-								"url": "/auth/customers"
-							},
-							{
-								"type": "custom",
-								"label": "Attributes",
-								"url": "/auth/user-attributes?lang=en"
-							},
-							{
-								"type": "custom",
-								"label": "Referrals",
-								"url": "/auth/referrals"
-							}
-						]
-					},
-					{
-						"type": "custom",
-						"label": "Access",
-						"url": "/auth/apps?lang=en",
-						"children": [
-							{
-								"type": "custom",
-								"label": "Applications",
-								"url": "/auth/apps?lang=en"
-							},
-							{
-								"type": "custom",
-								"label": "Sign-in directory",
-								"url": "/auth/directory/users?lang=en"
-							},
-							{
-								"type": "custom",
-								"label": "Roles",
-								"url": "/auth/roles?lang=en"
-							},
-							{
-								"type": "custom",
-								"label": "Permissions",
-								"url": "/auth/scopes?lang=en"
-							},
-							{
-								"type": "custom",
-								"label": "Organizations",
-								"url": "/auth/orgs?lang=en"
-							},
-							{
-								"type": "custom",
-								"label": "SSO",
-								"url": "/auth/saml?lang=en"
-							}
-						]
+						"url": "/auth/users"
 					},
 					{
 						"type": "custom",
 						"label": "Settings",
 						"url": "/auth/settings?lang=en"
-					},
-					{
-						"type": "custom",
-						"label": "Activity",
-						"url": "/auth/logs?lang=en"
 					}
 				]
 			},
@@ -383,7 +319,7 @@
 					{
 						"type": "custom",
 						"label": "API keys",
-						"url": "/auth/access-key"
+						"url": "/auth/settings?tab=security&section=keys"
 					},
 					{
 						"type": "custom",
@@ -455,76 +391,12 @@
 					{
 						"type": "custom",
 						"label": "Utilisateurs",
-						"url": "/auth/users",
-						"children": [
-							{
-								"type": "custom",
-								"label": "Comptes",
-								"url": "/auth/users"
-							},
-							{
-								"type": "custom",
-								"label": "Profils et installations",
-								"url": "/auth/customers"
-							},
-							{
-								"type": "custom",
-								"label": "Attributs",
-								"url": "/auth/user-attributes?lang=fr"
-							},
-							{
-								"type": "custom",
-								"label": "Parrainages",
-								"url": "/auth/referrals"
-							}
-						]
-					},
-					{
-						"type": "custom",
-						"label": "Accès",
-						"url": "/auth/apps?lang=fr",
-						"children": [
-							{
-								"type": "custom",
-								"label": "Applications",
-								"url": "/auth/apps?lang=fr"
-							},
-							{
-								"type": "custom",
-								"label": "Annuaire de connexion",
-								"url": "/auth/directory/users?lang=fr"
-							},
-							{
-								"type": "custom",
-								"label": "Rôles",
-								"url": "/auth/roles?lang=fr"
-							},
-							{
-								"type": "custom",
-								"label": "Permissions",
-								"url": "/auth/scopes?lang=fr"
-							},
-							{
-								"type": "custom",
-								"label": "Organisations",
-								"url": "/auth/orgs?lang=fr"
-							},
-							{
-								"type": "custom",
-								"label": "SSO",
-								"url": "/auth/saml?lang=fr"
-							}
-						]
+						"url": "/auth/users"
 					},
 					{
 						"type": "custom",
 						"label": "Paramètres",
 						"url": "/auth/settings?lang=fr"
-					},
-					{
-						"type": "custom",
-						"label": "Journal",
-						"url": "/auth/logs?lang=fr"
 					}
 				]
 			},
@@ -819,7 +691,7 @@
 					{
 						"type": "custom",
 						"label": "Clés API",
-						"url": "/auth/access-key"
+						"url": "/auth/settings?tab=security&section=keys"
 					},
 					{
 						"type": "custom",

@@ -1,4 +1,4 @@
-export const pluginId = "supbrd-plugmod-billing";
+export const pluginId = "superboard-billing";
 export const views = {
 	"superboard.products_purchases": () => import("./views/superboard.products_purchases.js"),
 	"superboard.monetization_purchases": () => import("./views/superboard.products_purchases.js"),

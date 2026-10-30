@@ -21,11 +21,11 @@ const TOKEN = "t".repeat(48);
 const ENCRYPTION = "e".repeat(48);
 const HASH = "h".repeat(48);
 
-test("Flows version plan is MBZA-only, value-free and never includes Email in the bundle", async () => {
-	const { target } = await loadTarget("mbza-development");
+test("Flows version plan is MABZA-only, value-free and never includes Email in the bundle", async () => {
+	const { target } = await loadTarget("mabza-development");
 	const plan = buildFlowsVersionBundlePlan({
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 	});
 	assert.equal(plan.valuesIncluded, false);
@@ -60,7 +60,7 @@ test("Flows version plan is MBZA-only, value-free and never includes Email in th
 				targetName: "reference-production",
 				environment: "production",
 			}),
-		/restricted to enabled MBZA development/u,
+		/restricted to enabled MABZA development/u,
 	);
 });
 
@@ -229,7 +229,7 @@ test("secret bundle paths cannot escape the ignored protected directory", () => 
 			flowsVersionUploadArgs({
 				config: "/tmp/flows.jsonc",
 				secretsFile: "/tmp/flows-secrets.json",
-				versionTag: "mbza-flows-test-v1",
+				versionTag: "mabza-flows-test-v1",
 			}),
 		/below/u,
 	);
@@ -238,7 +238,7 @@ test("secret bundle paths cannot escape the ignored protected directory", () => 
 			flowsObsoleteSecretBulkArgs({
 				config: "/tmp/flows.jsonc",
 				worker: "unsafe worker",
-				versionTag: "mbza-flows-test-without-email",
+				versionTag: "mabza-flows-test-without-email",
 				obsoleteSecretsFile: resolve(root, ".flows-cutover", "secrets", "remove-obsolete.json"),
 			}),
 		/Worker name is invalid/u,

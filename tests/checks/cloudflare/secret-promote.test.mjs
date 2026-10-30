@@ -134,10 +134,10 @@ test("overlap-capable shared token promotion needs no maintenance override", asy
 });
 
 test("Flows dedicated API secret cutover promotes Flows before API", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const bundlePlan = buildSecretBundlePlan({
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		contractIds: ["flows-internal-token"],
 		overlap: true,
@@ -159,7 +159,7 @@ test("Flows dedicated API secret cutover promotes Flows before API", async () =>
 	const receipt = buildSecretUploadReceipt(bundlePlan, services);
 	const promotion = validateSecretUploadReceipt({
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		receipt,
 		acceptSharedCutover: true,

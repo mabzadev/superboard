@@ -336,9 +336,9 @@
       "href": "/products/offerings",
       "label": "Offerings",
       "order": 2,
-      "permission": "supbrd-plug-products.read",
+      "permission": "superboard-products.read",
       "route_id": "superboard.products_offerings",
-      "plugin_id": "supbrd-plug-products",
+      "plugin_id": "superboard-products",
       "status": "passed",
       "headings": [
         "Offerings"
@@ -349,9 +349,9 @@
       "href": "/app/libraries",
       "label": "Libraries",
       "order": 4,
-      "permission": "supbrd-plug-settings.read",
+      "permission": "superboard-settings.read",
       "route_id": "superboard.app_libraries",
-      "plugin_id": "supbrd-plug-settings",
+      "plugin_id": "superboard-settings",
       "status": "passed",
       "headings": [
         "Libraries",
@@ -367,9 +367,9 @@
       "href": "/app/android-setup",
       "label": "Android Setup",
       "order": 5,
-      "permission": "supbrd-plug-settings.read",
+      "permission": "superboard-settings.read",
       "route_id": "superboard.app_android_setup",
-      "plugin_id": "supbrd-plug-settings",
+      "plugin_id": "superboard-settings",
       "status": "passed",
       "headings": [
         "Android Setup"
@@ -380,9 +380,9 @@
       "href": "/app/ios-setup",
       "label": "iOS Setup",
       "order": 6,
-      "permission": "supbrd-plug-settings.read",
+      "permission": "superboard-settings.read",
       "route_id": "superboard.app_ios_setup",
-      "plugin_id": "supbrd-plug-settings",
+      "plugin_id": "superboard-settings",
       "status": "passed",
       "headings": [
         "iOS Setup"
@@ -393,9 +393,9 @@
       "href": "/app/web-setup",
       "label": "Web Setup",
       "order": 7,
-      "permission": "supbrd-plug-settings.read",
+      "permission": "superboard-settings.read",
       "route_id": "superboard.app_web_setup",
-      "plugin_id": "supbrd-plug-settings",
+      "plugin_id": "superboard-settings",
       "status": "passed",
       "headings": [
         "Web Setup"
@@ -408,7 +408,7 @@
       "order": 0,
       "permission": "users.read",
       "route_id": "superboard.app_customers",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Customers"
@@ -421,7 +421,7 @@
       "order": 1,
       "permission": "users.read",
       "route_id": "superboard.users",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Application users"
@@ -434,7 +434,7 @@
       "order": 2,
       "permission": "users.read",
       "route_id": "superboard.app_referrals",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Referrals"
@@ -447,7 +447,7 @@
       "order": 3,
       "permission": "users.read",
       "route_id": "superboard.app_access_key",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Access Key"
@@ -460,7 +460,7 @@
       "order": 0,
       "permission": "users.read",
       "route_id": "superboard.identity_by_lang_dashboard",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Identity",
@@ -483,7 +483,7 @@
       "order": 2,
       "permission": "users.read",
       "route_id": "superboard.identity_by_lang_user_attributes",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Identity",
@@ -497,7 +497,7 @@
       "order": 3,
       "permission": "users.read",
       "route_id": "superboard.identity_by_lang_roles",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Identity",
@@ -511,7 +511,7 @@
       "order": 4,
       "permission": "users.read",
       "route_id": "superboard.identity_by_lang_apps",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Identity",
@@ -526,7 +526,7 @@
       "order": 5,
       "permission": "users.read",
       "route_id": "superboard.identity_by_lang_scopes",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Identity",
@@ -540,7 +540,7 @@
       "order": 6,
       "permission": "users.read",
       "route_id": "superboard.identity_by_lang_orgs",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Identity",
@@ -554,7 +554,7 @@
       "order": 7,
       "permission": "users.read",
       "route_id": "superboard.identity_by_lang_logs",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Identity",
@@ -571,7 +571,7 @@
       "order": 8,
       "permission": "users.read",
       "route_id": "superboard.identity_by_lang_saml",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Identity",
@@ -585,7 +585,7 @@
       "order": 9,
       "permission": "users.read",
       "route_id": "superboard.identity_by_lang_account",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Identity",
@@ -597,9 +597,9 @@
       "href": "/dashboard",
       "label": "Dashboard",
       "order": 0,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.dashboard",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Analytics",
@@ -611,9 +611,9 @@
       "href": "/analytics",
       "label": "Overview",
       "order": 0,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Analytics"
@@ -624,9 +624,9 @@
       "href": "/analytics/dashboards",
       "label": "Dashboards",
       "order": 1,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_dashboards",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Dashboards"
@@ -637,9 +637,9 @@
       "href": "/analytics/users",
       "label": "Users & Sessions",
       "order": 2,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_users",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Users & sessions"
@@ -650,9 +650,9 @@
       "href": "/analytics/events",
       "label": "Events",
       "order": 3,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_events",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Event explorer"
@@ -663,9 +663,9 @@
       "href": "/analytics/dimensions",
       "label": "Technology & Location",
       "order": 4,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_dimensions",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Technology & location"
@@ -676,9 +676,9 @@
       "href": "/analytics/views",
       "label": "Views",
       "order": 5,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_views",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Views"
@@ -689,9 +689,9 @@
       "href": "/analytics/installations",
       "label": "Installations",
       "order": 6,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_installations",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Installations"
@@ -702,9 +702,9 @@
       "href": "/analytics/purchases",
       "label": "Verified Purchases",
       "order": 7,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_purchases",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Verified purchases"
@@ -715,9 +715,9 @@
       "href": "/analytics/insights",
       "label": "Funnels & Retention",
       "order": 8,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_insights",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Funnels & retention"
@@ -728,9 +728,9 @@
       "href": "/analytics/cohorts",
       "label": "Cohorts",
       "order": 9,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_cohorts",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Cohorts"
@@ -741,9 +741,9 @@
       "href": "/analytics/crashes",
       "label": "Crashes",
       "order": 10,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_crashes",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Crashes"
@@ -754,9 +754,9 @@
       "href": "/analytics/feedback",
       "label": "Feedback",
       "order": 11,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_feedback",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Feedback"
@@ -767,9 +767,9 @@
       "href": "/analytics/remote-config",
       "label": "Remote Config",
       "order": 12,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_remote_config",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Remote Config"
@@ -780,9 +780,9 @@
       "href": "/analytics/alerts",
       "label": "Alerts",
       "order": 13,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_alerts",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Alerts"
@@ -793,9 +793,9 @@
       "href": "/analytics/reports",
       "label": "Reports & Exports",
       "order": 14,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_reports",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Reports & data operations"
@@ -806,9 +806,9 @@
       "href": "/analytics/settings",
       "label": "Settings",
       "order": 15,
-      "permission": "supbrd-plugmod-analytics.read",
+      "permission": "superboard-analytics.read",
       "route_id": "superboard.analytics_settings",
-      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_id": "superboard-analytics",
       "status": "passed",
       "headings": [
         "Analytics settings"
@@ -819,9 +819,9 @@
       "href": "/products/purchases",
       "label": "Purchases",
       "order": 0,
-      "permission": "supbrd-plugmod-billing.read",
+      "permission": "superboard-billing.read",
       "route_id": "superboard.products_purchases",
-      "plugin_id": "supbrd-plugmod-billing",
+      "plugin_id": "superboard-billing",
       "status": "passed",
       "headings": [
         "Purchases"
@@ -832,9 +832,9 @@
       "href": "/products/customers",
       "label": "Customers",
       "order": 1,
-      "permission": "supbrd-plugmod-billing.read",
+      "permission": "superboard-billing.read",
       "route_id": "superboard.products_customers",
-      "plugin_id": "supbrd-plugmod-billing",
+      "plugin_id": "superboard-billing",
       "status": "passed",
       "headings": [
         "Billing customers"
@@ -845,9 +845,9 @@
       "href": "/products/entitlements",
       "label": "Entitlements",
       "order": 3,
-      "permission": "supbrd-plugmod-billing.read",
+      "permission": "superboard-billing.read",
       "route_id": "superboard.products_entitlements",
-      "plugin_id": "supbrd-plugmod-billing",
+      "plugin_id": "superboard-billing",
       "status": "passed",
       "headings": [
         "Entitlements"
@@ -858,9 +858,9 @@
       "href": "/dynamic-links/links",
       "label": "Links",
       "order": 0,
-      "permission": "supbrd-plugmod-dynamic-links.read",
+      "permission": "superboard-dynamic-links.read",
       "route_id": "superboard.dynamic_links_links",
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "status": "passed",
       "headings": [
         "Links"
@@ -871,9 +871,9 @@
       "href": "/dynamic-links/campaigns",
       "label": "Campaigns",
       "order": 1,
-      "permission": "supbrd-plugmod-dynamic-links.read",
+      "permission": "superboard-dynamic-links.read",
       "route_id": "superboard.dynamic_links_campaigns",
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "status": "passed",
       "headings": [
         "Campaigns"
@@ -884,9 +884,9 @@
       "href": "/dynamic-links/redirect-rules",
       "label": "Redirect Rules",
       "order": 2,
-      "permission": "supbrd-plugmod-dynamic-links.read",
+      "permission": "superboard-dynamic-links.read",
       "route_id": "superboard.dynamic_links_redirect_rules",
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "status": "passed",
       "headings": [
         "Redirect Rules",
@@ -898,9 +898,9 @@
       "href": "/dynamic-links/domain",
       "label": "Domain",
       "order": 3,
-      "permission": "supbrd-plugmod-dynamic-links.read",
+      "permission": "superboard-dynamic-links.read",
       "route_id": "superboard.dynamic_links_domain",
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "status": "passed",
       "headings": [
         "Domain"
@@ -911,9 +911,9 @@
       "href": "/dynamic-links/social-media-preview",
       "label": "Social Media Preview",
       "order": 4,
-      "permission": "supbrd-plugmod-dynamic-links.read",
+      "permission": "superboard-dynamic-links.read",
       "route_id": "superboard.dynamic_links_social_media_preview",
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "status": "passed",
       "headings": [
         "Social Media Preview"
@@ -924,9 +924,9 @@
       "href": "/dynamic-links/tracking",
       "label": "Tracking",
       "order": 5,
-      "permission": "supbrd-plugmod-dynamic-links.read",
+      "permission": "superboard-dynamic-links.read",
       "route_id": "superboard.dynamic_links_tracking",
-      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_id": "superboard-dynamic-links",
       "status": "passed",
       "headings": [
         "Tracking"
@@ -937,9 +937,9 @@
       "href": "/flows",
       "label": "Overview",
       "order": 0,
-      "permission": "supbrd-plugmod-flows.read",
+      "permission": "superboard-flows.read",
       "route_id": "superboard.flows",
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "status": "passed",
       "headings": [
         "Flows overview"
@@ -950,9 +950,9 @@
       "href": "/flows/workflows",
       "label": "Workflows",
       "order": 1,
-      "permission": "supbrd-plugmod-flows.read",
+      "permission": "superboard-flows.read",
       "route_id": "superboard.flows_workflows",
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "status": "passed",
       "headings": [
         "Workflows"
@@ -963,9 +963,9 @@
       "href": "/flows/launchpad",
       "label": "Launchpad",
       "order": 2,
-      "permission": "supbrd-plugmod-flows.read",
+      "permission": "superboard-flows.read",
       "route_id": "superboard.flows_launchpad",
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "status": "passed",
       "headings": [
         "Launchpad"
@@ -976,9 +976,9 @@
       "href": "/flows/users",
       "label": "Users",
       "order": 3,
-      "permission": "supbrd-plugmod-flows.read",
+      "permission": "superboard-flows.read",
       "route_id": "superboard.flows_users",
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "status": "passed",
       "headings": [
         "Users"
@@ -989,9 +989,9 @@
       "href": "/flows/components",
       "label": "Components",
       "order": 4,
-      "permission": "supbrd-plugmod-flows.read",
+      "permission": "superboard-flows.read",
       "route_id": "superboard.flows_components",
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "status": "passed",
       "headings": [
         "Components",
@@ -1003,9 +1003,9 @@
       "href": "/flows/settings/environments",
       "label": "Environments",
       "order": 5,
-      "permission": "supbrd-plugmod-flows.read",
+      "permission": "superboard-flows.read",
       "route_id": "superboard.flows_settings_environments",
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "status": "passed",
       "headings": [
         "Environments"
@@ -1016,9 +1016,9 @@
       "href": "/flows/settings/localization",
       "label": "Localization",
       "order": 6,
-      "permission": "supbrd-plugmod-flows.read",
+      "permission": "superboard-flows.read",
       "route_id": "superboard.flows_settings_localization",
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "status": "passed",
       "headings": [
         "Localization"
@@ -1031,7 +1031,7 @@
       "order": 1,
       "permission": "users.read",
       "route_id": "superboard.identity_by_lang_users",
-      "plugin_id": "supbrd-plug-user",
+      "plugin_id": "superboard-user",
       "status": "passed",
       "headings": [
         "Identity",
@@ -1043,9 +1043,9 @@
       "href": "/flows/settings/sdk",
       "label": "SDK",
       "order": 7,
-      "permission": "supbrd-plugmod-flows.read",
+      "permission": "superboard-flows.read",
       "route_id": "superboard.flows_settings_sdk",
-      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_id": "superboard-flows",
       "status": "passed",
       "headings": [
         "SDK setup"
@@ -1056,9 +1056,9 @@
       "href": "/marketing/in-app-messages",
       "label": "In-app Messages",
       "order": 0,
-      "permission": "supbrd-plugmod-marketing.read",
+      "permission": "superboard-marketing.read",
       "route_id": "superboard.marketing_in_app_messages",
-      "plugin_id": "supbrd-plugmod-marketing",
+      "plugin_id": "superboard-marketing",
       "status": "passed",
       "rendered_controls": [
         "Create Message"
@@ -1070,9 +1070,9 @@
       "href": "/marketing/email",
       "label": "Email",
       "order": 1,
-      "permission": "supbrd-plugmod-marketing.read",
+      "permission": "superboard-marketing.read",
       "route_id": "superboard.marketing_email",
-      "plugin_id": "supbrd-plugmod-marketing",
+      "plugin_id": "superboard-marketing",
       "status": "passed",
       "headings": [
         "Email"
@@ -1083,9 +1083,9 @@
       "href": "/marketing/campaigns",
       "label": "Campaigns",
       "order": 2,
-      "permission": "supbrd-plugmod-marketing.read",
+      "permission": "superboard-marketing.read",
       "route_id": "superboard.marketing_campaigns",
-      "plugin_id": "supbrd-plugmod-marketing",
+      "plugin_id": "superboard-marketing",
       "status": "passed",
       "headings": [
         "Campaigns"
@@ -1096,9 +1096,9 @@
       "href": "/marketing/journeys",
       "label": "Journeys",
       "order": 3,
-      "permission": "supbrd-plugmod-marketing.read",
+      "permission": "superboard-marketing.read",
       "route_id": "superboard.marketing_journeys",
-      "plugin_id": "supbrd-plugmod-marketing",
+      "plugin_id": "superboard-marketing",
       "status": "passed",
       "headings": [
         "Marketing journeys"
@@ -1109,9 +1109,9 @@
       "href": "/marketing/channels",
       "label": "Channels",
       "order": 4,
-      "permission": "supbrd-plugmod-marketing.read",
+      "permission": "superboard-marketing.read",
       "route_id": "superboard.marketing_channels",
-      "plugin_id": "supbrd-plugmod-marketing",
+      "plugin_id": "superboard-marketing",
       "status": "passed",
       "headings": [
         "Marketing channels"
@@ -1122,9 +1122,9 @@
       "href": "/marketing/statistics",
       "label": "Statistics",
       "order": 5,
-      "permission": "supbrd-plugmod-marketing.read",
+      "permission": "superboard-marketing.read",
       "route_id": "superboard.marketing_statistics",
-      "plugin_id": "supbrd-plugmod-marketing",
+      "plugin_id": "superboard-marketing",
       "status": "passed",
       "headings": [
         "Marketing statistics"
@@ -1135,9 +1135,9 @@
       "href": "/marketing/settings",
       "label": "Settings",
       "order": 6,
-      "permission": "supbrd-plugmod-marketing.read",
+      "permission": "superboard-marketing.read",
       "route_id": "superboard.marketing_settings",
-      "plugin_id": "supbrd-plugmod-marketing",
+      "plugin_id": "superboard-marketing",
       "status": "passed",
       "headings": [
         "Marketing settings"
@@ -1148,9 +1148,9 @@
       "href": "/support/inbox",
       "label": "Inbox",
       "order": 0,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_inbox",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Support Inbox"
@@ -1161,9 +1161,9 @@
       "href": "/support/contacts",
       "label": "Contacts",
       "order": 1,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_contacts",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Contacts",
@@ -1176,9 +1176,9 @@
       "href": "/support/workforce",
       "label": "Workforce",
       "order": 2,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_workforce",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Workforce"
@@ -1189,9 +1189,9 @@
       "href": "/support/channels",
       "label": "Channels",
       "order": 3,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_channels",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Channels"
@@ -1202,9 +1202,9 @@
       "href": "/support/automations",
       "label": "Automations",
       "order": 4,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_automations",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Automations"
@@ -1215,9 +1215,9 @@
       "href": "/support/proactive-support",
       "label": "Proactive Support",
       "order": 5,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_proactive_support",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Proactive Support"
@@ -1228,9 +1228,9 @@
       "href": "/support/help-center",
       "label": "Help Center",
       "order": 6,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_help_center",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Help Center"
@@ -1241,9 +1241,9 @@
       "href": "/support/captain",
       "label": "Captain",
       "order": 7,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_captain",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Captain"
@@ -1254,9 +1254,9 @@
       "href": "/support/integrations",
       "label": "Integrations",
       "order": 8,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_integrations",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Integrations"
@@ -1267,9 +1267,9 @@
       "href": "/support/reports",
       "label": "Reports",
       "order": 9,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_reports",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Reports"
@@ -1280,9 +1280,9 @@
       "href": "/support/settings",
       "label": "Settings",
       "order": 10,
-      "permission": "supbrd-plugmod-support.read",
+      "permission": "superboard-support.read",
       "route_id": "superboard.support_settings",
-      "plugin_id": "supbrd-plugmod-support",
+      "plugin_id": "superboard-support",
       "status": "passed",
       "headings": [
         "Settings"

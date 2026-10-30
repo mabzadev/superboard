@@ -8,7 +8,7 @@ test("managed lifecycle actions revalidate expired active plugin receipts", asyn
 		"X-Parity-Operator": "1",
 	};
 	const enableUser = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-user/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-user/enable",
 		{ method: "POST", headers },
 	);
 	expect(enableUser.status, await enableUser.clone().text()).toBe(201);
@@ -38,7 +38,7 @@ test("managed lifecycle actions revalidate expired active plugin receipts", asyn
 		const health = await env.DB.prepare(
 			"SELECT MAX(expires_at) AS expires_at FROM superboard_plugin_runtime_health WHERE instance_id=? AND plugin_id=?",
 		)
-			.bind("reference-production", "supbrd-plug-user")
+			.bind("reference-production", "superboard-user")
 			.first<{ expires_at: string }>();
 		expect(Date.parse(health!.expires_at)).toBeGreaterThan(Date.now());
 	}

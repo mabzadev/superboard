@@ -41,11 +41,13 @@ export function requiredAppleNotificationUrls(
   apiDomain: string,
   productionProjectId: string,
   sandboxProjectId: string,
+  unified = false,
 ) {
   const origin = apiOrigin(apiDomain);
+  const prefix = unified ? "/v1/monetization/webhooks" : "/api/v2/purchases/providers/webhooks";
   return {
-    production_url: `${origin}/api/v2/purchases/providers/webhooks/apple/production/${projectId(productionProjectId)}`,
-    sandbox_url: `${origin}/api/v2/purchases/providers/webhooks/apple/sandbox/${projectId(sandboxProjectId)}`,
+    production_url: `${origin}${prefix}/apple/production/${projectId(productionProjectId)}`,
+    sandbox_url: `${origin}${prefix}/apple/sandbox/${projectId(sandboxProjectId)}`,
     production_version: 'V2' as const,
     sandbox_version: 'V2' as const,
   };
@@ -56,7 +58,7 @@ export async function readAppleNotificationConfiguration(
   productionProjectId: string,
   sandboxProjectId: string,
 ): Promise<AppleNotificationConfiguration> {
-  const required = requiredAppleNotificationUrls(env.API_DOMAIN, productionProjectId, sandboxProjectId);
+  const required = requiredAppleNotificationUrls(env.SDK_DOMAIN && env.AUTH_DOMAIN === env.SDK_DOMAIN ? env.SDK_DOMAIN : env.API_DOMAIN, productionProjectId, sandboxProjectId, Boolean(env.SDK_DOMAIN) && env.AUTH_DOMAIN === env.SDK_DOMAIN);
   const access = await appStoreConnectAccess(env, projectId(productionProjectId));
   const payload = await appleJson(
     `https://api.appstoreconnect.apple.com/v1/apps/${encodeURIComponent(access.appId)}?fields%5Bapps%5D=${encodeURIComponent(APP_FIELDS)}`,
@@ -70,7 +72,7 @@ export async function configureAppleNotificationConfiguration(
   productionProjectId: string,
   sandboxProjectId: string,
 ): Promise<AppleNotificationConfiguration> {
-  const required = requiredAppleNotificationUrls(env.API_DOMAIN, productionProjectId, sandboxProjectId);
+  const required = requiredAppleNotificationUrls(env.SDK_DOMAIN && env.AUTH_DOMAIN === env.SDK_DOMAIN ? env.SDK_DOMAIN : env.API_DOMAIN, productionProjectId, sandboxProjectId, Boolean(env.SDK_DOMAIN) && env.AUTH_DOMAIN === env.SDK_DOMAIN);
   const access = await appStoreConnectAccess(env, projectId(productionProjectId));
   await appleJson(
     `https://api.appstoreconnect.apple.com/v1/apps/${encodeURIComponent(access.appId)}`,

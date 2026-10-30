@@ -12,7 +12,7 @@ import {
 	siteApi,
 	unique,
 } from "../../../fixtures/site-browser/site-api.js";
-const plugin = "supbrd-plugmod-support";
+const plugin = "superboard-support";
 function requestPath(response: BrowserResponse) {
 	const url = new URL(response.url());
 	try {

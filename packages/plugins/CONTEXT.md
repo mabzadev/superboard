@@ -25,5 +25,5 @@ _À éviter_ : état transitoire de Worker, cache, donnée possédée par un Wor
 _À éviter_ : Donnée opérationnelle autoritative, archive, audit métier
 
 **Worker Gateway** :
-Worker d’exécution de `supbrd-plugmod-gateway` qui applique les Routes Gateway publiées par EmDash et transmet les commandes aux repositories propriétaires.
+Worker d’exécution de `superboard-gateway` qui applique les Routes Gateway publiées par EmDash et transmet les commandes aux repositories propriétaires.
 _À éviter_ : propriétaire de données métier, configuration de routes cachée dans le code

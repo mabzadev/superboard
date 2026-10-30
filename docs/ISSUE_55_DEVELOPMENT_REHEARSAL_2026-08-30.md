@@ -1,7 +1,7 @@
 # Issue #55 — état du rehearsal development
 
 Ce document enregistre le résultat final du rehearsal
-`mbza-development/development`. Les gates Release Front, trafic, rollback
+`mabza-development/development`. Les gates Release Front, trafic, rollback
 Worker, rollback pointer-only et seconde répétition ont été exercés. Il ne
 constitue aucune autorisation de mutation de `vocostar/production`.
 
@@ -12,7 +12,7 @@ constitue aucune autorisation de mutation de `vocostar/production`.
 - L’inventaire paginé a couvert 46 ressources sans drift blocker.
 - Le bootstrap a créé les ressources Site D1/R2/KV et les ressources Support
   v2 D1/R2/Vectorize/Queues. Les quatre identifiants qui appartiennent au
-  manifeste sont enregistrés dans `infra/targets/mbza-development.json`.
+  manifeste sont enregistrés dans `infra/targets/mabza-development.json`.
 - Treize D1 ont été exportés avant la première migration vers le répertoire
   protégé hors Git
   `/Users/appmonster/Workspace/.superboard-backups/issue-55-20260830`.
@@ -24,7 +24,7 @@ constitue aucune autorisation de mutation de `vocostar/production`.
   initial, ses bindings D1/R2/KV, son cron, son observabilité et son Worker
   Loader.
 - Le flag explicite `--site-preview-route` a ensuite attaché uniquement
-  `site.mbza.dev`, sans route `board.mbza.dev` et sans `workers.dev`.
+  `site.mabza.dev`, sans route `board.mabza.dev` et sans `workers.dev`.
 - La première version Cloudflare observée était
   `5fc3f3bb-bcaa-4894-ba65-e97529892112`. La version finale après ajout des
   consoles opérateur et récupération du rollback Worker est
@@ -32,12 +32,12 @@ constitue aucune autorisation de mutation de `vocostar/production`.
 
 ## Smokes distants
 
-| Surface                                             | Résultat observé                                       |
-| --------------------------------------------------- | ------------------------------------------------------ |
-| `https://site.mbza.dev/superboard-system/health`    | `200`                                                  |
-| `https://site.mbza.dev/superboard-system/readiness` | `503`, aucune Release Front active                     |
-| `https://site.mbza.dev/`                            | `503`, maintenance fail-closed                         |
-| `https://site.mbza.dev/_emdash/admin`               | session Opérateur SuperBoard vérifiée après magic link |
+| Surface                                              | Résultat observé                                       |
+| ---------------------------------------------------- | ------------------------------------------------------ |
+| `https://site.mabza.dev/superboard-system/health`    | `200`                                                  |
+| `https://site.mabza.dev/superboard-system/readiness` | `503`, aucune Release Front active                     |
+| `https://site.mabza.dev/`                            | `503`, maintenance fail-closed                         |
+| `https://site.mabza.dev/_emdash/admin`               | session Opérateur SuperBoard vérifiée après magic link |
 
 Le Dashboard historique et ses domaines restent inchangés. Aucune cible
 `vocostar/production` n’a été lue ou mutée pendant ces opérations.
@@ -49,7 +49,7 @@ Le Dashboard historique et ses domaines restent inchangés. Aucune cible
   séparés pour `front_release.approve`, `front_release.activate` et
   `front_release.rollback`.
 - `SUPERBOARD_RELEASE_OPERATIONS` est activé uniquement sur
-  `mbza-development/development`, conjointement à la route preview explicite.
+  `mabza-development/development`, conjointement à la route preview explicite.
 - La migration `0007_front_activation_reauthentication.sql` est appliquée ; les
   sept migrations Site sont convergées. L’export SQL additionnel a été refusé
   par D1 à cause des tables virtuelles FTS5. Le restore point officiel Time
@@ -107,7 +107,7 @@ corrigée avant la clôture finale.
 - `_plugin_state` contient 18 états SuperBoard `active`, source `config`.
   L’écran EmDash Plugins affiche 19 cartes : les 18 plugins SuperBoard plus
   `cloudflare-email`.
-- `supbrd-plug-user` v1.3.0 est devenu le manifest actif avec les six Stores
+- `superboard-user` v1.3.0 est devenu le manifest actif avec les six Stores
   canoniques `access_keys`, `credentials`, `customers`, `directory`,
   `referrals` et `sessions`. Les tests d’autorité, chiffrement, CAS,
   idempotence et shadow read restent verts après promotion.
@@ -147,7 +147,7 @@ fonctionnelle suivante remplace cette preuve incomplète.
   projection. Les deux reverse deltas sont replayable, avec zéro changement et
   zéro suppression.
 - La Data Source live
-  `supbrd-plugmod-flows.data_source.workflows` lit le Store EmDash, déchiffre
+  `superboard-flows.data_source.workflows` lit le Store EmDash, déchiffre
   ses enregistrements et retourne un objet métier réel avec HTTP 200.
 - La release fonctionnelle `01M19MG9YN6KQ4KQVF4FRETW1Q`, candidat
   `01M19MG9YNYYMM0M4VJZK7GAY7`, contient 19 entrées de Plugin Lock, 114 routes
@@ -200,7 +200,7 @@ development se déploie sur son domaine de preview explicite avec :
 
 ```sh
 node scripts/cloudflare/deploy.mjs \
-  --target mbza-development \
+  --target mabza-development \
   --environment development \
   --service site \
   --site-preview-route \

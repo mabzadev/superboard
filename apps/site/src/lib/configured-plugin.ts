@@ -6,11 +6,11 @@ import catalog from "../../../../scripts/config/superboard-plugin-catalog.json";
 
 const manifests = new Map(
 	[
-		...topology.plugins.map(({ manifest }) => manifest),
 		...catalog.plugins.flatMap(({ manifest, canonical_manifest }) => [
 			manifest,
 			canonical_manifest,
 		]),
+		...topology.plugins.map(({ manifest }) => manifest),
 	].map((manifest) => [manifest.plugin_id, manifest]),
 );
 const labels = new Map(
@@ -22,7 +22,7 @@ const labels = new Map(
 			] as const,
 	),
 );
-const componentPrefix = /^supbrd-(?:plug|plugmod)-/u;
+const componentPrefix = /^(?:supbrd-(?:plug|plugmod)|superboard)-/u;
 
 export function resolveConfiguredPluginSettingKey(pluginId: string, key: string): string {
 	const manifest = manifests.get(pluginPackageOwner(pluginId));

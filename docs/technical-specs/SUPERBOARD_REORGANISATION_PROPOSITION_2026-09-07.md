@@ -124,7 +124,7 @@ Les statistiques contextuelles restent aussi accessibles depuis les campagnes, p
 7. La préférence de largeur se mémorise par opérateur et instance. Au changement d’environnement, les droits et les plugins sont recalculés avant de restaurer une destination.
 8. Sur mobile, le menu devient un panneau refermable ; Échap, retour du focus et navigation clavier sont pris en charge. Les libellés passent par Lingui et le rendu est vérifié en français, anglais et arabe.
 
-L’accueil doit appartenir au socle, afin qu’une désactivation du plugin Statistiques ne retire pas la page d’entrée. Aujourd’hui `/dashboard` est contribué par `supbrd-plugmod-analytics`.
+L’accueil doit appartenir au socle, afin qu’une désactivation du plugin Statistiques ne retire pas la page d’entrée. Aujourd’hui `/dashboard` est contribué par `superboard-analytics`.
 
 ### Renommages prioritaires
 
@@ -185,7 +185,7 @@ La console affiche toujours l’application, l’environnement et l’URL d’AP
 
 Les paramètres de connexion comprennent les méthodes activées, les inscriptions, les invitations, Google/Apple, OAuth/OIDC, SAML, MFA, durées et révocation des sessions, politiques des comptes, domaines de retour, origines autorisées et limites de requêtes. Les permissions des opérateurs de la console restent distinctes de celles des utilisateurs finaux. La console centrale éventuelle gère la découverte et les accès ; chaque API d’environnement applique elle-même ses contrôles.
 
-Le dépôt possède déjà des manifestes de cible MBZA et Vocostar. La cible MBZA décrit `local` et `development` ; Vocostar décrit `production`. Ajouter « recette » exige une évolution du schéma et des unions de types qui ne connaissent que `local`, `development`, `production`. Le contrôle Production/Test actuel reste un type de projet historique à migrer explicitement, pas une preuve d’isolation d’environnement.
+Le dépôt possède déjà des manifestes de cible MABZA et Vocostar. La cible MABZA décrit `local` et `development` ; Vocostar décrit `production`. Ajouter « recette » exige une évolution du schéma et des unions de types qui ne connaissent que `local`, `development`, `production`. Le contrôle Production/Test actuel reste un type de projet historique à migrer explicitement, pas une preuve d’isolation d’environnement.
 
 Les bindings et variables Wrangler doivent être déclarés pour chaque environnement. Le générateur doit vérifier qu’aucune liaison de développement ne pointe vers la production. [Documentation Cloudflare sur les environnements](https://developers.cloudflare.com/workers/wrangler/environments/).
 
@@ -242,7 +242,7 @@ Les nombres actuels ci-dessous sont calculés à partir des rôles et des drapea
 | Profil                                       | Rôles sélectionnés dans le code           | Objectif après regroupement           |
 | -------------------------------------------- | ----------------------------------------- | ------------------------------------- |
 | SuperBoard complet, hors custom et Messaging | 17                                        | 10                                    |
-| MBZA avec extension de référence             | 17 + 1 custom = 18                        | 10 + 1 extension de référence = 11    |
+| MABZA avec extension de référence             | 17 + 1 custom = 18                        | 10 + 1 extension de référence = 11    |
 | Vocostar avec Analytics et Flows désactivés  | 15 + 1 adaptateur + 2 orchestrateurs = 18 | 8 + 1 plugin runtime + 2 moteurs = 11 |
 
 Vocostar reste **un plugin produit** possédant initialement trois runtimes : coordination des jobs, moteur voix, moteur média. Dans l’interface d’exploitation, ceux-ci sont regroupés sous Vocostar. Fusionner ensuite l’adaptateur et les orchestrateurs n’est pas requis pour la première réduction : leurs classes `Dispatcher`/`Standard`, conteneurs, Workflows et traitements en cours demandent une migration séparée.

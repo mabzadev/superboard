@@ -13,7 +13,7 @@ const viewMetric = /^view$/;
 test("paywall editor saves and publishes a version that has measured views", async ({
 	authenticatedPage: page,
 }) => {
-	const plugin = "supbrd-plugmod-paywalls";
+	const plugin = "superboard-paywalls";
 	const project = await projectRef(page);
 	const base = `/api/v1/paywalls/projects/${project}`;
 	const identifier = unique("wall");
@@ -104,7 +104,7 @@ test("paywall editor saves and publishes a version that has measured views", asy
 test("onboarding statistics reflect native completion events and the selected version", async ({
 	authenticatedPage: page,
 }) => {
-	const plugin = "supbrd-plugmod-onboardings";
+	const plugin = "superboard-onboardings";
 	const project = await projectRef(page);
 	const base = `/api/v1/onboardings/projects/${project}`;
 	const definition = {
@@ -172,7 +172,7 @@ test("onboarding statistics reflect native completion events and the selected ve
 test("onboarding editor keeps a block added after creating its first draft", async ({
 	authenticatedPage: page,
 }) => {
-	const plugin = "supbrd-plugmod-onboardings";
+	const plugin = "superboard-onboardings";
 	const project = await projectRef(page);
 	const base = `/api/v1/onboardings/projects/${project}`;
 	await ready(page, "/onboardings");

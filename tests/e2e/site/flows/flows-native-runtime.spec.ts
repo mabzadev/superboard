@@ -27,7 +27,7 @@ test("a real SDK user traverses the published graph and appears in native analyt
 	const sdk = async (action: string, body: Record<string, unknown>) => {
 		const response = await page.request.post(`/api/v1/flows/v2/sdk/${action}`, {
 			headers: {
-				...operatorHeaders("supbrd-plugmod-flows"),
+				...operatorHeaders("superboard-flows"),
 				"x-superboard-flows-sdk-key": f.environment.sdk_key,
 			},
 			data: { ...context, ...body },
@@ -89,7 +89,7 @@ test("a real SDK user traverses the published graph and appears in native analyt
 	const row = page.getByRole("row").filter({ hasText: hash });
 	await expect(row).toBeVisible();
 	await evidence(
-		"supbrd-plugmod-flows",
+		"superboard-flows",
 		"superboard.flows_users",
 		[hash, f.workflow.id],
 		"A real SDK identify/transition/survey populated the user projection; filtering excluded then found the exact persisted hash.",
@@ -101,7 +101,7 @@ test("a real SDK user traverses the published graph and appears in native analyt
 	await page.reload();
 	await expect(page.getByText(f.workflow.name, { exact: true })).toBeVisible();
 	await evidence(
-		"supbrd-plugmod-flows",
+		"superboard-flows",
 		"superboard.flows_users_by_id",
 		[hash, f.workflow.id],
 		"Opened the SDK-created user's workflow history and survey event, then reloaded the same persisted detail.",
@@ -114,7 +114,7 @@ test("a real SDK user traverses the published graph and appears in native analyt
 			.first(),
 	).toBeVisible();
 	await evidence(
-		"supbrd-plugmod-flows",
+		"superboard-flows",
 		"superboard.flows",
 		[f.workflow.id, eventId],
 		"Overview recent activity displays the environment and normalized events emitted by the real published SDK workflow.",

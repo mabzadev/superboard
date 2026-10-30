@@ -9,7 +9,7 @@ import {
 	siteApi,
 	unique,
 } from "../../../fixtures/site-browser/site-api.js";
-const plugin = "supbrd-plugmod-analytics";
+const plugin = "superboard-analytics";
 
 test("event explorer filters and analyses its real event", async ({ authenticatedPage: page }) => {
 	const name = unique("qa_event").replaceAll("-", "_");

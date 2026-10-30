@@ -15,27 +15,27 @@ const operator = {
 	disabled: false,
 };
 
-describe("supbrd-plug-user", () => {
+describe("superboard-user", () => {
 	test("preserves the canonical issue #48 Store, command, data source and settings names", () => {
 		expect(userPluginManifest.stores.map(({ store_id }) => store_id).toSorted()).toEqual([
-			"supbrd-plug-user.store.user_credentials",
-			"supbrd-plug-user.store.user_directory",
-			"supbrd-plug-user.store.user_sessions",
+			"superboard-user.store.user_credentials",
+			"superboard-user.store.user_directory",
+			"superboard-user.store.user_sessions",
 		]);
 		expect(userPluginManifest.commands.map(({ command_id }) => command_id).toSorted()).toEqual([
-			"supbrd-plug-user.command.application_sign_in",
-			"supbrd-plug-user.command.link_provider",
-			"supbrd-plug-user.command.revoke_application_session",
-			"supbrd-plug-user.command.suspend_member",
-			"supbrd-plug-user.command.update_profile",
+			"superboard-user.command.application_sign_in",
+			"superboard-user.command.link_provider",
+			"superboard-user.command.revoke_application_session",
+			"superboard-user.command.suspend_member",
+			"superboard-user.command.update_profile",
 		]);
 		expect(
 			userPluginManifest.data_sources.map(({ data_source_id }) => data_source_id).toSorted(),
 		).toEqual([
-			"supbrd-plug-user.data_source.active_sessions",
-			"supbrd-plug-user.data_source.current_profile",
-			"supbrd-plug-user.data_source.linked_providers",
-			"supbrd-plug-user.data_source.members",
+			"superboard-user.data_source.active_sessions",
+			"superboard-user.data_source.current_profile",
+			"superboard-user.data_source.linked_providers",
+			"superboard-user.data_source.members",
 		]);
 		expect(Object.keys(userPluginManifest.settings.schema.properties).toSorted()).toEqual([
 			"allow_anonymous_upgrade",
@@ -43,7 +43,7 @@ describe("supbrd-plug-user", () => {
 			"mfa_policy",
 		]);
 		const signInSchema = userPluginManifest.schemas.find(
-			({ schema_id: schemaId }) => schemaId === "supbrd-plug-user.schema.application_sign_in.v1",
+			({ schema_id: schemaId }) => schemaId === "superboard-user.schema.application_sign_in.v1",
 		);
 		expect(signInSchema?.json_schema).toMatchObject({
 			type: "object",

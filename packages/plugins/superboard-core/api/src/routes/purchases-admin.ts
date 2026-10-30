@@ -1,6 +1,12 @@
-import { Hono } from "hono";
+import { registerRouter } from "@superboard/contracts/route-registry";
+import { Hono, type Context } from "hono";
 
-import { customerInfo, identifyCustomer, queueCustomerEntitlementChanged } from "../lib/billing";
+import {
+	customerInfo,
+	identifyCustomer,
+	queueCustomerEntitlementChanged,
+	refreshCatalogEntitlement,
+} from "../lib/billing";
 import { signedCustomerInfo } from "../lib/billing-identity";
 import { customerForAppUserId } from "../lib/billing-identity";
 import { getOrCreateProject, parseProjectExternalId } from "../lib/db";
@@ -13,10 +19,16 @@ import {
 	testStoreCredentials,
 	type StoreCatalogProduct,
 } from "../lib/store-verification";
+import {
+	configureStripe,
+	stripeConnectionStatus,
+	testStripeConnection,
+	syncStripeCatalog,
+} from "../lib/stripe-billing.js";
 import { authMiddleware } from "../middleware/auth";
 import { AppVariables, Env } from "../types";
 
-const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+const admin = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.purchases-admin.admin","pluginId":"superboard-billing","surface":"internal","access":"operator"});
 admin.use("*", authMiddleware);
 
 async function body(c: any): Promise<Record<string, any>> {
@@ -40,7 +52,7 @@ async function projectFor(c: any) {
 	return { ...project, id: String(project.id), role: access.role };
 }
 
-function fail(c: any, error: unknown) {
+function fail(c: Context<{ Bindings: Env; Variables: AppVariables }>, error: unknown): Response {
 	const message = error instanceof Error ? error.message : "Billing request failed";
 	return c.json({ error: message }, /not found/i.test(message) ? 404 : 422);
 }
@@ -63,7 +75,7 @@ admin.get("/:projectId", async (c) => {
 				.bind(project.id)
 				.first(),
 			c.env.DB.prepare(
-				"SELECT * FROM billing_products WHERE project_id = ? AND store IN ('apple','google') ORDER BY created_at DESC",
+				"SELECT * FROM billing_products WHERE project_id = ? AND store IN ('apple','google','stripe') ORDER BY created_at DESC",
 			)
 				.bind(project.id)
 				.all(),
@@ -243,7 +255,7 @@ admin.get("/:projectId/products", async (c) => {
 		const rows = await c.env.DB.prepare(`
       SELECT p.*, GROUP_CONCAT(pe.entitlement_id) AS entitlement_ids
       FROM billing_products p LEFT JOIN billing_product_entitlements pe ON pe.product_id = p.id
-      WHERE p.project_id = ? AND p.store IN ('apple','google') GROUP BY p.id ORDER BY p.created_at DESC
+      WHERE p.project_id = ? AND p.store IN ('apple','google','stripe') GROUP BY p.id ORDER BY p.created_at DESC
     `)
 			.bind(project.id)
 			.all();
@@ -258,11 +270,17 @@ admin.post("/:projectId/products", async (c) => {
 		const project = await projectFor(c);
 		const data = await body(c);
 		if (
-			!["apple", "google"].includes(data.store) ||
+			!["apple", "google", "stripe"].includes(String(data.store)) ||
 			!["subscription", "non_consumable", "consumable"].includes(data.product_type)
 		) {
 			throw new Error("Valid store and product_type are required");
 		}
+		if (
+			typeof data.store_product_id !== "string" ||
+			!data.store_product_id.trim() ||
+			data.store_product_id.length > 255
+		)
+			throw new Error("Store product identifier is required");
 		const id = crypto.randomUUID();
 		await c.env.DB.prepare(`
       INSERT INTO billing_products (id, project_id, application_id, store, environment, store_product_id, product_type, display_name, description, metadata)
@@ -434,11 +452,32 @@ admin.post("/:projectId/entitlements", async (c) => {
 		if (!/^[a-z0-9_.-]{1,80}$/.test(identifier))
 			throw new Error("Entitlement identifier is invalid");
 		const id = crypto.randomUUID();
-		await c.env.DB.prepare(
-			"INSERT INTO billing_entitlements (id, project_id, identifier, display_name, description) VALUES (?, ?, ?, ?, ?)",
+		const ids: string[] = [
+			...new Set<string>(Array.isArray(data.product_ids) ? data.product_ids.map(String) : []),
+		];
+		if (ids.length > 100) throw new Error("Select at most 100 products");
+		const valid = await c.env.DB.prepare(
+			"SELECT COUNT(*) AS count FROM billing_products WHERE project_id=? AND id IN (SELECT value FROM json_each(?))",
 		)
-			.bind(id, project.id, identifier, data.display_name || identifier, data.description || null)
-			.run();
+			.bind(project.id, JSON.stringify(ids))
+			.first<{ count: number }>();
+		if (valid?.count !== ids.length) throw new Error("One or more products are unavailable");
+		await c.env.DB.batch([
+			c.env.DB.prepare(
+				"INSERT INTO billing_entitlements (id, project_id, identifier, display_name, description) VALUES (?, ?, ?, ?, ?)",
+			).bind(id, project.id, identifier, data.display_name || identifier, data.description || null),
+			...ids.map((productId) =>
+				c.env.DB.prepare(
+					"INSERT INTO billing_product_entitlements(product_id,entitlement_id) VALUES(?,?)",
+				).bind(productId, id),
+			),
+		]);
+		await refreshCatalogEntitlement(
+			c.env,
+			String(project.id),
+			id,
+			project.isTest ? "sandbox" : "production",
+		);
 		return c.json({ id }, 201);
 	} catch (error) {
 		return fail(c, error);
@@ -460,6 +499,12 @@ admin.post("/:projectId/products/:productId/entitlements/:entitlementId", async 
 		)
 			.bind(c.req.param("productId"), c.req.param("entitlementId"))
 			.run();
+		await refreshCatalogEntitlement(
+			c.env,
+			String(project.id),
+			c.req.param("entitlementId"),
+			project.isTest ? "sandbox" : "production",
+		);
 		return c.json({ mapped: true });
 	} catch (error) {
 		return fail(c, error);
@@ -471,25 +516,33 @@ admin.post("/:projectId/offerings", async (c) => {
 		const project = await projectFor(c);
 		const data = await body(c);
 		const id = crypto.randomUUID();
+		const identifier = String(data.identifier || "").trim();
+		if (!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(identifier))
+			throw new Error("Offering identifier is invalid");
+		const placement = String(data.placement || "default").trim();
+		const statements = [];
 		if (data.is_current)
-			await c.env.DB.prepare("UPDATE billing_offerings SET is_current = 0 WHERE project_id = ?")
-				.bind(project.id)
-				.run();
-		await c.env.DB.prepare(`
+			statements.push(
+				c.env.DB.prepare(
+					"UPDATE billing_offerings SET is_current = 0 WHERE project_id = ? AND placement = ?",
+				).bind(project.id, placement),
+			);
+		statements.push(
+			c.env.DB.prepare(`
       INSERT INTO billing_offerings (id, project_id, identifier, display_name, description, placement, is_current, metadata)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-			.bind(
+    `).bind(
 				id,
 				project.id,
-				String(data.identifier),
-				data.display_name || data.identifier,
+				identifier,
+				data.display_name || identifier,
 				data.description || null,
-				data.placement || "default",
+				placement,
 				data.is_current ? 1 : 0,
 				JSON.stringify(data.metadata || {}),
-			)
-			.run();
+			),
+		);
+		await c.env.DB.batch(statements);
 		return c.json({ id }, 201);
 	} catch (error) {
 		return fail(c, error);
@@ -529,6 +582,12 @@ admin.post("/:projectId/entitlements/:entitlementId/products", async (c) => {
     `).bind(productId, entitlement.id),
 			),
 		);
+		await refreshCatalogEntitlement(
+			c.env,
+			String(project.id),
+			c.req.param("entitlementId"),
+			project.isTest ? "sandbox" : "production",
+		);
 		return c.json({ mapped: productIds.length });
 	} catch (error) {
 		return fail(c, error);
@@ -555,15 +614,20 @@ admin.post("/:projectId/offerings/:offeringId/packages", async (c) => {
 		];
 		if (productIds.length === 0 || productIds.length > 100)
 			throw new Error("Select between 1 and 100 products");
-		const placeholders = productIds.map(() => "?").join(",");
-		const valid = await c.env.DB.prepare(`
-      SELECT COUNT(*) AS count FROM billing_products
-      WHERE project_id = ? AND active = 1 AND id IN (${placeholders})
-    `)
-			.bind(project.id, ...productIds)
-			.first<{ count: number }>();
-		if (Number(valid?.count || 0) !== productIds.length)
+		const valid = await c.env.DB.prepare(`SELECT id,store,environment FROM billing_products
+			WHERE project_id=? AND active=1 AND id IN (SELECT value FROM json_each(?))`)
+			.bind(project.id, JSON.stringify(productIds))
+			.all<{ id: string; store: string; environment: string }>();
+		if (valid.results.length !== productIds.length)
 			throw new Error("One or more products are unavailable");
+		if (
+			new Set(valid.results.map((product) => product.store + ":" + product.environment)).size !==
+			productIds.length
+		)
+			throw new Error("Select only one product per store and environment");
+		const position = Number(data.position ?? 0);
+		if (!Number.isSafeInteger(position) || position < 0)
+			throw new Error("Package position is invalid");
 		const id = crypto.randomUUID();
 		await c.env.DB.batch([
 			c.env.DB.prepare(
@@ -573,7 +637,7 @@ admin.post("/:projectId/offerings/:offeringId/packages", async (c) => {
 				offering.id,
 				identifier,
 				data.package_type || "custom",
-				Number(data.position || 0),
+				position,
 				JSON.stringify(data.metadata || {}),
 			),
 			...productIds.map((productId) =>
@@ -583,6 +647,157 @@ admin.post("/:projectId/offerings/:offeringId/packages", async (c) => {
 			),
 		]);
 		return c.json({ id }, 201);
+	} catch (error) {
+		return fail(c, error);
+	}
+});
+
+admin.patch("/:projectId/offerings/:id", async (c) => {
+	try {
+		const project = await projectFor(c);
+		const data = await body(c);
+		const current = await c.env.DB.prepare(
+			"SELECT placement FROM billing_offerings WHERE id=? AND project_id=?",
+		)
+			.bind(c.req.param("id"), project.id)
+			.first<{ placement: string }>();
+		if (!current) throw new Error("Offering not found");
+		const placement = String(data.placement || current.placement);
+		const statements = [];
+		if (data.is_current)
+			statements.push(
+				c.env.DB.prepare(
+					"UPDATE billing_offerings SET is_current=0 WHERE project_id=? AND placement=?",
+				).bind(project.id, placement),
+			);
+		statements.push(
+			c.env.DB.prepare(`UPDATE billing_offerings SET display_name=COALESCE(?,display_name),
+			description=COALESCE(?,description),placement=?,is_current=COALESCE(?,is_current),
+			active=COALESCE(?,active),updated_at=datetime('now') WHERE id=? AND project_id=?`).bind(
+				data.display_name ?? null,
+				data.description ?? null,
+				placement,
+				data.is_current === undefined ? null : data.is_current ? 1 : 0,
+				data.active === undefined ? null : data.active ? 1 : 0,
+				c.req.param("id"),
+				project.id,
+			),
+		);
+		await c.env.DB.batch(statements);
+		return c.json({ updated: true });
+	} catch (error) {
+		return fail(c, error);
+	}
+});
+
+admin.patch("/:projectId/offerings/:offeringId/packages/:id", async (c) => {
+	try {
+		const project = await projectFor(c);
+		const data = await body(c);
+		const pkg = await c.env.DB.prepare(`SELECT p.id FROM billing_packages p
+			JOIN billing_offerings o ON o.id=p.offering_id WHERE p.id=? AND o.id=? AND o.project_id=?`)
+			.bind(c.req.param("id"), c.req.param("offeringId"), project.id)
+			.first();
+		if (!pkg) throw new Error("Package not found");
+		const identifier = String(data.identifier || "").trim();
+		if (!/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(identifier))
+			throw new Error("Package identifier is invalid");
+		const ids: string[] = [
+			...new Set<string>(Array.isArray(data.product_ids) ? data.product_ids.map(String) : []),
+		];
+		if (!ids.length || ids.length > 100) throw new Error("Select between 1 and 100 products");
+		const rows = await c.env.DB.prepare(`SELECT id,store,environment FROM billing_products
+			WHERE project_id=? AND active=1 AND id IN (SELECT value FROM json_each(?))`)
+			.bind(project.id, JSON.stringify(ids))
+			.all<{ id: string; store: string; environment: string }>();
+		if (rows.results.length !== ids.length) throw new Error("One or more products are unavailable");
+		if (new Set(rows.results.map((p) => p.store + ":" + p.environment)).size !== ids.length)
+			throw new Error("Select only one product per store and environment");
+		const position = Number(data.position ?? 0);
+		if (!Number.isSafeInteger(position) || position < 0)
+			throw new Error("Package position is invalid");
+		await c.env.DB.batch([
+			c.env.DB.prepare(
+				"UPDATE billing_packages SET identifier=?,package_type=?,position=?,updated_at=datetime('now') WHERE id=?",
+			).bind(identifier, String(data.package_type || "custom"), position, pkg.id),
+			c.env.DB.prepare("DELETE FROM billing_package_products WHERE package_id=?").bind(pkg.id),
+			...ids.map((id) =>
+				c.env.DB.prepare(
+					"INSERT INTO billing_package_products(package_id,product_id) VALUES(?,?)",
+				).bind(pkg.id, id),
+			),
+		]);
+		return c.json({ updated: true });
+	} catch (error) {
+		return fail(c, error);
+	}
+});
+
+admin.delete("/:projectId/offerings/:offeringId/packages/:id", async (c) => {
+	try {
+		const project = await projectFor(c);
+		const result = await c.env.DB.prepare(`DELETE FROM billing_packages WHERE id=? AND offering_id=?
+			AND offering_id IN (SELECT id FROM billing_offerings WHERE project_id=?)`)
+			.bind(c.req.param("id"), c.req.param("offeringId"), project.id)
+			.run();
+		if (!result.meta.changes) throw new Error("Package not found");
+		return c.json({ removed: true });
+	} catch (error) {
+		return fail(c, error);
+	}
+});
+
+admin.patch("/:projectId/entitlements/:id", async (c) => {
+	try {
+		const project = await projectFor(c);
+		const data = await body(c);
+		const entitlement = await c.env.DB.prepare(
+			"SELECT id FROM billing_entitlements WHERE id=? AND project_id=?",
+		)
+			.bind(c.req.param("id"), project.id)
+			.first();
+		if (!entitlement) throw new Error("Entitlement not found");
+		const statements = [
+			c.env.DB.prepare(`UPDATE billing_entitlements SET display_name=COALESCE(?,display_name),
+			description=COALESCE(?,description),active=COALESCE(?,active),updated_at=datetime('now') WHERE id=? AND project_id=?`).bind(
+				data.display_name ?? null,
+				data.description ?? null,
+				data.active === undefined ? null : data.active ? 1 : 0,
+				entitlement.id,
+				project.id,
+			),
+		];
+		if (data.product_ids !== undefined) {
+			if (!Array.isArray(data.product_ids) || data.product_ids.length > 100)
+				throw new Error("Select at most 100 products");
+			const ids: string[] = [...new Set<string>(data.product_ids.map(String))];
+			const valid = await c.env.DB.prepare(
+				"SELECT COUNT(*) AS count FROM billing_products WHERE project_id=? AND id IN (SELECT value FROM json_each(?))",
+			)
+				.bind(project.id, JSON.stringify(ids))
+				.first<{ count: number }>();
+			if (valid?.count !== ids.length) throw new Error("One or more products are unavailable");
+			statements.push(
+				c.env.DB.prepare("DELETE FROM billing_product_entitlements WHERE entitlement_id=?").bind(
+					entitlement.id,
+				),
+			);
+			statements.push(
+				...ids.map((id) =>
+					c.env.DB.prepare(
+						"INSERT INTO billing_product_entitlements(product_id,entitlement_id) VALUES(?,?)",
+					).bind(id, entitlement.id),
+				),
+			);
+		}
+		await c.env.DB.batch(statements);
+		await refreshCatalogEntitlement(
+			c.env,
+			String(project.id),
+			String(entitlement.id),
+			project.isTest ? "sandbox" : "production",
+		);
+		return c.json({ updated: true });
 	} catch (error) {
 		return fail(c, error);
 	}
@@ -784,6 +999,12 @@ admin.delete("/:projectId/entitlements/:id", async (c) => {
 			.bind(c.req.param("id"), project.id)
 			.run();
 		if (!result.meta.changes) throw new Error("Entitlement not found");
+		await refreshCatalogEntitlement(
+			c.env,
+			String(project.id),
+			c.req.param("id"),
+			project.isTest ? "sandbox" : "production",
+		);
 		return c.json({ archived: true });
 	} catch (error) {
 		return fail(c, error);
@@ -917,6 +1138,64 @@ admin.post("/:projectId/credentials/test", async (c) => {
 				platform: data.platform,
 				environment: project.isTest ? "sandbox" : "production",
 			}),
+		);
+	} catch (error) {
+		return fail(c, error);
+	}
+});
+
+admin.get("/:projectId/stripe", async (c) => {
+	try {
+		const project = await projectFor(c);
+		return c.json(
+			await stripeConnectionStatus(
+				c.env,
+				String(project.id),
+				project.isTest ? "sandbox" : "production",
+			),
+		);
+	} catch (error) {
+		return fail(c, error);
+	}
+});
+admin.post("/:projectId/stripe", async (c) => {
+	try {
+		const project = await projectFor(c);
+		if (!["owner", "admin"].includes(String(project.role)))
+			return c.json({ error: "Administrator access required" }, 403);
+		return c.json(
+			await configureStripe(
+				c.env,
+				String(project.id),
+				project.isTest ? "sandbox" : "production",
+				await body(c),
+			),
+		);
+	} catch (error) {
+		return fail(c, error);
+	}
+});
+admin.post("/:projectId/stripe/test", async (c) => {
+	try {
+		const project = await projectFor(c);
+		return c.json(
+			await testStripeConnection(
+				c.env,
+				String(project.id),
+				project.isTest ? "sandbox" : "production",
+			),
+		);
+	} catch (error) {
+		return fail(c, error);
+	}
+});
+admin.post("/:projectId/stripe/sync", async (c) => {
+	try {
+		const project = await projectFor(c);
+		if (!["owner", "admin"].includes(String(project.role)))
+			return c.json({ error: "Administrator access required" }, 403);
+		return c.json(
+			await syncStripeCatalog(c.env, String(project.id), project.isTest ? "sandbox" : "production"),
 		);
 	} catch (error) {
 		return fail(c, error);

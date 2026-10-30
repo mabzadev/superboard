@@ -5,6 +5,7 @@ import test from "node:test";
 
 import {
 	auditConfigurationBoundaries,
+	authenticationSurfaceErrors,
 	collectSecretBindingNames,
 	findForbiddenSharedOccurrences,
 	findHardcodedTargetCommands,
@@ -14,7 +15,7 @@ import {
 test("the standalone repository has its reference profile without an application target", async () => {
 	const report = await auditConfigurationBoundaries();
 	assert.equal(report.valid, true, report.errors.join("\n"));
-	assert.equal(report.classification.reference.target, "mbza-development");
+	assert.equal(report.classification.reference.target, "mabza-development");
 	assert.deepEqual(report.classification.reference.environments, ["development", "local"]);
 	assert.ok(report.classification.reference.cloudflareResourceIds > 0);
 	const applications = report.classification.applications.map(({ target }) => target);
@@ -68,12 +69,12 @@ test("shared source rejects target domains, resource ids and workstation paths",
 			'const receipt = "/Users/example/private/receipt.json";',
 		].join("\n"),
 		ownership: {
-			domainSuffixes: ["mbza.dev", "reference.example"],
+			domainSuffixes: ["mabza.dev", "reference.example"],
 			exactLiterals: [
 				{
 					value: resourceId,
 					kind: "cloudflare-resource-id",
-					target: "mbza-development",
+					target: "mabza-development",
 				},
 			],
 		},
@@ -93,7 +94,7 @@ test("common provider and service-binding URLs remain allowed", () => {
 			'fetch("https://api.cloudflare.com/client/v4/accounts")',
 		].join("\n"),
 		ownership: {
-			domainSuffixes: ["mbza.dev", "reference.example"],
+			domainSuffixes: ["mabza.dev", "reference.example"],
 			exactLiterals: [],
 		},
 	});
@@ -146,7 +147,7 @@ test("root scripts cannot silently select one application target", () => {
 				portable: "node scripts/check.mjs --target $SUPERBOARD_TARGET",
 				pinned: "node scripts/check.mjs --target reference-production --environment production",
 			},
-			["mbza-development", "reference-production"],
+			["mabza-development", "reference-production"],
 		),
 		[{ script: "pinned", target: "reference-production" }],
 	);
@@ -162,4 +163,42 @@ test("the public short-link social preview never constructs an HTTP URL", async 
 	);
 	assert.match(source, /const domainUrl = `https:\/\//u);
 	assert.doesNotMatch(source, /const domainUrl = `http:\/\//u);
+});
+
+test("consolidated authentication requires the SDK namespace and application signing keys", () => {
+	const target = {
+		domains: { auth: "sdk.example.test", sdk: "sdk.example.test" },
+		authGateway: {
+			issuer: "https://sdk.example.test/v1/auth",
+			jwksUrl: "https://sdk.example.test/v1/auth/.well-known/application-jwks.json",
+		},
+	};
+	assert.deepEqual(authenticationSurfaceErrors(target), []);
+	assert.equal(
+		authenticationSurfaceErrors({
+			...target,
+			authGateway: { ...target.authGateway, issuer: "https://sdk.example.test" },
+		}).length,
+		1,
+	);
+	assert.equal(
+		authenticationSurfaceErrors({
+			...target,
+			authGateway: {
+				...target.authGateway,
+				jwksUrl: "https://sdk.example.test/.well-known/jwks.json",
+			},
+		}).length,
+		1,
+	);
+	assert.deepEqual(
+		authenticationSurfaceErrors({
+			domains: { auth: "auth.example.test", sdk: "sdk.example.test" },
+			authGateway: {
+				issuer: "https://auth.example.test",
+				jwksUrl: "https://auth.example.test/.well-known/jwks.json",
+			},
+		}),
+		[],
+	);
 });

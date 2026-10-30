@@ -3,8 +3,10 @@ import {
 	pluginPackage,
 	componentSettingKey,
 	canonicalPluginId,
+	LEGACY_PLUGIN_IDS,
 } from "@superboard/contracts/plugin-packages";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
+import { createFetchRouter, type FetchRouteHandler } from "@superboard/contracts/route-registry";
 import type { APIContext } from "astro";
 import { unwrapResult } from "emdash/api/error";
 import {
@@ -16,17 +18,54 @@ import {
 import * as settings from "emdash/routes/api/admin/plugins/_id_/settings";
 
 import { resolveConfiguredPluginSettingKey } from "./configured-plugin.js";
+import { registerSiteRouteSource } from "./site-route-registry.js";
 
-export async function dispatchSettingsPluginApi(
+type SettingsState = { context: APIContext; pluginId: string };
+const settingsRoutes = createFetchRouter<SettingsState>({
+	service: "site",
+	module: "settings-plugin",
+	pluginId: "superboard-settings",
+	surface: "internal",
+	access: "operator",
+});
+settingsRoutes
+	.defineRoute({ id: "site:settings:versions" })
+	.get("/_emdash/api/superboard/settings/versions", ({ request, env }) =>
+		request.method === "GET"
+			? handleSettings(env.context, request, env.pluginId, true)
+			: Response.json({ error: { code: "NOT_FOUND" } }, { status: 404 }),
+	);
+const settingsPath = "/_emdash/api/admin/plugins/:pluginId/settings";
+const settingsHandler: FetchRouteHandler<SettingsState> = ({ request, params, env }) =>
+	params.pluginId === env.pluginId
+		? handleSettings(env.context, request, env.pluginId, false)
+		: Response.json({ error: { code: "NOT_FOUND" } }, { status: 404 });
+for (const method of ["GET", "PUT"] as const)
+	settingsRoutes
+		.defineRoute({ id: `site:settings:${method.toLowerCase()}` })
+		.on(method, settingsPath, settingsHandler);
+settingsRoutes.defineRoute({ transport: "fallback" }).all(settingsPath, settingsHandler);
+registerSiteRouteSource("settings-plugin", settingsRoutes);
+
+export function dispatchSettingsPluginApi(
 	context: APIContext,
 	request: Request,
-	pluginId = "supbrd-plug-settings",
+	pluginId = "superboard-settings",
+): Promise<Response> {
+	return settingsRoutes.fetch(request, { context, pluginId });
+}
+
+async function handleSettings(
+	context: APIContext,
+	request: Request,
+	pluginId: string,
+	versions: boolean,
 ): Promise<Response> {
 	const url = new URL(request.url);
 	const owner = pluginPackage(pluginId);
 	const aliased = owner && owner.components.includes(pluginId) && owner.id !== pluginId;
 	const canonical = pluginId === owner?.directory;
-	if (url.pathname === "/_emdash/api/superboard/settings/versions" && request.method === "GET") {
+	if (versions) {
 		const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 50));
 		let query = context.locals.emdash.db
 			.selectFrom("_emdash_plugin_setting_versions")
@@ -72,8 +111,6 @@ export async function dispatchSettingsPluginApi(
 			},
 		});
 	}
-	if (url.pathname !== `/_emdash/api/admin/plugins/${pluginId}/settings`)
-		return Response.json({ error: { code: "NOT_FOUND" } }, { status: 404 });
 	const target = { ...context, request, url, params: { id: owner?.id ?? pluginId } };
 	if (!owner)
 		return request.method === "GET"
@@ -84,11 +121,19 @@ export async function dispatchSettingsPluginApi(
 	const denied = requirePerm(context.locals.user, "plugins:manage");
 	if (denied) return denied;
 	const runtime = context.locals.emdash;
-	const schema = getPluginSettingsSchema(
-		runtime.configuredPlugins,
-		runtime.sandboxedPluginEntries,
-		owner.id,
-	);
+	const legacyId = Object.entries(LEGACY_PLUGIN_IDS).find(
+		([, entryCanonical]) => entryCanonical === owner.id,
+	)?.[0];
+	const candidateIds = [owner.id, owner.directory, pluginId, ...(legacyId ? [legacyId] : [])];
+	let schema = null;
+	for (const candidate of candidateIds) {
+		schema = getPluginSettingsSchema(
+			runtime.configuredPlugins,
+			runtime.sandboxedPluginEntries,
+			candidate,
+		);
+		if (schema) break;
+	}
 	if (!schema) return Response.json({ error: { code: "PLUGIN_NOT_FOUND" } }, { status: 404 });
 	const keyForSetting = (key: string) => {
 		const location = componentSettingKey(owner.id, key);

@@ -216,7 +216,7 @@ async function deliverOptin(
 	);
 	const confirmationTitle = french ? "Confirmez votre inscription" : "Confirm your subscription";
 	const confirmationAction = french ? "Confirmer l’inscription" : "Confirm subscription";
-	const confirmationUrl = `${env.PUBLIC_API_URL}/api/v1/marketing/opt-in/${job.token}`;
+	const confirmationUrl = `${env.PUBLIC_API_URL}/v1/communication/marketing/opt-in/${job.token}`;
 	await sendSmtpMessage(env, {
 		idempotencyKey: `marketing.optin:${job.projectId}:${job.outboxId}:${profile.id}`,
 		projectId: job.projectId,

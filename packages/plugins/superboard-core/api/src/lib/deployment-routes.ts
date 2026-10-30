@@ -2,55 +2,73 @@ import type {
 	DeploymentConfiguration,
 	DeploymentRoute,
 } from "@superboard/contracts/deployment-configuration";
+import {
+	routeDestinations,
+	registeredRoutes,
+	type RouteDescriptor,
+} from "@superboard/contracts/route-registry";
 
 export function deploymentRoutes(
-	routes: readonly { method: string; path: string }[],
+	router: Parameters<typeof registeredRoutes>[0],
 	configuration: DeploymentConfiguration,
-	sdkRoutes: readonly { method: string; path: string }[] = [],
-	isClientRoute: (path: string) => boolean = () => false,
+	observed: readonly RouteDescriptor[] = registeredRoutes(router),
 ): DeploymentRoute[] {
-	const endpoints = new Map(configuration.endpoints.map((item) => [item.surface, item.url]));
-	const seen = new Set<string>();
-	const result: DeploymentRoute[] = [];
-	const add = (
-		route: { method: string; path: string },
-		surface: string,
-		worker: string,
-		clients: string[],
-	) => {
-		if (route.path.startsWith("/internal") || route.path === "*" || route.path === "/*") return;
-		const origin = endpoints.get(surface);
-		if (!origin) return;
-		const key = `${surface}:${route.method}:${route.path}`;
-		if (seen.has(key)) return;
-		seen.add(key);
-		result.push({
-			method: route.method,
-			path: route.path,
-			surface,
-			worker,
-			clients,
-			url: `${origin}${route.path}`,
-		});
-	};
-	for (const route of sdkRoutes)
-		add(
-			route,
-			route.path.startsWith("/custom/") ? "custom-api" : "sdk",
-			route.path.startsWith("/custom/") ? "custom" : "api",
-			["mobile", "web"],
-		);
-	for (const route of routes) {
-		if (route.path.includes("/custom/")) continue;
-		if (route.path.startsWith("/api/v1/sdk") || isClientRoute(route.path))
-			add(route, "sdk", "api", ["mobile", "web"]);
-	}
-	return result.sort(
-		(a, b) =>
-			a.surface.localeCompare(b.surface) ||
-			a.path.localeCompare(b.path) ||
-			a.method.localeCompare(b.method),
+	const origins = new Map(
+		configuration.endpoints.map((endpoint) => [endpoint.surface, endpoint.url]),
 	);
+	const surfaces = {
+		sdk: "sdk",
+		board: "console",
+		shortlinks: "links",
+		"custom-api": "custom-api",
+	} as const;
+	return observed
+		.map((route): DeploymentRoute => {
+			const origin =
+				route.surface === "internal" ? undefined : origins.get(surfaces[route.surface]);
+			const destination = origin ? new URL(origin) : undefined;
+			if (destination) destination.pathname = route.path;
+			return {
+				transport: route.transport,
+				...(route.executionScope ? { executionScope: route.executionScope } : {}),
+				...(routeDestinations(route).length ? { destinations: routeDestinations(route) } : {}),
+				id: route.id,
+				routeId: route.routeId,
+				pluginId: route.pluginId,
+				method: route.method,
+				path: route.path,
+				surface: route.surface,
+				...(destination ? { url: destination.href } : {}),
+				worker: route.service,
+				clients:
+					route.surface === "internal"
+						? ["service"]
+						: route.surface === "board"
+							? ["operator"]
+							: ["mobile", "web"],
+				kind: route.kind,
+				access: route.access,
+				...("availability" in route &&
+				(route.availability === "current" || route.availability === "stale")
+					? { availability: route.availability }
+					: {}),
+				...("buildId" in route && typeof route.buildId === "string"
+					? { buildId: route.buildId }
+					: {}),
+				...("observedAt" in route && typeof route.observedAt === "string"
+					? { observedAt: route.observedAt }
+					: {}),
+				...("origin" in route && (route.origin === "cms" || route.origin === "superboard")
+					? { origin: route.origin }
+					: {}),
+			};
+		})
+		.sort(
+			(a, b) =>
+				a.surface.localeCompare(b.surface) ||
+				a.path.localeCompare(b.path) ||
+				a.method.localeCompare(b.method),
+		);
 }
 
 export function deploymentWebOrigins(raw: string | undefined): string[] {

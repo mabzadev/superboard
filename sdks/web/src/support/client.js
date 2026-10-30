@@ -1,8 +1,8 @@
 import { SuperBoardSupportException, isRecord } from "./error.js";
 import { SuperBoardSupportRealtime } from "./realtime.js";
 
-export const SUPERBOARD_SUPPORT_WIDGET_PATH = "/api/v1/support-widget";
-export const SUPERBOARD_SUPPORT_REALTIME_PATH = "/api/v1/support/realtime";
+export const SUPERBOARD_SUPPORT_WIDGET_PATH = "/v1/communication/support/widget";
+export const SUPERBOARD_SUPPORT_REALTIME_PATH = "/v1/communication/support/realtime";
 
 const MAX_PAGE_SIZE = 100;
 const MAX_CURSOR_LENGTH = 512;
@@ -16,7 +16,7 @@ const TRANSIENT_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
  * Client for the native SuperBoard Support widget API.
  *
  * The configured URL may be either an HTTP(S) origin or the complete
- * `/api/v1/support-widget` URL. The public Support prefix is applied exactly
+ * `/v1/communication/support/widget` URL. The public Support prefix is applied exactly
  * once.
  */
 export class SuperBoardSupportClient {

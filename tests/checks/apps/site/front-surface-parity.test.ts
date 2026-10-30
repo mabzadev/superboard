@@ -112,7 +112,7 @@ test("runtime plugin manifests expose the canonical functional surface instead o
 		expect(manifest.commands, `${manifest.plugin_id} has no commands`).not.toHaveLength(0);
 		expect(manifest.data_sources, `${manifest.plugin_id} has no data sources`).not.toHaveLength(0);
 		expect(manifest.schemas, `${manifest.plugin_id} has no schemas`).not.toHaveLength(0);
-		if (manifest.plugin_id !== "supbrd-plug-audit") {
+		if (manifest.plugin_id !== "superboard-audit") {
 			expect(manifest.renderers, `${manifest.plugin_id} has no renderers`).not.toHaveLength(0);
 		}
 		expect(

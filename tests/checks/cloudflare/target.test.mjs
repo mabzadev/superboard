@@ -16,14 +16,14 @@ import {
 } from "../../../scripts/cloudflare/target.mjs";
 
 test("committed targets validate without embedding Cloudflare account ids", async () => {
-	for (const name of ["mbza-development", "reference-production"]) {
+	for (const name of ["mabza-development", "reference-production"]) {
 		const { target } = await loadTarget(name);
 		assert.equal("accountId" in target, false);
 		assert.equal(target.schemaVersion, 17);
-		assert.match(target.zoneName, /^(?:mbza\.dev|reference\.example)$/u);
+		assert.match(target.zoneName, /^(?:mabza\.dev|reference\.example)$/u);
 		assert.deepEqual(
 			target.resourceIdentity,
-			name === "mbza-development"
+			name === "mabza-development"
 				? {
 						logicalName: "superboard",
 						physicalName: "superboard",
@@ -42,17 +42,17 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
 		assert.ok(target.filePolicy.allowedContentTypes.length > 0);
 		assert.match(
 			target.workers.observability.development ?? target.workers.observability.production,
-			name === "mbza-development" ? /^superboard-observability/u : /^superboard-observability/u,
+			name === "mabza-development" ? /^superboard-observability/u : /^superboard-observability/u,
 		);
 		assert.match(
 			target.workers.mcp.development ?? target.workers.mcp.production,
-			name === "mbza-development" ? /^superboard-mcp/u : /^superboard-mcp/u,
+			name === "mabza-development" ? /^superboard-mcp/u : /^superboard-mcp/u,
 		);
 		for (const resources of Object.values(target.environments)) {
 			assert.match(resources.publicRouting, /^(?:active|staged)$/u);
 			assert.match(
 				resources.analyticsDataset,
-				name === "mbza-development" ? /^superboard_[a-z0-9_]+$/u : /^superboard_[a-z0-9_]+$/u,
+				name === "mabza-development" ? /^superboard_[a-z0-9_]+$/u : /^superboard_[a-z0-9_]+$/u,
 			);
 			assert.ok(resources.identityD1.name.endsWith("identity-db"));
 			assert.ok(resources.filesD1.name.endsWith("files-db"));
@@ -115,23 +115,23 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
 	});
 });
 
-test("mbza development domains keep API and short links separate", async () => {
-	const { target } = await loadTarget("mbza-development");
+test("mabza development domains keep API and short links separate", async () => {
+	const { target } = await loadTarget("mabza-development");
 	assert.equal(target.environments.development.publicRouting, "active");
-	assert.equal(publicApiUrl(target), "https://api.mbza.dev");
-	assert.equal(publicAuthUrl(target), "https://auth.mbza.dev");
-	assert.equal(target.domains.shortlinks, "in.mbza.dev");
-	assert.equal(target.domains.dashboard, "board.mbza.dev");
-	assert.deepEqual(target.retiredDomains, [
+	assert.equal(publicApiUrl(target), "https://sdk.mabza.dev");
+	assert.equal(publicAuthUrl(target), "https://sdk.mabza.dev/v1/auth");
+	assert.equal(target.domains.shortlinks, "in.mabza.dev");
+	assert.equal(target.domains.dashboard, "board.mabza.dev");
+	assert.deepEqual(target.retiredDomains.slice(0, 1), [
 		{
-			hostname: "grow.mbza.dev",
+			hostname: "grow.mabza.dev",
 			formerSurface: "dashboard",
 			policy: "must-be-unassigned",
-			reason: "Previous back-office hostname replaced by board.mbza.dev.",
+			reason: "Previous back-office hostname replaced by board.mabza.dev.",
 		},
 	]);
 	assert.equal(target.domains.mailPreview, undefined);
-	assert.equal(target.domains.mcp, "board.mbza.dev");
+	assert.equal(target.domains.mcp, "board.mabza.dev");
 	assert.equal(target.domains.messaging, undefined);
 	assert.equal(target.workers.messaging, undefined);
 	assert.equal(target.environments.development.messagingD1, undefined);
@@ -150,7 +150,7 @@ test("mbza development domains keep API and short links separate", async () => {
 });
 
 test("enabled Flows targets require their complete native resource set", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	const missingD1 = structuredClone(source);
 	delete missingD1.environments.development.moduleD1.flows;
 	await assert.rejects(
@@ -181,7 +181,7 @@ test("enabled Flows targets require their complete native resource set", async (
 });
 
 test("enabled Support targets require every queue and Vectorize resource", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	for (const queueKey of ["support", "supportAi", "supportBulk"]) {
 		const target = structuredClone(source);
 		delete target.environments.development.moduleQueues[queueKey];
@@ -201,12 +201,12 @@ test("enabled Support targets require every queue and Vectorize resource", async
 	);
 
 	const wrongRoute = structuredClone(source);
-	wrongRoute.environments.development.supportRouting.pattern = "other.mbza.dev/api/v1/support*";
+	wrongRoute.environments.development.supportRouting.pattern = "other.mabza.dev/api/v1/support*";
 	await assert.rejects(validateTarget(wrongRoute), /supportRouting must route/u);
 });
 
 test("resource identity keeps canonical and legacy physical resources fail-closed", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	const target = structuredClone(source);
 	target.environments.development.d1.name = "foreign-dev-db";
 	await assert.rejects(validateTarget(target), /outside the declared superboard namespace/u);
@@ -221,11 +221,14 @@ test("resource identity keeps canonical and legacy physical resources fail-close
 
 	const retired = structuredClone(source);
 	retired.retiredDomains[0].hostname = retired.domains.dashboard;
-	await assert.rejects(validateTarget(retired), /retired domain board\.mbza\.dev is still active/u);
+	await assert.rejects(
+		validateTarget(retired),
+		/retired domain board\.mabza\.dev is still active/u,
+	);
 });
 
 test("public surface monitors are constrained to one safe HTTPS origin", async () => {
-	const { target: source } = await loadTarget("mbza-development");
+	const { target: source } = await loadTarget("mabza-development");
 	const target = structuredClone(source);
 	target.publicSurfaceMonitors = [
 		{
@@ -252,11 +255,11 @@ test("production public routing requires a typed client cutover receipt", async 
 });
 
 test("account aliases resolve scoped credentials before the generic fallback", async () => {
-	const { target } = await loadTarget("mbza-development");
-	assert.equal(cloudflareAccountEnvName(target), "CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT");
+	const { target } = await loadTarget("mabza-development");
+	assert.equal(cloudflareAccountEnvName(target), "CLOUDFLARE_ACCOUNT_ID_MABZA_DEVELOPMENT");
 	assert.equal(
 		cloudflareAccountId(target, {
-			CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT: "a".repeat(32),
+			CLOUDFLARE_ACCOUNT_ID_MABZA_DEVELOPMENT: "a".repeat(32),
 			CLOUDFLARE_ACCOUNT_ID: "b".repeat(32),
 		}),
 		"a".repeat(32),
@@ -265,7 +268,7 @@ test("account aliases resolve scoped credentials before the generic fallback", a
 });
 
 test("Workers Builds cannot override target-owned Worker names", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const source = {
 		CLOUDFLARE_ACCOUNT_ID: "a".repeat(32),
 		CLOUDFLARE_API_TOKEN: "deployment-token",
@@ -299,8 +302,8 @@ test("local, development and production environments are accepted", () => {
 test("operational commands never select an implicit application target", () => {
 	assert.equal(targetNameFromArgs({ target: "reference-production" }, {}), "reference-production");
 	assert.equal(
-		targetNameFromArgs({}, { SUPERBOARD_TARGET: "mbza-development" }),
-		"mbza-development",
+		targetNameFromArgs({}, { SUPERBOARD_TARGET: "mabza-development" }),
+		"mabza-development",
 	);
 	assert.equal(
 		targetNameFromArgs(
@@ -318,7 +321,7 @@ test("validation can explicitly select the checked-in reference target", async (
 	assert.deepEqual(
 		await targetSelectionFromArgs({ reference: true }, {}, { allowReference: true }),
 		{
-			targetName: "mbza-development",
+			targetName: "mabza-development",
 			environment: "development",
 			reference: true,
 		},

@@ -183,7 +183,7 @@ async function start() {
 	}
 	await recoverStoppedLocalPluginTasks({
 		directory: resolve(state, "v3/d1"),
-		instanceId: compiled.target,
+		instanceId: compiled.instance.id,
 		ports: [
 			Number(args.port ?? 4321),
 			...materialization.services

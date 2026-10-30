@@ -1,3 +1,15 @@
+const identityClaims = {
+	iss: "https://auth.example.test",
+	sub: "user-1",
+	azp: "client",
+	aud: "client",
+	exp: 0,
+	iat: 0,
+	email: null,
+	first_name: null,
+	last_name: null,
+	locale: "en",
+};
 import * as shared from "@melody-auth/shared";
 import * as webModule from "@melody-auth/web";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";

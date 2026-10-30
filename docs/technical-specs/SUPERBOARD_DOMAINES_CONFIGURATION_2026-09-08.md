@@ -2,23 +2,23 @@
 
 Choix utilisateur du 8 septembre 2026 : six sous-domaines canoniques par instance et un endpoint MCP sous la console. Ce choix remplace la partie domaines de la proposition de simplification. Le regroupement des plugins reste une proposition distincte.
 
-| Usage             | MBZA                         | Vocostar                         |
-| ----------------- | ---------------------------- | -------------------------------- |
-| Console et EmDash | `board.mbza.dev`             | `board.vocostar.com`             |
-| API custom        | `api.mbza.dev`               | `api.vocostar.com`               |
-| Authentification  | `auth.mbza.dev`              | `auth.vocostar.com`              |
-| Fichiers          | `files.mbza.dev`             | `files.vocostar.com`             |
-| Liens courts      | `in.mbza.dev`                | `in.vocostar.com`                |
-| SDK               | `sdk.mbza.dev`               | `sdk.vocostar.com`               |
-| MCP               | `https://board.mbza.dev/mcp` | `https://board.vocostar.com/mcp` |
+| Usage             | MABZA                         | Vocostar                         |
+| ----------------- | ----------------------------- | -------------------------------- |
+| Console et EmDash | `board.mabza.dev`             | `board.vocostar.com`             |
+| API custom        | `api.mabza.dev`               | `api.vocostar.com`               |
+| Authentification  | `auth.mabza.dev`              | `auth.vocostar.com`              |
+| Fichiers          | `files.mabza.dev`             | `files.vocostar.com`             |
+| Liens courts      | `in.mabza.dev`                | `in.vocostar.com`                |
+| SDK               | `sdk.mabza.dev`               | `sdk.vocostar.com`               |
+| MCP               | `https://board.mabza.dev/mcp` | `https://board.vocostar.com/mcp` |
 
 ## Sources de configuration
 
-`infra/targets/mbza-development.json` et `infra/targets/vocostar.json` définissent les domaines, les workers et les environnements. `domainAliases` conserve les anciennes adresses pour préparer la migration ; ces alias ne sont pas comptés parmi les six noms canoniques. Leur déclaration ne constitue pas une preuve de rattachement dans Cloudflare.
+`infra/targets/mabza-development.json` et `infra/targets/vocostar.json` définissent les domaines, les workers et les environnements. `domainAliases` conserve les anciennes adresses pour préparer la migration ; ces alias ne sont pas comptés parmi les six noms canoniques. Leur déclaration ne constitue pas une preuve de rattachement dans Cloudflare.
 
 Le compilateur produit une projection publique de la configuration, son empreinte et la variable `SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON` pour le Site et l’API. Cette projection sélectionne explicitement les champs affichables. Elle n’exporte ni les secrets ni les valeurs arbitraires des variables des workers.
 
-La page **EmDash → Settings → Configuration** se trouve à `/_emdash/admin/plugins/supbrd-plug-settings/configuration`. Les paramètres du front, `/project-settings`, affichent également les adresses et un lien vers cette page. L’accès exige la permission opérateur `settings:manage`.
+La page **EmDash → Settings → Configuration** se trouve à `/_emdash/admin/plugins/superboard-settings/configuration`. Les paramètres du front, `/project-settings`, affichent également les adresses et un lien vers cette page. L’accès exige la permission opérateur `settings:manage`.
 
 La page interroge le worker API avec le bridge opérateur signé. Le worker renvoie ses routes Hono enregistrées et la configuration qu’il a chargée. Le Site refuse de mélanger deux cibles ou environnements. Si la découverte distante échoue, il affiche la configuration déclarée avec un état d’indisponibilité des routes, sans annoncer un déploiement vérifié. Le résumé du front se recharge toutes les 30 secondes.
 

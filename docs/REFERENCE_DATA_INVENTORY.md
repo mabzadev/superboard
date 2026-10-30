@@ -33,26 +33,26 @@ client.
 Its deployment contract is the strict, versioned
 `apps/reference/reference.project.json` manifest. It binds the `dev` branch to
 the GitHub `development` Environment, the assets-only Worker
-`superboard-reference-app-dev` and `https://reference.mbza.dev`. Account ID and API
+`superboard-reference-app-dev` and `https://reference.mabza.dev`. Account ID and API
 token remain GitHub Environment secrets and are intentionally absent from the
 manifest. The generated Wrangler file is ignored.
 
 ### Complete reference build configuration
 
-| Dart define                      | Example on MBZA                                  | Secret?                                       |
+| Dart define                      | Example on MABZA                                  | Secret?                                       |
 | -------------------------------- | ------------------------------------------------ | --------------------------------------------- |
 | `SUPERBOARD_ENVIRONMENT`         | `development`                                    | no                                            |
-| `SUPERBOARD_TARGET`              | `mbza-development`                               | no                                            |
-| `SUPERBOARD_API_URL`             | `https://api.mbza.dev`                           | no                                            |
-| `SUPERBOARD_SDK_URL`             | `https://sdk.mbza.dev`                           | no                                            |
-| `SUPERBOARD_SUPPORT_URL`         | `https://api.mbza.dev/api/v1/support-client`     | no                                            |
-| `SUPERBOARD_SHORT_LINKS_URL`     | `https://in.mbza.dev`                            | no                                            |
-| `SUPERBOARD_FILES_URL`           | `https://files.mbza.dev`                         | no                                            |
-| `SUPERBOARD_MAIL_PREVIEW_URL`    | `https://mail.mbza.dev`                          | no                                            |
+| `SUPERBOARD_TARGET`              | `mabza-development`                               | no                                            |
+| `SUPERBOARD_API_URL`             | `https://api.mabza.dev`                           | no                                            |
+| `SUPERBOARD_SDK_URL`             | `https://sdk.mabza.dev`                           | no                                            |
+| `SUPERBOARD_SUPPORT_URL`         | `https://api.mabza.dev/api/v1/support-client`     | no                                            |
+| `SUPERBOARD_SHORT_LINKS_URL`     | `https://in.mabza.dev`                            | no                                            |
+| `SUPERBOARD_FILES_URL`           | `https://files.mabza.dev`                         | no                                            |
+| `SUPERBOARD_MAIL_PREVIEW_URL`    | `https://mail.mabza.dev`                          | no                                            |
 | `SUPERBOARD_PROJECT_ID`          | provisioned test project numeric ID              | no                                            |
 | `SUPERBOARD_PROJECT_KEY`         | provisioned SDK access key                       | yes; CI/FlutterFlow secret                    |
 | `SUPERBOARD_SDK_PLATFORM`        | `web`                                            | no                                            |
-| `SUPERBOARD_SDK_IDENTIFIER`      | `reference.mbza.dev`                             | no; must match the registered SDK application |
+| `SUPERBOARD_SDK_IDENTIFIER`      | `reference.mabza.dev`                             | no; must match the registered SDK application |
 | `SUPERBOARD_PROJECT_ENVIRONMENT` | `test`                                           | no                                            |
 | `SUPERBOARD_LIVE_MODE`           | `false` by default, `true` for integration tests | no                                            |
 
@@ -87,7 +87,7 @@ and the embedded Chatwoot administration path.
 Private Service Binding health and public routed-HTTPS health are displayed as
 separate signals. The latter includes the HTTP status and latency of every
 standard target domain plus Git-declared `publicSurfaceMonitors`, including the
-MBZA reference application. The standard set includes the target MCP endpoint;
+MABZA reference application. The standard set includes the target MCP endpoint;
 Email and Marketing health detail is also normalized into the Background jobs
 card so queued, sending, failed, bounced, complained and dead-letter work is
 visible without direct D1 access.
@@ -225,7 +225,7 @@ email, Support and Marketing. Legacy Messaging queues are not deployed when
 `features.messaging=false`. Queue payloads are transient delivery
 contracts; durable business state remains in the owning D1.
 
-Custom Worker schedules are equally target-owned: MBZA declares a daily
+Custom Worker schedules are equally target-owned: MABZA declares a daily
 reference-retention cron, while VocoStar declares its one-minute dispatcher
 retry. No capability name implicitly creates a Cloudflare trigger.
 

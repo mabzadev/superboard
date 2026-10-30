@@ -69,10 +69,10 @@ async function render(node: ReactNode) {
 			<FrontContextProvider
 				value={{
 					instanceId: "42",
-					pluginId: "supbrd-plugmod-email",
+					pluginId: "superboard-email",
 					operator: null,
 					projectScope: null,
-					activePluginIds: ["supbrd-plugmod-email", "supbrd-plugmod-files", "supbrd-plugmod-mcp"],
+					activePluginIds: ["superboard-email", "superboard-files", "superboard-mcp"],
 					parameters: {},
 					path: "/email",
 					locale: "en",

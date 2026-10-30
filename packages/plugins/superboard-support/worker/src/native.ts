@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { isSafePublicHttpsUrl } from "@superboard/contracts/url-security";
 import { Hono } from "hono";
 
@@ -421,7 +422,7 @@ const resources: Resource[] = [
 	},
 ];
 
-const native = new Hono<{ Bindings: NativeEnv }>();
+const native = registerRouter(new Hono<{ Bindings: NativeEnv }>(), {"service":"support","module":"native.native","pluginId":"superboard-support","surface":"internal","access":"framework"});
 
 for (const resource of resources) {
 	native.get(`/:projectId/${resource.path}`, async (c) => {

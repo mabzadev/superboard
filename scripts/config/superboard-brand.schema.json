@@ -68,13 +68,13 @@
 			"required": ["dashboard", "reference", "shortLinks"],
 			"properties": {
 				"dashboard": {
-					"const": "board.mbza.dev"
+					"const": "board.mabza.dev"
 				},
 				"reference": {
-					"const": "reference.mbza.dev"
+					"const": "reference.mabza.dev"
 				},
 				"shortLinks": {
-					"const": "in.mbza.dev"
+					"const": "in.mabza.dev"
 				}
 			}
 		},

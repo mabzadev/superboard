@@ -1,6 +1,6 @@
 [
   {
-    "plugin_id": "supbrd-plugmod-observability",
+    "plugin_id": "superboard-observability",
     "route_id": "superboard.infrastructure",
     "scenario": "functional",
     "status": "passed",

@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import type { DeploymentConfiguration } from "@superboard/contracts/deployment-configuration";
 import { Hono } from "hono";
 import { expect, test } from "vitest";
@@ -30,19 +31,28 @@ test("newly registered SDK routes appear automatically without exposing handlers
 			},
 		],
 	};
-	const app = new Hono();
+	const app = registerRouter(new Hono(), {
+		service: "api",
+		module: "test",
+		pluginId: "supbrd-core",
+		surface: "sdk",
+		access: "sdk-key",
+	});
 	app.get("/new-mobile-or-web-route", (c) => c.text("private-handler-content"));
-	const routes = deploymentRoutes([], config, app.routes);
-	expect(routes).toEqual([
-		{
-			method: "GET",
-			path: "/new-mobile-or-web-route",
-			surface: "sdk",
-			url: "https://sdk.example.test/new-mobile-or-web-route",
-			worker: "api",
-			clients: ["mobile", "web"],
-		},
-	]);
+	const routes = deploymentRoutes(app, config);
+	expect(routes).toEqual(
+		["GET", "HEAD"].map((method) =>
+			expect.objectContaining({
+				method,
+				path: "/new-mobile-or-web-route",
+				surface: "sdk",
+				url: "https://sdk.example.test/new-mobile-or-web-route",
+				worker: "api",
+				pluginId: "supbrd-core",
+				clients: ["mobile", "web"],
+			}),
+		),
+	);
 	expect(JSON.stringify(routes)).not.toContain("private-handler-content");
 });
 

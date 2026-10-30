@@ -36,7 +36,7 @@ secret of its own.
 There is one automatic deployment authority per target.
 
 Cloudflare Workers Builds runs validation and deployment for each instance.
-`dev` deploys `mbza-development`; production installations follow `main` in
+`dev` deploys `mabza-development`; production installations follow `main` in
 their own Cloudflare accounts. One Site Worker connection deploys the complete
 instance after its build checks pass. The deployment token must cover every
 Worker and resource owned by that instance.
@@ -75,7 +75,7 @@ The common SuperBoard Email Worker handles transactional/test mail. It stores an
 idempotent message ledger, queues SMTP delivery, leases each recipient before an
 external side effect and quarantines exhausted work in its DLQ. API and Identity
 reach it only through a private Service Binding. The development target captures
-mail for `mail.mbza.dev`; production targets use an SMTP password stored as a
+mail for `mail.mabza.dev`; production targets use an SMTP password stored as a
 Worker secret. Each manifest only contains the transport mode and public sender
 identity.
 
@@ -127,10 +127,10 @@ reach Queue returns the item to quarantine.
 
 Every target declares a strict `resourceIdentity` contract. `logicalName` is
 the current product namespace shown to operators; `physicalName` is the
-namespace that Cloudflare must actually resolve. The fresh MBZA target uses
+namespace that Cloudflare must actually resolve. The fresh MABZA target uses
 `superboard` for both namespaces with `migrationStrategy: canonical`; its first
 provisioning creates canonical `superboard-*` resources because no historical
-MBZA platform resources exist in the selected account. VocoStar uses
+MABZA platform resources exist in the selected account. VocoStar uses
 `logicalName: superboard`, `physicalName: superboard` and
 `migrationStrategy: retain-physical-name` because its production resources own
 historical data. `previousNames` records only a physical namespace that is
@@ -190,8 +190,8 @@ deployment workflow verifies it before any domain inspection or mutation.
    explicitly. The command is read-only and never adopts or deletes DNS.
    `retiredDomains` must be unassigned and free of DNS records; any unregistered
    custom domain still attached to a target Worker is reported as a blocking
-   orphan. For MBZA, `board.mbza.dev` is the canonical back office,
-   `grow.mbza.dev` is retired, and `in.mbza.dev` remains the short-link domain.
+   orphan. For MABZA, `board.mabza.dev` is the canonical back office,
+   `grow.mabza.dev` is retired, and `in.mabza.dev` remains the short-link domain.
 2. Upload new Worker versions with `--preflight --upload-only`. This omits
    custom domains, D1 migrations, API queue consumers and cron triggers.
 3. Upload runtime secrets and validate private service readiness.

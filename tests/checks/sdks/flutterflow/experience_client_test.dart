@@ -44,7 +44,7 @@ void main() {
     final cached = await client.resolvePaywall(placement: 'default');
 
     expect(calls, 1);
-    expect(request.url.path, '/api/v1/paywalls/resolve');
+    expect(request.url.path, '/v1/monetization/paywalls/resolve');
     expect(request.headers['PROJECT-KEY'], 'test_project_key');
     expect(request.headers['PLATFORM'], 'ios');
     expect(request.headers['IDENTIFIER'], 'com.example.app');

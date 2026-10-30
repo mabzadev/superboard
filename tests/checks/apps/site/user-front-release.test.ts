@@ -3,6 +3,8 @@ import {
 	assertRendererCompatibility,
 	compileFrontRelease,
 	resolveFrontRequest,
+	resolveFrontRoute,
+	parseFrontNavigation,
 } from "@superboard/supbrd-core";
 import { expect, test } from "vitest";
 
@@ -32,6 +34,19 @@ const identifiers = {
 	],
 	created_at: "2026-08-30T00:30:00.000Z",
 };
+
+test("composes navigation links against the route that actually handles their destination", async () => {
+	const input = await composeUserFrontReleaseInput(identifiers);
+	const items = parseFrontNavigation(
+		input.presentation.navigation,
+		input.front_route_manifest.routes,
+	).flatMap((group) => group.items);
+	expect(items.length).toBeGreaterThan(0);
+	for (const item of items) {
+		const match = resolveFrontRoute(input.front_route_manifest, item.href);
+		expect(match).toMatchObject({ result: "matched", route_id: item.route_id });
+	}
+});
 
 test("locks Core plus every concrete runtime plugin with explicit dependency policies", async () => {
 	const catalog = superBoardRuntimePluginCatalog();
@@ -65,9 +80,9 @@ test("composes the next release against the exact active predecessor", async () 
 
 test("adds and removes plugin presentation only through the Release plugin lock", async () => {
 	const catalog = superBoardRuntimePluginCatalog();
-	const user = catalog.plugins.find(({ manifest }) => manifest.plugin_id === "supbrd-plug-user");
+	const user = catalog.plugins.find(({ manifest }) => manifest.plugin_id === "superboard-user");
 	const marketing = catalog.plugins.find(
-		({ manifest }) => manifest.plugin_id === "supbrd-plugmod-marketing",
+		({ manifest }) => manifest.plugin_id === "superboard-marketing",
 	);
 	if (!user || !marketing) throw new Error("Expected native Front plugins are missing");
 	const lockEntry = ({ manifest }: (typeof catalog.plugins)[number]) => ({
@@ -89,9 +104,7 @@ test("adds and removes plugin presentation only through the Release plugin lock"
 		new Set(input.front_route_manifest.routes.map(({ route_id }) => route_id));
 	const navigationRouteIds = (input: Awaited<ReturnType<typeof composeUserFrontReleaseInput>>) =>
 		new Set(
-			visibleUserNavigation(input, ["supbrd-plugmod-marketing.read"]).map(
-				({ route_id }) => route_id,
-			),
+			visibleUserNavigation(input, ["superboard-marketing.read"]).map(({ route_id }) => route_id),
 		);
 
 	expect(routeIds(withoutMarketing)).not.toContain("superboard.communication_campaigns");

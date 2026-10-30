@@ -1,3 +1,5 @@
+import { parseRouteDestinations } from "./route-manifest.js";
+import type { RouteDestination } from "./route-registry.js";
 export interface DeploymentEndpoint {
 	surface: string;
 	url: string;
@@ -20,10 +22,22 @@ export interface DeploymentConfiguration {
 	authIssuer: string;
 }
 export interface DeploymentRoute {
+	transport?: "http" | "websocket" | "fallback";
+	executionScope?: string;
+	destinations?: readonly RouteDestination[];
+	id?: string;
+	routeId?: string;
+	kind?: "canonical" | "alias";
+	access?: string;
+	availability?: "current" | "stale";
+	buildId?: string;
+	observedAt?: string;
+	pluginId?: string;
+	origin?: "cms" | "superboard";
 	method: string;
 	path: string;
 	surface: string;
-	url: string;
+	url?: string;
 	worker: string;
 	clients: string[];
 }
@@ -39,8 +53,8 @@ function text(value: unknown): string {
 		throw new Error("DEPLOYMENT_CONFIGURATION_INVALID");
 	return value;
 }
-function list(value: unknown): unknown[] {
-	if (!Array.isArray(value) || value.length > 5000)
+function list(value: unknown, maximum = 5000): unknown[] {
+	if (!Array.isArray(value) || value.length > maximum)
 		throw new Error("DEPLOYMENT_CONFIGURATION_INVALID");
 	return value;
 }
@@ -97,13 +111,31 @@ export function parseDeploymentConfiguration(raw: string): DeploymentConfigurati
 	};
 }
 export function parseDeploymentRoutes(value: unknown): DeploymentRoute[] {
-	return list(value).map((item) => {
+	return list(value, 20000).map((item) => {
 		const row = object(item);
 		return {
+			...(row.pluginId === undefined ? {} : { pluginId: text(row.pluginId) }),
+			...(row.executionScope === undefined ? {} : { executionScope: text(row.executionScope) }),
+			...(row.destinations === undefined
+				? {}
+				: { destinations: parseRouteDestinations(row.destinations) }),
 			method: text(row.method),
 			path: text(row.path),
 			surface: text(row.surface),
-			url: url(row.url),
+			...(row.surface === "internal" && row.url === undefined ? {} : { url: url(row.url) }),
+			...(row.id === undefined ? {} : { id: text(row.id) }),
+			...(row.routeId === undefined ? {} : { routeId: text(row.routeId) }),
+			...(row.access === undefined ? {} : { access: text(row.access) }),
+			...(row.transport === "http" || row.transport === "websocket" || row.transport === "fallback"
+				? { transport: row.transport }
+				: {}),
+			...(row.buildId === undefined ? {} : { buildId: text(row.buildId) }),
+			...(row.observedAt === undefined ? {} : { observedAt: text(row.observedAt) }),
+			...(row.kind === "alias" || row.kind === "canonical" ? { kind: row.kind } : {}),
+			...(row.origin === "cms" || row.origin === "superboard" ? { origin: row.origin } : {}),
+			...(row.availability === "current" || row.availability === "stale"
+				? { availability: row.availability }
+				: {}),
 			worker: text(row.worker),
 			clients: strings(row.clients),
 		};

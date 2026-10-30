@@ -24,7 +24,7 @@ test.describe("Operator sign in", () => {
 		const value = unwrap(await (await page.request.get("/_emdash/api/auth/me")).json());
 		expect((value.user ?? value).id).toBe(user.id);
 		await evidence(
-			"supbrd-plug-user",
+			"superboard-user",
 			"superboard.login",
 			[user.id],
 			"Real WebAuthn sign-in creates the same operator session after logout.",
@@ -83,7 +83,7 @@ test.describe("Operator sign in", () => {
 			).ok(),
 		).toBe(true);
 		await evidence(
-			"supbrd-plug-user",
+			"superboard-user",
 			"superboard.account",
 			[user.id, key.id],
 			"Registered a backup passkey through the account form, read the credential list, revoked the original and retained the backup.",
@@ -128,7 +128,7 @@ test("operator profile updates the authenticated core user and persists after re
 	const me = unwrap(await (await page.request.get("/_emdash/api/auth/me")).json());
 	expect((me.user ?? me).name).toBe(name);
 	await evidence(
-		"supbrd-plug-user",
+		"superboard-user",
 		"superboard.profile",
 		[user.id],
 		"Saved the real operator profile, reloaded the form and confirmed the same name in the authenticated Core session.",

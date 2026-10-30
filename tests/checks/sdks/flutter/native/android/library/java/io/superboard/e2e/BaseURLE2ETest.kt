@@ -76,7 +76,7 @@ class BaseURLE2ETest {
                 "after configure with baseURL=$customBaseURL"
             )
 
-            // Verify the first request path includes /api/v1/sdk/
+            // Verify the first request path includes /v1/
             val firstRequest = mockWebServer.takeRequest(1, TimeUnit.SECONDS)
             assertNotNullWithContext(
                 firstRequest,
@@ -84,8 +84,8 @@ class BaseURLE2ETest {
                 "after SDK configure with custom baseURL"
             )
             assertTrueWithContext(
-                firstRequest!!.path!!.startsWith("/api/v1/sdk/"),
-                "request path starts with /api/v1/sdk/",
+                firstRequest!!.path!!.startsWith("/v1/"),
+                "request path starts with /v1/",
                 "request path was: ${firstRequest.path}"
             )
 
@@ -115,7 +115,7 @@ class BaseURLE2ETest {
                 baseURL = customBaseURL
             )
 
-            // Assert - requests should still go to /api/v1/sdk/ (no double slash)
+            // Assert - requests should still go to /v1/ (no double slash)
             val firstRequest = mockWebServer.takeRequest(1, TimeUnit.SECONDS)
             assertNotNullWithContext(
                 firstRequest,
@@ -123,8 +123,8 @@ class BaseURLE2ETest {
                 "after SDK configure with trailing-slash baseURL"
             )
             assertTrueWithContext(
-                firstRequest!!.path!!.startsWith("/api/v1/sdk/"),
-                "request path starts with /api/v1/sdk/ (no double slash)",
+                firstRequest!!.path!!.startsWith("/v1/"),
+                "request path starts with /v1/ (no double slash)",
                 "request path was: ${firstRequest.path}"
             )
 

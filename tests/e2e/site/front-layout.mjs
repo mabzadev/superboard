@@ -35,7 +35,7 @@ try {
 		await expect(page.getByRole("link", { name: adminName, exact: true })).toHaveCount(0);
 		await expect(page.getByRole("combobox", { name: languageName, exact: true })).toHaveCount(0);
 		const header = page.locator(".native-front-content > header");
-		await expect(header).not.toContainText("https://api.mbza.dev");
+		await expect(header).not.toContainText("https://api.mabza.dev");
 		await expect(header.getByText("Local", { exact: true })).toHaveCount(0);
 		await account.click();
 		const panel = page.getByRole("dialog", {

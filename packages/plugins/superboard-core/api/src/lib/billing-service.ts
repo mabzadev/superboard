@@ -1,3 +1,4 @@
+import type { BillingClientContext } from "./billing-client-context.js";
 import type { Env } from '../types';
 import type { BillingQueueJob } from './billing-dispatch';
 import { identifyCustomer } from './billing';
@@ -124,12 +125,14 @@ export async function resolveCustomerFromBillingAuthority(env: Env, params: {
   projectId: string | number;
   authorization?: string;
   anonymousId?: string;
+  clientContext?: BillingClientContext;
 }): Promise<ResolvedSdkCustomer> {
   if (!billingServiceEnabled(env)) return resolveSdkCustomer(env, params);
   const response = await callBillingServiceBinding<{ data?: unknown }>(env, '/internal/v1/customers/resolve', {
     project_id: String(params.projectId),
     authorization: params.authorization || null,
     anonymous_id: params.anonymousId || null,
+    ...(params.clientContext ? { client_context: params.clientContext } : {}),
   });
   if (!isResolvedSdkCustomer(response.data)) {
     throw invalidBillingAuthorityResponse('Billing returned an invalid customer context');

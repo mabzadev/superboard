@@ -58,7 +58,7 @@ Sources/SuperBoard/
     ├── entities/                  # Data models
     └── extensions/                # Foundation extensions
 
-Tests/mbzadevsTests/
+Tests/mabzadevsTests/
 ├── *Tests.swift                   # 20 unit test files
 ├── Mock*.swift                    # Protocol-based mocks
 └── XCTestCase+Helpers.swift       # Test utilities
@@ -78,7 +78,7 @@ Tests/mbzadevsTests/
 ### Testing
 
 - All handlers/services have protocol interfaces for mock injection
-- Mocks are in `Tests/mbzadevsTests/Mock*.swift`
+- Mocks are in `Tests/mabzadevsTests/Mock*.swift`
 - No external test frameworks - plain XCTest only
 - Tests create mocks inline, no shared test data factories
 - DataCache does NOT auto-clear between tests - manage cleanup manually

@@ -13,7 +13,7 @@ for (const [path, routeId] of [
 		await ready(page, path);
 		const overview = await siteApi(
 			page.request,
-			"supbrd-plugmod-analytics",
+			"superboard-analytics",
 			"GET",
 			`/api/v1/analytics/projects/${event.project}/overview`,
 		);
@@ -22,7 +22,7 @@ for (const [path, routeId] of [
 			page.locator("main").getByText("Events", { exact: true }).locator(".."),
 		).toContainText(Number(overview.events).toLocaleString("en-US"));
 		await evidence(
-			"supbrd-plugmod-analytics",
+			"superboard-analytics",
 			routeId,
 			[event.id],
 			"Recorded a schema-v1 event through the owning API and verified the real overview count in this view.",

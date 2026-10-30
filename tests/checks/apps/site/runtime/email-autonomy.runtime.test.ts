@@ -1,4 +1,5 @@
 import { PROJECT_CONTEXT_HEADERS, signProjectContext } from "@superboard/contracts/project-context";
+import { INTERNAL_ROUTE_REFERENCES_PATH } from "@superboard/contracts/route-reference";
 import { signSiteOperatorRequest } from "@superboard/contracts/site-operator";
 import type { APIContext } from "astro";
 import { env } from "cloudflare:workers";
@@ -459,7 +460,7 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		),
 	});
 	await env.DB.prepare(
-		"UPDATE superboard_plugin_lifecycle SET state='active' WHERE instance_id=? AND plugin_id='supbrd-plugmod-email'",
+		"UPDATE superboard_plugin_lifecycle SET state='active' WHERE instance_id=? AND plugin_id='superboard-email'",
 	)
 		.bind(instanceId)
 		.run();
@@ -468,7 +469,17 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		SUPERBOARD_TARGET: instanceId,
 		SITE_OPERATOR_BRIDGE_TOKEN: "canonical-email-bridge",
 		EMAIL_INTERNAL_TOKEN: secret,
-		EMAIL_SERVICE: { fetch: (forwarded: Request) => email.fetch(forwarded, emailEnv) },
+		EMAIL_SERVICE: {
+			// Only the route manifest carries the instance identity; the command itself
+			// runs without the plugin task lifecycle, like the other Email checks here.
+			fetch: (forwarded: Request) =>
+				email.fetch(
+					forwarded,
+					new URL(forwarded.url).pathname === "/internal/route-manifest/v1"
+						? { ...emailEnv, SUPERBOARD_INSTANCE_ID: instanceId, SUPERBOARD_ENVIRONMENT: "local" }
+						: emailEnv,
+				),
+		},
 	} as unknown as ApiEnv;
 	const dispatchEnv = {
 		DB: env.DB,
@@ -476,9 +487,19 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		SUPERBOARD_ENVIRONMENT: "local",
 		SITE_OPERATOR_BRIDGE_TOKEN: "canonical-email-bridge",
 		SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: env.SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY,
-		API_SERVICE: { fetch: (forwarded: Request) => api.fetch(forwarded, apiEnv) },
+		// Route references are resolved with the instance identity; the command runs
+		// without the plugin task lifecycle, like the other Email checks here.
+		API_SERVICE: {
+			fetch: (forwarded: Request) =>
+				api.fetch(
+					forwarded,
+					new URL(forwarded.url).pathname === INTERNAL_ROUTE_REFERENCES_PATH
+						? { ...apiEnv, SUPERBOARD_INSTANCE_ID: instanceId, SUPERBOARD_ENVIRONMENT: "local" }
+						: apiEnv,
+				),
+		},
 	};
-	const pluginId = "supbrd-plugmod-email";
+	const pluginId = "superboard-email";
 	const body = {
 		method: "POST",
 		path: "/api/v1/email/projects/42-prod/transactional",

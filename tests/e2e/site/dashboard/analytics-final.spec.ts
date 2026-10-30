@@ -10,7 +10,7 @@ import {
 	unwrap,
 } from "../../../fixtures/site-browser/site-api.js";
 
-const plugin = "supbrd-plugmod-analytics";
+const plugin = "superboard-analytics";
 
 test("funnel query counts a real ordered pair of events for the same installation", async ({
 	authenticatedPage: page,
@@ -104,9 +104,9 @@ test("SDK attribution creates exactly one installation visible in Analytics", as
 	const domain = `${unique("native-installation")}.example.test`;
 	const project = await projectRef(page);
 	const setup = `/api/v1/app/projects/${project}/setup/web`;
-	const before = await siteApi(page.request, "supbrd-plug-settings", "GET", setup);
+	const before = await siteApi(page.request, "superboard-settings", "GET", setup);
 	try {
-		await siteApi(page.request, "supbrd-plug-settings", "PUT", setup, {
+		await siteApi(page.request, "superboard-settings", "PUT", setup, {
 			domain,
 			minimum_version: "1.0.0",
 			recommended_version: "1.0.0",
@@ -114,7 +114,7 @@ test("SDK attribution creates exactly one installation visible in Analytics", as
 		});
 		const key = await siteApi(
 			page.request,
-			"supbrd-plug-user",
+			"superboard-user",
 			"POST",
 			`/api/v1/app/projects/${project}/access-key/rotate`,
 			{},
@@ -148,7 +148,7 @@ test("SDK attribution creates exactly one installation visible in Analytics", as
 			const response = await page.request.post(`/api/v1/sdk/${action}`, {
 				headers: {
 					...credential.headers,
-					...operatorHeaders("supbrd-plug-user"),
+					...operatorHeaders("superboard-user"),
 					"User-Agent": `NativeSdkQA/${vendor}`,
 				},
 				data,
@@ -201,8 +201,8 @@ test("SDK attribution creates exactly one installation visible in Analytics", as
 		);
 	} finally {
 		if (before?.configuration && before.status !== "not_configured")
-			await siteApi(page.request, "supbrd-plug-settings", "PUT", setup, before.configuration);
-		else await siteApi(page.request, "supbrd-plug-settings", "DELETE", setup);
+			await siteApi(page.request, "superboard-settings", "PUT", setup, before.configuration);
+		else await siteApi(page.request, "superboard-settings", "DELETE", setup);
 	}
 });
 

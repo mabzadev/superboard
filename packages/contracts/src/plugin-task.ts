@@ -1,6 +1,8 @@
+import { signPluginTaskRequest } from "./internal-request-signature.js";
+export { signPluginTaskRequest, verifyPluginTaskRequest } from "./internal-request-signature.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import { readJsonObjectLimited, readBytesLimited } from "./request-body.js";
+import { readJsonObjectLimited } from "./request-body.js";
 
 export type PluginTaskKind =
 	| "scheduled"
@@ -42,12 +44,10 @@ export interface PluginTaskBindings {
 	FLOWS_INTERNAL_TOKEN?: string;
 	OBSERVABILITY_INTERNAL_TOKEN?: string;
 }
-const signatureHeader = "X-SuperBoard-Task-Signature";
-const timestampHeader = "X-SuperBoard-Task-Timestamp";
-const signaturePattern = /^[a-f0-9]{64}$/u;
 const workflowIdentifierPattern = /^[A-Za-z0-9_-]{1,100}$/u;
 const leasePattern = /^[A-Za-z0-9._:-]{8,200}$/u;
-const pluginPattern = /^supbrd-(?:core|(?:plug|plugmod)-[a-z0-9]+(?:-[a-z0-9]+)*)$/u;
+const pluginPattern =
+	/^(?:supbrd-(?:core|(?:plug|plugmod)-[a-z0-9]+(?:-[a-z0-9]+)*)|superboard-[a-z0-9]+(?:-[a-z0-9]+)*)$/u;
 const kinds = new Set<PluginTaskKind>([
 	"scheduled",
 	"queue",
@@ -100,7 +100,7 @@ export function parsePluginTaskCommand(value: unknown): PluginTaskCommand | null
 		return null;
 	if (
 		row.kind === "workflow" &&
-		(row.plugin_id !== "supbrd-plugmod-flows" ||
+		(row.plugin_id !== "superboard-flows" ||
 			!["FLOW_DELAY_EXECUTION", "FLOW_MAINTENANCE_EXECUTION"].includes(
 				String(row.workflow_binding),
 			) ||
@@ -120,74 +120,6 @@ export function parsePluginTaskCommand(value: unknown): PluginTaskCommand | null
 	return row as unknown as PluginTaskCommand;
 }
 
-export async function signPluginTaskRequest(request: Request, secret: string): Promise<Headers> {
-	if (!secret.trim()) throw new Error("PLUGIN_TASK_SECRET_REQUIRED");
-	const timestamp = String(Math.floor(Date.now() / 1000));
-	const key = await crypto.subtle.importKey(
-		"raw",
-		new TextEncoder().encode(secret),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
-	const signature = await crypto.subtle.sign(
-		"HMAC",
-		key,
-		await taskSignaturePayload(request, timestamp),
-	);
-	return new Headers({
-		[timestampHeader]: timestamp,
-		[signatureHeader]: hex(new Uint8Array(signature)),
-		"Content-Type": "application/json",
-	});
-}
-
-export async function verifyPluginTaskRequest(request: Request, secret: string): Promise<boolean> {
-	const timestamp = request.headers.get(timestampHeader);
-	const signature = request.headers.get(signatureHeader);
-	if (!secret.trim() || !timestamp || !signature || !signaturePattern.test(signature)) return false;
-	const issued = Number(timestamp);
-	const now = Date.now() / 1000;
-	if (!Number.isSafeInteger(issued) || issued > now + 5 || issued < now - 60) return false;
-	const key = await crypto.subtle.importKey(
-		"raw",
-		new TextEncoder().encode(secret),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["verify"],
-	);
-	return crypto.subtle.verify(
-		"HMAC",
-		key,
-		Uint8Array.from(signature.match(/.{2}/gu)!, (pair) => Number.parseInt(pair, 16)),
-		await taskSignaturePayload(request, timestamp),
-	);
-}
-
-async function taskSignaturePayload(
-	request: Request,
-	timestamp: string,
-): Promise<Uint8Array<ArrayBuffer>> {
-	const url = new URL(request.url);
-	const body = await readBytesLimited(request.clone(), 16384);
-	const checksum = hex(new Uint8Array(await crypto.subtle.digest("SHA-256", body)));
-	return new Uint8Array(
-		new TextEncoder().encode(
-			[
-				"superboard.plugin-task.v1",
-				timestamp,
-				request.method,
-				url.pathname,
-				url.search,
-				checksum,
-			].join("\n"),
-		),
-	);
-}
-function hex(bytes: Uint8Array): string {
-	return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
 export function pluginTaskManagementRequired(env: PluginTaskBindings): boolean {
 	if (env.SUPERBOARD_PLUGIN_LIFECYCLE === undefined && !env.SUPERBOARD_INSTANCE_ID) return false;
 	if (env.SUPERBOARD_PLUGIN_LIFECYCLE !== "required" || !env.SUPERBOARD_INSTANCE_ID)
@@ -204,9 +136,9 @@ function pluginTaskAuthority(env: PluginTaskBindings, pluginId: string) {
 		: `https://api.internal${PLUGIN_TASK_BROKER_PATH}`;
 	const token = direct
 		? env.SITE_OPERATOR_BRIDGE_TOKEN
-		: pluginId === "supbrd-plugmod-email"
+		: pluginId === "superboard-email"
 			? env.EMAIL_INTERNAL_TOKEN
-			: pluginId === "supbrd-plugmod-observability"
+			: pluginId === "superboard-observability"
 				? env.OBSERVABILITY_INTERNAL_TOKEN
 				: (env.INTERNAL_API_TOKEN ?? env.MODULE_INTERNAL_TOKEN);
 	if (!token) throw new PluginTaskUnavailable("PLUGIN_TASK_SECRET_REQUIRED", 503);

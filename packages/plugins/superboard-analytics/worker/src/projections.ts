@@ -151,7 +151,7 @@ export async function projectStoredEvent(
     )),
   );
   statements.push(
-    marketingSignalStatement(env.DB, outbox, event),
+    ...(stored.core_collection === true ? [] : [marketingSignalStatement(env.DB, outbox, event)]),
     env.DB.prepare(
       `UPDATE analytics_event_receipts
        SET status = 'projected', archive_key = ?, projected_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
@@ -166,7 +166,9 @@ export async function projectStoredEvent(
     ).bind(outbox.id),
   );
   await env.DB.batch(statements);
-  await deliverMarketingSignal(env, outbox.project_id, event.event_id);
+  if (stored.core_collection !== true) {
+    await deliverMarketingSignal(env, outbox.project_id, event.event_id);
+  }
 }
 
 async function projectHotRetentionDays(

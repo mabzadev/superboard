@@ -36,22 +36,12 @@ function fixture(run) {
 				status: "verified",
 				operations: [
 					{
-						method: "POST",
-						path: "/api/v1/documents/:id/publish",
+						route_id: "api:documents:publish",
 						parameters: ["id"],
 						server_bound_parameters: [],
 						parameter_values: {},
 						query: "none",
 						body: "passthrough",
-						sources: [
-							{
-								file: "client.ts",
-								line: 1,
-								symbol: "publish",
-								expression: 'path(id, "/publish")',
-								transport_method: "POST",
-							},
-						],
 					},
 				],
 			},
@@ -96,31 +86,22 @@ test("the frozen baseline catches removed or unknown command IDs", () =>
 		assert.ok(result.errors.some((error) => error.code === "MISSING_ADAPTER"));
 	}));
 
-test("a changed transport method or stale source expression requires a new review", () =>
+test("dispatch targets must reference a registered route without duplicating methods, paths or sources", () =>
 	fixture((registry, root) => {
-		registry.adapters[0].operations[0].method = "PUT";
+		const operation = registry.adapters[0].operations[0];
+		operation.method = "PUT";
 		assert.ok(
 			validatePluginApiAdapters(registry, baseline, root).errors.some(
-				(error) => error.code === "SOURCE_METHOD_MISMATCH",
+				(error) => error.code === "ROUTE_REFERENCE_INVALID",
 			),
 		);
-		registry.adapters[0].operations[0].method = "POST";
-		writeFileSync(
-			join(root, "client.ts"),
-			'export const publish = () => GET(path(id, "/publish"));\n',
-		);
+		delete operation.method;
+		delete operation.route_id;
+		operation.method = "POST";
+		operation.path = "/api/v1/documents/:id/publish";
 		assert.ok(
 			validatePluginApiAdapters(registry, baseline, root).errors.some(
-				(error) => error.code === "SOURCE_TRANSPORT_MISMATCH",
-			),
-		);
-		writeFileSync(
-			join(root, "client.ts"),
-			'export const publish = () => POST(path(id, "/archive"), {});\n',
-		);
-		assert.ok(
-			validatePluginApiAdapters(registry, baseline, root).errors.some(
-				(error) => error.code === "SOURCE_EXPRESSION_MISMATCH",
+				(error) => error.code === "ROUTE_REFERENCE_REQUIRED",
 			),
 		);
 	}));

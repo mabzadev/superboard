@@ -1,5 +1,5 @@
 {
-  "plugin_id": "supbrd-plugmod-marketing",
+  "plugin_id": "superboard-marketing",
   "route_id": "superboard.message_preview_craft",
   "route_pattern": "/message-preview-craft",
   "path": "/message-preview-craft",

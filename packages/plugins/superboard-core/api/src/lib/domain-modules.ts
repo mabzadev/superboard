@@ -1,3 +1,8 @@
+import {
+	resolveRouteDestination,
+	type RouteDestination,
+	type RouteOptions,
+} from "@superboard/contracts/route-registry";
 import { runPluginTask, PluginTaskUnavailable } from "@superboard/contracts/plugin-task";
 import {
 	signProjectContext,
@@ -15,64 +20,207 @@ import { isFlowsLegacyCutoverEnabled } from "./flows-cutover-state";
 import { flowsInternalToken } from "./flows-internal-auth";
 import { readJsonObjectLimited } from "./http-limits";
 import { resolveSiteOperatorInstance } from "./site-operator-scope";
+import { collectSdkTelemetry } from "../routes/core-collection.js";
 
 export const DOMAIN_MODULES = {
-	app: "APP_MODULE",
-	products: "PRODUCTS_MODULE",
-	paywalls: "PAYWALLS_MODULE",
-	"dynamic-links": "DYNAMIC_LINKS_MODULE",
-	support: "SUPPORT_MODULE",
-	analytics: "ANALYTICS_MODULE",
-	marketing: "MARKETING_MODULE",
-	email: "EMAIL_SERVICE",
-	onboardings: "ONBOARDINGS_MODULE",
-	flows: "FLOWS_MODULE",
+	app: { binding: "APP_MODULE", pluginId: "superboard-user" },
+	products: { binding: "PRODUCTS_MODULE", pluginId: "superboard-products" },
+	paywalls: { binding: "PAYWALLS_MODULE", pluginId: "superboard-paywalls" },
+	"dynamic-links": { binding: "DYNAMIC_LINKS_MODULE", pluginId: "superboard-dynamic-links" },
+	support: { binding: "SUPPORT_MODULE", pluginId: "superboard-support" },
+	analytics: { binding: "ANALYTICS_MODULE", pluginId: "superboard-analytics" },
+	marketing: { binding: "MARKETING_MODULE", pluginId: "superboard-marketing" },
+	email: { binding: "EMAIL_SERVICE", pluginId: "superboard-email" },
+	onboardings: { binding: "ONBOARDINGS_MODULE", pluginId: "superboard-onboardings" },
+	flows: { binding: "FLOWS_MODULE", pluginId: "superboard-flows" },
 } as const;
 
-export type DomainModuleBinding = (typeof DOMAIN_MODULES)[DomainModuleName];
+type DomainModuleBinding = (typeof DOMAIN_MODULES)[DomainModuleName]["binding"];
 export type LegacyDomainModuleName = "paywalls" | "onboardings";
+
+export function legacyDomainDestinations(source: LegacyDomainModuleName) {
+	const sourcePath = `/api/v1/${source}/projects/:projectRef/:rest{.+}?`;
+	return {
+		legacy: {
+			service: source,
+			path: "/internal/v1/:rest{.+}?",
+			sourcePath,
+			condition: "legacy-project" as const,
+		},
+		flows: {
+			service: "flows" as const,
+			path: `/internal/v1/legacy/${source}/:rest{.+}?`,
+			sourcePath,
+			condition: "flows-project" as const,
+		},
+	} satisfies Record<string, RouteDestination>;
+}
+
+function domainTransport(moduleName: DomainModuleName) {
+	return {
+		publicPrefix: `/api/v1/${moduleName}`,
+		internalPrefix: moduleName === "email" ? "/internal/v1/admin" : "/internal/v1",
+	};
+}
+
+export function domainRouteDestination(moduleName: DomainModuleName): RouteDestination | undefined {
+	if (moduleName === "paywalls" || moduleName === "onboardings") return undefined;
+	const transport = domainTransport(moduleName);
+	return {
+		service: moduleName,
+		sourcePath: `${transport.publicPrefix}/projects/:projectRef/:rest{.+}?`,
+		path: `${transport.internalPrefix}${moduleName === "flows" ? "/projects/:projectRef" : moduleName === "support" ? "/projects/:projectId" : ""}/:rest{.+}?`,
+	};
+}
 
 export const PUBLIC_FLOWS_SDK_ROUTES = Object.freeze([
 	{
 		method: "POST",
 		publicPath: "/api/v1/flows/v2/sdk/blocks",
+		registry: {
+			pluginId: "superboard-flows",
+			surface: "sdk",
+			access: "sdk-key",
+			exposures: [
+				{
+					surface: "sdk",
+					path: "/v1/acquisition/flows/blocks",
+					aliases: ["/v1/acquisition/flows/v2/sdk/blocks"],
+				},
+			],
+		} satisfies RouteOptions,
 		internalPath: "/v2/sdk/blocks",
 	},
 	{
 		method: "POST",
 		publicPath: "/api/v1/flows/v2/sdk/workflows",
+		registry: {
+			pluginId: "superboard-flows",
+			surface: "sdk",
+			access: "sdk-key",
+			exposures: [
+				{
+					surface: "sdk",
+					path: "/v1/acquisition/flows/workflows",
+					aliases: ["/v1/acquisition/flows/v2/sdk/workflows"],
+				},
+			],
+		} satisfies RouteOptions,
 		internalPath: "/v2/sdk/workflows",
 	},
 	{
 		method: "POST",
 		publicPath: "/api/v1/flows/v2/sdk/events",
+		registry: {
+			pluginId: "superboard-flows",
+			surface: "sdk",
+			access: "sdk-key",
+			exposures: [
+				{
+					surface: "sdk",
+					path: "/v1/acquisition/flows/events",
+					aliases: ["/v1/acquisition/flows/v2/sdk/events"],
+				},
+			],
+		} satisfies RouteOptions,
 		internalPath: "/v2/sdk/events",
 	},
 	{
 		method: "POST",
 		publicPath: "/api/v1/flows/v2/sdk/survey",
+		registry: {
+			pluginId: "superboard-flows",
+			surface: "sdk",
+			access: "sdk-key",
+			exposures: [
+				{
+					surface: "sdk",
+					path: "/v1/acquisition/flows/survey",
+					aliases: ["/v1/acquisition/flows/v2/sdk/survey"],
+				},
+			],
+		} satisfies RouteOptions,
 		internalPath: "/v2/sdk/survey",
 	},
 	{
 		method: "GET",
 		publicPath: "/api/v1/flows/ws/sdk/block-updates",
+		registry: {
+			pluginId: "superboard-flows",
+			surface: "sdk",
+			access: "sdk-key",
+			transport: "websocket",
+			exposures: [
+				{
+					surface: "sdk",
+					path: "/v1/acquisition/flows-realtime/block-updates",
+					aliases: ["/v1/acquisition/flows/ws/sdk/block-updates"],
+				},
+			],
+		} satisfies RouteOptions,
 		internalPath: "/ws/sdk/block-updates",
 	},
 ]);
 
 export const DOMAIN_SDK_ROUTES = Object.freeze([
-	sdkRoute("app", "/runtime-policy", "/runtime-policy/resolve", false),
-	sdkRoute("app", "/events", "/customer-events", true),
-	sdkRoute("products", "/offerings/resolve", "/offerings/resolve", false),
-	legacySdkRoute("paywalls", "/resolve", "/placements/resolve", false),
-	legacySdkRoute("paywalls", "/events", "/events", true),
-	sdkRoute("analytics", "/events", "/events", true),
-	sdkRoute("analytics", "/remote-config/resolve", "/remote-config/resolve", false),
-	legacySdkRoute("onboardings", "/resolve", "/placements/resolve", false),
-	legacySdkRoute("onboardings", "/events", "/events", true),
+	sdkRoute("app", "/runtime-policy", "/runtime-policy/resolve", false, {
+		pluginId: "superboard-settings",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [{ surface: "sdk", path: "/v1/data/runtime-policy" }],
+	}),
+	sdkRoute("app", "/events", "/customer-events", true, {
+		pluginId: "supbrd-core",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [{ surface: "sdk", path: "/v1/data/customer-events" }],
+	}),
+	sdkRoute("products", "/offerings/resolve", "/offerings/resolve", false, {
+		pluginId: "superboard-products",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [{ surface: "sdk", path: "/v1/monetization/offerings/resolve" }],
+	}),
+	legacySdkRoute("paywalls", "/resolve", "/placements/resolve", false, {
+		pluginId: "superboard-paywalls",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [{ surface: "sdk", path: "/v1/monetization/paywalls/resolve" }],
+	}),
+	legacySdkRoute("paywalls", "/events", "/events", true, {
+		pluginId: "superboard-paywalls",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [{ surface: "sdk", path: "/v1/monetization/paywalls/events" }],
+	}),
+	sdkRoute("analytics", "/events", "/events", true, {
+		pluginId: "supbrd-core",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [{ surface: "sdk", path: "/v1/analytics/events" }],
+	}),
+	sdkRoute("analytics", "/remote-config/resolve", "/remote-config/resolve", false, {
+		pluginId: "superboard-analytics",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [{ surface: "sdk", path: "/v1/analytics/remote-config/resolve" }],
+	}),
+	legacySdkRoute("onboardings", "/resolve", "/placements/resolve", false, {
+		pluginId: "superboard-onboardings",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [{ surface: "sdk", path: "/v1/acquisition/onboardings/resolve" }],
+	}),
+	legacySdkRoute("onboardings", "/events", "/events", true, {
+		pluginId: "superboard-onboardings",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [{ surface: "sdk", path: "/v1/acquisition/onboardings/events" }],
+	}),
 ]);
 
 export interface DomainSdkRoute {
+	registry: RouteOptions;
 	moduleName: "app" | "products" | "paywalls" | "analytics" | "onboardings";
 	bindingName: DomainModuleBinding;
 	publicPath: string;
@@ -107,13 +255,9 @@ export async function proxyDomainModule(
 ): Promise<Response> {
 	const requestId = requestIdFrom(c.req.raw);
 	try {
-		return await proxyDomainModuleRequest(
-			c,
-			moduleName,
-			bindingName,
-			requestId,
-			moduleName === "email" ? { internalPrefix: "/internal/v1/admin" } : {},
-		);
+		return await proxyDomainModuleRequest(c, moduleName, bindingName, requestId, {
+			internalPrefix: domainTransport(moduleName).internalPrefix,
+		});
 	} catch (error) {
 		console.error(
 			JSON.stringify({
@@ -147,7 +291,7 @@ export async function proxyLegacyDomainModule(
 		return await proxyDomainModuleRequest(
 			c,
 			legacyModuleName,
-			DOMAIN_MODULES[legacyModuleName],
+			DOMAIN_MODULES[legacyModuleName].binding,
 			requestId,
 			{
 				publicModuleName: legacyModuleName,
@@ -201,10 +345,7 @@ async function proxyDomainModuleRequest(
 			details: route.details,
 		});
 	}
-	let internalPath =
-		moduleName === "flows" && options.publicModuleName === undefined
-			? `/internal/v1/projects/${route.projectRef}${route.internalPath.slice("/internal/v1".length)}`
-			: route.internalPath;
+	let internalPath = route.internalPath;
 
 	if (isMutatingRequest(c.req.raw)) {
 		const error = validateIdempotencyKey(c.req.raw, requestId);
@@ -220,17 +361,32 @@ async function proxyDomainModuleRequest(
 	if (!project.ok) {
 		return domainError(requestId, project.status, project.code, project.message);
 	}
+	const destination =
+		options.publicModuleName === undefined ? domainRouteDestination(moduleName) : undefined;
+	if (destination) {
+		const transport = domainTransport(moduleName);
+		const canonicalPath = `${transport.publicPrefix}/projects/${route.projectRef}${route.internalPath.slice(transport.internalPrefix.length)}`;
+		const resolved = resolveRouteDestination({ path: canonicalPath, destination }, canonicalPath, {
+			projectId: String(project.context.projectId),
+		});
+		if (!resolved) throw new Error("DOMAIN_ROUTE_DESTINATION_INVALID");
+		internalPath = resolved.path;
+	}
 
 	let selectedModuleName = moduleName;
 	let selectedBindingName = bindingName;
-	if (
-		options.legacyModuleName &&
-		c.env.FLOWS_MODULE &&
-		(await isFlowsLegacyCutoverEnabled(c.env.DB, project.context.projectId))
-	) {
-		selectedModuleName = "flows";
-		selectedBindingName = "FLOWS_MODULE";
-		internalPath = `/internal/v1/legacy/${options.legacyModuleName}${route.internalPath.slice("/internal/v1".length)}`;
+	if (options.legacyModuleName) {
+		const choices = legacyDomainDestinations(options.legacyModuleName);
+		const useFlows =
+			c.env.FLOWS_MODULE &&
+			(await isFlowsLegacyCutoverEnabled(c.env.DB, project.context.projectId));
+		const selected = useFlows ? choices.flows : choices.legacy;
+		selectedModuleName = selected.service;
+		selectedBindingName = DOMAIN_MODULES[selected.service].binding;
+		const path = `/api/v1/${options.legacyModuleName}/projects/${route.projectRef}${route.internalPath.slice("/internal/v1".length)}`;
+		const resolved = resolveRouteDestination({ path, destination: selected }, path);
+		if (!resolved) throw new Error("DOMAIN_ROUTE_DESTINATION_INVALID");
+		internalPath = resolved.path;
 	}
 
 	if (
@@ -287,6 +443,16 @@ export async function proxyDomainSdkModule(
 				"maintenance_read_only",
 				"This project is temporarily read-only during module cutover",
 				{ retryable: true },
+			);
+		}
+		if (
+			route.publicPath === "/api/v1/analytics/events" ||
+			route.publicPath === "/api/v1/app/events"
+		) {
+			return collectSdkTelemetry(
+				c,
+				resolved.context.projectId,
+				route.moduleName === "app" ? "customer" : "analytics",
 			);
 		}
 		return forwardDomainRequest(c, moduleName, bindingName, requestId, internalPath, {
@@ -755,7 +921,7 @@ async function resolveNativeSdkProjectContext(
 	try {
 		const lookup = await runPluginTask(
 			env,
-			"supbrd-plug-user",
+			"superboard-user",
 			{ kind: "runtime", task_id: `sdk-credentials:${crypto.randomUUID()}`, duration_ms: 30000 },
 			async (_checkpoint, signal) =>
 				env.APP_MODULE!.fetch(
@@ -827,7 +993,7 @@ export function extractDomainRoute(
 			details?: Record<string, unknown>;
 	  } {
 	const url = new URL(request.url);
-	const publicPrefix = `/api/v1/${moduleName}`;
+	const publicPrefix = domainTransport(moduleName).publicPrefix;
 	const relativePath = url.pathname.slice(publicPrefix.length);
 	const segments = relativePath.split("/").filter(Boolean);
 	const headerProjectRef =
@@ -1112,10 +1278,12 @@ function sdkRoute(
 	publicSuffix: string,
 	internalSuffix: string,
 	requiresIdempotency: boolean,
+	registry: RouteOptions,
 ): DomainSdkRoute {
 	return Object.freeze({
 		moduleName,
-		bindingName: DOMAIN_MODULES[moduleName],
+		bindingName: DOMAIN_MODULES[moduleName].binding,
+		registry,
 		publicPath: `/api/v1/${moduleName}${publicSuffix}`,
 		internalPath: `/internal/v1${internalSuffix}`,
 		requiresIdempotency,
@@ -1127,9 +1295,10 @@ function legacySdkRoute(
 	publicSuffix: string,
 	internalSuffix: string,
 	requiresIdempotency: boolean,
+	registry: RouteOptions,
 ): DomainSdkRoute {
 	return Object.freeze({
-		...sdkRoute(moduleName, publicSuffix, internalSuffix, requiresIdempotency),
+		...sdkRoute(moduleName, publicSuffix, internalSuffix, requiresIdempotency, registry),
 		legacyModuleName: moduleName,
 		flowsInternalPath: `/internal/v1/legacy/${moduleName}${internalSuffix}`,
 	});

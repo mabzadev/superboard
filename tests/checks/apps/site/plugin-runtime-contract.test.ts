@@ -90,9 +90,9 @@ test.each([
 		labels: ["Settings", "Stores", "Commands", "Data sources", "Renderers"],
 	},
 ])("localizes the plugin summary when $name", async ({ headers, labels }) => {
-	const plugin = createConfiguredSuperBoardPlugin("supbrd-plugmod-analytics");
+	const plugin = createConfiguredSuperBoardPlugin("superboard-analytics");
 	const summary = await plugin.routes.admin.handler({
-		request: new Request("https://site.test/_emdash/api/plugins/supbrd-plugmod-analytics/admin", {
+		request: new Request("https://site.test/_emdash/api/plugins/superboard-analytics/admin", {
 			headers,
 		}),
 	} as never);
@@ -102,5 +102,5 @@ test.each([
 	expect(sections.map(({ text }) => text?.split("\n")[0])).toEqual(
 		labels.slice(0, 4).map((label) => `**${label}**`),
 	);
-	expect(JSON.stringify(summary)).toContain("supbrd-plugmod-analytics");
+	expect(JSON.stringify(summary)).toContain("superboard-analytics");
 });

@@ -35,7 +35,7 @@ test("development adoption preserves the configured resources and cannot cross a
 	t.after(() => database.close());
 	const target = JSON.parse(
 		await readFile(
-			new URL("../../../infra/targets/mbza-development.json", import.meta.url),
+			new URL("../../../infra/targets/mabza-development.json", import.meta.url),
 			"utf8",
 		),
 	);

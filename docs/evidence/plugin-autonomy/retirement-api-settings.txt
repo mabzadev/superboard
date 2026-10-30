@@ -7,8 +7,8 @@ All 10 files and 27 tests in this run passed.
 Recorded observations (emitted after semantic and persistence assertions):
 [
   {
-    "plugin_id": "supbrd-plug-settings",
-    "route_id": "gateway.supbrd-plug-settings.command.update_effective_settings",
+    "plugin_id": "superboard-settings",
+    "route_id": "gateway.superboard-settings.command.update_effective_settings",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -19,8 +19,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-settings",
-    "route_id": "gateway.supbrd-plug-settings.data_source.effective_settings",
+    "plugin_id": "superboard-settings",
+    "route_id": "gateway.superboard-settings.data_source.effective_settings",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -31,8 +31,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-settings",
-    "route_id": "gateway.supbrd-plug-settings.data_source.settings_versions",
+    "plugin_id": "superboard-settings",
+    "route_id": "gateway.superboard-settings.data_source.settings_versions",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -43,8 +43,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-settings",
-    "route_id": "gateway.supbrd-plug-settings.command.save_sdk_configuration",
+    "plugin_id": "superboard-settings",
+    "route_id": "gateway.superboard-settings.command.save_sdk_configuration",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -55,8 +55,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-settings",
-    "route_id": "gateway.supbrd-plug-settings.command.test_sdk_configuration",
+    "plugin_id": "superboard-settings",
+    "route_id": "gateway.superboard-settings.command.test_sdk_configuration",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -67,8 +67,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plug-settings",
-    "route_id": "gateway.supbrd-plug-settings.data_source.sdk_configurations",
+    "plugin_id": "superboard-settings",
+    "route_id": "gateway.superboard-settings.data_source.sdk_configurations",
     "scenario": "read",
     "status": "passed",
     "type": "integration",

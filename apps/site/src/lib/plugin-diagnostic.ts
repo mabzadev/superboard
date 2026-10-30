@@ -1,10 +1,10 @@
 import { hasPermission, toRoleLevel } from "@emdash-cms/auth";
 import {
 	parseDeploymentConfiguration,
-	parseDeploymentRoutes,
 	type DeploymentConfiguration,
 	type DeploymentRoute,
 } from "@superboard/contracts/deployment-configuration";
+import { canonicalFrontHref } from "@superboard/contracts/front-paths";
 import type {
 	PluginDeclaredConfiguration,
 	PluginDependencyDiagnostic,
@@ -17,12 +17,17 @@ import type {
 	PluginRouteViewDiagnostic,
 	PluginWorkerDiagnostic,
 } from "@superboard/contracts/plugin-diagnostic";
-import { canonicalPluginId, pluginPackage } from "@superboard/contracts/plugin-packages";
+import {
+	canonicalPluginId,
+	LEGACY_PLUGIN_IDS,
+	pluginPackage,
+} from "@superboard/contracts/plugin-packages";
 import { pluginWorkerHealthDefinition } from "@superboard/contracts/plugin-worker-health";
+import type { RouteInventorySummary } from "@superboard/contracts/route-inventory";
 
 import { WORKER_DEPLOYMENT_GROUPS } from "../../../../scripts/cloudflare/deployment-groups.mjs";
-import apiAdapters from "../../../../scripts/config/superboard-plugin-api-adapters.json";
 import packageCatalog from "../../../../scripts/config/superboard-plugin-catalog.json";
+import { instanceConfiguration } from "./instance-configuration.js";
 import { nativeFrontPluginCatalog } from "./native-front-plugins.js";
 import { probeSuperBoardPluginWorkerReport } from "./plugin-readiness.js";
 import type { SuperBoardSiteEnv } from "./site-env.js";
@@ -36,8 +41,6 @@ interface OperatorUser {
 	role: number;
 	disabled?: boolean;
 }
-
-const adminPluginPathPattern = /^(\/_emdash\/api\/admin\/plugins\/)([^/]+)(\/.*)?$/u;
 
 export class DiagnosticAuthorizationError extends Error {
 	constructor(
@@ -93,10 +96,31 @@ export async function resolvePluginDiagnostic(
 		)
 	)
 		throw new PluginNotFoundError();
-	const pluginId = canonical ? canonical.id : requestedPluginId;
+	const targetPackageId = canonical?.directory ?? canonicalPluginId(requestedPluginId);
+	const legacyIds = Object.entries(LEGACY_PLUGIN_IDS)
+		.filter(([, target]) => target === targetPackageId)
+		.map(([legacy]) => legacy);
+	const pluginId =
+		requestedPluginId === canonical?.directory
+			? canonical.directory
+			: legacyIds.includes(requestedPluginId)
+				? requestedPluginId
+				: canonical
+					? canonical.id
+					: requestedPluginId;
 	const useCanonicalIds = requestedPluginId === canonical?.directory;
 	const label = canonical ? canonical.label : requestedPluginId;
-	const aliasIds = canonical ? [canonical.id, ...canonical.components] : [requestedPluginId];
+	const aliasIds = canonical
+		? [
+				...new Set([
+					canonical.id,
+					canonical.directory,
+					targetPackageId,
+					...canonical.components,
+					...legacyIds,
+				]),
+			]
+		: [requestedPluginId];
 	const target = resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local");
 	const instanceId = env.SUPERBOARD_INSTANCE_ID;
 
@@ -182,8 +206,16 @@ export async function resolvePluginDiagnostic(
 	// 2. Declared Configuration
 	const catalog = superBoardRuntimePluginCatalog();
 	const catalogEntry =
-		packageCatalog.plugins.find(({ manifest }) => manifest.plugin_id === pluginId) ??
-		catalog.plugins.find(({ manifest }) => manifest.plugin_id === requestedPluginId);
+		packageCatalog.plugins.find(
+			(entry) =>
+				entry.directory === targetPackageId ||
+				entry.manifest.plugin_id === targetPackageId ||
+				aliasIds.includes(entry.manifest.plugin_id),
+		) ??
+		catalog.plugins.find(
+			({ manifest }) =>
+				manifest.plugin_id === targetPackageId || aliasIds.includes(manifest.plugin_id),
+		);
 	const manifest =
 		useCanonicalIds && catalogEntry && "canonical_manifest" in catalogEntry
 			? catalogEntry.canonical_manifest
@@ -353,6 +385,17 @@ export async function resolvePluginDiagnostic(
 		}
 	}
 
+	let liveRoutes: DeploymentRoute[] = [];
+	let routeInventory: RouteInventorySummary | undefined;
+	try {
+		const live = await instanceConfiguration(env, user, new Request("https://site.internal/"));
+		deploymentConfig = live.configuration;
+		liveRoutes = live.routes;
+		routeInventory = live.routeInventory;
+	} catch {
+		liveRoutes = [];
+	}
+
 	const pluginServices = [
 		...new Set(
 			componentIds.flatMap((id) =>
@@ -395,92 +438,103 @@ export async function resolvePluginDiagnostic(
 	const views: PluginRouteViewDiagnostic[] = [];
 	for (const plugin of nativeFrontPluginCatalog()) {
 		if (!aliasIds.includes(plugin.plugin_id)) continue;
-		for (const view of plugin.surfaces)
+		for (const view of plugin.surfaces) {
+			if (
+				plugin.plugin_id === "superboard-user" &&
+				new URL(canonicalFrontHref(view.path_pattern), "https://superboard.invalid").pathname !==
+					view.path_pattern
+			)
+				continue;
 			views.push({
 				routeId: view.route_id ?? view.path_pattern,
 				path: view.path_pattern,
 				method: "GET",
 			});
+		}
 	}
 
 	const apiRoutes: PluginRouteApiDiagnostic[] = [];
-	if (env.SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON) {
-		try {
-			const rawConfiguration: unknown = JSON.parse(env.SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON);
-			const rawRoutes =
-				rawConfiguration && typeof rawConfiguration === "object" && "routes" in rawConfiguration
-					? rawConfiguration.routes
-					: [];
-			const parsedRoutes: DeploymentRoute[] = parseDeploymentRoutes(rawRoutes);
-			for (const r of parsedRoutes) {
-				if (pluginServices.some((service) => service === r.worker)) {
-					apiRoutes.push({
-						method: r.method,
-						path: r.path,
-						surface: r.surface,
-						url: r.url,
-						worker: r.worker,
-					});
-				}
-			}
-		} catch {
-			// Ignore deployment route parse errors
-		}
+	for (const route of liveRoutes) {
+		if (route.surface !== "sdk") continue;
+		if (
+			targetPackageId === "superboard-analytics" &&
+			route.path !== "/v1/analytics" &&
+			!route.path.startsWith("/v1/analytics/")
+		)
+			continue;
+		if (targetPackageId === "superboard-data" && !route.path.startsWith("/v1/data/")) continue;
+		if (
+			targetPackageId === "superboard-authentification" &&
+			route.path !== "/v1/auth" &&
+			!route.path.startsWith("/v1/auth/")
+		)
+			continue;
+
+		if (
+			targetPackageId === "superboard-support" &&
+			route.path !== "/v1/support" &&
+			!route.path.startsWith("/v1/support/")
+		)
+			continue;
+
+		const routePluginId = route.pluginId;
+		const routeOwnerId = routePluginId ? canonicalPluginId(routePluginId) : undefined;
+		const belongsToPlugin =
+			(routeOwnerId !== undefined &&
+				(routeOwnerId === targetPackageId ||
+					(routePluginId !== undefined && aliasIds.includes(routePluginId)))) ||
+			(targetPackageId === "superboard-core" && route.pluginId === "supbrd-core");
+		if (belongsToPlugin)
+			apiRoutes.push({
+				id: route.id,
+				destinations: route.destinations,
+				transport: route.transport,
+				executionScope: route.executionScope,
+				kind: route.kind,
+				availability: route.availability,
+				observedAt: route.observedAt,
+				buildId: route.buildId,
+				method: route.method,
+				path: route.path,
+				surface: route.surface,
+				url: route.url,
+				worker: route.worker,
+			});
 	}
 
-	for (const adapter of apiAdapters.adapters) {
-		if (!aliasIds.includes(adapter.plugin_id)) continue;
-		for (const operation of adapter.operations) {
-			apiRoutes.push({
-				method: operation.method,
-				path: useCanonicalIds
-					? operation.path.replace(
-							adminPluginPathPattern,
-							(_match, prefix: string, id: string, suffix: string = "") =>
-								`${prefix}${canonicalPluginId(id)}${suffix}`,
-						)
-					: operation.path,
-				surface: "adapter",
-			});
-		}
-	}
-	const routeManifests =
-		useCanonicalIds && manifest
-			? [manifest]
-			: catalog.plugins
-					.filter((plugin) => aliasIds.includes(plugin.manifest.plugin_id))
-					.map((plugin) => plugin.manifest);
-	for (const component of routeManifests) {
-		for (const command of component.commands) {
-			apiRoutes.push({
-				method: "POST",
-				path: `/_emdash/api/superboard/plugins/${component.plugin_id}/commands/${command.command_id}`,
-				surface: "plugin",
-				worker: "site",
-			});
-		}
-		for (const source of component.data_sources) {
-			apiRoutes.push({
-				method: "GET",
-				path: `/_emdash/api/superboard/plugins/${component.plugin_id}/data-sources/${source.data_source_id}`,
-				surface: "plugin",
-				worker: "site",
-			});
-		}
+	if (
+		(targetPackageId === "superboard-data" ||
+			targetPackageId === "superboard-analytics" ||
+			targetPackageId === "superboard-authentification" ||
+			targetPackageId === "superboard-support") &&
+		routeInventory
+	) {
+		const services = new Set([
+			...pluginServices,
+			...apiRoutes.flatMap((route) => [
+				...(route.worker ? [route.worker] : []),
+				...(route.destinations ?? []).map((destination) => destination.service),
+			]),
+		]);
+		routeInventory = {
+			...routeInventory,
+			sources: routeInventory.sources.filter((source) => services.has(source.service)),
+		};
 	}
 
 	return {
-		pluginId: requestedPluginId === canonical?.directory ? canonical.directory : pluginId,
+		pluginId: targetPackageId,
 		label,
 		lifecycle,
 		configuration: {
 			...configuration,
-			pluginId: requestedPluginId === canonical?.directory ? canonical.directory : pluginId,
+			pluginId: targetPackageId,
 		},
 		health,
 		dependencies,
 		workers,
 		routes: {
+			inventory: routeInventory,
 			views,
 			api: [
 				...new Map(
@@ -511,4 +565,29 @@ function leastAvailableHealth(
 			reason: "HEALTH_PROOF_MISSING",
 		}
 	);
+}
+
+export async function pluginDiagnosticEtag(
+	diagnostic: PluginDiagnosticData,
+	envelope: string | null,
+): Promise<string> {
+	const inventory = diagnostic.routes.inventory;
+	const stable = {
+		...diagnostic,
+		routes: {
+			...diagnostic.routes,
+			api: diagnostic.routes.api.map(({ observedAt: _observedAt, ...route }) => route),
+			inventory: inventory
+				? {
+						revision: inventory.revision,
+						sources: inventory.sources.map(({ observedAt: _observedAt, ...source }) => source),
+					}
+				: undefined,
+		},
+	};
+	const digest = await crypto.subtle.digest(
+		"SHA-256",
+		new TextEncoder().encode(JSON.stringify({ stable, envelope })),
+	);
+	return `W/"${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}"`;
 }

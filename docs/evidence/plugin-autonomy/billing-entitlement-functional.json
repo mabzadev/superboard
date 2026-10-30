@@ -1,7 +1,7 @@
 {
   "results": [
     {
-      "plugin_id": "supbrd-plugmod-billing",
+      "plugin_id": "superboard-billing",
       "path": "/products/entitlements",
       "operation": "entitlement_create_reload",
       "status": "passed",

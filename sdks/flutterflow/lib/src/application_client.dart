@@ -25,6 +25,7 @@ class SuperBoardApplicationClient {
   SuperBoardApplicationClient({
     required String apiBaseUrl,
     required String filesBaseUrl,
+    String? customApiBaseUrl,
     String applicationAccessToken = '',
     this.projectKey = '',
     this.platform = '',
@@ -34,11 +35,16 @@ class SuperBoardApplicationClient {
     this.timeout = const Duration(seconds: 15),
   }) : apiBaseUri = _httpsBase(apiBaseUrl, 'apiBaseUrl'),
        filesBaseUri = _httpsBase(filesBaseUrl, 'filesBaseUrl'),
+       customApiBaseUri = _httpsBase(
+         customApiBaseUrl ?? apiBaseUrl,
+         'customApiBaseUrl',
+       ),
        _applicationAccessToken = applicationAccessToken.trim(),
        _http = httpClient ?? http.Client();
 
   final Uri apiBaseUri;
   final Uri filesBaseUri;
+  final Uri customApiBaseUri;
   final Duration timeout;
   final String projectKey;
   final String platform;
@@ -61,7 +67,7 @@ class SuperBoardApplicationClient {
     required String email,
     required String password,
     String name = '',
-  }) => _session('/auth/register', {
+  }) => _session('/v1/auth/register', {
     'email': email,
     'password': password,
     if (name.trim().isNotEmpty) 'name': name.trim(),
@@ -70,8 +76,10 @@ class SuperBoardApplicationClient {
   Future<Map<String, dynamic>> signInPassword({
     required String email,
     required String password,
-  }) =>
-      _session('/auth/signin/password', {'email': email, 'password': password});
+  }) => _session('/v1/auth/signin/password', {
+    'email': email,
+    'password': password,
+  });
 
   Future<Map<String, dynamic>> signInProvider({
     required String provider,
@@ -84,7 +92,7 @@ class SuperBoardApplicationClient {
         'Provider must be google or apple.',
       );
     }
-    return _session('/auth/signin/$provider', {
+    return _session('/v1/auth/signin/$provider', {
       'token': idToken,
       if (name.trim().isNotEmpty) 'name': name.trim(),
     });
@@ -102,21 +110,21 @@ class SuperBoardApplicationClient {
     }
     return _json(
       'POST',
-      apiBaseUri.resolve('/auth/link/$provider'),
+      apiBaseUri.resolve('/v1/auth/link/$provider'),
       authenticated: true,
       body: {'token': idToken},
     );
   }
 
   Future<Map<String, dynamic>> signInAnonymous(String installationId) =>
-      _session('/auth/anonymous', {'installation_id': installationId});
+      _session('/v1/auth/anonymous', {'installation_id': installationId});
 
   Future<Map<String, dynamic>> refresh(String refreshToken) =>
-      _session('/auth/refresh', {'refresh_token': refreshToken});
+      _session('/v1/auth/refresh', {'refresh_token': refreshToken});
 
   Future<Map<String, dynamic>> requestPasswordReset(String email) => _json(
     'POST',
-    apiBaseUri.resolve('/auth/request-password-reset'),
+    apiBaseUri.resolve('/v1/auth/request-password-reset'),
     headers: _sdkHeaders(),
     body: {'email': email},
   );
@@ -126,16 +134,16 @@ class SuperBoardApplicationClient {
     required String password,
   }) => _json(
     'POST',
-    apiBaseUri.resolve('/auth/reset-password'),
+    apiBaseUri.resolve('/v1/auth/reset-password'),
     body: {'token': token, 'password': password},
   );
 
   Future<Map<String, dynamic>> profile() =>
-      _json('GET', apiBaseUri.resolve('/auth/me'), authenticated: true);
+      _json('GET', apiBaseUri.resolve('/v1/auth/me'), authenticated: true);
 
   Future<Map<String, dynamic>> updateProfile({required String name}) => _json(
     'PATCH',
-    apiBaseUri.resolve('/auth/me'),
+    apiBaseUri.resolve('/v1/auth/me'),
     authenticated: true,
     body: {'name': name},
   );
@@ -143,7 +151,7 @@ class SuperBoardApplicationClient {
   Future<Map<String, dynamic>> logout() async {
     final result = await _json(
       'POST',
-      apiBaseUri.resolve('/auth/logout'),
+      apiBaseUri.resolve('/v1/auth/logout'),
       authenticated: true,
     );
     _applicationAccessToken = '';
@@ -154,7 +162,7 @@ class SuperBoardApplicationClient {
   Future<Map<String, dynamic>> deleteAccount() async {
     final result = await _json(
       'DELETE',
-      apiBaseUri.resolve('/api/v1/sdk/account/v1'),
+      apiBaseUri.resolve('/v1/auth/account'),
       authenticated: true,
       headers: _sdkHeaders(),
     );
@@ -165,7 +173,7 @@ class SuperBoardApplicationClient {
 
   Future<Map<String, dynamic>> marketingPreferences() => _json(
     'GET',
-    apiBaseUri.resolve('/api/v1/sdk/marketing/v1/preferences'),
+    apiBaseUri.resolve('/v1/communication/preferences'),
     authenticated: true,
     headers: _sdkHeaders(),
   );
@@ -191,7 +199,7 @@ class SuperBoardApplicationClient {
     }
     return _json(
       'PUT',
-      apiBaseUri.resolve('/api/v1/sdk/marketing/v1/preferences'),
+      apiBaseUri.resolve('/v1/communication/preferences'),
       authenticated: true,
       headers: _sdkHeaders()..['idempotency-key'] = key,
       body: {
@@ -209,7 +217,7 @@ class SuperBoardApplicationClient {
     final sdkHeaders = _sdkHeaders();
     return _json(
       'POST',
-      apiBaseUri.resolve('/api/v1/app/runtime-policy'),
+      apiBaseUri.resolve('/v1/data/runtime-policy'),
       body: {
         'app_version': appVersion,
         if (build.trim().isNotEmpty) 'build': build.trim(),
@@ -235,7 +243,7 @@ class SuperBoardApplicationClient {
       ..['authorization'] = 'Bearer ${await _customIdentity()}';
     return _json(
       'POST',
-      apiBaseUri.resolve('/api/v1/sdk/custom/v1/jobs'),
+      customApiBaseUri.resolve('/custom/v1/jobs'),
       authenticated: true,
       headers: headers,
       body: {'capability': capability.trim(), 'payload': payload},
@@ -254,8 +262,8 @@ class SuperBoardApplicationClient {
         'Custom job limit must be between 1 and 100.',
       );
     }
-    final uri = apiBaseUri
-        .resolve('/api/v1/sdk/custom/v1/jobs')
+    final uri = customApiBaseUri
+        .resolve('/custom/v1/jobs')
         .replace(
           queryParameters: {
             'limit': '$limit',
@@ -275,9 +283,7 @@ class SuperBoardApplicationClient {
       ..['authorization'] = 'Bearer ${await _customIdentity()}';
     return _json(
       'GET',
-      apiBaseUri.resolve(
-        '/api/v1/sdk/custom/v1/jobs/${Uri.encodeComponent(id)}',
-      ),
+      customApiBaseUri.resolve('/custom/v1/jobs/${Uri.encodeComponent(id)}'),
       authenticated: true,
       headers: headers,
     );
@@ -289,8 +295,8 @@ class SuperBoardApplicationClient {
       ..['authorization'] = 'Bearer ${await _customIdentity()}';
     return _json(
       'POST',
-      apiBaseUri.resolve(
-        '/api/v1/sdk/custom/v1/jobs/${Uri.encodeComponent(id)}/cancel',
+      customApiBaseUri.resolve(
+        '/custom/v1/jobs/${Uri.encodeComponent(id)}/cancel',
       ),
       authenticated: true,
       headers: headers,
@@ -311,7 +317,7 @@ class SuperBoardApplicationClient {
   Future<Map<String, dynamic>> listFiles({int limit = 50, int offset = 0}) =>
       _json(
         'GET',
-        filesBaseUri.resolve('/v1/files?limit=$limit&offset=$offset'),
+        filesBaseUri.resolve('/v1/data/files?limit=$limit&offset=$offset'),
         authenticated: true,
       );
 
@@ -320,7 +326,7 @@ class SuperBoardApplicationClient {
     required String filename,
     required String contentType,
   }) async {
-    final request = http.Request('POST', filesBaseUri.resolve('/v1/files'))
+    final request = http.Request('POST', filesBaseUri.resolve('/v1/data/files'))
       ..headers.addAll(_headers(authenticated: true))
       ..headers['content-type'] = contentType
       ..headers['x-filename'] = filename
@@ -334,7 +340,9 @@ class SuperBoardApplicationClient {
   }) async {
     final request = http.Request(
       'GET',
-      filesBaseUri.resolve('/v1/files/${Uri.encodeComponent(fileId)}/content'),
+      filesBaseUri.resolve(
+        '/v1/data/files/${Uri.encodeComponent(fileId)}/content',
+      ),
     )..headers.addAll(_headers(authenticated: true));
     final response = await _http.send(request).timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -361,7 +369,7 @@ class SuperBoardApplicationClient {
 
   Future<Map<String, dynamic>> deleteFile(String fileId) => _json(
     'DELETE',
-    filesBaseUri.resolve('/v1/files/${Uri.encodeComponent(fileId)}'),
+    filesBaseUri.resolve('/v1/data/files/${Uri.encodeComponent(fileId)}'),
     authenticated: true,
   );
 
@@ -414,7 +422,7 @@ class SuperBoardApplicationClient {
   ) async {
     final result = await _json(
       'POST',
-      apiBaseUri.resolve('/auth/superboard-token'),
+      apiBaseUri.resolve('/v1/auth/superboard-token'),
       authenticated: true,
     );
     final token = result['access_token']?.toString() ?? '';

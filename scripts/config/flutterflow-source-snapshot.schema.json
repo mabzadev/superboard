@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://board.mbza.dev/schemas/flutterflow-source-snapshot.schema.json",
+  "$id": "https://board.mabza.dev/schemas/flutterflow-source-snapshot.schema.json",
   "title": "SuperBoard FlutterFlow source snapshot and convergence contract",
   "type": "object",
   "additionalProperties": false,

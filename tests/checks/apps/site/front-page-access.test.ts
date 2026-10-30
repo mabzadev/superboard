@@ -29,7 +29,7 @@ let env: SuperBoardSiteEnv;
 
 beforeAll(async () => {
 	const userPlugin = superBoardRuntimePluginCatalog().plugins.find(
-		({ manifest }) => manifest.plugin_id === "supbrd-plug-user",
+		({ manifest }) => manifest.plugin_id === "superboard-user",
 	)?.manifest;
 	if (!userPlugin) throw new Error("Missing User plugin");
 	const keys = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [

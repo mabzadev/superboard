@@ -41,7 +41,7 @@ void main() {
       expect(client.floatingBlocks, hasLength(1));
       expect(
         requests.single.url.toString(),
-        'https://board.example/api/v1/flows/v2/sdk/blocks',
+        'https://board.example/v1/acquisition/flows/blocks',
       );
       final body = jsonDecode(requests.single.body) as Map<String, dynamic>;
       expect(body, {
@@ -227,9 +227,9 @@ void main() {
 
     expect(firstKeys, everyElement('survey:state_survey_1'));
     expect(replayPaths.take(3), [
-      '/api/v1/flows/v2/sdk/survey',
-      '/api/v1/flows/v2/sdk/events',
-      '/api/v1/flows/v2/sdk/blocks',
+      '/v1/acquisition/flows/survey',
+      '/v1/acquisition/flows/events',
+      '/v1/acquisition/flows/blocks',
     ]);
     expect(replayKeys.first, firstKeys.first);
     expect(replayKeys.last, isNotEmpty);
@@ -276,7 +276,7 @@ void main() {
 
     expect((await next).single.id, 'modal_1');
     expect(connectedUri.scheme, 'wss');
-    expect(connectedUri.path, '/api/v1/flows/ws/sdk/block-updates');
+    expect(connectedUri.path, '/v1/acquisition/flows-realtime/block-updates');
     expect(connectedUri.queryParameters, {
       'projectId': 'project_1',
       'environment': 'preview',

@@ -11,8 +11,8 @@
 
 [
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.data_source.platform_email_operations",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.data_source.platform_email_operations",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -25,8 +25,8 @@
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.command.replay_email_dead_letter",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.command.replay_email_dead_letter",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -37,8 +37,8 @@
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-observability",
-    "route_id": "gateway.supbrd-plugmod-observability.command.discard_email_dead_letter",
+    "plugin_id": "superboard-observability",
+    "route_id": "gateway.superboard-observability.command.discard_email_dead_letter",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",

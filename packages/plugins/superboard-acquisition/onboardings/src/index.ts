@@ -1,3 +1,5 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { localizeExperienceDefinition } from "@superboard/contracts/experience-localization";
 import {
 	verifyInternalProjectContextRequest,
@@ -23,7 +25,7 @@ class OnboardingError extends Error {
 		super(message);
 	}
 }
-const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+const app = registerRouter(new Hono<{ Bindings: Env; Variables: Variables }>(), {"service":"onboardings","module":"index.app","pluginId":"superboard-onboardings","surface":"internal","access":"internal"});
 const fail = (code: string, message: string, status: ErrorStatus, details?: unknown) =>
 	new OnboardingError(code, message, status, details);
 app.onError((cause, c) => {
@@ -952,4 +954,4 @@ function statisticsBucket(
 	}
 	return day;
 }
-export default app;
+export default withRouteManifest((app), [app], {"service":"onboardings","pluginId":"superboard-onboardings"});

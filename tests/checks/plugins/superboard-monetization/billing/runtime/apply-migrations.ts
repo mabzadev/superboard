@@ -10,3 +10,6 @@ beforeAll(async () => {
   const testEnv = env as BillingRuntimeEnv;
   await applyD1Migrations(testEnv.DB, testEnv.TEST_MIGRATIONS);
 });
+
+export const billingTestEnv = env as BillingRuntimeEnv;
+export { createExecutionContext } from "cloudflare:test";

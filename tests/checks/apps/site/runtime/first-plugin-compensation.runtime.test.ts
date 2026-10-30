@@ -13,7 +13,7 @@ test("compensates the first activation and permits a fresh independent installat
 		"CREATE TRIGGER fail_first_activation BEFORE INSERT ON _plugin_state WHEN NEW.plugin_id = 'supbrd-plug-identity' AND NEW.status = 'active' BEGIN SELECT RAISE(ABORT, 'injected first activation failure'); END;",
 	);
 	const failed = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-user/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-user/enable",
 		{ method: "POST", headers },
 	);
 	expect(failed.status, await failed.clone().text()).toBe(500);

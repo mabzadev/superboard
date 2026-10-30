@@ -1,10 +1,12 @@
-import { Hono } from "hono";
+import { registerRouter } from "@superboard/contracts/route-registry";
+import { Hono, type Context } from "hono";
 
 import {
 	applyVerifiedPurchase,
 	offeringsForCustomer,
 	type BillingEnvironment,
 } from "../lib/billing";
+import { billingClientContextFromRequest } from "../lib/billing-client-context.js";
 import { restoreVerifiedPurchases } from "../lib/billing-restore";
 import {
 	billingServiceEnabled,
@@ -26,23 +28,23 @@ function brandedHeader(c: any, suffix: string): string | undefined {
 	return c.req.header(`X-SuperBoard-${suffix}`);
 }
 
-const purchases = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+const purchases = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.purchases-sdk.purchases","pluginId":"superboard-billing","surface":"sdk","access":"sdk-key","public":{"surface":"sdk","prefix":"/v1/monetization/purchases","aliases":["/purchases/v1","/purchases/v2"]}});
 
 async function jsonBody(c: any): Promise<Record<string, any>> {
 	return readApiJson(c.req.raw);
 }
 
-async function context(c: any) {
+async function context(c: Context<{ Bindings: Env; Variables: AppVariables }>) {
 	const projectId = c.get("projectId");
 	if (!projectId) throw new Error("Invalid project for SDK credentials");
-	const project = (await c.env.DB.prepare(`
+	const project = await c.env.DB.prepare(`
     SELECT p.id, COALESCE(p.is_test, p.test, 0) AS is_test,
            COALESCE(s.purchases_enabled, 0) AS purchases_enabled
     FROM projects p LEFT JOIN billing_project_settings s ON s.project_id = p.id
     WHERE p.id = ? LIMIT 1
   `)
 		.bind(String(projectId))
-		.first()) as { id: number; is_test: number; purchases_enabled: number } | null;
+		.first<{ id: number; is_test: number; purchases_enabled: number }>();
 	if (!project) throw new Error("Invalid project for SDK credentials");
 	if (!isPurchasesEnabled(c.env, project.purchases_enabled)) {
 		throw new Error("SuperBoard Purchases is not enabled for this project");
@@ -50,6 +52,7 @@ async function context(c: any) {
 	const anonymousId = brandedHeader(c, "Anonymous-ID");
 	const resolved = await resolveCustomerFromBillingAuthority(c.env, {
 		projectId,
+		clientContext: billingClientContextFromRequest(c.req.raw),
 		authorization: c.req.header("Authorization"),
 		anonymousId,
 	});
@@ -226,7 +229,7 @@ purchases.post("/google/purchases", async (c) => {
 	}
 });
 
-async function restore(c: any) {
+async function restore(c: Context<{ Bindings: Env; Variables: AppVariables }>) {
 	try {
 		const ctx = await context(c);
 		const body = await jsonBody(c);

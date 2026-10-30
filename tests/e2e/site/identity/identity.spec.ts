@@ -9,7 +9,7 @@ import {
 	unique,
 } from "../../../fixtures/site-browser/site-api.js";
 
-const plugin = "supbrd-plug-user";
+const plugin = "superboard-user";
 const suffix = /\/([0-9]+)$/;
 const metadata = `<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://identity-fixture.example.test"><IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://identity-fixture.example.test/sso"/></IDPSSODescriptor></EntityDescriptor>`;
 

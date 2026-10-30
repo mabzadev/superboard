@@ -8,6 +8,10 @@ import {
 	readBytesLimited,
 	RequestBodyError,
 } from "@superboard/contracts/request-body";
+import { resolveRouteReference, RouteReferenceError } from "@superboard/contracts/route-reference";
+import { matchRouteParameters } from "@superboard/contracts/route-registry";
+import type { RouteDescriptor } from "@superboard/contracts/route-registry";
+import { createFetchRouter, resolveRegisteredRoute } from "@superboard/contracts/route-registry";
 import type { APIContext } from "astro";
 
 import registry from "../../../../scripts/config/superboard-plugin-api-adapters.json";
@@ -24,8 +28,10 @@ import {
 	OperatorProjectScopeError,
 } from "./operator-project-scope.js";
 import { requireActiveSuperBoardPlugin } from "./plugin-availability.js";
+import { resolveApiRouteReferences } from "./route-references.js";
 import { dispatchSettingsPluginApi } from "./settings-plugin-api.js";
 import { getSiteEnv } from "./site-env.js";
+import { registerSiteRouteSource } from "./site-route-registry.js";
 import { resolveSuperBoardPluginTarget } from "./superboard-plugin-catalog.js";
 
 export type PluginApiAdapterKind = "command" | "data_source";
@@ -35,8 +41,9 @@ export interface PluginApiAdapterEnvelope {
 	body?: unknown;
 }
 interface AdapterOperation {
-	method: string;
-	path: string;
+	route_id?: string;
+	method?: string;
+	path?: string;
 	parameters: string[];
 	server_bound_parameters: string[];
 	parameter_values: Record<string, readonly string[] | undefined>;
@@ -52,8 +59,9 @@ interface Adapter {
 	status: string;
 	operations: AdapterOperation[];
 }
+const adapterRegistry: { adapters: Adapter[] } = registry;
 const adapters = new Map<string, Adapter>(
-	registry.adapters.flatMap((adapter): [string, Adapter][] => [
+	adapterRegistry.adapters.flatMap((adapter): [string, Adapter][] => [
 		[adapter.id, adapter],
 		[canonicalPluginId(adapter.id), adapter],
 	]),
@@ -99,6 +107,7 @@ export function matchPluginApiAdapter(
 	contributionId: string,
 	kind: PluginApiAdapterKind,
 	value: unknown,
+	routes: readonly RouteDescriptor[] = [],
 ) {
 	const adapter = ownedAdapter(pluginId, contributionId);
 	if (!adapter || adapter.kind !== kind)
@@ -127,14 +136,15 @@ export function matchPluginApiAdapter(
 		!(
 			url.pathname.startsWith("/api/v1/") ||
 			url.pathname.startsWith("/api/v2/") ||
-			(["supbrd-plug-content", "supbrd-plug-audit", "supbrd-plug-settings"].includes(
+			(["superboard-content", "superboard-audit", "superboard-settings"].includes(
 				adapter.plugin_id,
 			) &&
 				url.pathname.startsWith("/_emdash/api/"))
 		)
 	)
 		throw new PluginApiAdapterError("PLUGIN_ADAPTER_PATH_INVALID", 422);
-	const matches = adapter.operations.flatMap((operation) => {
+	const matches = adapter.operations.flatMap((reference) => {
+		const operation = resolveRouteReference(reference, routes, adapter.plugin_id);
 		if (operation.method !== value.method) return [];
 		const parameters = matchPath(operation, url.pathname);
 		if (
@@ -164,7 +174,7 @@ export function matchPluginApiAdapter(
 	};
 }
 
-export async function dispatchPluginApiAdapter(
+async function executePluginApiAdapter(
 	context: APIContext,
 	kind: PluginApiAdapterKind,
 	envOverride?: OperatorApiProxyEnv & {
@@ -175,6 +185,8 @@ export async function dispatchPluginApiAdapter(
 ): Promise<Response> {
 	const denied = requirePluginOperator(context, { mutation: context.request.method !== "GET" });
 	if (denied) return denied;
+	const operator = context.locals.user;
+	if (!operator) return jsonResponse({ error: { code: "AUTHENTICATION_REQUIRED" } }, 401);
 	const env = envOverride ?? getSiteEnv();
 	const localId =
 		(kind === "command" ? context.params.commandId : context.params.dataSourceId) ?? "";
@@ -205,7 +217,14 @@ export async function dispatchPluginApiAdapter(
 			: context.request.method === "GET"
 				? (JSON.parse(context.url.searchParams.get("request") ?? "null") as unknown)
 				: await readJsonObjectLimited(context.request, 2 * 1024 * 1024);
-		const matched = matchPluginApiAdapter(pluginId, contributionId, kind, envelope);
+		const references =
+			ownedAdapter(pluginId, contributionId)?.operations.flatMap((operation) =>
+				operation.route_id ? [operation.route_id] : [],
+			) ?? [];
+		const routes = references.length
+			? await resolveApiRouteReferences(env, operator, references)
+			: [];
+		const matched = matchPluginApiAdapter(pluginId, contributionId, kind, envelope, routes);
 		if (
 			multipartMetadata &&
 			(matched.operation.body !== "passthrough" || matched.body !== undefined)
@@ -213,7 +232,6 @@ export async function dispatchPluginApiAdapter(
 			throw new PluginApiAdapterError("PLUGIN_ADAPTER_MULTIPART_INVALID", 422);
 		if (context.request.method === "GET" && matched.method !== "GET")
 			throw new PluginApiAdapterError("PLUGIN_ADAPTER_METHOD_NOT_ALLOWED", 405);
-		const operator = context.locals.user!;
 		let projectRef = "instance-wide";
 		if (matched.operation.server_bound_parameters.length) {
 			const scope = await resolveOperatorProjectScope(env, operator);
@@ -246,13 +264,13 @@ export async function dispatchPluginApiAdapter(
 			...(body !== undefined ? { body } : {}),
 		});
 		if (
-			["supbrd-plug-content", "supbrd-plug-audit", "supbrd-plug-settings"].includes(pluginId) &&
+			["superboard-content", "superboard-audit", "superboard-settings"].includes(pluginId) &&
 			destination.pathname.startsWith("/_emdash/api/")
 		) {
 			const dispatch = () =>
-				pluginId === "supbrd-plug-content"
-					? dispatchContentPluginApi(context, request)
-					: pluginId === "supbrd-plug-audit"
+				pluginId === "superboard-content"
+					? dispatchContentPluginApi(context, request, matched.operation.route_id)
+					: pluginId === "superboard-audit"
 						? dispatchAuditPluginApi(request, env)
 						: dispatchSettingsPluginApi(context, request, pluginId);
 			if (matched.method === "GET") return dispatch();
@@ -284,6 +302,8 @@ export async function dispatchPluginApiAdapter(
 				: {}),
 		});
 	} catch (error) {
+		if (error instanceof RouteReferenceError)
+			return jsonResponse({ error: { code: error.code } }, 503);
 		if (error instanceof PluginApiAdapterError)
 			return jsonResponse({ error: { code: error.code } }, error.status);
 		if (error instanceof OperatorProjectScopeError)
@@ -297,18 +317,14 @@ export async function dispatchPluginApiAdapter(
 	}
 }
 
-function matchPath(operation: AdapterOperation, pathname: string): Record<string, string> | null {
-	const expected = operation.path.split("/");
-	const actual = pathname.split("/");
-	if (expected.length !== actual.length) return null;
+function matchPath(
+	operation: AdapterOperation & { path: string },
+	pathname: string,
+): Record<string, string> | null {
+	const matched = matchRouteParameters(operation.path, pathname);
+	if (!matched) return null;
 	const parameters: Record<string, string> = {};
-	for (const [index, segment] of expected.entries()) {
-		const received = actual[index];
-		if (!segment.startsWith(":")) {
-			if (segment !== received) return null;
-			continue;
-		}
-		const name = segment.slice(1);
+	for (const [name, received] of Object.entries(matched)) {
 		let value: string;
 		try {
 			value = decodeURIComponent(received);
@@ -332,4 +348,59 @@ function matchPath(operation: AdapterOperation, pathname: string): Record<string
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+type AdapterEnvironment = Parameters<typeof executePluginApiAdapter>[2];
+const adapterRoutes = createFetchRouter<{ context: APIContext; env?: AdapterEnvironment }>({
+	service: "site",
+	module: "plugin-adapters",
+	pluginId: "supbrd-core",
+	surface: "board",
+	access: "operator",
+});
+for (const adapter of adapterRegistry.adapters) {
+	if (adapter.status !== "verified" || adapter.audience === "application_client") continue;
+	const kind: PluginApiAdapterKind = adapter.kind === "command" ? "command" : "data_source";
+	const resource = kind === "command" ? "commands" : "data-sources";
+	const method = kind === "command" ? "POST" : "GET";
+	const owner = pluginPackage(adapter.plugin_id);
+	const owners = new Set([adapter.plugin_id, ...(owner ? [owner.id, owner.directory] : [])]);
+	const ids = new Set([
+		adapter.id,
+		canonicalPluginId(adapter.id),
+		adapter.id.split(".").slice(2).join("."),
+	]);
+	const paths = [...owners].flatMap((pluginId) =>
+		[...ids]
+			.filter(
+				(id) =>
+					ownedAdapter(pluginId, id.includes(`.${kind}.`) ? id : `${pluginId}.${kind}.${id}`) ===
+					adapter,
+			)
+			.map((id) => `/_emdash/api/superboard/plugins/${pluginId}/${resource}/${id}`),
+	);
+	const canonical = `/_emdash/api/superboard/plugins/${canonicalPluginId(adapter.plugin_id)}/${resource}/${canonicalPluginId(adapter.id)}`;
+	adapterRoutes
+		.defineRoute({
+			id: `site:adapter:${adapter.id}`,
+			pluginId: adapter.plugin_id,
+			exposures: [{ surface: "board", path: canonical }],
+		})
+		.on(method, paths, ({ env }) => executePluginApiAdapter(env.context, kind, env.env));
+}
+registerSiteRouteSource("plugin-adapters", adapterRoutes);
+
+export function dispatchPluginApiAdapter(
+	context: APIContext,
+	kind: PluginApiAdapterKind,
+	env?: AdapterEnvironment,
+): Promise<Response> {
+	return resolveRegisteredRoute(
+		adapterRoutes,
+		context.request.method,
+		"board",
+		context.url.pathname,
+	)
+		? adapterRoutes.fetch(context.request, { context, env })
+		: executePluginApiAdapter(context, kind, env);
 }

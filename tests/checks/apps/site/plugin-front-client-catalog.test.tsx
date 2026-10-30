@@ -12,9 +12,9 @@ const publishedViews = parityFrontPluginCatalog.flatMap((plugin) =>
 );
 
 test.each([
-	["supbrd-plugmod-files", "/data/settings"],
-	["supbrd-plug-products", "/monetization/settings"],
-	["supbrd-plugmod-flows", "/acquisition/settings"],
+	["superboard-files", "/data/settings"],
+	["superboard-products", "/monetization/settings"],
+	["superboard-flows", "/acquisition/settings"],
 ])("publishes and loads the settings entry for %s", async (pluginId, path) => {
 	const surface = publishedViews.find((view) => view.plugin_id === pluginId && view.path === path);
 	expect(surface, `Missing settings entry: ${path}`).toBeDefined();
@@ -34,13 +34,13 @@ test.each(publishedViews)(
 
 test("rejects a route belonging to another plugin", async () => {
 	await expect(
-		loadPluginClientView("supbrd-plugmod-billing", "superboard.communication_statistics"),
+		loadPluginClientView("superboard-billing", "superboard.communication_statistics"),
 	).rejects.toThrow("View is not registered");
 });
 
 test("keeps the historical purchases view loadable under its billing owner", async () => {
 	const { Page } = await loadPluginClientView(
-		"supbrd-plugmod-billing",
+		"superboard-billing",
 		"superboard.products_purchases",
 	);
 	expect(Page).toBeDefined();
@@ -48,15 +48,15 @@ test("keeps the historical purchases view loadable under its billing owner", asy
 
 test("paywall statistics resolves to the statistics screen, not the editor", async () => {
 	const statistics = await loadPluginClientView(
-		"supbrd-plugmod-paywalls",
+		"superboard-paywalls",
 		"superboard.acquisition_paywalls_statistics",
 	);
 	const editor = await loadPluginClientView(
-		"supbrd-plugmod-paywalls",
+		"superboard-paywalls",
 		"superboard.acquisition_paywalls",
 	);
 	const original = await loadPluginClientView(
-		"supbrd-plugmod-paywalls",
+		"superboard-paywalls",
 		"superboard.paywalls_statistics",
 	);
 	expect(statistics.Page).toBe(original.Page);

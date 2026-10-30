@@ -22,7 +22,7 @@ Le front propose désormais un sélecteur de langue dans la barre supérieure. L
 
 Vérifications du 8 septembre : 116 tests unitaires du site, 39 tests de composants du front, 34 tests Analytics/Support, deux tests du rechargement des pages Block Kit, un test du plugin compilé dans un contexte sans variables Node, et trois scénarios HTTP de session/langue passent. Les vérifications de types du site, de l’admin et des deux packages de plugins/front passent ; le lint rapide ne rapporte aucun diagnostic. Le lint complet initial conserve un avertissement préexistant dans `packages/core/src/astro/integration/vite-config.ts`. Le navigateur confirme le sélecteur FR/EN, la navigation arabe RTL avec repli anglais, le tableau de bord Analytics français et le maintien du français dans Identity malgré une URL `/en/`.
 
-La page native `/_emdash/admin/plugins/supbrd-plugmod-analytics` reste un résumé technique du plugin. Elle ne monte pas les vues métier accessibles sous `/analytics`. Ces corrections de langue ne constituent donc pas une intégration complète de ces vues dans le menu et les pages natives d’EmDash Admin.
+La page native `/_emdash/admin/plugins/superboard-analytics` reste un résumé technique du plugin. Elle ne monte pas les vues métier accessibles sous `/analytics`. Ces corrections de langue ne constituent donc pas une intégration complète de ces vues dans le menu et les pages natives d’EmDash Admin.
 
 Sources : [shell](../../apps/site/src/components/NativeFrontApp.tsx), [accordéon](../../apps/site/src/components/NativeFrontNavigation.tsx), [organisation et traductions](../../apps/site/src/lib/product-navigation.ts), [bootstrap](../../apps/site/src/lib/superboard-views.ts).
 
@@ -89,7 +89,7 @@ Le profil `consolidated` produit les déploiements ci-dessous. Les identifiants 
 | Statistiques     | Analytics                                                     |
 | Supervision      | Observability                                                 |
 
-Le profil complet comporte **10 services communs**, auxquels s’ajoutent les extensions. MBZA en déclare 11 avec son extension de référence. La cible Vocostar en déclare également 11 avec Analytics et Flows désactivés, son adaptateur custom et ses deux orchestrateurs. Ces chiffres décrivent les plans générés ; ils ne sont pas un comptage des workers actuellement déployés dans les comptes Cloudflare. La passerelle historique Vocostar reste une dépendance externe tant que sa bascule n’est pas validée.
+Le profil complet comporte **10 services communs**, auxquels s’ajoutent les extensions. MABZA en déclare 11 avec son extension de référence. La cible Vocostar en déclare également 11 avec Analytics et Flows désactivés, son adaptateur custom et ses deux orchestrateurs. Ces chiffres décrivent les plans générés ; ils ne sont pas un comptage des workers actuellement déployés dans les comptes Cloudflare. La passerelle historique Vocostar reste une dépendance externe tant que sa bascule n’est pas validée.
 
 Chaque module reçoit ses propres bindings et variables. Les secrets des modules regroupés utilisent un préfixe, par exemple `EMAIL__EMAIL_INTERNAL_TOKEN` et `MARKETING__INTERNAL_API_TOKEN`. Le manifeste de déploiement indique le worker et le nom de secret d’origine. Le regroupement conserve les liaisons de stockage de chaque module. Le transport push conserve son stockage et son contrat de chiffrement existants.
 
@@ -102,8 +102,8 @@ Sources : [compilateur](../../scripts/cloudflare/deployment-groups.mjs), [géné
 Générer et examiner le plan d’une cible constitue la première étape.
 
 ```bash
-rtk proxy node scripts/cloudflare/deploy-all.mjs --target mbza-development --environment development --plan
-rtk proxy node scripts/cloudflare/consolidate.mjs --target mbza-development --environment development --preflight --allow-unprovisioned
+rtk proxy node scripts/cloudflare/deploy-all.mjs --target mabza-development --environment development --plan
+rtk proxy node scripts/cloudflare/consolidate.mjs --target mabza-development --environment development --preflight --allow-unprovisioned
 ```
 
 La génération écrit les configurations, les interfaces d’exécution et un manifeste sous `infra/generated/`. Le manifeste liste les services, les secrets à reprendre, les transferts de queues et les anciens workers candidats au retrait. `--allow-unprovisioned` sert à la validation des configurations ; le déploiement normal exige les ressources réelles.

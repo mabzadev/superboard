@@ -234,7 +234,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Validate exact MBZA endpoints and the Dart-define allowlist
+      - name: Validate exact MABZA endpoints and the Dart-define allowlist
         run: npm run config:test
       - name: Resolve validated project-owned CI metadata
         id: metadata
@@ -424,7 +424,7 @@ jobs:
           test "$(git -C vendor/superboard-platform rev-parse HEAD)" = "$SUPERBOARD_PLATFORM_REVISION"
       - run: flutter pub get --enforce-lockfile
       - run: npm ci
-      - name: Build live MBZA acceptance artifact
+      - name: Build live MABZA acceptance artifact
         env:
           SUPERBOARD_PROJECT_KEY: ${{ secrets.SUPERBOARD_PROJECT_KEY || secrets.SUPERBOARD_PROJECT_KEY }}
           SUPERBOARD_PROJECT_ID: ${{ secrets.SUPERBOARD_PROJECT_ID || secrets.SUPERBOARD_PROJECT_ID }}

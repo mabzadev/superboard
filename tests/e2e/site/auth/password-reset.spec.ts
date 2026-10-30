@@ -36,7 +36,7 @@ test.describe("Passwordless operator recovery", () => {
 				const profile = unwrap(await (await page.request.get("/_emdash/api/auth/me")).json());
 				expect((profile.user ?? profile).id).toBe(user.id);
 				await evidence(
-					"supbrd-plug-user",
+					"superboard-user",
 					routeId,
 					[user.id],
 					"Real captured magic link restores the existing operator session; no external email transport.",

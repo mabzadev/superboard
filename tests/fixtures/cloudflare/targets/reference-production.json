@@ -126,7 +126,7 @@
 	"customWorker": {
 		"source": "apps/reference/worker/src/index.ts",
 		"packagePath": "apps/reference/worker",
-		"description": "SuperBoard reference extension used to validate the custom Worker protocol on mbza.dev.",
+		"description": "SuperBoard reference extension used to validate the custom Worker protocol on mabza.dev.",
 		"capabilities": [
 			"reference.echo",
 			"reference.acceptance"

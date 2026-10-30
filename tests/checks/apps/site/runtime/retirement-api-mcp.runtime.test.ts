@@ -13,7 +13,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-mcp";
+const plugin = "superboard-mcp";
 const file = "retirement-api-mcp.runtime.test.ts";
 test("canonical MCP APIs retain consent, scoped token revocation, protocol sessions and receipts", async () => {
 	await prepareApiPlugin(plugin);

@@ -1,3 +1,4 @@
+import { INTERNAL_ROUTE_OWNER_PATH } from "@superboard/contracts/route-reference";
 import { verifySiteOperatorRequest } from "@superboard/contracts/site-operator";
 import { expect, test, vi } from "vitest";
 
@@ -5,7 +6,9 @@ import { proxyOperatorApiRequest } from "../../../../apps/site/src/lib/operator-
 
 test("proxies an operator request through the private API binding without leaking cookies", async () => {
 	const fetch = vi.fn(async (request: Request) =>
-		Response.json({ method: request.method, body: await request.json() }),
+		new URL(request.url).pathname === INTERNAL_ROUTE_OWNER_PATH
+			? Response.json({ pluginId: "supbrd-core", routeId: "api:fixture:reports" })
+			: Response.json({ method: request.method, body: await request.json() }),
 	);
 	const response = await proxyOperatorApiRequest({
 		request: new Request("https://site.example.test/api/v1/core/reports", {
@@ -30,7 +33,7 @@ test("proxies an operator request through the private API binding without leakin
 		command_authority: async ({ dispatch }) => dispatch(),
 	});
 	expect(response.status).toBe(200);
-	const forwarded = fetch.mock.calls[0]?.[0] as Request;
+	const forwarded = fetch.mock.calls[1]?.[0] as Request;
 	expect(forwarded.url).toBe("https://api.internal/api/v1/core/reports");
 	expect(forwarded.headers.get("Cookie")).toBeNull();
 	expect(forwarded.headers.get("Authorization")).toBeNull();
@@ -58,6 +61,7 @@ test("fails closed when a mutation cannot first commit to the EmDash command rep
 			body: "{}",
 		}),
 		operator: { id: "emdash-owner", role: 50 },
+		plugin_context: { plugin_id: "supbrd-core", project_ref: "instance-wide" },
 		env: {
 			SUPERBOARD_INSTANCE_ID: "reference-production",
 			API_SERVICE: { fetch },

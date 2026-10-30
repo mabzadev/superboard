@@ -4,8 +4,8 @@ import { expect, test } from "vitest";
 import { apiHeaders, jsonResult, prepareApiPlugin } from "./retirement-api-helpers.js";
 
 test("operator usage exports provide an admitted local download and a public email URL", async () => {
-	const scope = await prepareApiPlugin("supbrd-plug-settings");
-	await prepareApiPlugin("supbrd-plug-user");
+	const scope = await prepareApiPlugin("superboard-settings");
+	await prepareApiPlugin("superboard-user");
 	const response = await SELF.fetch(
 		`https://site.example/api/v1/instances/${scope.instance.id}/exports/usage`,
 		{

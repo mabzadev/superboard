@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 import { Env } from "../types";
 import { sdkMiddleware } from "../middleware/auth";
@@ -25,11 +26,10 @@ import {
 } from "@superboard/contracts/analytics";
 import {
   canonicalAnalyticsEventId,
-  deliverAnalyticsFact,
   enqueueAnalyticsFactStatement,
 } from "../lib/analytics-facts";
 
-const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+const sdk = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.sdk.sdk","pluginId":"supbrd-core","surface":"sdk","access":"sdk-key"});
 sdk.get("/.well-known/purchases-jwks.json", async (c) =>
   c.json(await purchasesJwksFromBillingAuthority(c.env), 200, {
     "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
@@ -40,7 +40,7 @@ sdk.route("/purchases/v1", purchasesRoutes);
 // V2 keeps the proven purchase/restore endpoints while adding remote
 // configuration, unified receipts, events and customer self-service.
 sdk.route("/purchases/v2", purchasesRoutes);
-sdk.route("/purchases/v2", purchasesV2Routes);
+sdk.defineRoute({ mount: "extend" }).route("/purchases/v2", purchasesV2Routes);
 sdk.route("/custom/v1", customSdkRoutes);
 sdk.route("/marketing/v1", marketingSdkRoutes);
 sdk.route("/account/v1", accountSdkRoutes);
@@ -533,7 +533,7 @@ async function notificationMessages(
 }
 
 // Upstream SDK auth endpoint. Uses PROJECT-KEY + PLATFORM + IDENTIFIER headers.
-sdk.post("/authenticate", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/data/authenticate","aliases":["/authenticate"]}]}).post("/authenticate", async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const ip =
@@ -643,7 +643,7 @@ sdk.post("/authenticate", async (c) => {
   });
 });
 
-sdk.get("/device_for_vendor_id", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/data/device_for_vendor_id","aliases":["/device_for_vendor_id"]}]}).get("/device_for_vendor_id", async (c) => {
   const body = { vendor_id: c.req.query("vendor_id") };
   const project = await currentSdkProject(c, body);
   const device = await c.env.DB.prepare(
@@ -666,7 +666,7 @@ sdk.get("/device_for_vendor_id", async (c) => {
 });
 
 // POST /api/v1/sdk/register — register a device
-sdk.post("/register", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/data/register","aliases":["/register"]}]}).post("/register", async (c) => {
   const ip =
     c.req.header("CF-Connecting-IP") ||
     c.req.header("X-Forwarded-For") ||
@@ -759,7 +759,7 @@ sdk.post("/register", async (c) => {
 });
 
 // POST /api/v1/sdk/attribution — deferred deep link matching
-sdk.post("/attribution", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/acquisition/attribution","aliases":["/attribution"]}]}).post("/attribution", async (c) => {
   const body = await c.req.json<{
     device_id: number;
     project_id: number;
@@ -878,7 +878,6 @@ sdk.post("/attribution", async (c) => {
       )
       .run();
   }
-  await deliverAnalyticsFact(c.env, project.id, factKey);
 
   if (!action) {
     return c.json({
@@ -908,7 +907,7 @@ sdk.post("/attribution", async (c) => {
 });
 
 // POST /api/v1/sdk/events — track in-app events
-sdk.post("/events", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/data/device-events","aliases":["/events"]}]}).post("/events", async (c) => {
   const body = await c.req.json<{
     device_id: number;
     project_id: number;
@@ -998,7 +997,6 @@ sdk.post("/events", async (c) => {
       event: analyticsEvent,
     }),
   ]);
-  await deliverAnalyticsFact(c.env, project.id, factKey);
 
   return c.json({
     success: true,
@@ -1008,7 +1006,7 @@ sdk.post("/events", async (c) => {
 });
 
 // Upstream SDK event alias: authenticated by PROJECT-KEY headers and LINKSQUARED.
-sdk.post("/event", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/data/event","aliases":["/event"]}]}).post("/event", async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const visitor = await sdkVisitor(c, Number(project.id));
@@ -1098,7 +1096,6 @@ sdk.post("/event", async (c) => {
       event: analyticsEvent,
     }),
   ]);
-  await deliverAnalyticsFact(c.env, project.id, factKey);
   return c.json({
     message: "Event added",
     event_id: eventId,
@@ -1106,7 +1103,7 @@ sdk.post("/event", async (c) => {
   });
 });
 
-sdk.post("/data_for_device", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/acquisition/data_for_device","aliases":["/data_for_device"]}]}).post("/data_for_device", async (c) => {
   const project = await currentSdkProject(c, await readBody(c));
   const visitor = await sdkVisitor(c, Number(project.id));
   if (!visitor) return c.json({ error: "Invalid linksquared id" }, 403);
@@ -1144,7 +1141,7 @@ sdk.post("/data_for_device", async (c) => {
   });
 });
 
-sdk.post("/data_for_device_and_url", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/acquisition/data_for_device_and_url","aliases":["/data_for_device_and_url"]}]}).post("/data_for_device_and_url", async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const visitor = await sdkVisitor(c, Number(project.id));
@@ -1163,7 +1160,7 @@ sdk.post("/data_for_device_and_url", async (c) => {
   });
 });
 
-sdk.post("/data_for_device_and_path", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/acquisition/data_for_device_and_path","aliases":["/data_for_device_and_path"]}]}).post("/data_for_device_and_path", async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const visitor = await sdkVisitor(c, Number(project.id));
@@ -1177,7 +1174,7 @@ sdk.post("/data_for_device_and_path", async (c) => {
   });
 });
 
-sdk.post("/link_details", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/acquisition/link_details","aliases":["/link_details"]}]}).post("/link_details", async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const visitor = await sdkVisitor(c, Number(project.id));
@@ -1189,7 +1186,7 @@ sdk.post("/link_details", async (c) => {
   return c.json(linkPayload(link));
 });
 
-sdk.post("/create_link", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/acquisition/create_link","aliases":["/create_link"]}]}).post("/create_link", async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const visitor = await sdkVisitor(c, Number(project.id));
@@ -1245,14 +1242,14 @@ sdk.post("/create_link", async (c) => {
   return c.json({ link: `/${link.path}` });
 });
 
-sdk.get("/visitor_attributes", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/data/visitor_attributes","aliases":["/visitor_attributes"]}]}).get("/visitor_attributes", async (c) => {
   const project = await currentSdkProject(c);
   const visitor = await sdkVisitor(c, Number(project.id));
   if (!visitor) return c.json({ error: "Invalid linksquared id" }, 403);
   return c.json({ visitor: sdkVisitorJson(visitor) });
 });
 
-sdk.post("/visitor_attributes", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/data/visitor_attributes","aliases":["/visitor_attributes"]}]}).post("/visitor_attributes", async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const visitor = await sdkVisitor(c, Number(project.id));
@@ -1285,7 +1282,7 @@ sdk.post("/visitor_attributes", async (c) => {
   return c.json({ visitor: sdkVisitorJson(row) });
 });
 
-sdk.post("/add_payment_event", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/monetization/add_payment_event","aliases":["/add_payment_event"]}]}).post("/add_payment_event", async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const visitor = await sdkVisitor(c, Number(project.id));
@@ -1322,7 +1319,7 @@ sdk.post("/add_payment_event", async (c) => {
   });
 });
 
-sdk.post("/generate_link", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/acquisition/generate_link","aliases":["/generate_link"]}]}).post("/generate_link", async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const redirectConfigId = await getOrCreateRedirectConfig(
@@ -1373,7 +1370,7 @@ sdk.post("/generate_link", async (c) => {
   return c.json({ link: `/${link.path}` });
 });
 
-sdk.get("/link/:path", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/acquisition/link/:path","aliases":["/link/:path"]}]}).get("/link/:path", async (c) => {
   const project = await currentSdkProject(c);
   const link = await findProjectLink(
     c.env.DB,
@@ -1384,7 +1381,7 @@ sdk.get("/link/:path", async (c) => {
   return c.json({ link: linkPayload(link) });
 });
 
-sdk.get("/metrics_for_link/:path", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/analytics/metrics_for_link/:path","aliases":["/metrics_for_link/:path"]}]}).get("/metrics_for_link/:path", async (c) => {
   const project = await currentSdkProject(c);
   const link = await findProjectLink(
     c.env.DB,
@@ -1399,7 +1396,7 @@ sdk.get("/metrics_for_link/:path", async (c) => {
   });
 });
 
-sdk.get("/metrics_for_project", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/analytics/metrics_for_project","aliases":["/metrics_for_project"]}]}).get("/metrics_for_project", async (c) => {
   const project = await currentSdkProject(c);
   return c.json(
     metricsPayload(await linkMetrics(c.env.DB, Number(project.id))),
@@ -1438,11 +1435,11 @@ async function notificationsForRequest(
   });
 }
 
-sdk.post("/notifications_for_device", async (c) =>
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/communication/notifications_for_device","aliases":["/notifications_for_device"]}]}).post("/notifications_for_device", async (c) =>
   notificationsForRequest(c, await readBody(c)),
 );
 
-sdk.get("/number_of_unread_notifications", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/communication/number_of_unread_notifications","aliases":["/number_of_unread_notifications"]}]}).get("/number_of_unread_notifications", async (c) => {
   const project = await currentSdkProject(c);
   const deviceId = Number(c.req.query("device_id") || 0);
   const projectId = Number(c.req.query("project_id") || project.id || 0);
@@ -1465,7 +1462,7 @@ sdk.get("/number_of_unread_notifications", async (c) => {
   return c.json({ number_of_unread_notifications: Number(row?.total || 0) });
 });
 
-sdk.post("/mark_notification_as_read", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/communication/mark_notification_as_read","aliases":["/mark_notification_as_read"]}]}).post("/mark_notification_as_read", async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const deviceId = Number(body.device_id || c.req.query("device_id") || 0);
@@ -1493,12 +1490,12 @@ sdk.post("/mark_notification_as_read", async (c) => {
   return c.json({ message: "Marked as read" });
 });
 
-sdk.get("/notifications_to_display_automatically", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/communication/notifications_to_display_automatically","aliases":["/notifications_to_display_automatically"]}]}).get("/notifications_to_display_automatically", async (c) => {
   return notificationsForRequest(c, {}, true, true);
 });
 
 // Backward-compatible Cloudflare path used by the current JS SDK adapter.
-sdk.get("/notifications", async (c) => {
+sdk.defineRoute({"exposures":[{"surface":"sdk","path":"/v1/communication/notifications","aliases":["/notifications"]}]}).get("/notifications", async (c) => {
   return notificationsForRequest(c, {}, true);
 });
 

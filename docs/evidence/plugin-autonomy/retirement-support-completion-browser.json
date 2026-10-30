@@ -1,6 +1,6 @@
 [
   {
-    "plugin_id": "supbrd-plugmod-support",
+    "plugin_id": "superboard-support",
     "route_id": "superboard.support_inbox",
     "scenario": "functional",
     "status": "passed",
@@ -15,7 +15,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
+    "plugin_id": "superboard-support",
     "route_id": "superboard.support_quality",
     "scenario": "functional",
     "status": "passed",
@@ -30,7 +30,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
+    "plugin_id": "superboard-support",
     "route_id": "superboard.support_reports",
     "scenario": "functional",
     "status": "passed",
@@ -45,7 +45,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-support-completion-browser.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
+    "plugin_id": "superboard-support",
     "route_id": "superboard.support_proactive_support",
     "scenario": "functional",
     "status": "passed",

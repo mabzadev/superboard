@@ -7,8 +7,8 @@ All 10 files and 27 tests in this run passed.
 Recorded observations (emitted after semantic and persistence assertions):
 [
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_link_campaign",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.create_link_campaign",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -19,8 +19,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.link_campaigns",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.data_source.link_campaigns",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -31,8 +31,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_link",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.create_link",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -43,8 +43,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.links",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.data_source.links",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -55,8 +55,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.update_link",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.update_link",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -67,8 +67,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.resolved_link",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.data_source.resolved_link",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -79,8 +79,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_redirect_rule",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.create_redirect_rule",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -91,8 +91,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.redirect_rules",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.data_source.redirect_rules",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -103,8 +103,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.update_redirect_rule",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.update_redirect_rule",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -115,8 +115,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.delete_redirect_rule",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -127,8 +127,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.save_social_preview",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.save_social_preview",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -139,8 +139,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.social_preview",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.data_source.social_preview",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -151,8 +151,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.save_tracking",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.save_tracking",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -163,8 +163,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.tracking",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.data_source.tracking",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -175,8 +175,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.data_source.link_campaign_analytics",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -187,8 +187,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.link_statistics",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.data_source.link_statistics",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -199,8 +199,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_domain",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.create_domain",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -211,8 +211,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.domains",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.data_source.domains",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -223,8 +223,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.verify_domain",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.verify_domain",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -235,8 +235,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_domain",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.delete_domain",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -247,8 +247,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_link",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.delete_link",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -259,8 +259,8 @@ Recorded observations (emitted after semantic and persistence assertions):
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
-    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_link_campaign",
+    "plugin_id": "superboard-dynamic-links",
+    "route_id": "gateway.superboard-dynamic-links.command.delete_link_campaign",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",

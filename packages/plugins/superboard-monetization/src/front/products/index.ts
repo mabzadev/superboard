@@ -1,4 +1,4 @@
-export const pluginId = "supbrd-plug-products";
+export const pluginId = "superboard-products";
 export const views = {
 	"superboard.products": () => import("./views/superboard.products.js"),
 	"superboard.products_products": () => import("./views/superboard.products_products.js"),

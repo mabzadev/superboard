@@ -29,6 +29,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Build front test dependencies sequentially
-        run: pnpm --filter '@superboard/site^...' --workspace-concurrency=1 -r build
+        run: |
+          pnpm --filter '@emdash-cms/admin...' build
+          pnpm --filter '@superboard/site^...' --workspace-concurrency=1 -r build
       - name: Validate menu authority, languages, and native cache invalidation
         run: pnpm check:front-menu

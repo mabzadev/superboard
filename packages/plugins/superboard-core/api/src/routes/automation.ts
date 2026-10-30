@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono, type Context } from 'hono';
 import { Env } from '../types';
 import { runMaintenance } from '../lib/maintenance';
@@ -5,7 +6,7 @@ import { parseJsonObject } from '../lib/db';
 import { timingSafeEqual } from '../lib/secrets';
 import { readJsonObjectLimited, readRequestObjectLimited } from '@superboard/contracts/request-body';
 
-const automation = new Hono<{ Bindings: Env }>();
+const automation = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.automation.automation","pluginId":"supbrd-core","surface":"internal","access":"operator"});
 
 type AutomationContext = Context<{ Bindings: Env }>;
 

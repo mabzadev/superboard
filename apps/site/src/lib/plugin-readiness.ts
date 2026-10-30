@@ -33,7 +33,7 @@ export async function verifySuperBoardPluginResources(
 	for (const pluginId of pluginIds) {
 		const manifest = manifests.get(pluginId);
 		if (!manifest) throw new Error(`PLUGIN_NOT_FOUND:${pluginId}`);
-		if (pluginId === "supbrd-plug-audit")
+		if (pluginId === "superboard-audit")
 			await env.DB.prepare("SELECT sequence FROM superboard_audit_heads LIMIT 1").all();
 		const ownerId = pluginPackageOwner(pluginId);
 		const runtimeManifest = packageManifests.get(ownerId) ?? manifest;

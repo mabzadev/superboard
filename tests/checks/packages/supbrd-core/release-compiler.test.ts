@@ -75,7 +75,7 @@ function validReleaseInput() {
 					query: {},
 					page_id: "page.superboard_login",
 					layout_ids: ["layout.superboard_public"],
-					renderer_ids: ["supbrd-plug-user.renderer.login_form"],
+					renderer_ids: ["superboard-user.renderer.login_form"],
 					state_policies: Object.fromEntries(
 						REQUIRED_STATES.map((state) => [state, `emdash.core.state.${state}`]),
 					),
@@ -105,7 +105,7 @@ function validReleaseInput() {
 				{
 					page_id: "page.superboard_login",
 					title: "Sign in",
-					root_renderer_id: "supbrd-plug-user.renderer.login_form",
+					root_renderer_id: "superboard-user.renderer.login_form",
 				},
 			],
 			layouts: [
@@ -121,15 +121,15 @@ function validReleaseInput() {
 		},
 		renderers: [
 			{
-				renderer_id: "supbrd-plug-user.renderer.login_form",
-				plugin_id: "supbrd-plug-user",
+				renderer_id: "superboard-user.renderer.login_form",
+				plugin_id: "superboard-user",
 				plugin_version: "1.0.0",
 				build_id: "01J00000000000000000000008",
 				build_checksum: `sha256:${"a".repeat(64)}`,
 				abi_version: "1.0.0",
 				runtime_range: ">=0.1.0 <0.2.0",
 				props_schema: {
-					schema_id: "supbrd-plug-user.schema.login-form-props",
+					schema_id: "superboard-user.schema.login-form-props",
 					version: "1.0.0",
 					checksum: `sha256:${"b".repeat(64)}`,
 				},
@@ -146,7 +146,7 @@ function validReleaseInput() {
 				native: true,
 			},
 			{
-				plugin_id: "supbrd-plug-user",
+				plugin_id: "superboard-user",
 				version: "1.0.0",
 				artifact_checksum: `sha256:${"d".repeat(64)}`,
 				native: false,

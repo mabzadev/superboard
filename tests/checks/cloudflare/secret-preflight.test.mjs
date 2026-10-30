@@ -24,7 +24,7 @@ test("secret readiness parses JSON after package-manager warnings", () => {
 
 test("Email can be deployed before configuring an AWS or SMTP provider", async () => {
 	for (const [targetName, environment] of [
-		["mbza-development", "development"],
+		["mabza-development", "development"],
 		["reference-production", "production"],
 	]) {
 		const { target } = await loadTarget(targetName);
@@ -47,7 +47,7 @@ test("Email can be deployed before configuring an AWS or SMTP provider", async (
 
 test("every required secret is declared in the upload allowlist", async () => {
 	for (const [targetName, environment] of [
-		["mbza-development", "development"],
+		["mabza-development", "development"],
 		["reference-production", "production"],
 	]) {
 		const target = (await loadTarget(targetName)).target;
@@ -88,7 +88,7 @@ test("billing encryption accepts the keyring or transitional single key", async 
 
 test("API encryption is required independently from the billing execution mode", async () => {
 	for (const [targetName, environment] of [
-		["mbza-development", "development"],
+		["mabza-development", "development"],
 		["reference-production", "production"],
 	]) {
 		const target = (await loadTarget(targetName)).target;

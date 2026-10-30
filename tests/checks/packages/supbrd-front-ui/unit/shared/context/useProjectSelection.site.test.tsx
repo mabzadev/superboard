@@ -21,11 +21,11 @@ const project = {
 };
 const context: FrontContextValue = {
 	instanceId: "local",
-	pluginId: "supbrd-plug-user",
+	pluginId: "superboard-user",
 	path: "/",
 	parameters: {},
 	locale: "en",
-	activePluginIds: ["supbrd-plug-user"],
+	activePluginIds: ["superboard-user"],
 	operator: { id: "operator", email: "operator@example.test", name: null, role: 50 },
 	projectScope: {
 		production_project_ref: "42-prod",

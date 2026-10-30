@@ -1,3 +1,4 @@
+import { createFetchRouter } from "@superboard/contracts/route-registry";
 import type { InternalProjectContext } from "@superboard/contracts/project-context";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 
@@ -8,6 +9,64 @@ interface Profile {
 	email: string | null;
 	name: string | null;
 }
+interface AdministrationState {
+	db: D1Database;
+	project: InternalProjectContext;
+	realm: string;
+}
+type ProfileAction =
+	| "read"
+	| "update"
+	| "suspend"
+	| "security"
+	| "resume"
+	| "revoke"
+	| "invalid-method"
+	| "not-found";
+export const userAdministrationRoutes = createFetchRouter<AdministrationState>({
+	service: "identity",
+	module: "user-administration",
+	pluginId: "superboard-user",
+	surface: "internal",
+	access: "operator",
+});
+userAdministrationRoutes.get("/internal/v1/admin/members", ({ request, env }) =>
+	listMembers(request, env.db, env.project),
+);
+const profilePath = "/internal/v1/admin/profiles/:userId";
+for (const [method, suffix, action] of [
+	["GET", "", "read"],
+	["PUT", "", "update"],
+	["POST", "/suspend", "suspend"],
+	["GET", "/security", "security"],
+	["POST", "/resume", "resume"],
+	["POST", "/sessions/:sessionId{[A-Za-z0-9._:-]{1,255}}/revoke", "revoke"],
+] as const) {
+	userAdministrationRoutes.on(method, profilePath + suffix, ({ request, params, env }) =>
+		handleProfile(
+			request,
+			env,
+			decodeURIComponent(params.userId ?? ""),
+			request.method === method
+				? action
+				: suffix === "" || suffix === "/suspend"
+					? "invalid-method"
+					: "not-found",
+			params.sessionId,
+		),
+	);
+}
+userAdministrationRoutes
+	.defineRoute({ transport: "fallback" })
+	.on("ALL", [profilePath, profilePath + "/suspend"], ({ request, params, env }) =>
+		handleProfile(request, env, decodeURIComponent(params.userId ?? ""), "invalid-method"),
+	);
+userAdministrationRoutes
+	.defineRoute({ transport: "fallback" })
+	.all(profilePath + "/:rest{.+}", ({ request, params, env }) =>
+		handleProfile(request, env, decodeURIComponent(params.userId ?? ""), "not-found"),
+	);
+
 export async function userAdministration(
 	request: Request,
 	db: D1Database,
@@ -16,25 +75,37 @@ export async function userAdministration(
 ): Promise<Response> {
 	if (!project.operatorId || !["admin", "owner"].includes(project.role))
 		return error(403, "application_user_administrator_required");
+	return userAdministrationRoutes.fetch(request, { db, project, realm });
+}
+async function listMembers(
+	request: Request,
+	db: D1Database,
+	project: InternalProjectContext,
+): Promise<Response> {
+	if (request.method !== "GET") return error(404, "application_user_route_not_found");
 	const url = new URL(request.url);
-	if (url.pathname === "/internal/v1/admin/members" && request.method === "GET") {
-		const page = integer(url.searchParams.get("page"), 1, 1, 100000);
-		const size = integer(url.searchParams.get("page_size"), 50, 10, 100);
-		if (page === null || size === null) return error(422, "application_user_pagination_invalid");
-		const result = await db
-			.prepare(
-				"SELECT id FROM application_users WHERE project_id=? AND deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?",
-			)
-			.bind(project.projectId, size + 1, (page - 1) * size)
-			.all<{ id: string }>();
-		return json({
-			items: result.results.slice(0, size).map((row) => row.id),
-			next_page: result.results.length > size ? page + 1 : null,
-		});
-	}
-	const match = /^\/internal\/v1\/admin\/profiles\/([^/]+)(\/.*)?$/u.exec(url.pathname);
-	if (!match) return error(404, "application_user_route_not_found");
-	const userId = decodeURIComponent(match[1]!);
+	const page = integer(url.searchParams.get("page"), 1, 1, 100000);
+	const size = integer(url.searchParams.get("page_size"), 50, 10, 100);
+	if (page === null || size === null) return error(422, "application_user_pagination_invalid");
+	const result = await db
+		.prepare(
+			"SELECT id FROM application_users WHERE project_id=? AND deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?",
+		)
+		.bind(project.projectId, size + 1, (page - 1) * size)
+		.all<{ id: string }>();
+	return json({
+		items: result.results.slice(0, size).map((row) => row.id),
+		next_page: result.results.length > size ? page + 1 : null,
+	});
+}
+async function handleProfile(
+	request: Request,
+	state: AdministrationState,
+	userId: string,
+	actionType: ProfileAction,
+	sessionId?: string,
+): Promise<Response> {
+	const { db, project, realm } = state;
 	if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/u.test(userId))
 		return error(422, "application_user_id_invalid");
 	const profile = await db
@@ -44,11 +115,15 @@ export async function userAdministration(
 		.bind(project.projectId, userId)
 		.first<Profile>();
 	if (!profile) return error(404, "application_user_not_found");
-	if (match[2] && match[2] !== "/suspend")
-		return applicationUserSecurity(request, db, project, realm, userId, match[2]);
-	if (request.method === "GET" && !match[2]) return json(expose(profile));
-	const suspend = match[2] === "/suspend" && request.method === "POST";
-	if (!suspend && (match[2] || request.method !== "PUT")) return error(405, "method_not_allowed");
+	if (actionType === "invalid-method") return error(405, "method_not_allowed");
+	if (actionType === "not-found") return error(404, "application_user_route_not_found");
+	if (actionType === "security" || actionType === "resume" || actionType === "revoke")
+		return applicationUserSecurity(request, db, project, realm, userId, {
+			type: actionType,
+			sessionId,
+		});
+	if (actionType === "read") return json(expose(profile));
+	const suspend = actionType === "suspend";
 	const key = request.headers.get("Idempotency-Key") ?? "";
 	if (key.length < 8 || key.length > 200) return error(400, "idempotency_key_required");
 	const body = await readJsonObjectLimited(request, 16384);
@@ -117,6 +192,7 @@ export async function userAdministration(
 		? json(JSON.parse(saved.result_json))
 		: error(409, "idempotency_conflict");
 }
+
 function operation(db: D1Database, project: number, key: string) {
 	return db
 		.prepare(

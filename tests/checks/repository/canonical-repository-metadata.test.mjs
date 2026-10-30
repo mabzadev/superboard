@@ -11,7 +11,7 @@ const activeMetadataFiles = [
 	"package.json",
 	"apps/mcp/package.json",
 	"apps/mcp/server.json",
-	"infra/targets/mbza-development.json",
+	"infra/targets/mabza-development.json",
 	"tests/fixtures/cloudflare/targets/reference-production.json",
 	"sdks/flutter/pubspec.yaml",
 	"sdks/flutter/ios/superboard_flutter.podspec",

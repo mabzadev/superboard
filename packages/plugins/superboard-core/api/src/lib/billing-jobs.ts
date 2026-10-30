@@ -9,6 +9,7 @@ import { recordGooglePendingRefundReview } from "./refunds";
 import { decryptCredential, hmacSha256 } from "./secrets";
 import { verifyAppleNotification } from "./store-verification";
 import { reconcileAppleSubscription, verifyGooglePurchase } from "./store-verification";
+import { reconcileStripeSubscription } from "./stripe-billing.js";
 
 export async function reconcileRefundDeadlines(env: BillingEnv, limit = 100, projectId?: string) {
 	const boundedLimit = Math.max(1, Math.min(500, Math.trunc(limit || 100)));
@@ -653,6 +654,13 @@ export async function reconcileStoreSubscription(env: BillingEnv, subscriptionId
 				store: "apple",
 				...(await applyVerifiedPurchase(env, purchase)),
 			};
+		} else if (row.store === "stripe") {
+			result = await reconcileStripeSubscription(
+				env,
+				String(row.project_id),
+				environment,
+				String(row.original_transaction_id),
+			);
 		} else if (row.store === "google" && row.purchase_token) {
 			const verified = await verifyGooglePurchase(env, {
 				projectId: String(row.project_id),

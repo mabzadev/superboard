@@ -1,3 +1,5 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
 import { readTextLimited } from "@superboard/contracts/request-body";
@@ -35,14 +37,23 @@ import { handleSupportQueue, publishSupportEvent } from "./webhooks";
 import { verifyWidgetIdentity } from "./widget-auth";
 import { runConversationAutomations } from "./workflows";
 
-const app = new Hono<{
-	Bindings: Env;
-	Variables: {
-		subject: string;
-		identityExpiresAt: number;
-		supportPrincipal: SupportPrincipal;
-	};
-}>();
+const app = registerRouter(
+	new Hono<{
+		Bindings: Env;
+		Variables: {
+			subject: string;
+			identityExpiresAt: number;
+			supportPrincipal: SupportPrincipal;
+		};
+	}>(),
+	{
+		service: "support",
+		module: "index.app",
+		pluginId: "superboard-support",
+		surface: "internal",
+		access: "framework",
+	},
+);
 
 app.use(
 	"*",
@@ -181,11 +192,13 @@ app.get("/public/v1/realtime/:ticket", async (c) => {
 	);
 });
 
-app.get("/public/v1/providers/:provider/oauth/callback", async (c, next) => {
-	const result = await completeIntegrationOAuth(c.env, c.req.raw, c.req.param("provider"));
-	if (!result.handled) return next();
-	return result.response;
-});
+app
+	.defineRoute({ continuation: true })
+	.get("/public/v1/providers/:provider/oauth/callback", async (c, next) => {
+		const result = await completeIntegrationOAuth(c.env, c.req.raw, c.req.param("provider"));
+		if (!result.handled) return next();
+		return result.response;
+	});
 
 app.route("/public/v1/providers", providers);
 
@@ -1111,24 +1124,26 @@ app.post("/v1/conversations/:conversationId/realtime-ticket", async (c) => {
 	return c.json({ data: issued }, 201);
 });
 
-app.get("/v1/conversations/:conversationId/ws", async (c) => {
-	const subject = c.get("subject");
-	const projectId = requireProject(c.env, c.req.header("X-SuperBoard-Project-Id"));
-	const conversation = await userConversation(
-		c.env,
-		c.req.param("conversationId"),
-		subject,
-		projectId,
-	);
-	return roomFetch(
-		c.env,
-		conversation.id,
-		{ id: subject, kind: "user" },
-		"/connect",
-		c.req.raw,
-		c.get("identityExpiresAt"),
-	);
-});
+app
+	.defineRoute({ transport: "websocket" })
+	.get("/v1/conversations/:conversationId/ws", async (c) => {
+		const subject = c.get("subject");
+		const projectId = requireProject(c.env, c.req.header("X-SuperBoard-Project-Id"));
+		const conversation = await userConversation(
+			c.env,
+			c.req.param("conversationId"),
+			subject,
+			projectId,
+		);
+		return roomFetch(
+			c.env,
+			conversation.id,
+			{ id: subject, kind: "user" },
+			"/connect",
+			c.req.raw,
+			c.get("identityExpiresAt"),
+		);
+	});
 
 app.post("/v1/conversations/:conversationId/attachments", async (c) => {
 	const subject = c.get("subject");
@@ -1481,15 +1496,17 @@ app.delete("/internal/v1/projects/:projectId/application/users/:userId", async (
 	});
 });
 
-app.get("/internal/v1/projects/:projectId/conversations", async (c) => {
-	const projectId = positiveInt(c.req.param("projectId"), "project_id_invalid");
-	const status = c.req.query("status") || "";
-	return c.json({
-		data: await listProjectConversations(c.env.DB, projectId, status),
+app
+	.defineRoute({ mount: "extend" })
+	.get("/internal/v1/projects/:projectId/conversations", async (c) => {
+		const projectId = positiveInt(c.req.param("projectId"), "project_id_invalid");
+		const status = c.req.query("status") || "";
+		return c.json({
+			data: await listProjectConversations(c.env.DB, projectId, status),
+		});
 	});
-});
 
-app.get("/internal/v1/projects/:projectId/items", async (c) => {
+app.defineRoute({ mount: "extend" }).get("/internal/v1/projects/:projectId/items", async (c) => {
 	const projectId = positiveInt(c.req.param("projectId"), "project_id_invalid");
 	const selectedType = String(c.req.query("type") || "all");
 	const selectedStatus = String(c.req.query("status") || "");
@@ -1769,12 +1786,14 @@ app.post("/internal/v1/projects/:projectId/conversations/:conversationId/typing"
 	return roomFetch(c.env, conversation.id, { id: agentId, kind: "agent" }, "/typing", c.req.raw);
 });
 
-app.get("/internal/v1/projects/:projectId/conversations/:conversationId/ws", async (c) => {
-	const projectId = positiveInt(c.req.param("projectId"), "project_id_invalid");
-	const conversation = await projectConversation(c.env, c.req.param("conversationId"), projectId);
-	const agentId = requiredAgent(c.req.header("X-SuperBoard-Agent-Id"));
-	return roomFetch(c.env, conversation.id, { id: agentId, kind: "agent" }, "/connect", c.req.raw);
-});
+app
+	.defineRoute({ transport: "websocket" })
+	.get("/internal/v1/projects/:projectId/conversations/:conversationId/ws", async (c) => {
+		const projectId = positiveInt(c.req.param("projectId"), "project_id_invalid");
+		const conversation = await projectConversation(c.env, c.req.param("conversationId"), projectId);
+		const agentId = requiredAgent(c.req.header("X-SuperBoard-Agent-Id"));
+		return roomFetch(c.env, conversation.id, { id: agentId, kind: "agent" }, "/connect", c.req.raw);
+	});
 
 app.post(
 	"/internal/v1/projects/:projectId/conversations/:conversationId/attachments",
@@ -2901,16 +2920,14 @@ export { ConversationRoom };
 
 function contextualInternalRequest(request: Request) {
 	const url = new URL(request.url);
-	if (
-		!url.pathname.startsWith("/internal/v1") ||
-		url.pathname === "/internal/v1/health" ||
-		url.pathname.startsWith("/internal/v1/projects/")
-	)
+	if (!url.pathname.startsWith("/internal/v1") || url.pathname === "/internal/v1/health")
 		return request;
 	const projectId = request.headers.get("x-project-id");
 	if (!projectId) return request;
-	const suffix = url.pathname.slice("/internal/v1".length);
-	url.pathname = `/internal/v1/projects/${encodeURIComponent(projectId)}${suffix || "/"}`;
+	if (!url.pathname.startsWith("/internal/v1/projects/")) {
+		const suffix = url.pathname.slice("/internal/v1".length);
+		url.pathname = `/internal/v1/projects/${encodeURIComponent(projectId)}${suffix || "/"}`;
+	}
 	const headers = new Headers(request.headers);
 	if (!headers.has("x-superboard-agent-id") && headers.has("x-actor-id")) {
 		headers.set("x-superboard-agent-id", headers.get("x-actor-id") || "");
@@ -3162,4 +3179,8 @@ function scheduledQueueBody(job: {
 	throw failure("scheduled_job_invalid", "Scheduled Support job type is invalid", 422);
 }
 
-export default withPluginTaskLifecycle("supbrd-plugmod-support", lifecycleWorker);
+export default withRouteManifest(
+	withPluginTaskLifecycle("superboard-support", lifecycleWorker),
+	[app, ConversationRoom.routes],
+	{ service: "support", pluginId: "superboard-support" },
+);

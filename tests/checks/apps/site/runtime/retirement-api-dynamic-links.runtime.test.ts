@@ -10,7 +10,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-dynamic-links";
+const plugin = "superboard-dynamic-links";
 const file = "retirement-api-dynamic-links.runtime.test.ts";
 test("canonical Dynamic Links APIs persist campaigns, redirect behavior, tracking facts and operator-confirmed domain metadata", async () => {
 	const scope = await prepareApiPlugin(plugin);

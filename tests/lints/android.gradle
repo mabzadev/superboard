@@ -4,6 +4,8 @@ gradle.beforeProject { project ->
             abortOnError = false
             checkAllWarnings = true
             sarifReport = true
+            // Upgrade notices depend on upstream releases, not on this code; Renovate proposes them.
+            disable.addAll(['GradleDependency', 'AndroidGradlePluginVersion', 'NewerVersionAvailable'])
         }
     }
 }

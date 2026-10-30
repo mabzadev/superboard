@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
 import { Hono } from "hono";
 
@@ -5,7 +6,7 @@ import { generateShortCode } from "../lib/crypto";
 import { readApiJson } from "../lib/request-body";
 import { Env } from "../types";
 
-const redirect = new Hono<{ Bindings: Env }>();
+const redirect = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.redirect.redirect","pluginId":"superboard-dynamic-links","surface":"shortlinks","access":"public"});
 
 function requestOrigin(c: any) {
 	const url = new URL(c.req.url);

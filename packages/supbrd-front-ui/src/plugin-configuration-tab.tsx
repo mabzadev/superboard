@@ -1,3 +1,8 @@
+import {
+	RouteInventoryStatus,
+	routeInventoryLabels,
+	routeDestinationText,
+} from "./route-inventory-status.js";
 import { parsePluginDiagnostic, parsePluginHealth } from "@superboard/contracts/plugin-diagnostic";
 import type {
 	PluginDependencyDiagnostic,
@@ -12,7 +17,8 @@ import {
 	pluginPackage,
 	pluginPackageOwner,
 } from "@superboard/contracts/plugin-packages";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useLiveQuery } from "./live-query.js";
 import { toast } from "sonner";
 
 import { useOptionalFrontContext } from "./context.js";
@@ -295,62 +301,38 @@ function PluginConfigurationContent({
 	const currentLocale = resolveLocale(explicitLocale);
 	const t = translations[currentLocale];
 
-	const [data, setData] = useState<PluginDiagnosticData | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-	const [isDisabled, setIsDisabled] = useState(false);
+	const front = useOptionalFrontContext();
+	const live = useLiveQuery<PluginDiagnosticData | null>({
+		key: [
+			"plugin-configuration",
+			front?.instanceId,
+			front?.deployment?.environment,
+			front?.operator?.id,
+			pluginId,
+		],
+		url: `/_emdash/api/superboard/plugins/${encodeURIComponent(pluginId)}/diagnostic`,
+		parse: (response) => readDiagnosticResponse(response, pluginId),
+	});
+	const data = live.data ?? null;
+	const routeLabels = routeInventoryLabels(currentLocale);
+	const loading = live.isPending;
+	const error = !data && live.error;
+	const isDisabled = live.data === null && !loading;
+	const setData = (
+		value:
+			| PluginDiagnosticData
+			| null
+			| ((current: PluginDiagnosticData | null) => PluginDiagnosticData | null),
+	) => {
+		live.update((current) => (typeof value === "function" ? value(current ?? null) : value));
+	};
+	const fetchDiagnostic = () => live.refetch();
 	const [rechecking, setRechecking] = useState(false);
 	const [showSchema, setShowSchema] = useState(false);
 
 	const [activeRouteTab, setActiveRouteTab] = useState<"views" | "api">("views");
 	const [viewsPage, setViewsPage] = useState(1);
 	const [apiPage, setApiPage] = useState(1);
-
-	const fetchDiagnostic = useCallback(async () => {
-		setLoading(true);
-		setError(null);
-		setIsDisabled(false);
-		try {
-			const res = await fetch(
-				`/_emdash/api/superboard/plugins/${encodeURIComponent(pluginId)}/diagnostic`,
-				{
-					headers: {
-						"X-EmDash-Request": "1",
-					},
-				},
-			);
-			const diagnostic = await readDiagnosticResponse(res, pluginId);
-			setIsDisabled(diagnostic === null);
-			setData(diagnostic);
-		} catch (err: unknown) {
-			setError(err instanceof Error ? err.message : String(err));
-		} finally {
-			setLoading(false);
-		}
-	}, [pluginId]);
-
-	useEffect(() => {
-		let active = true;
-		fetch(`/_emdash/api/superboard/plugins/${encodeURIComponent(pluginId)}/diagnostic`, {
-			headers: { "X-EmDash-Request": "1" },
-		})
-			.then(async (res) => {
-				const diagnostic = await readDiagnosticResponse(res, pluginId);
-				if (!active) return;
-				setIsDisabled(diagnostic === null);
-				setData(diagnostic);
-				setError(null);
-				setLoading(false);
-			})
-			.catch((err: unknown) => {
-				if (!active) return;
-				setError(err instanceof Error ? err.message : String(err));
-				setLoading(false);
-			});
-		return () => {
-			active = false;
-		};
-	}, [pluginId]);
 
 	const handleRecheckHealth = async () => {
 		setRechecking(true);
@@ -466,9 +448,7 @@ function PluginConfigurationContent({
 				<CardContent>
 					<Button
 						onClick={() => {
-							fetchDiagnostic().catch(() => {
-								setError("DIAGNOSTIC_UNAVAILABLE");
-							});
+							fetchDiagnostic().catch(() => undefined);
 						}}
 						variant="outline"
 					>
@@ -820,6 +800,13 @@ function PluginConfigurationContent({
 					</div>
 				</CardHeader>
 				<CardContent>
+					{activeRouteTab === "api" && (
+						<RouteInventoryStatus
+							inventory={data.routes.inventory}
+							locale={currentLocale}
+							failed={!!live.error}
+						/>
+					)}
 					{activeRouteTab === "views" ? (
 						paginatedViews.items.length === 0 ? (
 							<p className="text-sm text-muted-foreground">{t.noViews}</p>
@@ -891,11 +878,17 @@ function PluginConfigurationContent({
 										<TableHead>{t.path}</TableHead>
 										<TableHead>{t.service}</TableHead>
 										<TableHead>{t.destination}</TableHead>
+										<TableHead>{routeLabels.status}</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
 									{paginatedApiRoutes.items.map((r: PluginRouteApiDiagnostic) => (
-										<TableRow key={`${r.method}-${r.path}-${r.worker ?? ""}-${r.surface ?? ""}`}>
+										<TableRow
+											key={
+												r.id ??
+												`${r.method}-${r.path}-${r.worker ?? ""}-${r.executionScope ?? ""}-${r.surface ?? ""}`
+											}
+										>
 											<TableCell>
 												<Badge
 													variant={
@@ -911,9 +904,38 @@ function PluginConfigurationContent({
 											</TableCell>
 											<TableCell className="font-mono text-sm">{r.path}</TableCell>
 											<TableCell className="text-xs text-muted-foreground">
-												{r.worker ?? t.unknown}
+												<span data-route-service>
+													{[r.worker ?? t.unknown, r.executionScope].filter(Boolean).join(" · ")}
+												</span>
+												<div data-route-destinations>
+													{routeDestinationText(
+														r.destinations,
+														data.routes.inventory,
+														currentLocale,
+													)}
+												</div>
 											</TableCell>
-											<TableCell className="font-mono text-xs">{r.url ?? t.unknown}</TableCell>
+											<TableCell className="font-mono text-xs">
+												{r.url ?? (r.surface === "internal" ? routeLabels.internal : t.unknown)}
+											</TableCell>
+											<TableCell>
+												{r.transport === "websocket"
+													? `${routeLabels.websocket} · `
+													: r.transport === "fallback"
+														? `${routeLabels.fallback} · `
+														: ""}
+												{r.kind === "alias"
+													? routeLabels.alias
+													: r.kind === "canonical"
+														? routeLabels.canonical
+														: t.unknown}{" "}
+												·{" "}
+												{r.availability === "stale"
+													? routeLabels.expired
+													: r.availability === "current"
+														? routeLabels.current
+														: t.unknown}
+											</TableCell>
 										</TableRow>
 									))}
 								</TableBody>

@@ -360,3 +360,26 @@ test("security pagination omits credentials and replayed actions do not change t
 		).first(),
 	).toEqual({ revoked_at: null });
 });
+
+test("a profile served by Identity is described as an executable endpoint in its signed manifest", async () => {
+	const { signPluginTaskRequest } = await import("@superboard/contracts/plugin-task");
+	const { parseRouteManifest } = await import("@superboard/contracts/route-manifest");
+	const { resolveManifestRoute } = await import("@superboard/contracts/route-registry");
+	const created = await request("/auth/anonymous", "POST", { installation_id: "inventory-profile-fixture" });
+	const identity = await created.json() as { user: { id: string } };
+	const path = `/internal/v1/admin/profiles/${identity.user.id}`;
+	const profile = await request(path);
+	expect(profile.status).toBe(200);
+	expect(await profile.json()).toMatchObject({ data: { user_id: identity.user.id } });
+	const input = new Request("https://identity.internal/internal/route-manifest/v1");
+	const headers = await signPluginTaskRequest(input, "identity-runtime-internal-token");
+	const response = await SELF.fetch(new Request(input, { headers }));
+	expect({ status: response.status, error: response.ok ? undefined : await response.clone().text() }).toEqual({ status: 200, error: undefined });
+	const manifest = parseRouteManifest(await response.json());
+	for (const method of ["GET", "PUT"]) {
+		const resolved = resolveManifestRoute(manifest.routes, method, "internal", path);
+		expect(resolved?.route).toMatchObject({ method, transport: "http", pluginId: "superboard-user" });
+	}
+	expect((await request(path, "HEAD")).status).toBe(405);
+	expect((await request(`${path}/security`, "HEAD")).status).toBe(404);
+});

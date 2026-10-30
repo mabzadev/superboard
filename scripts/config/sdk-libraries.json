@@ -242,7 +242,7 @@
 			"lifecycle": "archived",
 			"displayName": "SuperBoard JavaScript",
 			"ecosystem": "npm",
-			"packageName": "@mbzadev/superboard-js-sdk",
+			"packageName": "@mabzadev/superboard-js-sdk",
 			"sourcePath": "sdks/javascript",
 			"license": "MIT",
 			"licensePath": "sdks/javascript/LICENSE",
@@ -252,8 +252,8 @@
 			"releaseRef": "sdk-js-v1.0.2",
 			"releaseStatus": "released",
 			"releaseSha": "cd27c193c471cf1b22f72a61f38acdd62f7a1e99",
-			"notes": "Source identifiers use the canonical SuperBoard namespace in this checkout. Recorded release versions and commits describe historical artifacts; this renamed source has not been published under the new coordinate.",
-			"install": "npm install @mbzadev/superboard-js-sdk@1.0.2",
+			"notes": "Historical version and commit metadata are retained. The configured @mabzadev package coordinate has not been republished or verified by this rename.",
+			"install": "npm install @mabzadev/superboard-js-sdk@1.0.2",
 			"distribution": {
 				"repository": "mabzadev/superboard-platform",
 				"registryKind": "github-packages-npm",
@@ -264,14 +264,15 @@
 					"required": true,
 					"tokenEnvironmentVariable": "SUPERBOARD_GITHUB_PACKAGES_TOKEN"
 				}
-			}
+			},
+			"sourcePublication": "local"
 		},
 		{
 			"id": "react-native",
 			"lifecycle": "archived",
 			"displayName": "SuperBoard React Native",
 			"ecosystem": "npm",
-			"packageName": "@mbzadev/superboard-react-native-sdk",
+			"packageName": "@mabzadev/superboard-react-native-sdk",
 			"sourcePath": "sdks/react-native",
 			"license": "MIT",
 			"licensePath": "sdks/react-native/LICENSE",
@@ -281,8 +282,8 @@
 			"releaseRef": "sdk-react-native-v1.0.2",
 			"releaseStatus": "released",
 			"releaseSha": "969bacf6f5c52d205ffe6da18cb4c47d85dfbaeb",
-			"notes": "Source identifiers use the canonical SuperBoard namespace in this checkout. Recorded release versions and commits describe historical artifacts; this renamed source has not been published under the new coordinate.",
-			"install": "npm install @mbzadev/superboard-react-native-sdk@1.0.2",
+			"notes": "Historical version and commit metadata are retained. The configured @mabzadev package coordinate has not been republished or verified by this rename.",
+			"install": "npm install @mabzadev/superboard-react-native-sdk@1.0.2",
 			"distribution": {
 				"repository": "mabzadev/superboard-platform",
 				"registryKind": "github-packages-npm",
@@ -293,7 +294,8 @@
 					"required": true,
 					"tokenEnvironmentVariable": "SUPERBOARD_GITHUB_PACKAGES_TOKEN"
 				}
-			}
+			},
+			"sourcePublication": "local"
 		}
 	]
 }

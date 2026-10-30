@@ -1,4 +1,4 @@
-export const pluginId = "supbrd-plugmod-flows";
+export const pluginId = "superboard-flows";
 export { FlowsProvider as Providers } from "./features/flows/FlowsContext.js";
 export const views = {
 	"superboard.acquisition_settings": () => import("./views/superboard.acquisition_settings.js"),

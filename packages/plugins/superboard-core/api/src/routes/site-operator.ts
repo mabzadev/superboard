@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 import { Hono } from "hono";
 
@@ -8,7 +9,7 @@ import {
 } from "../lib/site-operator-scope.js";
 import type { Env } from "../types.js";
 
-const routes = new Hono<{ Bindings: Env }>();
+const routes = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.site-operator.routes","pluginId":"supbrd-core","surface":"internal","access":"internal"});
 routes.all("/project-scope", async (c) => {
 	if (c.req.method !== "GET" && c.req.method !== "POST")
 		return c.json({ error: { code: "METHOD_NOT_ALLOWED" } }, 405);

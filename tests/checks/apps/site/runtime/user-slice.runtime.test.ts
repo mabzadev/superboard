@@ -61,7 +61,7 @@ test("produces candidate, preview, approval and activation evidence for the user
 	await env.DB.prepare(
 		`INSERT OR REPLACE INTO superboard_dependency_health
 		 (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
-		 VALUES ('reference-production', 'dependency.supbrd_plug_user', 'ready', ?, ?, ?)`,
+		 VALUES ('reference-production', 'dependency.superboard_user', 'ready', ?, ?, ?)`,
 	)
 		.bind(
 			`sha256:${"a".repeat(64)}`,

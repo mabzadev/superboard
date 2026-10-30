@@ -11,15 +11,15 @@ import { SectionNavigationProvider } from "../../../../packages/supbrd-front-ui/
 test("the French settings view follows configuration returned by the running API", async () => {
 	let configuration: DeploymentConfiguration = {
 		schemaVersion: 1,
-		target: "mbza-development",
+		target: "mabza-development",
 		environment: "local",
 		profile: "consolidated",
-		source: "infra/targets/mbza-development.json",
+		source: "infra/targets/mabza-development.json",
 		checksum: "first",
 		publicRouting: "staged",
-		authIssuer: "https://auth.mbza.dev",
+		authIssuer: "https://auth.mabza.dev",
 		endpoints: [
-			{ surface: "mcp", url: "https://board.mbza.dev/mcp", worker: "site", clients: ["mcp"] },
+			{ surface: "mcp", url: "https://board.mabza.dev/mcp", worker: "site", clients: ["mcp"] },
 		],
 		workers: [{ id: "site", name: "site-local", modules: ["site"] }],
 		aliases: [],
@@ -37,7 +37,7 @@ test("the French settings view follows configuration returned by the running API
 						method: "GET",
 						path: "/users",
 						surface: "sdk",
-						url: "https://api.mbza.dev/users",
+						url: "https://api.mabza.dev/users",
 						worker: "api",
 						clients: ["web"],
 					},
@@ -59,10 +59,10 @@ test("the French settings view follows configuration returned by the running API
 							parameters: {},
 							locale: "fr",
 							instanceId: "test-instance",
-							pluginId: "supbrd-plug-settings",
+							pluginId: "superboard-settings",
 							operator: null,
 							projectScope: null,
-							activePluginIds: ["supbrd-plug-settings"],
+							activePluginIds: ["superboard-settings"],
 						}}
 					>
 						<SectionNavigationProvider
@@ -80,7 +80,7 @@ test("the French settings view follows configuration returned by the running API
 			);
 		});
 		await vi.waitFor(() => {
-			expect(container.textContent).toContain("https://board.mbza.dev/mcp");
+			expect(container.textContent).toContain("https://board.mabza.dev/mcp");
 		});
 		expect(container.querySelector("h1")?.textContent).toBe("Configuration de l’instance");
 		const navigation = container.querySelector('nav[aria-label="Configuration"]');
@@ -93,9 +93,9 @@ test("the French settings view follows configuration returned by the running API
 			Boolean(heading.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING),
 		).toBe(true);
 		expect(container.querySelector('a[href*="/_emdash/admin/plugins/"]')).toBeNull();
-		expect(container.textContent).toContain("https://api.mbza.dev/users");
+		expect(container.textContent).toContain("https://api.mabza.dev/users");
 		expect(container.textContent).toContain("site-local");
-		expect(container.textContent).toContain("https://auth.mbza.dev");
+		expect(container.textContent).toContain("https://auth.mabza.dev");
 		configuration = {
 			...configuration,
 			checksum: "updated",
@@ -109,7 +109,7 @@ test("the French settings view follows configuration returned by the running API
 		await vi.waitFor(() => {
 			expect(container.textContent).toContain("https://board.updated.test/mcp");
 		});
-		expect(container.textContent).not.toContain("https://board.mbza.dev/mcp");
+		expect(container.textContent).not.toContain("https://board.mabza.dev/mcp");
 	} finally {
 		await act(async () => {
 			root.unmount();

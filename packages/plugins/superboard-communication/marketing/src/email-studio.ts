@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	canonicalEmailLocale,
 	createEmailDesign,
@@ -261,10 +262,10 @@ export async function claimEmailFrequency(
 	return result !== null;
 }
 
-export const emailStudioRoutes = new Hono<{
+export const emailStudioRoutes = registerRouter(new Hono<{
 	Bindings: Env;
 	Variables: { project: ProjectContext };
-}>();
+}>(), {"service":"marketing","module":"email-studio.emailStudioRoutes","pluginId":"superboard-marketing","surface":"internal","access":"internal"});
 emailStudioRoutes.use("*", async (c, next) => {
 	if (!["owner", "admin"].includes(c.get("project").role.toLowerCase()))
 		throw failure("role_insufficient", "Owner or admin access is required.", 403);

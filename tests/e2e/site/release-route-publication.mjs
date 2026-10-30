@@ -26,7 +26,7 @@ try {
 	await page.waitForURL((url) => url.pathname === "/_emdash/admin");
 	await api(
 		"../plugins/sync",
-		{ plan_id: `issue75-${nextId()}`, expires_in_hours: 1, plugin_ids: ["supbrd-plug-audit"] },
+		{ plan_id: `issue75-${nextId()}`, expires_in_hours: 1, plugin_ids: ["superboard-audit"] },
 		201,
 	);
 	const original = identifiers();

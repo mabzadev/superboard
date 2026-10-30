@@ -145,8 +145,8 @@ describe("SuperBoard observability Worker", () => {
 
 	it("queries a bounded, whitelisted Analytics Engine window", async () => {
 		const analyticsFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
-			expect(String(init?.body)).toContain("INTERVAL '15' MINUTE");
-			expect(String(init?.body)).toContain("FROM superboard_mbza_development");
+			expect(init?.body).toContain("INTERVAL '15' MINUTE");
+			expect(init?.body).toContain("FROM superboard_mabza_development");
 			return Response.json({
 				data: [
 					{
@@ -189,7 +189,7 @@ function environment(points: AnalyticsEngineDataPoint[], overrides: Record<strin
 				if (point) points.push(point);
 			},
 		},
-		ANALYTICS_DATASET: "superboard_mbza_development",
+		ANALYTICS_DATASET: "superboard_mabza_development",
 		ENVIRONMENT: "development",
 		OBSERVABILITY_INTERNAL_TOKEN: TOKEN,
 		CLOUDFLARE_ANALYTICS_ACCOUNT_ID: "a".repeat(32),

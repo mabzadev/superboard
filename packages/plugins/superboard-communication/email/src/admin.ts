@@ -1,3 +1,4 @@
+import { createFetchRouter } from "@superboard/contracts/route-registry";
 import type { EmailSmtpPublicConfig, EmailSmtpSecretConfig } from "@superboard/contracts/email";
 import {
 	verifyInternalProjectContextRequest,
@@ -45,68 +46,11 @@ interface AdminMutation {
 const ADMIN_PREFIX = "/internal/v1/admin";
 const TOKEN_PATTERN = /^[A-Za-z0-9._:-]{1,200}$/;
 
-export async function handleEmailAdmin(
-	request: Request,
-	env: EmailAdminEnv,
-	operations: RuntimeOperations,
-): Promise<Response> {
-	const verified = await verifyInternalProjectContextRequest(
-		request,
-		configuredSecrets(env.EMAIL_INTERNAL_TOKEN, env.EMAIL_INTERNAL_TOKEN_PREVIOUS),
-		"email",
-	);
-	if (!verified.ok) return error(401, verified.code);
-	const context = verified.context;
-	if (!["owner", "admin"].includes(context.role)) return error(403, "administrator_required");
-	const url = new URL(request.url);
-	const path = url.pathname.slice(ADMIN_PREFIX.length) || "/";
-	try {
-		const messageRead=await readEmailAdminMessages(request,env,context.projectId);
-		if(messageRead)return messageRead;
-		const mutating = !["GET", "HEAD"].includes(request.method);
-		const operationKey = request.headers.get("Idempotency-Key") ?? "";
-		if (mutating && !TOKEN_PATTERN.test(operationKey))
-			return error(400, "idempotency_key_required");
-		const body = mutating && request.body ? await readJsonObjectLimited(request, 600_000) : {};
-		const requestHash = mutating
-			? await sha256(`${request.method} ${path}\n${JSON.stringify(body)}`)
-			: "";
-		if (mutating) {
-			const replay = await env.DB.prepare(
-				"SELECT request_sha256, response_json, response_status FROM email_admin_operations WHERE project_id = ? AND operation_key = ?",
-			)
-				.bind(context.projectId, operationKey)
-				.first<{ request_sha256: string; response_json: string; response_status: number }>();
-			if (replay)
-				return replay.request_sha256 === requestHash
-					? new Response(replay.response_json, {
-							status: replay.response_status,
-							headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-						})
-					: error(409, "idempotency_conflict");
-		}
-		const commit = async (mutation: AdminMutation) => {
-			const status = mutation.status ?? 200;
-			const result = { data: mutation.data };
-			await env.DB.batch([
-				env.DB.prepare(
-					"INSERT INTO email_admin_operations (project_id, operation_key, request_sha256, response_json, response_status) VALUES (?, ?, ?, ?, ?)",
-				).bind(context.projectId, operationKey, requestHash, JSON.stringify(result), status),
-				...mutation.statements,
-				env.DB.prepare(
-					"INSERT INTO email_admin_audit_events (id, project_id, operator_id, action, resource_id, request_id) VALUES (?, ?, ?, ?, ?, ?)",
-				).bind(
-					crypto.randomUUID(),
-					context.projectId,
-					context.operatorId ?? String(context.actorId),
-					mutation.action,
-					mutation.resourceId,
-					context.requestId,
-				),
-			]);
-			return json(result, status);
-		};
-		if (path === "/migration/smtp-profiles" && request.method === "POST") {
+interface EmailAdminRequestState {
+ env: EmailAdminEnv; context: InternalProjectContext; operations: RuntimeOperations; body: Record<string, unknown>; commit(mutation: AdminMutation): Promise<Response>; path: string; url: URL; operationKey: string;
+}
+export const emailAdminRoutes = createFetchRouter<EmailAdminRequestState>({ service: "email", module: "administration", pluginId: "superboard-email", surface: "internal", access: "internal" });
+emailAdminRoutes.on(["POST"], [ADMIN_PREFIX + "/migration/smtp-profiles"], async ({ env: { env, context, body, commit } }) => {
 			if (!Array.isArray(body.profiles) || body.profiles.length > 100)
 				return error(422, "profile_import_invalid");
 			const mutations: AdminMutation[] = [];
@@ -142,8 +86,8 @@ export async function handleEmailAdmin(
 					).bind(context.projectId, mutation.resourceId),
 				]),
 			});
-		}
-		if (path === "/settings/smtp" && request.method === "GET") {
+		});
+emailAdminRoutes.on(["GET"], [ADMIN_PREFIX + "/settings/smtp"], async ({ env: { env, context } }) => {
 			const rows = await env.DB.prepare(
 				"SELECT * FROM email_smtp_profiles WHERE project_id = ? ORDER BY priority, created_at, id",
 			)
@@ -160,12 +104,10 @@ export async function handleEmailAdmin(
 							}
 						: { profiles, configured: profiles.length > 0, provider: env.MAIL_PROVIDER },
 			});
-		}
-		if (path === "/settings/smtp" && ["PUT", "POST"].includes(request.method))
-			return commit(await saveProfile(env, context, body));
-		const profilePath = /^\/settings\/smtp\/([^/]+)$/.exec(path);
-		if (profilePath && request.method === "DELETE") {
-			const row = await loadProfile(env, context.projectId, profilePath[1]);
+		});
+emailAdminRoutes.on(["PUT","POST"], [ADMIN_PREFIX + "/settings/smtp"], async ({ env: { env, context, body, commit } }) => {return commit(await saveProfile(env, context, body));});
+emailAdminRoutes.on(["DELETE"], [ADMIN_PREFIX + "/settings/smtp/:id"], async ({ params, env: { env, context, commit } }) => {
+			const row = await loadProfile(env, context.projectId, params.id);
 			if (!row) return error(404, "smtp_profile_not_found");
 			return commit({
 				action: "smtp_profile.deleted",
@@ -178,10 +120,9 @@ export async function handleEmailAdmin(
 					),
 				],
 			});
-		}
-		const verification = /^\/settings\/smtp\/([^/]+)\/verify-domain$/.exec(path);
-		if (verification && request.method === "POST") {
-			const row = await loadProfile(env, context.projectId, verification[1]);
+		});
+emailAdminRoutes.on(["POST"], [ADMIN_PREFIX + "/settings/smtp/:id/verify-domain"], async ({ params, env: { env, context, commit } }) => {
+			const row = await loadProfile(env, context.projectId, params.id);
 			if (!row) return error(404, "smtp_profile_not_found");
 			const configuration = JSON.parse(row.public_config_json) as EmailSmtpPublicConfig;
 			let result: Awaited<ReturnType<typeof verifyEmailAuthentication>>;
@@ -217,11 +158,8 @@ export async function handleEmailAdmin(
 					),
 				],
 			});
-		}
-		if (
-			(path === "/transactional" || path === "/settings/smtp/test") &&
-			request.method === "POST"
-		) {
+		});
+emailAdminRoutes.on(["POST"], [ADMIN_PREFIX + "/transactional", ADMIN_PREFIX + "/settings/smtp/test"], async ({ env: { env, context, operations, body, commit, path, operationKey } }) => {
 			const row = await loadProfile(
 				env,
 				context.projectId,
@@ -298,21 +236,20 @@ export async function handleEmailAdmin(
 				env,
 				sender,
 			);
-		}
-		if (path === "/settings/delivery-outbox" && request.method === "GET") {
+		});
+emailAdminRoutes.on(["GET"], [ADMIN_PREFIX + "/settings/delivery-outbox"], async ({ env: { env, context } }) => {
 			const rows = await env.DB.prepare(
 				"SELECT id, subject, kind AS job_type, status, last_error, created_at, updated_at, sent_at AS completed_at FROM email_messages WHERE project_id = ? ORDER BY created_at DESC, id DESC LIMIT 500",
 			)
 				.bind(context.projectId)
 				.all();
 			return json({ data: rows.results });
-		}
-		const retry = /^\/settings\/delivery-outbox\/([^/]+)\/retry$/.exec(path);
-		if (retry && request.method === "POST") {
+		});
+emailAdminRoutes.on(["POST"], [ADMIN_PREFIX + "/settings/delivery-outbox/:id/retry"], async ({ params, env: { env, context, commit } }) => {
 			const row = await env.DB.prepare(
 				"SELECT id FROM email_messages WHERE project_id = ? AND id = ? AND status IN ('queued','failed')",
 			)
-				.bind(context.projectId, retry[1])
+				.bind(context.projectId, params.id)
 				.first<{ id: string }>();
 			if (!row) return error(409, "outbox_not_retryable");
 			await env.EMAIL_QUEUE.send({ type: "email.deliver", messageId: row.id });
@@ -323,8 +260,8 @@ export async function handleEmailAdmin(
 				status: 202,
 				statements: [],
 			});
-		}
-		if (path === "/settings/dead-letters" && request.method === "GET") {
+		});
+emailAdminRoutes.on(["GET"], [ADMIN_PREFIX + "/settings/dead-letters"], async ({ env: { env, context } }) => {
 			const rows = await env.DB.prepare(
 				"SELECT d.id,d.source_queue,d.message_id AS queue_message_id,d.job_type,d.replayable,d.attempts,d.status,d.resolution,d.received_at,d.resolved_at,m.id AS resource_id FROM email_dead_letters d JOIN email_messages m ON m.id = json_extract(d.payload_json, '$.messageId') WHERE m.project_id = ? ORDER BY d.received_at DESC,d.id DESC LIMIT 100",
 			)
@@ -333,33 +270,31 @@ export async function handleEmailAdmin(
 			return json({
 				data: rows.results.map((row) => ({ ...row, replayable: row.replayable === 1 })),
 			});
-		}
-		const dead = /^\/settings\/dead-letters\/([^/]+)\/(replay|discard)$/.exec(path);
-		if (dead && request.method === "POST") {
+		});
+emailAdminRoutes.on(["POST"], [ADMIN_PREFIX + "/settings/dead-letters/:id/:action{replay|discard}"], async ({ params, env: { env, context, operations } }) => {
 			const row = await env.DB.prepare(
 				"SELECT d.id FROM email_dead_letters d JOIN email_messages m ON m.id = json_extract(d.payload_json, '$.messageId') WHERE d.id = ? AND m.project_id = ?",
 			)
-				.bind(dead[1], context.projectId)
+				.bind(params.id, context.projectId)
 				.first<{ id: string }>();
 			if (!row) return error(404, "dead_letter_not_found");
-			return dead[2] === "replay"
+			return params.action === "replay"
 				? operations.replayDeadLetter(env, row.id)
 				: operations.discardDeadLetter(env, row.id);
-		}
-		if (path === "/provider-events" && request.method === "GET") {
+		});
+emailAdminRoutes.on(["GET"], [ADMIN_PREFIX + "/provider-events"], async ({ env: { env, context } }) => {
 			const rows = await env.DB.prepare(
 				"SELECT id,provider,source,reference_id,provider_message_id,event_type,occurred_at,metadata_json FROM email_provider_events WHERE project_id = ? UNION ALL SELECT id,provider,endpoint_id AS source,delivery_id AS reference_id,provider_event_id AS provider_message_id,event_type,occurred_at,metadata_json FROM email_webhook_events WHERE project_id = ? ORDER BY occurred_at DESC,id DESC LIMIT 100",
 			)
 				.bind(context.projectId, context.projectId)
 				.all();
 			return json({ data: rows.results });
-		}
-		const webhookDeletion = /^\/settings\/provider-webhooks\/([^/]+)$/.exec(path);
-		if (webhookDeletion && request.method === "DELETE") {
+		});
+emailAdminRoutes.on(["DELETE"], [ADMIN_PREFIX + "/settings/provider-webhooks/:id"], async ({ params, env: { env, context, commit } }) => {
 			const row = await env.DB.prepare(
 				"SELECT id FROM email_webhook_endpoints WHERE id = ? AND project_id = ?",
 			)
-				.bind(webhookDeletion[1], context.projectId)
+				.bind(params.id, context.projectId)
 				.first<{ id: string }>();
 			if (!row) return error(404, "provider_webhook_not_found");
 			return commit({
@@ -372,16 +307,16 @@ export async function handleEmailAdmin(
 					).bind(row.id, context.projectId),
 				],
 			});
-		}
-		if (path === "/settings/provider-webhooks" && request.method === "GET") {
+		});
+emailAdminRoutes.on(["GET"], [ADMIN_PREFIX + "/settings/provider-webhooks"], async ({ env: { env, context } }) => {
 			const rows = await env.DB.prepare(
 				"SELECT id,provider,enabled,created_at,updated_at FROM email_webhook_endpoints WHERE project_id = ? ORDER BY created_at,id",
 			)
 				.bind(context.projectId)
 				.all();
 			return json({ data: rows.results });
-		}
-		if (path === "/settings/provider-webhooks" && request.method === "POST") {
+		});
+emailAdminRoutes.on(["POST"], [ADMIN_PREFIX + "/settings/provider-webhooks"], async ({ env: { env, context, body, commit } }) => {
 			const id = crypto.randomUUID();
 			const provider = requiredText(body.provider, "provider", 64);
 			return commit({
@@ -403,8 +338,70 @@ export async function handleEmailAdmin(
 					),
 				],
 			});
+		});
+
+export async function handleEmailAdmin(
+	request: Request,
+	env: EmailAdminEnv,
+	operations: RuntimeOperations,
+): Promise<Response> {
+	const verified = await verifyInternalProjectContextRequest(
+		request,
+		configuredSecrets(env.EMAIL_INTERNAL_TOKEN, env.EMAIL_INTERNAL_TOKEN_PREVIOUS),
+		"email",
+	);
+	if (!verified.ok) return error(401, verified.code);
+	const context = verified.context;
+	if (!["owner", "admin"].includes(context.role)) return error(403, "administrator_required");
+	const url = new URL(request.url);
+	const path = url.pathname.slice(ADMIN_PREFIX.length) || "/";
+	try {
+		const messageRead=await readEmailAdminMessages(request,env,context.projectId);
+		if(messageRead)return messageRead;
+		const mutating = !["GET", "HEAD"].includes(request.method);
+		const operationKey = request.headers.get("Idempotency-Key") ?? "";
+		if (mutating && !TOKEN_PATTERN.test(operationKey))
+			return error(400, "idempotency_key_required");
+		const body = mutating && request.body ? await readJsonObjectLimited(request, 600_000) : {};
+		const requestHash = mutating
+			? await sha256(`${request.method} ${path}\n${JSON.stringify(body)}`)
+			: "";
+		if (mutating) {
+			const replay = await env.DB.prepare(
+				"SELECT request_sha256, response_json, response_status FROM email_admin_operations WHERE project_id = ? AND operation_key = ?",
+			)
+				.bind(context.projectId, operationKey)
+				.first<{ request_sha256: string; response_json: string; response_status: number }>();
+			if (replay)
+				return replay.request_sha256 === requestHash
+					? new Response(replay.response_json, {
+							status: replay.response_status,
+							headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+						})
+					: error(409, "idempotency_conflict");
 		}
-		return error(404, "route_not_found");
+		const commit = async (mutation: AdminMutation) => {
+			const status = mutation.status ?? 200;
+			const result = { data: mutation.data };
+			await env.DB.batch([
+				env.DB.prepare(
+					"INSERT INTO email_admin_operations (project_id, operation_key, request_sha256, response_json, response_status) VALUES (?, ?, ?, ?, ?)",
+				).bind(context.projectId, operationKey, requestHash, JSON.stringify(result), status),
+				...mutation.statements,
+				env.DB.prepare(
+					"INSERT INTO email_admin_audit_events (id, project_id, operator_id, action, resource_id, request_id) VALUES (?, ?, ?, ?, ?, ?)",
+				).bind(
+					crypto.randomUUID(),
+					context.projectId,
+					context.operatorId ?? String(context.actorId),
+					mutation.action,
+					mutation.resourceId,
+					context.requestId,
+				),
+			]);
+			return json(result, status);
+		};
+		return await emailAdminRoutes.fetch(request, { env, context, operations, body, commit, path, url, operationKey });
 	} catch (cause) {
 		if (cause instanceof RequestBodyError) return error(cause.status, cause.code);
 		if (cause instanceof EmailValidationError) return error(422, cause.code);

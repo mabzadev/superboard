@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 import { expect, test, vi } from "vitest";
 
@@ -16,7 +17,7 @@ vi.mock("@superboard/contracts/plugin-task", async (importOriginal) => ({
 test.each(["/custom/v1/jobs", "/api/v1/sdk/custom/v1/jobs"])(
 	"disabled custom plugins stay inaccessible through %s",
 	async (path) => {
-		const app = new Hono();
+		const app = registerRouter(new Hono(), { service: "api", module: "test", pluginId: "supbrd-core", ownerBinding: "CUSTOM_WORKER_PLUGIN_ID", surface: "custom-api", access: "application" });
 		app.use("*", pluginHttpAdmission);
 		app.get(path, (c) => c.json({ retainedJobs: true }));
 		const response = await app.request(

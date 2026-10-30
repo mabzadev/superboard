@@ -1,5 +1,5 @@
 {
-  "plugin_id": "supbrd-plugmod-billing",
+  "plugin_id": "superboard-billing",
   "path": "/products/purchases",
   "operation": "historical_import_ui_resume",
   "responses": [

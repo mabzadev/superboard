@@ -1,9 +1,12 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { AnalyticsContractError, parseAnalyticsEventsV1 } from "@superboard/contracts/analytics";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
 import { Hono } from "hono";
 
 import { drainAnalyticsHooks, evaluateAnalyticsAlerts } from "./automations";
+import { collectAnalyticsProjection } from "./core-collection.js";
 import {
 	errorResponse,
 	httpError,
@@ -82,10 +85,10 @@ import type { Env } from "./types";
 
 export { AnalyticsOperationsWorkflow };
 
-const app = new Hono<{
+const app = registerRouter(new Hono<{
 	Bindings: AnalyticsBindings;
 	Variables: AnalyticsVariables;
-}>();
+}>(), {"service":"analytics","module":"index.app","pluginId":"superboard-analytics","surface":"internal","access":"internal"});
 
 app.get("/internal/v1/health", async (c) => {
 	try {
@@ -517,6 +520,7 @@ const lifecycleWorker = {
 	async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
 		ctx.waitUntil(
 			Promise.all([
+				collectAnalyticsProjection(env),
 				drainAnalyticsOutbox(env),
 				drainMarketingSignals(env),
 				evaluateAnalyticsAlerts(env),
@@ -539,4 +543,4 @@ const lifecycleWorker = {
 	},
 };
 
-export default withPluginTaskLifecycle("supbrd-plugmod-analytics", lifecycleWorker);
+export default withRouteManifest((withPluginTaskLifecycle("superboard-analytics", lifecycleWorker)), [app], {"service":"analytics","pluginId":"superboard-analytics"});

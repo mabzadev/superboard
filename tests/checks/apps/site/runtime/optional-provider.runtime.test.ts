@@ -12,7 +12,7 @@ const headers = {
 	"X-Parity-Operator": "1",
 };
 test("an internal Email integration cannot write while Email is disabled and resumes idempotently after activation", async () => {
-	const execution = pluginTaskContext(createExecutionContext(), "supbrd-plugmod-email");
+	const execution = pluginTaskContext(createExecutionContext(), "superboard-email");
 	const db = (env as unknown as { HEALTH_EMAIL_DB: D1Database }).HEALTH_EMAIL_DB;
 	const bindings = {
 		DB: db,
@@ -52,7 +52,7 @@ test("an internal Email integration cannot write while Email is disabled and res
 		count: 0,
 	});
 	const activated = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plugmod-email/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-email/enable",
 		{ method: "POST", headers },
 	);
 	expect(activated.status).toBe(201);
@@ -63,7 +63,7 @@ test("an internal Email integration cannot write while Email is disabled and res
 		count: 1,
 	});
 	const disabled = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plugmod-email/disable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-email/disable",
 		{ method: "POST", headers },
 	);
 	expect(disabled.status).toBe(201);
@@ -78,7 +78,7 @@ test("Analytics keeps a signal pending while Marketing is disabled and delivers 
 		HEALTH_ANALYTICS_DB: D1Database;
 		HEALTH_MARKETING_DB: D1Database;
 	};
-	const execution = pluginTaskContext(createExecutionContext(), "supbrd-plugmod-marketing");
+	const execution = pluginTaskContext(createExecutionContext(), "superboard-marketing");
 	const bindings = {
 		DB: stores.HEALTH_MARKETING_DB,
 		ENVIRONMENT: "local",
@@ -133,7 +133,7 @@ test("Analytics keeps a signal pending while Marketing is disabled and delivers 
 		).first(),
 	).toEqual({ count: 0 });
 	const activated = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-marketing/enable",
 		{ method: "POST", headers },
 	);
 	expect(activated.status).toBe(201);

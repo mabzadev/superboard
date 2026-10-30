@@ -269,10 +269,10 @@ test("overlap assigns the old token only to accepting consumers", async () => {
 });
 
 test("Flows cutover adds only its dedicated API pair without assigning platform email bindings", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const internalPlan = buildSecretBundlePlan({
 		target,
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "development",
 		contractIds: ["flows-internal-token"],
 		overlap: true,

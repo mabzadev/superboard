@@ -1,5 +1,5 @@
 {
-  "plugin_id": "supbrd-plugmod-email",
+  "plugin_id": "superboard-email",
   "path": "/system/email",
   "operation": "transactional_email_capture",
   "http_status": 202,

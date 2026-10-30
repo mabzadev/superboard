@@ -66,7 +66,7 @@ recompute the complete evidence digest.
 
 ## Production activation
 
-After MBZA acceptance, native device certification, provider sandbox tests and
+After MABZA acceptance, native device certification, provider sandbox tests and
 rollback rehearsal:
 
 1. refresh and review the FlutterFlow snapshot;

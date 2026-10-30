@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
 import { Hono } from "hono";
 
@@ -7,7 +8,7 @@ import { runMaintenance } from "../lib/maintenance";
 import { decryptCredential, encryptSecret, timingSafeEqual } from "../lib/secrets";
 import { Env } from "../types";
 
-const admin = new Hono<{ Bindings: Env }>();
+const admin = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.admin.admin","pluginId":"supbrd-core","surface":"internal","access":"operator"});
 
 type ProjectRecord = {
 	id: number;

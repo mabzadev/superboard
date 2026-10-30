@@ -111,7 +111,9 @@ function isPluginSelection(value: unknown): value is string[] | undefined {
 			value.length <= 100 &&
 			value.every(
 				(pluginId) =>
-					typeof pluginId === "string" && pluginId.startsWith("supbrd-") && !pluginId.includes("*"),
+					typeof pluginId === "string" &&
+					(pluginId.startsWith("supbrd-") || pluginId.startsWith("superboard-")) &&
+					!pluginId.includes("*"),
 			) &&
 			new Set(value).size === value.length)
 	);

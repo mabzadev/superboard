@@ -15,13 +15,13 @@ const packageDirectory = Object.fromEntries(
 	packages.packages.map((item) => [item.id, item.directory]),
 );
 const settings = [
-	["auth", "supbrd-plug-identity"],
-	["data", "supbrd-plug-data"],
-	["monetization", "supbrd-plug-commerce"],
-	["communication", "supbrd-plug-communication"],
-	["acquisition", "supbrd-plug-journeys"],
-	["support", "supbrd-plug-support"],
-	["analytics", "supbrd-plug-analytics"],
+	["auth", "superboard-authentification"],
+	["data", "superboard-data"],
+	["monetization", "superboard-monetization"],
+	["communication", "superboard-communication"],
+	["acquisition", "superboard-acquisition"],
+	["support", "superboard-support"],
+	["analytics", "superboard-analytics"],
 ];
 const results = [];
 const browser = await chromium.launch();
@@ -77,6 +77,38 @@ try {
 				const diagnostic = await diagnosticResponse.json();
 				assert.equal(diagnostic.pluginId, pluginId);
 				assert.ok(diagnostic.routes.views.length > 0);
+				const deploymentResponse = await context.request.get(
+					new URL("/_emdash/api/superboard/deployment-configuration", origin).href,
+				);
+				assert.equal(deploymentResponse.status(), 200);
+				const deployment = await deploymentResponse.json();
+				assert.equal(deployment.routesStatus, "loaded");
+				const definition = packages.packages.find(
+					(entry) => entry.id === pluginId || entry.directory === pluginId,
+				);
+				const owners = new Set([
+					pluginId,
+					definition?.id,
+					definition?.directory,
+					...(definition?.components ?? []),
+				]);
+				const liveRoutes = deployment.routes.filter(
+					(route) =>
+						route.pluginId &&
+						owners.has(route.pluginId) &&
+						route.surface === "sdk",
+				);
+				assert(liveRoutes.length > 0, `No live API routes discovered for ${pluginId}`);
+				for (const route of liveRoutes)
+					assert(
+						diagnostic.routes.api.some(
+							(candidate) =>
+								candidate.method === route.method &&
+								candidate.path === route.path &&
+								candidate.url === route.url,
+						),
+						`Configuration omits live route ${route.method} ${route.path}`,
+					);
 				await expect(
 					page.getByText(
 						locale === "fr" ? "Services et Workers associés" : "Associated Services & Workers",
@@ -159,8 +191,28 @@ try {
 							refreshed.routes.api[observed.length].path,
 						);
 						const rows = table.getByRole("row");
-						for (let index = 1; index < (await rows.count()); index++)
-							observed.push(await rows.nth(index).getByRole("cell").allTextContents());
+						for (let index = 1; index < (await rows.count()); index++) {
+							const row = rows.nth(index);
+							const expectedRoute = refreshed.routes.api[observed.length];
+							const cells = await row.getByRole("cell").allTextContents();
+							cells[2] = await row.locator("[data-route-service]").textContent();
+							for (const destination of expectedRoute.destinations ?? []) {
+								const detail = row.locator("[data-route-destinations]");
+								await expect(detail).toContainText(destination.service);
+								await expect(detail).toContainText(destination.path);
+								if (destination.condition)
+									await expect(detail).toContainText(
+										destination.condition === "flows-project"
+											? locale === "fr"
+												? "Projets migrés vers Flows"
+												: "Projects migrated to Flows"
+											: locale === "fr"
+												? "Projets non migrés"
+												: "Projects before migration",
+									);
+							}
+							observed.push(cells);
+						}
 						assert.ok(observed.length <= refreshed.routes.api.length);
 						if (observed.length < refreshed.routes.api.length) {
 							await expect(next).toBeEnabled();
@@ -172,8 +224,14 @@ try {
 						refreshed.routes.api.map((route) => [
 							route.method,
 							route.path,
-							route.worker ?? labels.unknown,
-							route.url ?? labels.unknown,
+							[route.worker ?? labels.unknown, route.executionScope].filter(Boolean).join(" · "),
+							route.url ??
+								(route.surface === "internal"
+									? locale === "fr"
+										? "Interne"
+										: "Internal"
+									: labels.unknown),
+							`${route.transport === "websocket" ? "WebSocket · " : route.transport === "fallback" ? (locale === "fr" ? "Secours · " : "Fallback · ") : ""}${route.kind === "alias" ? "Alias" : route.kind === "canonical" ? (locale === "fr" ? "Canonique" : "Canonical") : labels.unknown} · ${route.availability === "stale" ? (locale === "fr" ? "Périmé" : "Stale") : route.availability === "current" ? (locale === "fr" ? "Actuel" : "Current") : labels.unknown}`,
 						]),
 					);
 					checkedApiRoutes = observed.length;

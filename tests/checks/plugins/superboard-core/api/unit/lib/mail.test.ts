@@ -10,7 +10,7 @@ import { Env } from "../../../../../../../packages/plugins/superboard-core/api/s
 describe("Cloudflare email delivery", () => {
 	it("forwards AWS SNS events only to the native Email Worker", async () => {
 		const fetch = vi.fn().mockResolvedValue(Response.json({ accepted: true }, { status: 202 }));
-		const request = new Request("https://api.mbza.dev/api/v1/email/aws-ses/events", {
+		const request = new Request("https://api.mabza.dev/api/v1/email/aws-ses/events", {
 			method: "POST",
 			headers: {
 				"content-type": "text/plain; charset=UTF-8",
@@ -44,7 +44,7 @@ describe("Cloudflare email delivery", () => {
 			EMAIL_SERVICE: { fetch },
 			EMAIL_INTERNAL_TOKEN: "internal-mail-secret",
 			MAIL_PROVIDER: "email-service",
-			MAIL_FROM: "SuperBoard <noreply@mbza.dev>",
+			MAIL_FROM: "SuperBoard <noreply@mabza.dev>",
 		} as unknown as Env;
 
 		const result = await sendMail(env, {

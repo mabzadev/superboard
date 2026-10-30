@@ -16,19 +16,19 @@ export type GooglePubSubAuthentication = {
   subject: string | null;
 };
 
-export function googlePubSubAudience(apiDomain: string, instanceId: number | string) {
+export function googlePubSubAudience(apiDomain: string, instanceId: number | string, unified = false) {
   const input = String(apiDomain || '').trim().replace(/\/+$/, '');
   const origin = /^https?:\/\//i.test(input) ? input : `https://${input}`;
   const url = new URL(origin);
   if (url.protocol !== 'https:') throw authError('google_pubsub_audience_invalid', 'Google Pub/Sub audience must use HTTPS');
-  return `${url.origin}/api/v1/iap/google/${encodeURIComponent(String(instanceId))}`;
+  return `${url.origin}${unified ? "/v1/monetization/iap/google" : "/api/v1/iap/google"}/${encodeURIComponent(String(instanceId))}`;
 }
 
 export async function authenticateGooglePubSub(env: Env, request: Request, params: {
   instanceId: number;
   expectedEmail: string | null;
 }): Promise<GooglePubSubAuthentication> {
-  const audience = googlePubSubAudience(env.API_DOMAIN, params.instanceId);
+  const audience = googlePubSubAudience(env.SDK_DOMAIN && env.AUTH_DOMAIN === env.SDK_DOMAIN ? env.SDK_DOMAIN : env.API_DOMAIN, params.instanceId, Boolean(env.SDK_DOMAIN) && env.AUTH_DOMAIN === env.SDK_DOMAIN);
   const authorization = request.headers.get('Authorization') || '';
   const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() || '';
   if (bearer) {

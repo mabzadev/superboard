@@ -1,4 +1,4 @@
-export const pluginId = "supbrd-plugmod-dynamic-links";
+export const pluginId = "superboard-dynamic-links";
 export const views = {
 	"superboard.dynamic_links_campaigns": () =>
 		import("./views/superboard.dynamic_links_campaigns.js"),

@@ -1,7 +1,7 @@
-# Flows cutover runbook (MBZA development only)
+# Flows cutover runbook (MABZA development only)
 
 This tooling migrates the historical Paywalls and Onboardings D1 data into
-Flows. It is deliberately restricted to `mbza-development/development`, is a
+Flows. It is deliberately restricted to `mabza-development/development`, is a
 dry run by default, never deletes a database or row, and never invokes GitHub
 Actions. Remote operations use the local Cloudflare/Wrangler connection only.
 The import is scoped directly by SuperBoard project plus Flows environment; it
@@ -33,7 +33,7 @@ If the Flows D1 id is not provisioned, the backup plan stops and prints this
 direct command:
 
 ```sh
-node scripts/cloudflare/bootstrap.mjs --target mbza-development --environment development --remote
+node scripts/cloudflare/bootstrap.mjs --target mabza-development --environment development --remote
 ```
 
 Review that plan and execute only the exact confirmation printed by the
@@ -131,7 +131,7 @@ npm run flows:cutover -- snapshot \
 npm run flows:cutover -- plan \
   --project-ref <project-ref> --remote-read \
   --snapshot .flows-cutover/source-pre-freeze.json \
-  --flow-user-hash-bundle .flows-cutover/secrets/mbza-development-flows-development.json \
+  --flow-user-hash-bundle .flows-cutover/secrets/mabza-development-flows-development.json \
   --output .flows-cutover/plan-pre-freeze.json
 ```
 
@@ -162,7 +162,7 @@ npm run flows:cutover -- snapshot \
 npm run flows:cutover -- plan \
   --project-ref <project-ref> --remote-read \
   --snapshot .flows-cutover/source-final.json \
-  --flow-user-hash-bundle .flows-cutover/secrets/mbza-development-flows-development.json \
+  --flow-user-hash-bundle .flows-cutover/secrets/mabza-development-flows-development.json \
   --output .flows-cutover/plan-final.json
 ```
 
@@ -209,7 +209,7 @@ Do not thaw unless verification reports `ready: true`.
 
 ## 4. Atomic routing activation
 
-The MBZA API's final configuration contains `FLOWS_MODULE` and intentionally
+The MABZA API's final configuration contains `FLOWS_MODULE` and intentionally
 does not contain the two legacy service bindings. To avoid any unavailable
 legacy SDK window, do not promote that API version yet. First apply API
 migration `0061`, keep the currently active API/legacy Workers serving traffic,
@@ -314,7 +314,7 @@ without deploying or promoting it. The value-free plan is the default:
 
 ```sh
 npm run cloudflare:flows-version-bundle -- \
-  --target mbza-development \
+  --target mabza-development \
   --environment development
 ```
 
@@ -328,7 +328,7 @@ and every undeclared secret name are rejected.
 
 ```sh
 npm run cloudflare:flows-version-bundle -- \
-  --target mbza-development \
+  --target mabza-development \
   --environment development \
   --prepare \
   --existing-secrets-file /protected/flows-existing.json
@@ -345,25 +345,25 @@ second inactive version without an interactive prompt. Inspect and promote only
 that second version. Never use `wrangler secret delete`, which would deploy
 immediately.
 
-## 7. Direct MBZA deployment order (no GitHub Actions)
+## 7. Direct MABZA deployment order (no GitHub Actions)
 
 All commands below are local Cloudflare/Wrangler operations and target only
-`mbza-development/development`.
+`mabza-development/development`.
 
 Wrangler currently sees more than one accessible Cloudflare account and fails
-closed in non-interactive mode unless MBZA is selected. Verify membership with
+closed in non-interactive mode unless MABZA is selected. Verify membership with
 `npx wrangler whoami --account Mabza --json`, then set the returned account id
 only in the protected operator shell (never in the repository):
 
 ```sh
-export FLOWS_MBZA_ACCOUNT_ID='<verified MBZA account id>'
-export CLOUDFLARE_ACCOUNT_ID="$FLOWS_MBZA_ACCOUNT_ID"
-export CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT="$FLOWS_MBZA_ACCOUNT_ID"
+export FLOWS_MABZA_ACCOUNT_ID='<verified MABZA account id>'
+export CLOUDFLARE_ACCOUNT_ID="$FLOWS_MABZA_ACCOUNT_ID"
+export CLOUDFLARE_ACCOUNT_ID_MABZA_DEVELOPMENT="$FLOWS_MABZA_ACCOUNT_ID"
 ```
 
 The generic variable is consumed by raw `npx wrangler` commands; the scoped
 variable is consumed by SuperBoard target-aware scripts. Stop if `whoami` does
-not report the expected MBZA membership.
+not report the expected MABZA membership.
 
 1. Run all gates and route-free dry runs. Generate the Flows config and the
    protected secret bundle; never print its values.
@@ -385,7 +385,7 @@ not report the expected MBZA membership.
    intentionally removes the pre-cutover transient organization/workflow rows;
    only `flow_projects`/project environments may be auto-provisioned afterward.
 5. Upload the Flows code plus all three secrets as one inactive version with
-   the command emitted by `cloudflare:flows-version-bundle`. The current MBZA
+   the command emitted by `cloudflare:flows-version-bundle`. The current MABZA
    Worker inventory contains the obsolete `EMAIL_INTERNAL_TOKEN`; immediately
    run the emitted `wrangler versions secret bulk` cleanup command so Cloudflare
    clones the just-uploaded code into a second inactive version without that
@@ -397,7 +397,7 @@ not report the expected MBZA membership.
    deletion and promote the inspected upload version.
 6. Upload the final API and Dashboard as inactive versions. Do not promote them.
 7. Execute rehearsal snapshot/plan, freeze, final snapshot, import/resume and
-   verification for every MBZA project. Backups are already sealed by step 3;
+   verification for every MABZA project. Backups are already sealed by step 3;
    never replace those receipts after a schema mutation. Activate each project
    routing receipt only after its report is `ready: true`.
 8. Promote the inspected API version at 100%, then run native Flows plus every
@@ -416,7 +416,7 @@ Rollback restores the recorded historical API version first, which restores
 its immutable legacy bindings, then disables the staged D1 routing receipt and
 follows the generated reverse-delta plan while the freeze remains active.
 
-The MBZA cutover inventory is explicitly two scopes: `1-prod` (API project id
+The MABZA cutover inventory is explicitly two scopes: `1-prod` (API project id
 `1`) and `1-test` (API project id `2`). A shared operational window/archive
 batch is allowed, but each scope must have its own source snapshot, canonical
 plan, checkpoint, verification report and routing receipt. Do not promote the
@@ -444,44 +444,44 @@ The exact direct command skeleton is:
 
 ```sh
 # Read-only migration state.
-node scripts/database/d1-converge.mjs plan --target mbza-development --environment development --service flows --remote-read
-node scripts/database/d1-converge.mjs plan --target mbza-development --environment development --service api --remote-read
+node scripts/database/d1-converge.mjs plan --target mabza-development --environment development --service flows --remote-read
+node scripts/database/d1-converge.mjs plan --target mabza-development --environment development --service api --remote-read
 
 # Guarded schema writes (development target only).
 # STOP unless both project-bound backup receipts are ready and cover API,
 # Paywalls, Onboardings and Flows with verified Time Travel + R2 evidence.
-node scripts/database/d1-converge.mjs apply --target mbza-development --environment development --service flows --apply --confirm MIGRATE:mbza-development:development:flows
-node scripts/database/d1-converge.mjs apply --target mbza-development --environment development --service api --apply --confirm MIGRATE:mbza-development:development:api
+node scripts/database/d1-converge.mjs apply --target mabza-development --environment development --service flows --apply --confirm MIGRATE:mabza-development:development:flows
+node scripts/database/d1-converge.mjs apply --target mabza-development --environment development --service api --apply --confirm MIGRATE:mabza-development:development:api
 
 # Value-free configs and inactive version uploads.
-node scripts/cloudflare/config.mjs --target mbza-development --environment development --service flows --no-routes
-npx wrangler versions upload --config infra/generated/mbza-development-flows-development.jsonc --secrets-file .flows-cutover/secrets/mbza-development-flows-development.json --strict --tag mbza-flows-project-cutover-v1 --message 'SuperBoard Flows MBZA project-scoped cutover'
-npx wrangler versions secret bulk .flows-cutover/secrets/mbza-development-flows-development.remove-obsolete.json --config infra/generated/mbza-development-flows-development.jsonc --name superboard-flows-dev --tag mbza-flows-project-cutover-v1-without-email --message 'Remove obsolete Flows Email secret before MBZA activation'
-npm run cloudflare:deploy -- --target mbza-development --environment development --service api --upload-only
-npm run cloudflare:deploy -- --target mbza-development --environment development --service dashboard --upload-only
+node scripts/cloudflare/config.mjs --target mabza-development --environment development --service flows --no-routes
+npx wrangler versions upload --config infra/generated/mabza-development-flows-development.jsonc --secrets-file .flows-cutover/secrets/mabza-development-flows-development.json --strict --tag mabza-flows-project-cutover-v1 --message 'SuperBoard Flows MABZA project-scoped cutover'
+npx wrangler versions secret bulk .flows-cutover/secrets/mabza-development-flows-development.remove-obsolete.json --config infra/generated/mabza-development-flows-development.jsonc --name superboard-flows-dev --tag mabza-flows-project-cutover-v1-without-email --message 'Remove obsolete Flows Email secret before MABZA activation'
+npm run cloudflare:deploy -- --target mabza-development --environment development --service api --upload-only
+npm run cloudflare:deploy -- --target mabza-development --environment development --service dashboard --upload-only
 
 # Inspect immutable versions before each promotion.
-npx wrangler versions view <flows-upload-version-id> --config infra/generated/mbza-development-flows-development.jsonc --json
-npx wrangler versions view <flows-cleanup-version-id> --config infra/generated/mbza-development-flows-development.jsonc --json
-npx wrangler versions secret list --config infra/generated/mbza-development-flows-development.jsonc --latest-version
-npx wrangler versions view <api-version-id> --config infra/generated/mbza-development-api-development.jsonc --json
-npx wrangler versions view <dashboard-version-id> --config infra/generated/mbza-development-dashboard-development.jsonc --json
+npx wrangler versions view <flows-upload-version-id> --config infra/generated/mabza-development-flows-development.jsonc --json
+npx wrangler versions view <flows-cleanup-version-id> --config infra/generated/mabza-development-flows-development.jsonc --json
+npx wrangler versions secret list --config infra/generated/mabza-development-flows-development.jsonc --latest-version
+npx wrangler versions view <api-version-id> --config infra/generated/mabza-development-api-development.jsonc --json
+npx wrangler versions view <dashboard-version-id> --config infra/generated/mabza-development-dashboard-development.jsonc --json
 
 # Promote one inspected version at 100 percent.
-npx wrangler versions deploy --config infra/generated/mbza-development-flows-development.jsonc --version-id <flows-cleanup-version-id> --percentage 100 --yes --message 'Activate verified MBZA Flows'
-npx wrangler versions deploy --config infra/generated/mbza-development-api-development.jsonc --version-id <api-version-id> --percentage 100 --yes --message 'Switch verified MBZA projects to Flows'
-npx wrangler versions deploy --config infra/generated/mbza-development-dashboard-development.jsonc --version-id <dashboard-version-id> --percentage 100 --yes --message 'Expose verified MBZA Flows UI'
+npx wrangler versions deploy --config infra/generated/mabza-development-flows-development.jsonc --version-id <flows-cleanup-version-id> --percentage 100 --yes --message 'Activate verified MABZA Flows'
+npx wrangler versions deploy --config infra/generated/mabza-development-api-development.jsonc --version-id <api-version-id> --percentage 100 --yes --message 'Switch verified MABZA projects to Flows'
+npx wrangler versions deploy --config infra/generated/mabza-development-dashboard-development.jsonc --version-id <dashboard-version-id> --percentage 100 --yes --message 'Expose verified MABZA Flows UI'
 ```
 
 After successful smoke tests, generate the route-free archive configs and
 perform read-only/dry-run checks only:
 
 ```sh
-node scripts/cloudflare/config.mjs --target mbza-development --environment development --service paywalls --allow-disabled --no-routes
-node scripts/cloudflare/config.mjs --target mbza-development --environment development --service onboardings --allow-disabled --no-routes
-npx wrangler delete --config infra/generated/mbza-development-paywalls-development.jsonc --dry-run
-npx wrangler delete --config infra/generated/mbza-development-onboardings-development.jsonc --dry-run
-npx wrangler d1 list --config infra/generated/mbza-development-flows-development.jsonc --json
+node scripts/cloudflare/config.mjs --target mabza-development --environment development --service paywalls --allow-disabled --no-routes
+node scripts/cloudflare/config.mjs --target mabza-development --environment development --service onboardings --allow-disabled --no-routes
+npx wrangler delete --config infra/generated/mabza-development-paywalls-development.jsonc --dry-run
+npx wrangler delete --config infra/generated/mabza-development-onboardings-development.jsonc --dry-run
+npx wrangler d1 list --config infra/generated/mabza-development-flows-development.jsonc --json
 ```
 
 The dry runs are evidence only; do not repeat them without `--dry-run` during
@@ -503,5 +503,5 @@ active dependency, stop. While the dormant Workers still exist, the rollback
 API command is:
 
 ```sh
-npx wrangler versions deploy --config infra/generated/mbza-development-api-development.jsonc --version-id <recorded-legacy-api-version-id> --percentage 100 --yes --message 'Rollback MBZA API to recorded legacy bindings'
+npx wrangler versions deploy --config infra/generated/mabza-development-api-development.jsonc --version-id <recorded-legacy-api-version-id> --percentage 100 --yes --message 'Rollback MABZA API to recorded legacy bindings'
 ```

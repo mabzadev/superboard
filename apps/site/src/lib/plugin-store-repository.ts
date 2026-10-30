@@ -4,7 +4,8 @@ import {
 	verifySuperBoardPluginManifest,
 } from "@superboard/supbrd-core";
 
-const pluginPattern = /^supbrd-(?:plug|plugmod)-[a-z0-9*]+(?:-[a-z0-9*]+)*$/u;
+const pluginPattern =
+	/^(?:supbrd-(?:core|(?:plug|plugmod)-[a-z0-9*]+(?:-[a-z0-9*]+)*)|superboard-[a-z0-9*]+(?:-[a-z0-9*]+)*)$/u;
 const projectRefPattern = /^\d+-(?:test|prod)$/u;
 
 interface StoreRecordInput {
@@ -56,7 +57,7 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 	if (!installed) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
 	const manifest: unknown = JSON.parse(installed.manifest_json);
 	const manifestVerification =
-		input.plugin_id === "supbrd-plug-user"
+		input.plugin_id === "superboard-user"
 			? await validateUserPluginManifest(manifest)
 			: await verifySuperBoardPluginManifest(manifest);
 	if (
@@ -245,7 +246,7 @@ export async function listPluginStoreRecords(
 	if (!installed) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
 	const manifest: unknown = JSON.parse(installed.manifest_json);
 	const manifestVerification =
-		input.plugin_id === "supbrd-plug-user"
+		input.plugin_id === "superboard-user"
 			? await validateUserPluginManifest(manifest)
 			: await verifySuperBoardPluginManifest(manifest);
 	if (

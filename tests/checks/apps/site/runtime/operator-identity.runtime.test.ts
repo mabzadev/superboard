@@ -81,7 +81,7 @@ beforeAll(async () => {
 		),
 	});
 	await env.DB.prepare(
-		"UPDATE superboard_plugin_lifecycle SET state = 'active' WHERE instance_id = 'reference-production' AND target = 'local' AND plugin_id IN ('supbrd-plugmod-paywalls','supbrd-plugmod-billing','supbrd-plugmod-marketing','supbrd-plugmod-mcp')",
+		"UPDATE superboard_plugin_lifecycle SET state = 'active' WHERE instance_id = 'reference-production' AND target = 'local' AND plugin_id IN ('superboard-paywalls','superboard-billing','superboard-marketing','superboard-mcp')",
 	).run();
 	await env.DB.batch([
 		env.DB.prepare(
@@ -221,7 +221,7 @@ test("persists a Paywalls mutation and its EmDash actor, and replays without dup
 	).all<{ actor_id: string; project_ref: string }>();
 	expect(audit.results).toEqual([{ actor_id: operator.id, project_ref: "42-prod" }]);
 	await env.DB.prepare(
-		"UPDATE superboard_plugin_lifecycle SET state = 'disabled' WHERE instance_id = 'reference-production' AND plugin_id = 'supbrd-plugmod-paywalls'",
+		"UPDATE superboard_plugin_lifecycle SET state = 'disabled' WHERE instance_id = 'reference-production' AND plugin_id = 'superboard-paywalls'",
 	).run();
 	const disabled = await proxyOperatorApiRequest({
 		env: siteEnv,

@@ -167,7 +167,7 @@ Le rapport est non-mutant par défaut :
 
 ```bash
 npm run analytics:reconcile -- \
-  --target mbza-development \
+  --target mabza-development \
   --environment development \
   --project-ref <instance>-test
 ```
@@ -183,15 +183,15 @@ rapport compare :
 
 Le rollout est ordonné :
 
-1. MBZA development : bootstrap du D1/R2/Queue/Workflow Analytics, secrets,
+1. MABZA development : bootstrap du D1/R2/Queue/Workflow Analytics, secrets,
    migrations, Workers privés, API/Billing, Dashboard, drain et rapport vert ;
 2. VocoStar production : activation du feature flag uniquement après le retour
-   MBZA, backup de tous les D1, provisionnement avec confirmation, même séquence,
+   MABZA, backup de tous les D1, provisionnement avec confirmation, même séquence,
    puis rapport vert pour les projets test et production ;
 3. aucune source ou métrique legacy n'est supprimée avant la fenêtre de
    rétention et un rapport de réconciliation conservé.
 
-Le manifeste MBZA development possède ses identifiants D1, R2 et Queues
+Le manifeste MABZA development possède ses identifiants D1, R2 et Queues
 Analytics/Marketing et active les deux modules. VocoStar conserve Analytics
 derrière son feature flag jusqu'à son propre provisionnement. Les générateurs
 refusent un déploiement d'un module activé si une ressource ou un secret requis

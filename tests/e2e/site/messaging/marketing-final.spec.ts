@@ -8,7 +8,7 @@ import {
 	unique,
 	unwrap,
 } from "../../../fixtures/site-browser/site-api.js";
-const plugin = "supbrd-plugmod-marketing";
+const plugin = "superboard-marketing";
 
 test("provider webhook settings persist an encrypted inbound credential", async ({
 	authenticatedPage: page,

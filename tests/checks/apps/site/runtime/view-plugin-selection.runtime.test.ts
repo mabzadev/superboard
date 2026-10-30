@@ -13,7 +13,7 @@ test("selecting a plugin preserves View ownership in storage and rejects incompa
 	try {
 		const release = parseCompiledFrontReleaseJson(JSON.stringify(releaseJson.release)).payload;
 		const route = release.front_route_manifest.routes.find((entry) =>
-			entry.renderer_ids.includes("supbrd-plugmod-flows.renderer.admin_surface"),
+			entry.renderer_ids.includes("superboard-flows.renderer.admin_surface"),
 		)!;
 		await applySeed(
 			cms.runtime.db,
@@ -41,7 +41,7 @@ test("selecting a plugin preserves View ownership in storage and rejects incompa
 							status: "published",
 							data: {
 								name: "Before",
-								plugin_id: "supbrd-plugmod-flows",
+								plugin_id: "superboard-flows",
 								route_id: route.route_id,
 								path: route.path_pattern,
 							},
@@ -81,7 +81,7 @@ test("selecting a plugin preserves View ownership in storage and rejects incompa
 			.where("slug", "=", "plugin-choice-test")
 			.where("locale", "=", "en")
 			.executeTakeFirstOrThrow();
-		expect(stored).toEqual({ plugin_id: "supbrd-plugmod-flows", name: "After" });
+		expect(stored).toEqual({ plugin_id: "superboard-flows", name: "After" });
 		expect((await save("superboard-support", "Wrong plugin"))?.status).toBe(422);
 		const unchanged = await cms.runtime.db
 			.selectFrom(cms.runtime.db.dynamic.ref("ec_views"))

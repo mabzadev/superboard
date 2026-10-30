@@ -33,14 +33,14 @@
 		},
 		"referencePath": { "const": "apps/reference" },
 		"environment": { "const": "development" },
-		"target": { "const": "mbza-development" },
+		"target": { "const": "mabza-development" },
 		"sdkApplication": {
 			"type": "object",
 			"additionalProperties": false,
 			"required": ["platform", "identifier", "projectEnvironment"],
 			"properties": {
 				"platform": { "const": "web" },
-				"identifier": { "const": "reference.mbza.dev" },
+				"identifier": { "const": "reference.mabza.dev" },
 				"projectEnvironment": { "const": "test" }
 			}
 		},
@@ -84,15 +84,15 @@
 				"support"
 			],
 			"properties": {
-				"referenceWeb": { "const": "https://reference.mbza.dev" },
-				"dashboard": { "const": "https://board.mbza.dev" },
-				"api": { "const": "https://api.mbza.dev" },
-				"sdk": { "const": "https://sdk.mbza.dev" },
-				"shortLinks": { "const": "https://in.mbza.dev" },
-				"files": { "const": "https://files.mbza.dev" },
-				"mailPreview": { "const": "https://mail.mbza.dev" },
+				"referenceWeb": { "const": "https://reference.mabza.dev" },
+				"dashboard": { "const": "https://board.mabza.dev" },
+				"api": { "const": "https://api.mabza.dev" },
+				"sdk": { "const": "https://sdk.mabza.dev" },
+				"shortLinks": { "const": "https://in.mabza.dev" },
+				"files": { "const": "https://files.mabza.dev" },
+				"mailPreview": { "const": "https://mail.mabza.dev" },
 				"support": {
-					"const": "https://api.mbza.dev/api/v1/support-client"
+					"const": "https://api.mabza.dev/api/v1/support-client"
 				}
 			}
 		},

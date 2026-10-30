@@ -99,7 +99,7 @@ Future<bool> superboardInitializeAuthenticated({
         final response = await client
             .post(
               Uri.parse(
-                '${authGatewayBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/auth/superboard-token',
+                '${authGatewayBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/v1/auth/superboard-token',
               ),
               headers: {
                 'Authorization': 'Bearer ${applicationAccessToken.trim()}',
@@ -173,7 +173,7 @@ String _purchasesBaseUrl(String sdkBaseUrl) {
   final base = sdkBaseUrl
       .replaceFirst(RegExp(r'/+$'), '')
       .replaceFirst(RegExp(r'/purchases/v\d+$'), '');
-  return '$base/purchases/v2';
+  return '${Uri.parse(base).origin}/v1/monetization/purchases';
 }
 
 /// Submits structured evidence from the authenticated FlutterFlow build to an

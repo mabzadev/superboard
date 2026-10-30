@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import observabilityWorker from "../../../../../packages/plugins/superboard-core/observability/src/index.js";
 import { dispatchLifecycleApi, pluginTaskContext } from "./lifecycle-health-services.js";
 
-const plugin = "supbrd-plugmod-observability";
+const plugin = "superboard-observability";
 const headers = {
 	"X-Parity-Operator": "1",
 	"X-EmDash-Request": "1",
@@ -64,7 +64,7 @@ test("Observability persists observations and incident transitions while the req
 		wall_ms: 5,
 		observed_at: new Date().toISOString(),
 	};
-	expect((await ingest(event, "supbrd-plugmod-flows")).status).toBe(403);
+	expect((await ingest(event, "superboard-flows")).status).toBe(403);
 	expect((await ingest(event, plugin, "forged-secret")).status).toBe(401);
 	expect((await ingest({ ...event, instance_id: "other" })).status).toBe(403);
 	const delivered = await ingest(event);

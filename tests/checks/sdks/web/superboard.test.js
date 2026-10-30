@@ -77,7 +77,7 @@ beforeEach(() => {
 	installBrowser();
 	globalThis.XMLHttpRequest = MockXMLHttpRequest;
 	MockXMLHttpRequest.instances = [];
-	SuperBoardContext.API_BASE_URL = "https://sdk.example.com/api/v1/sdk";
+	SuperBoardContext.API_BASE_URL = "https://sdk.example.com/v1";
 	SuperBoardContext.API_KEY = null;
 	SuperBoardContext.testEnvironment = false;
 	SuperBoardContext.USER_IDENTIFIER = null;
@@ -100,7 +100,7 @@ test("the application SDK origin is mandatory and normalized", () => {
 		() => {},
 		"https://sdk.example.com/an-ignored-path?ignored=true",
 	);
-	assert.equal(SuperBoardContext.API_BASE_URL, "https://sdk.example.com/api/v1/sdk");
+	assert.equal(SuperBoardContext.API_BASE_URL, "https://sdk.example.com/v1");
 });
 
 test("manager construction is safe during server-side rendering", () => {
@@ -150,7 +150,7 @@ test("GET requests never accept or send a request body", () => {
 
 	const request = MockXMLHttpRequest.instances.at(-1);
 	assert.equal(request.method, "GET");
-	assert.equal(request.endpoint, "https://sdk.example.com/api/v1/sdk/messages");
+	assert.equal(request.endpoint, "https://sdk.example.com/v1/messages");
 	assert.equal(request.body, undefined);
 	request.respond({ responseText: '{"notifications":[]}' });
 	assert.deepEqual(response, { notifications: [] });
@@ -190,8 +190,8 @@ test("API service GET endpoints use the body-free helper contract", () => {
 	service.numberOfUnreadMessages(success, failure);
 
 	assert.deepEqual(calls, [
-		["/notifications_to_display_automatically", success, failure],
-		["/number_of_unread_notifications", success, failure],
+		["/communication/notifications_to_display_automatically", success, failure],
+		["/communication/number_of_unread_notifications", success, failure],
 	]);
 });
 

@@ -214,21 +214,21 @@ Le compilateur ne compense pas ces limites. `packages/supbrd-core/src/release-co
 
 Le contrat distingue `plugin_kind: "full" | "module"` et `execution.worker: "none" | "dedicated"` dans `packages/supbrd-core/src/plugin-manifest.ts:57-80`. Les 18 plugins concrets suivis dans `scripts/config/emdash-plugin-topology.json` sont :
 
-| Plugin full EmDash     | Plugin module                  |
-| ---------------------- | ------------------------------ |
-| `supbrd-plug-user`     | `supbrd-plugmod-gateway`       |
-| `supbrd-plug-settings` | `supbrd-plugmod-billing`       |
-| `supbrd-plug-content`  | `supbrd-plugmod-support`       |
-| `supbrd-plug-products` | `supbrd-plugmod-flows`         |
-| `supbrd-plug-audit`    | `supbrd-plugmod-analytics`     |
-|                        | `supbrd-plugmod-marketing`     |
-|                        | `supbrd-plugmod-email`         |
-|                        | `supbrd-plugmod-dynamic-links` |
-|                        | `supbrd-plugmod-files`         |
-|                        | `supbrd-plugmod-paywalls`      |
-|                        | `supbrd-plugmod-onboardings`   |
-|                        | `supbrd-plugmod-observability` |
-|                        | `supbrd-plugmod-mcp`           |
+| Plugin full EmDash    | Plugin module              |
+| --------------------- | -------------------------- |
+| `superboard-user`     | `superboard-gateway`       |
+| `superboard-settings` | `superboard-billing`       |
+| `superboard-content`  | `superboard-support`       |
+| `superboard-products` | `superboard-flows`         |
+| `superboard-audit`    | `superboard-analytics`     |
+|                       | `superboard-marketing`     |
+|                       | `superboard-email`         |
+|                       | `superboard-dynamic-links` |
+|                       | `superboard-files`         |
+|                       | `superboard-paywalls`      |
+|                       | `superboard-onboardings`   |
+|                       | `superboard-observability` |
+|                       | `superboard-mcp`           |
 
 Les premières déclarations se trouvent à `scripts/config/emdash-plugin-topology.json:11,668,1083,1554,2170,2571,3128,3690,4504,5053,5759,6442,6997,7616,8073,8599,9137,9566`. Le template non installable `supbrd-plugmod-custom-*` apparaît à `:9997`.
 
@@ -336,9 +336,9 @@ Le test `plugin-store-authority.runtime.test.ts:178-230` appelle cette approche 
 
 ### Catalogue nominal sans implémentation spécifique
 
-`scripts/config/emdash-plugin-topology.json:2568-2580` déclare `supbrd-plugmod-gateway`. Ses deux Stores sont `rate_limits` et `route_manifests`, et ses commandes de publication, modification et politique apparaissent à `:3003-3033`.
+`scripts/config/emdash-plugin-topology.json:2568-2580` déclare `superboard-gateway`. Ses deux Stores sont `rate_limits` et `route_manifests`, et ses commandes de publication, modification et politique apparaissent à `:3003-3033`.
 
-L’entrypoint n’implémente aucun comportement Gateway : `packages/supbrd-runtime-plugins/src/entries/supbrd-plugmod-gateway.ts:1-3` appelle la fabrique commune. Cette fabrique ne fournit que les routes descriptives `admin`, `contract`, `health`, `settings/effective`, `commands/catalog` et `data-sources/catalog` (`packages/supbrd-core/src/plugin-runtime.ts:44-87`). Elle n’exécute aucune command Gateway et ne lit aucun Store métier.
+L’entrypoint n’implémente aucun comportement Gateway : `packages/supbrd-runtime-plugins/src/entries/superboard-gateway.ts:1-3` appelle la fabrique commune. Cette fabrique ne fournit que les routes descriptives `admin`, `contract`, `health`, `settings/effective`, `commands/catalog` et `data-sources/catalog` (`packages/supbrd-core/src/plugin-runtime.ts:44-87`). Elle n’exécute aucune command Gateway et ne lit aucun Store métier.
 
 Deux data sources sont en outre rattachées au mauvais Store. `active_gateway_manifest` et `gateway_routes` pointent vers `rate_limits` dans `scripts/config/emdash-plugin-topology.json:3037-3058`, alors que `route_manifests` existe à `:2704` et son repository à `:3091-3100`.
 
@@ -441,7 +441,7 @@ Ce résultat suit directement `release-compiler.ts:237-258`, qui construit chaqu
 
 ### Remplacements du routage Gateway
 
-1. Remplacer l’entrypoint générique `packages/supbrd-runtime-plugins/src/entries/supbrd-plugmod-gateway.ts:1-3` par une implémentation dédiée de ses commands, data sources et Stores.
+1. Remplacer l’entrypoint générique `packages/supbrd-runtime-plugins/src/entries/superboard-gateway.ts:1-3` par une implémentation dédiée de ses commands, data sources et Stores.
 2. Fermer les schémas Route, Policy et Manifest dans `scripts/config/emdash-plugin-topology.json:2815-2955`, corriger les `store_id` à `:3042,3054`, puis ajouter une migration Site corrective.
 3. Remplacer `routes: []` dans `apps/site/src/lib/user-front-release.ts:161-165` par la composition déterministe du snapshot Gateway de l’Instance et des plugins actifs.
 4. Valider dans `packages/supbrd-core/src/release-compiler.ts` les collisions méthode + chemin, destinations, bindings, scopes, politiques, timeouts et références de Store.
@@ -464,7 +464,7 @@ Les manifests de target sont fermés et validés par `infra/targets/schema.json:
 Le schéma n’autorise que `development` et `production` (`infra/targets/schema.json:418-425`). `scripts/cloudflare/target.mjs:331-339` rejette explicitement toute autre valeur.
 
 ```text
-$ node scripts/cloudflare/config.mjs --target mbza-development \
+$ node scripts/cloudflare/config.mjs --target mabza-development \
     --environment local --service site --allow-unprovisioned --no-routes --preflight
 Error: --environment must be development or production
 ```
@@ -476,16 +476,16 @@ Le Site local utilise à la place `apps/site/wrangler.jsonc:1-27`, un fichier ma
 La commande suivante montre que les deux manifests suivis contiennent chacun un seul environnement :
 
 ```text
-$ for target in mbza-development vocostar; do
+$ for target in mabza-development vocostar; do
     git show 35aad4c:infra/targets/$target.json \
       | jq -c --arg target "$target" \
           '{target:$target,environments:(.environments|keys),has_release:has("release")}'
   done
-{"target":"mbza-development","environments":["development"],"has_release":false}
+{"target":"mabza-development","environments":["development"],"has_release":false}
 {"target":"vocostar","environments":["production"],"has_release":false}
 ```
 
-`mbza-development` et `vocostar` sont deux targets distincts dont les features peuvent légitimement différer. Leur comparaison ne prouve donc rien sur une divergence causée par l’environnement. Le constat pertinent est l’absence d’un target suivi qui matérialise une même Instance en development puis en production. Combinée au rejet de `local`, cette absence empêche d’exécuter la promotion exigée contre un même graphe logique.
+`mabza-development` et `vocostar` sont deux targets distincts dont les features peuvent légitimement différer. Leur comparaison ne prouve donc rien sur une divergence causée par l’environnement. Le constat pertinent est l’absence d’un target suivi qui matérialise une même Instance en development puis en production. Combinée au rejet de `local`, cette absence empêche d’exécuter la promotion exigée contre un même graphe logique.
 
 ### Parité des migrations non vérifiée
 

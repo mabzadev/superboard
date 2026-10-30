@@ -7,7 +7,7 @@ import { compileTarget, materializeTarget } from "../../../scripts/cloudflare/ta
 import { loadTarget, validateTarget } from "../../../scripts/cloudflare/target.mjs";
 
 test("an existing instance deploys the Site without provisioning or starting its retired Dashboard", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const before = JSON.stringify(target);
 	const compiled = await compileTarget(target, "local");
 	for (const adapter of ["local", "cloudflare"]) {
@@ -30,7 +30,7 @@ test("an existing instance deploys the Site without provisioning or starting its
 });
 
 test("new instances need no Dashboard worker, cache, hostname or OAuth client", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	delete target.workers.dashboard;
 	delete target.domains.dashboard;
 	delete target.oauth;
@@ -48,7 +48,7 @@ test("new instances need no Dashboard worker, cache, hostname or OAuth client", 
 });
 
 test("the former Dashboard hostname is served and monitored by the Site", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const compiled = await compileTarget(target, "development");
 	const frontAlias = compiled.materialization.routes.find(
 		(route) => route.hostname === target.domains.dashboard,

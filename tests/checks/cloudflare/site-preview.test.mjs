@@ -75,11 +75,11 @@ test("the Site preview selection returns one exact route and one propagated CLI 
 			requested: true,
 			service: "site",
 			environment: "development",
-			hostname: "site.mbza.dev",
+			hostname: "site.mabza.dev",
 		}),
 		{
-			hostname: "site.mbza.dev",
-			routes: [{ pattern: "site.mbza.dev", custom_domain: true }],
+			hostname: "site.mabza.dev",
+			routes: [{ pattern: "site.mabza.dev", custom_domain: true }],
 			cliArgs: ["--site-preview-route"],
 		},
 	);
@@ -88,7 +88,7 @@ test("the Site preview selection returns one exact route and one propagated CLI 
 			requested: false,
 			service: "site",
 			environment: "development",
-			hostname: "site.mbza.dev",
+			hostname: "site.mabza.dev",
 		}),
 		null,
 	);
@@ -105,7 +105,7 @@ test("the Site preview selection refuses every non-development or conflicting us
 			() =>
 				resolveSitePreviewRoute({
 					requested: true,
-					hostname: "site.mbza.dev",
+					hostname: "site.mabza.dev",
 					...selection,
 				}),
 			/site-preview-route/u,

@@ -1,16 +1,38 @@
+import { createFetchRouter, resolveRegisteredRoute } from "@superboard/contracts/route-registry";
 import { SITE_OPERATOR_HEADERS } from "@superboard/contracts/site-operator";
 
-const mcpPaths = new Set(["/mcp", "/mcp/health", "/.well-known/oauth-protected-resource/mcp"]);
+type McpProxyContext = {
+	service: { fetch(request: Request): Promise<Response> } | undefined;
+	endpoint: string;
+};
+export const mcpProxyRoutes = createFetchRouter<McpProxyContext>({
+	service: "site",
+	module: "mcp-proxy",
+	pluginId: "superboard-mcp",
+	surface: "board",
+	access: "framework",
+});
+mcpProxyRoutes.on(
+	"ALL",
+	["/mcp", "/mcp/health", "/.well-known/oauth-protected-resource/mcp"],
+	({ request, env }) => forwardMcpRequest(request, env.service, env.endpoint),
+);
 export function isMcpPath(path: string): boolean {
-	return mcpPaths.has(path);
+	return resolveRegisteredRoute(mcpProxyRoutes, "GET", "board", path) !== null;
 }
-export async function proxyMcpRequest(
+export function proxyMcpRequest(
+	request: Request,
+	service: McpProxyContext["service"],
+	endpoint: string,
+): Promise<Response> {
+	return mcpProxyRoutes.fetch(request, { service, endpoint });
+}
+async function forwardMcpRequest(
 	request: Request,
 	service: { fetch(request: Request): Promise<Response> } | undefined,
 	endpoint: string,
 ): Promise<Response> {
 	const source = new URL(request.url);
-	if (!isMcpPath(source.pathname)) return Response.json({ error: "not_found" }, { status: 404 });
 	if (
 		source.pathname === "/mcp" &&
 		request.method === "GET" &&

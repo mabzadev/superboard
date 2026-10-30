@@ -86,7 +86,7 @@ void test("the plugin topology exposes both closed execution families", () => {
 void test("every topology manifest uses the shared closed runtime contract", async () => {
 	for (const { manifest } of buildPluginTopology().plugins) {
 		const verification =
-			manifest.plugin_id === "supbrd-plug-user"
+			manifest.plugin_id === "superboard-user"
 				? await validateUserPluginManifest(manifest)
 				: await verifySuperBoardPluginManifest(manifest);
 		assert.deepEqual(verification, { valid: true, errors: [] });
@@ -138,22 +138,22 @@ void test("Dashboard requirements keep their canonical path and never assign a c
 	);
 	assert.equal(
 		dashboard.find(({ id }) => id === "dashboard:/project-settings")?.target,
-		"supbrd-plug-settings",
+		"superboard-settings",
 	);
 	assert.equal(
 		dashboard.find(({ id }) => id === "dashboard:/infrastructure")?.target,
-		"supbrd-plugmod-observability",
+		"superboard-observability",
 	);
 	assert.equal(
 		dashboard.find(({ id }) => id === "dashboard:/products/offerings")?.target,
-		"supbrd-plug-products",
+		"superboard-products",
 	);
 	for (const id of [
 		"dashboard:/products/customers",
 		"dashboard:/products/entitlements",
 		"dashboard:/products/purchases",
 	]) {
-		assert.equal(dashboard.find((row) => row.id === id)?.target, "supbrd-plugmod-billing", id);
+		assert.equal(dashboard.find((row) => row.id === id)?.target, "superboard-billing", id);
 	}
 });
 

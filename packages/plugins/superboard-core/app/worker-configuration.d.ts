@@ -11,6 +11,7 @@ interface __BaseEnv_Env {
 	SUPERBOARD_INSTANCE_ID: string;
 	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	INTERNAL_API_TOKEN: string;
+	API_SERVICE: Fetcher;
 }
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_Env {}

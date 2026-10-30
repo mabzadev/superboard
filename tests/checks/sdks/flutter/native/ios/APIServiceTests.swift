@@ -25,7 +25,7 @@ final class APIServiceTests: XCTestCase {
         let service = makeService()
         let event = Event(type: .appOpen, createdAt: Date(), link: "https://test.com")
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/event"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/event"] = { request in
             // Verify headers
             XCTAssertEqual(request.value(forHTTPHeaderField: "PROJECT-KEY"), "test-api-key")
             XCTAssertEqual(request.value(forHTTPHeaderField: "IDENTIFIER"), "com.test.bundle")
@@ -58,7 +58,7 @@ final class APIServiceTests: XCTestCase {
         let service = makeService()
         let event = Event(type: .install, createdAt: Date())
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/event"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/event"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: ["error": "server error"])
             return (response, data)
@@ -83,7 +83,7 @@ final class APIServiceTests: XCTestCase {
             startDate: Date(), store: true
         )
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/add_payment_event"] = { request in
+        MockURLProtocol.requestHandlers["/v1/monetization/add_payment_event"] = { request in
             XCTAssertEqual(request.httpMethod, "POST")
 
             if let body = request.httpBody, let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any] {
@@ -117,7 +117,7 @@ final class APIServiceTests: XCTestCase {
             startDate: Date(), store: false
         )
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/add_payment_event"] = { request in
+        MockURLProtocol.requestHandlers["/v1/monetization/add_payment_event"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 422, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: ["error": "invalid"])
             return (response, data)
@@ -137,7 +137,7 @@ final class APIServiceTests: XCTestCase {
         let service = makeService(useTestEnvironment: true)
         let event = Event(type: .view, createdAt: Date())
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/event"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/event"] = { request in
             XCTAssertEqual(request.value(forHTTPHeaderField: "PROJECT-KEY"), "test_test-api-key",
                            "Test environment should prefix the API key with 'test_'")
 
@@ -157,7 +157,7 @@ final class APIServiceTests: XCTestCase {
         let service = makeService(useTestEnvironment: false)
         let event = Event(type: .view, createdAt: Date())
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/event"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/event"] = { request in
             XCTAssertEqual(request.value(forHTTPHeaderField: "PROJECT-KEY"), "test-api-key",
                            "Production environment should use the raw API key")
 
@@ -179,7 +179,7 @@ final class APIServiceTests: XCTestCase {
         let service = makeService()
         let event = Event(type: .appOpen, createdAt: Date())
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/event"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/event"] = { request in
             XCTAssertNotNil(request.value(forHTTPHeaderField: "SDK-VERSION"),
                             "SDK-VERSION header should be present")
 
@@ -221,7 +221,7 @@ final class APIServiceTests: XCTestCase {
     func testAuthenticateReturnsCredentialsOnSuccess() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/authenticate"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             XCTAssertEqual(request.httpMethod, "POST")
 
             // Verify request body contains app details
@@ -260,7 +260,7 @@ final class APIServiceTests: XCTestCase {
     func testAuthenticateReturnsFalseOnMissingFields() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/authenticate"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             // Missing linksquared and uri_scheme
             return try self.okResponse(for: request, json: ["other": "data"])
         }
@@ -280,7 +280,7 @@ final class APIServiceTests: XCTestCase {
     func testPayloadForDeviceReturnsDataLinkTracking() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/data_for_device"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/data_for_device"] = { request in
             XCTAssertEqual(request.httpMethod, "POST")
 
             let json: [String: Any] = [
@@ -304,7 +304,7 @@ final class APIServiceTests: XCTestCase {
     func testPayloadForDeviceReturnsNilOnFailure() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/data_for_device"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/data_for_device"] = { request in
             return try self.errorResponse(for: request)
         }
 
@@ -323,7 +323,7 @@ final class APIServiceTests: XCTestCase {
     func testPayloadForDeviceAndURLIncludesURLInBody() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/data_for_device_and_url"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/data_for_device_and_url"] = { request in
             XCTAssertEqual(request.httpMethod, "POST")
 
             if let body = request.httpBody,
@@ -356,7 +356,7 @@ final class APIServiceTests: XCTestCase {
     func testGenerateLinkReturnsURLOnSuccess() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/create_link"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/create_link"] = { request in
             XCTAssertEqual(request.httpMethod, "POST")
 
             if let body = request.httpBody,
@@ -381,7 +381,7 @@ final class APIServiceTests: XCTestCase {
     func testGenerateLinkReturnsNilOnFailure() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/create_link"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/create_link"] = { request in
             return try self.errorResponse(for: request)
         }
 
@@ -400,7 +400,7 @@ final class APIServiceTests: XCTestCase {
     func testNotificationsDecodesResponseOnSuccess() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/notifications_for_device"] = { request in
+        MockURLProtocol.requestHandlers["/v1/communication/notifications_for_device"] = { request in
             XCTAssertEqual(request.httpMethod, "POST")
 
             if let body = request.httpBody,
@@ -435,7 +435,7 @@ final class APIServiceTests: XCTestCase {
     func testNotificationsReturnsNilOnFailure() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/notifications_for_device"] = { request in
+        MockURLProtocol.requestHandlers["/v1/communication/notifications_for_device"] = { request in
             return try self.errorResponse(for: request)
         }
 
@@ -452,7 +452,7 @@ final class APIServiceTests: XCTestCase {
     func testNumberOfUnreadNotificationsReturnsCount() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/number_of_unread_notifications"] = { request in
+        MockURLProtocol.requestHandlers["/v1/communication/number_of_unread_notifications"] = { request in
             XCTAssertEqual(request.httpMethod, "GET")
             return try self.okResponse(for: request, json: ["number_of_unread_notifications": 5])
         }
@@ -468,7 +468,7 @@ final class APIServiceTests: XCTestCase {
     func testNumberOfUnreadNotificationsReturnsNilOnFailure() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/number_of_unread_notifications"] = { request in
+        MockURLProtocol.requestHandlers["/v1/communication/number_of_unread_notifications"] = { request in
             return try self.errorResponse(for: request)
         }
 
@@ -485,7 +485,7 @@ final class APIServiceTests: XCTestCase {
     func testMarkNotificationAsReadSendsIDAndReturnsTrue() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/mark_notification_as_read"] = { request in
+        MockURLProtocol.requestHandlers["/v1/communication/mark_notification_as_read"] = { request in
             XCTAssertEqual(request.httpMethod, "POST")
 
             if let body = request.httpBody,
@@ -509,7 +509,7 @@ final class APIServiceTests: XCTestCase {
     func testMarkNotificationAsReadReturnsFalseOnFailure() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/mark_notification_as_read"] = { request in
+        MockURLProtocol.requestHandlers["/v1/communication/mark_notification_as_read"] = { request in
             return try self.errorResponse(for: request)
         }
 
@@ -526,7 +526,7 @@ final class APIServiceTests: XCTestCase {
     func testNotificationsToDisplayAutomaticallyDecodesResponse() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/notifications_to_display_automatically"] = { request in
+        MockURLProtocol.requestHandlers["/v1/communication/notifications_to_display_automatically"] = { request in
             XCTAssertEqual(request.httpMethod, "GET")
 
             let json: [String: Any] = [
@@ -558,7 +558,7 @@ final class APIServiceTests: XCTestCase {
     func testUpdateAttributesReturnsTrueOnSuccess() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/visitor_attributes"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/visitor_attributes"] = { request in
             XCTAssertEqual(request.httpMethod, "POST")
             return try self.okResponse(for: request)
         }
@@ -574,7 +574,7 @@ final class APIServiceTests: XCTestCase {
     func testUpdateAttributesReturnsFalseOnFailure() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/visitor_attributes"] = { request in
+        MockURLProtocol.requestHandlers["/v1/data/visitor_attributes"] = { request in
             return try self.errorResponse(for: request)
         }
 
@@ -591,7 +591,7 @@ final class APIServiceTests: XCTestCase {
     func testLinkDetailsReturnsDataOnSuccess() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/link_details"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/link_details"] = { request in
             XCTAssertEqual(request.httpMethod, "POST")
 
             if let body = request.httpBody,
@@ -619,7 +619,7 @@ final class APIServiceTests: XCTestCase {
     func testLinkDetailsReturnsNilOnFailure() {
         let service = makeService()
 
-        MockURLProtocol.requestHandlers["/api/v1/sdk/link_details"] = { request in
+        MockURLProtocol.requestHandlers["/v1/acquisition/link_details"] = { request in
             return try self.errorResponse(for: request)
         }
 

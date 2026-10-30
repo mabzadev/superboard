@@ -13,19 +13,19 @@ SuperBoard expose sept plugins métier et un socle technique obligatoire. Vocost
 | SuperBoard seul       |                      18 |             7 + socle | 10, conservés dans cette proposition |
 | SuperBoard + Vocostar |                      19 |             8 + socle | 13, conservés dans cette proposition |
 
-Les 18 entrées actuelles incluent cinq fonctions transférées dans le socle. Elles restent disponibles mais ne sont plus cinq extensions à installer séparément. Le compte exclut le modèle de plugin custom et l’extension de référence MBZA. La cible Vocostar actuelle désactive Analytics et Flows et prévoit donc 11 workers ; ce profil reste possible après regroupement.
+Les 18 entrées actuelles incluent cinq fonctions transférées dans le socle. Elles restent disponibles mais ne sont plus cinq extensions à installer séparément. Le compte exclut le modèle de plugin custom et l’extension de référence MABZA. La cible Vocostar actuelle désactive Analytics et Flows et prévoit donc 11 workers ; ce profil reste possible après regroupement.
 
 ## Sept plugins métier
 
-| Plugin cible        | Entrées actuelles réunies                                                          | Responsabilité                                                                               |
-| ------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Identité            | `supbrd-plug-user`                                                                 | Utilisateurs d’applications, profils, organisations, rôles, connexions et sessions.          |
-| Données et fichiers | `supbrd-plug-content`, `supbrd-plugmod-files`                                      | Contenus applicatifs, documents, révisions, fichiers, métadonnées et accès au stockage.      |
-| Commerce            | `supbrd-plug-products`, `supbrd-plugmod-billing`, `supbrd-plugmod-paywalls`        | Catalogue, offres, prix, achats, abonnements, remboursements, droits et écrans d’abonnement. |
-| Communication       | `supbrd-plugmod-marketing`, `supbrd-plugmod-email`, `supbrd-plugmod-dynamic-links` | Campagnes, contacts marketing, segments, e-mails, push, liens courts et attribution.         |
-| Parcours            | `supbrd-plugmod-onboardings`, `supbrd-plugmod-flows`                               | Accueil des utilisateurs, ciblage et scénarios automatisés.                                  |
-| Support             | `supbrd-plugmod-support`                                                           | Conversations, canaux, agents, intégrations et centre d’aide.                                |
-| Statistiques        | `supbrd-plugmod-analytics`                                                         | Événements, tableaux de bord, cohortes, rétention, rapports et alertes.                      |
+| Plugin cible        | Entrées actuelles réunies                                              | Responsabilité                                                                               |
+| ------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Identité            | `superboard-user`                                                      | Utilisateurs d’applications, profils, organisations, rôles, connexions et sessions.          |
+| Données et fichiers | `superboard-content`, `superboard-files`                               | Contenus applicatifs, documents, révisions, fichiers, métadonnées et accès au stockage.      |
+| Commerce            | `superboard-products`, `superboard-billing`, `superboard-paywalls`     | Catalogue, offres, prix, achats, abonnements, remboursements, droits et écrans d’abonnement. |
+| Communication       | `superboard-marketing`, `superboard-email`, `superboard-dynamic-links` | Campagnes, contacts marketing, segments, e-mails, push, liens courts et attribution.         |
+| Parcours            | `superboard-onboardings`, `superboard-flows`                           | Accueil des utilisateurs, ciblage et scénarios automatisés.                                  |
+| Support             | `superboard-support`                                                   | Conversations, canaux, agents, intégrations et centre d’aide.                                |
+| Statistiques        | `superboard-analytics`                                                 | Événements, tableaux de bord, cohortes, rétention, rapports et alertes.                      |
 
 Vocostar demeure une extension indépendante : `supbrd-plugmod-vocostar`. Ses voix, conversions, résultats, jobs et réglages restent propres à l’application. Ses trois workers — métier, voix et média — restent dédiés.
 
@@ -35,11 +35,11 @@ Ces regroupements correspondent à des tâches continues : préparer une offre p
 
 Les cinq entrées suivantes rejoignent les réglages et outils techniques de SuperBoard :
 
-- `supbrd-plug-settings` : paramètres de l’instance et configuration des SDK ;
-- `supbrd-plug-audit` : journal d’audit, archivage et vérification ;
-- `supbrd-plugmod-gateway` : routage et politiques d’accès ;
-- `supbrd-plugmod-observability` : santé, métriques et incidents ;
-- `supbrd-plugmod-mcp` : exposition des outils, consentements et autorisations MCP.
+- `superboard-settings` : paramètres de l’instance et configuration des SDK ;
+- `superboard-audit` : journal d’audit, archivage et vérification ;
+- `superboard-gateway` : routage et politiques d’accès ;
+- `superboard-observability` : santé, métriques et incidents ;
+- `superboard-mcp` : exposition des outils, consentements et autorisations MCP.
 
 Les options avancées restent configurables. Par exemple, l’accès MCP et les routes personnalisées peuvent être désactivés sans désactiver le routage nécessaire au fonctionnement de la plateforme. Le journal technique minimal et la connexion des opérateurs restent disponibles. Les e-mails nécessaires à la sécurité du compte opérateur ne doivent pas dépendre de l’activation des campagnes marketing.
 
@@ -55,13 +55,13 @@ Les anciens identifiants deviennent des alias de compatibilité vers les nouveau
 
 ## Cinq sous-domaines canoniques
 
-| Rôle             | Exemple SuperBoard MBZA | Exemple SuperBoard + Vocostar | Contenu                                                                                  |
-| ---------------- | ----------------------- | ----------------------------- | ---------------------------------------------------------------------------------------- |
-| Console          | `board.mbza.dev`        | `grow.vocostar.com`           | Front SuperBoard, administration EmDash sous `/_emdash/admin`, réglages et exploitation. |
-| API              | `api.mbza.dev`          | `api.vocostar.com`            | API métier, endpoints des SDK et endpoint MCP.                                           |
-| Authentification | `auth.mbza.dev`         | `auth.vocostar.com`           | Identité applicative, OAuth/OIDC, SSO et passkeys existantes.                            |
-| Fichiers         | `files.mbza.dev`        | `files.vocostar.com`          | Uploads, téléchargements et contenus utilisateurs sur une origine distincte.             |
-| Liens            | `in.mbza.dev`           | `go.vocostar.com`             | Liens publiés, redirections et associations mobiles.                                     |
+| Rôle             | Exemple SuperBoard MABZA | Exemple SuperBoard + Vocostar | Contenu                                                                                  |
+| ---------------- | ------------------------ | ----------------------------- | ---------------------------------------------------------------------------------------- |
+| Console          | `board.mabza.dev`        | `grow.vocostar.com`           | Front SuperBoard, administration EmDash sous `/_emdash/admin`, réglages et exploitation. |
+| API              | `api.mabza.dev`          | `api.vocostar.com`            | API métier, endpoints des SDK et endpoint MCP.                                           |
+| Authentification | `auth.mabza.dev`         | `auth.vocostar.com`           | Identité applicative, OAuth/OIDC, SSO et passkeys existantes.                            |
+| Fichiers         | `files.mabza.dev`        | `files.vocostar.com`          | Uploads, téléchargements et contenus utilisateurs sur une origine distincte.             |
+| Liens            | `in.mabza.dev`           | `go.vocostar.com`             | Liens publiés, redirections et associations mobiles.                                     |
 
 Les noms ci-dessus réutilisent les domaines déjà déclarés. Le choix définitif de l’origine de console doit prendre en compte le domaine sur lequel les passkeys EmDash ont été enregistrées. Si ces passkeys utilisent `site.*`, cette origine reste servie pendant leur migration ; changer uniquement une redirection DNS ne les transfère pas.
 
@@ -125,6 +125,6 @@ Les APIs, les webhooks, les signatures, les téléchargements signés et les con
 
 - [Catalogue des plugins](../../scripts/config/emdash-plugin-topology.json).
 - [Groupes de workers](../../scripts/cloudflare/deployment-groups.mjs).
-- [Cible MBZA](../../infra/targets/mbza-development.json) et [cible Vocostar](../../infra/targets/vocostar.json).
+- [Cible MABZA](../../infra/targets/mabza-development.json) et [cible Vocostar](../../infra/targets/vocostar.json).
 - [Routage des sous-domaines](../../packages/plugins/superboard-core/api/src/index.ts) et [générateur Cloudflare](../../scripts/cloudflare/config.mjs).
 - [RP ID Identity](../../packages/plugins/superboard-authentification/worker/src/melody/utils/crypto.ts), [découverte Identity](../../packages/plugins/superboard-authentification/worker/src/melody/handlers/other.ts) et [passkeys EmDash](../../packages/core/src/auth/passkey-config.ts).

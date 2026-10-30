@@ -18,8 +18,8 @@ Grouped run: Products, Billing and Email (3 files, 3 tests passed).
 Recorded successful operations:
 [
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.create_product",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.create_product",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -30,8 +30,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.data_source.products",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.data_source.products",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -42,8 +42,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.update_product",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.update_product",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -54,8 +54,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.create_package",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.create_package",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -66,8 +66,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.data_source.packages",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.data_source.packages",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -78,8 +78,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.update_package",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.update_package",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -90,8 +90,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.create_offering",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.create_offering",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -102,8 +102,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.data_source.offerings",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.data_source.offerings",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -114,8 +114,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.update_offering",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.update_offering",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -126,8 +126,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.create_entitlement",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.create_entitlement",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -138,8 +138,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.data_source.entitlements",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.data_source.entitlements",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -150,8 +150,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.update_entitlement",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.update_entitlement",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -162,8 +162,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.sync_store_catalog",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.sync_store_catalog",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -174,8 +174,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.data_source.store_sync_runs",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.data_source.store_sync_runs",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -186,8 +186,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.data_source.product_statistics",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.data_source.product_statistics",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -198,8 +198,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.archive_entitlement",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.archive_entitlement",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -210,8 +210,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.archive_offering",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.archive_offering",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -222,8 +222,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.archive_package",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.archive_package",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -234,8 +234,8 @@ Recorded successful operations:
     ]
   },
   {
-    "plugin_id": "supbrd-plug-products",
-    "route_id": "gateway.supbrd-plug-products.command.archive_product",
+    "plugin_id": "superboard-products",
+    "route_id": "gateway.superboard-products.command.archive_product",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",

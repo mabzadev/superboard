@@ -37,7 +37,7 @@ Surface interne du Site EmDash réservée à l’Opérateur SuperBoard pour cons
 _À éviter_ : SuperBoard Admin, interface d’utilisateur d’application
 
 **Identité EmDash** :
-Identité dont l’autorité appartient au Site EmDash. L’identité de l’Opérateur SuperBoard appartient au core administratif ; les identités des utilisateurs d’application appartiennent à `supbrd-plug-user`.
+Identité dont l’autorité appartient au Site EmDash. L’identité de l’Opérateur SuperBoard appartient au core administratif ; les identités des utilisateurs d’application appartiennent à `superboard-user`.
 _À éviter_ : identité Melody canonique, compte Dashboard générique
 
 **Donnée EmDash** :
@@ -53,7 +53,7 @@ Stockage spécialisé gouverné par le Site EmDash dont le schéma, les écritur
 _À éviter_ : base possédée par un Worker, stockage partagé sans autorité
 
 **Événement analytique** :
-Fait analytique exact et autoritatif conservé dans un Store de plugin D1 gouverné par EmDash.
+Fait utilisé pour les analyses, issu du Journal de collecte du core ou d’une opération métier vérifiée par son plugin propriétaire.
 _À éviter_ : datapoint échantillonné, archive R2, métrique agrégée
 
 **Projection analytique** :
@@ -269,8 +269,16 @@ Plugin `supbrd-plugmod-*` qui possède ses fonctions métier, ses données et se
 _À éviter_ : plugin full EmDash, Worker autonome, plugin d’interface
 
 **Core SuperBoard** :
-Socle technique qui fournit l’identité opérateur, l’accueil minimal, la composition des contributions actives, le dispatch et le journal techniques ainsi que les contrats de stockage.
+Socle technique qui fournit l’identité opérateur, l’accueil minimal, la composition des contributions actives, le dispatch et le journal techniques, les contrats de stockage et la collecte SDK partagée.
 _À éviter_ : plugin métier obligatoire, propriétaire des vues métier
+
+**Journal de collecte du core** :
+Ensemble autoritatif des événements SDK partagés, conservés indépendamment des plugins métier et accessibles à leurs consommateurs autorisés.
+_À éviter_ : stockage Analytics, file supprimée après lecture
+
+**Consommateur de collecte** :
+Plugin ou service qui sélectionne des événements du Journal de collecte du core et possède sa progression de lecture et ses résultats métier.
+_À éviter_ : propriétaire des événements bruts, lecteur du stockage privé d’un autre plugin
 
 **Activation de plugin** :
 Publication cohérente des contributions d’un plugin avec la Release qui les rend accessibles. Préparer un nouvel artefact ne modifie pas l’artefact ni les preuves encore actifs.

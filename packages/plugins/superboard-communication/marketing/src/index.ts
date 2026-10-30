@@ -1,3 +1,5 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	emailPublicationIssues,
 	resolveEmailMessage,
@@ -8,6 +10,7 @@ import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
 import { Hono, type Context } from "hono";
 
 import { verifyInternalProjectContext, failure } from "./auth";
+import { collectMarketingSignals } from "./core-collection.js";
 import { eraseStudioRecipientStatements } from "./delivery-records.js";
 import { verifyEmailAuthentication } from "./email-authentication";
 import { forwardMigratedEmailProfiles, migrateEmailProfiles } from "./email-profile-migration.js";
@@ -49,10 +52,10 @@ import {
 	text,
 } from "./validation";
 
-const app = new Hono<{
+const app = registerRouter(new Hono<{
 	Bindings: Env;
 	Variables: { project: ProjectContext };
-}>();
+}>(), {"service":"marketing","module":"index.app","pluginId":"superboard-marketing","surface":"internal","access":"internal"});
 type MarketingContext = Context<{
 	Bindings: Env;
 	Variables: { project: ProjectContext };
@@ -2975,6 +2978,7 @@ function parseMarketingDeadLetterJob(
 }
 
 async function scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+	ctx.waitUntil(collectMarketingSignals(env));
 	ctx.waitUntil(
 		(async () => {
 			const outbox = await env.DB.prepare(
@@ -3082,6 +3086,6 @@ const lifecycleWorker = {
 	scheduled,
 } satisfies ExportedHandler<Env>;
 
-export default withPluginTaskLifecycle("supbrd-plugmod-marketing", lifecycleWorker, {
+export default withRouteManifest((withPluginTaskLifecycle("superboard-marketing", lifecycleWorker, {
 	fetch: true,
-});
+})), [app], {"service":"marketing","pluginId":"superboard-marketing"});

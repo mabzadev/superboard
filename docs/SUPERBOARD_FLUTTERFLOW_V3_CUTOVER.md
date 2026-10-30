@@ -26,7 +26,7 @@ file or API key is committed.
    `FF_LIBRARY_SUPERBOARD_ONBOARDING_PAGE_KEY` in the protected GitHub
    environments. Values remain outside Git.
 5. Run the library and VocoStar edits first with `flutterflow ai test` and
-   `--dry-run` against the MBZA development project.
+   `--dry-run` against the MABZA development project.
 
 Source verification uses `SUPERBOARD_CLIENT_SOURCE_VOCOSTAR`. During the
 migration window only, the verifier and migration-plan CLI also accept
@@ -63,7 +63,7 @@ an intermediate project state.
 9. Run FlutterFlow validation, diagnostics, native Android/iOS builds, identity
    sign-in/restore/logout, purchase/restore, upload, custom jobs, support
    realtime/attachment, onboarding/newsletter consent, and deep-link checks.
-10. Publish only to the MBZA development project. Production VocoStar stays on
+10. Publish only to the MABZA development project. Production VocoStar stays on
     the reviewed v2 snapshot until the development acceptance gates pass.
 
 The secure application session is transactionally mirrored under the v3

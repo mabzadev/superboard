@@ -171,7 +171,7 @@ describe("Flows inspector", () => {
 		);
 
 		await user.click(screen.getByRole("combobox", { name: /^Component definition/ }));
-		await user.click(screen.getByRole("option", { name: "Modal · v3" }));
+		await user.click(await screen.findByRole("option", { name: "Modal · v3" }));
 		expect(onChange).toHaveBeenCalledWith(
 			expect.objectContaining({
 				id: block.id,

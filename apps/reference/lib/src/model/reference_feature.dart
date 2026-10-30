@@ -218,7 +218,7 @@ const referenceFeatures = <ReferenceFeature>[
     id: ReferenceFeatureId.customExtension,
     title: 'Custom extension',
     description:
-        'Create, list, read, and prove terminal cancellation semantics for project/owner-scoped reference.echo jobs or a revision-bound MBZA acceptance receipt through the versioned custom Worker facade.',
+        'Create, list, read, and prove terminal cancellation semantics for project/owner-scoped reference.echo jobs or a revision-bound MABZA acceptance receipt through the versioned custom Worker facade.',
     actions: [
       'superboardApplicationCreateCustomJobJson',
       'superboardApplicationListCustomJobsJson',

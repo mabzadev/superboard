@@ -33,7 +33,8 @@ export async function analyticsFacts(projectRef: string) {
 				dispatchLifecycleApi(
 					request,
 					{ ...env },
-					pluginTaskContext(createExecutionContext(), "supbrd-plugmod-analytics"),
+					// oxlint-disable-next-line typescript/no-unsafe-call, typescript/no-unsafe-argument -- cloudflare:test types are not resolved for this fixture module
+					pluginTaskContext(createExecutionContext(), "superboard-analytics"),
 				),
 		},
 	} as unknown as Env;

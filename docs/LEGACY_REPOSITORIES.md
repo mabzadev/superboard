@@ -18,13 +18,13 @@ them.
 
 ## Immutable compatibility records
 
-The archived tags and Releases must not be deleted, moved or recreated. The
-historical npm packages `@mbzadev/superboard-js-sdk` and
-`@mbzadev/superboard-react-native-sdk`, and the Maven package
-`io.superboard:superboard-android-sdk`, remain attached to
-`mabzadev/superboard-platform` in GitHub Packages. Their registry coordinates are
-therefore deliberately retained in `scripts/config/sdk-libraries.json`; this is not an
-active source-code dependency.
+The archived tags and Releases must not be deleted, moved or recreated.
+The SDK catalogue uses the canonical npm coordinates
+`@mabzadev/superboard-js-sdk` and `@mabzadev/superboard-react-native-sdk`.
+Their recorded versions and commits describe historical artifacts; changing
+the catalogue does not republish or verify packages at these coordinates.
+Original package metadata is retained in the operator's rename backup.
+These archived SDKs are not active source-code dependencies.
 
 All current source, package metadata, FlutterFlow DSL, deployment manifests and
 operator documentation must use `https://github.com/mabzadev/superboard`.

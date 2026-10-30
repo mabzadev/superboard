@@ -1,3 +1,7 @@
+import { createFetchRouter } from "@superboard/contracts/route-registry";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { emailAdminRoutes } from "./admin.js";
+import { emailMessageRoutes } from "./admin-messages.js";
 import { DEAD_LETTER_MAX_RECORDS, deadLetterPayload } from "@superboard/contracts/dead-letter";
 import {
 	EMAIL_SERVICE_DEAD_LETTERS_PATH,
@@ -50,45 +54,34 @@ import {
 	secretsEqual,
 } from "./validation";
 
-const lifecycleWorker = {
-	async fetch(request: Request, env: Env): Promise<Response> {
-		const url = new URL(request.url);
-		if (request.method === "POST" && url.pathname.startsWith("/public/v1/provider-webhooks/"))
-			return receiveEmailProviderWebhook(request, env);
-		if (url.pathname.startsWith("/internal/v1/admin"))
-			return handleEmailAdmin(request, env, {
+const routes = createFetchRouter<Env>({service:"email",module:"http",pluginId:"superboard-email",surface:"internal",access:"internal"});
+routes.defineRoute({access:"provider-signature"}).on(["POST"], "/public/v1/provider-webhooks/:endpointId", async ({request,env}) => {return receiveEmailProviderWebhook(request, env);});
+routes.on(["ALL"], ["/internal/v1/admin", "/internal/v1/admin/*"], async ({request,env}) => {return handleEmailAdmin(request, env, {
 				enqueue: enqueueMessage,
 				smtp: deliverDelegatedSmtp,
 				replayDeadLetter: replayEmailDeadLetter,
 				discardDeadLetter: discardEmailDeadLetter,
-			});
-		if (request.method === "GET" && url.pathname === "/health") return health(env);
-		if (request.method === "GET" && url.pathname === "/internal/v1/health")
-			return health(env, "installation");
-		if (request.method === "GET" && url.pathname === "/") return previewShell();
-		if (request.method === "POST" && url.pathname === EMAIL_SERVICE_AWS_SES_EVENTS_PATH) {
+			});});
+routes.defineRoute({access:"public"}).on(["GET"], "/health", async ({env}) => {return health(env);});
+routes.on(["GET"], "/internal/v1/health", async ({env}) => {return health(env, "installation");});
+routes.defineRoute({access:"public"}).on(["GET"], "/", async () => {return previewShell();});
+routes.on(["POST"], EMAIL_SERVICE_AWS_SES_EVENTS_PATH, async ({request,env}) => {
 			return receiveAwsSesEvent(request, env);
-		}
-		if (request.method === "POST" && url.pathname === EMAIL_SERVICE_INBOUND_NORMALIZE_PATH) {
+		});
+routes.on(["POST"], EMAIL_SERVICE_INBOUND_NORMALIZE_PATH, async ({request,env}) => {
 			return normalizeInboundEmail(request, env);
-		}
-		if (url.pathname.startsWith(EMAIL_SERVICE_PROVIDER_EVENTS_PATH)) {
-			if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
-			if (request.method === "GET" && url.pathname === EMAIL_SERVICE_PROVIDER_EVENTS_PATH) {
+		});
+routes.use(`${EMAIL_SERVICE_PROVIDER_EVENTS_PATH}*`, async ({request,env},next)=>{ if (!(await internalAuthorized(request,env)))return json({error:"unauthorized"},401); return next(); });
+routes.on(["GET"], EMAIL_SERVICE_PROVIDER_EVENTS_PATH, async ({env,url}) => {
 				return listProviderEvents(env, url);
-			}
-			if (
-				request.method === "POST" &&
-				url.pathname === `${EMAIL_SERVICE_PROVIDER_EVENTS_PATH}/ack`
-			) {
+			});
+routes.on(["POST"], `${EMAIL_SERVICE_PROVIDER_EVENTS_PATH}/ack`, async ({request,env}) => {
 				return acknowledgeProviderEvents(request, env);
-			}
-			return json({ error: "not_found" }, 404);
-		}
-		if (request.method === "POST" && url.pathname === EMAIL_SERVICE_SMTP_TRANSPORT_PATH) {
+			});
+routes.on(["POST"], EMAIL_SERVICE_SMTP_TRANSPORT_PATH, async ({request,env}) => {
 			return deliverDelegatedSmtp(request, env);
-		}
-		if (request.method === "GET" && url.pathname === "/internal/v1/senders") {
+		});
+routes.on(["GET"], "/internal/v1/senders", async ({request,env,url}) => {
 			if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
 			const projectId = Number(url.searchParams.get("project_id"));
 			if (!Number.isSafeInteger(projectId) || projectId <= 0)
@@ -114,36 +107,21 @@ const lifecycleWorker = {
 					)
 					.map((row) => ({ id: row.id, publicConfig: safeObjectJson(row.public_config_json) })),
 			});
-		}
-		if (url.pathname.startsWith(EMAIL_SERVICE_OPERATIONS_PATH)) {
-			if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
-			if (request.method === "GET" && url.pathname === EMAIL_SERVICE_OPERATIONS_PATH)
-				return listEmailOperations(env, url);
-			const decision = new RegExp(
-				`^${EMAIL_SERVICE_DEAD_LETTERS_PATH}/([a-f0-9-]{36})/(replay|discard)$`,
-			).exec(url.pathname);
-			if (request.method === "POST" && decision) {
-				return decision[2] === "replay"
-					? replayEmailDeadLetter(env, decision[1])
-					: discardEmailDeadLetter(env, decision[1]);
-			}
-			return json({ error: "not_found" }, 404);
-		}
-		if (url.pathname.startsWith("/api/")) {
-			if (!(await previewAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
-			if (request.method === "GET" && url.pathname === "/api/messages")
-				return listMessages(env, url);
-			const id = /^\/api\/messages\/([a-f0-9-]{36})$/.exec(url.pathname)?.[1];
-			if (request.method === "GET" && id) return readMessage(env, id);
-			if (request.method === "DELETE" && url.pathname === "/api/messages")
-				return clearCaptured(env);
-			return json({ error: "not_found" }, 404);
-		}
-		if (request.method === "POST" && url.pathname === EMAIL_SERVICE_SEND_PATH) {
+		});
+routes.use(`${EMAIL_SERVICE_OPERATIONS_PATH}*`, async ({request,env},next)=>{ if (!(await internalAuthorized(request,env)))return json({error:"unauthorized"},401); return next(); });
+routes.get(EMAIL_SERVICE_OPERATIONS_PATH, ({env,url})=>listEmailOperations(env,url));
+routes.post(`${EMAIL_SERVICE_DEAD_LETTERS_PATH}/:id/:action{replay|discard}`, async ({request,env,params})=>{ if(!(await internalAuthorized(request,env)))return json({error:"unauthorized"},401); if(!/^[a-f0-9-]{36}$/u.test(params.id))return json({error:"not_found"},404); return params.action === "replay" ? replayEmailDeadLetter(env,params.id) : discardEmailDeadLetter(env,params.id); });
+routes.use("/api/*", async ({request,env},next)=>{ if(!(await previewAuthorized(request,env)))return json({error:"unauthorized"},401); return next(); });
+routes.get("/api/messages", ({env,url})=>listMessages(env,url));
+routes.get("/api/messages/:id", ({env,params})=>/^[a-f0-9-]{36}$/u.test(params.id)?readMessage(env,params.id):json({error:"not_found"},404));
+routes.delete("/api/messages", ({env})=>clearCaptured(env));
+routes.on(["POST"], EMAIL_SERVICE_SEND_PATH, async ({request,env}) => {
 			return enqueueMessage(request, env);
-		}
-		return json({ error: "not_found" }, 404);
-	},
+		});
+routes.defineRoute({transport:"fallback"}).all("*",()=>json({error:"not_found"},404));
+
+const lifecycleWorker = {
+	async fetch(request: Request, env: Env): Promise<Response> { return routes.fetch(request, env); },
 
 	async queue(batch: MessageBatch<EmailQueueJob>, env: Env): Promise<void> {
 		if (batch.queue === env.EMAIL_DLQ_NAME) {
@@ -1913,4 +1891,4 @@ async function open(id){const r=await fetch('/api/messages/'+id,{headers:headers
 document.querySelector('#connect').onclick=load;document.querySelector('#clear').onclick=async()=>{if(confirm('Delete all captured messages?')){await fetch('/api/messages',{method:'DELETE',headers:headers()});await load()}};
 </script></main></html>`;
 
-export default withPluginTaskLifecycle("supbrd-plugmod-email", lifecycleWorker, { fetch: true });
+export default withRouteManifest(withPluginTaskLifecycle("superboard-email", lifecycleWorker, { fetch: true }), [routes, emailAdminRoutes, emailMessageRoutes], { service: "email", pluginId: "superboard-email" });

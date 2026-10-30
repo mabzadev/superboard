@@ -13,7 +13,7 @@ export async function eventFixture(
 	const application = unique("qa-app");
 	await siteApi(
 		page.request,
-		"supbrd-plugmod-analytics",
+		"superboard-analytics",
 		"POST",
 		`/api/v1/analytics/projects/${project}/events`,
 		{
@@ -40,7 +40,7 @@ export async function eventFixture(
 			async () => {
 				const records = await siteApi(
 					page.request,
-					"supbrd-plugmod-analytics",
+					"superboard-analytics",
 					"GET",
 					`/api/v1/analytics/projects/${project}/events?event_name=${encodeURIComponent(eventName)}&limit=100`,
 				);

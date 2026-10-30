@@ -2,228 +2,217 @@ import type { PluginApiAdapter } from "@superboard/front-ui/api";
 
 export const adapters = [
 	{
-		id: "supbrd-plug-products.command.create_product",
+		id: "superboard-products.command.create_product",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/products/projects/:projectRef/catalog/products",
+				route_id:
+					"api:products:operator-proxy->products:index.app:POST:/internal/v1/catalog/products",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.update_product",
+		id: "superboard-products.command.update_product",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/products/projects/:projectRef/catalog/products/:id",
+				route_id:
+					"api:products:operator-proxy->products:index.app:PUT:/internal/v1/catalog/products/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.archive_product",
+		id: "superboard-products.command.archive_product",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/products/projects/:projectRef/catalog/products/:id",
+				route_id:
+					"api:products:operator-proxy->products:index.app:DELETE:/internal/v1/catalog/products/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.create_package",
+		id: "superboard-products.command.create_package",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/products/projects/:projectRef/packages",
+				route_id: "api:products:operator-proxy->products:index.app:POST:/internal/v1/packages",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.update_package",
+		id: "superboard-products.command.update_package",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/products/projects/:projectRef/packages/:id",
+				route_id: "api:products:operator-proxy->products:index.app:PUT:/internal/v1/packages/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.archive_package",
+		id: "superboard-products.command.archive_package",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/products/projects/:projectRef/packages/:id",
+				route_id:
+					"api:products:operator-proxy->products:index.app:DELETE:/internal/v1/packages/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.create_offering",
+		id: "superboard-products.command.create_offering",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/products/projects/:projectRef/offerings",
+				route_id: "api:products:operator-proxy->products:index.app:POST:/internal/v1/offerings",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.update_offering",
+		id: "superboard-products.command.update_offering",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/products/projects/:projectRef/offerings/:id",
+				route_id: "api:products:operator-proxy->products:index.app:PUT:/internal/v1/offerings/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.archive_offering",
+		id: "superboard-products.command.archive_offering",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/products/projects/:projectRef/offerings/:id",
+				route_id:
+					"api:products:operator-proxy->products:index.app:DELETE:/internal/v1/offerings/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.create_entitlement",
+		id: "superboard-products.command.create_entitlement",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/products/projects/:projectRef/entitlements",
+				route_id: "api:products:operator-proxy->products:index.app:POST:/internal/v1/entitlements",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.update_entitlement",
+		id: "superboard-products.command.update_entitlement",
 		kind: "command",
 		operations: [
 			{
-				method: "PUT",
-				path: "/api/v1/products/projects/:projectRef/entitlements/:id",
+				route_id:
+					"api:products:operator-proxy->products:index.app:PUT:/internal/v1/entitlements/:id",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.archive_entitlement",
+		id: "superboard-products.command.archive_entitlement",
 		kind: "command",
 		operations: [
 			{
-				method: "DELETE",
-				path: "/api/v1/products/projects/:projectRef/entitlements/:id",
+				route_id:
+					"api:products:operator-proxy->products:index.app:DELETE:/internal/v1/entitlements/:id",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.command.sync_store_catalog",
+		id: "superboard-products.command.sync_store_catalog",
 		kind: "command",
 		operations: [
 			{
-				method: "POST",
-				path: "/api/v1/products/projects/:projectRef/catalog/sync",
+				route_id: "api:products:operator-proxy->products:index.app:POST:/internal/v1/catalog/sync",
 				query: "none",
 				body: "passthrough",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.data_source.products",
+		id: "superboard-products.data_source.products",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/products/projects/:projectRef/catalog/products",
+				route_id:
+					"api:products:operator-proxy->products:index.app:GET:/internal/v1/catalog/products",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.data_source.packages",
+		id: "superboard-products.data_source.packages",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/products/projects/:projectRef/packages",
+				route_id: "api:products:operator-proxy->products:index.app:GET:/internal/v1/packages",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.data_source.offerings",
+		id: "superboard-products.data_source.offerings",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/products/projects/:projectRef/offerings",
+				route_id: "api:products:operator-proxy->products:index.app:GET:/internal/v1/offerings",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.data_source.entitlements",
+		id: "superboard-products.data_source.entitlements",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/products/projects/:projectRef/entitlements",
+				route_id: "api:products:operator-proxy->products:index.app:GET:/internal/v1/entitlements",
 				query: "none",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.data_source.product_statistics",
+		id: "superboard-products.data_source.product_statistics",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/products/projects/:projectRef/statistics",
+				route_id: "api:products:operator-proxy->products:index.app:GET:/internal/v1/statistics",
 				query: "passthrough",
 				body: "none",
 			},
 		],
 	},
 	{
-		id: "supbrd-plug-products.data_source.store_sync_runs",
+		id: "superboard-products.data_source.store_sync_runs",
 		kind: "data_source",
 		operations: [
 			{
-				method: "GET",
-				path: "/api/v1/products/projects/:projectRef/catalog/syncs",
+				route_id: "api:products:operator-proxy->products:index.app:GET:/internal/v1/catalog/syncs",
 				query: "none",
 				body: "none",
 			},

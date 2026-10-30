@@ -4,7 +4,7 @@ import type { Page } from "@playwright/test";
 
 import { test, expect } from "../../../fixtures/site-browser/base-fixtures.js";
 
-const pluginId = "supbrd-plug-settings";
+const pluginId = "superboard-settings";
 const mainTitle = /^(?:iOS|Android|Web) Setup$/;
 const sdkOrigin = process.env.SUPERBOARD_E2E_SDK_URL ?? "https://sdk.autonomy-qa.example.test";
 const shortlinkHost = new URL(

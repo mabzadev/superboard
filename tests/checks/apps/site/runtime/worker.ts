@@ -181,7 +181,7 @@ export class WorkflowLifecycleApi extends WorkerEntrypoint {
 		return dispatchLifecycleApi(
 			request,
 			{ ...this.env },
-			pluginTaskContext(this.ctx, "supbrd-plugmod-flows"),
+			pluginTaskContext(this.ctx, "superboard-flows"),
 		);
 	}
 }

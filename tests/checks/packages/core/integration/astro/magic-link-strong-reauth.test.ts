@@ -30,7 +30,7 @@ describe("magic-link strong reauthentication", () => {
 		let link = "";
 		await sendMagicLink(
 			{
-				baseUrl: "https://site.mbza.dev",
+				baseUrl: "https://site.mabza.dev",
 				siteName: "SuperBoard",
 				email: async (message) => {
 					link = message.text.match(/https:\/\/\S+/u)?.[0] ?? "";

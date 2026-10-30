@@ -23,7 +23,7 @@ beforeAll(async () => {
 	const synchronized = await request("../plugins/sync", {
 		plan_id: "route-view-plan",
 		expires_in_hours: 1,
-		plugin_ids: ["supbrd-plug-audit"],
+		plugin_ids: ["superboard-audit"],
 	});
 	expect(synchronized.status).toBe(201);
 	const input = releaseInput();
@@ -82,7 +82,7 @@ test.each(["missing-registration", "import-failure"] as const)(
 		const input = analyticsInput();
 		const routeId = "superboard.analytics";
 		const renderer = input.renderers.find(
-			({ plugin_id }) => plugin_id === "supbrd-plugmod-analytics",
+			({ plugin_id }) => plugin_id === "superboard-analytics",
 		)!;
 		const original = views[routeId];
 		if (defect === "missing-registration") Reflect.deleteProperty(views, routeId);
@@ -124,7 +124,7 @@ test.each(["missing-registration", "import-failure"] as const)(
 					code: "ACTIVATION_PREFLIGHT_FAILED",
 					errors: expect.arrayContaining([
 						expect.stringContaining(
-							"ROUTE_VIEW_NOT_LOADABLE:supbrd-plugmod-analytics:superboard.analytics",
+							"ROUTE_VIEW_NOT_LOADABLE:superboard-analytics:superboard.analytics",
 						),
 					]),
 				},
@@ -252,10 +252,10 @@ function analyticsInput() {
 	const input = releaseInput();
 	const routeId = "superboard.analytics";
 	const manifest = superBoardRuntimePluginCatalog().plugins.find(
-		(entry) => entry.manifest.plugin_id === "supbrd-plugmod-analytics",
+		(entry) => entry.manifest.plugin_id === "superboard-analytics",
 	)!.manifest;
 	const renderer = manifest.renderers.find(
-		({ renderer_id }) => renderer_id === "supbrd-plugmod-analytics.renderer.admin_surface",
+		({ renderer_id }) => renderer_id === "superboard-analytics.renderer.admin_surface",
 	)!;
 	input.plugin_lock.push({
 		plugin_id: manifest.plugin_id,

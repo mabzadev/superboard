@@ -67,11 +67,11 @@ export function consoleEnvironmentCatalog(target, currentEnvironment) {
 		const selected = targetForEnvironment(target, environment);
 		return [
 			{
-				id: `${target.target}.${environment}`,
+				id: `${target.instanceId ?? target.target}.${environment}`,
 				application: target.displayName ?? target.target,
 				label: configuration.displayName ?? environment,
 				environment,
-				apiUrl: `https://${selected.domains.api}`,
+				apiUrl: `https://${environment !== "local" && selected.domains.auth === selected.domains.sdk ? selected.domains.sdk : selected.domains.api}`,
 				consoleUrl: `https://${selected.domains.site}`,
 			},
 		];

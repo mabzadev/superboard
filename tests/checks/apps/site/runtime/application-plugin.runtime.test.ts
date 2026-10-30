@@ -15,7 +15,7 @@ function applicationCall(
 	id: string,
 	sdk: Record<string, string>,
 	body?: unknown,
-	pluginId = "supbrd-plug-user",
+	pluginId = "superboard-user",
 ) {
 	const method = kind === "commands" ? "POST" : "GET";
 	const envelope = {
@@ -34,7 +34,7 @@ function applicationCall(
 }
 test("application User contracts authenticate SDK users without an EmDash session and reject mixed project credentials", async () => {
 	const enabled = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-user/enable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-user/enable",
 		{ method: "POST", headers: operatorHeaders },
 	);
 	expect(enabled.status, await enabled.clone().text()).toBe(201);
@@ -168,7 +168,7 @@ test("application User contracts authenticate SDK users without an EmDash sessio
 		await databases.HEALTH_API_DB.prepare("SELECT COUNT(*) AS count FROM users").first(),
 	).toEqual({ count: 0 });
 	const disabled = await SELF.fetch(
-		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-user/disable",
+		"https://site.example/_emdash/api/superboard/plugins/superboard-user/disable",
 		{
 			method: "POST",
 			headers: { ...operatorHeaders, "Idempotency-Key": "application-user-disable" },

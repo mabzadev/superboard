@@ -1,18 +1,41 @@
-import { applicationUserOperation } from "@superboard/contracts/application-plugin-api";
+import {
+	APPLICATION_USER_ROUTES,
+	applicationUserRoute,
+	type ApplicationUserOperation,
+} from "@superboard/contracts/application-plugin-api";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { runPluginTask, PluginTaskUnavailable } from "@superboard/contracts/plugin-task";
 import { createProjectContextHeaders } from "@superboard/contracts/project-context";
-import type { Context } from "hono";
+import { Hono, type Context } from "hono";
 
 import { resolveSdkProjectContext } from "../lib/domain-modules.js";
 import { resolveSiteOperatorInstance } from "../lib/site-operator-scope.js";
 import type { Env } from "../types.js";
 
-export async function applicationPluginApi(c: Context<{ Bindings: Env }>): Promise<Response> {
-	const kind = c.req.param("kind");
-	const id = c.req.param("id");
-	const operation = applicationUserOperation(kind ?? "", id ?? "");
-	if (!operation || operation.method !== c.req.method)
-		return failure(404, "APPLICATION_OPERATION_NOT_FOUND");
+export const applicationPluginRoutes = registerRouter(new Hono<{ Bindings: Env }>(), {
+	service: "api",
+	module: "application-plugin",
+	pluginId: "superboard-user",
+	surface: "internal",
+	access: "application",
+});
+for (const operation of Object.values(APPLICATION_USER_ROUTES)) {
+	const definition = applicationUserRoute(operation, "api");
+	applicationPluginRoutes
+		.defineRoute(definition)
+		.on(definition.method, definition.path, (c) => applicationPluginApi(c, operation));
+}
+applicationPluginRoutes
+	.defineRoute({ transport: "fallback" })
+	.all("/api/v1/application-identity/:kind/:id", () =>
+		failure(404, "APPLICATION_OPERATION_NOT_FOUND"),
+	);
+
+async function applicationPluginApi(
+	c: Context<{ Bindings: Env }>,
+	operation: ApplicationUserOperation,
+): Promise<Response> {
+	if (operation.method !== c.req.method) return failure(404, "APPLICATION_OPERATION_NOT_FOUND");
 	if (!c.env.IDENTITY_SERVICE || !c.env.MODULE_INTERNAL_TOKEN)
 		return failure(503, "IDENTITY_WORKER_UNAVAILABLE");
 	const resolved = await resolveSdkProjectContext(c.env.DB, c.req.raw, c.env);
@@ -23,10 +46,10 @@ export async function applicationPluginApi(c: Context<{ Bindings: Env }>): Promi
 	try {
 		const result = await runPluginTask(
 			c.env,
-			"supbrd-plug-user",
+			"superboard-user",
 			{ kind: "runtime", task_id: `application:${crypto.randomUUID()}`, duration_ms: 30000 },
 			async (_checkpoint, signal) => {
-				const path = `/internal/v1/application-plugin/${operation.kind}/${operation.id}`;
+				const path = applicationUserRoute(operation, "identity").path;
 				const headers = await createProjectContextHeaders(
 					{
 						...resolved.context,

@@ -1,6 +1,6 @@
 [
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.login",
     "scenario": "functional",
     "status": "passed",
@@ -14,7 +14,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.reset_password",
     "scenario": "functional",
     "status": "passed",
@@ -28,7 +28,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.new_password",
     "scenario": "functional",
     "status": "passed",
@@ -42,7 +42,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "plugin_id": "superboard-dynamic-links",
     "route_id": "superboard.dynamic_links_campaigns",
     "scenario": "functional",
     "status": "passed",
@@ -55,7 +55,7 @@
     "source_test": ""
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "plugin_id": "superboard-dynamic-links",
     "route_id": "superboard.dynamic_links_campaigns_by_id",
     "scenario": "functional",
     "status": "passed",
@@ -68,7 +68,7 @@
     "source_test": ""
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "plugin_id": "superboard-dynamic-links",
     "route_id": "superboard.dynamic_links_links",
     "scenario": "functional",
     "status": "passed",
@@ -81,7 +81,7 @@
     "source_test": ""
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_events",
     "scenario": "functional",
     "status": "passed",
@@ -95,7 +95,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_views",
     "scenario": "functional",
     "status": "passed",
@@ -109,7 +109,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_users",
     "scenario": "functional",
     "status": "passed",
@@ -123,7 +123,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_feedback",
     "scenario": "functional",
     "status": "passed",
@@ -137,7 +137,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_crashes",
     "scenario": "functional",
     "status": "passed",
@@ -151,7 +151,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_dimensions",
     "scenario": "functional",
     "status": "passed",
@@ -165,7 +165,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_dashboards",
     "scenario": "functional",
     "status": "passed",
@@ -179,7 +179,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_cohorts",
     "scenario": "functional",
     "status": "passed",
@@ -193,7 +193,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_remote_config",
     "scenario": "functional",
     "status": "passed",
@@ -207,7 +207,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_alerts",
     "scenario": "functional",
     "status": "passed",
@@ -221,7 +221,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_reports",
     "scenario": "functional",
     "status": "passed",
@@ -235,7 +235,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
+    "plugin_id": "superboard-flows",
     "route_id": "superboard.flows_components",
     "scenario": "functional",
     "status": "passed",
@@ -251,7 +251,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.dashboard",
     "scenario": "functional",
     "status": "passed",
@@ -265,7 +265,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.home",
     "scenario": "functional",
     "status": "passed",
@@ -279,7 +279,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.app_shell",
     "scenario": "functional",
     "status": "passed",
@@ -293,7 +293,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics",
     "scenario": "functional",
     "status": "passed",
@@ -307,7 +307,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
+    "plugin_id": "superboard-support",
     "route_id": "superboard.support_contacts",
     "scenario": "functional",
     "status": "passed",
@@ -321,7 +321,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
+    "plugin_id": "superboard-support",
     "route_id": "superboard.support_workforce",
     "scenario": "functional",
     "status": "passed",
@@ -335,7 +335,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
+    "plugin_id": "superboard-support",
     "route_id": "superboard.support_automations",
     "scenario": "functional",
     "status": "passed",
@@ -349,7 +349,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
+    "plugin_id": "superboard-support",
     "route_id": "superboard.support_help_center",
     "scenario": "functional",
     "status": "passed",
@@ -363,7 +363,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-support",
+    "plugin_id": "superboard-support",
     "route_id": "superboard.support_captain",
     "scenario": "functional",
     "status": "passed",
@@ -377,7 +377,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.register",
     "scenario": "functional",
     "status": "passed",
@@ -391,7 +391,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.register_with_email",
     "scenario": "functional",
     "status": "passed",
@@ -405,7 +405,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
+    "plugin_id": "superboard-flows",
     "route_id": "superboard.flows_workflows_by_id",
     "scenario": "functional",
     "status": "passed",
@@ -420,7 +420,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
+    "plugin_id": "superboard-marketing",
     "route_id": "superboard.marketing_email",
     "scenario": "functional",
     "status": "passed",
@@ -434,7 +434,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
+    "plugin_id": "superboard-marketing",
     "route_id": "superboard.marketing_journeys",
     "scenario": "functional",
     "status": "passed",
@@ -448,7 +448,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
+    "plugin_id": "superboard-marketing",
     "route_id": "superboard.marketing_channels",
     "scenario": "functional",
     "status": "passed",
@@ -462,7 +462,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "plugin_id": "superboard-dynamic-links",
     "route_id": "superboard.dynamic_links_domain",
     "scenario": "functional",
     "status": "passed",
@@ -476,7 +476,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "plugin_id": "superboard-dynamic-links",
     "route_id": "superboard.dynamic_links_tracking",
     "scenario": "functional",
     "status": "passed",
@@ -490,7 +490,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
+    "plugin_id": "superboard-marketing",
     "route_id": "superboard.marketing_campaigns",
     "scenario": "functional",
     "status": "passed",
@@ -505,7 +505,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "plugin_id": "superboard-dynamic-links",
     "route_id": "superboard.dynamic_links_redirect_rules",
     "scenario": "functional",
     "status": "passed",
@@ -519,7 +519,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "plugin_id": "superboard-dynamic-links",
     "route_id": "superboard.dynamic_links_social_media_preview",
     "scenario": "functional",
     "status": "passed",
@@ -533,7 +533,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.account",
     "scenario": "functional",
     "status": "passed",
@@ -548,7 +548,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.profile",
     "scenario": "functional",
     "status": "passed",
@@ -562,7 +562,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plug-user",
+    "plugin_id": "superboard-user",
     "route_id": "superboard.app_access_key",
     "scenario": "functional",
     "status": "passed",
@@ -576,7 +576,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
+    "plugin_id": "superboard-flows",
     "route_id": "superboard.flows_users",
     "scenario": "functional",
     "status": "passed",
@@ -591,7 +591,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
+    "plugin_id": "superboard-flows",
     "route_id": "superboard.flows_users_by_id",
     "scenario": "functional",
     "status": "passed",
@@ -606,7 +606,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
+    "plugin_id": "superboard-flows",
     "route_id": "superboard.flows",
     "scenario": "functional",
     "status": "passed",
@@ -621,7 +621,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plug-settings",
+    "plugin_id": "superboard-settings",
     "route_id": "superboard.project_settings",
     "scenario": "functional",
     "status": "passed",
@@ -633,7 +633,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
+    "plugin_id": "superboard-flows",
     "route_id": "superboard.flows_settings_sdk",
     "scenario": "functional",
     "status": "passed",
@@ -648,7 +648,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
+    "plugin_id": "superboard-flows",
     "route_id": "superboard.flows_launchpad",
     "scenario": "functional",
     "status": "passed",
@@ -663,7 +663,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
+    "plugin_id": "superboard-flows",
     "route_id": "superboard.flows_settings_environments",
     "scenario": "functional",
     "status": "passed",
@@ -677,7 +677,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
+    "plugin_id": "superboard-flows",
     "route_id": "superboard.flows_workflows",
     "scenario": "functional",
     "status": "passed",
@@ -691,7 +691,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-flows",
+    "plugin_id": "superboard-flows",
     "route_id": "superboard.flows_settings_localization",
     "scenario": "functional",
     "status": "passed",
@@ -705,7 +705,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
+    "plugin_id": "superboard-marketing",
     "route_id": "superboard.marketing_in_app_messages",
     "scenario": "functional",
     "status": "passed",
@@ -719,7 +719,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_insights",
     "scenario": "functional",
     "status": "passed",
@@ -734,7 +734,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_settings",
     "scenario": "functional",
     "status": "passed",
@@ -748,7 +748,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_installations",
     "scenario": "functional",
     "status": "passed",
@@ -763,7 +763,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
+    "plugin_id": "superboard-marketing",
     "route_id": "superboard.marketing_settings",
     "scenario": "functional",
     "status": "passed",
@@ -777,7 +777,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-marketing",
+    "plugin_id": "superboard-marketing",
     "route_id": "superboard.marketing_statistics",
     "scenario": "functional",
     "status": "passed",
@@ -791,7 +791,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-onboardings",
+    "plugin_id": "superboard-onboardings",
     "route_id": "superboard.onboardings_statistics",
     "scenario": "functional",
     "status": "passed",
@@ -810,7 +810,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
+    "plugin_id": "superboard-analytics",
     "route_id": "superboard.analytics_purchases",
     "scenario": "functional",
     "status": "passed",
@@ -822,7 +822,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
+    "plugin_id": "superboard-paywalls",
     "route_id": "superboard.paywalls",
     "scenario": "functional",
     "status": "passed",
@@ -837,7 +837,7 @@
     "evidence_path": "docs/evidence/plugin-autonomy/retirement-e2e-functional.json"
   },
   {
-    "plugin_id": "supbrd-plugmod-paywalls",
+    "plugin_id": "superboard-paywalls",
     "route_id": "superboard.paywalls_statistics",
     "scenario": "functional",
     "status": "passed",

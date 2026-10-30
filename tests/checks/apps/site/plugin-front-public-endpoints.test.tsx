@@ -47,7 +47,7 @@ function tree(child: ReactNode, target?: string) {
 		<FrontContextProvider
 			value={{
 				instanceId: target ?? "missing",
-				pluginId: "supbrd-plug-settings",
+				pluginId: "superboard-settings",
 				operator: null,
 				projectScope: target
 					? {

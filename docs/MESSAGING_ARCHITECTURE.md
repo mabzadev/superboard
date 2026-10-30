@@ -59,7 +59,7 @@ projects must not add that second package.
 The package covers configuration, conversations, messages, multiple
 attachments, download, read state, typing, realtime reconnect and CSAT. Its
 `supportUrl` should be the API gateway prefix, for example
-`https://api.mbza.dev/api/v1/support-client`.
+`https://api.mabza.dev/api/v1/support-client`.
 
 ## Chatwoot and legacy retirement
 

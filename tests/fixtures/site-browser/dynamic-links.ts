@@ -8,7 +8,7 @@ export async function linkFixture(page: Page, active = true) {
 	const name = `Site link ${slug}`;
 	const saved = await siteApi(
 		page.request,
-		"supbrd-plugmod-dynamic-links",
+		"superboard-dynamic-links",
 		"POST",
 		`/api/v1/dynamic-links/projects/${project}/links`,
 		{

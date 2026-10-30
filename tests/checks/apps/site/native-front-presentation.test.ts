@@ -178,11 +178,11 @@ test("every released View resolves its connections from the active plugin instea
 	const newRoute = structuredClone(
 		release.payload.gateway_manifest.routes.find(
 			(entry) =>
-				entry.destination === "supbrd-plugmod-flows" && entry.path_pattern.includes("/commands/"),
+				entry.destination === "superboard-flows" && entry.path_pattern.includes("/commands/"),
 		)!,
 	);
 	newRoute.path_pattern =
-		"/_emdash/api/superboard/plugins/supbrd-plugmod-flows/commands/new.live.command";
+		"/_emdash/api/superboard/plugins/superboard-flows/commands/new.live.command";
 	release.payload.gateway_manifest.routes = [newRoute];
 	const after = await (await withViewConnections(response(), release.payload)).json();
 	expect(before.data.item.data.bindings.commands).not.toContain("new.live.command");
@@ -222,8 +222,8 @@ test("EmDash menu and View records become editable Front configuration", () => {
 	const view = editableViewFromEntry({
 		data: {
 			name: "Configuration distante",
-			plugin_id: "supbrd-plugmod-analytics",
-			renderer_id: "supbrd-plugmod-analytics.renderer.admin_surface",
+			plugin_id: "superboard-analytics",
+			renderer_id: "superboard-analytics.renderer.admin_surface",
 			route_id: "superboard.analytics_remote_config",
 			path: "/analytics/remote-config",
 			description: "Ce texte vient de la View EmDash.",
@@ -238,8 +238,8 @@ test("EmDash menu and View records become editable Front configuration", () => {
 				],
 			},
 			bindings: {
-				data_sources: ["supbrd-plugmod-analytics.data_source.analytics_remote_config"],
-				commands: ["supbrd-plugmod-analytics.command.upsert_analytics_remote_config"],
+				data_sources: ["superboard-analytics.data_source.analytics_remote_config"],
+				commands: ["superboard-analytics.command.upsert_analytics_remote_config"],
 			},
 		},
 	});
@@ -255,8 +255,8 @@ test("EmDash menu and View records become editable Front configuration", () => {
 	]);
 	expect(view).toEqual({
 		route_id: "superboard.analytics_remote_config",
-		plugin_id: "supbrd-plugmod-analytics",
-		renderer_id: "supbrd-plugmod-analytics.renderer.admin_surface",
+		plugin_id: "superboard-analytics",
+		renderer_id: "superboard-analytics.renderer.admin_surface",
 		path: "/analytics/remote-config",
 		title: "Configuration distante",
 		description: "Ce texte vient de la View EmDash.",
@@ -268,8 +268,8 @@ test("EmDash menu and View records become editable Front configuration", () => {
 			},
 		],
 		bindings: {
-			data_sources: ["supbrd-plugmod-analytics.data_source.analytics_remote_config"],
-			commands: ["supbrd-plugmod-analytics.command.upsert_analytics_remote_config"],
+			data_sources: ["superboard-analytics.data_source.analytics_remote_config"],
+			commands: ["superboard-analytics.command.upsert_analytics_remote_config"],
 		},
 	});
 });
@@ -286,27 +286,27 @@ test("adding and removing a plugin from the Release changes the rendered Front",
 			native: entry.manifest.execution.backend === "native",
 		};
 	};
-	const user = plugin("supbrd-plug-user");
-	const marketing = plugin("supbrd-plugmod-marketing");
+	const user = plugin("superboard-user");
+	const marketing = plugin("superboard-marketing");
 	const withoutMarketing = await compile([user], "01J00000000000000000000405");
 	const withMarketing = await compile([user, marketing], "01J00000000000000000000406");
 
 	const absentMarkup = render(withoutMarketing, "/marketing/campaigns", ["users.read"]);
 	const activeMarkup = render(withMarketing, "/marketing/campaigns", [
 		"users.read",
-		"supbrd-plugmod-marketing.read",
+		"superboard-marketing.read",
 	]);
 
 	expect(absentMarkup).toContain("Page not found");
 	expect(absentMarkup).not.toContain('"href":"/communication/campaigns"');
 	expect(activeMarkup).toContain("Campaigns");
 	expect(activeMarkup).toContain('"href":"/communication/campaigns"');
-	expect(activeMarkup).toContain("supbrd-plugmod-marketing");
+	expect(activeMarkup).toContain("superboard-marketing");
 });
 
 test("the editable Remote Config View supplies its Dashboard renderer bindings", async () => {
 	const catalog = superBoardRuntimePluginCatalog();
-	const locked = ["supbrd-plug-user", "supbrd-plugmod-analytics"].map((pluginId) => {
+	const locked = ["superboard-user", "superboard-analytics"].map((pluginId) => {
 		const manifest = catalog.plugins.find(
 			({ manifest: candidate }) => candidate.plugin_id === pluginId,
 		)?.manifest;
@@ -327,12 +327,12 @@ test("the editable Remote Config View supplies its Dashboard renderer bindings",
 	const output = render(
 		release,
 		"/analytics/remote-config",
-		["users.read", "supbrd-plugmod-analytics.read"],
+		["users.read", "superboard-analytics.read"],
 		{ view },
 	);
 
 	expect(output).toContain("Remote Config");
-	expect(output).toContain("supbrd-plugmod-analytics.renderer.admin_surface");
+	expect(output).toContain("superboard-analytics.renderer.admin_surface");
 	expect(output).toContain("superboard-analytics.data_source.analytics_remote_config");
 	expect(output).toContain("superboard-analytics.command.upsert_analytics_remote_config");
 	expect(output).toContain('"group_id":"analytics"');
@@ -340,7 +340,7 @@ test("the editable Remote Config View supplies its Dashboard renderer bindings",
 
 test("EmDash menu and View edits drive the rendered Front within the active Release", async () => {
 	const catalog = superBoardRuntimePluginCatalog();
-	const locked = ["supbrd-plug-user", "supbrd-plugmod-analytics"].map((pluginId) => {
+	const locked = ["superboard-user", "superboard-analytics"].map((pluginId) => {
 		const manifest = catalog.plugins.find(
 			({ manifest: candidate }) => candidate.plugin_id === pluginId,
 		)?.manifest;
@@ -356,7 +356,7 @@ test("EmDash menu and View edits drive the rendered Front within the active Rele
 	const output = render(
 		release,
 		"/analytics/remote-config",
-		["users.read", "supbrd-plugmod-analytics.read"],
+		["users.read", "superboard-analytics.read"],
 		{
 			navigation: [
 				{
@@ -369,8 +369,8 @@ test("EmDash menu and View edits drive the rendered Front within the active Rele
 			],
 			view: {
 				route_id: "superboard.analytics_remote_config",
-				plugin_id: "supbrd-plugmod-analytics",
-				renderer_id: "supbrd-plugmod-analytics.renderer.admin_surface",
+				plugin_id: "superboard-analytics",
+				renderer_id: "superboard-analytics.renderer.admin_surface",
 				path: "/analytics/remote-config",
 				title: "Configuration distante",
 				description: "Ce texte vient de la View EmDash.",
@@ -398,7 +398,7 @@ test("EmDash menu and View edits drive the rendered Front within the active Rele
 test("rejects routes, pages, renderers, and navigation outside the Release graph", async () => {
 	const catalog = superBoardRuntimePluginCatalog();
 	const userManifest = catalog.plugins.find(
-		({ manifest }) => manifest.plugin_id === "supbrd-plug-user",
+		({ manifest }) => manifest.plugin_id === "superboard-user",
 	)?.manifest;
 	if (!userManifest) throw new Error("Missing User plugin");
 	const release = await compile(
@@ -439,14 +439,14 @@ test("rejects routes, pages, renderers, and navigation outside the Release graph
 
 	const withoutRenderer = structuredClone(release.payload);
 	withoutRenderer.renderers = withoutRenderer.renderers.filter(
-		({ renderer_id: rendererId }) => rendererId !== "supbrd-plug-user.renderer.admin_surface",
+		({ renderer_id: rendererId }) => rendererId !== "superboard-user.renderer.admin_surface",
 	);
 	expect(() => assertReleasePresentation(withoutRenderer)).toThrow(/renderer is missing/u);
 });
 
 test("legacy renderer checksums stay scoped to their plugin renderer", async () => {
 	const catalog = superBoardRuntimePluginCatalog();
-	const locked = ["supbrd-plug-user", "supbrd-plugmod-analytics"].map((pluginId) => {
+	const locked = ["superboard-user", "superboard-analytics"].map((pluginId) => {
 		const manifest = catalog.plugins.find(
 			({ manifest: candidate }) => candidate.plugin_id === pluginId,
 		)?.manifest;
@@ -460,7 +460,7 @@ test("legacy renderer checksums stay scoped to their plugin renderer", async () 
 	});
 	const release = await compile(locked, "01J00000000000000000000411");
 	const analyticsRenderer = release.payload.renderers.find(
-		({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-analytics",
+		({ plugin_id: pluginId }) => pluginId === "superboard-analytics",
 	);
 	if (!analyticsRenderer) throw new Error("Missing Analytics renderer");
 
@@ -477,7 +477,7 @@ test("legacy renderer checksums stay scoped to their plugin renderer", async () 
 
 test("keeps an active multi-plugin Release renderable across renderer upgrades", async () => {
 	const catalog = superBoardRuntimePluginCatalog();
-	const locked = ["supbrd-plug-user", "supbrd-plugmod-analytics"].map((pluginId) => {
+	const locked = ["superboard-user", "superboard-analytics"].map((pluginId) => {
 		const manifest = catalog.plugins.find(
 			({ manifest: candidate }) => candidate.plugin_id === pluginId,
 		)?.manifest;
@@ -494,8 +494,8 @@ test("keeps an active multi-plugin Release renderable across renderer upgrades",
 		"sha256:085d9fc3afdf6e893295f7f2701dfb84e1668c73ba0df6c03d9a713578fdd769",
 		...new Set(
 			Object.values(compatibility.artifacts).flatMap(({ plugin_id: pluginId, renderer_builds }) =>
-				pluginId === "supbrd-plugmod-analytics"
-					? [renderer_builds["supbrd-plugmod-analytics.renderer.admin_surface"]]
+				pluginId === "superboard-analytics" || pluginId === "supbrd-plugmod-analytics"
+					? [renderer_builds[`${pluginId}.renderer.admin_surface`]]
 					: [],
 			),
 		),
@@ -508,7 +508,7 @@ test("keeps an active multi-plugin Release renderable across renderer upgrades",
 	);
 	const analyticsRenderer = release.payload.renderers.find(
 		({ renderer_id: rendererId }) =>
-			rendererId === "supbrd-plugmod-analytics.renderer.admin_surface",
+			rendererId === "superboard-analytics.renderer.admin_surface",
 	);
 	if (!analyticsRenderer) throw new Error("Missing Analytics renderer");
 	const seededView = seed.content.views.find(
@@ -521,7 +521,7 @@ test("keeps an active multi-plugin Release renderable across renderer upgrades",
 		analyticsRenderer.build_checksum = build;
 		expect(() => assertReleasePresentation(release.payload)).not.toThrow();
 		expect(() =>
-			render(release, "/analytics/remote-config", ["users.read", "supbrd-plugmod-analytics.read"], {
+			render(release, "/analytics/remote-config", ["users.read", "superboard-analytics.read"], {
 				view,
 			}),
 		).not.toThrow();
@@ -530,7 +530,7 @@ test("keeps an active multi-plugin Release renderable across renderer upgrades",
 
 test("keeps an active legacy Release renderable during the native Front upgrade", async () => {
 	const userManifest = superBoardRuntimePluginCatalog().plugins.find(
-		({ manifest }) => manifest.plugin_id === "supbrd-plug-user",
+		({ manifest }) => manifest.plugin_id === "superboard-user",
 	)?.manifest;
 	if (!userManifest) throw new Error("Missing User plugin");
 	const legacyRelease = structuredClone(
@@ -567,11 +567,11 @@ test("keeps an active legacy Release renderable during the native Front upgrade"
 		.filter(({ plugin_id: pluginId }) => pluginId !== "supbrd-core")
 		.map((renderer) => {
 			const legacyBuilds: Record<string, string> = {
-				"supbrd-plug-user.renderer.admin_surface":
+				"superboard-user.renderer.admin_surface":
 					"sha256:d7b1bda9489908a0fc50539a8a305d0c18e8c54f92fac05980ec30af32f28ba2",
-				"supbrd-plug-user.renderer.login_form":
+				"superboard-user.renderer.login_form":
 					"sha256:fb7093abcf297a8b10024c579ec6faeb0336a91e3551e0c397a670ead659d9d9",
-				"supbrd-plug-user.renderer.profile_card":
+				"superboard-user.renderer.profile_card":
 					"sha256:a6ca9335d1dc37ecaabddcce6f5c6add578ec1bdd2b5b637e44b97606825d86d",
 			};
 			return legacyBuilds[renderer.renderer_id]
@@ -595,8 +595,8 @@ test("keeps an active legacy Release renderable during the native Front upgrade"
 	if (!legacyIdentityRoute) throw new Error("Missing legacy Identity surface");
 	legacyIdentityRoute.path_pattern = "/identity/:lang/dashboard";
 	legacyIdentityRoute.parameters = { lang: { type: "string", required: true } };
-	legacyUsersRoute.renderer_ids = ["supbrd-plug-user.renderer.admin_surface"];
-	legacyUsersPage.root_renderer_id = "supbrd-plug-user.renderer.admin_surface";
+	legacyUsersRoute.renderer_ids = ["superboard-user.renderer.admin_surface"];
+	legacyUsersPage.root_renderer_id = "superboard-user.renderer.admin_surface";
 
 	expect(() => assertReleasePresentation(legacyRelease.payload)).not.toThrow();
 	const legacyMarkup = render(legacyRelease, "/app/users", ["users.read"], {

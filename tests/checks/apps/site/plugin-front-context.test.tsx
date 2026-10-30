@@ -10,12 +10,12 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: tr
 
 const context: FrontContextValue = {
 	instanceId: "isolated-front",
-	pluginId: "supbrd-plug-user",
+	pluginId: "superboard-user",
 	path: "/identity/fr/users/member%2F42",
 	locale: "fr",
 	parameters: { lang: "fr", authid: "member/42" },
 	projectScope: null,
-	activePluginIds: ["supbrd-plug-user"],
+	activePluginIds: ["superboard-user"],
 	operator: { id: "operator-42", email: "operator@example.test", name: null, role: 40 },
 };
 

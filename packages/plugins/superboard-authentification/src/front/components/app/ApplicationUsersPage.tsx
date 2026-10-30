@@ -2,7 +2,6 @@
 
 import { useFrontContext, usePluginEnabled } from "@superboard/front-ui/context";
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
-import { LinkButton } from "@superboard/front-ui/kumo";
 import {
 	EmptyProject,
 	ModulePage,
@@ -75,7 +74,7 @@ export default function ApplicationUsersPage() {
 	const [securityRevision, setSecurityRevision] = useState(0);
 	const [actionRevision, setActionRevision] = useState(0);
 	const { selectedInstance, selectedProject } = useProjectSelection();
-	const billingEnabled = usePluginEnabled("supbrd-plugmod-billing");
+	const billingEnabled = usePluginEnabled("superboard-billing");
 	const [searchDraft, setSearchDraft] = useState("");
 	const [query, setQuery] = useState("");
 	const [offset, setOffset] = useState(0);
@@ -167,7 +166,6 @@ export default function ApplicationUsersPage() {
 			)}
 			error={error}
 		>
-			<LinkButton href={`/auth?lang=${locale}`}>{t("All authentication views")}</LinkButton>
 			{!selectedProject ? (
 				<EmptyProject />
 			) : !administrator ? (

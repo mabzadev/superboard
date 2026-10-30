@@ -91,7 +91,7 @@ test("runtime bridge deployment opens only after routing, callback ownership, an
 });
 
 test("development and partial recovery preserve per-service convergence", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	const development = buildDeploymentExecutionPlan({
 		target,
 		environment: "development",

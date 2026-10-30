@@ -1,4 +1,4 @@
-export const pluginId = "supbrd-plugmod-support";
+export const pluginId = "superboard-support";
 export const views = {
 	"superboard.support_automations": () => import("./views/superboard.support_automations.js"),
 	"superboard.support_captain": () => import("./views/superboard.support_captain.js"),

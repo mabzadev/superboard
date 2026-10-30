@@ -548,7 +548,7 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
             ?: throw IllegalStateException("SuperBoard baseURL must be configured by the application")
-        val baseUrl = configuredBaseUrl.trimEnd('/') + "/api/v1/sdk/"
+        val baseUrl = configuredBaseUrl.trimEnd('/') + "/v1/"
 
         return Retrofit.Builder()
             .baseUrl(baseUrl)

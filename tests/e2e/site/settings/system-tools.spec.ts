@@ -10,7 +10,7 @@ import {
 test("audit synchronizes its ledger, searches persisted receipts and creates an immutable archive", async ({
 	authenticatedPage: page,
 }) => {
-	const plugin = "supbrd-plug-audit";
+	const plugin = "superboard-audit";
 	const base = "/_emdash/api/superboard/audit";
 	await ready(page, "/system/audit");
 	await page.getByRole("button", { name: "Synchronize and verify", exact: true }).click();
@@ -45,7 +45,7 @@ test("audit synchronizes its ledger, searches persisted receipts and creates an 
 test("content creates, edits, publishes and reopens a document with its revision history", async ({
 	authenticatedPage: page,
 }) => {
-	const plugin = "supbrd-plug-content";
+	const plugin = "superboard-content";
 	await ready(page, "/system/content");
 	const setup = page.getByRole("button", { name: "Create document collection", exact: true });
 	if (await setup.isVisible()) await setup.click();
@@ -114,7 +114,7 @@ test("content creates, edits, publishes and reopens a document with its revision
 test("gateway saves a route, publishes the manifest and invokes the real API target", async ({
 	authenticatedPage: page,
 }) => {
-	const plugin = "supbrd-plugmod-gateway";
+	const plugin = "superboard-gateway";
 	const id = unique("retirement-route");
 	await ready(page, "/system/gateway");
 	await page.getByRole("button", { name: "New route", exact: true }).click();

@@ -82,7 +82,7 @@ export async function exercisePublishedMenuFaults(
 		const created = await page.request.post(`/api/v1/paywalls/projects/${project}`, {
 			headers: {
 				...headers,
-				"X-SuperBoard-Plugin-Id": "supbrd-plugmod-paywalls",
+				"X-SuperBoard-Plugin-Id": "superboard-paywalls",
 				"Idempotency-Key": crypto.randomUUID(),
 			},
 			data: { identifier: "issue76-editor", display_name: "Issue 76 editor" },

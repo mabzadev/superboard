@@ -187,13 +187,13 @@ describe("SupportSettingsPage", () => {
 			<FrontContextProvider
 				value={{
 					instanceId: "1",
-					pluginId: "supbrd-plugmod-support",
+					pluginId: "superboard-support",
 					path: "/support/settings",
 					parameters: {},
 					locale: "fr",
 					operator: null,
 					projectScope: null,
-					activePluginIds: ["supbrd-plugmod-support"],
+					activePluginIds: ["superboard-support"],
 				}}
 			>
 				<SupportSettingsPage />

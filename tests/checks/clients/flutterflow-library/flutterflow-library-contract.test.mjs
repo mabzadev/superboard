@@ -15,7 +15,7 @@ test("the Git-owned FlutterFlow library contract is complete", async () => {
 		status: "ok",
 		displayName: "SuperBoard",
 		dependencies: 1,
-		libraryValues: 11,
+		libraryValues: 12,
 		widgets: 9,
 		pages: 3,
 		actions: 88,

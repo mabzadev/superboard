@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	PROJECT_CONTEXT_HEADERS,
 	signProjectContext,
@@ -12,7 +13,7 @@ import type { Env } from "../types";
 
 type AdminContext = Context<{ Bindings: Env }>;
 
-const routes = new Hono<{ Bindings: Env }>();
+const routes = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.application-users-admin.routes","pluginId":"superboard-user","surface":"internal","access":"operator"});
 
 routes.get("/:projectRef/users", async (c) => {
 	const authorized = await authorize(c);
@@ -45,7 +46,7 @@ routes.get("/:projectRef/members", async (c) => {
 	if (authorized instanceof Response) return authorized;
 	return forward(c, `/internal/v1/admin/members${new URL(c.req.url).search}`, authorized);
 });
-routes.all("/:projectRef/profiles/:userId", async (c) => {
+routes.on(["GET", "PUT"], "/:projectRef/profiles/:userId", async (c) => {
 	if (!["GET", "PUT"].includes(c.req.method)) return c.notFound();
 	const authorized = await authorize(c);
 	if (authorized instanceof Response) return authorized;

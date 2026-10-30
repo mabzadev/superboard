@@ -1,3 +1,5 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import { Hono } from "hono";
 
@@ -33,7 +35,7 @@ import {
 type AppShape = { Bindings: WorkerBindings; Variables: WorkerVariables };
 type EntityRow = Record<string, unknown> & { id: string };
 
-const app = new Hono<AppShape>();
+const app = registerRouter(new Hono<AppShape>(), {"service":"products","module":"index.app","pluginId":"superboard-products","surface":"internal","access":"internal"});
 const auth = internalAuth();
 
 app.get("/internal/v1/health", async (c) => {
@@ -1245,4 +1247,4 @@ function storeForPlatform(value: string): string {
 	);
 }
 
-export default app;
+export default withRouteManifest((app), [app], {"service":"products","pluginId":"superboard-products"});

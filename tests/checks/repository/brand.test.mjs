@@ -43,8 +43,8 @@ test("canonical SuperBoard brand contract is strict and valid", async () => {
 		platform: ".",
 		reference: "apps/reference",
 	});
-	assert.equal(manifest.developmentDomains.dashboard, "board.mbza.dev");
-	assert.equal(manifest.developmentDomains.shortLinks, "in.mbza.dev");
+	assert.equal(manifest.developmentDomains.dashboard, "board.mabza.dev");
+	assert.equal(manifest.developmentDomains.shortLinks, "in.mabza.dev");
 	assert.deepEqual(manifest.sdkStrategy.active, ["flutter", "flutterflow"]);
 });
 
@@ -80,7 +80,7 @@ test("active brand checks cover Site and plugin sources without a retired applic
 	for (const file of [
 		"scripts/config/superboard-brand.json",
 		"scripts/config/superboard-brand.schema.json",
-		"infra/targets/mbza-development.json",
+		"infra/targets/mabza-development.json",
 	]) {
 		const target = join(fixture, file);
 		await mkdir(target.slice(0, target.lastIndexOf("/")), { recursive: true });
@@ -107,7 +107,7 @@ test("brand checks reject untracked UI and catalogue labels while preserving SDK
 	for (const file of [
 		"scripts/config/superboard-brand.json",
 		"scripts/config/superboard-brand.schema.json",
-		"infra/targets/mbza-development.json",
+		"infra/targets/mabza-development.json",
 	]) {
 		const target = join(fixture, file);
 		await mkdir(target.slice(0, target.lastIndexOf("/")), { recursive: true });

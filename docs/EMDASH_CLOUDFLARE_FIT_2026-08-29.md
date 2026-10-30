@@ -34,7 +34,7 @@ La release fixe le socle de démonstration Cloudflare à Astro 7.0.0, @astrojs/c
 
 ## Topologie SuperBoard constatée
 
-SuperBoard est un monorepo canonique pilotant plusieurs cibles Cloudflare depuis des manifests déclaratifs. Le développement mbza-development et la production vocostar peuvent vivre dans des comptes Cloudflare différents ; chaque compte est sélectionné à l’exécution et les identifiants de compte ne sont pas committés. Sources : [README SuperBoard](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/README.md), [cible mbza-development](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/mbza-development.json), [cible vocostar](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/vocostar.json).
+SuperBoard est un monorepo canonique pilotant plusieurs cibles Cloudflare depuis des manifests déclaratifs. Le développement mabza-development et la production vocostar peuvent vivre dans des comptes Cloudflare différents ; chaque compte est sélectionné à l’exécution et les identifiants de compte ne sont pas committés. Sources : [README SuperBoard](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/README.md), [cible mabza-development](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/mabza-development.json), [cible vocostar](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/vocostar.json).
 
 Les manifests nomment dix-sept Workers de plateforme ou de domaine par cible ; VocoStar déclare en plus deux Workers managés d’orchestration. Certaines fonctionnalités sont désactivées selon la cible, de sorte que ce nombre est un plafond déclaratif et non le nombre exact d’instances actives. Cette topologie est très en dessous de la limite actuelle de 500 Workers par compte Paid. Les Dynamic Workers chargés par EmDash ne sont pas des scripts statiques supplémentaires de ce catalogue, mais ils ont leur propre facturation et leur propre limite de concurrence. Sources : [registre de services SuperBoard](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-services.mjs), [limites Workers](https://developers.cloudflare.com/workers/platform/limits/), [tarification Dynamic Workers](https://developers.cloudflare.com/dynamic-workers/pricing/).
 
@@ -48,7 +48,7 @@ Le générateur de configuration SuperBoard applique actuellement à chaque serv
 
 Le Dashboard est ensuite une exception de build : le point d’entrée est apps/dashboard/.open-next/worker.js, les assets viennent de .open-next/assets, le cache incrémental Next est un bucket R2 NEXT_INC_CACHE_R2_BUCKET, et le Worker possède un service binding vers lui-même. Il ne possède ni D1, ni R2 MEDIA, ni KV SESSION, ni Worker Loader, ni Cron. Source : [générateur Cloudflare SuperBoard](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-config.mjs).
 
-Les domaines du Dashboard sont des Custom Domains exacts : board.mbza.dev en développement et grow.vocostar.com en production. Les autres Workers communiquent largement par Service bindings et possèdent chacun leurs ressources D1, R2, KV, Queues, Durable Objects, Workflows ou Analytics Engine selon leur rôle. Les migrations D1 sont attribuées à un seul propriétaire de schéma et sont des fichiers SQL ordonnés. Sources : [cible mbza-development](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/mbza-development.json), [cible vocostar](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/vocostar.json), [registre D1](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-d1-registry.mjs).
+Les domaines du Dashboard sont des Custom Domains exacts : board.mabza.dev en développement et grow.vocostar.com en production. Les autres Workers communiquent largement par Service bindings et possèdent chacun leurs ressources D1, R2, KV, Queues, Durable Objects, Workflows ou Analytics Engine selon leur rôle. Les migrations D1 sont attribuées à un seul propriétaire de schéma et sont des fichiers SQL ordonnés. Sources : [cible mabza-development](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/mabza-development.json), [cible vocostar](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/vocostar.json), [registre D1](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-d1-registry.mjs).
 
 ## Forme Cloudflare d’EmDash constatée
 
@@ -108,7 +108,7 @@ Astro 6 et suivants déterminent l’environnement Cloudflare pendant le build. 
 
 ### 2. Resources D1, R2 et KV absentes
 
-Ni le schéma infra/targets/schema.json, ni mbza-development, ni vocostar ne déclarent un CMS, un D1 EmDash, un bucket MEDIA EmDash, un KV SESSION ou un KV CACHE EmDash. Le registre des services refuse tout service extérieur à sa liste, et le registre D1 refuse tout propriétaire extérieur à sa liste. Sources : [schéma de cible](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/schema.json), [registre de services](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-services.mjs), [registre D1](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-d1-registry.mjs).
+Ni le schéma infra/targets/schema.json, ni mabza-development, ni vocostar ne déclarent un CMS, un D1 EmDash, un bucket MEDIA EmDash, un KV SESSION ou un KV CACHE EmDash. Le registre des services refuse tout service extérieur à sa liste, et le registre D1 refuse tout propriétaire extérieur à sa liste. Sources : [schéma de cible](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/infra/targets/schema.json), [registre de services](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-services.mjs), [registre D1](https://github.com/mabzadev/superboard/blob/d1850233e97b79c3cde7eae18a0123d4d39c8ae2/scripts/cloudflare-d1-registry.mjs).
 
 La D1 d’EmDash contient à la fois l’administration, l’authentification, le modèle de contenu, le contenu et le stockage logique des plugins. Le bridge sandboxé accède directement à DB et MEDIA du Worker hôte. Il n’est pas possible de remplacer ce D1 par une liste de Service bindings vers les D1 métiers existantes sans réécrire l’adapter et le bridge. Sources : [runner sandbox](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/packages/cloudflare/src/sandbox/runner.ts), [bridge sandbox](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/packages/cloudflare/src/sandbox/bridge.ts).
 
@@ -153,7 +153,7 @@ Le bridge sandbox d’EmDash n’expose pas les Service bindings arbitraires du 
 
 ### 6. Routes, domaines et coexistence
 
-Un Custom Domain est l’origine Worker de tous les chemins d’un hostname exact. Le Dashboard SuperBoard possède déjà ce rôle sur board.mbza.dev et grow.vocostar.com. Une Route plus spécifique peut s’exécuter devant un Worker Custom Domain et appeler ensuite l’origine par fetch. Cloudflare choisit la route la plus spécifique lorsqu’il existe plusieurs patterns. Sources : [Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/), [Routes](https://developers.cloudflare.com/workers/configuration/routing/routes/).
+Un Custom Domain est l’origine Worker de tous les chemins d’un hostname exact. Le Dashboard SuperBoard possède déjà ce rôle sur board.mabza.dev et grow.vocostar.com. Une Route plus spécifique peut s’exécuter devant un Worker Custom Domain et appeler ensuite l’origine par fetch. Cloudflare choisit la route la plus spécifique lorsqu’il existe plusieurs patterns. Sources : [Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/), [Routes](https://developers.cloudflare.com/workers/configuration/routing/routes/).
 
 Ces primitives rendent une coexistence technique possible, mais aucun état actuel de SuperBoard ne déclare :
 
@@ -197,7 +197,7 @@ La matrice Cloudflare courante ne liste pas Dynamic Worker Loaders parmi les bin
 
 Le dépôt EmDash fournit des pages manuelles sandbox-test et sandbox-plugin-test, mais aucun test automatisé trouvé n’exécute un vrai Worker Loader Cloudflare dans le pipeline de la release ; les tests unitaires du runner utilisent des mocks. Sources : [page sandbox simple](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/demos/cloudflare/src/pages/sandbox-test.astro), [page sandbox complète](https://github.com/emdash-cms/emdash/blob/3c99225d80a38a9751ed0e4b56e3924e40308e70/demos/cloudflare/src/pages/sandbox-plugin-test.astro), [tests Cloudflare EmDash](https://github.com/emdash-cms/emdash/tree/3c99225d80a38a9751ed0e4b56e3924e40308e70/packages/cloudflare/tests).
 
-Prérequis factuel : la migration doit posséder deux niveaux de preuve distincts, un environnement local déterministe pour D1/R2/KV et Workers métier, puis une acceptance sur le compte mbza-development pour LOADER et toute capacité non simulée.
+Prérequis factuel : la migration doit posséder deux niveaux de preuve distincts, un environnement local déterministe pour D1/R2/KV et Workers métier, puis une acceptance sur le compte mabza-development pour LOADER et toute capacité non simulée.
 
 ### 9. Observabilité
 
@@ -263,7 +263,7 @@ Les éléments suivants doivent devenir des décisions ou preuves séparées ; i
 1. **Épingler la source EmDash.** Choisir explicitement entre l’artefact publié 0.35.0 à 3c99225d… et un commit post-release. Interdire main, latest et un simple numéro 0.35.0 construit depuis un checkout différent comme identité de release.
 2. **Modéliser le CMS dans le control plane.** Ajouter un service ou un remplacement de service reconnu par les manifests, le schéma, la liste de déploiement, les checks, les types, les secrets et les moniteurs. La forme exacte reste à décider.
 3. **Déclarer chaque ressource par cible.** D1 DB, R2 MEDIA, KV SESSION, Worker Loader, Cron et EMDASH_ENCRYPTION_KEY sont le minimum observé avec plugins sandboxés. KV CACHE, AI_SEARCH, Images, Email et OAuth sont conditionnels. Aucun auto-provisionnement silencieux ne doit échapper à l’inventaire cible.
-4. **Vérifier Workers Paid sur chaque compte.** mbza-development et chaque cible de production utilisant LOADER doivent être éligibles et budgétées. Le code ne peut pas prouver cet entitlement.
+4. **Vérifier Workers Paid sur chaque compte.** mabza-development et chaque cible de production utilisant LOADER doivent être éligibles et budgétées. Le code ne peut pas prouver cet entitlement.
 5. **Remplacer ou isoler le build OpenNext.** Produire l’artefact Astro par cible avec une version de Wrangler éprouvée, sans supposer que .open-next et dist/server sont interchangeables.
 6. **Intégrer les migrations EmDash.** Conserver ensemble artefact et .emdash/migrations.json, sérialiser par compte/UUID, appliquer avec fingerprint, vérifier avant trafic et faire reconnaître le résultat par le reçu de déploiement SuperBoard.
 7. **Résoudre la sauvegarde FTS5.** Fournir un mécanisme vérifié pour sauvegarder et restaurer une D1 EmDash avec tables virtuelles tout en conservant les garanties de chiffrement, rétention hors checkout et reçu. wrangler d1 export seul ne satisfait pas ce besoin.
@@ -271,7 +271,7 @@ Les éléments suivants doivent devenir des décisions ou preuves séparées ; i
 9. **Borner les hooks sandboxés.** Prouver le comportement avec plus de quatre plugins concernés, puis imposer une stratégie qui respecte la limite Cloudflare. Le fan-out actuel ne constitue pas cette preuve.
 10. **Définir les contrats vers les Workers métier.** Lister les appels qui utilisent une URL publique, un Service binding du host ou une nouvelle capability bridge. Respecter la contrainte de même compte et ne pas compter sur la propagation de Cloudflare Access.
 11. **Compléter l’observabilité.** Relier le Worker hôte au collecteur SuperBoard et décider si les logs/exceptions directs des Dynamic Workers doivent être tailés. Ajouter corrélation et tests d’alerte.
-12. **Prouver local puis mbza-development.** Séparer les tests locaux D1/R2/KV/multi-Workers de l’acceptance distante LOADER, sans accès implicite aux données de production.
+12. **Prouver local puis mabza-development.** Séparer les tests locaux D1/R2/KV/multi-Workers de l’acceptance distante LOADER, sans accès implicite aux données de production.
 13. **Créer le plan de route et rollback.** Définir qui possède le Custom Domain à chaque phase, comment les assets restent affines, comment l’ancienne version est rappelée, et comment les mutations D1/R2/KV sont récupérées indépendamment du code.
 14. **Mesurer la capacité réelle.** Taille D1 projetée, taille maximale d’une entrée, nombre de champs, volume médias, fréquence KV, nombre de plugins, fan-out et CPU/mémoire du SSR. Les limites de plateforme seules ne prouvent pas la marge en charge.
 
@@ -279,7 +279,7 @@ Les éléments suivants doivent devenir des décisions ou preuves séparées ; i
 
 Cette enquête ne prétend pas connaître :
 
-- le plan Workers réellement actif sur les comptes mbza-development et vocostar ;
+- le plan Workers réellement actif sur les comptes mabza-development et vocostar ;
 - le nombre, la taille et la localisation des ressources Cloudflare déjà provisionnées hors manifests ;
 - le volume final du contenu et des médias après migration ;
 - le nombre de plugins sandboxés simultanément actifs ;

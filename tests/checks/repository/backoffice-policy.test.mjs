@@ -49,9 +49,9 @@ test("deployment targets have no SuperBoard edition or usage plan", () => {
 
 test("the root project references a target instead of duplicating its domains", () => {
 	const project = JSON.parse(read("superboard.project.json"));
-	assert.deepEqual(project.development, { target: "mbza-development" });
-	const target = JSON.parse(read("infra/targets/mbza-development.json"));
-	assert.equal(target.domains.shortlinks, "in.mbza.dev");
+	assert.deepEqual(project.development, { target: "mabza-development" });
+	const target = JSON.parse(read("infra/targets/mabza-development.json"));
+	assert.equal(target.domains.shortlinks, "in.mabza.dev");
 });
 
 test("public repository workflow never requires a platform read token", () => {
@@ -92,7 +92,7 @@ test("each target has one explicit automatic Cloudflare deployment authority", (
 		]),
 	);
 	assert.deepEqual(authorities, {
-		"mbza-development": "cloudflare-workers-builds",
+		"mabza-development": "cloudflare-workers-builds",
 	});
 	assert.match(read("docs/CLOUDFLARE.md"), /one automatic deployment authority per target/u);
 });
@@ -145,7 +145,7 @@ test("runtime and plugin Front do not expose legacy SuperBoard SaaS controls", (
 test("store purchases remain an application capability", () => {
 	const deployment = read("packages/plugins/superboard-core/api/src/lib/deployment.ts");
 	const purchases = read("packages/plugins/superboard-core/api/src/routes/purchases-sdk.ts");
-	const target = JSON.parse(read("infra/targets/mbza-development.json"));
+	const target = JSON.parse(read("infra/targets/mabza-development.json"));
 
 	assert.match(deployment, /configured === true \|\| Number\(configured\) === 1/);
 	assert.match(purchases, /isPurchasesEnabled\(c\.env, project\.purchases_enabled\)/);
@@ -214,7 +214,7 @@ test("reusable platform source and examples contain no application hostname or e
 	for (const path of reusableFiles) {
 		const source = read(path);
 		assert.equal(
-			/(?:mbza\.dev|reference-production\.com)/u.test(source),
+			/(?:mabza\.dev|reference-production\.com)/u.test(source),
 			false,
 			`${path} embeds an application hostname`,
 		);
@@ -294,7 +294,7 @@ test("MCP is a target-configured back-office adapter with no legacy SaaS gate", 
 	assert.match(oauth, /MCP consent URL is not configured/u);
 	assert.equal(oauth.includes("originFor(c)"), false);
 	for (const targetPath of [
-		"infra/targets/mbza-development.json",
+		"infra/targets/mabza-development.json",
 		"tests/fixtures/cloudflare/targets/reference-production.json",
 	]) {
 		const target = JSON.parse(read(targetPath));

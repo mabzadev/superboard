@@ -308,7 +308,7 @@ void main() {
       expect(creation.$2['capability'], 'reference.acceptance');
       expect(creation.$2['payload'], {
         'schemaVersion': 1,
-        'target': 'mbza-development',
+        'target': 'mabza-development',
         'projectEnvironment': 'test',
         'platformRevision': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         'referenceRevision': 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
@@ -341,7 +341,7 @@ class _Harness {
 
 const _configuration = ReferenceConfig(
   environment: 'development',
-  target: 'mbza-development',
+  target: 'mabza-development',
   apiBaseUrl: 'https://api.example.test',
   sdkBaseUrl: 'https://sdk.example.test',
   supportBaseUrl: 'https://api.example.test/api/v1/support-client',

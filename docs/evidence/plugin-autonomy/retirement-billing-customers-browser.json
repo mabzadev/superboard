@@ -1,6 +1,6 @@
 [
   {
-    "plugin_id": "supbrd-plugmod-billing",
+    "plugin_id": "superboard-billing",
     "route_id": "superboard.products_customers",
     "scenario": "functional",
     "status": "passed",

@@ -35,6 +35,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build test dependencies
         run: |
+          pnpm --filter '@emdash-cms/admin...' build
           pnpm --filter '@superboard/site^...' --filter '@superboard/email-worker^...' --workspace-concurrency=1 -r build
           pnpm -r --filter @superboard/plugin-* build
       - name: Check plugin behavior and deployment artifacts

@@ -83,3 +83,64 @@ test("the front preserves EmDash labels, order and deleted destinations", () => 
 	expect(result.groups).toEqual(groups);
 	expect(result.activeItem?.label).toBe("Mes chiffres");
 });
+
+test.each(["en", "fr"])(
+	"authentication settings owns its menu highlight instead of the environment keys shortcut (%s)",
+	(locale) => {
+		const settings = {
+			route_id: "settings",
+			href: `/auth/settings?lang=${locale}`,
+			label: "Settings",
+			permission: "read",
+			order: 1,
+		};
+		const groups = [
+			{
+				group_id: "authentication",
+				label: "Authentication",
+				order: 0,
+				items: [
+					{ route_id: "users", href: "/auth/users", label: "Users", permission: "read", order: 0 },
+					settings,
+				],
+			},
+			{
+				group_id: "environment",
+				label: "Environment",
+				order: 1,
+				items: [
+					{
+						route_id: "environment",
+						href: "/core/settings",
+						label: "Environment settings",
+						permission: "read",
+						order: 0,
+						children: [
+							{
+								route_id: "keys",
+								href: "/auth/settings?tab=security&section=keys",
+								label: "API keys",
+								permission: "read",
+								order: 0,
+							},
+						],
+					},
+				],
+			},
+		];
+		for (const path of [
+			"/auth/settings",
+			`/auth/settings?lang=${locale}`,
+			`/auth/settings?lang=${locale}&tab=configuration`,
+		]) {
+			const navigation = organizeProductNavigation(groups, path);
+			expect(navigation.activeItem?.route_id).toBe("settings");
+			expect(navigation.activeHref).toBe(settings.href);
+			expect(
+				navigation.groups.find((group) =>
+					group.items.some((item) => item.href === navigation.activeHref),
+				)?.group_id,
+			).toBe("authentication");
+		}
+	},
+);

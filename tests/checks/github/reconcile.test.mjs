@@ -60,7 +60,7 @@ function manifest() {
 				},
 				environments: {
 					development: {
-						variables: { SUPERBOARD_TARGET: "mbza-development" },
+						variables: { SUPERBOARD_TARGET: "mabza-development" },
 						secrets: ["CLOUDFLARE_API_TOKEN"],
 					},
 				},
@@ -140,7 +140,7 @@ test("reconciliation plans structure but leaves every secret value manual", () =
 		plan.repositories[0].manual.map(({ name }) => name),
 		["CLOUDFLARE_API_TOKEN", "READ_TOKEN"],
 	);
-	assert.equal(JSON.stringify(plan).includes("mbza-development"), false);
+	assert.equal(JSON.stringify(plan).includes("mabza-development"), false);
 });
 
 test("reconciliation converges declarative repository settings", () => {
@@ -470,7 +470,7 @@ test("confirmed reconciliation uses JSON stdin and never mutates secrets", () =>
 		calls.some(({ body }) => "CLOUDFLARE_API_TOKEN" in body),
 		false,
 	);
-	assert.equal(calls[1].body.value, "mbza-development");
+	assert.equal(calls[1].body.value, "mabza-development");
 	assert.deepEqual(calls[2].body.required_status_checks.contexts, ["CI gate"]);
 	assert.equal(calls[2].body.required_pull_request_reviews.require_code_owner_reviews, true);
 });

@@ -1,7 +1,8 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from 'hono';
 import { Env } from '../types';
 
-const wellKnown = new Hono<{ Bindings: Env }>();
+const wellKnown = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.well-known.wellKnown","pluginId":"superboard-dynamic-links","surface":"shortlinks","access":"public"});
 
 wellKnown.get('/oauth-protected-resource', async (c) => {
   const origin = new URL(c.req.url).origin;

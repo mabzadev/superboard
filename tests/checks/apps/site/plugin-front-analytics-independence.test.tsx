@@ -74,12 +74,12 @@ const project = {
 const testProject = { ...project, id: "42-test", internal_id: "102", is_test: true };
 const context: FrontContextValue = {
 	instanceId: "42",
-	pluginId: "supbrd-plugmod-analytics",
+	pluginId: "superboard-analytics",
 	path: "/dashboard",
 	parameters: {},
 	locale: "en",
 	operator: { id: "operator-1", email: "operator@example.test", name: "Operator", role: 50 },
-	activePluginIds: ["supbrd-plugmod-analytics"],
+	activePluginIds: ["superboard-analytics"],
 	projectScope: {
 		production_project_ref: project.id,
 		test_project_ref: testProject.id,
@@ -153,12 +153,12 @@ describe("Analytics with optional frontend integrations", () => {
 		expect(container.textContent).not.toContain("Some module data is temporarily unavailable");
 	});
 	it("restores only an enabled integration and removes its calls and links on disable", async () => {
-		await render([...context.activePluginIds, "supbrd-plugmod-dynamic-links"]);
+		await render([...context.activePluginIds, "superboard-dynamic-links"]);
 		expect(network.paths.some((path) => path.startsWith("/api/v1/dynamic-links/"))).toBe(true);
 		expect(
 			network.owners
 				.filter(({ path }) => path.startsWith("/api/v1/dynamic-links/"))
-				.every(({ pluginId }) => pluginId === "supbrd-plugmod-dynamic-links"),
+				.every(({ pluginId }) => pluginId === "superboard-dynamic-links"),
 		).toBe(true);
 		expect(network.paths.some((path) => /\/api\/v1\/(?:app|products)\//u.test(path))).toBe(false);
 		expect(container.textContent).toContain("Campaign landing");
@@ -171,10 +171,10 @@ describe("Analytics with optional frontend integrations", () => {
 	});
 
 	it("uses each provider identity for optional User and Products reads", async () => {
-		await render([...context.activePluginIds, "supbrd-plug-user", "supbrd-plug-products"]);
+		await render([...context.activePluginIds, "superboard-user", "superboard-products"]);
 		for (const [prefix, owner] of [
-			["/api/v1/app/", "supbrd-plug-user"],
-			["/api/v1/products/", "supbrd-plug-products"],
+			["/api/v1/app/", "superboard-user"],
+			["/api/v1/products/", "superboard-products"],
 		]) {
 			const calls = network.owners.filter(({ path }) => path.startsWith(prefix));
 			expect(calls.length).toBeGreaterThan(0);
@@ -184,7 +184,7 @@ describe("Analytics with optional frontend integrations", () => {
 
 	it("keeps Analytics available when a provider fails and leaves unknown metrics unknown", async () => {
 		network.failProducts = true;
-		await render([...context.activePluginIds, "supbrd-plug-products"]);
+		await render([...context.activePluginIds, "superboard-products"]);
 		expect(container.textContent).toContain("137");
 		expect(container.textContent).toContain("Products unavailable");
 		const label = [...container.querySelectorAll("span")].find(
@@ -195,9 +195,9 @@ describe("Analytics with optional frontend integrations", () => {
 
 	it("ignores an old provider failure after that provider is disabled", async () => {
 		network.deferLinkStatistics = true;
-		await render([...context.activePluginIds, "supbrd-plugmod-dynamic-links"]);
+		await render([...context.activePluginIds, "superboard-dynamic-links"]);
 		expect(network.rejectLinkStatistics).not.toBeNull();
-		await render([...context.activePluginIds, "supbrd-plug-user"]);
+		await render([...context.activePluginIds, "superboard-user"]);
 		await act(async () => {
 			network.rejectLinkStatistics?.(new Error("Stale link provider failure"));
 		});

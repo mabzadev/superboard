@@ -1,3 +1,6 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
+import { parseBillingClientContext } from "@superboard/api-worker/billing-client-context";
 import {
 	fetchStoreCatalog,
 	finalizeGooglePurchase,
@@ -5,11 +8,15 @@ import {
 	verifyAppleTransaction,
 	verifyGooglePurchase,
 } from "@superboard/api-worker/store-verification";
+import {
+	createStripeCheckout,
+	createStripePortal,
+	processStripeWebhook,
+} from "@superboard/api-worker/stripe-billing";
 import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
 import { configuredSecrets, matchesAnySecret } from "@superboard/contracts/secret";
 import { Hono } from "hono";
 
-import { drainAnalyticsFactOutbox } from "../../../superboard-core/api/src/lib/analytics-facts";
 import {
 	applyVerifiedPurchase,
 	identifyCustomer,
@@ -41,7 +48,7 @@ import catalogLedger from "./catalog-ledger.js";
 import { parseReceiptRequest, publicError } from "./contracts";
 
 type Bindings = Env & BillingEnv;
-const app = new Hono<{ Bindings: Bindings }>();
+const app = registerRouter(new Hono<{ Bindings: Bindings }>(), {"service":"billing","module":"index.app","pluginId":"superboard-billing","surface":"internal","access":"internal"});
 
 app.get("/internal/v1/health", async (c) => {
 	return c.json(await billingWorkerReadiness(c.env));
@@ -233,6 +240,7 @@ app.post("/internal/v1/customers/resolve", async (c) => {
 				projectId,
 				authorization: authorization || undefined,
 				anonymousId: anonymousId || undefined,
+				clientContext: parseBillingClientContext(body.client_context),
 			}),
 		});
 	} catch (error) {
@@ -328,10 +336,47 @@ app.post("/internal/v1/reconcile", async (c) =>
 	c.json({ data: await reconcileBillingState(c.env) }),
 );
 
+for (const action of ["checkout", "portal", "webhook"] as const) {
+	app.post(`/internal/v1/stripe/${action}`, async (c) => {
+		const body = await boundedRecord(c.req.raw);
+		const projectId = requiredText(body.project_id, "project_id");
+		if (body.environment !== "sandbox" && body.environment !== "production")
+			throw publicError("environment_invalid", "Invalid environment");
+		const environment = body.environment;
+		if (action === "webhook")
+			return c.json(
+				await processStripeWebhook(
+					c.env,
+					projectId,
+					environment,
+					requiredText(body.payload, "payload", 1_048_576),
+					requiredText(body.signature, "signature"),
+				),
+			);
+		const customerId = requiredText(body.customer_id, "customer_id");
+		const input =
+			body.input && typeof body.input === "object" && !Array.isArray(body.input)
+				? Object.fromEntries(Object.entries(body.input))
+				: {};
+		return c.json(
+			action === "checkout"
+				? await createStripeCheckout(
+						c.env,
+						projectId,
+						customerId,
+						environment,
+						input,
+						requiredText(body.idempotency_key, "idempotency_key"),
+					)
+				: await createStripePortal(c.env, projectId, customerId, environment, input),
+		);
+	});
+}
+
 app.route("", catalogLedger);
 app.route("/internal/v1/admin/billing", purchasesAdminRoutes);
 app.route("/internal/v1/admin/purchases/projects", purchasesV2AdminRoutes);
-app.route("/internal/v1/admin/purchases/projects", purchasesAdminRoutes);
+app.defineRoute({ mount: "extend" }).route("/internal/v1/admin/purchases/projects", purchasesAdminRoutes);
 
 app.onError((error, c) => {
 	const status = Number((error as { status?: number }).status || 500);
@@ -406,13 +451,6 @@ async function sha256Hex(value: string): Promise<string> {
 const lifecycleWorker = {
 	fetch: app.fetch,
 	async scheduled(_controller, env, ctx) {
-		ctx.waitUntil(
-			drainAnalyticsFactOutbox(env).then((summary) => {
-				if (summary.inspected > 0) {
-					console.log(JSON.stringify({ event: "analytics_fact_outbox_drained", summary }));
-				}
-			}),
-		);
 		if (!env.BILLING_QUEUE) return;
 		ctx.waitUntil(env.BILLING_QUEUE.send({ type: "billing.reconcile" }));
 	},
@@ -516,4 +554,4 @@ const lifecycleWorker = {
 	},
 } satisfies ExportedHandler<Bindings>;
 
-export default withPluginTaskLifecycle("supbrd-plugmod-billing", lifecycleWorker);
+export default withRouteManifest((withPluginTaskLifecycle("superboard-billing", lifecycleWorker)), [app], {"service":"billing","pluginId":"superboard-billing"});

@@ -3,9 +3,9 @@
 	"schemaVersion": 4,
 	"deployments": [
 		{
-			"id": "mbza-development",
+			"id": "mabza-development",
 			"branch": "dev",
-			"target": "mbza-development",
+			"target": "mabza-development",
 			"githubEnvironment": "development",
 			"cloudflareEnvironment": "development",
 			"automaticDeployment": {

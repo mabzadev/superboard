@@ -17,9 +17,9 @@ import {
 const CHECKSUM_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
 test("installation verification accepts the real Worker and admin health receipts", async () => {
-	const plan = await buildFreshInstancePlan("mbza-development");
+	const plan = await buildFreshInstancePlan("mabza-development");
 	const prepared = await prepareTarget({
-		targetName: "mbza-development",
+		targetName: "mabza-development",
 		environment: "local",
 		adapter: "local",
 	});
@@ -64,10 +64,10 @@ test("installation verification accepts the real Worker and admin health receipt
 });
 
 test("one target plans a blank local then development Instance with verifiable evidence", async () => {
-	const plan = await buildFreshInstancePlan("mbza-development");
+	const plan = await buildFreshInstancePlan("mabza-development");
 
 	assert.equal(plan.kind, "superboard-fresh-instance-proof-plan");
-	assert.equal(plan.target, "mbza-development");
+	assert.equal(plan.target, "mabza-development");
 	assert.deepEqual(
 		plan.adapters.map(({ environment, adapter }) => ({ environment, adapter })),
 		[
@@ -95,7 +95,7 @@ test("one target plans a blank local then development Instance with verifiable e
 });
 
 test("the executable proof rejects different runtime outcomes between adapters", async () => {
-	const plan = await buildFreshInstancePlan("mbza-development");
+	const plan = await buildFreshInstancePlan("mabza-development");
 	const runtime = plan.adapters.map(
 		({ environment, adapter, artifact_checksum, graph_checksum }) => ({
 			environment,
@@ -143,7 +143,7 @@ test("the executable proof rejects different runtime outcomes between adapters",
 		receipt_checksum: `sha256:${"2".repeat(64)}`,
 	};
 	await assert.rejects(
-		runFreshInstanceProof("mbza-development", {
+		runFreshInstanceProof("mabza-development", {
 			execute: (step) => {
 				const workerIndex =
 					step.id === "local_workers" ? 0 : step.id === "development_workers" ? 1 : -1;
@@ -191,7 +191,7 @@ test("receipt verification rejects a signed summary without executable evidence"
 });
 
 test("receipt verification accepts independently sealed complete evidence", async () => {
-	const plan = await buildFreshInstancePlan("mbza-development");
+	const plan = await buildFreshInstancePlan("mabza-development");
 	const evidenceSources = [
 		{
 			id: "target_adapters",

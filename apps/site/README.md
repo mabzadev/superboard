@@ -91,7 +91,7 @@ From the repository root:
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm target:orchestrate check --target mbza-development --environment local --adapter local
+pnpm target:orchestrate check --target mabza-development --environment local --adapter local
 pnpm site:check
 ```
 
@@ -116,15 +116,15 @@ Generate the Site, Gateway, and enabled Worker configurations from the local
 target materialization:
 
 ```bash
-pnpm target:orchestrate configure --target mbza-development --environment local --adapter local
+pnpm target:orchestrate configure --target mabza-development --environment local --adapter local
 ```
 
 Apply every target-owned migration to local Wrangler storage, then start the
 Site, Gateway, and enabled Workers:
 
 ```bash
-pnpm target:orchestrate migrate --target mbza-development --environment local --adapter local
-pnpm target:orchestrate start --target mbza-development --environment local --adapter local
+pnpm target:orchestrate migrate --target mabza-development --environment local --adapter local
+pnpm target:orchestrate start --target mabza-development --environment local --adapter local
 ```
 
 To test plugin activation and deactivation from EmDash Admin, provide
@@ -133,7 +133,7 @@ JWK with `alg: ES256` and an immutable `kid`. Keep the file and key out of Git.
 Start the local target with Release operations enabled:
 
 ```bash
-pnpm target:orchestrate start --target mbza-development --environment local --adapter local --release-operations
+pnpm target:orchestrate start --target mabza-development --environment local --adapter local --release-operations
 ```
 
 The option also applies to local `configure` and `migrate` commands. Each
@@ -147,7 +147,7 @@ the explicit Site preview route:
 
 ```bash
 node scripts/cloudflare/deploy.mjs \
-  --target mbza-development \
+  --target mabza-development \
   --environment development \
   --service site \
   --site-preview-route \

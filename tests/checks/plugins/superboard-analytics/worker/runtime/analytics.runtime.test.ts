@@ -12,7 +12,10 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { evaluateAnalyticsAlerts } from "../../../../../../packages/plugins/superboard-analytics/worker/src/automations";
-import { handleAnalyticsQueue } from "../../../../../../packages/plugins/superboard-analytics/worker/src/ingestion";
+import {
+	handleAnalyticsQueue,
+	ingestAnalyticsEvents,
+} from "../../../../../../packages/plugins/superboard-analytics/worker/src/ingestion";
 
 const secret = "analytics-runtime-secret";
 
@@ -79,6 +82,47 @@ async function projectEvent(projectId: number, eventId: string, messageId: strin
 }
 
 describe("Analytics in the Workers runtime", () => {
+	it("projects collected core events without forwarding a second copy to Marketing", async () => {
+		const results = await ingestAnalyticsEvents(
+			env,
+			{
+				projectId: 91,
+				instanceId: 10,
+				projectRef: "10-test",
+				environment: "test",
+				actorId: 0,
+				role: "sdk",
+				requestId: "core-event",
+				issuedAt: Math.floor(Date.now() / 1000),
+			},
+			[
+				{
+					schema_version: 1,
+					event_id: "core-event",
+					event_name: "screen.viewed",
+					source: "sdk",
+					application_id: "core-app",
+					occurred_at: new Date().toISOString(),
+					properties: {},
+				},
+			],
+			{ coreCollection: true },
+		);
+		expect(results[0]?.status).toBe("accepted");
+		expect((await projectEvent(91, "core-event", "core-projection")).explicitAcks).toEqual([
+			"core-projection",
+		]);
+		expect(
+			await env.DB.prepare(
+				"SELECT status FROM analytics_event_receipts WHERE project_id='91' AND event_id='core-event'",
+			).first(),
+		).toEqual({ status: "projected" });
+		expect(
+			await env.DB.prepare(
+				"SELECT COUNT(*) total FROM analytics_marketing_signal_outbox WHERE project_id='91'",
+			).first(),
+		).toEqual({ total: 0 });
+	});
 	it("projects events and retains integration delivery when Marketing is absent", async () => {
 		const event = {
 			schema_version: 1,
@@ -166,8 +210,8 @@ describe("Analytics in the Workers runtime", () => {
 				storage: { hot: "d1", archive: "r2", pipeline: "queue" },
 				schema: {
 					status: "current",
-					expectedMigration: "0002_countly_capabilities.sql",
-					latestMigration: "0002_countly_capabilities.sql",
+					expectedMigration: env.D1_EXPECTED_MIGRATION,
+					latestMigration: env.D1_EXPECTED_MIGRATION,
 				},
 				metrics: {
 					ingestion: {

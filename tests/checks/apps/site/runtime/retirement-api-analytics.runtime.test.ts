@@ -9,7 +9,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-analytics";
+const plugin = "superboard-analytics";
 const file = "retirement-api-analytics.runtime.test.ts";
 type Items = { items: Array<Record<string, unknown>> };
 test("canonical Analytics APIs read projected trusted events and persist reports, cohorts, remote configuration and jobs", async () => {

@@ -202,7 +202,7 @@ export async function lintSuperBoardBrandProject(repositoryRoot = root) {
 export async function checkSuperBoardBrand({ repositoryRoot = root } = {}) {
 	const manifest = await validateSuperBoardBrand({ repositoryRoot });
 	const developmentTarget = JSON.parse(
-		await readFile(resolve(repositoryRoot, "infra/targets/mbza-development.json"), "utf8"),
+		await readFile(resolve(repositoryRoot, "infra/targets/mabza-development.json"), "utf8"),
 	);
 	const violations = [];
 	if (
@@ -210,15 +210,15 @@ export async function checkSuperBoardBrand({ repositoryRoot = root } = {}) {
 			manifest.developmentDomains.dashboard ||
 		developmentTarget.domains?.shortlinks !== manifest.developmentDomains.shortLinks
 	) {
-		violations.push("MBZA domains do not match the canonical SuperBoard brand contract");
+		violations.push("MABZA domains do not match the canonical SuperBoard brand contract");
 	}
-	const retiredDashboard = ["grow", "mbza", "dev"].join(".");
+	const retiredDashboard = ["grow", "mabza", "dev"].join(".");
 	if (
 		!developmentTarget.retiredDomains?.some(
 			(entry) => entry.hostname === retiredDashboard && entry.policy === "must-be-unassigned",
 		)
 	) {
-		violations.push("the retired MBZA dashboard domain is not fail-closed");
+		violations.push("the retired MABZA dashboard domain is not fail-closed");
 	}
 	violations.push(
 		...(await lintSuperBoardBrandProject(repositoryRoot)).map(

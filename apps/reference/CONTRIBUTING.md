@@ -1,7 +1,7 @@
 # Contributing to SuperBoard Reference
 
 The `dev` branch tracks the SuperBoard platform `dev` branch and publishes the
-MBZA acceptance application. `main` represents the reviewed reference release
+MABZA acceptance application. `main` represents the reviewed reference release
 and must pin immutable platform SDK tags. Both branches require the aggregate
 `Reference gate` and an approving CODEOWNERS review. A platform-triggered
 acceptance run rejects any SHA that is not part of the official platform `dev`

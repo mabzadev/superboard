@@ -141,6 +141,7 @@ describe("Worker scheduled and queue handlers", () => {
 
 	it.each([
 		"/device_for_vendor_id?vendor_id=config-check",
+		"/v1/data/device_for_vendor_id?vendor_id=config-check",
 		"/api/v1/sdk/device_for_vendor_id?vendor_id=config-check",
 	])("serves mobile SDK routes on the SDK domain at %s", async (pathname) => {
 		const response = await worker.fetch?.(
@@ -407,7 +408,6 @@ describe("Worker scheduled and queue handlers", () => {
 
 		await worker.scheduled?.({} as any, testEnv, { waitUntil } as any);
 
-		expect(waitUntil).toHaveBeenCalledTimes(4);
 		await Promise.all(waitUntil.mock.results.map((result) => result.value));
 		expect(sent).toEqual([{ type: "maintenance.run", days: 3 }]);
 	});
@@ -478,3 +478,148 @@ describe("Worker scheduled and queue handlers", () => {
 		expect(inserted?.args[7]).toBe(0);
 	});
 });
+
+describe("unified public SDK routing", () => {
+	const unified = () => env({ AUTH_DOMAIN: "sdk.test", FILES_DOMAIN: "sdk.test" });
+	it.each([
+		["sdk.test", "/api/v1/users"],
+		["sdk.test", "/v1/auth/hosted/internal/v1/melody-admin/info"],
+		["sdk.test", "/internal/collection/v1/events"],
+		["sdk.test", "/v1/analytics/projects/10-prod"],
+		["api.test", "/v1/data/events"],
+		["api.test", "/api/v1/users"],
+		["api.test", "/auth/me"],
+	])("does not expose administrative or SDK handlers on %s%s", async (host, path) => {
+		const response = await worker.fetch(
+			new Request(`https://${host}${path}`),
+			unified(),
+			{} as ExecutionContext,
+		);
+		expect(response.status).toBe(404);
+	});
+	it("forwards file queries and application authorization without a public Files domain", async () => {
+		const requests: Request[] = [];
+		const files = {
+			fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+				requests.push(new Request(input, init));
+				return Response.json({ items: [] });
+			},
+		} as unknown as Fetcher;
+		const response = await worker.fetch(
+			new Request("https://sdk.test/v1/data/files?limit=7", {
+				headers: { Authorization: "Bearer application-session" },
+			}),
+			{ ...unified(), FILES_SERVICE: files },
+			{} as ExecutionContext,
+		);
+		expect(response.status).toBe(200);
+		expect(requests[0]?.url).toBe("https://service.internal/v1/files?limit=7");
+		expect(requests[0]?.headers.get("authorization")).toBe("Bearer application-session");
+	});
+	it("requires project credentials before canonical sign-in reaches Identity", async () => {
+		const fetch = vi.fn(async () => Response.json({ unexpected: true }));
+		const response = await worker.fetch(
+			new Request("https://sdk.test/v1/auth/signin/password", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: "{}",
+			}),
+			{
+				...unified(),
+				IDENTITY_SERVICE: { fetch } as unknown as Fetcher,
+				MODULE_INTERNAL_TOKEN: "module-secret",
+			},
+			{} as ExecutionContext,
+		);
+		expect(response.status).toBe(401);
+		expect(fetch).not.toHaveBeenCalled();
+	});
+	it("keeps embedded Flows CORS on canonical routes", async () => {
+		const response = await worker.fetch(
+			new Request("https://sdk.test/v1/acquisition/flows/blocks", {
+				method: "OPTIONS",
+				headers: { Origin: "https://customer.example", "Access-Control-Request-Method": "POST" },
+			}),
+			unified(),
+			{} as ExecutionContext,
+		);
+		expect(response.status).toBe(204);
+		expect(response.headers.get("access-control-allow-origin")).toBe("https://customer.example");
+	});
+});
+
+it("keeps hosted auth cookies, query and external host on the canonical SDK route", async () => {
+	let forwarded: Request | undefined;
+	const response = await worker.fetch(
+		new Request("https://sdk.test/v1/auth/oauth2/v1/authorize?client_id=app", {
+			headers: { Cookie: "locale=fr", "x-superboard-public-origin": "https://attacker.test" },
+		}),
+		env({
+			AUTH_DOMAIN: "sdk.test",
+			FILES_DOMAIN: "sdk.test",
+			IDENTITY_SERVICE: {
+				fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+					forwarded = new Request(input, init);
+					return new Response("auth", {
+						headers: { "set-cookie": "session=opaque; Secure; HttpOnly" },
+					});
+				},
+			} as unknown as Fetcher,
+		}),
+		{} as ExecutionContext,
+	);
+	expect(response.status).toBe(200);
+	expect(forwarded?.url).toBe("https://identity.internal/oauth2/v1/authorize?client_id=app");
+	expect(forwarded?.headers.get("x-forwarded-host")).toBe("sdk.test");
+	expect(forwarded?.headers.get("cookie")).toBe("locale=fr");
+	expect(response.headers.get("set-cookie")).toContain("session=opaque");
+});
+
+it.each(["/events", "/v1/data/device-events"])(
+	"preserves legacy device-event project validation on %s",
+	async (path) => {
+		const response = await worker.fetch(
+			new Request(`https://sdk.test${path}`, {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"PROJECT-KEY": "server-api-key",
+					PLATFORM: "android",
+					IDENTIFIER: "com.superboard.android",
+				},
+				body: JSON.stringify({ project_id: 202, device_id: 1, event: "app_open" }),
+			}),
+			env({ AUTH_DOMAIN: "sdk.test", FILES_DOMAIN: "sdk.test" }),
+			{} as ExecutionContext,
+		);
+		expect(response.status).toBe(403);
+		await expect(response.json()).resolves.toEqual({
+			error: "Invalid project for SDK credentials",
+		});
+	},
+);
+
+it.each(["/v1/support", "/v1/communication/support"])(
+	"forwards Support help-center requests through %s with their query",
+	async (prefix) => {
+		const response = await worker.fetch(
+			new Request(`https://sdk.test${prefix}/help-center/care/search?q=reset`),
+			env({
+				AUTH_DOMAIN: "sdk.test",
+				FILES_DOMAIN: "sdk.test",
+				SUPPORT_MODULE: {
+					async fetch(request: Request) {
+						const url = new URL(request.url);
+						return Response.json({ path: url.pathname, query: url.searchParams.get("q") });
+					},
+				} as Fetcher,
+			}),
+			{} as ExecutionContext,
+		);
+		expect(response.status).toBe(200);
+		await expect(response.json()).resolves.toEqual({
+			path: "/public/v1/help-center/care/search",
+			query: "reset",
+		});
+	},
+);

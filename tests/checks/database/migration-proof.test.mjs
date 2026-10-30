@@ -42,7 +42,7 @@ test("every declared Store has deterministic source/Store and non-destructive ev
 });
 
 test("a target-scoped rehearsal converges only Stores owned by its installed plugins", async () => {
-	const pluginIds = ["supbrd-plugmod-onboardings", "supbrd-plugmod-paywalls"];
+	const pluginIds = ["superboard-onboardings", "superboard-paywalls"];
 	const proof = await buildMigrationRehearsalProof({ pluginIds });
 
 	assert.deepEqual(

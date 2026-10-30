@@ -1,3 +1,5 @@
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { localizeExperienceDefinition } from "@superboard/contracts/experience-localization";
 import { Hono } from "hono";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
@@ -41,7 +43,7 @@ type PlacementRow = Row & {
   active: number;
 };
 
-const app = new Hono<AppShape>();
+const app = registerRouter(new Hono<AppShape>(), {"service":"paywalls","module":"index.app","pluginId":"superboard-paywalls","surface":"internal","access":"internal"});
 const auth = internalAuth();
 app.get("/internal/v1/health", async (c) => {
   try {
@@ -1142,4 +1144,4 @@ function now(): string {
   return new Date().toISOString();
 }
 
-export default app;
+export default withRouteManifest((app), [app], {"service":"paywalls","pluginId":"superboard-paywalls"});

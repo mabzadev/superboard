@@ -61,6 +61,12 @@
 			"required": true
 		},
 		{
+			"name": "customApiBaseUrl",
+			"key": "superboard_custom_api_base_url",
+			"type": "string",
+			"required": false
+		},
+		{
 			"name": "applicationIdentifier",
 			"key": "superboard_application_identifier",
 			"type": "string",

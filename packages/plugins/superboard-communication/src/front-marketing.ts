@@ -10,7 +10,7 @@ const marketing = navigationGroup({
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
-	plugin_id: "supbrd-plugmod-marketing",
+	plugin_id: "superboard-marketing",
 	plugin_label: "Marketing",
 	description:
 		"Build campaigns, journeys, messages, and channel settings from the active Marketing plugin.",

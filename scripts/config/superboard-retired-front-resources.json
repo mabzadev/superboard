@@ -2,7 +2,7 @@
 	"source_commit": "74949468d104b112db40d1d35a6022fff3bc2589",
 	"resources": [
 		{
-			"target": "mbza-development",
+			"target": "mabza-development",
 			"workers": {
 				"development": "superboard-dashboard-dev",
 				"local": "superboard-dashboard-local"

@@ -59,7 +59,13 @@ function snapshot(value: unknown): AuthenticationSettingsSnapshot {
 	};
 }
 
-export default function AuthenticationSettingsPage() {
+export default function AuthenticationSettingsPage({
+	embeddedGroups,
+	onInvalidGroup,
+}: {
+	embeddedGroups?: AuthenticationSettingsGroup[];
+	onInvalidGroup?(group: AuthenticationSettingsGroup): void;
+} = {}) {
 	const { locale } = useFrontContext();
 	const { selectedProject } = useProjectSelection();
 	const client = useQueryClient();
@@ -76,28 +82,32 @@ export default function AuthenticationSettingsPage() {
 	});
 	return (
 		<section className="ds-page space-y-5">
-			<header className="ds-page-header">
-				<div>
-					<h1 className="ds-page-title">{i18n._("title")}</h1>
-					<p className="ds-page-description">{i18n._("description")}</p>
-				</div>
-			</header>
-			<SectionNavigation />
-			<nav aria-label={i18n._("sections")} className="flex flex-wrap gap-2">
-				{tabs.map((item) => (
-					<Button
-						key={item}
-						type="button"
-						variant={group === item ? "primary" : "secondary"}
-						aria-pressed={group === item}
-						onClick={() => {
-							setGroup(item);
-						}}
-					>
-						{i18n._(item)}
-					</Button>
-				))}
-			</nav>
+			{!embeddedGroups && (
+				<header className="ds-page-header">
+					<div>
+						<h1 className="ds-page-title">{i18n._("title")}</h1>
+						<p className="ds-page-description">{i18n._("description")}</p>
+					</div>
+				</header>
+			)}
+			{!embeddedGroups && <SectionNavigation />}
+			{!embeddedGroups && (
+				<nav aria-label={i18n._("sections")} className="flex flex-wrap gap-2">
+					{tabs.map((item) => (
+						<Button
+							key={item}
+							type="button"
+							variant={group === item ? "primary" : "secondary"}
+							aria-pressed={group === item}
+							onClick={() => {
+								setGroup(item);
+							}}
+						>
+							{i18n._(item)}
+						</Button>
+					))}
+				</nav>
+			)}
 			{group === "configuration" && <PluginConfigurationTab locale={locale} />}
 			{query.isPending
 				? group !== "configuration" && (
@@ -124,6 +134,8 @@ export default function AuthenticationSettingsPage() {
 								key={projectRef}
 								initial={query.data}
 								group={group}
+								embeddedGroups={embeddedGroups}
+								onInvalidGroup={onInvalidGroup}
 								setGroup={setGroup}
 								endpoint={endpoint}
 								locale={locale}
@@ -140,6 +152,8 @@ type SettingsTab = AuthenticationSettingsGroup | "configuration";
 const tabs: SettingsTab[] = [...groups, "configuration"];
 
 function SettingsForm({
+	embeddedGroups,
+	onInvalidGroup,
 	initial,
 	group,
 	setGroup,
@@ -147,6 +161,8 @@ function SettingsForm({
 	locale,
 	onUpdate,
 }: {
+	embeddedGroups?: AuthenticationSettingsGroup[];
+	onInvalidGroup?(group: AuthenticationSettingsGroup): void;
 	initial: AuthenticationSettingsSnapshot;
 	group: SettingsTab;
 	setGroup(group: SettingsTab): void;
@@ -205,7 +221,10 @@ function SettingsForm({
 		} catch (cause) {
 			if (cause instanceof AuthenticationSettingsError) {
 				const field = authenticationSettingDefinitions[cause.field];
-				if (field) setGroup(field.group);
+				if (field) {
+					setGroup(field.group);
+					onInvalidGroup?.(field.group);
+				}
 				setError(`${t(cause.field)}: ${t("invalidValue")}`);
 				return;
 			}
@@ -240,11 +259,15 @@ function SettingsForm({
 			}}
 		>
 			<>
-				{group === "providers" && <p className="text-kumo-subtle">{t("providerHelp")}</p>}
+				{(embeddedGroups?.includes("providers") ?? group === "providers") && (
+					<p className="text-kumo-subtle">{t("providerHelp")}</p>
+				)}
 				<fieldset disabled={busy} className="grid gap-5 md:grid-cols-2">
-					<legend className="sr-only">{t(group)}</legend>
+					<legend className="sr-only">{t(embeddedGroups?.[0] ?? group)}</legend>
 					{Object.entries(authenticationSettingDefinitions)
-						.filter(([, field]) => field.group === group)
+						.filter(([, field]) =>
+							embeddedGroups ? embeddedGroups.includes(field.group) : field.group === group,
+						)
 						.map(([key, field]) => {
 							const value = values[key];
 							return (
@@ -265,6 +288,7 @@ function SettingsForm({
 											<Input
 												className="w-full"
 												id={`setting-${key}`}
+												aria-label={t(key)}
 												value={Array.isArray(value) ? value.join(", ") : String(value ?? "")}
 												onChange={(event) => {
 													change(key, event.target.value);
@@ -279,7 +303,7 @@ function SettingsForm({
 							);
 						})}
 				</fieldset>
-				{group === "general" && current.serverUrl && (
+				{(embeddedGroups?.includes("general") ?? group === "general") && current.serverUrl && (
 					<details className="space-y-2 rounded border border-kumo-subtle p-3 text-sm">
 						<summary className="cursor-pointer font-medium">{t("integrationLinks")}</summary>
 						<p className="text-kumo-subtle">{t("managedAddresses")}</p>

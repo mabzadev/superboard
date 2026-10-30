@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
 import { Hono } from "hono";
 
@@ -25,7 +26,7 @@ import { resolveSiteOperatorInstance } from "../lib/site-operator-scope";
 import { Env } from "../types";
 import { buildPlatformStatus } from "./platform-status";
 
-const mcp = new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>();
+const mcp = registerRouter(new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>(), {"service":"api","module":"routes.mcp.mcp","pluginId":"superboard-mcp","surface":"internal","access":"operator"});
 mcp.use("*", siteOperatorAdapter("mcp"));
 const nativeDynamicPath = /^\/api\/v1\/mcp\/(?:links|campaigns|analytics|redirects)(?:\/|$)/u;
 mcp.use("*", async (c, next) => {

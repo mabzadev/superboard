@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
 import { getOrCreateProject, parseProjectExternalId } from "../lib/db";
@@ -22,7 +23,7 @@ type InboxItem = {
 	source: Record<string, unknown>;
 };
 
-const inbox = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+const inbox = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.inbox-admin.inbox","pluginId":"superboard-support","surface":"internal","access":"operator"});
 inbox.use("*", authMiddleware);
 
 async function projectFor(c: any) {

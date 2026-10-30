@@ -1,4 +1,4 @@
-export const pluginId = "supbrd-plugmod-marketing";
+export const pluginId = "superboard-marketing";
 export const views = {
 	"superboard.notifications": () => import("./PushNotificationsPage.js"),
 	"superboard.marketing_campaigns": () => import("./views/superboard.marketing_campaigns.js"),

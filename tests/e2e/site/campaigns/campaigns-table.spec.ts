@@ -20,13 +20,13 @@ test("creates a campaign and reopens its real named detail from the list", async
 	await page.getByRole("button", { name: new RegExp(name) }).click();
 	await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 	await evidence(
-		"supbrd-plugmod-dynamic-links",
+		"superboard-dynamic-links",
 		"superboard.dynamic_links_campaigns",
 		[id],
 		"Created campaign, reloaded its named detail, and reopened it from the persisted list.",
 	);
 	await evidence(
-		"supbrd-plugmod-dynamic-links",
+		"superboard-dynamic-links",
 		"superboard.dynamic_links_campaigns_by_id",
 		[id],
 		"Resolved persisted campaign identity and its links view after navigation and reload.",

@@ -1,3 +1,4 @@
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from 'hono';
 import { Env } from '../types';
 import type { PushDeliveryEnv } from '../lib/push-credentials.js';
@@ -21,8 +22,8 @@ import {
   requirePushCredential,
 } from '../lib/push-credentials';
 
-const push = new Hono<{ Bindings: Env }>();
-export const internalPush = new Hono<{ Bindings: Env }>();
+const push = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.push.push","pluginId":"superboard-marketing","surface":"internal","access":"operator"});
+export const internalPush = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.push.internalPush","pluginId":"superboard-marketing","surface":"internal","access":"internal"});
 
 function base64url(input: ArrayBuffer | Uint8Array | string) {
   const bytes = typeof input === 'string'

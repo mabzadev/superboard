@@ -1,10 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+
+import { describe, expect, it, vi, onTestFinished } from "vitest";
 
 import {
 	AccountErasureError,
 	eraseApplicationAccount,
 } from "../../../../../../../packages/plugins/superboard-core/api/src/lib/account-erasure";
 import type { Env } from "../../../../../../../packages/plugins/superboard-core/api/src/types";
+import { sqliteD1 } from "../../helpers/sqlite-d1.js";
 
 describe("application account erasure coordinator", () => {
 	it("erases every configured subject store and revokes Identity last", async () => {
@@ -22,9 +26,20 @@ describe("application account erasure coordinator", () => {
 
 		expect(result).toMatchObject({
 			status: "completed",
-			completedSteps: ["app", "analytics", "marketing", "support", "custom", "billing", "identity"],
+			completedSteps: [
+				"core_collection",
+				"app",
+				"analytics",
+				"marketing",
+				"support",
+				"custom",
+				"billing",
+				"identity",
+			],
 		});
-		expect(calls.map(({ service }) => service)).toEqual(result.completedSteps);
+		expect(calls.map(({ service }) => service)).toEqual(
+			result.completedSteps.filter((step) => step !== "core_collection"),
+		);
 		expect(calls.at(-1)?.service).toBe("identity");
 		expect(calls[0].request.headers.get("x-project-ref")).toBe("10-test");
 		expect(calls[0].request.headers.get("x-context-signature")).toMatch(/^[A-Za-z0-9_-]+$/u);
@@ -58,7 +73,11 @@ describe("application account erasure coordinator", () => {
 			service: "marketing",
 		});
 		expect(database.row?.status).toBe("failed");
-		expect(JSON.parse(database.row?.completed_steps_json || "[]")).toEqual(["app", "analytics"]);
+		expect(JSON.parse(database.row?.completed_steps_json || "[]")).toEqual([
+			"core_collection",
+			"app",
+			"analytics",
+		]);
 
 		marketingAvailable = true;
 		calls.length = 0;
@@ -127,99 +146,25 @@ function erasureDatabase() {
 		lease_id: string | null;
 		lease_expires_at: string | null;
 	};
-	let row: Row | null = null;
-	const execute = async (
-		operation: "first" | "all" | "run",
-		sql: string,
-		args: unknown[],
-	): Promise<unknown> => {
-		const normalized = sql.replace(/\s+/gu, " ").trim();
-		if (operation === "run" && normalized.startsWith("INSERT INTO application_account_erasures")) {
-			row ??= {
-				id: String(args[0]),
-				project_id: Number(args[1]),
-				instance_id: Number(args[2]),
-				project_ref: String(args[3]),
-				application_user_id: String(args[4]),
-				application_user_hash: String(args[5]),
-				status: "processing",
-				completed_steps_json: "[]",
-				lease_id: null,
-				lease_expires_at: null,
-			};
-			return changed(1);
-		}
-		if (
-			operation === "first" &&
-			normalized.startsWith("SELECT * FROM application_account_erasures")
-		) {
-			return row;
-		}
-		if (
-			operation === "first" &&
-			normalized.startsWith("UPDATE application_account_erasures SET status = 'processing'")
-		) {
-			if (!row || row.status === "completed" || row.lease_id) return null;
-			row.status = "processing";
-			row.lease_id = String(args[0]);
-			row.lease_expires_at = "2099-01-01T00:00:00.000Z";
-			return { ...row };
-		}
-		if (
-			operation === "run" &&
-			normalized.includes("completed_steps_json = ?") &&
-			normalized.includes("lease_expires_at = datetime")
-		) {
-			if (!row || row.lease_id !== args[2]) return changed(0);
-			row.completed_steps_json = String(args[0]);
-			return changed(1);
-		}
-		if (operation === "run" && normalized.includes("status = 'completed'")) {
-			if (!row || row.lease_id !== args[2]) return changed(0);
-			row.status = "completed";
-			row.application_user_id = null;
-			row.completed_steps_json = String(args[0]);
-			row.lease_id = null;
-			row.lease_expires_at = null;
-			return changed(1);
-		}
-		if (operation === "run" && normalized.includes("status = 'failed'")) {
-			if (!row || row.lease_id !== args[4]) return changed(0);
-			row.status = "failed";
-			row.completed_steps_json = String(args[0]);
-			row.lease_id = null;
-			row.lease_expires_at = null;
-			return changed(1);
-		}
-		if (
-			operation === "all" &&
-			normalized.startsWith("SELECT * FROM application_account_erasures")
-		) {
-			return { results: row ? [row] : [] };
-		}
-		throw new Error(`Unhandled account-erasure D1 ${operation}: ${normalized}`);
-	};
-	const db = {
-		prepare(sql: string) {
-			const statement = (args: unknown[]) => ({
-				first: () => execute("first", sql, args),
-				all: () => execute("all", sql, args),
-				run: () => execute("run", sql, args),
-			});
-			return {
-				bind: (...args: unknown[]) => statement(args),
-				...statement([]),
-			};
-		},
-	} as unknown as D1Database;
+	const sqlite = new DatabaseSync(":memory:");
+	onTestFinished(() => sqlite.close());
+	const migrations = new URL(
+		"../../../../../../../packages/plugins/superboard-core/api/migrations/",
+		import.meta.url,
+	);
+	for (const file of readdirSync(migrations)
+		.filter((file) => file.endsWith(".sql"))
+		.sort((a, b) => a.localeCompare(b)))
+		sqlite.exec(readFileSync(new URL(file, migrations), "utf8"));
+	sqlite.exec(
+		"INSERT INTO instances(id,api_key,uri_scheme) VALUES(10,'erasure-test','test'); INSERT INTO projects(id,instance_id,is_test,name,identifier) VALUES(12,10,1,'Test','test');",
+	);
 	return {
-		db,
+		db: sqliteD1(sqlite) as unknown as D1Database,
 		get row() {
-			return row;
+			return sqlite.prepare("SELECT * FROM application_account_erasures LIMIT 1").get() as
+				| Row
+				| undefined;
 		},
 	};
-}
-
-function changed(changes: number) {
-	return { success: true, meta: { changes } };
 }

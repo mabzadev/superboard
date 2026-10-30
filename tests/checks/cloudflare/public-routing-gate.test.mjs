@@ -19,7 +19,7 @@ test("staged production deploys private Workers without public routes", async ()
 });
 
 test("development public routing does not require a production receipt", async () => {
-	const { target } = await loadTarget("mbza-development");
+	const { target } = await loadTarget("mabza-development");
 	assert.equal(assertPublicRoutingReady(target, "development").routesEnabled, true);
 });
 

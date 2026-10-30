@@ -1,9 +1,9 @@
 import { z } from "zod";
 const pathProjectRefPattern = /\/(\d+-(?:test|prod))(?:\/|$)/u;
-import { resolvePluginApiOwner as inferPluginId } from "@superboard/contracts/plugin-api-owner";
 import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
 
-const pluginPattern = /^supbrd-(?:plug|plugmod)-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+const pluginPattern =
+	/^(?:supbrd-(?:core|(?:plug|plugmod)-[a-z0-9]+(?:-[a-z0-9]+)*)|superboard-[a-z0-9]+(?:-[a-z0-9]+)*)$/u;
 const idempotencyPattern = /^[A-Za-z0-9._:-]{8,200}$/u;
 const projectRefPattern = /^\d+-(?:test|prod)$/u;
 
@@ -160,7 +160,10 @@ export async function completeRepositoryCommand(
 	return publicOperation(existing);
 }
 
-export function resolveRepositoryCommandScope(url: URL): {
+export function resolveRepositoryCommandScope(
+	url: URL,
+	pluginId: string,
+): {
 	plugin_id: string;
 	project_ref: string;
 	adapter_operation: string;
@@ -170,7 +173,7 @@ export function resolveRepositoryCommandScope(url: URL): {
 		pathname.match(pathProjectRefPattern)?.[1] ??
 		url.searchParams.get("project_ref")?.match(projectRefPattern)?.[0] ??
 		"instance-wide";
-	const pluginId = inferPluginId(pathname);
+	if (!pluginId.trim()) throw new Error("ROUTE_OWNER_UNAVAILABLE");
 	return {
 		plugin_id: pluginId,
 		project_ref: projectRef,

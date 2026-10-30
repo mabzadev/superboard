@@ -91,5 +91,5 @@ before starting the next service. This avoids concurrent SQLite recovery when
 restarting an existing local instance.
 
 The normal local state directory remains
-`~/.local/share/superboard/local/mbza-development/`. See
+`~/.local/share/superboard/local/mabza-development/`. See
 [Development workflow](DEVELOPMENT_WORKFLOW.md) for the operational procedure.

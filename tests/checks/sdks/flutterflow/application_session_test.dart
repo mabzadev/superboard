@@ -165,7 +165,7 @@ void main() {
 
       final restored = await manager.restore();
 
-      expect(refreshRequest.url.path, '/auth/refresh');
+      expect(refreshRequest.url.path, '/v1/auth/refresh');
       expect(refreshRequest.headers['project-key'], 'project-key');
       expect(refreshRequest.headers['platform'], 'ios');
       expect(refreshRequest.headers['identifier'], 'com.example.app');
@@ -231,7 +231,7 @@ void main() {
         platform: 'ios',
         identifier: 'com.example.app',
         httpClient: MockClient((request) async {
-          if (request.url.path == '/auth/signin/password') {
+          if (request.url.path == '/v1/auth/signin/password') {
             return http.Response(
               jsonEncode({
                 'access_token': 'access-1',

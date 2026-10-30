@@ -80,10 +80,12 @@ test("seven installable business packages retain every component contract and st
 			commands: "command_id",
 			data_sources: "data_source_id",
 		}[collection];
+		const items = catalog.plugins
+			.flatMap(({ manifest }) => manifest[collection].map((item) => item[key]))
+			.filter((id) => !id.endsWith(".store.sdk_collection"))
+			.sort();
 		assert.deepEqual(
-			catalog.plugins
-				.flatMap(({ manifest }) => manifest[collection].map((item) => item[key]))
-				.sort(),
+			items,
 			originals.flatMap(({ manifest }) => manifest[collection].map((item) => item[key])).sort(),
 		);
 	}
@@ -97,14 +99,14 @@ test("one component change updates its package artifact and preserves unrelated 
 	const before = buildPluginPackages(topology);
 	const changed = structuredClone(topology);
 	changed.plugins.find(
-		({ manifest }) => manifest.plugin_id === "supbrd-plugmod-files",
+		({ manifest }) => manifest.plugin_id === "superboard-files",
 	).manifest.settings.schema.properties.max_upload_bytes.maximum += 1;
 	const after = buildPluginPackages(changed);
 	for (const plugin of before.plugins) {
 		const updated = after.plugins.find(
 			({ manifest }) => manifest.plugin_id === plugin.manifest.plugin_id,
 		);
-		if (plugin.components.includes("supbrd-plugmod-files"))
+		if (plugin.components.includes("superboard-files"))
 			assert.notEqual(updated.manifest.artifact_checksum, plugin.manifest.artifact_checksum);
 		else assert.equal(updated.manifest.artifact_checksum, plugin.manifest.artifact_checksum);
 	}
@@ -138,9 +140,9 @@ test("lint blocks a stale package catalogue and a restored standalone component 
 			writeFileSync(join(entries, directory, "src/index.ts"), "");
 		}
 		expectClean();
-		mkdirSync(join(entries, "supbrd-plugmod-flows"));
+		mkdirSync(join(entries, "superboard-flows"));
 		assert.equal(lintPluginPackageProject(root)[0].message, "PLUGIN_PACKAGE_ENTRYPOINTS_INVALID");
-		rmSync(join(entries, "supbrd-plugmod-flows"), { recursive: true });
+		rmSync(join(entries, "superboard-flows"), { recursive: true });
 		catalog.plugins[0].manifest.commands.pop();
 		writeFileSync(
 			join(root, "scripts/config/superboard-plugin-catalog.json"),

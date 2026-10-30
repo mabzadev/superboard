@@ -1,4 +1,4 @@
-import { canonicalFrontPath } from "@superboard/contracts/front-paths";
+import { canonicalFrontHref, canonicalFrontPath } from "@superboard/contracts/front-paths";
 import { applySeed, SchemaRegistry, validateSeed, type SeedFile } from "emdash";
 
 import seedJson from "../../seed/seed.json";
@@ -6,7 +6,7 @@ import { ensureNativeFrontMenus } from "./native-front-menu-bootstrap.js";
 import { nativeFrontPluginCatalog } from "./native-front-plugins.js";
 
 const VIEWS_BOOTSTRAP_KEY = Symbol.for("superboard:views-bootstrap");
-const VIEWS_BOOTSTRAP_VERSION = "10.2.2";
+const VIEWS_BOOTSTRAP_VERSION = "10.3.0";
 const seed = readSeedFile(seedJson);
 
 interface ViewsBootstrapState {
@@ -205,6 +205,20 @@ async function installPluginViews(db: Parameters<typeof applySeed>[0]): Promise<
 			{ version: seed.version, defaultLocale: seed.defaultLocale, content: { views } },
 			{ includeContent: true, onConflict: "skip" },
 		);
+	const retiredPaths = Array.from(surfaces.values(), (surface) => surface.path_pattern).filter(
+		(path) =>
+			path.startsWith("/auth") &&
+			new URL(canonicalFrontHref(path), "https://superboard.invalid").pathname !== path,
+	);
+	const locales = [...new Set([...existing.map((row) => row.locale), seed.defaultLocale ?? "en"])];
+	if (retiredPaths.length)
+		await viewsDb
+			.updateTable("ec_views")
+			.set({ deleted_at: new Date().toISOString() })
+			.where("path", "in", retiredPaths)
+			.where("locale", "in", locales)
+			.where("deleted_at", "is", null)
+			.execute();
 }
 
 async function upgradeViewRenderers(db: Parameters<typeof applySeed>[0]): Promise<void> {

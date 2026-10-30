@@ -10,7 +10,7 @@ import {
 	prepareApiPlugin,
 	proveApi,
 } from "./retirement-api-helpers.js";
-const plugin = "supbrd-plugmod-support";
+const plugin = "superboard-support";
 const file = "retirement-api-support.runtime.test.ts";
 test("canonical Support APIs persist settings, credentials, real conversation messages and published knowledge", async () => {
 	const scope = await prepareApiPlugin(plugin);

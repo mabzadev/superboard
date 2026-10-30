@@ -27,7 +27,7 @@ interface MatchedRoute {
 }
 
 export function resolveFrontRoute(
-	manifest: FrontRouteManifest,
+	manifest: Pick<FrontRouteManifest, "normalization" | "routes">,
 	requestedPath: string,
 ): FrontRouteResolution {
 	const normalizedPath = normalizeFrontPath(requestedPath, manifest.normalization);

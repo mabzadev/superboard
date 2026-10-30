@@ -1,8 +1,8 @@
 Actual canonical Analytics integration, projected events from real Worker queue and D1 persistence.
 [
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_overview",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_overview",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -17,8 +17,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_events",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_events",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -33,8 +33,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_event_analysis",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_event_analysis",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -45,8 +45,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_installations",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_installations",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -57,8 +57,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_purchases",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_purchases",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -69,8 +69,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_retention",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_retention",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -81,8 +81,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_sessions",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_sessions",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -93,8 +93,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_profiles",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_profiles",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -105,8 +105,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_views",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_views",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -117,8 +117,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_dimensions",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_dimensions",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -133,8 +133,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_crashes",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_crashes",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -145,8 +145,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_feedback",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_feedback",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -157,8 +157,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_report",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.create_analytics_report",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -169,8 +169,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_reports",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_reports",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -181,8 +181,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.update_analytics_report",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.update_analytics_report",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -193,8 +193,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_dashboard",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.create_analytics_dashboard",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -205,8 +205,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.update_analytics_dashboard",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.update_analytics_dashboard",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -217,8 +217,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_dashboards",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_dashboards",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -229,8 +229,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_cohort",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.create_analytics_cohort",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -241,8 +241,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.evaluate_analytics_cohort",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -253,8 +253,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_cohorts",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_cohorts",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -265,8 +265,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.upsert_analytics_remote_config",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -277,8 +277,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_remote_config",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_remote_config",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -289,8 +289,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_alert",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.create_analytics_alert",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -301,8 +301,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_alerts",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_alerts",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -313,8 +313,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.update_analytics_settings",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.update_analytics_settings",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -325,8 +325,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_settings",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.data_source.analytics_settings",
     "scenario": "read",
     "status": "passed",
     "type": "integration",
@@ -337,8 +337,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_operation",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.create_analytics_operation",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -349,8 +349,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.delete_analytics_report",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.delete_analytics_report",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",
@@ -361,8 +361,8 @@ Actual canonical Analytics integration, projected events from real Worker queue 
     ]
   },
   {
-    "plugin_id": "supbrd-plugmod-analytics",
-    "route_id": "gateway.supbrd-plugmod-analytics.command.delete_analytics_dashboard",
+    "plugin_id": "superboard-analytics",
+    "route_id": "gateway.superboard-analytics.command.delete_analytics_dashboard",
     "scenario": "mutation",
     "status": "passed",
     "type": "integration",

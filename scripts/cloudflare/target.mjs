@@ -398,11 +398,11 @@ export function cloudflareEnv(target, env = process.env) {
 }
 
 export function publicApiUrl(target) {
-	return `https://${target.domains.api}`;
+	return `https://${target.domains.auth === target.domains.sdk ? target.domains.sdk : target.domains.api}`;
 }
 
 export function publicAuthUrl(target) {
-	return `https://${target.domains.auth}`;
+	return `https://${target.domains.auth}${target.domains.auth === target.domains.sdk ? "/v1/auth" : ""}`;
 }
 
 export function publicDashboardUrl(target) {

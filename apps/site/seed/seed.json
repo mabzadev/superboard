@@ -93,83 +93,19 @@
 				},
 				{
 					"type": "custom",
-					"label": "Authentification",
+					"label": "Authentication",
 					"url": "/auth/users",
 					"cssClasses": "sb-icon-users",
 					"children": [
 						{
 							"type": "custom",
 							"label": "Users",
-							"url": "/auth/users",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Accounts",
-									"url": "/auth/users"
-								},
-								{
-									"type": "custom",
-									"label": "Profiles and installations",
-									"url": "/auth/customers"
-								},
-								{
-									"type": "custom",
-									"label": "Attributes",
-									"url": "/auth/user-attributes?lang=en"
-								},
-								{
-									"type": "custom",
-									"label": "Referrals",
-									"url": "/auth/referrals"
-								}
-							]
-						},
-						{
-							"type": "custom",
-							"label": "Access",
-							"url": "/auth/apps?lang=en",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Applications",
-									"url": "/auth/apps?lang=en"
-								},
-								{
-									"type": "custom",
-									"label": "Sign-in directory",
-									"url": "/auth/directory/users?lang=en"
-								},
-								{
-									"type": "custom",
-									"label": "Roles",
-									"url": "/auth/roles?lang=en"
-								},
-								{
-									"type": "custom",
-									"label": "Permissions",
-									"url": "/auth/scopes?lang=en"
-								},
-								{
-									"type": "custom",
-									"label": "Organizations",
-									"url": "/auth/orgs?lang=en"
-								},
-								{
-									"type": "custom",
-									"label": "SSO",
-									"url": "/auth/saml?lang=en"
-								}
-							]
+							"url": "/auth/users"
 						},
 						{
 							"type": "custom",
 							"label": "Settings",
 							"url": "/auth/settings?lang=en"
-						},
-						{
-							"type": "custom",
-							"label": "Activity",
-							"url": "/auth/logs?lang=en"
 						}
 					]
 				},
@@ -464,7 +400,7 @@
 						{
 							"type": "custom",
 							"label": "API keys",
-							"url": "/auth/access-key"
+							"url": "/auth/settings?tab=security&section=keys"
 						},
 						{
 							"type": "custom",
@@ -536,76 +472,12 @@
 						{
 							"type": "custom",
 							"label": "Utilisateurs",
-							"url": "/auth/users",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Comptes",
-									"url": "/auth/users"
-								},
-								{
-									"type": "custom",
-									"label": "Profils et installations",
-									"url": "/auth/customers"
-								},
-								{
-									"type": "custom",
-									"label": "Attributs",
-									"url": "/auth/user-attributes?lang=fr"
-								},
-								{
-									"type": "custom",
-									"label": "Parrainages",
-									"url": "/auth/referrals"
-								}
-							]
-						},
-						{
-							"type": "custom",
-							"label": "Accès",
-							"url": "/auth/apps?lang=fr",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Applications",
-									"url": "/auth/apps?lang=fr"
-								},
-								{
-									"type": "custom",
-									"label": "Annuaire de connexion",
-									"url": "/auth/directory/users?lang=fr"
-								},
-								{
-									"type": "custom",
-									"label": "Rôles",
-									"url": "/auth/roles?lang=fr"
-								},
-								{
-									"type": "custom",
-									"label": "Permissions",
-									"url": "/auth/scopes?lang=fr"
-								},
-								{
-									"type": "custom",
-									"label": "Organisations",
-									"url": "/auth/orgs?lang=fr"
-								},
-								{
-									"type": "custom",
-									"label": "SSO",
-									"url": "/auth/saml?lang=fr"
-								}
-							]
+							"url": "/auth/users"
 						},
 						{
 							"type": "custom",
 							"label": "Paramètres",
 							"url": "/auth/settings?lang=fr"
-						},
-						{
-							"type": "custom",
-							"label": "Journal",
-							"url": "/auth/logs?lang=fr"
 						}
 					]
 				},
@@ -900,7 +772,7 @@
 						{
 							"type": "custom",
 							"label": "Clés API",
-							"url": "/auth/access-key"
+							"url": "/auth/settings?tab=security&section=keys"
 						},
 						{
 							"type": "custom",
@@ -961,11 +833,11 @@
 				"status": "published",
 				"data": {
 					"name": "Dashboard",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics",
 					"path": "/analytics",
 					"description": "A cross-module view of acquisition, engagement and product performance.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -982,11 +854,11 @@
 				"status": "published",
 				"data": {
 					"name": "Customers",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.app_customers",
 					"path": "/auth/customers",
 					"description": "Acquisition identities and their complete app engagement history.",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1003,11 +875,11 @@
 				"status": "published",
 				"data": {
 					"name": "Users",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.users",
 					"path": "/auth/users",
 					"description": "Authentication, linked Google or Apple identities, sessions, subscriptions, entitlements and paywall activity.",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1024,11 +896,11 @@
 				"status": "published",
 				"data": {
 					"name": "Referrals",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.app_referrals",
 					"path": "/auth/referrals",
 					"description": "Referral codes, attributed customers and the complete conversion lifecycle.",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1045,11 +917,11 @@
 				"status": "published",
 				"data": {
 					"name": "Access Key",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.app_access_key",
 					"path": "/auth/access-key",
 					"description": "Authenticate public SuperBoard SDK requests without exposing an administrative session.",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1066,11 +938,11 @@
 				"status": "published",
 				"data": {
 					"name": "Libraries",
-					"plugin_id": "supbrd-plug-settings",
+					"plugin_id": "superboard-settings",
 					"route_id": "superboard.app_libraries",
 					"path": "/core/libraries",
 					"description": "Git-owned SDK versions, immutable release references and reusable FlutterFlow custom code.",
-					"renderer_id": "supbrd-plug-settings.renderer.admin_surface",
+					"renderer_id": "superboard-settings.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1087,11 +959,11 @@
 				"status": "published",
 				"data": {
 					"name": "Android Setup",
-					"plugin_id": "supbrd-plug-settings",
+					"plugin_id": "superboard-settings",
 					"route_id": "superboard.app_android_setup",
 					"path": "/core/android-setup",
 					"description": "Complete the five-step Android SDK integration and verify it against this project.",
-					"renderer_id": "supbrd-plug-settings.renderer.admin_surface",
+					"renderer_id": "superboard-settings.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1108,11 +980,11 @@
 				"status": "published",
 				"data": {
 					"name": "iOS Setup",
-					"plugin_id": "supbrd-plug-settings",
+					"plugin_id": "superboard-settings",
 					"route_id": "superboard.app_ios_setup",
 					"path": "/core/ios-setup",
 					"description": "Complete the five-step iOS SDK integration and verify it against this project.",
-					"renderer_id": "supbrd-plug-settings.renderer.admin_surface",
+					"renderer_id": "superboard-settings.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1129,11 +1001,11 @@
 				"status": "published",
 				"data": {
 					"name": "Web Setup",
-					"plugin_id": "supbrd-plug-settings",
+					"plugin_id": "superboard-settings",
 					"route_id": "superboard.app_web_setup",
 					"path": "/core/web-setup",
 					"description": "Complete the five-step Web SDK integration and verify it against this project.",
-					"renderer_id": "supbrd-plug-settings.renderer.admin_surface",
+					"renderer_id": "superboard-settings.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1150,11 +1022,11 @@
 				"status": "published",
 				"data": {
 					"name": "Overview",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.auth_settings",
 					"path": "/auth/settings",
 					"description": "",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1171,11 +1043,11 @@
 				"status": "published",
 				"data": {
 					"name": "Users",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.identity_by_lang_users",
 					"path": "/auth/directory/users",
 					"description": "",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1192,11 +1064,11 @@
 				"status": "published",
 				"data": {
 					"name": "User Attributes",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.identity_by_lang_user_attributes",
 					"path": "/auth/user-attributes",
 					"description": "",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1213,11 +1085,11 @@
 				"status": "published",
 				"data": {
 					"name": "Roles",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.identity_by_lang_roles",
 					"path": "/auth/roles",
 					"description": "",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1234,11 +1106,11 @@
 				"status": "published",
 				"data": {
 					"name": "Applications",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.auth_apps",
 					"path": "/auth/apps",
 					"description": "",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1255,11 +1127,11 @@
 				"status": "published",
 				"data": {
 					"name": "Scopes",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.identity_by_lang_scopes",
 					"path": "/auth/scopes",
 					"description": "",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1276,11 +1148,11 @@
 				"status": "published",
 				"data": {
 					"name": "Organizations",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.identity_by_lang_orgs",
 					"path": "/auth/orgs",
 					"description": "",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1297,11 +1169,11 @@
 				"status": "published",
 				"data": {
 					"name": "Logs",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.auth_logs",
 					"path": "/auth/logs",
 					"description": "",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1318,11 +1190,11 @@
 				"status": "published",
 				"data": {
 					"name": "SAML SSO",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.identity_by_lang_saml",
 					"path": "/auth/saml",
 					"description": "",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1339,11 +1211,11 @@
 				"status": "published",
 				"data": {
 					"name": "Account Policies",
-					"plugin_id": "supbrd-plug-user",
+					"plugin_id": "superboard-user",
 					"route_id": "superboard.identity_by_lang_account",
 					"path": "/auth/account-policies",
 					"description": "",
-					"renderer_id": "supbrd-plug-user.renderer.admin_surface",
+					"renderer_id": "superboard-user.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1360,11 +1232,11 @@
 				"status": "published",
 				"data": {
 					"name": "Purchases",
-					"plugin_id": "supbrd-plugmod-billing",
+					"plugin_id": "superboard-billing",
 					"route_id": "superboard.monetization_purchases",
 					"path": "/monetization/purchases",
 					"description": "Purchases, subscriptions, restorations, refunds and financial history.",
-					"renderer_id": "supbrd-plugmod-billing.renderer.admin_surface",
+					"renderer_id": "superboard-billing.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1381,11 +1253,11 @@
 				"status": "published",
 				"data": {
 					"name": "Customers",
-					"plugin_id": "supbrd-plugmod-billing",
+					"plugin_id": "superboard-billing",
 					"route_id": "superboard.monetization_customers",
 					"path": "/monetization/customers",
 					"description": "Application identities, subscriptions, entitlements, balances, transactions and paywall activity.",
-					"renderer_id": "supbrd-plugmod-billing.renderer.admin_surface",
+					"renderer_id": "superboard-billing.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1402,11 +1274,11 @@
 				"status": "published",
 				"data": {
 					"name": "Offerings",
-					"plugin_id": "supbrd-plug-products",
+					"plugin_id": "superboard-products",
 					"route_id": "superboard.monetization_offerings",
 					"path": "/monetization/offerings",
 					"description": "Manage the store catalog, packages and SDK-resolved offerings.",
-					"renderer_id": "supbrd-plug-products.renderer.admin_surface",
+					"renderer_id": "superboard-products.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1423,11 +1295,11 @@
 				"status": "published",
 				"data": {
 					"name": "Entitlements",
-					"plugin_id": "supbrd-plugmod-billing",
+					"plugin_id": "superboard-billing",
 					"route_id": "superboard.monetization_entitlements",
 					"path": "/monetization/entitlements",
 					"description": "Define SDK access rights and the products that unlock each right.",
-					"renderer_id": "supbrd-plugmod-billing.renderer.admin_surface",
+					"renderer_id": "superboard-billing.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1444,11 +1316,11 @@
 				"status": "published",
 				"data": {
 					"name": "Overview",
-					"plugin_id": "supbrd-plugmod-flows",
+					"plugin_id": "superboard-flows",
 					"route_id": "superboard.flows",
 					"path": "/acquisition/overview",
 					"description": "Monitor active workflows, user activity and runtime incidents.",
-					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
+					"renderer_id": "superboard-flows.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1465,11 +1337,11 @@
 				"status": "published",
 				"data": {
 					"name": "Workflows",
-					"plugin_id": "supbrd-plugmod-flows",
+					"plugin_id": "superboard-flows",
 					"route_id": "superboard.acquisition_workflows",
 					"path": "/acquisition/workflows",
 					"description": "Create, version, publish and analyze product experiences.",
-					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
+					"renderer_id": "superboard-flows.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1486,11 +1358,11 @@
 				"status": "published",
 				"data": {
 					"name": "Launchpad",
-					"plugin_id": "supbrd-plugmod-flows",
+					"plugin_id": "superboard-flows",
 					"route_id": "superboard.acquisition_launchpad",
 					"path": "/acquisition/launchpad",
 					"description": "Order workflow groups, priorities and concurrency for every environment.",
-					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
+					"renderer_id": "superboard-flows.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1507,11 +1379,11 @@
 				"status": "published",
 				"data": {
 					"name": "Users",
-					"plugin_id": "supbrd-plugmod-flows",
+					"plugin_id": "superboard-flows",
 					"route_id": "superboard.acquisition_users",
 					"path": "/acquisition/users",
 					"description": "Inspect user properties, workflow state and the complete activity journal.",
-					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
+					"renderer_id": "superboard-flows.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1528,11 +1400,11 @@
 				"status": "published",
 				"data": {
 					"name": "Components",
-					"plugin_id": "supbrd-plugmod-flows",
+					"plugin_id": "superboard-flows",
 					"route_id": "superboard.acquisition_components",
 					"path": "/acquisition/components",
 					"description": "Manage Basics V2 and custom component libraries without silently updating instances.",
-					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
+					"renderer_id": "superboard-flows.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1549,11 +1421,11 @@
 				"status": "published",
 				"data": {
 					"name": "Environments",
-					"plugin_id": "supbrd-plugmod-flows",
+					"plugin_id": "superboard-flows",
 					"route_id": "superboard.acquisition_settings_environments",
 					"path": "/acquisition/settings/environments",
 					"description": "Manage isolated release environments and their rotatable SDK keys.",
-					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
+					"renderer_id": "superboard-flows.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1570,11 +1442,11 @@
 				"status": "published",
 				"data": {
 					"name": "Localization",
-					"plugin_id": "supbrd-plugmod-flows",
+					"plugin_id": "superboard-flows",
 					"route_id": "superboard.acquisition_settings_localization",
 					"path": "/acquisition/settings/localization",
 					"description": "Configure language groups, default languages and fallback chains.",
-					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
+					"renderer_id": "superboard-flows.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1591,11 +1463,11 @@
 				"status": "published",
 				"data": {
 					"name": "SDK",
-					"plugin_id": "supbrd-plugmod-flows",
+					"plugin_id": "superboard-flows",
 					"route_id": "superboard.acquisition_settings_sdk",
 					"path": "/acquisition/settings/sdk",
 					"description": "Install JavaScript, React, Flutter or FlutterFlow against the SuperBoard API.",
-					"renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
+					"renderer_id": "superboard-flows.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1612,11 +1484,11 @@
 				"status": "published",
 				"data": {
 					"name": "Links",
-					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"plugin_id": "superboard-dynamic-links",
 					"route_id": "superboard.acquisition_dynamic_links",
 					"path": "/acquisition/dynamic-links",
 					"description": "Create, route and measure links across every platform and acquisition source.",
-					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
+					"renderer_id": "superboard-dynamic-links.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1633,11 +1505,11 @@
 				"status": "published",
 				"data": {
 					"name": "Campaigns",
-					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"plugin_id": "superboard-dynamic-links",
 					"route_id": "superboard.acquisition_dynamic_links_campaigns",
 					"path": "/acquisition/dynamic-links/campaigns",
 					"description": "Measure every acquisition campaign from link view to referred customer and revenue.",
-					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
+					"renderer_id": "superboard-dynamic-links.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1654,11 +1526,11 @@
 				"status": "published",
 				"data": {
 					"name": "Redirect Rules",
-					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"plugin_id": "superboard-dynamic-links",
 					"route_id": "superboard.acquisition_dynamic_links_redirect_rules",
 					"path": "/acquisition/dynamic-links/redirect-rules",
 					"description": "Resolve the first matching platform rule by priority, then fall back to the link destination.",
-					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
+					"renderer_id": "superboard-dynamic-links.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1675,11 +1547,11 @@
 				"status": "published",
 				"data": {
 					"name": "Domain",
-					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"plugin_id": "superboard-dynamic-links",
 					"route_id": "superboard.acquisition_dynamic_links_domain",
 					"path": "/acquisition/dynamic-links/domain",
 					"description": "Serve branded dynamic links only after ownership has been verified through DNS.",
-					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
+					"renderer_id": "superboard-dynamic-links.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1696,11 +1568,11 @@
 				"status": "published",
 				"data": {
 					"name": "Social Media Preview",
-					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"plugin_id": "superboard-dynamic-links",
 					"route_id": "superboard.acquisition_dynamic_links_social_media_preview",
 					"path": "/acquisition/dynamic-links/social-media-preview",
 					"description": "Design the default Open Graph card shown when a dynamic link is shared.",
-					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
+					"renderer_id": "superboard-dynamic-links.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1717,11 +1589,11 @@
 				"status": "published",
 				"data": {
 					"name": "Tracking",
-					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"plugin_id": "superboard-dynamic-links",
 					"route_id": "superboard.acquisition_dynamic_links_tracking",
 					"path": "/acquisition/dynamic-links/tracking",
 					"description": "Inspect attributed link events and control consent-aware collection by project.",
-					"renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
+					"renderer_id": "superboard-dynamic-links.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1738,11 +1610,11 @@
 				"status": "published",
 				"data": {
 					"name": "Inbox",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_inbox",
 					"path": "/support/inbox",
 					"description": "",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1759,11 +1631,11 @@
 				"status": "published",
 				"data": {
 					"name": "Contacts",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_contacts",
 					"path": "/support/contacts",
 					"description": "",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1780,11 +1652,11 @@
 				"status": "published",
 				"data": {
 					"name": "Workforce",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_workforce",
 					"path": "/support/workforce",
 					"description": "Support roles, teams, availability, capacity and leave schedules.",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1801,11 +1673,11 @@
 				"status": "published",
 				"data": {
 					"name": "Channels",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_channels",
 					"path": "/support/channels",
 					"description": "Connect every customer channel to a native Support inbox.",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1822,11 +1694,11 @@
 				"status": "published",
 				"data": {
 					"name": "Automations",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_automations",
 					"path": "/support/automations",
 					"description": "Automate routing and actions, then enforce response and resolution targets.",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1843,11 +1715,11 @@
 				"status": "published",
 				"data": {
 					"name": "Proactive Support",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_proactive_support",
 					"path": "/support/proactive-support",
 					"description": "Reach eligible customers through Support inboxes with controlled, auditable campaigns.",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1864,11 +1736,11 @@
 				"status": "published",
 				"data": {
 					"name": "Help Center",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_help_center",
 					"path": "/support/help-center",
 					"description": "Author, translate, publish and index customer self-service content.",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1885,11 +1757,11 @@
 				"status": "published",
 				"data": {
 					"name": "Captain",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_captain",
 					"path": "/support/captain",
 					"description": "Project-isolated assistants, Copilot scenarios, allowlisted tools and traceable tasks.",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1906,11 +1778,11 @@
 				"status": "published",
 				"data": {
 					"name": "Integrations",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_integrations",
 					"path": "/support/integrations",
 					"description": "Connect Support workflows to your team tools and customer context.",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1927,11 +1799,11 @@
 				"status": "published",
 				"data": {
 					"name": "Reports",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_reports",
 					"path": "/support/reports",
 					"description": "Support volume, response, resolution, backlog, SLA, satisfaction and campaign performance.",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1948,11 +1820,11 @@
 				"status": "published",
 				"data": {
 					"name": "Settings",
-					"plugin_id": "supbrd-plugmod-support",
+					"plugin_id": "superboard-support",
 					"route_id": "superboard.support_settings",
 					"path": "/support/settings",
 					"description": "Project-wide Support behavior, attachments, features and operations.",
-					"renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
+					"renderer_id": "superboard-support.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1969,11 +1841,11 @@
 				"status": "published",
 				"data": {
 					"name": "In-app Messages",
-					"plugin_id": "supbrd-plugmod-marketing",
+					"plugin_id": "superboard-marketing",
 					"route_id": "superboard.communication_in_app_messages",
 					"path": "/communication/in-app-messages",
 					"description": "",
-					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
+					"renderer_id": "superboard-marketing.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -1990,11 +1862,11 @@
 				"status": "published",
 				"data": {
 					"name": "Email",
-					"plugin_id": "supbrd-plugmod-marketing",
+					"plugin_id": "superboard-marketing",
 					"route_id": "superboard.communication_marketing_email",
 					"path": "/communication/marketing-email",
 					"description": "Subscribers, consent, lists, double opt-in, segmentation and bulk operations.",
-					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
+					"renderer_id": "superboard-marketing.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2011,11 +1883,11 @@
 				"status": "published",
 				"data": {
 					"name": "Campaigns",
-					"plugin_id": "supbrd-plugmod-marketing",
+					"plugin_id": "superboard-marketing",
 					"route_id": "superboard.communication_campaigns",
 					"path": "/communication/campaigns",
 					"description": "Templates, media, previews, scheduled campaigns, transactional email and delivery controls.",
-					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
+					"renderer_id": "superboard-marketing.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2032,11 +1904,11 @@
 				"status": "published",
 				"data": {
 					"name": "Journeys",
-					"plugin_id": "supbrd-plugmod-marketing",
+					"plugin_id": "superboard-marketing",
 					"route_id": "superboard.communication_journeys",
 					"path": "/communication/journeys",
 					"description": "Turn product events into versioned, resumable email and omnichannel customer journeys.",
-					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
+					"renderer_id": "superboard-marketing.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2053,11 +1925,11 @@
 				"status": "published",
 				"data": {
 					"name": "Channels",
-					"plugin_id": "supbrd-plugmod-marketing",
+					"plugin_id": "superboard-marketing",
 					"route_id": "superboard.communication_channels",
 					"path": "/communication/channels",
 					"description": "Connect secure HTTPS destinations for SMS, push, WhatsApp, Slack and custom webhooks.",
-					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
+					"renderer_id": "superboard-marketing.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2074,11 +1946,11 @@
 				"status": "published",
 				"data": {
 					"name": "Statistics",
-					"plugin_id": "supbrd-plugmod-marketing",
+					"plugin_id": "superboard-marketing",
 					"route_id": "superboard.communication_statistics",
 					"path": "/communication/statistics",
 					"description": "Delivery, opens, clicks, bounces, complaints, unsubscribes and campaign progression.",
-					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
+					"renderer_id": "superboard-marketing.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2095,11 +1967,11 @@
 				"status": "published",
 				"data": {
 					"name": "Settings",
-					"plugin_id": "supbrd-plugmod-marketing",
+					"plugin_id": "superboard-marketing",
 					"route_id": "superboard.communication_settings",
 					"path": "/communication/settings",
 					"description": "Sender identities, AWS SES delivery, quotas, domain authentication, provider events and retries.",
-					"renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
+					"renderer_id": "superboard-marketing.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2116,11 +1988,11 @@
 				"status": "published",
 				"data": {
 					"name": "Users & Sessions",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_users",
 					"path": "/analytics/users",
 					"description": "Explore pseudonymized profiles and session timelines without exposing raw SDK identifiers.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2137,11 +2009,11 @@
 				"status": "published",
 				"data": {
 					"name": "Events",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_events",
 					"path": "/analytics/events",
 					"description": "Inspect the recent, pseudonymized event stream without exposing raw user identifiers.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2158,11 +2030,11 @@
 				"status": "published",
 				"data": {
 					"name": "Technology & Location",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_dimensions",
 					"path": "/analytics/dimensions",
 					"description": "Compare application versions, devices, browsers, countries, carriers and acquisition context.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2179,11 +2051,11 @@
 				"status": "published",
 				"data": {
 					"name": "Views",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_views",
 					"path": "/analytics/views",
 					"description": "Page and screen performance, visit depth and time spent across web and mobile applications.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2200,11 +2072,11 @@
 				"status": "published",
 				"data": {
 					"name": "Installations",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_installations",
 					"path": "/analytics/installations",
 					"description": "Canonical first installs only—retries and repeated attribution calls do not increase this count.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2221,11 +2093,11 @@
 				"status": "published",
 				"data": {
 					"name": "Verified Purchases",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_purchases",
 					"path": "/analytics/purchases",
 					"description": "Financial facts emitted only after store or billing verification, deduplicated by transaction and event type.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2242,11 +2114,11 @@
 				"status": "published",
 				"data": {
 					"name": "Funnels & Retention",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_insights",
 					"path": "/analytics/insights",
 					"description": "Understand conversion sequences and whether new installations return over time.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2263,11 +2135,11 @@
 				"status": "published",
 				"data": {
 					"name": "Cohorts",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_cohorts",
 					"path": "/analytics/cohorts",
 					"description": "Define reusable audiences from behavior and keep their estimated size current.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2284,11 +2156,11 @@
 				"status": "published",
 				"data": {
 					"name": "Crashes",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_crashes",
 					"path": "/analytics/crashes",
 					"description": "Group recurring errors by deterministic fingerprint, inspect occurrences and manage resolution.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2305,11 +2177,11 @@
 				"status": "published",
 				"data": {
 					"name": "Feedback",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_feedback",
 					"path": "/analytics/feedback",
 					"description": "Review star ratings and written feedback captured from web and mobile experiences.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2326,11 +2198,11 @@
 				"status": "published",
 				"data": {
 					"name": "Remote Config",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_remote_config",
 					"path": "/analytics/remote-config",
 					"description": "Publish versioned JSON values with deterministic rollouts for the selected environment.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2347,11 +2219,11 @@
 				"status": "published",
 				"data": {
 					"name": "Alerts",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_alerts",
 					"path": "/analytics/alerts",
 					"description": "Continuously evaluate product, crash, installation and verified-payment signals at the edge.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2368,11 +2240,11 @@
 				"status": "published",
 				"data": {
 					"name": "Reports & Exports",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_reports",
 					"path": "/analytics/reports",
 					"description": "Save reusable analysis definitions and run durable export or rollup jobs.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []
@@ -2389,11 +2261,11 @@
 				"status": "published",
 				"data": {
 					"name": "Settings",
-					"plugin_id": "supbrd-plugmod-analytics",
+					"plugin_id": "superboard-analytics",
 					"route_id": "superboard.analytics_settings",
 					"path": "/analytics/settings",
 					"description": "Manage applications, retention, collection, signed webhooks and timeline annotations.",
-					"renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
+					"renderer_id": "superboard-analytics.renderer.admin_surface",
 					"presentation": {
 						"schema_version": "1.0.0",
 						"blocks": []

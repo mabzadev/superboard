@@ -3,7 +3,7 @@ import { Input } from "@superboard/front-ui/ui/input.js";
 import { Textarea } from "@superboard/front-ui/ui/textarea.js";
 import { useEffect, useState } from "react";
 
-const endpoint = "/_emdash/api/admin/plugins/supbrd-plug-data/settings";
+const endpoint = "/_emdash/api/admin/plugins/superboard-data/settings";
 const fields = {
 	content: ["default_locale", "required_locales", "publishing_mode"],
 	files: ["max_upload_bytes", "allowed_content_types", "signed_url_ttl_seconds"],
@@ -77,7 +77,7 @@ export function DataSettingsForm({
 	locale: "en" | "fr";
 }) {
 	const t = messages[locale];
-	const prefix = section === "content" ? "supbrd-plug-content__" : "supbrd-plugmod-files__";
+	const prefix = section === "content" ? "superboard-content__" : "superboard-files__";
 	const [values, setValues] = useState<Values | null>(null);
 	const [changes, setChanges] = useState<Values>({});
 	const [busy, setBusy] = useState(false);

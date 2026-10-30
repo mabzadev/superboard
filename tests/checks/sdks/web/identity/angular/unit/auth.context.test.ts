@@ -1,3 +1,15 @@
+const identityClaims = {
+	iss: "https://auth.example.test",
+	sub: "user-1",
+	azp: "client",
+	aud: "client",
+	exp: 0,
+	iat: 0,
+	email: null,
+	first_name: null,
+	last_name: null,
+	locale: "en",
+};
 // Import the mocked functions for easy access in tests
 import {
 	getParams,

@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://board.mbza.dev/schemas/flutterflow-applications.schema.json",
+	"$id": "https://board.mabza.dev/schemas/flutterflow-applications.schema.json",
 	"title": "SuperBoard FlutterFlow application registry",
 	"type": "object",
 	"additionalProperties": false,

@@ -37,16 +37,16 @@ test("Site deployment preserves only the explicitly approved development preview
 		assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
 		vars: { SUPERBOARD_RELEASE_OPERATIONS: "disabled" },
 		d1_databases: [{ binding: "DB", migrations_dir: "../../apps/site/migrations" }],
-		routes: [{ pattern: "site.mbza.dev", custom_domain: true }],
+		routes: [{ pattern: "site.mabza.dev", custom_domain: true }],
 	};
-	assert.deepEqual(siteDeploymentArtifact(config, { previewHostname: "site.mbza.dev" }).routes, [
-		{ pattern: "site.mbza.dev", custom_domain: true },
+	assert.deepEqual(siteDeploymentArtifact(config, { previewHostname: "site.mabza.dev" }).routes, [
+		{ pattern: "site.mabza.dev", custom_domain: true },
 	]);
 	assert.throws(() => siteDeploymentArtifact(config), /must not acquire a public route/u);
 	assert.throws(
 		() =>
 			siteDeploymentArtifact(config, {
-				previewHostname: "board.mbza.dev",
+				previewHostname: "board.mabza.dev",
 			}),
 		/approved preview hostname/u,
 	);
@@ -58,11 +58,11 @@ test("Site deployment accepts its compiled target hosts and rejects foreign rout
 		vars: { SUPERBOARD_RELEASE_OPERATIONS: "disabled" },
 		d1_databases: [],
 		routes: [
-			{ pattern: "board.mbza.dev", custom_domain: true },
-			{ pattern: "site.mbza.dev", custom_domain: true },
+			{ pattern: "board.mabza.dev", custom_domain: true },
+			{ pattern: "site.mabza.dev", custom_domain: true },
 		],
 	};
-	const options = { deploymentHostnames: ["board.mbza.dev", "site.mbza.dev"] };
+	const options = { deploymentHostnames: ["board.mabza.dev", "site.mabza.dev"] };
 	assert.deepEqual(siteDeploymentArtifact(config, options).routes, config.routes);
 	assert.throws(
 		() =>
@@ -75,7 +75,7 @@ test("Site deployment accepts its compiled target hosts and rejects foreign rout
 	assert.throws(
 		() =>
 			siteDeploymentArtifact(
-				{ ...config, routes: [{ pattern: "board.mbza.dev", custom_domain: false }] },
+				{ ...config, routes: [{ pattern: "board.mabza.dev", custom_domain: false }] },
 				options,
 			),
 		/compiled target hostnames/u,
@@ -83,12 +83,12 @@ test("Site deployment accepts its compiled target hosts and rejects foreign rout
 });
 
 test("Site email plugin build settings come from the selected target", async () => {
-	const development = (await loadTarget("mbza-development")).target;
+	const development = (await loadTarget("mabza-development")).target;
 	const production = (await loadTarget("reference-production")).target;
 	expectSiteEmailEnvironment(siteEmailBuildEnvironment(development, {}), {
-		SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@mbza.dev",
+		SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@mabza.dev",
 		SUPERBOARD_SITE_EMAIL_FROM_NAME: "SuperBoard Development",
-		SUPERBOARD_SITE_EMAIL_REPLY_TO: "support@mbza.dev",
+		SUPERBOARD_SITE_EMAIL_REPLY_TO: "support@mabza.dev",
 	});
 	expectSiteEmailEnvironment(siteEmailBuildEnvironment(production, {}), {
 		SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@reference.example",
@@ -102,17 +102,17 @@ test("Site deployment preserves enabled Release operations only for the approved
 		assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
 		vars: { SUPERBOARD_RELEASE_OPERATIONS: "enabled" },
 		d1_databases: [{ binding: "DB", migrations_dir: "../../apps/site/migrations" }],
-		routes: [{ pattern: "site.mbza.dev", custom_domain: true }],
+		routes: [{ pattern: "site.mabza.dev", custom_domain: true }],
 	};
 	assert.equal(
 		siteDeploymentArtifact(config, {
-			previewHostname: "site.mbza.dev",
+			previewHostname: "site.mabza.dev",
 			releaseOperations: true,
 		}).vars.SUPERBOARD_RELEASE_OPERATIONS,
 		"enabled",
 	);
 	assert.throws(
-		() => siteDeploymentArtifact(config, { previewHostname: "site.mbza.dev" }),
+		() => siteDeploymentArtifact(config, { previewHostname: "site.mabza.dev" }),
 		/must keep release operations disabled/u,
 	);
 });

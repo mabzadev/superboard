@@ -6,7 +6,7 @@ import {
 const products = navigationGroup({ group_id: "products", group_label: "Products", group_order: 3 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
-	plugin_id: "supbrd-plugmod-billing",
+	plugin_id: "superboard-billing",
 	plugin_label: "Billing",
 	description: "Review customers and entitlements through the Billing plugin contract.",
 	surfaces: [

@@ -8,6 +8,7 @@ import emdash from "emdash/astro";
 import { dashboardViteAliases } from "./dashboard-vite-aliases.mjs";
 import { localSiteServerOptions } from "./local-vite-config.mjs";
 import { superboardReleaseOperatorApi } from "./release-operator-api.mjs";
+import { superboardRouteRegistry } from "./route-registry.mjs";
 import { superboardRuntimeCache } from "./runtime-cache.mjs";
 import { superboardConfiguredPlugins } from "./superboard-emdash-plugins.mjs";
 
@@ -53,6 +54,7 @@ export default defineConfig({
 			: {},
 	),
 	integrations: [
+		superboardRouteRegistry(),
 		superboardRuntimeCache(),
 		react(),
 		superboardApplicationApi(),

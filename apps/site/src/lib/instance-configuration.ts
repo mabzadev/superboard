@@ -5,6 +5,10 @@ import {
 	type DeploymentRoute,
 } from "@superboard/contracts/deployment-configuration";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
+import {
+	parseRouteInventorySummary,
+	type RouteInventorySummary,
+} from "@superboard/contracts/route-inventory";
 import { deploymentI18n } from "@superboard/front-ui/deployment-i18n.js";
 
 import { resolveLocale } from "../../../../packages/admin/src/locales/config.js";
@@ -30,6 +34,7 @@ export async function instanceConfiguration(
 		throw new Error("DEPLOYMENT_CONTEXT_MISMATCH");
 	let routes: DeploymentRoute[] = [];
 	let routesStatus = "unavailable";
+	let routeInventory: RouteInventorySummary | undefined;
 	let workerNames: Record<string, string> = {};
 	let webOrigins = configuration?.webOrigins ?? [];
 	try {
@@ -42,7 +47,7 @@ export async function instanceConfiguration(
 			plugin_context: { plugin_id: "supbrd-core", project_ref: "instance" },
 		});
 		if (response.ok) {
-			const data = await readJsonObjectLimited(response, 2_000_000);
+			const data = await readJsonObjectLimited(response, 8 * 1024 * 1024);
 			const live = parseDeploymentConfiguration(JSON.stringify(data.configuration));
 			if (
 				live.target !== env.SUPERBOARD_INSTANCE_ID ||
@@ -50,6 +55,8 @@ export async function instanceConfiguration(
 			)
 				throw new Error("DEPLOYMENT_CONTEXT_MISMATCH");
 			routes = parseDeploymentRoutes(data.routes);
+			if (data.routeInventory !== undefined)
+				routeInventory = parseRouteInventorySummary(data.routeInventory);
 			if (Array.isArray(data.webOrigins))
 				webOrigins = data.webOrigins.filter(
 					(value: unknown): value is string => typeof value === "string",
@@ -68,13 +75,13 @@ export async function instanceConfiguration(
 					),
 				);
 			configuration = live;
-			routesStatus = "loaded";
+			routesStatus = routeInventory?.status === "partial" ? "partial" : "loaded";
 		} else await response.body?.cancel();
 	} catch {
 		routesStatus = "unavailable";
 	}
 	if (!configuration) throw new Error("DEPLOYMENT_CONFIGURATION_UNAVAILABLE");
-	return { configuration, routes, routesStatus, workerNames, webOrigins };
+	return { configuration, routes, routesStatus, workerNames, webOrigins, routeInventory };
 }
 export function configurationBlocks(
 	data: Awaited<ReturnType<typeof instanceConfiguration>>,
