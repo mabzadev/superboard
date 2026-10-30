@@ -228,7 +228,7 @@ it("chooses a font from the selector and applies it to the device preview", asyn
 		<ExperienceStudio kind="paywall" initialDocument={createStudioDocument("paywall", "fr")} />,
 	);
 	await user.click(screen.getByRole("combobox", { name: "Police", exact: true }));
-	await user.click(screen.getByRole("option", { name: "Georgia", exact: true }));
+	await user.click(await screen.findByRole("option", { name: "Georgia", exact: true }));
 	expect(screen.getByLabelText("Écran de l’appareil")).toHaveStyle({ fontFamily: "Georgia" });
 	expect(screen.getByRole("heading", { name: "Profitez de toute l’expérience" })).toHaveStyle({
 		fontFamily: "Georgia",

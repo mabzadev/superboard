@@ -7,32 +7,32 @@
   "release": {
     "source": "scripts/config/superboard-parity-release.json",
     "release_id": "01J00000000000000000007005",
-    "content_checksum": "sha256:c08f58b0036f650dcb619a9610071c4834f21261f985bc095dc5236cd213c047",
+    "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "fyXgTOOYNqecG1Ya1bXX7FJTj97n7LmVedj-pttq7pbhxlI02o0byVurNRu2MdoItpsQivUfcbLZ9_IwfKEwzA"
+      "value": "GLRQnX7ia___mExiBeWcZKZQOsxsfJnZjhBTsYpXf0Esss9cJnI5KyaEdtLraL4TLH8B1-255xfC45et2AeHhw"
     },
-    "validation_set_checksum": "sha256:9f0778022349a81251634581399289cd7c3f311e23f761a06f4f7cd63f940118",
+    "validation_set_checksum": "sha256:57e785ea10b9ddc6ddae7f5bc711515c71133ed8d69a9b754f8ede10909b82ba",
     "validation_receipt_checksums": [
-      "sha256:0856b0f63ef0d9ad81b16b32034c9f141f9af91a13f4ea2481debae3774403c6",
-      "sha256:ce3246ff1d908e3ce09e58db45375957d4ea2a28c689c71193479ef9850f32bd",
-      "sha256:65beaadea1b8c2caede5f13330dca19071b9b227ecf8636baa6fc2254c8835ae",
-      "sha256:de1b466cd804e0ac1de7f2e40078988a63566fdf95fc44e5601d49cbdff10fd2",
-      "sha256:ae24af83842b2da2cdc37f52f92729739b73f7a89577ced57317a64e2cd6e60c",
-      "sha256:1ba122695bd1ea7e5e537403b060f907d487a303ceabb279d5c76a5068b97a89",
-      "sha256:11803b6d4e98e7c1f32fa13c52fedd34fec1550db476e40669280a54b0f5168c",
-      "sha256:6352e977695ba4f03e78d8fc66366fbb86cf241bc1c9acbf1f6ee57ef5decf7a",
-      "sha256:6dd8e5d18600ccca0ff0ccd8868153be886279e0617948d86398f8ffea16c3a1",
-      "sha256:759e5cb107216fb9aa28a41eddf6820ba3a7e93aa8c1790f9d164180c42e1ca3",
-      "sha256:096d0fe76e896ae5742ab0aabf37942de6ba547937fb5d521e37cff35bfd9f31",
-      "sha256:642ea680e2df99d24419c9972a7775f5a393a6b7313b2b9df86cf3c43ee062f5",
-      "sha256:3f32ab6189bc5c68ca4660f72f299aec00cba0fa452eb2684fe8b8c66bf98a8b"
+      "sha256:2fe359251eba69df03a6be42505b95ec1562f841db06ada0ae2d8f6b2b55eb50",
+      "sha256:ba00762f9a0bc24436fb80b642d1f86eecda868af3096c65b86cde04bc90f2d7",
+      "sha256:cc90371eaacec740a4c0c955266f6fd6edd5dbb5ec4d1381c5893fccd7265a75",
+      "sha256:17be355e1bb270e6bdb7aff25718e41dcf515d551374fd71d7cdac05e485762d",
+      "sha256:33948059c74aac19fb37fb739238f94022d274f21c96f5d0a1471715751eeec4",
+      "sha256:92b1e0e27b6d36b91e83293a982ca5cfa850a85af8f2c041afc5298524767bf2",
+      "sha256:f8b19c286791c367b558c8449069b04db01d943572e634f5ed4b9e5d8ed0c7f3",
+      "sha256:2b70c650ed0efafc8daa767eadc1f7c7f0f3e2ea6b98c23ff7ca4d05c759e92c",
+      "sha256:2122232f5ea2c3a984f9c172886b3dc8eaf971ef1e7d17fa034ae3f94f82dab8",
+      "sha256:3eeb0cfd837c3dc7163b46968afea1601609c71b237281f866345fe5e9390479",
+      "sha256:d17f4fad49b8c41f97132f9387c69ad6fce9bcc4e6e6f31cbe045ff5192c16b0",
+      "sha256:77f22acd7514cf3c09b93cc5db3baf3058ce1cf9d5b3389fc2fa6ddd551c2ddb",
+      "sha256:c1d394e54cfb40ebb75f81176ab2701b496c507ca1159ac36875171af91a5a16"
     ],
     "verification_status": "verified",
     "target": "mabza-development",
     "environment": "local",
-    "target_artifact_checksum": "sha256:702f59bd682a98293887b54b76e099a82f056d106a5104d7816ede6a80413d12",
+    "target_artifact_checksum": "sha256:89b65e3f6faf960846f142c515c3ded9e7cdc1cfdfd5bc38c8f371e478b4887b",
     "active_plugin_ids": [
       "superboard-analytics",
       "superboard-audit",
@@ -12084,7 +12084,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-analytics.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-audit.renderer.admin_surface",
@@ -12098,7 +12098,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-audit.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-billing.renderer.admin_surface",
@@ -12112,7 +12112,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-billing.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-content.renderer.admin_surface",
@@ -12126,7 +12126,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-content.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-dynamic-links.renderer.admin_surface",
@@ -12140,7 +12140,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-dynamic-links.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-email.renderer.admin_surface",
@@ -12154,7 +12154,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-email.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-files.renderer.admin_surface",
@@ -12168,7 +12168,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-files.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-flows.renderer.admin_surface",
@@ -12182,7 +12182,7 @@
       "required": false,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-flows.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-gateway.renderer.admin_surface",
@@ -12196,7 +12196,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-gateway.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-marketing.renderer.admin_surface",
@@ -12210,7 +12210,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-marketing.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-mcp.renderer.admin_surface",
@@ -12224,7 +12224,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-mcp.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-observability.renderer.admin_surface",
@@ -12238,7 +12238,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-observability.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-onboardings.renderer.admin_surface",
@@ -12252,7 +12252,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-onboardings.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-paywalls.renderer.admin_surface",
@@ -12266,7 +12266,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-paywalls.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-products.renderer.admin_surface",
@@ -12280,7 +12280,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-products.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-settings.renderer.admin_surface",
@@ -12294,7 +12294,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-settings.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-support.renderer.admin_surface",
@@ -12308,7 +12308,7 @@
       "required": false,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-support.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-user.renderer.admin_surface",
@@ -12322,7 +12322,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-user.renderer.admin_surface",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-user.renderer.login_form",
@@ -12336,7 +12336,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-user.renderer.login_form",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:renderer:superboard-user.renderer.profile_card",
@@ -12350,7 +12350,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-user.renderer.profile_card",
-      "contribution_checksum": "sha256:13db172587e00850a817852b5dd9b1ddc21a447f3c9f73884a01621fd85ea95f"
+      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
     },
     {
       "id": "release:store:superboard-analytics.store.aggregates",
@@ -12616,7 +12616,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-gateway.store.rate_limits",
-      "contribution_checksum": "sha256:737d9848e24973602471e534d24b5890d7b9a07e2bd0936c4e4ab949e3f17349"
+      "contribution_checksum": "sha256:2458d64eba8a52fac8f1e90718ea0274dc4c5b1708864aa76d2bcfbeb7505b5b"
     },
     {
       "id": "release:store:superboard-gateway.store.route_manifests",
@@ -12630,7 +12630,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-gateway.store.route_manifests",
-      "contribution_checksum": "sha256:695f6107aa9b963f673a0fd5827c95ff1ab7b221cbc1ce5c7953228fb690e64e"
+      "contribution_checksum": "sha256:a59fdf67948cbb1f4af85a404f0d53267f633385da0a5380f3522328cbae1c46"
     },
     {
       "id": "release:store:superboard-marketing.store.campaigns",
@@ -13963,12 +13963,12 @@
       "baseline": "scripts/config/superboard-parity-release.json",
       "target": "superboard-billing",
       "test": "tests/checks/plugins/superboard-monetization/billing/runtime/billing-authority.runtime.test.ts",
-      "proof_sha256": "sha256:70ac76f6cd33897a9a117d953d33fa4889b963cfa3b4da06dbc4b2e321d02810",
+      "proof_sha256": "sha256:f5bb3ca281b6cff34ea37dbfce9a2c830cd8c3a075d460403d08baa3188b2c36",
       "source_status": "delivered",
       "blocker": null,
       "required": true,
       "release_id": "01J00000000000000000007005",
-      "worker_descriptor_checksum": "sha256:a360f19adc5687a6ed8a5af988b1e791585a3f0778c7a6347e7fee77e4384323"
+      "worker_descriptor_checksum": "sha256:af4c980cee7b242a9ac30233ef0bcc5402e4cda52b8fd81e6ad9ddfb0316c5fd"
     },
     {
       "id": "release:worker-health:superboard-content",
@@ -14080,12 +14080,12 @@
       "baseline": "scripts/config/superboard-parity-release.json",
       "target": "superboard-observability",
       "test": "tests/checks/plugins/superboard-core/observability/unit/index.test.ts",
-      "proof_sha256": "sha256:56479f6a949830d1a3f7bbac1116fa57e5fd13303ee9350148f3da29f3305d20",
+      "proof_sha256": "sha256:af88ec8de79e26d32025233b9565b5e77afe64e28bc55bacde411142bf48b5d2",
       "source_status": "delivered",
       "blocker": null,
       "required": true,
       "release_id": "01J00000000000000000007005",
-      "worker_descriptor_checksum": "sha256:a336b019325bc44b15496b7d13f44e9ae3a3d2fdd812954696758f5b786e140f"
+      "worker_descriptor_checksum": "sha256:71fe7b0b03df965a3b909a27e351cd6362c58627fe255d5abd2688477a538899"
     },
     {
       "id": "release:worker-health:superboard-onboardings",
@@ -14237,7 +14237,7 @@
       "baseline": "packages/plugins/superboard-monetization/billing/src/index.ts",
       "target": "superboard-billing",
       "test": "tests/checks/plugins/superboard-monetization/billing/runtime/billing-authority.runtime.test.ts",
-      "proof_sha256": "sha256:70ac76f6cd33897a9a117d953d33fa4889b963cfa3b4da06dbc4b2e321d02810",
+      "proof_sha256": "sha256:f5bb3ca281b6cff34ea37dbfce9a2c830cd8c3a075d460403d08baa3188b2c36",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -14314,7 +14314,7 @@
       "baseline": "packages/plugins/superboard-core/observability/src/index.ts",
       "target": "superboard-observability",
       "test": "tests/checks/plugins/superboard-core/observability/unit/index.test.ts",
-      "proof_sha256": "sha256:56479f6a949830d1a3f7bbac1116fa57e5fd13303ee9350148f3da29f3305d20",
+      "proof_sha256": "sha256:af88ec8de79e26d32025233b9565b5e77afe64e28bc55bacde411142bf48b5d2",
       "source_status": "delivered",
       "blocker": null,
       "required": true

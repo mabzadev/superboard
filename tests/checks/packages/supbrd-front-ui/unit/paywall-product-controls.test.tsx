@@ -75,7 +75,7 @@ it("selects actual catalog packages and resets their selection when the offering
 	expect(screen.getByRole("checkbox", { name: "Monthly plan" })).toBeChecked();
 	expect(screen.getByRole("checkbox", { name: "All packages" })).not.toBeChecked();
 	await user.click(screen.getByRole("combobox", { name: "Offering identifier" }));
-	await user.click(screen.getByRole("option", { name: "Annual offer" }));
+	await user.click(await screen.findByRole("option", { name: "Annual offer" }));
 	await waitFor(() => {
 		expect(screen.queryByRole("checkbox", { name: "Monthly plan" })).not.toBeInTheDocument();
 	});

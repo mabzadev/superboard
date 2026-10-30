@@ -13,9 +13,10 @@ const topologyPath = join(root, "scripts/config/emdash-plugin-topology.json");
 const parityReleasePath = join(root, "scripts/config/superboard-parity-release.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "scripts/config/superboard-front-bundle.json");
-const manifestMigrationPath = join(root, "apps/site/migrations/0057_authentication_editors.sql");
+const manifestMigrationPath = join(root, "apps/site/migrations/0058_plugin_manifest_refresh.sql");
 const compatibilityPath = join(root, "scripts/config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0057_authentication_editors.sql"),
 	join(root, "apps/site/migrations/0056_authentication_tabs.sql"),
 	join(root, "apps/site/migrations/0055_core_sdk_collection.sql"),
 	join(root, "apps/site/migrations/0054_monetization_purchase_catalog.sql"),

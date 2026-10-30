@@ -582,6 +582,13 @@
         "supbrd-plugmod-files.renderer.admin_surface": "sha256:5a8d369b3e67f022c9488f8088ca632a98d8f0fd828883f31f1abce82ba53748"
       }
     },
+    "sha256:246a8de9b24e276853f043a77ec054671c07c807e80a2208a3f03c2346bc5967": {
+      "plugin_id": "superboard-paywalls",
+      "manifest_checksum": "sha256:fac0a949b4a645eddaf5c9ff8981ab4a2a9e0b657c8ea22fc189a9b5370613e0",
+      "renderer_builds": {
+        "superboard-paywalls.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
     "sha256:247e5dd711b0457a47d2bdeacc1d2b61e1b908383a6ac27c997c79464cabb83e": {
       "plugin_id": "supbrd-plugmod-email",
       "manifest_checksum": "sha256:891d1f9a2e97089792482d926945fbe2c8d9971e018a3cf5d94b43d04ffe95d3",
@@ -865,6 +872,13 @@
         "supbrd-plugmod-paywalls.renderer.admin_surface": "sha256:879c99198ac5b5d19da3ec73337dc16929c9f840365625561537e97522e9aea8"
       }
     },
+    "sha256:363f4c5bb39303664a3833098db28b1fbe24e4c4a20723dffa1928e38c51e844": {
+      "plugin_id": "superboard-billing",
+      "manifest_checksum": "sha256:bb9d43901b88148a5afb36a7d32f66e69cf3e08f7ae77e62fc82e5d827a937df",
+      "renderer_builds": {
+        "superboard-billing.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
     "sha256:368575cd9c4a64a1b206ffecf0b7f43501791f55ac7987ebdda4cdc189612baa": {
       "plugin_id": "supbrd-plugmod-email",
       "manifest_checksum": "sha256:485ad53aa2b443b1e810ea53d8cbe4fb95e5519c7ef9900d1b892a6fbdf981e4",
@@ -1076,6 +1090,13 @@
         "supbrd-plugmod-analytics.renderer.admin_surface": "sha256:92bdeb744b8958c7718358de8656353cb1b6ee1875e3d132c9dd5b46bea9194c"
       }
     },
+    "sha256:3fbe994149cf015a9d31c8d793725b3870f17e96bcaa20ac97667e257893b57d": {
+      "plugin_id": "superboard-dynamic-links",
+      "manifest_checksum": "sha256:72fddf3cf7977a762e3d8ce7e2faa6c13a7b48e132987cd019001aec674db836",
+      "renderer_builds": {
+        "superboard-dynamic-links.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
     "sha256:4015c026240d0eac1120bc09ad04b90c643f8b0a15a10ab8abbebd6f9d3d7732": {
       "plugin_id": "supbrd-plugmod-dynamic-links",
       "manifest_checksum": "sha256:b70ab8b73b13ebdad76d06245a53316286bb8c453db1e8bf31c06f47ff54f99b",
@@ -1221,6 +1242,13 @@
       "manifest_checksum": "sha256:0216ecb1d6bdf060dca85e34f47e1d81ac36c69b42813525b2cd2e3a11b68ab3",
       "renderer_builds": {
         "supbrd-plugmod-flows.renderer.admin_surface": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93"
+      }
+    },
+    "sha256:491982d0dee99adf7a17b31c512db63c5ecc62c483bd2c9fc19d127c064d0de3": {
+      "plugin_id": "superboard-analytics",
+      "manifest_checksum": "sha256:673528c71f93a4b3163b06e7d17d33d2bb65c3803c477f947cfd44b4eadb0306",
+      "renderer_builds": {
+        "superboard-analytics.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
       }
     },
     "sha256:493ad6bb1e9f102b4cc053eacffd8f6e4a9017731b6ceba731b65769bf6864fd": {
@@ -1492,6 +1520,13 @@
         "supbrd-plug-audit.renderer.admin_surface": "sha256:5ff2fd851652caf4bce177bebdf0540e57aeee696ed958bfaa1f4097c1eb8fa8"
       }
     },
+    "sha256:582c8f007286ba1a4be1c7a997c9b0adb59946f28d6d7c708b033af52d8b8a33": {
+      "plugin_id": "superboard-onboardings",
+      "manifest_checksum": "sha256:9a2d179f103c71705748bc8dece3322bea84ca414fa3179fae91edd9c6037822",
+      "renderer_builds": {
+        "superboard-onboardings.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
     "sha256:58674c810cac2679d9129ecac30be86c1400b69026311d7e3c9ba1df6026f137": {
       "plugin_id": "supbrd-plugmod-files",
       "manifest_checksum": "sha256:9c0a233a36614293523e71e6d532fb39cfcbf0527aa9caac5d5c2ce868e6c410",
@@ -1684,6 +1719,13 @@
         "supbrd-plugmod-email.renderer.admin_surface": "sha256:92bdeb744b8958c7718358de8656353cb1b6ee1875e3d132c9dd5b46bea9194c"
       }
     },
+    "sha256:63b42ea01a8ef4c6276b3366d075d444b17420a3feeeacb37f8551ccafd8a9c2": {
+      "plugin_id": "superboard-flows",
+      "manifest_checksum": "sha256:96347ab657424778f7c4b41c5166c08c48a9f51cba9c9a72ece4ff2c59fd7c58",
+      "renderer_builds": {
+        "superboard-flows.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
     "sha256:646bad6923daa9bf629b66d150276ebfda4fe821f59bb633db5cfb5b759f0f9f": {
       "plugin_id": "supbrd-plugmod-onboardings",
       "manifest_checksum": "sha256:9ed5b8e266e5a532d047e97bb5fb492c3cb787b5f14f042616b075736b9ca4e6",
@@ -1874,6 +1916,20 @@
       "manifest_checksum": "sha256:8e9cf2f2c60392be8322d60ead551c2077d534228e1d229176b856f6737bde28",
       "renderer_builds": {
         "supbrd-plug-audit.renderer.admin_surface": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239"
+      }
+    },
+    "sha256:714b36c45e9d2b6b0275668f44024a37661ba3880b10ac50bb832bf9fd3698f5": {
+      "plugin_id": "superboard-gateway",
+      "manifest_checksum": "sha256:d82f7f64ccf10040e0cf7ad4630904ff2a4cdafb415b05f9aefaeb493bec90dc",
+      "renderer_builds": {
+        "superboard-gateway.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
+    "sha256:71faadac44f2eab4ba87709f01b4dd5ad152e9d20f8f3a8c16de375bae88e2a0": {
+      "plugin_id": "superboard-observability",
+      "manifest_checksum": "sha256:5594bc04fbc2979872e2ae2c701e1607b1ca627cc6f901d80253029760e220a5",
+      "renderer_builds": {
+        "superboard-observability.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
       }
     },
     "sha256:72f1b2ef23b6dff8df528d8a1eeee7c888e22e21a99814ef4b6ef930252c093c": {
@@ -2257,6 +2313,15 @@
         "supbrd-plugmod-marketing.renderer.admin_surface": "sha256:9f6ccf5f3e8e4b9816e0ebebf38fb77c0db83b3dddc98187daad736705d15362"
       }
     },
+    "sha256:82fa31f7aab13f2c4f96c6dd740e2ce017292e32d8f1f6fc9ca396a213e3f002": {
+      "plugin_id": "superboard-user",
+      "manifest_checksum": "sha256:72514ecfd008115b60e3ea449058a162680ba0124fe4c4e70350a9d8e752b4be",
+      "renderer_builds": {
+        "superboard-user.renderer.login_form": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
+        "superboard-user.renderer.profile_card": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
+        "superboard-user.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
     "sha256:8307ae18c767ae3c49f4b0a7912640e4ab17dfb3eae9e0d117f44464d6c7ca22": {
       "plugin_id": "supbrd-plugmod-dynamic-links",
       "manifest_checksum": "sha256:2f22ab775345f994d888bb3de4e5770d7a46f3de7bd34a8db9594d0933deb719",
@@ -2370,6 +2435,13 @@
       "manifest_checksum": "sha256:ba9d60f8c9836ea6678b9af92529120fac8a842b9c7f284c78e2b2a602fb1bd7",
       "renderer_builds": {
         "supbrd-plugmod-analytics.renderer.admin_surface": "sha256:970742e3a01a5dd101e294635e525b8900f0f55220d2cbcd4bc0aab2e54caf81"
+      }
+    },
+    "sha256:8a32a5fae627567db02a8cbc6cc4b00dcb89ab09f830fef747261fdc7463925f": {
+      "plugin_id": "superboard-marketing",
+      "manifest_checksum": "sha256:01cdca2ada51cf384f9c907db2d0be663ed1e69b5d28ae91eb6dda4cb5aa8005",
+      "renderer_builds": {
+        "superboard-marketing.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
       }
     },
     "sha256:8b20386195a05dad0bf5764b48af176507d9e615600b86022680edbb91585f72": {
@@ -2568,6 +2640,13 @@
         "supbrd-plug-user.renderer.profile_card": "sha256:b3318a2b1c6e16e0daa891100d97c9d1ab99901f3128afcf7c585910d8ccfe64",
         "supbrd-plug-user.renderer.members_table": "sha256:b3318a2b1c6e16e0daa891100d97c9d1ab99901f3128afcf7c585910d8ccfe64",
         "supbrd-plug-user.renderer.admin_surface": "sha256:b3318a2b1c6e16e0daa891100d97c9d1ab99901f3128afcf7c585910d8ccfe64"
+      }
+    },
+    "sha256:961499d79f9e7038b944e34385026da4b12d677168fd2f1e3ffe403976d18655": {
+      "plugin_id": "superboard-settings",
+      "manifest_checksum": "sha256:fbb1c25285f627824a6d517b37b8034af8ab6a43848477b971c731bfae5f090c",
+      "renderer_builds": {
+        "superboard-settings.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
       }
     },
     "sha256:961b25e4fbff842ed0ff53f56360d16a5d46fcbe124daa7012d040b33271b3bc": {
@@ -2905,6 +2984,13 @@
         "supbrd-plugmod-custom-*.renderer.admin_surface": "sha256:f84178383c0cd30899b9fc328563dbf5a18012a175945364bded8bf710efcc97"
       }
     },
+    "sha256:a79d1408568b1441193bb9257ec170aaf1b85d00d71d84ef25a4153d5facc4cd": {
+      "plugin_id": "superboard-audit",
+      "manifest_checksum": "sha256:ee0cd179469801e87a49adc6f37e741fe915e054f08c77722b9d66a41da17dfb",
+      "renderer_builds": {
+        "superboard-audit.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
     "sha256:a7a5a96739177f74da8977907129bf8280d312f61cb007e579552f0df801d183": {
       "plugin_id": "supbrd-plugmod-files",
       "manifest_checksum": "sha256:c050fa40be684969735194423a9d31b03835681bbf4c7f835e8fd0fea978b87d",
@@ -2975,6 +3061,13 @@
         "supbrd-plugmod-mcp.renderer.admin_surface": "sha256:970742e3a01a5dd101e294635e525b8900f0f55220d2cbcd4bc0aab2e54caf81"
       }
     },
+    "sha256:adffbd0ecd453e8eb5c8b47d2deb1a1992c2620cf3deb0d1ee977e39961f0fbb": {
+      "plugin_id": "superboard-files",
+      "manifest_checksum": "sha256:a0cab697bfcd64afe1afa60be338e40cda45d68f7565572a72355ff3d9812b9b",
+      "renderer_builds": {
+        "superboard-files.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
     "sha256:ae59b9a65458d9260c8620bfe38b58bde7078359f64641e0eedfbce6bd5493e2": {
       "plugin_id": "supbrd-plug-products",
       "manifest_checksum": "sha256:3806f2dbe548de26b96599e958224ffda19664eb1d3baee1e1a8fc5bf151d249",
@@ -3001,6 +3094,13 @@
       "manifest_checksum": "sha256:86fa198242a985c7fa82df25c457c4654b04a19588efa111c1011e0e43225a1e",
       "renderer_builds": {
         "supbrd-plugmod-mcp.renderer.admin_surface": "sha256:c1b9e8b5dcf148ac833bbea07bf2b8a07817b261e76ff3329ed0940f87de7d23"
+      }
+    },
+    "sha256:af78df8688daa3a4591ad302d7d41695327d1f2e4a11c9532c5659e0e857d5e7": {
+      "plugin_id": "superboard-products",
+      "manifest_checksum": "sha256:7fb62353e60e5fde918685e4e3d3fc8cdf5c5dcf4690a0df1cf135ce57256ab2",
+      "renderer_builds": {
+        "superboard-products.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
       }
     },
     "sha256:afdfe3fa391f4cf8007813a04519c31c5cb9ca14d9446cff9cffd2519e5a418c": {
@@ -3214,6 +3314,13 @@
       "manifest_checksum": "sha256:464345f832eb8f279dc722d2682c6d7653558737544d2231f1fa0db8dacbd265",
       "renderer_builds": {
         "supbrd-plug-settings.renderer.admin_surface": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239"
+      }
+    },
+    "sha256:badb4d3b51d7e1543454c6d7dcb401201ede48d7058e04d70270b4fef7009e67": {
+      "plugin_id": "superboard-mcp",
+      "manifest_checksum": "sha256:34819153967d65b7ddd362e7a477c3377c1daa5cb04443ac6db38be705c305dc",
+      "renderer_builds": {
+        "superboard-mcp.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
       }
     },
     "sha256:bbb1a7f166d6d74900d0310bf256a5b1e209ef385461faa56754ba6362dc93fa": {
@@ -3727,6 +3834,13 @@
         "supbrd-plugmod-paywalls.renderer.admin_surface": "sha256:9e947fd00bb122bdb5bd0132c64619df2d9bc35442ca44d9b31a220951b51adb"
       }
     },
+    "sha256:d98952a1e572a097fee04c93ee336c7e944eaf77a2b7f8c7728d3231464ce06f": {
+      "plugin_id": "supbrd-plugmod-custom-*",
+      "manifest_checksum": "sha256:f9b610b612ebfcd5490ab346768570271e99ee99bcd011b0fafd3fef1010934d",
+      "renderer_builds": {
+        "supbrd-plugmod-custom-*.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
     "sha256:d9c21aedfbf1fa1aceb48355abe5adc680ba018b428033213e0438de245db845": {
       "plugin_id": "supbrd-plugmod-onboardings",
       "manifest_checksum": "sha256:4792ccd0d3ac1cac29188495733a40cd1b2ce0a69022a1b47f8fad4439d55852",
@@ -3914,6 +4028,13 @@
       "manifest_checksum": "sha256:551696b935af1c8d83af0d1de5310f65f846bef6052f66f74311799a435fa407",
       "renderer_builds": {
         "supbrd-plugmod-onboardings.renderer.admin_surface": "sha256:085d9fc3afdf6e893295f7f2701dfb84e1668c73ba0df6c03d9a713578fdd769"
+      }
+    },
+    "sha256:e2730df62ebb4309d179cddcd6c80091e3f1b45da99d972b82abc9379dec6fdd": {
+      "plugin_id": "superboard-email",
+      "manifest_checksum": "sha256:a602d2138b03464451813881089b66df0cf67c0511a05151c1a3ea8453dd7382",
+      "renderer_builds": {
+        "superboard-email.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
       }
     },
     "sha256:e279d890112357014438155ef9f3ce529dd081b6a3da86a80fcbdfc1507e0cd3": {
@@ -4126,6 +4247,13 @@
         "supbrd-plugmod-gateway.renderer.admin_surface": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9"
       }
     },
+    "sha256:f21675f922c603e7e83cce3655ec41679ae09cd7963a046038e03a989e169eae": {
+      "plugin_id": "superboard-content",
+      "manifest_checksum": "sha256:fa4d36749f41bbab15800c4c232e97cc89890d8c3189e161ce5749803d1134f8",
+      "renderer_builds": {
+        "superboard-content.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      }
+    },
     "sha256:f342aa29497fa4f7cc038a763cc6b81cf33a7e65f4b2e7b1190498590621e242": {
       "plugin_id": "supbrd-plug-settings",
       "manifest_checksum": "sha256:b5d9a5d7706f5cd0de76ae13b8118c79ad2b2121bbb50425dd124b49390dd4c5",
@@ -4197,6 +4325,13 @@
       "manifest_checksum": "sha256:bd0286e612b506987451003e6815d65fe40cfe1297adc0612791b40fd4029ddc",
       "renderer_builds": {
         "supbrd-plugmod-files.renderer.admin_surface": "sha256:ba9baa939ba91c7c56267a083679fb2b82dfdf8306105f3250448487bc874092"
+      }
+    },
+    "sha256:f753501922a53f5a51b38cef135f3a697e7357c62e7dd8e5935746e2965b7ed8": {
+      "plugin_id": "superboard-support",
+      "manifest_checksum": "sha256:c439d2e95b55a79acf54e2b755f2fd83d9f56b65d60f8fa9f3727af28d486477",
+      "renderer_builds": {
+        "superboard-support.renderer.admin_surface": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
       }
     },
     "sha256:f87410e8d6879896074c563aa7d2c211da8468f237b0f88b8c2392704097c8b7": {

@@ -81,7 +81,7 @@
     "SUPERBOARD_PUBLIC_ENDPOINTS_JSON": "{\"api\":\"https://api.mabza.dev\",\"shortlinks\":\"https://in.mabza.dev\",\"sdk\":\"https://sdk.mabza.dev\",\"site\":\"https://board.mabza.dev\",\"mcp\":\"https://board.mabza.dev/mcp\"}",
     "SUPERBOARD_PLUGIN_IDS": "[\"superboard-analytics\",\"superboard-audit\",\"superboard-billing\",\"superboard-content\",\"superboard-dynamic-links\",\"superboard-email\",\"superboard-files\",\"superboard-flows\",\"superboard-gateway\",\"superboard-marketing\",\"superboard-mcp\",\"superboard-observability\",\"superboard-onboardings\",\"superboard-paywalls\",\"superboard-products\",\"superboard-settings\",\"superboard-support\",\"superboard-user\"]",
     "SUPERBOARD_RELEASE_OPERATIONS": "enabled",
-    "D1_EXPECTED_MIGRATION": "0057_authentication_editors.sql",
+    "D1_EXPECTED_MIGRATION": "0058_plugin_manifest_refresh.sql",
     "TARGET_ARTIFACT_CHECKSUM": "sha256:702f59bd682a98293887b54b76e099a82f056d106a5104d7816ede6a80413d12"
   },
   "triggers": {
