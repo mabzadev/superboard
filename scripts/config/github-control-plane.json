@@ -30,26 +30,7 @@
 				"dependabotSecurityUpdates": true
 			},
 			"releaseProtection": {
-				"immutableReleases": true,
-				"tagRuleset": {
-					"name": "SuperBoard immutable SDK tags",
-					"enforcement": "active",
-					"include": [
-						"refs/tags/sdk-flutter-v*",
-						"refs/tags/sdk-flutterflow-v*",
-						"refs/tags/sdk-flutterflow-messaging-v*",
-						"refs/tags/sdk-ios-v*",
-						"refs/tags/sdk-android-v*",
-						"refs/tags/sdk-js-v*",
-						"refs/tags/sdk-react-native-v*",
-						"refs/tags/sdk-flows-js-v*",
-						"refs/tags/sdk-flows-react-v*",
-						"refs/tags/sdk-flows-js-components-v*",
-						"refs/tags/sdk-flows-react-components-v*",
-						"refs/tags/*.*.*"
-					],
-					"rules": ["update", "deletion"]
-				}
+				"immutableReleases": true
 			},
 			"repositorySecrets": [],
 			"branches": {
