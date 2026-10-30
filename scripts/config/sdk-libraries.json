@@ -16,12 +16,12 @@
 			"licensePath": "sdks/flutter/LICENSE",
 			"versionSource": "sdks/flutter/pubspec.yaml",
 			"sourceVersion": "4.0.0",
-			"latestReleaseVersion": "3.0.0",
-			"releaseRef": "sdk-flutter-v3.0.0",
+			"latestReleaseVersion": "3.0.1",
+			"releaseRef": "sdk-flutter-v3.0.1",
 			"releaseStatus": "pending-release",
-			"releaseSha": "1cd57f9d774c272b83f46eaa728fd21352c41e58",
-			"install": "superboard_flutter:\n  git:\n    url: https://github.com/mabzadev/superboard.git\n    ref: sdk-flutter-v3.0.0\n    path: sdks/flutter",
-			"notes": "The 4.0.0 source uses only the canonical SuperBoard API, channels, headers and environment names. Compatibility aliases have been removed. The latest published release remains 3.0.0."
+			"releaseSha": "a795e8c1ba45d82dbd036f173a48fc386346abe1",
+			"install": "superboard_flutter:\n  git:\n    url: https://github.com/mabzadev/superboard.git\n    ref: sdk-flutter-v3.0.1\n    path: sdks/flutter",
+			"notes": "The 4.0.0 source uses only the canonical SuperBoard API, channels, headers and environment names. Compatibility aliases have been removed. The latest published release is 3.0.1, which republishes the 3.0.0 code."
 		},
 		{
 			"id": "flutterflow",
@@ -34,13 +34,13 @@
 			"licensePath": "sdks/flutterflow/LICENSE",
 			"versionSource": "sdks/flutterflow/pubspec.yaml",
 			"sourceVersion": "4.0.0",
-			"latestReleaseVersion": "3.0.0",
-			"releaseRef": "sdk-flutterflow-v3.0.0",
+			"latestReleaseVersion": "3.0.1",
+			"releaseRef": "sdk-flutterflow-v3.0.1",
 			"releaseStatus": "pending-release",
 			"surfaceManifest": "scripts/config/flutterflow-custom-code.json",
-			"install": "superboard_flutterflow:\n  git:\n    url: https://github.com/mabzadev/superboard.git\n    ref: sdk-flutterflow-v3.0.0\n    path: sdks/flutterflow",
-			"releaseSha": "1cd57f9d774c272b83f46eaa728fd21352c41e58",
-			"notes": "The 4.0.0 source uses only the canonical SuperBoard API, channels, headers and environment names. Compatibility aliases have been removed. The latest published release remains 3.0.0."
+			"install": "superboard_flutterflow:\n  git:\n    url: https://github.com/mabzadev/superboard.git\n    ref: sdk-flutterflow-v3.0.1\n    path: sdks/flutterflow",
+			"releaseSha": "a795e8c1ba45d82dbd036f173a48fc386346abe1",
+			"notes": "The 4.0.0 source uses only the canonical SuperBoard API, channels, headers and environment names. Compatibility aliases have been removed. The latest published release is 3.0.1, which republishes the 3.0.0 code."
 		},
 		{
 			"id": "web",

@@ -55,7 +55,7 @@ test("mutable or SSH dependencies are rejected", async () => {
 				"https://github.com/mabzadev/superboard.git",
 				"git@github.com:mabzadev/superboard.git",
 			)
-			.replace("ref: sdk-flutterflow-v3.0.0", "ref: main"),
+			.replace("ref: sdk-flutterflow-v3.0.1", "ref: main"),
 	});
 	assert.equal(result.status, "blocked");
 	assert.ok(result.errors.some((error) => error.includes("public HTTPS")));

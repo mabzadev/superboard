@@ -706,7 +706,7 @@ void buildStarterEditFlow(
         r'''
 git:
   url: https://github.com/mabzadev/superboard.git
-  ref: sdk-flutterflow-v3.0.0
+  ref: sdk-flutterflow-v3.0.1
   path: sdks/flutterflow
 '''
             .trim();

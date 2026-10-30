@@ -10,13 +10,13 @@ Import-ready library for replacing RevenueCat actions in FlutterFlow.
 ## Installation
 
 Add the published FlutterFlow package `superboard_flutterflow`
-at the immutable release `sdk-flutterflow-v3.0.0`:
+at the immutable release `sdk-flutterflow-v3.0.1`:
 
 ```yaml
 superboard_flutterflow:
   git:
     url: https://github.com/mabzadev/superboard.git
-    ref: sdk-flutterflow-v3.0.0
+    ref: sdk-flutterflow-v3.0.1
     path: sdks/flutterflow
 ```
 

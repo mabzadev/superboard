@@ -498,7 +498,7 @@ class OGBootstrapBridge extends StatelessWidget {
       sdkDependency.version,
       contains('https://github.com/mabzadev/superboard.git'),
     );
-    expect(sdkDependency.version, contains('sdk-flutterflow-v3.0.0'));
+    expect(sdkDependency.version, contains('sdk-flutterflow-v3.0.1'));
     expect(sdkDependency.version, isNot(contains('git@github.com')));
 
     final manifest = project.customCode.customFiles.files.singleWhere(
