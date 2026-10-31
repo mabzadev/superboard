@@ -59,6 +59,31 @@ const authenticationTabs: Readonly<Record<string, readonly [string, string, stri
 	"/auth/access-key": ["settings", "security", "keys"],
 };
 
+// Pages that became in-page tabs of a single workspace: the route stays registered, but every
+// link and bookmark opens the workspace on the matching tab.
+const workspaceTabs: Readonly<Record<string, string>> = {
+	"/analytics/app": "/analytics/home",
+	"/analytics/installations": "/analytics/users?tab=installations",
+	"/analytics/views": "/analytics/users?tab=views",
+	"/analytics/dimensions": "/analytics/users?tab=dimensions",
+	"/analytics/cohorts": "/analytics/users?tab=cohorts",
+	"/analytics/alerts": "/analytics/reports?tab=alerts",
+	"/analytics/crashes": "/analytics/reports?tab=crashes",
+	"/analytics/feedback": "/analytics/reports?tab=feedback",
+	"/monetization/offerings": "/monetization/products?tab=offerings",
+	"/monetization/entitlements": "/monetization/products?tab=entitlements",
+	"/acquisition/dynamic-links/campaigns": "/acquisition/dynamic-links?tab=campaigns",
+	"/acquisition/dynamic-links/domain": "/acquisition/dynamic-links?tab=settings&section=domain",
+	"/acquisition/dynamic-links/redirect-rules":
+		"/acquisition/dynamic-links?tab=settings&section=routing",
+	"/acquisition/dynamic-links/social-media-preview":
+		"/acquisition/dynamic-links?tab=settings&section=preview",
+	"/acquisition/dynamic-links/tracking": "/acquisition/dynamic-links?tab=settings&section=tracking",
+	"/core/web-setup": "/core/libraries?tab=web",
+	"/core/ios-setup": "/core/libraries?tab=ios",
+	"/core/android-setup": "/core/libraries?tab=android",
+};
+
 const authenticationEditors: Readonly<Record<string, readonly [string, string, string, string?]>> =
 	{
 		"/auth/apps": ["settings", "apps", "apps"],
@@ -99,12 +124,14 @@ export function canonicalFrontHref(href: string): string {
 	const editor = authenticationEditors[canonical.slice(0, canonical.lastIndexOf("/"))];
 	const account = canonical === "/auth/account" || canonical === "/auth/profile";
 	const duplicateRegistration = canonical === "/auth/register/with-email";
+	const workspace = workspaceTabs[canonical];
 	if (
 		canonical === url.pathname &&
 		!authentication &&
 		!editor &&
 		!account &&
-		!duplicateRegistration
+		!duplicateRegistration &&
+		!workspace
 	)
 		return href;
 	const language = /^\/identity\/([a-z]{2}(?:-[A-Za-z]+)?)(?:\/|$)/u.exec(url.pathname)?.[1];
@@ -135,6 +162,11 @@ export function canonicalFrontHref(href: string): string {
 		url.searchParams.delete("id");
 	}
 	if (duplicateRegistration) url.pathname = "/auth/register";
+	if (workspace) {
+		const target = new URL(workspace, url);
+		url.pathname = target.pathname;
+		for (const [name, value] of target.searchParams) url.searchParams.set(name, value);
+	}
 	if (language && !url.searchParams.has("lang")) url.searchParams.set("lang", language);
 	return `${url.pathname}${url.search}${url.hash}`;
 }

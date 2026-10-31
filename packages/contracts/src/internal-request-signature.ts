@@ -6,13 +6,7 @@ const signaturePattern = /^[a-f0-9]{64}$/u;
 export async function signPluginTaskRequest(request: Request, secret: string): Promise<Headers> {
 	if (!secret.trim()) throw new Error("PLUGIN_TASK_SECRET_REQUIRED");
 	const timestamp = String(Math.floor(Date.now() / 1000));
-	const key = await crypto.subtle.importKey(
-		"raw",
-		new TextEncoder().encode(secret),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
+	const key = await taskSigningKey(secret);
 	const signature = await crypto.subtle.sign(
 		"HMAC",
 		key,
@@ -32,19 +26,31 @@ export async function verifyPluginTaskRequest(request: Request, secret: string):
 	const issued = Number(timestamp);
 	const now = Date.now() / 1000;
 	if (!Number.isSafeInteger(issued) || issued > now + 5 || issued < now - 60) return false;
-	const key = await crypto.subtle.importKey(
-		"raw",
-		new TextEncoder().encode(secret),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["verify"],
-	);
+	const key = await taskSigningKey(secret);
 	return crypto.subtle.verify(
 		"HMAC",
 		key,
 		Uint8Array.from(signature.match(/.{2}/gu) ?? [], (pair) => Number.parseInt(pair, 16)),
 		await taskSignaturePayload(request, timestamp),
 	);
+}
+
+const taskKeys = new Map<string, Promise<CryptoKey>>();
+function taskSigningKey(secret: string): Promise<CryptoKey> {
+	let key = taskKeys.get(secret);
+	if (!key) {
+		if (taskKeys.size >= 16) taskKeys.clear();
+		key = crypto.subtle.importKey(
+			"raw",
+			new TextEncoder().encode(secret),
+			{ name: "HMAC", hash: "SHA-256" },
+			false,
+			["sign", "verify"],
+		);
+		key.catch(() => taskKeys.get(secret) === key && taskKeys.delete(secret));
+		taskKeys.set(secret, key);
+	}
+	return key;
 }
 
 async function taskSignaturePayload(

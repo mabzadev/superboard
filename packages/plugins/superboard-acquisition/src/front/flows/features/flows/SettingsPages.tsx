@@ -5,7 +5,7 @@ import {
 	showErrorNotification,
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
-import { PluginConfigurationTab } from "@superboard/front-ui/plugin-configuration-tab";
+import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import {
 	Card,
@@ -37,7 +37,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/u
 import { Check, Code2, Copy, FolderKanban, KeyRound, Plus, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { LinkDefaults } from "../../../LinkDefaults.js";
 import {
 	flowsApi,
 	type FlowEnvironment,
@@ -552,25 +551,33 @@ export function SdkContent({ projectRef }: { projectRef: string }) {
 export function AcquisitionSettingsPage({
 	defaultTab = "environments",
 }: {
-	defaultTab?: "environments" | "sdk" | "localization" | "configuration";
+	defaultTab?: "environments" | "sdk" | "localization";
 } = {}) {
 	const { t, tr, locale } = useFlowI18n();
 	const { projectRef } = useFlows();
 	const [tab, setTab] = useState(() => {
 		const requested =
 			typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab");
-		return requested &&
-			["environments", "sdk", "localization", "links", "configuration"].includes(requested)
+		// Plugin health moved to the Plugins page, so old `?tab=configuration` links open the default tab.
+		return requested && ["environments", "sdk", "localization"].includes(requested)
 			? requested
 			: defaultTab;
 	});
 	useEffect(() => {
+		const url = new URL(window.location.href);
+		// Link defaults moved to Acquisition › Dynamic links › Settings.
+		if (url.searchParams.get("tab") === "links") {
+			const lang = url.searchParams.get("lang");
+			window.location.replace(
+				`/acquisition/dynamic-links?${lang ? `lang=${encodeURIComponent(lang)}&` : ""}tab=settings`,
+			);
+			return;
+		}
 		if (
 			/^\/(flows|acquisition)\/settings\/(environments|localization|sdk)$/.test(
 				window.location.pathname,
 			)
 		) {
-			const url = new URL(window.location.href);
 			url.pathname = "/acquisition/settings";
 			url.searchParams.set("tab", defaultTab);
 			window.location.replace(url);
@@ -583,9 +590,7 @@ export function AcquisitionSettingsPage({
 				<div className="min-w-0">
 					<h1 className="ds-page-title">{tr("Acquisition settings")}</h1>
 					<p className="ds-page-description">
-						{tr(
-							"Manage release environments, SDK integrations, localization rules and plugin configuration.",
-						)}
+						{tr("Manage release environments, SDK integrations and localization rules.")}
 					</p>
 				</div>
 			</header>
@@ -603,8 +608,6 @@ export function AcquisitionSettingsPage({
 					<TabsTrigger value="environments">{tr("Environments")}</TabsTrigger>
 					<TabsTrigger value="sdk">{tr("SDK")}</TabsTrigger>
 					<TabsTrigger value="localization">{tr("Localization")}</TabsTrigger>
-					<TabsTrigger value="links">{tr("Link defaults")}</TabsTrigger>
-					<TabsTrigger value="configuration">{tr("Configuration")}</TabsTrigger>
 				</TabsList>
 				<TabsContent value="environments">
 					{projectRef ? (
@@ -627,13 +630,8 @@ export function AcquisitionSettingsPage({
 						<FlowsEmptyState icon={FolderKanban} title={t("selectProject")} />
 					)}
 				</TabsContent>
-				<TabsContent value="links">
-					<LinkDefaults />
-				</TabsContent>
-				<TabsContent value="configuration">
-					<PluginConfigurationTab locale={locale} />
-				</TabsContent>
 			</Tabs>
+			<PluginDiagnosticsLink locale={locale} />
 		</section>
 	);
 }

@@ -1,4 +1,3 @@
-import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	AnalyticsContractError,
 	parseMarketingSignalV1,
@@ -6,6 +5,7 @@ import {
 } from "@superboard/contracts/analytics";
 import { evaluateJourneyCondition as conditionMatches } from "@superboard/contracts/journey-simulation";
 import type { ProjectContext } from "@superboard/contracts/project-context";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
 import { failure } from "./auth";
@@ -16,6 +16,16 @@ import {
 	claimEmailFrequency,
 	getPublishedEmailTemplate,
 } from "./email-studio.js";
+import {
+	enrollmentReachedGoal,
+	evaluateWaitStep,
+	journeyOutcomes,
+	nativeTriggerKeys,
+	onSubscriberSignal,
+	validateEventKey,
+	validateNativeTriggerSettings,
+	type DateTriggerSettings,
+} from "./native-triggers.js";
 import { decryptJson, encryptJson } from "./secrets";
 import { deliverySenders } from "./sender-profiles.js";
 import { instrumentHtml, unsubscribeUrl } from "./tracking";
@@ -37,7 +47,14 @@ type JourneyBindings = {
 
 type JourneyStatus = "draft" | "active" | "paused" | "archived";
 type ReentryPolicy = "once" | "after_completion" | "every_event";
-type JourneyNodeType = "email" | "channel" | "delay" | "branch" | "update_attribute" | "exit";
+type JourneyNodeType =
+	| "email"
+	| "channel"
+	| "delay"
+	| "branch"
+	| "update_attribute"
+	| "wait_event"
+	| "exit";
 
 type JourneyCondition = {
 	field: string;
@@ -58,6 +75,7 @@ type JourneyCondition = {
 type JourneyTrigger = {
 	event_name: string;
 	conditions: JourneyCondition[];
+	date?: DateTriggerSettings;
 };
 
 type JourneyNode = {
@@ -69,6 +87,8 @@ type JourneyNode = {
 	delay_seconds?: number;
 	condition?: JourneyCondition;
 	attributes?: Record<string, unknown>;
+	event_name?: string;
+	timeout_seconds?: number;
 };
 
 type JourneyEdge = {
@@ -81,9 +101,10 @@ type JourneyDefinition = {
 	start_node_id: string;
 	nodes: JourneyNode[];
 	edges: JourneyEdge[];
+	goal?: { event_name: string };
 };
 
-type JourneyRow = Record<string, unknown> & {
+export type JourneyRow = Record<string, unknown> & {
 	id: string;
 	project_id: number;
 	status: JourneyStatus;
@@ -118,7 +139,13 @@ type SubscriberRow = {
 
 const NODE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/u;
 const EVENT_NAME = /^(?:\*|[A-Za-z0-9][A-Za-z0-9._:-]{0,254})$/u;
-const journeyRoutes = registerRouter(new Hono<JourneyBindings>(), {"service":"marketing","module":"journeys.journeyRoutes","pluginId":"superboard-marketing","surface":"internal","access":"internal"});
+const journeyRoutes = registerRouter(new Hono<JourneyBindings>(), {
+	service: "marketing",
+	module: "journeys.journeyRoutes",
+	pluginId: "superboard-marketing",
+	surface: "internal",
+	access: "internal",
+});
 
 journeyRoutes.get("/journeys", async (c) => {
 	const projectId = c.get("project").projectId;
@@ -392,7 +419,12 @@ journeyRoutes.get("/journeys/:journeyId/statistics", async (c) => {
 			c.req.param("journeyId"),
 		)
 		.first<Record<string, unknown>>();
-	return c.json({ data: row ?? {} });
+	return c.json({
+		data: {
+			...row,
+			...(await journeyOutcomes(c.env.DB, projectId, c.req.param("journeyId"))),
+		},
+	});
 });
 
 journeyRoutes.post("/signals", async (c) => {
@@ -413,6 +445,7 @@ export async function acceptMarketingSignal(
 	project: ProjectContext,
 	signal: MarketingSignalV1,
 	source = "analytics",
+	options: { subscriberId?: string } = {},
 ): Promise<{ duplicate: boolean; matched_journeys: number }> {
 	const claimed = await env.DB.prepare(
 		`INSERT INTO marketing_signal_receipts
@@ -439,28 +472,34 @@ export async function acceptMarketingSignal(
 			.first<{ status: string }>();
 		if (existing?.status !== "received") return { duplicate: true, matched_journeys: 0 };
 	}
-	const subscriber = signal.subject_hash
-		? await env.DB.prepare(
-				`SELECT subscriber.* FROM subscriber_identity_aliases identity
+	const subscriber = options.subscriberId
+		? await env.DB.prepare("SELECT * FROM subscribers WHERE project_id = ? AND id = ?")
+				.bind(project.projectId, options.subscriberId)
+				.first<SubscriberRow>()
+		: signal.subject_hash
+			? await env.DB.prepare(
+					`SELECT subscriber.* FROM subscriber_identity_aliases identity
          JOIN subscribers subscriber ON subscriber.id = identity.subscriber_id
          WHERE identity.project_id = ? AND identity.identity_hash = ?
            AND identity.identity_kind IN ('user','anonymous','instance')
          LIMIT 1`,
-			)
-				.bind(project.projectId, signal.subject_hash)
-				.first<SubscriberRow>()
-		: null;
+				)
+					.bind(project.projectId, signal.subject_hash)
+					.first<SubscriberRow>()
+			: null;
 	if (!subscriber) {
 		await completeSignal(env.DB, project.projectId, signal.event_id, 0, "unmatched");
 		return { duplicate: false, matched_journeys: 0 };
 	}
+	await onSubscriberSignal(env, project.projectId, subscriber.id, signal);
+	const triggerNames = [signal.event_name, "*", ...nativeTriggerKeys(signal)];
 	const journeys = await env.DB.prepare(
 		`SELECT * FROM marketing_journeys
      WHERE project_id = ? AND status = 'active'
-       AND (trigger_event_name = ? OR trigger_event_name = '*')
+       AND trigger_event_name IN (${triggerNames.map(() => "?").join(",")})
      ORDER BY id`,
 	)
-		.bind(project.projectId, signal.event_name)
+		.bind(project.projectId, ...triggerNames)
 		.all<JourneyRow>();
 	let matched = 0;
 	for (const journey of journeys.results) {
@@ -637,6 +676,10 @@ export async function advanceJourneyEnrollment(
 		.bind(job.projectId, job.enrollmentId)
 		.first<EnrollmentRow>();
 	if (!enrollment || !["active", "waiting", "processing"].includes(enrollment.status)) return;
+	if (await enrollmentReachedGoal(env.DB, job.projectId, enrollment.id)) {
+		await completeEnrollment(env.DB, enrollment.id, "exited", null);
+		return;
+	}
 	if (Date.parse(enrollment.next_run_at) > Date.now()) return;
 	const journey = await getJourney(env.DB, job.projectId, enrollment.journey_id);
 	if (journey.status !== "active") {
@@ -748,6 +791,23 @@ async function executeNode(
 			.bind(JSON.stringify(node.attributes ?? {}), enrollment.project_id, subscriber.id)
 			.run();
 		output = { updated_attributes: Object.keys(node.attributes ?? {}) };
+	} else if (node.type === "wait_event") {
+		const wait = await evaluateWaitStep(env.DB, enrollment, node);
+		if (wait.waiting) {
+			// The step is re-claimed when the event arrives or the timeout expires.
+			await env.DB.batch([
+				env.DB.prepare("DELETE FROM marketing_journey_step_executions WHERE id = ?").bind(
+					executionId,
+				),
+				env.DB.prepare(
+					`UPDATE marketing_journey_enrollments SET status = 'waiting', next_run_at = ?, last_error = NULL,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND status = 'processing'`,
+				).bind(wait.expires_at, enrollment.id),
+			]);
+			return;
+		}
+		outcome = wait.outcome;
+		output = wait.output;
 	} else if (node.type === "email") {
 		output = await deliverJourneyEmail(
 			env,
@@ -1110,7 +1170,7 @@ async function recordJourneyDelivery(
 		.run();
 }
 
-async function enrollSubscriber(
+export async function enrollSubscriber(
 	env: Env,
 	journey: JourneyRow,
 	subscriberId: string,
@@ -1254,6 +1314,7 @@ function validateTrigger(value: unknown): JourneyTrigger {
 	return {
 		event_name: eventName,
 		conditions: rawConditions.map(validateCondition),
+		...validateNativeTriggerSettings(eventName, source),
 	};
 }
 
@@ -1283,12 +1344,25 @@ function validateDefinition(value: unknown): JourneyDefinition {
 			) {
 				throw failure("journey_graph_invalid", "Branch nodes require true and false edges");
 			}
+		} else if (node.type === "wait_event") {
+			if (new Set(outgoing.map((edge) => edge.outcome)).size !== outgoing.length) {
+				throw failure("journey_graph_invalid", "Wait steps allow one edge per outcome");
+			}
 		} else if (node.type !== "exit" && outgoing.length > 1) {
 			throw failure("journey_graph_invalid", "Non-branch nodes allow at most one edge");
 		}
 	}
 	assertAcyclic(startNodeId, edges);
-	return { start_node_id: startNodeId, nodes, edges };
+	const goal =
+		source.goal == null
+			? undefined
+			: {
+					event_name: validateEventKey(
+						jsonObject(source.goal, "goal", 2_000).event_name,
+						"goal.event_name",
+					),
+				};
+	return { start_node_id: startNodeId, nodes, edges, ...(goal ? { goal } : {}) };
 }
 
 function validateNode(value: unknown): JourneyNode {
@@ -1301,8 +1375,24 @@ function validateNode(value: unknown): JourneyNode {
 		"delay",
 		"branch",
 		"update_attribute",
+		"wait_event",
 		"exit",
 	] as const);
+	if (type === "wait_event") {
+		const timeout = positiveInt(source.timeout_seconds, "timeout_seconds");
+		if (timeout < 60 || timeout > 31_536_000) {
+			throw failure(
+				"timeout_seconds_invalid",
+				"A wait is limited to between one minute and one year",
+			);
+		}
+		return {
+			id,
+			type,
+			event_name: validateEventKey(source.event_name, "event_name"),
+			timeout_seconds: timeout,
+		};
+	}
 	if (type === "email") {
 		return {
 			id,

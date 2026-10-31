@@ -3,6 +3,7 @@
 interface __BaseEnv_Env {
 	FILES: R2Bucket;
 	DB: D1Database;
+	SUPERBOARD_WORKER_VERSION: WorkerVersionMetadata;
 	ENVIRONMENT: string;
 	D1_EXPECTED_MIGRATION: string;
 	AUTH_GATEWAY_ISSUER: string;
@@ -12,6 +13,7 @@ interface __BaseEnv_Env {
 	FILES_PUBLIC_ORIGIN: string;
 	DOWNLOAD_TICKET_TTL_SECONDS: string;
 	ALLOWED_FILE_CONTENT_TYPES_JSON: string;
+	SUPERBOARD_RELEASE: string;
 	SUPERBOARD_INSTANCE_ID: string;
 	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	FILES_DOWNLOAD_SIGNING_KEY: string;
@@ -25,7 +27,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "APPLICATION_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "MAX_FILE_BYTES" | "FILES_PUBLIC_ORIGIN" | "DOWNLOAD_TICKET_TTL_SECONDS" | "ALLOWED_FILE_CONTENT_TYPES_JSON" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "FILES_DOWNLOAD_SIGNING_KEY" | "FILES_INTERNAL_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "APPLICATION_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "MAX_FILE_BYTES" | "FILES_PUBLIC_ORIGIN" | "DOWNLOAD_TICKET_TTL_SECONDS" | "ALLOWED_FILE_CONTENT_TYPES_JSON" | "SUPERBOARD_RELEASE" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "FILES_DOWNLOAD_SIGNING_KEY" | "FILES_INTERNAL_TOKEN">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

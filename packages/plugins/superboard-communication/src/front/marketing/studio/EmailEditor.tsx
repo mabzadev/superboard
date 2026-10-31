@@ -13,6 +13,9 @@ import { Button, Input, InputArea, Select } from "@superboard/front-ui/kumo";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { EmailTemplate } from "../api/marketing/marketingService.js";
+import { applyBrandTheme, BRAND_FONTS } from "./brand.js";
+import { useGrowthI18n } from "./growth-i18n.js";
+import { getBrandKit } from "./growth-service.js";
 import { useStudioI18n } from "./i18n.js";
 import {
 	getEmailVersions,
@@ -92,6 +95,7 @@ export function EmailEditor({
 	purposeGroup?: "campaign" | "transactional";
 }) {
 	const { t, locale } = useStudioI18n();
+	const { t: growth } = useGrowthI18n();
 	const initial = template?.studio_document ?? initialDesign ?? createEmailDesign(locale);
 	const [document, setDocument] = useState<EmailDesign>(() => structuredClone(initial));
 	const [name, setName] = useState(template?.name ?? initialName ?? t("New message"));
@@ -806,11 +810,24 @@ export function EmailEditor({
 									value && update((draft) => ({ ...draft, theme: { ...draft.theme, font: value } }))
 								}
 								items={{
-									"Arial, sans-serif": "Arial",
-									"Georgia, serif": "Georgia",
-									"Verdana, sans-serif": "Verdana",
+									...BRAND_FONTS,
+									...(BRAND_FONTS[document.theme.font]
+										? {}
+										: { [document.theme.font]: document.theme.font }),
 								}}
 							/>
+							<Button
+								onClick={() => {
+									getBrandKit(project).then(
+										(brand) => {
+											update((draft) => applyBrandTheme(draft, brand));
+										},
+										() => undefined,
+									);
+								}}
+							>
+								{growth("Apply brand kit")}
+							</Button>
 						</>
 					)}
 					{panel === "Languages" && (

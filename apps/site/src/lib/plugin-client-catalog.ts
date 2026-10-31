@@ -38,3 +38,19 @@ export async function loadPluginClientView(pluginId: string, routeId: string) {
 		throw new Error(`View component is not exported by ${pluginId}: ${routeId}`);
 	return { Page: module.default, Providers: plugin.Providers };
 }
+
+const preloadedViews = new Map<string, ReturnType<typeof loadPluginClientView>>();
+
+// Starts the view import once per route so it can run alongside the scope request.
+export function preloadPluginClientView(pluginId: string, routeId: string) {
+	const key = `${pluginId}\0${routeId}`;
+	let view = preloadedViews.get(key);
+	if (!view) {
+		view = loadPluginClientView(pluginId, routeId);
+		view.catch(() => {
+			preloadedViews.delete(key);
+		});
+		preloadedViews.set(key, view);
+	}
+	return view;
+}

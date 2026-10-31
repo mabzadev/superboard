@@ -7,7 +7,10 @@ import {
 	editableViewFromEntry,
 	frontViewSlug,
 } from "../lib/native-front-views.js";
-import { projectNativeFrontPresentation } from "../lib/native-front-presentation.js";
+import {
+	projectNativeFrontPresentation,
+	renderedContentRequiresProjectScope,
+} from "../lib/native-front-presentation.js";
 import { ensureSuperBoardViews } from "../lib/superboard-views.js";
 import { createUserFrontI18n, resolveUserFrontRequestLocale } from "../lib/user-front-i18n.js";
 import { NativeFrontApp } from "./NativeFrontApp.js";
@@ -17,6 +20,7 @@ import { getSiteEnv } from "../lib/site-env.js";
 import "@superboard/front-ui/styles/kumo.css";
 import "../styles/dashboard-views.css";
 import "../styles/native-front.css";
+// Imported last on purpose: its :root font tokens must follow the Kumo/Tailwind layers.
 import "@superboard/front-ui/styles/fonts.css";
 
 interface Props {
@@ -27,6 +31,13 @@ const { model } = Astro.props;
 const locale = resolveUserFrontRequestLocale(Astro.request);
 Astro.response.headers.set("Content-Language", locale);
 let configuration;
+// The scope request only depends on the resolved renderers, so it runs alongside the
+// editorial view and menu reads instead of after them. On failure, the authenticated POST
+// bootstrap resolves absent core projections in the client.
+const projectScope =
+	model.operator && renderedContentRequiresProjectScope(model)
+		? resolveOperatorProjectScope(getSiteEnv(), model.operator).catch(() => undefined)
+		: undefined;
 if (model.resolution.result === "rendered" && model.operator) {
 	await ensureSuperBoardViews(Astro.locals.emdash.db);
 	const route = model.release?.release.payload.front_route_manifest.routes.find(({ route_id }) => route_id === model.resolution.route_id);
@@ -34,7 +45,6 @@ if (model.resolution.result === "rendered" && model.operator) {
 		getMenu("superboard-admin", { locale }),
 		getEmDashEntry("views", frontViewSlug(route?.path_pattern ?? model.requested_path)),
 	]);
-	if (Astro.cache?.enabled) Astro.cache.set(viewResult.cacheHint);
 	configuration = {
 		navigation: editableNavigationFromMenu(menu),
 		view: editableViewFromEntry(viewResult.entry, model.release?.release.payload ?? null),
@@ -42,11 +52,12 @@ if (model.resolution.result === "rendered" && model.operator) {
 }
 const projection = projectNativeFrontPresentation(model, locale, configuration);
 projection.operator = model.operator;
-if (model.operator && model.resolution.result === "rendered" && projection.content_mounts.some(({ renderer }) => renderer.plugin_id !== "supbrd-core")) {
-	try { projection.project_scope = await resolveOperatorProjectScope(getSiteEnv(), model.operator); }
-	catch { /* The authenticated POST bootstrap resolves absent core projections in the client. */ }
-}
+const resolvedProjectScope = await projectScope;
+if (resolvedProjectScope) projection.project_scope = resolvedProjectScope;
 const i18n = createUserFrontI18n(locale);
+// Loaded without blocking render; "Geist Mono" (self-hosted) covers the swap period.
+const sourceCodeProStylesheet =
+	"https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,400;0,500;0,600;1,400&display=swap";
 const viewTitle = projection.content_mounts[0]?.view_title ?? model.page_title;
 const title = viewTitle ? (Object.hasOwn(projection.messages, viewTitle) ? i18n._(viewTitle) : viewTitle) : i18n._("site.front.title");
 ---
@@ -59,30 +70,50 @@ const title = viewTitle ? (Object.hasOwn(projection.messages, viewTitle) ? i18n.
 		<meta name="robots" content="noindex, nofollow" />
 		<meta name="superboard-release-id" content={projection.release_id ?? ""} />
 		<title>{title}</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href={sourceCodeProStylesheet}
+			media="print"
+			onload="this.media='all'"
+		/>
+		<noscript><link rel="stylesheet" href={sourceCodeProStylesheet} /></noscript>
 		<script is:inline define:vars={{ instanceId: model.instance_id }}>
+			// Mirrors the next-themes provider in FrontRuntimeProviders (same storage key,
+			// defaultTheme "system") so the first paint matches the hydrated theme.
 			(() => {
-				let preference = "dark";
+				const storageKey = `superboard:${instanceId}:theme`;
+				let storedPreference = null;
 				try {
-					const storedPreference =
-						localStorage.getItem(`superboard:${instanceId}:theme`) ||
-						localStorage.getItem("superboard-theme") ||
-						localStorage.getItem("theme");
-					if (storedPreference === "light" || storedPreference === "dark") {
-						preference = storedPreference;
-					} else if (storedPreference === "system") {
-						const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-						preference = prefersDark ? "dark" : "light";
+					storedPreference = localStorage.getItem(storageKey);
+					if (!storedPreference) {
+						const legacyPreference =
+							localStorage.getItem("superboard-theme") || localStorage.getItem("theme");
+						if (
+							legacyPreference === "light" ||
+							legacyPreference === "dark" ||
+							legacyPreference === "system"
+						) {
+							storedPreference = legacyPreference;
+							localStorage.setItem(storageKey, legacyPreference);
+						}
 					}
 				} catch {
 					// Storage can be unavailable in privacy-restricted contexts.
 				}
-				if (preference === "dark") {
-					document.documentElement.classList.add("dark");
-				} else {
-					document.documentElement.classList.remove("dark");
-				}
-				document.documentElement.setAttribute("data-theme", preference);
-				document.documentElement.setAttribute("data-mode", preference);
+				const preference =
+					storedPreference === "light" || storedPreference === "dark"
+						? storedPreference
+						: window.matchMedia("(prefers-color-scheme: dark)").matches
+							? "dark"
+							: "light";
+				const root = document.documentElement;
+				root.classList.remove("light", "dark");
+				root.classList.add(preference);
+				root.setAttribute("data-theme", preference);
+				root.setAttribute("data-mode", preference);
+				root.style.colorScheme = preference;
 			})();
 		</script>
 	</head>

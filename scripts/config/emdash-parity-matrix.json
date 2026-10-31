@@ -7,32 +7,32 @@
   "release": {
     "source": "scripts/config/superboard-parity-release.json",
     "release_id": "01J00000000000000000007005",
-    "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+    "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "GLRQnX7ia___mExiBeWcZKZQOsxsfJnZjhBTsYpXf0Esss9cJnI5KyaEdtLraL4TLH8B1-255xfC45et2AeHhw"
+      "value": "rVuxpYOOwmq5MxGzW5Xufk9FuB5jZxmlrFLJVn88YourRYhxSBlqXILqY-NwGUdKZera5FhbyjF_tPVsx7SzwQ"
     },
-    "validation_set_checksum": "sha256:57e785ea10b9ddc6ddae7f5bc711515c71133ed8d69a9b754f8ede10909b82ba",
+    "validation_set_checksum": "sha256:27c0624d6831bd0d74fd79ffdfd6aa5e37d843752c6d4b5aea8e6675c7833e76",
     "validation_receipt_checksums": [
-      "sha256:2fe359251eba69df03a6be42505b95ec1562f841db06ada0ae2d8f6b2b55eb50",
-      "sha256:ba00762f9a0bc24436fb80b642d1f86eecda868af3096c65b86cde04bc90f2d7",
-      "sha256:cc90371eaacec740a4c0c955266f6fd6edd5dbb5ec4d1381c5893fccd7265a75",
-      "sha256:17be355e1bb270e6bdb7aff25718e41dcf515d551374fd71d7cdac05e485762d",
-      "sha256:33948059c74aac19fb37fb739238f94022d274f21c96f5d0a1471715751eeec4",
-      "sha256:92b1e0e27b6d36b91e83293a982ca5cfa850a85af8f2c041afc5298524767bf2",
-      "sha256:f8b19c286791c367b558c8449069b04db01d943572e634f5ed4b9e5d8ed0c7f3",
-      "sha256:2b70c650ed0efafc8daa767eadc1f7c7f0f3e2ea6b98c23ff7ca4d05c759e92c",
-      "sha256:2122232f5ea2c3a984f9c172886b3dc8eaf971ef1e7d17fa034ae3f94f82dab8",
-      "sha256:3eeb0cfd837c3dc7163b46968afea1601609c71b237281f866345fe5e9390479",
-      "sha256:d17f4fad49b8c41f97132f9387c69ad6fce9bcc4e6e6f31cbe045ff5192c16b0",
-      "sha256:77f22acd7514cf3c09b93cc5db3baf3058ce1cf9d5b3389fc2fa6ddd551c2ddb",
-      "sha256:c1d394e54cfb40ebb75f81176ab2701b496c507ca1159ac36875171af91a5a16"
+      "sha256:49b19c6bab22734f7c3f809ab53dac4023b1e785d464afa9e11115854da6d62e",
+      "sha256:63a84ec6916a938208e7cb4af91dbffd97d252a953f880323aa00cfd61f58be6",
+      "sha256:66f672751ff9b64617db2d78b0c489ed6c69f63e636a03849ef5add2d5790cc8",
+      "sha256:bde646fadd9eef1145f83d130abee5747265bb04cc0a8b1609ea7a3cc463a3dd",
+      "sha256:9fdfe4d38e256262d43c0c8ef3ac1ac317c71fa2c2db631fbb6e26d8aff79433",
+      "sha256:e67bc7dd87f73a745c07b1018c9ba1159cbcaadeb8c67a8173380db0d5617905",
+      "sha256:fcbfa161ba8364343dd613fa092d18e6594164421c2163f83629e8fae36d304a",
+      "sha256:3fba9fcecd449c66ef5f35d1536ad3565cde7adba87f0ae9c8ac47c10921c7e0",
+      "sha256:f1ac9a2b661fe8a79c21dbe65198efda2607e41e29a4be8883d9f14d68d4ae93",
+      "sha256:6a0bfd0ef2ae5cf19a764820518076eb950070d4329d23094921426d0f0867a9",
+      "sha256:858188259b659308e2685ae7dc65b3557bf3c62d0e8a15a495a3aab40bf0a316",
+      "sha256:9f289796c371a76d89bff54b08f58012d05e60467b9ba0decc47a6f4c345e37d",
+      "sha256:171cec562eaa19dc77f2c9c1436f332ce53fbb69b4a8d8f6a3c773605bfd504f"
     ],
     "verification_status": "verified",
     "target": "mabza-development",
     "environment": "local",
-    "target_artifact_checksum": "sha256:89b65e3f6faf960846f142c515c3ded9e7cdc1cfdfd5bc38c8f371e478b4887b",
+    "target_artifact_checksum": "sha256:65d71b7f96292b562d7ef9d4fa3ba1de3043bdfc9bffade87d31e8e1d4431331",
     "active_plugin_ids": [
       "superboard-analytics",
       "superboard-audit",
@@ -61,7 +61,7 @@
       "baseline": "packages/plugins/superboard-core/api/src/index.ts",
       "target": "superboard-gateway",
       "test": "tests/checks/plugins/superboard-core/api/unit/lib/domain-modules.test.ts",
-      "proof_sha256": "sha256:2bb418226a50b66af12a3bd9b840c4486e885588e9a932c9147379a9170d101a",
+      "proof_sha256": "sha256:33ed59fc0047803e97c390b706527e508c231f099012f4e7c1495baed1ecc6f1",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -105,7 +105,7 @@
       "baseline": "packages/plugins/superboard-core/api/src/index.ts",
       "target": "superboard-gateway",
       "test": "tests/checks/plugins/superboard-core/api/unit/routes/projects-visitors.test.ts",
-      "proof_sha256": "sha256:d50d0c2cbc697aa5b229c80b6dfff3d68a70741b7b7bf868be76a7bb33eac3e1",
+      "proof_sha256": "sha256:808a79981bba8cdc9c9cc1e05722b23667edc2dd391ac408f4f3a8d9ed9e9ef5",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -204,7 +204,7 @@
       "baseline": "packages/plugins/superboard-core/api/src/index.ts",
       "target": "superboard-gateway",
       "test": "tests/checks/plugins/superboard-core/api/unit/routes/projects-visitors.test.ts",
-      "proof_sha256": "sha256:d50d0c2cbc697aa5b229c80b6dfff3d68a70741b7b7bf868be76a7bb33eac3e1",
+      "proof_sha256": "sha256:808a79981bba8cdc9c9cc1e05722b23667edc2dd391ac408f4f3a8d9ed9e9ef5",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -10705,6 +10705,24 @@
       ]
     },
     {
+      "id": "release:page:superboard.communication_audience",
+      "kind": "page",
+      "baseline": "scripts/config/superboard-parity-release.json",
+      "target": "superboard-marketing",
+      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
+      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
+      "release_id": "01J00000000000000000007005",
+      "route_id": "superboard.communication_audience",
+      "path": "/communication/audience",
+      "page_id": "page.superboard_communication_audience",
+      "renderer_ids": [
+        "superboard-marketing.renderer.admin_surface"
+      ]
+    },
+    {
       "id": "release:page:superboard.communication_campaigns",
       "kind": "page",
       "baseline": "scripts/config/superboard-parity-release.json",
@@ -12084,7 +12102,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-analytics.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-audit.renderer.admin_surface",
@@ -12098,7 +12116,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-audit.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-billing.renderer.admin_surface",
@@ -12112,7 +12130,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-billing.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-content.renderer.admin_surface",
@@ -12126,7 +12144,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-content.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-dynamic-links.renderer.admin_surface",
@@ -12140,7 +12158,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-dynamic-links.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-email.renderer.admin_surface",
@@ -12154,7 +12172,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-email.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-files.renderer.admin_surface",
@@ -12168,7 +12186,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-files.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-flows.renderer.admin_surface",
@@ -12182,7 +12200,7 @@
       "required": false,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-flows.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-gateway.renderer.admin_surface",
@@ -12196,7 +12214,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-gateway.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-marketing.renderer.admin_surface",
@@ -12210,7 +12228,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-marketing.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-mcp.renderer.admin_surface",
@@ -12224,7 +12242,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-mcp.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-observability.renderer.admin_surface",
@@ -12238,7 +12256,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-observability.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-onboardings.renderer.admin_surface",
@@ -12252,7 +12270,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-onboardings.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-paywalls.renderer.admin_surface",
@@ -12266,7 +12284,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-paywalls.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-products.renderer.admin_surface",
@@ -12280,7 +12298,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-products.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-settings.renderer.admin_surface",
@@ -12294,7 +12312,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-settings.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-support.renderer.admin_surface",
@@ -12308,7 +12326,7 @@
       "required": false,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-support.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-user.renderer.admin_surface",
@@ -12322,7 +12340,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-user.renderer.admin_surface",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-user.renderer.login_form",
@@ -12336,7 +12354,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-user.renderer.login_form",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:renderer:superboard-user.renderer.profile_card",
@@ -12350,7 +12368,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-user.renderer.profile_card",
-      "contribution_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1"
+      "contribution_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114"
     },
     {
       "id": "release:store:superboard-analytics.store.aggregates",
@@ -12532,7 +12550,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-email.store.deliveries",
-      "contribution_checksum": "sha256:d0fb9b88e1a75f61a87decfa67294db87f5daa94f88e0bec24c7f267f6daf436"
+      "contribution_checksum": "sha256:6e846fb2a5bcd1929f0322b6da7437ce69c6db96ebb6ab4c2142e2e538d8c26b"
     },
     {
       "id": "release:store:superboard-email.store.provider_events",
@@ -12546,7 +12564,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-email.store.provider_events",
-      "contribution_checksum": "sha256:3da6246d6c12de824999d37d249ffe13f135b9909f05a3ebff7fe813401c9513"
+      "contribution_checksum": "sha256:7c2490222c6b290d388cb2c193e95d49589dd4b719900082bed6f95c0952fe6c"
     },
     {
       "id": "release:store:superboard-files.store.objects",
@@ -12616,7 +12634,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-gateway.store.rate_limits",
-      "contribution_checksum": "sha256:2458d64eba8a52fac8f1e90718ea0274dc4c5b1708864aa76d2bcfbeb7505b5b"
+      "contribution_checksum": "sha256:fc70f09401a2f50b4c3099347c8cceb1b74e9435726fc11d2494fba8b43fa32f"
     },
     {
       "id": "release:store:superboard-gateway.store.route_manifests",
@@ -12630,7 +12648,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-gateway.store.route_manifests",
-      "contribution_checksum": "sha256:a59fdf67948cbb1f4af85a404f0d53267f633385da0a5380f3522328cbae1c46"
+      "contribution_checksum": "sha256:415287b61681dcc95377f16df932cfe9406de05bdd25e895b22802ef8ac4281e"
     },
     {
       "id": "release:store:superboard-marketing.store.campaigns",
@@ -12644,7 +12662,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-marketing.store.campaigns",
-      "contribution_checksum": "sha256:f53586048db5db8f94549d7248091a82578bd3b023f93fcce308ed625592379d"
+      "contribution_checksum": "sha256:15f64c22aa672b3c96b771fb894b9c2b962c96047fb4fcddba7d85ecbef974ff"
     },
     {
       "id": "release:store:superboard-marketing.store.consent",
@@ -12658,7 +12676,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-marketing.store.consent",
-      "contribution_checksum": "sha256:718960ee4dce6dbbd64b700529973103f52eeba8422a6fc488b112d03064da5e"
+      "contribution_checksum": "sha256:c2eaf0e5363d24f1e04b75fe7ac204c0ef19d5143fdfc37d81970f4f8a12bd62"
     },
     {
       "id": "release:store:superboard-marketing.store.journeys",
@@ -12672,7 +12690,7 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "contribution_id": "superboard-marketing.store.journeys",
-      "contribution_checksum": "sha256:34ac1adeafd1916224ab2da6f6bee4b8aac080551c0e850953736504386b06c2"
+      "contribution_checksum": "sha256:0eced8c084d671a86f2e77040dad99204c91502bdfcffb58f5a43284cb1cdfbd"
     },
     {
       "id": "release:store:superboard-mcp.store.sessions",
@@ -12927,6 +12945,66 @@
       "contribution_checksum": "sha256:074aa91d5b5b73c5d072b1450d21ea9cc88beb943fe45c3cd77828d31702f5cc"
     },
     {
+      "id": "release:submenu:acquisition:superboard.acquisition_dynamic_links",
+      "kind": "submenu",
+      "baseline": "scripts/config/superboard-parity-release.json",
+      "target": "superboard-dynamic-links",
+      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
+      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
+      "release_id": "01J00000000000000000007005",
+      "group_id": "acquisition",
+      "route_id": "superboard.acquisition_dynamic_links",
+      "href": "/acquisition/dynamic-links"
+    },
+    {
+      "id": "release:submenu:acquisition:superboard.acquisition_paywalls",
+      "kind": "submenu",
+      "baseline": "scripts/config/superboard-parity-release.json",
+      "target": "superboard-paywalls",
+      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
+      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
+      "release_id": "01J00000000000000000007005",
+      "group_id": "acquisition",
+      "route_id": "superboard.acquisition_paywalls",
+      "href": "/acquisition/paywalls"
+    },
+    {
+      "id": "release:submenu:acquisition:superboard.acquisition_settings",
+      "kind": "submenu",
+      "baseline": "scripts/config/superboard-parity-release.json",
+      "target": "superboard-flows",
+      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
+      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
+      "source_status": "unvalidated",
+      "blocker": "flows_complete_gate",
+      "required": false,
+      "release_id": "01J00000000000000000007005",
+      "group_id": "acquisition",
+      "route_id": "superboard.acquisition_settings",
+      "href": "/acquisition/settings"
+    },
+    {
+      "id": "release:submenu:acquisition:superboard.onboardings",
+      "kind": "submenu",
+      "baseline": "scripts/config/superboard-parity-release.json",
+      "target": "superboard-onboardings",
+      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
+      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
+      "release_id": "01J00000000000000000007005",
+      "group_id": "acquisition",
+      "route_id": "superboard.onboardings",
+      "href": "/acquisition/onboardings"
+    },
+    {
       "id": "release:submenu:analytics:superboard.analytics",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
@@ -12940,66 +13018,6 @@
       "group_id": "analytics",
       "route_id": "superboard.analytics",
       "href": "/analytics"
-    },
-    {
-      "id": "release:submenu:analytics:superboard.analytics_alerts",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-analytics",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "analytics",
-      "route_id": "superboard.analytics_alerts",
-      "href": "/analytics/alerts"
-    },
-    {
-      "id": "release:submenu:analytics:superboard.analytics_cohorts",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-analytics",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "analytics",
-      "route_id": "superboard.analytics_cohorts",
-      "href": "/analytics/cohorts"
-    },
-    {
-      "id": "release:submenu:analytics:superboard.analytics_crashes",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-analytics",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "analytics",
-      "route_id": "superboard.analytics_crashes",
-      "href": "/analytics/crashes"
-    },
-    {
-      "id": "release:submenu:analytics:superboard.analytics_dimensions",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-analytics",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "analytics",
-      "route_id": "superboard.analytics_dimensions",
-      "href": "/analytics/dimensions"
     },
     {
       "id": "release:submenu:analytics:superboard.analytics_events",
@@ -13017,21 +13035,6 @@
       "href": "/analytics/events"
     },
     {
-      "id": "release:submenu:analytics:superboard.analytics_feedback",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-analytics",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "analytics",
-      "route_id": "superboard.analytics_feedback",
-      "href": "/analytics/feedback"
-    },
-    {
       "id": "release:submenu:analytics:superboard.analytics_insights",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
@@ -13045,21 +13048,6 @@
       "group_id": "analytics",
       "route_id": "superboard.analytics_insights",
       "href": "/analytics/insights"
-    },
-    {
-      "id": "release:submenu:analytics:superboard.analytics_installations",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-analytics",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "analytics",
-      "route_id": "superboard.analytics_installations",
-      "href": "/analytics/installations"
     },
     {
       "id": "release:submenu:analytics:superboard.analytics_purchases",
@@ -13137,21 +13125,6 @@
       "href": "/analytics/users"
     },
     {
-      "id": "release:submenu:analytics:superboard.analytics_views",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-analytics",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "analytics",
-      "route_id": "superboard.analytics_views",
-      "href": "/analytics/views"
-    },
-    {
       "id": "release:submenu:app:superboard.app_access_key",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
@@ -13165,21 +13138,6 @@
       "group_id": "app",
       "route_id": "superboard.app_access_key",
       "href": "/auth/access-key"
-    },
-    {
-      "id": "release:submenu:app:superboard.app_android_setup",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-settings",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "app",
-      "route_id": "superboard.app_android_setup",
-      "href": "/core/android-setup"
     },
     {
       "id": "release:submenu:app:superboard.app_customers",
@@ -13197,36 +13155,6 @@
       "href": "/auth/customers"
     },
     {
-      "id": "release:submenu:app:superboard.app_ios_setup",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-settings",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "app",
-      "route_id": "superboard.app_ios_setup",
-      "href": "/core/ios-setup"
-    },
-    {
-      "id": "release:submenu:app:superboard.app_libraries",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-settings",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "app",
-      "route_id": "superboard.app_libraries",
-      "href": "/core/libraries"
-    },
-    {
       "id": "release:submenu:app:superboard.app_referrals",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
@@ -13240,36 +13168,6 @@
       "group_id": "app",
       "route_id": "superboard.app_referrals",
       "href": "/auth/referrals"
-    },
-    {
-      "id": "release:submenu:app:superboard.app_web_setup",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-settings",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "app",
-      "route_id": "superboard.app_web_setup",
-      "href": "/core/web-setup"
-    },
-    {
-      "id": "release:submenu:app:superboard.project_settings",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-settings",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "app",
-      "route_id": "superboard.project_settings",
-      "href": "/core/settings"
     },
     {
       "id": "release:submenu:app:superboard.users",
@@ -13287,94 +13185,139 @@
       "href": "/auth/users"
     },
     {
-      "id": "release:submenu:dynamic-links:superboard.acquisition_dynamic_links",
+      "id": "release:submenu:data:superboard.data_content",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-dynamic-links",
+      "target": "superboard-content",
       "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
       "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
       "source_status": "delivered",
       "blocker": null,
       "required": true,
       "release_id": "01J00000000000000000007005",
-      "group_id": "dynamic-links",
-      "route_id": "superboard.acquisition_dynamic_links",
-      "href": "/acquisition/dynamic-links"
+      "group_id": "data",
+      "route_id": "superboard.data_content",
+      "href": "/data/content"
     },
     {
-      "id": "release:submenu:flows:superboard.acquisition_components",
+      "id": "release:submenu:data:superboard.data_files",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-flows",
+      "target": "superboard-files",
       "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
       "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "unvalidated",
-      "blocker": "flows_complete_gate",
-      "required": false,
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
       "release_id": "01J00000000000000000007005",
-      "group_id": "flows",
-      "route_id": "superboard.acquisition_components",
-      "href": "/acquisition/components"
+      "group_id": "data",
+      "route_id": "superboard.data_files",
+      "href": "/data/files"
     },
     {
-      "id": "release:submenu:flows:superboard.acquisition_launchpad",
+      "id": "release:submenu:data:superboard.data_settings",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-flows",
+      "target": "superboard-files",
       "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
       "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "unvalidated",
-      "blocker": "flows_complete_gate",
-      "required": false,
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
       "release_id": "01J00000000000000000007005",
-      "group_id": "flows",
-      "route_id": "superboard.acquisition_launchpad",
-      "href": "/acquisition/launchpad"
+      "group_id": "data",
+      "route_id": "superboard.data_settings",
+      "href": "/data/settings"
     },
     {
-      "id": "release:submenu:flows:superboard.acquisition_settings",
+      "id": "release:submenu:environment:superboard.app_libraries",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-flows",
+      "target": "superboard-settings",
       "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
       "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "unvalidated",
-      "blocker": "flows_complete_gate",
-      "required": false,
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
       "release_id": "01J00000000000000000007005",
-      "group_id": "flows",
-      "route_id": "superboard.acquisition_settings",
-      "href": "/acquisition/settings"
+      "group_id": "environment",
+      "route_id": "superboard.app_libraries",
+      "href": "/core/libraries"
     },
     {
-      "id": "release:submenu:flows:superboard.acquisition_workflows",
+      "id": "release:submenu:environment:superboard.infrastructure",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-flows",
+      "target": "superboard-observability",
       "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
       "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "unvalidated",
-      "blocker": "flows_complete_gate",
-      "required": false,
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
       "release_id": "01J00000000000000000007005",
-      "group_id": "flows",
-      "route_id": "superboard.acquisition_workflows",
-      "href": "/acquisition/workflows"
+      "group_id": "environment",
+      "route_id": "superboard.infrastructure",
+      "href": "/core/infrastructure"
     },
     {
-      "id": "release:submenu:flows:superboard.flows",
+      "id": "release:submenu:environment:superboard.mcp",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-flows",
+      "target": "superboard-mcp",
       "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
       "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "unvalidated",
-      "blocker": "flows_complete_gate",
-      "required": false,
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
       "release_id": "01J00000000000000000007005",
-      "group_id": "flows",
-      "route_id": "superboard.flows",
-      "href": "/acquisition/overview"
+      "group_id": "environment",
+      "route_id": "superboard.mcp",
+      "href": "/core/mcp"
+    },
+    {
+      "id": "release:submenu:environment:superboard.project_settings",
+      "kind": "submenu",
+      "baseline": "scripts/config/superboard-parity-release.json",
+      "target": "superboard-settings",
+      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
+      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
+      "release_id": "01J00000000000000000007005",
+      "group_id": "environment",
+      "route_id": "superboard.project_settings",
+      "href": "/core/settings"
+    },
+    {
+      "id": "release:submenu:environment:superboard.system_audit",
+      "kind": "submenu",
+      "baseline": "scripts/config/superboard-parity-release.json",
+      "target": "superboard-audit",
+      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
+      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
+      "release_id": "01J00000000000000000007005",
+      "group_id": "environment",
+      "route_id": "superboard.system_audit",
+      "href": "/core/audit"
+    },
+    {
+      "id": "release:submenu:environment:superboard.system_gateway",
+      "kind": "submenu",
+      "baseline": "scripts/config/superboard-parity-release.json",
+      "target": "superboard-gateway",
+      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
+      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
+      "release_id": "01J00000000000000000007005",
+      "group_id": "environment",
+      "route_id": "superboard.system_gateway",
+      "href": "/core/gateway"
     },
     {
       "id": "release:submenu:identity:superboard.auth_settings",
@@ -13527,7 +13470,7 @@
       "href": "/auth/users?tab=accounts&section=directory&lang=en"
     },
     {
-      "id": "release:submenu:marketing:superboard.communication_campaigns",
+      "id": "release:submenu:marketing:superboard.communication_audience",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
       "target": "superboard-marketing",
@@ -13538,23 +13481,8 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "group_id": "marketing",
-      "route_id": "superboard.communication_campaigns",
-      "href": "/communication/campaigns"
-    },
-    {
-      "id": "release:submenu:marketing:superboard.communication_channels",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-marketing",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "marketing",
-      "route_id": "superboard.communication_channels",
-      "href": "/communication/channels"
+      "route_id": "superboard.communication_audience",
+      "href": "/communication/audience"
     },
     {
       "id": "release:submenu:marketing:superboard.communication_in_app_messages",
@@ -13602,21 +13530,6 @@
       "href": "/communication/marketing-email"
     },
     {
-      "id": "release:submenu:marketing:superboard.communication_notifications",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-marketing",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "marketing",
-      "route_id": "superboard.communication_notifications",
-      "href": "/communication/notifications"
-    },
-    {
       "id": "release:submenu:marketing:superboard.communication_settings",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
@@ -13647,6 +13560,21 @@
       "href": "/communication/statistics"
     },
     {
+      "id": "release:submenu:overview:superboard.home",
+      "kind": "submenu",
+      "baseline": "scripts/config/superboard-parity-release.json",
+      "target": "superboard-analytics",
+      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
+      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
+      "source_status": "delivered",
+      "blocker": null,
+      "required": true,
+      "release_id": "01J00000000000000000007005",
+      "group_id": "overview",
+      "route_id": "superboard.home",
+      "href": "/analytics/home"
+    },
+    {
       "id": "release:submenu:products:superboard.monetization_customers",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
@@ -13660,36 +13588,6 @@
       "group_id": "products",
       "route_id": "superboard.monetization_customers",
       "href": "/monetization/customers"
-    },
-    {
-      "id": "release:submenu:products:superboard.monetization_entitlements",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-billing",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "products",
-      "route_id": "superboard.monetization_entitlements",
-      "href": "/monetization/entitlements"
-    },
-    {
-      "id": "release:submenu:products:superboard.monetization_offerings",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-products",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "products",
-      "route_id": "superboard.monetization_offerings",
-      "href": "/monetization/offerings"
     },
     {
       "id": "release:submenu:products:superboard.monetization_products",
@@ -13707,10 +13605,10 @@
       "href": "/monetization/products"
     },
     {
-      "id": "release:submenu:products:superboard.monetization_purchases",
+      "id": "release:submenu:products:superboard.monetization_settings",
       "kind": "submenu",
       "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-billing",
+      "target": "superboard-products",
       "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
       "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
       "source_status": "delivered",
@@ -13718,38 +13616,8 @@
       "required": true,
       "release_id": "01J00000000000000000007005",
       "group_id": "products",
-      "route_id": "superboard.monetization_purchases",
-      "href": "/monetization/purchases"
-    },
-    {
-      "id": "release:submenu:superboard-audit.navigation:superboard.system_audit",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-audit",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "superboard-audit.navigation",
-      "route_id": "superboard.system_audit",
-      "href": "/core/audit"
-    },
-    {
-      "id": "release:submenu:superboard-content.navigation:superboard.data_content",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-content",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "superboard-content.navigation",
-      "route_id": "superboard.data_content",
-      "href": "/data/content"
+      "route_id": "superboard.monetization_settings",
+      "href": "/monetization/settings"
     },
     {
       "id": "release:submenu:superboard-email.navigation:superboard.communication_email",
@@ -13765,126 +13633,6 @@
       "group_id": "superboard-email.navigation",
       "route_id": "superboard.communication_email",
       "href": "/communication/email"
-    },
-    {
-      "id": "release:submenu:superboard-files.navigation:superboard.data_files",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-files",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "superboard-files.navigation",
-      "route_id": "superboard.data_files",
-      "href": "/data/files"
-    },
-    {
-      "id": "release:submenu:superboard-gateway.navigation:superboard.system_gateway",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-gateway",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "superboard-gateway.navigation",
-      "route_id": "superboard.system_gateway",
-      "href": "/core/gateway"
-    },
-    {
-      "id": "release:submenu:superboard-mcp.navigation:superboard.mcp",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-mcp",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "superboard-mcp.navigation",
-      "route_id": "superboard.mcp",
-      "href": "/core/mcp"
-    },
-    {
-      "id": "release:submenu:superboard-observability.navigation:superboard.infrastructure",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-observability",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "superboard-observability.navigation",
-      "route_id": "superboard.infrastructure",
-      "href": "/core/infrastructure"
-    },
-    {
-      "id": "release:submenu:superboard-onboardings.navigation:superboard.onboardings",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-onboardings",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "superboard-onboardings.navigation",
-      "route_id": "superboard.onboardings",
-      "href": "/acquisition/onboardings"
-    },
-    {
-      "id": "release:submenu:superboard-onboardings.navigation:superboard.onboardings_statistics",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-onboardings",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "superboard-onboardings.navigation",
-      "route_id": "superboard.onboardings_statistics",
-      "href": "/acquisition/onboardings/statistics"
-    },
-    {
-      "id": "release:submenu:superboard-paywalls.navigation:superboard.acquisition_paywalls",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-paywalls",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "superboard-paywalls.navigation",
-      "route_id": "superboard.acquisition_paywalls",
-      "href": "/acquisition/paywalls"
-    },
-    {
-      "id": "release:submenu:superboard-paywalls.navigation:superboard.acquisition_paywalls_statistics",
-      "kind": "submenu",
-      "baseline": "scripts/config/superboard-parity-release.json",
-      "target": "superboard-paywalls",
-      "test": "tests/checks/apps/site/front-release-dom-parity.test.tsx",
-      "proof_sha256": "sha256:34dae62e3be53d6b0353e9133294f76014155d44e73fd6e9392a8c8c213cac4e",
-      "source_status": "delivered",
-      "blocker": null,
-      "required": true,
-      "release_id": "01J00000000000000000007005",
-      "group_id": "superboard-paywalls.navigation",
-      "route_id": "superboard.acquisition_paywalls_statistics",
-      "href": "/acquisition/paywalls/statistics"
     },
     {
       "id": "release:submenu:support:superboard.support_help_center",
@@ -13937,12 +13685,12 @@
       "baseline": "scripts/config/superboard-parity-release.json",
       "target": "superboard-analytics",
       "test": "tests/checks/plugins/superboard-analytics/worker/runtime/analytics.runtime.test.ts",
-      "proof_sha256": "sha256:f5bba5691b6c665130f6e1bbf0307a153ea68bd9bfba100ce8eb1723c6160b12",
+      "proof_sha256": "sha256:e879b8a213b3b988bee5de0f9473f4daaab49aff84e3f55ccbee53d3f34f03ec",
       "source_status": "delivered",
       "blocker": null,
       "required": true,
       "release_id": "01J00000000000000000007005",
-      "worker_descriptor_checksum": "sha256:11e825c22f937da3fdfe12ba29619ae55230dd8df2be21dc0016aeb640354e05"
+      "worker_descriptor_checksum": "sha256:113c626c0d38b18aa12df1fedb74a0aee6115295667d680bab8e8bf5e99556d3"
     },
     {
       "id": "release:worker-health:superboard-audit",
@@ -14054,12 +13802,12 @@
       "baseline": "scripts/config/superboard-parity-release.json",
       "target": "superboard-marketing",
       "test": "tests/checks/plugins/superboard-communication/marketing/runtime/marketing.runtime.test.ts",
-      "proof_sha256": "sha256:5613954c7fff4d082b8fcbf8c41c207e6691808477e53d4a5d586065e58aaffc",
+      "proof_sha256": "sha256:883481123876efa29dc7dfcbea3da46119a33df009b6c11877f96694b870ddc5",
       "source_status": "delivered",
       "blocker": null,
       "required": true,
       "release_id": "01J00000000000000000007005",
-      "worker_descriptor_checksum": "sha256:71a294059e72b57b80db49a672916fa8a786380497ae74d27f651fab2f39ac20"
+      "worker_descriptor_checksum": "sha256:3557e0fcd02725e051a09fc0e014a2d7fdf13f207118d1947daaec7e484876f8"
     },
     {
       "id": "release:worker-health:superboard-mcp",
@@ -14080,12 +13828,12 @@
       "baseline": "scripts/config/superboard-parity-release.json",
       "target": "superboard-observability",
       "test": "tests/checks/plugins/superboard-core/observability/unit/index.test.ts",
-      "proof_sha256": "sha256:af88ec8de79e26d32025233b9565b5e77afe64e28bc55bacde411142bf48b5d2",
+      "proof_sha256": "sha256:82509fe446777f59ee85623aefa79cc5882b43f7ac9cfc2256f465ec752ab989",
       "source_status": "delivered",
       "blocker": null,
       "required": true,
       "release_id": "01J00000000000000000007005",
-      "worker_descriptor_checksum": "sha256:71fe7b0b03df965a3b909a27e351cd6362c58627fe255d5abd2688477a538899"
+      "worker_descriptor_checksum": "sha256:9f097cba288787bc84041bf54852bd7fc6da7dff1dc81a6908db3be7eda21881"
     },
     {
       "id": "release:worker-health:superboard-onboardings",
@@ -14215,7 +13963,7 @@
       "baseline": "packages/plugins/superboard-analytics/worker/src/index.ts",
       "target": "superboard-analytics",
       "test": "tests/checks/plugins/superboard-analytics/worker/runtime/analytics.runtime.test.ts",
-      "proof_sha256": "sha256:f5bba5691b6c665130f6e1bbf0307a153ea68bd9bfba100ce8eb1723c6160b12",
+      "proof_sha256": "sha256:e879b8a213b3b988bee5de0f9473f4daaab49aff84e3f55ccbee53d3f34f03ec",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -14292,7 +14040,7 @@
       "baseline": "packages/plugins/superboard-communication/marketing/src/index.ts",
       "target": "superboard-marketing",
       "test": "tests/checks/plugins/superboard-communication/marketing/runtime/marketing.runtime.test.ts",
-      "proof_sha256": "sha256:5613954c7fff4d082b8fcbf8c41c207e6691808477e53d4a5d586065e58aaffc",
+      "proof_sha256": "sha256:883481123876efa29dc7dfcbea3da46119a33df009b6c11877f96694b870ddc5",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -14314,7 +14062,7 @@
       "baseline": "packages/plugins/superboard-core/observability/src/index.ts",
       "target": "superboard-observability",
       "test": "tests/checks/plugins/superboard-core/observability/unit/index.test.ts",
-      "proof_sha256": "sha256:af88ec8de79e26d32025233b9565b5e77afe64e28bc55bacde411142bf48b5d2",
+      "proof_sha256": "sha256:82509fe446777f59ee85623aefa79cc5882b43f7ac9cfc2256f465ec752ab989",
       "source_status": "delivered",
       "blocker": null,
       "required": true

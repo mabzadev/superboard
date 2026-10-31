@@ -1,7 +1,3 @@
-import { createFetchRouter } from "@superboard/contracts/route-registry";
-import { withRouteManifest } from "@superboard/contracts/route-manifest";
-import { emailAdminRoutes } from "./admin.js";
-import { emailMessageRoutes } from "./admin-messages.js";
 import { DEAD_LETTER_MAX_RECORDS, deadLetterPayload } from "@superboard/contracts/dead-letter";
 import {
 	EMAIL_SERVICE_DEAD_LETTERS_PATH,
@@ -23,6 +19,7 @@ import type {
 	EmailProviderEventAcknowledgement,
 	EmailProviderEventPage,
 	EmailServiceReceipt,
+	EmailSmtpPublicConfig,
 	EmailSmtpTransportReceipt,
 	EmailSmtpTransportRequest,
 	EmailTransportOperation,
@@ -30,9 +27,14 @@ import type {
 import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
 import { RequestBodyError, readJsonLimited } from "@superboard/contracts/request-body";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { createFetchRouter } from "@superboard/contracts/route-registry";
 import { configuredSecrets, matchesAnySecret } from "@superboard/contracts/secret";
 import { EmailTransportError, sendSmtpMessage } from "@superboard/email-transport";
 
+import { emailApiAdminRoutes } from "./admin-api.js";
+import { emailMessageRoutes } from "./admin-messages.js";
+import { emailAdminRoutes } from "./admin.js";
 import {
 	handleEmailAdmin,
 	receiveEmailProviderWebhook,
@@ -46,7 +48,16 @@ import {
 	trustedAwsSnsConfirmationUrl,
 	verifyAwsSnsEnvelope,
 } from "./aws-ses";
+import {
+	QUEUE_MAX_DELAY_SECONDS,
+	deliverWebhook,
+	emailQueue,
+	recordEmailEvent,
+	webhookTypeForProviderEvent,
+	type EmailWorkerJob,
+} from "./events.js";
 import { inboundNormalizationError, normalizeInboundEmailRequest } from "./inbound";
+import { emailPublicRoutes, releaseOverdueScheduledMessages } from "./public-api.js";
 import {
 	EmailValidationError,
 	parseEmailMessage,
@@ -54,74 +65,119 @@ import {
 	secretsEqual,
 } from "./validation";
 
-const routes = createFetchRouter<Env>({service:"email",module:"http",pluginId:"superboard-email",surface:"internal",access:"internal"});
-routes.defineRoute({access:"provider-signature"}).on(["POST"], "/public/v1/provider-webhooks/:endpointId", async ({request,env}) => {return receiveEmailProviderWebhook(request, env);});
-routes.on(["ALL"], ["/internal/v1/admin", "/internal/v1/admin/*"], async ({request,env}) => {return handleEmailAdmin(request, env, {
-				enqueue: enqueueMessage,
-				smtp: deliverDelegatedSmtp,
-				replayDeadLetter: replayEmailDeadLetter,
-				discardDeadLetter: discardEmailDeadLetter,
-			});});
-routes.defineRoute({access:"public"}).on(["GET"], "/health", async ({env}) => {return health(env);});
-routes.on(["GET"], "/internal/v1/health", async ({env}) => {return health(env, "installation");});
-routes.defineRoute({access:"public"}).on(["GET"], "/", async () => {return previewShell();});
-routes.on(["POST"], EMAIL_SERVICE_AWS_SES_EVENTS_PATH, async ({request,env}) => {
-			return receiveAwsSesEvent(request, env);
-		});
-routes.on(["POST"], EMAIL_SERVICE_INBOUND_NORMALIZE_PATH, async ({request,env}) => {
-			return normalizeInboundEmail(request, env);
-		});
-routes.use(`${EMAIL_SERVICE_PROVIDER_EVENTS_PATH}*`, async ({request,env},next)=>{ if (!(await internalAuthorized(request,env)))return json({error:"unauthorized"},401); return next(); });
-routes.on(["GET"], EMAIL_SERVICE_PROVIDER_EVENTS_PATH, async ({env,url}) => {
-				return listProviderEvents(env, url);
-			});
-routes.on(["POST"], `${EMAIL_SERVICE_PROVIDER_EVENTS_PATH}/ack`, async ({request,env}) => {
-				return acknowledgeProviderEvents(request, env);
-			});
-routes.on(["POST"], EMAIL_SERVICE_SMTP_TRANSPORT_PATH, async ({request,env}) => {
-			return deliverDelegatedSmtp(request, env);
-		});
-routes.on(["GET"], "/internal/v1/senders", async ({request,env,url}) => {
-			if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
-			const projectId = Number(url.searchParams.get("project_id"));
-			if (!Number.isSafeInteger(projectId) || projectId <= 0)
-				return json({ error: "project_invalid" }, 422);
-			const rows = await env.DB.prepare(
-				"SELECT id,public_config_json,enabled,authentication_status FROM email_smtp_profiles WHERE project_id=? ORDER BY priority,created_at LIMIT 100",
+const routes = createFetchRouter<Env>({
+	service: "email",
+	module: "http",
+	pluginId: "superboard-email",
+	surface: "internal",
+	access: "internal",
+});
+routes
+	.defineRoute({ access: "provider-signature" })
+	.on(["POST"], "/public/v1/provider-webhooks/:endpointId", async ({ request, env }) => {
+		return receiveEmailProviderWebhook(request, env);
+	});
+routes.on(["ALL"], ["/internal/v1/admin", "/internal/v1/admin/*"], async ({ request, env }) => {
+	return handleEmailAdmin(request, env, {
+		enqueue: enqueueMessage,
+		smtp: deliverDelegatedSmtp,
+		replayDeadLetter: replayEmailDeadLetter,
+		discardDeadLetter: discardEmailDeadLetter,
+	});
+});
+routes.on(["GET", "POST"], ["/internal/v1/public/*"], async ({ request, env }) => {
+	return emailPublicRoutes.fetch(request, env);
+});
+routes.defineRoute({ access: "public" }).on(["GET"], "/health", async ({ env }) => {
+	return health(env);
+});
+routes.on(["GET"], "/internal/v1/health", async ({ env }) => {
+	return health(env, "installation");
+});
+routes.defineRoute({ access: "public" }).on(["GET"], "/", async () => {
+	return previewShell();
+});
+routes.on(["POST"], EMAIL_SERVICE_AWS_SES_EVENTS_PATH, async ({ request, env }) => {
+	return receiveAwsSesEvent(request, env);
+});
+routes.on(["POST"], EMAIL_SERVICE_INBOUND_NORMALIZE_PATH, async ({ request, env }) => {
+	return normalizeInboundEmail(request, env);
+});
+routes.use(`${EMAIL_SERVICE_PROVIDER_EVENTS_PATH}*`, async ({ request, env }, next) => {
+	if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
+	return next();
+});
+routes.on(["GET"], EMAIL_SERVICE_PROVIDER_EVENTS_PATH, async ({ env, url }) => {
+	return listProviderEvents(env, url);
+});
+routes.on(["POST"], `${EMAIL_SERVICE_PROVIDER_EVENTS_PATH}/ack`, async ({ request, env }) => {
+	return acknowledgeProviderEvents(request, env);
+});
+routes.on(["POST"], EMAIL_SERVICE_SMTP_TRANSPORT_PATH, async ({ request, env }) => {
+	return deliverDelegatedSmtp(request, env);
+});
+routes.on(["GET"], "/internal/v1/senders", async ({ request, env, url }) => {
+	if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
+	const projectId = Number(url.searchParams.get("project_id"));
+	if (!Number.isSafeInteger(projectId) || projectId <= 0)
+		return json({ error: "project_invalid" }, 422);
+	const rows = await env.DB.prepare(
+		"SELECT id,public_config_json,enabled,authentication_status FROM email_smtp_profiles WHERE project_id=? ORDER BY priority,created_at LIMIT 100",
+	)
+		.bind(projectId)
+		.all<{
+			id: string;
+			public_config_json: string;
+			enabled: number;
+			authentication_status: string;
+		}>();
+	return json({
+		configured: rows.results.length > 0,
+		known_ids: rows.results.map((row) => row.id),
+		items: rows.results
+			.filter(
+				(row) =>
+					row.enabled === 1 &&
+					(env.ENVIRONMENT !== "production" || row.authentication_status === "verified"),
 			)
-				.bind(projectId)
-				.all<{
-					id: string;
-					public_config_json: string;
-					enabled: number;
-					authentication_status: string;
-				}>();
-			return json({
-				configured: rows.results.length > 0,
-				known_ids: rows.results.map((row) => row.id),
-				items: rows.results
-					.filter(
-						(row) =>
-							row.enabled === 1 &&
-							(env.ENVIRONMENT !== "production" || row.authentication_status === "verified"),
-					)
-					.map((row) => ({ id: row.id, publicConfig: safeObjectJson(row.public_config_json) })),
-			});
-		});
-routes.use(`${EMAIL_SERVICE_OPERATIONS_PATH}*`, async ({request,env},next)=>{ if (!(await internalAuthorized(request,env)))return json({error:"unauthorized"},401); return next(); });
-routes.get(EMAIL_SERVICE_OPERATIONS_PATH, ({env,url})=>listEmailOperations(env,url));
-routes.post(`${EMAIL_SERVICE_DEAD_LETTERS_PATH}/:id/:action{replay|discard}`, async ({request,env,params})=>{ if(!(await internalAuthorized(request,env)))return json({error:"unauthorized"},401); if(!/^[a-f0-9-]{36}$/u.test(params.id))return json({error:"not_found"},404); return params.action === "replay" ? replayEmailDeadLetter(env,params.id) : discardEmailDeadLetter(env,params.id); });
-routes.use("/api/*", async ({request,env},next)=>{ if(!(await previewAuthorized(request,env)))return json({error:"unauthorized"},401); return next(); });
-routes.get("/api/messages", ({env,url})=>listMessages(env,url));
-routes.get("/api/messages/:id", ({env,params})=>/^[a-f0-9-]{36}$/u.test(params.id)?readMessage(env,params.id):json({error:"not_found"},404));
-routes.delete("/api/messages", ({env})=>clearCaptured(env));
-routes.on(["POST"], EMAIL_SERVICE_SEND_PATH, async ({request,env}) => {
-			return enqueueMessage(request, env);
-		});
-routes.defineRoute({transport:"fallback"}).all("*",()=>json({error:"not_found"},404));
+			.map((row) => ({ id: row.id, publicConfig: safeObjectJson(row.public_config_json) })),
+	});
+});
+routes.use(`${EMAIL_SERVICE_OPERATIONS_PATH}*`, async ({ request, env }, next) => {
+	if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
+	return next();
+});
+routes.get(EMAIL_SERVICE_OPERATIONS_PATH, ({ env, url }) => listEmailOperations(env, url));
+routes.post(
+	`${EMAIL_SERVICE_DEAD_LETTERS_PATH}/:id/:action{replay|discard}`,
+	async ({ request, env, params }) => {
+		if (!(await internalAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
+		if (!/^[a-f0-9-]{36}$/u.test(params.id)) return json({ error: "not_found" }, 404);
+		return params.action === "replay"
+			? replayEmailDeadLetter(env, params.id)
+			: discardEmailDeadLetter(env, params.id);
+	},
+);
+routes.use("/api/*", async ({ request, env }, next) => {
+	if (!(await previewAuthorized(request, env))) return json({ error: "unauthorized" }, 401);
+	return next();
+});
+routes.get("/api/messages", ({ env, url }) => listMessages(env, url));
+routes.get("/api/messages/:id", ({ env, params }) =>
+	/^[a-f0-9-]{36}$/u.test(params.id)
+		? readMessage(env, params.id)
+		: json({ error: "not_found" }, 404),
+);
+routes.delete("/api/messages", ({ env }) => clearCaptured(env));
+routes.on(["POST"], EMAIL_SERVICE_SEND_PATH, async ({ request, env }) => {
+	return enqueueMessage(request, env);
+});
+routes.defineRoute({ transport: "fallback" }).all("*", () => json({ error: "not_found" }, 404));
 
 const lifecycleWorker = {
-	async fetch(request: Request, env: Env): Promise<Response> { return routes.fetch(request, env); },
+	async fetch(request: Request, env: Env): Promise<Response> {
+		return routes.fetch(request, env);
+	},
 
 	async queue(batch: MessageBatch<EmailQueueJob>, env: Env): Promise<void> {
 		if (batch.queue === env.EMAIL_DLQ_NAME) {
@@ -137,6 +193,7 @@ const lifecycleWorker = {
 							duplicate: result.duplicate,
 						}),
 					);
+					await recordQuarantinedFailures(env, message.body);
 					message.ack();
 				} catch (error) {
 					console.error(
@@ -153,11 +210,18 @@ const lifecycleWorker = {
 		}
 		for (const message of batch.messages) {
 			try {
-				if (message.body?.type !== "email.deliver" || typeof message.body.messageId !== "string") {
+				const job = emailWorkerJob(message.body);
+				if (job?.type === "email.webhook") {
+					// Webhook retries are scheduled explicitly with backoff by deliverWebhook.
+					await deliverWebhook(env, job.deliveryId);
 					message.ack();
 					continue;
 				}
-				await deliverMessage(env, message.body.messageId);
+				if (job?.type !== "email.deliver") {
+					message.ack();
+					continue;
+				}
+				await deliverMessage(env, job.messageId);
 				message.ack();
 			} catch (error) {
 				console.error("email_delivery_failed", {
@@ -169,6 +233,7 @@ const lifecycleWorker = {
 				});
 			}
 		}
+		await releaseOverdueScheduledMessages(env).catch(() => undefined);
 	},
 } satisfies ExportedHandler<Env, EmailQueueJob>;
 
@@ -305,7 +370,7 @@ async function receiveAwsSesEvent(request: Request, env: Env): Promise<Response>
 					}>(),
 				env.DB.prepare(
 					`
-          SELECT delivery.id, delivery.message_id, message.project_id
+          SELECT delivery.id, delivery.message_id, delivery.recipient, message.project_id
           FROM email_deliveries delivery
           JOIN email_messages message ON message.id = delivery.message_id
           WHERE delivery.provider_message_id = ? LIMIT 1
@@ -315,6 +380,7 @@ async function receiveAwsSesEvent(request: Request, env: Env): Promise<Response>
 					.first<{
 						id: string;
 						message_id: string;
+						recipient: string;
 						project_id: number | null;
 					}>(),
 			]);
@@ -398,10 +464,28 @@ async function receiveAwsSesEvent(request: Request, env: Env): Promise<Response>
             WHERE id = ? AND correlation_status = 'processing'
           `,
 					).bind(direct.project_id, direct.id, envelope.MessageId),
+					...(direct.project_id != null &&
+					(event.eventType === "hard_bounce" || event.eventType === "complaint")
+						? [
+								env.DB.prepare(
+									"INSERT INTO email_suppressions (project_id, recipient, reason, source_event_id) VALUES (?, ?, ?, ?) ON CONFLICT(project_id, recipient) DO NOTHING",
+								).bind(direct.project_id, direct.recipient, event.eventType, envelope.MessageId),
+							]
+						: []),
 				]);
 				if (event.eventType === "delivered") {
 					await markMessageSent(env.DB, direct.message_id);
 				}
+				await recordEmailEvent(env, {
+					messageId: direct.message_id,
+					projectId: direct.project_id,
+					recipient: direct.recipient,
+					type: event.eventType,
+					webhook: webhookTypeForProviderEvent(event.eventType),
+					occurredAt: event.occurredAt,
+					eventId: `aws-ses:${envelope.MessageId}`,
+					detail: providerEventDetail(event.eventType, event.metadata),
+				});
 			} else {
 				await env.DB.prepare(
 					`
@@ -866,6 +950,38 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 		.bind(messageId)
 		.first<EmailRow>();
 	if (!message) return;
+	const dispatch = await env.DB.prepare(
+		"SELECT state, scheduled_at FROM email_message_dispatch WHERE message_id = ?",
+	)
+		.bind(messageId)
+		.first<{ state: string; scheduled_at: string | null }>();
+	if (dispatch?.state === "canceled") return;
+	if (dispatch?.state === "scheduled") {
+		const remaining = Math.ceil((Date.parse(dispatch.scheduled_at ?? "") - Date.now()) / 1_000);
+		if (remaining > 1) {
+			// Queue delays are bounded; long schedules hop through several delayed jobs.
+			await emailQueue(env).send(
+				{ type: "email.deliver", messageId },
+				{ delaySeconds: Math.min(QUEUE_MAX_DELAY_SECONDS, remaining) },
+			);
+			return;
+		}
+		const released = await env.DB.prepare(
+			"UPDATE email_message_dispatch SET state = 'released' WHERE message_id = ? AND state = 'scheduled' RETURNING message_id",
+		)
+			.bind(messageId)
+			.first<{ message_id: string }>();
+		if (released) {
+			await recordEmailEvent(env, { messageId, projectId: message.project_id, type: "released" });
+		} else {
+			const current = await env.DB.prepare(
+				"SELECT state FROM email_message_dispatch WHERE message_id = ?",
+			)
+				.bind(messageId)
+				.first<{ state: string }>();
+			if (current?.state === "canceled") return;
+		}
+	}
 	const deliveries = (
 		await env.DB.prepare(
 			`
@@ -888,13 +1004,24 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 	const snapshot = storedSender
 		? {
 				id: storedSender.id,
-				publicConfig: JSON.parse(storedSender.public_config_json),
+				publicConfig: storedPublicConfig(storedSender.public_config_json),
 				encrypted_config: storedSender.encrypted_config,
 			}
 		: undefined;
+	// Amazon SES managed identities carry no SMTP credentials of their own: the
+	// central SES credentials and configuration set are used for them.
+	const managedSnapshot = Boolean(
+		snapshot && env.MAIL_PROVIDER === "aws-ses" && !snapshot.publicConfig.username,
+	);
 	const smtp = snapshot
-		? resolveSmtpConfiguration(env, snapshot.publicConfig, await decryptEmailSender(env, snapshot))
+		? resolveSmtpConfiguration(
+				env,
+				snapshot.publicConfig,
+				await decryptEmailSender(env, snapshot),
+				managedSnapshot,
+			)
 		: smtpConfiguration(env, message);
+	const attachments = await loadMessageAttachments(env.DB, messageId);
 	await env.DB.prepare(`UPDATE email_messages SET status = 'sending', updated_at = ? WHERE id = ?`)
 		.bind(new Date().toISOString(), messageId)
 		.run();
@@ -918,6 +1045,7 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 				subject: message.subject,
 				text: message.text_body,
 				html: message.html_body,
+				...(attachments.length ? { attachments } : {}),
 				headers: providerHeaders(
 					env,
 					safeJson(message.headers_json),
@@ -925,7 +1053,7 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 						source: "email",
 						...(message.project_id == null ? {} : { project: String(message.project_id) }),
 					},
-					!snapshot,
+					!snapshot || managedSnapshot,
 				),
 				messageId: await deterministicMessageId(
 					`email.delivery:${message.id}:${delivery.id}`,
@@ -936,6 +1064,19 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 			const reason = (error instanceof Error ? error.message : String(error)).slice(0, 4_000);
 			const outcomeUnknown =
 				error instanceof EmailTransportError && error.code === "smtp_outcome_unknown";
+			const permanent = error instanceof EmailTransportError && error.status === 422;
+			await recordEmailEvent(env, {
+				messageId,
+				projectId: message.project_id,
+				recipient: delivery.recipient,
+				type: outcomeUnknown ? "outcome_unknown" : permanent ? "failed" : "deferred",
+				webhook: permanent ? "failed" : null,
+				...(permanent ? { eventId: `failed:${delivery.id}` } : {}),
+				detail: {
+					error: error instanceof EmailTransportError ? error.code : "smtp_unavailable",
+					attempt: acquired.attempt_count,
+				},
+			});
 			await env.DB.batch([
 				env.DB.prepare(
 					`UPDATE email_deliveries SET status = ?, last_error = ?, updated_at = ? WHERE id = ?`,
@@ -969,6 +1110,15 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 			if (Number(persisted.meta.changes || 0) !== 1) {
 				throw new Error("Accepted SMTP delivery receipt was not persisted");
 			}
+			await recordEmailEvent(env, {
+				messageId,
+				projectId: message.project_id,
+				recipient: delivery.recipient,
+				type: "sent",
+				webhook: "sent",
+				eventId: `sent:${delivery.id}`,
+				detail: { provider_message_id: result.messageId },
+			});
 		} catch (error) {
 			const reason = `outcome_unknown: ${(error instanceof Error
 				? error.message
@@ -986,6 +1136,88 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 		}
 	}
 	await markMessageSent(env.DB, messageId);
+}
+
+async function loadMessageAttachments(db: D1Database, messageId: string) {
+	const rows = (
+		await db
+			.prepare(
+				`SELECT a.id, a.filename, a.content_type, a.content_id, a.disposition, c.content_base64
+         FROM email_message_attachments a
+         JOIN email_message_attachment_chunks c ON c.attachment_id = a.id
+         WHERE a.message_id = ? ORDER BY a.position, c.chunk_index`,
+			)
+			.bind(messageId)
+			.all<{
+				id: string;
+				filename: string;
+				content_type: string;
+				content_id: string | null;
+				disposition: "attachment" | "inline";
+				content_base64: string;
+			}>()
+	).results;
+	const attachments = new Map<
+		string,
+		{
+			filename: string;
+			contentType: string;
+			contentId: string | null;
+			disposition: "attachment" | "inline";
+			parts: string[];
+		}
+	>();
+	for (const row of rows) {
+		const current = attachments.get(row.id) ?? {
+			filename: row.filename,
+			contentType: row.content_type,
+			contentId: row.content_id,
+			disposition: row.disposition,
+			parts: [],
+		};
+		current.parts.push(row.content_base64);
+		attachments.set(row.id, current);
+	}
+	return [...attachments.values()].map(({ parts, ...attachment }) => ({
+		...attachment,
+		content: parts.join(""),
+	}));
+}
+
+async function recordQuarantinedFailures(env: Env, body: unknown): Promise<void> {
+	const messageId =
+		body && typeof body === "object" ? (body as { messageId?: unknown }).messageId : null;
+	if (typeof messageId !== "string") return;
+	try {
+		const rows = await env.DB.prepare(
+			`SELECT d.id, d.recipient, m.project_id FROM email_deliveries d
+       JOIN email_messages m ON m.id = d.message_id
+       WHERE d.message_id = ? AND d.status IN ('queued', 'sending', 'failed')`,
+		)
+			.bind(messageId)
+			.all<{ id: string; recipient: string; project_id: number | null }>();
+		for (const row of rows.results)
+			await recordEmailEvent(env, {
+				messageId,
+				projectId: row.project_id,
+				recipient: row.recipient,
+				type: "failed",
+				webhook: "failed",
+				eventId: `failed:${row.id}`,
+				detail: { error: "delivery_attempts_exhausted" },
+			});
+	} catch {
+		// The dead letter is already durable; timeline events are best effort.
+	}
+}
+
+function providerEventDetail(eventType: string, metadata: Record<string, unknown>) {
+	const detail: Record<string, unknown> = { provider: "aws-ses", provider_status: eventType };
+	for (const key of ["bounce_type", "bounce_subtype", "feedback_type", "reason", "smtp_response"])
+		if (metadata[key] !== undefined) detail[key] = metadata[key];
+	if (Array.isArray(metadata.diagnostic_codes) && metadata.diagnostic_codes.length)
+		detail.diagnostic = String(metadata.diagnostic_codes[0]).slice(0, 512);
+	return detail;
 }
 
 function smtpConfiguration(env: Env, message: EmailRow) {
@@ -1750,6 +1982,37 @@ function safeJson(value: string): Record<string, string> {
 	}
 }
 
+/** Reads a queue message body; both job shapes share the queue (see emailQueue). */
+function emailWorkerJob(body: unknown): EmailWorkerJob | null {
+	if (typeof body !== "object" || body === null || !("type" in body)) return null;
+	if (body.type === "email.webhook" && "deliveryId" in body && typeof body.deliveryId === "string")
+		return { type: "email.webhook", deliveryId: body.deliveryId };
+	if (body.type === "email.deliver" && "messageId" in body && typeof body.messageId === "string")
+		return { type: "email.deliver", messageId: body.messageId };
+	return null;
+}
+
+/** Sender snapshot written with JSON.stringify(EmailSmtpPublicConfig) at accept time. */
+function storedPublicConfig(value: string): EmailSmtpPublicConfig {
+	const parsed: unknown = JSON.parse(value);
+	const config: Record<string, unknown> =
+		parsed && typeof parsed === "object" && !Array.isArray(parsed) ? { ...parsed } : {};
+	const text = (key: string) => {
+		const item = config[key];
+		return typeof item === "string" ? item : null;
+	};
+	const security = config.security;
+	return {
+		host: text("host") ?? "",
+		port: typeof config.port === "number" ? config.port : 0,
+		security: security === "starttls" || security === "plain" ? security : "tls",
+		username: text("username"),
+		from_email: text("from_email") ?? "",
+		from_name: text("from_name"),
+		reply_to: text("reply_to"),
+	};
+}
+
 function safeObjectJson(value: string): Record<string, unknown> {
 	try {
 		const parsed: unknown = JSON.parse(value);
@@ -1891,4 +2154,8 @@ async function open(id){const r=await fetch('/api/messages/'+id,{headers:headers
 document.querySelector('#connect').onclick=load;document.querySelector('#clear').onclick=async()=>{if(confirm('Delete all captured messages?')){await fetch('/api/messages',{method:'DELETE',headers:headers()});await load()}};
 </script></main></html>`;
 
-export default withRouteManifest(withPluginTaskLifecycle("superboard-email", lifecycleWorker, { fetch: true }), [routes, emailAdminRoutes, emailMessageRoutes], { service: "email", pluginId: "superboard-email" });
+export default withRouteManifest(
+	withPluginTaskLifecycle("superboard-email", lifecycleWorker, { fetch: true }),
+	[routes, emailAdminRoutes, emailApiAdminRoutes, emailMessageRoutes, emailPublicRoutes],
+	{ service: "email", pluginId: "superboard-email" },
+);

@@ -66,4 +66,40 @@ describe("dashboard visitor queries", () => {
 			meta: { total_entries: 1, total_pages: 1 },
 		});
 	});
+
+	it("reads event filter values with batched DISTINCT queries", async () => {
+		const distinct: Record<string, unknown[]> = {
+			platform: ["ios", "android", "ios"],
+			app_version: ["2.0.0", "1.9.0"],
+			build: ["42"],
+		};
+		const distinctArgs: unknown[] = [];
+		const db = createFakeD1(({ op, sql, args }) => {
+			if (op === "first" && sql.includes("FROM projects WHERE instance_id = ? AND is_test = ?")) {
+				return { id: 11, name: "Reference application", instance_id: 10, is_test: 0 };
+			}
+			const match = /^SELECT DISTINCT (\w+) AS value FROM events WHERE project_id = \?/u.exec(sql);
+			if (op === "run" && match) {
+				distinctArgs.push(args);
+				return { results: (distinct[match[1]] || []).map((value) => ({ value })) };
+			}
+			return undefined;
+		});
+		const env = { DB: db } as Env;
+
+		const response = await projects.request("/10-prod/events/metric_values", {}, env);
+
+		expect(response.status).toBe(200);
+		await expect(response.json()).resolves.toEqual({
+			metrics_values: {
+				platforms: ["android", "ios"],
+				app_versions: ["1.9.0", "2.0.0"],
+				builds: ["42"],
+			},
+		});
+		expect(distinctArgs).toEqual([[11], [11], [11]]);
+		expect(db.calls.some((call) => call.sql.includes("SELECT platform, app_version, build"))).toBe(
+			false,
+		);
+	});
 });

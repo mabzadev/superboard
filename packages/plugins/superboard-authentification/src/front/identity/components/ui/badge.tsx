@@ -1,1 +1,1 @@
-export { Badge, badgeVariants } from "@superboard/front-ui/ui";
+export { Badge, badgeVariants } from "@superboard/front-ui/ui/badge.js";

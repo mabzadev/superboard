@@ -4,7 +4,7 @@ import { evidence, ready, unwrap } from "../../../fixtures/site-browser/site-api
 test("project settings keeps the selected reporting period on reload", async ({
 	authenticatedPage: page,
 }) => {
-	await ready(page, "/project-settings");
+	await ready(page, "/project-settings?tab=usage");
 	await expect(page.getByText("Active Users", { exact: true })).toBeVisible();
 	const picker = page.locator("main").getByRole("button").first();
 	const previous = await picker.innerText();
@@ -18,7 +18,7 @@ test("project settings keeps the selected reporting period on reload", async ({
 test("the native team section can open and cancel the invitation form", async ({
 	authenticatedPage: page,
 }) => {
-	await ready(page, "/project-settings");
+	await ready(page, "/project-settings?tab=team");
 	await page.getByRole("button", { name: "Add member", exact: true }).click();
 	await expect(page.getByRole("dialog")).toBeVisible();
 	await page.getByRole("button", { name: "Close dialog", exact: true }).click();
@@ -27,7 +27,7 @@ test("the native team section can open and cancel the invitation form", async ({
 test("project deletion requires its confirmation and cancellation preserves the project", async ({
 	authenticatedPage: page,
 }) => {
-	await ready(page, "/project-settings");
+	await ready(page, "/project-settings?tab=general");
 	await page.getByRole("button", { name: "Delete Project", exact: true }).click();
 	await expect(page.getByRole("dialog")).toBeVisible();
 	await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -37,7 +37,7 @@ test("project deletion requires its confirmation and cancellation preserves the 
 test("usage export produces a retrievable CSV from the chosen dates", async ({
 	authenticatedPage: page,
 }) => {
-	await ready(page, "/project-settings");
+	await ready(page, "/project-settings?tab=usage");
 	const downloadPromise = page.waitForEvent("download");
 	const responsePromise = page.waitForResponse(
 		(response) =>

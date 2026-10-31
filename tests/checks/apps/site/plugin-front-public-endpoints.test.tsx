@@ -5,7 +5,6 @@ import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import SocialPreview from "../../../../packages/plugins/superboard-acquisition/src/front/dynamic-links/components/dynamic_links/social-preview/SocialPreviewPageContent.js";
-import McpTokensSection from "../../../../packages/plugins/superboard-core/src/front/mcp/components/account/McpTokensSection.js";
 import SdkSetupWizard from "../../../../packages/plugins/superboard-core/src/front/settings/components/app/SdkSetupWizard.js";
 
 const selection = vi.hoisted(() => ({ selectedProject: { id: "42-prod" } }));
@@ -20,13 +19,6 @@ vi.mock(
 		saveSdkConfiguration: async () => null,
 		testSdkConfiguration: async () => null,
 		deleteSdkConfiguration: async () => null,
-	}),
-);
-vi.mock(
-	"../../../../packages/plugins/superboard-core/src/front/mcp/hooks/queries/useMcpQueries.js",
-	() => ({
-		useMcpTokensQuery: () => ({ data: [], isLoading: false }),
-		useRevokeMcpTokenMutation: () => ({ mutateAsync: async () => undefined }),
 	}),
 );
 vi.mock(
@@ -99,21 +91,9 @@ afterEach(async () => {
 	await act(async () => root.unmount());
 	container.remove();
 });
-test("MCP endpoint rendering isolates target domains across SSR requests", () => {
-	for (const target of ["alpha", "beta", "alpha"]) {
-		const html = renderToString(tree(<McpTokensSection />, target));
-		expect(html).toContain(`https://mcp.${target}.example/mcp`);
-		expect(html).not.toContain(`https://mcp.${target === "alpha" ? "beta" : "alpha"}.example`);
-	}
-});
 test("short-link previews use the target short-link host during SSR", () => {
 	const html = renderToString(tree(<SocialPreview />, "alpha"));
 	expect(html).toContain("in.alpha.example");
-});
-test("missing MCP configuration is explicit and does not invent an endpoint", () => {
-	const html = renderToString(tree(<McpTokensSection />));
-	expect(html).toContain("MCP endpoint is not configured");
-	expect(html).not.toContain('href="/mcp"');
 });
 test("SDK snippets use the configured SDK origin and update with the target", async () => {
 	await act(async () => root.render(tree(<SdkSetupWizard platform="web" />, "alpha")));

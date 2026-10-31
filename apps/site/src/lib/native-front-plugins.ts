@@ -1,4 +1,3 @@
-import { canonicalPluginId } from "@superboard/contracts/plugin-packages";
 import type {
 	FrontNavigationGroup,
 	NativeFrontPluginModule,
@@ -9,19 +8,12 @@ import type {
 } from "@superboard/supbrd-core";
 
 import compatibility from "../../../../scripts/config/superboard-plugin-compatibility.json";
-
-const discoveredModules = import.meta.glob<{ nativeFrontPlugin: NativeFrontPluginModule }>(
-	["../front-plugins/*.ts", "../../../../packages/plugins/superboard-*/src/front-*.ts"],
-	{ eager: true },
-);
-
-const plugins = new Map<string, NativeFrontPluginModule>();
-const legacyComponentPrefix = /^supbrd-(?:plug|plugmod)-/u;
-
-// Releases published before the superboard-* namespace keep their original ids.
-function currentComponentId(id: string): string {
-	return id.replace(legacyComponentPrefix, "superboard-");
-}
+import {
+	currentComponentId,
+	nativeFrontPlugins as plugins,
+	resolveLockedNativeFrontPlugin,
+	resolveNativeRendererAlias,
+} from "./native-front-renderers.js";
 
 const compatibleLegacyBuilds = new Map<string, Set<string>>([
 	[
@@ -49,17 +41,6 @@ for (const artifact of Object.values(compatibility.artifacts)) {
 		compatibleLegacyBuilds.set(current, builds);
 	}
 }
-for (const [source, module] of Object.entries(discoveredModules)) {
-	const plugin = module.nativeFrontPlugin;
-	if (!plugin || typeof plugin.plugin_id !== "string") {
-		throw new TypeError(`Native Front plugin module is invalid: ${source}`);
-	}
-	if (plugins.has(plugin.plugin_id)) {
-		throw new TypeError(`Duplicate native Front plugin: ${plugin.plugin_id}`);
-	}
-	plugins.set(plugin.plugin_id, plugin);
-}
-
 export function nativeFrontPluginCatalog(): NativeFrontPluginModule[] {
 	return [...plugins.values()].toSorted((left, right) =>
 		left.plugin_id.localeCompare(right.plugin_id),
@@ -121,19 +102,7 @@ export function assertNativeFrontRenderer(
 	pluginLock: readonly PluginLockEntry[],
 ): NativeFrontPluginModule {
 	const renderer = resolveNativeRendererAlias(requestedRenderer);
-	const pluginId = renderer.plugin_id;
-	if (
-		!pluginLock.some(
-			({ plugin_id: lockedPluginId }) =>
-				lockedPluginId === pluginId || currentComponentId(lockedPluginId) === pluginId,
-		)
-	) {
-		throw new Error(`Renderer plugin is not locked by the Release: ${pluginId}`);
-	}
-	const plugin = plugins.get(pluginId);
-	if (!plugin || !plugin.renderer_ids.includes(renderer.renderer_id)) {
-		throw new Error(`Native renderer is unavailable: ${renderer.renderer_id}`);
-	}
+	const plugin = resolveLockedNativeFrontPlugin(renderer, pluginLock);
 	if (
 		plugin.renderer_builds[renderer.renderer_id] !== renderer.build_checksum &&
 		!compatibleLegacyBuilds.get(renderer.renderer_id)?.has(renderer.build_checksum)
@@ -141,20 +110,4 @@ export function assertNativeFrontRenderer(
 		throw new Error(`Native renderer build is unavailable: ${renderer.renderer_id}`);
 	}
 	return plugin;
-}
-
-function resolveNativeRendererAlias(renderer: RendererDescriptor): RendererDescriptor {
-	if (plugins.has(renderer.plugin_id)) return renderer;
-	const current = plugins.get(currentComponentId(renderer.plugin_id));
-	const currentRendererId = currentComponentId(renderer.renderer_id);
-	if (current?.renderer_ids.includes(currentRendererId))
-		return { ...renderer, plugin_id: current.plugin_id, renderer_id: currentRendererId };
-	for (const plugin of plugins.values()) {
-		if (canonicalPluginId(plugin.plugin_id) !== renderer.plugin_id) continue;
-		const id = plugin.renderer_ids.find(
-			(candidate) => canonicalPluginId(candidate) === renderer.renderer_id,
-		);
-		if (id) return { ...renderer, plugin_id: plugin.plugin_id, renderer_id: id };
-	}
-	return renderer;
 }

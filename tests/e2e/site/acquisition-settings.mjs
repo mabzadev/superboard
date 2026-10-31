@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { chromium, expect } from "@playwright/test";
 
 const origin = new URL(process.env.SUPERBOARD_LOCAL_URL ?? "http://127.0.0.1:4321");
+const pluginsLinkName = /^(Open in Plugins|Ouvrir dans Plugins)$/;
+const pluginsLinkHref =
+	/^\/_emdash\/admin\/plugins-manager\/superboard-acquisition\/configuration$/;
 assert(["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname));
 const browser = await chromium.launch();
 try {
@@ -12,7 +15,7 @@ try {
 	page.on("pageerror", (error) => errors.push(error.message));
 	const hydrate = async () => {
 		await page.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])').waitFor();
-		await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toBeVisible();
+		await expect(page.getByRole("link", { name: pluginsLinkName })).toBeVisible();
 	};
 	const open = async (path) => {
 		await page.goto(new URL(path, origin).href);
@@ -112,66 +115,27 @@ try {
 			assert.equal(new URL(page.url()).searchParams.get("tab"), tab);
 			assert.equal(new URL(page.url()).searchParams.get("lang"), locale);
 		}
-		await page.getByRole("tab", { name: "Configuration", exact: true }).click();
+		// Plugin health and lifecycle are owned by the central Plugins page.
+		await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 		await expect(
-			page.getByText(fr ? "Cycle de vie du plugin" : "Plugin Lifecycle", { exact: true }),
-		).toBeVisible();
+			page.getByRole("link", { name: fr ? "Ouvrir dans Plugins" : "Open in Plugins", exact: true }),
+		).toHaveAttribute("href", pluginsLinkHref);
 		const health = new URL("/_emdash/api/superboard/plugins/supbrd-plug-journeys/health", origin)
 			.href;
-		const checked = page.waitForResponse(health);
-		await page
-			.getByRole("button", { name: fr ? "Vérifier à nouveau" : "Re-check Health", exact: true })
-			.click();
-		const result = await (await checked).json();
+		const checked = await context.request.post(health, {
+			headers: { Origin: origin.origin, "X-EmDash-Request": "1" },
+		});
+		assert.equal(checked.status(), 200, await checked.text());
+		const result = await checked.json();
 		assert.ok(result.checkedAt);
 		assert.ok(result.diagnostic.workers.every((worker) => worker.physicalName));
-		const routeLabel = fr ? "Routes API" : "API Routes";
-		await page
-			.getByRole("button", {
-				name: `${routeLabel} (${result.diagnostic.routes.api.length})`,
-				exact: true,
-			})
-			.click();
-		const seen = [];
-		const table = page.getByRole("table", { name: routeLabel, exact: true });
-		while (seen.length < result.diagnostic.routes.api.length) {
-			await expect(table.getByRole("row").nth(1).getByRole("cell").nth(1)).toHaveText(
-				result.diagnostic.routes.api[seen.length].path,
-			);
-			for (const row of (await table.getByRole("row").all()).slice(1))
-				seen.push(await row.getByRole("cell").nth(1).innerText());
-			if (seen.length < result.diagnostic.routes.api.length)
-				await page.getByRole("button", { name: fr ? "Suivant" : "Next", exact: true }).click();
-		}
-		assert.deepEqual(
-			seen,
-			result.diagnostic.routes.api.map((route) => route.path),
-		);
-		await page.route(health, (route) => route.abort("failed"));
-		await page
-			.getByRole("button", { name: fr ? "Vérifier à nouveau" : "Re-check Health", exact: true })
-			.click();
-		const workers = page.getByRole("table", {
-			name: fr ? "Services et Workers associés" : "Associated Services & Workers",
-			exact: true,
-		});
-		await expect(workers).toContainText(fr ? "Inconnu" : "Unknown");
-		await expect(workers).toContainText(result.diagnostic.workers[0].physicalName);
-		await page.unroute(health);
-		const diagnostic = health.replace(/health$/, "diagnostic");
-		await page.route(diagnostic, (route) => route.abort("failed"));
-		await page.reload();
-		await hydrate();
+		// Legacy configuration links fall back to the default Environments tab.
+		await open(`/acquisition/settings?lang=${locale}&tab=configuration`);
 		await expect(
-			page.getByText(fr ? "Échec du chargement du diagnostic" : "Failed to load diagnostic", {
-				exact: true,
-			}),
-		).toBeVisible();
-		await page.unroute(diagnostic);
-		await page.getByRole("button", { name: fr ? "Réessayer" : "Retry", exact: true }).click();
-		await expect(workers).toBeVisible();
+			page.getByRole("tab", { name: fr ? "Environnements" : "Environments", exact: true }),
+		).toHaveAttribute("aria-selected", "true");
 		console.log(
-			`${locale}: menu, keyboard, environment creation, SDK selection, saved language/fallback rules, reload/API reread, legacy links, ${seen.length} diagnostic routes and health failure verified.`,
+			`${locale}: menu, keyboard, environment creation, SDK selection, saved language/fallback rules, reload/API reread, legacy links, Plugins diagnostics link and health check (${result.diagnostic.routes.api.length} API routes in diagnostic) verified.`,
 		);
 	}
 	const anonymous = await browser.newContext();

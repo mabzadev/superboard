@@ -115,8 +115,17 @@ export default function InfrastructurePage() {
 
 	useEffect(() => {
 		void load();
-		const timer = window.setInterval(() => void load(), 30_000);
-		return () => window.clearInterval(timer);
+		// Polling pauses while the tab is hidden and catches up when it becomes visible.
+		const refresh = () => {
+			// load() reports its own failures through setError.
+			if (document.visibilityState !== "hidden") load().catch(() => undefined);
+		};
+		const timer = window.setInterval(refresh, 30_000);
+		document.addEventListener("visibilitychange", refresh);
+		return () => {
+			window.clearInterval(timer);
+			document.removeEventListener("visibilitychange", refresh);
+		};
 	}, [load]);
 
 	return (

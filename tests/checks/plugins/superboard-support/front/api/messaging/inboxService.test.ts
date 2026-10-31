@@ -19,7 +19,10 @@ vi.mock("../../../../../../../packages/supbrd-front-ui/src/shared/lib/config.js"
 	},
 }));
 
-import { inboxDeepLink } from "../../../../../../../packages/plugins/superboard-support/src/front/api/messaging/inboxDeepLink.js";
+import {
+	inboxDeepLink,
+	inboxItemMatchesQuery,
+} from "../../../../../../../packages/plugins/superboard-support/src/front/api/messaging/inboxDeepLink.js";
 import {
 	createInboxRealtimeTicket,
 	downloadInboxAttachment,
@@ -40,6 +43,7 @@ describe("Inbox deep links", () => {
 			sourceId: "conversation/1",
 			type: "conversation",
 			status: "pending",
+			query: "",
 		});
 	});
 
@@ -48,7 +52,34 @@ describe("Inbox deep links", () => {
 			sourceId: "item-1",
 			type: "all",
 			status: "",
+			query: "",
 		});
+	});
+
+	it("reads a customer search from q", () => {
+		expect(inboxDeepLink("?q=%20ada%40example.test%20").query).toBe("ada@example.test");
+	});
+
+	it("matches items by customer reference, contact user ids, or text", () => {
+		const item = {
+			id: "conversation:c-1",
+			source_type: "conversation" as const,
+			source_id: "c-1",
+			title: "Billing question",
+			preview: "Hello",
+			status: "open" as const,
+			priority: "normal" as const,
+			customer_reference: "user-42",
+			updated_at: "2026-10-01T00:00:00.000Z",
+			destination: "/support/inbox?type=conversation&id=c-1",
+			capabilities: [],
+			source: { subject: "Billing question", external_user_id: "user-42" },
+		};
+		expect(inboxItemMatchesQuery(item, "")).toBe(true);
+		expect(inboxItemMatchesQuery(item, "USER-42")).toBe(true);
+		expect(inboxItemMatchesQuery(item, "c-1")).toBe(true);
+		expect(inboxItemMatchesQuery(item, "ada@example.test")).toBe(false);
+		expect(inboxItemMatchesQuery(item, "ada@example.test", new Set(["user-42"]))).toBe(true);
 	});
 });
 

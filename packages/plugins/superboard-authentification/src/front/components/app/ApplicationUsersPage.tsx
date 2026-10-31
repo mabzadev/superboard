@@ -54,6 +54,7 @@ import {
 import { useApplicationUsersI18n } from "../../application-users-i18n.js";
 import ApplicationUserActions from "../../ApplicationUserActions.js";
 import ApplicationUserSecurity from "../../ApplicationUserSecurity.js";
+import ApplicationUserSheet from "./ApplicationUserSheet.js";
 
 const PAGE_SIZE = 50;
 const emptyPage: ApplicationUserPage = {
@@ -289,38 +290,49 @@ export default function ApplicationUsersPage() {
 							</CardContent>
 						</Card>
 
-						<div className="grid content-start gap-4">
-							{detail && (
-								<ApplicationUserActions
-									key={`${selectedProject.id}:${detail.id}:${actionRevision}`}
-									projectRef={selectedProject.id}
-									userId={detail.id}
-									name={detail.name ?? ""}
-									onChange={async () => {
-										await load();
-										setSecurityRevision((current) => current + 1);
-										setDetail(await getApplicationUser(selectedProject.id, detail.id));
-									}}
-								/>
-							)}
-							<ApplicationUserDetailPanel
+						{detail ? (
+							<ApplicationUserSheet
+								key={`${selectedProject.id}:${detail.id}`}
 								detail={detail}
-								commerce={commerce}
-								loading={detailLoading}
+								purchases={<CommercePanel state={commerce} />}
+								account={
+									<>
+										<ApplicationUserIdentity detail={detail} />
+										<ApplicationUserActions
+											key={`${selectedProject.id}:${detail.id}:${actionRevision}`}
+											projectRef={selectedProject.id}
+											userId={detail.id}
+											name={detail.name ?? ""}
+											onChange={async () => {
+												await load();
+												setSecurityRevision((current) => current + 1);
+												setDetail(await getApplicationUser(selectedProject.id, detail.id));
+											}}
+										/>
+										<ApplicationUserSecurity
+											key={`${selectedProject.id}:${detail.id}:${securityRevision}`}
+											projectRef={selectedProject.id}
+											userId={detail.id}
+											onChange={async () => {
+												await load();
+												setActionRevision((current) => current + 1);
+												setDetail(await getApplicationUser(selectedProject.id, detail.id));
+											}}
+										/>
+									</>
+								}
 							/>
-							{detail && (
-								<ApplicationUserSecurity
-									key={`${selectedProject.id}:${detail.id}:${securityRevision}`}
-									projectRef={selectedProject.id}
-									userId={detail.id}
-									onChange={async () => {
-										await load();
-										setActionRevision((current) => current + 1);
-										setDetail(await getApplicationUser(selectedProject.id, detail.id));
-									}}
-								/>
-							)}
-						</div>
+						) : (
+							<Card>
+								<CardContent className="flex min-h-80 items-center justify-center p-8 text-center text-sm text-muted-foreground">
+									{detailLoading
+										? t("Loading identity and purchase state…")
+										: t(
+												"Select a user to inspect authentication, entitlements, subscriptions and paywall activity.",
+											)}
+								</CardContent>
+							</Card>
+						)}
 					</div>
 				</div>
 			)}
@@ -384,101 +396,73 @@ function AuthMethodBadges({ user }: { user: ApplicationUser }) {
 	);
 }
 
-function ApplicationUserDetailPanel({
-	detail,
-	commerce,
-	loading,
-}: {
-	detail: ApplicationUserDetail | null;
-	commerce: CommerceState;
-	loading: boolean;
-}) {
+function ApplicationUserIdentity({ detail }: { detail: ApplicationUserDetail }) {
 	const { t, locale } = useApplicationUsersI18n();
-	if (!detail) {
-		return (
-			<Card>
-				<CardContent className="flex min-h-80 items-center justify-center p-8 text-center text-sm text-muted-foreground">
-					{loading
-						? t("Loading identity and purchase state…")
-						: t(
-								"Select a user to inspect authentication, entitlements, subscriptions and paywall activity.",
-							)}
-				</CardContent>
-			</Card>
-		);
-	}
 	return (
-		<div className="space-y-4">
-			<Card>
-				<CardHeader>
-					<CardTitle>{detail.name || detail.email || t("Anonymous user")}</CardTitle>
-					<CardDescription className="break-all font-mono">{detail.id}</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					<div className="grid gap-3 sm:grid-cols-2">
-						<Value label={t("Email")} value={detail.email || t("Not provided")} />
-						<Value
-							label={t("Email state")}
-							value={
-								detail.email
-									? detail.email_verified
-										? t("Verified")
-										: t("Unverified")
-									: t("Not applicable")
-							}
-						/>
-						<Value label={t("Active sessions")} value={String(detail.sessions.active)} />
-						<Value
-							label={t("Last authentication")}
-							value={date(detail.sessions.last_authenticated_at, locale)}
-						/>
-					</div>
-					<div>
-						<h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-							<KeyRound className="size-4" /> {t("Linked authentication")}
-						</h3>
-						<div className="space-y-2">
-							{detail.identities.map((identity) => (
-								<div
-									key={`${identity.provider}:${identity.linked_at}`}
-									className="rounded-md border p-3 text-sm"
-								>
-									<strong className="capitalize">
-										{identity.provider === "anonymous" ? t("Anonymous") : identity.provider}
-									</strong>
-									<p className="text-xs text-muted-foreground">
-										{t("{email} · linked {date}", {
-											email: identity.provider_email || t("No provider email"),
-											date: date(identity.linked_at, locale),
-										})}
-									</p>
-								</div>
-							))}
-							{detail.password_configured && (
-								<div className="rounded-md border p-3 text-sm">
-									<strong>{t("Password")}</strong>
-									<p className="text-xs text-muted-foreground">
-										{t("Configured; credential material is never exposed.")}
-									</p>
-								</div>
-							)}
-						</div>
-					</div>
-					<p className="text-xs text-muted-foreground">
-						{t(
-							"Sessions: {total} total · {active} active · {revoked} revoked · {expired} expired",
-							{
-								total: detail.sessions.total,
-								active: detail.sessions.active,
-								revoked: detail.sessions.revoked,
-								expired: detail.sessions.expired,
-							},
+		<Card>
+			<CardHeader>
+				<CardTitle>{t("Identity")}</CardTitle>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				<div className="grid gap-3 sm:grid-cols-2">
+					<Value label={t("Email")} value={detail.email || t("Not provided")} />
+					<Value
+						label={t("Email state")}
+						value={
+							detail.email
+								? detail.email_verified
+									? t("Verified")
+									: t("Unverified")
+								: t("Not applicable")
+						}
+					/>
+					<Value label={t("Active sessions")} value={String(detail.sessions.active)} />
+					<Value
+						label={t("Last authentication")}
+						value={date(detail.sessions.last_authenticated_at, locale)}
+					/>
+				</div>
+				<div>
+					<h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+						<KeyRound className="size-4" /> {t("Linked authentication")}
+					</h3>
+					<div className="space-y-2">
+						{detail.identities.map((identity) => (
+							<div
+								key={`${identity.provider}:${identity.linked_at}`}
+								className="rounded-md border p-3 text-sm"
+							>
+								<strong className="capitalize">
+									{identity.provider === "anonymous" ? t("Anonymous") : identity.provider}
+								</strong>
+								<p className="text-xs text-muted-foreground">
+									{t("{email} · linked {date}", {
+										email: identity.provider_email || t("No provider email"),
+										date: date(identity.linked_at, locale),
+									})}
+								</p>
+							</div>
+						))}
+						{detail.password_configured && (
+							<div className="rounded-md border p-3 text-sm">
+								<strong>{t("Password")}</strong>
+								<p className="text-xs text-muted-foreground">
+									{t("Configured; credential material is never exposed.")}
+								</p>
+							</div>
 						)}
-					</p>
-				</CardContent>
-			</Card>
-			<CommercePanel state={commerce} />
-		</div>
+					</div>
+				</div>
+				<p className="text-xs text-muted-foreground">
+					{t("Sessions: {total} total · {active} active · {revoked} revoked · {expired} expired", {
+						total: detail.sessions.total,
+						active: detail.sessions.active,
+						revoked: detail.sessions.revoked,
+						expired: detail.sessions.expired,
+					})}
+				</p>
+			</CardContent>
+		</Card>
 	);
 }
 

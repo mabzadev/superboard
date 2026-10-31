@@ -110,6 +110,9 @@ const french: Record<string, string> = {
 	"Filter by the exact event name.": "Filtrez avec le nom exact de l’événement.",
 	"Event name": "Nom de l’événement",
 	"Apply filter": "Appliquer le filtre",
+	"Filtered by user": "Filtré par utilisateur",
+	"Clear user filter": "Retirer le filtre utilisateur",
+	"Events recorded for this user.": "Événements enregistrés pour cet utilisateur.",
 	Event: "Événement",
 	Source: "Source",
 	Application: "Application",
@@ -351,6 +354,14 @@ const french: Record<string, string> = {
 	"Incident resolved": "Incident résolu",
 	"No incidents have been triggered.": "Aucun incident déclenché.",
 	"Analytics settings": "Paramètres des statistiques",
+	"Audience and usage": "Audience et utilisation",
+	"Viewed screens": "Écrans consultés",
+	"Devices and countries": "Appareils et pays",
+	"User groups": "Groupes d’utilisateurs",
+	"Reports and exports": "Rapports et exports",
+	Quality: "Qualité",
+	"Application errors": "Erreurs de l’application",
+	"User feedback": "Retours utilisateur",
 	"Manage applications, retention, collection, signed webhooks and timeline annotations.":
 		"Gérez les applications, la rétention, la collecte, les webhooks signés et les annotations de la chronologie.",
 	Applications: "Applications",
@@ -368,11 +379,14 @@ const french: Record<string, string> = {
 	"Application updated": "Application mise à jour",
 	"Analytics processing": "Traitement Analytics",
 	"Processing & retention": "Traitement et conservation",
-	"Set Analytics processing, hot-event retention and reporting timezone.": "Définissez le traitement Analytics, la conservation des événements récents et le fuseau horaire des rapports.",
+	"Set Analytics processing, hot-event retention and reporting timezone.":
+		"Définissez le traitement Analytics, la conservation des événements récents et le fuseau horaire des rapports.",
 	"Process collected events": "Traiter les événements collectés",
-	"Core collection continues while Analytics processing is paused.": "Le core continue la collecte lorsque le traitement Analytics est en pause.",
+	"Core collection continues while Analytics processing is paused.":
+		"Le core continue la collecte lorsque le traitement Analytics est en pause.",
 	"Process events": "Traiter les événements",
-	"Manage applications, retention, processing, signed webhooks and timeline annotations.": "Gérez les applications, la conservation, le traitement, les webhooks signés et les annotations de la chronologie.",
+	"Manage applications, retention, processing, signed webhooks and timeline annotations.":
+		"Gérez les applications, la conservation, le traitement, les webhooks signés et les annotations de la chronologie.",
 	"Hot-event retention (days)": "Conservation des événements récents (jours)",
 	"Reporting timezone": "Fuseau horaire des rapports",
 	"Collect data": "Collecter les données",
@@ -443,10 +457,74 @@ const french: Record<string, string> = {
 	Unknown: "Inconnu",
 	Anonymous: "Anonyme",
 	Never: "Jamais",
+	// Overview (/analytics/home)
+	Overview: "Vue d’ensemble",
+	"Quick start, key metrics and link performance for the selected project.":
+		"Démarrage rapide, indicateurs clés et performances des liens du projet sélectionné.",
+	"Accepted events in the selected period.": "Événements acceptés sur la période sélectionnée.",
+	"Distinct people seen in the selected period.":
+		"Personnes distinctes observées sur la période sélectionnée.",
+	"Application installations recorded by Analytics.":
+		"Installations de l’application enregistrées par les statistiques.",
+	"Successful purchases verified by the server.": "Achats réussis vérifiés par le serveur.",
+	Platforms: "Plateformes",
+	"Refreshing…": "Actualisation…",
+	"Some module data is temporarily unavailable":
+		"Certaines données des modules sont temporairement indisponibles",
+	"Available modules are still shown.": "Les modules disponibles restent affichés.",
+	"App overview": "Synthèse de l’application",
+	"Access key": "Clé d’accès",
+	Links: "Liens",
+	Campaigns: "Campagnes",
+	Domains: "Domaines",
+	"Redirect rules": "Règles de redirection",
+	"Link analytics": "Statistiques des liens",
+	"Product catalog": "Catalogue de produits",
+	"Purchase analytics": "Statistiques des achats",
+	"Link views": "Vues des liens",
+	"Browser views, clicks and redirects in the selected period.":
+		"Vues dans le navigateur, clics et redirections sur la période sélectionnée.",
+	"Net revenue": "Revenu net",
+	"Gross purchase revenue after recorded refunds.":
+		"Revenu brut des achats après remboursements enregistrés.",
+	"Quick start": "Démarrage rapide",
+	"Create an API key": "Créer une clé d’API",
+	"Authenticate the SDK in the selected project.":
+		"Authentifiez le SDK dans le projet sélectionné.",
+	"Install an SDK": "Installer un SDK",
+	"Complete the iOS, Android or Web integration guide.":
+		"Suivez le guide d’intégration iOS, Android ou Web.",
+	"Configure link routing": "Configurer le routage des liens",
+	"Add redirect rules or verify a branded domain.":
+		"Ajoutez des règles de redirection ou vérifiez un domaine personnalisé.",
+	"Publish the first link": "Publier le premier lien",
+	"Create a link and optionally group it into a campaign.":
+		"Créez un lien et regroupez-le éventuellement dans une campagne.",
+	"Build the product catalog": "Constituer le catalogue de produits",
+	"Register products before resolving offerings.":
+		"Enregistrez des produits avant de résoudre les offres.",
+	"Daily browser activity for the selected period.":
+		"Activité quotidienne dans le navigateur sur la période sélectionnée.",
+	"No link views yet": "Aucune vue de lien pour le moment",
+	"Create and share a dynamic link to populate this chart.":
+		"Créez et partagez un lien dynamique pour alimenter ce graphique.",
+	"Create a link": "Créer un lien",
+	"Top links": "Meilleurs liens",
+	"Ranked by attributed views in the selected period.":
+		"Classés par vues attribuées sur la période sélectionnée.",
+	"See Dynamic links analytics": "Voir l’analyse des liens dynamiques",
+	Link: "Lien",
+	Opens: "Ouvertures",
+	Installs: "Installations",
+	Revenue: "Revenu",
+	"No links are available for this period.": "Aucun lien disponible pour cette période.",
 };
 
 const interpolation: Record<"en" | "fr", Messages> = {
 	en: {
+		"Quick start progress": [["complete"], " of ", ["total"], " project foundations completed."],
+		"Daily link views": [["date"], ": ", ["count"], " views"],
+		"Link views column": ["Views"],
 		"Last seen at": ["Last seen ", ["date"]],
 		"Dimension empty": ["No ", ["dimension"], " data."],
 		"Occurrences count": [
@@ -482,6 +560,9 @@ const interpolation: Record<"en" | "fr", Messages> = {
 		"Delete item": ["Delete ", ["name"]],
 	},
 	fr: {
+		"Quick start progress": [["complete"], " étapes essentielles sur ", ["total"], " terminées."],
+		"Daily link views": [["date"], " : ", ["count"], " vues"],
+		"Link views column": ["Vues"],
 		"Last seen at": ["Dernière activité le ", ["date"]],
 		"Dimension empty": ["Aucune donnée pour « ", ["dimension"], " »."],
 		"Occurrences count": [

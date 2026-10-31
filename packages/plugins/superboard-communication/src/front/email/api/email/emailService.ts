@@ -34,6 +34,21 @@ export type EmailMessageDetail = EmailMessageSummary & {
 		attempt_count: number;
 		last_error: string | null;
 	}>;
+	/** "api" for messages sent through POST /v1/email/send. */
+	source?: "api" | "admin";
+	scheduled_at?: string | null;
+	tags?: string[];
+	timeline?: Array<{
+		type: string;
+		recipient: string | null;
+		occurred_at: string;
+		detail: Record<string, unknown> | null;
+	}>;
+	attachments?: Array<{
+		filename: string;
+		content_type: string;
+		size_bytes: number;
+	}>;
 };
 export async function getEmailMessages(projectRef: string, filters: Record<string, string> = {}) {
 	return data<{ items: EmailMessageSummary[]; nextCursor?: string }>(
@@ -63,9 +78,9 @@ export type SmtpSettings = {
 	daily_quota?: number | null;
 	dkim_selector?: string | null;
 	authentication_status?: "unverified" | "verified" | "failed";
-	spf_status?: "verified" | "missing" | null;
-	dkim_status?: "verified" | "missing" | "unconfigured" | null;
-	dmarc_status?: "verified" | "missing" | null;
+	spf_status?: DnsRecordStatus | null;
+	dkim_status?: DnsRecordStatus | null;
+	dmarc_status?: DnsRecordStatus | null;
 	authentication_checked_at?: string | null;
 	last_tested_at?: string | null;
 	last_test_status?: string | null;
@@ -82,12 +97,12 @@ export type ProviderWebhook = {
 	created_at?: string;
 };
 
+/** Email Worker messages exposed by the delivery outbox endpoint. */
 export type DeliveryOutboxItem = {
 	id: string;
+	subject?: string | null;
 	job_type: string;
-	resource_id: string;
 	status: string;
-	attempt_count: number;
 	last_error?: string | null;
 	created_at: string;
 };
@@ -134,15 +149,173 @@ export async function testSmtpSettings(projectRef: string, profileId?: string, r
 }
 
 export async function verifySmtpDomain(projectRef: string, profileId: string) {
+	return data<DomainAuthenticationReport>(
+		await POST(path(projectRef, `/settings/smtp/${profileId}/verify-domain`), {}),
+	);
+}
+
+export type DnsRecordStatus = "verified" | "missing" | "mismatch" | "unconfigured";
+export type DnsRecord = {
+	id: string;
+	purpose: "spf" | "dkim" | "dmarc" | "mail_from";
+	type: "TXT" | "CNAME" | "MX";
+	host: string;
+	value: string;
+	priority?: number;
+	needs?: "spf_include" | "dkim" | "dkim_tokens";
+};
+export type DnsRecordCheck = DnsRecord & {
+	status: DnsRecordStatus;
+	found: string[];
+	detail: string;
+	detail_key?: string;
+	detail_params?: Record<string, string>;
+	aligned: boolean | null;
+};
+export type DomainAuthenticationReport = {
+	domain: string;
+	dkimSelector: string | null;
+	records: DnsRecordCheck[];
+	spf: DnsRecordStatus;
+	dkim: DnsRecordStatus;
+	dmarc: DnsRecordStatus;
+	alignment: { spf: boolean; dkim: boolean; dmarc_policy: string | null };
+	ready: boolean;
+	checkedAt: string;
+};
+export type DomainAuthenticationConfig = {
+	spf_include?: string | null;
+	dkim_type?: "txt" | "cname" | null;
+	dkim_selector?: string | null;
+	dkim_value?: string | null;
+	dkim_tokens?: string[];
+	dmarc_rua?: string | null;
+	mail_from_domain?: string | null;
+};
+export type SenderAuthentication = {
+	profile_id: string;
+	domain: string;
+	provider: "smtp" | "aws-ses";
+	aws_region: string | null;
+	config: DomainAuthenticationConfig;
+	records: DnsRecord[];
+	status: string;
+	checked_at: string | null;
+	report: DomainAuthenticationReport | null;
+};
+
+export async function getSenderAuthentication(projectRef: string, profileId: string) {
+	return data<SenderAuthentication>(
+		await GET(path(projectRef, `/settings/smtp/${encodeURIComponent(profileId)}/authentication`)),
+	);
+}
+
+export async function saveSenderAuthentication(
+	projectRef: string,
+	profileId: string,
+	config: DomainAuthenticationConfig,
+) {
+	return data<SenderAuthentication>(
+		await PUT(path(projectRef, `/settings/smtp/${encodeURIComponent(profileId)}/authentication`), {
+			config,
+		}),
+	);
+}
+
+export type EmailApiKey = {
+	id: string;
+	name: string;
+	prefix: string;
+	scopes: string[];
+	created_at: string;
+	last_used_at: string | null;
+	/** Present only in the creation response. */
+	secret?: string | null;
+};
+
+export async function getEmailApiKeys(projectRef: string) {
+	return data<EmailApiKey[]>(await GET(path(projectRef, "/settings/api-keys")));
+}
+
+export async function createEmailApiKey(projectRef: string, name: string) {
+	return data<EmailApiKey>(await POST(path(projectRef, "/settings/api-keys"), { name }));
+}
+
+export async function revokeEmailApiKey(projectRef: string, id: string) {
+	return data<unknown>(
+		await DELETE(path(projectRef, `/settings/api-keys/${encodeURIComponent(id)}`)),
+	);
+}
+
+export type EmailEventType =
+	| "sent"
+	| "delivered"
+	| "bounced"
+	| "complained"
+	| "opened"
+	| "clicked"
+	| "failed";
+export type EmailEventWebhook = {
+	id: string;
+	url: string;
+	description: string | null;
+	events: EmailEventType[];
+	enabled: boolean;
+	secret_prefix: string;
+	last_status?: string | null;
+	last_delivery_at?: string | null;
+	/** Present only in the creation response. */
+	secret?: string | null;
+};
+export type EmailEventWebhookDelivery = {
+	id: string;
+	event_type: string;
+	status: "pending" | "retrying" | "delivered" | "failed";
+	attempt_count: number;
+	response_status: number | null;
+	last_error: string | null;
+	created_at: string;
+};
+
+export async function getEventWebhooks(projectRef: string) {
+	return data<EmailEventWebhook[]>(await GET(path(projectRef, "/settings/event-webhooks")));
+}
+
+export async function createEventWebhook(
+	projectRef: string,
+	payload: { url: string; events: EmailEventType[]; description?: string },
+) {
+	return data<EmailEventWebhook>(await POST(path(projectRef, "/settings/event-webhooks"), payload));
+}
+
+export async function updateEventWebhook(
+	projectRef: string,
+	id: string,
+	payload: Partial<Pick<EmailEventWebhook, "url" | "events" | "enabled" | "description">>,
+) {
+	return data<EmailEventWebhook>(
+		await PUT(path(projectRef, `/settings/event-webhooks/${encodeURIComponent(id)}`), payload),
+	);
+}
+
+export async function deleteEventWebhook(projectRef: string, id: string) {
+	return data<unknown>(
+		await DELETE(path(projectRef, `/settings/event-webhooks/${encodeURIComponent(id)}`)),
+	);
+}
+
+export async function testEventWebhook(projectRef: string, id: string) {
 	return data<{
-		domain: string;
-		dkimSelector: string | null;
-		spf: "verified" | "missing";
-		dkim: "verified" | "missing" | "unconfigured";
-		dmarc: "verified" | "missing";
-		ready: boolean;
-		checkedAt: string;
-	}>(await POST(path(projectRef, `/settings/smtp/${profileId}/verify-domain`), {}));
+		status: string;
+		responseStatus: number | null;
+		error: string | null;
+	}>(await POST(path(projectRef, `/settings/event-webhooks/${encodeURIComponent(id)}/test`), {}));
+}
+
+export async function getEventWebhookDeliveries(projectRef: string, id: string) {
+	return data<EmailEventWebhookDelivery[]>(
+		await GET(path(projectRef, `/settings/event-webhooks/${encodeURIComponent(id)}/deliveries`)),
+	);
 }
 
 export async function getProviderWebhooks(projectRef: string) {

@@ -16,11 +16,11 @@ import { USER_FRONT_CATALOGS } from "../../../../apps/site/src/lib/user-front-ca
 import { ModulePage } from "../../../../packages/supbrd-front-ui/src/shared/components/modules/ModulePage.js";
 import { useProjectSelection } from "../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js";
 
-vi.mock("../../../../apps/site/src/lib/native-front-plugins.js", async () => {
+vi.mock("../../../../apps/site/src/lib/native-front-renderers.js", async () => {
 	const { nativeFrontPlugin } =
 		await import("../../../../apps/site/src/front-plugins/emdash-core.js");
 	return {
-		mountNativeFrontRenderer: ({ mount }: { mount: NativeRendererMountInput }) =>
+		mountProjectedNativeFrontRenderer: ({ mount }: { mount: NativeRendererMountInput }) =>
 			mount.renderer.plugin_id === "supbrd-core"
 				? nativeFrontPlugin.mount_renderer(mount)
 				: { kind: "surface", title: "Products", blocks: [] },
@@ -89,17 +89,14 @@ const projection: NativeFrontPresentationProjection = {
 			projects: [production, staging],
 		},
 	},
-	plugin_lock: [
-		"supbrd-core",
-		"superboard-products",
-		"superboard-user",
-		"superboard-settings",
-	].map((plugin_id) => ({
-		plugin_id,
-		version: "1.0.0",
-		artifact_checksum: `sha256:${"a".repeat(64)}`,
-		native: true,
-	})),
+	plugin_lock: ["supbrd-core", "superboard-products", "superboard-user", "superboard-settings"].map(
+		(plugin_id) => ({
+			plugin_id,
+			version: "1.0.0",
+			artifact_checksum: `sha256:${"a".repeat(64)}`,
+			native: true,
+		}),
+	),
 	navigation: [
 		{
 			group_id: "products",
@@ -259,7 +256,7 @@ test("section links follow the page title and retain their active destination", 
 		Boolean(heading!.compareDocumentPosition(navigation!) & Node.DOCUMENT_POSITION_FOLLOWING),
 	).toBe(true);
 	expect(navigation!.querySelector('a[aria-current="page"]')?.getAttribute("href")).toBe(
-		"/monetization/offerings",
+		"/monetization/products?tab=offerings",
 	);
 	expect(navigation!.querySelector('a[href="/monetization/catalog"]')).not.toBeNull();
 });
@@ -341,7 +338,8 @@ test("opening another section closes the previous section and a reduced menu reo
 	expect(container.querySelectorAll("details[open]")).toHaveLength(1);
 	expect(container.querySelector('a[href="/other"]')?.closest("details")?.open).toBe(true);
 	expect(
-		container.querySelector('a[href="/monetization/offerings"]')?.closest("details")?.open,
+		container.querySelector('a[href="/monetization/products?tab=offerings"]')?.closest("details")
+			?.open,
 	).toBe(false);
 	await click("Collapse sidebar");
 	await act(async () => other!.click());
@@ -389,4 +387,30 @@ test("the front language selector offers only English and French", async () => {
 	expect(
 		Array.from(document.querySelectorAll('[role="option"]'), (item) => item.textContent?.trim()),
 	).toEqual(["English", "Français"]);
+});
+
+test("the brand and the menu Overview entry open the same page", async () => {
+	await render({
+		...projection,
+		navigation: [
+			{
+				group_id: "overview",
+				label: "Overview",
+				order: 0,
+				items: [
+					{
+						route_id: "superboard.home",
+						href: "/analytics/home",
+						label: "Overview",
+						order: 0,
+						permission: "allow",
+					},
+				],
+			},
+			...projection.navigation,
+		],
+	});
+	expect(container.querySelector("a.native-front-brand")?.getAttribute("href")).toBe(
+		"/analytics/home",
+	);
 });

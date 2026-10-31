@@ -1,5 +1,4 @@
 //sidebarNav options
-export const SETTING = "Project settings" as const;
 export const CONFIGURATION = "Configuration" as const;
 export const NOTIFICATIONS = "Notifications" as const;
 export const MESSAGES = "Messages" as const;

@@ -1,9 +1,5 @@
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
-import {
-	EmptyProject,
-	ModulePage,
-	moduleErrorMessage,
-} from "@superboard/front-ui/modules/ModulePage.js";
+import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { Label } from "@superboard/front-ui/ui/label.js";
@@ -15,6 +11,7 @@ import {
 	type SupportCursorQuery,
 } from "../../api/support/nativeClient.js";
 import { useSupportI18n } from "../../i18n.js";
+import { SupportModulePage as ModulePage } from "./SupportModulePage.js";
 import {
 	SupportError,
 	SupportLoadMore,

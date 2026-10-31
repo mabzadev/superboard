@@ -134,6 +134,7 @@ const french: Record<string, string> = {
 	google: "Google",
 	stripe: "Stripe",
 	// Offerings & Entitlements general
+	Catalog: "Catalogue",
 	Offerings: "Offres",
 	"Manage the store catalog, packages and SDK-resolved offerings.":
 		"Gérez le catalogue du store, les packages et les offres résolues par le SDK.",
@@ -338,7 +339,9 @@ const french: Record<string, string> = {
 		"Configurez la facturation, les passerelles de paiement, les devises et consultez le diagnostic du service de monétisation.",
 	General: "Général",
 	Gateways: "Passerelles",
-	Configuration: "Configuration",
+	Advanced: "Avancé",
+	"Store credentials and webhook secrets used by the Monetization service.":
+		"Identifiants des stores et secrets de webhook utilisés par le service de monétisation.",
 	"Default Currency": "Devise par défaut",
 	"Tax Calculation": "Calcul des taxes",
 	"Automatic (Stripe Tax)": "Automatique (Stripe Tax)",

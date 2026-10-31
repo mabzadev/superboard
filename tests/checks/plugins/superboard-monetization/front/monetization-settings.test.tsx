@@ -1,7 +1,13 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 
 import MonetizationSettingsPage from "../../../../../packages/plugins/superboard-monetization/src/front/MonetizationSettingsPage.js";
-import { fireEvent, render, screen, waitFor } from "../../../packages/supbrd-front-ui/render.js";
+import {
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+	within,
+} from "../../../packages/supbrd-front-ui/render.js";
 
 vi.mock("@superboard/front-ui/context/useProjectSelection.js", () => ({
 	useProjectSelection: () => ({ selectedProject: { id: "1-test" } }),
@@ -19,10 +25,6 @@ vi.mock(
 
 vi.mock("@superboard/front-ui/section-navigation.js", () => ({
 	SectionNavigation: () => <div data-testid="section-nav" />,
-}));
-
-vi.mock("@superboard/front-ui/plugin-configuration-tab", () => ({
-	PluginConfigurationTab: () => <div data-testid="plugin-config-tab">Plugin configuration</div>,
 }));
 
 describe("MonetizationSettingsPage", () => {
@@ -67,13 +69,16 @@ describe("MonetizationSettingsPage", () => {
 			}),
 		);
 		render(<MonetizationSettingsPage />);
-		fireEvent.keyDown(screen.getByRole("tab", { name: "Configuration" }), { key: "Enter" });
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
+		fireEvent.click(await screen.findByText("Advanced"));
 		const secret = await screen.findByLabelText("Apple private key");
 		fireEvent.change(secret, { target: { value: pem } });
 		fireEvent.keyDown(screen.getByRole("tab", { name: "Products" }), { key: "Enter" });
-		fireEvent.keyDown(screen.getByRole("tab", { name: "Configuration" }), { key: "Enter" });
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
 		expect(screen.getByLabelText("Apple private key")).toHaveValue(pem);
-		fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+		const advanced = screen.getByText("Advanced").closest("details");
+		if (!advanced) throw new Error("Advanced section missing");
+		fireEvent.click(within(advanced).getByRole("button", { name: "Save changes" }));
 		await screen.findByText("Settings saved.");
 		expect(submitted).toEqual({ [key]: pem });
 		expect(screen.getByLabelText("Apple private key")).toHaveValue("");
@@ -108,7 +113,11 @@ describe("MonetizationSettingsPage", () => {
 		expect(screen.getByText("Monetization Settings")).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "General" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Gateways" })).toBeInTheDocument();
-		expect(screen.getByRole("tab", { name: "Configuration" })).toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Configuration" })).not.toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Open in Plugins" })).toHaveAttribute(
+			"href",
+			expect.stringMatching(/^\/_emdash\/admin\/plugins-manager\/[^/]+\/configuration$/),
+		);
 
 		expect(await screen.findByRole("checkbox", { name: "Enable purchases" })).not.toBeChecked();
 		expect(screen.queryByText("Automatic (Stripe Tax)")).not.toBeInTheDocument();
@@ -127,15 +136,27 @@ describe("MonetizationSettingsPage", () => {
 		expect(screen.getByText("Apple App Store")).toBeInTheDocument();
 	});
 
-	it("switches to configuration tab and opens the active View configuration", async () => {
+	it("keeps store credentials in a collapsed Advanced section of the gateways tab", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => Response.json({ data: { values: {}, secretsSet: {} } })),
+		);
 		render(<MonetizationSettingsPage />);
 
-		const configBtn = screen.getByRole("tab", { name: "Configuration" });
-		fireEvent.keyDown(configBtn, { key: "Enter" });
+		fireEvent.keyDown(screen.getByRole("tab", { name: "Gateways" }), { key: "Enter" });
 
+		const advanced = (await screen.findByText("Advanced")).closest("details");
+		expect(advanced).not.toHaveAttribute("open");
+		expect(advanced).toContainElement(await screen.findByLabelText("Apple private key"));
+	});
+
+	it("opens legacy configuration links on the gateways tab with Advanced expanded", async () => {
+		window.history.replaceState(null, "", "/monetization/settings?tab=configuration");
+		render(<MonetizationSettingsPage />);
+
+		expect(screen.getByRole("tab", { name: "Gateways" })).toHaveAttribute("aria-selected", "true");
 		await waitFor(() => {
-			expect(screen.getByTestId("plugin-config-tab")).toBeInTheDocument();
+			expect(screen.getByText("Advanced").closest("details")).toHaveAttribute("open");
 		});
-		expect(screen.getByText("Plugin configuration")).toBeInTheDocument();
 	});
 });

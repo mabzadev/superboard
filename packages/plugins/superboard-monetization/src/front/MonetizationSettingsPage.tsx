@@ -1,5 +1,5 @@
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
-import { PluginConfigurationTab } from "@superboard/front-ui/plugin-configuration-tab";
+import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
 import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
@@ -20,13 +20,17 @@ import StripeSettings from "./StripeSettings.js";
 export default function MonetizationSettingsPage() {
 	const { t, locale } = useMonetizationI18n();
 	const { selectedProject } = useProjectSelection();
-	const [tab, setTab] = useState(() => {
-		const requested =
-			typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab");
-		return requested && ["general", "products", "gateways", "configuration"].includes(requested)
-			? requested
-			: "general";
-	});
+	const [requested] = useState(() =>
+		typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab"),
+	);
+	// Plugin health moved to the Plugins page; old `?tab=configuration` links open the advanced store credentials.
+	const [tab, setTab] = useState(() =>
+		requested === "configuration"
+			? "gateways"
+			: requested && ["general", "products", "gateways"].includes(requested)
+				? requested
+				: "general",
+	);
 	return (
 		<section className="ds-page space-y-5">
 			<header className="ds-page-header">
@@ -55,26 +59,35 @@ export default function MonetizationSettingsPage() {
 					<TabsTrigger value="general">{t("General")}</TabsTrigger>
 					<TabsTrigger value="products">{t("Products")}</TabsTrigger>
 					<TabsTrigger value="gateways">{t("Gateways")}</TabsTrigger>
-					<TabsTrigger value="configuration">{t("Configuration")}</TabsTrigger>
 				</TabsList>
 				{selectedProject ? (
-					<BillingSettings key={selectedProject.id} projectId={selectedProject.id} tab={tab} />
+					<BillingSettings
+						key={selectedProject.id}
+						projectId={selectedProject.id}
+						tab={tab}
+						advancedOpen={requested === "configuration"}
+					/>
 				) : (
 					<p role="status">{t("Loading settings…")}</p>
 				)}
 				<TabsContent value="products" forceMount hidden={tab !== "products"}>
 					<MonetizationSettingsForm section="products" />
 				</TabsContent>
-				<TabsContent value="configuration" forceMount hidden={tab !== "configuration"}>
-					<MonetizationSettingsForm section="billing" />
-					<PluginConfigurationTab locale={locale} />
-				</TabsContent>
 			</Tabs>
+			<PluginDiagnosticsLink locale={locale} />
 		</section>
 	);
 }
 
-function BillingSettings({ projectId, tab }: { projectId: string; tab: string }) {
+function BillingSettings({
+	projectId,
+	tab,
+	advancedOpen,
+}: {
+	projectId: string;
+	tab: string;
+	advancedOpen: boolean;
+}) {
 	const { t, locale } = useMonetizationI18n();
 	const [overview, setOverview] = useState<BillingOverview | null>(null);
 	const [enabled, setEnabled] = useState(false);
@@ -264,6 +277,15 @@ function BillingSettings({ projectId, tab }: { projectId: string; tab: string })
 						})}
 					</div>
 				)}
+				<details className="rounded border p-4" open={advancedOpen}>
+					<summary className="cursor-pointer font-medium">{t("Advanced")}</summary>
+					<p className="mt-2 text-sm text-muted-foreground">
+						{t("Store credentials and webhook secrets used by the Monetization service.")}
+					</p>
+					<div className="mt-4">
+						<MonetizationSettingsForm section="billing" />
+					</div>
+				</details>
 			</TabsContent>
 		</>
 	);

@@ -3,37 +3,34 @@ import {
 	navigationGroup,
 } from "../../../supbrd-core/src/plugin-front-runtime.js";
 
-const flows = navigationGroup({ group_id: "flows", group_label: "Flows", group_order: 4 });
+// Fallback navigation (used only when the EmDash menu is missing) mirrors the seeded section.
+const acquisition = navigationGroup({
+	group_id: "acquisition",
+	group_label: "Acquisition",
+	group_order: 5,
+});
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
 	plugin_id: "superboard-flows",
 	plugin_label: "Flows",
 	description:
 		"Design workflows, components, launch configurations, and runtime settings from the Flows plugin.",
+	translations: {
+		en: { "superboard-flows.menu.settings": "Settings" },
+		fr: { "superboard-flows.menu.settings": "Paramètres" },
+	},
 	surfaces: [
-		{ path_pattern: "/flows", title: "Flows", navigation: flows("Overview", 0) },
-		{
-			path_pattern: "/acquisition/workflows",
-			title: "Workflows",
-			navigation: flows("Workflows", 1),
-		},
+		{ path_pattern: "/flows", title: "Flows" },
+		{ path_pattern: "/acquisition/workflows", title: "Workflows" },
 		{ path_pattern: "/acquisition/workflows/:id", title: "Workflow" },
-		{
-			path_pattern: "/acquisition/launchpad",
-			title: "Launchpad",
-			navigation: flows("Launchpad", 2),
-		},
+		{ path_pattern: "/acquisition/launchpad", title: "Launchpad" },
 		{ path_pattern: "/acquisition/users", title: "Flow users" },
 		{ path_pattern: "/acquisition/users/:id", title: "Flow user" },
-		{
-			path_pattern: "/acquisition/components",
-			title: "Components",
-			navigation: flows("Components", 4),
-		},
+		{ path_pattern: "/acquisition/components", title: "Components" },
 		{
 			path_pattern: "/acquisition/settings",
 			title: "Acquisition settings",
-			navigation: flows("Settings", 5),
+			navigation: acquisition("superboard-flows.menu.settings", 3),
 		},
 		{
 			path_pattern: "/acquisition/settings/environments",

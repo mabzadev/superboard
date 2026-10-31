@@ -3,10 +3,11 @@ import {
 	navigationGroup,
 } from "../../../supbrd-core/src/plugin-front-runtime.js";
 
-const navigation = navigationGroup({
-	group_id: "superboard-paywalls.navigation",
-	group_label: "superboard-paywalls.menu.group",
-	group_order: 70,
+// Fallback navigation (used only when the EmDash menu is missing) mirrors the seeded section.
+const acquisition = navigationGroup({
+	group_id: "acquisition",
+	group_label: "Acquisition",
+	group_order: 5,
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
@@ -15,25 +16,20 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 	description: "Compose paywalls and inspect their performance from the active Paywalls plugin.",
 	translations: {
 		en: {
-			"superboard-paywalls.menu.group": "Paywalls",
 			"superboard-paywalls.menu.item_0": "Paywalls",
-			"superboard-paywalls.menu.item_1": "Statistics",
 		},
 		fr: {
-			"superboard-paywalls.menu.group": "Paywalls",
-			"superboard-paywalls.menu.item_0": "Paywalls",
-			"superboard-paywalls.menu.item_1": "Statistiques",
+			"superboard-paywalls.menu.item_0": "Écrans d’abonnement",
 		},
 	},
 	surfaces: [
 		{
 			path_pattern: "/acquisition/paywalls",
-			navigation: navigation("superboard-paywalls.menu.item_0", 0),
+			navigation: acquisition("superboard-paywalls.menu.item_0", 0),
 			title: "Paywalls",
 		},
 		{
 			path_pattern: "/acquisition/paywalls/statistics",
-			navigation: navigation("superboard-paywalls.menu.item_1", 1),
 			title: "Paywall statistics",
 		},
 		{

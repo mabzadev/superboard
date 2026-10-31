@@ -295,6 +295,56 @@ describe("public redirects", () => {
 		expect(state.quickLinks[0].image_url).toBe(body.link.image_url);
 	});
 
+	it("defers device, action and view writes to waitUntil when an execution context exists", async () => {
+		const { env, state } = redirectFixture();
+		const pending: Promise<unknown>[] = [];
+		const ctx = {
+			waitUntil: (promise: Promise<unknown>) => pending.push(promise),
+			passThroughOnException: () => undefined,
+			props: {},
+		} as unknown as ExecutionContext;
+		const response = await redirectRoutes.fetch(
+			new Request("https://go.test/promo", {
+				headers: { "User-Agent": "Mozilla/5.0 (Macintosh)", "CF-Connecting-IP": "203.0.113.10" },
+			}),
+			env,
+			ctx,
+		);
+
+		expect(response.status).toBe(200);
+		expect(pending).toHaveLength(1);
+		await Promise.all(pending);
+		expect(state.devices).toHaveLength(1);
+		expect(state.actions).toEqual([{ device_id: 1, link_id: 77 }]);
+		expect(state.events).toEqual([
+			{ device_id: 1, project_id: 101, link_id: 77, platform: "web", ip: "203.0.113.10" },
+		]);
+	});
+
+	it("reuses a recent device and resolves quick links from the short-code route", async () => {
+		const { env, state } = redirectFixture();
+		state.devices.push({ id: 5, ip: "203.0.113.10", user_agent: "Mozilla/5.0 (Macintosh)" });
+		await redirectRoutes.request(
+			"/promo",
+			{ headers: { "User-Agent": "Mozilla/5.0 (Macintosh)", "CF-Connecting-IP": "203.0.113.10" } },
+			env,
+		);
+		expect(state.devices).toHaveLength(1);
+		expect(state.actions).toEqual([{ device_id: 5, link_id: 77 }]);
+		const deviceLookup = env.DB.calls.find((call) => call.sql.startsWith("SELECT id FROM devices"));
+		expect(deviceLookup?.sql).not.toContain("datetime(updated_at)");
+
+		state.quickLinks.push({ path: "quick1", desktop: "https://desktop.test/quick" });
+		const quick = await redirectRoutes.request(
+			"/quick1",
+			{ headers: { "User-Agent": "Mozilla/5.0 (Macintosh)" }, redirect: "manual" },
+			env,
+		);
+		expect(quick.status).toBe(302);
+		expect(quick.headers.get("location")).toBe("https://desktop.test/quick");
+		expect(state.actions).toHaveLength(1);
+	});
+
 	it("sanitizes marketing message HTML before rendering", async () => {
 		const { env } = redirectFixture();
 		const response = await redirectRoutes.request("/mm/message-1", {}, env);

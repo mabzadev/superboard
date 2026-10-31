@@ -6,4 +6,4 @@ export {
 	CardAction,
 	CardDescription,
 	CardContent,
-} from "@superboard/front-ui/ui";
+} from "@superboard/front-ui/ui/card.js";

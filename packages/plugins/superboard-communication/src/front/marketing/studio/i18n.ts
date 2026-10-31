@@ -2,7 +2,10 @@ import { useFrontContext } from "@superboard/front-ui/context";
 import { createFrontI18n } from "@superboard/front-ui/i18n";
 import { useMemo } from "react";
 
+import { audienceFrench } from "./audience-i18n.js";
+
 const french: Record<string, string> = {
+	...audienceFrench,
 	Button: "Bouton",
 	"HTML source": "Code HTML",
 	Components: "Composants",
@@ -689,6 +692,168 @@ const french: Record<string, string> = {
 		"DNS de l’expéditeur : {authentication} · SPF {spf} · DKIM {dkim} · DMARC {dmarc}",
 	"{status} · {count} attempts": "{status} · {count} tentatives",
 	"{count} configured": "{count} configurés",
+	"Communication sections": "Sections de la communication",
+	"In-app & Push": "In-app et push",
+	Suppressions: "Suppressions",
+	Operations: "Opérations",
+	"Message log": "Journal des messages",
+	"Senders & domains": "Expéditeurs et domaines",
+	"Sending preferences": "Préférences d’envoi",
+	"Who your messages come from, and how and when they are sent.":
+		"L’expéditeur de vos messages, et comment et quand ils sont envoyés.",
+	"Campaigns, automated and transactional emails in one place.":
+		"E-mails de campagne, automatisés et transactionnels au même endroit.",
+	Automated: "Automatisé",
+	Transactional: "Transactionnel",
+	"Delete email": "Supprimer l’e-mail",
+	"Configure a sender first: emails cannot be delivered without a sender identity.":
+		"Configurez d’abord un expéditeur : aucun e-mail ne peut être livré sans identité d’expéditeur.",
+	"Configure a sender": "Configurer un expéditeur",
+	"Configure a sender first, then create your first email.":
+		"Configurez d’abord un expéditeur, puis créez votre premier e-mail.",
+	"Create a campaign, an automated or a transactional email to get started.":
+		"Créez un e-mail de campagne, automatisé ou transactionnel pour commencer.",
+	"Campaign: one-off send to a list or segment":
+		"Campagne : envoi ponctuel à une liste ou un segment",
+	"Automated: sent by a journey or trigger":
+		"Automatisé : envoyé par un parcours ou un déclencheur",
+	"Transactional: receipts, alerts and account emails":
+		"Transactionnel : reçus, alertes et e-mails de compte",
+	"Email type": "Type d’e-mail",
+	"Search emails": "Rechercher des e-mails",
+	"No emails match this filter": "Aucun e-mail ne correspond à ce filtre",
+	Sends: "Envois",
+	"Send to one recipient": "Envoyer à un destinataire",
+	"Sends the published version now. Your application normally sends this email through its trigger or the API.":
+		"Envoie maintenant la version publiée. Votre application envoie normalement cet e-mail via son déclencheur ou l’API.",
+	"Email queued for delivery": "E-mail mis en file d’envoi",
+	"Track opens and clicks": "Suivre les ouvertures et les clics",
+	"Send a test to": "Envoyer un test à",
+	"Send test": "Envoyer un test",
+	"Test email accepted": "E-mail de test accepté",
+	"Test email failed": "Échec de l’e-mail de test",
+	"No sends yet. Create a campaign to choose an audience, test it and schedule it.":
+		"Aucun envoi pour le moment. Créez une campagne pour choisir une audience, la tester et la programmer.",
+	"Contacts, lists, segments and the addresses that must never receive email.":
+		"Contacts, listes, segments et adresses qui ne doivent jamais recevoir d’e-mail.",
+	"Audience sections": "Sections de l’audience",
+	"No contacts yet. Add a contact, import a CSV file or let your application create them.":
+		"Aucun contact pour le moment. Ajoutez un contact, importez un fichier CSV ou laissez votre application les créer.",
+	"Ask for confirmation by email (double opt-in)":
+		"Demander une confirmation par e-mail (double opt-in)",
+	List: "Liste",
+	Description: "Description",
+	Visibility: "Visibilité",
+	"Opt-in": "Consentement",
+	Public: "Publique",
+	Private: "Privée",
+	"Single opt-in": "Opt-in simple",
+	"Double opt-in": "Double opt-in",
+	"Private: managed by your team": "Privée : gérée par votre équipe",
+	"Public: contacts can choose it in their preferences":
+		"Publique : les contacts peuvent la choisir dans leurs préférences",
+	"Double opt-in: contacts confirm by email": "Double opt-in : les contacts confirment par e-mail",
+	"Edit list": "Modifier la liste",
+	"Edit segment": "Modifier le segment",
+	"No lists yet": "Aucune liste pour le moment",
+	"Lists group contacts who chose to hear from you. Create one with the form, then add contacts to it.":
+		"Les listes regroupent les contacts qui ont choisi de vous lire. Créez-en une avec le formulaire, puis ajoutez-y des contacts.",
+	"{count} contacts": "{count} contacts",
+	"No segments yet": "Aucun segment pour le moment",
+	"Segments select contacts by language, attributes or activity. Define the rules with the form.":
+		"Les segments sélectionnent les contacts selon leur langue, leurs attributs ou leur activité. Définissez les règles avec le formulaire.",
+	"Suppressed addresses never receive campaigns or automated emails. Unsubscribes, bounces and complaints are recorded automatically and can only be lifted by the contact.":
+		"Les adresses supprimées ne reçoivent jamais de campagnes ni d’e-mails automatisés. Les désabonnements, rebonds et plaintes sont enregistrés automatiquement et seul le contact peut les lever.",
+	"Search suppressions": "Rechercher des suppressions",
+	"Block an address": "Bloquer une adresse",
+	"Block address": "Bloquer l’adresse",
+	"Unblock {email}": "Débloquer {email}",
+	Unblock: "Débloquer",
+	Reason: "Motif",
+	Since: "Depuis",
+	"Blocked by your team": "Bloquée par votre équipe",
+	Unsubscribed: "Désabonné",
+	"Hard bounce": "Rebond définitif",
+	"Spam complaint": "Plainte pour spam",
+	"Privacy deletion": "Suppression des données",
+	"No suppressed addresses": "Aucune adresse supprimée",
+	"No matching addresses": "Aucune adresse correspondante",
+	"Addresses appear here when someone unsubscribes, bounces, complains or is blocked by your team.":
+		"Les adresses apparaissent ici après un désabonnement, un rebond, une plainte ou un blocage par votre équipe.",
+	"Every message sent, its results, and the deliveries that need attention.":
+		"Chaque message envoyé, ses résultats et les envois qui demandent votre attention.",
+	"Activity sections": "Sections de l’activité",
+	"Message source": "Source des messages",
+	"Search by recipient": "Rechercher par destinataire",
+	"No deliveries match this recipient.": "Aucun envoi ne correspond à ce destinataire.",
+	"No deliveries yet. Campaign and journey emails appear here once they are sent.":
+		"Aucun envoi pour le moment. Les e-mails de campagne et de parcours apparaissent ici une fois envoyés.",
+	"No delivery events in this period yet. Send a campaign or activate an automation to see results here.":
+		"Aucun événement d’envoi sur cette période. Envoyez une campagne ou activez une automatisation pour voir les résultats ici.",
+	Subscribers: "Abonnés",
+	"Enabled subscribers": "Abonnés actifs",
+	"Running campaigns": "Campagnes en cours",
+	Sent: "Envoyés",
+	Delivered: "Livrés",
+	Open: "Ouvertures",
+	Click: "Clics",
+	Bounce: "Rebonds",
+	Complaint: "Plaintes",
+	"Delivery rate": "Taux de livraison",
+	"Open rate": "Taux d’ouverture",
+	"Click rate": "Taux de clic",
+	Unknown: "Inconnu",
+	"Unknown Queue job": "Tâche de file inconnue",
+	Replay: "Rejouer",
+	"Payload was redacted and cannot be replayed":
+		"Le contenu a été masqué et ne peut pas être rejoué",
+	"Retry queue": "File de nouvelle tentative",
+	"Transactional emails that are still queued or failed":
+		"E-mails transactionnels encore en attente ou en échec",
+	"No email is waiting or failed.": "Aucun e-mail en attente ou en échec.",
+	"Email dead letters": "Lettres mortes e-mail",
+	"No email dead letters.": "Aucune lettre morte e-mail.",
+	"Email job queued again": "Tâche e-mail remise en file",
+	"Email dead letter discarded": "Lettre morte e-mail écartée",
+	"No sender identity yet. Add one with the form, then verify its domain: emails cannot be delivered without it.":
+		"Aucune identité d’expéditeur pour le moment. Ajoutez-en une avec le formulaire, puis vérifiez son domaine : aucun e-mail ne peut être livré sans elle.",
+	"Legacy campaign senders (read-only)": "Anciens expéditeurs de campagne (lecture seule)",
+	"These senders were configured before sender identities moved to the Email service. Campaigns use them only while no sender identity exists above. Move them to manage everything in one place.":
+		"Ces expéditeurs ont été configurés avant le passage des identités d’expéditeur au service E-mail. Les campagnes ne les utilisent que tant qu’aucune identité n’existe ci-dessus. Déplacez-les pour tout gérer au même endroit.",
+	"Move to the Email service": "Déplacer vers le service E-mail",
+	"Senders moved to the Email service": "Expéditeurs déplacés vers le service E-mail",
+	"Other channels": "Autres canaux",
+	"Connect secure HTTPS destinations for SMS, push, WhatsApp, Slack and custom webhooks. Automations can then use them as steps.":
+		"Connectez des destinations HTTPS sécurisées pour les SMS, le push, WhatsApp, Slack et les webhooks. Les automatisations peuvent ensuite les utiliser comme étapes.",
+	"Provider webhooks": "Webhooks du fournisseur",
+	"Give these URLs to your email provider so bounces, complaints and deliveries update your contacts automatically.":
+		"Donnez ces URL à votre fournisseur d’e-mail pour que les rebonds, plaintes et livraisons mettent vos contacts à jour automatiquement.",
+	"Events for": "Événements pour",
+	"No provider webhook yet. Create one if your provider reports bounces by webhook.":
+		"Aucun webhook de fournisseur pour le moment. Créez-en un si votre fournisseur signale les rebonds par webhook.",
+	"Automation activated": "Automatisation activée",
+	"Automation paused": "Automatisation mise en pause",
+	"Automation resumed": "Automatisation reprise",
+	"Automation archived": "Automatisation archivée",
+	"No contact found for {email}": "Aucun contact trouvé pour {email}",
+	"{enrolled} of {requested} contacts enrolled": "{enrolled} contacts inscrits sur {requested}",
+	"Contacts to enroll": "Contacts à inscrire",
+	"Contact emails or IDs, separated by commas":
+		"E-mails ou identifiants des contacts, séparés par des virgules",
+	"Email steps need an email. Create one first, then come back to this automation.":
+		"Les étapes e-mail ont besoin d’un e-mail. Créez-en un, puis revenez à cette automatisation.",
+	"Create an email": "Créer un e-mail",
+	"No automations yet. Name it, choose the event that starts it, add email or channel steps above, then activate it.":
+		"Aucune automatisation pour le moment. Nommez-la, choisissez l’événement qui la déclenche, ajoutez des étapes e-mail ou canal ci-dessus, puis activez-la.",
+	Subscriber: "Abonné",
+	Version: "Version",
+	"Current step": "Étape actuelle",
+	Entered: "Entrée",
+	"No archived messages.": "Aucun message archivé.",
+	"No messages yet. Add a message shown inside your app, optionally sent as a push notification.":
+		"Aucun message pour le moment. Ajoutez un message affiché dans votre application, éventuellement envoyé en notification push.",
+	Previous: "Précédent",
+	Next: "Suivant",
 };
 
 export function studioI18n(locale: "en" | "fr") {

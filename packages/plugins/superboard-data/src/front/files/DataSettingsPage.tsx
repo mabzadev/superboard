@@ -1,41 +1,48 @@
 import { useFrontContext } from "@superboard/front-ui/context";
-import { PluginConfigurationTab } from "@superboard/front-ui/plugin-configuration-tab";
+import { useRouter } from "@superboard/front-ui/navigation";
+import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
 import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
-import { useState } from "react";
-
-import { DataSettingsForm } from "./DataSettingsForm.js";
+import { useEffect } from "react";
 
 const messages = {
 	en: {
 		title: "Data Settings",
-		description: "Manage content and file settings, and inspect service configuration and health.",
-		configuration: "Configuration",
-		sections: "Settings sections",
-		content: "Content",
-		files: "Files",
+		description: "Find the content and file settings of the Data module.",
+		moved: "Content and file settings are available directly in their pages:",
+		content: "Content settings",
+		files: "File settings",
+		opening: "Opening settings…",
 	},
 	fr: {
 		title: "Paramètres Data",
-		description:
-			"Gérez les paramètres des contenus et fichiers, puis consultez la configuration et la santé des services.",
-		configuration: "Configuration",
-		sections: "Sections des paramètres",
-		content: "Contenus",
-		files: "Fichiers",
+		description: "Retrouvez les paramètres des contenus et des fichiers du module Data.",
+		moved:
+			"Les paramètres des contenus et des fichiers sont disponibles directement dans leurs pages :",
+		content: "Paramètres des contenus",
+		files: "Paramètres des fichiers",
+		opening: "Ouverture des paramètres…",
 	},
 };
 
+/**
+ * Content and file settings live in their own pages; legacy `?tab=content|files` links open them there.
+ * Service health and lifecycle are owned by the Plugins page, so `?tab=configuration` just lands here.
+ */
+const legacyTargets = { content: "/data/content", files: "/data/files" } as const;
+function legacyTarget() {
+	if (typeof window === "undefined") return null;
+	const requested = new URLSearchParams(window.location.search).get("tab");
+	return requested === "content" || requested === "files" ? legacyTargets[requested] : null;
+}
+
 export default function DataSettingsPage() {
 	const { locale } = useFrontContext();
+	const router = useRouter();
 	const t = messages[locale === "fr" ? "fr" : "en"];
-	const [tab, setTab] = useState(() => {
-		if (typeof window === "undefined") return "content";
-		const requested = new URLSearchParams(window.location.search).get("tab");
-		return requested && ["content", "files", "configuration"].includes(requested)
-			? requested
-			: "content";
-	});
+	const target = legacyTarget();
+	useEffect(() => {
+		if (target) router.replace(`${target}?tab=settings&lang=${locale}`);
+	}, [target, router, locale]);
 	return (
 		<section className="ds-page space-y-5">
 			<header className="ds-page-header">
@@ -45,30 +52,23 @@ export default function DataSettingsPage() {
 				</div>
 			</header>
 			<SectionNavigation />
-			<Tabs
-				value={tab}
-				onValueChange={(value) => {
-					setTab(value);
-					const url = new URL(window.location.href);
-					url.searchParams.set("tab", value);
-					window.history.replaceState(null, "", url);
-				}}
-			>
-				<TabsList aria-label={t.sections}>
-					<TabsTrigger value="content">{t.content}</TabsTrigger>
-					<TabsTrigger value="files">{t.files}</TabsTrigger>
-					<TabsTrigger value="configuration">{t.configuration}</TabsTrigger>
-				</TabsList>
-				<TabsContent value="content" forceMount hidden={tab !== "content"}>
-					<DataSettingsForm section="content" locale={locale === "fr" ? "fr" : "en"} />
-				</TabsContent>
-				<TabsContent value="files" forceMount hidden={tab !== "files"}>
-					<DataSettingsForm section="files" locale={locale === "fr" ? "fr" : "en"} />
-				</TabsContent>
-				<TabsContent value="configuration">
-					<PluginConfigurationTab locale={locale} />
-				</TabsContent>
-			</Tabs>
+			{target ? (
+				<p role="status">{t.opening}</p>
+			) : (
+				<>
+					<p className="text-sm text-muted-foreground">
+						{t.moved}{" "}
+						<a className="underline" href={`/data/content?tab=settings&lang=${locale}`}>
+							{t.content}
+						</a>
+						{" · "}
+						<a className="underline" href={`/data/files?tab=settings&lang=${locale}`}>
+							{t.files}
+						</a>
+					</p>
+					<PluginDiagnosticsLink locale={locale} />
+				</>
+			)}
 		</section>
 	);
 }

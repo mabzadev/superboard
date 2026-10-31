@@ -5,11 +5,7 @@ import {
 	showErrorNotification,
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
-import {
-	EmptyProject,
-	ModulePage,
-	moduleErrorMessage,
-} from "@superboard/front-ui/modules/ModulePage.js";
+import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import {
@@ -49,6 +45,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { AcquisitionPage } from "../../../../AcquisitionPage.js";
+import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
 import {
 	createRedirectRule,
 	deleteRedirectRule,
@@ -93,6 +91,7 @@ function formFromRule(rule: RedirectRule): RuleForm {
 }
 
 export default function RedirectRulesPageContent() {
+	const { tr } = useFlowI18n();
 	const { selectedProject } = useProjectSelection();
 	const [rules, setRules] = useState<RedirectRule[]>([]);
 	const [error, setError] = useState<string | null>(null);
@@ -181,9 +180,11 @@ export default function RedirectRulesPageContent() {
 	};
 
 	return (
-		<ModulePage
-			title="Redirect Rules"
-			description="Resolve the first matching platform rule by priority, then fall back to the link destination."
+		<AcquisitionPage
+			title={tr("Redirect rules")}
+			description={tr(
+				"Resolve the first matching platform rule by priority, then fall back to the link destination.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -363,7 +364,7 @@ export default function RedirectRulesPageContent() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-		</ModulePage>
+		</AcquisitionPage>
 	);
 }
 

@@ -92,7 +92,7 @@ export async function signProjectContext(
 	secret: string,
 ): Promise<string> {
 	if (!secret) throw new Error("Project context signing secret is missing");
-	const key = await importHmacKey(secret, ["sign"]);
+	const key = await importHmacKey(secret);
 	const bytes = await crypto.subtle.sign(
 		"HMAC",
 		key,
@@ -121,7 +121,7 @@ export async function verifyProjectContextSignature(
 	} catch {
 		return false;
 	}
-	const key = await importHmacKey(secret, ["verify"]);
+	const key = await importHmacKey(secret);
 	return crypto.subtle.verify(
 		"HMAC",
 		key,
@@ -246,14 +246,22 @@ function invalidContext(message: string): ProjectContextVerification {
 	return { ok: false, code: "project_context_invalid", message };
 }
 
-function importHmacKey(secret: string, keyUsages: Array<"sign" | "verify">): Promise<CryptoKey> {
-	return crypto.subtle.importKey(
-		"raw",
-		arrayBuffer(encode(secret)),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		keyUsages,
-	);
+const hmacKeys = new Map<string, Promise<CryptoKey>>();
+function importHmacKey(secret: string): Promise<CryptoKey> {
+	let key = hmacKeys.get(secret);
+	if (!key) {
+		if (hmacKeys.size >= 16) hmacKeys.clear();
+		key = crypto.subtle.importKey(
+			"raw",
+			arrayBuffer(encode(secret)),
+			{ name: "HMAC", hash: "SHA-256" },
+			false,
+			["sign", "verify"],
+		);
+		key.catch(() => hmacKeys.get(secret) === key && hmacKeys.delete(secret));
+		hmacKeys.set(secret, key);
+	}
+	return key;
 }
 
 function encode(value: string): Uint8Array {

@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { chromium, expect } from "@playwright/test";
 
 const origin = new URL(process.env.SUPERBOARD_LOCAL_URL ?? "http://127.0.0.1:4321");
+const pluginsLinkName = /^(Open in Plugins|Ouvrir dans Plugins)$/;
+const pluginsLinkHref = /^\/_emdash\/admin\/plugins-manager\/superboard-analytics\/configuration$/;
 assert(["127.0.0.1", "localhost", "[::1]"].includes(origin.hostname));
 const diagnostic = new URL(
 	"/_emdash/api/superboard/plugins/supbrd-plug-analytics/diagnostic",
@@ -19,7 +21,7 @@ try {
 	page.on("pageerror", (error) => errors.push(error.message));
 	const hydrate = async () => {
 		await page.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])').waitFor();
-		await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toBeVisible();
+		await expect(page.getByRole("link", { name: pluginsLinkName })).toBeVisible();
 	};
 	await page.goto(
 		new URL("/_emdash/api/auth/dev-bypass?redirect=/analytics/settings?tab=collection", origin)
@@ -158,88 +160,32 @@ try {
 				assert.equal(removed.status(), 200, await removed.text());
 			}
 
-			await page.getByRole("tab", { name: "Configuration", exact: true }).click();
+			// Plugin health and lifecycle are owned by the central Plugins page.
+			await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 			await expect(
-				page.getByText(locale === "fr" ? "Cycle de vie du plugin" : "Plugin Lifecycle", {
+				page.getByRole("link", {
+					name: locale === "fr" ? "Ouvrir dans Plugins" : "Open in Plugins",
 					exact: true,
 				}),
-			).toBeVisible();
-			const checked = page.waitForResponse(
-				(response) => response.url() === health && response.request().method() === "POST",
-			);
-			await page
-				.getByRole("button", {
-					name: locale === "fr" ? "Vérifier à nouveau" : "Re-check Health",
-					exact: true,
-				})
-				.click();
-			const result = await (await checked).json();
+			).toHaveAttribute("href", pluginsLinkHref);
+			const checked = await context.request.post(health, {
+				headers: { Origin: origin.origin, "X-EmDash-Request": "1" },
+			});
+			assert.equal(checked.status(), 200, await checked.text());
+			const result = await checked.json();
 			assert.ok(result.checkedAt);
 			const inventory = result.diagnostic;
 			assert.equal(inventory.pluginId, "supbrd-plug-analytics");
 			assert.ok(
 				inventory.workers.some((worker) => worker.service === "analytics" && worker.physicalName),
 			);
-			const routeLabel = locale === "fr" ? "Routes API" : "API Routes";
-			await page
-				.getByRole("button", {
-					name: `${routeLabel} (${inventory.routes.api.length})`,
-					exact: true,
-				})
-				.click();
-			const seen = [];
-			const table = page.getByRole("table", { name: routeLabel, exact: true });
-			while (seen.length < inventory.routes.api.length) {
-				await expect(table.getByRole("row").nth(1).getByRole("cell").nth(1)).toHaveText(
-					inventory.routes.api[seen.length].path,
-				);
-				const rows = table.getByRole("row");
-				for (let index = 1; index < (await rows.count()); index++)
-					seen.push(await rows.nth(index).getByRole("cell").allTextContents());
-				if (seen.length < inventory.routes.api.length)
-					await page
-						.getByRole("button", { name: locale === "fr" ? "Suivant" : "Next", exact: true })
-						.click();
-			}
-			assert.deepEqual(
-				seen,
-				inventory.routes.api.map((route) => [
-					route.method,
-					route.path,
-					route.worker ?? (locale === "fr" ? "Inconnu" : "Unknown"),
-					route.url ?? (locale === "fr" ? "Inconnu" : "Unknown"),
-				]),
-			);
-			await page.route(health, (route) => route.abort("failed"));
-			await page
-				.getByRole("button", {
-					name: locale === "fr" ? "Vérifier à nouveau" : "Re-check Health",
-					exact: true,
-				})
-				.click();
-			const workers = page.getByRole("table", {
-				name: locale === "fr" ? "Services et Workers associés" : "Associated Services & Workers",
-				exact: true,
-			});
-			await expect(workers).toContainText(locale === "fr" ? "Inconnu" : "Unknown");
-			await expect(workers).toContainText(
-				inventory.workers.find((worker) => worker.service === "analytics").physicalName,
-			);
-			await page.unroute(health);
-			await page.route(diagnostic, (route) => route.abort("failed"));
-			await page.reload();
+			// Legacy configuration links fall back to the default Applications tab.
+			await page.goto(new URL(`/analytics/settings?lang=${locale}&tab=configuration`, origin).href);
 			await hydrate();
-			await expect(
-				page.getByText(
-					locale === "fr" ? "Échec du chargement du diagnostic" : "Failed to load diagnostic",
-					{ exact: true },
-				),
-			).toBeVisible();
-			await page.unroute(diagnostic);
-			await page
-				.getByRole("button", { name: locale === "fr" ? "Réessayer" : "Retry", exact: true })
-				.click();
-			await expect(workers).toBeVisible();
+			await expect(page.getByRole("tab", { name: "Applications", exact: true })).toHaveAttribute(
+				"aria-selected",
+				"true",
+			);
 			for (const [path, tab] of [
 				["events", "collection"],
 				["reports", "hooks"],
@@ -255,7 +201,7 @@ try {
 			}
 
 			console.log(
-				`${locale}: sidebar, tab URL/reload, keyboard, save/API reread, signed webhook and annotation reload, ${seen.length} diagnostic routes, health failure and retry passed`,
+				`${locale}: sidebar, tab URL/reload, keyboard, save/API reread, signed webhook and annotation reload, Plugins diagnostics link, health check (${inventory.routes.api.length} API routes in diagnostic) and legacy configuration link passed`,
 			);
 		}
 	} finally {

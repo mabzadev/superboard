@@ -1,6 +1,6 @@
 import "../../fixtures/cloudflare/targets.mjs";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -153,16 +153,17 @@ test("root scripts cannot silently select one application target", () => {
 	);
 });
 
-test("the public short-link social preview never constructs an HTTP URL", async () => {
-	const source = await readFile(
-		new URL(
-			"../../../packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkSocialMediaPreview.tsx",
-			import.meta.url,
-		),
-		"utf8",
+test("the Dynamic links operator UI never constructs a plain HTTP short-link URL", async () => {
+	const root = new URL(
+		"../../../packages/plugins/superboard-acquisition/src/front/dynamic-links/components/",
+		import.meta.url,
 	);
-	assert.match(source, /const domainUrl = `https:\/\//u);
-	assert.doesNotMatch(source, /const domainUrl = `http:\/\//u);
+	const files = (await readdir(root, { recursive: true })).filter((file) => file.endsWith(".tsx"));
+	assert.ok(files.some((file) => file.endsWith("SocialPreviewPageContent.tsx")));
+	for (const file of files) {
+		const source = await readFile(new URL(file, root), "utf8");
+		assert.doesNotMatch(source, /`http:\/\/\$\{/u, file);
+	}
 });
 
 test("consolidated authentication requires the SDK namespace and application signing keys", () => {

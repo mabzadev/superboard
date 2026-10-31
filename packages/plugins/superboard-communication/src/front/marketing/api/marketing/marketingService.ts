@@ -157,19 +157,26 @@ export type JourneyCondition = {
 export type JourneyTrigger = {
 	event_name: string;
 	conditions: JourneyCondition[];
+	/** Date-based trigger settings, used with `native:date_attribute`. */
+	date?: { attribute: string; anniversary: boolean; offset_days: number; hour: number };
 };
 export type JourneyNode = {
 	id: string;
-	type: "email" | "channel" | "delay" | "branch" | "update_attribute" | "exit";
+	type: "email" | "channel" | "delay" | "branch" | "update_attribute" | "wait_event" | "exit";
 	template_id?: string;
 	smtp_profile_id?: string;
 	connector_id?: string;
 	delay_seconds?: number;
 	condition?: JourneyCondition;
 	attributes?: Record<string, unknown>;
+	/** Wait-until-event step: the awaited event and how long to wait. */
+	event_name?: string;
+	timeout_seconds?: number;
 };
 export type JourneyDefinition = {
 	start_node_id: string;
+	/** Contacts who reach the goal event leave the journey as converted. */
+	goal?: { event_name: string };
 	nodes: JourneyNode[];
 	edges: Array<{
 		from: string;
@@ -214,6 +221,8 @@ export type JourneyStatistics = {
 	failed: number;
 	steps_completed: number;
 	messages_sent: number;
+	goals_reached?: number;
+	attributed_revenue?: number;
 };
 export type MarketingChannelConnector = {
 	id: string;
@@ -596,4 +605,29 @@ export async function updateMarketingChannelConnector(
 
 export async function deleteMarketingChannelConnector(projectRef: string, id: string) {
 	return data<{ deleted: boolean }>(await DELETE(path(projectRef, `/channel-connectors/${id}`)));
+}
+
+export type EmailSuppression = {
+	id: string;
+	email: string;
+	reason: "manual" | "unsubscribe" | "hard_bounce" | "complaint" | "privacy_delete";
+	source: string;
+	created_at: string;
+};
+
+export async function getEmailSuppressions(projectRef: string, query = "", offset = 0) {
+	const parameters = new URLSearchParams({ q: query, offset: String(offset), limit: "50" });
+	return data<EmailSuppression[]>(await GET(`${path(projectRef, "/suppressions")}?${parameters}`));
+}
+export async function createEmailSuppression(projectRef: string, email: string) {
+	return data<EmailSuppression>(await POST(path(projectRef, "/suppressions"), { email }));
+}
+export async function deleteEmailSuppression(projectRef: string, id: string) {
+	return data<unknown>(await DELETE(path(projectRef, `/suppressions/${encodeURIComponent(id)}`)));
+}
+/** Moves legacy Marketing sender profiles to the Email Worker, one page per call. */
+export async function migrateMarketingSenders(projectRef: string, cursor = "") {
+	return data<{ complete: boolean; imported: number; next_cursor?: string }>(
+		await POST(path(projectRef, "/settings/smtp/migrate-to-email"), { cursor }),
+	);
 }

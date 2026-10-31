@@ -49,6 +49,58 @@ describe("SuperBoard observability Worker", () => {
 		expect(JSON.stringify(points[0])).not.toContain("secret");
 	});
 
+	it("forwards every trace of a tail invocation in one signed batch", async () => {
+		const bodies: Array<{ observations: Array<Record<string, unknown>> }> = [];
+		const actions: string[] = [];
+		const points: AnalyticsEngineDataPoint[] = [];
+		const trace = (status: number, outcome: string) =>
+			({
+				event: {
+					request: { method: "GET", url: "https://api.example.com/users", headers: {} },
+					response: { status },
+				},
+				eventTimestamp: Date.now(),
+				logs: [],
+				exceptions: [],
+				diagnosticsChannelEvents: [],
+				scriptName: "superboard-api-dev",
+				entrypoint: "default",
+				outcome,
+				executionModel: "stateless",
+				truncated: false,
+				cpuTime: 1,
+				wallTime: 2,
+			}) as TraceItem;
+		await worker.tail?.(
+			[trace(200, "ok"), trace(500, "exception"), trace(204, "ok")],
+			environment(points, {
+				SUPERBOARD_PLUGIN_LIFECYCLE: "required",
+				SUPERBOARD_INSTANCE_ID: "reference-production",
+				API_SERVICE: {
+					fetch: async (request: Request) => {
+						expect(request.headers.get("X-SuperBoard-Task-Signature")).toMatch(/^[a-f0-9]{64}$/u);
+						const body = (await request.json()) as Record<string, never>;
+						if (new URL(request.url).pathname === "/internal/plugin-tasks") {
+							actions.push(body.action);
+							return Response.json({
+								lease_id: body.lease_id,
+								state: body.action === "finish" ? "finished" : "running",
+								deadline_at: new Date(Date.now() + 60000).toISOString(),
+							});
+						}
+						bodies.push(body);
+						return Response.json({}, { status: 201 });
+					},
+				},
+			}),
+			{} as ExecutionContext,
+		);
+		expect(points).toHaveLength(3);
+		expect(bodies).toHaveLength(1);
+		expect(bodies[0]!.observations.map(({ status }) => status)).toEqual([200, 500, 204]);
+		expect(actions).toEqual(["claim", "finish"]);
+	});
+
 	it("rejects unauthenticated private reads", async () => {
 		const response = await worker.fetch?.(
 			new Request("https://observability.internal/internal/v1/health"),

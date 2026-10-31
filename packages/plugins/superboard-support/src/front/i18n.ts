@@ -128,7 +128,13 @@ const french: Record<string, string> = {
 	Reports: "Rapports",
 	Contacts: "Contacts",
 	"Agents and teams": "Agents et équipes",
-	"Shared automations": "Automatisations communes",
+	"Inbox automations": "Automatisations de la boîte",
+	"Inboxes, channels, automations, proactive messages and reports for every inbox.":
+		"Boîtes de réception, canaux, automatisations, messages proactifs et rapports de toutes les boîtes.",
+	"Automations for every inbox. Open an inbox to manage only the rules that apply to it.":
+		"Automatisations de toutes les boîtes de réception. Ouvrez une boîte pour gérer uniquement ses propres règles.",
+	"Feature flags are a JSON object of lowercase keys set to true or false. Change them only when instructed.":
+		"Les fonctionnalités sont un objet JSON de clés en minuscules valant true ou false. Ne les modifiez que sur instruction.",
 	"AI assistant": "Assistant IA",
 	Conversations: "Conversations",
 	Articles: "Articles",
@@ -579,6 +585,10 @@ const french: Record<string, string> = {
 	"Allowed attachments": "Pièces jointes autorisées",
 	"Save settings": "Enregistrer les paramètres",
 	"Settings sections": "Sections des réglages",
+	"Search conversations": "Rechercher des conversations",
+	"Email, user ID or conversation ID": "E-mail, ID utilisateur ou ID de conversation",
+	Search: "Rechercher",
+	"No conversations match {query}.": "Aucune conversation ne correspond à {query}.",
 };
 
 export function useSupportI18n() {

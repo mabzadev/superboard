@@ -12,20 +12,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { useUrlState as useDynamicUrlState } from "../../../../../../../packages/plugins/superboard-acquisition/src/front/dynamic-links/hooks/useUrlState.js";
-import { useUrlState as useMarketingUrlState } from "../../../../../../../packages/plugins/superboard-communication/src/front/marketing/hooks/useUrlState.js";
 
-describe.each([
-	["Dynamic Links", useDynamicUrlState],
-	["Marketing", useMarketingUrlState],
-] as const)("%s URL state", (_owner, hook) => {
-	const useUrlState = hook as <T>(
-		key: string,
-		defaultValue: T,
-		options?: {
-			parse?: (v: string) => T;
-			serialize?: (v: T) => string;
-		},
-	) => [T, (v: T) => void];
+describe.each([["Dynamic Links", useDynamicUrlState]] as const)("%s URL state", (_owner, hook) => {
+	const useUrlState = hook;
 	beforeEach(() => {
 		mockSearchParams = new URLSearchParams();
 		mockReplace.mockClear();
