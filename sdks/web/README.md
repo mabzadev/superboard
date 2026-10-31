@@ -44,6 +44,58 @@ Each client owns its own session. Requests use only the configured origin,
 never send browser cookies, and reject redirects. HTTP is accepted only for
 loopback development origins.
 
+## Server-side transactional email (`@superboard/web/server`)
+
+> **Server only.** These helpers need a secret server API key (`sb_email_…`)
+> created in Communication › Settings › Senders & domains. Keep it in a server
+> environment variable; never bundle it in a browser or mobile application.
+> The helper refuses to run in a browser.
+
+```typescript
+import { SuperBoardServer, verifyWebhookSignature } from "@superboard/web/server";
+
+const email = new SuperBoardServer({
+	apiUrl: "https://sdk.example.com",
+	secretKey: process.env.SUPERBOARD_EMAIL_KEY!,
+});
+
+const { id, status } = await email.sendEmail(
+	{
+		from: "Billing <billing@example.com>", // an enabled, verified sender identity
+		to: ["customer@example.net"],
+		subject: "Your receipt",
+		html: "<p>Thank you!</p>",
+		text: "Thank you!",
+		tags: ["receipt"],
+		metadata: { order_id: "A-1" },
+		attachments: [{ filename: "receipt.pdf", content: pdfBytes, contentType: "application/pdf" }],
+		// or: templateId: "receipt", variables: { first_name: "Ada" }, locale: "fr"
+		// scheduledAt: new Date(Date.now() + 3_600_000), // up to 7 days ahead
+	},
+	{ idempotencyKey: "order-A-1" },
+);
+await email.getEmail(id); // status, recipients and timeline
+await email.cancelEmail(id); // scheduled messages only
+```
+
+The helper calls `POST /v1/email/send`, `GET /v1/email/messages/:id` and
+`POST /v1/email/messages/:id/cancel` with `Authorization: Bearer <key>`. Keys are
+scoped to `email:send`, stored hashed, and rate limited per project. Attachments
+are limited to 10 MB per message; recipients that hard-bounced or complained are
+skipped and returned in `suppressed`.
+
+Event webhooks (sent, delivered, bounced, complained, opened, clicked, failed)
+are signed with HMAC-SHA256 over `"<X-SuperBoard-Timestamp>.<raw body>"`:
+
+```typescript
+const valid = await verifyWebhookSignature({
+	payload: rawBody,
+	signature: request.headers.get("X-SuperBoard-Signature"),
+	timestamp: request.headers.get("X-SuperBoard-Timestamp"),
+	secret: process.env.SUPERBOARD_WEBHOOK_SECRET!,
+});
+```
+
 ## Links and Support
 
 The default export retains the link and attribution API. The `/support` export

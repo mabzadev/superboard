@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'backoff.dart';
 import 'client.dart';
 import 'models.dart';
 
@@ -176,7 +177,9 @@ class SuperBoardSupportRealtime {
     if (!_active(generation, conversation) || _retryTimer != null) return;
     final delay = _retryDelays.isEmpty
         ? Duration.zero
-        : _retryDelays[_attempt.clamp(0, _retryDelays.length - 1)];
+        : supportRetryDelayWithJitter(
+            _retryDelays[_attempt.clamp(0, _retryDelays.length - 1)],
+          );
     _attempt += 1;
     _emitError(
       conversation,

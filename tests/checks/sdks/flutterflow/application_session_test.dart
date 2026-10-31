@@ -265,6 +265,67 @@ void main() {
     },
   );
 
+  test('concurrent refreshes share one single-use token rotation', () async {
+    final storage = CountingApplicationSessionStorage();
+    var refreshes = 0;
+    final client = SuperBoardApplicationClient(
+      apiBaseUrl: 'https://api.example.test',
+      filesBaseUrl: 'https://files.example.test',
+      projectKey: 'project-key',
+      platform: 'ios',
+      identifier: 'com.example.app',
+      httpClient: MockClient((request) async {
+        refreshes += 1;
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        return http.Response(
+          jsonEncode({
+            'access_token': 'access-$refreshes',
+            'refresh_token': 'refresh-$refreshes',
+            'expires_in': 300,
+          }),
+          200,
+        );
+      }),
+    );
+    final manager = SuperBoardApplicationSessionManager(
+      client: client,
+      storage: storage,
+      storageKey: 'session-key',
+      legacyStorageKeys: const ['session-key'],
+    );
+
+    final sessions = await Future.wait([
+      manager.refresh('refresh-0'),
+      manager.refresh('refresh-0'),
+      manager.refresh('refresh-0'),
+    ]);
+
+    expect(refreshes, 1);
+    expect(sessions.map((session) => session.accessToken).toSet(), {
+      'access-1',
+    });
+    expect(storage.writes, 1, reason: 'identical legacy keys are not mirrored');
+
+    await manager.refresh();
+    expect(refreshes, 2);
+  });
+
+  test('legacy storage key matches the current key format', () {
+    final uri = Uri.parse('https://api.example.test');
+    expect(
+      SuperBoardApplicationSessionManager.legacyScopedStorageKey(
+        apiBaseUri: uri,
+        projectKey: 'project-a',
+        environment: 'production',
+      ),
+      SuperBoardApplicationSessionManager.scopedStorageKey(
+        apiBaseUri: uri,
+        projectKey: 'project-a',
+        environment: 'production',
+      ),
+    );
+  });
+
   test('session storage keys are isolated by target and environment', () {
     final production = SuperBoardApplicationSessionManager.scopedStorageKey(
       apiBaseUri: Uri.parse('https://api.example.test'),
@@ -304,5 +365,16 @@ class MemoryApplicationSessionStorage
   @override
   Future<void> write({required String key, required String value}) async {
     values[key] = value;
+  }
+}
+
+class CountingApplicationSessionStorage
+    extends MemoryApplicationSessionStorage {
+  int writes = 0;
+
+  @override
+  Future<void> write({required String key, required String value}) {
+    writes += 1;
+    return super.write(key: key, value: value);
   }
 }

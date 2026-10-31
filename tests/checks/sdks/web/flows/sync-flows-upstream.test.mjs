@@ -272,3 +272,117 @@ test("all public SDK E2E scenarios and product documentation groups are retained
 		assert.ok(read(path).length > 0, `${path} was not imported`);
 	}
 });
+
+async function importPatchedModule(relativePath, replacements) {
+	const { default: ts } = await import("typescript");
+	let source = read(relativePath);
+	for (const [before, after] of replacements) {
+		assert.ok(source.includes(before), `${relativePath} no longer contains ${before}`);
+		source = source.replace(before, after);
+	}
+	const { outputText } = ts.transpileModule(source, {
+		compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+	});
+	return import(`data:text/javascript;base64,${Buffer.from(outputText).toString("base64")}`);
+}
+
+test("websocket disconnect closes the current socket and cancels a pending reconnect", async (t) => {
+	t.mock.timers.enable({ apis: ["setTimeout"] });
+	const sockets = [];
+	class FakeWebSocket extends EventTarget {
+		static CONNECTING = 0;
+		static OPEN = 1;
+		readyState = FakeWebSocket.OPEN;
+		closed = false;
+		constructor(url) {
+			super();
+			this.url = url;
+			sockets.push(this);
+		}
+		close() {
+			this.closed = true;
+		}
+	}
+	const previous = globalThis.WebSocket;
+	globalThis.WebSocket = FakeWebSocket;
+	t.after(() => {
+		globalThis.WebSocket = previous;
+	});
+	const { websocket } = await importPatchedModule("packages/js/src/lib/websocket.ts", [
+		['import { wsError } from "../store";', "const wsError = { value: false };"],
+	]);
+	const props = { url: "wss://example.test/ws", onMessage: () => {}, onOpen: () => {} };
+
+	const first = websocket(props);
+	sockets[0].dispatchEvent(new Event("close"));
+	t.mock.timers.tick(1000);
+	assert.equal(sockets.length, 2, "the connection reconnects after a close");
+	first.disconnect();
+	assert.equal(sockets[1].closed, true, "disconnect closes the reconnected socket");
+
+	const second = websocket(props);
+	sockets[2].dispatchEvent(new Event("close"));
+	second.disconnect();
+	t.mock.timers.tick(200_000);
+	assert.equal(sockets.length, 3, "a pending reconnect is cancelled by disconnect");
+
+	// Each connection owns its backoff: a fresh connection starts at the first delay.
+	websocket(props);
+	sockets[3].dispatchEvent(new Event("close"));
+	t.mock.timers.tick(1000);
+	assert.equal(sockets.length, 5);
+});
+
+test("location tracking follows history navigations without polling", async (t) => {
+	t.mock.timers.enable({ apis: ["setInterval"] });
+	const listeners = new EventTarget();
+	const location = { pathname: "/start", search: "" };
+	const history = {
+		pushState(_state, _unused, url) {
+			location.pathname = String(url);
+		},
+		replaceState(_state, _unused, url) {
+			location.pathname = String(url);
+		},
+	};
+	const previous = globalThis.window;
+	globalThis.window = {
+		history,
+		location,
+		addEventListener: listeners.addEventListener.bind(listeners),
+		removeEventListener: listeners.removeEventListener.bind(listeners),
+		dispatchEvent: listeners.dispatchEvent.bind(listeners),
+		setInterval: () => assert.fail("location must not be polled"),
+	};
+	t.after(() => {
+		globalThis.window = previous;
+	});
+	const module = await importPatchedModule("packages/js/src/init.ts", [
+		[
+			/^import[\s\S]*?from "\.\/lib\/debug";\n/mu.exec(read("packages/js/src/init.ts"))[0],
+			`const pathname = { value: "" };
+const getPathname = () => window.location.pathname + window.location.search;
+const config = {};
+const getDefaultApiUrl = () => "/api/v1/flows";
+const withSdkKey = (fetch) => fetch;
+const sendEvents = () => undefined;
+const connectToWebsocketAndFetchBlocks = () => undefined;
+const addHandlers = () => undefined;
+const handleDocumentClick = () => undefined;
+const createKeydownDebugListener = () => () => undefined;
+const initDebugPanel = () => undefined;
+export const currentPathname = () => pathname.value;
+`,
+		],
+	]);
+	module.init({ environment: "test", projectId: "project", userId: "user" });
+	assert.equal(module.currentPathname(), "/start");
+	window.history.pushState(null, "", "/next");
+	assert.equal(module.currentPathname(), "/next");
+	module.init({ environment: "test", projectId: "project", userId: "user" });
+	window.history.replaceState(null, "", "/again");
+	assert.equal(module.currentPathname(), "/again");
+	location.pathname = "/back";
+	window.dispatchEvent(new Event("popstate"));
+	assert.equal(module.currentPathname(), "/back");
+});

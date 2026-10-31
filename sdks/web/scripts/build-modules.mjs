@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cp, readdir, readFile, writeFile } from "node:fs/promises";
+import { cp, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const sdk = resolve(import.meta.dirname, "..");
@@ -22,12 +22,16 @@ run([
 	"-r",
 	"build",
 ]);
+// The package exports map only exposes ESM, declarations and stylesheets for
+// Flows, so the CommonJS (`.js`) and IIFE (`.global.js`) builds tsup also emits
+// are unreachable for consumers and are not published.
+const exported = (path) => /\.(?:mjs|d\.m?ts|css)$/u.test(path);
 const modules = [
 	["identity/web/dist", "identity"],
-	["flows/upstream/packages/js/dist", "flows"],
-	["flows/upstream/packages/react/dist", "flows/react"],
-	["flows/upstream/packages/js-components/dist", "flows/components"],
-	["flows/upstream/packages/react-components/dist", "flows/react-components"],
+	["flows/upstream/packages/js/dist", "flows", exported],
+	["flows/upstream/packages/react/dist", "flows/react", exported],
+	["flows/upstream/packages/js-components/dist", "flows/components", exported],
+	["flows/upstream/packages/react-components/dist", "flows/react-components", exported],
 ];
 const names = {
 	"@superboard/flows-react-components": "@superboard/web/flows/react-components",
@@ -47,9 +51,12 @@ async function rewrite(directory) {
 		}
 	}
 }
-for (const [source, destination] of modules) {
+for (const [source, destination, include] of modules) {
 	const output = resolve(sdk, "dist", destination);
-	await cp(resolve(sdk, source), output, { recursive: true });
+	await cp(resolve(sdk, source), output, {
+		recursive: true,
+		filter: include ? async (path) => (await stat(path)).isDirectory() || include(path) : undefined,
+	});
 	await rewrite(output);
 }
 

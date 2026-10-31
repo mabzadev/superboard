@@ -26,7 +26,7 @@ class SuperBoardBootstrap extends StatefulWidget {
     this.identityToken = '',
     this.appVersion = '',
     this.buildNumber = '',
-    this.purchasesSdkVersion = '3.0.0',
+    this.purchasesSdkVersion = '4.0.0',
     this.initializePurchases = false,
     this.onInitialized,
     this.onDeepLinkJson,

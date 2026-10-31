@@ -5,6 +5,14 @@ const shared = {
 	mode: "production",
 };
 
+// The ESM entry imports Support from the published `./support.js` bundle instead
+// of embedding a second copy, so both entry points share one set of classes.
+const supportEntry = path.resolve(__dirname, "src/support/index.js");
+const supportAsSiblingModule = ({ context, request }, callback) =>
+	context && request && path.resolve(context, request) === supportEntry
+		? callback(null, "module ./support.js")
+		: callback();
+
 module.exports = [
 	{
 		...shared,
@@ -13,6 +21,7 @@ module.exports = [
 		experiments: {
 			outputModule: true,
 		},
+		externals: [supportAsSiblingModule],
 		output: {
 			path: path.resolve(__dirname, "dist"),
 			filename: "superboard.js",

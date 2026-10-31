@@ -67,6 +67,7 @@ class SuperBoardPurchases {
   final SuperBoardPurchaseStorage _secureStorage;
   final SuperBoardCustomerInfoVerifier _customerInfoVerifier;
   final http.Client Function() _httpClientFactory;
+  http.Client? _httpClient;
   late final SuperBoardPurchaseOutbox _outbox;
   final _customerInfoController =
       StreamController<SuperBoardCustomerInfo>.broadcast();
@@ -1037,20 +1038,28 @@ class SuperBoardPurchases {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       })
       ..body = jsonEncode(body ?? const {});
-    final client = _httpClientFactory();
+    // One long-lived client per instance keeps connections (and TLS
+    // sessions) alive across Purchases requests instead of re-handshaking.
+    final client = _httpClient ??= _httpClientFactory();
+    final sending = client.send(request);
     late final http.StreamedResponse streamed;
     late final String text;
     try {
-      streamed = await client.send(request).timeout(_requestTimeout);
+      streamed = await sending.timeout(_requestTimeout);
       text = await _readBoundedResponse(streamed).timeout(_requestTimeout);
     } on TimeoutException {
+      // The client is shared, so a late response is drained rather than
+      // closing the client and aborting concurrent requests.
+      unawaited(
+        sending
+            .then((response) => response.stream.drain<void>())
+            .catchError((Object _) {}),
+      );
       throw const SuperBoardPurchasesException(
         'Purchases request timed out',
         code: 'network_timeout',
         retryable: true,
       );
-    } finally {
-      client.close();
     }
     late final Map<String, dynamic> decoded;
     try {
@@ -1180,6 +1189,8 @@ class SuperBoardPurchases {
     _outboxRetryTimer?.cancel();
     await _subscription?.cancel();
     await _purchaseHandlingTail;
+    _httpClient?.close();
+    _httpClient = null;
     await _customerInfoController.close();
     await _purchaseResultController.close();
   }
