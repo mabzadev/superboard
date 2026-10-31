@@ -147,7 +147,7 @@ test("development uses native Git connections without an application production 
 	);
 	assert.match(
 		packageConfiguration.scripts["billing:test:runtime"],
-		/^SUPERBOARD_TARGET= SUPERBOARD_ENVIRONMENT= SUPERBOARD_TARGET= SUPERBOARD_ENVIRONMENT= /u,
+		/^SUPERBOARD_TARGET= SUPERBOARD_ENVIRONMENT= node /u,
 		"reference-only billing tests must not inherit an operational Workers Builds target",
 	);
 	assert.throws(

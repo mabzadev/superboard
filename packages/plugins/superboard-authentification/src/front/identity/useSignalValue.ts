@@ -1,8 +1,8 @@
 import { Signal } from "@preact/signals-core";
 import { useEffect, useState } from "react";
 
-const useSignalValue = (signal: Signal) => {
-	const [value, setValue] = useState(signal.value);
+const useSignalValue = <T>(signal: Signal<T>): T => {
+	const [value, setValue] = useState<T>(signal.value);
 
 	useEffect(() => {
 		const unsubscribe = signal.subscribe((newValue) => {

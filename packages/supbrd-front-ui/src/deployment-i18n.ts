@@ -2,7 +2,7 @@ import { createFrontI18n } from "./i18n.js";
 const messages = {
 	en: {
 		cloudflare: "Cloudflare",
-		title: "Instance configuration",
+		title: "Environment settings",
 		description:
 			"Domains and worker routes are loaded automatically from the running configuration.",
 		source: "Source",
@@ -41,7 +41,7 @@ const messages = {
 	},
 	fr: {
 		cloudflare: "Cloudflare",
-		title: "Configuration de l’instance",
+		title: "Paramètres de l’environnement",
 		description:
 			"Les domaines et routes des workers remontent automatiquement depuis la configuration exécutée.",
 		source: "Source",

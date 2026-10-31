@@ -7,6 +7,9 @@
 	"main": "./dist/superboard.umd.cjs",
 	"module": "./dist/superboard.js",
 	"browser": "./dist/superboard.js",
+	"sideEffects": [
+		"*.css"
+	],
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -23,6 +26,10 @@
 		"./client": {
 			"types": "./src/client.d.ts",
 			"import": "./src/client.js"
+		},
+		"./server": {
+			"types": "./src/server.d.ts",
+			"import": "./src/server.js"
 		},
 		"./flows": {
 			"types": "./dist/flows/index.d.ts",
@@ -66,12 +73,14 @@
 	"files": [
 		"dist",
 		"src/client.js",
-		"src/client.d.ts"
+		"src/client.d.ts",
+		"src/server.js",
+		"src/server.d.ts"
 	],
 	"scripts": {
 		"start": "webpack-dev-server --config webpack.config.cjs --open",
 		"build": "webpack --config webpack.config.cjs && node scripts/build-modules.mjs",
-		"test": "node --test ../../tests/checks/sdks/web/superboard.test.js ../../tests/checks/sdks/web/support.test.js ../../tests/checks/sdks/web/emdash-store-parity.test.js ../../tests/checks/sdks/web/client.test.mjs",
+		"test": "node --test ../../tests/checks/sdks/web/superboard.test.js ../../tests/checks/sdks/web/support.test.js ../../tests/checks/sdks/web/emdash-store-parity.test.js ../../tests/checks/sdks/web/client.test.mjs ../../tests/checks/sdks/web/server.test.mjs ../../tests/checks/sdks/web/ui-helper.test.js ../../tests/checks/sdks/support-contract-parity.test.mjs",
 		"test:package": "node --test ../../tests/checks/sdks/web/package.test.js",
 		"pack:check": "npm pack --dry-run",
 		"audit:production": "npm audit --omit=dev --workspaces=false --audit-level=low",

@@ -4,8 +4,6 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ESLint } from "eslint";
-
 import relocations from "../../scripts/config/superboard-source-relocations.json" with { type: "json" };
 import { diagnostic, lintRepository, maintainedFile, trackedFiles } from "./repository.mjs";
 
@@ -195,6 +193,8 @@ async function lintSyntax(paths) {
 		"pnpm-lock.yaml",
 	])
 		configurationHash.update(readFileSync(resolve(root, path)));
+	// Loaded lazily so analyzers that only reuse the baseline helpers do not pay for ESLint.
+	const { ESLint } = await import("eslint");
 	const eslint = new ESLint({
 		allowInlineConfig: false,
 		cwd: root,

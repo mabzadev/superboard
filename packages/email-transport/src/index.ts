@@ -10,6 +10,18 @@ export type SmtpPublicConfig = {
 
 export type SmtpSecretConfig = { password: string | null };
 
+export type SmtpAttachment = {
+	/** Display filename. It is sanitized and RFC 2231 encoded by the transport. */
+	filename: string;
+	/** MIME type such as application/pdf. Invalid values fall back to application/octet-stream. */
+	contentType?: string | null;
+	/** Standard base64 content (whitespace is ignored). */
+	content: string;
+	/** Optional Content-ID for inline images referenced as cid:<contentId> in HTML. */
+	contentId?: string | null;
+	disposition?: "attachment" | "inline";
+};
+
 export type SmtpMessage = {
 	to: string;
 	subject: string;
@@ -17,7 +29,13 @@ export type SmtpMessage = {
 	text: string | null;
 	headers?: Record<string, string>;
 	messageId?: string;
+	attachments?: SmtpAttachment[];
 };
+
+/** Maximum decoded size of all attachments of one message. */
+export const EMAIL_ATTACHMENTS_MAX_BYTES = 10 * 1024 * 1024;
+/** Maximum number of attachments of one message. */
+export const EMAIL_ATTACHMENTS_MAX_COUNT = 20;
 
 export class EmailTransportError extends Error {
 	constructor(
@@ -36,6 +54,9 @@ export async function sendSmtpMessage(
 	secret: SmtpSecretConfig,
 	message: SmtpMessage,
 ): Promise<{ messageId: string; response: string }> {
+	// Build (and validate attachments) before opening a socket so invalid input
+	// never reaches the provider and never becomes an ambiguous SMTP outcome.
+	const built = buildMessage(config, message);
 	const { connect } = await import("cloudflare:sockets");
 	let socket = connect(
 		{ hostname: config.host, port: config.port },
@@ -74,7 +95,6 @@ export async function sendSmtpMessage(
 		await session.command(`MAIL FROM:<${sanitizeMailbox(config.from_email)}>`, [250]);
 		await session.command(`RCPT TO:<${sanitizeMailbox(message.to)}>`, [250, 251]);
 		await session.command("DATA", [354]);
-		const built = buildMessage(config, message);
 		let accepted: { code: number; text: string };
 		try {
 			await session.write(`${dotStuff(built)}\r\n.\r\n`);
@@ -193,30 +213,189 @@ export function buildMessage(config: SmtpPublicConfig, message: SmtpMessage) {
 		...customHeaders,
 		"MIME-Version: 1.0",
 	];
-	let body: string;
-	if (message.html && message.text) {
-		headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
-		body = [
-			`--${boundary}`,
-			"Content-Type: text/plain; charset=UTF-8",
-			"Content-Transfer-Encoding: 8bit",
-			"",
-			normalizeLines(message.text),
-			`--${boundary}`,
-			"Content-Type: text/html; charset=UTF-8",
-			"Content-Transfer-Encoding: 8bit",
-			"",
-			normalizeLines(message.html),
-			`--${boundary}--`,
-		].join("\r\n");
-	} else if (message.html) {
-		headers.push("Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: 8bit");
-		body = normalizeLines(message.html);
-	} else {
-		headers.push("Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: 8bit");
-		body = normalizeLines(message.text || "");
+	const content = contentPart(message, boundary);
+	const attachments = normalizeAttachments(message.attachments);
+	const inline = attachments.filter((attachment) => attachment.disposition === "inline");
+	const regular = attachments.filter((attachment) => attachment.disposition === "attachment");
+	let root = content;
+	if (inline.length) {
+		root = multipart("related", `${boundary}-related`, [content, ...inline.map(attachmentPart)]);
 	}
+	if (regular.length) {
+		root = multipart("mixed", `${boundary}-mixed`, [root, ...regular.map(attachmentPart)]);
+	}
+	headers.push(...root.headers);
+	const body = root.body;
 	return { raw: `${headers.join("\r\n")}\r\n\r\n${body}`, messageId };
+}
+
+type MimePart = { headers: string[]; body: string };
+type NormalizedAttachment = {
+	filename: string;
+	contentType: string;
+	content: string;
+	contentId: string | null;
+	disposition: "attachment" | "inline";
+};
+
+function contentPart(message: SmtpMessage, boundary: string): MimePart {
+	if (message.html && message.text) {
+		return {
+			headers: [`Content-Type: multipart/alternative; boundary="${boundary}"`],
+			body: [
+				`--${boundary}`,
+				"Content-Type: text/plain; charset=UTF-8",
+				"Content-Transfer-Encoding: 8bit",
+				"",
+				normalizeLines(message.text),
+				`--${boundary}`,
+				"Content-Type: text/html; charset=UTF-8",
+				"Content-Transfer-Encoding: 8bit",
+				"",
+				normalizeLines(message.html),
+				`--${boundary}--`,
+			].join("\r\n"),
+		};
+	}
+	if (message.html) {
+		return {
+			headers: ["Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: 8bit"],
+			body: normalizeLines(message.html),
+		};
+	}
+	return {
+		headers: ["Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: 8bit"],
+		body: normalizeLines(message.text || ""),
+	};
+}
+
+function multipart(subtype: "mixed" | "related", boundary: string, parts: MimePart[]): MimePart {
+	return {
+		headers: [`Content-Type: multipart/${subtype}; boundary="${boundary}"`],
+		body: [
+			...parts.flatMap((part) => [`--${boundary}`, ...part.headers, "", part.body]),
+			`--${boundary}--`,
+		].join("\r\n"),
+	};
+}
+
+function attachmentPart(attachment: NormalizedAttachment): MimePart {
+	const name = filenameParameters(attachment.filename);
+	return {
+		headers: [
+			`Content-Type: ${attachment.contentType}; ${name.type}`,
+			"Content-Transfer-Encoding: base64",
+			`Content-Disposition: ${attachment.disposition}; ${name.disposition}`,
+			...(attachment.contentId ? [`Content-ID: <${attachment.contentId}>`] : []),
+		],
+		body: (attachment.content.match(/.{1,76}/g) ?? []).join("\r\n"),
+	};
+}
+
+/**
+ * Validates attachments before any byte reaches the SMTP session. Content must
+ * be strict base64; the decoded total is bounded by EMAIL_ATTACHMENTS_MAX_BYTES.
+ */
+export function normalizeAttachments(
+	attachments: SmtpAttachment[] | undefined,
+): NormalizedAttachment[] {
+	if (!attachments?.length) return [];
+	if (!Array.isArray(attachments) || attachments.length > EMAIL_ATTACHMENTS_MAX_COUNT)
+		throw error("email_attachments_invalid", "Too many email attachments", 422);
+	let total = 0;
+	const contentIds = new Set<string>();
+	return attachments.map((attachment) => {
+		if (!attachment || typeof attachment !== "object")
+			throw error("email_attachment_invalid", "Email attachment is invalid", 422);
+		const content = String(attachment.content ?? "").replace(/\s+/g, "");
+		if (!content || content.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(content))
+			throw error(
+				"email_attachment_content_invalid",
+				"Email attachment content is not base64",
+				422,
+			);
+		total += decodedBase64Length(content);
+		if (total > EMAIL_ATTACHMENTS_MAX_BYTES)
+			throw error("email_attachments_too_large", "Email attachments exceed the size limit", 422);
+		const disposition = attachment.disposition === "inline" ? "inline" : "attachment";
+		const contentId = attachment.contentId ? sanitizeContentId(attachment.contentId) : null;
+		if (disposition === "inline" && !contentId)
+			throw error(
+				"email_attachment_content_id_required",
+				"Inline attachments need a Content-ID",
+				422,
+			);
+		if (contentId) {
+			if (contentIds.has(contentId))
+				throw error("email_attachment_content_id_duplicate", "Content-ID is duplicated", 422);
+			contentIds.add(contentId);
+		}
+		return {
+			filename: sanitizeFilename(attachment.filename),
+			contentType: sanitizeContentType(attachment.contentType),
+			content,
+			contentId,
+			disposition,
+		};
+	});
+}
+
+export function decodedBase64Length(value: string): number {
+	const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+	return Math.floor((value.length * 3) / 4) - padding;
+}
+
+/** Removes path, control, quoting and header-breaking characters from a filename. */
+export function sanitizeFilename(value: unknown): string {
+	let replaced = "";
+	let previousUnsafe = false;
+	for (const character of scalarText(value).normalize("NFC")) {
+		const code = character.charCodeAt(0);
+		const unsafe = code < 32 || code === 127 || UNSAFE_FILENAME_CHARACTERS.has(character);
+		if (!unsafe) replaced += character;
+		else if (!previousUnsafe) replaced += "_";
+		previousUnsafe = unsafe;
+	}
+	const cleaned = replaced
+		.replace(/^[.\s_]+/, "")
+		.trim()
+		.slice(0, 200);
+	return cleaned || "attachment";
+}
+/** Text of a primitive header input; objects and missing values become empty. */
+function scalarText(value: unknown): string {
+	return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+		? String(value)
+		: "";
+}
+const UNSAFE_FILENAME_CHARACTERS = new Set(['"', "\\", "/", ":", "*", "?", "<", ">", "|", ";"]);
+
+export function sanitizeContentType(value: unknown): string {
+	const type = scalarText(value).trim().toLowerCase();
+	return /^[a-z0-9][a-z0-9!#$&^_.+-]{0,63}\/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$/.test(type)
+		? type
+		: "application/octet-stream";
+}
+
+function sanitizeContentId(value: string): string {
+	const id = String(value).trim().replace(/^<|>$/g, "");
+	if (!/^[A-Za-z0-9._%+-]{1,128}(?:@[A-Za-z0-9.-]{1,253})?$/.test(id))
+		throw error("email_attachment_content_id_invalid", "Content-ID is invalid", 422);
+	return id;
+}
+
+function filenameParameters(filename: string): { type: string; disposition: string } {
+	const ascii = /^[\x20-\x7e]+$/.test(filename);
+	if (ascii) return { type: `name="${filename}"`, disposition: `filename="${filename}"` };
+	const fallback = filename.replace(/[^\x20-\x7e]/g, "_");
+	const encoded = encodeURIComponent(filename).replace(
+		/['()*]/g,
+		(character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+	);
+	return {
+		type: `name="${fallback}"`,
+		disposition: `filename="${fallback}"; filename*=UTF-8''${encoded}`,
+	};
 }
 
 function error(code: string, message: string, status = 503, details?: Record<string, unknown>) {

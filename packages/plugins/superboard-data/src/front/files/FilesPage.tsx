@@ -1,6 +1,13 @@
 import { useFrontContext } from "@superboard/front-ui/context";
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@superboard/front-ui/ui/dialog.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import {
 	Table as FrontTable,
@@ -13,6 +20,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { responseData } from "../content/workspace.js";
+import { DataSettingsForm } from "./DataSettingsForm.js";
 import { DELETE, GET, POST, PUT } from "./transport.js";
 
 interface StoredFile {
@@ -26,6 +34,7 @@ const messages = {
 	en: {
 		title: "Files",
 		settings: "File settings",
+		settingsDescription: "Upload limits and download links for this project.",
 		choose: "Choose a file",
 		upload: "Upload",
 		uploading: "Uploading…",
@@ -51,6 +60,7 @@ const messages = {
 	fr: {
 		title: "Fichiers",
 		settings: "Paramètres des fichiers",
+		settingsDescription: "Limites de transfert et liens de téléchargement de ce projet.",
 		choose: "Choisir un fichier",
 		upload: "Transférer",
 		uploading: "Transfert…",
@@ -93,6 +103,11 @@ export default function FilesPage() {
 	const [progress, setProgress] = useState(0);
 	const [error, setError] = useState<string | null>(null);
 	const [message, setMessage] = useState<string | null>(null);
+	const [settingsOpen, setSettingsOpen] = useState(
+		() =>
+			typeof window !== "undefined" &&
+			new URLSearchParams(window.location.search).get("tab") === "settings",
+	);
 	const fetchFiles = useCallback(async () => {
 		if (!selectedProject) return;
 		const query = new URLSearchParams({ deleted: String(deleted), ...(cursor ? { cursor } : {}) });
@@ -153,8 +168,26 @@ export default function FilesPage() {
 
 	return (
 		<section className="ds-page space-y-5">
-			<h1 className="ds-page-title">{t.title}</h1>
-			<a href={`/data/settings?tab=files&lang=${locale}`}>{t.settings}</a>
+			<header className="ds-page-header">
+				<h1 className="ds-page-title">{t.title}</h1>
+				<Button
+					variant="outline"
+					onClick={() => {
+						setSettingsOpen(true);
+					}}
+				>
+					{t.settings}
+				</Button>
+			</header>
+			<Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+				<DialogContent className="max-h-[90vh] overflow-y-auto">
+					<DialogHeader>
+						<DialogTitle>{t.settings}</DialogTitle>
+						<DialogDescription>{t.settingsDescription}</DialogDescription>
+					</DialogHeader>
+					<DataSettingsForm section="files" locale={locale} />
+				</DialogContent>
+			</Dialog>
 			{error && <p role="alert">{error}</p>}
 			{message && <p role="status">{message}</p>}
 			{usage && (

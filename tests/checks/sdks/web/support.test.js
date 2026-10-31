@@ -451,3 +451,20 @@ async function eventually(predicate) {
 	}
 	assert.fail("condition was not reached");
 }
+
+test("retry and reconnect delays are jittered between half and the full delay", async () => {
+	const { withJitter } = await import("../../../../sdks/web/src/support/backoff.js");
+	assert.equal(withJitter(0), 0);
+	assert.equal(
+		withJitter(1_000, () => 0),
+		500,
+	);
+	assert.equal(
+		withJitter(1_000, () => 1),
+		1_000,
+	);
+	for (let index = 0; index < 50; index += 1) {
+		const wait = withJitter(30_000);
+		assert.ok(wait >= 15_000 && wait <= 30_000, `${wait} is outside the jitter window`);
+	}
+});

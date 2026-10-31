@@ -336,7 +336,7 @@ export const getPasswordlessUserOrCreate = async (
 export const verifySignIn = async (
 	c: Context<typeConfig.Context>,
 	email: string,
-	isValidCredential: (currentUser: userModel.Record) => boolean,
+	isValidCredential: (currentUser: userModel.Record) => boolean | Promise<boolean>,
 ): Promise<userModel.Record> => {
 	const { ACCOUNT_LOCKOUT_THRESHOLD: lockThreshold, ACCOUNT_LOCKOUT_EXPIRES_IN: lockExpiresIn } =
 		env(c);
@@ -364,7 +364,7 @@ export const verifySignIn = async (
 		throw new errorConfig.NotFound(messageConfig.RequestError.NoUser);
 	}
 
-	const isValid = isValidCredential(user);
+	const isValid = await isValidCredential(user);
 
 	if (!isValid) {
 		if (lockThreshold) {
@@ -395,9 +395,10 @@ export const verifyPasswordSignIn = async (
 	c: Context<typeConfig.Context>,
 	bodyDto: baseDto.SignInDto,
 ): Promise<userModel.Record> => {
-	const user = await verifySignIn(c, bodyDto.email, (currentUser) => {
+	const user = await verifySignIn(c, bodyDto.email, async (currentUser) => {
 		return (
-			!!currentUser.password && cryptoUtil.bcryptCompare(bodyDto.password, currentUser.password)
+			!!currentUser.password &&
+			(await cryptoUtil.bcryptCompare(bodyDto.password, currentUser.password))
 		);
 	});
 
@@ -408,10 +409,10 @@ export const verifyRecoveryCodeSignIn = async (
 	c: Context<typeConfig.Context>,
 	bodyDto: baseDto.SignInWithRecoveryCodeDto,
 ): Promise<{ user: userModel.Record; recoveryCode: string }> => {
-	const user = await verifySignIn(c, bodyDto.email, (currentUser) => {
+	const user = await verifySignIn(c, bodyDto.email, async (currentUser) => {
 		return (
 			!!currentUser.recoveryCodeHash &&
-			cryptoUtil.bcryptCompare(bodyDto.recoveryCode, currentUser.recoveryCodeHash)
+			(await cryptoUtil.bcryptCompare(bodyDto.recoveryCode, currentUser.recoveryCodeHash))
 		);
 	});
 
@@ -870,7 +871,7 @@ export const resetUserPassword = async (
 		throw new errorConfig.Forbidden(messageConfig.RequestError.WrongCode);
 	}
 
-	const isSame = cryptoUtil.bcryptCompare(bodyDto.password, user.password);
+	const isSame = await cryptoUtil.bcryptCompare(bodyDto.password, user.password);
 	if (isSame) {
 		loggerUtil.triggerLogger(
 			c,
@@ -899,7 +900,7 @@ export const changeUserPassword = async (
 		throw new errorConfig.NotFound(messageConfig.RequestError.NoUser);
 	}
 
-	const isSame = cryptoUtil.bcryptCompare(bodyDto.password, user.password);
+	const isSame = await cryptoUtil.bcryptCompare(bodyDto.password, user.password);
 	if (isSame) {
 		loggerUtil.triggerLogger(
 			c,

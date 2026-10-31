@@ -127,7 +127,7 @@
 						},
 						{
 							"type": "custom",
-							"label": "Settings",
+							"label": "Configuration",
 							"url": "/data/settings"
 						}
 					]
@@ -145,18 +145,8 @@
 						},
 						{
 							"type": "custom",
-							"label": "Products",
+							"label": "Catalog",
 							"url": "/monetization/products"
-						},
-						{
-							"type": "custom",
-							"label": "Offerings",
-							"url": "/monetization/offerings"
-						},
-						{
-							"type": "custom",
-							"label": "Entitlements",
-							"url": "/monetization/entitlements"
 						},
 						{
 							"type": "custom",
@@ -168,23 +158,33 @@
 				{
 					"type": "custom",
 					"label": "Communication",
-					"url": "/communication/campaigns",
+					"url": "/communication/marketing-email",
 					"cssClasses": "sb-icon-communication",
 					"children": [
 						{
 							"type": "custom",
-							"label": "Campaign email",
-							"url": "/communication/campaigns"
+							"label": "Emails",
+							"url": "/communication/marketing-email"
 						},
 						{
 							"type": "custom",
-							"label": "Transactional email",
-							"url": "/communication/email"
+							"label": "Automations",
+							"url": "/communication/journeys"
 						},
 						{
 							"type": "custom",
-							"label": "In-app messages",
+							"label": "In-app & Push",
 							"url": "/communication/in-app-messages"
+						},
+						{
+							"type": "custom",
+							"label": "Audience",
+							"url": "/communication/audience"
+						},
+						{
+							"type": "custom",
+							"label": "Activity",
+							"url": "/communication/statistics"
 						},
 						{
 							"type": "custom",
@@ -234,53 +234,8 @@
 						},
 						{
 							"type": "custom",
-							"label": "Contacts",
-							"url": "/support/contacts"
-						},
-						{
-							"type": "custom",
-							"label": "Workforce",
-							"url": "/support/workforce"
-						},
-						{
-							"type": "custom",
-							"label": "Channels",
-							"url": "/support/channels"
-						},
-						{
-							"type": "custom",
-							"label": "Automations",
-							"url": "/support/automations"
-						},
-						{
-							"type": "custom",
-							"label": "Proactive Support",
-							"url": "/support/proactive-support"
-						},
-						{
-							"type": "custom",
 							"label": "Help center",
 							"url": "/support/help-center"
-						},
-						{
-							"type": "custom",
-							"label": "Support AI assistant",
-							"url": "/support/captain"
-						},
-						{
-							"type": "custom",
-							"label": "Support integrations",
-							"url": "/support/integrations"
-						},
-						{
-							"type": "custom",
-							"label": "Satisfaction and quality",
-							"url": "/support/quality"
-						},
-						{
-							"type": "custom",
-							"label": "Support reports",
-							"url": "/support/reports"
 						},
 						{
 							"type": "custom",
@@ -303,34 +258,7 @@
 						{
 							"type": "custom",
 							"label": "Audience and usage",
-							"url": "/analytics/users",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Audience and usage",
-									"url": "/analytics/users"
-								},
-								{
-									"type": "custom",
-									"label": "Installations",
-									"url": "/analytics/installations"
-								},
-								{
-									"type": "custom",
-									"label": "Viewed screens",
-									"url": "/analytics/views"
-								},
-								{
-									"type": "custom",
-									"label": "Devices and countries",
-									"url": "/analytics/dimensions"
-								},
-								{
-									"type": "custom",
-									"label": "User groups",
-									"url": "/analytics/cohorts"
-								}
-							]
+							"url": "/analytics/users"
 						},
 						{
 							"type": "custom",
@@ -350,29 +278,7 @@
 						{
 							"type": "custom",
 							"label": "Reports and exports",
-							"url": "/analytics/reports",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Reports and exports",
-									"url": "/analytics/reports"
-								},
-								{
-									"type": "custom",
-									"label": "Alerts",
-									"url": "/analytics/alerts"
-								},
-								{
-									"type": "custom",
-									"label": "Application errors",
-									"url": "/analytics/crashes"
-								},
-								{
-									"type": "custom",
-									"label": "User feedback",
-									"url": "/analytics/feedback"
-								}
-							]
+							"url": "/analytics/reports"
 						},
 						{
 							"type": "custom",
@@ -394,7 +300,7 @@
 					"children": [
 						{
 							"type": "custom",
-							"label": "Environment settings",
+							"label": "General",
 							"url": "/core/settings"
 						},
 						{
@@ -404,23 +310,8 @@
 						},
 						{
 							"type": "custom",
-							"label": "SDK libraries",
+							"label": "SDK & apps",
 							"url": "/core/libraries"
-						},
-						{
-							"type": "custom",
-							"label": "Web setup",
-							"url": "/core/web-setup"
-						},
-						{
-							"type": "custom",
-							"label": "iOS setup",
-							"url": "/core/ios-setup"
-						},
-						{
-							"type": "custom",
-							"label": "Android setup",
-							"url": "/core/android-setup"
 						},
 						{
 							"type": "custom",
@@ -499,7 +390,7 @@
 						},
 						{
 							"type": "custom",
-							"label": "Paramètres",
+							"label": "Configuration",
 							"url": "/data/settings"
 						}
 					]
@@ -517,18 +408,8 @@
 						},
 						{
 							"type": "custom",
-							"label": "Produits",
+							"label": "Catalogue",
 							"url": "/monetization/products"
-						},
-						{
-							"type": "custom",
-							"label": "Offres",
-							"url": "/monetization/offerings"
-						},
-						{
-							"type": "custom",
-							"label": "Droits d’accès",
-							"url": "/monetization/entitlements"
 						},
 						{
 							"type": "custom",
@@ -540,23 +421,33 @@
 				{
 					"type": "custom",
 					"label": "Communication",
-					"url": "/communication/campaigns",
+					"url": "/communication/marketing-email",
 					"cssClasses": "sb-icon-communication",
 					"children": [
 						{
 							"type": "custom",
-							"label": "E-mails de campagne",
-							"url": "/communication/campaigns"
+							"label": "E-mails",
+							"url": "/communication/marketing-email"
 						},
 						{
 							"type": "custom",
-							"label": "E-mails transactionnels",
-							"url": "/communication/email"
+							"label": "Automatisations",
+							"url": "/communication/journeys"
 						},
 						{
 							"type": "custom",
-							"label": "Messages dans l’application",
+							"label": "In-app et push",
 							"url": "/communication/in-app-messages"
+						},
+						{
+							"type": "custom",
+							"label": "Audience",
+							"url": "/communication/audience"
+						},
+						{
+							"type": "custom",
+							"label": "Activité",
+							"url": "/communication/statistics"
 						},
 						{
 							"type": "custom",
@@ -606,53 +497,8 @@
 						},
 						{
 							"type": "custom",
-							"label": "Contacts",
-							"url": "/support/contacts"
-						},
-						{
-							"type": "custom",
-							"label": "Agents et équipes",
-							"url": "/support/workforce"
-						},
-						{
-							"type": "custom",
-							"label": "Canaux de contact",
-							"url": "/support/channels"
-						},
-						{
-							"type": "custom",
-							"label": "Règles automatiques",
-							"url": "/support/automations"
-						},
-						{
-							"type": "custom",
-							"label": "Aide proactive",
-							"url": "/support/proactive-support"
-						},
-						{
-							"type": "custom",
 							"label": "Centre d’aide",
 							"url": "/support/help-center"
-						},
-						{
-							"type": "custom",
-							"label": "Assistant IA du support",
-							"url": "/support/captain"
-						},
-						{
-							"type": "custom",
-							"label": "Intégrations du support",
-							"url": "/support/integrations"
-						},
-						{
-							"type": "custom",
-							"label": "Satisfaction et qualité",
-							"url": "/support/quality"
-						},
-						{
-							"type": "custom",
-							"label": "Rapports du support",
-							"url": "/support/reports"
 						},
 						{
 							"type": "custom",
@@ -675,34 +521,7 @@
 						{
 							"type": "custom",
 							"label": "Audience et utilisation",
-							"url": "/analytics/users",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Audience et utilisation",
-									"url": "/analytics/users"
-								},
-								{
-									"type": "custom",
-									"label": "Installations",
-									"url": "/analytics/installations"
-								},
-								{
-									"type": "custom",
-									"label": "Écrans consultés",
-									"url": "/analytics/views"
-								},
-								{
-									"type": "custom",
-									"label": "Appareils et pays",
-									"url": "/analytics/dimensions"
-								},
-								{
-									"type": "custom",
-									"label": "Groupes d’utilisateurs",
-									"url": "/analytics/cohorts"
-								}
-							]
+							"url": "/analytics/users"
 						},
 						{
 							"type": "custom",
@@ -722,29 +541,7 @@
 						{
 							"type": "custom",
 							"label": "Rapports et exports",
-							"url": "/analytics/reports",
-							"children": [
-								{
-									"type": "custom",
-									"label": "Rapports et exports",
-									"url": "/analytics/reports"
-								},
-								{
-									"type": "custom",
-									"label": "Alertes",
-									"url": "/analytics/alerts"
-								},
-								{
-									"type": "custom",
-									"label": "Erreurs de l’application",
-									"url": "/analytics/crashes"
-								},
-								{
-									"type": "custom",
-									"label": "Retours utilisateur",
-									"url": "/analytics/feedback"
-								}
-							]
+							"url": "/analytics/reports"
 						},
 						{
 							"type": "custom",
@@ -766,7 +563,7 @@
 					"children": [
 						{
 							"type": "custom",
-							"label": "Paramètres de l’environnement",
+							"label": "Général",
 							"url": "/core/settings"
 						},
 						{
@@ -776,23 +573,8 @@
 						},
 						{
 							"type": "custom",
-							"label": "Bibliothèques SDK",
+							"label": "SDK et applications",
 							"url": "/core/libraries"
-						},
-						{
-							"type": "custom",
-							"label": "Configurer le Web",
-							"url": "/core/web-setup"
-						},
-						{
-							"type": "custom",
-							"label": "Configurer iOS",
-							"url": "/core/ios-setup"
-						},
-						{
-							"type": "custom",
-							"label": "Configurer Android",
-							"url": "/core/android-setup"
 						},
 						{
 							"type": "custom",

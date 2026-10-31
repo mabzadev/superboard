@@ -1,5 +1,3 @@
-import { withRouteManifest } from "@superboard/contracts/route-manifest";
-import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	emailPublicationIssues,
 	resolveEmailMessage,
@@ -7,8 +5,13 @@ import {
 } from "@superboard/contracts/email-studio";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono, type Context } from "hono";
 
+import { audienceFieldRoutes, validateAttributes } from "./audience-fields";
+import { audienceImportRoutes } from "./audience-import";
+import { audienceTagRoutes } from "./audience-tags";
 import { verifyInternalProjectContext, failure } from "./auth";
 import { collectMarketingSignals } from "./core-collection.js";
 import { eraseStudioRecipientStatements } from "./delivery-records.js";
@@ -26,10 +29,16 @@ import {
 	resolveStoredEmail,
 	getPublishedEmailTemplate,
 } from "./email-studio.js";
+import { publicSignupFormRoutes, signupFormRoutes } from "./forms";
+import { growthRoutes, runGrowthSchedules } from "./growth";
 import { marketingIdentityHashCandidates } from "./identity";
 import { dispatchDueJourneyEnrollments, journeyRoutes } from "./journeys";
+import { deliverabilityRates, recordLinkClick } from "./link-analytics";
+import { doubleOptInListIds, doubleOptInRoutes, queueDoubleOptIns } from "./optin";
+import { preferenceCenterRoutes, renderPreferenceCenter } from "./preferences";
 import { handleMarketingQueue, isMarketingQueueJob } from "./queue";
 import { decryptJson, encryptJson, sha256 } from "./secrets";
+import { mountSegmentRoutes, refreshStaleSegments } from "./segments";
 import { verifyTrackingToken } from "./tracking";
 import type {
 	Env,
@@ -52,10 +61,19 @@ import {
 	text,
 } from "./validation";
 
-const app = registerRouter(new Hono<{
-	Bindings: Env;
-	Variables: { project: ProjectContext };
-}>(), {"service":"marketing","module":"index.app","pluginId":"superboard-marketing","surface":"internal","access":"internal"});
+const app = registerRouter(
+	new Hono<{
+		Bindings: Env;
+		Variables: { project: ProjectContext };
+	}>(),
+	{
+		service: "marketing",
+		module: "index.app",
+		pluginId: "superboard-marketing",
+		surface: "internal",
+		access: "internal",
+	},
+);
 type MarketingContext = Context<{
 	Bindings: Env;
 	Variables: { project: ProjectContext };
@@ -214,6 +232,7 @@ app.get("/public/v1/tracking/click/:token", async (c) => {
 	await recordTrackingEvent(c.env.DB, payload, "click", {
 		target: payload.target,
 	});
+	await recordLinkClick(c.env.DB, payload, String(payload.target));
 	return c.redirect(String(payload.target), 302);
 });
 
@@ -233,7 +252,10 @@ app.all("/public/v1/tracking/unsubscribe/:token", async (c) => {
 	await recordTrackingEvent(c.env.DB, payload, "unsubscribe");
 	return c.req.method === "GET"
 		? c.html(
-				"<!doctype html><html><body><h1>Unsubscribed</h1><p>You will no longer receive these emails.</p></body></html>",
+				await renderPreferenceCenter(c.env, payload.projectId, payload.subscriberId, {
+					notice: "unsubscribed",
+					acceptLanguage: c.req.header("accept-language"),
+				}),
 			)
 		: c.json({ data: { unsubscribed: true } });
 });
@@ -249,32 +271,39 @@ app.all("/public/v1/opt-in/:token", async (c) => {
       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
     WHERE optin_token_hash = ? AND consent_status = 'pending'
       AND optin_token_expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-    RETURNING id, project_id
+    RETURNING id, project_id, email
   `,
 	)
 		.bind(tokenHash)
-		.first<{ id: string; project_id: number }>();
+		.first<{ id: string; project_id: number; email: string }>();
 	if (!confirmed)
 		throw failure("confirmation_invalid", "Confirmation token is invalid or expired", 422);
-	await c.env.DB.prepare(
-		`
+	await c.env.DB.batch([
+		c.env.DB.prepare(
+			`
     INSERT INTO audit_events (id, project_id, action, actor_id, request_id, payload_json)
     VALUES (?, ?, 'subscriber.double_optin_confirmed', 'subscriber', ?, ?)
   `,
-	)
-		.bind(
+		).bind(
 			crypto.randomUUID(),
 			confirmed.project_id,
 			crypto.randomUUID(),
 			JSON.stringify({ subscriber_id: confirmed.id }),
-		)
-		.run();
+		),
+		// Confirming again is the contact's own consent: lift only their unsubscribe.
+		c.env.DB.prepare(
+			"DELETE FROM suppressions WHERE project_id = ? AND email = ? AND reason = 'unsubscribe'",
+		).bind(confirmed.project_id, confirmed.email),
+	]);
 	return c.req.method === "GET"
 		? c.html(
 				"<!doctype html><html><body><h1>Subscription confirmed</h1><p>Your email preferences have been updated.</p></body></html>",
 			)
 		: c.json({ data: { confirmed: true } });
 });
+
+app.route("/", preferenceCenterRoutes);
+app.route("/", publicSignupFormRoutes);
 
 app.use("/internal/v1/*", async (c, next) => {
 	c.set("project", await verifyInternalProjectContext(c.req.raw, c.env));
@@ -395,6 +424,12 @@ app.use("/internal/v1/*", async (c, next) => {
 
 app.route("/internal/v1", journeyRoutes);
 app.route("/internal/v1/studio", emailStudioRoutes);
+app.route("/internal/v1", audienceTagRoutes);
+app.route("/internal/v1", audienceFieldRoutes);
+app.route("/internal/v1", audienceImportRoutes);
+app.route("/internal/v1", doubleOptInRoutes);
+app.route("/internal/v1", signupFormRoutes);
+app.route("/internal/v1", growthRoutes);
 
 app.get("/internal/v1", (c) =>
 	c.json({
@@ -652,19 +687,23 @@ app.get("/internal/v1/email/subscribers", async (c) => {
 	const limit = Math.min(positiveInt(c.req.query("limit") || 100, "limit"), 500);
 	const offset = Math.max(Number(c.req.query("offset") || 0), 0);
 	const listId = String(c.req.query("list_id") ?? "");
+	const tagId = String(c.req.query("tag_id") ?? "");
 	const like = `%${escapeLike(query)}%`;
 	const rows = await c.env.DB.prepare(
 		`
     SELECT subscriber.*,
       (SELECT json_group_array(membership.list_id) FROM subscriber_list_memberships membership
-        WHERE membership.project_id = subscriber.project_id AND membership.subscriber_id = subscriber.id) list_ids_json
+        WHERE membership.project_id = subscriber.project_id AND membership.subscriber_id = subscriber.id) list_ids_json,
+      (SELECT json_group_array(assignment.tag_id) FROM subscriber_tag_assignments assignment
+        WHERE assignment.project_id = subscriber.project_id AND assignment.subscriber_id = subscriber.id) tag_ids_json
     FROM subscribers subscriber WHERE subscriber.project_id = ?
       AND (? = '' OR subscriber.status = ?) AND (? = '' OR subscriber.email LIKE ? ESCAPE '\\' OR COALESCE(subscriber.name, '') LIKE ? ESCAPE '\\')
       AND (?='' OR EXISTS(SELECT 1 FROM subscriber_list_memberships m WHERE m.project_id=subscriber.project_id AND m.subscriber_id=subscriber.id AND m.list_id=?))
+      AND (?='' OR EXISTS(SELECT 1 FROM subscriber_tag_assignments t WHERE t.project_id=subscriber.project_id AND t.subscriber_id=subscriber.id AND t.tag_id=?))
     ORDER BY subscriber.created_at DESC,subscriber.id DESC LIMIT ? OFFSET ?
   `,
 	)
-		.bind(projectId, status, status, query, like, like, listId, listId, limit, offset)
+		.bind(projectId, status, status, query, like, like, listId, listId, tagId, tagId, limit, offset)
 		.all<Record<string, unknown>>();
 	return c.json({ data: rows.results.map(serializeSubscriber) });
 });
@@ -674,7 +713,11 @@ app.post("/internal/v1/email/subscribers", async (c) => {
 	const body = await readJsonObject(c.req.raw);
 	const address = email(body.email);
 	const now = new Date().toISOString();
-	const doubleOptIn = booleanValue(body.double_opt_in, false);
+	const requestedListIds = stringArray(body.list_ids, "list_ids");
+	// Lists configured for double opt-in always ask new contacts to confirm.
+	const doubleOptIn =
+		booleanValue(body.double_opt_in, false) ||
+		(await doubleOptInListIds(c.env.DB, project.projectId, requestedListIds)).length > 0;
 	const confirmationToken = doubleOptIn ? randomToken() : null;
 	const outboxId = doubleOptIn ? crypto.randomUUID() : null;
 	const optinExpiresAt = doubleOptIn
@@ -687,7 +730,11 @@ app.post("/internal/v1/email/subscribers", async (c) => {
 		status: "enabled",
 		consent_status: doubleOptIn ? "pending" : "confirmed",
 		consent_source: optionalText(body.consent_source, "consent_source", 128) || "admin",
-		attributes: jsonObject(body.attributes, "attributes"),
+		attributes: await validateAttributes(
+			c.env.DB,
+			project.projectId,
+			jsonObject(body.attributes, "attributes"),
+		),
 		created_at: now,
 	};
 	const existing = await c.env.DB.prepare(
@@ -719,7 +766,7 @@ app.post("/internal/v1/email/subscribers", async (c) => {
 			now,
 			now,
 		),
-		...stringArray(body.list_ids, "list_ids").map((listId) =>
+		...requestedListIds.map((listId) =>
 			c.env.DB.prepare(
 				`
       INSERT INTO subscriber_list_memberships (project_id, subscriber_id, list_id, source)
@@ -813,15 +860,31 @@ app.patch("/internal/v1/email/subscribers/:subscriberId", async (c) => {
 	const attributes =
 		body.attributes === undefined
 			? parseStoredJson(current.attributes_json, {})
-			: jsonObject(body.attributes, "attributes");
-	await c.env.DB.prepare(
-		`
+			: await validateAttributes(c.env.DB, projectId, jsonObject(body.attributes, "attributes"));
+	const listIds = body.list_ids === undefined ? null : stringArray(body.list_ids, "list_ids");
+	await c.env.DB.batch([
+		c.env.DB.prepare(
+			`
     UPDATE subscribers SET email = ?, name = ?, attributes_json = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
     WHERE project_id = ? AND id = ?
   `,
-	)
-		.bind(address, name, JSON.stringify(attributes), projectId, current.id)
-		.run();
+		).bind(address, name, JSON.stringify(attributes), projectId, current.id),
+		...(listIds === null
+			? []
+			: [
+					c.env.DB.prepare(
+						`DELETE FROM subscriber_list_memberships WHERE project_id = ? AND subscriber_id = ?
+             AND list_id NOT IN (SELECT value FROM json_each(?))`,
+					).bind(projectId, current.id, JSON.stringify(listIds)),
+					...listIds.map((listId) =>
+						c.env.DB.prepare(
+							`INSERT INTO subscriber_list_memberships (project_id, subscriber_id, list_id, source)
+               SELECT ?, ?, id, 'admin' FROM subscriber_lists WHERE project_id = ? AND id = ?
+               ON CONFLICT(project_id, subscriber_id, list_id) DO NOTHING`,
+						).bind(projectId, current.id, projectId, listId),
+					),
+				]),
+	]);
 	return c.json({
 		data: serializeSubscriber(await subscriber(c.env.DB, projectId, String(current.id))),
 	});
@@ -981,6 +1044,74 @@ app.post("/internal/v1/email/subscribers-import", async (c) => {
 	);
 });
 
+app.get("/internal/v1/suppressions", async (c) => {
+	const query = String(c.req.query("q") || "")
+		.trim()
+		.slice(0, 255);
+	const limit = Math.min(positiveInt(c.req.query("limit") || 50, "limit"), 200);
+	const offset = Math.max(Number(c.req.query("offset") || 0), 0);
+	const rows = await c.env.DB.prepare(
+		`SELECT id, email, reason, source, created_at FROM suppressions
+    WHERE project_id = ? AND (? = '' OR email LIKE ? ESCAPE '\\')
+    ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`,
+	)
+		.bind(c.get("project").projectId, query, `%${escapeLike(query)}%`, limit, offset)
+		.all();
+	return c.json({ data: rows.results });
+});
+
+// Operators can only add or lift manual suppressions. Unsubscribes, bounces,
+// complaints and privacy deletions stay authoritative so consent is never
+// restored on someone's behalf.
+app.post("/internal/v1/suppressions", async (c) => {
+	const project = c.get("project");
+	const address = email((await readJsonObject(c.req.raw)).email);
+	const existing = await c.env.DB.prepare(
+		"SELECT reason FROM suppressions WHERE project_id = ? AND email = ?",
+	)
+		.bind(project.projectId, address)
+		.first<{ reason: string }>();
+	if (existing && existing.reason !== "manual")
+		throw failure("suppression_exists", "This address is already suppressed", 409);
+	const id = crypto.randomUUID();
+	await c.env.DB.batch([
+		c.env.DB.prepare(
+			`INSERT INTO suppressions (id, project_id, email, reason, source, metadata_json) VALUES (?, ?, ?, 'manual', 'admin', ?) ON CONFLICT(project_id, email) DO NOTHING`,
+		).bind(
+			id,
+			project.projectId,
+			address,
+			JSON.stringify({ actor_id: project.operatorId ?? project.actorId }),
+		),
+		c.env.DB.prepare(
+			`UPDATE subscribers SET status = 'blocklisted', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE project_id = ? AND email = ? AND status = 'enabled'`,
+		).bind(project.projectId, address),
+	]);
+	const row = await c.env.DB.prepare(
+		"SELECT id, email, reason, source, created_at FROM suppressions WHERE project_id = ? AND email = ?",
+	)
+		.bind(project.projectId, address)
+		.first();
+	return c.json({ data: row }, 201);
+});
+
+app.delete("/internal/v1/suppressions/:suppressionId", async (c) => {
+	const projectId = c.get("project").projectId;
+	const removed = await c.env.DB.prepare(
+		"DELETE FROM suppressions WHERE project_id = ? AND id = ? AND reason = 'manual' RETURNING email",
+	)
+		.bind(projectId, c.req.param("suppressionId"))
+		.first<{ email: string }>();
+	if (!removed)
+		throw failure("suppression_not_removable", "Only manual suppressions can be removed", 404);
+	await c.env.DB.prepare(
+		`UPDATE subscribers SET status = 'enabled', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE project_id = ? AND email = ? AND status = 'blocklisted'`,
+	)
+		.bind(projectId, removed.email)
+		.run();
+	return c.json({ data: { deleted: true } });
+});
+
 app.get("/internal/v1/lists", async (c) => {
 	const rows = await c.env.DB.prepare(
 		`
@@ -1055,7 +1186,7 @@ app.delete("/internal/v1/lists/:listId", async (c) => {
 
 app.put("/internal/v1/lists/:listId/subscribers/:subscriberId", async (c) => {
 	const projectId = c.get("project").projectId;
-	await Promise.all([
+	const [listRow, subscriberRow] = await Promise.all([
 		list(c.env.DB, projectId, c.req.param("listId")),
 		subscriber(c.env.DB, projectId, c.req.param("subscriberId")),
 	]);
@@ -1067,7 +1198,13 @@ app.put("/internal/v1/lists/:listId/subscribers/:subscriberId", async (c) => {
 	)
 		.bind(projectId, c.req.param("subscriberId"), c.req.param("listId"))
 		.run();
-	return c.json({ data: { subscribed: true } });
+	// A double opt-in list re-sends the confirmation to contacts who have not confirmed yet.
+	const confirmationRequired =
+		listRow.optin_mode === "double" &&
+		subscriberRow.status === "enabled" &&
+		subscriberRow.consent_status === "pending";
+	if (confirmationRequired) await queueDoubleOptIns(c.env, projectId, [String(subscriberRow.id)]);
+	return c.json({ data: { subscribed: true, confirmation_required: confirmationRequired } });
 });
 
 app.delete("/internal/v1/lists/:listId/subscribers/:subscriberId", async (c) => {
@@ -1079,91 +1216,7 @@ app.delete("/internal/v1/lists/:listId/subscribers/:subscriberId", async (c) => 
 	return c.json({ data: { subscribed: false } });
 });
 
-app.get("/internal/v1/segments", async (c) => {
-	const rows = await c.env.DB.prepare(
-		`
-    SELECT segment.*, (SELECT COUNT(*) FROM segment_memberships membership WHERE membership.segment_id = segment.id) subscriber_count
-    FROM subscriber_segments segment WHERE project_id = ? ORDER BY name
-  `,
-	)
-		.bind(c.get("project").projectId)
-		.all<Record<string, unknown>>();
-	return c.json({
-		data: rows.results.map((row) => ({
-			...row,
-			rules: parseStoredJson(row.rules_json, {}),
-		})),
-	});
-});
-
-app.post("/internal/v1/segments", async (c) => {
-	const projectId = c.get("project").projectId;
-	const body = await readJsonObject(c.req.raw);
-	const id = crypto.randomUUID();
-	const rules = validateSegmentRules(body.rules);
-	await c.env.DB.prepare(
-		"INSERT INTO subscriber_segments (id, project_id, name, rules_json) VALUES (?, ?, ?, ?)",
-	)
-		.bind(id, projectId, text(body.name, "name"), JSON.stringify(rules))
-		.run();
-	await refreshSegment(c.env.DB, projectId, id, rules);
-	return c.json({ data: { id, name: body.name, rules } }, 201);
-});
-
-app.patch("/internal/v1/segments/:segmentId", async (c) => {
-	const projectId = c.get("project").projectId;
-	const current = await segment(c.env.DB, projectId, c.req.param("segmentId"));
-	const body = await readJsonObject(c.req.raw);
-	const rules =
-		body.rules === undefined
-			? parseStoredJson<SegmentRules>(current.rules_json, {
-					mode: "all",
-					conditions: [],
-				})
-			: validateSegmentRules(body.rules);
-	await c.env.DB.prepare(
-		`UPDATE subscriber_segments SET name = ?, rules_json = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE project_id = ? AND id = ?`,
-	)
-		.bind(
-			body.name === undefined ? current.name : text(body.name, "name"),
-			JSON.stringify(rules),
-			projectId,
-			current.id,
-		)
-		.run();
-	await refreshSegment(c.env.DB, projectId, String(current.id), rules);
-	return c.json({
-		data: {
-			...(await segment(c.env.DB, projectId, String(current.id))),
-			rules,
-		},
-	});
-});
-
-app.post("/internal/v1/segments/:segmentId/refresh", async (c) => {
-	const projectId = c.get("project").projectId;
-	const current = await segment(c.env.DB, projectId, c.req.param("segmentId"));
-	const count = await refreshSegment(
-		c.env.DB,
-		projectId,
-		String(current.id),
-		parseStoredJson<SegmentRules>(current.rules_json, {
-			mode: "all",
-			conditions: [],
-		}),
-	);
-	return c.json({ data: { subscriber_count: count } });
-});
-
-app.delete("/internal/v1/segments/:segmentId", async (c) => {
-	const result = await c.env.DB.prepare(
-		"DELETE FROM subscriber_segments WHERE project_id = ? AND id = ? RETURNING id",
-	)
-		.bind(c.get("project").projectId, c.req.param("segmentId"))
-		.first();
-	if (!result) throw failure("segment_not_found", "Segment not found", 404);
-	return c.json({ data: { deleted: true } });
-});
+mountSegmentRoutes(app);
 
 app.get("/internal/v1/templates", async (c) => {
 	const rows = await c.env.DB.prepare(
@@ -2165,6 +2218,7 @@ app.get("/internal/v1/statistics", async (c) => {
 		"day",
 	);
 	const campaignId = optionalText(c.req.query("campaign_id"), "campaign_id");
+	const variantId = optionalText(c.req.query("variant_id"), "variant_id", 8);
 	const bucket =
 		interval === "hour"
 			? "%Y-%m-%dT%H:00:00Z"
@@ -2185,14 +2239,14 @@ app.get("/internal/v1/statistics", async (c) => {
 			.bind(projectId)
 			.first<Record<string, number>>(),
 		c.env.DB.prepare(
-			`SELECT event_type, COUNT(*) total FROM email_events WHERE project_id = ? AND occurred_at BETWEEN ? AND ? AND (? IS NULL OR campaign_id = ?) GROUP BY event_type`,
+			`SELECT event_type, COUNT(*) total FROM email_events WHERE project_id = ? AND julianday(occurred_at) BETWEEN julianday(?) AND julianday(?) AND (? IS NULL OR campaign_id = ?) AND (? IS NULL OR delivery_id IN (SELECT id FROM email_deliveries WHERE project_id = ? AND variant_id = ?)) GROUP BY event_type`,
 		)
-			.bind(projectId, from, to, campaignId, campaignId)
+			.bind(projectId, from, to, campaignId, campaignId, variantId, projectId, variantId)
 			.all<{ event_type: string; total: number }>(),
 		c.env.DB.prepare(
-			`SELECT strftime(?, occurred_at) bucket, event_type, COUNT(*) total FROM email_events WHERE project_id = ? AND occurred_at BETWEEN ? AND ? AND (? IS NULL OR campaign_id = ?) GROUP BY bucket, event_type ORDER BY bucket`,
+			`SELECT strftime(?, occurred_at) bucket, event_type, COUNT(*) total FROM email_events WHERE project_id = ? AND julianday(occurred_at) BETWEEN julianday(?) AND julianday(?) AND (? IS NULL OR campaign_id = ?) AND (? IS NULL OR delivery_id IN (SELECT id FROM email_deliveries WHERE project_id = ? AND variant_id = ?)) GROUP BY bucket, event_type ORDER BY bucket`,
 		)
-			.bind(bucket, projectId, from, to, campaignId, campaignId)
+			.bind(bucket, projectId, from, to, campaignId, campaignId, variantId, projectId, variantId)
 			.all(),
 	]);
 	const totals: Record<string, number> = {
@@ -2205,6 +2259,7 @@ app.get("/internal/v1/statistics", async (c) => {
 	totals.delivery_rate = percentage(totals.delivered || totals.sent || 0, totals.sent || 0);
 	totals.open_rate = percentage(totals.open || 0, totals.delivered || totals.sent || 0);
 	totals.click_rate = percentage(totals.click || 0, totals.delivered || totals.sent || 0);
+	Object.assign(totals, deliverabilityRates(totals));
 	return c.json({
 		data: {
 			totals,
@@ -2573,133 +2628,16 @@ async function transitionCampaign(
 	return Response.json({ data: serializeCampaign(updated) });
 }
 
-async function refreshSegment(
-	db: D1Database,
-	projectId: number,
-	segmentId: string,
-	rules: SegmentRules,
-) {
-	await db
-		.prepare("DELETE FROM segment_memberships WHERE project_id = ? AND segment_id = ?")
-		.bind(projectId, segmentId)
-		.run();
-	let cursor = "";
-	let matched = 0;
-	while (true) {
-		const rows = await db
-			.prepare(
-				`
-      SELECT id, email, name, status, consent_status, attributes_json
-      FROM subscribers WHERE project_id = ? AND id > ? ORDER BY id LIMIT 500
-    `,
-			)
-			.bind(projectId, cursor)
-			.all<Record<string, unknown>>();
-		if (!rows.results.length) break;
-		const matching = rows.results.filter((row) => segmentMatches(row, rules));
-		for (let index = 0; index < matching.length; index += 100) {
-			await db.batch(
-				matching.slice(index, index + 100).map((row) =>
-					db
-						.prepare(
-							`
-        INSERT INTO segment_memberships (project_id, segment_id, subscriber_id) VALUES (?, ?, ?)
-      `,
-						)
-						.bind(projectId, segmentId, row.id),
-				),
-			);
-		}
-		matched += matching.length;
-		cursor = String(rows.results.at(-1)?.id || cursor);
-		if (rows.results.length < 500) break;
-	}
-	await db
-		.prepare(
-			`UPDATE subscriber_segments SET refreshed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE project_id = ? AND id = ?`,
-		)
-		.bind(projectId, segmentId)
-		.run();
-	return matched;
-}
-
-type SegmentCondition = {
-	field: string;
-	operator: "equals" | "not_equals" | "contains" | "starts_with" | "exists" | "in";
-	value?: unknown;
-};
-type SegmentRules = { mode: "all" | "any"; conditions: SegmentCondition[] };
-
-function validateSegmentRules(value: unknown): SegmentRules {
-	const source = jsonObject(value, "rules");
-	const mode = enumValue(source.mode, "mode", ["all", "any"], "all");
-	if (
-		!Array.isArray(source.conditions) ||
-		source.conditions.length === 0 ||
-		source.conditions.length > 25
-	)
-		throw failure("segment_conditions_invalid", "A segment requires between 1 and 25 conditions");
-	const conditions = source.conditions.map((condition) => {
-		const item = jsonObject(condition, "condition", 4_000);
-		return {
-			field: text(item.field, "field", 128),
-			operator: enumValue(item.operator, "operator", [
-				"equals",
-				"not_equals",
-				"contains",
-				"starts_with",
-				"exists",
-				"in",
-			]),
-			value: item.value,
-		} as SegmentCondition;
-	});
-	return { mode, conditions };
-}
-
-function segmentMatches(row: Record<string, unknown>, rules: SegmentRules) {
-	const values = {
-		...parseStoredJson<Record<string, unknown>>(row.attributes_json, {}),
-		...row,
-	};
-	const matches = rules.conditions.map((condition) => {
-		const actual = condition.field
-			.split(".")
-			.reduce<unknown>(
-				(current, key) =>
-					current && typeof current === "object"
-						? (current as Record<string, unknown>)[key]
-						: undefined,
-				values,
-			);
-		switch (condition.operator) {
-			case "exists":
-				return actual !== undefined && actual !== null && actual !== "";
-			case "equals":
-				return String(actual ?? "") === String(condition.value ?? "");
-			case "not_equals":
-				return String(actual ?? "") !== String(condition.value ?? "");
-			case "contains":
-				return String(actual ?? "")
-					.toLowerCase()
-					.includes(String(condition.value ?? "").toLowerCase());
-			case "starts_with":
-				return String(actual ?? "")
-					.toLowerCase()
-					.startsWith(String(condition.value ?? "").toLowerCase());
-			case "in":
-				return (
-					Array.isArray(condition.value) &&
-					condition.value.map(String).includes(String(actual ?? ""))
-				);
-		}
-	});
-	return rules.mode === "all" ? matches.every(Boolean) : matches.some(Boolean);
-}
-
 async function subscriber(db: D1Database, projectId: number, id: string) {
 	const row = await db
-		.prepare("SELECT * FROM subscribers WHERE project_id = ? AND id = ?")
+		.prepare(
+			`SELECT subscriber.*,
+        (SELECT json_group_array(membership.list_id) FROM subscriber_list_memberships membership
+          WHERE membership.project_id = subscriber.project_id AND membership.subscriber_id = subscriber.id) list_ids_json,
+        (SELECT json_group_array(assignment.tag_id) FROM subscriber_tag_assignments assignment
+          WHERE assignment.project_id = subscriber.project_id AND assignment.subscriber_id = subscriber.id) tag_ids_json
+      FROM subscribers subscriber WHERE subscriber.project_id = ? AND subscriber.id = ?`,
+		)
 		.bind(projectId, id)
 		.first<Record<string, unknown>>();
 	if (!row) throw failure("subscriber_not_found", "Subscriber not found", 404);
@@ -2711,14 +2649,6 @@ async function list(db: D1Database, projectId: number, id: string) {
 		.bind(projectId, id)
 		.first<Record<string, unknown>>();
 	if (!row) throw failure("list_not_found", "List not found", 404);
-	return row;
-}
-async function segment(db: D1Database, projectId: number, id: string) {
-	const row = await db
-		.prepare("SELECT * FROM subscriber_segments WHERE project_id = ? AND id = ?")
-		.bind(projectId, id)
-		.first<Record<string, unknown>>();
-	if (!row) throw failure("segment_not_found", "Segment not found", 404);
 	return row;
 }
 async function template(db: D1Database, projectId: number, id: string) {
@@ -2791,6 +2721,7 @@ export function serializeSubscriber(row: Record<string, unknown>) {
 		consent_source: row.consent_source,
 		attributes: parseStoredJson(row.attributes_json, {}),
 		list_ids: parseStoredJson(row.list_ids_json, []),
+		tag_ids: parseStoredJson(row.tag_ids_json, []),
 		consented_at: row.consented_at,
 		unsubscribed_at: row.unsubscribed_at,
 		created_at: row.created_at,
@@ -2979,6 +2910,7 @@ function parseMarketingDeadLetterJob(
 
 async function scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
 	ctx.waitUntil(collectMarketingSignals(env));
+	ctx.waitUntil(refreshStaleSegments(env.DB));
 	ctx.waitUntil(
 		(async () => {
 			const outbox = await env.DB.prepare(
@@ -3016,6 +2948,7 @@ async function scheduled(_controller: ScheduledController, env: Env, ctx: Execut
 				} satisfies MarketingQueueJob);
 			}
 			await dispatchDueJourneyEnrollments(env);
+			await runGrowthSchedules(env);
 			await reconcileEmailProviderEvents(env);
 		})(),
 	);
@@ -3086,6 +3019,10 @@ const lifecycleWorker = {
 	scheduled,
 } satisfies ExportedHandler<Env>;
 
-export default withRouteManifest((withPluginTaskLifecycle("superboard-marketing", lifecycleWorker, {
-	fetch: true,
-})), [app], {"service":"marketing","pluginId":"superboard-marketing"});
+export default withRouteManifest(
+	withPluginTaskLifecycle("superboard-marketing", lifecycleWorker, {
+		fetch: true,
+	}),
+	[app],
+	{ service: "marketing", pluginId: "superboard-marketing" },
+);

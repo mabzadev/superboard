@@ -1,5 +1,3 @@
-import { createFetchRouter } from "@superboard/contracts/route-registry";
-import { withRouteManifest } from "@superboard/contracts/route-manifest";
 import {
 	OBSERVABILITY_HEALTH_PATH,
 	OBSERVABILITY_SUMMARY_PATH,
@@ -9,6 +7,8 @@ import {
 	type RuntimeMetricRow,
 } from "@superboard/contracts/observability";
 import { signPluginTaskRequest, withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { createFetchRouter } from "@superboard/contracts/route-registry";
 import { configuredSecrets, matchesAnySecret } from "@superboard/contracts/secret";
 
 interface ObservabilitySecrets {
@@ -21,38 +21,48 @@ interface ObservabilitySecrets {
 
 type ObservabilityEnv = Env & ObservabilitySecrets;
 
-const routes = createFetchRouter<ObservabilityEnv>({ service: "observability", module: "http", pluginId: "superboard-observability", surface: "internal", access: "internal" });
+// Signed internal bodies are limited to 16 KiB, so traces are packed into as few requests as fit.
+const OBSERVATION_BATCH_BYTES = 15_000;
+const OBSERVATION_BATCH_SIZE = 100;
+
+const routes = createFetchRouter<ObservabilityEnv>({
+	service: "observability",
+	module: "http",
+	pluginId: "superboard-observability",
+	surface: "internal",
+	access: "internal",
+});
 routes.use("*", async ({ request, env }, next) => {
- if (!(await authorized(request, env))) return json({ error: "unauthorized" }, 401);
- if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
- return next();
+	if (!(await authorized(request, env))) return json({ error: "unauthorized" }, 401);
+	if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+	return next();
 });
 routes.get(OBSERVABILITY_HEALTH_PATH, async ({ env }) => {
-			const analyticsQueryConfigured = configured(env);
-			const optionalOutsideProduction =
-				env.ENVIRONMENT !== "production" && !analyticsQueryConfigured;
-			return json(
-				{
-					service: "observability",
-					status: analyticsQueryConfigured
-						? "ok"
-						: optionalOutsideProduction
-							? "degraded"
-							: "misconfigured",
-					environment: env.ENVIRONMENT,
-					dataset: env.ANALYTICS_DATASET,
-					analyticsQueryConfigured,
-					timestamp: new Date().toISOString(),
-				},
-				analyticsQueryConfigured || optionalOutsideProduction ? 200 : 503,
-			);
-		});
+	const analyticsQueryConfigured = configured(env);
+	const optionalOutsideProduction = env.ENVIRONMENT !== "production" && !analyticsQueryConfigured;
+	return json(
+		{
+			service: "observability",
+			status: analyticsQueryConfigured
+				? "ok"
+				: optionalOutsideProduction
+					? "degraded"
+					: "misconfigured",
+			environment: env.ENVIRONMENT,
+			dataset: env.ANALYTICS_DATASET,
+			analyticsQueryConfigured,
+			timestamp: new Date().toISOString(),
+		},
+		analyticsQueryConfigured || optionalOutsideProduction ? 200 : 503,
+	);
+});
 routes.get(OBSERVABILITY_SUMMARY_PATH, async ({ env, url }) => {
-			return runtimeSummary(env, parseWindow(url.searchParams.get("window")));
-		});
+	return runtimeSummary(env, parseWindow(url.searchParams.get("window")));
+});
 
 const lifecycleWorker = {
 	async tail(events: TraceItem[], env: ObservabilityEnv): Promise<void> {
+		const observations: Record<string, unknown>[] = [];
 		for (const trace of events) {
 			const event = classifyEvent(trace.event);
 			if (
@@ -82,35 +92,43 @@ const lifecycleWorker = {
 					trace.truncated ? 1 : 0,
 				],
 			});
-			if (env.API_SERVICE && env.SUPERBOARD_INSTANCE_ID) {
-				const request = new Request("https://api.internal/internal/observability/observations", {
-					method: "POST",
-					body: JSON.stringify({
-						instance_id: env.SUPERBOARD_INSTANCE_ID,
-						observation_id: crypto.randomUUID(),
-						service: bounded(trace.scriptName || "unknown", 96),
-						event_type: event.type,
-						outcome: bounded(trace.outcome || "unknown", 64),
-						status: Number(event.status || 0),
-						exceptions: trace.exceptions.length,
-						truncated: trace.truncated,
-						cpu_ms: Math.max(0, finite(trace.cpuTime)),
-						wall_ms: Math.max(0, finite(trace.wallTime)),
-						observed_at: new Date(trace.eventTimestamp ?? Date.now()).toISOString(),
-					}),
-				});
-				const headers = await signPluginTaskRequest(request, env.OBSERVABILITY_INTERNAL_TOKEN);
-				const response = await env.API_SERVICE.fetch(
-					new Request(request, { headers, signal: AbortSignal.timeout(10000) }),
-				);
-				if (!response.ok) throw new Error(`Observability ingestion failed: ${response.status}`);
-			} else if (env.SUPERBOARD_PLUGIN_LIFECYCLE === "required") {
+			observations.push({
+				instance_id: env.SUPERBOARD_INSTANCE_ID,
+				observation_id: crypto.randomUUID(),
+				service: bounded(trace.scriptName || "unknown", 96),
+				event_type: event.type,
+				outcome: bounded(trace.outcome || "unknown", 64),
+				status: Number(event.status || 0),
+				exceptions: trace.exceptions.length,
+				truncated: trace.truncated,
+				cpu_ms: Math.max(0, finite(trace.cpuTime)),
+				wall_ms: Math.max(0, finite(trace.wallTime)),
+				observed_at: new Date(trace.eventTimestamp ?? Date.now()).toISOString(),
+			});
+		}
+		if (!observations.length) return;
+		if (!env.API_SERVICE || !env.SUPERBOARD_INSTANCE_ID) {
+			if (env.SUPERBOARD_PLUGIN_LIFECYCLE === "required")
 				throw new Error("OBSERVABILITY_INGESTION_BINDING_REQUIRED");
-			}
+			return;
+		}
+		// The service health and runtime metric panels count every invocation, so all traces are kept.
+		for (const body of observationBatches(observations)) {
+			const request = new Request("https://api.internal/internal/observability/observations", {
+				method: "POST",
+				body,
+			});
+			const headers = await signPluginTaskRequest(request, env.OBSERVABILITY_INTERNAL_TOKEN);
+			const response = await env.API_SERVICE.fetch(
+				new Request(request, { headers, signal: AbortSignal.timeout(10000) }),
+			);
+			if (!response.ok) throw new Error(`Observability ingestion failed: ${response.status}`);
 		}
 	},
 
-	async fetch(request: Request, env: ObservabilityEnv): Promise<Response> { return routes.fetch(request, env); },
+	async fetch(request: Request, env: ObservabilityEnv): Promise<Response> {
+		return routes.fetch(request, env);
+	},
 } satisfies ExportedHandler<ObservabilityEnv>;
 
 async function runtimeSummary(
@@ -241,6 +259,29 @@ function normalizeRows(payload: unknown): RuntimeMetricRow[] {
 	});
 }
 
+function observationBatches(observations: Record<string, unknown>[]): string[] {
+	const batches: string[] = [];
+	let current: string[] = [];
+	let size = 0;
+	const encoder = new TextEncoder();
+	for (const observation of observations) {
+		const serialized = JSON.stringify(observation);
+		const bytes = encoder.encode(serialized).byteLength + 1;
+		if (
+			current.length &&
+			(size + bytes > OBSERVATION_BATCH_BYTES || current.length >= OBSERVATION_BATCH_SIZE)
+		) {
+			batches.push(`{"observations":[${current.join(",")}]}`);
+			current = [];
+			size = 0;
+		}
+		current.push(serialized);
+		size += bytes;
+	}
+	if (current.length) batches.push(`{"observations":[${current.join(",")}]}`);
+	return batches;
+}
+
 function classifyEvent(event: TraceItem["event"]): {
 	type: string;
 	method: string;
@@ -369,4 +410,8 @@ function json(value: unknown, status = 200): Response {
 	});
 }
 
-export default withRouteManifest(withPluginTaskLifecycle("superboard-observability", lifecycleWorker), [routes], { service: "observability", pluginId: "superboard-observability" });
+export default withRouteManifest(
+	withPluginTaskLifecycle("superboard-observability", lifecycleWorker),
+	[routes],
+	{ service: "observability", pluginId: "superboard-observability" },
+);

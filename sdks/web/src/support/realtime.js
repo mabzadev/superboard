@@ -1,3 +1,4 @@
+import { withJitter } from "./backoff.js";
 import { SuperBoardSupportException, isRecord } from "./error.js";
 
 const ALLOWED_EVENT_TYPES = new Set([
@@ -149,7 +150,7 @@ export class SuperBoardSupportRealtime {
 	#schedule(generation, conversationId) {
 		if (!this.#active(generation, conversationId) || this.timer !== null) return;
 		const index = Math.min(this.attempt, Math.max(0, this.retryDelaysMs.length - 1));
-		const wait = this.retryDelaysMs.length === 0 ? 0 : this.retryDelaysMs[index];
+		const wait = this.retryDelaysMs.length === 0 ? 0 : withJitter(this.retryDelaysMs[index]);
 		this.attempt += 1;
 		this.#emit(
 			this.#event("error", conversationId, {

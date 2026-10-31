@@ -1,4 +1,4 @@
-import { MarketingSettingsPage } from "../components/modules/MarketingPages.js";
+import CommunicationWorkspace from "../studio/CommunicationWorkspace.js";
 export default function View() {
-	return <MarketingSettingsPage />;
+	return <CommunicationWorkspace initialTab="senders" />;
 }

@@ -88,6 +88,20 @@ test("canonical Email APIs preserve encrypted settings, captures, verified DNS a
 			.first(),
 	).toEqual({ last_test_status: "sent" });
 	proveApi(plugin, "test_smtp_settings", "mutation", file, [profileId]);
+	// Verification compares published values, so the profile carries the provider's DKIM key
+	// as the authentication wizard stores it; a selector alone leaves DKIM unconfigured.
+	await db
+		.prepare("UPDATE email_smtp_profiles SET authentication_config_json=? WHERE id=?")
+		.bind(
+			JSON.stringify({
+				dkim_type: "txt",
+				dkim_selector: "mail",
+				dkim_value: "v=DKIM1; k=rsa; p=fixture-public-key",
+				dkim_tokens: [],
+			}),
+			profileId,
+		)
+		.run();
 	const dnsFetch = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
 		const url = new URL(input instanceof Request ? input.url : String(input));
 		expect(url.origin).toBe("https://cloudflare-dns.com");

@@ -3,10 +3,11 @@ import {
 	navigationGroup,
 } from "../../../supbrd-core/src/plugin-front-runtime.js";
 
+// Fallback navigation (used only when the EmDash menu is missing) mirrors the seeded section.
 const navigation = navigationGroup({
-	group_id: "superboard-observability.navigation",
-	group_label: "superboard-observability.menu.group",
-	group_order: 77,
+	group_id: "environment",
+	group_label: "navigation.section.environment",
+	group_order: 8,
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
@@ -16,18 +17,16 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 		"Inspect infrastructure health and operational signals from the Observability plugin.",
 	translations: {
 		en: {
-			"superboard-observability.menu.group": "Observability",
-			"superboard-observability.menu.item_0": "Infrastructure",
+			"superboard-observability.menu.item_0": "Service health",
 		},
 		fr: {
-			"superboard-observability.menu.group": "Observabilité",
-			"superboard-observability.menu.item_0": "Infrastructure",
+			"superboard-observability.menu.item_0": "État des services",
 		},
 	},
 	surfaces: [
 		{
 			path_pattern: "/infrastructure",
-			navigation: navigation("superboard-observability.menu.item_0", 0),
+			navigation: navigation("superboard-observability.menu.item_0", 3),
 			title: "Infrastructure",
 		},
 	],

@@ -7,6 +7,7 @@ import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:uuid/uuid.dart';
 
+import 'backoff.dart';
 import 'models.dart';
 
 typedef SuperBoardSupportIdentityTokenProvider = Future<String> Function();
@@ -40,6 +41,7 @@ class SuperBoardSupportClient {
     SuperBoardSupportIdentityTokenProvider? identityTokenProvider,
     http.Client? httpClient,
     Duration requestTimeout = const Duration(seconds: 15),
+    List<Duration> retryDelays = defaultRetryDelays,
   }) : this._(
          baseUri: baseUri,
          projectId: projectId,
@@ -47,9 +49,18 @@ class SuperBoardSupportClient {
          identityTokenProvider: identityTokenProvider,
          httpClient: httpClient,
          requestTimeout: requestTimeout,
+         retryDelays: retryDelays,
          pathPrefix: '',
          projectHeader: 'X-SuperBoard-Project-Id',
        );
+
+  /// Delays between attempts for transient failures (network errors,
+  /// timeouts, 408, 425, 429 and 5xx gateway statuses), matching the Web
+  /// Support SDK. Each delay is jittered; mutations keep their idempotency key.
+  static const List<Duration> defaultRetryDelays = [
+    Duration(milliseconds: 250),
+    Duration(seconds: 1),
+  ];
 
   SuperBoardSupportClient._({
     required Uri baseUri,
@@ -60,7 +71,9 @@ class SuperBoardSupportClient {
     SuperBoardSupportIdentityTokenProvider? identityTokenProvider,
     http.Client? httpClient,
     Duration requestTimeout = const Duration(seconds: 15),
+    List<Duration> retryDelays = defaultRetryDelays,
   }) : _baseUri = baseUri,
+       _retryDelays = List.unmodifiable(retryDelays),
        _projectId = projectId,
        _identityToken = identityToken,
        _identityTokenProvider = identityTokenProvider,
@@ -89,6 +102,13 @@ class SuperBoardSupportClient {
         'Identity token cannot be empty',
       );
     }
+    if (retryDelays.any((delay) => delay.isNegative)) {
+      throw ArgumentError.value(
+        retryDelays,
+        'retryDelays',
+        'Retry delays cannot be negative',
+      );
+    }
     if (requestTimeout <= Duration.zero) {
       throw ArgumentError.value(
         requestTimeout,
@@ -104,6 +124,7 @@ class SuperBoardSupportClient {
   String _identityToken;
   final SuperBoardSupportIdentityTokenProvider? _identityTokenProvider;
   final Duration _requestTimeout;
+  final List<Duration> _retryDelays;
   final String _pathPrefix;
   final String _projectHeader;
   final http.Client _http;
@@ -681,14 +702,38 @@ class SuperBoardSupportClient {
     Future<http.Response> Function(Map<String, String> headers) request, {
     String? idempotencyKey,
   }) async {
-    await _refreshIfExpiring();
-    var response = await _timedRequest(request, idempotencyKey);
-    if (response.statusCode == 401 && _identityTokenProvider != null) {
-      await _refreshIdentityToken();
-      response = await _timedRequest(request, idempotencyKey);
+    var refreshedAfterUnauthorized = false;
+    for (var attempt = 0; ; attempt += 1) {
+      await _refreshIfExpiring();
+      final http.Response response;
+      try {
+        response = await _timedRequest(request, idempotencyKey);
+      } on SuperBoardSupportException catch (error) {
+        if (!error.retryable || attempt >= _retryDelays.length) rethrow;
+        await Future<void>.delayed(
+          supportRetryDelayWithJitter(_retryDelays[attempt]),
+        );
+        continue;
+      }
+      if (response.statusCode == 401 &&
+          _identityTokenProvider != null &&
+          !refreshedAfterUnauthorized) {
+        refreshedAfterUnauthorized = true;
+        await _refreshIdentityToken();
+        attempt -= 1;
+        continue;
+      }
+      if (attempt >= _retryDelays.length ||
+          !_transientStatusCodes.contains(response.statusCode)) {
+        return response;
+      }
+      await Future<void>.delayed(
+        supportRetryDelayWithJitter(_retryDelays[attempt]),
+      );
     }
-    return response;
   }
+
+  static const _transientStatusCodes = {408, 425, 429, 500, 502, 503, 504};
 
   Future<http.Response> _timedRequest(
     Future<http.Response> Function(Map<String, String> headers) request,
@@ -852,6 +897,7 @@ class SuperBoardMessagingClient extends SuperBoardSupportClient {
     super.identityTokenProvider,
     super.httpClient,
     super.requestTimeout = const Duration(seconds: 15),
+    super.retryDelays = SuperBoardSupportClient.defaultRetryDelays,
   }) : super._(pathPrefix: '/v1', projectHeader: 'X-SuperBoard-Project-Id');
 }
 

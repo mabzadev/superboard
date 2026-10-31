@@ -136,7 +136,7 @@ ne vérifie pas la sauvegarde de tous les formulaires métier.
 `pnpm test:navigation` vérifie l'accès au catalogue avec Paramètres actif et
 Supervision inactive, le refus lorsque Paramètres est inactif ou l'opérateur
 non autorisé, et la présence des liens de section. Le workflow GitHub `quality`
-exécute ces tests. `pnpm lint:navigation`
+exécute ces tests. `pnpm lint:front-menu`
 contrôle les destinations des menus déclarés et l'existence des fichiers de
 vue. Ces règles sont aussi exécutées par `pnpm lint` et `pnpm lint:quick`.
 

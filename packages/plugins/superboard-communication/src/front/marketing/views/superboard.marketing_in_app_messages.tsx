@@ -1,1 +1,4 @@
-export { default } from "../studio/InAppItemsPage.js";
+import CommunicationWorkspace from "../studio/CommunicationWorkspace.js";
+export default function View() {
+	return <CommunicationWorkspace initialTab="in-app" />;
+}

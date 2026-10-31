@@ -1,6 +1,17 @@
 import { useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { Alert, AlertDescription } from "@superboard/front-ui/ui/alert.js";
-import { useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
+
+const EmbeddedPageContext = createContext(false);
+
+/** Renders nested Acquisition pages as sections of the surrounding workspace. */
+export function EmbeddedPage({ children }: { children: ReactNode }) {
+	return <EmbeddedPageContext.Provider value>{children}</EmbeddedPageContext.Provider>;
+}
+
+export function useEmbeddedPage() {
+	return useContext(EmbeddedPageContext);
+}
 
 export function AcquisitionPage({
 	title,
@@ -13,6 +24,25 @@ export function AcquisitionPage({
 	error?: string | null;
 	children: ReactNode;
 }) {
+	const embedded = useEmbeddedPage();
+	const alert = error ? (
+		<Alert variant="destructive">
+			<AlertDescription>{error}</AlertDescription>
+		</Alert>
+	) : null;
+	if (embedded)
+		return (
+			<section className="space-y-4">
+				{title ? (
+					<header className="space-y-1">
+						<h2 className="text-lg font-semibold">{title}</h2>
+						{description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+					</header>
+				) : null}
+				{alert}
+				{children}
+			</section>
+		);
 	return (
 		<section className="ds-page space-y-5">
 			<header className="ds-page-header">
@@ -21,11 +51,7 @@ export function AcquisitionPage({
 					<p className="ds-page-description">{description}</p>
 				</div>
 			</header>
-			{error && (
-				<Alert variant="destructive">
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			)}
+			{alert}
 			{children}
 		</section>
 	);

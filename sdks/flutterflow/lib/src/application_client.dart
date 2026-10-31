@@ -395,6 +395,24 @@ class SuperBoardApplicationClient {
     return result;
   }
 
+  /// Returns the short-lived SuperBoard identity token minted from the current
+  /// application session. The token is cached until shortly before it expires
+  /// and concurrent callers share a single exchange.
+  ///
+  /// Pass [rejectedToken] when a downstream SuperBoard service refused or is
+  /// about to expire a token previously returned here; the cached token is
+  /// then discarded (once, even for concurrent callers) before refreshing.
+  Future<String> customIdentityToken({String rejectedToken = ''}) {
+    final rejected = rejectedToken.trim();
+    if (rejected.isNotEmpty &&
+        _customIdentityRefresh == null &&
+        rejected == _customIdentityToken) {
+      _customIdentityToken = '';
+      _customIdentityTokenExpiresAt = null;
+    }
+    return _customIdentity();
+  }
+
   Future<String> _customIdentity() async {
     final now = DateTime.now().toUtc();
     final expiresAt = _customIdentityTokenExpiresAt;

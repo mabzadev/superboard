@@ -1286,4 +1286,88 @@ describe("Marketing in the Workers runtime", () => {
 				.first(),
 		).resolves.toMatchObject({ total: 2 });
 	});
+
+	it("shares campaign and sender lookups across a delivery batch and finishes the campaign once", async () => {
+		const projectId = 7712;
+		const campaignId = crypto.randomUUID();
+		await env.DB.prepare(
+			`
+      INSERT INTO campaigns (id, project_id, name, subject, content_text, status, tracking_enabled, updated_at)
+      VALUES (?, ?, 'Batch', 'Hello {{name}}', 'Hi {{name}}', 'running', 0, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    `,
+		)
+			.bind(campaignId, projectId)
+			.run();
+		const deliveryIds: string[] = [];
+		for (const name of ["Ada", "Grace", "Linus"]) {
+			const subscriberId = crypto.randomUUID();
+			const deliveryId = crypto.randomUUID();
+			deliveryIds.push(deliveryId);
+			await env.DB.batch([
+				env.DB.prepare(
+					`INSERT INTO subscribers (id, project_id, email, name, status, attributes_json, consent_status, consent_source) VALUES (?, ?, ?, ?, 'enabled', '{}', 'confirmed', 'test')`,
+				).bind(subscriberId, projectId, `${name.toLowerCase()}@batch.example.com`, name),
+				env.DB.prepare(
+					`INSERT INTO email_deliveries (id, project_id, campaign_id, subscriber_id, recipient_email, recipient_name, status) VALUES (?, ?, ?, ?, ?, ?, 'sending')`,
+				).bind(
+					deliveryId,
+					projectId,
+					campaignId,
+					subscriberId,
+					`${name.toLowerCase()}@batch.example.com`,
+					name,
+				),
+			]);
+		}
+		const calls = { senders: 0, transport: 0 };
+		const subjects: string[] = [];
+		const emailService = {
+			fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+				const url = new URL(
+					typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+				);
+				if (url.pathname === "/internal/v1/senders") {
+					calls.senders += 1;
+					return Response.json({
+						configured: true,
+						items: [{ id: "managed-batch", publicConfig: { from_email: "hello@example.com" } }],
+					});
+				}
+				calls.transport += 1;
+				const body = JSON.parse(typeof init?.body === "string" ? init.body : "") as {
+					message: { subject: string };
+				};
+				subjects.push(body.message.subject);
+				return Response.json({
+					status: "sent",
+					id: crypto.randomUUID(),
+					messageId: `<${crypto.randomUUID()}@example.com>`,
+					response: "250 OK",
+				});
+			},
+		};
+		const batch = createMessageBatch(
+			"marketing-test-delivery",
+			deliveryIds.map((deliveryId, index) => ({
+				id: `batch-delivery-${index}`,
+				timestamp: new Date(),
+				attempts: 1,
+				body: { type: "marketing.email.deliver", projectId, deliveryId },
+			})),
+		);
+		const execution = createExecutionContext();
+		await handleMarketingQueue(batch, { ...env, EMAIL_SERVICE: emailService } as typeof env);
+		expect((await getQueueResult(batch, execution)).explicitAcks).toEqual([
+			"batch-delivery-0",
+			"batch-delivery-1",
+			"batch-delivery-2",
+		]);
+		expect(calls).toEqual({ senders: 1, transport: 3 });
+		expect(subjects.sort()).toEqual(["Hello Ada", "Hello Grace", "Hello Linus"]);
+		await expect(
+			env.DB.prepare("SELECT status, sent_count FROM campaigns WHERE id = ?")
+				.bind(campaignId)
+				.first(),
+		).resolves.toMatchObject({ status: "finished", sent_count: 3 });
+	});
 });

@@ -1,119 +1,235 @@
-import { Env } from '../types';
-import { migrateLegacyPushCredentials } from './push-credentials';
-import { migrateLegacyBearerTokenStorage } from './token-storage';
-import { migrateLegacyOtpSecrets } from './auth-credentials';
-import { cleanupDashboardAuthRateLimits } from './auth-rate-limit';
+import { Env } from "../types";
+import { migrateLegacyOtpSecrets } from "./auth-credentials";
+import { cleanupDashboardAuthRateLimits } from "./auth-rate-limit";
+import { pruneObservabilityObservations } from "./observability-retention";
+import { migrateLegacyPushCredentials } from "./push-credentials";
+import { migrateLegacyBearerTokenStorage } from "./token-storage";
 
 const EVENT_METRICS = {
-  views: "SUM(CASE WHEN event = 'view' THEN 1 ELSE 0 END)",
-  opens: "SUM(CASE WHEN event = 'open' THEN 1 ELSE 0 END)",
-  installs: "SUM(CASE WHEN event = 'install' THEN 1 ELSE 0 END)",
-  reinstalls: "SUM(CASE WHEN event = 'reinstall' THEN 1 ELSE 0 END)",
-  reactivations: "SUM(CASE WHEN event = 'reactivation' THEN 1 ELSE 0 END)",
-  app_opens: "SUM(CASE WHEN event = 'app_open' THEN 1 ELSE 0 END)",
-  user_referred: "SUM(CASE WHEN event = 'user_referred' THEN 1 ELSE 0 END)",
-  time_spent: "SUM(CASE WHEN event = 'time_spent' THEN COALESCE(engagement_time, 0) ELSE 0 END)",
+	views: "SUM(CASE WHEN event = 'view' THEN 1 ELSE 0 END)",
+	opens: "SUM(CASE WHEN event = 'open' THEN 1 ELSE 0 END)",
+	installs: "SUM(CASE WHEN event = 'install' THEN 1 ELSE 0 END)",
+	reinstalls: "SUM(CASE WHEN event = 'reinstall' THEN 1 ELSE 0 END)",
+	reactivations: "SUM(CASE WHEN event = 'reactivation' THEN 1 ELSE 0 END)",
+	app_opens: "SUM(CASE WHEN event = 'app_open' THEN 1 ELSE 0 END)",
+	user_referred: "SUM(CASE WHEN event = 'user_referred' THEN 1 ELSE 0 END)",
+	time_spent: "SUM(CASE WHEN event = 'time_spent' THEN COALESCE(engagement_time, 0) ELSE 0 END)",
 };
 
 function dateDaysAgo(days: number): string {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() - days);
-  return date.toISOString().slice(0, 10);
+	const date = new Date();
+	date.setUTCDate(date.getUTCDate() - days);
+	return date.toISOString().slice(0, 10);
 }
 
 function recentDates(days: number): string[] {
-  const dates: string[] = [];
-  for (let i = days - 1; i >= 0; i -= 1) dates.push(dateDaysAgo(i));
-  return dates;
+	const dates: string[] = [];
+	for (let i = days - 1; i >= 0; i -= 1) dates.push(dateDaysAgo(i));
+	return dates;
 }
 
-export async function cleanupExpiredMcp(db: D1Database): Promise<{ authorizationCodes: number; tokens: number; clients: number }> {
-  const authorizationCodes = await db.prepare(`
+/**
+ * Half-open UTC day range for sargable `created_at` filters. Every writer of
+ * `events.created_at` stores a UTC timestamp that starts with `YYYY-MM-DD`
+ * (`datetime('now')` or `Date#toISOString()`), so `[day, nextDay)` selects the
+ * same rows as `date(created_at) = day` while letting SQLite use the index.
+ */
+function dayRange(date: string): [string, string] {
+	const next = new Date(`${date}T00:00:00.000Z`);
+	next.setUTCDate(next.getUTCDate() + 1);
+	return [date, next.toISOString().slice(0, 10)];
+}
+
+const DAILY_MAINTENANCE_MARKER_PREFIX = "superboard:maintenance:daily:";
+
+/**
+ * Older days only need recomputing once per UTC day; the scheduled run fires
+ * every few minutes. KV is eventually consistent, so in the worst case the
+ * daily pass runs twice, which is idempotent. Without KV every run is "due",
+ * preserving the previous behaviour.
+ */
+async function dailyMaintenanceDue(env: Env, today: string): Promise<boolean> {
+	try {
+		return !(await env.KV.get(`${DAILY_MAINTENANCE_MARKER_PREFIX}${today}`));
+	} catch {
+		return true;
+	}
+}
+
+async function markDailyMaintenanceDone(env: Env, today: string): Promise<void> {
+	try {
+		await env.KV.put(`${DAILY_MAINTENANCE_MARKER_PREFIX}${today}`, new Date().toISOString(), {
+			expirationTtl: 172_800,
+		});
+	} catch {
+		// Missing KV only means the next run repeats the daily pass.
+	}
+}
+
+/** Rows changed by a cleanup statement; a failed statement counts as zero. */
+async function changedRows(statement: D1PreparedStatement): Promise<number> {
+	const result = await statement.run().catch(() => null);
+	return result?.meta?.changes || 0;
+}
+
+export async function cleanupExpiredMcp(
+	db: D1Database,
+): Promise<{ authorizationCodes: number; tokens: number; clients: number }> {
+	const authorizationCodes = await db
+		.prepare(`
     DELETE FROM mcp_authorization_codes
     WHERE datetime(expires_at) <= datetime('now')
        OR (used_at IS NOT NULL AND datetime(used_at) <= datetime('now', '-1 day'))
-  `).run().catch(() => ({ meta: { changes: 0 } } as any));
+  `)
+		.run()
+		.catch(() => ({ meta: { changes: 0 } }) as any);
 
-  const expiredTokens = await db.prepare(`
+	const expiredTokens = await db
+		.prepare(`
     UPDATE mcp_tokens
     SET revoked_at = COALESCE(revoked_at, datetime('now')), updated_at = datetime('now')
     WHERE revoked_at IS NULL
       AND expires_at IS NOT NULL
       AND datetime(expires_at) <= datetime('now')
-  `).run().catch(() => ({ meta: { changes: 0 } } as any));
+  `)
+		.run()
+		.catch(() => ({ meta: { changes: 0 } }) as any);
 
-  const clients = await db.prepare(`
+	const clients = await db
+		.prepare(`
     DELETE FROM mcp_clients
     WHERE datetime(created_at) <= datetime('now', '-90 days')
       AND id NOT IN (SELECT DISTINCT mcp_client_id FROM mcp_tokens)
       AND id NOT IN (SELECT DISTINCT mcp_client_id FROM mcp_authorization_codes)
-  `).run().catch(() => ({ meta: { changes: 0 } } as any));
+  `)
+		.run()
+		.catch(() => ({ meta: { changes: 0 } }) as any);
 
-  return {
-    authorizationCodes: authorizationCodes.meta?.changes || 0,
-    tokens: expiredTokens.meta?.changes || 0,
-    clients: clients.meta?.changes || 0,
-  };
+	return {
+		authorizationCodes: authorizationCodes.meta?.changes || 0,
+		tokens: expiredTokens.meta?.changes || 0,
+		clients: clients.meta?.changes || 0,
+	};
 }
 
-export async function cleanupOrphanedActions(db: D1Database): Promise<number> {
-  const result = await db.prepare(`
+/**
+ * Stale handled actions are found through `idx_actions_handled_updated_at`.
+ * The orphan sweep has to visit every action (orphans appear when a link or
+ * device is deleted), so scheduled maintenance only runs it once per day via
+ * `includeOrphans: false` on the other runs.
+ */
+export async function cleanupOrphanedActions(
+	db: D1Database,
+	options: { includeOrphans?: boolean } = {},
+): Promise<number> {
+	// Day granularity keeps the comparison valid for both `datetime('now')` and
+	// ISO-8601 values; rows are kept for at most one extra day.
+	const staleBefore = dateDaysAgo(30);
+	let deleted = await changedRows(
+		db
+			.prepare(`
+    DELETE FROM actions
+    WHERE handled = 1 AND updated_at < ?
+  `)
+			.bind(staleBefore),
+	);
+	if (options.includeOrphans === false) return deleted;
+	deleted += await changedRows(
+		db.prepare(`
     DELETE FROM actions
     WHERE NOT EXISTS (SELECT 1 FROM devices d WHERE d.id = actions.device_id)
        OR NOT EXISTS (SELECT 1 FROM links l WHERE l.id = actions.link_id)
-       OR (handled = 1 AND datetime(updated_at) <= datetime('now', '-30 days'))
-  `).run().catch(() => ({ meta: { changes: 0 } } as any));
-  return result.meta?.changes || 0;
+  `),
+	);
+	return deleted;
 }
 
 export async function mergeDuplicateVisitors(db: D1Database): Promise<number> {
-  const groups = await db.prepare(`
+	const groups = await db
+		.prepare(`
     SELECT project_id, device_id, MIN(id) AS keep_id, COUNT(*) AS total
     FROM visitors
     WHERE device_id IS NOT NULL
     GROUP BY project_id, device_id
     HAVING COUNT(*) > 1
     LIMIT 50
-  `).all<{ project_id: string; device_id: number; keep_id: string; total: number }>().catch(() => ({ results: [] }));
+  `)
+		.all<{ project_id: string; device_id: number; keep_id: string; total: number }>()
+		.catch(() => ({ results: [] }));
 
-  let merged = 0;
-  for (const group of groups.results || []) {
-    const duplicates = await db.prepare(`
+	let merged = 0;
+	for (const group of groups.results || []) {
+		const duplicates = await db
+			.prepare(`
       SELECT id FROM visitors
       WHERE project_id = ? AND device_id = ? AND id != ?
-    `).bind(group.project_id, group.device_id, group.keep_id).all<{ id: string }>();
-    for (const duplicate of duplicates.results || []) {
-      await db.prepare('UPDATE notification_messages SET visitor_id = ?, updated_at = datetime("now") WHERE visitor_id = ?')
-        .bind(group.keep_id, duplicate.id).run().catch(() => null);
-      await db.prepare('UPDATE purchase_events SET visitor_id = ?, updated_at = datetime("now") WHERE visitor_id = ?')
-        .bind(group.keep_id, duplicate.id).run().catch(() => null);
-      await db.prepare('DELETE FROM visitors WHERE id = ?').bind(duplicate.id).run().catch(() => null);
-      merged += 1;
-    }
-  }
-  return merged;
+    `)
+			.bind(group.project_id, group.device_id, group.keep_id)
+			.all<{ id: string }>();
+		for (const duplicate of duplicates.results || []) {
+			await db
+				.prepare(
+					'UPDATE notification_messages SET visitor_id = ?, updated_at = datetime("now") WHERE visitor_id = ?',
+				)
+				.bind(group.keep_id, duplicate.id)
+				.run()
+				.catch(() => null);
+			await db
+				.prepare(
+					'UPDATE purchase_events SET visitor_id = ?, updated_at = datetime("now") WHERE visitor_id = ?',
+				)
+				.bind(group.keep_id, duplicate.id)
+				.run()
+				.catch(() => null);
+			await db
+				.prepare("DELETE FROM visitors WHERE id = ?")
+				.bind(duplicate.id)
+				.run()
+				.catch(() => null);
+			merged += 1;
+		}
+	}
+	return merged;
 }
 
 export async function cleanupExpiredDownloads(env: Env): Promise<number> {
-  if (!env.R2) return 0;
-  let deleted = 0;
-  let cursor: string | undefined;
-  do {
-    const listed = await env.R2.list({ cursor, limit: 100 });
-    cursor = listed.truncated ? listed.cursor : undefined;
-    for (const item of listed.objects) {
-      const expiresAt = item.customMetadata?.expiresAt;
-      if (!expiresAt || Date.parse(expiresAt) > Date.now()) continue;
-      await env.R2.delete(item.key);
-      await env.DB.prepare('DELETE FROM downloadable_files WHERE file_key = ?').bind(item.key).run().catch(() => null);
-      deleted += 1;
-    }
-  } while (cursor);
-  return deleted;
+	if (!env.R2) return 0;
+	let deleted = 0;
+	let cursor: string | undefined;
+	do {
+		// Download exports (lib/files.ts) are stored at the bucket root, while
+		// quick-link images and billing exports live under `quick-links/` and
+		// `purchases/`. The delimiter keeps those nested objects out of the scan.
+		// `customMetadata` is only returned when explicitly included.
+		const listed = await env.R2.list({
+			cursor,
+			limit: 100,
+			delimiter: "/",
+			include: ["customMetadata"],
+		});
+		cursor = listed.truncated ? listed.cursor : undefined;
+		const now = Date.now();
+		const expired = listed.objects
+			.filter((item) => {
+				const expiresAt = item.customMetadata?.expiresAt;
+				return expiresAt ? Date.parse(expiresAt) <= now : false;
+			})
+			.map((item) => item.key);
+		if (!expired.length) continue;
+		await env.R2.delete(expired);
+		const placeholders = expired.map(() => "?").join(", ");
+		await env.DB.prepare(`DELETE FROM downloadable_files WHERE file_key IN (${placeholders})`)
+			.bind(...expired)
+			.run()
+			.catch(() => null);
+		deleted += expired.length;
+	} while (cursor);
+	return deleted;
 }
 
 async function backfillVisitorDailyStatistics(db: D1Database, date: string): Promise<number> {
-  const result = await db.prepare(`
+	const result = await db
+		.prepare(`
     INSERT INTO visitor_daily_statistics (
       project_id, visitor_id, date, event_date, platform, invited_by_id,
       views, opens, installs, reinstalls, reactivations, app_opens,
@@ -139,7 +255,7 @@ async function backfillVisitorDailyStatistics(db: D1Database, date: string): Pro
       datetime('now')
     FROM events e
     JOIN visitors v ON v.device_id = e.device_id AND v.project_id = e.project_id
-    WHERE date(e.created_at) = ?
+    WHERE e.created_at >= ? AND e.created_at < ?
     GROUP BY e.project_id, v.id, date(e.created_at), COALESCE(e.platform, 'unknown'), v.inviter_id
     ON CONFLICT(project_id, visitor_id, event_date, platform)
     DO UPDATE SET
@@ -155,12 +271,15 @@ async function backfillVisitorDailyStatistics(db: D1Database, date: string): Pro
       time_spent = excluded.time_spent,
       events = excluded.events,
       updated_at = datetime('now')
-  `).bind(date).run();
-  return result.meta?.changes || 0;
+  `)
+		.bind(...dayRange(date))
+		.run();
+	return result.meta?.changes || 0;
 }
 
 async function backfillLinkDailyStatistics(db: D1Database, date: string): Promise<number> {
-  const result = await db.prepare(`
+	const result = await db
+		.prepare(`
     INSERT INTO link_daily_statistics (
       link_id, project_id, event_date, platform,
       views, opens, installs, reinstalls, reactivations, app_opens,
@@ -186,7 +305,7 @@ async function backfillLinkDailyStatistics(db: D1Database, date: string): Promis
     LEFT JOIN purchase_events pe ON pe.link_id = e.link_id
       AND pe.project_id = e.project_id
       AND date(COALESCE(pe.date, pe.created_at)) = date(e.created_at)
-    WHERE e.link_id IS NOT NULL AND date(e.created_at) = ?
+    WHERE e.link_id IS NOT NULL AND e.created_at >= ? AND e.created_at < ?
     GROUP BY e.link_id, e.project_id, date(e.created_at), COALESCE(e.platform, 'unknown')
     ON CONFLICT(link_id, project_id, event_date, platform)
     DO UPDATE SET
@@ -200,12 +319,15 @@ async function backfillLinkDailyStatistics(db: D1Database, date: string): Promis
       time_spent = excluded.time_spent,
       revenue = excluded.revenue,
       updated_at = datetime('now')
-  `).bind(date).run();
-  return result.meta?.changes || 0;
+  `)
+		.bind(...dayRange(date))
+		.run();
+	return result.meta?.changes || 0;
 }
 
 async function backfillProjectDailyActiveUsers(db: D1Database, date: string): Promise<number> {
-  const result = await db.prepare(`
+	const result = await db
+		.prepare(`
     INSERT INTO project_daily_active_users (
       project_id, date, event_date, platform, active_users, new_users, returning_users, created_at, updated_at
     )
@@ -224,8 +346,8 @@ async function backfillProjectDailyActiveUsers(db: D1Database, date: string): Pr
       ON previous.project_id = vds.project_id
       AND previous.platform = vds.platform
       AND previous.visitor_id = vds.visitor_id
-      AND date(previous.event_date) < date(vds.event_date)
-    WHERE date(vds.event_date) = ?
+      AND previous.event_date < vds.event_date
+    WHERE vds.event_date = ?
     GROUP BY vds.project_id, vds.event_date, COALESCE(vds.platform, 'unknown')
     ON CONFLICT(project_id, event_date, platform)
     DO UPDATE SET
@@ -234,12 +356,15 @@ async function backfillProjectDailyActiveUsers(db: D1Database, date: string): Pr
       new_users = excluded.new_users,
       returning_users = excluded.returning_users,
       updated_at = datetime('now')
-  `).bind(date).run();
-  return result.meta?.changes || 0;
+  `)
+		.bind(date)
+		.run();
+	return result.meta?.changes || 0;
 }
 
 async function backfillDailyProjectMetrics(db: D1Database, date: string): Promise<number> {
-  const result = await db.prepare(`
+	const result = await db
+		.prepare(`
     INSERT INTO daily_project_metrics (
       project_id, event_date, platform,
       views, link_views, installs, reinstalls, opens, app_opens,
@@ -282,7 +407,7 @@ async function backfillDailyProjectMetrics(db: D1Database, date: string): Promis
         SUM(CASE WHEN event IN ('install', 'reinstall') AND link_id IS NOT NULL THEN 1 ELSE 0 END) AS link_installs,
         ${EVENT_METRICS.user_referred} AS referred_users
       FROM events
-      WHERE date(created_at) = ?
+      WHERE created_at >= ? AND created_at < ?
       GROUP BY project_id, date(created_at), COALESCE(platform, 'unknown')
     ) events
     LEFT JOIN project_daily_active_users dau
@@ -323,45 +448,74 @@ async function backfillDailyProjectMetrics(db: D1Database, date: string): Promis
       cancellations = excluded.cancellations,
       first_time_purchases = excluded.first_time_purchases,
       updated_at = datetime('now')
-  `).bind(date, date).run();
-  return result.meta?.changes || 0;
+  `)
+		.bind(...dayRange(date), date)
+		.run();
+	return result.meta?.changes || 0;
 }
 
-export async function runMaintenance(env: Env, days = 3) {
-  const summary = {
-    dates: recentDates(days),
-    expiredDownloadsDeleted: await cleanupExpiredDownloads(env),
-    expiredMcp: await cleanupExpiredMcp(env.DB),
-    messagingRealtimeTicketsDeleted: await cleanupMessagingRealtimeTickets(env.DB),
-    orphanedActionsDeleted: await cleanupOrphanedActions(env.DB),
-    duplicateVisitorsMerged: await mergeDuplicateVisitors(env.DB),
-    pushCredentialsMigrated: await migrateLegacyPushCredentials(env),
-    bearerTokensMigrated: await migrateLegacyBearerTokenStorage(env),
-    otpSecretsMigrated: await migrateLegacyOtpSecrets(env),
-    authRateLimitKeysDeleted: await cleanupDashboardAuthRateLimits(env.DB),
-    visitorDailyRows: 0,
-    linkDailyRows: 0,
-    projectActiveUserRows: 0,
-    projectMetricRows: 0,
-  };
+type RunMaintenanceOptions = {
+	/**
+	 * Scheduled runs: aggregate only today on every run (plus yesterday during
+	 * the first UTC hour) and recompute the older days, plus the full
+	 * orphaned-action sweep, once per UTC day from 01:00.
+	 * Explicit admin/automation runs leave this off and recompute every day.
+	 */
+	incremental?: boolean;
+};
 
-  for (const date of summary.dates) {
-    summary.visitorDailyRows += await backfillVisitorDailyStatistics(env.DB, date);
-    summary.linkDailyRows += await backfillLinkDailyStatistics(env.DB, date);
-    summary.projectActiveUserRows += await backfillProjectDailyActiveUsers(env.DB, date);
-    summary.projectMetricRows += await backfillDailyProjectMetrics(env.DB, date);
-  }
+function incrementalDates(allDates: string[], now: Date): string[] {
+	// During the first UTC hour yesterday keeps receiving late events, so it is
+	// refreshed on every run until the daily pass finalises it.
+	return now.getUTCHours() === 0 ? allDates.slice(-2) : allDates.slice(-1);
+}
 
-  return summary;
+export async function runMaintenance(env: Env, days = 3, options: RunMaintenanceOptions = {}) {
+	const now = new Date();
+	const allDates = recentDates(days);
+	const today = allDates[allDates.length - 1];
+	// The daily pass waits for 01:00 UTC so yesterday's late events are included.
+	const dailyPass =
+		!options.incremental || (now.getUTCHours() >= 1 && (await dailyMaintenanceDue(env, today)));
+	const summary = {
+		dates: dailyPass ? allDates : incrementalDates(allDates, now),
+		dailyPass,
+		expiredDownloadsDeleted: await cleanupExpiredDownloads(env),
+		expiredMcp: await cleanupExpiredMcp(env.DB),
+		messagingRealtimeTicketsDeleted: await cleanupMessagingRealtimeTickets(env.DB),
+		orphanedActionsDeleted: await cleanupOrphanedActions(env.DB, { includeOrphans: dailyPass }),
+		duplicateVisitorsMerged: await mergeDuplicateVisitors(env.DB),
+		pushCredentialsMigrated: await migrateLegacyPushCredentials(env),
+		bearerTokensMigrated: await migrateLegacyBearerTokenStorage(env),
+		otpSecretsMigrated: await migrateLegacyOtpSecrets(env),
+		authRateLimitKeysDeleted: await cleanupDashboardAuthRateLimits(env.DB),
+		observabilityObservationsDeleted: dailyPass ? await pruneObservabilityObservations(env.DB) : 0,
+		visitorDailyRows: 0,
+		linkDailyRows: 0,
+		projectActiveUserRows: 0,
+		projectMetricRows: 0,
+	};
+
+	for (const date of summary.dates) {
+		summary.visitorDailyRows += await backfillVisitorDailyStatistics(env.DB, date);
+		summary.linkDailyRows += await backfillLinkDailyStatistics(env.DB, date);
+		summary.projectActiveUserRows += await backfillProjectDailyActiveUsers(env.DB, date);
+		summary.projectMetricRows += await backfillDailyProjectMetrics(env.DB, date);
+	}
+
+	if (options.incremental && dailyPass) await markDailyMaintenanceDone(env, today);
+
+	return summary;
 }
 
 export async function cleanupMessagingRealtimeTickets(db: D1Database) {
-  const result = await db.prepare(`
+	const result = await db
+		.prepare(`
     DELETE FROM messaging_realtime_tickets
     WHERE expires_at <= ? OR (consumed_at IS NOT NULL AND consumed_at <= ?)
-  `).bind(
-    new Date().toISOString(),
-    new Date(Date.now() - 86_400_000).toISOString(),
-  ).run().catch(() => ({ meta: { changes: 0 } } as D1Result));
-  return Number(result.meta?.changes || 0);
+  `)
+		.bind(new Date().toISOString(), new Date(Date.now() - 86_400_000).toISOString())
+		.run()
+		.catch(() => ({ meta: { changes: 0 } }) as D1Result);
+	return Number(result.meta?.changes || 0);
 }

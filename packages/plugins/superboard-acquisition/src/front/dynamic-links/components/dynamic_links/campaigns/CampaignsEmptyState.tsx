@@ -4,6 +4,8 @@ import { cn } from "@superboard/front-ui/lib/utils.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Plus, FolderOpen } from "lucide-react";
 
+import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
+
 const CampaignsEmptyState = ({
 	onCreateCampaign,
 	isArchived,
@@ -11,6 +13,7 @@ const CampaignsEmptyState = ({
 	onCreateCampaign?: () => void;
 	isArchived?: boolean;
 }) => {
+	const { tr } = useFlowI18n();
 	return (
 		<div
 			role="status"
@@ -22,7 +25,7 @@ const CampaignsEmptyState = ({
 			</div>
 
 			<h3 className="text-sm font-semibold text-foreground text-center mb-2">
-				{isArchived ? "No archived campaigns" : "No campaigns yet"}
+				{tr(isArchived ? "No archived campaigns" : "No campaigns yet")}
 			</h3>
 
 			<p
@@ -31,15 +34,17 @@ const CampaignsEmptyState = ({
 					!isArchived && "mb-6",
 				)}
 			>
-				{isArchived
-					? "Campaigns you archive will appear here. Archived campaigns keep their historical data but their links are no longer grouped."
-					: "A campaign is a collection of links grouped under a single marketing objective. Add links to track their combined performance across channels and audiences."}
+				{tr(
+					isArchived
+						? "Campaigns you archive will appear here. Archived campaigns keep their historical data but their links are no longer grouped."
+						: "A campaign is a collection of links grouped under a single marketing objective. Add links to track their combined performance across channels and audiences.",
+				)}
 			</p>
 
 			{!isArchived && onCreateCampaign && (
-				<Button className="pl-3 pr-4" onClick={onCreateCampaign}>
+				<Button className="ps-3 pe-4" onClick={onCreateCampaign}>
 					<Plus className="h-4 w-4" />
-					Create Campaign
+					{tr("Create Campaign")}
 				</Button>
 			)}
 		</div>

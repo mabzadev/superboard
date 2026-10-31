@@ -7,9 +7,13 @@ export {
 	Circle,
 	CreditCard,
 	Database,
+	Download,
+	History,
 	House,
 	MessagesSquare,
+	Search,
 	Settings2,
 	Users,
 	Workflow,
+	Zap,
 } from "lucide-react";

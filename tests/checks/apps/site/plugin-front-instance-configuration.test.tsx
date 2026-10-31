@@ -5,10 +5,11 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
-import InstanceConfiguration from "../../../../packages/plugins/superboard-core/src/front/settings/InstanceConfiguration.js";
+import EnvironmentSettings from "../../../../packages/plugins/superboard-core/src/front/settings/EnvironmentSettings.js";
 import { SectionNavigationProvider } from "../../../../packages/supbrd-front-ui/src/section-navigation.js";
 
 test("the French settings view follows configuration returned by the running API", async () => {
+	window.history.replaceState({}, "", "/core/settings?tab=infrastructure");
 	let configuration: DeploymentConfiguration = {
 		schemaVersion: 1,
 		target: "mabza-development",
@@ -55,7 +56,7 @@ test("the French settings view follows configuration returned by the running API
 				<QueryClientProvider client={client}>
 					<FrontContextProvider
 						value={{
-							path: "/project-settings",
+							path: "/core/settings",
 							parameters: {},
 							locale: "fr",
 							instanceId: "test-instance",
@@ -73,7 +74,7 @@ test("the French settings view follows configuration returned by the running API
 								</nav>
 							}
 						>
-							<InstanceConfiguration />
+							<EnvironmentSettings />
 						</SectionNavigationProvider>
 					</FrontContextProvider>
 				</QueryClientProvider>,
@@ -82,7 +83,11 @@ test("the French settings view follows configuration returned by the running API
 		await vi.waitFor(() => {
 			expect(container.textContent).toContain("https://board.mabza.dev/mcp");
 		});
-		expect(container.querySelector("h1")?.textContent).toBe("Configuration de l’instance");
+		expect(container.querySelectorAll("h1")).toHaveLength(1);
+		expect(container.querySelector("h1")?.textContent).toBe("Paramètres de l’environnement");
+		expect(container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe(
+			"Infrastructure",
+		);
 		const navigation = container.querySelector('nav[aria-label="Configuration"]');
 		expect(navigation?.querySelector('a[href="/app/android-setup"]')).not.toBeNull();
 		expect(navigation?.querySelector('a[href="/app/ios-setup"]')).not.toBeNull();
@@ -117,5 +122,6 @@ test("the French settings view follows configuration returned by the running API
 		client.clear();
 		container.remove();
 		vi.unstubAllGlobals();
+		window.history.replaceState({}, "", "/");
 	}
 });

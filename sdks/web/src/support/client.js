@@ -1,3 +1,4 @@
+import { withJitter } from "./backoff.js";
 import { SuperBoardSupportException, isRecord } from "./error.js";
 import { SuperBoardSupportRealtime } from "./realtime.js";
 
@@ -941,8 +942,11 @@ async function sha256Hex(value) {
 }
 
 function delay(milliseconds) {
-	return milliseconds > 0
-		? new Promise((resolve) => setTimeout(resolve, milliseconds))
+	const wait = withJitter(milliseconds);
+	return wait > 0
+		? new Promise((resolve) => {
+				setTimeout(resolve, wait);
+			})
 		: Promise.resolve();
 }
 

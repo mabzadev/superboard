@@ -1,4 +1,4 @@
-import TrackingPageContent from "../components/dynamic_links/tracking/TrackingPageContent.js";
+import DynamicLinksWorkspace from "../components/dynamic_links/DynamicLinksWorkspace.js";
 export default function View() {
-	return <TrackingPageContent />;
+	return <DynamicLinksWorkspace tab="settings" section="tracking" />;
 }

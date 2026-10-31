@@ -7,4 +7,4 @@ export {
 	TableRow,
 	TableCell,
 	TableCaption,
-} from "@superboard/front-ui/ui";
+} from "@superboard/front-ui/ui/table.js";

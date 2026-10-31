@@ -3,12 +3,13 @@ import { Button, Dialog } from "@superboard/front-ui/kumo";
 import { NavigationProvider, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 import { lazy, Suspense, type ComponentType } from "react";
 
+import { authenticationTarget, type AuthenticationView } from "./authentication-navigation.js";
 import { useAuthenticationI18n } from "./AuthenticationTabs.js";
 import IdentityPanel from "./IdentityPanel.js";
 import { OperatorProfile } from "./OperatorProfile.js";
 
 interface Editor {
-	view: "users" | "settings";
+	view: AuthenticationView;
 	tab: string;
 	label: string;
 	edit: ComponentType;
@@ -18,7 +19,7 @@ interface Editor {
 const editors: Record<string, Editor> = {
 	apps: {
 		view: "settings",
-		tab: "apps",
+		tab: "access",
 		label: "apps",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/apps/[id]/page.js")),
@@ -26,7 +27,7 @@ const editors: Record<string, Editor> = {
 	},
 	banners: {
 		view: "settings",
-		tab: "apps",
+		tab: "appearance",
 		label: "banners",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/apps/banners/[id]/page.js")),
@@ -34,7 +35,7 @@ const editors: Record<string, Editor> = {
 	},
 	roles: {
 		view: "settings",
-		tab: "roles",
+		tab: "access",
 		label: "roles",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/roles/[id]/page.js")),
@@ -42,7 +43,7 @@ const editors: Record<string, Editor> = {
 	},
 	scopes: {
 		view: "settings",
-		tab: "permissions",
+		tab: "access",
 		label: "permissions",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/scopes/[id]/page.js")),
@@ -50,7 +51,7 @@ const editors: Record<string, Editor> = {
 	},
 	orgs: {
 		view: "settings",
-		tab: "organizations",
+		tab: "access",
 		label: "organizations",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/orgs/[id]/page.js")),
@@ -66,7 +67,7 @@ const editors: Record<string, Editor> = {
 	},
 	saml: {
 		view: "settings",
-		tab: "login",
+		tab: "sign-in",
 		label: "sso",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/saml/[id]/page.js")),
@@ -74,49 +75,49 @@ const editors: Record<string, Editor> = {
 	},
 	users: {
 		view: "users",
-		tab: "accounts",
-		label: "accounts",
+		tab: "users",
+		label: "directory",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/users/[authId]/page.js")),
 	},
 	email: {
-		view: "settings",
-		tab: "logs",
+		view: "users",
+		tab: "activity",
 		label: "email",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/logs/email/[id]/page.js")),
 	},
 	sms: {
-		view: "settings",
-		tab: "logs",
+		view: "users",
+		tab: "activity",
 		label: "sms",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/logs/sms/[id]/page.js")),
 	},
 	"sign-in": {
-		view: "settings",
-		tab: "logs",
+		view: "users",
+		tab: "activity",
 		label: "sign-in",
 		identity: true,
 		edit: lazy(() => import("./app/(protected)/identity/[lang]/logs/sign-in/[id]/page.js")),
 	},
 	profile: {
 		view: "settings",
-		tab: "security",
+		tab: "sign-in",
 		label: "profile",
 		identity: false,
 		edit: OperatorProfile,
 	},
 	account: {
 		view: "settings",
-		tab: "security",
+		tab: "sign-in",
 		label: "account",
 		identity: false,
 		edit: () => <OperatorProfile security />,
 	},
 };
 
-export default function AuthenticationEditor({ view }: { view: "users" | "settings" }) {
+export default function AuthenticationEditor({ view }: { view: AuthenticationView }) {
 	const search = useSearchParams();
 	const router = useRouter();
 	const { locale, path } = useFrontContext();
@@ -126,10 +127,12 @@ export default function AuthenticationEditor({ view }: { view: "users" | "settin
 	const id = search.get("id") ?? "";
 	const Panel = id === "new" ? editor?.create : editor?.edit;
 	if (!name) return null;
+	const target = authenticationTarget(view, search);
 	const valid =
 		editor &&
 		editor.view === view &&
-		editor.tab === search.get("tab") &&
+		target.view === view &&
+		editor.tab === target.tab &&
 		Panel &&
 		(!editor.identity || (id.length > 0 && id.length <= 512 && !/[\u0000-\u001f]/u.test(id)));
 	const close = () => {

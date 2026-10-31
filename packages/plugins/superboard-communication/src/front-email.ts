@@ -16,22 +16,22 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 	translations: {
 		en: {
 			"superboard-email.menu.group": "Email",
-			"superboard-email.menu.item_0": "Delivery settings",
+			"superboard-email.menu.item_0": "Transactional email",
 		},
 		fr: {
 			"superboard-email.menu.group": "E-mail",
-			"superboard-email.menu.item_0": "Paramètres de livraison",
+			"superboard-email.menu.item_0": "E-mails transactionnels",
 		},
 	},
 	surfaces: [
 		{
 			path_pattern: "/communication/email",
 			navigation: navigation("superboard-email.menu.item_0", 0),
-			title: "Email delivery",
+			title: "Transactional email",
 		},
 		{
 			path_pattern: "/system/email",
-			title: "Email delivery",
+			title: "Transactional email",
 		},
 	],
 });

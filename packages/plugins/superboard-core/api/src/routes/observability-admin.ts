@@ -10,6 +10,7 @@ import { Hono, type Context } from "hono";
 import { z } from "zod";
 
 import { getRequestAuthContext } from "../lib/auth.js";
+import { OBSERVATION_RETENTION_MS } from "../lib/observability-retention.js";
 import type { Env } from "../types.js";
 
 const pluginId = "superboard-observability";
@@ -26,6 +27,7 @@ const observation = z.object({
 	wall_ms: z.number().finite().nonnegative(),
 	observed_at: z.string().datetime(),
 });
+const observationBatch = z.object({ observations: z.array(observation).min(1).max(100) });
 type Incident = {
 	incident_id: string;
 	status: string;
@@ -48,75 +50,98 @@ export async function receiveObservabilityObservation(
 			return fail(403, "OBSERVABILITY_PRODUCER_FORBIDDEN");
 		if (!(await verifyPluginTaskRequest(c.req.raw, c.env.OBSERVABILITY_INTERNAL_TOKEN ?? "")))
 			return fail(401, "OBSERVABILITY_SIGNATURE_INVALID");
-		const value = observation.parse(await readJsonObjectLimited(c.req.raw, 16384));
-		if (value.instance_id !== c.env.SUPERBOARD_INSTANCE_ID)
-			return fail(403, "OBSERVABILITY_INSTANCE_FORBIDDEN");
-		if (Math.abs(Date.now() - Date.parse(value.observed_at)) > 86400000)
-			return fail(422, "OBSERVABILITY_TIMESTAMP_INVALID");
+		const body = await readJsonObjectLimited(c.req.raw, 16384);
+		const batched = Array.isArray(body.observations);
+		const values = batched ? observationBatch.parse(body).observations : [observation.parse(body)];
+		for (const value of values) {
+			if (value.instance_id !== c.env.SUPERBOARD_INSTANCE_ID)
+				return fail(403, "OBSERVABILITY_INSTANCE_FORBIDDEN");
+			if (Math.abs(Date.now() - Date.parse(value.observed_at)) > 86400000)
+				return fail(422, "OBSERVABILITY_TIMESTAMP_INVALID");
+		}
 		const admitted = await runPluginTask(
 			c.env,
 			pluginId,
-			{ kind: "runtime", task_id: `observation:${value.observation_id}`, duration_ms: 30000 },
+			{
+				kind: "runtime",
+				task_id: `observation:${values[0]?.observation_id}`,
+				duration_ms: 30000,
+			},
 			async () => {
-				const failed =
-					value.exceptions > 0 ||
-					value.status >= 500 ||
-					!["ok", "canceled"].includes(value.outcome);
-				const incidentId = failed
-					? await hash(
-							JSON.stringify([value.service, value.event_type, value.outcome, value.status]),
-						)
-					: null;
 				const statements: D1PreparedStatement[] = [];
-				if (incidentId)
-					statements.push(
-						c.env.DB.prepare(`INSERT INTO observability_incidents(instance_id,incident_id,service,event_type,outcome,http_status,status,occurrences,first_observed_at,last_observed_at)
-				SELECT ?,?,?,?,?,?,'open',1,?,? WHERE NOT EXISTS (SELECT 1 FROM observability_observations WHERE instance_id=? AND observation_id=?)
-				ON CONFLICT(instance_id,incident_id) DO UPDATE SET occurrences=observability_incidents.occurrences+1,
-				first_observed_at=MIN(observability_incidents.first_observed_at,excluded.first_observed_at),last_observed_at=MAX(observability_incidents.last_observed_at,excluded.last_observed_at),
-				status=CASE WHEN observability_incidents.status='resolved' AND excluded.last_observed_at>observability_incidents.resolved_at THEN 'open' ELSE observability_incidents.status END`).bind(
-							value.instance_id,
-							incidentId,
-							value.service,
-							value.event_type,
-							value.outcome,
-							value.status,
-							value.observed_at,
-							value.observed_at,
-							value.instance_id,
-							value.observation_id,
-						),
-					);
-				statements.push(
-					c.env.DB.prepare(
-						"INSERT OR IGNORE INTO observability_observations(instance_id,observation_id,service,event_type,outcome,http_status,exceptions,cpu_ms,wall_ms,observed_at,incident_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-					).bind(
-						value.instance_id,
-						value.observation_id,
-						value.service,
-						value.event_type,
-						value.outcome,
-						value.status,
-						value.exceptions,
-						value.cpu_ms,
-						value.wall_ms,
-						value.observed_at,
-						incidentId,
-					),
-				);
-				statements.push(
-					c.env.DB.prepare(
-						"INSERT OR IGNORE INTO observability_observation_details(instance_id,observation_id,truncated) VALUES (?,?,?)",
-					).bind(value.instance_id, value.observation_id, value.truncated ? 1 : 0),
-				);
+				const results: Array<{ observation_id: string; incident_id: string | null }> = [];
+				for (const value of values) {
+					const incidentId = await observationStatements(c.env.DB, value, statements);
+					results.push({ observation_id: value.observation_id, incident_id: incidentId });
+				}
 				await c.env.DB.batch(statements);
-				return json({ observation_id: value.observation_id, incident_id: incidentId }, 201);
+				return json(batched ? { observations: results } : results[0], 201);
 			},
 		);
 		return admitted.ran ? admitted.value : fail(404, "PLUGIN_NOT_ACTIVE");
 	} catch (error) {
 		return failure(error);
 	}
+}
+
+async function observationStatements(
+	db: D1Database,
+	value: z.infer<typeof observation>,
+	statements: D1PreparedStatement[],
+): Promise<string | null> {
+	const failed =
+		value.exceptions > 0 || value.status >= 500 || !["ok", "canceled"].includes(value.outcome);
+	const incidentId = failed
+		? await hash(JSON.stringify([value.service, value.event_type, value.outcome, value.status]))
+		: null;
+	if (incidentId)
+		statements.push(
+			db
+				.prepare(`INSERT INTO observability_incidents(instance_id,incident_id,service,event_type,outcome,http_status,status,occurrences,first_observed_at,last_observed_at)
+				SELECT ?,?,?,?,?,?,'open',1,?,? WHERE NOT EXISTS (SELECT 1 FROM observability_observations WHERE instance_id=? AND observation_id=?)
+				ON CONFLICT(instance_id,incident_id) DO UPDATE SET occurrences=observability_incidents.occurrences+1,
+				first_observed_at=MIN(observability_incidents.first_observed_at,excluded.first_observed_at),last_observed_at=MAX(observability_incidents.last_observed_at,excluded.last_observed_at),
+				status=CASE WHEN observability_incidents.status='resolved' AND excluded.last_observed_at>observability_incidents.resolved_at THEN 'open' ELSE observability_incidents.status END`)
+				.bind(
+					value.instance_id,
+					incidentId,
+					value.service,
+					value.event_type,
+					value.outcome,
+					value.status,
+					value.observed_at,
+					value.observed_at,
+					value.instance_id,
+					value.observation_id,
+				),
+		);
+	statements.push(
+		db
+			.prepare(
+				"INSERT OR IGNORE INTO observability_observations(instance_id,observation_id,service,event_type,outcome,http_status,exceptions,cpu_ms,wall_ms,observed_at,incident_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+			)
+			.bind(
+				value.instance_id,
+				value.observation_id,
+				value.service,
+				value.event_type,
+				value.outcome,
+				value.status,
+				value.exceptions,
+				value.cpu_ms,
+				value.wall_ms,
+				value.observed_at,
+				incidentId,
+			),
+	);
+	statements.push(
+		db
+			.prepare(
+				"INSERT OR IGNORE INTO observability_observation_details(instance_id,observation_id,truncated) VALUES (?,?,?)",
+			)
+			.bind(value.instance_id, value.observation_id, value.truncated ? 1 : 0),
+	);
+	return incidentId;
 }
 
 export async function readObservabilitySummary(c: Context<{ Bindings: Env }>): Promise<Response> {
@@ -237,9 +262,9 @@ observabilityAdmin.defineRoute({ id: "api:observability:service-health" }).get(
 	"/service-health",
 	operatorAction(async (c, { instance }) => {
 		const rows = await c.env.DB.prepare(
-			"SELECT service,outcome,http_status,exceptions,observed_at FROM (SELECT service,outcome,http_status,exceptions,observed_at,ROW_NUMBER() OVER (PARTITION BY service ORDER BY observed_at DESC,observation_id DESC) AS position FROM observability_observations WHERE instance_id=?) WHERE position=1 ORDER BY service LIMIT 1000",
+			"SELECT service,outcome,http_status,exceptions,observed_at FROM (SELECT service,outcome,http_status,exceptions,observed_at,ROW_NUMBER() OVER (PARTITION BY service ORDER BY observed_at DESC,observation_id DESC) AS position FROM observability_observations WHERE instance_id=? AND observed_at>=?) WHERE position=1 ORDER BY service LIMIT 1000",
 		)
-			.bind(instance)
+			.bind(instance, new Date(Date.now() - OBSERVATION_RETENTION_MS).toISOString())
 			.all<{
 				service: string;
 				outcome: string;

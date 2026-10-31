@@ -1,7 +1,6 @@
+# Fast local checks only. Typecheck, the full test suite and plugin regressions
+# run in CI (.github/workflows/quality.yml, plugin-regressions.yml) and gate deployments.
 pnpm run check:front-menu
-pnpm run test:plugins:regression
 pnpm exec lint-staged
 pnpm run lint:quick
 gitleaks git . --staged --no-banner --redact
-pnpm run typecheck
-pnpm run test

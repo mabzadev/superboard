@@ -1,5 +1,6 @@
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { Button, Checkbox, Input, InputArea, Loader, Select } from "@superboard/front-ui/kumo";
+import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 
@@ -148,7 +149,7 @@ function InAppItems({ project }: { project: string }) {
 							{t("Back to list")}
 						</Button>
 					)}
-					<h1 className="ds-page-title">{selected?.title ?? t("In-app messages")}</h1>
+					<h1 className="ds-page-title">{selected?.title ?? t("In-app & Push")}</h1>
 					<p className="ds-page-description">
 						{t(
 							itemId
@@ -168,6 +169,7 @@ function InAppItems({ project }: { project: string }) {
 					</Button>
 				)}
 			</header>
+			<SectionNavigation />
 			{error && (
 				<div role="alert">
 					{error} <Button onClick={() => void load()}>{t("Retry")}</Button>
@@ -450,7 +452,15 @@ function InAppItems({ project }: { project: string }) {
 								</span>
 							</article>
 						))}
-						{!items.length && <p className="p-6 text-kumo-subtle">{t("No messages yet")}</p>}
+						{!items.length && (
+							<p className="p-6 text-kumo-subtle">
+								{t(
+									archived
+										? "No archived messages."
+										: "No messages yet. Add a message shown inside your app, optionally sent as a push notification.",
+								)}
+							</p>
+						)}
 					</div>
 					{pages > 1 && (
 						<div className="flex gap-2">

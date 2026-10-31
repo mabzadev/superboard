@@ -85,7 +85,8 @@ To verify the checked-in tree without network access or source clones:
 npm --prefix sdks/flows run check:import
 ```
 
-Add `--verify-sources` and both source arguments to verify the source hashes as well. Product docs,
-assets, examples, public types, constants, icons and UI primitives under `upstream/reference` and
+Add `--verify-sources` and both source arguments to verify the source hashes as well. Product docs
+content, public types, constants, icons and UI primitives under `upstream/reference` and
 `upstream/product` are reference inputs for SuperBoard. They are deliberately outside the runtime
-workspace and are never deployed as a second dashboard.
+workspace and are never deployed as a second dashboard. Documentation images and the upstream
+example/template applications are not imported; consult them at the pinned upstream commits.

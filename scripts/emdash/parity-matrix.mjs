@@ -13,9 +13,10 @@ const topologyPath = join(root, "scripts/config/emdash-plugin-topology.json");
 const parityReleasePath = join(root, "scripts/config/superboard-parity-release.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "scripts/config/superboard-front-bundle.json");
-const manifestMigrationPath = join(root, "apps/site/migrations/0058_plugin_manifest_refresh.sql");
+const manifestMigrationPath = join(root, "apps/site/migrations/0059_plugin_manifest_refresh.sql");
 const compatibilityPath = join(root, "scripts/config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0058_plugin_manifest_refresh.sql"),
 	join(root, "apps/site/migrations/0057_authentication_editors.sql"),
 	join(root, "apps/site/migrations/0056_authentication_tabs.sql"),
 	join(root, "apps/site/migrations/0055_core_sdk_collection.sql"),
@@ -1233,6 +1234,7 @@ function buildFrontBundleReceipt() {
 		join(root, "apps/site/src/lib/core-front-contract.ts"),
 		join(root, "apps/site/src/lib/front-release-composer.ts"),
 		join(root, "apps/site/src/lib/native-front-plugins.ts"),
+		join(root, "apps/site/src/lib/native-front-renderers.ts"),
 		join(root, "apps/site/src/lib/native-front-presentation.ts"),
 		join(root, "apps/site/src/lib/user-front-catalogs.ts"),
 		join(root, "apps/site/src/lib/user-front-release.ts"),

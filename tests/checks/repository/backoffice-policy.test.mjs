@@ -108,7 +108,9 @@ test("runtime and plugin Front do not expose legacy SuperBoard SaaS controls", (
 		"packages/plugins/superboard-core/api/src/routes/redirect.ts",
 		"packages/supbrd-front-ui/src/shared/lib/config.ts",
 		"packages/supbrd-front-ui/src/shared/lib/queryKeys.ts",
-		"packages/plugins/superboard-core/src/front/settings/app/(protected)/project-settings/page.tsx",
+		"packages/plugins/superboard-core/src/front/settings/EnvironmentSettings.tsx",
+		"packages/plugins/superboard-core/src/front/settings/components/settings/GeneralSection.tsx",
+		"packages/plugins/superboard-core/src/front/settings/components/settings/UsageSection.tsx",
 	];
 	const forbidden = [
 		"SUPERBOARD_ACCESS_MODE",

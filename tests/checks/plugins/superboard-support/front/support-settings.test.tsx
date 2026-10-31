@@ -3,10 +3,6 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { render, screen, waitFor } from "../../../packages/supbrd-front-ui/render.js";
 
-vi.mock("@superboard/front-ui/plugin-configuration-tab", () => ({
-	PluginConfigurationTab: () => <div data-testid="plugin-config-tab">Plugin configuration</div>,
-}));
-
 vi.mock(
 	"../../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js",
 	() => ({
@@ -118,13 +114,13 @@ describe("SupportSettingsPage", () => {
 		await waitFor(() =>
 			expect(screen.getByRole("button", { name: "Save preferences" })).toBeEnabled(),
 		);
-		await user.click(screen.getByRole("tab", { name: "Configuration" }));
-		expect(new URL(window.location.href).searchParams.get("tab")).toBe("configuration");
+		await user.click(screen.getByRole("tab", { name: "Operations" }));
+		expect(new URL(window.location.href).searchParams.get("tab")).toBe("operations");
 		expect(new URL(window.location.href).searchParams.get("lang")).toBe("fr");
 	});
 
-	it("keeps unsupported tab names from hiding all settings", () => {
-		window.history.replaceState(null, "", "/support/settings?tab=missing");
+	it.each(["missing", "configuration"])("keeps the %s tab name from hiding all settings", (tab) => {
+		window.history.replaceState(null, "", `/support/settings?tab=${tab}`);
 		render(<SupportSettingsPage />);
 		expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
 	});
@@ -149,7 +145,7 @@ describe("SupportSettingsPage", () => {
 		await waitFor(() => expect(services.getOperations).toHaveBeenCalled());
 	});
 
-	it("renders settings with all tabs including Configuration", async () => {
+	it("renders settings tabs and points diagnostics to Plugins", async () => {
 		render(<SupportSettingsPage />);
 
 		expect(screen.getByText("Settings")).toBeInTheDocument();
@@ -159,27 +155,16 @@ describe("SupportSettingsPage", () => {
 			"Operations",
 			"Agents and teams",
 			"Contacts",
-			"Shared automations",
 			"Integrations",
 			"AI assistant",
-			"Configuration",
 		]);
 		expect(screen.getByRole("tab", { name: "General" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Notifications" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Operations" })).toBeInTheDocument();
-		expect(screen.getByRole("tab", { name: "Configuration" })).toBeInTheDocument();
-	});
-
-	it("switches to configuration tab and opens the active View configuration", async () => {
-		const user = userEvent.setup();
-		render(<SupportSettingsPage />);
-
-		const configBtn = screen.getByRole("tab", { name: "Configuration" });
-		await user.click(configBtn);
-
-		await waitFor(() => {
-			expect(screen.getByTestId("plugin-config-tab")).toHaveTextContent("Plugin configuration");
-		});
+		expect(screen.getByRole("link", { name: "Open in Plugins" })).toHaveAttribute(
+			"href",
+			expect.stringMatching(/^\/_emdash\/admin\/plugins-manager\/[^/]+\/configuration$/),
+		);
 	});
 
 	it("renders settings in French", async () => {
@@ -207,12 +192,13 @@ describe("SupportSettingsPage", () => {
 		expect(screen.getByRole("button", { name: "Enregistrer les paramètres" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Notifications" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Opérations" })).toBeInTheDocument();
-		expect(screen.getByRole("tab", { name: "Configuration" })).toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Configuration" })).not.toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Ouvrir dans Plugins" })).toBeInTheDocument();
 	});
 
 	it("renders SupportSettingsPage from support_configuration view", async () => {
 		render(<SupportConfigurationView />);
 
-		expect(screen.getByRole("tab", { name: "Configuration" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "General" })).toBeInTheDocument();
 	});
 });

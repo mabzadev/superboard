@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/ale
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Card } from "@superboard/front-ui/ui/card.js";
+import { Input } from "@superboard/front-ui/ui/input.js";
 import {
 	CircleUserRound,
 	Download,
@@ -22,6 +23,7 @@ import {
 	RefreshCw,
 	RotateCcw,
 	Save,
+	Search,
 	Send,
 	ShieldCheck,
 	Trash2,
@@ -30,7 +32,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { inboxDeepLink } from "../../api/support/inboxDeepLink.js";
+import { inboxDeepLink, inboxItemMatchesQuery } from "../../api/support/inboxDeepLink.js";
 import {
 	getInboxMessages,
 	getUnifiedInboxItems,
@@ -52,6 +54,7 @@ import {
 } from "../../api/support/inboxService.js";
 import {
 	executeSupportMacro,
+	getSupportContacts,
 	getSupportDraft,
 	saveSupportDraft,
 } from "../../api/support/operationsService.js";
@@ -60,6 +63,7 @@ import {
 	listSupportMemberships,
 	listSupportTeams,
 } from "../../api/support/workforceService.js";
+import { useSupportI18n } from "../../i18n.js";
 
 const dateTime = (value?: string | null) =>
 	value
@@ -113,6 +117,21 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 		inboxes: Array<{ value: string; label: string }>;
 	}>({ agents: [], teams: [], inboxes: [] });
 	const [selectedMacroId, setSelectedMacroId] = useState("");
+	const { t } = useSupportI18n();
+	// `?q=` narrows the list to one customer (email, user id or conversation id).
+	const [query, setQuery] = useState(() =>
+		typeof window === "undefined" ? "" : inboxDeepLink(window.location.search).query,
+	);
+	const [queryDraft, setQueryDraft] = useState(query);
+	// User ids of the Support contacts matching the search, kept with the search they answer.
+	const [contactMatch, setContactMatch] = useState<{
+		query: string;
+		references: ReadonlySet<string>;
+	}>(() => ({ query: "", references: new Set() }));
+	const customerReferences = useMemo(
+		() => (contactMatch.query === query ? contactMatch.references : new Set<string>()),
+		[contactMatch, query],
+	);
 	const typingTimer = useRef<number | null>(null);
 	const customerTypingTimer = useRef<number | null>(null);
 	const draftTimer = useRef<number | null>(null);
@@ -135,7 +154,25 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 		id: string;
 		body: string;
 	} | null>(null);
-	const selected = useMemo(() => items.find((item) => item.id === selectedId), [items, selectedId]);
+	const visibleItems = useMemo(
+		() => items.filter((item) => inboxItemMatchesQuery(item, query, customerReferences)),
+		[items, query, customerReferences],
+	);
+	// While searching, the first matching conversation is shown until another one is chosen.
+	const selected = useMemo(
+		() =>
+			visibleItems.find((item) => item.id === selectedId) ?? (query ? visibleItems[0] : undefined),
+		[visibleItems, selectedId, query],
+	);
+	const applyQuery = (value: string) => {
+		const next = value.trim().slice(0, 255);
+		setQueryDraft(next);
+		setQuery(next);
+		const url = new URL(window.location.href);
+		if (next) url.searchParams.set("q", next);
+		else url.searchParams.delete("q");
+		window.history.replaceState(window.history.state, "", url);
+	};
 
 	const loadItems = useCallback(async () => {
 		if (!projectId) return;
@@ -197,6 +234,22 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 		void loadItems();
 	}, [loadItems]);
 	useEffect(() => {
+		// An email resolves to the Support contacts' user ids, which conversations reference.
+		if (!projectId || !query) return;
+		let current = true;
+		getSupportContacts(projectId, query).then(
+			(result) => {
+				if (!current) return;
+				const references = (result.data || []).map((contact) => contact.external_user_id);
+				setContactMatch({ query, references: new Set(references.filter(Boolean)) });
+			},
+			() => undefined,
+		);
+		return () => {
+			current = false;
+		};
+	}, [projectId, query]);
+	useEffect(() => {
 		if (!projectId) {
 			setMacros([]);
 			setCannedResponses([]);
@@ -257,11 +310,18 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 		};
 	}, [projectId, selected?.source_id, selected?.source_type]);
 	useEffect(() => {
-		const timer = window.setInterval(() => {
+		// Polling pauses while the tab is hidden and catches up when it becomes visible.
+		const refresh = () => {
+			if (document.visibilityState === "hidden") return;
 			void loadItems();
 			void loadMessages();
-		}, 60_000);
-		return () => window.clearInterval(timer);
+		};
+		const timer = window.setInterval(refresh, 60_000);
+		document.addEventListener("visibilitychange", refresh);
+		return () => {
+			window.clearInterval(timer);
+			document.removeEventListener("visibilitychange", refresh);
+		};
 	}, [loadItems, loadMessages]);
 	useEffect(() => {
 		messagesEnd.current?.scrollIntoView({ block: "end" });
@@ -509,6 +569,29 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 						</p>
 					</div>
 					<div className="flex flex-wrap gap-2">
+						<form
+							role="search"
+							className="flex gap-2"
+							onSubmit={(event) => {
+								event.preventDefault();
+								applyQuery(queryDraft);
+							}}
+						>
+							<Input
+								type="search"
+								className="w-56"
+								aria-label={t("Search conversations")}
+								placeholder={t("Email, user ID or conversation ID")}
+								value={queryDraft}
+								onChange={(event) => {
+									setQueryDraft(event.target.value);
+									if (!event.target.value) applyQuery("");
+								}}
+							/>
+							<Button type="submit" variant="outline" size="icon" aria-label={t("Search")}>
+								<Search className="h-4 w-4" />
+							</Button>
+						</form>
 						<select
 							aria-label="Filter by source"
 							className="rounded-md border bg-background px-3 text-sm"
@@ -557,11 +640,11 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 				))}
 				<div className="grid min-h-0 flex-1 overflow-hidden rounded-xl border bg-card lg:grid-cols-[380px_1fr]">
 					<aside className="min-h-0 overflow-auto border-r">
-						{items.map((item) => (
+						{visibleItems.map((item) => (
 							<button
 								key={item.id}
 								onClick={() => setSelectedId(item.id)}
-								className={`w-full border-b p-4 text-left transition-colors hover:bg-muted ${selectedId === item.id ? "bg-muted" : ""}`}
+								className={`w-full border-b p-4 text-left transition-colors hover:bg-muted ${selected?.id === item.id ? "bg-muted" : ""}`}
 							>
 								<div className="flex items-center justify-between gap-2">
 									<div className="flex min-w-0 items-center gap-2">
@@ -587,10 +670,12 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 								</div>
 							</button>
 						))}
-						{!items.length && (
+						{!visibleItems.length && (
 							<div className="flex flex-col items-center gap-2 p-10 text-center text-sm text-muted-foreground">
 								<Inbox className="h-8 w-8" />
-								No Inbox items match these filters.
+								{query
+									? t("No conversations match {query}.", { query })
+									: "No Inbox items match these filters."}
 							</div>
 						)}
 					</aside>

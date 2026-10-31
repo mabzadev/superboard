@@ -1,4 +1,6 @@
 import { Button, Checkbox, Dialog, Input, Loader, Select } from "@superboard/front-ui/kumo";
+import { moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
+import { useSearchParams } from "@superboard/front-ui/navigation";
 import {
 	Table as FrontTable,
 	TableHeader as FrontTableHeader,
@@ -7,34 +9,39 @@ import {
 	TableHead as FrontTableHead,
 	TableCell as FrontTableCell,
 } from "@superboard/front-ui/ui/table.js";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
 	createEmailSubscriber,
-	getEmailSubscriberPage,
-	importEmailSubscribers,
 	exportEmailSubscribers,
 	deleteEmailSubscriber,
-	deleteSubscriberList,
-	deleteSubscriberSegment,
-	updateSubscriberList,
-	updateSubscriberSegment,
-	refreshSubscriberSegment,
 	updateEmailSubscriber,
 	getSubscriberLists,
-	getSubscriberSegments,
 	getEmailSubscriberExport,
 	suppressEmailSubscriber,
-	createSubscriberList,
-	createSubscriberSegment,
-	type EmailSubscriber,
 	type SubscriberList,
-	type SubscriberSegment,
 	type SubscriberExport,
 } from "../api/marketing/marketingService.js";
-import { AudienceRules } from "./AudienceRules.js";
-import { parseContactCsv } from "./contact-csv.js";
+import {
+	assignAudienceTags,
+	getAudienceFields,
+	getAudienceTags,
+	getContactPage,
+	type AudienceContact,
+	type AudienceField,
+	type AudienceTag,
+} from "./audience-service.js";
+import { ContactImport } from "./ContactImport.js";
 import { useStudioI18n } from "./i18n.js";
+
+const languageAttributes = [
+	["locale", "Preferred language"],
+	["billing_locale", "Billing language"],
+	["notification_locale", "Notification language"],
+	["marketing_locale", "Marketing language"],
+	["support_locale", "Support language"],
+	["time_zone", "Time zone"],
+] as const;
 
 export function EmailContacts({
 	project,
@@ -45,79 +52,86 @@ export function EmailContacts({
 }) {
 	const { t, locale } = useStudioI18n();
 	const languageNames = new Intl.DisplayNames([locale], { type: "language" });
-	const [contacts, setContacts] = useState<EmailSubscriber[]>([]);
+	const [contacts, setContacts] = useState<AudienceContact[]>([]);
 	const [lists, setLists] = useState<SubscriberList[]>([]);
-	const [segments, setSegments] = useState<SubscriberSegment[]>([]);
-	const [query, setQuery] = useState("");
+	const [tags, setTags] = useState<AudienceTag[]>([]);
+	const [fields, setFields] = useState<AudienceField[]>([]);
+	// `?q=` opens the list already searched, e.g. from the Authentication person sheet.
+	const linkedQuery = useSearchParams().get("q") ?? "";
+	const [query, setQuery] = useState(linkedQuery);
+	const [appliedLinkedQuery, setAppliedLinkedQuery] = useState(linkedQuery);
+	if (linkedQuery !== appliedLinkedQuery) {
+		setAppliedLinkedQuery(linkedQuery);
+		setQuery(linkedQuery);
+	}
 	const [filter, setFilter] = useState("all");
+	const [tagFilter, setTagFilter] = useState("all");
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
-	const [selected, setSelected] = useState<Partial<EmailSubscriber> | null>(null);
+	const [selected, setSelected] = useState<Partial<AudienceContact> | null>(null);
+	const [pendingTags, setPendingTags] = useState<string[]>([]);
+	const [checked, setChecked] = useState<string[]>([]);
+	const [bulkTag, setBulkTag] = useState("");
+	const [detailTag, setDetailTag] = useState("");
 	const [activity, setActivity] = useState<SubscriberExport | null>(null);
-	const [listName, setListName] = useState("");
-	const [segment, setSegment] = useState({
-		name: "",
-		field: "locale",
-		operator: "equals",
-		value: "fr",
-	});
 	const [busy, setBusy] = useState(false);
 	const [hasMore, setHasMore] = useState(false);
-	const [editingList, setEditingList] = useState<string>();
-	const [editingSegment, setEditingSegment] = useState<string>();
-	const [segmentRules, setSegmentRules] = useState<Record<string, unknown>>({
-		mode: "all",
-		conditions: [{ field: "locale", operator: "equals", value: "fr" }],
-	});
-	const [importRows, setImportRows] = useState<Array<Record<string, unknown>>>([]);
+	const [doubleOptIn, setDoubleOptIn] = useState(false);
+	const [importing, setImporting] = useState(false);
 	const [confirmation, setConfirmation] = useState<{
 		name: string;
 		action: () => Promise<unknown>;
 	} | null>(null);
-	const queryRef = useRef({ query, filter });
-	queryRef.current = { query, filter };
-
+	const page = useCallback(
+		(offset: number) =>
+			getContactPage(project, {
+				q: query,
+				offset,
+				listId: filter === "all" ? "" : filter,
+				tagId: tagFilter === "all" ? "" : tagFilter,
+			}),
+		[project, query, filter, tagFilter],
+	);
 	const load = useCallback(async () => {
 		setLoading(true);
 		try {
-			const [people, groups, rules] = await Promise.all([
-				getEmailSubscriberPage(
-					project,
-					queryRef.current.query,
-					0,
-					queryRef.current.filter === "all" ? "" : queryRef.current.filter,
-				),
-				getSubscriberLists(project),
-				getSubscriberSegments(project),
-			]);
+			const [people, groups] = await Promise.all([page(0), getSubscriberLists(project)]);
 			setContacts(people);
 			setHasMore(people.length === 50);
 			setLists(groups);
-			setSegments(rules);
+			setChecked((values) => values.filter((id) => people.some((person) => person.id === id)));
 		} catch {
 			setError(t("Loading failed"));
 		} finally {
 			setLoading(false);
 		}
-	}, [project, t]);
+		// Tags and fields are optional enrichments: the list stays usable without them.
+		const [tagResult, fieldResult] = await Promise.allSettled([
+			getAudienceTags(project),
+			getAudienceFields(project),
+		]);
+		if (tagResult.status === "fulfilled") setTags(tagResult.value);
+		if (fieldResult.status === "fulfilled") setFields(fieldResult.value);
+	}, [project, page, t]);
 	useEffect(() => {
 		const timer = setTimeout(() => void load(), 250);
 		return () => clearTimeout(timer);
-	}, [load, query, filter]);
+	}, [load]);
 	const run = async (action: () => Promise<unknown>) => {
 		setBusy(true);
 		setError("");
 		try {
 			await action();
 			await load();
-		} catch {
-			setError(t("Save failed"));
+		} catch (cause) {
+			setError(moduleErrorMessage(cause, locale) || t("Save failed"));
 		} finally {
 			setBusy(false);
 		}
 	};
+	const tagNames = new Map(tags.map((tag) => [tag.id, tag.name]));
 	const attributes = selected?.attributes ?? {};
-	const updatePreference = (key: string, value: string) =>
+	const updateAttribute = (key: string, value: unknown) =>
 		setSelected((previous) => ({
 			...previous,
 			attributes: { ...previous?.attributes, [key]: value },
@@ -125,13 +139,62 @@ export function EmailContacts({
 	const visible = contacts.filter(
 		(contact) =>
 			`${contact.email} ${contact.name ?? ""}`.toLowerCase().includes(query.toLowerCase()) &&
-			(filter === "all" || contact.list_ids?.includes(filter)),
+			(filter === "all" || contact.list_ids?.includes(filter)) &&
+			(tagFilter === "all" || contact.tag_ids?.includes(tagFilter)),
 	);
+	const allChecked = visible.length > 0 && visible.every((contact) => checked.includes(contact.id));
+	const bulk = (action: "add" | "remove") => {
+		const name = bulkTag.trim();
+		if (!name || !checked.length) return;
+		const existing = tags.find((tag) => tag.name.toLowerCase() === name.toLowerCase());
+		void run(async () => {
+			await assignAudienceTags(project, {
+				subscriber_ids: checked,
+				action,
+				...(existing ? { tag_ids: [existing.id] } : { tag_names: [name] }),
+			});
+			setBulkTag("");
+		}).catch(() => undefined);
+	};
+	const changeContactTag = (action: "add" | "remove", name: string, tagId?: string) => {
+		if (!selected?.id) {
+			setPendingTags((values) =>
+				action === "add"
+					? [...new Set([...values, name])]
+					: values.filter((value) => value !== name),
+			);
+			return;
+		}
+		const id = selected.id;
+		void run(async () => {
+			const result = await assignAudienceTags(project, {
+				subscriber_ids: [id],
+				action,
+				...(tagId ? { tag_ids: [tagId] } : { tag_names: [name] }),
+			});
+			setSelected((previous) =>
+				previous
+					? {
+							...previous,
+							tag_ids:
+								action === "add"
+									? [...new Set([...(previous.tag_ids ?? []), ...result.tag_ids])]
+									: previous.tag_ids?.filter((value) => !result.tag_ids.includes(value)),
+						}
+					: previous,
+			);
+		}).catch(() => undefined);
+	};
 	return (
 		<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
 			<section className="space-y-4">
+				<datalist id="audience-tag-names">
+					{tags.map((tag) => (
+						<option key={tag.id} value={tag.name} />
+					))}
+				</datalist>
 				<div className="flex flex-wrap justify-between gap-3">
-					<div className="flex gap-2">
+					<div className="flex flex-wrap gap-2">
 						<Input
 							placeholder={t("Search contacts")}
 							aria-label={t("Search contacts")}
@@ -143,68 +206,102 @@ export function EmailContacts({
 							value={filter}
 							onValueChange={(value) => value && setFilter(value)}
 							items={{
-								all: t("All"),
+								all: t("All lists"),
 								...Object.fromEntries(lists.map((list) => [list.id, list.name])),
 							}}
 						/>
+						{tags.length > 0 && (
+							<Select
+								aria-label={t("Tags")}
+								value={tagFilter}
+								onValueChange={(value) => {
+									if (value) setTagFilter(value);
+								}}
+								items={{
+									all: t("All tags"),
+									...Object.fromEntries(tags.map((tag) => [tag.id, tag.name])),
+								}}
+							/>
+						)}
 					</div>
-					<Button
-						variant="primary"
-						onClick={() => {
-							setSelected({ email: "", name: "", attributes: {}, list_ids: [] });
-							setActivity(null);
-						}}
-					>
-						{t("Add contact")}
-					</Button>
-				</div>
-				<div className="flex flex-wrap items-end gap-3">
-					<Button
-						onClick={async () => {
-							try {
-								const blob = await exportEmailSubscribers(project);
-								const url = URL.createObjectURL(blob);
-								const link = document.createElement("a");
-								link.href = url;
-								link.download = "contacts.csv";
-								link.click();
-								setTimeout(() => URL.revokeObjectURL(url), 1000);
-							} catch {
-								setError(t("Loading failed"));
-							}
-						}}
-					>
-						{t("Export CSV")}
-					</Button>
-					<Input
-						type="file"
-						accept=".csv,text/csv"
-						label={t("Import CSV")}
-						onChange={async (event) => {
-							const file = event.target.files?.[0];
-							if (!file) return;
-							try {
-								setImportRows(parseContactCsv(await file.text()));
-								setError("");
-							} catch {
-								setError(t("Invalid CSV. Use an email column and at most 1000 contacts."));
-							}
-						}}
-					/>
-					{importRows.length > 0 && (
+					<div className="flex flex-wrap gap-2">
 						<Button
-							disabled={busy}
-							onClick={() =>
-								void run(async () => {
-									await importEmailSubscribers(project, importRows);
-									setImportRows([]);
-								})
-							}
+							onClick={() => {
+								setImporting(true);
+							}}
 						>
-							{t("Import subscribed contacts")} ({importRows.length})
+							{t("Import CSV")}
 						</Button>
-					)}
+						<Button
+							onClick={async () => {
+								try {
+									const blob = await exportEmailSubscribers(project);
+									const url = URL.createObjectURL(blob);
+									const link = document.createElement("a");
+									link.href = url;
+									link.download = "contacts.csv";
+									link.click();
+									setTimeout(() => URL.revokeObjectURL(url), 1000);
+								} catch {
+									setError(t("Loading failed"));
+								}
+							}}
+						>
+							{t("Export CSV")}
+						</Button>
+						<Button
+							variant="primary"
+							onClick={() => {
+								setSelected({ email: "", name: "", attributes: {}, list_ids: [], tag_ids: [] });
+								setPendingTags([]);
+								setActivity(null);
+								setDoubleOptIn(lists.some((list) => list.optin_mode === "double"));
+							}}
+						>
+							{t("Add contact")}
+						</Button>
+					</div>
 				</div>
+				{checked.length > 0 && (
+					<div className="flex flex-wrap items-end gap-2 rounded-lg border border-kumo-line bg-kumo-tint p-3">
+						<p className="me-auto self-center text-sm font-medium">
+							{t("{count} selected", { count: checked.length })}
+						</p>
+						<Input
+							aria-label={t("Tag name")}
+							placeholder={t("Tag name")}
+							list="audience-tag-names"
+							value={bulkTag}
+							onChange={(event) => {
+								setBulkTag(event.target.value);
+							}}
+						/>
+						<Button
+							disabled={busy || !bulkTag.trim()}
+							onClick={() => {
+								bulk("add");
+							}}
+						>
+							{t("Add tag")}
+						</Button>
+						<Button
+							disabled={busy || !bulkTag.trim()}
+							onClick={() => {
+								bulk("remove");
+							}}
+						>
+							{t("Remove tag")}
+						</Button>
+						<Button
+							variant="ghost"
+							onClick={() => {
+								setChecked([]);
+							}}
+						>
+							{t("Clear selection")}
+						</Button>
+					</div>
+				)}
 				{error && (
 					<p role="alert" className="text-kumo-danger">
 						{error}
@@ -217,7 +314,16 @@ export function EmailContacts({
 						<FrontTable className="w-full text-start text-sm">
 							<FrontTableHeader className="bg-kumo-tint">
 								<FrontTableRow>
-									{["Contact", "Language", "Status", "Lists"].map((label) => (
+									<FrontTableHead className="w-10 p-4">
+										<Checkbox
+											aria-label={t("Select all contacts")}
+											checked={allChecked}
+											onCheckedChange={(value) => {
+												setChecked(value ? visible.map((contact) => contact.id) : []);
+											}}
+										/>
+									</FrontTableHead>
+									{["Contact", "Language", "Status", "Lists", "Tags"].map((label) => (
 										<FrontTableHead key={label} className="p-4 text-start font-medium">
 											{t(label)}
 										</FrontTableHead>
@@ -227,6 +333,19 @@ export function EmailContacts({
 							<FrontTableBody>
 								{visible.map((contact) => (
 									<FrontTableRow key={contact.id} className="border-t border-kumo-line">
+										<FrontTableCell className="p-4">
+											<Checkbox
+												aria-label={t("Select {email}", { email: contact.email })}
+												checked={checked.includes(contact.id)}
+												onCheckedChange={(value) => {
+													setChecked((values) =>
+														value
+															? [...values, contact.id]
+															: values.filter((id) => id !== contact.id),
+													);
+												}}
+											/>
+										</FrontTableCell>
 										<FrontTableCell className="p-3">
 											<Button
 												variant="ghost"
@@ -252,11 +371,24 @@ export function EmailContacts({
 										</FrontTableCell>
 										<FrontTableCell>{t(contact.consent_status ?? contact.status)}</FrontTableCell>
 										<FrontTableCell>{contact.list_ids?.length ?? 0}</FrontTableCell>
+										<FrontTableCell className="p-3">
+											<TagChips
+												names={(contact.tag_ids ?? []).map((id) => tagNames.get(id) ?? "")}
+											/>
+										</FrontTableCell>
 									</FrontTableRow>
 								))}
 							</FrontTableBody>
 						</FrontTable>
-						{!visible.length && <p className="p-6 text-kumo-subtle">{t("No matching contacts")}</p>}
+						{!visible.length && (
+							<p className="p-6 text-kumo-subtle">
+								{t(
+									query || filter !== "all" || tagFilter !== "all"
+										? "No matching contacts"
+										: "No contacts yet. Add a contact, import a CSV file or let your application create them.",
+								)}
+							</p>
+						)}
 					</div>
 				)}
 				{hasMore && (
@@ -264,12 +396,7 @@ export function EmailContacts({
 						disabled={busy}
 						onClick={async () => {
 							try {
-								const next = await getEmailSubscriberPage(
-									project,
-									query,
-									contacts.length,
-									filter === "all" ? "" : filter,
-								);
+								const next = await page(contacts.length);
 								setContacts((values) => [...values, ...next]);
 								setHasMore(next.length === 50);
 							} catch {
@@ -280,135 +407,17 @@ export function EmailContacts({
 						{t("Load more")}
 					</Button>
 				)}
-				<div className="grid gap-4 md:grid-cols-2">
-					<div className="space-y-3 rounded-lg border border-kumo-line p-5">
-						<h3 className="font-semibold">{t("Lists")}</h3>
-						{lists.map((list) => (
-							<p key={list.id} className="flex justify-between text-sm">
-								<span>{list.name}</span>
-								<span>
-									{list.subscriber_count ?? 0}
-									<Button
-										size="xs"
-										variant="ghost"
-										onClick={() => {
-											setListName(list.name);
-											setEditingList(list.id);
-										}}
-									>
-										{t("Edit")}
-									</Button>
-									<Button
-										size="xs"
-										variant="ghost"
-										onClick={() =>
-											setConfirmation({
-												name: list.name,
-												action: () => deleteSubscriberList(project, list.id),
-											})
-										}
-									>
-										{t("Delete")}
-									</Button>
-								</span>
-							</p>
-						))}
-						<Input
-							label={t("List name")}
-							value={listName}
-							onChange={(event) => setListName(event.target.value)}
-						/>
-						<Button
-							disabled={!listName.trim() || busy}
-							onClick={() =>
-								void run(async () => {
-									await (editingList
-										? updateSubscriberList(project, editingList, { name: listName })
-										: createSubscriberList(project, {
-												name: listName,
-												visibility: "private",
-												optin_mode: "single",
-											}));
-									setEditingList(undefined);
-									setListName("");
-								})
-							}
-						>
-							{t("Create list")}
-						</Button>
-					</div>
-					<div className="space-y-3 rounded-lg border border-kumo-line p-5">
-						<h3 className="font-semibold">{t("Segments")}</h3>
-						{segments.map((item) => (
-							<p key={item.id} className="flex justify-between text-sm">
-								<span>{item.name}</span>
-								<span>
-									{item.subscriber_count ?? 0}
-									<Button
-										size="xs"
-										variant="ghost"
-										onClick={() => {
-											const condition = (
-												item.rules.conditions as Array<Record<string, unknown>> | undefined
-											)?.[0];
-											setSegment({
-												name: item.name,
-												field: String(condition?.field ?? "locale"),
-												operator: String(condition?.operator ?? "equals"),
-												value: String(condition?.value ?? ""),
-											});
-											setEditingSegment(item.id);
-											setSegmentRules(structuredClone(item.rules));
-										}}
-									>
-										{t("Edit")}
-									</Button>
-									<Button
-										size="xs"
-										variant="ghost"
-										onClick={() => void run(() => refreshSubscriberSegment(project, item.id))}
-									>
-										{t("Refresh")}
-									</Button>
-									<Button
-										size="xs"
-										variant="ghost"
-										onClick={() =>
-											setConfirmation({
-												name: item.name,
-												action: () => deleteSubscriberSegment(project, item.id),
-											})
-										}
-									>
-										{t("Delete")}
-									</Button>
-								</span>
-							</p>
-						))}
-						<Input
-							label={t("Segment name")}
-							value={segment.name}
-							onChange={(event) => setSegment({ ...segment, name: event.target.value })}
-						/>
-						<AudienceRules value={segmentRules} onChange={setSegmentRules} />
-						<Button
-							disabled={!segment.name.trim() || busy}
-							onClick={() =>
-								void run(async () => {
-									const payload = { name: segment.name, rules: segmentRules };
-									if (editingSegment)
-										await updateSubscriberSegment(project, editingSegment, payload);
-									else await createSubscriberSegment(project, payload);
-									setEditingSegment(undefined);
-									setSegment({ ...segment, name: "" });
-								})
-							}
-						>
-							{t("Create segment")}
-						</Button>
-					</div>
-				</div>
 			</section>
+			<ContactImport
+				project={project}
+				open={importing}
+				lists={lists}
+				fields={fields}
+				onClose={() => {
+					setImporting(false);
+				}}
+				onImported={() => void load()}
+			/>
 			<Dialog.Root
 				open={confirmation !== null}
 				onOpenChange={(open) => {
@@ -462,62 +471,124 @@ export function EmailContacts({
 							value={selected.email ?? ""}
 							onChange={(event) => setSelected({ ...selected, email: event.target.value })}
 						/>
-						{(
-							[
-								["locale", "Preferred language"],
-								["billing_locale", "Billing language"],
-								["notification_locale", "Notification language"],
-								["marketing_locale", "Marketing language"],
-								["support_locale", "Support language"],
-								["time_zone", "Time zone"],
-							] as const
-						).map(([key, label]) =>
-							key === "time_zone" ? (
+						<div className="space-y-2">
+							<p className="text-sm font-medium">{t("Tags")}</p>
+							<TagChips
+								names={
+									selected.id
+										? (selected.tag_ids ?? []).map((id) => tagNames.get(id) ?? "")
+										: pendingTags
+								}
+								onRemove={(name) => {
+									changeContactTag("remove", name, tags.find((tag) => tag.name === name)?.id);
+								}}
+								removeLabel={(name) => t("Remove tag {tag}", { tag: name })}
+							/>
+							<form
+								className="flex items-end gap-2"
+								onSubmit={(event) => {
+									event.preventDefault();
+									const name = detailTag.trim();
+									if (!name) return;
+									changeContactTag(
+										"add",
+										name,
+										tags.find((tag) => tag.name.toLowerCase() === name.toLowerCase())?.id,
+									);
+									setDetailTag("");
+								}}
+							>
 								<Input
-									key={key}
-									label={t(label)}
-									value={String(attributes[key] ?? "")}
-									onChange={(event) => updatePreference(key, event.target.value)}
+									aria-label={t("Add a tag")}
+									placeholder={t("Add a tag")}
+									list="audience-tag-names"
+									value={detailTag}
+									onChange={(event) => {
+										setDetailTag(event.target.value);
+									}}
 								/>
-							) : (
-								<Select
-									key={key}
-									label={t(label)}
-									value={String(attributes[key] ?? "")}
-									onValueChange={(value) => updatePreference(key, value ?? "")}
-									items={Object.fromEntries(
-										[...new Set(["", ...locales, String(attributes[key] ?? "")])].map(
-											(language) => {
-												let name = language;
-												try {
-													name = language
-														? (languageNames.of(language) ?? language)
-														: t("Use account language");
-												} catch {
-													name = language;
-												}
-												return [language, name];
-											},
-										),
-									)}
-								/>
-							),
-						)}
+								<Button type="submit" size="sm" disabled={busy || !detailTag.trim()}>
+									{t("Add")}
+								</Button>
+							</form>
+						</div>
+						{fields.map((field) => (
+							<CustomFieldInput
+								key={field.id}
+								field={field}
+								value={attributes[field.key]}
+								onChange={(value) => {
+									updateAttribute(field.key, value);
+								}}
+							/>
+						))}
+						<details>
+							<summary className="cursor-pointer text-sm font-medium">
+								{t("Languages and time zone")}
+							</summary>
+							<div className="mt-3 space-y-3">
+								{languageAttributes.map(([key, label]) =>
+									key === "time_zone" ? (
+										<Input
+											key={key}
+											label={t(label)}
+											value={String(attributes[key] ?? "")}
+											onChange={(event) => {
+												updateAttribute(key, event.target.value);
+											}}
+										/>
+									) : (
+										<Select
+											key={key}
+											label={t(label)}
+											value={String(attributes[key] ?? "")}
+											onValueChange={(value) => {
+												updateAttribute(key, value ?? "");
+											}}
+											items={Object.fromEntries(
+												[...new Set(["", ...locales, String(attributes[key] ?? "")])].map(
+													(language) => {
+														let name = language;
+														try {
+															name = language
+																? (languageNames.of(language) ?? language)
+																: t("Use account language");
+														} catch {
+															name = language;
+														}
+														return [language, name];
+													},
+												),
+											)}
+										/>
+									),
+								)}
+							</div>
+						</details>
 						{lists.map((list) => (
 							<Checkbox
 								key={list.id}
 								label={list.name}
 								checked={selected.list_ids?.includes(list.id) ?? false}
-								onCheckedChange={(checked) =>
+								onCheckedChange={(value) =>
 									setSelected({
 										...selected,
-										list_ids: checked
+										list_ids: value
 											? [...(selected.list_ids ?? []), list.id]
 											: selected.list_ids?.filter((id) => id !== list.id),
 									})
 								}
 							/>
 						))}
+						{!selected.id && (
+							<Checkbox
+								label={t("Ask for confirmation by email (double opt-in)")}
+								checked={doubleOptIn}
+								onCheckedChange={(value) => {
+									setDoubleOptIn(value);
+								}}
+							/>
+						)}
 						<Button
 							variant="primary"
 							disabled={busy || !selected.email}
@@ -528,11 +599,19 @@ export function EmailContacts({
 										name: selected.name,
 										attributes: selected.attributes,
 										list_ids: selected.list_ids,
+										...(selected.id ? {} : { double_opt_in: doubleOptIn }),
 									};
 									const result = selected.id
 										? await updateEmailSubscriber(project, selected.id, payload)
 										: await createEmailSubscriber(project, payload);
-									setSelected(result);
+									if (!selected.id && pendingTags.length && result.id)
+										await assignAudienceTags(project, {
+											subscriber_ids: [result.id],
+											tag_names: pendingTags,
+											action: "add",
+										});
+									setPendingTags([]);
+									setSelected({ ...result, tag_ids: (result as AudienceContact).tag_ids ?? [] });
 								})
 							}
 						>
@@ -595,5 +674,97 @@ export function EmailContacts({
 				)}
 			</aside>
 		</div>
+	);
+}
+
+function TagChips({
+	names,
+	onRemove,
+	removeLabel,
+}: {
+	names: string[];
+	onRemove?: (name: string) => void;
+	removeLabel?: (name: string) => string;
+}) {
+	const visible = names.filter(Boolean);
+	if (!visible.length) return <span className="text-kumo-subtle">—</span>;
+	return (
+		<span className="flex flex-wrap gap-1">
+			{visible.map((name) => (
+				<span
+					key={name}
+					className="inline-flex items-center gap-1 rounded-full bg-kumo-tint px-2 py-0.5 text-xs"
+				>
+					{name}
+					{onRemove && (
+						<button
+							type="button"
+							className="text-kumo-subtle hover:text-kumo-default"
+							aria-label={removeLabel?.(name) ?? name}
+							onClick={() => {
+								onRemove(name);
+							}}
+						>
+							×
+						</button>
+					)}
+				</span>
+			))}
+		</span>
+	);
+}
+
+/** Shows a stored custom field value in a text control; structured values stay empty. */
+function fieldText(value: unknown) {
+	return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+		? String(value)
+		: "";
+}
+
+function CustomFieldInput({
+	field,
+	value,
+	onChange,
+}: {
+	field: AudienceField;
+	value: unknown;
+	onChange: (value: unknown) => void;
+}) {
+	const { t } = useStudioI18n();
+	if (field.field_type === "boolean")
+		return (
+			<Checkbox
+				label={field.label}
+				checked={value === true || value === "true"}
+				onCheckedChange={(checked) => {
+					onChange(checked);
+				}}
+			/>
+		);
+	if (field.field_type === "select")
+		return (
+			<Select
+				label={field.label}
+				value={fieldText(value)}
+				onValueChange={(next) => {
+					onChange(next ?? "");
+				}}
+				items={{
+					"": t("Not set"),
+					...Object.fromEntries(field.options.map((option) => [option, option])),
+				}}
+			/>
+		);
+	return (
+		<Input
+			type={
+				field.field_type === "number" ? "number" : field.field_type === "date" ? "date" : "text"
+			}
+			label={field.label}
+			value={fieldText(value)}
+			onChange={(event) => {
+				onChange(event.target.value);
+			}}
+		/>
 	);
 }

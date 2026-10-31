@@ -1,4 +1,11 @@
+import { SuperBoardClient, SuperBoardError } from "./client.js";
 import SuperBoardManager from "./superboard_manager.js";
+import {
+	SuperBoardSupportClient,
+	SuperBoardSupportException,
+	SuperBoardSupportRealtime,
+	SuperBoardSupportWidget,
+} from "./support/index.js";
 
 /**
  * Entry point for the SuperBoard SDK.
@@ -145,5 +152,24 @@ class SuperBoard {
 		this.manager.markMessageAsRead(message, response, error);
 	}
 }
+
+// Keep the CommonJS/browser default callable while exposing the native Support
+// API as static properties on the historical default export. The class is
+// decorated in its own module so that dropping an unused import of this module
+// (package.json "sideEffects") can never leave a half-initialised export behind.
+Object.defineProperties(SuperBoard, {
+	SuperBoardClient: { value: SuperBoardClient, enumerable: true },
+	SuperBoardError: { value: SuperBoardError, enumerable: true },
+	SuperBoardSupportClient: { value: SuperBoardSupportClient, enumerable: true },
+	SuperBoardSupportException: {
+		value: SuperBoardSupportException,
+		enumerable: true,
+	},
+	SuperBoardSupportRealtime: {
+		value: SuperBoardSupportRealtime,
+		enumerable: true,
+	},
+	SuperBoardSupportWidget: { value: SuperBoardSupportWidget, enumerable: true },
+});
 
 export default SuperBoard;

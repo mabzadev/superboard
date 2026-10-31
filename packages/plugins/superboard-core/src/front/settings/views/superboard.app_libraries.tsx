@@ -1,4 +1,4 @@
-import LibrariesPageContent from "../components/app/LibrariesPageContent.js";
+import SdkAppsWorkspace from "../components/app/SdkAppsWorkspace.js";
 export default function View() {
-	return <LibrariesPageContent />;
+	return <SdkAppsWorkspace />;
 }

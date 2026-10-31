@@ -123,6 +123,58 @@ describe("Analytics in the Workers runtime", () => {
 			).first(),
 		).toEqual({ total: 0 });
 	});
+	it("ingests a mixed batch with one insert batch and one dispatch update", async () => {
+		const project = {
+			projectId: 93,
+			instanceId: 10,
+			projectRef: "10-test",
+			environment: "test" as const,
+			actorId: 0,
+			role: "sdk",
+			requestId: "batch-ingest",
+			issuedAt: Math.floor(Date.now() / 1000),
+		};
+		const base = {
+			schema_version: 1 as const,
+			event_name: "screen.viewed",
+			source: "sdk" as const,
+			application_id: "batch-app",
+			occurred_at: new Date().toISOString(),
+			properties: {},
+		};
+		const first = await ingestAnalyticsEvents(env, project, [
+			{ ...base, event_id: "batch-existing" },
+		]);
+		expect(first.map((result) => result.status)).toEqual(["accepted"]);
+
+		const events = [
+			...Array.from({ length: 120 }, (_, index) => ({
+				...base,
+				event_id: `batch-new-${index}`,
+			})),
+			{ ...base, event_id: "batch-new-0" },
+			{ ...base, event_id: "batch-new-1", properties: { changed: true } },
+			{ ...base, event_id: "batch-existing" },
+			{ ...base, event_id: "batch-existing", properties: { changed: true } },
+		];
+		const results = await ingestAnalyticsEvents(env, project, events);
+		expect(results).toHaveLength(events.length);
+		expect(results.slice(0, 120).every((result) => result.status === "accepted")).toBe(true);
+		expect(results.slice(120)).toEqual([
+			{ event_id: "batch-new-0", status: "duplicate" },
+			{ event_id: "batch-new-1", status: "rejected", code: "analytics_event_id_conflict" },
+			{ event_id: "batch-existing", status: "duplicate" },
+			{ event_id: "batch-existing", status: "rejected", code: "analytics_event_id_conflict" },
+		]);
+		await expect(
+			env.DB.prepare(
+				`SELECT COUNT(*) AS total,
+          SUM(CASE WHEN status = 'dispatched' THEN 1 ELSE 0 END) AS dispatched
+         FROM analytics_ingest_outbox WHERE project_id = '93'`,
+			).first(),
+		).resolves.toEqual({ total: 121, dispatched: 121 });
+	});
+
 	it("projects events and retains integration delivery when Marketing is absent", async () => {
 		const event = {
 			schema_version: 1,
@@ -521,6 +573,20 @@ describe("Analytics in the Workers runtime", () => {
 				},
 			},
 		});
+
+		const userEvents = await SELF.fetch(
+			await signedRequest("/internal/v1/events?user_id=private-crash-user", 22),
+		);
+		expect(userEvents.status).toBe(200);
+		const userStream = await userEvents.json<{
+			data: { items: Array<{ event_id: string; user_id_hash: string | null }> };
+		}>();
+		expect(userStream.data.items.map((event) => event.event_id)).toEqual(["runtime-crash-1"]);
+		expect(JSON.stringify(userStream)).not.toContain("private-crash-user");
+		const unknownUser = await SELF.fetch(
+			await signedRequest("/internal/v1/events?user_id=nobody", 22),
+		);
+		await expect(unknownUser.json()).resolves.toMatchObject({ data: { items: [] } });
 	});
 
 	it("provides idempotent dashboards and deterministic remote configuration", async () => {

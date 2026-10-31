@@ -2,9 +2,8 @@ import type { PluginViewProps } from "@superboard/front-ui/context";
 import type { ReactNode } from "react";
 
 import IdentityIntlProvider from "./identity/IdentityIntlProvider.js";
+import { useIdentityMessages } from "./identity/identityMessages.js";
 import Setup from "./identity/Setup.js";
-import en from "./identity/translations/en.json";
-import fr from "./identity/translations/fr.json";
 
 export function Providers({
 	path,
@@ -22,8 +21,13 @@ export function Providers({
 	if (!isIdentity || path === "/auth" || path === "/identity") return children;
 	if (path.endsWith("/settings")) return children;
 	const language = parameters.lang === "fr" || parameters.lang === "en" ? parameters.lang : locale;
+	return <IdentityProviders language={language}>{children}</IdentityProviders>;
+}
+
+function IdentityProviders({ language, children }: { language: string; children: ReactNode }) {
+	const messages = useIdentityMessages(language);
 	return (
-		<IdentityIntlProvider locale={language} messages={language === "fr" ? fr : en}>
+		<IdentityIntlProvider locale={language} messages={messages}>
 			<Setup>{children}</Setup>
 		</IdentityIntlProvider>
 	);

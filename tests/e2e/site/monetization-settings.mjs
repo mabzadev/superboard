@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { chromium, expect } from "@playwright/test";
 
 const origin = new URL(process.env.SUPERBOARD_LOCAL_URL ?? "http://127.0.0.1:4321");
+const pluginsLinkName = /^(Open in Plugins|Ouvrir dans Plugins)$/;
+const pluginsLinkHref =
+	/^\/_emdash\/admin\/plugins-manager\/superboard-monetization\/configuration$/;
 assert(["127.0.0.1", "localhost", "[::1]"].includes(origin.hostname));
 const endpoint = new URL("/_emdash/api/admin/plugins/supbrd-plug-commerce/settings", origin).href;
 const diagnostic = new URL(
@@ -37,7 +40,7 @@ try {
 	const restore = { ...original.values };
 	const hydrate = async () => {
 		await page.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])').waitFor();
-		await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toBeVisible();
+		await expect(page.getByRole("link", { name: pluginsLinkName })).toBeVisible();
 	};
 	try {
 		for (const locale of ["en", "fr"]) {
@@ -111,6 +114,14 @@ try {
 			await page
 				.getByRole("tab", { name: locale === "fr" ? "Passerelles" : "Gateways", exact: true })
 				.click();
+			// Store credentials live in the collapsed Advanced section of the Gateways tab.
+			const advancedLabel = locale === "fr" ? "Avancé" : "Advanced";
+			const advanced = page.locator("details", {
+				has: page.getByText(advancedLabel, { exact: true }),
+			});
+			await expect(advanced).not.toHaveAttribute("open", "");
+			await advanced.getByText(advancedLabel, { exact: true }).click();
+			await expect(advanced).toHaveAttribute("open", "");
 			for (const field of ["apple_issuer_id", "apple_key_id"])
 				await page.locator(`#setting-${field}`).fill(`isolated-${locale}`);
 			const secretFields = [
@@ -132,15 +143,17 @@ try {
 					await expect(page.locator(`#setting-${field}`)).toHaveValue(secret);
 				}
 			}
-			await save.click();
-			await expect(page.getByRole("status")).toContainText(
+			await advanced
+				.getByRole("button", {
+					name: locale === "fr" ? "Enregistrer" : "Save changes",
+					exact: true,
+				})
+				.click();
+			await expect(advanced.getByRole("status")).toContainText(
 				locale === "fr" ? "Paramètres enregistrés." : "Settings saved.",
 			);
 			persisted = await read();
-			assert.equal(
-				persisted.values["superboard-billing__apple_issuer_id"],
-				`isolated-${locale}`,
-			);
+			assert.equal(persisted.values["superboard-billing__apple_issuer_id"], `isolated-${locale}`);
 			assert.equal(persisted.values["superboard-billing__apple_key_id"], `isolated-${locale}`);
 			for (const field of secretFields) {
 				const key = `superboard-billing__${field}`;
@@ -151,22 +164,18 @@ try {
 			await hydrate();
 			for (const field of secretFields)
 				await expect(page.locator(`#setting-${field}`)).toHaveValue("");
-			await page.getByRole("tab", { name: "Configuration", exact: true }).click();
+			// Plugin health and lifecycle are owned by the central Plugins page.
+			await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 			await expect(
-				page.getByText(locale === "fr" ? "Cycle de vie du plugin" : "Plugin Lifecycle", {
+				page.getByRole("link", {
+					name: locale === "fr" ? "Ouvrir dans Plugins" : "Open in Plugins",
 					exact: true,
 				}),
-			).toBeVisible();
-			const refreshed = page.waitForResponse(
-				(r) => r.url() === health && r.request().method() === "POST",
-			);
-			const recheck = page.getByRole("button", {
-				name: locale === "fr" ? "Vérifier à nouveau" : "Re-check Health",
-				exact: true,
+			).toHaveAttribute("href", pluginsLinkHref);
+			const healthResponse = await context.request.post(health, {
+				headers: { Origin: origin.origin, "X-EmDash-Request": "1" },
 			});
-			await recheck.click();
-			const healthResponse = await refreshed;
-			assert.equal(healthResponse.status(), 200);
+			assert.equal(healthResponse.status(), 200, await healthResponse.text());
 			const checked = await healthResponse.json();
 			assert.ok(checked.checkedAt);
 			const inventory = checked.diagnostic;
@@ -174,65 +183,17 @@ try {
 				assert.ok(
 					inventory.workers.some((worker) => worker.service === service && worker.physicalName),
 				);
-			const routeLabel = locale === "fr" ? "Routes API" : "API Routes";
-			await page
-				.getByRole("button", {
-					name: `${routeLabel} (${inventory.routes.api.length})`,
-					exact: true,
-				})
-				.click();
-			const seen = [];
-			const table = page.getByRole("table", { name: routeLabel, exact: true });
-			while (seen.length < inventory.routes.api.length) {
-				await expect(table.getByRole("row").nth(1).getByRole("cell").nth(1)).toHaveText(
-					inventory.routes.api[seen.length].path,
-				);
-				const rows = table.getByRole("row");
-				for (let index = 1; index < (await rows.count()); index++)
-					seen.push(await rows.nth(index).getByRole("cell").allTextContents());
-				if (seen.length < inventory.routes.api.length)
-					await page
-						.getByRole("button", { name: locale === "fr" ? "Suivant" : "Next", exact: true })
-						.click();
-			}
-			assert.deepEqual(
-				seen,
-				inventory.routes.api.map((route) => [
-					route.method,
-					route.path,
-					route.worker ?? (locale === "fr" ? "Inconnu" : "Unknown"),
-					route.url ?? (locale === "fr" ? "Inconnu" : "Unknown"),
-				]),
+			// Legacy configuration links open the Gateways tab with Advanced expanded.
+			await page.goto(
+				new URL(`/monetization/settings?lang=${locale}&tab=configuration`, origin).href,
 			);
-			await page.route(health, (route) => route.abort("failed"));
-			await recheck.click();
-			await expect(
-				page.getByRole("table", {
-					name: locale === "fr" ? "Services et Workers associés" : "Associated Services & Workers",
-					exact: true,
-				}),
-			).toContainText(locale === "fr" ? "Inconnu" : "Unknown");
-			await page.unroute(health);
-			await page.route(diagnostic, (route) => route.abort("failed"));
-			await page.reload();
 			await hydrate();
 			await expect(
-				page.getByText(
-					locale === "fr" ? "Échec du chargement du diagnostic" : "Failed to load diagnostic",
-					{ exact: true },
-				),
-			).toBeVisible();
-			await page.unroute(diagnostic);
-			await page
-				.getByRole("button", { name: locale === "fr" ? "Réessayer" : "Retry", exact: true })
-				.click();
-			await expect(
-				page.getByText(locale === "fr" ? "Cycle de vie du plugin" : "Plugin Lifecycle", {
-					exact: true,
-				}),
-			).toBeVisible();
+				page.getByRole("tab", { name: locale === "fr" ? "Passerelles" : "Gateways", exact: true }),
+			).toHaveAttribute("aria-selected", "true");
+			await expect(advanced).toHaveAttribute("open", "");
 			console.log(
-				`${locale}: settings saved and reread; secret masking, reload, keyboard, ${seen.length} API routes, health refresh/failure and diagnostic retry passed`,
+				`${locale}: settings saved and reread; secret masking, reload, keyboard, Plugins diagnostics link, health check (${inventory.routes.api.length} API routes in diagnostic) and legacy configuration link passed`,
 			);
 		}
 	} finally {

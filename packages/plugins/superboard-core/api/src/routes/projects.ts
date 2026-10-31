@@ -1,5 +1,5 @@
-import { registerRouter } from "@superboard/contracts/route-registry";
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
 import { getRequestAuthUserId } from "../lib/auth";
@@ -10,7 +10,13 @@ import { downloadFileMessage, sendMail } from "../lib/mail";
 import { siteOperatorAdapter, type SiteAdapterVariables } from "../lib/site-operator-adapter";
 import { Env } from "../types";
 
-const projects = registerRouter(new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>(), {"service":"api","module":"routes.projects.projects","pluginId":"supbrd-core","surface":"internal","access":"operator"});
+const projects = registerRouter(new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>(), {
+	service: "api",
+	module: "routes.projects.projects",
+	pluginId: "supbrd-core",
+	surface: "internal",
+	access: "operator",
+});
 projects.use("*", siteOperatorAdapter("projects"));
 
 async function currentUserId(c: any): Promise<number | null> {
@@ -1227,29 +1233,26 @@ projects.post("/:id/events/overview", async (c) => {
 });
 projects.get("/:id/events/metric_values", async (c) => {
 	const project = await resolveProject(c.env.DB, c.req.param("id"));
-	const rows = await c.env.DB.prepare(`
-    SELECT
-      platform,
-      app_version,
-      build
-    FROM events
-    WHERE project_id = ?
-  `)
-		.bind(project.id)
-		.all<any>();
-	const platforms = new Set<string>();
-	const appVersions = new Set<string>();
-	const builds = new Set<string>();
-	for (const row of rows.results || []) {
-		if (row.platform) platforms.add(String(row.platform));
-		if (row.app_version) appVersions.add(String(row.app_version));
-		if (row.build) builds.add(String(row.build));
-	}
+	// Three DISTINCT scans of idx_events_project_platform_version_build instead
+	// of loading every event row of the project.
+	const distinct = (column: "platform" | "app_version" | "build") =>
+		c.env.DB.prepare(
+			`SELECT DISTINCT ${column} AS value FROM events WHERE project_id = ? AND ${column} IS NOT NULL AND ${column} != ''`,
+		).bind(project.id);
+	const [platformRows, appVersionRows, buildRows] = await c.env.DB.batch<{ value: unknown }>([
+		distinct("platform"),
+		distinct("app_version"),
+		distinct("build"),
+	]);
+	const values = (result: D1Result<{ value: unknown }> | undefined) =>
+		Array.from(
+			new Set((result?.results || []).map((row) => String(row.value)).filter(Boolean)),
+		).sort();
 	return c.json({
 		metrics_values: {
-			platforms: Array.from(platforms).sort(),
-			app_versions: Array.from(appVersions).sort(),
-			builds: Array.from(builds).sort(),
+			platforms: values(platformRows),
+			app_versions: values(appVersionRows),
+			builds: values(buildRows),
 		},
 	});
 });
@@ -1855,53 +1858,55 @@ export async function enqueuePushNotifications(
 	return queued;
 }
 
-projects.defineRoute({ pluginId: "superboard-marketing" }).post("/:projectRef/notifications/search", async (c) => {
-	const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
-	const body = await readBody(c);
-	const allowedSorts = [
-		"title",
-		"subtitle",
-		"platform",
-		"read_count",
-		"auto_display",
-		"push_notification",
-		"updated_at",
-	];
-	const sortBy =
-		typeof body.sort_by === "string" && allowedSorts.includes(body.sort_by)
-			? body.sort_by
-			: "updated_at";
-	const ascending = body.ascending === true ? 1 : 0;
-	const archived = toBool(body.archived) ? 1 : 0;
-	const page = Math.max(1, Number(body.page || body.current_page || 1));
-	const perPage = Math.max(1, Math.min(100, Number(body.per_page || 20)));
-	const term = String(body.term || "")
-		.trim()
-		.toLowerCase();
-	const hasNewUsersFilter =
-		body.for_new_users !== undefined && body.for_new_users !== null && body.for_new_users !== "";
-	const newUsersFilter = toBool(body.for_new_users) ? 1 : 0;
-	// D1 caps LIKE patterns at 50 bytes, including the surrounding wildcards.
-	const literalSearch = new TextEncoder().encode(term).byteLength > 48;
-	const termClause = term
-		? literalSearch
-			? " AND (instr(LOWER(n.title), ?) > 0 OR instr(LOWER(n.subtitle), ?) > 0)"
-			: " AND (LOWER(n.title) LIKE ? OR LOWER(n.subtitle) LIKE ?)"
-		: "";
-	const termValues = term ? (literalSearch ? [term, term] : [`%${term}%`, `%${term}%`]) : [];
-	const newUsersClause = hasNewUsersFilter ? " AND COALESCE(nt.new_users, 0) = ?" : "";
-	const newUsersValues = hasNewUsersFilter ? [newUsersFilter] : [];
-	const pushClause =
-		typeof body.send_push === "boolean"
-			? body.send_push
-				? " AND COALESCE(n.send_push, 0) = 1"
-				: " AND COALESCE(n.send_push, 0) = 0"
+projects
+	.defineRoute({ pluginId: "superboard-marketing" })
+	.post("/:projectRef/notifications/search", async (c) => {
+		const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
+		const body = await readBody(c);
+		const allowedSorts = [
+			"title",
+			"subtitle",
+			"platform",
+			"read_count",
+			"auto_display",
+			"push_notification",
+			"updated_at",
+		];
+		const sortBy =
+			typeof body.sort_by === "string" && allowedSorts.includes(body.sort_by)
+				? body.sort_by
+				: "updated_at";
+		const ascending = body.ascending === true ? 1 : 0;
+		const archived = toBool(body.archived) ? 1 : 0;
+		const page = Math.max(1, Number(body.page || body.current_page || 1));
+		const perPage = Math.max(1, Math.min(100, Number(body.per_page || 20)));
+		const term = String(body.term || "")
+			.trim()
+			.toLowerCase();
+		const hasNewUsersFilter =
+			body.for_new_users !== undefined && body.for_new_users !== null && body.for_new_users !== "";
+		const newUsersFilter = toBool(body.for_new_users) ? 1 : 0;
+		// D1 caps LIKE patterns at 50 bytes, including the surrounding wildcards.
+		const literalSearch = new TextEncoder().encode(term).byteLength > 48;
+		const termClause = term
+			? literalSearch
+				? " AND (instr(LOWER(n.title), ?) > 0 OR instr(LOWER(n.subtitle), ?) > 0)"
+				: " AND (LOWER(n.title) LIKE ? OR LOWER(n.subtitle) LIKE ?)"
 			: "";
-	const visibility =
-		body.include_drafts === true && archived === 0
-			? "(COALESCE(n.archived, 0) = ? OR EXISTS (SELECT 1 FROM notification_drafts nd WHERE nd.notification_id=n.id))"
-			: "COALESCE(n.archived, 0) = ? AND NOT EXISTS (SELECT 1 FROM notification_drafts nd WHERE nd.notification_id=n.id)";
-	const count = await c.env.DB.prepare(`
+		const termValues = term ? (literalSearch ? [term, term] : [`%${term}%`, `%${term}%`]) : [];
+		const newUsersClause = hasNewUsersFilter ? " AND COALESCE(nt.new_users, 0) = ?" : "";
+		const newUsersValues = hasNewUsersFilter ? [newUsersFilter] : [];
+		const pushClause =
+			typeof body.send_push === "boolean"
+				? body.send_push
+					? " AND COALESCE(n.send_push, 0) = 1"
+					: " AND COALESCE(n.send_push, 0) = 0"
+				: "";
+		const visibility =
+			body.include_drafts === true && archived === 0
+				? "(COALESCE(n.archived, 0) = ? OR EXISTS (SELECT 1 FROM notification_drafts nd WHERE nd.notification_id=n.id))"
+				: "COALESCE(n.archived, 0) = ? AND NOT EXISTS (SELECT 1 FROM notification_drafts nd WHERE nd.notification_id=n.id)";
+		const count = await c.env.DB.prepare(`
     SELECT COUNT(*) AS total
     FROM notifications n
     LEFT JOIN notification_targets nt ON nt.notification_id = n.id
@@ -1910,9 +1915,9 @@ projects.defineRoute({ pluginId: "superboard-marketing" }).post("/:projectRef/no
       ${termClause}
       ${pushClause}
   `)
-		.bind(project.id, archived, ...newUsersValues, ...termValues)
-		.first();
-	const rows = await c.env.DB.prepare(`
+			.bind(project.id, archived, ...newUsersValues, ...termValues)
+			.first();
+		const rows = await c.env.DB.prepare(`
     SELECT n.*,
       EXISTS (SELECT 1 FROM notification_drafts nd WHERE nd.notification_id=n.id) AS draft,
       nt.id AS target_id,
@@ -1934,198 +1939,213 @@ projects.defineRoute({ pluginId: "superboard-marketing" }).post("/:projectRef/no
       CASE WHEN ? = 0 THEN CASE ? WHEN 'title' THEN n.title WHEN 'subtitle' THEN n.subtitle WHEN 'platform' THEN nt.platforms WHEN 'read_count' THEN read_count WHEN 'auto_display' THEN n.auto_display WHEN 'push_notification' THEN n.send_push ELSE n.updated_at END END DESC, n.id DESC
     LIMIT ? OFFSET ?
   `)
-		.bind(
-			project.id,
-			archived,
-			...newUsersValues,
-			...termValues,
-			ascending,
-			sortBy,
-			ascending,
-			sortBy,
-			perPage,
-			(page - 1) * perPage,
-		)
-		.all<NotificationRecord>();
-	const total = Number(count?.total || 0);
-	return c.json({
-		data: (rows.results || []).map((row) => notificationRow(c, row)),
-		total_pages: Math.max(1, Math.ceil(total / perPage)),
-		total_entries: total,
+			.bind(
+				project.id,
+				archived,
+				...newUsersValues,
+				...termValues,
+				ascending,
+				sortBy,
+				ascending,
+				sortBy,
+				perPage,
+				(page - 1) * perPage,
+			)
+			.all<NotificationRecord>();
+		const total = Number(count?.total || 0);
+		return c.json({
+			data: (rows.results || []).map((row) => notificationRow(c, row)),
+			total_pages: Math.max(1, Math.ceil(total / perPage)),
+			total_entries: total,
+		});
 	});
-});
 
-projects.defineRoute({ pluginId: "superboard-marketing" }).post("/:projectRef/notifications", async (c) => {
-	const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
-	const body = await readRequestObjectLimited(c.req.raw, 1024 * 1024);
-	const platforms = parseJsonArray(body.platforms);
-	const newUsers = toBool(body.new_users ?? body.for_new_users);
-	const existingUsers = toBool(body.existing_users ?? body.for_existing_users);
-	if (newUsers === existingUsers) {
-		return c.json({ error: "New and existing users can't both be selected or both be empty" }, 422);
-	}
-	const row = await c.env.DB.prepare(
-		"INSERT INTO notifications (project_id, title, subtitle, html, send_push, auto_display, archived) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *",
-	)
-		.bind(
-			project.id,
-			typeof body.title === "string" ? body.title : "",
-			typeof body.subtitle === "string" ? body.subtitle : "",
-			typeof body.html_message === "string"
-				? body.html_message
-				: typeof body.html === "string"
-					? body.html
-					: null,
-			toBool(body.send_push) ? 1 : 0,
-			toBool(body.auto_display) ? 1 : 0,
-			body.draft === true ? 1 : 0,
+projects
+	.defineRoute({ pluginId: "superboard-marketing" })
+	.post("/:projectRef/notifications", async (c) => {
+		const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
+		const body = await readRequestObjectLimited(c.req.raw, 1024 * 1024);
+		const platforms = parseJsonArray(body.platforms);
+		const newUsers = toBool(body.new_users ?? body.for_new_users);
+		const existingUsers = toBool(body.existing_users ?? body.for_existing_users);
+		if (newUsers === existingUsers) {
+			return c.json(
+				{ error: "New and existing users can't both be selected or both be empty" },
+				422,
+			);
+		}
+		const row = await c.env.DB.prepare(
+			"INSERT INTO notifications (project_id, title, subtitle, html, send_push, auto_display, archived) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *",
 		)
-		.first<NotificationRecord>();
-	if (!row) throw new Error("Notification creation failed");
-	await c.env.DB.prepare(`
+			.bind(
+				project.id,
+				typeof body.title === "string" ? body.title : "",
+				typeof body.subtitle === "string" ? body.subtitle : "",
+				typeof body.html_message === "string"
+					? body.html_message
+					: typeof body.html === "string"
+						? body.html
+						: null,
+				toBool(body.send_push) ? 1 : 0,
+				toBool(body.auto_display) ? 1 : 0,
+				body.draft === true ? 1 : 0,
+			)
+			.first<NotificationRecord>();
+		if (!row) throw new Error("Notification creation failed");
+		await c.env.DB.prepare(`
     INSERT INTO notification_targets (notification_id, existing_users, new_users, platforms)
     VALUES (?, ?, ?, ?)
   `)
-		.bind(String(row.id), existingUsers ? 1 : 0, newUsers ? 1 : 0, JSON.stringify(platforms))
-		.run();
-	if (body.draft === true)
-		await c.env.DB.prepare("INSERT INTO notification_drafts (notification_id) VALUES (?)")
-			.bind(row.id)
+			.bind(String(row.id), existingUsers ? 1 : 0, newUsers ? 1 : 0, JSON.stringify(platforms))
 			.run();
-	if (existingUsers && body.draft !== true) {
-		await createMessagesForExistingVisitors(c.env.DB, row.id, project.id, platforms);
-		await enqueuePushNotifications(c.env.DB, row.id, project.id);
-	}
-	const serialized = notificationRow(c, {
-		...row,
-		draft: body.draft === true ? 1 : 0,
-		platforms: JSON.stringify(platforms),
-		new_users: newUsers ? 1 : 0,
-		existing_users: existingUsers ? 1 : 0,
-		read_count: 0,
+		if (body.draft === true)
+			await c.env.DB.prepare("INSERT INTO notification_drafts (notification_id) VALUES (?)")
+				.bind(row.id)
+				.run();
+		if (existingUsers && body.draft !== true) {
+			await createMessagesForExistingVisitors(c.env.DB, row.id, project.id, platforms);
+			await enqueuePushNotifications(c.env.DB, row.id, project.id);
+		}
+		const serialized = notificationRow(c, {
+			...row,
+			draft: body.draft === true ? 1 : 0,
+			platforms: JSON.stringify(platforms),
+			new_users: newUsers ? 1 : 0,
+			existing_users: existingUsers ? 1 : 0,
+			read_count: 0,
+		});
+		return c.json({ ...serialized, notification: serialized }, 201);
 	});
-	return c.json({ ...serialized, notification: serialized }, 201);
-});
 
-projects.defineRoute({ pluginId: "superboard-marketing" }).get("/:projectRef/notifications/:notifId", async (c) => {
-	const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
-	const row = await c.env.DB.prepare(`SELECT n.*, nt.platforms, nt.new_users, nt.existing_users,
+projects
+	.defineRoute({ pluginId: "superboard-marketing" })
+	.get("/:projectRef/notifications/:notifId", async (c) => {
+		const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
+		const row = await c.env.DB.prepare(`SELECT n.*, nt.platforms, nt.new_users, nt.existing_users,
     EXISTS (SELECT 1 FROM notification_drafts nd WHERE nd.notification_id=n.id) AS draft,
     (SELECT COUNT(*) FROM notification_messages nm WHERE nm.notification_id=n.id AND nm.read=1) AS read_count,
     (SELECT COUNT(*) FROM notification_messages nm WHERE nm.notification_id=n.id) AS recipients
     FROM notifications n LEFT JOIN notification_targets nt ON nt.notification_id=n.id
     WHERE n.project_id=? AND n.id=?`)
-		.bind(project.id, c.req.param("notifId"))
-		.first<NotificationRecord>();
-	if (!row) return c.json({ error: "Not found" }, 404);
-	const push =
-		await c.env.DB.prepare(`SELECT COUNT(*) AS queued, COALESCE(SUM(delivered=1),0) AS delivered, COALESCE(SUM(failed=1),0) AS failed
+			.bind(project.id, c.req.param("notifId"))
+			.first<NotificationRecord>();
+		if (!row) return c.json({ error: "Not found" }, 404);
+		const push =
+			await c.env.DB.prepare(`SELECT COUNT(*) AS queued, COALESCE(SUM(delivered=1),0) AS delivered, COALESCE(SUM(failed=1),0) AS failed
     FROM rpush_notifications WHERE json_extract(data,'$.notification_id')=?`)
-			.bind(String(row.id))
-			.first();
-	return c.json({
-		...notificationRow(c, row),
-		statistics: { recipients: row.recipients, views: row.read_count, push },
+				.bind(String(row.id))
+				.first();
+		return c.json({
+			...notificationRow(c, row),
+			statistics: { recipients: row.recipients, views: row.read_count, push },
+		});
 	});
-});
 
-projects.defineRoute({ pluginId: "superboard-marketing" }).patch("/:projectRef/notifications/:notifId", async (c) => {
-	const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
-	const id = c.req.param("notifId");
-	const body = await readRequestObjectLimited(c.req.raw, 1024 * 1024);
-	const current = await c.env.DB.prepare(
-		"SELECT n.id FROM notifications n JOIN notification_drafts nd ON nd.notification_id=n.id WHERE n.id=? AND n.project_id=? AND n.archived=1",
-	)
-		.bind(id, project.id)
-		.first();
-	if (!current) return c.json({ error: "Only drafts can be edited" }, 409);
-	const platforms = parseJsonArray(body.platforms);
-	if (!platforms.length || platforms.some((value) => !["android", "ios"].includes(value)))
-		return c.json({ error: "Choose Android or Apple" }, 422);
-	const newUsers = toBool(body.new_users);
-	const existingUsers = toBool(body.existing_users);
-	if (
-		newUsers === existingUsers ||
-		typeof body.title !== "string" ||
-		!body.title.trim() ||
-		body.title.length > 200
-	)
-		return c.json({ error: "Invalid notification settings" }, 422);
-	await c.env.DB.batch([
-		c.env.DB.prepare(
-			"UPDATE notifications SET title=?,subtitle=?,html=?,send_push=?,auto_display=?,updated_at=datetime('now') WHERE id=? AND project_id=? AND archived=1",
-		).bind(
-			body.title.trim(),
-			typeof body.subtitle === "string" ? body.subtitle.slice(0, 2000) : "",
-			typeof body.html === "string" ? body.html : null,
-			toBool(body.send_push) ? 1 : 0,
-			toBool(body.auto_display) ? 1 : 0,
-			id,
-			project.id,
-		),
-		c.env.DB.prepare(
-			"UPDATE notification_targets SET platforms=?,new_users=?,existing_users=? WHERE notification_id=?",
-		).bind(JSON.stringify(platforms), newUsers ? 1 : 0, existingUsers ? 1 : 0, id),
-	]);
-	return c.json({ saved: true });
-});
+projects
+	.defineRoute({ pluginId: "superboard-marketing" })
+	.patch("/:projectRef/notifications/:notifId", async (c) => {
+		const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
+		const id = c.req.param("notifId");
+		const body = await readRequestObjectLimited(c.req.raw, 1024 * 1024);
+		const current = await c.env.DB.prepare(
+			"SELECT n.id FROM notifications n JOIN notification_drafts nd ON nd.notification_id=n.id WHERE n.id=? AND n.project_id=? AND n.archived=1",
+		)
+			.bind(id, project.id)
+			.first();
+		if (!current) return c.json({ error: "Only drafts can be edited" }, 409);
+		const platforms = parseJsonArray(body.platforms);
+		if (!platforms.length || platforms.some((value) => !["android", "ios"].includes(value)))
+			return c.json({ error: "Choose Android or Apple" }, 422);
+		const newUsers = toBool(body.new_users);
+		const existingUsers = toBool(body.existing_users);
+		if (
+			newUsers === existingUsers ||
+			typeof body.title !== "string" ||
+			!body.title.trim() ||
+			body.title.length > 200
+		)
+			return c.json({ error: "Invalid notification settings" }, 422);
+		await c.env.DB.batch([
+			c.env.DB.prepare(
+				"UPDATE notifications SET title=?,subtitle=?,html=?,send_push=?,auto_display=?,updated_at=datetime('now') WHERE id=? AND project_id=? AND archived=1",
+			).bind(
+				body.title.trim(),
+				typeof body.subtitle === "string" ? body.subtitle.slice(0, 2000) : "",
+				typeof body.html === "string" ? body.html : null,
+				toBool(body.send_push) ? 1 : 0,
+				toBool(body.auto_display) ? 1 : 0,
+				id,
+				project.id,
+			),
+			c.env.DB.prepare(
+				"UPDATE notification_targets SET platforms=?,new_users=?,existing_users=? WHERE notification_id=?",
+			).bind(JSON.stringify(platforms), newUsers ? 1 : 0, existingUsers ? 1 : 0, id),
+		]);
+		return c.json({ saved: true });
+	});
 
-projects.defineRoute({ pluginId: "superboard-marketing" }).post("/:projectRef/notifications/:notifId/publish", async (c) => {
-	const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
-	const id = c.req.param("notifId");
-	const row = await c.env.DB.prepare(
-		"SELECT n.*,nt.platforms,nt.existing_users,nt.new_users FROM notifications n JOIN notification_drafts nd ON nd.notification_id=n.id JOIN notification_targets nt ON nt.notification_id=n.id WHERE n.id=? AND n.project_id=?",
-	)
-		.bind(id, project.id)
-		.first<NotificationRecord>();
-	if (!row) return c.json({ error: "Draft not found" }, 404);
-	if (
-		!String(row.title).trim() ||
-		!String(row.subtitle).trim() ||
-		!parseJsonArray(row.platforms).length
-	)
-		return c.json({ error: "Complete the message before publishing" }, 422);
-	await c.env.DB.prepare(
-		"UPDATE notifications SET archived=0,updated_at=datetime('now') WHERE id=? AND project_id=?",
-	)
-		.bind(id, project.id)
-		.run();
-	if (row.existing_users === 1) {
-		await createMessagesForExistingVisitors(
-			c.env.DB,
-			Number(id),
-			project.id,
-			parseJsonArray(row.platforms),
-		);
-		await enqueuePushNotifications(c.env.DB, id, project.id);
-	}
-	await c.env.DB.prepare("DELETE FROM notification_drafts WHERE notification_id=?").bind(id).run();
-	return c.json({ published: true });
-});
+projects
+	.defineRoute({ pluginId: "superboard-marketing" })
+	.post("/:projectRef/notifications/:notifId/publish", async (c) => {
+		const project = await resolveProject(c.env.DB, c.req.param("projectRef"));
+		const id = c.req.param("notifId");
+		const row = await c.env.DB.prepare(
+			"SELECT n.*,nt.platforms,nt.existing_users,nt.new_users FROM notifications n JOIN notification_drafts nd ON nd.notification_id=n.id JOIN notification_targets nt ON nt.notification_id=n.id WHERE n.id=? AND n.project_id=?",
+		)
+			.bind(id, project.id)
+			.first<NotificationRecord>();
+		if (!row) return c.json({ error: "Draft not found" }, 404);
+		if (
+			!String(row.title).trim() ||
+			!String(row.subtitle).trim() ||
+			!parseJsonArray(row.platforms).length
+		)
+			return c.json({ error: "Complete the message before publishing" }, 422);
+		await c.env.DB.prepare(
+			"UPDATE notifications SET archived=0,updated_at=datetime('now') WHERE id=? AND project_id=?",
+		)
+			.bind(id, project.id)
+			.run();
+		if (row.existing_users === 1) {
+			await createMessagesForExistingVisitors(
+				c.env.DB,
+				Number(id),
+				project.id,
+				parseJsonArray(row.platforms),
+			);
+			await enqueuePushNotifications(c.env.DB, id, project.id);
+		}
+		await c.env.DB.prepare("DELETE FROM notification_drafts WHERE notification_id=?")
+			.bind(id)
+			.run();
+		return c.json({ published: true });
+	});
 
-projects.defineRoute({ pluginId: "superboard-marketing" }).delete("/:projectRef/notifications/:notifId", async (c) => {
-	const notifId = Number(c.req.param("notifId"));
-	const target = await c.env.DB.prepare(
-		"SELECT existing_users FROM notification_targets WHERE notification_id = ? LIMIT 1",
-	)
-		.bind(String(notifId))
-		.first<{ existing_users: number }>();
-	if (target?.existing_users === 1) {
-		return c.json({ error: "You can't archive a notification for existing users!" }, 422);
-	}
-	const row = await c.env.DB.prepare(`
+projects
+	.defineRoute({ pluginId: "superboard-marketing" })
+	.delete("/:projectRef/notifications/:notifId", async (c) => {
+		const notifId = Number(c.req.param("notifId"));
+		const target = await c.env.DB.prepare(
+			"SELECT existing_users FROM notification_targets WHERE notification_id = ? LIMIT 1",
+		)
+			.bind(String(notifId))
+			.first<{ existing_users: number }>();
+		if (target?.existing_users === 1) {
+			return c.json({ error: "You can't archive a notification for existing users!" }, 422);
+		}
+		const row = await c.env.DB.prepare(`
     UPDATE notifications
     SET archived = 1, updated_at = datetime("now")
     WHERE id = ?
     RETURNING *
   `)
-		.bind(notifId)
-		.first<NotificationRecord>();
-	if (!row) return c.json({ error: "Not found" }, 404);
-	return c.json({
-		notifications: notificationRow(c, { ...row, ...target, platforms: "[]", read_count: 0 }),
+			.bind(notifId)
+			.first<NotificationRecord>();
+		if (!row) return c.json({ error: "Not found" }, 404);
+		return c.json({
+			notifications: notificationRow(c, { ...row, ...target, platforms: "[]", read_count: 0 }),
+		});
 	});
-});
 
 projects.get("/exports/:fileKey", async (c) => {
 	const key = decodeURIComponent(c.req.param("fileKey"));
