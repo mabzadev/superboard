@@ -37,7 +37,10 @@ for (const failure of [0, 42])
 		assert.equal(calls[0], "run check:front-menu");
 		if (failure) assert.deepEqual(calls, ["run check:front-menu"]);
 		else {
-			assert.ok(calls.includes("run typecheck"));
-			assert.ok(calls.includes("run test"));
+			assert.ok(calls.includes("exec lint-staged"));
+			assert.ok(calls.includes("run lint:quick"));
+			// Slow suites run in CI instead of the commit hook.
+			for (const slow of ["run typecheck", "run test", "run test:plugins:regression"])
+				assert.ok(!calls.includes(slow), `${slow} must not run in the commit hook`);
 		}
 	});

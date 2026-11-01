@@ -1,1 +1,1 @@
-export { Spinner, type SpinnerProps } from "@superboard/front-ui/ui";
+export { Spinner, type SpinnerProps } from "@superboard/front-ui/ui/spinner.js";

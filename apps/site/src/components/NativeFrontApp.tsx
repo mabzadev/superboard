@@ -1,18 +1,33 @@
+import { canonicalFrontPath } from "@superboard/contracts/front-paths";
+import { Search } from "@superboard/front-ui/icons";
 import { watchPluginLifecycle } from "@superboard/front-ui/lifecycle";
 import {
 	SectionNavigation,
 	SectionNavigationProvider,
 } from "@superboard/front-ui/section-navigation";
-import { Button } from "@superboard/front-ui/ui";
+import { Button } from "@superboard/front-ui/ui/button.js";
 import type {
 	NativeRendererBlock,
 	NativeRendererCard,
 	NativeRendererDocument,
 } from "@superboard/supbrd-core";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+	lazy,
+	Suspense,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+	type ComponentProps,
+	type ComponentType,
+	type CSSProperties,
+} from "react";
 
-import { mountNativeFrontRenderer } from "../lib/native-front-plugins.js";
+import { frontRecentPagesKey, recordFrontRecentPage } from "../lib/front-recent-pages.js";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
+import { mountProjectedNativeFrontRenderer } from "../lib/native-front-renderers.js";
 import { organizeProductNavigation } from "../lib/product-navigation.js";
 import {
 	createUserFrontI18n,
@@ -20,9 +35,23 @@ import {
 	USER_FRONT_CATALOGS,
 } from "../lib/user-front-i18n.js";
 import { FrontRuntimeProviders } from "./FrontRuntimeProviders.js";
+import type CommandPalette from "./NativeFrontCommandPalette.js";
 import { NativeFrontControls } from "./NativeFrontControls.js";
 import { NativeFrontNavigation } from "./NativeFrontNavigation.js";
 import { PluginFrontView } from "./PluginFrontView.js";
+
+const HREF_SUFFIX_PATTERN = /[?#]/u;
+const APPLE_PLATFORM = /Mac|iPhone|iPad|iPod/u;
+// The command palette is fetched on first use (or when its button is hovered or focused) so the
+// shell bundle stays small. A failed fetch renders nothing instead of breaking the shell.
+const loadCommandPalette = () => import("./NativeFrontCommandPalette.js");
+const NativeFrontCommandPalette = lazy(
+	(): Promise<{ default: ComponentType<ComponentProps<typeof CommandPalette>> }> =>
+		loadCommandPalette().catch(() => ({ default: () => null })),
+);
+const prefetchCommandPalette = () => void loadCommandPalette().catch(() => undefined);
+const subscribeToNothing = () => () => undefined;
+const platformShortcut = () => (APPLE_PLATFORM.test(navigator.userAgent) ? "⌘K" : "Ctrl K");
 
 export function NativeFrontApp({ projection }: { projection: NativeFrontPresentationProjection }) {
 	return (
@@ -39,6 +68,14 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 	useEffect(watchPluginLifecycle, []);
 	const [collapsed, setCollapsed] = useState(false);
 	const [mobileOpen, setMobileOpen] = useState(false);
+	const [paletteOpen, setPaletteOpen] = useState(false);
+	const [paletteRequested, setPaletteRequested] = useState(false);
+	// The server render has no platform: the shortcut hint appears once hydrated.
+	const paletteShortcut = useSyncExternalStore(
+		subscribeToNothing,
+		platformShortcut,
+		() => undefined,
+	);
 	const navigationButton = useRef<HTMLButtonElement>(null);
 	const sidebar = useRef<HTMLElement>(null);
 	useEffect(() => {
@@ -79,41 +116,70 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 		document.addEventListener("keydown", close);
 		return () => document.removeEventListener("keydown", close);
 	}, [mobileOpen]);
-	const navigation = organizeProductNavigation(
-		projection.navigation.map((group) => ({
-			...group,
-			items: localizeNavigationItems(group.items, projection.locale),
-		})),
-		localizeFrontPath(projection.path, projection.locale),
+	const navigation = useMemo(
+		() =>
+			organizeProductNavigation(
+				projection.navigation.map((group) => ({
+					...group,
+					items: localizeNavigationItems(group.items, projection.locale),
+				})),
+				// The query tells apart entries sharing a page, e.g. Environment settings › API keys.
+				localizeFrontPath(
+					`${projection.path}${globalThis.location?.search ?? ""}`,
+					projection.locale,
+				),
+			),
+		[projection.navigation, projection.locale, projection.path],
 	);
-	const messages = {
-		...USER_FRONT_CATALOGS[projection.locale],
-		...projection.messages,
-		"site.front.title": USER_FRONT_CATALOGS[projection.locale]["site.front.title"],
-	};
-	const i18n = createUserFrontI18n(projection.locale, messages);
-	const message = (id: string, values?: Record<string, string>) =>
-		Object.hasOwn(messages, id) ? i18n._(id, values) : id;
-	const sectionNavigation =
-		navigation.localItems.length > 1 ? (
-			<nav className="native-front-local-navigation" aria-label={message("navigation.local")}>
-				{navigation.localItems.map((item) => (
-					<a
-						key={item.route_id}
-						href={item.href}
-						aria-current={item.route_id === navigation.activeItem?.route_id ? "page" : undefined}
-					>
-						{item.label}
-					</a>
-				))}
-			</nav>
-		) : null;
-	const mount = (input: NativeFrontPresentationProjection["content_mounts"][number]) =>
-		mountNativeFrontRenderer({ mount: input, plugin_lock: projection.plugin_lock });
-	const layouts = projection.layout_mounts.map(mount);
-	const contents = projection.content_mounts.map(mount);
+	const messages = useMemo(
+		() => ({
+			...USER_FRONT_CATALOGS[projection.locale],
+			...projection.messages,
+			"site.front.title": USER_FRONT_CATALOGS[projection.locale]["site.front.title"],
+		}),
+		[projection.locale, projection.messages],
+	);
+	const i18n = useMemo(
+		() => createUserFrontI18n(projection.locale, messages),
+		[projection.locale, messages],
+	);
+	const message = useCallback(
+		(id: string, values?: Record<string, string>) =>
+			Object.hasOwn(messages, id) ? i18n._(id, values) : id,
+		[messages, i18n],
+	);
+	const sectionNavigation = useMemo(
+		() =>
+			navigation.localItems.length > 1 ? (
+				<nav className="native-front-local-navigation" aria-label={message("navigation.local")}>
+					{navigation.localItems.map((item) => (
+						<a
+							key={item.route_id}
+							href={item.href}
+							aria-current={item.route_id === navigation.activeItem?.route_id ? "page" : undefined}
+						>
+							{item.label}
+						</a>
+					))}
+				</nav>
+			) : null,
+		[navigation, message],
+	);
+	const { layouts, contents, state } = useMemo(() => {
+		const mount = (input: NativeFrontPresentationProjection["content_mounts"][number]) =>
+			mountProjectedNativeFrontRenderer({ mount: input, plugin_lock: projection.plugin_lock });
+		return {
+			layouts: projection.layout_mounts.map(mount),
+			contents: projection.content_mounts.map(mount),
+			state: projection.state_mount ? mount(projection.state_mount) : null,
+		};
+	}, [
+		projection.plugin_lock,
+		projection.layout_mounts,
+		projection.content_mounts,
+		projection.state_mount,
+	]);
 	const dashboardMount = projection.content_mounts[0];
-	const state = projection.state_mount ? mount(projection.state_mount) : null;
 	const currentSurface = contents.find((document) => document.kind === "surface");
 	const style: CSSProperties & { "--front-primary": string } = {
 		"--front-primary": projection.theme.accent,
@@ -145,6 +211,39 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 		))
 	);
 	const layout = layouts.find((document) => document.kind === "layout");
+	const hasLayout = Boolean(layout);
+	const recentKey = frontRecentPagesKey(projection.instance_id, projection.operator?.id);
+	useEffect(() => {
+		if (!hasLayout) return;
+		const toggle = (event: KeyboardEvent) => {
+			if (event.key.toLowerCase() !== "k" || event.altKey || event.shiftKey) return;
+			if (!(event.metaKey || event.ctrlKey)) return;
+			event.preventDefault();
+			setPaletteRequested(true);
+			setPaletteOpen((open) => !open);
+		};
+		document.addEventListener("keydown", toggle);
+		return () => {
+			document.removeEventListener("keydown", toggle);
+		};
+	}, [hasLayout]);
+	const activeItem = navigation.activeItem;
+	useEffect(() => {
+		if (!hasLayout || !activeItem) return;
+		const group = navigation.groups.find(({ items }) =>
+			items.some(({ href }) => href === navigation.activeHref),
+		);
+		const root = group?.items.find(({ href }) => href === navigation.activeHref);
+		const trail = [group?.label, root?.label].filter(
+			(label, index, all): label is string =>
+				Boolean(label) && label !== activeItem.label && all.indexOf(label) === index,
+		);
+		recordFrontRecentPage(recentKey, {
+			href: activeItem.href,
+			label: activeItem.label,
+			...(trail.length ? { hint: trail.join(" › ") } : {}),
+		});
+	}, [hasLayout, activeItem, navigation.groups, navigation.activeHref, recentKey]);
 	if (!layout) {
 		return (
 			<div className="native-front native-front-standalone" style={style}>
@@ -152,6 +251,13 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 			</div>
 		);
 	}
+	// The brand and the menu's Overview entry lead to the same page: the canonical home
+	// destination when the menu lists it, otherwise the always-available core home.
+	const homeHref =
+		navigation.groups
+			.flatMap(({ items }) => items)
+			.find((item) => item.href.split(HREF_SUFFIX_PATTERN, 1)[0] === canonicalFrontPath("/"))
+			?.href ?? layout.home_href;
 	return (
 		<div
 			className="native-front native-front-layout"
@@ -178,7 +284,7 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 				aria-label={message(layout.navigation_label)}
 			>
 				<div className="native-front-brand-wrap">
-					<a className="native-front-brand" href={layout.home_href}>
+					<a className="native-front-brand" href={homeHref}>
 						<span className="native-front-brand-mark" aria-hidden="true" />
 						<span className="native-front-brand-name">{message(layout.title)}</span>
 					</a>
@@ -247,6 +353,26 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 						☰
 					</Button>
 					<div className="native-front-header-actions">
+						<button
+							type="button"
+							className="native-front-command-trigger"
+							aria-haspopup="dialog"
+							aria-expanded={paletteOpen}
+							aria-keyshortcuts="Meta+K Control+K"
+							aria-label={message("site.front.command.label")}
+							onPointerEnter={prefetchCommandPalette}
+							onFocus={prefetchCommandPalette}
+							onClick={() => {
+								setPaletteRequested(true);
+								setPaletteOpen(true);
+							}}
+						>
+							<Search aria-hidden="true" size={15} />
+							<span className="native-front-command-trigger-label">
+								{message("site.front.command.open")}
+							</span>
+							{paletteShortcut ? <kbd aria-hidden="true">{paletteShortcut}</kbd> : null}
+						</button>
 						<NativeFrontControls
 							message={message}
 							locale={projection.locale}
@@ -258,6 +384,19 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 					<SectionNavigationProvider value={sectionNavigation}>{body}</SectionNavigationProvider>
 				</main>
 			</div>
+			{paletteRequested ? (
+				<Suspense fallback={null}>
+					<NativeFrontCommandPalette
+						open={paletteOpen}
+						onOpenChange={setPaletteOpen}
+						navigation={navigation.groups}
+						currentHref={activeItem?.href}
+						recentKey={recentKey}
+						locale={projection.locale}
+						message={message}
+					/>
+				</Suspense>
+			) : null}
 		</div>
 	);
 }

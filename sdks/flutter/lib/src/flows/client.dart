@@ -51,7 +51,7 @@ class SuperBoardFlowsClient {
        _navigationAdapter = navigationAdapter,
        _reconnectDelays = List.unmodifiable(reconnectDelays);
 
-  static const String sdkVersion = '3.0.0';
+  static const String sdkVersion = '4.0.0';
 
   final String _apiUrl;
   String _projectId;
@@ -88,7 +88,9 @@ class SuperBoardFlowsClient {
   bool _disposed = false;
   bool _started = false;
   Future<void>? _connectOperation;
-  Future<void> _persistTail = Future<void>.value();
+  Timer? _persistTimer;
+  Future<void>? _persistWrite;
+  Future<void>? _persistQueued;
   Future<void>? _commandFlushOperation;
   bool _refreshOnRealtimeConnect = false;
   bool _reconcilingRealtime = false;
@@ -514,7 +516,7 @@ class SuperBoardFlowsClient {
         return;
       }
       _applyUpdate(update, source: 'websocket');
-      unawaited(_persist());
+      _persistSoon();
     } catch (error) {
       _log('Ignored invalid realtime message: $error');
     }
@@ -789,21 +791,78 @@ class SuperBoardFlowsClient {
       value.environment == _environment &&
       value.userId == _userId;
 
+  /// Debounce window for high-frequency, fire-and-forget persistence such as
+  /// realtime update bursts. Awaited callers write without this delay.
+  static const Duration _persistDebounce = Duration(milliseconds: 300);
+
+  SuperBoardFlowPersistedState _snapshot() => SuperBoardFlowPersistedState(
+    projectId: _projectId,
+    environment: _environment,
+    userId: _userId,
+    language: _language,
+    userProperties: _userProperties,
+    blocks: _blocks,
+    tourProgress: Map.unmodifiable(_tourProgress),
+    activeSurveyBlockStates: List.unmodifiable(_activeSurveyBlockStates),
+    pendingCommands: List.unmodifiable(_pendingCommands),
+  );
+
+  /// Persists the current state. Writes are serialized and coalesced: callers
+  /// arriving while a write is in flight share a single trailing write that
+  /// snapshots the latest state when it starts (latest snapshot wins), so a
+  /// burst of mutations produces at most one extra secure-storage write.
   Future<void> _persist() {
-    final snapshot = SuperBoardFlowPersistedState(
-      projectId: _projectId,
-      environment: _environment,
-      userId: _userId,
-      language: _language,
-      userProperties: _userProperties,
-      blocks: _blocks,
-      tourProgress: Map.unmodifiable(_tourProgress),
-      activeSurveyBlockStates: List.unmodifiable(_activeSurveyBlockStates),
-      pendingCommands: List.unmodifiable(_pendingCommands),
-    );
-    final operation = _persistTail.then((_) => _storage.write(snapshot));
-    _persistTail = operation.catchError((Object _) {});
-    return operation;
+    _persistTimer?.cancel();
+    _persistTimer = null;
+    return _schedulePersistWrite();
+  }
+
+  /// Persists the current state after [_persistDebounce] without blocking the
+  /// caller. Pending writes are flushed by [dispose].
+  void _persistSoon() {
+    if (_disposed || _persistTimer?.isActive == true) return;
+    _persistTimer = Timer(_persistDebounce, () {
+      _persistTimer = null;
+      unawaited(
+        _schedulePersistWrite().catchError((Object error) {
+          _log('Flows state persistence failed: $error');
+        }),
+      );
+    });
+  }
+
+  Future<void> _schedulePersistWrite() {
+    final queued = _persistQueued;
+    if (queued != null) return queued;
+    final previous = _persistWrite ?? Future<void>.value();
+    late final Future<void> write;
+    write = previous
+        .catchError((Object _) {})
+        .then((_) {
+          if (identical(_persistQueued, write)) _persistQueued = null;
+          return _storage.write(_snapshot());
+        })
+        .whenComplete(() {
+          if (identical(_persistWrite, write)) _persistWrite = null;
+        });
+    _persistQueued = write;
+    _persistWrite = write;
+    return write;
+  }
+
+  Future<void> _flushPersistence() async {
+    if (_persistTimer?.isActive == true) {
+      _persistTimer!.cancel();
+      _persistTimer = null;
+      unawaited(_schedulePersistWrite().catchError((Object _) {}));
+    }
+    final pending = _persistWrite;
+    if (pending == null) return;
+    try {
+      await pending;
+    } on Object catch (error) {
+      _log('Flows state persistence failed: $error');
+    }
   }
 
   Uri _uri(String path) => Uri.parse(
@@ -897,7 +956,7 @@ class SuperBoardFlowsClient {
     _disposed = true;
     _reconnectTimer?.cancel();
     await _disconnectRealtime(scheduleReconnect: false);
-    await _persistTail;
+    await _flushPersistence();
     if (_ownsHttp) _http.close();
     await _blocksController.close();
     await _debugController.close();

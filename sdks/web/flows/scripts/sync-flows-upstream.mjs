@@ -77,26 +77,6 @@ const IGNORED_NAMES = new Set([
 	"test-results",
 ]);
 
-const REFERENCE_EXTENSIONS = new Set([
-	".css",
-	".gif",
-	".html",
-	".ico",
-	".jpeg",
-	".jpg",
-	".js",
-	".json",
-	".md",
-	".mdx",
-	".mjs",
-	".png",
-	".svg",
-	".ts",
-	".tsx",
-	".txt",
-	".webp",
-]);
-
 const RETIRED_PRODUCT_PATHS = Object.freeze([
 	"packages/icons/src/organization16.tsx",
 	"packages/shared/src/billing.ts",
@@ -196,6 +176,15 @@ function replacePackageNames(value, names) {
 		output = output.replaceAll(upstream, local);
 	}
 	return output;
+}
+
+// Patches that must keep applying to the pinned source: fail the import loudly
+// instead of silently shipping the unpatched upstream behaviour.
+function replaceRequired(destinationPath, text, before, after) {
+	if (!text.includes(before)) {
+		throw new Error(`Flows upstream patch no longer applies to ${destinationPath}`);
+	}
+	return text.replace(before, after);
 }
 
 function transformPackageJson(sourceKey, destinationPath, text) {
@@ -661,6 +650,154 @@ export const sendActivate = async (blockId: string, blockStateId?: string): Prom
 			);
 	}
 
+	if (destinationPath === "packages/js/src/lib/websocket.ts") {
+		// Upstream returns the first socket's `disconnect` and reconnects through a
+		// detached timer, so a later disconnect closes nothing and the pending
+		// reconnect opens a socket nobody owns. Keep one owner per connection: its
+		// own attempt counter, the pending timer and whichever socket is current.
+		output = replaceRequired(
+			destinationPath,
+			output,
+			`let reconnectAttempts = 0;
+
+export const websocket = (props: Props): { disconnect: Disconnect } => {
+  const connect = (): { disconnect: Disconnect } => {
+    const socket = new WebSocket(props.url);`,
+			`export const websocket = (props: Props): { disconnect: Disconnect } => {
+  let reconnectAttempts = 0;
+  let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  let disconnected = false;
+  let disconnectCurrent: Disconnect = () => undefined;
+
+  const connect = (): void => {
+    if (disconnected) return;
+    const socket = new WebSocket(props.url);`,
+		);
+		output = replaceRequired(
+			destinationPath,
+			output,
+			`    const handleClose = (): void => {
+      setTimeout(
+        () => {
+          connect();
+        },
+        Math.min(1000 * 4 ** reconnectAttempts, 120_000),
+      );
+      reconnectAttempts += 1;
+    };`,
+			`    const handleClose = (): void => {
+      if (disconnected) return;
+      if (reconnectTimeout !== null) clearTimeout(reconnectTimeout);
+      reconnectTimeout = setTimeout(
+        () => {
+          reconnectTimeout = null;
+          connect();
+        },
+        Math.min(1000 * 4 ** reconnectAttempts, 120_000),
+      );
+      reconnectAttempts += 1;
+    };`,
+		);
+		output = replaceRequired(
+			destinationPath,
+			output,
+			`    const disconnect = (): void => {
+      socket.removeEventListener("message", props.onMessage);`,
+			`    disconnectCurrent = (): void => {
+      socket.removeEventListener("message", props.onMessage);`,
+		);
+		output = replaceRequired(
+			destinationPath,
+			output,
+			`      } else socket.close();
+    };
+
+    return { disconnect };
+  };
+
+  return connect();
+};`,
+			`      } else socket.close();
+    };
+  };
+
+  connect();
+
+  return {
+    disconnect: () => {
+      disconnected = true;
+      if (reconnectTimeout !== null) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+      disconnectCurrent();
+    },
+  };
+};`,
+		);
+	}
+
+	if (destinationPath === "packages/js/src/init.ts") {
+		// Replace the 250 ms location polling with navigation events. History API
+		// navigations do not emit events, so pushState/replaceState are wrapped once
+		// (chaining whatever implementation is installed) to announce them.
+		output = replaceRequired(
+			destinationPath,
+			output,
+			`let locationChangeInterval: number | null = null;
+`,
+			`const LOCATION_CHANGE_EVENT = "superboard-flows:locationchange";
+const HISTORY_PATCHED = Symbol.for("superboard.flows.historyPatched");
+let stopLocationTracking: (() => void) | null = null;
+
+const patchHistory = (): void => {
+  const history = window.history as History & { [HISTORY_PATCHED]?: true };
+  if (history[HISTORY_PATCHED]) return;
+  for (const method of ["pushState", "replaceState"] as const) {
+    const original = history[method];
+    history[method] = function (this: History, ...args: Parameters<History["pushState"]>) {
+      const result = original.apply(this, args);
+      window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT));
+      return result;
+    };
+  }
+  history[HISTORY_PATCHED] = true;
+};
+
+const trackLocation = (): (() => void) => {
+  const update = (): void => {
+    const newPathname = getPathname();
+    if (pathname.value !== newPathname) {
+      pathname.value = newPathname;
+    }
+  };
+  patchHistory();
+  const events = ["popstate", "hashchange", LOCATION_CHANGE_EVENT];
+  for (const type of events) window.addEventListener(type, update);
+  update();
+  return () => {
+    for (const type of events) window.removeEventListener(type, update);
+  };
+};
+`,
+		);
+		output = replaceRequired(
+			destinationPath,
+			output,
+			`  if (locationChangeInterval !== null) clearInterval(locationChangeInterval);
+  locationChangeInterval = window.setInterval(() => {
+    const newPathname = getPathname();
+    if (pathname.value !== newPathname) {
+      pathname.value = newPathname;
+    }
+  }, 250);
+`,
+			`  stopLocationTracking?.();
+  stopLocationTracking = trackLocation();
+`,
+		);
+	}
+
 	if (destinationPath === "packages/js/src/store.ts") {
 		output = output.replace(
 			'// Log a "Powered by Flows" message in the console for free orgs',
@@ -1109,8 +1246,10 @@ function transformText(sourceKey, destinationPath, contents) {
 			if (Object.keys(configuration.options).length === 0) delete configuration.options;
 		}
 		if (sourceKey === "flows-sh" && destinationPath !== "product/.oxlintrc.json") {
+			// Product packages sit one level below product/, whose .oxlintrc.json is
+			// the imported flows.sh root configuration.
 			configuration.extends = (configuration.extends ?? []).map((path) =>
-				path === "../../.oxlintrc.json" ? "../../../../.oxlintrc.json" : path,
+				path === "../../.oxlintrc.json" ? "../.oxlintrc.json" : path,
 			);
 		}
 		if (destinationPath === ".oxlintrc.json") {
@@ -1332,9 +1471,6 @@ function createSelection(flowsShSource, flowsSdkSource) {
 		);
 	}
 	addTree("flows-sdk", flowsSdkSource, "workspaces/e2e", "tests/e2e", () => true);
-	addTree("flows-sdk", flowsSdkSource, "examples", "reference/framework-examples", (path) =>
-		REFERENCE_EXTENSIONS.has(extname(path).toLowerCase()),
-	);
 
 	addFile("flows-sh", flowsShSource, "LICENSE.md", "notices/flows-sh-LICENSE.md");
 	addFile("flows-sh", flowsShSource, ".oxlintrc.json", "product/.oxlintrc.json");
@@ -1365,30 +1501,9 @@ function createSelection(flowsShSource, flowsSdkSource) {
 		"reference/product-docs/content",
 		(path) => !isRetiredProductPath(`apps/docs/src/content/${path}`),
 	);
-	addTree(
-		"flows-sh",
-		flowsShSource,
-		"apps/docs/public",
-		"reference/product-docs/assets",
-		(path) => !isRetiredProductPath(`apps/docs/public/${path}`),
-	);
-	addTree("flows-sh", flowsShSource, "examples", "reference/product-examples", (path) => {
-		if (!REFERENCE_EXTENSIONS.has(extname(path).toLowerCase())) return false;
-		if (path.includes("/src/components/ui/") || path.includes("/src/components/providers/"))
-			return false;
-		if (path.endsWith("/src/app/layout.tsx") || path.endsWith("/src/app/providers.tsx"))
-			return false;
-		if (path.endsWith("/src/lib/utils.ts")) return false;
-		return true;
-	});
-	addTree("flows-sh", flowsShSource, "example-templates", "reference/product-templates", (path) => {
-		if (!REFERENCE_EXTENSIONS.has(extname(path).toLowerCase())) return false;
-		if (path.includes("/src/components/ui/") || path.includes("/src/components/providers/"))
-			return false;
-		if (path.endsWith("/src/app/layout.tsx") || path.endsWith("/src/app/providers.tsx"))
-			return false;
-		return true;
-	});
+	// Documentation images and the upstream example/template applications (about
+	// 127 MB) are not imported: nothing builds, tests or ships them, they remain
+	// available at the pinned upstream commits, and the licenses live in notices/.
 
 	const destinations = new Set();
 	for (const entry of selected) {

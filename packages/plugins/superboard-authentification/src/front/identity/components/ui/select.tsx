@@ -9,4 +9,4 @@ export {
 	SelectSeparator,
 	SelectScrollUpButton,
 	SelectScrollDownButton,
-} from "@superboard/front-ui/ui";
+} from "@superboard/front-ui/ui/select.js";

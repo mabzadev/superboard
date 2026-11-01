@@ -4,6 +4,7 @@ type EmailQueueJob = { type: "email.deliver"; messageId: string };
 interface __BaseEnv_Env {
 	DB: D1Database;
 	EMAIL_QUEUE: Queue<EmailQueueJob>;
+	SUPERBOARD_WORKER_VERSION: WorkerVersionMetadata;
 	ENVIRONMENT: string;
 	D1_EXPECTED_MIGRATION: string;
 	MAIL_TRANSPORT: "capture" | "smtp";
@@ -15,6 +16,7 @@ interface __BaseEnv_Env {
 	EMAIL_DLQ_NAME: string;
 	AWS_REGION: string;
 	AWS_SES_CONFIGURATION_SET: string;
+	SUPERBOARD_RELEASE: string;
 	SUPERBOARD_INSTANCE_ID: string;
 	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	EMAIL_INTERNAL_TOKEN: string;
@@ -29,7 +31,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "D1_EXPECTED_MIGRATION" | "MAIL_TRANSPORT" | "MAIL_PROVIDER" | "MAIL_FROM_NAME" | "MAIL_FROM_ADDRESS" | "MAIL_REPLY_TO" | "EMAIL_QUEUE_NAME" | "EMAIL_DLQ_NAME" | "AWS_REGION" | "AWS_SES_CONFIGURATION_SET" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "EMAIL_INTERNAL_TOKEN" | "EMAIL_SMTP_ENCRYPTION_KEY">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "D1_EXPECTED_MIGRATION" | "MAIL_TRANSPORT" | "MAIL_PROVIDER" | "MAIL_FROM_NAME" | "MAIL_FROM_ADDRESS" | "MAIL_REPLY_TO" | "EMAIL_QUEUE_NAME" | "EMAIL_DLQ_NAME" | "AWS_REGION" | "AWS_SES_CONFIGURATION_SET" | "SUPERBOARD_RELEASE" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "EMAIL_INTERNAL_TOKEN" | "EMAIL_SMTP_ENCRYPTION_KEY">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

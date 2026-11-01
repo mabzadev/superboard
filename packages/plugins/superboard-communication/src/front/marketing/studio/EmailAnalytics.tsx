@@ -10,6 +10,7 @@ import {
 } from "@superboard/front-ui/ui/table.js";
 import { useEffect, useState } from "react";
 
+import { EmailInsights } from "./EmailInsights.js";
 import { useStudioI18n } from "./i18n.js";
 import { getStudioStatistics, type StudioStatistics } from "./service.js";
 
@@ -159,6 +160,16 @@ export function EmailAnalytics({
 							<p className="p-5 text-kumo-subtle">{t("No deliveries in this period")}</p>
 						)}
 					</div>
+					{templateId && (
+						<EmailInsights
+							project={project}
+							filters={{
+								template_id: templateId,
+								from: new Date(filters.from + "T00:00:00").toISOString(),
+								to: new Date(filters.to + "T23:59:59").toISOString(),
+							}}
+						/>
+					)}
 				</>
 			)}
 		</section>

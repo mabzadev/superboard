@@ -147,7 +147,7 @@ describe("Analytics with optional frontend integrations", () => {
 		expect(container.textContent).toContain("Unique people");
 		expect(
 			container.querySelector(
-				'a[href^="/app/"], a[href^="/products/"], a[href^="/dynamic-links/"], a[href^="/acquisition/dynamic-links/"]',
+				'a[href^="/app/"], a[href^="/products/"], a[href^="/dynamic-links/"], a[href^="/acquisition/dynamic-links"], a[href^="/auth/"], a[href^="/monetization/"]',
 			),
 		).toBeNull();
 		expect(container.textContent).not.toContain("Some module data is temporarily unavailable");
@@ -162,11 +162,11 @@ describe("Analytics with optional frontend integrations", () => {
 		).toBe(true);
 		expect(network.paths.some((path) => /\/api\/v1\/(?:app|products)\//u.test(path))).toBe(false);
 		expect(container.textContent).toContain("Campaign landing");
-		expect(container.querySelector('a[href^="/acquisition/dynamic-links/"]')).not.toBeNull();
+		expect(container.querySelector('a[href^="/acquisition/dynamic-links"]')).not.toBeNull();
 		network.paths.length = 0;
 		await render();
 		expect(network.paths.some((path) => path.includes("/dynamic-links/"))).toBe(false);
-		expect(container.querySelector('a[href^="/acquisition/dynamic-links/"]')).toBeNull();
+		expect(container.querySelector('a[href^="/acquisition/dynamic-links"]')).toBeNull();
 		expect(container.textContent).toContain("137");
 	});
 
@@ -188,7 +188,7 @@ describe("Analytics with optional frontend integrations", () => {
 		expect(container.textContent).toContain("137");
 		expect(container.textContent).toContain("Products unavailable");
 		const label = [...container.querySelectorAll("span")].find(
-			(element) => element.textContent === "Purchases",
+			(element) => element.textContent === "Net revenue",
 		);
 		expect(label?.parentElement?.parentElement?.textContent).toContain("—");
 	});
@@ -202,7 +202,7 @@ describe("Analytics with optional frontend integrations", () => {
 			network.rejectLinkStatistics?.(new Error("Stale link provider failure"));
 		});
 		expect(container.textContent).not.toContain("Stale link provider failure");
-		expect(container.querySelector('a[href^="/acquisition/dynamic-links/"]')).toBeNull();
+		expect(container.querySelector('a[href^="/acquisition/dynamic-links"]')).toBeNull();
 		expect(container.textContent).toContain("137");
 	});
 
@@ -210,9 +210,9 @@ describe("Analytics with optional frontend integrations", () => {
 		network.failAnalytics = true;
 		await render();
 		expect(container.textContent).toContain("Analytics unavailable");
-		const label = [...container.querySelectorAll("p")].find(
+		const label = [...container.querySelectorAll("span")].find(
 			(element) => element.textContent === "Events",
 		);
-		expect(label?.parentElement?.textContent).toContain("—");
+		expect(label?.parentElement?.parentElement?.textContent).toContain("—");
 	});
 });

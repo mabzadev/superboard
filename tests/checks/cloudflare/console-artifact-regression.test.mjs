@@ -7,6 +7,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { parse } from "yaml";
+
 import { captureConsoleArtifact } from "../../../scripts/cloudflare/console-artifact.mjs";
 import { runConsolidatedDeployment } from "../../../scripts/cloudflare/consolidate.mjs";
 
@@ -260,39 +262,21 @@ for (const script of ["cloudflare:deploy", "cloudflare:deploy:all"]) {
 	});
 }
 
-test("a failing plugin regression check stops the commit hook", async () => {
-	const directory = await mkdtemp(join(tmpdir(), "superboard-plugin-hook-"));
-	try {
-		const marker = join(directory, "commit-continued");
-		await writeFile(
-			join(directory, "pnpm"),
-			`#!/bin/sh
-if [ "$1 $2" = "run check:front-menu" ]; then exit 0; fi
-if [ "$1 $2" = "run test:plugins:regression" ]; then exit 7; fi
-: > "$REGRESSION_DEPLOY_MARKER"
-`,
-			{ mode: 0o755 },
-		);
-		await writeFile(join(directory, "gitleaks"), '#!/bin/sh\n: > "$REGRESSION_DEPLOY_MARKER"\n', {
-			mode: 0o755,
-		});
-		const result = spawnSync(
-			"/bin/sh",
-			["-e", join(import.meta.dirname, "../../../.husky/pre-commit")],
-			{
-				env: {
-					...process.env,
-					PATH: `${directory}:${process.env.PATH}`,
-					REGRESSION_DEPLOY_MARKER: marker,
-				},
-				encoding: "utf8",
-			},
-		);
-		assert.equal(result.status, 7, result.stderr);
-		await assert.rejects(access(marker), { code: "ENOENT" });
-	} finally {
-		await rm(directory, { recursive: true, force: true });
-	}
+test("plugin regression checks gate every pull request in CI", async () => {
+	const workflow = parse(
+		await readFile(
+			new URL("../../../.github/workflows/plugin-regressions.yml", import.meta.url),
+			"utf8",
+		),
+	);
+	assert.ok("pull_request" in workflow.on);
+	const job = workflow.jobs["plugin-regressions"];
+	assert.deepEqual(job.strategy.matrix.check, ["local", "development", "artifact"]);
+	assert.ok(
+		job.steps.some((step) => /^pnpm run test:plugins:\$\{\{ matrix\.check \}\}$/u.test(step.run)),
+		"every regression mode must run in CI",
+	);
+	assert.equal(job.strategy["fail-fast"], false);
 });
 
 test("deploying a prepared console preserves the tested Worker and browser assets", async () => {

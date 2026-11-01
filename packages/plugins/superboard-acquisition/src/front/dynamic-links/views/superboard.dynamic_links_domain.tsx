@@ -1,4 +1,4 @@
-import DomainPageContent from "../components/dynamic_links/domain/DomainPageContent.js";
+import DynamicLinksWorkspace from "../components/dynamic_links/DynamicLinksWorkspace.js";
 export default function View() {
-	return <DomainPageContent />;
+	return <DynamicLinksWorkspace tab="settings" section="domain" />;
 }

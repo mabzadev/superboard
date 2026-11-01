@@ -2,8 +2,8 @@
   "schema_version": 1,
   "target": "mabza-development",
   "environment": "local",
-  "target_artifact_checksum": "sha256:89b65e3f6faf960846f142c515c3ded9e7cdc1cfdfd5bc38c8f371e478b4887b",
-  "target_graph_checksum": "sha256:c6c2dd5f301f4330e23fed872a1c7e84f711f65ecfbb39cab60337f75e7cd4de",
+  "target_artifact_checksum": "sha256:65d71b7f96292b562d7ef9d4fa3ba1de3043bdfc9bffade87d31e8e1d4431331",
+  "target_graph_checksum": "sha256:96d9b9a6d83dddaefb56ee07d683c6b61ea524fdf9dc6b83aa616fbb61837965",
   "active_plugin_ids": [
     "superboard-analytics",
     "superboard-audit",
@@ -25,24 +25,24 @@
     "superboard-user"
   ],
   "manifest_artifact_checksums": {
-    "superboard-analytics": "sha256:491982d0dee99adf7a17b31c512db63c5ecc62c483bd2c9fc19d127c064d0de3",
-    "superboard-audit": "sha256:a79d1408568b1441193bb9257ec170aaf1b85d00d71d84ef25a4153d5facc4cd",
-    "superboard-billing": "sha256:363f4c5bb39303664a3833098db28b1fbe24e4c4a20723dffa1928e38c51e844",
-    "superboard-content": "sha256:f21675f922c603e7e83cce3655ec41679ae09cd7963a046038e03a989e169eae",
-    "superboard-dynamic-links": "sha256:3fbe994149cf015a9d31c8d793725b3870f17e96bcaa20ac97667e257893b57d",
-    "superboard-email": "sha256:e2730df62ebb4309d179cddcd6c80091e3f1b45da99d972b82abc9379dec6fdd",
-    "superboard-files": "sha256:adffbd0ecd453e8eb5c8b47d2deb1a1992c2620cf3deb0d1ee977e39961f0fbb",
-    "superboard-flows": "sha256:63b42ea01a8ef4c6276b3366d075d444b17420a3feeeacb37f8551ccafd8a9c2",
-    "superboard-gateway": "sha256:714b36c45e9d2b6b0275668f44024a37661ba3880b10ac50bb832bf9fd3698f5",
-    "superboard-marketing": "sha256:8a32a5fae627567db02a8cbc6cc4b00dcb89ab09f830fef747261fdc7463925f",
-    "superboard-mcp": "sha256:badb4d3b51d7e1543454c6d7dcb401201ede48d7058e04d70270b4fef7009e67",
-    "superboard-observability": "sha256:71faadac44f2eab4ba87709f01b4dd5ad152e9d20f8f3a8c16de375bae88e2a0",
-    "superboard-onboardings": "sha256:582c8f007286ba1a4be1c7a997c9b0adb59946f28d6d7c708b033af52d8b8a33",
-    "superboard-paywalls": "sha256:246a8de9b24e276853f043a77ec054671c07c807e80a2208a3f03c2346bc5967",
-    "superboard-products": "sha256:af78df8688daa3a4591ad302d7d41695327d1f2e4a11c9532c5659e0e857d5e7",
-    "superboard-settings": "sha256:961499d79f9e7038b944e34385026da4b12d677168fd2f1e3ffe403976d18655",
-    "superboard-support": "sha256:f753501922a53f5a51b38cef135f3a697e7357c62e7dd8e5935746e2965b7ed8",
-    "superboard-user": "sha256:82fa31f7aab13f2c4f96c6dd740e2ce017292e32d8f1f6fc9ca396a213e3f002"
+    "superboard-analytics": "sha256:da614cefbceeb22be1f08fe6fb3b329828abd777325a89abe2b1d5306fb4ed38",
+    "superboard-audit": "sha256:669453b99c04cb7e6dfee70854339bd521c0c0364ac35b78c0d09e2339881c06",
+    "superboard-billing": "sha256:bb27077a537406d3d9bf392ab4faca43bcfe73b43da4b9122041999607fd9e92",
+    "superboard-content": "sha256:116d8bbe50e9bbb08614621771d8762db9dc2f4fdc450e52175f41467ea4f434",
+    "superboard-dynamic-links": "sha256:ce42391b715b825d3d3339aaa14b7d153b51c2e6ad82af3bbb2db872a12b6fd3",
+    "superboard-email": "sha256:8a1c3aa6a836a44fe980ea6fa96e0c88abb356bb9806790dee49224ea2922fab",
+    "superboard-files": "sha256:bb5e656950807872c6ac335c286d31133286921eed2031a37265d5ce4ab63c47",
+    "superboard-flows": "sha256:c19c01bfac68580d2313ec66b159d85bcb186391c7050049edc8e82e6201c46a",
+    "superboard-gateway": "sha256:4fc7408b6afa454592eff074eaab1ca1d10d73b599dddcdd2db0b934d7081315",
+    "superboard-marketing": "sha256:ff7d8875a85ecdbcc03390f029d520ef7a5efeb5ffd762ddbf1008bcc27a2bbb",
+    "superboard-mcp": "sha256:7cf29e01684b8103b50cae00a10f1adf81c8a12cfe6486f6419afba410a6b321",
+    "superboard-observability": "sha256:4a7524d6b9297c45b5b780bf6c3803bc496db443311f86415fc06a67837a0e47",
+    "superboard-onboardings": "sha256:e776095a4ad1c8fc09eb67138b9be4500b0f2240bf1042cf9849a0774b894cb5",
+    "superboard-paywalls": "sha256:2296bfa9aa7dd9731c9d86fc38ac9ce4770326d2f6ecdf17c8fef420660b8a1b",
+    "superboard-products": "sha256:51d5001b98bc95b2b604cf39b6effd77d7c2fa136cd33c2809e55b4f90bf7ec1",
+    "superboard-settings": "sha256:25b1b9ed8e86007f7a6c44a0a4dd9aabb906cea6d616011cfe2b432dfc707a60",
+    "superboard-support": "sha256:ac57f828db95beeb71c3787fbcaadfa81edf983fbcabd70f85176e0eb77dbbfa",
+    "superboard-user": "sha256:6806929e91db0964215559397714ddd1dae8ef32fe6a290c2b814fd3c2547d1a"
   },
   "verification_key": {
     "key_ops": [
@@ -50,8 +50,8 @@
     ],
     "ext": true,
     "kty": "EC",
-    "x": "xwlwzsDcGfpVBzbvv5slSPHcBIDHuZA4_eQSah1vnPc",
-    "y": "beYv0pgFIoqotJ5De20gZaHc_EDPwCZMWXQxq3luoiU",
+    "x": "PDuwkgCkapqBvVhFjN5L6mxHiLV8TWy7Z_e-UqfCwtY",
+    "y": "7lcQaAm2sEZpk5uy1QVxpVGyNHxuNuppRe1TzXcyeDA",
     "crv": "P-256",
     "kid": "issue-70-parity"
   },
@@ -2781,6 +2781,37 @@
             "layout_ids": [
               "layout.superboard_admin"
             ],
+            "page_id": "page.superboard_communication_audience",
+            "parameters": {},
+            "path_pattern": "/communication/audience",
+            "permission_expression": "superboard-marketing.read",
+            "priority": 200,
+            "query": {},
+            "redirect": null,
+            "renderer_ids": [
+              "superboard-marketing.renderer.admin_surface"
+            ],
+            "route_id": "superboard.communication_audience",
+            "route_kind": "page",
+            "state_policies": {
+              "empty": "emdash.core.state.empty",
+              "error": "emdash.core.state.error",
+              "forbidden": "emdash.core.state.forbidden",
+              "loading": "emdash.core.state.loading",
+              "maintenance": "emdash.core.state.maintenance",
+              "not_found": "emdash.core.state.not_found",
+              "unavailable": "emdash.core.state.unavailable"
+            }
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "dependencies": [
+              "dependency.superboard_marketing"
+            ],
+            "layout_ids": [
+              "layout.superboard_admin"
+            ],
             "page_id": "page.superboard_communication_campaigns",
             "parameters": {},
             "path_pattern": "/communication/campaigns",
@@ -4137,7 +4168,7 @@
         ],
         "schema_version": "1.0.0",
         "system_routes": [],
-        "route_manifest_checksum": "sha256:5e3ee75aa16382a20ac3e57fefdb5ab9056298520fc126384b9a680aa388ae2d"
+        "route_manifest_checksum": "sha256:c860196eb0f0141732472c3cebccc78fbed152a43cd6f242e6c2c13bf9b0c49c"
       },
       "gateway_manifest": {
         "gateway_manifest_id": "01J00000000000000000000221",
@@ -7345,109 +7376,109 @@
           "version": "0.1.0"
         },
         {
-          "artifact_checksum": "sha256:491982d0dee99adf7a17b31c512db63c5ecc62c483bd2c9fc19d127c064d0de3",
+          "artifact_checksum": "sha256:da614cefbceeb22be1f08fe6fb3b329828abd777325a89abe2b1d5306fb4ed38",
           "native": false,
           "plugin_id": "superboard-analytics",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:a79d1408568b1441193bb9257ec170aaf1b85d00d71d84ef25a4153d5facc4cd",
+          "artifact_checksum": "sha256:669453b99c04cb7e6dfee70854339bd521c0c0364ac35b78c0d09e2339881c06",
           "native": false,
           "plugin_id": "superboard-audit",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:363f4c5bb39303664a3833098db28b1fbe24e4c4a20723dffa1928e38c51e844",
+          "artifact_checksum": "sha256:bb27077a537406d3d9bf392ab4faca43bcfe73b43da4b9122041999607fd9e92",
           "native": false,
           "plugin_id": "superboard-billing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:f21675f922c603e7e83cce3655ec41679ae09cd7963a046038e03a989e169eae",
+          "artifact_checksum": "sha256:116d8bbe50e9bbb08614621771d8762db9dc2f4fdc450e52175f41467ea4f434",
           "native": false,
           "plugin_id": "superboard-content",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:3fbe994149cf015a9d31c8d793725b3870f17e96bcaa20ac97667e257893b57d",
+          "artifact_checksum": "sha256:ce42391b715b825d3d3339aaa14b7d153b51c2e6ad82af3bbb2db872a12b6fd3",
           "native": false,
           "plugin_id": "superboard-dynamic-links",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:e2730df62ebb4309d179cddcd6c80091e3f1b45da99d972b82abc9379dec6fdd",
+          "artifact_checksum": "sha256:8a1c3aa6a836a44fe980ea6fa96e0c88abb356bb9806790dee49224ea2922fab",
           "native": false,
           "plugin_id": "superboard-email",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:adffbd0ecd453e8eb5c8b47d2deb1a1992c2620cf3deb0d1ee977e39961f0fbb",
+          "artifact_checksum": "sha256:bb5e656950807872c6ac335c286d31133286921eed2031a37265d5ce4ab63c47",
           "native": false,
           "plugin_id": "superboard-files",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:63b42ea01a8ef4c6276b3366d075d444b17420a3feeeacb37f8551ccafd8a9c2",
+          "artifact_checksum": "sha256:c19c01bfac68580d2313ec66b159d85bcb186391c7050049edc8e82e6201c46a",
           "native": false,
           "plugin_id": "superboard-flows",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:714b36c45e9d2b6b0275668f44024a37661ba3880b10ac50bb832bf9fd3698f5",
+          "artifact_checksum": "sha256:4fc7408b6afa454592eff074eaab1ca1d10d73b599dddcdd2db0b934d7081315",
           "native": false,
           "plugin_id": "superboard-gateway",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:8a32a5fae627567db02a8cbc6cc4b00dcb89ab09f830fef747261fdc7463925f",
+          "artifact_checksum": "sha256:ff7d8875a85ecdbcc03390f029d520ef7a5efeb5ffd762ddbf1008bcc27a2bbb",
           "native": false,
           "plugin_id": "superboard-marketing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:badb4d3b51d7e1543454c6d7dcb401201ede48d7058e04d70270b4fef7009e67",
+          "artifact_checksum": "sha256:7cf29e01684b8103b50cae00a10f1adf81c8a12cfe6486f6419afba410a6b321",
           "native": false,
           "plugin_id": "superboard-mcp",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:71faadac44f2eab4ba87709f01b4dd5ad152e9d20f8f3a8c16de375bae88e2a0",
+          "artifact_checksum": "sha256:4a7524d6b9297c45b5b780bf6c3803bc496db443311f86415fc06a67837a0e47",
           "native": false,
           "plugin_id": "superboard-observability",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:582c8f007286ba1a4be1c7a997c9b0adb59946f28d6d7c708b033af52d8b8a33",
+          "artifact_checksum": "sha256:e776095a4ad1c8fc09eb67138b9be4500b0f2240bf1042cf9849a0774b894cb5",
           "native": false,
           "plugin_id": "superboard-onboardings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:246a8de9b24e276853f043a77ec054671c07c807e80a2208a3f03c2346bc5967",
+          "artifact_checksum": "sha256:2296bfa9aa7dd9731c9d86fc38ac9ce4770326d2f6ecdf17c8fef420660b8a1b",
           "native": false,
           "plugin_id": "superboard-paywalls",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:af78df8688daa3a4591ad302d7d41695327d1f2e4a11c9532c5659e0e857d5e7",
+          "artifact_checksum": "sha256:51d5001b98bc95b2b604cf39b6effd77d7c2fa136cd33c2809e55b4f90bf7ec1",
           "native": false,
           "plugin_id": "superboard-products",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:961499d79f9e7038b944e34385026da4b12d677168fd2f1e3ffe403976d18655",
+          "artifact_checksum": "sha256:25b1b9ed8e86007f7a6c44a0a4dd9aabb906cea6d616011cfe2b432dfc707a60",
           "native": false,
           "plugin_id": "superboard-settings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:f753501922a53f5a51b38cef135f3a697e7357c62e7dd8e5935746e2965b7ed8",
+          "artifact_checksum": "sha256:ac57f828db95beeb71c3787fbcaadfa81edf983fbcabd70f85176e0eb77dbbfa",
           "native": false,
           "plugin_id": "superboard-support",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:82fa31f7aab13f2c4f96c6dd740e2ce017292e32d8f1f6fc9ca396a213e3f002",
+          "artifact_checksum": "sha256:6806929e91db0964215559397714ddd1dae8ef32fe6a290c2b814fd3c2547d1a",
           "native": false,
           "plugin_id": "superboard-user",
           "version": "1.4.0"
@@ -7463,15 +7494,22 @@
         "media": [],
         "navigation": [
           {
-            "group_id": "app",
+            "group_id": "overview",
             "items": [
               {
-                "href": "/core/settings",
-                "label": "Project settings",
-                "order": -1,
-                "permission": "superboard-settings.read",
-                "route_id": "superboard.project_settings"
-              },
+                "href": "/analytics/home",
+                "label": "superboard-analytics.menu.home",
+                "order": 0,
+                "permission": "superboard-analytics.read",
+                "route_id": "superboard.home"
+              }
+            ],
+            "label": "navigation.section.overview",
+            "order": 0
+          },
+          {
+            "group_id": "app",
+            "items": [
               {
                 "href": "/auth/customers",
                 "label": "Customers",
@@ -7499,38 +7537,38 @@
                 "order": 3,
                 "permission": "users.read",
                 "route_id": "superboard.app_access_key"
-              },
-              {
-                "href": "/core/libraries",
-                "label": "Libraries",
-                "order": 4,
-                "permission": "superboard-settings.read",
-                "route_id": "superboard.app_libraries"
-              },
-              {
-                "href": "/core/android-setup",
-                "label": "Android Setup",
-                "order": 5,
-                "permission": "superboard-settings.read",
-                "route_id": "superboard.app_android_setup"
-              },
-              {
-                "href": "/core/ios-setup",
-                "label": "iOS Setup",
-                "order": 6,
-                "permission": "superboard-settings.read",
-                "route_id": "superboard.app_ios_setup"
-              },
-              {
-                "href": "/core/web-setup",
-                "label": "Web Setup",
-                "order": 7,
-                "permission": "superboard-settings.read",
-                "route_id": "superboard.app_web_setup"
               }
             ],
             "label": "App",
             "order": 1
+          },
+          {
+            "group_id": "data",
+            "items": [
+              {
+                "href": "/data/content",
+                "label": "superboard-content.menu.item_0",
+                "order": 0,
+                "permission": "superboard-content.read",
+                "route_id": "superboard.data_content"
+              },
+              {
+                "href": "/data/files",
+                "label": "superboard-files.menu.item_0",
+                "order": 1,
+                "permission": "superboard-files.read",
+                "route_id": "superboard.data_files"
+              },
+              {
+                "href": "/data/settings",
+                "label": "superboard-files.menu.settings",
+                "order": 2,
+                "permission": "superboard-files.read",
+                "route_id": "superboard.data_settings"
+              }
+            ],
+            "label": "Data",
+            "order": 2
           },
           {
             "group_id": "identity",
@@ -7613,98 +7651,112 @@
             "group_id": "products",
             "items": [
               {
-                "href": "/monetization/purchases",
-                "label": "Purchases",
-                "order": 0,
-                "permission": "superboard-billing.read",
-                "route_id": "superboard.monetization_purchases"
-              },
-              {
                 "href": "/monetization/customers",
-                "label": "Customers",
-                "order": 1,
+                "label": "superboard-billing.menu.customers",
+                "order": 0,
                 "permission": "superboard-billing.read",
                 "route_id": "superboard.monetization_customers"
               },
               {
                 "href": "/monetization/products",
-                "label": "Products",
-                "order": 2,
+                "label": "superboard-products.menu.catalog",
+                "order": 1,
                 "permission": "superboard-products.read",
                 "route_id": "superboard.monetization_products"
               },
               {
-                "href": "/monetization/entitlements",
-                "label": "Entitlements",
-                "order": 3,
-                "permission": "superboard-billing.read",
-                "route_id": "superboard.monetization_entitlements"
-              },
-              {
-                "href": "/monetization/offerings",
-                "label": "Offerings",
-                "order": 3,
+                "href": "/monetization/settings",
+                "label": "superboard-products.menu.settings",
+                "order": 2,
                 "permission": "superboard-products.read",
-                "route_id": "superboard.monetization_offerings"
+                "route_id": "superboard.monetization_settings"
               }
             ],
-            "label": "Products",
+            "label": "navigation.section.monetization",
             "order": 3
           },
           {
-            "group_id": "flows",
+            "group_id": "marketing",
             "items": [
               {
-                "href": "/acquisition/overview",
-                "label": "Overview",
+                "href": "/communication/marketing-email",
+                "label": "superboard-marketing.menu.marketing-email",
                 "order": 0,
-                "permission": "superboard-flows.read",
-                "route_id": "superboard.flows"
+                "permission": "superboard-marketing.read",
+                "route_id": "superboard.communication_marketing_email"
               },
               {
-                "href": "/acquisition/workflows",
-                "label": "Workflows",
+                "href": "/communication/journeys",
+                "label": "superboard-marketing.menu.journeys",
                 "order": 1,
-                "permission": "superboard-flows.read",
-                "route_id": "superboard.acquisition_workflows"
+                "permission": "superboard-marketing.read",
+                "route_id": "superboard.communication_journeys"
               },
               {
-                "href": "/acquisition/launchpad",
-                "label": "Launchpad",
+                "href": "/communication/in-app-messages",
+                "label": "superboard-marketing.menu.in-app-messages",
                 "order": 2,
-                "permission": "superboard-flows.read",
-                "route_id": "superboard.acquisition_launchpad"
+                "permission": "superboard-marketing.read",
+                "route_id": "superboard.communication_in_app_messages"
               },
               {
-                "href": "/acquisition/components",
-                "label": "Components",
+                "href": "/communication/audience",
+                "label": "superboard-marketing.menu.audience",
+                "order": 3,
+                "permission": "superboard-marketing.read",
+                "route_id": "superboard.communication_audience"
+              },
+              {
+                "href": "/communication/statistics",
+                "label": "superboard-marketing.menu.statistics",
                 "order": 4,
-                "permission": "superboard-flows.read",
-                "route_id": "superboard.acquisition_components"
+                "permission": "superboard-marketing.read",
+                "route_id": "superboard.communication_statistics"
+              },
+              {
+                "href": "/communication/settings",
+                "label": "superboard-marketing.menu.settings",
+                "order": 5,
+                "permission": "superboard-marketing.read",
+                "route_id": "superboard.communication_settings"
+              }
+            ],
+            "label": "Communication",
+            "order": 4
+          },
+          {
+            "group_id": "acquisition",
+            "items": [
+              {
+                "href": "/acquisition/paywalls",
+                "label": "superboard-paywalls.menu.item_0",
+                "order": 0,
+                "permission": "superboard-paywalls.read",
+                "route_id": "superboard.acquisition_paywalls"
+              },
+              {
+                "href": "/acquisition/onboardings",
+                "label": "superboard-onboardings.menu.item_0",
+                "order": 1,
+                "permission": "superboard-onboardings.read",
+                "route_id": "superboard.onboardings"
+              },
+              {
+                "href": "/acquisition/dynamic-links",
+                "label": "superboard-dynamic-links.menu.links",
+                "order": 2,
+                "permission": "superboard-dynamic-links.read",
+                "route_id": "superboard.acquisition_dynamic_links"
               },
               {
                 "href": "/acquisition/settings",
-                "label": "Settings",
-                "order": 5,
+                "label": "superboard-flows.menu.settings",
+                "order": 3,
                 "permission": "superboard-flows.read",
                 "route_id": "superboard.acquisition_settings"
               }
             ],
-            "label": "Flows",
-            "order": 4
-          },
-          {
-            "group_id": "dynamic-links",
-            "items": [
-              {
-                "href": "/acquisition/dynamic-links",
-                "label": "Links",
-                "order": 0,
-                "permission": "superboard-dynamic-links.read",
-                "route_id": "superboard.acquisition_dynamic_links"
-              }
-            ],
-            "label": "Dynamic Links",
+            "label": "Acquisition",
             "order": 5
           },
           {
@@ -7736,249 +7788,116 @@
             "order": 6
           },
           {
-            "group_id": "marketing",
-            "items": [
-              {
-                "href": "/communication/in-app-messages",
-                "label": "In-app Messages",
-                "order": 0,
-                "permission": "superboard-marketing.read",
-                "route_id": "superboard.communication_in_app_messages"
-              },
-              {
-                "href": "/communication/marketing-email",
-                "label": "Email",
-                "order": 1,
-                "permission": "superboard-marketing.read",
-                "route_id": "superboard.communication_marketing_email"
-              },
-              {
-                "href": "/communication/campaigns",
-                "label": "Campaigns",
-                "order": 2,
-                "permission": "superboard-marketing.read",
-                "route_id": "superboard.communication_campaigns"
-              },
-              {
-                "href": "/communication/journeys",
-                "label": "Journeys",
-                "order": 3,
-                "permission": "superboard-marketing.read",
-                "route_id": "superboard.communication_journeys"
-              },
-              {
-                "href": "/communication/channels",
-                "label": "Channels",
-                "order": 4,
-                "permission": "superboard-marketing.read",
-                "route_id": "superboard.communication_channels"
-              },
-              {
-                "href": "/communication/statistics",
-                "label": "Statistics",
-                "order": 5,
-                "permission": "superboard-marketing.read",
-                "route_id": "superboard.communication_statistics"
-              },
-              {
-                "href": "/communication/settings",
-                "label": "Settings",
-                "order": 6,
-                "permission": "superboard-marketing.read",
-                "route_id": "superboard.communication_settings"
-              },
-              {
-                "href": "/communication/notifications",
-                "label": "Push notifications",
-                "order": 8,
-                "permission": "superboard-marketing.read",
-                "route_id": "superboard.communication_notifications"
-              }
-            ],
-            "label": "Marketing",
-            "order": 7
-          },
-          {
             "group_id": "analytics",
             "items": [
               {
                 "href": "/analytics",
-                "label": "Overview",
+                "label": "superboard-analytics.menu.overview",
                 "order": 0,
                 "permission": "superboard-analytics.read",
                 "route_id": "superboard.analytics"
               },
               {
                 "href": "/analytics/users",
-                "label": "Users & Sessions",
-                "order": 2,
+                "label": "superboard-analytics.menu.users",
+                "order": 1,
                 "permission": "superboard-analytics.read",
                 "route_id": "superboard.analytics_users"
               },
               {
                 "href": "/analytics/events",
-                "label": "Events",
-                "order": 3,
+                "label": "superboard-analytics.menu.events",
+                "order": 2,
                 "permission": "superboard-analytics.read",
                 "route_id": "superboard.analytics_events"
               },
               {
-                "href": "/analytics/dimensions",
-                "label": "Technology & Location",
-                "order": 4,
-                "permission": "superboard-analytics.read",
-                "route_id": "superboard.analytics_dimensions"
-              },
-              {
-                "href": "/analytics/views",
-                "label": "Views",
-                "order": 5,
-                "permission": "superboard-analytics.read",
-                "route_id": "superboard.analytics_views"
-              },
-              {
-                "href": "/analytics/installations",
-                "label": "Installations",
-                "order": 6,
-                "permission": "superboard-analytics.read",
-                "route_id": "superboard.analytics_installations"
-              },
-              {
-                "href": "/analytics/purchases",
-                "label": "Verified Purchases",
-                "order": 7,
-                "permission": "superboard-analytics.read",
-                "route_id": "superboard.analytics_purchases"
-              },
-              {
                 "href": "/analytics/insights",
-                "label": "Funnels & Retention",
-                "order": 8,
+                "label": "superboard-analytics.menu.insights",
+                "order": 3,
                 "permission": "superboard-analytics.read",
                 "route_id": "superboard.analytics_insights"
               },
               {
-                "href": "/analytics/cohorts",
-                "label": "Cohorts",
-                "order": 9,
+                "href": "/analytics/purchases",
+                "label": "superboard-analytics.menu.purchases",
+                "order": 4,
                 "permission": "superboard-analytics.read",
-                "route_id": "superboard.analytics_cohorts"
-              },
-              {
-                "href": "/analytics/crashes",
-                "label": "Crashes",
-                "order": 10,
-                "permission": "superboard-analytics.read",
-                "route_id": "superboard.analytics_crashes"
-              },
-              {
-                "href": "/analytics/feedback",
-                "label": "Feedback",
-                "order": 11,
-                "permission": "superboard-analytics.read",
-                "route_id": "superboard.analytics_feedback"
-              },
-              {
-                "href": "/analytics/remote-config",
-                "label": "Remote Config",
-                "order": 12,
-                "permission": "superboard-analytics.read",
-                "route_id": "superboard.analytics_remote_config"
-              },
-              {
-                "href": "/analytics/alerts",
-                "label": "Alerts",
-                "order": 13,
-                "permission": "superboard-analytics.read",
-                "route_id": "superboard.analytics_alerts"
+                "route_id": "superboard.analytics_purchases"
               },
               {
                 "href": "/analytics/reports",
-                "label": "Reports & Exports",
-                "order": 14,
+                "label": "superboard-analytics.menu.reports",
+                "order": 5,
                 "permission": "superboard-analytics.read",
                 "route_id": "superboard.analytics_reports"
               },
               {
+                "href": "/analytics/remote-config",
+                "label": "superboard-analytics.menu.remote-config",
+                "order": 6,
+                "permission": "superboard-analytics.read",
+                "route_id": "superboard.analytics_remote_config"
+              },
+              {
                 "href": "/analytics/settings",
-                "label": "Settings",
-                "order": 15,
+                "label": "superboard-analytics.menu.settings",
+                "order": 7,
                 "permission": "superboard-analytics.read",
                 "route_id": "superboard.analytics_settings"
               }
             ],
             "label": "Analytics",
-            "order": 8
+            "order": 7
           },
           {
-            "group_id": "superboard-paywalls.navigation",
+            "group_id": "environment",
             "items": [
               {
-                "href": "/acquisition/paywalls",
-                "label": "superboard-paywalls.menu.item_0",
+                "href": "/core/settings",
+                "label": "superboard-settings.menu.general",
                 "order": 0,
-                "permission": "superboard-paywalls.read",
-                "route_id": "superboard.acquisition_paywalls"
+                "permission": "superboard-settings.read",
+                "route_id": "superboard.project_settings"
               },
               {
-                "href": "/acquisition/paywalls/statistics",
-                "label": "superboard-paywalls.menu.item_1",
-                "order": 1,
-                "permission": "superboard-paywalls.read",
-                "route_id": "superboard.acquisition_paywalls_statistics"
-              }
-            ],
-            "label": "superboard-paywalls.menu.group",
-            "order": 70
-          },
-          {
-            "group_id": "superboard-onboardings.navigation",
-            "items": [
-              {
-                "href": "/acquisition/onboardings",
-                "label": "superboard-onboardings.menu.item_0",
-                "order": 0,
-                "permission": "superboard-onboardings.read",
-                "route_id": "superboard.onboardings"
+                "href": "/core/libraries",
+                "label": "superboard-settings.menu.sdk",
+                "order": 2,
+                "permission": "superboard-settings.read",
+                "route_id": "superboard.app_libraries"
               },
               {
-                "href": "/acquisition/onboardings/statistics",
-                "label": "superboard-onboardings.menu.item_1",
-                "order": 1,
-                "permission": "superboard-onboardings.read",
-                "route_id": "superboard.onboardings_statistics"
-              }
-            ],
-            "label": "superboard-onboardings.menu.group",
-            "order": 71
-          },
-          {
-            "group_id": "superboard-audit.navigation",
-            "items": [
+                "href": "/core/infrastructure",
+                "label": "superboard-observability.menu.item_0",
+                "order": 3,
+                "permission": "superboard-observability.read",
+                "route_id": "superboard.infrastructure"
+              },
               {
                 "href": "/core/audit",
                 "label": "superboard-audit.menu.item_0",
-                "order": 0,
+                "order": 4,
                 "permission": "superboard-audit.read",
                 "route_id": "superboard.system_audit"
-              }
-            ],
-            "label": "superboard-audit.menu.group",
-            "order": 72
-          },
-          {
-            "group_id": "superboard-content.navigation",
-            "items": [
+              },
               {
-                "href": "/data/content",
-                "label": "superboard-content.menu.item_0",
-                "order": 0,
-                "permission": "superboard-content.read",
-                "route_id": "superboard.data_content"
+                "href": "/core/gateway",
+                "label": "superboard-gateway.menu.item_0",
+                "order": 5,
+                "permission": "superboard-gateway.read",
+                "route_id": "superboard.system_gateway"
+              },
+              {
+                "href": "/core/mcp",
+                "label": "superboard-mcp.menu.tools",
+                "order": 6,
+                "permission": "superboard-mcp.read",
+                "route_id": "superboard.mcp"
               }
             ],
-            "label": "superboard-content.menu.group",
-            "order": 73
+            "label": "navigation.section.environment",
+            "order": 8
           },
           {
             "group_id": "superboard-email.navigation",
@@ -7993,62 +7912,6 @@
             ],
             "label": "superboard-email.menu.group",
             "order": 74
-          },
-          {
-            "group_id": "superboard-files.navigation",
-            "items": [
-              {
-                "href": "/data/files",
-                "label": "superboard-files.menu.item_0",
-                "order": 0,
-                "permission": "superboard-files.read",
-                "route_id": "superboard.data_files"
-              }
-            ],
-            "label": "superboard-files.menu.group",
-            "order": 75
-          },
-          {
-            "group_id": "superboard-gateway.navigation",
-            "items": [
-              {
-                "href": "/core/gateway",
-                "label": "superboard-gateway.menu.item_0",
-                "order": 0,
-                "permission": "superboard-gateway.read",
-                "route_id": "superboard.system_gateway"
-              }
-            ],
-            "label": "superboard-gateway.menu.group",
-            "order": 76
-          },
-          {
-            "group_id": "superboard-observability.navigation",
-            "items": [
-              {
-                "href": "/core/infrastructure",
-                "label": "superboard-observability.menu.item_0",
-                "order": 0,
-                "permission": "superboard-observability.read",
-                "route_id": "superboard.infrastructure"
-              }
-            ],
-            "label": "superboard-observability.menu.group",
-            "order": 77
-          },
-          {
-            "group_id": "superboard-mcp.navigation",
-            "items": [
-              {
-                "href": "/core/mcp",
-                "label": "superboard-mcp.menu.tools",
-                "order": 0,
-                "permission": "superboard-mcp.read",
-                "route_id": "superboard.mcp"
-              }
-            ],
-            "label": "superboard-mcp.menu.group",
-            "order": 78
           }
         ],
         "pages": [
@@ -8270,7 +8133,7 @@
           {
             "page_id": "page.superboard_app_libraries",
             "root_renderer_id": "superboard-settings.renderer.admin_surface",
-            "title": "Libraries"
+            "title": "SDK & apps"
           },
           {
             "page_id": "page.superboard_app_referrals",
@@ -8298,6 +8161,11 @@
             "title": "Authentication settings"
           },
           {
+            "page_id": "page.superboard_communication_audience",
+            "root_renderer_id": "superboard-marketing.renderer.admin_surface",
+            "title": "Audience"
+          },
+          {
             "page_id": "page.superboard_communication_campaigns",
             "root_renderer_id": "superboard-marketing.renderer.admin_surface",
             "title": "Campaigns"
@@ -8310,7 +8178,7 @@
           {
             "page_id": "page.superboard_communication_email",
             "root_renderer_id": "superboard-email.renderer.admin_surface",
-            "title": "Email delivery"
+            "title": "Transactional email"
           },
           {
             "page_id": "page.superboard_communication_in_app_messages",
@@ -8580,7 +8448,7 @@
           {
             "page_id": "page.superboard_project_settings",
             "root_renderer_id": "superboard-settings.renderer.admin_surface",
-            "title": "Project settings"
+            "title": "Environment settings"
           },
           {
             "page_id": "page.superboard_register",
@@ -8692,11 +8560,16 @@
             "locale": "en",
             "messages": {
               "navigation.local": "Section pages",
+              "navigation.section.environment": "Environment settings",
+              "navigation.section.monetization": "Monetization",
+              "navigation.section.overview": "Overview",
               "site.admin.open": "Platform administration",
               "site.front.account": "Account",
               "site.front.account_menu": "Account menu",
               "site.front.close_navigation": "Close navigation",
               "site.front.collapse_sidebar": "Collapse sidebar",
+              "site.front.command.label": "Search pages and actions",
+              "site.front.command.open": "Search",
               "site.front.dark_mode": "Dark mode",
               "site.front.dependency_unavailable": "Dependency unavailable",
               "site.front.dependency_unavailable_description": "A required plugin dependency is unavailable.",
@@ -8729,7 +8602,7 @@
               "site.front.open_navigation": "Open navigation",
               "site.front.production": "Production",
               "site.front.project_data": "Project data",
-              "site.front.project_settings": "Project Settings",
+              "site.front.project_settings": "Environment settings",
               "site.front.route_manifest": "Front Route Manifest",
               "site.front.section_navigation": "{section} pages",
               "site.front.test": "Test",
@@ -8748,26 +8621,39 @@
               "site.preview.not_found": "Preview not found or expired",
               "site.preview.operator_required": "Operator session required",
               "site.preview.verification_failed": "Preview verification failed",
-              "superboard-audit.menu.group": "Audit",
-              "superboard-audit.menu.item_0": "Ledger",
-              "superboard-content.menu.group": "Content",
-              "superboard-content.menu.item_0": "Documents",
+              "superboard-analytics.menu.events": "Events",
+              "superboard-analytics.menu.home": "Overview",
+              "superboard-analytics.menu.insights": "Conversion and retention",
+              "superboard-analytics.menu.overview": "Statistics overview",
+              "superboard-analytics.menu.purchases": "Verified revenue",
+              "superboard-analytics.menu.remote-config": "Remote configuration",
+              "superboard-analytics.menu.reports": "Reports and exports",
+              "superboard-analytics.menu.settings": "Settings",
+              "superboard-analytics.menu.users": "Audience and usage",
+              "superboard-audit.menu.item_0": "Audit log",
+              "superboard-billing.menu.customers": "Customers",
+              "superboard-content.menu.item_0": "Content",
+              "superboard-dynamic-links.menu.links": "Dynamic links",
               "superboard-email.menu.group": "Email",
-              "superboard-email.menu.item_0": "Delivery settings",
-              "superboard-files.menu.group": "Files",
-              "superboard-files.menu.item_0": "Files",
-              "superboard-gateway.menu.group": "Gateway",
-              "superboard-gateway.menu.item_0": "Routes and access",
-              "superboard-mcp.menu.group": "MCP",
-              "superboard-mcp.menu.tools": "Tools and access",
-              "superboard-observability.menu.group": "Observability",
-              "superboard-observability.menu.item_0": "Infrastructure",
-              "superboard-onboardings.menu.group": "Onboardings",
+              "superboard-email.menu.item_0": "Transactional email",
+              "superboard-files.menu.item_0": "Files and media",
+              "superboard-files.menu.settings": "Configuration",
+              "superboard-flows.menu.settings": "Settings",
+              "superboard-gateway.menu.item_0": "API routing",
+              "superboard-marketing.menu.audience": "Audience",
+              "superboard-marketing.menu.in-app-messages": "In-app & Push",
+              "superboard-marketing.menu.journeys": "Automations",
+              "superboard-marketing.menu.marketing-email": "Emails",
+              "superboard-marketing.menu.settings": "Settings",
+              "superboard-marketing.menu.statistics": "Activity",
+              "superboard-mcp.menu.tools": "AI assistant access",
+              "superboard-observability.menu.item_0": "Service health",
               "superboard-onboardings.menu.item_0": "Onboardings",
-              "superboard-onboardings.menu.item_1": "Statistics",
-              "superboard-paywalls.menu.group": "Paywalls",
               "superboard-paywalls.menu.item_0": "Paywalls",
-              "superboard-paywalls.menu.item_1": "Statistics",
+              "superboard-products.menu.catalog": "Catalog",
+              "superboard-products.menu.settings": "Settings",
+              "superboard-settings.menu.general": "General",
+              "superboard-settings.menu.sdk": "SDK & apps",
               "user.action.passkey": "Continue with Passkey",
               "user.admin.description": "Manage the selected identity View through its verified plugin renderer.",
               "user.admin.title": "Identity administration",
@@ -8792,11 +8678,16 @@
             "locale": "fr",
             "messages": {
               "navigation.local": "Pages de la section",
+              "navigation.section.environment": "Paramètres de l’environnement",
+              "navigation.section.monetization": "Monétisation",
+              "navigation.section.overview": "Vue d’ensemble",
               "site.admin.open": "Administration de la plateforme",
               "site.front.account": "Compte",
               "site.front.account_menu": "Menu du compte",
               "site.front.close_navigation": "Fermer la navigation",
               "site.front.collapse_sidebar": "Réduire la navigation",
+              "site.front.command.label": "Rechercher des pages et des actions",
+              "site.front.command.open": "Rechercher",
               "site.front.dark_mode": "Mode sombre",
               "site.front.dependency_unavailable": "Dépendance indisponible",
               "site.front.dependency_unavailable_description": "Une dépendance obligatoire du plugin est indisponible.",
@@ -8829,7 +8720,7 @@
               "site.front.open_navigation": "Ouvrir la navigation",
               "site.front.production": "Production",
               "site.front.project_data": "Données du projet",
-              "site.front.project_settings": "Paramètres du projet",
+              "site.front.project_settings": "Paramètres de l’environnement",
               "site.front.route_manifest": "Manifeste des routes Front",
               "site.front.section_navigation": "Pages {section}",
               "site.front.test": "Test",
@@ -8848,26 +8739,39 @@
               "site.preview.not_found": "Preview introuvable ou expirée",
               "site.preview.operator_required": "Session opérateur requise",
               "site.preview.verification_failed": "Échec de la vérification de la preview",
-              "superboard-audit.menu.group": "Audit",
-              "superboard-audit.menu.item_0": "Journal",
-              "superboard-content.menu.group": "Contenu",
-              "superboard-content.menu.item_0": "Documents",
+              "superboard-analytics.menu.events": "Événements",
+              "superboard-analytics.menu.home": "Vue d’ensemble",
+              "superboard-analytics.menu.insights": "Conversions et fidélisation",
+              "superboard-analytics.menu.overview": "Vue d’ensemble des statistiques",
+              "superboard-analytics.menu.purchases": "Revenus vérifiés",
+              "superboard-analytics.menu.remote-config": "Configuration distante",
+              "superboard-analytics.menu.reports": "Rapports et exports",
+              "superboard-analytics.menu.settings": "Paramètres",
+              "superboard-analytics.menu.users": "Audience et utilisation",
+              "superboard-audit.menu.item_0": "Journal d’audit",
+              "superboard-billing.menu.customers": "Clients",
+              "superboard-content.menu.item_0": "Contenus",
+              "superboard-dynamic-links.menu.links": "Liens dynamiques",
               "superboard-email.menu.group": "E-mail",
-              "superboard-email.menu.item_0": "Paramètres de livraison",
-              "superboard-files.menu.group": "Fichiers",
-              "superboard-files.menu.item_0": "Fichiers",
-              "superboard-gateway.menu.group": "Passerelle",
-              "superboard-gateway.menu.item_0": "Routes et accès",
-              "superboard-mcp.menu.group": "MCP",
-              "superboard-mcp.menu.tools": "Outils et accès",
-              "superboard-observability.menu.group": "Observabilité",
-              "superboard-observability.menu.item_0": "Infrastructure",
-              "superboard-onboardings.menu.group": "Onboardings",
-              "superboard-onboardings.menu.item_0": "Onboardings",
-              "superboard-onboardings.menu.item_1": "Statistiques",
-              "superboard-paywalls.menu.group": "Paywalls",
-              "superboard-paywalls.menu.item_0": "Paywalls",
-              "superboard-paywalls.menu.item_1": "Statistiques",
+              "superboard-email.menu.item_0": "E-mails transactionnels",
+              "superboard-files.menu.item_0": "Fichiers et médias",
+              "superboard-files.menu.settings": "Configuration",
+              "superboard-flows.menu.settings": "Paramètres",
+              "superboard-gateway.menu.item_0": "Routage de l’API",
+              "superboard-marketing.menu.audience": "Audience",
+              "superboard-marketing.menu.in-app-messages": "In-app et push",
+              "superboard-marketing.menu.journeys": "Automatisations",
+              "superboard-marketing.menu.marketing-email": "E-mails",
+              "superboard-marketing.menu.settings": "Paramètres",
+              "superboard-marketing.menu.statistics": "Activité",
+              "superboard-mcp.menu.tools": "Accès des assistants IA",
+              "superboard-observability.menu.item_0": "État des services",
+              "superboard-onboardings.menu.item_0": "Parcours d’accueil",
+              "superboard-paywalls.menu.item_0": "Écrans d’abonnement",
+              "superboard-products.menu.catalog": "Catalogue",
+              "superboard-products.menu.settings": "Paramètres",
+              "superboard-settings.menu.general": "Général",
+              "superboard-settings.menu.sdk": "SDK et applications",
               "user.action.passkey": "Continuer avec une passkey",
               "user.admin.description": "Gérez la View d’identité sélectionnée avec son renderer de plugin vérifié.",
               "user.admin.title": "Administration des identités",
@@ -9168,8 +9072,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9197,8 +9101,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9226,8 +9130,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9255,8 +9159,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9284,8 +9188,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9313,8 +9217,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9342,8 +9246,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9371,8 +9275,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9400,8 +9304,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9429,8 +9333,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9458,8 +9362,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9487,8 +9391,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9516,8 +9420,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9545,8 +9449,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9574,8 +9478,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9603,8 +9507,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9632,8 +9536,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9661,8 +9565,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9688,8 +9592,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9715,8 +9619,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:4561bf7bf99ba59d0e2a4ed5235a4eab32e8ec1cb425408f888e178159acc1e1",
-          "build_id": "6W4WK82V803Y0PAE9M8347VPXZ",
+          "build_checksum": "sha256:9b3491516eefc084d8ff16ff5cebda6d4e2566073611682ace804405a8347114",
+          "build_id": "62CW037KCA9KT5K4KSZJHTJ1C5",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9748,11 +9652,11 @@
       },
       "schema_version": "1.0.0"
     },
-    "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+    "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "GLRQnX7ia___mExiBeWcZKZQOsxsfJnZjhBTsYpXf0Esss9cJnI5KyaEdtLraL4TLH8B1-255xfC45et2AeHhw"
+      "value": "rVuxpYOOwmq5MxGzW5Xufk9FuB5jZxmlrFLJVn88YourRYhxSBlqXILqY-NwGUdKZera5FhbyjF_tPVsx7SzwQ"
     },
     "validation_receipts": [
       {
@@ -9762,9 +9666,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "schema validation passed",
-        "receipt_checksum": "sha256:2fe359251eba69df03a6be42505b95ec1562f841db06ada0ae2d8f6b2b55eb50"
+        "receipt_checksum": "sha256:49b19c6bab22734f7c3f809ab53dac4023b1e785d464afa9e11115854da6d62e"
       },
       {
         "receipt_id": "01J00000000000000000007004:normalization",
@@ -9773,9 +9677,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "normalization validation passed",
-        "receipt_checksum": "sha256:ba00762f9a0bc24436fb80b642d1f86eecda868af3096c65b86cde04bc90f2d7"
+        "receipt_checksum": "sha256:63a84ec6916a938208e7cb4af91dbffd97d252a953f880323aa00cfd61f58be6"
       },
       {
         "receipt_id": "01J00000000000000000007004:identity",
@@ -9784,9 +9688,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "identity validation passed",
-        "receipt_checksum": "sha256:cc90371eaacec740a4c0c955266f6fd6edd5dbb5ec4d1381c5893fccd7265a75"
+        "receipt_checksum": "sha256:66f672751ff9b64617db2d78b0c489ed6c69f63e636a03849ef5add2d5790cc8"
       },
       {
         "receipt_id": "01J00000000000000000007004:reference_graph",
@@ -9795,9 +9699,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "reference_graph validation passed",
-        "receipt_checksum": "sha256:17be355e1bb270e6bdb7aff25718e41dcf515d551374fd71d7cdac05e485762d"
+        "receipt_checksum": "sha256:bde646fadd9eef1145f83d130abee5747265bb04cc0a8b1609ea7a3cc463a3dd"
       },
       {
         "receipt_id": "01J00000000000000000007004:routing",
@@ -9806,9 +9710,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "routing validation passed",
-        "receipt_checksum": "sha256:33948059c74aac19fb37fb739238f94022d274f21c96f5d0a1471715751eeec4"
+        "receipt_checksum": "sha256:9fdfe4d38e256262d43c0c8ef3ac1ac317c71fa2c2db631fbb6e26d8aff79433"
       },
       {
         "receipt_id": "01J00000000000000000007004:renderer_compatibility",
@@ -9817,9 +9721,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "renderer_compatibility validation passed",
-        "receipt_checksum": "sha256:92b1e0e27b6d36b91e83293a982ca5cfa850a85af8f2c041afc5298524767bf2"
+        "receipt_checksum": "sha256:e67bc7dd87f73a745c07b1018c9ba1159cbcaadeb8c67a8173380db0d5617905"
       },
       {
         "receipt_id": "01J00000000000000000007004:actions_data_sources",
@@ -9828,9 +9732,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "actions_data_sources validation passed",
-        "receipt_checksum": "sha256:f8b19c286791c367b558c8449069b04db01d943572e634f5ed4b9e5d8ed0c7f3"
+        "receipt_checksum": "sha256:fcbfa161ba8364343dd613fa092d18e6594164421c2163f83629e8fae36d304a"
       },
       {
         "receipt_id": "01J00000000000000000007004:permissions_security",
@@ -9839,9 +9743,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "permissions_security validation passed",
-        "receipt_checksum": "sha256:2b70c650ed0efafc8daa767eadc1f7c7f0f3e2ea6b98c23ff7ca4d05c759e92c"
+        "receipt_checksum": "sha256:3fba9fcecd449c66ef5f35d1536ad3565cde7adba87f0ae9c8ac47c10921c7e0"
       },
       {
         "receipt_id": "01J00000000000000000007004:translations_media",
@@ -9850,9 +9754,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "translations_media validation passed",
-        "receipt_checksum": "sha256:2122232f5ea2c3a984f9c172886b3dc8eaf971ef1e7d17fa034ae3f94f82dab8"
+        "receipt_checksum": "sha256:f1ac9a2b661fe8a79c21dbe65198efda2607e41e29a4be8883d9f14d68d4ae93"
       },
       {
         "receipt_id": "01J00000000000000000007004:plugins_stores_workers",
@@ -9861,9 +9765,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "plugins_stores_workers validation passed",
-        "receipt_checksum": "sha256:3eeb0cfd837c3dc7163b46968afea1601609c71b237281f866345fe5e9390479"
+        "receipt_checksum": "sha256:6a0bfd0ef2ae5cf19a764820518076eb950070d4329d23094921426d0f0867a9"
       },
       {
         "receipt_id": "01J00000000000000000007004:migrations",
@@ -9872,9 +9776,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "migrations validation passed",
-        "receipt_checksum": "sha256:d17f4fad49b8c41f97132f9387c69ad6fce9bcc4e6e6f31cbe045ff5192c16b0"
+        "receipt_checksum": "sha256:858188259b659308e2685ae7dc65b3557bf3c62d0e8a15a495a3aab40bf0a316"
       },
       {
         "receipt_id": "01J00000000000000000007004:rollback_readiness",
@@ -9883,9 +9787,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "rollback_readiness validation passed",
-        "receipt_checksum": "sha256:77f22acd7514cf3c09b93cc5db3baf3058ce1cf9d5b3389fc2fa6ddd551c2ddb"
+        "receipt_checksum": "sha256:9f289796c371a76d89bff54b08f58012d05e60467b9ba0decc47a6f4c345e37d"
       },
       {
         "receipt_id": "01J00000000000000000007004:integrity",
@@ -9894,12 +9798,12 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:eecc47d5448a60632391b0466b633c1a4e9e7f4a6bc378cc1981273457a678cf",
+        "content_checksum": "sha256:4903cb6fa15a2f8f220cc905686d855f732c3ae257aa16a9c5a88c42e08608d5",
         "message": "integrity validation passed",
-        "receipt_checksum": "sha256:c1d394e54cfb40ebb75f81176ab2701b496c507ca1159ac36875171af91a5a16"
+        "receipt_checksum": "sha256:171cec562eaa19dc77f2c9c1436f332ce53fbb69b4a8d8f6a3c773605bfd504f"
       }
     ],
-    "validation_set_checksum": "sha256:57e785ea10b9ddc6ddae7f5bc711515c71133ed8d69a9b754f8ede10909b82ba",
+    "validation_set_checksum": "sha256:27c0624d6831bd0d74fd79ffdfd6aa5e37d843752c6d4b5aea8e6675c7833e76",
     "verification_status": "verified"
   }
 }

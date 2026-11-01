@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../application_actions.dart';
+import '../application_client.dart';
 import 'client.dart';
 import 'models.dart';
 import 'realtime.dart';
@@ -35,7 +37,31 @@ Future<bool> superboardMessagingInitializeAuthenticated({
     );
   }
 
+  final sharedIdentity = SuperBoardSharedIdentityTokenSource(
+    authGatewayBaseUrl: authGatewayUrl,
+    applicationAccessToken: applicationAccessToken,
+  );
   Future<String> tokenProvider() async {
+    try {
+      final shared = await sharedIdentity.token();
+      if (shared != null) return shared;
+    } on SuperBoardApplicationException catch (error) {
+      final status = error.statusCode ?? 0;
+      throw SuperBoardSupportException(
+        error.code,
+        error.message,
+        retryable:
+            error.retryable || status == 408 || status == 429 || status >= 500,
+        statusCode: error.statusCode,
+      );
+    } on Object catch (error) {
+      if (error is SuperBoardSupportException) rethrow;
+      throw const SuperBoardSupportException(
+        'identity_gateway_unavailable',
+        'The authentication gateway is temporarily unavailable',
+        retryable: true,
+      );
+    }
     final base = authGatewayUrl.replaceFirst(RegExp(r'/+$'), '');
     late http.Response response;
     try {

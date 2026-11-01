@@ -298,9 +298,9 @@ test("adding and removing a plugin from the Release changes the rendered Front",
 	]);
 
 	expect(absentMarkup).toContain("Page not found");
-	expect(absentMarkup).not.toContain('"href":"/communication/campaigns"');
-	expect(activeMarkup).toContain("Campaigns");
-	expect(activeMarkup).toContain('"href":"/communication/campaigns"');
+	expect(absentMarkup).not.toContain('"href":"/communication/marketing-email"');
+	expect(activeMarkup).toContain("Emails");
+	expect(activeMarkup).toContain('"href":"/communication/marketing-email"');
 	expect(activeMarkup).toContain("superboard-marketing");
 });
 
@@ -507,8 +507,7 @@ test("keeps an active multi-plugin Release renderable across renderer upgrades",
 		]),
 	);
 	const analyticsRenderer = release.payload.renderers.find(
-		({ renderer_id: rendererId }) =>
-			rendererId === "superboard-analytics.renderer.admin_surface",
+		({ renderer_id: rendererId }) => rendererId === "superboard-analytics.renderer.admin_surface",
 	);
 	if (!analyticsRenderer) throw new Error("Missing Analytics renderer");
 	const seededView = seed.content.views.find(

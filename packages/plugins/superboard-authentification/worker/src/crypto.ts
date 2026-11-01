@@ -19,6 +19,11 @@ type IdentityJwk = JsonWebKey & {
 type IdentityKeyset = { active_kid: string; keys: IdentityJwk[] };
 
 const remoteKeys = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+const localKeys = new Map<string, ReturnType<typeof createLocalJWKSet>>();
+const signingKeys = new Map<
+	string,
+	Promise<{ kid: string; key: Awaited<ReturnType<typeof importJWK>> }>
+>();
 
 export async function sha256(value: string): Promise<string> {
 	const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
@@ -92,7 +97,13 @@ export async function issueSuperBoardToken(
 }
 
 export async function verifyApplicationToken(env: IdentityEnv, token: string): Promise<JWTPayload> {
-	const verified = await jwtVerify(token, createLocalJWKSet(publicJwks(env)), {
+	let keys = localKeys.get(env.IDENTITY_KEYSET);
+	if (!keys) {
+		keys = createLocalJWKSet(publicJwks(env));
+		if (localKeys.size >= 4) localKeys.clear();
+		localKeys.set(env.IDENTITY_KEYSET, keys);
+	}
+	const verified = await jwtVerify(token, keys, {
 		issuer: env.SUPERBOARD_IDENTITY_ISSUER,
 		audience: env.APPLICATION_AUDIENCE,
 		algorithms: ["ES256"],
@@ -149,12 +160,9 @@ async function sign(
 	audience: string,
 	expiresIn: number,
 ): Promise<string> {
-	const keyset = parseKeyset(env.IDENTITY_KEYSET);
-	const signing = keyset.keys.find((key) => key.kid === keyset.active_kid && key.d);
-	if (!signing) throw new Error("identity_active_key_missing");
-	const key = await importJWK(signing, "ES256");
+	const { kid, key } = await signingKey(env.IDENTITY_KEYSET);
 	return new SignJWT(payload)
-		.setProtectedHeader({ alg: "ES256", typ: "JWT", kid: signing.kid })
+		.setProtectedHeader({ alg: "ES256", typ: "JWT", kid })
 		.setIssuer(env.SUPERBOARD_IDENTITY_ISSUER)
 		.setAudience(audience)
 		.setIssuedAt()
@@ -162,6 +170,20 @@ async function sign(
 		.setExpirationTime(Math.floor(Date.now() / 1000) + expiresIn)
 		.setJti(crypto.randomUUID())
 		.sign(key);
+}
+
+function signingKey(serialized: string) {
+	let cached = signingKeys.get(serialized);
+	if (!cached) {
+		const keyset = parseKeyset(serialized);
+		const signing = keyset.keys.find((key) => key.kid === keyset.active_kid && key.d);
+		if (!signing) throw new Error("identity_active_key_missing");
+		cached = importJWK(signing, "ES256").then((key) => ({ kid: signing.kid, key }));
+		cached.catch(() => signingKeys.get(serialized) === cached && signingKeys.delete(serialized));
+		if (signingKeys.size >= 4) signingKeys.clear();
+		signingKeys.set(serialized, cached);
+	}
+	return cached;
 }
 
 function parseKeyset(serialized: string): IdentityKeyset {

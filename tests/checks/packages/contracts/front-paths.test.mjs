@@ -15,12 +15,12 @@ test("renamed plugin links preserve detail IDs, queries and fragments", () => {
 		],
 		["/app/referrals", "/auth/users?tab=referrals"],
 		["/system/files", "/data/files"],
-		["/products/offerings", "/monetization/offerings"],
+		["/products/offerings", "/monetization/products?tab=offerings"],
 		["/products/products", "/monetization/products/products"],
 		["/marketing/email", "/communication/marketing-email"],
 		["/flows/workflows/workflow-42", "/acquisition/workflows/workflow-42"],
 		["/onboardings/statistics", "/acquisition/onboardings/statistics"],
-		["/app/ios-setup", "/core/ios-setup"],
+		["/app/ios-setup", "/core/libraries?tab=ios"],
 		["/system/audit", "/core/audit"],
 	])
 		assert.equal(canonicalFrontHref(before), after);
@@ -92,4 +92,29 @@ test("authentication editors preserve record identifiers and return to their own
 		canonicalFrontHref("/auth/register/with-email?invite=token"),
 		"/auth/register?invite=token",
 	);
+});
+
+test("pages merged into workspace tabs keep their bookmarks on the matching tab", () => {
+	for (const [before, after] of [
+		["/dynamic-links/links?q=summer", "/acquisition/dynamic-links?q=summer"],
+		["/dynamic-links/campaigns", "/acquisition/dynamic-links?tab=campaigns"],
+		["/dynamic-links/domain", "/acquisition/dynamic-links?tab=settings&section=domain"],
+		["/dynamic-links/redirect-rules", "/acquisition/dynamic-links?tab=settings&section=routing"],
+		[
+			"/acquisition/dynamic-links/social-media-preview?lang=fr",
+			"/acquisition/dynamic-links?lang=fr&tab=settings&section=preview",
+		],
+		["/dynamic-links/tracking", "/acquisition/dynamic-links?tab=settings&section=tracking"],
+		["/dynamic-links/campaigns/42", "/acquisition/dynamic-links/campaigns/42"],
+		["/monetization/entitlements", "/monetization/products?tab=entitlements"],
+		["/analytics/installations?lang=fr", "/analytics/users?lang=fr&tab=installations"],
+		["/analytics/crashes", "/analytics/reports?tab=crashes"],
+		["/app/web-setup", "/core/libraries?tab=web"],
+		["/core/android-setup", "/core/libraries?tab=android"],
+		["/app", "/analytics/home"],
+		["/analytics/app", "/analytics/home"],
+	]) {
+		assert.equal(canonicalFrontHref(before), after);
+		assert.equal(canonicalFrontHref(after), after);
+	}
 });

@@ -26,7 +26,10 @@ function jobsDb() {
 			return { meta: { changes: 2 } };
 		if (op === "run" && sql.includes("UPDATE mcp_tokens")) return { meta: { changes: 3 } };
 		if (op === "run" && sql.includes("DELETE FROM mcp_clients")) return { meta: { changes: 4 } };
-		if (op === "run" && sql.includes("DELETE FROM actions")) return { meta: { changes: 5 } };
+		if (op === "run" && sql.includes("DELETE FROM actions WHERE handled = 1 AND updated_at < ?"))
+			return { meta: { changes: 2 } };
+		if (op === "run" && sql.includes("DELETE FROM actions WHERE NOT EXISTS"))
+			return { meta: { changes: 3 } };
 		return undefined;
 	});
 }

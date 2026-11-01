@@ -7,11 +7,7 @@ import {
 	showErrorNotification,
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
-import {
-	EmptyProject,
-	ModulePage,
-	moduleErrorMessage,
-} from "@superboard/front-ui/modules/ModulePage.js";
+import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
@@ -380,11 +376,15 @@ export default function SdkSetupWizard({ platform }: { platform: SdkPlatform }) 
 	const currentDefinition = platformSteps[currentStep] ?? platformSteps[0]!;
 
 	return (
-		<ModulePage
-			title={`${platformLabels[platform]} Setup`}
-			description={`Complete the ${platformSteps.length}-step ${platformLabels[platform]} SDK integration and verify it against this project.`}
-			error={error}
-		>
+		<section className="space-y-4">
+			<p className="text-sm text-muted-foreground">
+				{`Complete the ${platformSteps.length}-step ${platformLabels[platform]} SDK integration and verify it against this project.`}
+			</p>
+			{error && (
+				<Alert variant="destructive">
+					<AlertDescription>{error}</AlertDescription>
+				</Alert>
+			)}
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
@@ -460,7 +460,7 @@ export default function SdkSetupWizard({ platform }: { platform: SdkPlatform }) 
 					</Card>
 				</div>
 			)}
-		</ModulePage>
+		</section>
 	);
 }
 

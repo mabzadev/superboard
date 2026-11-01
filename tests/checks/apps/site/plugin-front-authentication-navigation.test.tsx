@@ -96,8 +96,10 @@ async function click(label: string) {
 
 test("settings tabs preserve unsaved fields and follow browser navigation", async () => {
 	await render();
-	await vi.waitFor(() =>
-		expect(container.querySelector("#setting-EMAIL_SENDER_NAME")).not.toBeNull(),
+	// The settings form loads lazily; under a parallel suite run that takes over a second.
+	await vi.waitFor(
+		() => expect(container.querySelector("#setting-EMAIL_SENDER_NAME")).not.toBeNull(),
+		{ timeout: 5_000 },
 	);
 	const input = container.querySelector<HTMLInputElement>("#setting-EMAIL_SENDER_NAME");
 	if (!input) throw new Error("Sender input missing");
@@ -108,9 +110,11 @@ test("settings tabs preserve unsaved fields and follow browser navigation", asyn
 		);
 		input.dispatchEvent(new Event("input", { bubbles: true }));
 	});
-	await click("Sécurité");
-	expect(location.search).toContain("tab=security");
+	await click("Connexion");
+	expect(location.search).toContain("tab=sign-in");
+	expect(container.querySelector("#setting-EMAIL_SENDER_NAME")).toBeNull();
 	expect(container.querySelector("#setting-AUTHORIZATION_CODE_EXPIRES_IN")).not.toBeNull();
+	expect(container.querySelector("#setting-GOOGLE_AUTH_CLIENT_ID")).not.toBeNull();
 	await act(async () => {
 		history.replaceState({}, "", "/auth/settings?lang=fr&tab=appearance");
 		dispatchEvent(new PopStateEvent("popstate"));
@@ -121,39 +125,18 @@ test("settings tabs preserve unsaved fields and follow browser navigation", asyn
 	expect(api.put).not.toHaveBeenCalled();
 });
 
-test("Configuration remains a directly accessible tab when sign-in settings fail", async () => {
-	api.get.mockRejectedValue(new Error("Settings unavailable"));
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async () =>
-			Response.json({
-				pluginId: "superboard-authentification",
-				label: "Authentication",
-				lifecycle: { state: "active", changedAt: null, reason: null },
-				configuration: {
-					pluginId: "superboard-authentification",
-					version: "1",
-					label: "Authentication",
-					capabilities: [],
-					failurePolicies: { reads: "unavailable", writes: "fail_closed" },
-				},
-				health: { status: "unknown", checkedAt: null, reason: null },
-				dependencies: [],
-				workers: [],
-				routes: { views: [], api: [] },
-			}),
-		),
-	);
+test("Settings has four tabs and former tab links open their new home", async () => {
+	history.replaceState({}, "", "/auth/settings?lang=fr&tab=user-attributes");
 	await render();
-	await click("Configuration");
-	await vi.waitFor(() => expect(container.textContent).toContain("Santé vérifiée"));
-	expect(location.search).toContain("tab=configuration");
-	expect(container.querySelector('nav [aria-pressed="true"]')?.textContent).toBe("Configuration");
 	const labels = Array.from(
 		container.querySelectorAll("nav button"),
 		(button) => button.textContent ?? "",
 	);
-	expect(labels.every((label) => /^\S+$/u.test(label))).toBe(true);
+	expect(labels).toEqual(["Connexion", "Contrôle d’accès", "Utilisateurs et champs", "Apparence"]);
+	expect(container.querySelector('nav [aria-pressed="true"]')?.textContent).toBe(
+		"Utilisateurs et champs",
+	);
+	await vi.waitFor(() => expect(container.querySelector("#setting-EMAIL_SENDER_NAME")).toBeNull());
 });
 
 test("operators create and edit a role in Settings without opening another view", async () => {

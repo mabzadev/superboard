@@ -144,3 +144,67 @@ test.each(["en", "fr"])(
 		}
 	},
 );
+
+test.each(["en", "fr"])(
+	"the environment keys shortcut keeps Environment settings selected on its own tab (%s)",
+	(locale) => {
+		const keys = {
+			route_id: "keys",
+			href: "/auth/settings?tab=security&section=keys",
+			label: "API keys",
+			permission: "read",
+			order: 1,
+		};
+		const groups = [
+			{
+				group_id: "authentication",
+				label: "Authentication",
+				order: 0,
+				items: [
+					{
+						route_id: "settings",
+						href: `/auth/settings?lang=${locale}`,
+						label: "Settings",
+						permission: "read",
+						order: 0,
+					},
+				],
+			},
+			{
+				group_id: "environment",
+				label: "Environment",
+				order: 1,
+				items: [
+					{
+						route_id: "environment",
+						href: "/core/settings",
+						label: "Environment settings",
+						permission: "read",
+						order: 0,
+						children: [
+							{
+								route_id: "general",
+								href: "/core/settings",
+								label: "General",
+								permission: "read",
+								order: 0,
+							},
+							keys,
+						],
+					},
+				],
+			},
+		];
+		const navigation = organizeProductNavigation(
+			groups,
+			`/auth/settings?tab=security&section=keys&lang=${locale}`,
+		);
+		expect(navigation.activeItem?.route_id).toBe("keys");
+		expect(navigation.activeHref).toBe("/core/settings");
+		expect(navigation.localItems.map(({ route_id }) => route_id)).toEqual(["general", "keys"]);
+		expect(
+			organizeProductNavigation(groups, `/auth/settings?tab=security&lang=${locale}`).activeItem
+				?.route_id,
+		).toBe("settings");
+	},
+);

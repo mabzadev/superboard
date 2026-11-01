@@ -5,11 +5,7 @@ import {
 	showErrorNotification,
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
-import {
-	EmptyProject,
-	ModulePage,
-	moduleErrorMessage,
-} from "@superboard/front-ui/modules/ModulePage.js";
+import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
@@ -33,6 +29,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { AcquisitionPage } from "../../../../AcquisitionPage.js";
+import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
 import {
 	createDomain,
 	deleteDomain,
@@ -42,6 +40,7 @@ import {
 } from "../../../api/dynamic-links/dynamicLinksService.js";
 
 export default function DomainPageContent() {
+	const { tr } = useFlowI18n();
 	const { selectedProject } = useProjectSelection();
 	const [domains, setDomains] = useState<LinkDomain[]>([]);
 	const [selectedId, setSelectedId] = useState<string>();
@@ -121,9 +120,11 @@ export default function DomainPageContent() {
 	};
 
 	return (
-		<ModulePage
-			title="Domain"
-			description="Serve branded dynamic links only after ownership has been verified through DNS."
+		<AcquisitionPage
+			title={tr("Domain")}
+			description={tr(
+				"Serve branded dynamic links only after ownership has been verified through DNS.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -314,6 +315,6 @@ export default function DomainPageContent() {
 					</Card>
 				</div>
 			)}
-		</ModulePage>
+		</AcquisitionPage>
 	);
 }

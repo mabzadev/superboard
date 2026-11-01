@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { render, screen, waitFor } from "../../../../../packages/supbrd-front-ui/render.js";
+import { render, screen, waitFor, within } from "../../../../../packages/supbrd-front-ui/render.js";
 
 const services = vi.hoisted(() => ({
 	getSettings: vi.fn(),
@@ -85,6 +85,7 @@ vi.mock("../../../../../../../packages/supbrd-front-ui/src/shared/lib/Notificati
 }));
 
 import SupportChannelsPage from "../../../../../../../packages/plugins/superboard-support/src/front/components/modules/SupportChannelsPage.js";
+import SupportInboxWorkspace from "../../../../../../../packages/plugins/superboard-support/src/front/components/modules/SupportInboxWorkspace.js";
 import SupportSettingsPage from "../../../../../../../packages/plugins/superboard-support/src/front/components/modules/SupportSettingsPage.js";
 
 describe("native Support Grow pages", () => {
@@ -222,6 +223,40 @@ describe("native Support Grow pages", () => {
 				settings: {},
 			}),
 		);
+	});
+
+	it("reaches project-wide Inbox sections through in-page tabs", async () => {
+		window.history.replaceState(null, "", "/support/inbox?lang=en");
+		const user = userEvent.setup();
+		render(<SupportInboxWorkspace />);
+
+		const sections = within(screen.getByRole("tablist", { name: "Inbox sections" }));
+		expect(sections.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+			"Inboxes",
+			"Channels",
+			"Automations",
+			"Proactive Support",
+			"Reports",
+		]);
+		expect(await screen.findByText("Web support")).toBeInTheDocument();
+		await user.click(sections.getByRole("tab", { name: "Channels" }));
+		expect(new URL(window.location.href).searchParams.get("section")).toBe("channels");
+		await user.click(sections.getByRole("tab", { name: "Inboxes" }));
+		expect(new URL(window.location.href).searchParams.has("section")).toBe(false);
+	});
+
+	it("opens the requested Inbox section from legacy Support links", async () => {
+		window.history.replaceState(null, "", "/support/inbox?section=channels");
+		const user = userEvent.setup();
+		render(<SupportInboxWorkspace />);
+
+		const sections = within(screen.getByRole("tablist", { name: "Inbox sections" }));
+		expect(sections.getByRole("tab", { name: "Channels" })).toHaveAttribute(
+			"aria-selected",
+			"true",
+		);
+		await user.click(screen.getByRole("tab", { name: "Connections" }));
+		expect(await screen.findByText("Customer Telegram")).toBeInTheDocument();
 	});
 
 	it("exposes native notification preferences and read-all controls", async () => {

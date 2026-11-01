@@ -138,6 +138,28 @@ describe("Analytics follows the console language", () => {
 		expect(screen.getByRole("button", { name: "Apply filter" })).toBeInTheDocument();
 	});
 
+	it("narrows the event stream to the user from ?user= and clears it", async () => {
+		window.history.replaceState(null, "", "/analytics/events?user=user-42&lang=fr");
+		render(<Page kind="events" locale="fr" />);
+		await waitFor(() =>
+			expect(state.events).toHaveBeenCalledWith(
+				"project-1",
+				expect.objectContaining({ user_id: "user-42" }),
+			),
+		);
+		expect(screen.getByText("Filtré par utilisateur")).toBeInTheDocument();
+		expect(screen.getByText("user-42")).toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "Retirer le filtre utilisateur" }));
+		await waitFor(() => expect(new URL(window.location.href).search).toBe("?lang=fr"));
+		await waitFor(() =>
+			expect(state.events).toHaveBeenLastCalledWith(
+				"project-1",
+				expect.objectContaining({ user_id: undefined }),
+			),
+		);
+		window.history.replaceState(null, "", "/");
+	});
+
 	it("queues an export from the French report view and translates its confirmation", async () => {
 		render(<Page kind="reports" locale="fr" />);
 		fireEvent.click(screen.getByRole("button", { name: "Exporter les événements" }));
@@ -206,10 +228,60 @@ describe("Analytics follows the console language", () => {
 	it("saves data collection settings through the French feature view", async () => {
 		const user = userEvent.setup();
 		render(<Page kind="settings" locale="fr" />);
-		await user.click(screen.getByRole("tab", { name: "Collecte des données" }));
+		await user.click(screen.getByRole("tab", { name: "Traitement Analytics" }));
 		await user.click(await screen.findByRole("button", { name: "Enregistrer les paramètres" }));
 		await waitFor(() =>
 			expect(state.success).toHaveBeenCalledWith("Paramètres des statistiques enregistrés"),
+		);
+	});
+
+	it("groups audience pages behind in-page tabs without a repeated settings link", () => {
+		state.project = null;
+		render(<Page kind="views" locale="fr" />);
+		const tabs = screen.getByRole("navigation", { name: "Audience et utilisation" });
+		expect(tabs.querySelectorAll("a")).toHaveLength(5);
+		expect(screen.getByRole("link", { name: "Écrans consultés" })).toHaveAttribute(
+			"aria-current",
+			"page",
+		);
+		expect(screen.getByRole("link", { name: "Groupes d’utilisateurs" })).toHaveAttribute(
+			"href",
+			"/analytics/users?tab=cohorts&lang=fr",
+		);
+		expect(screen.queryByRole("link", { name: "Paramètres des statistiques" })).toBeNull();
+	});
+
+	it("opens a grouped page as a tab of its parent entry", () => {
+		state.project = null;
+		window.history.pushState({}, "", "/analytics/users?tab=cohorts&lang=fr");
+		try {
+			render(<Page kind="users" locale="fr" />);
+			expect(screen.getByRole("link", { name: "Groupes d’utilisateurs" })).toHaveAttribute(
+				"aria-current",
+				"page",
+			);
+		} finally {
+			window.history.pushState({}, "", "/");
+		}
+	});
+
+	it("groups alerts, application errors and feedback as a Quality area under reports", () => {
+		state.project = null;
+		render(<Page kind="crashes" locale="en" />);
+		expect(screen.getByRole("link", { name: "Reports and exports" })).toHaveAttribute(
+			"href",
+			"/analytics/reports?lang=en",
+		);
+		expect(screen.getByRole("link", { name: "Quality" })).toHaveAttribute("aria-current", "page");
+		const quality = screen.getByRole("navigation", { name: "Quality" });
+		expect([...quality.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
+			"Alerts",
+			"Application errors",
+			"User feedback",
+		]);
+		expect(screen.getByRole("link", { name: "Application errors" })).toHaveAttribute(
+			"aria-current",
+			"page",
 		);
 	});
 });

@@ -34,10 +34,7 @@ import io.superboard.utils.LSJsonDateTypeAdapterFactory
 import io.superboard.utils.LSJsonInstantCompatTypeAdapterFactory
 import io.superboard.utils.LSJsonInstantTypeAdapterFactory
 import io.superboard.utils.LSResult
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.retryWhen
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -109,6 +106,8 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
             .registerTypeAdapterFactory(LSJsonDateTypeAdapterFactory())
             .create()
     }
+    // Bounded retries with exponential backoff; see SuperBoardRequestExecutor.
+    private val requests = SuperBoardRequestExecutor(gson)
     private val accessKey: String
         get() {
             if (superboardContext.settings.useTestEnvironment) {
@@ -132,56 +131,28 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
     override suspend fun payloadFor(@Body request: AppDetails): LSResult<DeeplinkDetails> {
         DebugLogger.instance.log(LogLevel.INFO, "Fetching payload for device")
 
-        var retryCount = 0
-        while (true) {
-            try {
-                val response = superboardApi.payloadFor(request)
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    body?.let {
-                        DebugLogger.instance.log(LogLevel.INFO, "Fetching payload for device - Received payload")
-                        return LSResult.Success(it)
-                    }
-                }
-
-                response.errorBody()?.string()?.let { responseString ->
-                    val error = gson.fromJson(responseString, ErrorMessage::class.java)
-                    DebugLogger.instance.log(LogLevel.INFO, "Fetching payload - Failed. ${error.error}")
-
-                    return LSResult.Error(java.io.IOException("Failed to fetch the payload. Reason: $response"))
-                }
-            } catch (e: Exception) {}
-
-            delay(if (retryCount < EAGER_RETRY_COUNT) EAGER_RETRY_FALLBACK_TIME else RETRY_FALLBACK_TIME)
-            retryCount++
+        return requests.request(
+            label = "Fetching payload",
+            failureMessage = "Failed to fetch the payload.",
+            call = { superboardApi.payloadFor(request) },
+        ) { body ->
+            body?.also {
+                DebugLogger.instance.log(LogLevel.INFO, "Fetching payload for device - Received payload")
+            }
         }
     }
 
     override suspend fun payloadWithLinkFor(@Body request: AppDetails): LSResult<DeeplinkDetails> {
         DebugLogger.instance.log(LogLevel.INFO, "Fetching payload for device")
 
-        var retryCount = 0
-        while (true) {
-            try {
-                val response = superboardApi.payloadWithLinkFor(request)
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    body?.let {
-                        DebugLogger.instance.log(LogLevel.INFO, "Fetching payload for device - Received payload")
-                        return LSResult.Success(it)
-                    }
-                }
-
-                response.errorBody()?.string()?.let { responseString ->
-                    val error = gson.fromJson(responseString, ErrorMessage::class.java)
-                    DebugLogger.instance.log(LogLevel.INFO, "Fetching payload - Failed. ${error.error}")
-
-                    return LSResult.Error(java.io.IOException("Failed to fetch the payload. ${error.error}"))
-                }
-            } catch (e: Exception) {}
-
-            delay(if (retryCount < EAGER_RETRY_COUNT) EAGER_RETRY_FALLBACK_TIME else RETRY_FALLBACK_TIME)
-            retryCount++
+        return requests.request(
+            label = "Fetching payload",
+            failureMessage = "Failed to fetch the payload.",
+            call = { superboardApi.payloadWithLinkFor(request) },
+        ) { body ->
+            body?.also {
+                DebugLogger.instance.log(LogLevel.INFO, "Fetching payload for device - Received payload")
+            }
         }
     }
 
@@ -189,31 +160,18 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
     ///
     /// - Parameters:
     ///   - appDetails: Details of the app.
-    override fun authenticate(appDetails: AppDetails): Flow<GVRetryResult<AuthenticationResponse>> = flow {
+    override fun authenticate(appDetails: AppDetails): Flow<GVRetryResult<AuthenticationResponse>> {
         DebugLogger.instance.log(LogLevel.INFO, "Authenticate")
 
-        val response = superboardApi.authenticate(appDetails)
-        if (response.isSuccessful) {
-            val body = response.body()
-            body?.let {
+        return requests.retryingFlow(
+            label = "Authenticate",
+            failureMessage = "Failed to authenticate.",
+            call = { superboardApi.authenticate(appDetails) },
+        ) { body ->
+            body?.also {
                 DebugLogger.instance.log(LogLevel.INFO, "Authenticate - Success")
-                emit(GVRetryResult.Success(it))
-                return@flow
             }
         }
-
-        response.errorBody()?.string()?.let { responseString ->
-            val error = gson.fromJson(responseString, ErrorMessage::class.java)
-            DebugLogger.instance.log(LogLevel.INFO, "Authenticate - Failed. ${error.error}")
-
-            emit(GVRetryResult.Error(java.io.IOException("Failed to authenticate. ${error.error}")))
-            return@flow
-        }
-    }.retryWhen { cause, attempt ->
-        DebugLogger.instance.log(LogLevel.INFO, "Authenticate - Failed. Exception: ${cause.message}")
-        emit(GVRetryResult.Retrying(attempt.toInt()))
-        delay(if (attempt < EAGER_RETRY_COUNT) EAGER_RETRY_FALLBACK_TIME else RETRY_FALLBACK_TIME)
-        true // continue retrying
     }
 
     override suspend fun generateLink(title: String?,
@@ -349,184 +307,89 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
     override suspend fun updateAttributes(identifier: String?, attributes: Map<String, Any>?, pushToken: String?): LSResult<Boolean> {
         DebugLogger.instance.log(LogLevel.INFO, "Set attributes - $identifier $attributes push token: $pushToken")
 
-        var retryCount = 0
-        while (true) {
-            try {
-                val request = UpdateAttributesRequest( sdkIdentifier = identifier,
-                    sdkAttributes = attributes,
-                    pushToken = pushToken)
-                val response = superboardApi.updateAttributes(request)
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    body?.let {
-                        DebugLogger.instance.log(LogLevel.INFO, "Set attributes - Successful - $identifier $attributes")
-
-                        return LSResult.Success(true)
-                    }
-                }
-
-                response.errorBody()?.string()?.let { responseString ->
-                    val error = gson.fromJson(responseString, ErrorMessage::class.java)
-                    DebugLogger.instance.log(LogLevel.INFO, "Set attributes - Failed. ${error.error}")
-
-                    return LSResult.Error(java.io.IOException("Failed to set attributes. ${error.error}"))
-                }
-            } catch (e: Exception) { }
-
-            delay(if (retryCount < EAGER_RETRY_COUNT) EAGER_RETRY_FALLBACK_TIME else RETRY_FALLBACK_TIME)
-            retryCount++
+        val request = UpdateAttributesRequest( sdkIdentifier = identifier,
+            sdkAttributes = attributes,
+            pushToken = pushToken)
+        // The endpoint answers with an empty body, so any 2xx is a success.
+        return requests.request(
+            label = "Set attributes",
+            failureMessage = "Failed to set attributes.",
+            call = { superboardApi.updateAttributes(request) },
+        ) {
+            DebugLogger.instance.log(LogLevel.INFO, "Set attributes - Successful - $identifier $attributes")
+            true
         }
     }
 
-    override fun getDeviceFor(vendorId: String): Flow<GVRetryResult<GetDeviceResponse>> = flow {
+    override fun getDeviceFor(vendorId: String): Flow<GVRetryResult<GetDeviceResponse>> {
         DebugLogger.instance.log(LogLevel.INFO, "Getting device last seen")
 
-        val response = superboardApi.getDeviceFor(vendorId)
-        if (response.isSuccessful) {
-            val body = response.body()
-            body?.let {
+        return requests.retryingFlow(
+            label = "Getting device last seen",
+            failureMessage = "Failed to get device last seen.",
+            call = { superboardApi.getDeviceFor(vendorId) },
+        ) { body ->
+            body?.also {
                 DebugLogger.instance.log(LogLevel.INFO, "Getting device last seen - Successful")
-
-                emit(GVRetryResult.Success(it))
-                return@flow
             }
         }
-
-        response.errorBody()?.string()?.let { responseString ->
-            val error = gson.fromJson(responseString, ErrorMessage::class.java)
-            DebugLogger.instance.log(LogLevel.INFO, "Getting device last seen - Failed. ${error.error}")
-
-            emit(GVRetryResult.Error(java.io.IOException("Failed to get device last seen. ${error.error}")))
-            return@flow
-        }
-    }.retryWhen { cause, attempt ->
-        DebugLogger.instance.log(LogLevel.INFO, "Getting device last seen - Failed. Exception: ${cause.message}")
-        emit(GVRetryResult.Retrying(attempt.toInt()))
-        delay(if (attempt < EAGER_RETRY_COUNT) EAGER_RETRY_FALLBACK_TIME else RETRY_FALLBACK_TIME)
-        true // continue retrying
     }
 
     override suspend fun notifications(page: Int): LSResult<NotificationsResponse> {
         DebugLogger.instance.log(LogLevel.INFO, "Getting all the notifications")
 
-        var retryCount = 0
-        while (true) {
-            try {
-                val request = NotificationsRequest(page = page)
-                val response = superboardApi.notifications(request)
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    body?.let {
-                        DebugLogger.instance.log(LogLevel.INFO, "Getting all the notifications - Successful")
-
-                        return LSResult.Success(it)
-                    }
-                }
-
-                response.errorBody()?.string()?.let { responseString ->
-                    val error = gson.fromJson(responseString, ErrorMessage::class.java)
-                    DebugLogger.instance.log(LogLevel.INFO, "Getting all the notifications - Failed. ${error.error}")
-
-                    return LSResult.Error(java.io.IOException("Failed getting all the notifications. ${error.error}"))
-                }
-            } catch (e: Exception) {
-                if (e.javaClass.name == "kotlinx.coroutines.flow.internal.AbortFlowException") {
-                    throw e
-                }
-
-                DebugLogger.instance.log(LogLevel.INFO, "Getting device last seen - Failed. ${e.message}")
+        val request = NotificationsRequest(page = page)
+        return requests.request(
+            label = "Getting all the notifications",
+            failureMessage = "Failed getting all the notifications.",
+            call = { superboardApi.notifications(request) },
+        ) { body ->
+            body?.also {
+                DebugLogger.instance.log(LogLevel.INFO, "Getting all the notifications - Successful")
             }
-
-            delay(if (retryCount < EAGER_RETRY_COUNT) EAGER_RETRY_FALLBACK_TIME else RETRY_FALLBACK_TIME)
-            retryCount++
         }
     }
 
     override suspend fun numberOfUnreadNotifications(): LSResult<NumberOfUnreadNotificationsResponse> {
         DebugLogger.instance.log(LogLevel.INFO, "Get unread messages")
 
-        var retryCount = 0
-        while (true) {
-            try {
-                val response = superboardApi.numberOfUnreadNotifications()
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    body?.let {
-                        DebugLogger.instance.log(LogLevel.INFO, "Get unread messages - Successful")
-
-                        return LSResult.Success(it)
-                    }
-                }
-
-                response.errorBody()?.string()?.let { responseString ->
-                    val error = gson.fromJson(responseString, ErrorMessage::class.java)
-                    DebugLogger.instance.log(LogLevel.INFO, "Get unread messages - Failed. ${error.error}")
-
-                    return LSResult.Error(java.io.IOException("Failed get unread messages. ${error.error}"))
-                }
-            } catch (e: Exception) { }
-
-            delay(if (retryCount < EAGER_RETRY_COUNT) EAGER_RETRY_FALLBACK_TIME else RETRY_FALLBACK_TIME)
-            retryCount++
+        return requests.request(
+            label = "Get unread messages",
+            failureMessage = "Failed get unread messages.",
+            call = { superboardApi.numberOfUnreadNotifications() },
+        ) { body ->
+            body?.also {
+                DebugLogger.instance.log(LogLevel.INFO, "Get unread messages - Successful")
+            }
         }
     }
 
     override suspend fun markNotificationAsRead(notificationId: Int): LSResult<Boolean> {
         DebugLogger.instance.log(LogLevel.INFO, "Mark notification as read")
 
-        var retryCount = 0
-        while (true) {
-            try {
-                val request = MarkNotificationAsReadRequest(notificationId = notificationId)
-                val response = superboardApi.markNotificationAsRead(request = request)
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    body?.let {
-                        DebugLogger.instance.log(LogLevel.INFO, "Mark notification as read - Successful")
-
-                        return LSResult.Success(true)
-                    }
-                }
-
-                response.errorBody()?.string()?.let { responseString ->
-                    val error = gson.fromJson(responseString, ErrorMessage::class.java)
-                    DebugLogger.instance.log(LogLevel.INFO, "Mark notification as read - Failed. ${error.error}")
-
-                    return LSResult.Error(java.io.IOException("Failed to mark notification as read. ${error.error}"))
-                }
-            } catch (e: Exception) { }
-
-            delay(if (retryCount < EAGER_RETRY_COUNT) EAGER_RETRY_FALLBACK_TIME else RETRY_FALLBACK_TIME)
-            retryCount++
+        val request = MarkNotificationAsReadRequest(notificationId = notificationId)
+        // The endpoint answers with an empty body, so any 2xx is a success.
+        return requests.request(
+            label = "Mark notification as read",
+            failureMessage = "Failed to mark notification as read.",
+            call = { superboardApi.markNotificationAsRead(request = request) },
+        ) {
+            DebugLogger.instance.log(LogLevel.INFO, "Mark notification as read - Successful")
+            true
         }
     }
 
     override suspend fun notificationsToDisplayAutomatically(): LSResult<NotificationsResponse> {
         DebugLogger.instance.log(LogLevel.INFO, "Notifications to display automatically")
 
-        var retryCount = 0
-        while (true) {
-            try {
-                val response = superboardApi.notificationsToDisplayAutomatically()
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    body?.let {
-                        DebugLogger.instance.log(LogLevel.INFO, "Getting notifications to display automatically - Successful")
-
-                        return LSResult.Success(it)
-                    }
-                }
-
-                response.errorBody()?.string()?.let { responseString ->
-                    val error = gson.fromJson(responseString, ErrorMessage::class.java)
-                    DebugLogger.instance.log(LogLevel.INFO, "Getting notifications to display automatically - Failed. ${error.error}")
-
-                    return LSResult.Error(java.io.IOException("Failed getting notifications to display automatically. ${error.error}"))
-                }
-            } catch (e: Exception) { }
-
-            delay(if (retryCount < EAGER_RETRY_COUNT) EAGER_RETRY_FALLBACK_TIME else RETRY_FALLBACK_TIME)
-            retryCount++
+        return requests.request(
+            label = "Getting notifications to display automatically",
+            failureMessage = "Failed getting notifications to display automatically.",
+            call = { superboardApi.notificationsToDisplayAutomatically() },
+        ) { body ->
+            body?.also {
+                DebugLogger.instance.log(LogLevel.INFO, "Getting notifications to display automatically - Successful")
+            }
         }
     }
 

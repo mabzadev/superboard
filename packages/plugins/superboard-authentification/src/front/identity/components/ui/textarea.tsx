@@ -1,1 +1,1 @@
-export { Textarea } from "@superboard/front-ui/ui";
+export { Textarea } from "@superboard/front-ui/ui/textarea.js";

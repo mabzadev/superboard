@@ -2,178 +2,83 @@
 
 import {
 	type IconType,
-	SiAstro,
-	SiBiome,
-	SiBower,
-	SiBun,
-	SiC,
-	SiCircleci,
-	SiCoffeescript,
-	SiCplusplus,
-	SiCss,
-	SiCssmodules,
 	SiDart,
-	SiDocker,
-	SiDocusaurus,
-	SiDotenv,
-	SiEditorconfig,
-	SiEslint,
-	SiGatsby,
-	SiGitignoredotio,
-	SiGnubash,
-	SiGo,
-	SiGraphql,
-	SiGrunt,
-	SiGulp,
-	SiHandlebarsdotjs,
-	SiHtml5,
 	SiJavascript,
-	SiJest,
-	SiJson,
-	SiLess,
-	SiMarkdown,
-	SiMdx,
-	SiMintlify,
-	SiMocha,
-	SiMysql,
-	SiNextdotjs,
-	SiPerl,
-	SiPhp,
-	SiPostcss,
-	SiPrettier,
-	SiPrisma,
-	SiPug,
-	SiPython,
-	SiR,
-	SiReact,
-	SiReadme,
-	SiRedis,
-	SiRemix,
-	SiRive,
-	SiRollupdotjs,
-	SiRuby,
-	SiSanity,
-	SiSass,
-	SiScala,
-	SiSentry,
-	SiShadcnui,
-	SiStorybook,
-	SiStylelint,
-	SiSublimetext,
-	SiSvelte,
-	SiSvg,
-	SiSwift,
-	SiTailwindcss,
-	SiToml,
-	SiTypescript,
-	SiVercel,
-	SiVite,
-	SiVuedotjs,
-	SiWebassembly,
 	SiKotlin,
+	SiReact,
+	SiSwift,
+	SiTypescript,
 } from "@icons-pack/react-simple-icons";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { ComponentProps, HTMLAttributes, ReactElement, ReactNode } from "react";
-import { cloneElement, createContext, useContext, useState } from "react";
-import { createHighlighterCoreSync } from "shiki/core";
-import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
-import langGroovy from "shiki/langs/groovy.mjs";
-import langJavascript from "shiki/langs/javascript.mjs";
-import langJsx from "shiki/langs/jsx.mjs";
-import langKotlin from "shiki/langs/kotlin.mjs";
-import langSwift from "shiki/langs/swift.mjs";
-import langTypescript from "shiki/langs/typescript.mjs";
-import langXml from "shiki/langs/xml.mjs";
-import themeGithubDark from "shiki/themes/github-dark.mjs";
-import themeGithubLight from "shiki/themes/github-light.mjs";
+import { cloneElement, createContext, useContext, useEffect, useState } from "react";
+import type { HighlighterCore } from "shiki/core";
 
-const shiki = createHighlighterCoreSync({
-	themes: [themeGithubLight, themeGithubDark],
-	langs: [langJsx, langTypescript, langJavascript, langSwift, langKotlin, langGroovy, langXml],
-	engine: createJavaScriptRegexEngine(),
-});
 import { cn } from "../../../../lib/utils.js";
 import { Button } from "../../button.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../select.js";
 
+let highlighter: HighlighterCore | null = null;
+let highlighterRequest: Promise<HighlighterCore> | null = null;
+
+// Shiki, its grammars and themes load on the first highlighted block instead of at import.
+function loadHighlighter(): Promise<HighlighterCore> {
+	highlighterRequest ??= Promise.all([
+		import("shiki/core"),
+		import("shiki/engine/javascript"),
+	]).then(([{ createHighlighterCore }, { createJavaScriptRegexEngine }]) =>
+		createHighlighterCore({
+			themes: [import("shiki/themes/github-light.mjs"), import("shiki/themes/github-dark.mjs")],
+			langs: [
+				import("shiki/langs/jsx.mjs"),
+				import("shiki/langs/typescript.mjs"),
+				import("shiki/langs/javascript.mjs"),
+				import("shiki/langs/swift.mjs"),
+				import("shiki/langs/kotlin.mjs"),
+				import("shiki/langs/groovy.mjs"),
+				import("shiki/langs/xml.mjs"),
+			],
+			engine: createJavaScriptRegexEngine(),
+		}).then((created) => {
+			highlighter = created;
+			return created;
+		}),
+	);
+	return highlighterRequest;
+}
+
+function useHighlighter(enabled: boolean): HighlighterCore | null {
+	const [current, setCurrent] = useState(highlighter);
+	useEffect(() => {
+		if (!enabled || current) return;
+		let active = true;
+		void loadHighlighter().then(
+			(loaded) => {
+				if (active) setCurrent(loaded);
+			},
+			() => {
+				highlighterRequest = null;
+			},
+		);
+		return () => {
+			active = false;
+		};
+	}, [enabled, current]);
+	return current;
+}
+
 export type BundledLanguage = string;
 
+// Only the SDK setup snippets render filenames; unmatched names simply show no icon.
 const filenameIconMap = {
-	".env": SiDotenv,
-	"*.astro": SiAstro,
-	"biome.json": SiBiome,
-	".bowerrc": SiBower,
-	"bun.lockb": SiBun,
-	"*.c": SiC,
-	"*.cpp": SiCplusplus,
-	".circleci/config.yml": SiCircleci,
-	"*.coffee": SiCoffeescript,
-	"*.module.css": SiCssmodules,
-	"*.css": SiCss,
-	"*.dart": SiDart,
-	Dockerfile: SiDocker,
-	"docusaurus.config.js": SiDocusaurus,
-	".editorconfig": SiEditorconfig,
-	".eslintrc": SiEslint,
-	"eslint.config.*": SiEslint,
-	"gatsby-config.*": SiGatsby,
-	".gitignore": SiGitignoredotio,
-	"*.go": SiGo,
-	"*.graphql": SiGraphql,
-	"*.sh": SiGnubash,
-	"Gruntfile.*": SiGrunt,
-	"gulpfile.*": SiGulp,
-	"*.hbs": SiHandlebarsdotjs,
-	"*.html": SiHtml5,
 	"*.js": SiJavascript,
-	"*.json": SiJson,
-	"*.test.js": SiJest,
-	"*.less": SiLess,
-	"*.md": SiMarkdown,
-	"*.mdx": SiMdx,
-	"mintlify.json": SiMintlify,
-	"mocha.opts": SiMocha,
-	"*.mustache": SiHandlebarsdotjs,
-	"*.sql": SiMysql,
-	"next.config.*": SiNextdotjs,
-	"*.pl": SiPerl,
-	"*.php": SiPhp,
-	"postcss.config.*": SiPostcss,
-	"prettier.config.*": SiPrettier,
-	"*.prisma": SiPrisma,
-	"*.pug": SiPug,
-	"*.py": SiPython,
-	"*.r": SiR,
-	"*.rb": SiRuby,
 	"*.jsx": SiReact,
-	"*.tsx": SiReact,
-	"readme.md": SiReadme,
-	"*.rdb": SiRedis,
-	"remix.config.*": SiRemix,
-	"*.riv": SiRive,
-	"rollup.config.*": SiRollupdotjs,
-	"sanity.config.*": SiSanity,
-	"*.sass": SiSass,
-	"*.scss": SiSass,
-	"*.sc": SiScala,
-	"*.scala": SiScala,
-	"sentry.client.config.*": SiSentry,
-	"components.json": SiShadcnui,
-	"storybook.config.*": SiStorybook,
-	"stylelint.config.*": SiStylelint,
-	".sublime-settings": SiSublimetext,
-	"*.svelte": SiSvelte,
-	"*.svg": SiSvg,
-	"*.swift": SiSwift,
-	"tailwind.config.*": SiTailwindcss,
-	"*.toml": SiToml,
 	"*.ts": SiTypescript,
-	"vercel.json": SiVercel,
-	"vite.config.*": SiVite,
-	"*.vue": SiVuedotjs,
-	"*.wasm": SiWebassembly,
+	"*.tsx": SiReact,
+	"*.dart": SiDart,
+	"*.swift": SiSwift,
 	"*.kt": SiKotlin,
 };
 
@@ -524,8 +429,9 @@ export const CodeBlockContent = ({
 	...props
 }: CodeBlockContentProps) => {
 	const { resolvedTheme } = useTheme();
+	const shiki = useHighlighter(syntaxHighlighting);
 
-	if (!syntaxHighlighting) {
+	if (!syntaxHighlighting || !shiki) {
 		return <CodeBlockFallback {...props}>{children}</CodeBlockFallback>;
 	}
 

@@ -3,10 +3,11 @@ import {
 	navigationGroup,
 } from "../../../supbrd-core/src/plugin-front-runtime.js";
 
-const navigation = navigationGroup({
-	group_id: "superboard-onboardings.navigation",
-	group_label: "superboard-onboardings.menu.group",
-	group_order: 71,
+// Fallback navigation (used only when the EmDash menu is missing) mirrors the seeded section.
+const acquisition = navigationGroup({
+	group_id: "acquisition",
+	group_label: "Acquisition",
+	group_order: 5,
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
@@ -15,25 +16,20 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 	description: "Build onboarding experiences and inspect their performance from the active plugin.",
 	translations: {
 		en: {
-			"superboard-onboardings.menu.group": "Onboardings",
 			"superboard-onboardings.menu.item_0": "Onboardings",
-			"superboard-onboardings.menu.item_1": "Statistics",
 		},
 		fr: {
-			"superboard-onboardings.menu.group": "Onboardings",
-			"superboard-onboardings.menu.item_0": "Onboardings",
-			"superboard-onboardings.menu.item_1": "Statistiques",
+			"superboard-onboardings.menu.item_0": "Parcours d’accueil",
 		},
 	},
 	surfaces: [
 		{
 			path_pattern: "/onboardings",
-			navigation: navigation("superboard-onboardings.menu.item_0", 0),
+			navigation: acquisition("superboard-onboardings.menu.item_0", 1),
 			title: "Onboardings",
 		},
 		{
 			path_pattern: "/onboardings/statistics",
-			navigation: navigation("superboard-onboardings.menu.item_1", 1),
 			title: "Onboarding statistics",
 		},
 	],

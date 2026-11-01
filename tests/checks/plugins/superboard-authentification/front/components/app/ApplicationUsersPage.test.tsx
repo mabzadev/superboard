@@ -157,9 +157,35 @@ describe("application user back office", () => {
 		expect(
 			screen.getByText("relay@privaterelay.appleid.com", { exact: false }),
 		).toBeInTheDocument();
+		await waitFor(() =>
+			expect(mocks.searchBillingCustomers).toHaveBeenCalledWith("10-test", "application-user-1"),
+		);
+
+		fireEvent.click(screen.getByRole("tab", { name: "Purchases & entitlements" }));
 		expect(await screen.findByText("premium: active")).toBeInTheDocument();
 		expect(screen.getByText("purchase")).toBeInTheDocument();
-		expect(mocks.searchBillingCustomers).toHaveBeenCalledWith("10-test", "application-user-1");
+	});
+
+	it("links the dimensions owned by other plugins from the user sheet", async () => {
+		render(<ApplicationUsersPage />);
+		fireEvent.click(await screen.findByRole("button", { name: "Inspect user@example.test" }));
+		await screen.findByText("Linked authentication");
+
+		fireEvent.click(screen.getByRole("tab", { name: "Messages" }));
+		expect(screen.getByRole("link", { name: "View in Communication › Audience" })).toHaveAttribute(
+			"href",
+			"/communication/marketing-email?tab=contacts&q=user%40example.test",
+		);
+		fireEvent.click(screen.getByRole("tab", { name: "Support" }));
+		expect(screen.getByRole("link", { name: "View in Support" })).toHaveAttribute(
+			"href",
+			"/support/inbox?q=user%40example.test",
+		);
+		fireEvent.click(screen.getByRole("tab", { name: "Events" }));
+		expect(screen.getByRole("link", { name: "View events" })).toHaveAttribute(
+			"href",
+			"/analytics/events?user=application-user-1",
+		);
 	});
 
 	it("does not query personal data for a non-administrator", async () => {

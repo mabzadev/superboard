@@ -2,6 +2,7 @@ import {
 	authenticationSettingDefinitions,
 	AuthenticationSettingsError,
 	validateAuthenticationSettings,
+	type AuthenticationSettingDefinition,
 	type AuthenticationSettingsSnapshot,
 	type AuthenticationSettings,
 	type AuthenticationSettingValue,
@@ -21,8 +22,8 @@ import { GET, PUT } from "./transport.js";
 const groups: AuthenticationSettingsGroup[] = [
 	"general",
 	"login",
-	"security",
 	"providers",
+	"security",
 	"advanced",
 ];
 const commaPattern = /[,\n]/u;
@@ -60,11 +61,12 @@ function snapshot(value: unknown): AuthenticationSettingsSnapshot {
 }
 
 export default function AuthenticationSettingsPage({
-	embeddedGroups,
-	onInvalidGroup,
+	embedded,
+	onInvalidField,
 }: {
-	embeddedGroups?: AuthenticationSettingsGroup[];
-	onInvalidGroup?(group: AuthenticationSettingsGroup): void;
+	/** Shows only the settings this predicate accepts, grouped by section, without page chrome. */
+	embedded?(key: string): boolean;
+	onInvalidField?(key: string): void;
 } = {}) {
 	const { locale } = useFrontContext();
 	const { selectedProject } = useProjectSelection();
@@ -82,7 +84,7 @@ export default function AuthenticationSettingsPage({
 	});
 	return (
 		<section className="ds-page space-y-5">
-			{!embeddedGroups && (
+			{!embedded && (
 				<header className="ds-page-header">
 					<div>
 						<h1 className="ds-page-title">{i18n._("title")}</h1>
@@ -90,8 +92,8 @@ export default function AuthenticationSettingsPage({
 					</div>
 				</header>
 			)}
-			{!embeddedGroups && <SectionNavigation />}
-			{!embeddedGroups && (
+			{!embedded && <SectionNavigation />}
+			{!embedded && (
 				<nav aria-label={i18n._("sections")} className="flex flex-wrap gap-2">
 					{tabs.map((item) => (
 						<Button
@@ -134,8 +136,8 @@ export default function AuthenticationSettingsPage({
 								key={projectRef}
 								initial={query.data}
 								group={group}
-								embeddedGroups={embeddedGroups}
-								onInvalidGroup={onInvalidGroup}
+								embedded={embedded}
+								onInvalidField={onInvalidField}
 								setGroup={setGroup}
 								endpoint={endpoint}
 								locale={locale}
@@ -152,8 +154,8 @@ type SettingsTab = AuthenticationSettingsGroup | "configuration";
 const tabs: SettingsTab[] = [...groups, "configuration"];
 
 function SettingsForm({
-	embeddedGroups,
-	onInvalidGroup,
+	embedded,
+	onInvalidField,
 	initial,
 	group,
 	setGroup,
@@ -161,8 +163,8 @@ function SettingsForm({
 	locale,
 	onUpdate,
 }: {
-	embeddedGroups?: AuthenticationSettingsGroup[];
-	onInvalidGroup?(group: AuthenticationSettingsGroup): void;
+	embedded?(key: string): boolean;
+	onInvalidField?(key: string): void;
 	initial: AuthenticationSettingsSnapshot;
 	group: SettingsTab;
 	setGroup(group: SettingsTab): void;
@@ -223,7 +225,7 @@ function SettingsForm({
 				const field = authenticationSettingDefinitions[cause.field];
 				if (field) {
 					setGroup(field.group);
-					onInvalidGroup?.(field.group);
+					onInvalidField?.(cause.field);
 				}
 				setError(`${t(cause.field)}: ${t("invalidValue")}`);
 				return;
@@ -248,6 +250,10 @@ function SettingsForm({
 		}
 	};
 	if (group === "configuration") return null;
+	const fields = Object.entries(authenticationSettingDefinitions).filter(([key, field]) =>
+		embedded ? embedded(key) : field.group === group,
+	);
+	const shown = groups.filter((section) => fields.some(([, field]) => field.group === section));
 	return (
 		<form
 			className="space-y-5"
@@ -259,51 +265,46 @@ function SettingsForm({
 			}}
 		>
 			<>
-				{(embeddedGroups?.includes("providers") ?? group === "providers") && (
-					<p className="text-kumo-subtle">{t("providerHelp")}</p>
-				)}
-				<fieldset disabled={busy} className="grid gap-5 md:grid-cols-2">
-					<legend className="sr-only">{t(embeddedGroups?.[0] ?? group)}</legend>
-					{Object.entries(authenticationSettingDefinitions)
-						.filter(([, field]) =>
-							embeddedGroups ? embeddedGroups.includes(field.group) : field.group === group,
-						)
-						.map(([key, field]) => {
-							const value = values[key];
-							return (
-								<div key={key} className="space-y-2">
-									{field.type === "boolean" ? (
-										<Checkbox
-											label={t(key)}
-											checked={value === true}
-											onCheckedChange={(checked) => {
-												change(key, checked === true);
-											}}
-										/>
-									) : (
-										<>
-											<label htmlFor={`setting-${key}`} className="block text-sm font-medium">
-												{t(key)}
-											</label>
-											<Input
-												className="w-full"
-												id={`setting-${key}`}
-												aria-label={t(key)}
-												value={Array.isArray(value) ? value.join(", ") : String(value ?? "")}
-												onChange={(event) => {
-													change(key, event.target.value);
-												}}
-											/>
-											{field.type === "list" && (
-												<p className="text-xs text-kumo-subtle">{t("listHelp")}</p>
-											)}
-										</>
-									)}
-								</div>
-							);
-						})}
-				</fieldset>
-				{(embeddedGroups?.includes("general") ?? group === "general") && current.serverUrl && (
+				{shown.includes("providers") && <p className="text-kumo-subtle">{t("providerHelp")}</p>}
+				{shown.map((section) => {
+					const fieldset = (
+						<fieldset key={section} disabled={busy} className="grid gap-5 md:grid-cols-2">
+							<legend
+								className={
+									embedded && shown.length > 1 && section !== "advanced"
+										? "mb-3 text-base font-semibold"
+										: "sr-only"
+								}
+							>
+								{t(section)}
+							</legend>
+							{fields
+								.filter(([, field]) => field.group === section)
+								.map(([key, field]) => (
+									<SettingField
+										key={key}
+										name={key}
+										type={field.type}
+										value={values[key]}
+										label={t(key)}
+										listHelp={t("listHelp")}
+										onChange={(value) => {
+											change(key, value);
+										}}
+									/>
+								))}
+						</fieldset>
+					);
+					return embedded && shown.length > 1 && section === "advanced" ? (
+						<details key={section} className="rounded border border-kumo-subtle p-4">
+							<summary className="cursor-pointer font-semibold">{t(section)}</summary>
+							<div className="mt-4">{fieldset}</div>
+						</details>
+					) : (
+						fieldset
+					);
+				})}
+				{shown.includes("general") && current.serverUrl && (
 					<details className="space-y-2 rounded border border-kumo-subtle p-3 text-sm">
 						<summary className="cursor-pointer font-medium">{t("integrationLinks")}</summary>
 						<p className="text-kumo-subtle">{t("managedAddresses")}</p>
@@ -358,5 +359,51 @@ function SettingsForm({
 				</div>
 			</>
 		</form>
+	);
+}
+
+function SettingField({
+	name,
+	type,
+	value,
+	label,
+	listHelp,
+	onChange,
+}: {
+	name: string;
+	type: AuthenticationSettingDefinition["type"];
+	value: AuthenticationSettingValue | undefined;
+	label: string;
+	listHelp: string;
+	onChange(value: AuthenticationSettingValue): void;
+}) {
+	return (
+		<div className="space-y-2">
+			{type === "boolean" ? (
+				<Checkbox
+					label={label}
+					checked={value === true}
+					onCheckedChange={(checked) => {
+						onChange(checked === true);
+					}}
+				/>
+			) : (
+				<>
+					<label htmlFor={`setting-${name}`} className="block text-sm font-medium">
+						{label}
+					</label>
+					<Input
+						className="w-full"
+						id={`setting-${name}`}
+						aria-label={label}
+						value={Array.isArray(value) ? value.join(", ") : String(value ?? "")}
+						onChange={(event) => {
+							onChange(event.target.value);
+						}}
+					/>
+					{type === "list" && <p className="text-xs text-kumo-subtle">{listHelp}</p>}
+				</>
+			)}
+		</div>
 	);
 }

@@ -1,18 +1,17 @@
 import {
-	RouteInventoryStatus,
-	routeInventoryLabels,
-	routeDestinationText,
-} from "@superboard/front-ui/route-inventory-status.js";
-import {
 	parseDeploymentConfiguration,
 	parseDeploymentRoutes,
 } from "@superboard/contracts/deployment-configuration";
+import { parseRouteInventorySummary } from "@superboard/contracts/route-inventory";
 import { useFrontContext } from "@superboard/front-ui/context";
 import { deploymentI18n } from "@superboard/front-ui/deployment-i18n.js";
 import { Button, Loader } from "@superboard/front-ui/kumo";
 import { useLiveQuery } from "@superboard/front-ui/live-query.js";
-import { parseRouteInventorySummary } from "@superboard/contracts/route-inventory";
-import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
+import {
+	RouteInventoryStatus,
+	routeInventoryLabels,
+	routeDestinationText,
+} from "@superboard/front-ui/route-inventory-status.js";
 import {
 	Table as FrontTable,
 	TableHeader as FrontTableHeader,
@@ -23,6 +22,7 @@ import {
 } from "@superboard/front-ui/ui/table.js";
 import { useState } from "react";
 
+/** Environment settings › Infrastructure: deployment, Workers and routes inventory. */
 export default function InstanceConfiguration() {
 	const context = useFrontContext();
 	const t = deploymentI18n(context.locale ?? "en");
@@ -53,10 +53,8 @@ export default function InstanceConfiguration() {
 		},
 	});
 	return (
-		<section className="ds-page space-y-5">
-			<h1 className="ds-page-title">{t("title")}</h1>
+		<section className="space-y-5 py-4">
 			<p>{t("description")}</p>
-			<SectionNavigation />
 			{query.isPending ? (
 				<Loader />
 			) : query.error && !query.data ? (

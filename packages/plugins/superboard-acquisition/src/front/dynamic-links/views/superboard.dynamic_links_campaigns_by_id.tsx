@@ -1,6 +1,6 @@
 import type { PluginViewProps } from "@superboard/front-ui/context";
 
-import Page from "../app/(protected)/dynamic-links/campaigns/[id]/page.js";
+import DynamicLinksWorkspace from "../components/dynamic_links/DynamicLinksWorkspace.js";
 export default function View({ parameters }: PluginViewProps) {
-	return <Page params={{ id: parameters.id }} />;
+	return <DynamicLinksWorkspace campaignId={parameters.id} />;
 }

@@ -12,9 +12,11 @@ import {
 	env,
 	getQueueResult,
 	SELF,
+	waitOnExecutionContext,
 } from "cloudflare:test";
 import { beforeAll, expect, test } from "vitest";
 
+import { pruneFinishedPluginTaskLeases } from "../../../../../apps/site/src/lib/plugin-task-lease-retention.js";
 import analyticsWorker from "../../../../../packages/plugins/superboard-analytics/worker/src/index.js";
 import { ingestAnalyticsEvents } from "../../../../../packages/plugins/superboard-analytics/worker/src/ingestion.js";
 import { dispatchLifecycleApi, pluginTaskContext } from "./lifecycle-health-services.js";
@@ -355,4 +357,123 @@ test("the broker rejects cross-plugin and cross-instance task claims", async () 
 		new Request(request, { headers: await signPluginTaskRequest(request, "incorrect-secret") }),
 	);
 	expect(forged.status).toBe(401);
+});
+
+test("an HTTP response does not wait for background work whose lease still blocks disable", async () => {
+	let release!: () => void;
+	const paused = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const execution = createExecutionContext();
+	const worker = withPluginTaskLifecycle(
+		pluginId,
+		{
+			fetch: (_request, _bindings: PluginTaskBindings, context) => {
+				context.waitUntil(paused);
+				return Response.json({ accepted: true });
+			},
+		},
+		{ fetch: true },
+	);
+	const response = await worker.fetch!(
+		new Request("https://worker.example/operation"),
+		moduleEnvironment(),
+		execution,
+	);
+	expect(response.status).toBe(200);
+	expect(await response.json()).toEqual({ accepted: true });
+	expect((await toggle("disable")).status).toBe(409);
+	release();
+	await waitOnExecutionContext(execution);
+	expect((await toggle("disable")).status).toBe(201);
+	expect((await toggle("enable")).status).toBe(201);
+});
+
+test("a queue batch takes one lease and keeps each message outcome", async () => {
+	const actions: string[] = [];
+	const base = moduleEnvironment();
+	const bindings: PluginTaskBindings = {
+		...base,
+		API_SERVICE: {
+			fetch: async (request) => {
+				actions.push((await request.clone().json<PluginTaskCommand>()).action);
+				return base.API_SERVICE!.fetch(request);
+			},
+		},
+	};
+	const worker = withPluginTaskLifecycle(pluginId, {
+		queue: (batch: MessageBatch<{ fail: boolean }>, _bindings: PluginTaskBindings) => {
+			for (const message of batch.messages) {
+				if (message.body.fail) throw new Error("expected queue failure");
+				message.ack();
+			}
+		},
+	});
+	const batch = createMessageBatch<{ fail: boolean }>("analytics-task-batch", [
+		{ id: "first", timestamp: new Date(), attempts: 1, body: { fail: false } },
+		{ id: "second", timestamp: new Date(), attempts: 1, body: { fail: true } },
+		{ id: "third", timestamp: new Date(), attempts: 1, body: { fail: false } },
+	]);
+	const execution = createExecutionContext();
+	await worker.queue!(batch, bindings, execution);
+	const result = await getQueueResult(batch, execution);
+	expect(result.explicitAcks).toEqual(["first", "third"]);
+	expect(result.retryMessages).toEqual([expect.objectContaining({ msgId: "second" })]);
+	expect(actions).toEqual(["claim", "finish"]);
+});
+
+test("retention removes only finished leases older than a day", async () => {
+	const old = new Date(Date.now() - 2 * 86_400_000).toISOString();
+	const recent = new Date().toISOString();
+	const insert = (id: string, state: string, finished: string | null) =>
+		env.DB.prepare(
+			"INSERT INTO superboard_plugin_task_leases (lease_id, instance_id, target, plugin_id, task_id, kind, token_checksum, state, started_at, deadline_at, finished_at) VALUES (?, 'reference-production', 'production', ?, ?, 'queue', 'checksum', ?, ?, ?, ?)",
+		).bind(id, pluginId, id, state, old, old, finished);
+	const expired = `old-${crypto.randomUUID()}`;
+	const recentId = `recent-${crypto.randomUUID()}`;
+	const running = `running-${crypto.randomUUID()}`;
+	await env.DB.batch([
+		insert(expired, "finished", old),
+		insert(recentId, "finished", recent),
+		insert(running, "running", null),
+	]);
+	expect(await pruneFinishedPluginTaskLeases(env.DB)).toBeGreaterThanOrEqual(1);
+	const remaining = await env.DB.prepare(
+		"SELECT lease_id FROM superboard_plugin_task_leases WHERE lease_id IN (?, ?, ?)",
+	)
+		.bind(expired, recentId, running)
+		.all<{ lease_id: string }>();
+	expect(remaining.results.map(({ lease_id }) => lease_id).toSorted()).toEqual(
+		[recentId, running].toSorted(),
+	);
+	await env.DB.prepare("DELETE FROM superboard_plugin_task_leases WHERE lease_id = ?")
+		.bind(running)
+		.run();
+});
+
+test("finishing a lease prunes expired finished leases of the same plugin", async () => {
+	const input = command();
+	await sendPluginTaskCommand(moduleEnvironment(), input);
+	const lease = await env.DB.prepare(
+		"SELECT target FROM superboard_plugin_task_leases WHERE lease_id = ?",
+	)
+		.bind(input.lease_id)
+		.first<{ target: string }>();
+	const old = new Date(Date.now() - 2 * 86_400_000).toISOString();
+	const expired = `old-${crypto.randomUUID()}`;
+	await env.DB.prepare(
+		"INSERT INTO superboard_plugin_task_leases (lease_id, instance_id, target, plugin_id, task_id, kind, token_checksum, state, started_at, deadline_at, finished_at) VALUES (?, 'reference-production', ?, ?, ?, 'queue', 'checksum', 'finished', ?, ?, ?)",
+	)
+		.bind(expired, lease?.target, pluginId, expired, old, old, old)
+		.run();
+	expect(
+		await sendPluginTaskCommand(moduleEnvironment(), { ...input, action: "finish" }),
+	).toMatchObject({ lease_id: input.lease_id, state: "finished" });
+	expect(
+		await env.DB.prepare(
+			"SELECT lease_id, state FROM superboard_plugin_task_leases WHERE lease_id IN (?, ?)",
+		)
+			.bind(expired, input.lease_id)
+			.all(),
+	).toMatchObject({ results: [{ lease_id: input.lease_id, state: "finished" }] });
 });

@@ -200,6 +200,7 @@ describe("marketing worker", () => {
 			consent_source: "form",
 			attributes: { plan: "pro" },
 			list_ids: ["list-1"],
+			tag_ids: [],
 			consented_at: undefined,
 			unsubscribed_at: undefined,
 			created_at: "2026-08-07T00:00:00.000Z",

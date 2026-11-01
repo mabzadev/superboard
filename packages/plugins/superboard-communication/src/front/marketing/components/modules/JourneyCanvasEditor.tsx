@@ -21,7 +21,9 @@ import {
 } from "@xyflow/react";
 import {
 	Clock3,
+	Flag,
 	GitBranch,
+	Hourglass,
 	LogOut,
 	Mail,
 	PencilLine,
@@ -38,8 +40,9 @@ import type {
 	JourneyNode,
 	MarketingChannelConnector,
 } from "../../api/marketing/marketingService.js";
-import { useStudioI18n } from "../../studio/i18n.js";
+import { useGrowthI18n as useStudioI18n } from "../../studio/growth-i18n.js";
 import { JourneySimulation } from "../../studio/JourneySimulation.js";
+import { EventKeyPicker, useEventLabel } from "../../studio/TriggerPicker.js";
 
 type JourneyNodeType = JourneyNode["type"];
 
@@ -66,6 +69,12 @@ const nodeTypes: Array<{
 		label: "Delay",
 		description: "Wait before continuing",
 		icon: Clock3,
+	},
+	{
+		type: "wait_event",
+		label: "Wait for event",
+		description: "Continue when an event happens, or after a time limit",
+		icon: Hourglass,
 	},
 	{
 		type: "branch",
@@ -101,6 +110,7 @@ export function JourneyCanvasEditor({
 	connectors: MarketingChannelConnector[];
 }) {
 	const { t } = useStudioI18n();
+	const eventLabel = useEventLabel(project);
 	const [selectedId, setSelectedId] = useState(value.start_node_id);
 	const selected = value.nodes.find((node) => node.id === selectedId) ?? null;
 	const ordered = useMemo(() => layoutNodes(value), [value]);
@@ -117,7 +127,7 @@ export function JourneyCanvasEditor({
 		if (sourceEdge) {
 			edges = edges.map((edge) => (edge === sourceEdge ? { ...edge, to: id } : edge));
 		}
-		if (type === "branch" && destination) {
+		if ((type === "branch" || type === "wait_event") && destination) {
 			edges = [
 				...edges,
 				{ from: id, to: destination, outcome: "true" as const },
@@ -132,6 +142,7 @@ export function JourneyCanvasEditor({
 				)
 			: [...value.nodes, node];
 		onChange({
+			...value,
 			start_node_id:
 				value.nodes.length === 0 || (value.start_node_id === destination && !source)
 					? id
@@ -171,7 +182,7 @@ export function JourneyCanvasEditor({
 		const nodes = value.nodes.filter((candidate) => candidate.id !== nodeId);
 		const startNodeId =
 			value.start_node_id === nodeId ? (fallback ?? nodes[0]?.id ?? "") : value.start_node_id;
-		onChange({ start_node_id: startNodeId, nodes, edges });
+		onChange({ ...value, start_node_id: startNodeId, nodes, edges });
 		setSelectedId(startNodeId);
 	};
 
@@ -191,12 +202,13 @@ export function JourneyCanvasEditor({
 					</div>
 				</div>
 				<div className="flex flex-wrap gap-2">
-					{nodeTypes.map(({ type, label, icon: Icon }) => (
+					{nodeTypes.map(({ type, label, description, icon: Icon }) => (
 						<Button
 							key={type}
 							type="button"
 							size="sm"
 							variant="outline"
+							title={t(description)}
 							disabled={type === "exit" && value.nodes.some((node) => node.type === "exit")}
 							onClick={() => addNode(type)}
 						>
@@ -205,6 +217,33 @@ export function JourneyCanvasEditor({
 					))}
 				</div>
 			</div>
+
+			<details
+				className="rounded-lg border border-kumo-line bg-kumo-base p-3"
+				open={Boolean(value.goal)}
+			>
+				<summary className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+					<Flag className="size-4" /> {t("Goal (optional)")}
+					{value.goal && (
+						<span className="text-kumo-subtle">· {eventLabel(value.goal.event_name)}</span>
+					)}
+				</summary>
+				<div className="mt-3 max-w-xl space-y-2">
+					<p className="text-sm text-kumo-subtle">
+						{t("Contacts who reach the goal leave the automation and count as converted.")}
+					</p>
+					<EventKeyPicker
+						project={project}
+						label={t("Goal event")}
+						allowEmpty
+						value={value.goal?.event_name ?? ""}
+						onChange={(eventName) => {
+							const { goal: _previous, ...rest } = value;
+							onChange(eventName ? { ...rest, goal: { event_name: eventName } } : rest);
+						}}
+					/>
+				</div>
+			</details>
 
 			<div className="grid min-h-[420px] gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
 				<div className="h-[620px] overflow-hidden rounded-lg border border-kumo-line bg-kumo-tint">
@@ -215,7 +254,7 @@ export function JourneyCanvasEditor({
 							position: { x: node.type === "branch" ? 160 : (index % 2) * 320, y: index * 150 },
 							data: {
 								label: t(nodeLabel(node.type)),
-								summary: nodeSummary(node, templates, connectors, t),
+								summary: nodeSummary(node, templates, connectors, t, eventLabel),
 								kind: node.type,
 							},
 							selected: node.id === selectedId,
@@ -278,6 +317,7 @@ export function JourneyCanvasEditor({
 									{selected.id}
 								</div>
 								<NodeFields
+									project={project}
 									node={selected}
 									templates={templates}
 									connectors={connectors}
@@ -325,7 +365,7 @@ function JourneyGraphNode({ data }: NodeProps) {
 			<Handle type="target" position={Position.Top} />
 			<p className="text-sm font-semibold">{String(data.label)}</p>
 			<p className="mt-2 text-xs text-kumo-subtle">{String(data.summary)}</p>
-			{data.kind === "branch" ? (
+			{data.kind === "branch" || data.kind === "wait_event" ? (
 				<>
 					<Handle id="true" type="source" position={Position.Bottom} style={{ left: "25%" }} />
 					<Handle id="false" type="source" position={Position.Bottom} style={{ left: "75%" }} />
@@ -339,11 +379,13 @@ function JourneyGraphNode({ data }: NodeProps) {
 const journeyNodeTypes = { journey: JourneyGraphNode };
 
 function NodeFields({
+	project,
 	node,
 	templates,
 	connectors,
 	onChange,
 }: {
+	project: string;
 	node: JourneyNode;
 	templates: EmailTemplate[];
 	connectors: MarketingChannelConnector[];
@@ -403,6 +445,31 @@ function NodeFields({
 					}
 				/>
 			</Field>
+		);
+	}
+	if (node.type === "wait_event") {
+		return (
+			<div className="space-y-4">
+				<EventKeyPicker
+					project={project}
+					label={t("Wait until")}
+					value={node.event_name ?? ""}
+					onChange={(eventName) => {
+						onChange({ event_name: eventName });
+					}}
+				/>
+				<Field label={t("Time limit in hours")}>
+					<Input
+						type="number"
+						min={1}
+						max={8_760}
+						value={Math.max(1, Math.round((node.timeout_seconds ?? 86_400) / 3_600))}
+						onChange={(event) => {
+							onChange({ timeout_seconds: Math.max(1, Number(event.target.value)) * 3_600 });
+						}}
+					/>
+				</Field>
+			</div>
 		);
 	}
 	if (node.type === "branch") {
@@ -518,6 +585,11 @@ function ConnectionFields({
 			{select("true", "If condition is true")}
 			{select("false", "If condition is false")}
 		</div>
+	) : node.type === "wait_event" ? (
+		<div className="space-y-4">
+			{select("true", "If the event happens")}
+			{select("false", "If the time limit is reached")}
+		</div>
 	) : (
 		select("default", "Continue to")
 	);
@@ -537,6 +609,8 @@ function defaultNode(
 			connector_id: connectors.find((item) => item.enabled)?.id ?? "",
 		};
 	if (type === "delay") return { id, type, delay_seconds: 3_600 };
+	if (type === "wait_event")
+		return { id, type, event_name: "native:purchase_completed", timeout_seconds: 86_400 };
 	if (type === "branch")
 		return {
 			id,
@@ -571,6 +645,7 @@ function nodeSummary(
 	templates: EmailTemplate[],
 	connectors: MarketingChannelConnector[],
 	t: (key: string) => string,
+	eventLabel: (key: string) => string,
 ) {
 	if (node.type === "email")
 		return templates.find((item) => item.id === node.template_id)?.name ?? t("Choose a template");
@@ -583,6 +658,11 @@ function nodeSummary(
 			"{minutes}",
 			String(Math.round((node.delay_seconds ?? 60) / 60)),
 		);
+	if (node.type === "wait_event")
+		return `${eventLabel(node.event_name ?? "")} · ${t("up to {hours} h").replace(
+			"{hours}",
+			String(Math.round((node.timeout_seconds ?? 86_400) / 3_600)),
+		)}`;
 	if (node.type === "branch")
 		return `${node.condition?.field ?? "field"} ${node.condition?.operator ?? "equals"} ${String(node.condition?.value ?? "")}`;
 	if (node.type === "update_attribute")

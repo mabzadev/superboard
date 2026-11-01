@@ -5,10 +5,20 @@ import type {
 
 const suffixPattern = /[?#]/u;
 const pathname = (href: string) => href.split(suffixPattern, 1)[0] ?? "";
-const querySpecificity = (href: string) => {
+const queryOf = (href: string) => {
 	const parameters = new URL(href, "https://superboard.invalid").searchParams;
 	parameters.delete("lang");
-	return parameters.size;
+	return parameters;
+};
+/**
+ * Entries sharing a pathname are told apart by their query: an entry whose parameters are all
+ * present in the current URL wins, the most specific first (e.g. Environment settings › API keys
+ * on `/auth/settings?tab=security&section=keys`); otherwise the least specific entry wins.
+ */
+const queryRank = (href: string, current: URLSearchParams) => {
+	const parameters = queryOf(href);
+	const satisfied = [...parameters].every(([name, value]) => current.get(name) === value);
+	return satisfied ? parameters.size + 1 : -parameters.size;
 };
 const matchesPath = (path: string, href: string) => {
 	const current = pathname(path);
@@ -30,12 +40,13 @@ export function organizeProductNavigation(
 		}
 	};
 	for (const group of groups) visit(group.items);
+	const current = queryOf(path);
 	const active = candidates
 		.filter(({ item }) => matchesPath(path, item.href))
 		.toSorted(
 			(a, b) =>
 				pathname(b.item.href).length - pathname(a.item.href).length ||
-				querySpecificity(a.item.href) - querySpecificity(b.item.href) ||
+				queryRank(b.item.href, current) - queryRank(a.item.href, current) ||
 				Number(Boolean(a.item.children?.length)) - Number(Boolean(b.item.children?.length)),
 		)[0];
 	const localItems = active?.root.children?.length

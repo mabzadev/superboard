@@ -3,10 +3,11 @@ import {
 	navigationGroup,
 } from "../../../supbrd-core/src/plugin-front-runtime.js";
 
+// Fallback navigation (used only when the EmDash menu is missing) mirrors the seeded section.
 const navigation = navigationGroup({
-	group_id: "superboard-content.navigation",
-	group_label: "superboard-content.menu.group",
-	group_order: 73,
+	group_id: "data",
+	group_label: "Data",
+	group_order: 2,
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
@@ -15,12 +16,10 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 	description: "Content presentation is contributed when a Front Draft selects a Content surface.",
 	translations: {
 		en: {
-			"superboard-content.menu.group": "Content",
-			"superboard-content.menu.item_0": "Documents",
+			"superboard-content.menu.item_0": "Content",
 		},
 		fr: {
-			"superboard-content.menu.group": "Contenu",
-			"superboard-content.menu.item_0": "Documents",
+			"superboard-content.menu.item_0": "Contenus",
 		},
 	},
 	surfaces: [

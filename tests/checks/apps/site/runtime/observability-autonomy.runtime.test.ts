@@ -2,6 +2,7 @@ import { signPluginTaskRequest } from "@superboard/contracts/plugin-task";
 import { createExecutionContext, env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
+import { pruneObservabilityObservations } from "../../../../../packages/plugins/superboard-core/api/src/lib/observability-retention.js";
 import observabilityWorker from "../../../../../packages/plugins/superboard-core/observability/src/index.js";
 import { dispatchLifecycleApi, pluginTaskContext } from "./lifecycle-health-services.js";
 
@@ -233,4 +234,59 @@ test("production supervision reads persisted instance metrics without Cloudflare
 			},
 		]),
 	});
+});
+
+test("batched observations persist in one request and expired observations are pruned", async () => {
+	await toggle("enable");
+	const service = `batched-${crypto.randomUUID()}`;
+	const observation = (status: number) => ({
+		instance_id: "reference-production",
+		observation_id: crypto.randomUUID(),
+		service,
+		event_type: "fetch",
+		outcome: status >= 500 ? "exception" : "ok",
+		status,
+		exceptions: status >= 500 ? 1 : 0,
+		cpu_ms: 1,
+		wall_ms: 2,
+		observed_at: new Date().toISOString(),
+	});
+	expect(
+		(await ingest({ observations: [{ ...observation(200), instance_id: "other" }] })).status,
+	).toBe(403);
+	const delivered = await ingest({ observations: [observation(200), observation(503)] });
+	expect(delivered.status).toBe(201);
+	expect(await delivered.json()).toMatchObject({
+		data: { observations: [{ incident_id: null }, { incident_id: expect.any(String) }] },
+	});
+	const db = (env as unknown as { HEALTH_API_DB: D1Database }).HEALTH_API_DB;
+	const expired = crypto.randomUUID();
+	const old = new Date(Date.now() - 20 * 86_400_000).toISOString();
+	await db.batch([
+		db
+			.prepare(
+				"INSERT INTO observability_observations(instance_id,observation_id,service,event_type,outcome,http_status,exceptions,cpu_ms,wall_ms,observed_at) VALUES ('reference-production',?,?,'fetch','ok',200,0,1,1,?)",
+			)
+			.bind(expired, service, old),
+		db
+			.prepare(
+				"INSERT INTO observability_observation_details(instance_id,observation_id,truncated) VALUES ('reference-production',?,0)",
+			)
+			.bind(expired),
+	]);
+	expect(await pruneObservabilityObservations(db)).toBeGreaterThanOrEqual(1);
+	expect(
+		await db
+			.prepare("SELECT COUNT(*) AS count FROM observability_observations WHERE service=?")
+			.bind(service)
+			.first(),
+	).toEqual({ count: 2 });
+	expect(
+		await db
+			.prepare(
+				"SELECT COUNT(*) AS count FROM observability_observation_details WHERE observation_id=?",
+			)
+			.bind(expired)
+			.first(),
+	).toEqual({ count: 0 });
 });

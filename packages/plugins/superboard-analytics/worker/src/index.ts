@@ -1,12 +1,13 @@
-import { withRouteManifest } from "@superboard/contracts/route-manifest";
-import { registerRouter } from "@superboard/contracts/route-registry";
 import { AnalyticsContractError, parseAnalyticsEventsV1 } from "@superboard/contracts/analytics";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
 import { drainAnalyticsHooks, evaluateAnalyticsAlerts } from "./automations";
 import { collectAnalyticsProjection } from "./core-collection.js";
+import { identityHashCandidates } from "./crypto";
 import {
 	errorResponse,
 	httpError,
@@ -85,10 +86,19 @@ import type { Env } from "./types";
 
 export { AnalyticsOperationsWorkflow };
 
-const app = registerRouter(new Hono<{
-	Bindings: AnalyticsBindings;
-	Variables: AnalyticsVariables;
-}>(), {"service":"analytics","module":"index.app","pluginId":"superboard-analytics","surface":"internal","access":"internal"});
+const app = registerRouter(
+	new Hono<{
+		Bindings: AnalyticsBindings;
+		Variables: AnalyticsVariables;
+	}>(),
+	{
+		service: "analytics",
+		module: "index.app",
+		pluginId: "superboard-analytics",
+		surface: "internal",
+		access: "internal",
+	},
+);
 
 app.get("/internal/v1/health", async (c) => {
 	try {
@@ -199,15 +209,16 @@ app.get("/internal/v1/overview", async (c) =>
 	}),
 );
 
-app.get("/internal/v1/events", async (c) =>
-	c.json({
-		data: await listAnalyticsEvents(
-			c.env.DB,
-			String(c.get("project").projectId),
-			new URL(c.req.url),
-		),
-	}),
-);
+app.get("/internal/v1/events", async (c) => {
+	const url = new URL(c.req.url);
+	const projectId = String(c.get("project").projectId);
+	// `user_id` is the application user id; it is hashed here so raw identifiers never reach storage.
+	const userId = url.searchParams.get("user_id")?.trim().slice(0, 1_024);
+	const userIdHashes = userId
+		? await identityHashCandidates(c.env, projectId, "user", userId)
+		: undefined;
+	return c.json({ data: await listAnalyticsEvents(c.env.DB, projectId, url, { userIdHashes }) });
+});
 app.get("/internal/v1/events/analyze", async (c) => c.json({ data: await analyzeEvent(c) }));
 
 app.get("/internal/v1/installations", async (c) =>
@@ -543,4 +554,8 @@ const lifecycleWorker = {
 	},
 };
 
-export default withRouteManifest((withPluginTaskLifecycle("superboard-analytics", lifecycleWorker)), [app], {"service":"analytics","pluginId":"superboard-analytics"});
+export default withRouteManifest(
+	withPluginTaskLifecycle("superboard-analytics", lifecycleWorker),
+	[app],
+	{ service: "analytics", pluginId: "superboard-analytics" },
+);

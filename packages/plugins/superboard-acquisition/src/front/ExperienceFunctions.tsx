@@ -1,53 +1,27 @@
-import { useCallback, useState } from "react";
-
-import { ComponentsPage } from "./flows/features/flows/ComponentsPage.js";
-import { WorkflowEditorPage } from "./flows/features/flows/editor/WorkflowEditorPage.js";
-import { FlowsProvider } from "./flows/features/flows/FlowsContext.js";
 import { useFlowI18n } from "./flows/features/flows/i18n.js";
-import { LaunchpadPage } from "./flows/features/flows/LaunchpadPage.js";
-import { FlowsWorkflowsPage } from "./flows/features/flows/WorkflowsPage.js";
 
-export function ExperienceFunctions({
-	section,
-	onDirtyChange,
-}: {
-	section: string;
-	onDirtyChange: (dirty: boolean) => void;
-}) {
-	const { tr } = useFlowI18n();
-	const [workflowId, setWorkflowId] = useState("");
-	const [dirty, setDirty] = useState(false);
-	const changed = useCallback(
-		(value: boolean) => {
-			setDirty(value);
-			onDirtyChange(value);
-		},
-		[onDirtyChange],
-	);
+const functions = [
+	["workflows", "/acquisition/workflows"],
+	["launchpad", "/acquisition/launchpad"],
+	["components", "/acquisition/components"],
+] as const;
+
+/** Project-wide experience functions, linked once from the Paywalls and Onboardings lists. */
+export function ExperienceFunctionLinks() {
+	const { t, tr, locale } = useFlowI18n();
+	const hint = tr("These functions are shared by the experiences in this project.");
 	return (
-		<div hidden={!["Workflows", "Launchpad", "Components"].includes(section)}>
-			<FlowsProvider>
-				<p className="text-sm text-muted-foreground">
-					{tr("These functions are shared by the experiences in this project.")}
-				</p>
-				<div hidden={section !== "Workflows"}>
-					{workflowId ? (
-						<WorkflowEditorPage
-							workflowId={workflowId}
-							onDirtyChange={changed}
-							onBack={() => {
-								if (dirty && !window.confirm(tr("Discard unsaved changes?"))) return;
-								changed(false);
-								setWorkflowId("");
-							}}
-						/>
-					) : (
-						section === "Workflows" && <FlowsWorkflowsPage onOpen={setWorkflowId} />
-					)}
-				</div>
-				{section === "Launchpad" && <LaunchpadPage />}
-				{section === "Components" && <ComponentsPage />}
-			</FlowsProvider>
-		</div>
+		<nav aria-label={hint} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+			<span className="text-muted-foreground">{hint}</span>
+			{functions.map(([key, href]) => (
+				<a
+					key={key}
+					href={`${href}?lang=${locale}`}
+					className="font-medium underline-offset-4 hover:underline"
+				>
+					{t(key)}
+				</a>
+			))}
+		</nav>
 	);
 }

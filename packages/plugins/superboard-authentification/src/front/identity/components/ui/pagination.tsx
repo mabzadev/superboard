@@ -6,4 +6,4 @@ export {
 	PaginationPrevious,
 	PaginationNext,
 	PaginationEllipsis,
-} from "@superboard/front-ui/ui";
+} from "@superboard/front-ui/ui/pagination.js";

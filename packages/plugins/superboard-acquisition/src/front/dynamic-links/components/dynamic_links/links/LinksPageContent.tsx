@@ -112,6 +112,10 @@ function toForm(link: DynamicLink): LinkForm {
 	};
 }
 
+function createLinkRequested() {
+	return new URLSearchParams(globalThis.location?.search ?? "").get("create") === "1";
+}
+
 function csvCell(value: unknown) {
 	return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
@@ -119,6 +123,7 @@ function csvCell(value: unknown) {
 import {
 	AcquisitionPage as ModulePage,
 	useAcquisitionSelection,
+	useEmbeddedPage,
 	useItemExitGuard,
 } from "../../../../AcquisitionPage.js";
 import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
@@ -126,6 +131,7 @@ import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
 export default function LinksPageContent({ campaignId }: { campaignId?: string }) {
 	const { itemId, selectItem } = useAcquisitionSelection();
 	const { tr } = useFlowI18n();
+	const embedded = useEmbeddedPage();
 	const [section, setSection] = useState("Details");
 	const { selectedProject } = useProjectSelection();
 	const {
@@ -148,9 +154,12 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 	const [campaigns, setCampaigns] = useState<LinkCampaign[] | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [dialogOpen, setDialogOpen] = useState(false);
+	// `?create=1` (e.g. from the command palette) opens the Create link dialog on arrival.
+	const [dialogOpen, setDialogOpen] = useState(() => !itemId && createLinkRequested());
 	const [saving, setSaving] = useState(false);
-	const [form, setForm] = useState<LinkForm>(emptyForm);
+	const [form, setForm] = useState<LinkForm>(() =>
+		createLinkRequested() ? { ...emptyForm, campaignId: campaignId ?? "" } : emptyForm,
+	);
 	const [selectedColumns, setSelectedColumns] = useState([
 		"ads_platform",
 		"title",
@@ -257,6 +266,12 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 		setDialogOpen(true);
 	};
 
+	// The parameter is dropped once read so a reload or Back does not reopen the dialog.
+	const [createRequest, setCreateRequest] = useUrlState("create", "");
+	useEffect(() => {
+		if (createRequest) setCreateRequest("");
+	}, [createRequest, setCreateRequest]);
+
 	const openEdit = useCallback(
 		(row: LinkData) => {
 			const link = links.find((item) => item.id === row.id);
@@ -299,13 +314,13 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 		try {
 			if (form.id) {
 				await updateLink(selectedProject.id, form.id, payload());
-				showSuccessNotification("Link updated");
+				showSuccessNotification(tr("Link updated"));
 			} else {
 				const created = await createLink(selectedProject.id, payload());
 				setForm((current) => ({ ...current, id: created.id }));
 				setSection("Details");
 				selectItem(created.id);
-				showSuccessNotification("Link created");
+				showSuccessNotification(tr("Link created"));
 			}
 			setDialogOpen(false);
 			await load();
@@ -323,7 +338,7 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 			await deleteLink(selectedProject.id, form.id);
 			selectItem("");
 			setDialogOpen(false);
-			showSuccessNotification("Link deleted");
+			showSuccessNotification(tr("Link deleted"));
 			await load();
 		} catch (cause) {
 			showErrorNotification(moduleErrorMessage(cause));
@@ -412,12 +427,16 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 					? form.name
 					: campaignId
 						? (campaign?.name ?? tr("Campaign links"))
-						: tr("Dynamic links")
+						: embedded
+							? ""
+							: tr("Dynamic links")
 			}
-			description={tr(
-				"Create, route and measure links across every platform and acquisition source.",
-			)}
-			error={error ?? (campaignMissing ? "Campaign not found" : null)}
+			description={
+				campaignId && !itemId
+					? tr("Links grouped in this campaign and their attributed results.")
+					: tr("Create, route and measure links across every platform and acquisition source.")
+			}
+			error={error ?? (campaignMissing ? tr("Campaign not found") : null)}
 		>
 			{!selectedProject ? (
 				<EmptyProject />
@@ -646,8 +665,8 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value={ACTIVE}>Active</SelectItem>
-										<SelectItem value={ARCHIVED}>Archived</SelectItem>
+										<SelectItem value={ACTIVE}>{tr("Active")}</SelectItem>
+										<SelectItem value={ARCHIVED}>{tr("Archived")}</SelectItem>
 									</SelectContent>
 								</Select>
 							) : null}
@@ -656,20 +675,20 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 								platformAdsOptions={adsFilterList}
 								selectedAdsPlatform={linkType}
 								setSelectedAdsPlatforms={setLinkType}
-								title="Types"
-								selectListTitle="Types"
+								title={tr("Types")}
+								selectListTitle={tr("Types")}
 							/>
 							<AdsPlatformSelect
 								platformAdsOptions={platformsFilterList}
 								selectedAdsPlatform={platform}
 								setSelectedAdsPlatforms={setPlatform}
-								title="Platforms"
-								selectListTitle="Platforms"
+								title={tr("Platforms")}
+								selectListTitle={tr("Platforms")}
 							/>
 						</div>
 						<div className="flex flex-wrap gap-2">
 							<Button variant="outline" onClick={exportCsv}>
-								<Download className="size-4" /> Export
+								<Download className="size-4" /> {tr("Export")}
 							</Button>
 							<CustomizeColumns
 								columnOptions={columnOptions}

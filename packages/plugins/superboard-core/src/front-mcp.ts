@@ -3,10 +3,11 @@ import {
 	navigationGroup,
 } from "../../../supbrd-core/src/plugin-front-runtime.js";
 
+// Fallback navigation (used only when the EmDash menu is missing) mirrors the seeded section.
 const navigation = navigationGroup({
-	group_id: "superboard-mcp.navigation",
-	group_label: "superboard-mcp.menu.group",
-	group_order: 78,
+	group_id: "environment",
+	group_label: "navigation.section.environment",
+	group_order: 8,
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
@@ -15,19 +16,17 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 	description: "Review and authorize MCP access through the active MCP plugin contract.",
 	translations: {
 		en: {
-			"superboard-mcp.menu.group": "MCP",
-			"superboard-mcp.menu.tools": "Tools and access",
+			"superboard-mcp.menu.tools": "AI assistant access",
 		},
 		fr: {
-			"superboard-mcp.menu.group": "MCP",
-			"superboard-mcp.menu.tools": "Outils et accès",
+			"superboard-mcp.menu.tools": "Accès des assistants IA",
 		},
 	},
 	surfaces: [
 		{
 			path_pattern: "/mcp",
 			title: "MCP tools",
-			navigation: navigation("superboard-mcp.menu.tools", 0),
+			navigation: navigation("superboard-mcp.menu.tools", 6),
 		},
 		{ path_pattern: "/mcp/authorize", title: "MCP authorization" },
 	],

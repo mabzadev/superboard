@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:superboard_flutter/superboard_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'application_actions.dart';
+import 'application_client.dart';
 import 'models.dart';
 
 /// Ephemeral values emitted by native callbacks for no-code action flows.
@@ -38,7 +40,7 @@ Future<bool> superboardInitialize({
   String identityToken = '',
   String appVersion = '',
   String buildNumber = '',
-  String sdkVersion = '3.0.0',
+  String sdkVersion = '4.0.0',
 }) async {
   await SuperBoardPurchases.instance.configure(
     projectKey: projectKey,
@@ -61,7 +63,7 @@ Future<bool> superboardInitializeAuto({
   String identityToken = '',
   String appVersion = '',
   String buildNumber = '',
-  String sdkVersion = '3.0.0',
+  String sdkVersion = '4.0.0',
 }) async {
   final platformIdentifier = await SuperBoard().getPlatformIdentifier();
   return superboardInitialize(
@@ -84,7 +86,7 @@ Future<bool> superboardInitializeAuthenticated({
   required String authGatewayBaseUrl,
   String appVersion = '',
   String buildNumber = '',
-  String sdkVersion = '3.0.0',
+  String sdkVersion = '4.0.0',
 }) async {
   if (applicationAccessToken.trim().isEmpty) {
     throw const SuperBoardPurchasesException(
@@ -92,7 +94,35 @@ Future<bool> superboardInitializeAuthenticated({
       code: 'identity_required',
     );
   }
+  final sharedIdentity = SuperBoardSharedIdentityTokenSource(
+    authGatewayBaseUrl: authGatewayBaseUrl,
+    applicationAccessToken: applicationAccessToken,
+  );
   Future<String?> tokenProvider() async {
+    try {
+      final shared = await sharedIdentity.token();
+      if (shared != null) return shared;
+    } on SuperBoardApplicationException catch (error) {
+      final status = error.statusCode ?? 0;
+      throw SuperBoardPurchasesException(
+        'Identity synchronization failed',
+        code: error.code,
+        retryable:
+            error.retryable || status == 408 || status == 429 || status >= 500,
+      );
+    } on TimeoutException {
+      throw const SuperBoardPurchasesException(
+        'Identity synchronization timed out',
+        code: 'identity_timeout',
+        retryable: true,
+      );
+    } on http.ClientException {
+      throw const SuperBoardPurchasesException(
+        'Identity synchronization is unavailable',
+        code: 'identity_network_unavailable',
+        retryable: true,
+      );
+    }
     final client = http.Client();
     try {
       try {

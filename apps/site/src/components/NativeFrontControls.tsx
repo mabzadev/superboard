@@ -2,10 +2,10 @@ import { useFrontContext } from "@superboard/front-ui/context";
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { Select, Popover } from "@superboard/front-ui/kumo";
 import { useTheme } from "@superboard/front-ui/theme";
-import { Button } from "@superboard/front-ui/ui";
+import { Button } from "@superboard/front-ui/ui/button.js";
 import { useState } from "react";
 
-import { localizeFrontPath, type UserFrontLocale } from "../lib/user-front-i18n.js";
+import { frontLocaleSwitchHref, type UserFrontLocale } from "../lib/user-front-i18n.js";
 
 export function NativeFrontControls({
 	message,
@@ -73,10 +73,7 @@ export function NativeFrontControls({
 						}}
 						onValueChange={(value: UserFrontLocale | null) => {
 							if (!value || value === locale) return;
-							const url = new URL(window.location.href);
-							url.pathname = localizeFrontPath(url.pathname, value);
-							url.searchParams.set("lang", value);
-							window.location.assign(url.href);
+							window.location.assign(frontLocaleSwitchHref(window.location.href, value));
 						}}
 					/>
 					{actions.map((action) => (

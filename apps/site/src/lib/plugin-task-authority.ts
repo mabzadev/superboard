@@ -3,6 +3,7 @@ import { parsePluginTaskCommand, verifyPluginTaskRequest } from "@superboard/con
 import { readJsonObjectLimited, RequestBodyError } from "@superboard/contracts/request-body";
 
 import { jsonResponse } from "./operator-guard.js";
+import { finishedPluginTaskLeaseRetention } from "./plugin-task-lease-retention.js";
 import type { SuperBoardSiteEnv } from "./site-env.js";
 import {
 	resolveSuperBoardPluginTarget,
@@ -173,12 +174,18 @@ export async function handlePluginTaskAuthority(
 				deadline_at: lease.deadline_at,
 			});
 		}
-		await db
-			.prepare(
-				"UPDATE superboard_plugin_task_leases SET state = 'finished', finished_at = ? WHERE lease_id = ? AND state = 'running'",
-			)
-			.bind(now, command.lease_id)
-			.run();
+		await db.batch([
+			db
+				.prepare(
+					"UPDATE superboard_plugin_task_leases SET state = 'finished', finished_at = ? WHERE lease_id = ? AND state = 'running'",
+				)
+				.bind(now, command.lease_id),
+			finishedPluginTaskLeaseRetention(db, {
+				instanceId: command.instance_id,
+				target,
+				pluginId: command.plugin_id,
+			}),
+		]);
 		return jsonResponse({ lease_id: command.lease_id, state: "finished" });
 	} catch (error) {
 		if (error instanceof RequestBodyError)

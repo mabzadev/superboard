@@ -1,4 +1,4 @@
-import EmailItemsPage from "../studio/EmailItemsPage.js";
+import CommunicationWorkspace from "../studio/CommunicationWorkspace.js";
 export default function View() {
-	return <EmailItemsPage kind="campaign" />;
+	return <CommunicationWorkspace initialTab="automations" />;
 }

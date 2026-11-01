@@ -45,7 +45,7 @@ export const genOtpSecret = () => {
 
 export const genRecoveryCode = async () => {
 	const recoveryCode = genRandomString(24);
-	const recoveryHash = cryptoUtil.bcryptText(recoveryCode);
+	const recoveryHash = await cryptoUtil.bcryptText(recoveryCode);
 	return {
 		recoveryCode,
 		recoveryHash,
@@ -103,15 +103,14 @@ export const verifyTotp = async (secret: string, otp: string): Promise<number | 
 	return null;
 };
 
-export const bcryptText = (text: string) => {
-	const salt = bcrypt.genSaltSync(12);
-	const hash = bcrypt.hashSync(text, salt);
-	return hash;
+// Async bcryptjs variants yield between rounds instead of blocking the isolate
+// for the whole cost-12 computation. Cost and algorithm stay unchanged.
+export const bcryptText = async (text: string): Promise<string> => {
+	return bcrypt.hash(text, 12);
 };
 
-export const bcryptCompare = (text: string, hash: string) => {
-	const isMatch = bcrypt.compareSync(text, hash);
-	return isMatch;
+export const bcryptCompare = async (text: string, hash: string): Promise<boolean> => {
+	return bcrypt.compare(text, hash);
 };
 
 export const isValidCodeChallenge = async (

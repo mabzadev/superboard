@@ -8,6 +8,7 @@ import {
 } from "../../../../packages/core/src/database/repositories/menu.js";
 import legacyAuthenticationMenus from "../../seed/legacy-authentication-menus.json";
 import legacyProductMenus from "../../seed/legacy-product-menus.json";
+import legacySectionMenus from "../../seed/legacy-section-menus.json";
 import legacyMenu from "../../seed/legacy-superboard-menu.json";
 import { retiredFrontPageDestination } from "./retired-front-pages.js";
 
@@ -31,6 +32,40 @@ const acquisitionMenuPaths = new Set([
 	"/acquisition/settings/localization",
 	"/acquisition/settings/sdk",
 ]);
+
+// Seeded entries whose page became an in-page tab of a sibling entry. They are removed from
+// customized menus only while they keep their seeded label and have no custom children;
+// renamed entries keep working because their link opens the matching tab.
+const mergedDefaultItems = new Map<string, readonly string[]>([
+	["/monetization/products?tab=offerings", ["Offerings", "Offres"]],
+	["/monetization/products?tab=entitlements", ["Entitlements", "Droits d’accès"]],
+	["/analytics/users?tab=installations", ["Installations"]],
+	["/analytics/users?tab=views", ["Viewed screens", "Écrans consultés"]],
+	["/analytics/users?tab=dimensions", ["Devices and countries", "Appareils et pays"]],
+	["/analytics/users?tab=cohorts", ["User groups", "Groupes d’utilisateurs"]],
+	["/analytics/reports?tab=alerts", ["Alerts", "Alertes"]],
+	["/analytics/reports?tab=crashes", ["Application errors", "Erreurs de l’application"]],
+	["/analytics/reports?tab=feedback", ["User feedback", "Retours utilisateur"]],
+	["/core/libraries?tab=web", ["Web setup", "Configurer le Web"]],
+	["/core/libraries?tab=ios", ["iOS setup", "Configurer iOS"]],
+	["/core/libraries?tab=android", ["Android setup", "Configurer Android"]],
+]);
+// Grouped parents that repeated themselves as their first child.
+const selfNestedParents = new Set(["/analytics/users", "/analytics/reports"]);
+// Seeded sub-entries renamed in place: [previous labels, English label, French label].
+const renamedDefaultItems = new Map<string, readonly [readonly string[], string, string]>([
+	["/monetization/products", [["Products", "Produits"], "Catalog", "Catalogue"]],
+	["/data/settings", [["Settings", "Paramètres"], "Configuration", "Configuration"]],
+	[
+		"/core/settings",
+		[["Environment settings", "Paramètres de l’environnement"], "General", "Général"],
+	],
+	[
+		"/core/libraries",
+		[["SDK libraries", "Bibliothèques SDK"], "SDK & apps", "SDK et applications"],
+	],
+]);
+const communicationRoots = new Set(["/communication/campaigns", "/communication/marketing-email"]);
 
 const pendingLabel = "superboard-front-menu:initializing";
 
@@ -61,7 +96,11 @@ export async function ensureNativeFrontMenus(
 			locale === "en" &&
 			menu.label === legacyMenu.label &&
 			JSON.stringify(storedItems(items)) === JSON.stringify(seedItems(legacyMenu.items, false));
-		const untouchedProduct = [...legacyProductMenus, ...legacyAuthenticationMenus].some(
+		const untouchedProduct = [
+			...legacyProductMenus,
+			...legacyAuthenticationMenus,
+			...legacySectionMenus,
+		].some(
 			(entry) =>
 				entry.locale === locale &&
 				JSON.stringify(storedItems(items)) === JSON.stringify(seedItems(entry.items, false)),
@@ -100,6 +139,26 @@ export async function ensureNativeFrontMenus(
 						await repository.updateItem(menu.id, item.id, { customUrl: canonical });
 						item.customUrl = canonical;
 					}
+				}
+				const childless = !items.some((child) => child.parentId === item.id);
+				if (
+					item.parentId &&
+					childless &&
+					(mergedDefaultItems.get(item.customUrl ?? "")?.includes(item.label) ||
+						(selfNestedParents.has(item.customUrl ?? "") &&
+							items.some(
+								(parent) => parent.id === item.parentId && parent.customUrl === item.customUrl,
+							)))
+				) {
+					await repository.deleteItem(menu.id, item.id);
+					continue;
+				}
+				const renamed = renamedDefaultItems.get(item.customUrl ?? "");
+				if (item.parentId && renamed?.[0].includes(item.label)) {
+					await repository.updateItem(menu.id, item.id, {
+						label: locale === "fr" ? renamed[2] : renamed[1],
+					});
+					continue;
 				}
 				if (item.customUrl === "/support/configuration") {
 					if (
@@ -321,7 +380,7 @@ export async function ensureNativeFrontMenus(
 					});
 			}
 			const communicationParent = items.find(
-				(item) => item.customUrl === "/communication/campaigns" && item.parentId === null,
+				(item) => communicationRoots.has(item.customUrl ?? "") && item.parentId === null,
 			);
 			if (communicationParent) {
 				const settings = items.find((item) => item.customUrl === "/communication/settings");
@@ -351,18 +410,19 @@ export async function ensureNativeFrontMenus(
 				}
 			}
 			if (communicationParent) {
+				const fr = locale === "fr";
 				const entries = [
-					["/communication/campaigns", locale === "fr" ? "E-mails de campagne" : "Campaign email"],
-					[
-						"/communication/email",
-						locale === "fr" ? "E-mails transactionnels" : "Transactional email",
-					],
-					[
-						"/communication/in-app-messages",
-						locale === "fr" ? "Messages dans l’application" : "In-app messages",
-					],
-					["/communication/settings", locale === "fr" ? "Paramètres" : "Settings"],
+					["/communication/marketing-email", fr ? "E-mails" : "Emails"],
+					["/communication/journeys", fr ? "Automatisations" : "Automations"],
+					["/communication/in-app-messages", fr ? "In-app et push" : "In-app & Push"],
+					["/communication/audience", "Audience"],
+					["/communication/statistics", fr ? "Activité" : "Activity"],
+					["/communication/settings", fr ? "Paramètres" : "Settings"],
 				] as const;
+				if (communicationParent.customUrl !== entries[0][0])
+					await repository.updateItem(menu.id, communicationParent.id, {
+						customUrl: entries[0][0],
+					});
 				const retained = new Set(entries.map(([path]) => path as string));
 				for (const child of items.filter(
 					(item) =>
@@ -488,22 +548,13 @@ export async function ensureNativeFrontMenus(
 				if (authentication.label !== label)
 					await repository.updateItem(menu.id, authentication.id, { label });
 			}
-			const supportSettings = items.find((item) => item.customUrl === "/support/settings");
-			if (
-				supportSettings &&
-				["Support settings", "Paramètres du support"].includes(supportSettings.label)
-			) {
-				await repository.updateItem(menu.id, supportSettings.id, {
-					label: locale === "fr" ? "Paramètres" : "Settings",
-				});
-			}
 			const supportParent = items.find(
 				(item) => item.customUrl === "/support/inbox" && item.parentId === null,
 			);
 			if (supportParent && !items.some((item) => item.customUrl === "/support/settings")) {
 				await repository.createItem(menu.id, locale, {
 					type: "custom",
-					label: locale === "fr" ? "Paramètres" : "Settings",
+					label: locale === "fr" ? "Paramètres du support" : "Support settings",
 					customUrl: "/support/settings",
 					parentId: supportParent.id,
 				});
@@ -512,7 +563,7 @@ export async function ensureNativeFrontMenus(
 			if (dataParent && !items.some((i) => i.customUrl === "/data/settings")) {
 				await repository.createItem(menu.id, locale, {
 					type: "custom",
-					label: locale === "fr" ? "Paramètres" : "Settings",
+					label: "Configuration",
 					customUrl: "/data/settings",
 					parentId: dataParent.id,
 				});

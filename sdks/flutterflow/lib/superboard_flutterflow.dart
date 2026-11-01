@@ -4,7 +4,7 @@ export 'package:superboard_flutter/superboard_flows.dart';
 export 'package:superboard_flutter/superboard_support.dart';
 
 export 'src/actions.dart';
-export 'src/application_actions.dart';
+export 'src/application_actions.dart' hide SuperBoardSharedIdentityTokenSource;
 export 'src/application_client.dart';
 export 'src/application_session.dart';
 export 'src/bootstrap.dart';

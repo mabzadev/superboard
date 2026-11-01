@@ -5,6 +5,7 @@ class SuperBoardUIHelper {
 		this.service = new SuperBoardAPIService();
 		this.page = 1;
 		this.isLoading = false;
+		this.hasReachedEnd = false;
 
 		this.htmlContent = `
     <!DOCTYPE html>
@@ -184,6 +185,8 @@ class SuperBoardUIHelper {
 	}
 
 	showMessagesList() {
+		this.page = 1;
+		this.hasReachedEnd = false;
 		// Create modal overlay
 		const modalOverlay = document.createElement("div");
 		modalOverlay.id = "SuperBoard-modal";
@@ -213,9 +216,12 @@ class SuperBoardUIHelper {
 		if (itemsListHTML) {
 			// Add scroll event listener to load next page when scrolling past half
 			itemsListHTML.addEventListener("scroll", () => {
-				if (this.isLoading) return; // Prevent multiple concurrent loads
+				// Prevent concurrent loads and stop once the server returned an empty page.
+				if (this.isLoading || this.hasReachedEnd) return;
 				const scrollPosition = itemsListHTML.scrollTop;
 				const modalHeight = itemsListHTML.scrollHeight - itemsListHTML.clientHeight;
+				// Nothing to paginate while the list does not overflow its container.
+				if (modalHeight <= 0) return;
 				// Load next page if scrolled past halfway
 				if (scrollPosition >= modalHeight / 2) {
 					this.isLoading = true;
@@ -227,6 +233,11 @@ class SuperBoardUIHelper {
 	}
 
 	openPage(notification) {
+		const accessUrl = SuperBoardUIHelper.#safeHttpUrl(notification?.access_url);
+		if (!accessUrl) {
+			console.log("SuperBoard -- refusing to open a message without an http(s) URL!");
+			return;
+		}
 		// Create a full-screen modal for the iframe
 		const iframeModal = document.createElement("div");
 		iframeModal.style.position = "fixed";
@@ -273,7 +284,7 @@ class SuperBoardUIHelper {
 		iframeModal.appendChild(modalHeader);
 		// Create iframe
 		const iframe = document.createElement("iframe");
-		iframe.src = notification.access_url;
+		iframe.src = accessUrl;
 		iframe.style.width = "100%";
 		iframe.style.height = "calc(100% - 20px)"; // Adjust height to account for header
 		iframe.style.border = "none"; // Remove iframe border
@@ -285,6 +296,17 @@ class SuperBoardUIHelper {
 	}
 
 	//   Private methods
+
+	// Only http(s) URLs may be framed: a javascript: or data: URL would run in the host origin.
+	static #safeHttpUrl(value) {
+		if (typeof value !== "string" || value.trim() === "") return null;
+		try {
+			const url = new URL(value, globalThis.location?.href);
+			return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+		} catch {
+			return null;
+		}
+	}
 
 	#loadMessages() {
 		const spinner = document.getElementById("spinner");
@@ -302,10 +324,14 @@ class SuperBoardUIHelper {
 					itemList.innerHTML = "";
 				}
 
-				this.#refreshItemsList(response.notifications);
+				const notifications = Array.isArray(response?.notifications) ? response.notifications : [];
+				if (notifications.length === 0) this.hasReachedEnd = true;
+				this.#refreshItemsList(notifications);
 			},
 			(_error) => {
 				this.isLoading = false;
+				// Let the next scroll retry the page that failed instead of skipping it.
+				if (this.page > 1) this.page -= 1;
 				spinner.style.display = "none";
 				console.log("SuperBoard -- could not get messages!");
 			},
@@ -313,6 +339,8 @@ class SuperBoardUIHelper {
 	}
 
 	#refreshItemsList(items) {
+		const itemList = document.getElementById("itemList");
+		if (!itemList) return;
 		items.forEach((item) => {
 			const itemDiv = document.createElement("div");
 			itemDiv.className = "item";
@@ -328,8 +356,8 @@ class SuperBoardUIHelper {
 										item.read ? "none" : "block"
 									}"></div>
                   <div class="list-title">
-                    <strong class="item-title">${item.title}</strong><br />
-                    <span class="item-subtitle">${item.subtitle}</span>
+                    <strong class="item-title"></strong><br />
+                    <span class="item-subtitle"></span>
                   </div>
               </div>
               <svg width="10" height="20" viewBox="0 0 54 95" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -338,6 +366,11 @@ class SuperBoardUIHelper {
   
   </span>
           `;
+			// Server-provided text is assigned via textContent so it can never be parsed as HTML.
+			itemDiv.querySelector(".item-title").textContent =
+				item.title == null ? "" : String(item.title);
+			itemDiv.querySelector(".item-subtitle").textContent =
+				item.subtitle == null ? "" : String(item.subtitle);
 			itemDiv.onclick = () => {
 				this.openPage(item);
 			};

@@ -4,6 +4,8 @@ import { cn } from "@superboard/front-ui/lib/utils.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Plus, Link2, FolderOpen } from "lucide-react";
 
+import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
+
 const LinksEmptyState = ({
 	onCreateLink,
 	isCampaign,
@@ -13,6 +15,7 @@ const LinksEmptyState = ({
 	isCampaign?: boolean;
 	isArchived?: boolean;
 }) => {
+	const { tr } = useFlowI18n();
 	const title = isArchived
 		? "No archived links"
 		: isCampaign
@@ -39,7 +42,7 @@ const LinksEmptyState = ({
 				)}
 			</div>
 
-			<h3 className="text-sm font-semibold text-foreground text-center mb-2">{title}</h3>
+			<h3 className="text-sm font-semibold text-foreground text-center mb-2">{tr(title)}</h3>
 
 			<p
 				className={cn(
@@ -47,13 +50,13 @@ const LinksEmptyState = ({
 					!isArchived && "mb-6",
 				)}
 			>
-				{description}
+				{tr(description)}
 			</p>
 
 			{!isArchived && onCreateLink && (
-				<Button className="pl-3 pr-4" onClick={onCreateLink}>
+				<Button className="ps-3 pe-4" onClick={onCreateLink}>
 					<Plus className="h-4 w-4" />
-					{isCampaign ? "Add Link To Campaign" : "Create Link"}
+					{tr(isCampaign ? "Add Link To Campaign" : "Create Link")}
 				</Button>
 			)}
 		</div>

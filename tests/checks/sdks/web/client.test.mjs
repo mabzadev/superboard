@@ -206,3 +206,137 @@ await test("purchase access is returned only from a verified CustomerInfo signat
 	tampered = true;
 	await assert.rejects(client.getPurchaseCustomerInfo(), { code: "customer_info_unverified" });
 });
+
+await test("concurrent application token callers share one exchange", async () => {
+	let calls = 0;
+	let release;
+	const client = new SuperBoardClient({
+		...options,
+		fetch: async () => {
+			calls++;
+			await new Promise((resolve) => {
+				release = resolve;
+			});
+			return Response.json({ access_token: "application-shared", expires_in: 300 });
+		},
+	});
+	client.setSession(session);
+	const pending = [client.getApplicationAccessToken(), client.getApplicationAccessToken()];
+	await new Promise((resolve) => {
+		setImmediate(resolve);
+	});
+	release();
+	assert.deepEqual(await Promise.all(pending), ["application-shared", "application-shared"]);
+	assert.equal(calls, 1);
+});
+
+await test("an expired access token is refreshed once and the request retried", async () => {
+	const requests = [];
+	const client = new SuperBoardClient({
+		...options,
+		fetch: async (url, init) => {
+			const path = new URL(url).pathname;
+			requests.push({
+				path,
+				authorization: init.headers.get("Authorization"),
+				key: init.headers.get("Idempotency-Key"),
+			});
+			if (path === "/v1/auth/refresh")
+				return Response.json({
+					data: { access_token: "identity-two", refresh_token: "refresh-two" },
+				});
+			if (init.headers.get("Authorization") === "Bearer identity-two")
+				return Response.json({ data: { id: "user-one" } });
+			return Response.json(
+				{ error: { code: "token_expired", message: "Expired" } },
+				{ status: 401 },
+			);
+		},
+	});
+	client.setSession(session);
+	assert.deepEqual(await client.updateProfile({ name: "Demo" }), { id: "user-one" });
+	assert.deepEqual(
+		requests.map((request) => request.path),
+		["/v1/auth/me", "/v1/auth/refresh", "/v1/auth/me"],
+	);
+	assert.equal(requests[0].key, requests[2].key);
+	assert.equal(client.session.access_token, "identity-two");
+});
+
+await test("a rejected refresh reports the original 401 without looping", async () => {
+	let calls = 0;
+	const client = new SuperBoardClient({
+		...options,
+		fetch: async () => {
+			calls++;
+			return Response.json({ error: { code: "unauthorized", message: "No" } }, { status: 401 });
+		},
+	});
+	client.setSession(session);
+	await assert.rejects(client.getProfile(), { code: "unauthorized", status: 401 });
+	assert.equal(calls, 2);
+	assert.equal(client.session, null);
+});
+
+await test("purchases signing keys are fetched once per kid", async () => {
+	const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+		"sign",
+		"verify",
+	]);
+	const publicKey = await crypto.subtle.exportKey("jwk", pair.publicKey);
+	const encoded = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
+	const info = { customer_id: "customer", original_app_user_id: "user", entitlements: {} };
+	const head = encoded({ alg: "ES256", kid: "cached-key" });
+	const claims = encoded({
+		iss: "superboard-purchases",
+		aud: "superboard-sdk",
+		sub: "user",
+		exp: Math.floor(Date.now() / 1000) + 60,
+		customer_info: info,
+	});
+	const signature = Buffer.from(
+		await crypto.subtle.sign(
+			{ name: "ECDSA", hash: "SHA-256" },
+			pair.privateKey,
+			new TextEncoder().encode(`${head}.${claims}`),
+		),
+	).toString("base64url");
+	let keysetCalls = 0;
+	const client = new SuperBoardClient({
+		...options,
+		fetch: async (url) => {
+			if (url.endsWith("superboard-token"))
+				return Response.json({ access_token: "app-token", expires_in: 300 });
+			if (url.endsWith("purchases-jwks.json")) {
+				keysetCalls++;
+				return Response.json({ keys: [{ ...publicKey, kid: "cached-key" }] });
+			}
+			return Response.json({
+				...info,
+				signature_key_id: "cached-key",
+				signature: `${head}.${claims}.${signature}`,
+			});
+		},
+	});
+	client.setSession(session);
+	await client.getPurchaseCustomerInfo();
+	await client.getPurchaseCustomerInfo();
+	assert.equal(keysetCalls, 1);
+});
+
+await test("the SDK version header follows the published package version", async () => {
+	const { readFile } = await import("node:fs/promises");
+	const { version } = JSON.parse(
+		await readFile(new URL("../../../../sdks/web/package.json", import.meta.url), "utf8"),
+	);
+	let header;
+	const client = new SuperBoardClient({
+		...options,
+		fetch: async (_url, init) => {
+			header = init.headers.get("X-SuperBoard-SDK-Version");
+			return Response.json({ data: {} });
+		},
+	});
+	await client.request("/v1/health", { authenticated: false });
+	assert.equal(header, version);
+});

@@ -911,6 +911,11 @@ describe("public Marketing gateway", () => {
 		],
 		["GET", "/api/v1/marketing/opt-in/confirmation-token", "/public/v1/opt-in/confirmation-token"],
 		["POST", "/api/v1/marketing/opt-in/confirmation-token", "/public/v1/opt-in/confirmation-token"],
+		["GET", "/api/v1/marketing/preferences/signed-token", "/public/v1/preferences/signed-token"],
+		["POST", "/api/v1/marketing/preferences/signed-token", "/public/v1/preferences/signed-token"],
+		["GET", "/api/v1/marketing/forms/form-1", "/public/v1/forms/form-1"],
+		["POST", "/api/v1/marketing/forms/form-1", "/public/v1/forms/form-1"],
+		["GET", "/api/v1/marketing/forms/form-1/embed.js", "/public/v1/forms/form-1/embed.js"],
 		[
 			"POST",
 			"/api/v1/marketing/provider-webhooks/provider-1",

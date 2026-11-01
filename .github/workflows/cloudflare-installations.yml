@@ -5,7 +5,9 @@ on:
     branches: [main, dev]
   workflow_dispatch:
   schedule:
-    - cron: "3-58/5 * * * *"
+    # Sweeps queued installations and expired leases. Pushes to main/dev start
+    # updates immediately; a newly queued installation waits for the next sweep.
+    - cron: "3,33 * * * *"
 
 permissions:
   contents: read
@@ -59,7 +61,8 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ matrix.revision }}
-          fetch-depth: 0
+          # The runner only verifies HEAD against the claimed revision; no history is read.
+          fetch-depth: 1
       - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:

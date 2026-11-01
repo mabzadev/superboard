@@ -10,6 +10,11 @@ import {
 	ModulePage,
 	moduleErrorMessage,
 } from "@superboard/front-ui/modules/ModulePage.js";
+import { usePathname, useRouter, useSearchParams } from "@superboard/front-ui/navigation";
+import {
+	SectionNavigation,
+	SectionNavigationProvider,
+} from "@superboard/front-ui/section-navigation.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import {
@@ -41,6 +46,7 @@ import {
 	Trash2,
 	Users,
 	WalletCards,
+	X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -109,25 +115,91 @@ export type AnalyticsPageKind =
 	| "reports"
 	| "settings";
 
-export function AnalyticsPage({ kind }: { kind: AnalyticsPageKind }) {
+type AnalyticsTab = { kind: AnalyticsPageKind; label: string };
+
+const audienceTabs: readonly AnalyticsTab[] = [
+	{ kind: "users", label: "Audience and usage" },
+	{ kind: "installations", label: "Installations" },
+	{ kind: "views", label: "Viewed screens" },
+	{ kind: "dimensions", label: "Devices and countries" },
+	{ kind: "cohorts", label: "User groups" },
+];
+const qualityTabs: readonly AnalyticsTab[] = [
+	{ kind: "alerts", label: "Alerts" },
+	{ kind: "crashes", label: "Application errors" },
+	{ kind: "feedback", label: "User feedback" },
+];
+
+/** In-page tab rows that group the Analytics child pages behind their parent entry. */
+function analyticsTabRows(kind: AnalyticsPageKind) {
+	if (audienceTabs.some((tab) => tab.kind === kind))
+		return [{ label: "Audience and usage", tabs: audienceTabs, active: kind }];
+	const quality = qualityTabs.some((tab) => tab.kind === kind);
+	if (kind !== "reports" && !quality) return null;
+	const reports = {
+		label: "Reports and exports",
+		tabs: [
+			{ kind: "reports", label: "Reports and exports" },
+			{ kind: quality ? kind : "alerts", label: "Quality" },
+		] satisfies AnalyticsTab[],
+		active: kind,
+	};
+	return quality ? [reports, { label: "Quality", tabs: qualityTabs, active: kind }] : [reports];
+}
+
+/** Child pages are tabs of their parent entry, kept in `?tab=` so the parent stays selected. */
+function analyticsTabHref(kind: AnalyticsPageKind, locale: string) {
+	const parent = audienceTabs.some((tab) => tab.kind === kind) ? "users" : "reports";
+	return kind === parent
+		? `/analytics/${kind}?lang=${locale}`
+		: `/analytics/${parent}?tab=${kind}&lang=${locale}`;
+}
+
+function AnalyticsTabRows({ rows }: { rows: NonNullable<ReturnType<typeof analyticsTabRows>> }) {
 	const { t, locale } = useAnalyticsI18n();
-	const tab =
-		kind === "events" || kind === "insights"
-			? "collection"
-			: kind === "reports"
-				? "hooks"
-				: kind === "dashboards"
-					? "annotations"
-					: "applications";
 	return (
-		<>
+		<div className="space-y-2">
+			{rows.map((row) => (
+				<nav
+					key={row.label}
+					aria-label={t(row.label)}
+					className="bg-muted text-muted-foreground flex w-fit flex-wrap items-center gap-1 rounded-lg p-[3px]"
+				>
+					{row.tabs.map((tab) => (
+						<a
+							key={tab.label}
+							href={analyticsTabHref(tab.kind, locale)}
+							aria-current={tab.kind === row.active ? "page" : undefined}
+							className="text-foreground rounded-md px-3 py-1 text-sm font-medium aria-[current=page]:bg-background aria-[current=page]:shadow-sm"
+						>
+							{t(tab.label)}
+						</a>
+					))}
+				</nav>
+			))}
+		</div>
+	);
+}
+
+export function AnalyticsPage({ kind: routeKind }: { kind: AnalyticsPageKind }) {
+	// Read the host section navigation before overriding it so grouped pages keep it above their tabs.
+	const hostNavigation = SectionNavigation();
+	const requested = useSearchParams().get("tab");
+	const group = routeKind === "users" ? audienceTabs : routeKind === "reports" ? qualityTabs : [];
+	const kind = group.find((tab) => tab.kind === requested)?.kind ?? routeKind;
+	const rows = analyticsTabRows(kind);
+	if (!rows) return <AnalyticsPageContent kind={kind} />;
+	return (
+		<SectionNavigationProvider
+			value={
+				<>
+					{hostNavigation}
+					<AnalyticsTabRows rows={rows} />
+				</>
+			}
+		>
 			<AnalyticsPageContent kind={kind} />
-			{kind !== "settings" && (
-				<a className="text-sm underline" href={`/analytics/settings?tab=${tab}&lang=${locale}`}>
-					{t("Analytics settings")}
-				</a>
-			)}
-		</>
+		</SectionNavigationProvider>
 	);
 }
 
@@ -287,6 +359,17 @@ function EventsPage() {
 	const [property, setProperty] = useState("");
 	const [analysis, setAnalysis] = useState<AnalyticsEventAnalysis | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	// `?user=<id>` (e.g. from a person sheet) narrows the stream to one application user.
+	const search = useSearchParams();
+	const router = useRouter();
+	const pathname = usePathname();
+	const userId = (search.get("user") ?? "").trim().slice(0, 1_024);
+	const clearUser = () => {
+		const next = new URLSearchParams(search);
+		next.delete("user");
+		const query = next.toString();
+		router.replace(query ? `${pathname}?${query}` : pathname);
+	};
 	const load = useCallback(async () => {
 		if (!selectedProject) return;
 		try {
@@ -294,6 +377,7 @@ function EventsPage() {
 				getAnalyticsEvents(selectedProject.id, {
 					...range,
 					event_name: appliedName || undefined,
+					user_id: userId || undefined,
 					limit: "100",
 				}),
 				appliedName
@@ -310,7 +394,7 @@ function EventsPage() {
 		} catch (cause) {
 			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [appliedName, property, range, selectedProject, locale]);
+	}, [appliedName, property, range, selectedProject, locale, userId]);
 	useEffect(() => void load(), [load]);
 	return (
 		<ModulePage
@@ -327,9 +411,23 @@ function EventsPage() {
 					<Card>
 						<CardHeader>
 							<CardTitle>{t("Recent events")}</CardTitle>
-							<CardDescription>{t("Filter by the exact event name.")}</CardDescription>
+							<CardDescription>
+								{t(userId ? "Events recorded for this user." : "Filter by the exact event name.")}
+							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
+							{userId ? (
+								<div className="flex flex-wrap items-center gap-2 text-sm">
+									<span className="text-muted-foreground">{t("Filtered by user")}</span>
+									<Badge variant="secondary" className="max-w-full font-mono">
+										<span className="truncate">{userId}</span>
+									</Badge>
+									<Button type="button" variant="ghost" size="sm" onClick={clearUser}>
+										<X className="size-4" />
+										{t("Clear user filter")}
+									</Button>
+								</div>
+							) : null}
 							<form
 								className="flex flex-col gap-2 sm:flex-row"
 								onSubmit={(event) => {

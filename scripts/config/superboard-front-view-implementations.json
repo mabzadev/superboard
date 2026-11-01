@@ -682,6 +682,13 @@
 		},
 		{
 			"plugin_id": "superboard-marketing",
+			"route_id": "superboard.communication_audience",
+			"path": "/communication/audience",
+			"status": "registered",
+			"module": "packages/plugins/superboard-communication/src/front/marketing/views/superboard.marketing_audience.tsx"
+		},
+		{
+			"plugin_id": "superboard-marketing",
 			"route_id": "superboard.communication_settings",
 			"path": "/communication/settings",
 			"status": "registered",
@@ -931,11 +938,6 @@
 			"source": "apps/dashboard/src/components/modules/ModulePage.tsx",
 			"destination": "packages/supbrd-front-ui/src/shared/components/modules/ModulePage.tsx",
 			"owner": "shared"
-		},
-		{
-			"source": "apps/dashboard/src/components/modules/ProductsPages.tsx",
-			"destination": "packages/plugins/superboard-monetization/src/front/products/components/modules/ProductsPages.tsx",
-			"owner": "superboard-products"
 		},
 		{
 			"source": "apps/dashboard/src/api/app/appService.ts",
@@ -1208,11 +1210,6 @@
 			"owner": "shared"
 		},
 		{
-			"source": "apps/dashboard/src/app/(protected)/project-settings/page.tsx",
-			"destination": "packages/plugins/superboard-core/src/front/settings/app/(protected)/project-settings/page.tsx",
-			"owner": "superboard-settings"
-		},
-		{
 			"source": "apps/dashboard/src/api/app/appService.ts",
 			"destination": "packages/plugins/superboard-authentification/src/front/api/app/appService.ts",
 			"owner": "superboard-user"
@@ -1263,69 +1260,9 @@
 			"owner": "shared"
 		},
 		{
-			"source": "apps/dashboard/src/assets/icons/ads_platform/meta.svg",
-			"destination": "packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/meta.svg",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/assets/icons/ads_platform/google.svg",
-			"destination": "packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/google.svg",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/assets/icons/ads_platform/tiktok.svg",
-			"destination": "packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/tiktok.svg",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/assets/icons/ads_platform/linkedIn.svg",
-			"destination": "packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/linkedIn.svg",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/assets/icons/ads_platform/google_dark_mode.svg",
-			"destination": "packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/google_dark_mode.svg",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/assets/icons/ads_platform/linkedIn_dark_mode.svg",
-			"destination": "packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/linkedIn_dark_mode.svg",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/assets/icons/ads_platform/tiktok_dark_mode.svg",
-			"destination": "packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/tiktok_dark_mode.svg",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/assets/icons/ads_platform/meta_dark_mode.svg",
-			"destination": "packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/meta_dark_mode.svg",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/assets/icons/ads_platform/superboard.svg",
-			"destination": "packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/superboard.svg",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
-			"destination": "packages/plugins/superboard-authentification/src/front/api/dynamic-links/dynamicLinksService.ts",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/components/dynamic_links/links/linkAnalytics.ts",
-			"destination": "packages/plugins/superboard-authentification/src/front/components/dynamic_links/links/linkAnalytics.ts",
-			"owner": "superboard-user"
-		},
-		{
 			"source": "apps/dashboard/src/components/ui/tooltip.tsx",
 			"destination": "packages/supbrd-front-ui/src/shared/components/ui/tooltip.tsx",
 			"owner": "shared"
-		},
-		{
-			"source": "apps/dashboard/src/components/dynamic_links/links/LinksTableColumns.tsx",
-			"destination": "packages/plugins/superboard-authentification/src/front/components/dynamic_links/links/LinksTableColumns.tsx",
-			"owner": "superboard-user"
 		},
 		{
 			"source": "apps/dashboard/src/components/app/AppAudiencePages.tsx",
@@ -1410,11 +1347,6 @@
 		{
 			"source": "apps/dashboard/src/identity/components/LoadingPage.tsx",
 			"destination": "packages/plugins/superboard-authentification/src/front/identity/components/LoadingPage.tsx",
-			"owner": "superboard-user"
-		},
-		{
-			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/dashboard/page.tsx",
-			"destination": "packages/plugins/superboard-authentification/src/front/app/(protected)/identity/[lang]/dashboard/page.tsx",
 			"owner": "superboard-user"
 		},
 		{
@@ -2053,11 +1985,6 @@
 			"owner": "superboard-dynamic-links"
 		},
 		{
-			"source": "apps/dashboard/src/app/(protected)/dynamic-links/campaigns/[id]/page.tsx",
-			"destination": "packages/plugins/superboard-acquisition/src/front/dynamic-links/app/(protected)/dynamic-links/campaigns/[id]/page.tsx",
-			"owner": "superboard-dynamic-links"
-		},
-		{
 			"source": "apps/dashboard/src/components/dynamic_links/domain/DomainPageContent.tsx",
 			"destination": "packages/plugins/superboard-acquisition/src/front/dynamic-links/components/dynamic_links/domain/DomainPageContent.tsx",
 			"owner": "superboard-dynamic-links"
@@ -2198,36 +2125,6 @@
 			"owner": "superboard-marketing"
 		},
 		{
-			"source": "apps/dashboard/src/components/messaging/MessagingEmptyState.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessagingEmptyState.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/messaging/MessagingTable.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessagingTable.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/messaging/MessagingTableColumns.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessagingTableColumns.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/api/notifications/notificationService.ts",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/api/notifications/notificationService.ts",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/hooks/queries/useNotificationsQueries.ts",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/hooks/queries/useNotificationsQueries.ts",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/hooks/useUrlState.ts",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/hooks/useUrlState.ts",
-			"owner": "superboard-marketing"
-		},
-		{
 			"source": "apps/dashboard/src/components/craft/ComponentToolbar.tsx",
 			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/craft/ComponentToolbar.tsx",
 			"owner": "superboard-marketing"
@@ -2268,21 +2165,6 @@
 			"owner": "superboard-marketing"
 		},
 		{
-			"source": "apps/dashboard/src/components/messaging/CreateMessageOverview.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/messaging/CreateMessageOverview.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/messaging/CreateMessageDelivery.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/messaging/CreateMessageDelivery.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/hooks/mutations/useNotificationsMutations.ts",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/hooks/mutations/useNotificationsMutations.ts",
-			"owner": "superboard-marketing"
-		},
-		{
 			"source": "apps/dashboard/src/components/craft/Toolbox.tsx",
 			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/craft/Toolbox.tsx",
 			"owner": "superboard-marketing"
@@ -2298,59 +2180,9 @@
 			"owner": "superboard-marketing"
 		},
 		{
-			"source": "apps/dashboard/src/components/messaging/CreateMessageContent.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/messaging/CreateMessageContent.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/craft/ExportButton.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/craft/ExportButton.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/craft/PreviewOnlyButton.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/craft/PreviewOnlyButton.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
 			"source": "apps/dashboard/src/components/common/action-confirm.tsx",
 			"destination": "packages/supbrd-front-ui/src/shared/components/common/action-confirm.tsx",
 			"owner": "shared"
-		},
-		{
-			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkSidebar.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/dynamic_links/links/create_link/CreateLinkSidebar.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/messaging/PublishConfirmDialog.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/messaging/PublishConfirmDialog.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/messaging/MessagePreviewDialog.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessagePreviewDialog.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/messaging/MessageDialog.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessageDialog.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/messaging/MessageDialogWithEditor.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessageDialogWithEditor.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/craft/DynamicEditor.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/craft/DynamicEditor.tsx",
-			"owner": "superboard-marketing"
-		},
-		{
-			"source": "apps/dashboard/src/components/modules/InAppMessagesPage.tsx",
-			"destination": "packages/plugins/superboard-communication/src/front/marketing/components/modules/InAppMessagesPage.tsx",
-			"owner": "superboard-marketing"
 		},
 		{
 			"source": "apps/dashboard/src/app/message-preview-craft/page.tsx",
@@ -2520,11 +2352,6 @@
 		{
 			"source": "apps/dashboard/src/api/messaging/settingsService.ts",
 			"destination": "packages/plugins/superboard-support/src/front/api/messaging/settingsService.ts",
-			"owner": "superboard-support"
-		},
-		{
-			"source": "apps/dashboard/src/components/modules/SupportConfigurationPage.tsx",
-			"destination": "packages/plugins/superboard-support/src/front/components/modules/SupportConfigurationPage.tsx",
 			"owner": "superboard-support"
 		},
 		{

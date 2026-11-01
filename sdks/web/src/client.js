@@ -7,6 +7,9 @@ export class SuperBoardError extends Error {
 	}
 }
 
+// Purchases signing keys are immutable per kid; re-import them at most once per TTL.
+const VERIFICATION_KEY_TTL_MS = 10 * 60 * 1000;
+
 export class SuperBoardClient {
 	#origin;
 	#fetch;
@@ -15,6 +18,8 @@ export class SuperBoardClient {
 	#generation = 0;
 	#refreshing = null;
 	#applicationToken = null;
+	#applicationTokenRequest = null;
+	#verificationKeys = new Map();
 
 	constructor(options) {
 		const url = new URL(options.apiUrl);
@@ -65,12 +70,14 @@ export class SuperBoardClient {
 		this.#generation++;
 		this.#session = { ...session };
 		this.#applicationToken = null;
+		this.#applicationTokenRequest = null;
 	}
 
 	clearSession() {
 		this.#generation++;
 		this.#session = null;
 		this.#applicationToken = null;
+		this.#applicationTokenRequest = null;
 		this.#refreshing = null;
 	}
 
@@ -145,23 +152,54 @@ export class SuperBoardClient {
 	async getApplicationAccessToken() {
 		if (this.#applicationToken && this.#applicationToken.expiresAt > Date.now() + 10000)
 			return this.#applicationToken.value;
+		// Concurrent callers share one exchange; a session change discards it (see setSession).
+		if (this.#applicationTokenRequest) return this.#applicationTokenRequest;
 		const generation = this.#generation;
-		const result = await this.request("/v1/auth/superboard-token", { method: "POST", body: {} });
-		if (generation !== this.#generation)
-			throw new SuperBoardError(
-				"session_changed",
-				"The session changed while exchanging its token.",
-			);
-		if (!result?.access_token || !Number.isFinite(result.expires_in) || result.expires_in <= 0)
-			throw new SuperBoardError(
-				"invalid_application_token",
-				"The application token response is invalid.",
-			);
-		this.#applicationToken = {
-			value: result.access_token,
-			expiresAt: Date.now() + result.expires_in * 1000,
-		};
-		return result.access_token;
+		const operation = this.request("/v1/auth/superboard-token", { method: "POST", body: {} })
+			.then((result) => {
+				if (generation !== this.#generation)
+					throw new SuperBoardError(
+						"session_changed",
+						"The session changed while exchanging its token.",
+					);
+				if (!result?.access_token || !Number.isFinite(result.expires_in) || result.expires_in <= 0)
+					throw new SuperBoardError(
+						"invalid_application_token",
+						"The application token response is invalid.",
+					);
+				this.#applicationToken = {
+					value: result.access_token,
+					expiresAt: Date.now() + result.expires_in * 1000,
+				};
+				return result.access_token;
+			})
+			.finally(() => {
+				if (this.#applicationTokenRequest === operation) this.#applicationTokenRequest = null;
+			});
+		this.#applicationTokenRequest = operation;
+		return operation;
+	}
+
+	async #verificationKey(kid) {
+		const cached = this.#verificationKeys.get(kid);
+		if (cached && cached.expiresAt > Date.now()) return cached.key;
+		this.#verificationKeys.delete(kid);
+		const keyset = await this.request("/.well-known/purchases-jwks.json", {
+			authenticated: false,
+		});
+		const jwk = keyset?.keys?.find(
+			(key) => key.kid === kid && key.kty === "EC" && key.crv === "P-256" && !key.d,
+		);
+		if (!jwk) throw new Error("Unknown signing key");
+		const key = await crypto.subtle.importKey(
+			"jwk",
+			jwk,
+			{ name: "ECDSA", namedCurve: "P-256" },
+			false,
+			["verify"],
+		);
+		this.#verificationKeys.set(kid, { key, expiresAt: Date.now() + VERIFICATION_KEY_TTL_MS });
+		return key;
 	}
 
 	getPurchaseOfferings(placement = "default") {
@@ -196,20 +234,7 @@ export class SuperBoardClient {
 				claims.sub !== response.original_app_user_id
 			)
 				throw new Error("Invalid claims");
-			const keyset = await this.request("/.well-known/purchases-jwks.json", {
-				authenticated: false,
-			});
-			const jwk = keyset.keys?.find(
-				(key) => key.kid === header.kid && key.kty === "EC" && key.crv === "P-256" && !key.d,
-			);
-			if (!jwk) throw new Error("Unknown signing key");
-			const key = await crypto.subtle.importKey(
-				"jwk",
-				jwk,
-				{ name: "ECDSA", namedCurve: "P-256" },
-				false,
-				["verify"],
-			);
+			const key = await this.#verificationKey(header.kid);
 			if (
 				!(await crypto.subtle.verify(
 					{ name: "ECDSA", hash: "SHA-256" },
@@ -268,27 +293,47 @@ export class SuperBoardClient {
 		const authenticated = options.authenticated !== false;
 		const headers = new Headers({ ...this.#headers, Accept: "application/json" });
 		if (options.body !== undefined) headers.set("Content-Type", "application/json");
+		// The same key is reused if the request is retried after a token refresh.
 		if (!["GET", "HEAD"].includes(method))
 			headers.set("Idempotency-Key", options.idempotencyKey ?? crypto.randomUUID());
-		if (authenticated) {
-			if (!this.#session)
-				throw new SuperBoardError(
-					"session_required",
-					"Sign in before making an authenticated request.",
-				);
-			const token = options.applicationToken
-				? await this.getApplicationAccessToken()
-				: this.#session.access_token;
-			headers.set("Authorization", `Bearer ${token}`);
+		const send = async () => {
+			let token = null;
+			if (authenticated) {
+				if (!this.#session)
+					throw new SuperBoardError(
+						"session_required",
+						"Sign in before making an authenticated request.",
+					);
+				token = options.applicationToken
+					? await this.getApplicationAccessToken()
+					: this.#session.access_token;
+				headers.set("Authorization", `Bearer ${token}`);
+			}
+			const response = await this.#fetch(url.href, {
+				method,
+				headers,
+				...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+				credentials: "omit",
+				redirect: "error",
+				signal: options.signal,
+			});
+			return { response, token };
+		};
+		let { response, token } = await send();
+		if (response.status === 401 && authenticated && this.#session && !options.signal?.aborted) {
+			// One refresh-and-retry: drop a rejected application token, or refresh the
+			// session when its access token is still the one the server rejected.
+			try {
+				if (options.applicationToken) {
+					if (this.#applicationToken?.value === token) this.#applicationToken = null;
+				} else if (this.#session?.access_token === token) {
+					await this.refreshSession();
+				}
+			} catch {
+				// Report the original 401 below when the refresh itself fails.
+			}
+			if (this.#session) ({ response, token } = await send());
 		}
-		const response = await this.#fetch(url.href, {
-			method,
-			headers,
-			...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-			credentials: "omit",
-			redirect: "error",
-			signal: options.signal,
-		});
 		let payload = null;
 		if (response.status !== 204) {
 			try {

@@ -1,12 +1,20 @@
-import { registerRouter } from "@superboard/contracts/route-registry";
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
-import { Hono } from "hono";
+import { registerRouter } from "@superboard/contracts/route-registry";
+import { Hono, type Context } from "hono";
 
 import { generateShortCode } from "../lib/crypto";
 import { readApiJson } from "../lib/request-body";
 import { Env } from "../types";
 
-const redirect = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.redirect.redirect","pluginId":"superboard-dynamic-links","surface":"shortlinks","access":"public"});
+type RedirectContext = Context<{ Bindings: Env }>;
+
+const redirect = registerRouter(new Hono<{ Bindings: Env }>(), {
+	service: "api",
+	module: "routes.redirect.redirect",
+	pluginId: "superboard-dynamic-links",
+	surface: "shortlinks",
+	access: "public",
+});
 
 function requestOrigin(c: any) {
 	const url = new URL(c.req.url);
@@ -257,12 +265,33 @@ redirect.get("/mm/:id", async (c) => {
 	return marketingMessageResponse(c, c.req.param("id"));
 });
 
-async function quickLinkResponse(c: any, path: string) {
-	const db = c.env.DB as D1Database;
-	const quickLink = await db
+type QuickLinkRow = {
+	path: string;
+	title: string | null;
+	subtitle: string | null;
+	image_url: string | null;
+	ios_phone: string | null;
+	ios_tablet: string | null;
+	android_phone: string | null;
+	android_tablet: string | null;
+	desktop: string | null;
+	desktop_linux: string | null;
+	desktop_mac: string | null;
+	desktop_windows: string | null;
+};
+
+function findQuickLink(db: D1Database, path: string) {
+	return db
 		.prepare("SELECT * FROM quick_links WHERE path = ? LIMIT 1")
 		.bind(sanitizeQuickLinkPath(path))
-		.first<any>();
+		.first<QuickLinkRow>();
+}
+
+async function quickLinkResponse(c: RedirectContext, path: string) {
+	return renderQuickLink(c, await findQuickLink(c.env.DB, path));
+}
+
+function renderQuickLink(c: RedirectContext, quickLink: QuickLinkRow | null) {
 	if (!quickLink) return null;
 
 	const userAgent = c.req.header("User-Agent") || "";
@@ -282,10 +311,91 @@ async function quickLinkResponse(c: any, path: string) {
 }
 
 // GET /:code — Resolve and redirect a short link.
+type LinkVisit = {
+	existingDeviceId: number | null;
+	ip: string;
+	userAgent: string;
+	platform: string;
+	linkId: number;
+	projectId: number;
+	recordView: boolean;
+};
+
+/**
+ * Device, action and view-event writes never influence the redirect response,
+ * so they run after it in `waitUntil` when an execution context exists.
+ */
+async function recordLinkVisit(db: D1Database, visit: LinkVisit) {
+	const followUps = (deviceId: number) => {
+		const statements = [
+			db
+				.prepare(`
+      INSERT INTO actions (device_id, link_id)
+      SELECT ?, ?
+      WHERE NOT EXISTS (
+        SELECT 1 FROM actions
+        WHERE device_id = ? AND link_id = ? AND handled = 0
+      )
+    `)
+				.bind(deviceId, visit.linkId, deviceId, visit.linkId),
+		];
+		if (visit.recordView) {
+			statements.push(
+				db
+					.prepare(
+						"INSERT INTO events (device_id, project_id, link_id, event, platform, ip) VALUES (?, ?, ?, 'view', ?, ?)",
+					)
+					.bind(deviceId, visit.projectId, visit.linkId, visit.platform, visit.ip),
+			);
+		}
+		return statements;
+	};
+
+	if (visit.existingDeviceId) {
+		await db.batch([
+			db
+				.prepare('UPDATE devices SET remote_ip = ?, updated_at = datetime("now") WHERE id = ?')
+				.bind(visit.ip, visit.existingDeviceId),
+			...followUps(visit.existingDeviceId),
+		]);
+		return;
+	}
+	const device = await db
+		.prepare(
+			"INSERT INTO devices (ip, remote_ip, user_agent, platform) VALUES (?, ?, ?, ?) RETURNING id",
+		)
+		.bind(visit.ip, visit.ip, visit.userAgent, visit.platform)
+		.first<{ id: number }>();
+	if (device) await db.batch(followUps(device.id));
+}
+
+function runAfterResponse(
+	c: RedirectContext,
+	task: () => Promise<void>,
+): Promise<void> | undefined {
+	let context: { waitUntil(promise: Promise<unknown>): void } | undefined;
+	try {
+		context = c.executionCtx;
+	} catch {
+		context = undefined;
+	}
+	if (!context) return task();
+	context.waitUntil(
+		task().catch((error: unknown) => {
+			console.error(
+				JSON.stringify({
+					event: "redirect_visit_record_failed",
+					error: error instanceof Error ? error.message : String(error),
+				}),
+			);
+		}),
+	);
+	return undefined;
+}
+
 redirect.get("/:code", async (c) => {
 	const code = c.req.param("code");
-	const quickLink = await quickLinkResponse(c, code);
-	if (quickLink) return quickLink;
+	const db = c.env.DB;
 
 	const userAgent = c.req.header("User-Agent") || "";
 	const ip = c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "0.0.0.0";
@@ -294,7 +404,10 @@ redirect.get("/:code", async (c) => {
 	const superboardRedirect = url.searchParams.get("superboard_redirect");
 	const isBot = isBotUserAgent(userAgent);
 
-	const link = await c.env.DB.prepare(`
+	const [quickLinkRow, link] = await Promise.all([
+		findQuickLink(db, code),
+		db
+			.prepare(`
     SELECT l.*, rc.default_fallback, rc.project_id,
            rc.show_preview_ios AS config_show_preview_ios,
            rc.show_preview_android AS config_show_preview_android,
@@ -309,28 +422,31 @@ redirect.get("/:code", async (c) => {
     LEFT JOIN domains d ON d.id = l.domain_id
     WHERE l.path = ? AND l.active = 1
   `)
-		.bind(code)
-		.first<{
-			id: number;
-			path: string;
-			redirect_config_id: number;
-			title: string | null;
-			subtitle: string | null;
-			image_url: string | null;
-			data: string | null;
-			default_fallback: string | null;
-			project_id: number;
-			instance_id: number;
-			project_name: string | null;
-			uri_scheme: string | null;
-			show_preview_ios: number | null;
-			show_preview_android: number | null;
-			config_show_preview_ios: number | null;
-			config_show_preview_android: number | null;
-			generic_title: string | null;
-			generic_subtitle: string | null;
-			generic_image_url: string | null;
-		}>();
+			.bind(code)
+			.first<{
+				id: number;
+				path: string;
+				redirect_config_id: number;
+				title: string | null;
+				subtitle: string | null;
+				image_url: string | null;
+				data: string | null;
+				default_fallback: string | null;
+				project_id: number;
+				instance_id: number;
+				project_name: string | null;
+				uri_scheme: string | null;
+				show_preview_ios: number | null;
+				show_preview_android: number | null;
+				config_show_preview_ios: number | null;
+				config_show_preview_android: number | null;
+				generic_title: string | null;
+				generic_subtitle: string | null;
+				generic_image_url: string | null;
+			}>(),
+	]);
+	const quickLink = renderQuickLink(c, quickLinkRow);
+	if (quickLink) return quickLink;
 
 	if (!link) {
 		return c.redirect(dashboardUrl(c), 302);
@@ -341,66 +457,48 @@ redirect.get("/:code", async (c) => {
 	const isAndroid = /Android/i.test(userAgent);
 	const platform = isIOS ? "ios" : isAndroid ? "android" : "web";
 
-	let device = await c.env.DB.prepare(`
+	// Independent reads run concurrently; the visit writes are deferred below.
+	const [device, customRedirect, platformRedirect] = await Promise.all([
+		db
+			.prepare(`
     SELECT id FROM devices
     WHERE ip = ? AND user_agent = ?
-      AND datetime(updated_at) >= datetime('now', '-24 hours')
-    ORDER BY datetime(updated_at) DESC
+      AND updated_at >= datetime('now', '-24 hours')
+    ORDER BY updated_at DESC
     LIMIT 1
   `)
-		.bind(ip, userAgent)
-		.first<{ id: number }>();
-	if (device) {
-		await c.env.DB.prepare(
-			'UPDATE devices SET remote_ip = ?, updated_at = datetime("now") WHERE id = ?',
-		)
-			.bind(ip, device.id)
-			.run();
-	} else {
-		device = await c.env.DB.prepare(
-			"INSERT INTO devices (ip, remote_ip, user_agent, platform) VALUES (?, ?, ?, ?) RETURNING id",
-		)
-			.bind(ip, ip, userAgent, platform)
-			.first<{ id: number }>();
-	}
-
-	if (device) {
-		await c.env.DB.prepare(`
-      INSERT INTO actions (device_id, link_id)
-      SELECT ?, ?
-      WHERE NOT EXISTS (
-        SELECT 1 FROM actions
-        WHERE device_id = ? AND link_id = ? AND handled = 0
-      )
-    `)
-			.bind(device.id, link.id, device.id, link.id)
-			.run();
-
-		if (!goToFallback && !superboardRedirect && !isBot) {
-			await c.env.DB.prepare(
-				"INSERT INTO events (device_id, project_id, link_id, event, platform, ip) VALUES (?, ?, ?, 'view', ?, ?)",
+			.bind(ip, userAgent)
+			.first<{ id: number }>(),
+		// Find platform-specific redirect URL
+		db
+			.prepare(
+				"SELECT url, open_app_if_installed FROM custom_redirects WHERE link_id = ? AND platform = ?",
 			)
-				.bind(device.id, link.project_id, link.id, platform, ip)
-				.run();
-		}
-	}
-
-	// Find platform-specific redirect URL
-	const customRedirect = await c.env.DB.prepare(
-		"SELECT url, open_app_if_installed FROM custom_redirects WHERE link_id = ? AND platform = ?",
-	)
-		.bind(link.id, platform)
-		.first<{ url: string | null; open_app_if_installed: number | null }>();
-
-	const platformRedirect = await c.env.DB.prepare(`
+			.bind(link.id, platform)
+			.first<{ url: string | null; open_app_if_installed: number | null }>(),
+		db
+			.prepare(`
     SELECT fallback_url, appstore
     FROM redirects
     WHERE redirect_config_id = ? AND platform = ? AND COALESCE(enabled, 1) = 1
     ORDER BY CASE WHEN variation = 'phone' THEN 0 WHEN variation = 'tablet' THEN 1 ELSE 2 END
     LIMIT 1
   `)
-		.bind(link.redirect_config_id, platform)
-		.first<{ fallback_url: string | null; appstore: number | null }>();
+			.bind(link.redirect_config_id, platform)
+			.first<{ fallback_url: string | null; appstore: number | null }>(),
+	]);
+
+	const visit: LinkVisit = {
+		existingDeviceId: device?.id ?? null,
+		ip,
+		userAgent,
+		platform,
+		linkId: link.id,
+		projectId: link.project_id,
+		recordView: !goToFallback && !superboardRedirect && !isBot,
+	};
+	const pendingVisit = runAfterResponse(c, () => recordLinkVisit(db, visit));
+	if (pendingVisit) await pendingVisit;
 
 	const linkData = parseLinkData(link.data);
 	const deeplink = String(

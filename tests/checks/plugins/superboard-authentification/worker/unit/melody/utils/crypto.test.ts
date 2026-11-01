@@ -41,17 +41,18 @@ const branding = {
 const locale = "en" as typeConfig.Locale;
 
 describe("bcrypt helpers", () => {
-	test("should generate password hashes with cost 12", () => {
-		const hash = bcryptText("Password1!");
+	test("should generate password hashes with cost 12", async () => {
+		const hash = await bcryptText("Password1!");
 
 		expect(hash.split("$")[2]).toBe("12");
-		expect(bcryptCompare("Password1!", hash)).toBe(true);
+		await expect(bcryptCompare("Password1!", hash)).resolves.toBe(true);
+		await expect(bcryptCompare("Wrong1!", hash)).resolves.toBe(false);
 	});
 
-	test("should compare legacy cost 10 password hashes", () => {
+	test("should compare legacy cost 10 password hashes", async () => {
 		const legacyCostTenHash = "$2a$10$/KBURsxnGm5OClLQFPNwZ.HcaM27Gogp/mA1xRxfEbY3bs0cuu8Fm";
 
-		expect(bcryptCompare("Password1!", legacyCostTenHash)).toBe(true);
+		await expect(bcryptCompare("Password1!", legacyCostTenHash)).resolves.toBe(true);
 	});
 });
 

@@ -6,4 +6,4 @@ export {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 	BreadcrumbEllipsis,
-} from "@superboard/front-ui/ui";
+} from "@superboard/front-ui/ui/breadcrumb.js";

@@ -10,7 +10,7 @@ import {
 	ModulePage,
 	moduleErrorMessage,
 } from "@superboard/front-ui/modules/ModulePage.js";
-import { PluginConfigurationTab } from "@superboard/front-ui/plugin-configuration-tab";
+import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
 import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
@@ -1542,8 +1542,8 @@ export function AnalyticsSettingsPage() {
 	const { selectedProject } = useProjectSelection();
 	const [tab, setTab] = useState(() => {
 		const requested = new URLSearchParams(globalThis.location?.search ?? "").get("tab");
-		return requested &&
-			["applications", "collection", "hooks", "annotations", "configuration"].includes(requested)
+		// Plugin health moved to the Plugins page, so old `?tab=configuration` links open Applications.
+		return requested && ["applications", "collection", "hooks", "annotations"].includes(requested)
 			? requested
 			: "applications";
 	});
@@ -1612,11 +1612,7 @@ export function AnalyticsSettingsPage() {
 					<TabsTrigger value="collection">{t("Analytics processing")}</TabsTrigger>
 					<TabsTrigger value="hooks">{t("Webhooks")}</TabsTrigger>
 					<TabsTrigger value="annotations">{t("Annotations")}</TabsTrigger>
-					<TabsTrigger value="configuration">{t("Configuration")}</TabsTrigger>
 				</TabsList>
-				<TabsContent value="configuration">
-					<PluginConfigurationTab locale={locale} />
-				</TabsContent>
 				{!selectedProject ? (
 					<div className="pt-4">
 						<EmptyProject />
@@ -1951,6 +1947,7 @@ export function AnalyticsSettingsPage() {
 					</>
 				)}
 			</Tabs>
+			<PluginDiagnosticsLink locale={locale} />
 		</ModulePage>
 	);
 }

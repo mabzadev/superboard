@@ -1,4 +1,3 @@
-import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	canonicalEmailLocale,
 	createEmailDesign,
@@ -13,6 +12,7 @@ import {
 	type EmailBlock,
 } from "@superboard/contracts/email-studio";
 import type { ProjectContext } from "@superboard/contracts/project-context";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { isSafePublicHttpsUrl } from "@superboard/contracts/url-security";
 import { Hono } from "hono";
 
@@ -21,6 +21,7 @@ import { freezeDeliveryMessage, recordTransportStatus } from "./delivery-records
 import { sendSmtpMessage } from "./email-service.js";
 import { translateEmail, type TranslationProvider } from "./email-translation.js";
 import { decryptJson, encryptJson } from "./secrets.js";
+import { refreshSegmentsByIds } from "./segments.js";
 import { deliverySenders } from "./sender-profiles.js";
 import { studioDeliveryRoutes, studioDeliveryStatistics } from "./studio-deliveries.js";
 import type { Env } from "./types.js";
@@ -262,10 +263,19 @@ export async function claimEmailFrequency(
 	return result !== null;
 }
 
-export const emailStudioRoutes = registerRouter(new Hono<{
-	Bindings: Env;
-	Variables: { project: ProjectContext };
-}>(), {"service":"marketing","module":"email-studio.emailStudioRoutes","pluginId":"superboard-marketing","surface":"internal","access":"internal"});
+export const emailStudioRoutes = registerRouter(
+	new Hono<{
+		Bindings: Env;
+		Variables: { project: ProjectContext };
+	}>(),
+	{
+		service: "marketing",
+		module: "email-studio.emailStudioRoutes",
+		pluginId: "superboard-marketing",
+		surface: "internal",
+		access: "internal",
+	},
+);
 emailStudioRoutes.use("*", async (c, next) => {
 	if (!["owner", "admin"].includes(c.get("project").role.toLowerCase()))
 		throw failure("role_insufficient", "Owner or admin access is required.", 403);
@@ -541,6 +551,7 @@ emailStudioRoutes.get("/campaigns/:id/preflight", async (c) => {
 	const values: (string | number)[] = [projectId];
 	const lists = parseStoredJson<string[]>(campaign.list_ids_json, []);
 	const segments = parseStoredJson<string[]>(campaign.segment_ids_json, []);
+	await refreshSegmentsByIds(c.env.DB, projectId, segments);
 	if (lists.length) {
 		target.push(
 			`EXISTS (SELECT 1 FROM subscriber_list_memberships m WHERE m.project_id=s.project_id AND m.subscriber_id=s.id AND m.list_id IN (${lists.map(() => "?").join(",")}))`,

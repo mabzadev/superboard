@@ -596,6 +596,135 @@ body:has(.native-front) #emdash-toolbar {
 	background: var(--muted, var(--front-muted));
 	outline-offset: 2px;
 }
+.native-front-visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+.native-front-command-trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2, 0.5rem);
+	min-width: 12rem;
+	min-height: 2rem;
+	border: 1px solid var(--front-border);
+	border-radius: var(--front-radius-sm);
+	background: var(--front-background);
+	color: var(--front-muted-foreground);
+	padding: var(--space-1, 0.25rem) var(--space-2, 0.5rem);
+	font: inherit;
+	font-size: var(--text-sm, 0.8125rem);
+	cursor: pointer;
+}
+.native-front-command-trigger:hover {
+	color: var(--front-foreground);
+}
+.native-front-command-trigger:focus-visible {
+	outline: 2px solid var(--front-primary);
+	outline-offset: 2px;
+}
+.native-front-command-trigger kbd,
+.native-front-command-search kbd {
+	margin-inline-start: auto;
+	border: 1px solid var(--front-border);
+	border-radius: var(--front-radius-sm);
+	padding: 0 var(--space-1, 0.25rem);
+	font-family: inherit;
+	font-size: var(--text-xs, 0.75rem);
+	line-height: 1.5;
+}
+.native-front-command-palette[data-slot="dialog-content"] {
+	top: 12vh;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	max-width: min(40rem, calc(100% - 2rem));
+	max-height: min(32rem, 76vh);
+	overflow: hidden;
+	/* The shared dialog centres vertically with Tailwind's `translate`; the palette sits near the top. */
+	translate: -50% 0;
+	border-color: var(--front-border);
+	background: var(--popover, var(--front-card));
+	color: var(--popover-foreground, var(--front-foreground));
+	padding: 0;
+}
+.native-front-command-search {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2, 0.5rem);
+	border-block-end: 1px solid var(--front-border);
+	padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+	color: var(--front-muted-foreground);
+}
+.native-front-command-search input {
+	flex: 1;
+	min-width: 0;
+	border: 0;
+	background: transparent;
+	color: var(--front-foreground);
+	font: inherit;
+	font-size: var(--text-base, 0.9375rem);
+	outline: none;
+}
+.native-front-command-list {
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: var(--space-1, 0.25rem);
+}
+.native-front-command-heading {
+	padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem) var(--space-1, 0.25rem);
+	color: var(--front-muted-foreground);
+	font-size: var(--text-xs, 0.75rem);
+	font-weight: 600;
+}
+.native-front-command-option {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2, 0.5rem);
+	min-height: 2.25rem;
+	border-radius: var(--front-radius-sm);
+	padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+	font-size: var(--text-sm, 0.8125rem);
+	cursor: pointer;
+}
+.native-front-command-option > svg {
+	flex: 0 0 auto;
+	color: var(--front-muted-foreground);
+}
+.native-front-command-option[aria-selected="true"] {
+	background: var(--muted, var(--front-muted));
+}
+.native-front-command-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.native-front-command-hint {
+	margin-inline-start: auto;
+	overflow: hidden;
+	padding-inline-start: var(--space-3, 0.75rem);
+	color: var(--front-muted-foreground);
+	font-size: var(--text-xs, 0.75rem);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.native-front-command-empty {
+	margin: 0;
+	padding: var(--space-6, 1.5rem) var(--space-4, 1rem);
+	color: var(--front-muted-foreground);
+	text-align: center;
+	font-size: var(--text-sm, 0.8125rem);
+}
+.native-front-command-footer {
+	margin: 0;
+	border-block-start: 1px solid var(--front-border);
+	padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+	color: var(--front-muted-foreground);
+	font-size: var(--text-xs, 0.75rem);
+}
 @media (max-width: 900px) {
 	.native-front-columns {
 		grid-template-columns: 1fr;
@@ -662,6 +791,25 @@ body:has(.native-front) #emdash-toolbar {
 		flex: 1;
 		justify-content: space-between;
 		gap: var(--space-1, 0.25rem);
+	}
+	.native-front-command-trigger {
+		min-width: 0;
+		min-height: 2.25rem;
+		padding-inline: var(--space-2, 0.5rem);
+	}
+	.native-front-command-trigger-label,
+	.native-front-command-trigger kbd,
+	.native-front-command-search kbd,
+	.native-front-command-footer {
+		display: none;
+	}
+	.native-front-command-palette[data-slot="dialog-content"] {
+		top: var(--space-2, 0.5rem);
+		max-width: calc(100% - 1rem);
+		max-height: calc(100dvh - 1rem);
+	}
+	.native-front-command-option {
+		min-height: 2.75rem;
 	}
 	.native-front-controls {
 		gap: var(--space-1, 0.25rem);

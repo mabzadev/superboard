@@ -4,7 +4,7 @@ import { cn } from "@superboard/front-ui/lib/utils.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Progress } from "@superboard/front-ui/ui/progress.js";
 import { Check, ChevronLeft, ChevronRight, Circle, Save } from "lucide-react";
-import React, { useCallback, useRef } from "react";
+import React, { lazy, Suspense, useCallback, useRef } from "react";
 
 /**
  * Attaches a native DOM click listener to bypass React's synthetic event dispatch,
@@ -39,17 +39,6 @@ function useNativeClick(handler: (() => void) | undefined) {
 
 	return setRef;
 }
-import {
-	CodeBlock,
-	CodeBlockBody,
-	CodeBlockContent,
-	CodeBlockCopyButton,
-	CodeBlockFilename,
-	CodeBlockFiles,
-	CodeBlockHeader,
-	CodeBlockItem,
-} from "@superboard/front-ui/ui/shadcn-io/code-block/index.js";
-import type { BundledLanguage } from "shiki";
 
 // --- Types ---
 
@@ -68,33 +57,22 @@ export type CodeBlockData = {
 
 // --- RenderCodeBlock ---
 
+// The code block pulls in Shiki, so it loads only when a setup step shows a snippet.
+const CodeBlockView = lazy(() => import("./RenderCodeBlock.js"));
+
 export function RenderCodeBlock({ data }: { data: CodeBlockData[] }) {
 	return (
-		<CodeBlock data={data} defaultValue={data[0]?.language ?? ""}>
-			<CodeBlockHeader>
-				<CodeBlockFiles>
-					{(item) => (
-						<CodeBlockFilename key={item.language} value={item.language}>
-							{item.filename}
-						</CodeBlockFilename>
-					)}
-				</CodeBlockFiles>
-				<CodeBlockCopyButton onCopy={() => {}} onError={() => {}} />
-			</CodeBlockHeader>
-			<CodeBlockBody>
-				{(item) => (
-					<CodeBlockItem key={item.language} value={item.language}>
-						<CodeBlockContent
-							syntaxHighlighting
-							themes={{ light: "github-light", dark: "github-dark" }}
-							language={item.language as BundledLanguage}
-						>
-							{item.code}
-						</CodeBlockContent>
-					</CodeBlockItem>
-				)}
-			</CodeBlockBody>
-		</CodeBlock>
+		<Suspense
+			fallback={
+				<div className="size-full overflow-auto rounded-md border">
+					<pre className="w-full p-4 text-sm">
+						<code>{data[0]?.code}</code>
+					</pre>
+				</div>
+			}
+		>
+			<CodeBlockView data={data} />
+		</Suspense>
 	);
 }
 

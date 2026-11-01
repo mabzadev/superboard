@@ -1,1 +1,1 @@
-export { Alert, AlertTitle, AlertDescription } from "@superboard/front-ui/ui";
+export { Alert, AlertTitle, AlertDescription } from "@superboard/front-ui/ui/alert.js";

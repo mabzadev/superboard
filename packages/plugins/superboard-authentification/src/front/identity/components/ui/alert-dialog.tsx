@@ -10,4 +10,4 @@ export {
 	AlertDialogDescription,
 	AlertDialogAction,
 	AlertDialogCancel,
-} from "@superboard/front-ui/ui";
+} from "@superboard/front-ui/ui/alert-dialog.js";

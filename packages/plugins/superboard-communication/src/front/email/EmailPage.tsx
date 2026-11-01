@@ -1,4 +1,4 @@
-import EmailItemsPage from "../marketing/studio/EmailItemsPage.js";
+import CommunicationWorkspace from "../marketing/studio/CommunicationWorkspace.js";
 export default function View() {
-	return <EmailItemsPage kind="transactional" />;
+	return <CommunicationWorkspace initialTab="emails" emailFilter="transactional" />;
 }

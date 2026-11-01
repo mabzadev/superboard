@@ -1,1 +1,1 @@
-export { Label } from "@superboard/front-ui/ui";
+export { Label } from "@superboard/front-ui/ui/label.js";

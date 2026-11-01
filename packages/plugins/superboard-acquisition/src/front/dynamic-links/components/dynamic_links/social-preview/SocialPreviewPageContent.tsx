@@ -7,11 +7,7 @@ import {
 	showSuccessNotification,
 } from "@superboard/front-ui/lib/Notifications.js";
 import { cn } from "@superboard/front-ui/lib/utils.js";
-import {
-	EmptyProject,
-	ModulePage,
-	moduleErrorMessage,
-} from "@superboard/front-ui/modules/ModulePage.js";
+import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import Image from "@superboard/front-ui/next-image";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import {
@@ -27,6 +23,8 @@ import { Tabs, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { ImageIcon, Save, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { AcquisitionPage } from "../../../../AcquisitionPage.js";
+import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
 import {
 	getSocialPreview,
 	saveSocialPreview,
@@ -47,6 +45,7 @@ const emptyForm: PreviewForm = {
 };
 
 export default function SocialPreviewPageContent() {
+	const { tr } = useFlowI18n();
 	const config = usePublicConfig();
 	const { selectedProject } = useProjectSelection();
 	const [form, setForm] = useState<PreviewForm>(emptyForm);
@@ -99,9 +98,9 @@ export default function SocialPreviewPageContent() {
 		form.site_name || (config.shortlinkUrl ? new URL(config.shortlinkUrl).hostname : "");
 
 	return (
-		<ModulePage
-			title="Social Media Preview"
-			description="Design the default Open Graph card shown when a dynamic link is shared."
+		<AcquisitionPage
+			title={tr("Social preview")}
+			description={tr("Design the default Open Graph card shown when a dynamic link is shared.")}
 			error={error ?? (!config.shortlinkUrl ? config.endpointError("Short-link") : null)}
 		>
 			{!selectedProject ? (
@@ -244,7 +243,7 @@ export default function SocialPreviewPageContent() {
 					</div>
 				</div>
 			)}
-		</ModulePage>
+		</AcquisitionPage>
 	);
 }
 

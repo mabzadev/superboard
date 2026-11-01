@@ -6,7 +6,39 @@ import { config, pathname } from "./store";
 import { type FlowsOptions } from "./types/configuration";
 import { createKeydownDebugListener, initDebugPanel } from "./lib/debug";
 
-let locationChangeInterval: number | null = null;
+const LOCATION_CHANGE_EVENT = "superboard-flows:locationchange";
+const HISTORY_PATCHED = Symbol.for("superboard.flows.historyPatched");
+let stopLocationTracking: (() => void) | null = null;
+
+const patchHistory = (): void => {
+  const history = window.history as History & { [HISTORY_PATCHED]?: true };
+  if (history[HISTORY_PATCHED]) return;
+  for (const method of ["pushState", "replaceState"] as const) {
+    const original = history[method];
+    history[method] = function (this: History, ...args: Parameters<History["pushState"]>) {
+      const result = original.apply(this, args);
+      window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT));
+      return result;
+    };
+  }
+  history[HISTORY_PATCHED] = true;
+};
+
+const trackLocation = (): (() => void) => {
+  const update = (): void => {
+    const newPathname = getPathname();
+    if (pathname.value !== newPathname) {
+      pathname.value = newPathname;
+    }
+  };
+  patchHistory();
+  const events = ["popstate", "hashchange", LOCATION_CHANGE_EVENT];
+  for (const type of events) window.addEventListener(type, update);
+  update();
+  return () => {
+    for (const type of events) window.removeEventListener(type, update);
+  };
+};
 
 /**
  * Identify the user and initialize `@superboard/flows-js`.
@@ -26,13 +58,8 @@ export const init = ({ debug, onDebugShortcut, ...options }: FlowsOptions): void
     },
   });
 
-  if (locationChangeInterval !== null) clearInterval(locationChangeInterval);
-  locationChangeInterval = window.setInterval(() => {
-    const newPathname = getPathname();
-    if (pathname.value !== newPathname) {
-      pathname.value = newPathname;
-    }
-  }, 250);
+  stopLocationTracking?.();
+  stopLocationTracking = trackLocation();
 
   addHandlers([
     { type: "click", handler: handleDocumentClick },

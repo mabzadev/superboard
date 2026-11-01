@@ -1,4 +1,4 @@
-import CommunicationSettingsPage from "../studio/CommunicationSettingsPage.js";
+import CommunicationWorkspace from "../studio/CommunicationWorkspace.js";
 export default function View() {
-	return <CommunicationSettingsPage initialTab="channels" />;
+	return <CommunicationWorkspace initialTab="channels" />;
 }

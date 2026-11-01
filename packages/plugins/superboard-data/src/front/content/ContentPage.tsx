@@ -2,12 +2,13 @@ import { Button } from "@superboard/front-ui/ui/button.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@superboard/front-ui/ui/tabs.js";
 import { useEffect, useState } from "react";
 
+import { DataSettingsForm } from "../files/DataSettingsForm.js";
 import { CollectionsView } from "./CollectionsView.js";
 import { DocumentsView } from "./DocumentsView.js";
 import { TaxonomiesView } from "./TaxonomiesView.js";
 import { useDataI18n, useResource, type Collection, type Page } from "./workspace.js";
 
-const tabs = ["documents", "trash", "collections", "taxonomies"] as const;
+const tabs = ["documents", "trash", "collections", "taxonomies", "settings"] as const;
 function requestedTab() {
 	if (typeof window === "undefined") return "documents";
 	const value = new URLSearchParams(window.location.search).get("tab");
@@ -39,7 +40,6 @@ export default function ContentPage() {
 		<section className="ds-page space-y-5">
 			<header className="ds-page-header">
 				<h1 className="ds-page-title">{t.title}</h1>
-				<a href={`/data/settings?tab=content&lang=${locale}`}>{t.settings}</a>
 			</header>
 			{collections.error && (
 				<div role="alert">
@@ -65,6 +65,9 @@ export default function ContentPage() {
 				</TabsContent>
 				<TabsContent value="taxonomies">
 					<TaxonomiesView collections={rows} />
+				</TabsContent>
+				<TabsContent value="settings">
+					<DataSettingsForm section="content" locale={locale === "fr" ? "fr" : "en"} />
 				</TabsContent>
 				{["documents", "trash"].map((value) => (
 					<TabsContent key={value} value={value}>

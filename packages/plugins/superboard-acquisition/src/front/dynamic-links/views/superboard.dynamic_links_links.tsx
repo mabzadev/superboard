@@ -1,4 +1,4 @@
-import LinksPageContent from "../components/dynamic_links/links/LinksPageContent.js";
+import DynamicLinksWorkspace from "../components/dynamic_links/DynamicLinksWorkspace.js";
 export default function View() {
-	return <LinksPageContent />;
+	return <DynamicLinksWorkspace />;
 }

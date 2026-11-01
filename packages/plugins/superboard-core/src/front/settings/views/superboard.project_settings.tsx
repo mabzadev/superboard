@@ -1,10 +1,4 @@
-import Page from "../app/(protected)/project-settings/page.js";
-import InstanceConfiguration from "../InstanceConfiguration.js";
+import EnvironmentSettings from "../EnvironmentSettings.js";
 export default function View() {
-	return (
-		<>
-			<InstanceConfiguration />
-			<Page />
-		</>
-	);
+	return <EnvironmentSettings />;
 }

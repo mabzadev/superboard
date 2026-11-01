@@ -84,9 +84,6 @@ query-counts-out/
 !.dev.vars.example
 
 # SuperBoard overlay
-# Dependencies
-node_modules/
-
 # Build output
 build/
 .dart_tool/
@@ -96,16 +93,12 @@ scripts/clients/flutterflow-library/generated_code/
 .next/
 .vercel/
 .open-next/
-.wrangler/
 infra/generated/
 .backups/
-dist/
 out/
 .build/
 coverage/
 tsconfig.tsbuildinfo
-test-results/
-playwright-report/
 tests/e2e/site/.auth
 
 # Local env / secrets
@@ -116,10 +109,6 @@ tests/e2e/site/.auth
 
 # Logs and OS files
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.DS_Store
 
 # Runtime caches
 .cache/
@@ -132,10 +121,6 @@ yarn-error.log*
 
 # Local test environments
 /tests/**/.auth/
-/tests/**/.astro/
-/tests/**/node_modules
-/tests/**/.wrangler/
-/tests/**/dist/
 
 # Maintained fixture seeds
 !tests/fixtures/*/.emdash/

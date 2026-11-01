@@ -27,6 +27,14 @@ export function localizeFrontPath(path: string, locale: UserFrontLocale): string
 	return `${url.pathname}${url.search}${url.hash}`;
 }
 
+/** The given page in another language: the path is localized and `lang` pins the choice. */
+export function frontLocaleSwitchHref(href: string, locale: UserFrontLocale): string {
+	const url = new URL(href);
+	url.pathname = localizeFrontPath(url.pathname, locale);
+	url.searchParams.set("lang", locale);
+	return url.href;
+}
+
 export function resolveUserFrontRequestLocale(request: Request): UserFrontLocale {
 	const url = new URL(request.url);
 	const explicit = url.searchParams.get("lang");

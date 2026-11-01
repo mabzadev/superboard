@@ -3,6 +3,7 @@ import { afterEach, expect, test } from "vitest";
 
 import legacyAuthenticationMenus from "../../../../apps/site/seed/legacy-authentication-menus.json";
 import legacyProductMenus from "../../../../apps/site/seed/legacy-product-menus.json";
+import legacySectionMenus from "../../../../apps/site/seed/legacy-section-menus.json";
 import legacyMenu from "../../../../apps/site/seed/legacy-superboard-menu.json";
 import seedJson from "../../../../apps/site/seed/seed.json";
 import { CORE_OPERATOR_SURFACES } from "../../../../apps/site/src/lib/core-front-contract.js";
@@ -202,7 +203,7 @@ test("existing product menus use canonical destinations while historical links r
 			menu.locale === "fr" ? "Monétisation" : "Monetization",
 		);
 		expect(section("/support/inbox")).toBe("Support");
-		expect(section("/communication/campaigns")).toBe("Communication");
+		expect(section("/communication/marketing-email")).toBe("Communication");
 		expect(section("/auth/users")).toBe(
 			menu.locale === "fr" ? "Authentification" : "Authentication",
 		);
@@ -630,7 +631,9 @@ test("Communication settings is a direct sidebar destination after upgrading a n
 		const before = await repo.findItems(menu.id);
 		await ensureNativeFrontMenus(db, seedJson.menus);
 		const after = await repo.findItems(menu.id);
-		const root = after.find((item) => item.customUrl === "/communication/campaigns")!;
+		const root = after.find(
+			(item) => item.customUrl === "/communication/marketing-email" && item.parentId === null,
+		)!;
 		const settings = after.filter((item) => item.customUrl === "/communication/settings");
 		expect(settings).toHaveLength(1);
 		expect(settings[0]).toMatchObject({
@@ -731,20 +734,7 @@ test("Support navigation groups its operational destinations under one section",
 				.filter((item) => item.parentId === support!.id)
 				.map((item) => item.customUrl)
 				.toSorted((a, b) => (a ?? "").localeCompare(b ?? "")),
-		).toEqual([
-			"/support/automations",
-			"/support/captain",
-			"/support/channels",
-			"/support/contacts",
-			"/support/help-center",
-			"/support/inbox",
-			"/support/integrations",
-			"/support/proactive-support",
-			"/support/quality",
-			"/support/reports",
-			"/support/settings",
-			"/support/workforce",
-		]);
+		).toEqual(["/support/help-center", "/support/inbox", "/support/settings"]);
 		await ensureNativeFrontMenus(db, seedJson.menus);
 		expect(
 			(await repository.findItems(menu.id)).filter((item) => item.parentId === support!.id),
@@ -783,5 +773,85 @@ test("authentication keeps two management views and five access screens while ar
 		"/auth/register/with-email",
 	]) {
 		expect(rows.find((row) => row.path === path)?.deleted_at).toBeTruthy();
+	}
+});
+
+test("menus seeded before the section simplification adopt it while edited menus keep custom links", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: legacySectionMenus });
+	const repo = new MenuRepository(db);
+	const children = (items: Awaited<ReturnType<typeof repo.findItems>>, url: string) => {
+		const parent = items.find((item) => item.parentId === null && item.customUrl === url);
+		return items
+			.filter((item) => item.parentId === parent?.id)
+			.map(({ label, customUrl }) => [label, customUrl]);
+	};
+	for (const menu of await repo.findByName("superboard-admin")) {
+		await ensureNativeFrontMenus(db, seedJson.menus);
+		const definition = seedJson.menus.find((entry) => entry.locale === menu.locale)!;
+		const untouched = await repo.findItems(menu.id);
+		expect(untouched.filter((item) => item.parentId === null).map((item) => item.label)).toEqual(
+			definition.items.map((item) => item.label),
+		);
+		expect(children(untouched, "/core/settings").map(([, url]) => url)).toEqual(
+			definition.items.at(-2)!.children!.map((item) => item.url),
+		);
+	}
+
+	await teardownTestDatabase(db);
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: legacySectionMenus });
+	const repository = new MenuRepository(db);
+	for (const menu of await repository.findByName("superboard-admin")) {
+		const fr = menu.locale === "fr";
+		await repository.createItem(menu.id, menu.locale, {
+			type: "custom",
+			label: "My events",
+			customUrl: "/analytics/events?source=custom",
+		});
+		await ensureNativeFrontMenus(db, seedJson.menus);
+		const items = await repository.findItems(menu.id);
+		const sectionOf = (url: string) => children(items, url).map(([, href]) => href);
+		expect(children(items, "/monetization/customers")).toEqual([
+			[fr ? "Clients" : "Customers", "/monetization/customers"],
+			[fr ? "Catalogue" : "Catalog", "/monetization/products"],
+			[fr ? "Paramètres" : "Settings", "/monetization/settings"],
+		]);
+		expect(sectionOf("/communication/marketing-email")).toEqual([
+			"/communication/marketing-email",
+			"/communication/journeys",
+			"/communication/in-app-messages",
+			"/communication/audience",
+			"/communication/statistics",
+			"/communication/settings",
+		]);
+		expect(sectionOf("/support/inbox")).toEqual([
+			"/support/inbox",
+			"/support/help-center",
+			"/support/settings",
+		]);
+		expect(children(items, "/data/content").at(-1)).toEqual(["Configuration", "/data/settings"]);
+		const analytics = items.find(
+			(item) => item.parentId === null && item.customUrl === "/analytics",
+		)!;
+		const analyticsChildren = new Set(
+			items.filter((item) => item.parentId === analytics.id).map((item) => item.id),
+		);
+		expect(items.some((item) => item.parentId && analyticsChildren.has(item.parentId))).toBe(false);
+		expect(sectionOf("/core/settings")).toEqual([
+			"/core/settings",
+			"/auth/settings?tab=security&section=keys",
+			"/core/libraries",
+			"/core/infrastructure",
+			"/core/audit",
+			"/core/gateway",
+			"/core/mcp",
+		]);
+		expect(children(items, "/core/settings")[0]?.[0]).toBe(fr ? "Général" : "General");
+		expect(items.find((item) => item.label === "My events")?.customUrl).toBe(
+			"/analytics/events?source=custom",
+		);
+		await ensureNativeFrontMenus(db, seedJson.menus);
+		expect(await repository.findItems(menu.id)).toEqual(items);
 	}
 });

@@ -5,7 +5,7 @@ import { NavigationProvider } from "@superboard/front-ui/navigation";
 import { QueryClient, QueryClientProvider } from "@superboard/front-ui/query";
 import { ThemeProvider } from "@superboard/front-ui/theme";
 import { Toaster } from "@superboard/front-ui/toaster";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
 import { parseOperatorProjectScopeResponse } from "../lib/operator-project-scope-response.js";
@@ -60,36 +60,41 @@ export function FrontRuntimeProviders({
 		return () => controller.abort();
 	}, [requiresScope, scope]);
 	const locale = projection.locale;
-	const parameters = { ...mount?.parameters, lang: locale };
+	const mountParameters = mount?.parameters;
+	const parameters = useMemo(
+		() => ({ ...mountParameters, lang: locale }),
+		[mountParameters, locale],
+	);
+	const frontContext = useMemo(
+		() => ({
+			path: projection.path,
+			parameters,
+			locale,
+			instanceId: projection.instance_id,
+			pluginId,
+			operator: projection.operator ?? null,
+			projectScope: scope,
+			activePluginIds: projection.plugin_lock.map((entry) => entry.plugin_id),
+			publicEndpoints: projection.public_endpoints,
+			deployment: projection.deployment,
+			environments: projection.environments,
+		}),
+		[projection, parameters, locale, pluginId, scope],
+	);
+	const runtimeState = useMemo(() => ({ scopeError, requiresScope }), [scopeError, requiresScope]);
 	return (
 		<ThemeProvider
-			attribute={["class", "data-theme"]}
+			attribute={["class", "data-theme", "data-mode"]}
 			defaultTheme="system"
 			enableSystem
 			storageKey={`superboard:${projection.instance_id}:theme`}
 			disableTransitionOnChange
 		>
-			<FrontContextProvider
-				value={{
-					path: projection.path,
-					parameters,
-					locale,
-					instanceId: projection.instance_id,
-					pluginId,
-					operator: projection.operator ?? null,
-					projectScope: scope,
-					activePluginIds: projection.plugin_lock.map((entry) => entry.plugin_id),
-					publicEndpoints: projection.public_endpoints,
-					deployment: projection.deployment,
-					environments: projection.environments,
-				}}
-			>
+			<FrontContextProvider value={frontContext}>
 				<NavigationProvider path={projection.path} parameters={parameters}>
 					<QueryClientProvider client={queryClient}>
 						<ProjectSelectionProvider>
-							<RuntimeState.Provider value={{ scopeError, requiresScope }}>
-								{children}
-							</RuntimeState.Provider>
+							<RuntimeState.Provider value={runtimeState}>{children}</RuntimeState.Provider>
 							<Toaster />
 						</ProjectSelectionProvider>
 					</QueryClientProvider>

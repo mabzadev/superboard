@@ -69,11 +69,27 @@ test.each([
 	["Offerings", OfferingsView, "New offering"],
 	["Entitlements", EntitlementsView, "Add entitlement"],
 ] as const)(
-	"%s opens the purchase catalog directly without a catalog switch",
+	"%s opens its tab of the purchase catalog without a catalog source switch",
 	async (title, View, action) => {
 		render(<View />);
 		expect(await screen.findByRole("button", { name: action })).toBeInTheDocument();
-		expect(screen.getByRole("heading", { level: 1, name: title })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { level: 1, name: "Catalog" })).toBeInTheDocument();
+		const tabs = screen.getByRole("navigation", { name: "Catalog" });
+		expect(
+			Array.from(tabs.querySelectorAll("a")).map((link) => [
+				link.textContent,
+				link.getAttribute("href"),
+				link.getAttribute("aria-current"),
+			]),
+		).toEqual(
+			["Products", "Offerings", "Entitlements"].map((tab) => [
+				tab,
+				tab === "Products"
+					? "/monetization/products?lang=en"
+					: `/monetization/products?tab=${tab.toLowerCase()}&lang=en`,
+				tab === title ? "page" : null,
+			]),
+		);
 		expect(screen.queryByRole("group", { name: "Catalog source" })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Existing catalog" })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Purchases catalog" })).not.toBeInTheDocument();
@@ -92,4 +108,18 @@ test("an operator can open package creation from its offering and select a mobil
 
 afterEach(() => {
 	vi.unstubAllGlobals();
+});
+
+test("a former Offerings or Entitlements bookmark opens its tab of the Catalog entry", async () => {
+	window.history.pushState({}, "", "/monetization/products?tab=entitlements&lang=en");
+	try {
+		render(<ProductsIndexView />);
+		expect(await screen.findByRole("button", { name: "Add entitlement" })).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Entitlements" })).toHaveAttribute(
+			"aria-current",
+			"page",
+		);
+	} finally {
+		window.history.pushState({}, "", "/");
+	}
 });

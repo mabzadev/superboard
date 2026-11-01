@@ -42,6 +42,10 @@ import {
 	targetSelectionFromArgs,
 } from "./target.mjs";
 
+const HIGH_VOLUME_LOG_SERVICES = new Set(["api", "flows", "analytics"]);
+const INTERNAL_ONLY_SERVICES = new Set(["observability"]);
+const SMART_PLACEMENT_SERVICES = new Set(["api", "flows", "analytics", "support", "marketing"]);
+
 const args = parseArgs();
 const service = args.service ?? "api";
 const { targetName, environment } = await targetSelectionFromArgs(args, process.env, {
@@ -183,6 +187,18 @@ function d1SchemaVars() {
 	return { D1_EXPECTED_MIGRATION: expectedD1Migration };
 }
 
+function workerObservability(selectedService) {
+	return {
+		enabled: true,
+		logs: {
+			enabled: true,
+			head_sampling_rate: HIGH_VOLUME_LOG_SERVICES.has(selectedService) ? 0.1 : 1,
+			invocation_logs: !INTERNAL_ONLY_SERVICES.has(selectedService),
+		},
+		traces: { enabled: true, head_sampling_rate: 0.1 },
+	};
+}
+
 function baseConfig() {
 	const accountId = cloudflareAccountId(target, process.env, {
 		required: false,
@@ -199,11 +215,8 @@ function baseConfig() {
 		workers_dev: false,
 		preview_urls: false,
 		version_metadata: { binding: "SUPERBOARD_WORKER_VERSION" },
-		observability: {
-			enabled: true,
-			logs: { enabled: true, head_sampling_rate: 1, invocation_logs: true },
-			traces: { enabled: true, head_sampling_rate: 0.1 },
-		},
+		observability: workerObservability(service),
+		...(SMART_PLACEMENT_SERVICES.has(service) ? { placement: { mode: "smart" } } : {}),
 		...(requiredSecrets.length ? { secrets: { required: requiredSecrets } } : {}),
 		...(service === "observability"
 			? {}

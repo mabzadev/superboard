@@ -49,6 +49,7 @@ import {
 	createMarketingJourney,
 	deleteMarketingChannelConnector,
 	enrollJourneySubscribers,
+	getEmailSubscribers,
 	getEmailTemplates,
 	getJourneyEnrollments,
 	getJourneyStatistics,
@@ -61,12 +62,15 @@ import {
 	type JourneyDefinition,
 	type JourneyEnrollment,
 	type JourneyStatistics,
+	type JourneyTrigger,
 	type MarketingChannelConnector,
 	type MarketingChannelConnectorInput,
 	type MarketingJourney,
 	type MarketingJourneyInput,
 } from "../../api/marketing/marketingService.js";
 import { useStudioI18n } from "../../studio/i18n.js";
+import { TriggerPicker, useEventLabel } from "../../studio/TriggerPicker.js";
+import { useWorkspaceTab } from "../../studio/workspace-navigation.js";
 import { JourneyCanvasEditor } from "./JourneyCanvasEditor.js";
 
 const emptyDefinition: JourneyDefinition = {
@@ -75,9 +79,18 @@ const emptyDefinition: JourneyDefinition = {
 	edges: [],
 };
 
+const transitionMessages = {
+	activate: "Automation activated",
+	pause: "Automation paused",
+	resume: "Automation resumed",
+	archive: "Automation archived",
+} as const;
+
 export function MarketingJourneysPage() {
 	const { t } = useStudioI18n();
 	const { selectedProject } = useProjectSelection();
+	const workspace = useWorkspaceTab("automations");
+	const eventLabel = useEventLabel(selectedProject?.id ?? "");
 	const [journeys, setJourneys] = useState<MarketingJourney[]>([]);
 	const [templates, setTemplates] = useState<EmailTemplate[]>([]);
 	const [connectors, setConnectors] = useState<MarketingChannelConnector[]>([]);
@@ -89,7 +102,10 @@ export function MarketingJourneysPage() {
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
-	const [eventName, setEventName] = useState("account.created");
+	const [trigger, setTrigger] = useState<JourneyTrigger>({
+		event_name: "account.created",
+		conditions: [],
+	});
 	const [reentry, setReentry] = useState<MarketingJourney["reentry_policy"]>("once");
 	const [builderDefinition, setBuilderDefinition] = useState<JourneyDefinition>(emptyDefinition);
 	const [advanced, setAdvanced] = useState(false);
@@ -122,7 +138,7 @@ export function MarketingJourneysPage() {
 		setEditingId(null);
 		setName("");
 		setDescription("");
-		setEventName("account.created");
+		setTrigger({ event_name: "account.created", conditions: [] });
 		setReentry("once");
 		setBuilderDefinition(emptyDefinition);
 		setAdvanced(false);
@@ -134,7 +150,7 @@ export function MarketingJourneysPage() {
 		setEditingId(journey.id);
 		setName(journey.name);
 		setDescription(journey.description ?? "");
-		setEventName(journey.trigger.event_name);
+		setTrigger(journey.trigger);
 		setReentry(journey.reentry_policy);
 		setTriggerText(JSON.stringify(journey.trigger, null, 2));
 		setDefinitionText(JSON.stringify(journey.definition, null, 2));
@@ -154,7 +170,7 @@ export function MarketingJourneysPage() {
 				reentry_policy: reentry,
 				trigger: advanced
 					? (parseObject(triggerText, "Trigger") as MarketingJourneyInput["trigger"])
-					: { event_name: eventName.trim(), conditions: [] },
+					: { ...trigger, event_name: trigger.event_name.trim() },
 				definition: advanced
 					? (parseObject(definitionText, "Journey definition") as JourneyDefinition)
 					: builderDefinition,
@@ -189,7 +205,7 @@ export function MarketingJourneysPage() {
 		setBusy(true);
 		try {
 			await transitionMarketingJourney(selectedProject.id, journey.id, actionName);
-			showSuccessNotification(`Journey ${actionName}d`);
+			showSuccessNotification(t(transitionMessages[actionName]));
 			await load();
 		} catch (cause) {
 			showErrorNotification(moduleErrorMessage(cause));
@@ -215,15 +231,30 @@ export function MarketingJourneysPage() {
 
 	const manualEnrollment = async () => {
 		if (!selectedProject || !selected) return;
-		const ids = subscriberIds
-			.split(",")
+		const values = subscriberIds
+			.split(/[,\s]+/)
 			.map((value) => value.trim())
 			.filter(Boolean);
-		if (!ids.length) return;
+		if (!values.length) return;
 		setBusy(true);
 		try {
+			// Operators know contacts by email; the API enrolls subscriber IDs.
+			const ids = await Promise.all(
+				values.map(async (value) => {
+					if (!value.includes("@")) return value;
+					const matches = await getEmailSubscribers(selectedProject.id, value);
+					const match = matches.find((item) => item.email.toLowerCase() === value.toLowerCase());
+					if (!match) throw new Error(t("No contact found for {email}", { email: value }));
+					return match.id;
+				}),
+			);
 			const result = await enrollJourneySubscribers(selectedProject.id, selected.id, ids);
-			showSuccessNotification(`${result.enrolled} of ${result.requested} subscribers enrolled`);
+			showSuccessNotification(
+				t("{enrolled} of {requested} contacts enrolled", {
+					enrolled: result.enrolled,
+					requested: result.requested,
+				}),
+			);
 			setSubscriberIds("");
 			await inspect(selected);
 		} catch (cause) {
@@ -235,7 +266,7 @@ export function MarketingJourneysPage() {
 
 	return (
 		<ModulePage
-			title={t("Marketing journeys")}
+			title={t("Automations")}
 			description={t(
 				"Turn product events into versioned, resumable email and omnichannel customer journeys.",
 			)}
@@ -265,15 +296,17 @@ export function MarketingJourneysPage() {
 											placeholder={t("New customer activation")}
 										/>
 									</Field>
-									<Field label={t("Event that starts the journey")}>
-										<Input
-											required
-											disabled={advanced}
-											value={eventName}
-											onChange={(event) => setEventName(event.target.value)}
-											placeholder={t("account.created")}
+									{advanced ? (
+										<Field label={t("Event that starts the journey")}>
+											<Input disabled value={trigger.event_name} />
+										</Field>
+									) : (
+										<TriggerPicker
+											project={selectedProject.id}
+											value={trigger}
+											onChange={setTrigger}
 										/>
-									</Field>
+									)}
 									<Field label={t("Description")}>
 										<Input
 											value={description}
@@ -296,6 +329,26 @@ export function MarketingJourneysPage() {
 									</Field>
 								</div>
 
+								{!templates.length && (
+									<div
+										role="status"
+										className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 p-4"
+									>
+										<p className="text-sm">
+											{t(
+												"Email steps need an email. Create one first, then come back to this automation.",
+											)}
+										</p>
+										<Button
+											type="button"
+											size="sm"
+											variant="outline"
+											onClick={() => void workspace.open("emails", { kind: "automated" })}
+										>
+											{t("Create an email")}
+										</Button>
+									</div>
+								)}
 								{!advanced && (
 									<JourneyCanvasEditor
 										project={selectedProject.id}
@@ -399,8 +452,8 @@ export function MarketingJourneysPage() {
 											</div>
 											<p className="mt-1 text-sm text-muted-foreground">
 												{t("Starts on")}
-												{journey.trigger_event_name} {t("·")} {journey.enrollments_total ?? 0}{" "}
-												{t("entries")}
+												{eventLabel(journey.trigger_event_name)} {t("·")}{" "}
+												{journey.enrollments_total ?? 0} {t("entries")}
 											</p>
 										</button>
 										<div className="flex flex-wrap gap-2">
@@ -453,7 +506,9 @@ export function MarketingJourneysPage() {
 							))}
 							{!journeys.length && (
 								<p className="py-8 text-center text-sm text-muted-foreground">
-									{t("No journeys yet. Create the first draft above.")}
+									{t(
+										"No automations yet. Name it, choose the event that starts it, add email or channel steps above, then activate it.",
+									)}
 								</p>
 							)}
 						</CardContent>
@@ -483,7 +538,8 @@ export function MarketingJourneysPage() {
 										<Input
 											value={subscriberIds}
 											onChange={(event) => setSubscriberIds(event.target.value)}
-											placeholder={t("Subscriber IDs, separated by commas")}
+											aria-label={t("Contacts to enroll")}
+											placeholder={t("Contact emails or IDs, separated by commas")}
 										/>
 										<Button
 											disabled={busy || !subscriberIds.trim()}
@@ -500,7 +556,7 @@ export function MarketingJourneysPage() {
 												{["Subscriber", "Version", "Current step", "Status", "Entered"].map(
 													(column) => (
 														<FrontTableHead key={column} className="px-4 py-3 font-medium">
-															{column}
+															{t(column)}
 														</FrontTableHead>
 													),
 												)}
@@ -653,13 +709,16 @@ function MarketingChannelsEditor() {
 	};
 
 	return (
-		<ModulePage
-			title={t("Marketing channels")}
-			description={t(
-				"Connect secure HTTPS destinations for SMS, push, WhatsApp, Slack and custom webhooks.",
-			)}
-			error={error}
-		>
+		<section className="space-y-4">
+			<div>
+				<h2 className="text-lg font-semibold">{t("Other channels")}</h2>
+				<p className="text-sm text-muted-foreground">
+					{t(
+						"Connect secure HTTPS destinations for SMS, push, WhatsApp, Slack and custom webhooks. Automations can then use them as steps.",
+					)}
+				</p>
+			</div>
+			{error && <p role="alert">{error}</p>}
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
@@ -791,7 +850,7 @@ function MarketingChannelsEditor() {
 					</Card>
 				</div>
 			)}
-		</ModulePage>
+		</section>
 	);
 }
 

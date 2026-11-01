@@ -1,1 +1,1 @@
-export { Button, buttonVariants, type ButtonProps } from "@superboard/front-ui/ui";
+export { Button, buttonVariants, type ButtonProps } from "@superboard/front-ui/ui/button.js";

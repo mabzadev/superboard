@@ -1,4 +1,4 @@
-import { MarketingStatisticsPage } from "../components/modules/MarketingPages.js";
+import CommunicationWorkspace from "../studio/CommunicationWorkspace.js";
 export default function View() {
-	return <MarketingStatisticsPage />;
+	return <CommunicationWorkspace initialTab="statistics" />;
 }

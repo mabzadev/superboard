@@ -2,14 +2,15 @@ import { lazy } from "react";
 
 import AuthenticationEditor from "./AuthenticationEditor.js";
 import {
+	AuthenticationChoices,
 	AuthenticationTabs,
+	useAuthenticationI18n,
 	useAuthenticationTab,
-	AuthenticationSection,
 } from "./AuthenticationTabs.js";
 import IdentityPanel from "./IdentityPanel.js";
 
 const Accounts = lazy(() => import("./components/app/ApplicationUsersPage.js"));
-const Profiles = lazy(() =>
+const DevicesAndProfiles = lazy(() =>
 	import("./components/app/AppAudiencePages.js").then((module) => ({
 		default: module.CustomersAnalyticsPage,
 	})),
@@ -20,26 +21,49 @@ const Referrals = lazy(() =>
 	})),
 );
 const Directory = lazy(() => import("./app/(protected)/identity/[lang]/users/page.js"));
-const tabs = ["accounts", "profiles", "devices", "referrals"] as const;
+const Activity = lazy(() => import("./app/(protected)/identity/[lang]/logs/page.js"));
+const sources = ["accounts", "directory"] as const;
 
 export default function UsersPage() {
-	const { selected, select } = useAuthenticationTab(tabs, "accounts");
+	const i18n = useAuthenticationI18n();
+	const { moved, selected, section, select } = useAuthenticationTab("users");
+	if (moved) return <p role="status">{i18n._("loading")}</p>;
+	const source = section === "directory" ? "directory" : "accounts";
 	return (
-		<AuthenticationTabs view="users" tabs={tabs} selected={selected} select={select}>
-			{selected === "accounts" && (
+		<AuthenticationTabs view="users" selected={selected} select={select}>
+			{selected === "users" && (
 				<>
-					<Accounts />
-					<AuthenticationSection name="directory">
+					<div className="space-y-1">
+						<AuthenticationChoices
+							label={i18n._("userSource")}
+							items={sources}
+							selected={source}
+							labelOf={(item) => i18n._(`source:${item}`)}
+							onSelect={(item) => {
+								select("users", item === "directory" ? item : undefined);
+							}}
+						/>
+						<p className="text-sm text-kumo-subtle">{i18n._("sourceDescription")}</p>
+					</div>
+					{source === "accounts" ? (
+						<Accounts />
+					) : (
 						<IdentityPanel>
 							<Directory />
 						</IdentityPanel>
-					</AuthenticationSection>
+					)}
 				</>
 			)}
-			{(selected === "profiles" || selected === "devices") && (
-				<Profiles key={selected} mode={selected} />
-			)}
+			{selected === "devices" && <DevicesAndProfiles />}
 			{selected === "referrals" && <Referrals />}
+			{selected === "activity" && (
+				<>
+					<p className="text-sm text-kumo-subtle">{i18n._("activityDescription")}</p>
+					<IdentityPanel>
+						<Activity />
+					</IdentityPanel>
+				</>
+			)}
 			<AuthenticationEditor view="users" />
 		</AuthenticationTabs>
 	);

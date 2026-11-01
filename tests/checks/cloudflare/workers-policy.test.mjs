@@ -297,9 +297,20 @@ function assertWorkerPolicy(config, target, service) {
 	}
 	assert.deepEqual(config.observability, {
 		enabled: true,
-		logs: { enabled: true, head_sampling_rate: 1, invocation_logs: true },
+		logs: {
+			enabled: true,
+			head_sampling_rate: ["api", "flows", "analytics"].includes(service) ? 0.1 : 1,
+			invocation_logs: service !== "observability",
+		},
 		traces: { enabled: true, head_sampling_rate: 0.1 },
 	});
+	assert.deepEqual(
+		config.placement,
+		["api", "flows", "analytics", "support", "marketing"].includes(service)
+			? { mode: "smart" }
+			: undefined,
+		`${service} placement policy`,
+	);
 	assert.equal(config.routes, undefined, `${service} preflight must not own routes`);
 	assert.equal(config.triggers, undefined, `${service} preflight must not own triggers`);
 	assert.equal(config.queues?.consumers, undefined, `${service} preflight must not consume queues`);

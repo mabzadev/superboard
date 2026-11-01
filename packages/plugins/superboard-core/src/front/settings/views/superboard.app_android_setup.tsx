@@ -1,4 +1,4 @@
-import SdkSetupWizard from "../components/app/SdkSetupWizard.js";
+import SdkAppsWorkspace from "../components/app/SdkAppsWorkspace.js";
 export default function View() {
-	return <SdkSetupWizard platform="android" />;
+	return <SdkAppsWorkspace tab="android" />;
 }

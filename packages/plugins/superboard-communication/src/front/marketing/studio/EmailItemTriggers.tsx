@@ -3,26 +3,34 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
 	createMarketingJourney,
+	getMarketingChannelConnectors,
 	getMarketingJourneys,
 	transitionMarketingJourney,
 	updateMarketingJourney,
 	type EmailTemplate,
 	type JourneyCondition,
+	type MarketingChannelConnector,
 	type MarketingJourney,
 	type MarketingJourneyInput,
 } from "../api/marketing/marketingService.js";
 import { JourneyCanvasEditor } from "../components/modules/JourneyCanvasEditor.js";
 import { useStudioI18n } from "./i18n.js";
+import { TriggerPicker, useEventLabel } from "./TriggerPicker.js";
 
 export function EmailItemTriggers({
 	project,
 	template,
+	templates = [template],
 }: {
 	project: string;
 	template: EmailTemplate;
+	/** Every email the canvas may use, so one trigger can chain several messages. */
+	templates?: EmailTemplate[];
 }) {
 	const { t } = useStudioI18n();
+	const eventLabel = useEventLabel(project);
 	const [items, setItems] = useState<MarketingJourney[]>([]);
+	const [connectors, setConnectors] = useState<MarketingChannelConnector[]>([]);
 	const [form, setForm] = useState<MarketingJourneyInput | null>(null);
 	const [conditionIds, setConditionIds] = useState<string[]>([]);
 	const [editing, setEditing] = useState<string>();
@@ -65,6 +73,13 @@ export function EmailItemTriggers({
 					setLoading(false);
 				}
 			},
+		);
+		// Channel steps (SMS, push, WhatsApp, Slack, webhook) need the configured connectors.
+		void getMarketingChannelConnectors(project).then(
+			(values) => {
+				if (active) setConnectors(values.filter((connector) => connector.enabled));
+			},
+			() => undefined,
 		);
 		return () => {
 			active = false;
@@ -152,13 +167,12 @@ export function EmailItemTriggers({
 								setForm({ ...form, name: event.target.value });
 							}}
 						/>
-						<Input
-							label={t("Trigger event")}
-							value={form.trigger.event_name}
-							required
-							placeholder={t("Event name from your application")}
-							onChange={(event) => {
-								setForm({ ...form, trigger: { ...form.trigger, event_name: event.target.value } });
+						<TriggerPicker
+							project={project}
+							value={form.trigger}
+							onChange={(trigger) => {
+								setConditionIds(trigger.conditions.map(() => crypto.randomUUID()));
+								setForm({ ...form, trigger });
 							}}
 						/>
 						<Select
@@ -273,8 +287,8 @@ export function EmailItemTriggers({
 					<JourneyCanvasEditor
 						project={project}
 						value={form.definition}
-						templates={[template]}
-						connectors={[]}
+						templates={templates.some((item) => item.id === template.id) ? templates : [template]}
+						connectors={connectors}
 						onChange={(definition) => {
 							setForm({ ...form, definition });
 						}}
@@ -285,6 +299,7 @@ export function EmailItemTriggers({
 							variant="primary"
 							loading={busy}
 							disabled={
+								!form.trigger.event_name.trim() ||
 								!form.definition.nodes.some(
 									(node) => node.type === "email" && node.template_id === template.id,
 								)
@@ -311,7 +326,7 @@ export function EmailItemTriggers({
 					<div>
 						<h3 className="font-medium">{item.name}</h3>
 						<p className="text-sm text-kumo-subtle">
-							{item.trigger.event_name} · {t(item.status)}
+							{eventLabel(item.trigger.event_name)} · {t(item.status)}
 						</p>
 					</div>
 					<div className="flex flex-wrap gap-2">

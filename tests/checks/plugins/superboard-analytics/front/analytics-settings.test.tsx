@@ -1,11 +1,7 @@
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { render, screen, waitFor } from "../../../packages/supbrd-front-ui/render.js";
-
-vi.mock("@superboard/front-ui/plugin-configuration-tab", () => ({
-	PluginConfigurationTab: () => <div data-testid="plugin-config-tab">Plugin configuration</div>,
-}));
+import { render, screen } from "../../../packages/supbrd-front-ui/render.js";
 
 vi.mock(
 	"../../../../../packages/supbrd-front-ui/src/shared/context/useProjectSelection.js",
@@ -74,7 +70,7 @@ describe("AnalyticsSettingsPage", () => {
 		expect(screen.getByRole("tab", { name: "Webhooks" })).toHaveAttribute("aria-selected", "true");
 	});
 
-	it("renders settings with all tabs including Configuration", async () => {
+	it("renders settings tabs and points diagnostics to Plugins", async () => {
 		render(<AnalyticsSettingsPage />);
 
 		expect(screen.getByText("Analytics settings")).toBeInTheDocument();
@@ -82,19 +78,21 @@ describe("AnalyticsSettingsPage", () => {
 		expect(screen.getByRole("tab", { name: "Analytics processing" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Webhooks" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Annotations" })).toBeInTheDocument();
-		expect(screen.getByRole("tab", { name: "Configuration" })).toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Configuration" })).not.toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Open in Plugins" })).toHaveAttribute(
+			"href",
+			expect.stringMatching(/^\/_emdash\/admin\/plugins-manager\/[^/]+\/configuration$/),
+		);
 	});
 
-	it("switches to configuration tab and opens the active View configuration", async () => {
-		const user = userEvent.setup();
+	it("opens legacy configuration links on the default tab", () => {
+		window.history.replaceState(null, "", "/analytics/settings?tab=configuration");
 		render(<AnalyticsSettingsPage />);
 
-		const configBtn = screen.getByRole("tab", { name: "Configuration" });
-		await user.click(configBtn);
-
-		await waitFor(() => {
-			expect(screen.getByTestId("plugin-config-tab")).toHaveTextContent("Plugin configuration");
-		});
+		expect(screen.getByRole("tab", { name: "Applications" })).toHaveAttribute(
+			"aria-selected",
+			"true",
+		);
 	});
 
 	it("renders settings in French", async () => {
@@ -117,12 +115,13 @@ describe("AnalyticsSettingsPage", () => {
 
 		expect(screen.getByText("Paramètres des statistiques")).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Applications" })).toBeInTheDocument();
-		expect(screen.getByRole("tab", { name: "Configuration" })).toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Configuration" })).not.toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Ouvrir dans Plugins" })).toBeInTheDocument();
 	});
 
 	it("renders from analytics_settings view", async () => {
 		render(<AnalyticsSettingsView />);
 
-		expect(screen.getByRole("tab", { name: "Configuration" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Applications" })).toBeInTheDocument();
 	});
 });

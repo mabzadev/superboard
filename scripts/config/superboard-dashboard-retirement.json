@@ -562,8 +562,7 @@
 			"disposition": "owned-source",
 			"destinations": [
 				"packages/plugins/superboard-acquisition/src/front/dynamic-links/api/dynamic-links/dynamicLinksService.ts",
-				"packages/plugins/superboard-analytics/src/front/api/dynamic-links/dynamicLinksService.ts",
-				"packages/plugins/superboard-authentification/src/front/api/dynamic-links/dynamicLinksService.ts"
+				"packages/plugins/superboard-analytics/src/front/api/dynamic-links/dynamicLinksService.ts"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -719,10 +718,8 @@
 		{
 			"source": "apps/dashboard/src/api/notifications/notificationService.ts",
 			"sha256": "26b31a3ac024fd22129a2266e4c31f57e244532a09a3d348c0f7ec4b98bdce24",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/api/notifications/notificationService.ts"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -972,9 +969,6 @@
 			"source": "apps/dashboard/src/app/(protected)/account/page.tsx",
 			"sha256": "cdc5c5a2974a440ec91770a5cd9129fcca26ebb55441c8ad90bfe989c0bfa47b",
 			"disposition": "native-route",
-			"destinations": [
-				"packages/plugins/superboard-authentification/src/front/views/superboard.account.tsx"
-			],
 			"reason": "Next route wrapper replaced by native plugin route registration or EmDash operator authentication.",
 			"reachable_from_dashboard_routes": true
 		},
@@ -1142,9 +1136,6 @@
 			"source": "apps/dashboard/src/app/(protected)/app/access-key/page.tsx",
 			"sha256": "b6448be49f57fdd5b70111fc36ecf41dafc6a3d8eec4b99af75242eb3f512279",
 			"disposition": "native-route",
-			"destinations": [
-				"packages/plugins/superboard-authentification/src/front/views/superboard.app_access_key.tsx"
-			],
 			"reason": "Next route wrapper replaced by native plugin route registration or EmDash operator authentication.",
 			"reachable_from_dashboard_routes": true
 		},
@@ -1162,9 +1153,6 @@
 			"source": "apps/dashboard/src/app/(protected)/app/customers/page.tsx",
 			"sha256": "fc02b919af497e26791bac55e62fdf3b417929a1a5234f266ff25cbdadc8caa6",
 			"disposition": "native-route",
-			"destinations": [
-				"packages/plugins/superboard-authentification/src/front/views/superboard.app_customers.tsx"
-			],
 			"reason": "Next route wrapper replaced by native plugin route registration or EmDash operator authentication.",
 			"reachable_from_dashboard_routes": true
 		},
@@ -1192,9 +1180,6 @@
 			"source": "apps/dashboard/src/app/(protected)/app/referrals/page.tsx",
 			"sha256": "5f52ad2cda3be71f16a0465fca02fefb76e97b7f840a0034bea7a50a2350cd94",
 			"disposition": "native-route",
-			"destinations": [
-				"packages/plugins/superboard-authentification/src/front/views/superboard.app_referrals.tsx"
-			],
 			"reason": "Next route wrapper replaced by native plugin route registration or EmDash operator authentication.",
 			"reachable_from_dashboard_routes": true
 		},
@@ -1202,9 +1187,6 @@
 			"source": "apps/dashboard/src/app/(protected)/app/users/page.tsx",
 			"sha256": "96e851549faa596748338fc7f40ae75024039872baa0c24adb99add4dc6ac487",
 			"disposition": "native-route",
-			"destinations": [
-				"packages/plugins/superboard-authentification/src/front/views/superboard.users.tsx"
-			],
 			"reason": "Next route wrapper replaced by native plugin route registration or EmDash operator authentication.",
 			"reachable_from_dashboard_routes": true
 		},
@@ -1245,10 +1227,8 @@
 		{
 			"source": "apps/dashboard/src/app/(protected)/dynamic-links/campaigns/[id]/page.tsx",
 			"sha256": "cec092995a34ba6141ffa81afd503ef4b0208c18638217499501e39f3318c1f7",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-acquisition/src/front/dynamic-links/app/(protected)/dynamic-links/campaigns/[id]/page.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -1523,10 +1503,8 @@
 		{
 			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/dashboard/page.tsx",
 			"sha256": "e199d255ff2eaa4d200384328c59d9a74a65777caccf6a13f87b874d0ab2591b",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-authentification/src/front/app/(protected)/identity/[lang]/dashboard/page.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -1644,9 +1622,6 @@
 			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/page.tsx",
 			"sha256": "1640d206825496f2c3d37123c6666e68eb23d5b39db271f916b6a601c3d2b7c2",
 			"disposition": "native-route",
-			"destinations": [
-				"packages/plugins/superboard-authentification/src/front/views/superboard.identity_by_lang.tsx"
-			],
 			"reason": "Next route wrapper replaced by native plugin route registration or EmDash operator authentication.",
 			"reachable_from_dashboard_routes": true
 		},
@@ -1887,9 +1862,6 @@
 			"source": "apps/dashboard/src/app/(protected)/identity/page.tsx",
 			"sha256": "71c200a8608d54d68af1a9e773ea56b9c4dbb784c9685bc6e63715750f86e4d0",
 			"disposition": "native-route",
-			"destinations": [
-				"packages/plugins/superboard-authentification/src/front/views/superboard.identity.tsx"
-			],
 			"reason": "Next route wrapper replaced by native plugin route registration or EmDash operator authentication.",
 			"reachable_from_dashboard_routes": true
 		},
@@ -2104,10 +2076,8 @@
 		{
 			"source": "apps/dashboard/src/app/(protected)/project-settings/page.tsx",
 			"sha256": "be9c4b85e2dc9f02ec26eafdd99f60dddd24b88451fe639593c4bdeafe9a2303",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-core/src/front/settings/app/(protected)/project-settings/page.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -2458,9 +2428,6 @@
 			"source": "apps/dashboard/src/app/register/with_email/page.tsx",
 			"sha256": "7bcac9386c45f9b841794a7e0a9c212d1a3936eeddd05b67488c476ee1947a3b",
 			"disposition": "native-route",
-			"destinations": [
-				"packages/plugins/superboard-authentification/src/front/views/superboard.register_with_email.tsx"
-			],
 			"reason": "Next route wrapper replaced by native plugin route registration or EmDash operator authentication.",
 			"reachable_from_dashboard_routes": true
 		},
@@ -2512,8 +2479,7 @@
 			"disposition": "owned-source",
 			"destinations": [
 				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/google.svg",
-				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/google.svg",
-				"packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/google.svg"
+				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/google.svg"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -2523,8 +2489,7 @@
 			"disposition": "owned-source",
 			"destinations": [
 				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/google_dark_mode.svg",
-				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/google_dark_mode.svg",
-				"packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/google_dark_mode.svg"
+				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/google_dark_mode.svg"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -2534,8 +2499,7 @@
 			"disposition": "owned-source",
 			"destinations": [
 				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/linkedIn.svg",
-				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/linkedIn.svg",
-				"packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/linkedIn.svg"
+				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/linkedIn.svg"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -2545,8 +2509,7 @@
 			"disposition": "owned-source",
 			"destinations": [
 				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/linkedIn_dark_mode.svg",
-				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/linkedIn_dark_mode.svg",
-				"packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/linkedIn_dark_mode.svg"
+				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/linkedIn_dark_mode.svg"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -2555,8 +2518,7 @@
 			"sha256": "8f09ba5545b101d201c0294587051440c37419ca93ee11d8928269cbffc8c040",
 			"disposition": "owned-source",
 			"destinations": [
-				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/meta.svg",
-				"packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/meta.svg"
+				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/meta.svg"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -2565,8 +2527,7 @@
 			"sha256": "6b3bd08e1558ae13c91507d4f6852eb05d1be807c585e6366933bf5182134e2a",
 			"disposition": "owned-source",
 			"destinations": [
-				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/meta_dark_mode.svg",
-				"packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/meta_dark_mode.svg"
+				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/meta_dark_mode.svg"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -2577,7 +2538,6 @@
 			"destinations": [
 				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/superboard.svg",
 				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/superboard.svg",
-				"packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/superboard.svg",
 				"packages/plugins/superboard-core/src/front/mcp/assets/icons/ads_platform/superboard.svg"
 			],
 			"reachable_from_dashboard_routes": true
@@ -2588,8 +2548,7 @@
 			"disposition": "owned-source",
 			"destinations": [
 				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/tiktok.svg",
-				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/tiktok.svg",
-				"packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/tiktok.svg"
+				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/tiktok.svg"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -2599,8 +2558,7 @@
 			"disposition": "owned-source",
 			"destinations": [
 				"packages/plugins/superboard-acquisition/src/front/dynamic-links/assets/icons/ads_platform/tiktok_dark_mode.svg",
-				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/tiktok_dark_mode.svg",
-				"packages/plugins/superboard-authentification/src/front/assets/icons/ads_platform/tiktok_dark_mode.svg"
+				"packages/plugins/superboard-analytics/src/front/assets/icons/ads_platform/tiktok_dark_mode.svg"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -2730,10 +2688,8 @@
 		{
 			"source": "apps/dashboard/src/components/__tests__/McpTokensSection.test.tsx",
 			"sha256": "c910d8cf1432dcc3e640aff0096fbc3fae1bb224c5c337e9917f156b4f2fa889",
-			"disposition": "transferred",
-			"destinations": [
-				"tests/checks/plugins/superboard-core/front/mcp/components/McpTokensSection.test.tsx"
-			],
+			"disposition": "replaced-test",
+			"reason": "Retired with its component by the operator UI simplification; the surviving page tests cover the behavior.",
 			"reachable_from_dashboard_routes": false
 		},
 		{
@@ -2769,10 +2725,8 @@
 		{
 			"source": "apps/dashboard/src/components/account/McpTokensSection.tsx",
 			"sha256": "fdc4269db29a9f3da69f0224af73ee9974dc43c3506834fd5357d20a99881207",
-			"disposition": "transferred",
-			"destinations": [
-				"packages/plugins/superboard-core/src/front/mcp/components/account/McpTokensSection.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -3048,10 +3002,8 @@
 		{
 			"source": "apps/dashboard/src/components/craft/DynamicEditor.tsx",
 			"sha256": "0d24cc92b2cfd897e10a69931d27d8e9d0b1657788c3f8ab3893860211962a67",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/craft/DynamicEditor.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -3066,10 +3018,8 @@
 		{
 			"source": "apps/dashboard/src/components/craft/ExportButton.tsx",
 			"sha256": "feb1f599df8212a543777e8698c32c611beb0e66463d722dc5df1b7b708d6516",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/craft/ExportButton.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -3084,10 +3034,8 @@
 		{
 			"source": "apps/dashboard/src/components/craft/PreviewOnlyButton.tsx",
 			"sha256": "f7078673717852c734e1c431069178983deed1cf94c13ead120999e55416f54d",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/craft/PreviewOnlyButton.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -3307,109 +3255,85 @@
 			"sha256": "0955ed0c63739310e031572ae65b1c6b5ca3ece2b468ddb35cc0f280e1db41e7",
 			"disposition": "owned-source",
 			"destinations": [
-				"packages/plugins/superboard-acquisition/src/front/dynamic-links/components/dynamic_links/links/LinksTableColumns.tsx",
-				"packages/plugins/superboard-authentification/src/front/components/dynamic_links/links/LinksTableColumns.tsx"
+				"packages/plugins/superboard-acquisition/src/front/dynamic-links/components/dynamic_links/links/LinksTableColumns.tsx"
 			],
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/RedirectPreviewModal.tsx",
 			"sha256": "a66d82d98cf1ee56a1b2a966d606725b46f01c4bc47fe643845f9cee80012032",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/RedirectPreviewModal.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkAndroidRedirect.tsx",
 			"sha256": "02abfb4014cf1c7942869b0e6ba0ac306572e42fb319efd16cf29e8e46f0a1e9",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkAndroidRedirect.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkComputersRedirect.tsx",
 			"sha256": "b54834eff8ef10d6c0062d76c48c6943bb0376e15f0f03ef92038035bc29acbb",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkComputersRedirect.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkCreatedSuccessfully.tsx",
 			"sha256": "853fdb08e72cb420d7c59116b1ba25acb59eadbafb6f7114eaaaa02bcacceb45",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkCreatedSuccessfully.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkDataSection.tsx",
 			"sha256": "7646d093a7bfeca9f602c5af757ec63c5d1ffd44f45c22448d88ed125e9db355",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkDataSection.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkDataTableColumns.tsx",
 			"sha256": "572126c733daa30f36421bfefa631917e5043d46fb7f7653ee2073f769042728",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkDataTableColumns.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkDetailsSection.tsx",
 			"sha256": "eda87e2a6f1e26438c23a8a57721258143d055d07d30f6dd1896aa0490fc47e7",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkDetailsSection.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkIosRedirect.tsx",
 			"sha256": "abf32ef73acb8a9d48d479fcd6bd192a5dff5565ccce2ad809beddea8d727fec",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkIosRedirect.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkSidebar.tsx",
 			"sha256": "4779653410905eb8b0135609b732516fbf3b488663375a6df900a4bc94102a8f",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkSidebar.tsx",
-				"packages/plugins/superboard-communication/src/front/marketing/components/dynamic_links/links/create_link/CreateLinkSidebar.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkSocialMediaPreview.tsx",
 			"sha256": "1766c8dffa6a413fb7e73566865f756e831e6c2efb4decc5bb847ebe4deb470b",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkSocialMediaPreview.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkTrackingSection.tsx",
 			"sha256": "8c4f09f606a4e2d7a1cfde509d21988901b6b7bfd55fa29af52ccc91cadee476",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinkTrackingSection.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -3422,19 +3346,15 @@
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinksRedirectsSection.tsx",
 			"sha256": "e334052ffc591b338df986322d91af0d9ecfcc9bc62f36e8a7dd90bdfaeb144f",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/CreateLinksRedirectsSection.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/LinkDialogContent.tsx",
 			"sha256": "c3d85acfde696131eea4dedd7b7a8cb3f40ce136770e8579ed9c2155bb3c3e17",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/components/dynamic_links/links/create_link/LinkDialogContent.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -3456,8 +3376,7 @@
 			"sha256": "66e667605cab796bdaa09448b34bd8b12cf3a9f1c5d846b98e01e37e13d3ea6c",
 			"disposition": "owned-source",
 			"destinations": [
-				"packages/plugins/superboard-acquisition/src/front/dynamic-links/components/dynamic_links/links/linkAnalytics.ts",
-				"packages/plugins/superboard-authentification/src/front/components/dynamic_links/links/linkAnalytics.ts"
+				"packages/plugins/superboard-acquisition/src/front/dynamic-links/components/dynamic_links/links/linkAnalytics.ts"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -3634,91 +3553,71 @@
 		{
 			"source": "apps/dashboard/src/components/messaging/CreateMessageContent.tsx",
 			"sha256": "1a7fc12e47abc8eeafebaf0be6a8e5d108c48acfe05124b2d8bf6f878c3bd38d",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/messaging/CreateMessageContent.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/messaging/CreateMessageDelivery.tsx",
 			"sha256": "6a3306a1310f496afc2646b46fb7fcb960c7c702f126f1f741b1b63ea5879281",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/messaging/CreateMessageDelivery.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/messaging/CreateMessageOverview.tsx",
 			"sha256": "d82b8bef0cf0504fc8945f259dfcf57a18066eb8c78b627702b01def94144d72",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/messaging/CreateMessageOverview.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/messaging/MessageDialog.tsx",
 			"sha256": "b197c2c6323f60ead58a31709ef938c821118190d12b29266dd25084a2d89a10",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessageDialog.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/messaging/MessageDialogWithEditor.tsx",
 			"sha256": "0ba1368065977bd44060c9eee6afb5cb30e53ede07dcf5c4724a57f52782aaf0",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessageDialogWithEditor.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/messaging/MessagePreviewDialog.tsx",
 			"sha256": "2cb906a9858504b19e342b0b1fe563e27833f2c7444c63a4bc613f7792846f6f",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessagePreviewDialog.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/messaging/MessagingEmptyState.tsx",
 			"sha256": "f436e347ee20fe4a0e3e9fee4a91db72a0676b4b874ed7cfce3f0cb4b334e2bc",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessagingEmptyState.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/messaging/MessagingTable.tsx",
 			"sha256": "681ca5e3d764c2b5382db6b3f92ee06f3485b7ca7d8e389f474419fd86cde41b",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessagingTable.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/messaging/MessagingTableColumns.tsx",
 			"sha256": "2cccd33a753e044a529242de72fa834b97b2e769cc9e7ebfecf3bfd03ede7c83",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/messaging/MessagingTableColumns.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/components/messaging/PublishConfirmDialog.tsx",
 			"sha256": "8a7f09d887accbc4943e8bf0bddc35f80d56d59f27cc3c8bfad21de27f00c3e7",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/messaging/PublishConfirmDialog.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -3733,10 +3632,8 @@
 		{
 			"source": "apps/dashboard/src/components/modules/InAppMessagesPage.tsx",
 			"sha256": "a20e51b1777e29e5b5de5f2f3ee1a63fcee3bd9c92f6f2f5fd857973f7641573",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/components/modules/InAppMessagesPage.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -3796,7 +3693,6 @@
 			"sha256": "04a62fb8bf9e67c9465c5ceaf7e51a72b0164439bb4ca64279505dfc860b6ccf",
 			"disposition": "owned-source",
 			"destinations": [
-				"packages/plugins/superboard-monetization/src/front/products/components/modules/ProductsPages.tsx",
 				"packages/plugins/superboard-monetization/src/front/billing/components/modules/ProductsPages.tsx"
 			],
 			"reachable_from_dashboard_routes": true
@@ -3831,10 +3727,8 @@
 		{
 			"source": "apps/dashboard/src/components/modules/SupportConfigurationPage.tsx",
 			"sha256": "45b8d4689f9545f1fb671042b13eb9581ac91f6d556562c7e7fa93646adf04e5",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-support/src/front/components/modules/SupportConfigurationPage.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": false
 		},
 		{
@@ -3930,10 +3824,8 @@
 		{
 			"source": "apps/dashboard/src/components/modules/__tests__/InAppMessagesPage.test.tsx",
 			"sha256": "b5da971b138ec247de7434813d225fcd6a6bd128f38502faaa9025c3cfb8c819",
-			"disposition": "transferred",
-			"destinations": [
-				"tests/checks/plugins/superboard-communication/front/marketing/components/modules/InAppMessagesPage.test.tsx"
-			],
+			"disposition": "replaced-test",
+			"reason": "Retired with its component by the operator UI simplification; the surviving page tests cover the behavior.",
 			"reachable_from_dashboard_routes": false
 		},
 		{
@@ -4374,10 +4266,8 @@
 		{
 			"source": "apps/dashboard/src/context/useLinkDialogContext.tsx",
 			"sha256": "7518ec9db0b1b075769ec1fb82d4d641bc5666e5e7181381cbf4e0d26fc6e294",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/context/useLinkDialogContext.tsx"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -4722,28 +4612,22 @@
 		{
 			"source": "apps/dashboard/src/hooks/__tests__/useMcpQueries.test.ts",
 			"sha256": "e024e462ae6cc217a8eed7a6e029a5900de6e95a17b62accca6c7b7d20daa7ba",
-			"disposition": "transferred",
-			"destinations": [
-				"tests/checks/plugins/superboard-core/front/mcp/hooks/useMcpQueries.test.ts"
-			],
+			"disposition": "replaced-test",
+			"reason": "Retired with its component by the operator UI simplification; the surviving page tests cover the behavior.",
 			"reachable_from_dashboard_routes": false
 		},
 		{
 			"source": "apps/dashboard/src/hooks/__tests__/useNotificationsMutations.test.ts",
 			"sha256": "55c8eac7d177641d2e04a3545460f3f7598c6fe6941bacc70b37a044cb704c05",
-			"disposition": "transferred",
-			"destinations": [
-				"tests/checks/plugins/superboard-communication/front/marketing/hooks/useNotificationsMutations.test.ts"
-			],
+			"disposition": "replaced-test",
+			"reason": "Retired with its component by the operator UI simplification; the surviving page tests cover the behavior.",
 			"reachable_from_dashboard_routes": false
 		},
 		{
 			"source": "apps/dashboard/src/hooks/__tests__/useNotificationsQueries.test.ts",
 			"sha256": "e8861eebf422f56c6cbed7dd1bd8d04f848235ec4a891b6f19b73812a7302a1c",
-			"disposition": "transferred",
-			"destinations": [
-				"tests/checks/plugins/superboard-communication/front/marketing/hooks/useNotificationsQueries.test.ts"
-			],
+			"disposition": "replaced-test",
+			"reason": "Retired with its component by the operator UI simplification; the surviving page tests cover the behavior.",
 			"reachable_from_dashboard_routes": false
 		},
 		{
@@ -4839,10 +4723,8 @@
 		{
 			"source": "apps/dashboard/src/hooks/mutations/useNotificationsMutations.ts",
 			"sha256": "8a98ca26ecd92009476ee2c2e367073de69ea55db6c02c79ce4fa75d85188c27",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/hooks/mutations/useNotificationsMutations.ts"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -4902,19 +4784,15 @@
 		{
 			"source": "apps/dashboard/src/hooks/queries/useMcpQueries.ts",
 			"sha256": "f964d458c25393e1edc0a9e56ad4dc65cfdc33e01a2f627fdab3c41601f24139",
-			"disposition": "transferred",
-			"destinations": [
-				"packages/plugins/superboard-core/src/front/mcp/hooks/queries/useMcpQueries.ts"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
 			"source": "apps/dashboard/src/hooks/queries/useNotificationsQueries.ts",
 			"sha256": "63f7ba0277885007c7ccc24948525a37671d540e38d6654c91a2c12452b2bf5b",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-communication/src/front/marketing/hooks/queries/useNotificationsQueries.ts"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -4945,10 +4823,8 @@
 		{
 			"source": "apps/dashboard/src/hooks/useCreateLinkForm.ts",
 			"sha256": "8c0cbbff00c03c47d079ec8fde1d72c495d8e8128775f9eb4ac6952b4080972a",
-			"disposition": "owned-source",
-			"destinations": [
-				"packages/plugins/superboard-analytics/src/front/hooks/useCreateLinkForm.ts"
-			],
+			"disposition": "unused-source",
+			"reason": "Retired by the operator UI simplification; no longer imported by the active native plugin sources.",
 			"reachable_from_dashboard_routes": true
 		},
 		{
@@ -4990,8 +4866,7 @@
 			"sha256": "aac018bd0dc4cce757a1e98cbbaab07f2ba97af9fbbaff64178dfbd844c1c125",
 			"disposition": "owned-source",
 			"destinations": [
-				"packages/plugins/superboard-acquisition/src/front/dynamic-links/hooks/useUrlState.ts",
-				"packages/plugins/superboard-communication/src/front/marketing/hooks/useUrlState.ts"
+				"packages/plugins/superboard-acquisition/src/front/dynamic-links/hooks/useUrlState.ts"
 			],
 			"reachable_from_dashboard_routes": true
 		},
@@ -6239,11 +6114,11 @@
 		"unused-template-asset": 5,
 		"site-public-asset": 3,
 		"removed-dashboard-shell": 66,
-		"owned-source": 365,
-		"transferred": 95,
-		"unused-source": 55,
+		"owned-source": 329,
+		"transferred": 88,
+		"unused-source": 93,
 		"native-route": 79,
-		"replaced-test": 13
+		"replaced-test": 18
 	},
 	"limitations": [
 		"This inventory records file ownership and explicit retired boundaries; it does not claim execution coverage of every historical behavior.",

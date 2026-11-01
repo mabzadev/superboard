@@ -84,6 +84,26 @@ export interface NativeFrontPresentationProjection {
 	messages: Record<string, string>;
 }
 
+/**
+ * True when a rendered page mounts a content renderer outside supbrd-core. Uses the same
+ * renderer lookup as the projection so the Front page can start the operator project
+ * scope request before the editorial configuration is loaded.
+ */
+export function renderedContentRequiresProjectScope(model: FrontPageModel): boolean {
+	const payload = model.release?.release.payload;
+	if (!payload || model.resolution.result !== "rendered") return false;
+	const renderers = new Map(
+		[...CORE_FRONT_RENDERER_DESCRIPTORS, ...payload.renderers].map((renderer) => [
+			renderer.renderer_id,
+			renderer,
+		]),
+	);
+	return model.resolution.renderer_ids.some((rendererId) => {
+		const renderer = renderers.get(rendererId);
+		return renderer !== undefined && renderer.plugin_id !== "supbrd-core";
+	});
+}
+
 export function projectNativeFrontPresentation(
 	model: FrontPageModel,
 	locale: UserFrontLocale = "en",

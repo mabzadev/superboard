@@ -1,12 +1,21 @@
 import { DEAD_LETTER_MAX_RECORDS, deadLetterPayload } from "@superboard/contracts/dead-letter";
 import type { EmailRenderContext } from "@superboard/contracts/email-studio";
 
+import { campaignVariant, type AbVariant } from "./ab-tests.js";
 import { freezeDeliveryMessage, recordTransportStatus } from "./delivery-records.js";
 import { isEmailTransportInProgress, sendSmtpMessage } from "./email-service";
 import { resolveStoredEmail, claimEmailFrequency } from "./email-studio.js";
+import { campaignCompletionHeld, insertPlannedDeliveries } from "./growth.js";
 import { advanceJourneyEnrollment } from "./journeys";
+import { renderDoubleOptInMessage } from "./optin";
+import { appendPreferenceFooter, preferenceFooterText, preferencesUrl } from "./preferences";
 import { decryptJson } from "./secrets";
-import { deliverySenders } from "./sender-profiles.js";
+import { refreshSegmentsByIds } from "./segments";
+import {
+	createDeliverySendersCache,
+	deliverySenders,
+	type DeliverySendersCache,
+} from "./sender-profiles.js";
 import { instrumentHtml, unsubscribeUrl } from "./tracking";
 import type { Env, MarketingQueueJob, SmtpPublicConfig, SmtpSecretConfig } from "./types";
 import { parseStoredJson } from "./validation";
@@ -20,6 +29,7 @@ type Delivery = {
 	recipient_name: string | null;
 	status: string;
 	attempt_count: number;
+	variant_id?: string | null;
 };
 
 type Campaign = {
@@ -33,6 +43,62 @@ type Campaign = {
 	tracking_enabled: number;
 	status: string;
 };
+
+/**
+ * Lookups shared by every message of one queue batch. Campaign rows, studio
+ * contexts and sender authority are stable while a campaign is being sent, so
+ * each is read at most once per batch; campaign completion is evaluated once
+ * per touched campaign after the batch instead of after every delivery.
+ */
+type QueueBatchCache = {
+	campaigns: Map<string, Promise<Campaign | null>>;
+	studioContexts: Map<string, Promise<{ context_json: string } | null>>;
+	variants: Map<string, Promise<AbVariant | null>>;
+	senders: DeliverySendersCache;
+	campaignsToFinish: Map<string, { projectId: number; campaignId: string }>;
+};
+
+function createQueueBatchCache(): QueueBatchCache {
+	return {
+		campaigns: new Map(),
+		studioContexts: new Map(),
+		variants: new Map(),
+		senders: createDeliverySendersCache(),
+		campaignsToFinish: new Map(),
+	};
+}
+
+function memoize<V>(map: Map<string, Promise<V>>, key: string, load: () => Promise<V>): Promise<V> {
+	const cached = map.get(key);
+	if (cached) return cached;
+	const pending = load();
+	map.set(key, pending);
+	void pending.catch(() => {
+		if (map.get(key) === pending) map.delete(key);
+	});
+	return pending;
+}
+
+function scheduleCampaignCompletion(cache: QueueBatchCache, projectId: number, campaignId: string) {
+	cache.campaignsToFinish.set(`${projectId}:${campaignId}`, { projectId, campaignId });
+}
+
+async function finishScheduledCampaigns(env: Env, cache: QueueBatchCache) {
+	for (const { projectId, campaignId } of cache.campaignsToFinish.values()) {
+		try {
+			await finishCampaignIfComplete(env, projectId, campaignId);
+		} catch (error) {
+			console.error(
+				JSON.stringify({
+					event: "marketing_campaign_finish_failed",
+					project_id: projectId,
+					campaign_id: campaignId,
+					error: error instanceof Error ? error.message : String(error),
+				}),
+			);
+		}
+	}
+}
 
 export async function handleMarketingQueue(batch: MessageBatch<unknown>, env: Env): Promise<void> {
 	if (batch.queue === env.DLQ_NAME) {
@@ -62,6 +128,19 @@ export async function handleMarketingQueue(batch: MessageBatch<unknown>, env: En
 		}
 		return;
 	}
+	const cache = createQueueBatchCache();
+	try {
+		await processMarketingMessages(batch, env, cache);
+	} finally {
+		await finishScheduledCampaigns(env, cache);
+	}
+}
+
+async function processMarketingMessages(
+	batch: MessageBatch<unknown>,
+	env: Env,
+	cache: QueueBatchCache,
+) {
 	for (const message of batch.messages) {
 		if (!isMarketingQueueJob(message.body)) {
 			console.error(
@@ -77,9 +156,9 @@ export async function handleMarketingQueue(batch: MessageBatch<unknown>, env: En
 			if (message.body.type === "marketing.campaign.dispatch")
 				await dispatchCampaign(env, message.body);
 			else if (message.body.type === "marketing.email.deliver")
-				await deliverEmail(env, message.body, message.attempts);
+				await deliverEmail(env, message.body, message.attempts, cache);
 			else if (message.body.type === "marketing.optin.deliver")
-				await deliverOptin(env, message.body);
+				await deliverOptin(env, message.body, cache);
 			else await advanceJourneyEnrollment(env, message.body);
 			message.ack();
 		} catch (error) {
@@ -93,7 +172,13 @@ export async function handleMarketingQueue(batch: MessageBatch<unknown>, env: En
 				}),
 			);
 			if (message.body.type === "marketing.email.deliver" && message.attempts >= 5) {
-				await markDeliveryFailed(env, message.body.projectId, message.body.deliveryId, error);
+				await markDeliveryFailed(
+					env,
+					message.body.projectId,
+					message.body.deliveryId,
+					error,
+					cache,
+				);
 			}
 			if (message.body.type === "marketing.optin.deliver") {
 				await env.DB.prepare(
@@ -186,11 +271,12 @@ export async function quarantineMarketingDeadLetter(
 async function deliverOptin(
 	env: Env,
 	job: Extract<MarketingQueueJob, { type: "marketing.optin.deliver" }>,
+	cache: QueueBatchCache,
 ) {
 	const subscriber = await env.DB.prepare(
 		`
     SELECT id, email, name, attributes_json FROM subscribers
-    WHERE id = ? AND project_id = ? AND status = 'enabled' AND consent_status = 'pending'
+    WHERE id = ? AND project_id = ? AND status IN ('enabled', 'unsubscribed') AND consent_status = 'pending'
       AND optin_token_expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
   `,
 	)
@@ -200,7 +286,7 @@ async function deliverOptin(
 		await completeOutbox(env.DB, job.projectId, job.outboxId);
 		return;
 	}
-	const profile = (await deliverySenders(env, job.projectId))[0];
+	const profile = (await deliverySenders(env, job.projectId, null, cache.senders))[0];
 	if (!profile) throw new Error("No production-ready SMTP profile is configured for double opt-in");
 	const publicConfig = parseStoredJson<SmtpPublicConfig>(
 		profile.public_config_json,
@@ -211,12 +297,13 @@ async function deliverOptin(
 			? { password: null }
 			: await decryptJson<SmtpSecretConfig>(env.SMTP_ENCRYPTION_KEY, profile.encrypted_config);
 	const attributes = parseStoredJson<Record<string, unknown>>(subscriber.attributes_json, {});
-	const french = String(attributes.locale ?? attributes.communication_locale ?? "").startsWith(
-		"fr",
-	);
-	const confirmationTitle = french ? "Confirmez votre inscription" : "Confirm your subscription";
-	const confirmationAction = french ? "Confirmer l’inscription" : "Confirm subscription";
 	const confirmationUrl = `${env.PUBLIC_API_URL}/v1/communication/marketing/opt-in/${job.token}`;
+	const confirmation = await renderDoubleOptInMessage(
+		env.DB,
+		job.projectId,
+		{ name: subscriber.name, locale: attributes.locale ?? attributes.communication_locale },
+		confirmationUrl,
+	);
 	await sendSmtpMessage(env, {
 		idempotencyKey: `marketing.optin:${job.projectId}:${job.outboxId}:${profile.id}`,
 		projectId: job.projectId,
@@ -227,9 +314,9 @@ async function deliverOptin(
 		secret,
 		message: {
 			to: subscriber.email,
-			subject: confirmationTitle,
-			text: `${confirmationTitle}: ${confirmationUrl}`,
-			html: `<p>${confirmationTitle}</p><p><a href="${confirmationUrl}">${confirmationAction}</a></p>`,
+			subject: confirmation.subject,
+			text: confirmation.text,
+			html: confirmation.html,
 		},
 	});
 	await env.DB.batch([
@@ -280,12 +367,17 @@ export async function dispatchCampaign(
   `,
 	)
 		.bind(job.campaignId, job.projectId)
-		.first<Campaign & { list_ids_json: string; segment_ids_json: string }>();
+		.first<
+			Campaign & { list_ids_json: string; segment_ids_json: string; started_at: string | null }
+		>();
 	if (!campaign) return { dispatched: false, reason: "not_found" as const };
 	if (!["scheduled", "running"].includes(campaign.status))
 		return { dispatched: false, reason: `status:${String(campaign.status)}` };
 	const listIds = parseStoredJson<string[]>(campaign.list_ids_json, []);
 	const segmentIds = parseStoredJson<string[]>(campaign.segment_ids_json, []);
+	// Segments are dynamic: recompute them once when the send starts.
+	if (segmentIds.length && !campaign.started_at)
+		await refreshSegmentsByIds(env.DB, job.projectId, segmentIds);
 	const targetClauses: string[] = [];
 	const bindings: unknown[] = [job.projectId];
 	if (listIds.length) {
@@ -300,21 +392,27 @@ export async function dispatchCampaign(
         AND membership.segment_id IN (${segmentIds.map(() => "?").join(",")}))`);
 		bindings.push(...segmentIds);
 	}
-	await env.DB.prepare(
-		`
-    INSERT INTO email_deliveries
-      (id, project_id, campaign_id, subscriber_id, recipient_email, recipient_name, status)
-    SELECT lower(hex(randomblob(16))), subscriber.project_id, ?, subscriber.id, subscriber.email, subscriber.name, 'pending'
-    FROM subscribers subscriber
+	const audience = {
+		sql: `FROM subscribers subscriber
     WHERE subscriber.project_id = ? AND subscriber.status = 'enabled' AND subscriber.consent_status = 'confirmed'
       AND NOT EXISTS (SELECT 1 FROM suppressions suppression
         WHERE suppression.project_id = subscriber.project_id AND suppression.email = subscriber.email)
-      ${targetClauses.length ? `AND (${targetClauses.join(" OR ")})` : ""}
+      ${targetClauses.length ? `AND (${targetClauses.join(" OR ")})` : ""}`,
+		bindings,
+	};
+	// A/B tests and recipient time-zone sends create their own deliveries.
+	if (!(await insertPlannedDeliveries(env.DB, job.projectId, job.campaignId, audience)))
+		await env.DB.prepare(
+			`
+    INSERT INTO email_deliveries
+      (id, project_id, campaign_id, subscriber_id, recipient_email, recipient_name, status)
+    SELECT lower(hex(randomblob(16))), subscriber.project_id, ?, subscriber.id, subscriber.email, subscriber.name, 'pending'
+    ${audience.sql}
     ON CONFLICT(campaign_id, subscriber_id) DO NOTHING
   `,
-	)
-		.bind(job.campaignId, ...bindings)
-		.run();
+		)
+			.bind(job.campaignId, ...bindings)
+			.run();
 	await env.DB.prepare(
 		`
     UPDATE campaigns SET status = 'running', started_at = COALESCE(started_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -372,6 +470,7 @@ async function deliverEmail(
 	env: Env,
 	job: Extract<MarketingQueueJob, { type: "marketing.email.deliver" }>,
 	queueAttempt: number,
+	cache: QueueBatchCache,
 ) {
 	const delivery = await env.DB.prepare(
 		`
@@ -385,13 +484,15 @@ async function deliverEmail(
 		["sent", "delivered", "bounced", "complained", "unsubscribed"].includes(delivery.status)
 	)
 		return;
-	const campaign = await env.DB.prepare(
-		`
+	const campaign = await memoize(cache.campaigns, `${job.projectId}:${delivery.campaign_id}`, () =>
+		env.DB.prepare(
+			`
     SELECT c.*, s.document_json AS studio_document_json FROM campaigns c LEFT JOIN email_studio_documents s ON s.project_id=c.project_id AND s.resource_type='campaign' AND s.resource_id=c.id WHERE c.id = ? AND c.project_id = ?
   `,
-	)
-		.bind(delivery.campaign_id, job.projectId)
-		.first<Campaign>();
+		)
+			.bind(delivery.campaign_id, job.projectId)
+			.first<Campaign>(),
+	);
 	if (!campaign || campaign.status === "cancelled" || campaign.status === "archived") return;
 	if (campaign.status === "paused") {
 		await env.MARKETING_QUEUE.send(job, { delaySeconds: 60 });
@@ -426,10 +527,15 @@ async function deliverEmail(
 		)
 			.bind(delivery.id)
 			.run();
-		await finishCampaignIfComplete(env, job.projectId, campaign.id);
+		scheduleCampaignCompletion(cache, job.projectId, campaign.id);
 		return;
 	}
-	const profiles = await deliverySenders(env, job.projectId, campaign.smtp_profile_id);
+	const profiles = await deliverySenders(
+		env,
+		job.projectId,
+		campaign.smtp_profile_id,
+		cache.senders,
+	);
 	if (!profiles.length) throw new Error("No production-ready SMTP profile is configured");
 	const attributes = parseStoredJson<Record<string, unknown>>(subscriber.attributes_json, {});
 	const replacements = {
@@ -437,11 +543,17 @@ async function deliverEmail(
 		name: delivery.recipient_name || "",
 		...attributes,
 	};
-	const studioContext = await env.DB.prepare(
-		"SELECT context_json FROM email_studio_contexts WHERE project_id=? AND campaign_id=?",
-	)
-		.bind(job.projectId, campaign.id)
-		.first<{ context_json: string }>();
+	const studioContext = await memoize(
+		cache.studioContexts,
+		`${job.projectId}:${campaign.id}`,
+		async () =>
+			env.DB.prepare(
+				"SELECT context_json FROM email_studio_contexts WHERE project_id=? AND campaign_id=?",
+			)
+				.bind(job.projectId, campaign.id)
+				.first<{ context_json: string }>(),
+	);
+	// Parsed per delivery so no message can observe another one's mutations.
 	const context = studioContext
 		? (JSON.parse(studioContext.context_json) as EmailRenderContext)
 		: {};
@@ -452,18 +564,30 @@ async function deliverEmail(
 		campaignId: campaign.id,
 	};
 	const unsubscribe = await unsubscribeUrl(env, trackingPayload);
-	const localized = await resolveStoredEmail(env.DB, job.projectId, campaign.id, delivery.id, {
-		...context,
-		profile: replacements,
-		unsubscribe_url: unsubscribe,
-	});
+	const variant = delivery.variant_id
+		? await memoize(cache.variants, `${job.projectId}:${campaign.id}:${delivery.variant_id}`, () =>
+				campaignVariant(env.DB, job.projectId, campaign.id, String(delivery.variant_id)),
+			)
+		: null;
+	const localized = await resolveStoredEmail(
+		env.DB,
+		job.projectId,
+		variant?.template_id ?? campaign.id,
+		delivery.id,
+		{
+			...context,
+			profile: replacements,
+			unsubscribe_url: unsubscribe,
+		},
+		variant?.template_id ? "template" : "campaign",
+	);
 	if (localized?.status === "skipped") {
 		await env.DB.prepare(
 			"UPDATE email_deliveries SET status='suppressed', last_error='translation_unavailable' WHERE project_id=? AND id=?",
 		)
 			.bind(job.projectId, delivery.id)
 			.run();
-		await finishCampaignIfComplete(env, job.projectId, campaign.id);
+		scheduleCampaignCompletion(cache, job.projectId, campaign.id);
 		return;
 	}
 	if (
@@ -475,10 +599,17 @@ async function deliverEmail(
 		)
 			.bind(job.projectId, delivery.id)
 			.run();
-		await finishCampaignIfComplete(env, job.projectId, campaign.id);
+		scheduleCampaignCompletion(cache, job.projectId, campaign.id);
 		return;
 	}
 	const marketingMessage = !localized || ["campaign", "lifecycle"].includes(localized.purpose);
+	const footerLocale =
+		localized?.status === "ready"
+			? localized.locale
+			: (attributes.marketing_locale ?? attributes.locale);
+	const preferences = marketingMessage
+		? await preferencesUrl(env, job.projectId, delivery.subscriber_id)
+		: null;
 	let lastError: unknown;
 	for (const profile of profiles) {
 		try {
@@ -510,15 +641,20 @@ async function deliverEmail(
 					delivery.id,
 					async () => ({
 						to: delivery.recipient_email,
-						subject:
-							localized?.status === "ready"
+						subject: variant?.subject
+							? personalize(variant.subject, replacements)
+							: localized?.status === "ready"
 								? localized.subject
 								: personalize(campaign.subject, replacements),
-						html:
+						html: withPreferenceFooter(
 							personalizedHtml && campaign.tracking_enabled
 								? await instrumentHtml(env, trackingPayload, personalizedHtml)
 								: personalizedHtml,
-						text: `${localized?.status === "ready" ? localized.text : campaign.content_text ? personalize(campaign.content_text, replacements) : ""}${marketingMessage ? `\n\n${localized?.status === "ready" && localized.locale.startsWith("fr") ? "Se désabonner" : "Unsubscribe"}: ${unsubscribe}` : ""}`,
+							preferences,
+							personalizedHtml?.includes(unsubscribe) ? null : unsubscribe,
+							footerLocale,
+						),
+						text: `${localized?.status === "ready" ? localized.text : campaign.content_text ? personalize(campaign.content_text, replacements) : ""}${marketingMessage ? `\n\n${localized?.status === "ready" && localized.locale.startsWith("fr") ? "Se désabonner" : "Unsubscribe"}: ${unsubscribe}` : ""}${preferences ? `\n${preferenceFooterText(preferences, footerLocale)}` : ""}`,
 						headers: {
 							"X-SuperBoard-Campaign": campaign.id,
 							"X-SuperBoard-Delivery": delivery.id,
@@ -571,7 +707,7 @@ async function deliverEmail(
 						: "INSERT INTO smtp_attempts (id,project_id,delivery_id,smtp_profile_id,attempt_number,success) VALUES (?,?,?,?,?,1)",
 				).bind(crypto.randomUUID(), job.projectId, delivery.id, profile.id, queueAttempt),
 			]);
-			await finishCampaignIfComplete(env, job.projectId, campaign.id);
+			scheduleCampaignCompletion(cache, job.projectId, campaign.id);
 			return;
 		} catch (error) {
 			if (isEmailTransportInProgress(error)) throw error;
@@ -595,7 +731,13 @@ async function deliverEmail(
 	throw lastError instanceof Error ? lastError : new Error("Every SMTP profile failed");
 }
 
-async function markDeliveryFailed(env: Env, projectId: number, deliveryId: string, error: unknown) {
+async function markDeliveryFailed(
+	env: Env,
+	projectId: number,
+	deliveryId: string,
+	error: unknown,
+	cache: QueueBatchCache,
+) {
 	const delivery = await env.DB.prepare(
 		"SELECT campaign_id, subscriber_id FROM email_deliveries WHERE id = ? AND project_id = ?",
 	)
@@ -619,7 +761,7 @@ async function markDeliveryFailed(env: Env, projectId: number, deliveryId: strin
 			JSON.stringify({ error: message }),
 		),
 	]);
-	await finishCampaignIfComplete(env, projectId, delivery.campaign_id);
+	scheduleCampaignCompletion(cache, projectId, delivery.campaign_id);
 }
 
 async function finishCampaignIfComplete(env: Env, projectId: number, campaignId: string) {
@@ -631,6 +773,7 @@ async function finishCampaignIfComplete(env: Env, projectId: number, campaignId:
 		.bind(projectId, campaignId)
 		.first<{ pending: number }>();
 	if (Number(count?.pending || 0) > 0) return;
+	if (await campaignCompletionHeld(env.DB, projectId, campaignId)) return;
 	await env.DB.prepare(
 		`
     UPDATE campaigns SET status = CASE WHEN status = 'running' THEN 'finished' ELSE status END,
@@ -641,6 +784,23 @@ async function finishCampaignIfComplete(env: Env, projectId: number, campaignId:
 	)
 		.bind(campaignId, campaignId, projectId)
 		.run();
+}
+
+/** Marketing HTML always carries a link to the hosted preference center. */
+function withPreferenceFooter(
+	html: string | null,
+	preferences: string | null,
+	missingUnsubscribe: string | null,
+	locale: unknown,
+) {
+	return html && preferences
+		? appendPreferenceFooter(html, {
+				preferencesUrl: preferences,
+				unsubscribeUrl: missingUnsubscribe ?? "",
+				includeUnsubscribe: missingUnsubscribe !== null,
+				locale,
+			})
+		: html;
 }
 
 function personalize(content: string, values: Record<string, unknown>) {

@@ -1,4 +1,4 @@
-import RedirectRulesPageContent from "../components/dynamic_links/redirect-rules/RedirectRulesPageContent.js";
+import DynamicLinksWorkspace from "../components/dynamic_links/DynamicLinksWorkspace.js";
 export default function View() {
-	return <RedirectRulesPageContent />;
+	return <DynamicLinksWorkspace tab="settings" section="routing" />;
 }

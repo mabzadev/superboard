@@ -1,7 +1,6 @@
 "use client";
 
 import { showSuccessNotification } from "@superboard/front-ui/lib/Notifications.js";
-import { SectionNavigation } from "@superboard/front-ui/section-navigation.js";
 import { Alert, AlertDescription, AlertTitle } from "@superboard/front-ui/ui/alert.js";
 import { Badge } from "@superboard/front-ui/ui/badge.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
@@ -55,22 +54,16 @@ export default function LibrariesPageContent() {
 	};
 
 	return (
-		<div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-6">
+		<div className="flex w-full flex-col gap-6">
 			<div className="flex flex-wrap items-start justify-between gap-4">
-				<div>
-					<h1 className="text-2xl font-semibold">Libraries</h1>
-					<p className="text-sm text-muted-foreground">
-						Git-owned SDK versions, immutable release references and reusable FlutterFlow custom
-						code.
-					</p>
-				</div>
+				<p className="text-sm text-muted-foreground">
+					Git-owned SDK versions, immutable release references and reusable FlutterFlow custom code.
+				</p>
 				<Button variant="outline" onClick={() => void load()} disabled={loading}>
 					<RefreshCw className={loading ? "animate-spin" : ""} />
 					Refresh
 				</Button>
 			</div>
-
-			<SectionNavigation />
 
 			{error && (
 				<Alert variant="destructive">

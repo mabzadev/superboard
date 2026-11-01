@@ -9,11 +9,7 @@ import { ACTIVE, ARCHIVED } from "@superboard/front-ui/constants/OptionsConstant
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { useTableParams } from "@superboard/front-ui/hooks/useTableParams.js";
 import { showErrorNotification } from "@superboard/front-ui/lib/Notifications.js";
-import {
-	ModulePage,
-	EmptyProject,
-	moduleErrorMessage,
-} from "@superboard/front-ui/modules/ModulePage.js";
+import { EmptyProject, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import { useRouter } from "@superboard/front-ui/navigation";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Checkbox } from "@superboard/front-ui/ui/checkbox.js";
@@ -30,6 +26,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@superboard/front-ui/ui
 import { ChevronDown, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { AcquisitionPage } from "../../../../AcquisitionPage.js";
+import { useFlowI18n } from "../../../../flows/features/flows/i18n.js";
 import {
 	createLinkCampaign,
 	getLinkCampaignAnalytics,
@@ -71,6 +69,7 @@ function campaignMetric(row: CampaignAnalyticsRow, sortKey: string) {
 
 export default function CampaignsPageContent() {
 	const router = useRouter();
+	const { tr } = useFlowI18n();
 	const { selectedProject } = useProjectSelection();
 	const {
 		page,
@@ -182,9 +181,11 @@ export default function CampaignsPageContent() {
 	};
 
 	return (
-		<ModulePage
-			title="Campaigns"
-			description="Measure every acquisition campaign from link view to referred customer and revenue."
+		<AcquisitionPage
+			title={tr("Campaigns")}
+			description={tr(
+				"Measure every acquisition campaign from link view to referred customer and revenue.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -195,19 +196,19 @@ export default function CampaignsPageContent() {
 						<div className="flex min-w-[240px] flex-1 flex-wrap gap-2">
 							<Input
 								className="w-full min-w-[180px] max-w-[280px]"
-								placeholder="Search campaigns"
+								placeholder={tr("Search campaigns")}
 								value={searchTerm}
 								onChange={(event) => setSearchTerm(event.currentTarget.value)}
 							/>
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button variant="outline" className="whitespace-nowrap">
-										{status === ACTIVE ? "Active" : "Archived"}
+										{tr(status === ACTIVE ? "Active" : "Archived")}
 										<ChevronDown className="size-3.5" />
 									</Button>
 								</PopoverTrigger>
 								<PopoverContent className="w-48 space-y-2 p-2">
-									<p className="text-sm text-muted-foreground">Status</p>
+									<p className="text-sm text-muted-foreground">{tr("Status")}</p>
 									{[
 										{ label: "Active", value: ACTIVE },
 										{ label: "Archived", value: ARCHIVED },
@@ -220,7 +221,7 @@ export default function CampaignsPageContent() {
 												checked={status === option.value}
 												onCheckedChange={() => setStatus(option.value)}
 											/>
-											{option.label}
+											{tr(option.label)}
 										</label>
 									))}
 								</PopoverContent>
@@ -230,8 +231,8 @@ export default function CampaignsPageContent() {
 								platformAdsOptions={platformsFilterList}
 								selectedAdsPlatform={platform}
 								setSelectedAdsPlatforms={setPlatform}
-								selectListTitle="Platforms"
-								title="Platforms"
+								selectListTitle={tr("Platforms")}
+								title={tr("Platforms")}
 							/>
 						</div>
 						<div className="flex flex-wrap gap-2">
@@ -242,7 +243,7 @@ export default function CampaignsPageContent() {
 							/>
 							<Button onClick={() => setCreateOpen(true)}>
 								<Plus className="size-4" />
-								Create campaign
+								{tr("Create campaign")}
 							</Button>
 						</div>
 					</div>
@@ -274,14 +275,16 @@ export default function CampaignsPageContent() {
 			<Dialog open={createOpen} onOpenChange={setCreateOpen}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Create acquisition campaign</DialogTitle>
+						<DialogTitle>{tr("Create acquisition campaign")}</DialogTitle>
 						<DialogDescription>
-							Group dynamic links and measure their performance independently from email campaigns.
+							{tr(
+								"Group dynamic links and measure their performance independently from email campaigns.",
+							)}
 						</DialogDescription>
 					</DialogHeader>
 					<Input
 						autoFocus
-						placeholder="Summer launch"
+						placeholder={tr("Summer launch")}
 						value={campaignName}
 						onChange={(event) => setCampaignName(event.currentTarget.value)}
 						onKeyDown={(event) => {
@@ -293,18 +296,18 @@ export default function CampaignsPageContent() {
 					/>
 					<DialogFooter>
 						<Button variant="outline" onClick={() => setCreateOpen(false)}>
-							Cancel
+							{tr("Cancel")}
 						</Button>
 						<Button
 							disabled={!campaignName.trim() || creating}
 							onClick={() => void createCampaign()}
 						>
 							<Plus className="size-4" />
-							{creating ? "Creating…" : "Create campaign"}
+							{tr(creating ? "Creating…" : "Create campaign")}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-		</ModulePage>
+		</AcquisitionPage>
 	);
 }

@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:superboard_flutter/src/support/backoff.dart';
 import 'package:superboard_flutter/superboard_support.dart';
 
 void main() {
@@ -76,6 +77,85 @@ void main() {
     expect(conversation.displayId, 1001);
     expect(conversation.assignedTeamId, 'team-1');
     expect(conversation.customAttributes, {'plan': 'plus'});
+  });
+
+  test('retries transient failures with a stable idempotency key', () async {
+    final keys = <String?>[];
+    var calls = 0;
+    final client = SuperBoardSupportClient(
+      baseUri: Uri.parse('https://api.example/api/v1/support-client'),
+      projectId: 11,
+      identityToken: 'signed-token',
+      retryDelays: const [Duration.zero, Duration.zero],
+      httpClient: MockClient((request) async {
+        calls += 1;
+        keys.add(request.headers['idempotency-key']);
+        if (calls == 1) throw http.ClientException('offline');
+        if (calls == 2) return http.Response('{}', 503);
+        return http.Response(
+          jsonEncode({
+            'data': {
+              'id': 'conversation-1',
+              'status': 'open',
+              'unread_count': 0,
+            },
+          }),
+          201,
+        );
+      }),
+    );
+
+    final conversation = await client.createConversation(
+      clientConversationId: 'client-conversation-1',
+    );
+
+    expect(conversation.id, 'conversation-1');
+    expect(calls, 3);
+    expect(keys.toSet(), {'client-conversation-1'});
+  });
+
+  test('does not retry non-transient statuses and bounds attempts', () async {
+    var calls = 0;
+    final client = SuperBoardSupportClient(
+      baseUri: Uri.parse('https://api.example/api/v1/support-client'),
+      projectId: 11,
+      identityToken: 'signed-token',
+      retryDelays: const [Duration.zero, Duration.zero],
+      httpClient: MockClient((_) async {
+        calls += 1;
+        return http.Response(
+          '{"error":{"code":"invalid","message":"Invalid"}}',
+          calls == 1 ? 422 : 429,
+        );
+      }),
+    );
+
+    await expectLater(
+      client.conversations(),
+      throwsA(isA<SuperBoardSupportException>()),
+    );
+    expect(calls, 1);
+    await expectLater(
+      client.conversations(),
+      throwsA(
+        isA<SuperBoardSupportException>().having(
+          (error) => error.statusCode,
+          'statusCode',
+          429,
+        ),
+      ),
+    );
+    expect(calls, 4);
+  });
+
+  test('jittered retry delays stay within half and the full delay', () {
+    const base = Duration(seconds: 2);
+    for (var index = 0; index < 50; index++) {
+      final delay = supportRetryDelayWithJitter(base);
+      expect(delay, greaterThanOrEqualTo(const Duration(seconds: 1)));
+      expect(delay, lessThanOrEqualTo(base));
+    }
+    expect(supportRetryDelayWithJitter(Duration.zero), Duration.zero);
   });
 
   test('parses canonical nested errors and legacy flat errors', () async {

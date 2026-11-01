@@ -19,4 +19,5 @@ export const views = {
 	"superboard.communication_statistics": () => import("./views/superboard.marketing_statistics.js"),
 	"superboard.communication_settings": () => import("./views/superboard.marketing_settings.js"),
 	"superboard.communication_journeys": () => import("./views/superboard.marketing_journeys.js"),
+	"superboard.communication_audience": () => import("./views/superboard.marketing_audience.js"),
 };

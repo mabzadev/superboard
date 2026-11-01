@@ -1,4 +1,4 @@
-import SocialPreviewPageContent from "../components/dynamic_links/social-preview/SocialPreviewPageContent.js";
+import DynamicLinksWorkspace from "../components/dynamic_links/DynamicLinksWorkspace.js";
 export default function View() {
-	return <SocialPreviewPageContent />;
+	return <DynamicLinksWorkspace tab="settings" section="preview" />;
 }

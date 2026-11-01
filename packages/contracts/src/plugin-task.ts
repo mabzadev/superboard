@@ -220,6 +220,7 @@ export async function runPluginTask<T>(
 		resume_event?: string;
 	},
 	work: (checkpoint: () => Promise<void>, signal: AbortSignal) => Promise<T>,
+	options: { release?: (finish: () => Promise<void>) => Promise<void> | void } = {},
 ): Promise<{ ran: true; value: T } | { ran: false }> {
 	if (!pluginTaskManagementRequired(env))
 		return { ran: true, value: await work(async () => undefined, new AbortController().signal) };
@@ -252,15 +253,18 @@ export async function runPluginTask<T>(
 		signal.throwIfAborted();
 		await sendPluginTaskCommand(env, { ...command, action: "check" });
 	};
+	const finish = async () => {
+		await sendPluginTaskCommand(env, { ...command, action: "finish" });
+	};
+	// A successful claim already proves a running lease, so work starts without an extra check.
 	try {
-		await checkpoint();
 		return {
 			ran: true,
 			value: await taskContext.run({ checkpoint, signal }, () => work(checkpoint, signal)),
 		};
 	} finally {
 		// Completion is reported only after work settles; a deadline is not proof that execution stopped.
-		await sendPluginTaskCommand(env, { ...command, action: "finish" });
+		await (options.release ? options.release(finish) : finish());
 	}
 }
 
@@ -285,6 +289,8 @@ export function withPluginTaskLifecycle<TEnv extends PluginTaskBindings, TBody>(
 							const path = new URL(request.url).pathname;
 							if (!managed || path === "/health" || path === "/internal/v1/health")
 								return await fetchHandler(request, env, context);
+							const tracked = trackWaitUntil(context);
+							// Background work keeps the lease until it settles without delaying the response.
 							const result = await runPluginTask(
 								env,
 								pluginId,
@@ -293,8 +299,30 @@ export function withPluginTaskLifecycle<TEnv extends PluginTaskBindings, TBody>(
 									task_id: `worker-http:${crypto.randomUUID()}`,
 									duration_ms: 60000,
 								},
-								async () =>
-									withTaskWaitUntil(context, async (scoped) => fetchHandler(request, env, scoped)),
+								async () => fetchHandler(request, env, tracked.context),
+								{
+									release: (finish) => {
+										if (!tracked.pending()) return finish();
+										context.waitUntil(
+											tracked
+												.settle()
+												.then(async (failures) => {
+													for (const error of failures)
+														console.error("[plugin-task] background work failed", {
+															plugin_id: pluginId,
+															error,
+														});
+													await finish();
+												})
+												.catch((error: unknown) => {
+													console.error("[plugin-task] lease finish failed", {
+														plugin_id: pluginId,
+														error,
+													});
+												}),
+										);
+									},
+								},
 							);
 							return result.ran
 								? result.value
@@ -323,8 +351,7 @@ export function withPluginTaskLifecycle<TEnv extends PluginTaskBindings, TBody>(
 								kind: "scheduled",
 								task_id: `scheduled:${controller.cron}:${controller.scheduledTime}`,
 							},
-							async (checkpoint) => {
-								await checkpoint();
+							async () => {
 								await withTaskWaitUntil(ctx, (context) =>
 									handler.scheduled!(controller, env, context),
 								);
@@ -336,39 +363,51 @@ export function withPluginTaskLifecycle<TEnv extends PluginTaskBindings, TBody>(
 		...(handler.queue
 			? {
 					queue: async (batch: MessageBatch<TBody>, env: TEnv, ctx: ExecutionContext) => {
-						for (const message of batch.messages) {
-							const retention = Object.entries(env).some(
-								([key, value]) => key.endsWith("DLQ_NAME") && value === batch.queue,
+						if (!batch.messages.length) return;
+						const retention = Object.entries(env).some(
+							([key, value]) => key.endsWith("DLQ_NAME") && value === batch.queue,
+						);
+						const failed = (message: Message<TBody>, error: unknown) => {
+							console.error("[plugin-task] queue admission or execution failed", {
+								plugin_id: pluginId,
+								message_id: message.id,
+								error,
+							});
+							message.retry({ delaySeconds: 60 });
+						};
+						// One lease covers the batch; each message keeps its own ack and retry outcome.
+						try {
+							const result = await runPluginTask(
+								env,
+								pluginId,
+								{
+									kind: retention ? "retention" : "queue",
+									task_id: `queue:${batch.queue}:${batch.messages[0]?.id}:${batch.messages.length}`,
+								},
+								async (_checkpoint, signal) => {
+									for (const message of batch.messages) {
+										const single: MessageBatch<TBody> = {
+											queue: batch.queue,
+											metadata: batch.metadata,
+											messages: [message],
+											ackAll: () => message.ack(),
+											retryAll: (options) => message.retry(options),
+										};
+										try {
+											signal.throwIfAborted();
+											await withTaskWaitUntil(ctx, (context) =>
+												handler.queue?.(single, env, context),
+											);
+										} catch (error) {
+											failed(message, error);
+										}
+									}
+								},
 							);
-							const single: MessageBatch<TBody> = {
-								queue: batch.queue,
-								metadata: batch.metadata,
-								messages: [message],
-								ackAll: () => message.ack(),
-								retryAll: (options) => message.retry(options),
-							};
-							try {
-								const result = await runPluginTask(
-									env,
-									pluginId,
-									{
-										kind: retention ? "retention" : "queue",
-										task_id: `queue:${batch.queue}:${message.id}`,
-									},
-									async (checkpoint) => {
-										await checkpoint();
-										await withTaskWaitUntil(ctx, (context) => handler.queue!(single, env, context));
-									},
-								);
-								if (!result.ran) message.retry({ delaySeconds: 60 });
-							} catch (error) {
-								console.error("[plugin-task] queue admission or execution failed", {
-									plugin_id: pluginId,
-									message_id: message.id,
-									error,
-								});
-								message.retry({ delaySeconds: 60 });
-							}
+							if (!result.ran)
+								for (const message of batch.messages) message.retry({ delaySeconds: 60 });
+						} catch (error) {
+							for (const message of batch.messages) failed(message, error);
 						}
 					},
 				}
@@ -382,8 +421,7 @@ export function withPluginTaskLifecycle<TEnv extends PluginTaskBindings, TBody>(
 							env,
 							pluginId,
 							{ kind: "tail", task_id: `tail:${crypto.randomUUID()}` },
-							async (checkpoint) => {
-								await checkpoint();
+							async () => {
 								await withTaskWaitUntil(ctx, (context) => handler.tail!(events, env, context));
 							},
 						);
@@ -393,10 +431,11 @@ export function withPluginTaskLifecycle<TEnv extends PluginTaskBindings, TBody>(
 	};
 }
 
-export async function withTaskWaitUntil<T>(
-	ctx: ExecutionContext,
-	work: (context: ExecutionContext) => T | Promise<T>,
-): Promise<T> {
+export function trackWaitUntil(ctx: ExecutionContext): {
+	context: ExecutionContext;
+	pending: () => number;
+	settle: () => Promise<unknown[]>;
+} {
 	const pending: Promise<unknown>[] = [];
 	const context = new Proxy(ctx, {
 		get(target, property) {
@@ -409,19 +448,36 @@ export async function withTaskWaitUntil<T>(
 			return typeof value === "function" ? value.bind(target) : value;
 		},
 	});
+	return {
+		context,
+		pending: () => pending.length,
+		settle: async () => {
+			const failures: unknown[] = [];
+			for (let index = 0; index < pending.length;) {
+				const current = pending.slice(index);
+				index = pending.length;
+				const results = await Promise.allSettled(current);
+				for (const result of results)
+					if (result.status === "rejected") failures.push(result.reason);
+			}
+			return failures;
+		},
+	};
+}
+
+export async function withTaskWaitUntil<T>(
+	ctx: ExecutionContext,
+	work: (context: ExecutionContext) => T | Promise<T>,
+): Promise<T> {
+	const tracked = trackWaitUntil(ctx);
 	const failures: unknown[] = [];
 	let outcome: { value: T } | undefined;
 	try {
-		outcome = { value: await work(context) };
+		outcome = { value: await work(tracked.context) };
 	} catch (error) {
 		failures.push(error);
 	}
-	for (let index = 0; index < pending.length;) {
-		const current = pending.slice(index);
-		index = pending.length;
-		const results = await Promise.allSettled(current);
-		for (const result of results) if (result.status === "rejected") failures.push(result.reason);
-	}
+	failures.push(...(await tracked.settle()));
 	if (failures.length) throw failures[0];
 	if (!outcome) throw new Error("PLUGIN_TASK_RESULT_MISSING");
 	return outcome.value;

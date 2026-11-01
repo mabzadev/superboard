@@ -128,8 +128,14 @@ class SuperBoardApplicationSessionManager {
   final DateTime Function() _clock;
   SuperBoardApplicationSession? _session;
   Future<SuperBoardApplicationSession?>? _restoring;
+  Future<SuperBoardApplicationSession>? _refreshing;
+  String _refreshingToken = '';
 
   SuperBoardApplicationSession? get currentSession => _session;
+
+  /// Legacy keys that actually differ from [storageKey], deduplicated.
+  Iterable<String> get _distinctLegacyKeys =>
+      legacyStorageKeys.where((key) => key != storageKey).toSet();
 
   static String scopedStorageKey({
     required Uri apiBaseUri,
@@ -147,8 +153,11 @@ class SuperBoardApplicationSessionManager {
   }
 
   /// Previous secure-storage key retained during the v2 -> v3 rollback window.
-  /// v3 mirrors rotations to this secure key until the compatibility window is
-  /// closed in a later major release.
+  ///
+  /// The v2 and v3 key formats are identical, so this currently returns the
+  /// same value as [scopedStorageKey]. The session manager ignores legacy keys
+  /// equal to [storageKey], so passing it in [legacyStorageKeys] never causes
+  /// duplicate secure-storage reads, writes or deletes.
   static String legacyScopedStorageKey({
     required Uri apiBaseUri,
     required String projectKey,
@@ -178,7 +187,7 @@ class SuperBoardApplicationSessionManager {
     var sourceKey = storageKey;
     var serialized = await storage.read(key: sourceKey);
     if (serialized == null || serialized.trim().isEmpty) {
-      for (final legacyKey in legacyStorageKeys) {
+      for (final legacyKey in _distinctLegacyKeys) {
         serialized = await storage.read(key: legacyKey);
         if (serialized != null && serialized.trim().isNotEmpty) {
           sourceKey = legacyKey;
@@ -250,19 +259,34 @@ class SuperBoardApplicationSessionManager {
     String installationId,
   ) async => _adopt(await client.signInAnonymous(installationId));
 
-  Future<SuperBoardApplicationSession> refresh([
-    String refreshToken = '',
-  ]) async {
+  /// Rotates the application session. Concurrent callers refreshing the same
+  /// refresh token share one request: refresh tokens are single-use, so a
+  /// second parallel rotation would be rejected and could revoke the session.
+  Future<SuperBoardApplicationSession> refresh([String refreshToken = '']) {
     final token = refreshToken.trim().isNotEmpty
         ? refreshToken.trim()
         : _session?.refreshToken ?? '';
     if (token.isEmpty) {
-      throw const SuperBoardApplicationException(
-        'refresh_token_missing',
-        'No secure application refresh token is available.',
+      return Future.error(
+        const SuperBoardApplicationException(
+          'refresh_token_missing',
+          'No secure application refresh token is available.',
+        ),
       );
     }
-    return _adopt(await client.refresh(token));
+    final inFlight = _refreshing;
+    if (inFlight != null && _refreshingToken == token) return inFlight;
+    late final Future<SuperBoardApplicationSession> operation;
+    operation = Future.sync(() async => _adopt(await client.refresh(token)))
+        .whenComplete(() {
+          if (identical(_refreshing, operation)) {
+            _refreshing = null;
+            _refreshingToken = '';
+          }
+        });
+    _refreshing = operation;
+    _refreshingToken = token;
+    return operation;
   }
 
   Future<Map<String, dynamic>> logout() async {
@@ -289,7 +313,7 @@ class SuperBoardApplicationSessionManager {
     _session = null;
     client.setApplicationAccessToken('');
     await storage.delete(key: storageKey);
-    for (final legacyKey in legacyStorageKeys) {
+    for (final legacyKey in _distinctLegacyKeys) {
       await storage.delete(key: legacyKey);
     }
   }
@@ -301,9 +325,10 @@ class SuperBoardApplicationSessionManager {
       response,
       _clock().toUtc(),
     );
-    await storage.write(key: storageKey, value: jsonEncode(session.toJson()));
-    for (final legacyKey in legacyStorageKeys) {
-      await storage.write(key: legacyKey, value: jsonEncode(session.toJson()));
+    final serialized = jsonEncode(session.toJson());
+    await storage.write(key: storageKey, value: serialized);
+    for (final legacyKey in _distinctLegacyKeys) {
+      await storage.write(key: legacyKey, value: serialized);
     }
     _session = session;
     client.setApplicationAccessToken(session.accessToken);

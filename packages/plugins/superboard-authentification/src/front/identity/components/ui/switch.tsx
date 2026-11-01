@@ -1,1 +1,1 @@
-export { Switch } from "@superboard/front-ui/ui";
+export { Switch } from "@superboard/front-ui/ui/switch.js";

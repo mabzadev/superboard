@@ -1,5 +1,6 @@
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
 import { ModulePage, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
+import { useSearchParams } from "@superboard/front-ui/navigation";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Checkbox } from "@superboard/front-ui/ui/checkbox.js";
 import {
@@ -46,16 +47,43 @@ const initial = (kind: Draft["kind"], offeringId = ""): Draft => ({
 	product_ids: [],
 });
 const titles = { products: "Products", offerings: "Offerings", entitlements: "Entitlements" };
+const sections: Section[] = ["products", "offerings", "entitlements"];
 
-export default function MobileCatalogPage({ section }: { section: Section }) {
+/** Products, Offerings and Entitlements are tabs of one Catalog page kept in `?tab=`; the
+ * former /monetization/offerings and /monetization/entitlements routes open their tab. */
+function CatalogTabs({ section }: { section: Section }) {
+	const { t, locale } = useMonetizationI18n();
+	return (
+		<nav
+			aria-label={t("Catalog")}
+			className="bg-muted text-muted-foreground flex w-fit flex-wrap items-center gap-1 rounded-lg p-[3px]"
+		>
+			{sections.map((tab) => (
+				<a
+					key={tab}
+					href={`/monetization/products?${tab === "products" ? "" : `tab=${tab}&`}lang=${locale}`}
+					aria-current={tab === section ? "page" : undefined}
+					className="text-foreground rounded-md px-3 py-1 text-sm font-medium aria-[current=page]:bg-background aria-[current=page]:shadow-sm"
+				>
+					{t(titles[tab])}
+				</a>
+			))}
+		</nav>
+	);
+}
+
+export default function MobileCatalogPage({ section: routeSection }: { section: Section }) {
+	const requested = useSearchParams().get("tab");
+	const section = sections.find((tab) => tab === requested) ?? routeSection;
 	const { selectedProject } = useProjectSelection();
 	const { t } = useMonetizationI18n();
 	if (!selectedProject)
 		return (
 			<ModulePage
-				title={t(titles[section])}
+				title={t("Catalog")}
 				description={t("Configure the products, offers and access used by your mobile app.")}
 			>
+				<CatalogTabs section={section} />
 				<p role="status">{t("Loading settings…")}</p>
 			</ModulePage>
 		);
@@ -170,10 +198,11 @@ function Catalog({ projectId, section }: { projectId: string; section: Section }
 			.map((link) => link.product_id) ?? [];
 	return (
 		<ModulePage
-			title={t(titles[section])}
+			title={t("Catalog")}
 			description={t("Configure the products, offers and access used by your mobile app.")}
 			error={null}
 		>
+			<CatalogTabs section={section} />
 			{error && (
 				<div role="alert" className="space-y-2">
 					<p>{error}</p>

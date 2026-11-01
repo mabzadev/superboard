@@ -40,7 +40,7 @@ import {
 import { formatCurrencyFromCents } from "@superboard/front-ui/utils/formatCurrency.js";
 import { numberFormatter } from "@superboard/front-ui/utils/numberFormatter.js";
 import type { AccessorKeyColumnDef } from "@tanstack/react-table";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -53,7 +53,6 @@ import {
 } from "../../api/app/appService.js";
 import { useAudienceI18n } from "../../audience-i18n.js";
 import { useAuthenticationI18n } from "../../AuthenticationTabs.js";
-import { checkSortDirection } from "../dynamic_links/links/LinksTableColumns.js";
 
 type AudienceRow = {
 	id: string;
@@ -153,6 +152,15 @@ export function referralToAudienceRow(referral: AppReferral): AudienceRow {
 		revenue: numeric(values, "total_revenue", "revenue_cents"),
 		date: referral.converted_at || referral.created_at,
 	};
+}
+
+function checkSortDirection(sortKey: string, selectedSort: SortType) {
+	if (sortKey !== selectedSort.sortKey) return <ChevronsUpDown className="h-4 w-4" />;
+	return selectedSort.ascending ? (
+		<ChevronUp className="h-4 w-4" />
+	) : (
+		<ChevronDown className="h-4 w-4" />
+	);
 }
 
 function header(
@@ -287,18 +295,13 @@ function rowSort(left: AudienceRow, right: AudienceRow, sort: SortType) {
 	return sort.ascending ? comparison : -comparison;
 }
 
-export function CustomersAnalyticsPage({
-	mode = "profiles",
-}: { mode?: "profiles" | "devices" } = {}) {
+/** SDK profiles and their devices: platform, installs and activity in one table. */
+export function CustomersAnalyticsPage() {
 	const i18n = useAuthenticationI18n();
 	const { selectedProject } = useProjectSelection();
 	const table = useTableParams({ defaultSortKey: "date" });
 	const [customers, setCustomers] = useState<AppCustomer[]>([]);
-	const [selectedColumns, setSelectedColumns] = useState(
-		mode === "devices"
-			? ["id", "sdk_identifier", "platform", "installs", "reinstalls", "date"]
-			: customerColumns,
-	);
+	const [selectedColumns, setSelectedColumns] = useState(customerColumns);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -340,8 +343,8 @@ export function CustomersAnalyticsPage({
 
 	return (
 		<AudiencePage
-			title={i18n._(mode)}
-			description={i18n._(mode === "devices" ? "deviceDescription" : "profileDescription")}
+			title={i18n._("tab:devices")}
+			description={i18n._("devicesDescription")}
 			selected={Boolean(selectedProject)}
 			error={error}
 			rows={rows}

@@ -153,7 +153,10 @@ export async function getLinks(
 	projectRef: string,
 	search = "",
 	active?: boolean,
-	filters: Pick<LinkStatisticsFilters, "from" | "to" | "platform"> = {},
+	filters: Pick<LinkStatisticsFilters, "from" | "to" | "platform"> & {
+		limit?: number;
+		sort_by?: "views" | "opens" | "installs" | "name" | "created_at";
+	} = {},
 ) {
 	return unwrap<DynamicLink[]>(
 		await GET(
@@ -165,6 +168,8 @@ export async function getLinks(
 					from: filters.from,
 					to: filters.to,
 					platform: filters.platform,
+					limit: filters.limit ? String(filters.limit) : undefined,
+					sort_by: filters.sort_by,
 				}),
 			),
 		),

@@ -1,12 +1,12 @@
 import { useFrontContext, type PluginViewProps } from "@superboard/front-ui/context";
 import { useProjectSelection } from "@superboard/front-ui/context/useProjectSelection.js";
-import { Component, lazy, Suspense, useMemo, type ReactNode } from "react";
+import { Component, lazy, memo, Suspense, useMemo, type ReactNode } from "react";
 
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
-import { loadPluginClientView } from "../lib/plugin-client-catalog.js";
+import { preloadPluginClientView } from "../lib/plugin-client-catalog.js";
 import { useFrontRuntimeState } from "./FrontRuntimeProviders.js";
 
-export function PluginFrontView({
+export const PluginFrontView = memo(function PluginFrontView({
 	projection,
 	message,
 }: {
@@ -16,28 +16,31 @@ export function PluginFrontView({
 	const mount = projection.content_mounts[0];
 	const pluginId = mount?.renderer.plugin_id ?? "";
 	const routeId = mount?.route_id ?? "";
+	const locked =
+		Boolean(mount) && projection.plugin_lock.some(({ plugin_id }) => plugin_id === pluginId);
 	const { projectScope: scope } = useFrontContext();
 	const { scopeError, requiresScope } = useFrontRuntimeState();
 	const { ready, selectedProject } = useProjectSelection();
-	const View = useMemo(
-		() =>
-			lazy(async () => {
-				const { Page, Providers } = await loadPluginClientView(pluginId, routeId);
-				return {
-					default: (props: PluginViewProps) =>
-						Providers ? (
-							<Providers {...props}>
-								<Page {...props} />
-							</Providers>
-						) : (
+	// The import starts on the first render, in parallel with the operator scope request,
+	// instead of waiting for the scope before the lazy view first renders.
+	const View = useMemo(() => {
+		if (!locked) return null;
+		const view = preloadPluginClientView(pluginId, routeId);
+		return lazy(async () => {
+			const { Page, Providers } = await view;
+			return {
+				default: (props: PluginViewProps) =>
+					Providers ? (
+						<Providers {...props}>
 							<Page {...props} />
-						),
-				};
-			}),
-		[pluginId, routeId],
-	);
-	if (!mount || !projection.plugin_lock.some(({ plugin_id }) => plugin_id === pluginId))
-		return <p role="alert">{message("site.front.not_found")}</p>;
+						</Providers>
+					) : (
+						<Page {...props} />
+					),
+			};
+		});
+	}, [locked, pluginId, routeId]);
+	if (!mount || !View) return <p role="alert">{message("site.front.not_found")}</p>;
 	if (scopeError)
 		return (
 			<section role="alert">
@@ -60,7 +63,7 @@ export function PluginFrontView({
 			</Suspense>
 		</ViewBoundary>
 	);
-}
+});
 
 class ViewBoundary extends Component<
 	{ message(id: string): string; children: ReactNode },

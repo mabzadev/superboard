@@ -80,6 +80,7 @@ import authRoutes from "./routes/auth";
 import automationRoutes from "./routes/automation";
 import coreCollection, { collectSdkTelemetry } from "./routes/core-collection.js";
 import diagnosticsRoutes from "./routes/diagnostics";
+import { emailPublicRoutes } from "./routes/email-public.js";
 import { filesAdmin, filesAdminRoute } from "./routes/files-admin.js";
 import { gatewayAdmin, GATEWAY_ADMIN_PREFIX } from "./routes/gateway-admin.js";
 import iapRoutes from "./routes/iap";
@@ -658,6 +659,56 @@ app
 	.defineRoute({
 		pluginId: "superboard-marketing",
 		surface: "sdk",
+		access: "sdk-key",
+		exposures: [
+			{
+				surface: "sdk",
+				path: "/v1/communication/marketing/preferences/:token",
+				aliases: ["/api/v1/marketing/preferences/:token"],
+			},
+		],
+	})
+	.all("/api/v1/marketing/preferences/:token", (c) => {
+		if (!["GET", "POST"].includes(c.req.method)) return c.notFound();
+		return proxyPublicMarketing(c, `/public/v1/preferences/${c.req.param("token")}`);
+	});
+app
+	.defineRoute({
+		pluginId: "superboard-marketing",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [
+			{
+				surface: "sdk",
+				path: "/v1/communication/marketing/forms/:formId",
+				aliases: ["/api/v1/marketing/forms/:formId"],
+			},
+		],
+	})
+	.all("/api/v1/marketing/forms/:formId", (c) => {
+		if (!["GET", "POST"].includes(c.req.method)) return c.notFound();
+		return proxyPublicMarketing(c, `/public/v1/forms/${c.req.param("formId")}`);
+	});
+app
+	.defineRoute({
+		pluginId: "superboard-marketing",
+		surface: "sdk",
+		access: "sdk-key",
+		exposures: [
+			{
+				surface: "sdk",
+				path: "/v1/communication/marketing/forms/:formId/embed.js",
+				aliases: ["/api/v1/marketing/forms/:formId/embed.js"],
+			},
+		],
+	})
+	.get("/api/v1/marketing/forms/:formId/embed.js", (c) =>
+		proxyPublicMarketing(c, `/public/v1/forms/${c.req.param("formId")}/embed.js`),
+	);
+app
+	.defineRoute({
+		pluginId: "superboard-marketing",
+		surface: "sdk",
 		access: "provider-signature",
 		exposures: [
 			{
@@ -684,6 +735,7 @@ app
 		],
 	})
 	.post("/api/v1/email/aws-ses/events", (c) => proxyAwsSesEvent(c.env, c.req.raw));
+app.route("/", emailPublicRoutes);
 app
 	.defineRoute({
 		pluginId: "superboard-support",
@@ -1454,7 +1506,7 @@ export default withRouteManifest(
 				return;
 			}
 			ctx.waitUntil(
-				runMaintenance(env)
+				runMaintenance(env, 3, { incremental: true })
 					.then((summary) => {
 						console.log(JSON.stringify({ event: "maintenance_completed", summary }));
 					})

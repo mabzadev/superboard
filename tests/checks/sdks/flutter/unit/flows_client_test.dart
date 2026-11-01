@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -53,7 +54,7 @@ void main() {
       });
       expect(
         requests.single.headers['x-flows-version'],
-        'superboard-flutter@3.0.0',
+        'superboard-flutter@${SuperBoardFlowsClient.sdkVersion}',
       );
       expect(
         requests.single.headers['x-superboard-flows-sdk-key'],
@@ -524,6 +525,63 @@ void main() {
     );
   });
 
+  test('coalesces realtime persistence and flushes it on dispose', () async {
+    final storage = _CountingFlowStorage();
+    final socket = _FakeWebSocketChannel();
+    final client = SuperBoardFlowsClient(
+      apiUrl: 'https://board.example/api/v1/flows',
+      projectId: 'project_1',
+      environment: 'production',
+      userId: 'user_1',
+      storage: storage,
+      httpClient: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'blocks': [_blockJson(id: 'card_1')],
+          }),
+          200,
+        ),
+      ),
+      webSocketConnector: (_) => socket,
+    );
+    await client.start();
+    final writesAfterStart = storage.writes;
+
+    for (var index = 0; index < 20; index++) {
+      socket.addServerMessage(
+        jsonEncode({
+          'exitedBlockIds': const <String>[],
+          'updatedBlocks': [_blockJson(id: 'card_$index')],
+        }),
+      );
+    }
+    await Future<void>.delayed(Duration.zero);
+    expect(storage.writes, writesAfterStart, reason: 'writes are debounced');
+
+    await client.dispose();
+    expect(storage.writes, writesAfterStart + 1);
+    expect(storage.state?.blocks.map((block) => block.id), contains('card_19'));
+  });
+
+  test('reports the package version in x-flows-version', () {
+    var directory = Directory.current.absolute;
+    while (!File('${directory.path}/sdks/flutter/pubspec.yaml').existsSync()) {
+      final parent = directory.parent;
+      if (parent.path == directory.path) {
+        throw StateError('sdks/flutter/pubspec.yaml was not found');
+      }
+      directory = parent;
+    }
+    final pubspec = File(
+      '${directory.path}/sdks/flutter/pubspec.yaml',
+    ).readAsStringSync();
+    final version = RegExp(
+      r'^version:\s*(\S+)\s*$',
+      multiLine: true,
+    ).firstMatch(pubspec)?.group(1);
+    expect(SuperBoardFlowsClient.sdkVersion, version);
+  });
+
   test('persists native tour progress across client restarts', () async {
     final storage = SuperBoardMemoryFlowStorage();
     final tour = _tourBlockJson();
@@ -659,4 +717,14 @@ class _FakeWebSocketSink implements WebSocketSink {
 
   @override
   Future<void> get done => _outgoing.done;
+}
+
+class _CountingFlowStorage extends SuperBoardMemoryFlowStorage {
+  int writes = 0;
+
+  @override
+  Future<void> write(SuperBoardFlowPersistedState value) {
+    writes += 1;
+    return super.write(value);
+  }
 }

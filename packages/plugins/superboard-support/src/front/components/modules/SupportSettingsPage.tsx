@@ -10,7 +10,7 @@ import {
 	ModulePage,
 	moduleErrorMessage,
 } from "@superboard/front-ui/modules/ModulePage.js";
-import { PluginConfigurationTab } from "@superboard/front-ui/plugin-configuration-tab";
+import { PluginDiagnosticsLink } from "@superboard/front-ui/plugin-diagnostics-link";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@superboard/front-ui/ui/card.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
@@ -57,7 +57,6 @@ import {
 import { useSupportI18n } from "../../i18n.js";
 import { SupportDetail } from "../support/SupportModulePage.js";
 import { AccessNotice, SupportEmpty, SupportMetric, SupportStatus } from "../support/SupportUi.js";
-import SupportAutomationsPage from "./SupportAutomationsPage.js";
 import SupportCaptainPage from "./SupportCaptainPage.js";
 import SupportContactsPage from "./SupportContactsPage.js";
 import SupportIntegrationsPage from "./SupportIntegrationsPage.js";
@@ -67,7 +66,6 @@ import SupportWorkforcePage from "./SupportWorkforcePage.js";
 const sharedSettings = {
 	workforce: { label: "Agents and teams", Component: SupportWorkforcePage },
 	contacts: { label: "Contacts", Component: () => <SupportContactsPage embedded /> },
-	automations: { label: "Shared automations", Component: SupportAutomationsPage },
 	integrations: { label: "Integrations", Component: SupportIntegrationsPage },
 	assistant: { label: "AI assistant", Component: SupportCaptainPage },
 };
@@ -111,8 +109,9 @@ export default function SupportSettingsPage() {
 	const [activeTab, setActiveTab] = useState(() => {
 		const requested =
 			typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab");
+		// Plugin health moved to the Plugins page, so old `?tab=configuration` links open General.
 		return requested &&
-			(["general", "notifications", "operations", "configuration"].includes(requested) ||
+			(["general", "notifications", "operations"].includes(requested) ||
 				Object.hasOwn(sharedSettings, requested))
 			? requested
 			: "general";
@@ -312,6 +311,14 @@ export default function SupportSettingsPage() {
 	};
 
 	useEffect(() => {
+		if (new URLSearchParams(window.location.search).get("tab") === "automations") {
+			const url = new URL(window.location.href);
+			url.pathname = "/support/inbox";
+			url.searchParams.delete("tab");
+			url.searchParams.set("section", "automations");
+			window.location.replace(url);
+			return;
+		}
 		if (window.location.pathname === "/support/configuration") {
 			const url = new URL(window.location.href);
 			url.pathname = "/support/settings";
@@ -344,12 +351,7 @@ export default function SupportSettingsPage() {
 							{t(label)}
 						</TabsTrigger>
 					))}
-					<TabsTrigger value="configuration">{t("Configuration")}</TabsTrigger>
 				</TabsList>
-
-				<TabsContent className="space-y-6" value="configuration">
-					<PluginConfigurationTab locale={locale} />
-				</TabsContent>
 
 				{!selectedProject ? (
 					<div className="pt-4">
@@ -458,6 +460,11 @@ export default function SupportSettingsPage() {
 									</Card>
 									<details className="rounded-md border p-4">
 										<summary className="cursor-pointer text-sm">{t("Advanced settings")}</summary>
+										<p className="mt-3 text-xs text-muted-foreground">
+											{t(
+												"Feature flags are a JSON object of lowercase keys set to true or false. Change them only when instructed.",
+											)}
+										</p>
 										<Field label={t("Feature flags")}>
 											<textarea
 												aria-label={t("Feature flags")}
@@ -718,6 +725,7 @@ export default function SupportSettingsPage() {
 					</>
 				)}
 			</Tabs>
+			<PluginDiagnosticsLink locale={locale} />
 		</ModulePage>
 	);
 }

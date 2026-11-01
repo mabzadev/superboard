@@ -3,6 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
+	"sideEffects": ["**/*.css"],
 	"exports": {
 		"./ui": "./src/ui.ts",
 		"./ui/*.js": "./src/shared/components/ui/*.tsx",
@@ -58,6 +59,8 @@
 		"./experience-flow-canvas.js": "./src/experience-flow-canvas.tsx",
 		"./plugin-configuration-tab": "./src/plugin-configuration-tab.tsx",
 		"./plugin-configuration-tab.js": "./src/plugin-configuration-tab.tsx",
+		"./plugin-diagnostics-link": "./src/plugin-diagnostics-link.tsx",
+		"./plugin-diagnostics-link.js": "./src/plugin-diagnostics-link.tsx",
 		"./*": "./src/*.tsx",
 		"./live-query": "./src/live-query.ts",
 		"./live-query.js": "./src/live-query.ts",

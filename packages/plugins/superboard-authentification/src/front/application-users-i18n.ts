@@ -72,6 +72,26 @@ const french: Record<string, string> = {
 		"Sessions : {total} au total · {active} actives · {revoked} révoquées · {expired} expirées",
 	"Identity is available. Purchase details are temporarily unavailable: {message}":
 		"L’identité est disponible. Les détails des achats sont temporairement indisponibles : {message}",
+	"User sheet": "Fiche utilisateur",
+	Identity: "Identité",
+	"Purchases & entitlements": "Achats et droits",
+	Messages: "Messages",
+	Support: "Support",
+	Events: "Événements",
+	"Email and marketing consent, lists and recent deliveries for {email}.":
+		"Consentement e-mail et marketing, listes et envois récents pour {email}.",
+	"This account has no email address, so it cannot receive email.":
+		"Ce compte n’a pas d’adresse e-mail et ne peut donc pas recevoir d’e-mails.",
+	"View in Communication › Audience": "Voir dans Communication › Audience",
+	"Communication is not enabled.": "La communication n’est pas activée.",
+	"Authentication emails and SMS": "E-mails et SMS d’authentification",
+	"Conversations with {contact}.": "Conversations avec {contact}.",
+	"View in Support": "Voir dans le Support",
+	"Support is not enabled.": "Le support n’est pas activé.",
+	"Recent analytics events sent by the SDK for this user.":
+		"Événements analytiques récents envoyés par le SDK pour cet utilisateur.",
+	"View events": "Voir les événements",
+	"Analytics is not enabled.": "L’analytique n’est pas activée.",
 };
 
 export function useApplicationUsersI18n() {

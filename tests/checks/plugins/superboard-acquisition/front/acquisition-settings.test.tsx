@@ -7,10 +7,6 @@ vi.mock("@superboard/front-ui/section-navigation.js", () => ({
 	SectionNavigation: () => <div data-testid="section-nav" />,
 }));
 
-vi.mock("@superboard/front-ui/plugin-configuration-tab", () => ({
-	PluginConfigurationTab: () => <div data-testid="plugin-config-tab">Plugin configuration</div>,
-}));
-
 vi.mock(
 	"../../../../../packages/plugins/superboard-acquisition/src/front/flows/features/flows/FlowsContext.js",
 	() => ({
@@ -70,12 +66,12 @@ describe("AcquisitionSettingsPage", () => {
 		window.history.replaceState(null, "", "/acquisition/settings?tab=localization&lang=fr");
 		const view = render(<AcquisitionSettingsPage />);
 		await waitFor(() => expect(screen.getByDisplayValue("Global")).toBeInTheDocument());
-		await userEvent.click(screen.getByRole("tab", { name: "Configuration" }));
-		expect(new URLSearchParams(window.location.search).get("tab")).toBe("configuration");
+		await userEvent.click(screen.getByRole("tab", { name: "SDK" }));
+		expect(new URLSearchParams(window.location.search).get("tab")).toBe("sdk");
 		expect(new URLSearchParams(window.location.search).get("lang")).toBe("fr");
 		view.unmount();
 		render(<AcquisitionSettingsPage />);
-		expect(screen.getByTestId("plugin-config-tab")).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "SDK" })).toHaveAttribute("aria-selected", "true");
 	});
 
 	it("does not invent a production SDK environment when the list is empty", async () => {
@@ -100,7 +96,13 @@ describe("AcquisitionSettingsPage", () => {
 		expect(screen.getByRole("tab", { name: "Environments" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "SDK" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Localization" })).toBeInTheDocument();
-		expect(screen.getByRole("tab", { name: "Configuration" })).toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Configuration" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Link defaults" })).not.toBeInTheDocument();
+		expect(screen.getAllByRole("tab")).toHaveLength(3);
+		expect(screen.getByRole("link", { name: "Open in Plugins" })).toHaveAttribute(
+			"href",
+			expect.stringMatching(/^\/_emdash\/admin\/plugins-manager\/[^/]+\/configuration$/),
+		);
 
 		await waitFor(() => {
 			expect(
@@ -110,15 +112,14 @@ describe("AcquisitionSettingsPage", () => {
 		});
 	});
 
-	it("switches to configuration tab and opens the active View configuration", async () => {
+	it("opens legacy configuration links on the default tab", () => {
+		window.history.replaceState(null, "", "/acquisition/settings?tab=configuration");
 		render(<AcquisitionSettingsPage />);
 
-		const configBtn = screen.getByRole("tab", { name: "Configuration" });
-		await userEvent.click(configBtn);
-
-		await waitFor(() => {
-			expect(screen.getByTestId("plugin-config-tab")).toHaveTextContent("Plugin configuration");
-		});
+		expect(screen.getByRole("tab", { name: "Environments" })).toHaveAttribute(
+			"aria-selected",
+			"true",
+		);
 	});
 
 	it("switches to SDK and Localization tabs", async () => {
@@ -161,7 +162,8 @@ describe("AcquisitionSettingsPage", () => {
 		expect(screen.getByRole("tab", { name: "Environnements" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "SDK" })).toBeInTheDocument();
 		expect(screen.getByRole("tab", { name: "Localisation" })).toBeInTheDocument();
-		expect(screen.getByRole("tab", { name: "Configuration" })).toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Configuration" })).not.toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Ouvrir dans Plugins" })).toBeInTheDocument();
 	});
 
 	it("renders standalone Environments, Localization, and Sdk settings pages", () => {

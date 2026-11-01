@@ -45,7 +45,7 @@ import {
 	useAcquisitionSelection,
 	useItemExitGuard,
 } from "../../../AcquisitionPage.js";
-import { ExperienceFunctions } from "../../../ExperienceFunctions.js";
+import { ExperienceFunctionLinks } from "../../../ExperienceFunctions.js";
 import { useFlowI18n } from "../../../flows/features/flows/i18n.js";
 import {
 	createOnboarding,
@@ -87,7 +87,6 @@ export function OnboardingsPage() {
 	const { itemId, selectItem } = useAcquisitionSelection();
 	const { tr } = useFlowI18n();
 	const { t, locale } = useExperienceI18n();
-	const [workflowDirty, setWorkflowDirty] = useState(false);
 	const [studioTab, setStudioTab] = useState("Design");
 	const [compared, setCompared] = useState<string[]>([]);
 	const { selectedProject } = useProjectSelection();
@@ -131,11 +130,10 @@ export function OnboardingsPage() {
 	});
 
 	useItemExitGuard(
-		Boolean(itemId) && (draftStatus !== "Saved" || workflowDirty),
+		Boolean(itemId) && draftStatus !== "Saved",
 		tr("Discard unsaved changes?"),
 		() => {
 			setSelected(undefined);
-			setWorkflowDirty(false);
 		},
 	);
 
@@ -173,7 +171,6 @@ export function OnboardingsPage() {
 					setError(null);
 					setSelected(item);
 					setDocumentValid(true);
-					setWorkflowDirty(false);
 					setMetadata({ display_name: item.display_name, description: item.description ?? "" });
 					setVersions(result);
 					const latest = result[0];
@@ -281,13 +278,11 @@ export function OnboardingsPage() {
 	};
 
 	const leaveItem = async () => {
-		if (workflowDirty && !window.confirm(tr("Discard unsaved changes?"))) return;
 		if (draftStatus !== "Saved" && (!documentValid || !(await save()))) {
 			if (!window.confirm(tr("Discard unsaved changes?"))) return;
 		}
 		editorRequest.current += 1;
 		setSelected(undefined);
-		setWorkflowDirty(false);
 		selectItem("");
 	};
 
@@ -316,7 +311,8 @@ export function OnboardingsPage() {
 			) : (
 				<div className="grid gap-6">
 					{!itemId && (
-						<div>
+						<div className="space-y-3">
+							<ExperienceFunctionLinks />
 							<Card className="border-kumo-line bg-kumo-base">
 								<CardContent className="space-y-3">
 									<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
@@ -417,15 +413,7 @@ export function OnboardingsPage() {
 					{itemId && selected?.id === itemId && (
 						<div className="space-y-6">
 							<nav className="flex flex-wrap gap-2">
-								{[
-									"Design",
-									"Delivery",
-									"Versions",
-									"Results",
-									"Workflows",
-									"Launchpad",
-									"Components",
-								].map((tab) => (
+								{["Design", "Delivery", "Versions", "Results"].map((tab) => (
 									<Button
 										key={tab}
 										variant={studioTab === tab ? "secondary" : "ghost"}
@@ -662,7 +650,6 @@ export function OnboardingsPage() {
 									)}
 								</CardContent>
 							</Card>
-							<ExperienceFunctions section={studioTab} onDirtyChange={setWorkflowDirty} />
 							{studioTab === "Results" && (
 								<OnboardingStatisticsPage key={selected.id} itemVersions={versions} />
 							)}

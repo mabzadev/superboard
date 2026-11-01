@@ -2,14 +2,15 @@ import DeleteConfirm from "@superboard/front-ui/common/delete-confirm.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { AlertTriangle, Trash2 } from "lucide-react";
 
+import { useSettingsI18n } from "../../i18n.js";
+
 const DangerZoneSection = ({ handleRemoveProject }: { handleRemoveProject: () => void }) => {
+	const { t } = useSettingsI18n();
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-col gap-0.5">
-				<span className="text-sm font-semibold text-destructive">Danger Zone</span>
-				<span className="text-xs text-muted-foreground">
-					Irreversible actions that permanently affect this project.
-				</span>
+				<h2 className="text-sm font-semibold text-destructive">{t("danger.title")}</h2>
+				<span className="text-xs text-muted-foreground">{t("danger.description")}</span>
 			</div>
 
 			<div className="rounded-xl border border-destructive/20 overflow-hidden">
@@ -18,9 +19,9 @@ const DangerZoneSection = ({ handleRemoveProject }: { handleRemoveProject: () =>
 						<AlertTriangle className="h-5 w-5 text-destructive" />
 					</div>
 					<div className="flex flex-col gap-0.5 flex-1 min-w-0">
-						<span className="text-sm font-semibold">Delete this project</span>
+						<span className="text-sm font-semibold">{t("danger.deleteTitle")}</span>
 						<span className="text-xs text-muted-foreground leading-snug">
-							Permanently remove all links, data, and shared resources. This cannot be undone.
+							{t("danger.deleteDescription")}
 						</span>
 					</div>
 					<DeleteConfirm onConfirm={handleRemoveProject}>
@@ -30,7 +31,7 @@ const DangerZoneSection = ({ handleRemoveProject }: { handleRemoveProject: () =>
 							className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive shrink-0"
 						>
 							<Trash2 className="h-3.5 w-3.5" />
-							Delete Project
+							{t("danger.delete")}
 						</Button>
 					</DeleteConfirm>
 				</div>

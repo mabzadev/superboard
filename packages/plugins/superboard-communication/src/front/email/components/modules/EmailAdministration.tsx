@@ -14,44 +14,41 @@ import {
 } from "@superboard/front-ui/ui/card.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { Switch } from "@superboard/front-ui/ui/switch.js";
-import { Cloud, Mail, Plus, RefreshCw, RotateCcw, Send, Settings, Trash2 } from "lucide-react";
+import { Cloud, Mail, Plus, RotateCcw, Send, Settings, ShieldCheck, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { useStudioI18n } from "../../../marketing/studio/i18n.js";
 import {
-	createProviderWebhook,
 	discardEmailDeadLetter,
-	deleteProviderWebhook,
 	deleteSmtpSettings,
 	getDeliveryOutbox,
 	getProviderEvents,
 	getEmailDeadLetters,
-	getProviderWebhooks,
 	getSmtpSettings,
 	replayEmailDeadLetter,
 	retryDeliveryOutbox,
 	saveSmtpSettings,
 	testSmtpSettings,
-	verifySmtpDomain,
 	type DeliveryOutboxItem,
 	type EmailDeadLetter,
-	type ProviderWebhook,
 	type SmtpSettings,
 } from "../../api/email/emailService.js";
+import { useEmailI18n } from "./email-i18n.js";
+import { EmailDeveloperSettings } from "./EmailDeveloperSettings.js";
+import { SenderDomainAuthentication } from "./SenderDomainAuthentication.js";
 
 const selectClass = "w-full rounded-md border bg-background px-3 py-2 text-sm";
 
 export function EmailAdministration({
 	section = "operations",
 }: {
-	section?: "delivery" | "webhooks" | "operations";
+	section?: "delivery" | "operations";
 }) {
-	const { t } = useStudioI18n();
+	const { t } = useEmailI18n();
 	const { selectedProject } = useProjectSelection();
+	const [authenticating, setAuthenticating] = useState<string | null>(null);
 	const [profiles, setProfiles] = useState<SmtpSettings[]>([]);
 	const [deliveryProvider, setDeliveryProvider] = useState<"smtp" | "aws-ses">("smtp");
 	const [awsRegion, setAwsRegion] = useState<string | null>(null);
-	const [webhooks, setWebhooks] = useState<ProviderWebhook[]>([]);
 	const [outbox, setOutbox] = useState<DeliveryOutboxItem[]>([]);
 	const [deadLetters, setDeadLetters] = useState<EmailDeadLetter[]>([]);
 	const [eventCount, setEventCount] = useState(0);
@@ -66,17 +63,12 @@ export function EmailAdministration({
 	});
 	const [password, setPassword] = useState("");
 	const [testRecipient, setTestRecipient] = useState("");
-	const [webhookProvider, setWebhookProvider] = useState("");
-	const [webhookSecret, setWebhookSecret] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const load = useCallback(async () => {
 		if (!selectedProject) return;
 		try {
-			const [smtpResult, hookRows, outboxRows, deadLetterRows, eventRows] = await Promise.all([
-				section === "delivery" || section === "operations"
-					? getSmtpSettings(selectedProject.id)
-					: Promise.resolve<SmtpSettings>({ configured: false, profiles: [] }),
-				section === "webhooks" ? getProviderWebhooks(selectedProject.id) : Promise.resolve([]),
+			const [smtpResult, outboxRows, deadLetterRows, eventRows] = await Promise.all([
+				getSmtpSettings(selectedProject.id),
 				section === "operations" ? getDeliveryOutbox(selectedProject.id) : Promise.resolve([]),
 				section === "operations" ? getEmailDeadLetters(selectedProject.id) : Promise.resolve([]),
 				section === "operations" ? getProviderEvents(selectedProject.id) : Promise.resolve([]),
@@ -85,8 +77,8 @@ export function EmailAdministration({
 			setProfiles(rows);
 			setDeliveryProvider(smtpResult.provider || "smtp");
 			setAwsRegion(smtpResult.aws_region || null);
-			setWebhooks(hookRows);
-			setOutbox(outboxRows);
+			// Only messages that still wait or failed need an operator here; the full history is in the message log.
+			setOutbox(outboxRows.filter((item) => ["queued", "failed"].includes(item.status)));
 			setDeadLetters(deadLetterRows);
 			setEventCount(eventRows.length);
 			setError(null);
@@ -139,11 +131,7 @@ export function EmailAdministration({
 	return (
 		<section className="space-y-4">
 			<h2 className="text-lg font-semibold">
-				{section === "operations"
-					? t("Email delivery operations")
-					: section === "webhooks"
-						? t("Provider webhook")
-						: t("Sender identities")}
+				{section === "operations" ? t("Email delivery operations") : t("Sender identities")}
 			</h2>
 			{error && <p role="alert">{error}</p>}
 			{section === "operations" && <p>{t("{count} provider events", { count: eventCount })}</p>}
@@ -179,7 +167,10 @@ export function EmailAdministration({
 									placeholder={t("Profile name")}
 									value={smtp.name || ""}
 									onChange={(event) => {
-										setSmtp((value) => ({ ...value, name: event.target.value }));
+										setSmtp((value) => ({
+											...value,
+											name: event.target.value,
+										}));
 									}}
 								/>
 								{deliveryProvider === "smtp" ? (
@@ -362,7 +353,11 @@ export function EmailAdministration({
 								</CardHeader>
 								<CardContent className="space-y-3">
 									{profiles.length === 0 ? (
-										<Empty text={t("No sender identities configured.")} />
+										<Empty
+											text={t(
+												"No sender identity yet. Add one with the form, then verify its domain: emails cannot be delivered without it.",
+											)}
+										/>
 									) : (
 										profiles.map((item) => (
 											<div key={item.id} className="rounded-md border p-3">
@@ -385,33 +380,37 @@ export function EmailAdministration({
 														</p>
 														<p className="text-xs text-muted-foreground">
 															{t("Sender DNS:")}
-															{item.authentication_status || "unverified"} {t("· SPF")}{" "}
-															{item.spf_status || "unchecked"} {t("· DKIM")}{" "}
-															{item.dkim_status || "unchecked"} {t("· DMARC")}{" "}
-															{item.dmarc_status || "unchecked"}
+															{t(item.authentication_status || "unverified")} {t("· SPF")}{" "}
+															{t(item.spf_status || "unchecked")} {t("· DKIM")}{" "}
+															{t(item.dkim_status || "unchecked")} {t("· DMARC")}{" "}
+															{t(item.dmarc_status || "unchecked")}
 														</p>
 													</button>
 													<div className="flex">
 														<Button
-															variant="ghost"
+															variant={authenticating === item.id ? "secondary" : "ghost"}
 															size="icon"
-															aria-label={t("Verify sender DNS {name}", { name: item.name || "" })}
-															disabled={!item.id || !item.dkim_selector}
-															onClick={() =>
-																item.id &&
-																void run(
-																	() => verifySmtpDomain(selectedProject.id, item.id!),
-																	"SPF, DKIM and DMARC checked",
-																)
-															}
+															aria-label={t("Open domain authentication for {name}", {
+																name: item.name || "",
+															})}
+															aria-expanded={authenticating === item.id}
+															title={t("Domain authentication")}
+															disabled={!item.id}
+															onClick={() => {
+																setAuthenticating((current) =>
+																	current === item.id ? null : (item.id ?? null),
+																);
+															}}
 														>
-															<RefreshCw />
+															<ShieldCheck />
 														</Button>
 
 														<Button
 															variant="ghost"
 															size="icon"
-															aria-label={t("Delete {name}", { name: item.name || "" })}
+															aria-label={t("Delete {name}", {
+																name: item.name || "",
+															})}
 															onClick={() =>
 																item.id &&
 																void run(
@@ -424,6 +423,13 @@ export function EmailAdministration({
 														</Button>
 													</div>
 												</div>
+												{item.id && authenticating === item.id && (
+													<SenderDomainAuthentication
+														project={selectedProject.id}
+														profileId={item.id}
+														onVerified={() => void load()}
+													/>
+												)}
 											</div>
 										))
 									)}
@@ -431,81 +437,8 @@ export function EmailAdministration({
 							</Card>
 						</div>
 					)}
+					{section === "delivery" && <EmailDeveloperSettings project={selectedProject.id} />}
 					<div className="grid gap-6 xl:grid-cols-3">
-						{section === "webhooks" && (
-							<FormCard title={t("Provider webhook")}>
-								<Input
-									placeholder={t("Provider identifier")}
-									value={webhookProvider}
-									onChange={(event) => {
-										setWebhookProvider(
-											event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "_"),
-										);
-									}}
-								/>
-								<Input
-									type="password"
-									autoComplete="new-password"
-									placeholder={t("Shared secret (minimum 16 characters)")}
-									value={webhookSecret}
-									onChange={(event) => {
-										setWebhookSecret(event.target.value);
-									}}
-								/>
-								<Button
-									disabled={!webhookProvider || webhookSecret.length < 16}
-									onClick={() =>
-										void (async () => {
-											if (
-												await run(
-													() =>
-														createProviderWebhook(selectedProject.id, {
-															provider: webhookProvider,
-															secret: webhookSecret,
-															enabled: true,
-														}),
-													"Provider webhook created",
-												)
-											) {
-												setWebhookProvider("");
-												setWebhookSecret("");
-											}
-										})()
-									}
-								>
-									<Plus />
-									{t("Create endpoint")}
-								</Button>
-								{webhooks.map((item) => (
-									<div
-										key={item.id}
-										className="flex items-center justify-between rounded-md border p-3"
-									>
-										<div>
-											<p className="font-medium">{item.provider}</p>
-											<code className="text-xs">
-												{t("/api/v1/marketing/provider-webhooks/")}
-												{item.id}
-											</code>
-										</div>
-										<Button
-											size="icon"
-											variant="ghost"
-											aria-label={t("Delete {name}", { name: item.provider })}
-											onClick={() =>
-												void run(
-													() => deleteProviderWebhook(selectedProject.id, item.id),
-													"Webhook deleted",
-												)
-											}
-										>
-											<Trash2 />
-										</Button>
-									</div>
-								))}
-							</FormCard>
-						)}
-
 						{section === "operations" && (
 							<>
 								<Card>
@@ -528,7 +461,9 @@ export function EmailAdministration({
 													disabled={!testRecipient.trim()}
 													variant="ghost"
 													size="icon"
-													aria-label={t("Test {name}", { name: item.name || "" })}
+													aria-label={t("Test {name}", {
+														name: item.name || "",
+													})}
 													onClick={() =>
 														void run(
 															() =>
@@ -545,14 +480,14 @@ export function EmailAdministration({
 								</Card>
 								<Card>
 									<CardHeader>
-										<CardTitle>{t("Delivery outbox")}</CardTitle>
+										<CardTitle>{t("Retry queue")}</CardTitle>
 										<CardDescription>
-											{t("Pending and dead-lettered double opt-in deliveries")}
+											{t("Transactional emails that are still queued or failed")}
 										</CardDescription>
 									</CardHeader>
 									<CardContent className="space-y-2">
 										{outbox.length === 0 ? (
-											<Empty text={t("Delivery outbox is empty.")} />
+											<Empty text={t("No email is waiting or failed.")} />
 										) : (
 											outbox.map((item) => (
 												<div
@@ -560,13 +495,13 @@ export function EmailAdministration({
 													className="flex items-center justify-between rounded-md border p-3"
 												>
 													<div>
-														<p className="font-medium">{item.job_type}</p>
+														<p className="font-medium">{item.subject || t(item.job_type)}</p>
 														<p className="text-xs text-muted-foreground">
-															{item.status} {t("·")} {item.attempt_count} {t("attempts")}{" "}
-															{item.last_error ? `· ${item.last_error}` : ""}
+															{t(item.status)}
+															{item.last_error ? ` · ${item.last_error}` : ""}
 														</p>
 													</div>
-													{["pending", "dead_letter"].includes(item.status) && (
+													{["queued", "failed"].includes(item.status) && (
 														<Button
 															size="sm"
 															variant="outline"
@@ -588,21 +523,21 @@ export function EmailAdministration({
 								</Card>
 								<Card>
 									<CardHeader>
-										<CardTitle>{t("Marketing dead letters")}</CardTitle>
+										<CardTitle>{t("Email dead letters")}</CardTitle>
 										<CardDescription>
 											{t("Inspect and resolve individual terminal Queue jobs")}
 										</CardDescription>
 									</CardHeader>
 									<CardContent className="space-y-2">
 										{deadLetters.length === 0 ? (
-											<Empty text={t("No marketing dead letters.")} />
+											<Empty text={t("No email dead letters.")} />
 										) : (
 											deadLetters.map((item) => (
 												<div key={item.id} className="rounded-md border p-3">
 													<div className="flex items-start justify-between gap-3">
 														<div className="min-w-0">
 															<p className="truncate font-medium">
-																{item.job_type || "Unknown Queue job"}
+																{item.job_type || t("Unknown Queue job")}
 															</p>
 															<p className="text-xs text-muted-foreground">
 																{item.status}
@@ -618,17 +553,19 @@ export function EmailAdministration({
 																<Button
 																	size="icon"
 																	variant="ghost"
-																	aria-label={t("Replay dead letter {name}", { name: item.id })}
+																	aria-label={t("Replay dead letter {name}", {
+																		name: item.id,
+																	})}
 																	disabled={!item.replayable}
-																	title={
+																	title={t(
 																		item.replayable
 																			? "Replay"
-																			: "Payload was redacted and cannot be replayed"
-																	}
+																			: "Payload was redacted and cannot be replayed",
+																	)}
 																	onClick={() =>
 																		void run(
 																			() => replayEmailDeadLetter(selectedProject.id, item.id),
-																			"Marketing job queued again",
+																			"Email job queued again",
 																		)
 																	}
 																>
@@ -637,11 +574,13 @@ export function EmailAdministration({
 																<Button
 																	size="icon"
 																	variant="ghost"
-																	aria-label={t("Discard dead letter {name}", { name: item.id })}
+																	aria-label={t("Discard dead letter {name}", {
+																		name: item.id,
+																	})}
 																	onClick={() =>
 																		void run(
 																			() => discardEmailDeadLetter(selectedProject.id, item.id),
-																			"Marketing dead letter discarded",
+																			"Email dead letter discarded",
 																		)
 																	}
 																>

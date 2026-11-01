@@ -108,9 +108,11 @@ test("adds and removes plugin presentation only through the Release plugin lock"
 		);
 
 	expect(routeIds(withoutMarketing)).not.toContain("superboard.communication_campaigns");
-	expect(navigationRouteIds(withoutMarketing)).not.toContain("superboard.communication_campaigns");
+	expect(navigationRouteIds(withoutMarketing)).not.toContain(
+		"superboard.communication_marketing_email",
+	);
 	expect(routeIds(withMarketing)).toContain("superboard.communication_campaigns");
-	expect(navigationRouteIds(withMarketing)).toContain("superboard.communication_campaigns");
+	expect(navigationRouteIds(withMarketing)).toContain("superboard.communication_marketing_email");
 	expect(
 		withMarketing.presentation.pages.some(
 			({ page_id }) => page_id === "page.superboard_communication_campaigns",

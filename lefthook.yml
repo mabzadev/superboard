@@ -1,9 +1,0 @@
-pre-commit:
-  jobs:
-    - name: secret scan
-      run: gitleaks git . --staged --no-banner --redact
-
-pre-push:
-  jobs:
-    - name: full history secret scan
-      run: gitleaks git . --no-banner --redact

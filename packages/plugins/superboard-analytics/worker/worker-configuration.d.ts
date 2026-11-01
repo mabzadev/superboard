@@ -4,6 +4,7 @@ interface __BaseEnv_Env {
 	EVENT_ARCHIVE: R2Bucket;
 	DB: D1Database;
 	ANALYTICS_INGEST_QUEUE: Queue;
+	SUPERBOARD_WORKER_VERSION: WorkerVersionMetadata;
 	ENVIRONMENT: string;
 	SERVICE_NAME: string;
 	D1_EXPECTED_MIGRATION: string;
@@ -12,6 +13,7 @@ interface __BaseEnv_Env {
 	AUTH_GATEWAY_JWKS_URL: string;
 	QUEUE_NAME: string;
 	DLQ_NAME: string;
+	SUPERBOARD_RELEASE: string;
 	SUPERBOARD_INSTANCE_ID: string;
 	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	ANALYTICS_CONFIG_ENCRYPTION_KEY: string;
@@ -31,7 +33,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "QUEUE_NAME" | "DLQ_NAME" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "ANALYTICS_CONFIG_ENCRYPTION_KEY" | "ANALYTICS_ID_HASH_KEY" | "EMAIL_INTERNAL_TOKEN" | "INTERNAL_API_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "QUEUE_NAME" | "DLQ_NAME" | "SUPERBOARD_RELEASE" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "ANALYTICS_CONFIG_ENCRYPTION_KEY" | "ANALYTICS_ID_HASH_KEY" | "EMAIL_INTERNAL_TOKEN" | "INTERNAL_API_TOKEN">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

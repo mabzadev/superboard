@@ -1,4 +1,3 @@
-import { registerRouter } from "@superboard/contracts/route-registry";
 import {
 	CUSTOM_WORKER_JOB_PATH,
 	CUSTOM_WORKER_MANIFEST_PATH,
@@ -16,6 +15,7 @@ import {
 	OBSERVABILITY_SUMMARY_PATH,
 	type ObservabilitySummary,
 } from "@superboard/contracts/observability";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
 import flutterFlowCustomCode from "../../../../../../scripts/config/flutterflow-custom-code.json";
@@ -25,7 +25,13 @@ import { getRequestAuthContext } from "../lib/auth";
 import { readJsonObjectLimited, readTextLimited } from "../lib/http-limits";
 import type { Env } from "../types";
 
-const platform = registerRouter(new Hono<{ Bindings: Env }>(), {"service":"api","module":"routes.platform-status.platform","pluginId":"superboard-observability","surface":"internal","access":"operator"});
+const platform = registerRouter(new Hono<{ Bindings: Env }>(), {
+	service: "api",
+	module: "routes.platform-status.platform",
+	pluginId: "superboard-observability",
+	surface: "internal",
+	access: "operator",
+});
 
 const OBSERVABILITY_SUMMARY_MAX_BYTES = 512 * 1024;
 const CUSTOM_MANIFEST_MAX_BYTES = 64 * 1024;
@@ -964,7 +970,7 @@ function operationalServices(input: {
 		const configured = input.topology.workers.get(definition.id);
 		const enabled =
 			configured?.enabled ??
-			Boolean(definition.binding && input.env[definition.binding as keyof Env]);
+			Boolean(definition.binding && envBinding(input.env, definition.binding));
 		const check = input.checks.find(({ id }) => id === definition.id);
 		const publicSurface = configured?.publicSurfaceIds
 			.map((id) => input.publicSurfaces.find((surface) => surface.id === id))
@@ -1178,7 +1184,7 @@ async function checkService(
 	const { id, binding: bindingName, healthPath: path, description } = definition;
 	if (configured && !configured.enabled)
 		return { id, status: "disabled", description, responseTimeMs: null };
-	const binding = bindingName ? (env[bindingName as keyof Env] as Fetcher | undefined) : undefined;
+	const binding = bindingName ? serviceBinding(env, bindingName) : undefined;
 	if (!binding)
 		return {
 			id,
@@ -1233,7 +1239,7 @@ async function checkManagedWorker(
 			responseTimeMs: null,
 		};
 	}
-	const binding = env[definition.managed.binding as keyof Env] as Fetcher | undefined;
+	const binding = serviceBinding(env, definition.managed.binding);
 	if (!binding) {
 		return {
 			id: definition.id,
@@ -2145,3 +2151,22 @@ async function proxyEmail(env: Env, path: string, init: RequestInit = {}): Promi
 }
 
 export default platform;
+
+/** Reads a binding declared by name in the Worker topology. */
+function envBinding(env: Env, name: string): unknown {
+	return Reflect.get(env, name);
+}
+
+/** Service bindings are objects or, for RPC-capable Workers, callable stubs. */
+function isFetcher(value: unknown): value is Fetcher {
+	return (
+		((typeof value === "object" && value !== null) || typeof value === "function") &&
+		// Read through `get`: test and RPC stubs are proxies without a `has` trap.
+		typeof Reflect.get(value, "fetch") === "function"
+	);
+}
+
+function serviceBinding(env: Env, name: string): Fetcher | undefined {
+	const value = envBinding(env, name);
+	return isFetcher(value) ? value : undefined;
+}

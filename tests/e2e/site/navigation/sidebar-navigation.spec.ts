@@ -35,9 +35,11 @@ test.describe("Native plugin shell", () => {
 	test("opens project settings from the account menu", async ({ authenticatedPage: page }) => {
 		await ready(page, "/app/customers");
 		await page.getByRole("button", { name: ACCOUNT_MENU }).click();
-		await page.getByRole("menuitem", { name: "Project Settings", exact: true }).click();
+		await page.getByRole("menuitem", { name: "Environment settings", exact: true }).click();
 		await expect.poll(() => new URL(page.url()).pathname).toBe("/project-settings");
-		await expect(page.getByText("Active Users", { exact: true })).toBeVisible();
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Environment settings", exact: true }),
+		).toBeVisible();
 	});
 	test("switches the real module project and preserves its environment after reload", async ({
 		authenticatedPage: page,
@@ -76,7 +78,7 @@ test.describe("Native plugin shell", () => {
 		await page.getByRole("button", { name: ACCOUNT_MENU }).click();
 		await expect(page.getByRole("menuitem", { name: "Account", exact: true })).toBeVisible();
 		await expect(
-			page.getByRole("menuitem", { name: "Project Settings", exact: true }),
+			page.getByRole("menuitem", { name: "Environment settings", exact: true }),
 		).toBeVisible();
 		await expect(page.getByRole("menuitem", { name: /(?:Dark|Light) mode/i })).toBeVisible();
 		await page.getByRole("menuitem", { name: "Log out", exact: true }).click();

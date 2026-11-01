@@ -1,4 +1,4 @@
-import { moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
+import { ModulePage, moduleErrorMessage } from "@superboard/front-ui/modules/ModulePage.js";
 import { Button } from "@superboard/front-ui/ui/button.js";
 import { Input } from "@superboard/front-ui/ui/input.js";
 import { Label } from "@superboard/front-ui/ui/label.js";
@@ -24,11 +24,86 @@ import SupportProactivePage from "./SupportProactivePage.js";
 import { SupportQualityPage } from "./SupportQualityPage.js";
 import SupportReportsPage from "./SupportReportsPage.js";
 
+const hubSections = {
+	inboxes: "Inboxes",
+	channels: "Channels",
+	automations: "Automations",
+	proactive: "Proactive Support",
+	reports: "Reports",
+};
+
 export default function SupportInboxWorkspace() {
+	const search = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
+	// `?id=` opens one conversation; `?q=` (a customer email or id) lists that customer's conversations.
+	if (search?.has("id") || search?.get("q")?.trim()) return <InboxPage />;
+	if (search?.has("inbox")) return <InboxEntities />;
+	return <InboxHub />;
+}
+
+function InboxHub() {
+	const { t } = useSupportI18n();
+	const [section, setSection] = useState(() => {
+		const requested =
+			typeof window === "undefined"
+				? null
+				: new URLSearchParams(window.location.search).get("section");
+		return requested && Object.hasOwn(hubSections, requested) ? requested : "inboxes";
+	});
+	return (
+		<ModulePage
+			title={t("Inbox")}
+			description={t(
+				"Inboxes, channels, automations, proactive messages and reports for every inbox.",
+			)}
+		>
+			<Tabs
+				value={section}
+				onValueChange={(value) => {
+					const url = new URL(window.location.href);
+					if (value === "inboxes") url.searchParams.delete("section");
+					else url.searchParams.set("section", value);
+					window.history.replaceState(null, "", url);
+					setSection(value);
+				}}
+			>
+				<TabsList aria-label={t("Inbox sections")} className="h-auto flex-wrap">
+					{Object.entries(hubSections).map(([value, label]) => (
+						<TabsTrigger key={value} value={value}>
+							{t(label)}
+						</TabsTrigger>
+					))}
+				</TabsList>
+				<SupportDetail>
+					<TabsContent value="inboxes">
+						<InboxEntities />
+					</TabsContent>
+					<TabsContent value="channels">
+						<SupportChannelsPage />
+					</TabsContent>
+					<TabsContent className="space-y-4" value="automations">
+						<p className="text-sm text-muted-foreground">
+							{t(
+								"Automations for every inbox. Open an inbox to manage only the rules that apply to it.",
+							)}
+						</p>
+						<SupportAutomationsPage />
+					</TabsContent>
+					<TabsContent value="proactive">
+						<SupportProactivePage />
+					</TabsContent>
+					<TabsContent className="space-y-4" value="reports">
+						<SupportReportsPage />
+						<SupportQualityPage />
+					</TabsContent>
+				</SupportDetail>
+			</Tabs>
+		</ModulePage>
+	);
+}
+
+function InboxEntities() {
 	const { t } = useSupportI18n();
 	const [channel, setChannel] = useState("widget");
-	if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("id"))
-		return <InboxPage />;
 	return (
 		<SupportEntityPage<SupportInbox>
 			title={t("Inbox")}
@@ -92,7 +167,7 @@ const sections = {
 	general: "General",
 	channels: "Connections",
 	members: "Members",
-	automations: "Automations",
+	automations: "Inbox automations",
 	proactive: "Proactive Support",
 	reports: "Reports",
 };
