@@ -466,10 +466,12 @@ void _setPath(Map<String, dynamic> root, List<String> segments, Object? value) {
         return;
       }
       final nextSegmentIsIndex = int.tryParse(segments[index + 1]) != null;
-      current = current.putIfAbsent(
-        segment,
-        () => nextSegmentIsIndex ? <dynamic>[] : <String, dynamic>{},
-      );
+      current =
+          current.putIfAbsent(
+                segment,
+                () => nextSegmentIsIndex ? <dynamic>[] : <String, dynamic>{},
+              )
+              as Object;
       continue;
     }
     if (current is List<dynamic>) {
@@ -483,9 +485,11 @@ void _setPath(Map<String, dynamic> root, List<String> segments, Object? value) {
         return;
       }
       final nextSegmentIsIndex = int.tryParse(segments[index + 1]) != null;
-      current = current[listIndex] ??= nextSegmentIsIndex
-          ? <dynamic>[]
-          : <String, dynamic>{};
+      current =
+          (current[listIndex] ??= nextSegmentIsIndex
+                  ? <dynamic>[]
+                  : <String, dynamic>{})
+              as Object;
       continue;
     }
     return;

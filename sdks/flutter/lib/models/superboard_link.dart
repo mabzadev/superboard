@@ -36,9 +36,13 @@ class DeeplinkDetails {
   factory DeeplinkDetails.fromMap(Map<dynamic, dynamic> map) {
     return DeeplinkDetails(
       link: map['link'] as String?,
-      data: map['data'] != null ? Map<String, dynamic>.from(map['data']) : null,
+      data: map['data'] != null
+          ? Map<String, dynamic>.from(map['data'] as Map)
+          : null,
       tracking: map['tracking'] != null
-          ? TrackingParams.fromMap(Map<String, dynamic>.from(map['tracking']))
+          ? TrackingParams.fromMap(
+              Map<String, dynamic>.from(map['tracking'] as Map),
+            )
           : null,
     );
   }
@@ -133,10 +137,4 @@ class SuperBoardException implements Exception {
       'SuperBoardException: $message${code != null ? ' (code: $code)' : ''}';
 }
 
-enum TransactionType {
-  buy,
-
-  cancel,
-
-  refund,
-}
+enum TransactionType { buy, cancel, refund }

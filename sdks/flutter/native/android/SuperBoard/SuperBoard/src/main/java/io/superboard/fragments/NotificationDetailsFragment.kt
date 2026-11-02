@@ -1,5 +1,6 @@
 package io.superboard.fragments
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -50,6 +51,7 @@ class NotificationDetailsFragment : Fragment() {
         setup()
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     private fun setup() {
         binding.webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {

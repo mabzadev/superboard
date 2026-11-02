@@ -61,7 +61,6 @@ class MainActivity : FragmentActivity() {
     ) { isGranted: Boolean ->
         if (isGranted) {
             updateFCMToken()
-        } else {
         }
     }
 

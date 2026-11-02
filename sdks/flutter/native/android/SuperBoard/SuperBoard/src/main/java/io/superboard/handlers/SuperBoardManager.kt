@@ -232,8 +232,7 @@ class SuperBoardManager(
         return superboardService.linkDetails(path = path)
     }
 
-    fun start() {
-    }
+    fun start() = Unit
 
     suspend fun handleIntent(intent: Intent, delayEvents: Boolean, cacheIntent: Boolean = false): DeeplinkDetails? {
         if (!superboardContext.settings.sdkEnabled) {

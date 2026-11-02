@@ -72,7 +72,7 @@ class SuperBoardCustomerEvent {
       ),
       metadata: rawMetadata == null
           ? const {}
-          : rawMetadata.cast<String, dynamic>(),
+          : (rawMetadata as Map).cast<String, dynamic>(),
     );
   }
 

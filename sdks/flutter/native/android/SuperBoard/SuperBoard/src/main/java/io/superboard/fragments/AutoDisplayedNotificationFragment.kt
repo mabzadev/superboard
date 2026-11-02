@@ -1,5 +1,6 @@
 package io.superboard.fragments
 
+import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.graphics.Color
 import android.os.Build
@@ -76,6 +77,7 @@ class AutoDisplayedNotificationFragment(val superboardService: SuperBoardService
         onDialogDismissed?.invoke()
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     private fun setup() {
         viewModel.superboardService = superboardService
 
