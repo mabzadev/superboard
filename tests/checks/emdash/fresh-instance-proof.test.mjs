@@ -210,6 +210,8 @@ test("receipt verification accepts independently sealed complete evidence", asyn
 			id: "store_runtime",
 			paths: [
 				"apps/site/vitest.runtime.config.ts",
+				"apps/site/vitest.runtime-site.config.ts",
+				"tests/checks/apps/site/runtime/apply-site-migrations.ts",
 				"tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts",
 			],
 		},
@@ -224,6 +226,8 @@ test("receipt verification accepts independently sealed complete evidence", asyn
 			id: "runtime_lifecycle",
 			paths: [
 				"apps/site/vitest.runtime.config.ts",
+				"apps/site/vitest.runtime-site.config.ts",
+				"tests/checks/apps/site/runtime/apply-site-migrations.ts",
 				"tests/checks/apps/site/runtime/fresh-instance-proof.runtime.test.ts",
 			],
 		},

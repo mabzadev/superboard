@@ -3,10 +3,7 @@
 	"experimentalSortImports": {},
 	"overrides": [
 		{
-			"files": [
-				"packages/plugins/superboard-authentification/worker/src/melody/node.tsx",
-				"tests/checks/plugins/superboard-authentification/worker/unit/melody/helpers/setup.ts"
-			],
+			"files": ["packages/plugins/superboard-authentification/worker/src/melody/node.tsx"],
 			"options": {
 				"semi": false,
 				"singleQuote": true,

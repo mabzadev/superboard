@@ -291,6 +291,103 @@ test("canonical Email APIs preserve encrypted settings, captures, verified DNS a
 	proveApi(plugin, "delete_smtp_settings", "mutation", file, [profileId]);
 });
 
+{
+	const observabilityPlugin = "superboard-observability";
+	const observabilityFile = "retirement-api-email.runtime.test.ts";
+	test("Observability reads actual Email failures and replays or discards the persisted dead letters", async () => {
+		const scope = await prepareApiPlugin("superboard-email");
+		await prepareApiPlugin(observabilityPlugin);
+		const db = pluginDatabase("email");
+		const message = await jsonResult<{ id: string }>(
+			await apiCommand("superboard-email", "send_transactional_email", {
+				method: "POST",
+				path: `/api/v1/email/projects/${scope.production_project_ref}/transactional`,
+				body: {
+					recipient: "observability@example.test",
+					subject: "Observability Email recovery",
+					text: "Captured locally before queue failure",
+				},
+			}),
+			202,
+		);
+		const replay = await quarantineEmailDeadLetter(db, "retirement-observability-email-dlq", {
+			id: "observability-replay",
+			body: { type: "email.deliver", messageId: message.id },
+			attempts: 4,
+		});
+		const discard = await quarantineEmailDeadLetter(db, "retirement-observability-email-dlq", {
+			id: "observability-discard",
+			body: { type: "email.deliver", messageId: message.id },
+			attempts: 4,
+		});
+		const operations = await jsonResult<{
+			messages: Array<{ id: string; status: string }>;
+			deadLetters: Array<{ id: string; resolution: string }>;
+		}>(
+			await apiRead(observabilityPlugin, "platform_email_operations", {
+				method: "GET",
+				path: "/api/v1/platform/email/operations",
+			}),
+		);
+		expect(operations.messages).toContainEqual(
+			expect.objectContaining({ id: message.id, status: "failed" }),
+		);
+		expect(operations.deadLetters.map((row) => row.id)).toEqual(
+			expect.arrayContaining([replay.id, discard.id]),
+		);
+		proveApi(observabilityPlugin, "platform_email_operations", "read", observabilityFile, [
+			message.id,
+			replay.id,
+			discard.id,
+		]);
+		const replayResponse = await SELF.fetch(
+			`https://site.example/_emdash/api/superboard/plugins/${observabilityPlugin}/commands/${observabilityPlugin}.command.replay_email_dead_letter`,
+			{
+				method: "POST",
+				headers: {
+					...apiHeaders,
+					"X-Test-Email-Transport": "smtp",
+					"Idempotency-Key": crypto.randomUUID(),
+				},
+				body: JSON.stringify({
+					method: "POST",
+					path: `/api/v1/platform/email/dead-letters/${replay.id}/replay`,
+					body: {},
+				}),
+			},
+		);
+		expect(await jsonResult(replayResponse, 202)).toMatchObject({
+			id: replay.id,
+			status: "replayed",
+			messageId: message.id,
+		});
+		expect(
+			await db
+				.prepare("SELECT resolution FROM email_dead_letters WHERE id=?")
+				.bind(replay.id)
+				.first(),
+		).toEqual({ resolution: "replayed" });
+		proveApi(observabilityPlugin, "replay_email_dead_letter", "mutation", observabilityFile, [
+			replay.id,
+		]);
+		const discarded = await apiCommand(observabilityPlugin, "discard_email_dead_letter", {
+			method: "POST",
+			path: `/api/v1/platform/email/dead-letters/${discard.id}/discard`,
+			body: {},
+		});
+		expect(await jsonResult(discarded)).toMatchObject({ id: discard.id, status: "discarded" });
+		expect(
+			await db
+				.prepare("SELECT resolution FROM email_dead_letters WHERE id=?")
+				.bind(discard.id)
+				.first(),
+		).toEqual({ resolution: "discarded" });
+		proveApi(observabilityPlugin, "discard_email_dead_letter", "mutation", observabilityFile, [
+			discard.id,
+		]);
+	});
+}
+
 function dnsAnswer(path: string): Buffer {
 	const encoded = new URL(path, "https://cloudflare-dns.com").searchParams.get("dns")!;
 	const query = Buffer.from(encoded, "base64url");

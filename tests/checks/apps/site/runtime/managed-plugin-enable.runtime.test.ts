@@ -115,3 +115,46 @@ test("the host lifecycle actions preserve aliases and keep the core required", a
 		{ plugin_id: "superboard-user", state: "disabled" },
 	]);
 });
+
+test("managed lifecycle actions revalidate expired active plugin receipts", async () => {
+	const headers = {
+		Origin: "https://site.example",
+		"X-EmDash-Request": "1",
+		"X-Parity-Operator": "1",
+	};
+	const enableUser = await SELF.fetch(
+		"https://site.example/_emdash/api/superboard/plugins/superboard-user/enable",
+		{ method: "POST", headers },
+	);
+	expect([200, 201]).toContain(enableUser.status);
+
+	for (const action of ["enable", "disable"]) {
+		await env.DB.prepare(
+			`UPDATE superboard_plugin_runtime_health SET expires_at = '2000-01-01T00:00:00.000Z'
+			 WHERE instance_id = ? AND target = 'local'`,
+		)
+			.bind("reference-production")
+			.run();
+		await env.DB.prepare(
+			`UPDATE superboard_dependency_health SET expires_at = '2000-01-01T00:00:00.000Z'
+			 WHERE instance_id = ?`,
+		)
+			.bind("reference-production")
+			.run();
+		const response = await SELF.fetch(
+			`https://site.example/_emdash/api/superboard/plugins/supbrd-plug-data/${action}`,
+			{ method: "POST", headers },
+		);
+		expect(response.status).toBe(201);
+		expect(await response.json()).toMatchObject({
+			plugin_id: "supbrd-plug-data",
+			status: action === "enable" ? "active" : "disabled",
+		});
+		const health = await env.DB.prepare(
+			"SELECT MAX(expires_at) AS expires_at FROM superboard_plugin_runtime_health WHERE instance_id=? AND plugin_id=?",
+		)
+			.bind("reference-production", "superboard-user")
+			.first<{ expires_at: string }>();
+		expect(Date.parse(health!.expires_at)).toBeGreaterThan(Date.now());
+	}
+});

@@ -34,6 +34,12 @@ Dans `checks/`, le chemin indique son propriétaire :
 
 Un sous-dossier `unit/` contient les tests d'une fonction ou d'un module.
 `runtime/` exécute le service avec son environnement de test, notamment workerd.
+Dans `checks/apps/site/runtime/`, `vitest.runtime.config.ts` applique les
+migrations du Site et des Workers de service ; les fichiers qui n'utilisent que
+la base du Site passent par `vitest.runtime-site.config.ts`, plus rapide.
+`pnpm --dir apps/site test:runtime` lance les deux. Ces fichiers partagent les
+services Workers locaux : en parallèle, ils dépassent leur délai de 30 s, d'où
+un seul worker Vitest.
 `front/` vérifie les composants d'interface. Les sous-dossiers métier existants
 restent en place lorsqu'ils permettent de retrouver une fonctionnalité.
 
@@ -140,13 +146,10 @@ exécute ces tests. `pnpm lint:front-menu`
 contrôle les destinations des menus déclarés et l'existence des fichiers de
 vue. Ces règles sont aussi exécutées par `pnpm lint` et `pnpm lint:quick`.
 
-Les tests hérités de Melody dans
-`checks/plugins/superboard-authentification/worker/unit/melody/` sont conservés. Leur
-ancien environnement Node, Redis et PostgreSQL n'est pas raccordé aux commandes
-actuelles du Worker Cloudflare. Une réussite de ces commandes ne valide donc
-pas cette suite héritée. Un contrôle unitaire couvre uniquement la lecture des
-variables TOML de ce lanceur ; il ne valide pas le serveur Node complet.
-Les tests iOS et les tests Android sur appareil exigent
+Le serveur Node hérité de Melody n'a pas de suite de tests raccordée aux
+commandes du Worker Cloudflare. Un contrôle unitaire couvre uniquement la
+lecture des variables TOML de ce lanceur ; il ne valide pas le serveur Node
+complet. Les tests iOS et les tests Android sur appareil exigent
 également les plateformes et simulateurs correspondants.
 
 Le contrôle `checks/cloudflare/installation-artifacts.test.mjs` construit les

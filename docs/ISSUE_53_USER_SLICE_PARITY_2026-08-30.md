@@ -21,7 +21,7 @@ Cette note lie la Release Front de l’issue #53 aux comportements historiques E
 
 ## Reçus et octets immuables
 
-Le test D1 `tests/checks/apps/site/runtime/user-slice.runtime.test.ts` compile les octets d’une seule `FrontReleaseInput`, persiste le même candidate, crée son preview, lie la réauthentification forte et l’approbation au checksum du candidate, active ce même candidate, puis relit les reçus d’activation. Les identifiants de preuve du scénario sont :
+Le test D1 `tests/checks/apps/site/runtime/front-release-workflow.runtime.test.ts` compile les octets d’une seule `FrontReleaseInput`, persiste le même candidate, crée son preview, lie la réauthentification forte et l’approbation au checksum du candidate, active ce même candidate, puis relit les reçus d’activation. Les identifiants de preuve du scénario sont :
 
 - candidate `01J00000000000000000000404` ;
 - release `01J00000000000000000000405` ;

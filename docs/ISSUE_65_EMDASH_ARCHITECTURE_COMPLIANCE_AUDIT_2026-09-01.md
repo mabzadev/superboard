@@ -74,7 +74,7 @@ Les commandes ciblées exécutées dans le snapshot du SHA ont produit les résu
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | `pnpm --dir packages/supbrd-core test`                                                                                                                                                                      | 7 fichiers, 16 tests passés                               |
 | `pnpm --dir apps/site exec vitest run --config vitest.config.ts tests/front-surface-parity.test.ts tests/user-front-release.test.ts tests/operator-api-proxy.test.ts tests/plugin-runtime-contract.test.ts` | 4 fichiers, 12 tests passés                               |
-| `pnpm --dir apps/site exec vitest run --config vitest.runtime.config.ts runtime-tests/plugin-store-authority.runtime.test.ts`                                                                               | 1 fichier, 10 tests passés                                |
+| `pnpm --dir apps/site exec vitest run --config vitest.runtime-site.config.ts ../../tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts`                                                   | 1 fichier, 10 tests passés                                |
 | `pnpm --filter '@superboard/site^...' build`, puis `pnpm --dir apps/site build`                                                                                                                             | dépendances construites, puis build Astro du Site terminé |
 | `node --test tests/checks/cloudflare/target.test.mjs tests/checks/cloudflare/services.test.mjs tests/checks/cloudflare/deploy-plan.test.mjs`                                                                | 45 tests passés                                           |
 | `node --test tests/checks/database/d1-schema.test.mjs`                                                                                                                                                      | 17 tests passés, dont 16 propriétaires de schéma D1       |
@@ -267,8 +267,8 @@ La synchronisation du catalogue fusionne installation et activation. `apps/site/
 Le test runtime confirme ce comportement : `tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts:29-69` appelle une seule synchronisation puis exige 18 lignes `_plugin_state` actives, 18 manifests actifs et 18 dépendances `ready`.
 
 ```text
-$ pnpm --dir apps/site exec vitest run --config vitest.runtime.config.ts \
-    runtime-tests/plugin-store-authority.runtime.test.ts
+$ pnpm --dir apps/site exec vitest run --config vitest.runtime-site.config.ts \
+    ../../tests/checks/apps/site/runtime/plugin-store-authority.runtime.test.ts
 Test Files  1 passed (1)
 Tests       10 passed (10)
 ```

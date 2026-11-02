@@ -1,5 +1,5 @@
 import type { APIContext } from "astro";
-import { env } from "cloudflare:test";
+import { env, SELF } from "cloudflare:test";
 import { expect, test } from "vitest";
 
 import { dispatchSettingsPluginApi } from "../../../../../apps/site/src/lib/settings-plugin-api.js";
@@ -11,6 +11,7 @@ import {
 	pluginDatabase,
 	prepareApiPlugin,
 	proveApi,
+	apiHeaders,
 } from "./retirement-api-helpers.js";
 const plugin = "superboard-settings";
 const file = "retirement-api-settings.runtime.test.ts";
@@ -153,4 +154,26 @@ test("canonical Settings APIs retain changed values, versions and verified SDK c
 	} finally {
 		await cms.close();
 	}
+});
+
+test("operator usage exports provide an admitted local download and a public email URL", async () => {
+	const scope = await prepareApiPlugin("superboard-settings");
+	await prepareApiPlugin("superboard-user");
+	const response = await SELF.fetch(
+		`https://site.example/api/v1/instances/${scope.instance.id}/exports/usage`,
+		{
+			method: "POST",
+			headers: { ...apiHeaders, "Idempotency-Key": crypto.randomUUID() },
+			body: JSON.stringify({ start_date: "2026-01-01", end_date: "2026-12-31" }),
+		},
+	);
+	const result = await jsonResult<{ download_path: string; url: string }>(response, 202);
+	expect(result.download_path).toMatch(/^\/api\/v1\/projects\/exports\//);
+	expect(new URL(result.url).origin).toBe("https://api.site.test");
+	const download = await SELF.fetch(`https://site.example${result.download_path}`, {
+		headers: apiHeaders,
+	});
+	expect(download.status).toBe(200);
+	expect(download.headers.get("content-type")).toContain("text/csv");
+	expect(await download.text()).toContain("date,active_users");
 });

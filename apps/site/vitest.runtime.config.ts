@@ -71,6 +71,15 @@ const parityRelease = JSON.parse(
 	),
 );
 
+const runtimeTests = "../../tests/checks/apps/site/runtime";
+export const siteMigrationRuntimeTests = [
+	"fresh-instance-proof",
+	"front-release-workflow",
+	"operator-identity",
+	"plugin-store-authority",
+	"view-plugin-selection",
+].map((name) => `${runtimeTests}/${name}.runtime.test.ts`);
+
 export default centralTests(
 	import.meta.url,
 	defineConfig({
@@ -198,7 +207,7 @@ export default centralTests(
 				},
 			},
 			include: ["../../tests/checks/apps/site/runtime/**/*.test.ts"],
-			exclude: ["../../tests/checks/apps/site/runtime/plugin-packages.runtime.test.ts"],
+			exclude: [`${runtimeTests}/plugin-packages.runtime.test.ts`, ...siteMigrationRuntimeTests],
 			setupFiles: ["../../tests/checks/apps/site/runtime/apply-migrations.ts"],
 			sequence: { concurrent: false },
 			maxWorkers: 1,
