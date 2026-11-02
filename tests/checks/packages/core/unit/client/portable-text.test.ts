@@ -16,10 +16,6 @@ beforeEach(() => {
 	resetKeyCounter();
 });
 
-// ---------------------------------------------------------------------------
-// PT -> Markdown
-// ---------------------------------------------------------------------------
-
 describe("portableTextToMarkdown", () => {
 	it("converts a simple paragraph", () => {
 		const blocks: PortableTextBlock[] = [
@@ -265,10 +261,6 @@ describe("portableTextToMarkdown", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Markdown -> PT
-// ---------------------------------------------------------------------------
-
 describe("markdownToPortableText", () => {
 	it("converts a simple paragraph", () => {
 		const blocks = markdownToPortableText("Hello world\n");
@@ -392,10 +384,6 @@ describe("markdownToPortableText", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Round-trip
-// ---------------------------------------------------------------------------
-
 describe("PT <-> Markdown round-trip", () => {
 	it("preserves simple text through round-trip", () => {
 		const original: PortableTextBlock[] = [
@@ -511,10 +499,6 @@ describe("PT <-> Markdown round-trip", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Schema-aware conversion
-// ---------------------------------------------------------------------------
-
 describe("convertDataForRead", () => {
 	const fields: FieldSchema[] = [
 		{ slug: "title", type: "string" },
@@ -554,7 +538,7 @@ describe("convertDataForRead", () => {
 		const data = { title: "Test", body: "already a string" };
 		const result = convertDataForRead(data, fields);
 		expect(result.title).toBe("Test");
-		expect(result.body).toBe("already a string"); // not an array, skip
+		expect(result.body).toBe("already a string");
 	});
 });
 
@@ -580,6 +564,6 @@ describe("convertDataForWrite", () => {
 		const ptArray = [{ _type: "block", children: [{ _type: "span", text: "Raw" }] }];
 		const data = { body: ptArray };
 		const result = convertDataForWrite(data, fields);
-		expect(result.body).toBe(ptArray); // same reference
+		expect(result.body).toBe(ptArray);
 	});
 });

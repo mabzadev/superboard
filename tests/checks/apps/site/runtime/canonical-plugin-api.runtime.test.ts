@@ -1,14 +1,14 @@
 import { resolveRouteReference } from "@superboard/contracts/route-reference";
 import type { RouteDescriptor } from "@superboard/contracts/route-registry";
-import { resolveApiRouteReferences } from "../../../../../apps/site/src/lib/route-references.js";
 import { SELF, env } from "cloudflare:test";
 import { beforeAll, expect, test } from "vitest";
 
 import { proxyOperatorApiRequest } from "../../../../../apps/site/src/lib/operator-api-proxy.js";
 import { initializeOperatorProjectScope } from "../../../../../apps/site/src/lib/operator-project-scope.js";
 import { matchPluginApiAdapter } from "../../../../../apps/site/src/lib/plugin-api-adapter.js";
-import { resolveApiRouteOwner } from "../../../../../apps/site/src/lib/route-owner.js";
 import { importPluginStoreEncryptionKey } from "../../../../../apps/site/src/lib/plugin-store-repository.js";
+import { resolveApiRouteOwner } from "../../../../../apps/site/src/lib/route-owner.js";
+import { resolveApiRouteReferences } from "../../../../../apps/site/src/lib/route-references.js";
 import { canonicalPluginId } from "../../../../../packages/contracts/src/plugin-packages.js";
 import registry from "../../../../../scripts/config/superboard-plugin-api-adapters.json";
 
@@ -357,7 +357,6 @@ test("preserves multipart bytes through the command repository and signed Worker
 	);
 	const original = new Uint8Array(await request.clone().arrayBuffer());
 	const response = await SELF.fetch(request);
-	// The Paywalls handler accepts JSON; this exercises transport and admission, not an upload feature.
 	expect(response.status, await response.clone().text()).toBe(400);
 	const row = await env.DB.prepare(
 		"SELECT request_payload_json FROM superboard_plugin_command_operations WHERE operation_id = ?",

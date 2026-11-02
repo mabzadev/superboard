@@ -1,16 +1,3 @@
-/**
- * Marketplace handler tests
- *
- * Tests the business logic for:
- * - Install (handleMarketplaceInstall)
- * - Update (handleMarketplaceUpdate)
- * - Uninstall (handleMarketplaceUninstall)
- * - Update check (handleMarketplaceUpdateCheck)
- * - Search/GetPlugin proxies (handleMarketplaceSearch, handleMarketplaceGetPlugin)
- *
- * Uses a real in-memory SQLite database and mock Storage/SandboxRunner/fetch.
- */
-
 import BetterSqlite3 from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -40,8 +27,6 @@ import type {
 	SignedUploadUrl,
 } from "../../../../../../packages/core/src/storage/types.js";
 
-// ── Mock factories ────────────────────────────────────────────────
-
 function createMockStorage(): Storage {
 	const store = new Map<string, { body: Uint8Array; contentType: string }>();
 
@@ -57,7 +42,6 @@ function createMockStorage(): Storage {
 			} else if (Buffer.isBuffer(opts.body)) {
 				body = new Uint8Array(opts.body);
 			} else {
-				// ReadableStream
 				const response = new Response(opts.body);
 				body = new Uint8Array(await response.arrayBuffer());
 			}
@@ -141,16 +125,11 @@ function mockManifest(id = "test-seo", version = "1.0.0"): PluginManifest {
 	};
 }
 
-/**
- * Create a gzipped tar bundle for use with mocked fetch.
- * Uses CompressionStream + minimal tar format.
- */
 async function createMockBundle(manifest: PluginManifest): Promise<Uint8Array> {
 	const encoder = new TextEncoder();
 	const manifestJson = JSON.stringify(manifest);
 	const backendCode = 'export default function() { return "hello"; }';
 
-	// Create simple tar
 	const files = [
 		{ name: "manifest.json", content: manifestJson },
 		{ name: "backend.js", content: backendCode },
@@ -162,21 +141,14 @@ async function createMockBundle(manifest: PluginManifest): Promise<Uint8Array> {
 		const contentBytes = encoder.encode(file.content);
 		const header = new Uint8Array(512);
 
-		// Name
 		header.set(encoder.encode(file.name), 0);
-		// Mode
 		header.set(encoder.encode("0000644\0"), 100);
-		// UID/GID
 		header.set(encoder.encode("0000000\0"), 108);
 		header.set(encoder.encode("0000000\0"), 116);
-		// Size in octal
 		const sizeOctal = contentBytes.length.toString(8).padStart(11, "0") + "\0";
 		header.set(encoder.encode(sizeOctal), 124);
-		// Mtime
 		header.set(encoder.encode("00000000000\0"), 136);
-		// Type = regular file
 		header[156] = 0x30;
-		// Checksum spaces
 		header.set(encoder.encode("        "), 148);
 
 		let checksum = 0;
@@ -191,7 +163,7 @@ async function createMockBundle(manifest: PluginManifest): Promise<Uint8Array> {
 		blocks.push(dataBlock);
 	}
 
-	blocks.push(new Uint8Array(1024)); // end-of-archive
+	blocks.push(new Uint8Array(1024));
 
 	const totalSize = blocks.reduce((sum, b) => sum + b.length, 0);
 	const tar = new Uint8Array(totalSize);
@@ -201,7 +173,6 @@ async function createMockBundle(manifest: PluginManifest): Promise<Uint8Array> {
 		offset += block.length;
 	}
 
-	// Gzip
 	const cs = new CompressionStream("gzip");
 	const writer = cs.writable.getWriter();
 	const reader = cs.readable.getReader();
@@ -291,8 +262,6 @@ describe("Marketplace handlers", () => {
 		vi.restoreAllMocks();
 	});
 
-	// ── Install ────────────────────────────────────────────────────
-
 	describe("handleMarketplaceInstall", () => {
 		it("returns error when marketplace not configured", async () => {
 			const result = await handleMarketplaceInstall(db, storage, sandboxRunner, undefined, "test");
@@ -322,13 +291,10 @@ describe("Marketplace handlers", () => {
 			const manifest = mockManifest("test-seo", "1.0.0");
 			const bundleBytes = await createMockBundle(manifest);
 
-			// Mock: getPlugin detail — set checksum to undefined so the check is skipped
 			const detail = mockPluginDetail("test-seo", "1.0.0");
 			detail.latestVersion!.checksum = "";
 			fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(detail), { status: 200 }));
-			// Mock: downloadBundle
 			fetchSpy.mockResolvedValueOnce(new Response(bundleBytes, { status: 200 }));
-			// Mock: reportInstall
 			fetchSpy.mockResolvedValueOnce(new Response("OK", { status: 200 }));
 
 			const result = await handleMarketplaceInstall(
@@ -344,7 +310,6 @@ describe("Marketplace handlers", () => {
 			expect(result.data?.version).toBe("1.0.0");
 			expect(result.data?.capabilities).toEqual(["content:read"]);
 
-			// Verify state was written
 			const repo = new PluginStateRepository(db);
 			const state = await repo.get("test-seo");
 			expect(state?.source).toBe("marketplace");
@@ -447,14 +412,12 @@ describe("Marketplace handlers", () => {
 		});
 
 		it("rejects install if plugin already installed", async () => {
-			// Pre-install the plugin
 			const repo = new PluginStateRepository(db);
 			await repo.upsert("test-seo", "1.0.0", "active", {
 				source: "marketplace",
 				marketplaceVersion: "1.0.0",
 			});
 
-			// Mock: getPlugin detail (still needed — called before install check... actually, the existing check comes first)
 			const result = await handleMarketplaceInstall(
 				db,
 				storage,
@@ -471,7 +434,6 @@ describe("Marketplace handlers", () => {
 			const manifest = mockManifest("wrong-id", "1.0.0");
 			const bundleBytes = await createMockBundle(manifest);
 
-			// Clear checksum so we reach the manifest check
 			const detail = mockPluginDetail("test-seo", "1.0.0");
 			detail.latestVersion!.checksum = "";
 			fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(detail), { status: 200 }));
@@ -532,8 +494,6 @@ describe("Marketplace handlers", () => {
 		});
 	});
 
-	// ── Update ─────────────────────────────────────────────────────
-
 	describe("handleMarketplaceUpdate", () => {
 		it("returns error when plugin not found", async () => {
 			const result = await handleMarketplaceUpdate(
@@ -548,7 +508,6 @@ describe("Marketplace handlers", () => {
 		});
 
 		it("returns error when plugin is not from marketplace", async () => {
-			// Insert a config-sourced plugin
 			const repo = new PluginStateRepository(db);
 			await repo.upsert("config-plugin", "1.0.0", "active");
 
@@ -564,14 +523,12 @@ describe("Marketplace handlers", () => {
 		});
 
 		it("returns error when already up to date", async () => {
-			// Install v1.0.0
 			const repo = new PluginStateRepository(db);
 			await repo.upsert("test-seo", "1.0.0", "active", {
 				source: "marketplace",
 				marketplaceVersion: "1.0.0",
 			});
 
-			// Mock getPlugin returning same version
 			fetchSpy.mockResolvedValueOnce(
 				new Response(JSON.stringify(mockPluginDetail("test-seo", "1.0.0")), { status: 200 }),
 			);
@@ -644,14 +601,12 @@ describe("Marketplace handlers", () => {
 		});
 
 		it("requires confirmation for capability escalation", async () => {
-			// Install v1.0.0 with only "hooks" capability
 			const repo = new PluginStateRepository(db);
 			await repo.upsert("test-seo", "1.0.0", "active", {
 				source: "marketplace",
 				marketplaceVersion: "1.0.0",
 			});
 
-			// Store old bundle in R2 (needed for capability diff)
 			const oldManifest = mockManifest("test-seo", "1.0.0");
 			const encoder = new TextEncoder();
 			await storage.upload({
@@ -665,18 +620,15 @@ describe("Marketplace handlers", () => {
 				contentType: "application/javascript",
 			});
 
-			// New version has additional capability
 			const newManifest = {
 				...mockManifest("test-seo", "2.0.0"),
 				capabilities: ["content:read", "network:request"],
 			};
 			const bundleBytes = await createMockBundle(newManifest as PluginManifest);
 
-			// Mock getPlugin
 			const detail = mockPluginDetail("test-seo", "2.0.0");
 			detail.latestVersion!.checksum = "";
 			fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(detail), { status: 200 }));
-			// Mock downloadBundle
 			fetchSpy.mockResolvedValueOnce(new Response(bundleBytes, { status: 200 }));
 
 			const result = await handleMarketplaceUpdate(
@@ -699,7 +651,6 @@ describe("Marketplace handlers", () => {
 				marketplaceVersion: "1.0.0",
 			});
 
-			// Store old bundle
 			const encoder = new TextEncoder();
 			const oldManifest = mockManifest("test-seo", "1.0.0");
 			await storage.upload({
@@ -740,10 +691,6 @@ describe("Marketplace handlers", () => {
 		});
 
 		it("treats deprecated → current capability rename as no change", async () => {
-			// Installed version declared the legacy name; new version
-			// declares the canonical name. diffCapabilities normalizes
-			// both sides, so the diff should be empty — no spurious
-			// "capability changed" prompt for a pure rename.
 			const repo = new PluginStateRepository(db);
 			await repo.upsert("test-seo", "1.0.0", "active", {
 				source: "marketplace",
@@ -777,8 +724,6 @@ describe("Marketplace handlers", () => {
 			fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(detail), { status: 200 }));
 			fetchSpy.mockResolvedValueOnce(new Response(bundleBytes, { status: 200 }));
 
-			// No `confirmCapabilityChanges` — if the diff were non-empty,
-			// this would fail with CAPABILITY_ESCALATION.
 			const result = await handleMarketplaceUpdate(
 				db,
 				storage,
@@ -792,8 +737,6 @@ describe("Marketplace handlers", () => {
 			expect(result.data?.capabilityChanges.removed).toEqual([]);
 		});
 	});
-
-	// ── Uninstall ──────────────────────────────────────────────────
 
 	describe("handleMarketplaceUninstall", () => {
 		it("returns error when plugin not found", async () => {
@@ -818,7 +761,6 @@ describe("Marketplace handlers", () => {
 				marketplaceVersion: "1.0.0",
 			});
 
-			// Store bundle files that should be cleaned up
 			const encoder = new TextEncoder();
 			await storage.upload({
 				key: "marketplace/test-seo/1.0.0/manifest.json",
@@ -837,7 +779,6 @@ describe("Marketplace handlers", () => {
 			expect(result.data?.pluginId).toBe("test-seo");
 			expect(result.data?.dataDeleted).toBe(false);
 
-			// Verify state was deleted
 			const state = await repo.get("test-seo");
 			expect(state).toBeNull();
 		});
@@ -849,7 +790,6 @@ describe("Marketplace handlers", () => {
 				marketplaceVersion: "1.0.0",
 			});
 
-			// Insert some plugin storage data
 			await db
 				.insertInto("_plugin_storage")
 				.values({
@@ -867,7 +807,6 @@ describe("Marketplace handlers", () => {
 			expect(result.success).toBe(true);
 			expect(result.data?.dataDeleted).toBe(true);
 
-			// Verify plugin storage data was deleted
 			const storageRows = await db
 				.selectFrom("_plugin_storage")
 				.selectAll()
@@ -876,8 +815,6 @@ describe("Marketplace handlers", () => {
 			expect(storageRows).toHaveLength(0);
 		});
 	});
-
-	// ── Update check ───────────────────────────────────────────────
 
 	describe("handleMarketplaceUpdateCheck", () => {
 		it("returns error when marketplace not configured", async () => {
@@ -899,7 +836,6 @@ describe("Marketplace handlers", () => {
 				marketplaceVersion: "1.0.0",
 			});
 
-			// Mock getPlugin returning newer version
 			fetchSpy.mockResolvedValueOnce(
 				new Response(JSON.stringify(mockPluginDetail("test-seo", "2.0.0")), { status: 200 }),
 			);
@@ -941,11 +877,9 @@ describe("Marketplace handlers", () => {
 				marketplaceVersion: "1.0.0",
 			});
 
-			// First plugin check fails (404 — delisted)
 			fetchSpy.mockResolvedValueOnce(
 				new Response(JSON.stringify({ error: "Not found" }), { status: 404 }),
 			);
-			// Second plugin check succeeds
 			fetchSpy.mockResolvedValueOnce(
 				new Response(JSON.stringify(mockPluginDetail("test-analytics", "2.0.0")), { status: 200 }),
 			);
@@ -953,13 +887,10 @@ describe("Marketplace handlers", () => {
 			const result = await handleMarketplaceUpdateCheck(db, MARKETPLACE_URL);
 
 			expect(result.success).toBe(true);
-			// Only the successful check should appear
 			expect(result.data?.items).toHaveLength(1);
 			expect(result.data?.items[0]?.pluginId).toBe("test-analytics");
 		});
 	});
-
-	// ── Search proxy ───────────────────────────────────────────────
 
 	describe("handleMarketplaceSearch", () => {
 		it("returns error when marketplace not configured", async () => {
@@ -978,8 +909,6 @@ describe("Marketplace handlers", () => {
 			expect(url).toContain("/api/v1/plugins?q=seo");
 		});
 	});
-
-	// ── GetPlugin proxy ────────────────────────────────────────────
 
 	describe("handleMarketplaceGetPlugin", () => {
 		it("returns error when marketplace not configured", async () => {

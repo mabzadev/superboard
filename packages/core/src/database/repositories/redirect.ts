@@ -11,38 +11,18 @@ import { currentTimestampValue } from "../dialect-helpers.js";
 import type { Database, RedirectTable } from "../types.js";
 import { encodeCursor, decodeCursor, type FindManyResult } from "./types.js";
 
-// ---------------------------------------------------------------------------
-// Bounded 404 logging
-// ---------------------------------------------------------------------------
-
-/**
- * Hard cap on rows stored in `_emdash_404_log`. When exceeded, the oldest
- * rows (by `last_seen_at`) are evicted on insert. Prevents an unauthenticated
- * attacker from growing the table without bound by requesting unique URLs.
- */
 export const MAX_404_LOG_ROWS = 10_000;
 
-/** Max stored length for the `Referer` header — truncated on insert. */
 export const REFERRER_MAX_LENGTH = 512;
 
-/** Max stored length for the `User-Agent` header — truncated on insert. */
 export const USER_AGENT_MAX_LENGTH = 256;
 
-/** Pattern to escape LIKE wildcards: %, _, and backslash */
 const LIKE_ESCAPE_RE = /[\\%_]/g;
 
-/**
- * Truncate a header-derived string to `max` chars, preserving `null`/`undefined`
- * as `null`. Empty strings stay empty (the caller decides whether to coerce).
- */
 function truncateOrNull(value: string | null | undefined, max: number): string | null {
 	if (value === null || value === undefined) return null;
 	return value.length > max ? value.slice(0, max) : value;
 }
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export interface Redirect {
 	id: string;
@@ -99,10 +79,6 @@ export interface RedirectMatch {
 	resolvedDestination: string;
 }
 
-// ---------------------------------------------------------------------------
-// Row mapping
-// ---------------------------------------------------------------------------
-
 function rowToRedirect(row: RedirectTable): Redirect {
 	return {
 		id: row.id,
@@ -120,14 +96,8 @@ function rowToRedirect(row: RedirectTable): Redirect {
 	};
 }
 
-// ---------------------------------------------------------------------------
-// Repository
-// ---------------------------------------------------------------------------
-
 export class RedirectRepository {
 	constructor(private db: Kysely<Database>) {}
-
-	// --- CRUD ---------------------------------------------------------------
 
 	async findById(id: string): Promise<Redirect | null> {
 		const row = await this.db
@@ -165,8 +135,6 @@ export class RedirectRepository {
 			.limit(limit + 1);
 
 		if (opts.search) {
-			// Escape LIKE wildcards in the search term to prevent injection.
-			// Must include ESCAPE clause for SQLite to recognize backslash as escape char.
 			const escaped = opts.search.replace(LIKE_ESCAPE_RE, (c) => `\\${c}`);
 			const term = `%${escaped}%`;
 			query = query.where((eb) =>
@@ -270,10 +238,6 @@ export class RedirectRepository {
 		return BigInt(result.numDeletedRows) > 0n;
 	}
 
-	/**
-	 * Fetch all enabled redirects (for loop detection graph building).
-	 * Not paginated — returns the full set.
-	 */
 	async findAllEnabled(): Promise<Redirect[]> {
 		const rows = await this.db
 			.selectFrom("_emdash_redirects")
@@ -282,8 +246,6 @@ export class RedirectRepository {
 			.execute();
 		return rows.map(rowToRedirect);
 	}
-
-	// --- Matching -----------------------------------------------------------
 
 	async findExactMatch(path: string): Promise<Redirect | null> {
 		const row = await this.db
@@ -306,19 +268,12 @@ export class RedirectRepository {
 		return rows.map(rowToRedirect);
 	}
 
-	/**
-	 * Match a request path against all enabled redirect rules.
-	 * Checks exact matches first (indexed), then pattern rules.
-	 * Returns the matched redirect and the resolved destination URL.
-	 */
 	async matchPath(path: string): Promise<RedirectMatch | null> {
-		// 1. Exact match (fast, indexed)
 		const exact = await this.findExactMatch(path);
 		if (exact) {
 			return { redirect: exact, resolvedDestination: exact.destination };
 		}
 
-		// 2. Pattern match
 		const patterns = await this.findEnabledPatternRules();
 		for (const redirect of patterns) {
 			const compiled = compilePattern(redirect.source);
@@ -332,8 +287,6 @@ export class RedirectRepository {
 		return null;
 	}
 
-	// --- Hit tracking -------------------------------------------------------
-
 	async recordHit(id: string): Promise<void> {
 		await sql`
 			UPDATE _emdash_redirects
@@ -342,17 +295,6 @@ export class RedirectRepository {
 		`.execute(this.db);
 	}
 
-	// --- Auto-redirects (slug change) ---------------------------------------
-
-	/**
-	 * Create an auto-redirect when a content slug changes.
-	 * Uses the collection's URL pattern to compute old/new URLs.
-	 * Collapses existing redirect chains pointing to the old URL and
-	 * removes redirects that would shadow the now-live new URL, so a
-	 * rename that is later reverted cannot form a loop (#1986).
-	 *
-	 * Returns null when old and new URL are identical (nothing to redirect).
-	 */
 	async createAutoRedirect(
 		collection: string,
 		oldSlug: string,
@@ -367,21 +309,14 @@ export class RedirectRepository {
 			? urlPattern.replace("{slug}", newSlug).replace("{id}", contentId)
 			: `/${collection}/${newSlug}`;
 
-		// A redirect from a URL to itself would make the page unreachable
 		if (oldUrl === newUrl) return null;
 
-		// Collapse chains: update any existing redirects pointing to the old URL
 		await this.collapseChains(oldUrl, newUrl);
 
-		// The new URL serves live content again — any redirect from it would
-		// shadow the page. This also removes the self-redirect that chain
-		// collapsing produces when a rename A → B is reverted (A → A).
 		await this.db.deleteFrom("_emdash_redirects").where("source", "=", newUrl).execute();
 
-		// Check if a redirect from this source already exists
 		const existing = await this.findBySource(oldUrl);
 		if (existing) {
-			// Update the existing redirect to point to the new URL
 			return (await this.update(existing.id, { destination: newUrl }))!;
 		}
 
@@ -395,11 +330,6 @@ export class RedirectRepository {
 		});
 	}
 
-	/**
-	 * Update all redirects whose destination matches oldDestination
-	 * to point to newDestination instead. Prevents redirect chains.
-	 * Returns the number of updated rows.
-	 */
 	async collapseChains(oldDestination: string, newDestination: string): Promise<number> {
 		const result = await this.db
 			.updateTable("_emdash_redirects")
@@ -412,21 +342,6 @@ export class RedirectRepository {
 		return Number(result.numUpdatedRows);
 	}
 
-	// --- 404 log ------------------------------------------------------------
-
-	/**
-	 * Record a 404 hit for `entry.path`.
-	 *
-	 * Dedups by path: repeat hits increment `hits` and refresh `last_seen_at`
-	 * on the existing row instead of inserting a new one. Referrer and
-	 * user-agent are truncated to bounded lengths so a malicious client can't
-	 * blow up storage with huge headers. When the table would exceed
-	 * MAX_404_LOG_ROWS, the oldest entries (by `last_seen_at`) are evicted.
-	 *
-	 * This is called from the public redirect middleware on every 404 and
-	 * must never throw for an unauthenticated caller — failures bubble up to
-	 * the middleware, which swallows them.
-	 */
 	async log404(entry: {
 		path: string;
 		referrer?: string | null;
@@ -438,10 +353,6 @@ export class RedirectRepository {
 		const userAgent = truncateOrNull(entry.userAgent, USER_AGENT_MAX_LENGTH);
 		const ip = entry.ip ?? null;
 
-		// Atomic upsert by path. The UNIQUE index on `path` makes this safe
-		// under concurrency: two requests for the same new path can't both
-		// insert — the second one hits the conflict branch and increments
-		// hits instead of failing with a uniqueness error.
 		await this.db
 			.insertInto("_emdash_404_log")
 			.values({
@@ -465,19 +376,9 @@ export class RedirectRepository {
 			)
 			.execute();
 
-		// Enforce the row cap. Cheap when the table is under cap (single
-		// COUNT(*) query); evicts oldest rows if we're over. Updates (dedup
-		// hits) don't grow the table so this is a no-op for repeat paths.
 		await this.enforce404Cap();
 	}
 
-	/**
-	 * Delete the oldest rows from `_emdash_404_log` if the row count exceeds
-	 * MAX_404_LOG_ROWS. "Oldest" is by `last_seen_at`, so a path that keeps
-	 * getting hit stays in the table even if it was first seen long ago.
-	 *
-	 * Private — callers use `log404`, which invokes this after every upsert.
-	 */
 	private async enforce404Cap(): Promise<void> {
 		const countRow = await this.db
 			.selectFrom("_emdash_404_log")
@@ -488,11 +389,6 @@ export class RedirectRepository {
 
 		const excess = count - MAX_404_LOG_ROWS;
 
-		// Evict the oldest rows in a single SQL statement. Using a subquery
-		// (rather than materialising the victim IDs in JS and passing them
-		// back as bind parameters) keeps the statement bounded regardless of
-		// how far over cap the table is — important for existing installs
-		// that crossed the threshold before this cap was introduced.
 		await this.db
 			.deleteFrom("_emdash_404_log")
 			.where(
@@ -558,10 +454,6 @@ export class RedirectRepository {
 	}
 
 	async get404Summary(limit = 50): Promise<NotFoundSummary[]> {
-		// Since rows are now deduped by path, each path has exactly one row
-		// with `hits` as the running count and `last_seen_at` as the latest
-		// timestamp. The subquery for `top_referrer` collapses to a simple
-		// pick of the row's stored referrer (the most recent one seen).
 		const rows = await sql<{
 			path: string;
 			count: number;

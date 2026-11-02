@@ -9,10 +9,6 @@ import { fetchRevisions, restoreRevision, type Revision } from "../lib/api";
 import { cn, formatRelativeTime, parseTimestamp } from "../lib/utils";
 import { ConfirmDialog } from "./ConfirmDialog";
 
-// =============================================================================
-// Diff utilities
-// =============================================================================
-
 type DiffKind = "added" | "removed" | "changed" | "unchanged";
 
 interface FieldDiff {
@@ -22,10 +18,6 @@ interface FieldDiff {
 	newValue?: unknown;
 }
 
-/**
- * Compute field-level diff between two revision data snapshots.
- * `older` is the revision being viewed, `newer` is the next revision after it.
- */
 function computeFieldDiff(
 	older: Record<string, unknown>,
 	newer: Record<string, unknown>,
@@ -52,14 +44,12 @@ function computeFieldDiff(
 		}
 	}
 
-	// Sort: changes first, then added, removed, unchanged
 	const kindOrder: Record<DiffKind, number> = { changed: 0, added: 1, removed: 2, unchanged: 3 };
 	diffs.sort((a, b) => kindOrder[a.kind] - kindOrder[b.kind]);
 
 	return diffs;
 }
 
-/** Format a value for display in the diff view */
 function formatDiffValue(value: unknown): string {
 	if (value === null || value === undefined) return "—";
 	if (typeof value === "string") return value;
@@ -69,15 +59,10 @@ function formatDiffValue(value: unknown): string {
 interface RevisionHistoryProps {
 	collection: string;
 	entryId: string;
-	/** Called when a revision is successfully restored */
 	onRestored?: () => void;
-	/** Reserve the inline end of the disclosure header for an external control. */
 	reserveHeaderEnd?: boolean;
 }
 
-/**
- * Format a date as a full timestamp
- */
 function formatFullDate(dateString: string): string {
 	return parseTimestamp(dateString).toLocaleString(undefined, {
 		weekday: "short",
@@ -89,10 +74,6 @@ function formatFullDate(dateString: string): string {
 	});
 }
 
-/**
- * RevisionHistory component - displays revision history for a content item
- * with ability to restore previous versions.
- */
 export function RevisionHistory({
 	collection,
 	entryId,
@@ -109,13 +90,12 @@ export function RevisionHistory({
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["revisions", collection, entryId],
 		queryFn: () => fetchRevisions(collection, entryId, { limit: 20 }),
-		enabled: isExpanded, // Only fetch when expanded
+		enabled: isExpanded,
 	});
 
 	const restoreMutation = useMutation({
 		mutationFn: (revisionId: string) => restoreRevision(revisionId),
 		onSuccess: () => {
-			// Invalidate content and revisions queries
 			void queryClient.invalidateQueries({
 				queryKey: ["content", collection, entryId],
 			});
@@ -149,7 +129,6 @@ export function RevisionHistory({
 	return (
 		<>
 			<Collapsible.Root open={isExpanded} onOpenChange={setIsExpanded}>
-				{/* Header - always visible */}
 				<Collapsible.Trigger
 					render={
 						<Button
@@ -177,7 +156,6 @@ export function RevisionHistory({
 					/>
 				</Collapsible.Trigger>
 
-				{/* Content - shown when expanded */}
 				<Collapsible.Panel
 					className="overflow-hidden duration-150 ease-out [&[hidden]:not([hidden='until-found'])]:hidden motion-reduce:transition-none"
 					style={({ transitionStatus }) => ({
@@ -250,7 +228,6 @@ export function RevisionHistory({
 
 interface RevisionItemProps {
 	revision: Revision;
-	/** The next newer revision to compare against (undefined for the latest) */
 	compareRevision?: Revision;
 	isLatest: boolean;
 	isRestoring: boolean;
@@ -304,7 +281,6 @@ function RevisionItem({
 				)}
 			</div>
 
-			{/* Diff view or snapshot - shown when selected */}
 			{isSelected && (
 				<div className="mt-3 pt-3 border-t">
 					{compareRevision ? (
@@ -322,10 +298,6 @@ function RevisionItem({
 		</div>
 	);
 }
-
-// =============================================================================
-// Diff view component
-// =============================================================================
 
 interface RevisionDiffViewProps {
 	older: Record<string, unknown>;

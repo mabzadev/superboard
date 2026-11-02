@@ -141,7 +141,7 @@ RootContainer.craft = {
 	},
 
 	rules: {
-		canDrag: () => false, // prevent dragging the root
+		canDrag: () => false,
 		canMoveIn: () => true,
 	},
 	related: {

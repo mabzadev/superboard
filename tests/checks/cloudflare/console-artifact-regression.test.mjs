@@ -317,7 +317,6 @@ test("deploying a prepared console preserves the tested Worker and browser asset
 			},
 			(_command, args) => {
 				if (args[0] === "scripts/cloudflare/site-build.mjs") {
-					// A later build can incorporate edits or a compiler different from the validated build.
 					writeFileSync(
 						worker,
 						"export default { fetch() { return new Response('untested'); } };\n",

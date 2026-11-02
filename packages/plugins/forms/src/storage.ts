@@ -1,9 +1,3 @@
-/**
- * Storage type definition for the forms plugin.
- *
- * Declares the two storage collections and their indexes.
- */
-
 import type { PluginStorageConfig } from "emdash";
 
 export type FormsStorage = PluginStorageConfig & {

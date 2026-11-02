@@ -53,7 +53,6 @@ describe("fallbackToOriginalThumbnail", () => {
 	it("does not loop if the original also fails", () => {
 		const img = { dataset: { thumbFallback: "1" } as DOMStringMap, src: LOCAL_IMAGE };
 		fallbackToOriginalThumbnail(img, "/some/other/url.jpg");
-		// Guard short-circuits: src is left untouched.
 		expect(img.src).toBe(LOCAL_IMAGE);
 	});
 });

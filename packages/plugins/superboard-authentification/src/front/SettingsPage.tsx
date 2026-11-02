@@ -34,7 +34,6 @@ const accessPanels: Record<(typeof accessSections)[number], ComponentType> = {
 	organizations: Organizations,
 	apps: Apps,
 };
-/** Settings whose natural home is not the tab of their contract group. */
 const settingTabs: Readonly<Record<string, string>> = {
 	ENABLE_NAMES: "fields",
 	NAMES_IS_REQUIRED: "fields",
@@ -54,7 +53,6 @@ export default function SettingsPage() {
 	const { path } = useFrontContext();
 	const i18n = useAuthenticationI18n();
 	const { moved, selected, section, select } = useAuthenticationTab("settings");
-	// API keys moved out of Settings; `/auth/access-key` and former `section=keys` links show them alone.
 	if (path === "/auth/access-key" || section === "keys")
 		return (
 			<section className="ds-page">
@@ -68,7 +66,6 @@ export default function SettingsPage() {
 	const AccessPanel = accessPanels[access];
 	return (
 		<AuthenticationTabs view="settings" selected={selected} select={select}>
-			{/* One form for every tab, so unsaved values survive tab switches. */}
 			<AuthenticationSettingsPage
 				embedded={(key) => settingTab(key) === selected}
 				onInvalidField={(key) => {

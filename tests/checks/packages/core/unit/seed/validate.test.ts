@@ -148,7 +148,7 @@ describe("validateSeed", () => {
 					{
 						slug: "posts",
 						label: "Posts",
-						fields: [{ slug: "title" }], // missing label and type
+						fields: [{ slug: "title" }],
 					},
 				],
 			});
@@ -406,7 +406,7 @@ describe("validateSeed", () => {
 						label: "Categories",
 						hierarchical: true,
 						collections: ["posts"],
-						terms: [{ slug: "news" }], // missing label
+						terms: [{ slug: "news" }],
 					},
 				],
 			});
@@ -572,7 +572,7 @@ describe("validateSeed", () => {
 								type: "custom",
 								url: "/about",
 								label: "About",
-								children: [{ type: "page" }], // missing ref
+								children: [{ type: "page" }],
 							},
 						],
 					},

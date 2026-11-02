@@ -1,10 +1,3 @@
-/**
- * Comment moderation inbox.
- *
- * Status tabs (Pending, Approved, Spam, Trash), search, collection filter,
- * table with row actions, bulk selection, and detail slide-over.
- */
-
 import { Badge, Button, Checkbox, Select, Tabs } from "@cloudflare/kumo";
 import { plural } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
@@ -23,10 +16,6 @@ import { CaretNext, CaretPrev } from "../ArrowIcons.js";
 import { ConfirmDialog } from "../ConfirmDialog.js";
 import { TableToolbar, TableToolbarSearch } from "../TableToolbar.js";
 import { CommentDetail } from "./CommentDetail.js";
-
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
 
 export interface CommentInboxProps {
 	comments: AdminComment[];
@@ -49,10 +38,6 @@ export interface CommentInboxProps {
 	deleteError: unknown;
 	onDeleteErrorReset: () => void;
 }
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 20;
 
@@ -79,15 +64,12 @@ export function CommentInbox({
 }: CommentInboxProps) {
 	const { t } = useLingui();
 
-	// Selection state
 	const [selected, setSelected] = React.useState<Set<string>>(new Set());
 	const [detailComment, setDetailComment] = React.useState<AdminComment | null>(null);
 	const [deleteId, setDeleteId] = React.useState<string | null>(null);
 
-	// Pagination (client-side within loaded data)
 	const [page, setPage] = React.useState(0);
 
-	// Reset selection and page when status tab or filters change
 	React.useEffect(() => {
 		setSelected(new Set());
 		setPage(0);
@@ -98,7 +80,6 @@ export function CommentInbox({
 	const totalPages = Math.max(1, Math.ceil(comments.length / PAGE_SIZE));
 	const paginatedComments = comments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-	// Bulk select
 	const allOnPageSelected =
 		paginatedComments.length > 0 && paginatedComments.every((c) => selected.has(c.id));
 
@@ -131,7 +112,6 @@ export function CommentInbox({
 		void onBulkAction([...selected], action).then(clearSelection);
 	};
 
-	// Collection filter items
 	const collectionItems: Record<string, string> = { "": t`All collections` };
 	for (const [slug, config] of Object.entries(collections)) {
 		collectionItems[slug] = config.label;
@@ -141,7 +121,6 @@ export function CommentInbox({
 
 	return (
 		<div className="space-y-4">
-			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-3">
 					<ADMIN_NAV_ICONS.comments className="h-6 w-6" />
@@ -154,7 +133,6 @@ export function CommentInbox({
 				</div>
 			</div>
 
-			{/* Tabs */}
 			<Tabs
 				variant="underline"
 				value={activeStatus}
@@ -213,7 +191,6 @@ export function CommentInbox({
 				)}
 			</TableToolbar>
 
-			{/* Bulk action bar */}
 			{selected.size > 0 && (
 				<div className="flex items-center gap-3 rounded-lg border bg-kumo-tint/50 px-4 py-2">
 					<span className="text-sm font-medium">
@@ -263,7 +240,6 @@ export function CommentInbox({
 				</div>
 			)}
 
-			{/* Table */}
 			<div className="rounded-md border bg-kumo-base overflow-x-auto">
 				<table className="w-full">
 					<thead>
@@ -329,7 +305,6 @@ export function CommentInbox({
 				</table>
 			</div>
 
-			{/* Pagination */}
 			{(totalPages > 1 || nextCursor) && (
 				<div className="flex items-center justify-between">
 					<span className="text-sm text-kumo-subtle">
@@ -368,7 +343,6 @@ export function CommentInbox({
 				</div>
 			)}
 
-			{/* Detail slide-over */}
 			{detailComment && (
 				<CommentDetail
 					comment={detailComment}
@@ -387,7 +361,6 @@ export function CommentInbox({
 				/>
 			)}
 
-			{/* Delete confirmation */}
 			<ConfirmDialog
 				open={!!deleteId}
 				onClose={() => {
@@ -409,10 +382,6 @@ export function CommentInbox({
 		</div>
 	);
 }
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
 
 interface CommentRowProps {
 	comment: AdminComment;

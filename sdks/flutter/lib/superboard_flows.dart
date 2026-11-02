@@ -1,4 +1,3 @@
-/// Public entrypoint for the native SuperBoard Flows SDK.
 library;
 
 export 'src/flows/client.dart';

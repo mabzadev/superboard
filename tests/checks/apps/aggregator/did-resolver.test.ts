@@ -1,14 +1,3 @@
-/**
- * DidResolver unit tests + the D1 binding's contract test.
- *
- * The class is exercised end-to-end with a real WebCrypto-backed signing key
- * (generated once in `beforeAll`) and a Map-backed cache so cache behaviour is
- * verified independently of D1 wiring. A separate suite runs the D1 binding
- * against the test pool's in-memory D1 and re-runs the cache contract via
- * the same scenarios — that way the contract is the same in tests and in
- * production.
- */
-
 import { P256PrivateKeyExportable } from "@atcute/crypto";
 import type { DidDocument } from "@atcute/identity";
 import type { Did } from "@atcute/lexicons/syntax";
@@ -205,8 +194,6 @@ describe("DidResolver", () => {
 		it("invalidate() forces re-resolution on the next call", async () => {
 			const cache = new MapDidDocCache();
 			const resolver = new StubResolver(buildDidDoc());
-			// Use a real-world `now` so invalidate's "epoch" sentinel falls
-			// well outside the TTL window.
 			const subject = new DidResolver({
 				cache,
 				resolver,
@@ -246,9 +233,6 @@ describe("DidResolver", () => {
 		});
 
 		it("returns null when row exists but cache fields are unpopulated", async () => {
-			// Backfill or future code may insert a known_publishers row before the
-			// consumer has resolved the DID doc; the read should treat that as
-			// a cache miss, not a stale cache hit.
 			const now = new Date().toISOString();
 			await testEnv.DB.prepare(
 				`INSERT INTO known_publishers (did, first_seen_at, last_seen_at)
@@ -324,7 +308,6 @@ describe("DidResolver", () => {
 			await subject.resolve(TEST_DID);
 			await subject.resolve(TEST_DID);
 
-			// One resolver call for the cache miss; the second resolve hits D1.
 			expect(resolver.calls).toHaveLength(1);
 		});
 
@@ -350,8 +333,6 @@ describe("DidResolver", () => {
 				.first<{ first_seen_at: string; last_seen_at: string; pds_resolved_at: string }>();
 			expect(row?.first_seen_at).toBe(seenAt.toISOString());
 			expect(row?.last_seen_at).toBe(seenAt.toISOString());
-			// pds_resolved_at gets pushed to epoch so the next resolve()
-			// sees the row as stale per the TTL check.
 			expect(row?.pds_resolved_at).toBe("1970-01-01T00:00:00.000Z");
 		});
 

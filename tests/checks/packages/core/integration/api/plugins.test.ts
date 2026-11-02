@@ -1,8 +1,3 @@
-/**
- * Plugin admin list handler: a statically-sandboxed entry surfaces flagged
- * sandboxed, and a configured plugin shadows a sandboxed entry with the same id.
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -64,12 +59,10 @@ describe("plugin admin handlers: sandboxed plugins", () => {
 		expect(result.success).toBe(true);
 		if (!result.success) return;
 
-		// A sandboxed-only entry surfaces, flagged.
 		const surfaced = result.data.items.filter((p) => p.id === "sandboxed-only");
 		expect(surfaced).toHaveLength(1);
 		expect(surfaced[0]).toMatchObject({ source: "config", sandboxed: true });
 
-		// A configured plugin with the same id wins; the sandboxed entry is not listed twice.
 		const shared = result.data.items.filter((p) => p.id === "shared-id");
 		expect(shared).toHaveLength(1);
 		expect(shared[0]?.version).toBe("1.0.0");

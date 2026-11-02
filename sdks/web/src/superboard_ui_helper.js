@@ -187,7 +187,6 @@ class SuperBoardUIHelper {
 	showMessagesList() {
 		this.page = 1;
 		this.hasReachedEnd = false;
-		// Create modal overlay
 		const modalOverlay = document.createElement("div");
 		modalOverlay.id = "SuperBoard-modal";
 		modalOverlay.style.position = "fixed";
@@ -195,34 +194,27 @@ class SuperBoardUIHelper {
 		modalOverlay.style.left = "15%";
 		modalOverlay.style.width = "70%";
 		modalOverlay.style.height = "70%";
-		modalOverlay.style.zIndex = "1000"; // Ensure it sits on top
+		modalOverlay.style.zIndex = "1000";
 
 		modalOverlay.innerHTML = this.htmlContent;
-		// Append modal overlay to body
 		document.body.appendChild(modalOverlay);
 
 		this.#loadMessages();
-		// Add event listener to close the modal
 		document.getElementById("closeModalBtn").addEventListener("click", () => {
-			document.body.removeChild(modalOverlay); // Remove the modal from the DOM
+			document.body.removeChild(modalOverlay);
 		});
-		// Close modal when clicking outside of modal content
 		modalOverlay.addEventListener("click", (event) => {
 			if (event.target === modalOverlay) {
-				document.body.removeChild(modalOverlay); // Remove the modal from the DOM
+				document.body.removeChild(modalOverlay);
 			}
 		});
 		const itemsListHTML = document.getElementById("itemList");
 		if (itemsListHTML) {
-			// Add scroll event listener to load next page when scrolling past half
 			itemsListHTML.addEventListener("scroll", () => {
-				// Prevent concurrent loads and stop once the server returned an empty page.
 				if (this.isLoading || this.hasReachedEnd) return;
 				const scrollPosition = itemsListHTML.scrollTop;
 				const modalHeight = itemsListHTML.scrollHeight - itemsListHTML.clientHeight;
-				// Nothing to paginate while the list does not overflow its container.
 				if (modalHeight <= 0) return;
-				// Load next page if scrolled past halfway
 				if (scrollPosition >= modalHeight / 2) {
 					this.isLoading = true;
 					this.page += 1;
@@ -238,17 +230,15 @@ class SuperBoardUIHelper {
 			console.log("SuperBoard -- refusing to open a message without an http(s) URL!");
 			return;
 		}
-		// Create a full-screen modal for the iframe
 		const iframeModal = document.createElement("div");
 		iframeModal.style.position = "fixed";
 		iframeModal.style.top = "0";
 		iframeModal.style.left = "0";
 		iframeModal.style.width = "100%";
 		iframeModal.style.height = "100%";
-		iframeModal.style.zIndex = "1002"; // Ensure it sits above other content
-		iframeModal.style.backgroundColor = "rgba(0, 0, 0, 0.5)"; // Dark background
+		iframeModal.style.zIndex = "1002";
+		iframeModal.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
 		iframeModal.style.background = "red";
-		// Create header for the iframe modal
 		const modalHeader = document.createElement("div");
 		modalHeader.style.display = "flex";
 		modalHeader.style.justifyContent = "space-between";
@@ -264,7 +254,7 @@ class SuperBoardUIHelper {
 		closeButton.style.height = "24px";
 		closeButton.style.marginRight = "20px";
 		closeButton.onclick = () => {
-			document.body.removeChild(iframeModal); // Remove the modal from the DOM
+			document.body.removeChild(iframeModal);
 		};
 		closeButton.innerHTML = `
           <svg
@@ -282,22 +272,16 @@ class SuperBoardUIHelper {
         `;
 		modalHeader.appendChild(closeButton);
 		iframeModal.appendChild(modalHeader);
-		// Create iframe
 		const iframe = document.createElement("iframe");
 		iframe.src = accessUrl;
 		iframe.style.width = "100%";
-		iframe.style.height = "calc(100% - 20px)"; // Adjust height to account for header
-		iframe.style.border = "none"; // Remove iframe border
-		// Append header and iframe to modal
+		iframe.style.height = "calc(100% - 20px)";
+		iframe.style.border = "none";
 		iframeModal.appendChild(modalHeader);
 		iframeModal.appendChild(iframe);
-		// Append iframe modal to body
 		document.body.appendChild(iframeModal);
 	}
 
-	//   Private methods
-
-	// Only http(s) URLs may be framed: a javascript: or data: URL would run in the host origin.
 	static #safeHttpUrl(value) {
 		if (typeof value !== "string" || value.trim() === "") return null;
 		try {
@@ -317,7 +301,7 @@ class SuperBoardUIHelper {
 			this.page,
 			(response) => {
 				spinner.style.display = "none";
-				this.isLoading = false; // Reset loading state
+				this.isLoading = false;
 
 				if (this.page == 1) {
 					const itemList = document.getElementById("itemList");
@@ -330,7 +314,6 @@ class SuperBoardUIHelper {
 			},
 			(_error) => {
 				this.isLoading = false;
-				// Let the next scroll retry the page that failed instead of skipping it.
 				if (this.page > 1) this.page -= 1;
 				spinner.style.display = "none";
 				console.log("SuperBoard -- could not get messages!");
@@ -366,7 +349,6 @@ class SuperBoardUIHelper {
   
   </span>
           `;
-			// Server-provided text is assigned via textContent so it can never be parsed as HTML.
 			itemDiv.querySelector(".item-title").textContent =
 				item.title == null ? "" : String(item.title);
 			itemDiv.querySelector(".item-subtitle").textContent =

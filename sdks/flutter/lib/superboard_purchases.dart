@@ -194,9 +194,6 @@ class SuperBoardPurchases {
   Future<void> setIdentityToken(String? token) async =>
       _setIdentityToken(token);
 
-  /// Records an authenticated, challenge-bound result for a live purchase
-  /// certification run. The server accepts only a verified application
-  /// identity and stores the structured result as immutable evidence.
   Future<SuperBoardCertificationResult> submitCertificationResult({
     required String runId,
     required String challenge,
@@ -358,11 +355,6 @@ class SuperBoardPurchases {
     );
   }
 
-  /// Fetches the offering, published remote paywall, targeting result and
-  /// deterministic experiment assignment for a placement.
-  ///
-  /// The last successful response is cached per placement and returned during
-  /// transient network failures so the application can still monetize offline.
   Future<SuperBoardPurchaseConfiguration> getPurchaseConfiguration({
     String placement = 'default',
   }) async {
@@ -891,7 +883,6 @@ class SuperBoardPurchases {
           ),
         );
       } catch (_) {
-        // The durable entry stays in the outbox and the retry timer remains active.
       }
     }
   }
@@ -1034,12 +1025,9 @@ class SuperBoardPurchases {
         if (_buildNumber.isNotEmpty) 'X-SuperBoard-Build-Number': _buildNumber,
         if (_storefront.isNotEmpty) 'X-SuperBoard-Storefront': _storefront,
         if (_campaign.isNotEmpty) 'X-SuperBoard-Campaign': _campaign,
-        // Compatibility headers remain during the rolling Worker migration.
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       })
       ..body = jsonEncode(body ?? const {});
-    // One long-lived client per instance keeps connections (and TLS
-    // sessions) alive across Purchases requests instead of re-handshaking.
     final client = _httpClient ??= _httpClientFactory();
     final sending = client.send(request);
     late final http.StreamedResponse streamed;
@@ -1048,8 +1036,6 @@ class SuperBoardPurchases {
       streamed = await sending.timeout(_requestTimeout);
       text = await _readBoundedResponse(streamed).timeout(_requestTimeout);
     } on TimeoutException {
-      // The client is shared, so a late response is drained rather than
-      // closing the client and aborting concurrent requests.
       unawaited(
         sending
             .then((response) => response.stream.drain<void>())

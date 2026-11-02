@@ -91,7 +91,6 @@ const DEFAULT_POLICY: NormalizedReleasePolicy = {
 	approvers: [],
 };
 
-/** Validate signed profile/release records and apply the complete provenance policy. */
 export async function verifyPackageReleaseRecords(
 	input: RecordVerificationInput,
 ): Promise<RecordVerificationReport> {

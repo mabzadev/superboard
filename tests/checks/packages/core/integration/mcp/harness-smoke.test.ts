@@ -1,12 +1,3 @@
-/**
- * Smoke test for the MCP integration harness.
- *
- * Verifies the `connectMcpHarness()` plumbing is sound: real DB, real
- * runtime, real MCP client/server pair. This is not bug coverage — it
- * just guards against regressions in the harness itself. Bug-specific
- * tests live in the other files in this directory.
- */
-
 import { Role } from "@emdash-cms/auth";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 

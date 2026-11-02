@@ -178,7 +178,6 @@ describe("PluginConfigurationTab", () => {
 		expect(screen.getByText("Associated Services & Workers")).toBeInTheDocument();
 		expect(screen.getByText("Routes & Views")).toBeInTheDocument();
 
-		// Check values
 		expect(screen.getByText("Active")).toBeInTheDocument();
 		expect(screen.getByText("1.2.0")).toBeInTheDocument();
 		expect(screen.getAllByText("auth.login").length).toBeGreaterThanOrEqual(1);
@@ -252,14 +251,12 @@ describe("PluginConfigurationTab", () => {
 
 	it("triggers re-check health and updates diagnostic", async () => {
 		const fetchMock = vi.fn();
-		// First fetch: diagnostic
 		fetchMock.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
 			headers: new Headers(),
 			json: async () => mockDiagnosticData,
 		});
-		// Second fetch: health POST
 		fetchMock.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
@@ -270,7 +267,6 @@ describe("PluginConfigurationTab", () => {
 				reason: null,
 			}),
 		});
-		// Third fetch: diagnostic refetch
 		fetchMock.mockResolvedValueOnce({
 			ok: true,
 			status: 200,

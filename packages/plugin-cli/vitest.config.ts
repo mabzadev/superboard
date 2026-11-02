@@ -8,8 +8,6 @@ export default centralTests(
 		test: {
 			environment: "node",
 			include: ["../../tests/checks/packages/plugin-cli/**/*.test.ts"],
-			// Bundle / build tests run a full tsdown probe + transpile,
-			// which is fast locally but can take >5s on cold CI runners.
 			testTimeout: 30_000,
 		},
 	}),

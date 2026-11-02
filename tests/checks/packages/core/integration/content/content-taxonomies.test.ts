@@ -1,15 +1,3 @@
-/**
- * MCP + REST content create/update accept a `taxonomies` field that assigns
- * taxonomy terms in the same transaction (issue #953).
- *
- * Prior behaviour: `content_create` silently ignored the field and callers had
- * to make N follow-up REST calls to attach categories/tags. The regression
- * this suite guards is that the field now resolves term slugs in the entry's
- * locale, persists the assignments via `setTermsForEntry` (same path as the
- * `/terms/{taxonomy}` REST route), and reports validation errors rather than
- * silently dropping unknown terms.
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -91,8 +79,6 @@ describeEachDialect("Content taxonomies field - create/update", (dialect) => {
 		expect(result.error?.code).toBe("VALIDATION_ERROR");
 		expect(result.error?.message).toContain("does-not-exist");
 
-		// The transaction must have rolled back. No orphan content row and no
-		// partial term assignment for the tag that did exist.
 		const list = await ctx.db
 			.selectFrom("ec_post")
 			.selectAll()
@@ -131,7 +117,6 @@ describeEachDialect("Content taxonomies field - create/update", (dialect) => {
 
 		const tags = await taxRepo.getTermsForEntry("post", entryId, "tag");
 		expect(tags.map((t) => t.slug)).toEqual(["seo"]);
-		// Sanity: we didn't just wipe the taxonomies table.
 		expect((await taxRepo.findById(tagAi.id))?.slug).toBe("ai");
 		expect((await taxRepo.findById(tagSeo.id))?.slug).toBe("seo");
 	});
@@ -165,7 +150,6 @@ describeEachDialect("Content taxonomies field - create/update", (dialect) => {
 		});
 		const entryId = created.data!.item.id;
 
-		// Update only `tag`; `category` must survive.
 		const updated = await handleContentUpdate(ctx.db, "post", entryId, {
 			taxonomies: { tag: ["seo"] },
 		});
@@ -198,7 +182,6 @@ describeEachDialect("Content taxonomies field - create/update", (dialect) => {
 			translationOf: enTag.id,
 		});
 
-		// EN entry references the EN slug.
 		const enResult = await handleContentCreate(ctx.db, "post", {
 			data: { title: "Hello" },
 			locale: "en",
@@ -206,7 +189,6 @@ describeEachDialect("Content taxonomies field - create/update", (dialect) => {
 		});
 		expect(enResult.success).toBe(true);
 
-		// FR entry references the FR slug. The EN slug must NOT resolve here.
 		const frResult = await handleContentCreate(ctx.db, "post", {
 			data: { title: "Bonjour" },
 			locale: "fr",

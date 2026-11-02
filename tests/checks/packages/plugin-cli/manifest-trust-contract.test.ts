@@ -1,13 +1,3 @@
-/**
- * Coverage for the manifest's identity (`slug`, `version`) and
- * trust-contract fields (`capabilities`, `allowedHosts`, `storage`).
- *
- * The trust contract is the manifest's most security-sensitive surface.
- * Capability vocabulary, deprecated-name rejection, and the cross-field
- * `network:request` / `allowedHosts` rules all need explicit coverage so
- * a future schema edit can't silently relax the validation.
- */
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -60,8 +50,6 @@ describe("VersionSchema", () => {
 	});
 
 	it("rejects build metadata (atproto rkey constraint)", () => {
-		// The atproto record-key alphabet has no `+`, so a semver
-		// build-metadata suffix can't survive into the publish path.
 		const result = VersionSchema.safeParse("1.0.0+build.1");
 		expect(result.success).toBe(false);
 	});
@@ -108,9 +96,6 @@ describe("CapabilitiesSchema (array-level)", () => {
 	});
 
 	it("rejects more than 32 entries", () => {
-		// All entries are valid capabilities but the count alone should
-		// trip the array max. Repeat a valid one rather than constructing
-		// 33 distinct names that would also each fail individually.
 		const result = CapabilitiesSchema.safeParse(Array.from({ length: 33 }).fill("content:read"));
 		expect(result.success).toBe(false);
 	});
@@ -128,14 +113,7 @@ describe("AllowedHostsSchema", () => {
 	});
 
 	it("rejects host:port", () => {
-		// Port must be carried separately; the lexicon's grammar doesn't
-		// include ports in the pattern.
 		const result = AllowedHostsSchema.safeParse(["api.example.com:8080"]);
-		// `:` is allowed-but-we-don't-validate at this layer (no
-		// scheme/path/whitespace is the only structural test); a port
-		// is technically passes the loose check. Document as intentional
-		// — the lexicon's host-pattern grammar is the strict validator.
-		// Update this test if we tighten the regex.
 		expect(result.success).toBe(true);
 	});
 
@@ -231,9 +209,6 @@ describe("ManifestSchema cross-field rules", () => {
 	});
 
 	it("network:request:unrestricted forbids allowedHosts", () => {
-		// The lexicon's invariant: allowedHosts MUST NOT appear when
-		// unrestricted is declared. The unrestricted capability already
-		// grants any host.
 		const result = ManifestSchema.safeParse({
 			...base,
 			capabilities: ["network:request:unrestricted"],

@@ -22,10 +22,6 @@ import type {
 } from "../../../../../../packages/core/src/plugins/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function defaultSettings(
 	overrides: Partial<CollectionCommentSettings> = {},
 ): CollectionCommentSettings {
@@ -45,10 +41,6 @@ const defaultInput = {
 	authorEmail: "jane@example.com",
 	body: "Great post!",
 };
-
-// ---------------------------------------------------------------------------
-// Group 1: Service with mocked CommentHookRunner
-// ---------------------------------------------------------------------------
 
 describe("Comment Service with CommentHookRunner", () => {
 	let db: Kysely<Database>;
@@ -176,10 +168,6 @@ describe("Comment Service with CommentHookRunner", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Group 2: Built-in moderator unit tests
-// ---------------------------------------------------------------------------
-
 describe("Built-in Default Comment Moderator", () => {
 	const ctx = {} as PluginContext;
 
@@ -287,10 +275,6 @@ describe("Built-in Default Comment Moderator", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Group 3: Real HookPipeline integration
-// ---------------------------------------------------------------------------
-
 describe("Comment Hooks with HookPipeline", () => {
 	let pipelineDb: Kysely<Database>;
 
@@ -361,7 +345,6 @@ describe("Comment Hooks with HookPipeline", () => {
 
 		const pipeline = createHookPipeline([plugin], { db: pipelineDb });
 
-		// Auto-select the sole provider
 		await resolveExclusiveHooks({
 			pipeline,
 			isActive: () => true,
@@ -423,7 +406,6 @@ describe("Comment Hooks with HookPipeline", () => {
 		const selection = pipeline.getExclusiveSelection("comment:moderate");
 		expect(selection).toBe(DEFAULT_COMMENT_MODERATOR_PLUGIN_ID);
 
-		// Verify it actually works
 		const moderateEvent: CommentModerateEvent = {
 			comment: {
 				collection: "post",

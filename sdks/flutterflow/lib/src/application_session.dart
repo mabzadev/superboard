@@ -133,7 +133,6 @@ class SuperBoardApplicationSessionManager {
 
   SuperBoardApplicationSession? get currentSession => _session;
 
-  /// Legacy keys that actually differ from [storageKey], deduplicated.
   Iterable<String> get _distinctLegacyKeys =>
       legacyStorageKeys.where((key) => key != storageKey).toSet();
 
@@ -152,12 +151,6 @@ class SuperBoardApplicationSessionManager {
     return 'superboard.application_session.v1.$scope';
   }
 
-  /// Previous secure-storage key retained during the v2 -> v3 rollback window.
-  ///
-  /// The v2 and v3 key formats are identical, so this currently returns the
-  /// same value as [scopedStorageKey]. The session manager ignores legacy keys
-  /// equal to [storageKey], so passing it in [legacyStorageKeys] never causes
-  /// duplicate secure-storage reads, writes or deletes.
   static String legacyScopedStorageKey({
     required Uri apiBaseUri,
     required String projectKey,
@@ -259,9 +252,6 @@ class SuperBoardApplicationSessionManager {
     String installationId,
   ) async => _adopt(await client.signInAnonymous(installationId));
 
-  /// Rotates the application session. Concurrent callers refreshing the same
-  /// refresh token share one request: refresh tokens are single-use, so a
-  /// second parallel rotation would be rejected and could revoke the session.
   Future<SuperBoardApplicationSession> refresh([String refreshToken = '']) {
     final token = refreshToken.trim().isNotEmpty
         ? refreshToken.trim()

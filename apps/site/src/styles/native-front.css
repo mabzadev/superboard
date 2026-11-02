@@ -644,7 +644,6 @@ body:has(.native-front) #emdash-toolbar {
 	max-width: min(40rem, calc(100% - 2rem));
 	max-height: min(32rem, 76vh);
 	overflow: hidden;
-	/* The shared dialog centres vertically with Tailwind's `translate`; the palette sits near the top. */
 	translate: -50% 0;
 	border-color: var(--front-border);
 	background: var(--popover, var(--front-card));

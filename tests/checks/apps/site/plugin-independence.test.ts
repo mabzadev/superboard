@@ -60,7 +60,6 @@ test.each(selections)("publishes $label without another business plugin", async 
 	const owners = new Set(["supbrd-core", ...plugins.map(({ manifest }) => manifest.plugin_id)]);
 	expect(input.renderers.every(({ plugin_id }) => owners.has(plugin_id))).toBe(true);
 	const pluginId = plugins[0]?.manifest.plugin_id;
-	// Statistics is an in-page view of each module, so the fallback navigation lists one entry.
 	const expectedLinks =
 		pluginId === "superboard-paywalls"
 			? ["/acquisition/paywalls"]

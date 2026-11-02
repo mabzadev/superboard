@@ -1,16 +1,5 @@
-/**
- * Shared sanitization for gallery block images, used by both converters so
- * the editor round-trip and the stored shape stay in lockstep.
- */
-
 import type { PortableTextGalleryImage } from "./types.js";
 
-/**
- * Normalize an untrusted `images` value into well-formed gallery images.
- * Non-object entries and entries without an asset object are dropped.
- * Missing `_key`s are filled via `generateKey` when provided (PM → PT);
- * left empty otherwise (PT → PM keeps whatever the block carried).
- */
 export function sanitizeGalleryImages(
 	value: unknown,
 	generateKey?: () => string,

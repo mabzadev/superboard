@@ -18,15 +18,12 @@ describe("isDeprecatedCapability", () => {
 	});
 
 	it("does not flag any rename target as deprecated (renames must be terminal)", () => {
-		// If a rename target ended up as another deprecated name, normalization
-		// would never settle. Check the closure stops in one step.
 		for (const target of Object.values(CAPABILITY_RENAMES)) {
 			expect(isDeprecatedCapability(target)).toBe(false);
 		}
 	});
 
 	it("does not flag prototype property names as deprecated", () => {
-		// Object.hasOwn guard: prototype keys must not slip through.
 		expect(isDeprecatedCapability("toString")).toBe(false);
 		expect(isDeprecatedCapability("constructor")).toBe(false);
 		expect(isDeprecatedCapability("__proto__")).toBe(false);
@@ -64,9 +61,6 @@ describe("normalizeCapabilities", () => {
 	});
 
 	it("deduplicates when a manifest declares both the legacy and canonical forms", () => {
-		// Both `network:fetch` and `network:request` are present -- after
-		// normalization both become `network:request`, and the second occurrence
-		// is dropped.
 		expect(normalizeCapabilities(["network:fetch", "network:request"])).toEqual([
 			"network:request",
 		]);
@@ -117,15 +111,12 @@ describe("declaredAccess facet mapping", () => {
 		expect(capabilitiesToDeclaredAccess(["network:request"], ["api.example.com"])).toEqual({
 			network: { request: { allowedHosts: ["api.example.com"] } },
 		});
-		// An empty constraint object is the lexicon's spelling of "unrestricted".
 		expect(
 			capabilitiesToDeclaredAccess(["network:request:unrestricted", "network:request"], []),
 		).toEqual({ network: { request: {} } });
 	});
 
 	it("never widens an empty allowedHosts (deny-all) to unrestricted", () => {
-		// An empty allowedHosts is the most-restrictive spelling (deny-all); it must
-		// never decode to unrestricted, or the tightest declaration grants the most.
 		expect(capabilitiesToDeclaredAccess(["network:request"], [])).toEqual({
 			network: { request: { allowedHosts: [] } },
 		});
@@ -135,8 +126,6 @@ describe("declaredAccess facet mapping", () => {
 	});
 
 	it("carries every facet of an email transport that also calls out and observes events", () => {
-		// declaredAccess must carry all three facets so the consent list matches
-		// the capability set the runtime enforces.
 		const da = capabilitiesToDeclaredAccess(
 			["hooks.email-transport:register", "network:request", "hooks.email-events:register"],
 			["api.cloudflare.com"],
@@ -152,19 +141,11 @@ describe("declaredAccess facet mapping", () => {
 });
 
 describe("declaredAccess <-> capabilities round-trip (total over the vocabulary)", () => {
-	// The full enumeration of implication-closed, valid capability states.
-	// definePlugin closes write->read and unrestricted->request, and publish
-	// rejects network:request with no hosts, so these are the only states that
-	// can reach a published manifest. Every one must round-trip to identity --
-	// the guard that the two representations are isomorphic, so the consent list
-	// always equals the capability set the runtime enforces.
 	const contentChoices = [[], ["content:read"], ["content:read", "content:write"]];
 	const mediaChoices = [[], ["media:read"], ["media:read", "media:write"]];
 	const networkChoices: { caps: string[]; hosts: string[] }[] = [
 		{ caps: [], hosts: [] },
 		{ caps: ["network:request", "network:request:unrestricted"], hosts: [] },
-		// Host-restricted with an empty allow-list = deny-all. Must round-trip
-		// as restricted, never widening to unrestricted.
 		{ caps: ["network:request"], hosts: [] },
 		{ caps: ["network:request"], hosts: ["api.example.com"] },
 		{ caps: ["network:request"], hosts: ["api.example.com", "*.cdn.example.com"] },
@@ -204,7 +185,6 @@ describe("declaredAccess <-> capabilities round-trip (total over the vocabulary)
 			expect(new Set(back.allowedHosts)).toEqual(new Set(input.allowedHosts));
 			count++;
 		}
-		// 3 content x 3 media x 5 network x 2^6 singleton subsets.
 		expect(count).toBe(2880);
 	});
 });

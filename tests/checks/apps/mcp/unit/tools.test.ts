@@ -95,8 +95,6 @@ beforeEach(() => {
 	vi.mocked(api.archiveCampaign).mockReset();
 });
 
-// --- Handlers propagate errors (no internal catch) ---
-
 describe("handlers propagate errors", () => {
 	it("handleGetStatus throws on API failure", async () => {
 		vi.mocked(api.getStatus).mockRejectedValueOnce(new ApiError(500, "Server down"));
@@ -179,8 +177,6 @@ describe("handlers propagate errors", () => {
 	});
 });
 
-// --- runWithAuth: single error boundary ---
-
 describe("runWithAuth", () => {
 	it("extracts token and passes to handler", async () => {
 		const handler = vi.fn().mockResolvedValue({
@@ -221,8 +217,6 @@ describe("runWithAuth", () => {
 	});
 });
 
-// --- Full path: runWithAuth + handler ---
-
 describe("runWithAuth + handler integration", () => {
 	it("success: returns formatted text", async () => {
 		vi.mocked(api.getStatus).mockResolvedValueOnce(statusEmpty);
@@ -251,8 +245,6 @@ describe("runWithAuth + handler integration", () => {
 		expect(vi.mocked(api.getStatus)).not.toHaveBeenCalled();
 	});
 });
-
-// --- format() primitive guard ---
 
 const { format } = await import("../../../../../apps/mcp/src/tools/handlers.js");
 
@@ -290,8 +282,6 @@ describe("format()", () => {
 		expect(result).not.toContain("warning");
 	});
 });
-
-// --- Handler success paths ---
 
 describe("handler success", () => {
 	it("handleGetStatus returns formatted text", async () => {
@@ -476,11 +466,8 @@ describe("handler success", () => {
 	});
 });
 
-// --- Wrong API shape: expectKey warnings surface through handlers ---
-
 describe("unexpected API response shapes", () => {
 	it("handleCreateLink warns when API returns no link key", async () => {
-		// API changed shape: returns {data: {link: ...}} instead of {link: ...}
 		vi.mocked(api.createLink).mockResolvedValueOnce({ data: { link: { id: 1 } } });
 
 		const result = await handleCreateLink("tok", "p1", { name: "x" });
@@ -491,7 +478,6 @@ describe("unexpected API response shapes", () => {
 	});
 
 	it("handleArchiveLink warns when API returns empty object", async () => {
-		// API returns {success: true} instead of {link: ...}
 		vi.mocked(api.archiveLink).mockResolvedValueOnce({ success: true });
 
 		const result = await handleArchiveLink("tok", "p1", 55);

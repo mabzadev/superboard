@@ -1,9 +1,3 @@
-/**
- * ProseMirror to Portable Text Converter
- *
- * Converts TipTap's ProseMirror JSON format to Portable Text for storage.
- */
-
 import { sanitizeGalleryImages } from "./gallery.js";
 import {
 	UnsupportedPortableTextMarksError,
@@ -24,16 +18,10 @@ import type {
 	PortableTextHtmlBlock,
 } from "./types.js";
 
-/**
- * Generate a unique key for Portable Text blocks
- */
 function generateKey(): string {
 	return Math.random().toString(36).substring(2, 11);
 }
 
-/**
- * Convert ProseMirror document to Portable Text
- */
 export function prosemirrorToPortableText(doc: ProseMirrorDocument): PortableTextBlock[] {
 	if (!doc || doc.type !== "doc" || !doc.content) {
 		return [];
@@ -56,9 +44,6 @@ export function prosemirrorToPortableText(doc: ProseMirrorDocument): PortableTex
 	return blocks;
 }
 
-/**
- * Convert a single ProseMirror node to Portable Text block(s)
- */
 function convertNode(
 	node: ProseMirrorNode,
 	path: string,
@@ -99,7 +84,6 @@ function convertNode(
 			};
 
 		default:
-			// Preserve unknown blocks
 			return {
 				_type: node.type,
 				_key: generateKey(),
@@ -109,13 +93,9 @@ function convertNode(
 	}
 }
 
-/**
- * Convert paragraph to Portable Text block
- */
 function convertParagraph(node: ProseMirrorNode): PortableTextTextBlock | null {
 	const { children, markDefs } = convertInlineContent(node.content || []);
 
-	// Skip empty paragraphs
 	if (children.length === 0) {
 		return null;
 	}
@@ -133,7 +113,6 @@ function convertParagraph(node: ProseMirrorNode): PortableTextTextBlock | null {
 	};
 }
 
-/** Map heading level number to Portable Text style */
 function headingLevelToStyle(level: number): PortableTextTextBlock["style"] {
 	switch (level) {
 		case 1:
@@ -153,9 +132,6 @@ function headingLevelToStyle(level: number): PortableTextTextBlock["style"] {
 	}
 }
 
-/**
- * Convert heading to Portable Text block
- */
 function convertHeading(node: ProseMirrorNode): PortableTextTextBlock | null {
 	const { children, markDefs } = convertInlineContent(node.content || []);
 	const rawLevel = typeof node.attrs?.level === "number" ? node.attrs.level : 1;
@@ -178,9 +154,6 @@ function convertHeading(node: ProseMirrorNode): PortableTextTextBlock | null {
 	};
 }
 
-/**
- * Convert list to Portable Text blocks
- */
 function convertList(
 	node: ProseMirrorNode,
 	listItem: "bullet" | "number",
@@ -199,9 +172,6 @@ function convertList(
 	return blocks;
 }
 
-/**
- * Convert list item to Portable Text blocks
- */
 function convertListItem(
 	item: ProseMirrorNode,
 	listItem: "bullet" | "number",
@@ -237,9 +207,6 @@ function convertListItem(
 	return blocks;
 }
 
-/**
- * Convert nested list
- */
 function convertListItemNested(
 	node: ProseMirrorNode,
 	listItem: "bullet" | "number",
@@ -258,13 +225,9 @@ function convertListItemNested(
 	return blocks;
 }
 
-/**
- * Convert blockquote to Portable Text blocks
- */
 function convertBlockquote(
 	node: ProseMirrorNode,
 ): PortableTextTextBlock | PortableTextTextBlock[] | null {
-	// Blockquotes in PT are just blocks with style: "blockquote"
 	const blocks: PortableTextTextBlock[] = [];
 
 	for (const child of node.content || []) {
@@ -286,9 +249,6 @@ function convertBlockquote(
 	return blocks.length === 1 ? blocks[0] : blocks.length > 0 ? blocks : null;
 }
 
-/**
- * Convert code block to Portable Text
- */
 function convertCodeBlock(node: ProseMirrorNode): PortableTextCodeBlock {
 	const code = node.content?.map((n) => n.text || "").join("") || "";
 	const language = typeof node.attrs?.language === "string" ? node.attrs.language : undefined;
@@ -301,9 +261,6 @@ function convertCodeBlock(node: ProseMirrorNode): PortableTextCodeBlock {
 	};
 }
 
-/**
- * Convert HTML block to Portable Text
- */
 function convertHtmlBlock(node: ProseMirrorNode): PortableTextHtmlBlock {
 	const rawHtml = node.attrs?.html;
 	return {
@@ -313,9 +270,6 @@ function convertHtmlBlock(node: ProseMirrorNode): PortableTextHtmlBlock {
 	};
 }
 
-/**
- * Convert image to Portable Text
- */
 function convertImage(node: ProseMirrorNode): PortableTextImageBlock {
 	const attrs = node.attrs;
 	const provider = typeof attrs?.provider === "string" ? attrs.provider : undefined;
@@ -332,11 +286,8 @@ function convertImage(node: ProseMirrorNode): PortableTextImageBlock {
 		_type: "image",
 		_key: generateKey(),
 		asset: {
-			// Use mediaId as _ref if available (for proper provider lookups)
 			_ref: mediaId || src || "",
-			// Store URL for admin preview and fallback rendering
 			url: src || "",
-			// Store provider for external media
 			provider: provider && provider !== "local" ? provider : undefined,
 		},
 		alt: alt || undefined,
@@ -348,9 +299,6 @@ function convertImage(node: ProseMirrorNode): PortableTextImageBlock {
 	};
 }
 
-/**
- * Convert gallery node to Portable Text
- */
 function convertGallery(node: ProseMirrorNode): PortableTextGalleryBlock {
 	const columns = node.attrs?.columns;
 	return {
@@ -361,16 +309,13 @@ function convertGallery(node: ProseMirrorNode): PortableTextGalleryBlock {
 	};
 }
 
-/**
- * Convert inline content (text nodes with marks) to Portable Text spans
- */
 function convertInlineContent(nodes: ProseMirrorNode[]): {
 	children: PortableTextSpan[];
 	markDefs: PortableTextMarkDef[];
 } {
 	const children: PortableTextSpan[] = [];
 	const markDefs: PortableTextMarkDef[] = [];
-	const markDefMap = new Map<string, string>(); // href -> key
+	const markDefMap = new Map<string, string>();
 
 	for (const node of nodes) {
 		if (node.type === "text" && node.text) {
@@ -390,7 +335,6 @@ function convertInlineContent(nodes: ProseMirrorNode[]): {
 				marks: marks.length > 0 ? marks : undefined,
 			});
 		} else if (node.type === "hardBreak") {
-			// Hard breaks become newlines in the text
 			if (children.length > 0) {
 				const lastChild = children.at(-1)!;
 				lastChild.text += "\n";
@@ -404,7 +348,6 @@ function convertInlineContent(nodes: ProseMirrorNode[]): {
 		}
 	}
 
-	// Ensure at least one span exists
 	if (children.length === 0) {
 		children.push({
 			_type: "span",
@@ -416,9 +359,6 @@ function convertInlineContent(nodes: ProseMirrorNode[]): {
 	return { children, markDefs };
 }
 
-/**
- * Convert a ProseMirror mark to Portable Text mark
- */
 function convertMark(
 	mark: ProseMirrorMark,
 	markDefs: PortableTextMarkDef[],
@@ -452,12 +392,10 @@ function convertMark(
 		case "link": {
 			const href = (typeof mark.attrs?.href === "string" ? mark.attrs.href : "") || "";
 
-			// Check if we already have a mark def for this link
 			if (markDefMap.has(href)) {
 				return markDefMap.get(href)!;
 			}
 
-			// Create new mark def
 			const key = generateKey();
 			markDefs.push({
 				_type: "link",

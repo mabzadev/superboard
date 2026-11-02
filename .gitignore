@@ -86,6 +86,7 @@ query-counts-out/
 # SuperBoard overlay
 # Build output
 build/
+!packages/plugin-cli/src/build/
 .dart_tool/
 **/.flutterflow/
 scripts/clients/flutterflow-library/generated_code/

@@ -1,7 +1,3 @@
-/**
- * Passkey authentication module
- */
-
 export type {
 	RegistrationOptions,
 	RegistrationResponse,

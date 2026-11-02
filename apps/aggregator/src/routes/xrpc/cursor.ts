@@ -1,30 +1,5 @@
-/**
- * Cursor encoding for paginated XRPC responses.
- *
- * Cursors are opaque base64url strings to clients; internally they encode
- * a small JSON object specific to the endpoint's ORDER BY clause. We use
- * different shapes for different endpoints (list cursors carry sort
- * keys; offset cursors carry an integer).
- *
- * Decode discipline: an *absent* cursor (`undefined`) means "first page".
- * A *provided* cursor that fails to decode throws `InvalidCursorError`,
- * which handlers translate into a 400 InvalidRequest. Earlier drafts
- * silently restarted on bad cursors to defend against DOS via forged
- * cursors, but that policy lets a legitimate client (with a corrupted
- * cursor from URL-encoding mishaps, mid-rollout schema changes, etc.)
- * loop forever re-fetching page 1 thinking they're paginating. The DOS
- * argument doesn't apply because the workload is bounded by `limit`
- * regardless. Throw loud, fail fast.
- *
- * Offset cursors additionally cap `offset` to `MAX_OFFSET` so a forged
- * cursor with a wildly large offset can't trigger an arbitrarily deep
- * SQL scan. Real clients never paginate that deep.
- */
-
 import { isPlainObject } from "../../utils.js";
 
-/** Throw when a *provided* cursor fails to decode. Handler catches and
- * converts to 400 InvalidRequest. */
 export class InvalidCursorError extends Error {
 	override readonly name = "InvalidCursorError";
 }
@@ -61,11 +36,6 @@ interface OffsetCursor {
 	offset: number;
 }
 
-/** Cap on offset values accepted from a client cursor. Real pagination
- * never reaches this depth — at the lexicon's `limit: 100` cap that's
- * 100 pages of 100 results = 10k items; defaulting to `limit: 25` makes
- * it 400 pages. Past that, a forged cursor is the more likely
- * explanation than a legitimate client. */
 const MAX_OFFSET = 10_000;
 
 export function encodeOffsetCursor(cursor: OffsetCursor): string {
@@ -100,7 +70,6 @@ const BASE64URL_DASH = /-/g;
 const BASE64URL_UNDERSCORE = /_/g;
 
 function base64UrlEncode(value: string): string {
-	// btoa needs latin-1; encode UTF-8 first via TextEncoder.
 	const bytes = new TextEncoder().encode(value);
 	let str = "";
 	for (let i = 0; i < bytes.length; i++) {

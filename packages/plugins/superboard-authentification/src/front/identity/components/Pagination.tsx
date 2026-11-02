@@ -61,13 +61,11 @@ const ShadcnPagination: React.FC<ShadcnPaginationProps> = ({
 		if (rightSiblingIndex < lastPage - 1) {
 			pages.push("ellipsis");
 		} else {
-			// Include pages between rightSiblingIndex and lastPage
 			for (let i = rightSiblingIndex + 1; i < lastPage; i++) {
 				pages.push(i);
 			}
 		}
 
-		// Always show last page
 		if (lastPage !== firstPage) {
 			pages.push(lastPage);
 		}

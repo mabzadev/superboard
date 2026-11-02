@@ -1,10 +1,3 @@
-/**
- * Menu translation endpoints
- *
- * GET  /_emdash/api/menus/:name/translations       — list translations for a menu (uses any locale row)
- * POST /_emdash/api/menus/:name/translations       — create a new locale translation (body: { locale, label })
- */
-
 import type { APIRoute } from "astro";
 import { z } from "zod";
 
@@ -37,7 +30,6 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
 	if (isParseError(localeQ)) return localeQ;
 
 	try {
-		// Look up any menu row matching the name so we can get its translation_group.
 		const anchor = await handleMenuGet(emdash.db, name, { locale: localeQ.locale });
 		if (!anchor.success) return unwrapResult(anchor);
 		const result = await handleMenuTranslations(emdash.db, anchor.data.id);
@@ -64,8 +56,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		const body = await parseBody(request, createTranslationBody);
 		if (isParseError(body)) return body;
 
-		// Resolve the source menu (either by explicit locale in query, or the
-		// first matching row). Its id becomes the `translationOf` for the new row.
 		const source = await handleMenuGet(emdash.db, name, { locale: localeQ.locale });
 		if (!source.success) return unwrapResult(source);
 

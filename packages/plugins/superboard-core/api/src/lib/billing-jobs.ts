@@ -127,8 +127,6 @@ export async function processGoogleBillingNotification(
 	},
 ) {
 	try {
-		// Jobs queued before environment classification was introduced were all
-		// persisted as production events. Preserve that replay behavior during cutover.
 		const environment = params.environment === "sandbox" ? "sandbox" : "production";
 		const verified = await verifyGooglePurchase(env, {
 			projectId: params.projectId,

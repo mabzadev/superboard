@@ -34,7 +34,6 @@ function nodeOptionsWithSmokeFontProvider(): string {
 }
 
 const SITE_MATRIX: SiteCase[] = [
-	// Templates
 	{
 		name: "templates/blog",
 		dir: resolve(WORKSPACE_ROOT, "templates/blog"),
@@ -88,9 +87,7 @@ async function waitForServer(url: string, timeoutMs: number): Promise<void> {
 				signal: AbortSignal.timeout(3000),
 			});
 			if (res.status > 0) return;
-		} catch {
-			// retry
-		}
+		} catch {}
 		await new Promise((resolveSleep) => setTimeout(resolveSleep, 500));
 	}
 
@@ -120,13 +117,6 @@ async function fetchWithRetry(url: string, retries = 10, delayMs = 1500): Promis
 	throw lastError instanceof Error ? lastError : new Error(`Request failed for ${url}`);
 }
 
-// ---------------------------------------------------------------------------
-// Build verification — runs a single recursive `pnpm build` across templates
-// in parallel. The child process replaces Astro's
-// Google provider with a local font so the smoke suite exercises the font
-// pipeline without depending on Google's CSS and asset rollouts being in sync.
-// ---------------------------------------------------------------------------
-
 describe("Site build verification", () => {
 	it("all templates build successfully", { timeout: 300_000 }, async () => {
 		await ensureBuilt();
@@ -153,10 +143,6 @@ describe("Site build verification", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Helpers — shared server lifecycle for runtime tests
-// ---------------------------------------------------------------------------
-
 interface BootedServer {
 	baseUrl: string;
 	process: ReturnType<typeof spawn>;
@@ -166,7 +152,6 @@ interface BootedServer {
 async function bootSite(site: SiteCase): Promise<BootedServer> {
 	await ensureBuilt();
 
-	// Remove stale database files so each run starts fresh.
 	for (const file of ["data.db", "data.db-wal", "data.db-shm"]) {
 		rmSync(join(site.dir, file), { force: true });
 	}
@@ -214,11 +199,6 @@ function killServer(serverProcess: ReturnType<typeof spawn>): Promise<void> {
 	});
 }
 
-// ---------------------------------------------------------------------------
-// Runtime verification — boots each site with `astro dev` and checks that
-// admin + frontend respond.
-// ---------------------------------------------------------------------------
-
 describe.sequential("Site runtime verification", () => {
 	for (const site of SITE_MATRIX) {
 		const setupPath = site.setupPath ?? "/_emdash/api/setup/dev-bypass?redirect=/";
@@ -262,11 +242,6 @@ describe.sequential("Site runtime verification", () => {
 	}
 });
 
-// ---------------------------------------------------------------------------
-// MCP endpoint verification — boots one Node and one Cloudflare site, gets a
-// bearer token, and verifies the MCP server responds to tools/list.
-// ---------------------------------------------------------------------------
-
 const MCP_SITES: SiteCase[] = SITE_MATRIX.filter(
 	(s) => s.name === "templates/blog" || s.name === "templates/starter-cloudflare",
 );
@@ -280,7 +255,6 @@ describe.sequential("MCP endpoint verification", () => {
 				const server = await bootSite(site);
 
 				try {
-					// Run dev-bypass with ?token=1 to get a bearer token
 					const setupRes = await fetchWithRetry(
 						`${server.baseUrl}/_emdash/api/setup/dev-bypass?token=1`,
 					);
@@ -292,7 +266,6 @@ describe.sequential("MCP endpoint verification", () => {
 					const token = setupBody.data?.token;
 					expect(token).toBeTruthy();
 
-					// Send MCP initialize
 					const initRes = await fetch(`${server.baseUrl}/_emdash/api/mcp`, {
 						method: "POST",
 						headers: {
@@ -313,14 +286,10 @@ describe.sequential("MCP endpoint verification", () => {
 					});
 					expect(initRes.status).toBe(200);
 
-					// Parse SSE response to extract JSON
 					const initText = await initRes.text();
 					const initData = parseSSE(initText);
 					expect(initData).toHaveProperty("result.serverInfo.name", "emdash");
 
-					// Send initialized notification + tools/list in one request
-					// (stateless mode — each request is independent, so we send
-					// the full sequence: notifications/initialized then tools/list)
 					const listRes = await fetch(`${server.baseUrl}/_emdash/api/mcp`, {
 						method: "POST",
 						headers: {
@@ -349,17 +318,10 @@ describe.sequential("MCP endpoint verification", () => {
 					const tools = (listData as { result: { tools: unknown[] } }).result.tools;
 					expect(tools.length).toBeGreaterThan(0);
 
-					// Verify some expected tools exist
 					const toolNames = tools.map((t: unknown) => (t as { name: string }).name);
 					expect(toolNames).toContain("content_list");
 					expect(toolNames).toContain("schema_list_collections");
 
-					// Send 14 concurrent tools/list calls and verify all succeed —
-					// guards against an auth-middleware race observed in production
-					// where parallel requests on the same authenticated session
-					// occasionally returned spurious 401s. The InMemoryTransport
-					// integration test cannot reach this code path; only a live
-					// HTTP server exercises the auth middleware that's racy.
 					const concurrentResponses = await Promise.all(
 						Array.from({ length: 14 }, (_, i) =>
 							fetch(`${server.baseUrl}/_emdash/api/mcp`, {
@@ -557,16 +519,11 @@ describe.sequential("MCP endpoint verification", () => {
 	);
 });
 
-/**
- * Parse the first JSON-RPC message from an SSE text response.
- * MCP stateless mode returns `event: message\ndata: {...}\n\n`.
- */
 function parseSSE(text: string): unknown {
 	for (const line of text.split("\n")) {
 		if (line.startsWith("data: ")) {
 			return JSON.parse(line.slice(6));
 		}
 	}
-	// Fall back to parsing as plain JSON (non-SSE response)
 	return JSON.parse(text);
 }

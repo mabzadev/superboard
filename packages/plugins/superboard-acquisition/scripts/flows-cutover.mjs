@@ -234,8 +234,6 @@ export async function main(argv = process.argv.slice(2)) {
 		typeof adapter.validatePlanIdentity === "function"
 	) {
 		await adapter.validatePlanIdentity(plan, {
-			// The guarded import is responsible for bootstrapping the deterministic
-			// project/default-environment scope before applying any converted rows.
 			allowMissingDefaultScope: command === "apply" || command === "resume",
 		});
 	}
@@ -379,9 +377,6 @@ async function maintenanceCommand(command, args, adapter, projectRef) {
 	if (window.project_ref !== projectRef || plan.project.project_ref !== projectRef)
 		throw new Error("Freeze/thaw artifacts do not match project_ref");
 	await adapter.validatePlanIdentity?.(plan, {
-		// Maintenance is stored in the API D1 and must precede the guarded import.
-		// The import itself is the only operation allowed to bootstrap the
-		// deterministic project/default-environment scope in Flows.
 		allowMissingDefaultScope: command === "freeze",
 	});
 	const operation = command === "freeze" ? "FREEZE" : "THAW";

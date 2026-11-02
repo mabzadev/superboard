@@ -1,16 +1,3 @@
-/**
- * Registry Browse
- *
- * Grid of plugin cards backed by the experimental decentralized plugin
- * registry's aggregator. Search box debounces directly into the
- * aggregator's `searchPackages` XRPC -- the aggregator is a public,
- * read-only service, so no server proxy is involved.
- *
- * Cards navigate to `/plugins/marketplace/$pluginId` (the same path the
- * marketplace browse uses); the router branches to the registry detail
- * component when `manifest.registry` is configured.
- */
-
 import { Badge, Button, Input } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { MagnifyingGlass } from "@phosphor-icons/react";
@@ -28,14 +15,7 @@ import { ADMIN_NAV_ICONS } from "./admin-navigation-icons.js";
 import { PublisherIdentity } from "./PublisherHandle.js";
 
 export interface RegistryBrowseProps {
-	/** Resolved manifest.registry block. Required -- caller checks. */
 	config: RegistryClientConfig;
-	/**
-	 * Plugin IDs already installed on this site (derived hashes for
-	 * registry installs, see `makeRegistryPluginId`). The UI uses this
-	 * only to show an "Installed" badge on browse cards; install gating
-	 * happens server-side.
-	 */
 	installedRegistryUris?: Set<string>;
 }
 
@@ -44,7 +24,6 @@ export function RegistryBrowse({ config, installedRegistryUris = new Set() }: Re
 	const [searchQuery, setSearchQuery] = React.useState("");
 	const [debouncedQuery, setDebouncedQuery] = React.useState("");
 
-	// Debounce search input
 	React.useEffect(() => {
 		const timer = setTimeout(setDebouncedQuery, 300, searchQuery);
 		return () => clearTimeout(timer);
@@ -85,7 +64,6 @@ export function RegistryBrowse({ config, installedRegistryUris = new Set() }: Re
 
 	return (
 		<div className="space-y-6">
-			{/* Header */}
 			<div>
 				<h1 className="text-2xl font-semibold leading-tight">{t`Plugin Registry`}</h1>
 				<p className="mt-1 text-sm leading-5 text-pretty text-kumo-subtle">
@@ -93,7 +71,6 @@ export function RegistryBrowse({ config, installedRegistryUris = new Set() }: Re
 				</p>
 			</div>
 
-			{/* Search */}
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 				<div className="relative flex-1">
 					<MagnifyingGlass className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kumo-subtle" />
@@ -108,7 +85,6 @@ export function RegistryBrowse({ config, installedRegistryUris = new Set() }: Re
 				</div>
 			</div>
 
-			{/* Error */}
 			{error ? (
 				<div
 					className="rounded-md border border-kumo-error bg-kumo-error/10 p-4 text-kumo-error"
@@ -118,7 +94,6 @@ export function RegistryBrowse({ config, installedRegistryUris = new Set() }: Re
 				</div>
 			) : null}
 
-			{/* Loading skeleton */}
 			{isSafetyRefreshPending ? (
 				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{Array.from({ length: 6 }).map((_, i) => (
@@ -131,7 +106,6 @@ export function RegistryBrowse({ config, installedRegistryUris = new Set() }: Re
 				</div>
 			) : null}
 
-			{/* Empty */}
 			{packages && packages.length === 0 ? (
 				<div className="rounded-md border border-kumo-border bg-kumo-subtle p-8 text-center text-kumo-subtle">
 					{debouncedQuery
@@ -140,7 +114,6 @@ export function RegistryBrowse({ config, installedRegistryUris = new Set() }: Re
 				</div>
 			) : null}
 
-			{/* Grid */}
 			{packages && packages.length > 0 ? (
 				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{packages.map((pkg) => (
@@ -153,7 +126,6 @@ export function RegistryBrowse({ config, installedRegistryUris = new Set() }: Re
 				</div>
 			) : null}
 
-			{/* Load more */}
 			{hasNextPage ? (
 				<div className="flex justify-center">
 					<Button
@@ -177,9 +149,6 @@ interface RegistryPackageCardProps {
 
 function RegistryPackageCard({ pkg, installed }: RegistryPackageCardProps) {
 	const { t } = useLingui();
-	// `profile` is lexicon-validated at the DiscoveryClient boundary, so the
-	// shape is trustworthy (or `null`). These are plain text content
-	// (React-escaped) — no URL/href, so no scheme allow-list is needed here.
 	const name = pkg.profile?.name;
 	const description = pkg.profile?.description;
 	const license = pkg.profile?.license;

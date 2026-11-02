@@ -1,12 +1,3 @@
-/**
- * Optional minimal styles for EmDash forms.
- *
- * Uses CSS custom properties for theming.
- * Import this stylesheet in your site to get basic form styling:
- *
- *   import "@emdash-cms/plugin-forms/styles";
- */
-
 .ec-form {
 	--ec-form-gap: 1rem;
 	--ec-form-field-border: 1px solid #d1d5db;
@@ -192,7 +183,6 @@
 	margin-top: 0.5rem;
 }
 
-/* Responsive: stack half-width fields on small screens */
 @media (max-width: 640px) {
 	.ec-form-field--half {
 		width: 100%;

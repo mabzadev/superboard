@@ -1,12 +1,3 @@
-/**
- * Gallery Detail Panel for Editor
- *
- * Sidebar panel for editing a gallery block: add images (multi-select media
- * picker), remove, drag-and-drop reorder, per-image alt/caption, and column
- * count. Changes apply immediately via onUpdate (reordering is inherently
- * live, so the whole panel follows suit instead of a save-button form).
- */
-
 import { Button, Input, Label, Select } from "@cloudflare/kumo";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
@@ -27,7 +18,6 @@ export interface GalleryDetailPanelProps {
 	onUpdate: (attrs: Partial<GalleryAttributes>) => void;
 	onDelete: () => void;
 	onClose: () => void;
-	/** When true, renders inline within the sidebar column instead of as a fixed overlay */
 	inline?: boolean;
 }
 
@@ -35,7 +25,6 @@ function generateKey(): string {
 	return Math.random().toString(36).substring(2, 11);
 }
 
-/** Map a picked MediaItem to the gallery's Portable Text image shape. */
 export function mediaItemToGalleryImage(item: MediaItem): GalleryImage {
 	return {
 		_type: "image",
@@ -51,9 +40,6 @@ export function mediaItemToGalleryImage(item: MediaItem): GalleryImage {
 		height: item.height,
 		focalX: item.focalX ?? undefined,
 		focalY: item.focalY ?? undefined,
-		// Cache LQIP alongside dimensions so the gallery renders a placeholder
-		// without a runtime lookup. Fall back to `meta` for providers that
-		// stash it there — mirrors ImageFieldRenderer's handleSelect.
 		blurhash: item.blurhash ?? metaString(item.meta, "blurhash"),
 		dominantColor: item.dominantColor ?? metaString(item.meta, "dominantColor"),
 	};
@@ -67,43 +53,24 @@ export function GalleryDetailPanel({
 	inline = false,
 }: GalleryDetailPanelProps) {
 	const { t } = useLingui();
-	// A distance-based activation constraint lets a plain pointerdown+pointerup
-	// (a click) pass through to the thumbnail button's onClick instead of the
-	// sensor immediately claiming the pointer and starting drag tracking.
 	const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 	const [showMediaPicker, setShowMediaPicker] = React.useState(false);
-	// `selectedImageKey` and `nodeKey` are transient UI state passed in via
-	// `attributes` when the gallery node view opens the sidebar (e.g. clicking
-	// an image in the canvas grid) — neither is ever persisted to node attrs.
 	const selectedImageKey = (attributes as GalleryAttributes & { selectedImageKey?: string })
 		.selectedImageKey;
 	const nodeKey = (attributes as GalleryAttributes & { nodeKey?: string }).nodeKey;
 	const [selectedKey, setSelectedKey] = React.useState<string | null>(selectedImageKey ?? null);
 
-	// The panel component instance is reused (not remounted) while the
-	// sidebar stays open, so clicking a different image in the canvas grid
-	// must update the selection even though `selectedKey` state already exists.
 	React.useEffect(() => {
 		if (selectedImageKey != null) {
 			setSelectedKey(selectedImageKey);
 		}
 	}, [selectedImageKey]);
 
-	// `attributes` is a snapshot taken when the sidebar opened; it does not
-	// refresh after onUpdate. Local state is the live source of truth while
-	// the panel is open so sequential edits (caption, then reorder) compose
-	// instead of the later edit clobbering the earlier one.
 	const [gallery, setGallery] = React.useState<GalleryAttributes>({
 		images: attributes.images ?? [],
 		columns: attributes.columns,
 	});
 
-	// Resync local state only when `nodeKey` changes — i.e. the sidebar switched
-	// to a DIFFERENT gallery node (or opened for the first time). `attributes`
-	// is a snapshot taken when the sidebar opened; a parent re-render can give
-	// it a new object identity without the underlying node changing (e.g. a
-	// parent re-wrapping attrs), and resyncing on identity alone would clobber
-	// in-progress local edits with that stale snapshot.
 	React.useEffect(() => {
 		setGallery({ images: attributes.images ?? [], columns: attributes.columns });
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on nodeKey by design; see comment above
@@ -135,7 +102,6 @@ export function GalleryDetailPanel({
 	};
 
 	const handleReplace = (key: string, item: MediaItem) => {
-		// Keep the slot (key, caption) — swap the asset and its intrinsic data
 		apply({
 			images: images.map((image) =>
 				image._key === key

@@ -1,12 +1,3 @@
-/**
- * Plugin Settings page
- *
- * Auto-generates a settings form from a plugin's `admin.settingsSchema`.
- * Values are stored server-side under the same KV keys the plugin reads
- * via `ctx.kv.get("settings:{key}")`. Secret fields are write-only: the
- * server never returns their values, only whether one is set.
- */
-
 import { Button, Input, InputArea, Select, Switch, Toast } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { FloppyDisk } from "@phosphor-icons/react";
@@ -47,8 +38,6 @@ export function PluginSettings({ pluginId }: PluginSettingsProps) {
 	});
 
 	const [values, setValues] = React.useState<Record<string, unknown>>({});
-	// Secret fields are write-only: track typed input separately and only
-	// send keys the user actually changed.
 	const [secretInputs, setSecretInputs] = React.useState<Record<string, string>>({});
 	const [clearedSecrets, setClearedSecrets] = React.useState<Set<string>>(new Set());
 
@@ -94,11 +83,6 @@ export function PluginSettings({ pluginId }: PluginSettingsProps) {
 				continue;
 			}
 			const value = values[key];
-			// An emptied field reverts to the schema default: send null so
-			// the server deletes the stored value. Sending "" would persist
-			// an empty string and shadow the default; skipping the key would
-			// leave the old stored value in place. Never-set fields also send
-			// null — deleting a missing key is a no-op.
 			const cleared = value === null || value === undefined || value === "";
 			updates[key] = cleared ? null : value;
 		}
@@ -239,8 +223,6 @@ function SettingFieldInput({
 }: SettingFieldInputProps) {
 	const { t } = useLingui();
 
-	// Schema labels/descriptions are plugin-authored strings (like admin
-	// page labels) — rendered as-is, not localized.
 	switch (field.type) {
 		case "string":
 			return field.multiline ? (
@@ -304,7 +286,6 @@ function SettingFieldInput({
 			);
 
 		case "select": {
-			// Kumo Select.items is a value->label record, not {value,label}[].
 			const items: Record<string, string> = {};
 			for (const option of field.options) {
 				items[option.value] = option.label;

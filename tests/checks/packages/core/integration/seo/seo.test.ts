@@ -33,7 +33,6 @@ describe("SEO", () => {
 		seoRepo = new SeoRepository(db);
 		registry = new SchemaRegistry(db);
 
-		// Create post collection with title field and SEO enabled
 		await registry.createCollection({
 			slug: "post",
 			label: "Posts",
@@ -44,14 +43,12 @@ describe("SEO", () => {
 			label: "Title",
 			type: "string",
 		});
-		// Enable SEO on posts
 		await db
 			.updateTable("_emdash_collections")
 			.set({ has_seo: 1 })
 			.where("slug", "=", "post")
 			.execute();
 
-		// Create page collection with SEO enabled
 		await registry.createCollection({
 			slug: "page",
 			label: "Pages",
@@ -202,7 +199,7 @@ describe("SEO", () => {
 			const seo = await seoRepo.get("post", duplicate.id);
 			expect(seo.title).toBe("SEO Title");
 			expect(seo.description).toBe("SEO Desc");
-			expect(seo.canonical).toBeNull(); // Canonical should not be copied
+			expect(seo.canonical).toBeNull();
 			expect(seo.noIndex).toBe(true);
 		});
 
@@ -213,13 +210,12 @@ describe("SEO", () => {
 
 			await seoRepo.upsert("post", c1.id, { title: "SEO 1" });
 			await seoRepo.upsert("post", c3.id, { title: "SEO 3", noIndex: true });
-			// c2 has no SEO row
 
 			const seoMap = await seoRepo.getMany("post", [c1.id, c2.id, c3.id]);
 
 			expect(seoMap.size).toBe(3);
 			expect(seoMap.get(c1.id)!.title).toBe("SEO 1");
-			expect(seoMap.get(c2.id)!.title).toBeNull(); // defaults
+			expect(seoMap.get(c2.id)!.title).toBeNull();
 			expect(seoMap.get(c3.id)!.title).toBe("SEO 3");
 			expect(seoMap.get(c3.id)!.noIndex).toBe(true);
 		});
@@ -232,14 +228,11 @@ describe("SEO", () => {
 		it("should skip upsert when input has no fields set", async () => {
 			const content = await repo.create({ type: "post", data: { title: "Test" } });
 
-			// Empty seo input should be a no-op
 			const seo = await seoRepo.upsert("post", content.id, {});
 
-			// Should return defaults without creating a row
 			expect(seo.title).toBeNull();
 			expect(seo.noIndex).toBe(false);
 
-			// Verify no row was actually written
 			const directCheck = await seoRepo.get("post", content.id);
 			expect(directCheck.title).toBeNull();
 		});
@@ -256,7 +249,6 @@ describe("SEO", () => {
 
 			await seoRepo.copyForDuplicate("post", original.id, duplicate.id);
 
-			// Should still return defaults (no row was created)
 			const seo = await seoRepo.get("post", duplicate.id);
 			expect(seo.title).toBeNull();
 		});
@@ -319,7 +311,6 @@ describe("SEO", () => {
 			});
 			const id = createResult.data!.item.id;
 
-			// Update only content data, not SEO
 			const updateResult = await handleContentUpdate(db, "post", id, {
 				data: { title: "Updated Title" },
 			});
@@ -381,11 +372,10 @@ describe("SEO", () => {
 			expect(dupItem.seo).toBeDefined();
 			expect(dupItem.seo!.title).toBe("SEO Title");
 			expect(dupItem.seo!.description).toBe("SEO Desc");
-			expect(dupItem.seo!.canonical).toBeNull(); // Canonical should not be copied
+			expect(dupItem.seo!.canonical).toBeNull();
 		});
 
 		it("should return default SEO on duplicate when original has no SEO customizations", async () => {
-			// Create with no explicit SEO
 			const createResult = await handleContentCreate(db, "post", {
 				data: { title: "Plain Post" },
 			});
@@ -394,7 +384,6 @@ describe("SEO", () => {
 			const dupResult = await handleContentDuplicate(db, "post", id);
 			expect(dupResult.success).toBe(true);
 
-			// Duplicate of an SEO-enabled collection should always have seo field
 			const dupItem = dupResult.data!.item;
 			expect(dupItem.seo).toBeDefined();
 			expect(dupItem.seo!.title).toBeNull();
@@ -426,11 +415,9 @@ describe("SEO", () => {
 			});
 			const id = createResult.data!.item.id;
 
-			// Soft delete first, then permanent delete
 			await repo.delete("post", id);
 			await handleContentPermanentDelete(db, "post", id);
 
-			// SEO row should be gone
 			const seo = await seoRepo.get("post", id);
 			expect(seo.title).toBeNull();
 		});
@@ -441,7 +428,6 @@ describe("SEO", () => {
 			});
 			const id = createResult.data!.item.id;
 
-			// Create some revisions
 			const revisionRepo = new RevisionRepository(db);
 			await revisionRepo.create({ collection: "post", entryId: id, data: { title: "v1" } });
 			await revisionRepo.create({ collection: "post", entryId: id, data: { title: "v2" } });
@@ -449,17 +435,14 @@ describe("SEO", () => {
 			const before = await revisionRepo.findByEntry("post", id);
 			expect(before).toHaveLength(2);
 
-			// Soft delete first, then permanent delete
 			await repo.delete("post", id);
 			await handleContentPermanentDelete(db, "post", id);
 
-			// Revisions should be gone
 			const after = await revisionRepo.findByEntry("post", id);
 			expect(after).toHaveLength(0);
 		});
 
 		it("should not hydrate SEO for collections without has_seo", async () => {
-			// Create a collection without SEO
 			await registry.createCollection({
 				slug: "snippet",
 				label: "Snippets",
@@ -495,7 +478,6 @@ describe("SEO", () => {
 				type: "string",
 			});
 
-			// Providing seo input for a non-SEO collection should return a validation error
 			const result = await handleContentCreate(db, "nav", {
 				data: { label: "Home" },
 				seo: { title: "Should be rejected" },
@@ -518,13 +500,11 @@ describe("SEO", () => {
 				type: "string",
 			});
 
-			// Create without SEO (should succeed)
 			const created = await handleContentCreate(db, "nav", {
 				data: { label: "Home" },
 			});
 			expect(created.success).toBe(true);
 
-			// Try to update with SEO (should fail)
 			const updated = await handleContentUpdate(db, "nav", created.data!.item.id, {
 				data: { label: "Updated" },
 				seo: { title: "Should be rejected" },
@@ -790,12 +770,10 @@ describe("SEO", () => {
 
 		it("should handle content with no SEO field (non-SEO collection)", () => {
 			const content = createMockContent({});
-			// Remove seo to simulate a non-SEO collection
 			delete (content as Partial<ContentItem>).seo;
 
 			const meta = getSeoMeta(content, { siteTitle: "My Blog" });
 
-			// Should use fallback defaults
 			expect(meta.title).toBe("Default Title | My Blog");
 			expect(meta.description).toBeNull();
 			expect(meta.robots).toBeNull();
@@ -825,7 +803,6 @@ describe("SEO", () => {
 	});
 
 	describe("handleSitemapData", () => {
-		/** Flatten the per-collection response into a flat list with collection tag. */
 		function flatEntries(data: {
 			collections: Array<{
 				collection: string;
@@ -876,7 +853,6 @@ describe("SEO", () => {
 				status: "published",
 			});
 
-			// Mark hidden post as noindex via SeoRepository
 			await seoRepo.upsert("post", hidden.id, { noIndex: true });
 
 			const result = await handleSitemapData(db);
@@ -931,7 +907,6 @@ describe("SEO", () => {
 		});
 
 		it("should exclude content from non-SEO collections", async () => {
-			// Create a collection WITHOUT has_seo
 			await registry.createCollection({
 				slug: "snippet",
 				label: "Snippets",
@@ -1002,22 +977,14 @@ describe("SEO", () => {
 				status: "published",
 			});
 
-			// Simulate a row whose updated_at came from the column default
-			// (`datetime('now')` on SQLite / `CURRENT_TIMESTAMP` on Postgres) or
-			// a content import: a space-separated "YYYY-MM-DD HH:MM:SS" string.
-			// This is not valid W3C Datetime and Google Search Console rejects
-			// it in <lastmod> as "Invalid date".
 			await sql`UPDATE ec_post SET updated_at = '2026-06-28 04:01:26'`.execute(db);
 
 			const result = await handleSitemapData(db);
 			expect(result.success).toBe(true);
 
 			const col = result.data!.collections[0]!;
-			// Both the index <lastmod> and the per-entry value are normalized
-			// to ISO 8601 (UTC assumed, matching SQLite's datetime('now')).
 			expect(col.lastmod).toBe("2026-06-28T04:01:26.000Z");
 			expect(col.entries[0]!.updatedAt).toBe("2026-06-28T04:01:26.000Z");
-			// The raw, space-separated form must not leak into the sitemap.
 			expect(col.lastmod).not.toContain(" ");
 		});
 
@@ -1063,7 +1030,6 @@ describe("SEO", () => {
 		});
 
 		it("should return empty collections when no SEO-enabled collections exist", async () => {
-			// Disable SEO on all collections
 			await db.updateTable("_emdash_collections").set({ has_seo: 0 }).execute();
 
 			await repo.create({
@@ -1099,13 +1065,10 @@ describe("SEO", () => {
 			expect(result.success).toBe(true);
 			const entries = flatEntries(result.data!);
 			expect(entries).toHaveLength(1);
-			// Default locale is `'en'` from migration 019. Rows backfill to it.
 			expect(result.data!.collections[0]!.entries[0]!.locale).toBe("en");
 		});
 
 		it("should expose translation_group so siblings can be linked", async () => {
-			// Create an English post, then a French translation of it. The
-			// repo wires `translation_group` so both rows share a group.
 			const en = await repo.create({
 				type: "post",
 				slug: "hello",
@@ -1176,9 +1139,6 @@ describe("SEO", () => {
 	});
 });
 
-/**
- * Helper to create a mock ContentItem for unit-level getSeoMeta tests.
- */
 function createMockContent(
 	overrides: Partial<{
 		data: Record<string, unknown>;

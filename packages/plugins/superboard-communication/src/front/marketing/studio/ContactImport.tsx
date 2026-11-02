@@ -27,10 +27,6 @@ const reasonLabels: Record<string, string> = {
 	invalid_tag: "Invalid tag",
 };
 
-/**
- * Three short steps in one dialog: choose a file, check the column mapping
- * and state how consent was collected, then read the result summary.
- */
 export function ContactImport({
 	project,
 	open,

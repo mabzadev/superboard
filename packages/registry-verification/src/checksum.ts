@@ -12,7 +12,6 @@ export interface DecodedMultihash {
 	digest: Uint8Array;
 }
 
-/** Decodes a lowercase base32 multibase-encoded multihash. */
 export function decodeMultihash(value: string): VerificationResult<DecodedMultihash> {
 	if (!value.startsWith("b")) {
 		return verificationError(
@@ -85,11 +84,6 @@ export async function verifyMultihash(
 	return { success: true, value: true };
 }
 
-/**
- * Compare public checksum digest bytes without early exit. Digests are public
- * integrity metadata, so a portable byte loop is preferable to a Node-only
- * timing primitive while still avoiding an ordinary equality short circuit.
- */
 export function compareDigestBytes(left: Uint8Array, right: Uint8Array): boolean {
 	let difference = left.length ^ right.length;
 	const maximumLength = Math.max(left.length, right.length);

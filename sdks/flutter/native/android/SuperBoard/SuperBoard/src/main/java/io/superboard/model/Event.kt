@@ -25,14 +25,10 @@ enum class EventType {
 
 @Parcelize
 class Event(
-    /// The type of the event.
     val event: EventType,
-    /// The creation date of the event.
     @SerializedName("created_at")
     val createdAt: InstantCompat,
-    /// The link associated with the event.
     var link: String? = null,
-    /// The engagement time associated with the event.
     @SerializedName("engagement_time")
     var engagementTime: Int? = null
 ) : Parcelable {

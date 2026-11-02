@@ -351,7 +351,6 @@ describe("Marketing A/B tests", () => {
 			)
 				.bind(`open:${row.id}`, project, campaignId, row.subscriber_id, row.id)
 				.run();
-		// Still testing: the campaign must not finish.
 		await dispatchCampaign(env, {
 			type: "marketing.campaign.dispatch",
 			projectId: project,
@@ -467,7 +466,6 @@ describe("Marketing A/B tests", () => {
 			"variant-delivery",
 		]);
 		expect(subjects).toEqual(["Variant B for Ada"]);
-		// A test in progress keeps the campaign running.
 		await expect(
 			env.DB.prepare("SELECT status FROM campaigns WHERE id=?").bind(campaignId).first(),
 		).resolves.toMatchObject({ status: "running" });
@@ -679,7 +677,6 @@ describe("Marketing native triggers, waits, goals and revenue attribution", () =
 		);
 		expect(statistics.body.data.goals_reached).toBe(1);
 
-		// Outside the attribution window nothing is attributed.
 		await acceptMarketingSignal(
 			env,
 			systemProject(project),

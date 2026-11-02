@@ -30,12 +30,10 @@ import {
 	decodeCursor,
 } from "./types.js";
 
-// Regex pattern for ULID validation
 const ULID_PATTERN = /^[0-9A-Z]{26}$/;
 const SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/;
 const MAX_DRAFT_STAGE_ATTEMPTS = 32;
 
-// LIKE wildcards that must be escaped so user search input is matched literally.
 const LIKE_WILDCARD_RE = /[\\%_]/g;
 const MAX_INDEXED_FIELD_FILTERS = 20;
 const MAX_IN_FILTER_VALUES = SQL_BATCH_SIZE;
@@ -179,11 +177,6 @@ function decodeIndexedFieldCursor(
 	return { value: candidate.value as IndexedOrderValue, id };
 }
 
-/**
- * Whitelist mapping a public date-filter field to its physical column. Keeping
- * this separate from `mapOrderField` makes the filterable set explicit and
- * prevents filtering on arbitrary columns.
- */
 const DATE_FILTER_COLUMNS: Record<ContentDateField, "created_at" | "updated_at" | "published_at"> =
 	{
 		createdAt: "created_at",
@@ -191,11 +184,6 @@ const DATE_FILTER_COLUMNS: Record<ContentDateField, "created_at" | "updated_at" 
 		publishedAt: "published_at",
 	};
 
-/**
- * Built-in sort fields → their physical columns. A closed set that blocks
- * sorting by arbitrary columns; per-collection fields are allowed
- * separately via `mapOrderField`'s `sortableExtras`.
- */
 const ORDER_FIELD_COLUMNS: Record<string, string> = {
 	createdAt: "created_at",
 	updatedAt: "updated_at",
@@ -209,14 +197,10 @@ const ORDER_FIELD_COLUMNS: Record<string, string> = {
 	locale: "locale",
 };
 
-/** True when `field` maps to a system column and needs no per-collection resolution. */
 export function isSystemOrderField(field: string): boolean {
 	return field in ORDER_FIELD_COLUMNS;
 }
 
-/**
- * System columns that exist in every ec_* table
- */
 const SYSTEM_COLUMNS = new Set([
 	"id",
 	"slug",
@@ -235,19 +219,11 @@ const SYSTEM_COLUMNS = new Set([
 	"translation_group",
 ]);
 
-/**
- * Get the table name for a collection type
- */
 function getTableName(type: string): string {
 	validateIdentifier(type, "collection type");
 	return `ec_${type}`;
 }
 
-/**
- * Serialize a value for database storage
- * Objects/arrays are JSON-stringified
- * Booleans are converted to 0/1 for SQLite
- */
 function serializeValue(value: unknown): unknown {
 	if (value === null || value === undefined) {
 		return null;
@@ -271,13 +247,8 @@ function writableContentData(data: Record<string, unknown>): Record<string, unkn
 	return writable;
 }
 
-/**
- * Deserialize a value from database storage
- * Attempts to parse JSON strings that look like objects/arrays
- */
 function deserializeValue(value: unknown): unknown {
 	if (typeof value === "string") {
-		// Try to parse if it looks like JSON
 		if (value.startsWith("{") || value.startsWith("[")) {
 			try {
 				return JSON.parse(value);
@@ -289,28 +260,15 @@ function deserializeValue(value: unknown): unknown {
 	return value;
 }
 
-/** Pattern for escaping special regex characters */
 const REGEX_ESCAPE_PATTERN = /[.*+?^${}()|[\]\\]/g;
 
-/**
- * Escape special regex characters in a string for use in `new RegExp()`
- */
 function escapeRegExp(s: string): string {
 	return s.replace(REGEX_ESCAPE_PATTERN, "\\$&");
 }
 
-/**
- * Repository for content CRUD operations
- *
- * Content is stored in per-collection tables (ec_posts, ec_pages, etc.)
- * Each field becomes a real column in the table.
- */
 export class ContentRepository {
 	constructor(private db: Kysely<Database>) {}
 
-	/**
-	 * Create a new content item
-	 */
 	async create(input: CreateContentInput): Promise<ContentItem> {
 		const id = input.id ?? ulid();
 		const now = new Date().toISOString();
@@ -328,15 +286,13 @@ export class ContentRepository {
 			createdAt,
 		} = input;
 
-		// Validate required fields
 		if (!type) {
 			throw new EmDashValidationError("Content type is required");
 		}
 
 		const tableName = getTableName(type);
 
-		// Resolve translation_group: if translationOf is set, look up the source item's group
-		let translationGroup: string = id; // default: self-reference
+		let translationGroup: string = id;
 		if (translationOf) {
 			const source = await this.findById(type, translationOf);
 			if (!source) {
@@ -345,7 +301,6 @@ export class ContentRepository {
 			translationGroup = source.translationGroup || source.id;
 		}
 
-		// Build column names and values
 		const columns: string[] = [
 			"id",
 			"slug",
@@ -373,7 +328,6 @@ export class ContentRepository {
 			translationGroup,
 		];
 
-		// Add data fields as columns (skip system columns to prevent injection via data)
 		if (data && typeof data === "object") {
 			for (const [key, value] of Object.entries(data)) {
 				if (!SYSTEM_COLUMNS.has(key)) {
@@ -384,7 +338,6 @@ export class ContentRepository {
 			}
 		}
 
-		// Build dynamic INSERT using raw SQL
 		const columnRefs = columns.map((c) => sql.ref(c));
 		const valuePlaceholders = values.map((v) => (v === null ? sql`NULL` : sql`${v}`));
 
@@ -395,7 +348,6 @@ export class ContentRepository {
 
 		invalidateCollectionCache(type);
 
-		// Fetch and return the created item
 		const item = await this.findById(type, id);
 		if (!item) {
 			throw new Error("Failed to create content");
@@ -403,22 +355,12 @@ export class ContentRepository {
 		return item;
 	}
 
-	/**
-	 * Generate a unique slug for a content item within a collection.
-	 *
-	 * Checks the collection table for existing slugs that match `baseSlug`
-	 * (optionally scoped to a locale) and appends a numeric suffix (`-1`,
-	 * `-2`, etc.) on collision to guarantee uniqueness.
-	 *
-	 * Returns null when slug normalization cannot produce a value.
-	 */
 	async generateUniqueSlug(type: string, text: string, locale?: string): Promise<string | null> {
 		const baseSlug = slugify(text);
 		if (!baseSlug) return null;
 
 		const tableName = getTableName(type);
 
-		// Check if the base slug is available
 		const existing = locale
 			? await sql<{ slug: string }>`
 					SELECT slug FROM ${sql.ref(tableName)}
@@ -436,7 +378,6 @@ export class ContentRepository {
 			return baseSlug;
 		}
 
-		// Find all slugs matching the pattern `baseSlug` or `baseSlug-N`
 		const pattern = `${baseSlug}-%`;
 		const candidates = locale
 			? await sql<{ slug: string }>`
@@ -449,7 +390,6 @@ export class ContentRepository {
 					WHERE slug = ${baseSlug} OR slug LIKE ${pattern}
 				`.execute(this.db);
 
-		// Find the highest numeric suffix in use
 		let maxSuffix = 0;
 		const suffixPattern = new RegExp(`^${escapeRegExp(baseSlug)}-(\\d+)$`);
 		for (const row of candidates.rows) {
@@ -463,29 +403,20 @@ export class ContentRepository {
 		return `${baseSlug}-${maxSuffix + 1}`;
 	}
 
-	/**
-	 * Duplicate a content item
-	 * Creates a new draft copy with "(Copy)" appended to the title.
-	 * A slug is auto-generated from the new title by the handler layer.
-	 */
 	async duplicate(type: string, id: string, authorId?: string): Promise<ContentItem> {
-		// Fetch the original item
 		const original = await this.findById(type, id);
 		if (!original) {
 			throw new EmDashValidationError("Content item not found");
 		}
 
-		// Prepare the new data
 		const newData = { ...original.data };
 
-		// Append "(Copy)" to title if present
 		if (typeof newData.title === "string") {
 			newData.title = `${newData.title} (Copy)`;
 		} else if (typeof newData.name === "string") {
 			newData.name = `${newData.name} (Copy)`;
 		}
 
-		// Auto-generate a unique slug from the new title/name
 		const slugSource =
 			typeof newData.title === "string"
 				? newData.title
@@ -497,7 +428,6 @@ export class ContentRepository {
 			? await this.generateUniqueSlug(type, slugSource, original.locale ?? undefined)
 			: null;
 
-		// Create the duplicate as a draft — use override authorId if provided (caller owns the copy)
 		return this.create({
 			type,
 			slug,
@@ -508,9 +438,6 @@ export class ContentRepository {
 		});
 	}
 
-	/**
-	 * Find content by ID
-	 */
 	async findById(type: string, id: string): Promise<ContentItem | null> {
 		const tableName = getTableName(type);
 
@@ -528,10 +455,6 @@ export class ContentRepository {
 		return this.mapRow(type, row);
 	}
 
-	/**
-	 * Find content by id, including trashed (soft-deleted) items.
-	 * Used by restore endpoint for ownership checks.
-	 */
 	async findByIdIncludingTrashed(type: string, id: string): Promise<ContentItem | null> {
 		const tableName = getTableName(type);
 
@@ -548,10 +471,6 @@ export class ContentRepository {
 		return this.mapRow(type, row);
 	}
 
-	/**
-	 * Find content by ID or slug. Tries ID first if it looks like a ULID,
-	 * otherwise tries slug. Falls back to the other if the first lookup misses.
-	 */
 	async findByIdOrSlug(
 		type: string,
 		identifier: string,
@@ -560,10 +479,6 @@ export class ContentRepository {
 		return this._findByIdOrSlug(type, identifier, false, locale);
 	}
 
-	/**
-	 * Find content by ID or slug, including trashed (soft-deleted) items.
-	 * Used by restore/permanent-delete endpoints.
-	 */
 	async findByIdOrSlugIncludingTrashed(
 		type: string,
 		identifier: string,
@@ -578,7 +493,6 @@ export class ContentRepository {
 		includeTrashed: boolean,
 		locale?: string,
 	): Promise<ContentItem | null> {
-		// ULIDs are 26 uppercase alphanumeric chars
 		const looksLikeUlid = ULID_PATTERN.test(identifier);
 
 		const findById = includeTrashed
@@ -590,29 +504,19 @@ export class ContentRepository {
 
 		try {
 			if (looksLikeUlid) {
-				// Try ID first, fall back to slug
 				const byId = await findById(type, identifier);
 				if (byId) return byId;
 				return await findBySlug(type, identifier);
 			}
-			// Try slug first, fall back to ID
 			const bySlug = await findBySlug(type, identifier);
 			if (bySlug) return bySlug;
 			return await findById(type, identifier);
 		} catch (error) {
-			// A collection dropped out from under a still-referencing caller (e.g. a
-			// relation whose collection was deleted without cascading) leaves the
-			// ec_* table missing. Treat that as "not found", matching
-			// findManyByIdOrSlug and findTranslationsForGroups, so callers surface a
-			// structured NOT_FOUND instead of a 500.
 			if (isMissingTableError(error)) return null;
 			throw error;
 		}
 	}
 
-	/**
-	 * Find content by slug
-	 */
 	async findBySlug(type: string, slug: string, locale?: string): Promise<ContentItem | null> {
 		const tableName = getTableName(type);
 
@@ -639,10 +543,6 @@ export class ContentRepository {
 		return this.mapRow(type, row);
 	}
 
-	/**
-	 * Find content by slug, including trashed (soft-deleted) items.
-	 * Used by restore/permanent-delete endpoints.
-	 */
 	async findBySlugIncludingTrashed(
 		type: string,
 		slug: string,
@@ -671,9 +571,6 @@ export class ContentRepository {
 		return this.mapRow(type, row);
 	}
 
-	/**
-	 * Find many content items with filtering and pagination
-	 */
 	async findMany(
 		type: string,
 		options: FindManyOptions = {},
@@ -681,7 +578,6 @@ export class ContentRepository {
 		const tableName = getTableName(type);
 		const limit = Math.min(options.limit || 50, 100);
 
-		// Determine ordering
 		const orderField = options.orderBy?.field || "createdAt";
 		const orderDirection = options.orderBy?.direction || "desc";
 		const resolvedOrderField = await this.resolveOrderField(
@@ -692,17 +588,13 @@ export class ContentRepository {
 		const dbField = resolvedOrderField.column;
 		const resolvedFieldFilters = await this.resolveFieldFilters(type, options.where?.fieldFilters);
 
-		// Validate order direction to prevent injection
 		const safeOrderDirection = orderDirection.toLowerCase() === "asc" ? "ASC" : "DESC";
 
-		// Build query with parameterized values (no string interpolation)
-		// Note: Dynamic content tables have deleted_at column, cast needed for Kysely
 		let query = this.db
 			.selectFrom(tableName as keyof Database)
 			.selectAll()
 			.where("deleted_at" as never, "is", null);
 
-		// Apply filters with parameterized queries
 		if (options.where?.status) {
 			query = query.where("status", "=", options.where.status);
 		}
@@ -720,9 +612,6 @@ export class ContentRepository {
 		query = this.applyBylineFilter(query, options.where, type);
 		query = this.applyFieldFilters(query, resolvedFieldFilters);
 
-		// Handle cursor pagination — decodeCursor throws InvalidCursorError
-		// on malformed input; let it propagate so handlers surface a
-		// structured INVALID_CURSOR rather than silently returning page 1.
 		if (options.cursor) {
 			if (resolvedOrderField.indexedCustomField) {
 				const { value, id: cursorId } = decodeIndexedFieldCursor(options.cursor, orderField);
@@ -770,7 +659,6 @@ export class ContentRepository {
 			}
 		}
 
-		// Apply ordering and limit
 		const indexedOrderFilter = resolvedOrderField.indexedCustomField
 			? resolvedFieldFilters.find((filter) => filter.column === dbField)
 			: undefined;
@@ -785,14 +673,6 @@ export class ContentRepository {
 		}
 		query = query.orderBy("id", safeOrderDirection === "ASC" ? "asc" : "desc").limit(limit + 1);
 
-		// Run the page fetch and the unbounded count together — the UI needs
-		// both to render a stable denominator (kept on every page intentionally),
-		// and issuing them in parallel on SQLite is essentially free.
-		//
-		// Settled rather than raced: a collection whose table is missing rejects
-		// both, and `Promise.all` returns on the first. The loser stays in flight
-		// holding a pooled connection, so a Postgres pool destroyed in that window
-		// never finishes closing.
 		const [rowsResult, countResult] = await Promise.allSettled([
 			query.execute(),
 			this.countWithResolvedFilters(type, options.where, resolvedFieldFilters),
@@ -837,15 +717,10 @@ export class ContentRepository {
 		return mappedResult;
 	}
 
-	/**
-	 * Update content
-	 */
 	async update(type: string, id: string, input: UpdateContentInput): Promise<ContentItem> {
 		const tableName = getTableName(type);
 		const now = new Date().toISOString();
 
-		// Every update advances the optimistic-concurrency version. updated_at
-		// advances only when a content-row column actually changes.
 		const updates: Record<string, unknown> = {};
 
 		if (input.status !== undefined) {
@@ -872,7 +747,6 @@ export class ContentRepository {
 			updates.primary_byline_id = input.primaryBylineId;
 		}
 
-		// Update data fields (skip system columns to prevent injection via data)
 		if (input.data !== undefined && typeof input.data === "object") {
 			for (const [key, value] of Object.entries(writableContentData(input.data))) {
 				updates[key] = serializeValue(value);
@@ -902,10 +776,6 @@ export class ContentRepository {
 		return updated;
 	}
 
-	/**
-	 * Update plugin-authored fields without letting content columns diverge
-	 * from the revision pointers that publication promotes.
-	 */
 	async updateDraftAware(
 		type: string,
 		id: string,
@@ -1055,9 +925,6 @@ export class ContentRepository {
 		return changed;
 	}
 
-	/**
-	 * Delete content (soft delete - moves to trash)
-	 */
 	async delete(type: string, id: string): Promise<boolean> {
 		const tableName = getTableName(type);
 		const now = new Date().toISOString();
@@ -1076,9 +943,6 @@ export class ContentRepository {
 		return changed;
 	}
 
-	/**
-	 * Restore content from trash
-	 */
 	async restore(type: string, id: string): Promise<ContentItem | null> {
 		const tableName = getTableName(type);
 
@@ -1097,19 +961,6 @@ export class ContentRepository {
 		return this.mapRow(type, restored);
 	}
 
-	/**
-	 * Permanently delete content (cannot be undone)
-	 */
-	/**
-	 * Permanently delete a soft-deleted content row.
-	 *
-	 * Returns `true` only when a soft-deleted (trashed) row was removed.
-	 * Returns `false` when no row exists OR when the row exists but is live —
-	 * the caller is responsible for distinguishing these cases (typically via
-	 * a follow-up `findByIdOrSlugIncludingTrashed` to surface NOT_FOUND vs
-	 * NOT_TRASHED). The `AND deleted_at IS NOT NULL` clause is the safety net
-	 * that prevents permanent delete from bypassing the trash workflow.
-	 */
 	async permanentDelete(type: string, id: string): Promise<boolean> {
 		const tableName = getTableName(type);
 
@@ -1124,9 +975,6 @@ export class ContentRepository {
 		return changed;
 	}
 
-	/**
-	 * Find trashed content items
-	 */
 	async findTrashed(
 		type: string,
 		options: Omit<FindManyOptions, "where"> = {},
@@ -1134,7 +982,6 @@ export class ContentRepository {
 		const tableName = getTableName(type);
 		const limit = Math.min(options.limit || 50, 100);
 
-		// Determine ordering - default to most recently deleted
 		const orderField = options.orderBy?.field || "deletedAt";
 		const orderDirection = options.orderBy?.direction || "desc";
 		const dbField = this.mapOrderField(orderField);
@@ -1146,7 +993,6 @@ export class ContentRepository {
 			.selectAll()
 			.where("deleted_at" as never, "is not", null);
 
-		// Handle cursor pagination — decodeCursor throws on invalid input.
 		if (options.cursor) {
 			const { orderValue, id: cursorId } = decodeCursor(options.cursor);
 
@@ -1199,9 +1045,6 @@ export class ContentRepository {
 		return mappedResult;
 	}
 
-	/**
-	 * Count trashed content items
-	 */
 	async countTrashed(type: string): Promise<number> {
 		const tableName = getTableName(type);
 
@@ -1214,22 +1057,6 @@ export class ContentRepository {
 		return Number(result?.count || 0);
 	}
 
-	/**
-	 * Apply the optional `q` filter.
-	 *
-	 * When the handler sets `useFts` (collection has a healthy FTS5 index
-	 * covering the display columns; SQLite only), the filter is served from
-	 * the index: a token-prefix MATCH against `_emdash_fts_<slug>` OR'd with
-	 * an index-served `slug GLOB 'term*'` prefix (the slug is not in the FTS
-	 * index). Both sides are index-backed, so SQLite's OR optimization avoids
-	 * the full-table scan the LIKE fallback needs (#1517). The trade-off is
-	 * search semantics: token-prefix matching instead of arbitrary substring.
-	 *
-	 * Fallback (Postgres, search disabled, or no usable terms): case-
-	 * insensitive substring LIKE across the handler-resolved `searchColumns`
-	 * (OR'd). User input is treated literally (LIKE wildcards escaped) and
-	 * `lower()` is applied on both sides for SQLite/Postgres parity.
-	 */
 	private applySearchFilter<QB extends { where: (cb: (eb: any) => unknown) => QB }>(
 		query: QB,
 		where: { q?: string; searchColumns?: string[]; useFts?: boolean } | undefined,
@@ -1252,7 +1079,6 @@ export class ContentRepository {
 					]),
 				);
 			}
-			// No usable terms (e.g. quotes only) — fall through to LIKE.
 		}
 
 		const escaped = term.replace(LIKE_WILDCARD_RE, (c) => `\\${c}`);
@@ -1268,12 +1094,6 @@ export class ContentRepository {
 		);
 	}
 
-	/**
-	 * Apply the optional inclusive date-range filter. The field is mapped
-	 * through `DATE_FILTER_COLUMNS` (a closed whitelist), and bounds compare
-	 * lexicographically against the stored ISO 8601 timestamps. A `publishedAt`
-	 * range naturally excludes never-published rows (their column is NULL).
-	 */
 	private applyDateFilter<QB extends { where: (cb: (eb: any) => unknown) => QB }>(
 		query: QB,
 		where?: { dateFilter?: { field: string; from?: string; to?: string } },
@@ -1293,19 +1113,6 @@ export class ContentRepository {
 		return next;
 	}
 
-	/**
-	 * Apply the optional byline filter as a correlated (NOT) EXISTS against
-	 * `_emdash_content_bylines`.
-	 *
-	 * Correlating from the content table preserves the outer sort index so
-	 * `LIMIT` can short-circuit. `mode: "none"` tests the junction rather than
-	 * `primary_byline_id` because the two are written in the same call but
-	 * are not atomically consistent, so the junction is authoritative.
-	 *
-	 * Whether a credit *renders* is locale-scoped; whether one *exists* is
-	 * not. Both are needed: the first decides what the filter matches, the
-	 * second decides whether the author fallback applies at all.
-	 */
 	private applyBylineFilter<QB extends { where: (cb: (eb: any) => unknown) => QB }>(
 		query: QB,
 		where: { bylineFilter?: ContentBylineFilter } | undefined,
@@ -1318,12 +1125,6 @@ export class ContentRepository {
 		const authorColumn = `${tableName}.author_id`;
 		const localeColumn = `${tableName}.locale`;
 
-		// An explicit credit that actually renders — optionally within a given
-		// set of translation groups. The junction stores a group, but a credit
-		// resolves only where that group has a byline row at the locale the
-		// list is scoped to, so this repeats the join `getContentBylinesMany`
-		// makes. `locale` falls back to each entry's own when the list spans
-		// locales.
 		const creditRenders = (eb: any, bylineIds?: string[]) => {
 			let sub = eb
 				.selectFrom("_emdash_content_bylines as cb")
@@ -1338,10 +1139,6 @@ export class ContentRepository {
 			return eb.exists(sub);
 		};
 
-		// Whether the entry carries an explicit credit at all, at any locale.
-		// Deliberately not locale-scoped: the author fallback is suppressed by
-		// the presence of a junction row, even one that renders nothing here
-		// (`hydrateBylinesMany` gates inference on `primaryBylineId`).
 		const hasExplicitCredit = (eb: any) =>
 			eb.exists(
 				eb
@@ -1351,14 +1148,6 @@ export class ContentRepository {
 					.whereRef("cb.content_id", "=", idColumn),
 			);
 
-		// The entry's author owns a byline row — optionally within a given set
-		// of translation groups — at the locale the list is scoped to. Matching
-		// the locale is what keeps the filter agreeing with the list: an
-		// inferred credit renders only when the author's byline has a row at
-		// that locale (`hydrateBylinesMany` -> `findByUserIds`), and byline
-		// translations start life with a null `user_id`, so a group translated
-		// into the locale but not re-linked resolves to no credit. `locale`
-		// falls back to each entry's own when the list spans locales.
 		const authorHasByline = (eb: any, bylineIds?: string[]) => {
 			let sub = eb
 				.selectFrom("_emdash_bylines as b")
@@ -1374,8 +1163,6 @@ export class ContentRepository {
 		if (filter.mode === "none") {
 			return query.where((eb: any) => {
 				const uncredited = eb.not(creditRenders(eb));
-				// With inference on, "no byline" means none is rendered, so an
-				// entry that falls through to an author byline is excluded too.
 				return filter.includeInferred
 					? eb.and([uncredited, eb.or([hasExplicitCredit(eb), eb.not(authorHasByline(eb))])])
 					: uncredited;
@@ -1384,15 +1171,11 @@ export class ContentRepository {
 
 		const bylineIds = filter.bylineIds ?? [];
 		if (bylineIds.length === 0) {
-			// A filter that resolved to no ids must match nothing rather than
-			// silently degrade to "no filter" and return the whole collection.
 			return query.where(() => sql<boolean>`1 = 0`);
 		}
 
 		return query.where((eb: any) => {
 			if (!filter.includeInferred) return creditRenders(eb, bylineIds);
-			// Inference applies only where no explicit credit exists, so an
-			// entry credited to someone else never matches on its author.
 			return eb.or([
 				creditRenders(eb, bylineIds),
 				eb.and([eb.not(hasExplicitCredit(eb)), authorHasByline(eb, bylineIds)]),
@@ -1400,9 +1183,6 @@ export class ContentRepository {
 		});
 	}
 
-	/**
-	 * Count content items
-	 */
 	async count(type: string, where?: FindManyOptions["where"]): Promise<number> {
 		const resolvedFieldFilters = await this.resolveFieldFilters(type, where?.fieldFilters);
 		return this.countWithResolvedFilters(type, where, resolvedFieldFilters);
@@ -1441,12 +1221,6 @@ export class ContentRepository {
 		return Number(result?.count || 0);
 	}
 
-	/**
-	 * Distinct, non-null `author_id` values across the collection's live
-	 * (non-trashed) content. Used to populate the admin author filter with
-	 * only the users who have actually authored entries, rather than the
-	 * full user directory (which requires admin privileges to read).
-	 */
 	async findDistinctAuthorIds(type: string): Promise<string[]> {
 		const tableName = getTableName(type);
 
@@ -1461,7 +1235,6 @@ export class ContentRepository {
 		return rows.map((row) => row.author_id).filter((id): id is string => id !== null);
 	}
 
-	// get overall statistics for a content type in a single query
 	async getStats(
 		type: string,
 		now = new Date(),
@@ -1498,17 +1271,10 @@ export class ContentRepository {
 		};
 	}
 
-	/**
-	 * Schedule content for future publishing
-	 *
-	 * Sets status to 'scheduled' and stores the scheduled publish time.
-	 * The content will be auto-published when the scheduled time is reached.
-	 */
 	async schedule(type: string, id: string, scheduledAt: string): Promise<ContentItem> {
 		const tableName = getTableName(type);
 		const now = new Date().toISOString();
 
-		// Validate scheduledAt is in the future
 		const scheduledDate = new Date(scheduledAt);
 		if (isNaN(scheduledDate.getTime())) {
 			throw new EmDashValidationError("Invalid scheduled date");
@@ -1522,9 +1288,6 @@ export class ContentRepository {
 			throw new EmDashValidationError("Content item not found");
 		}
 
-		// Published posts keep their status — the schedule applies to the
-		// pending draft, not the currently-live revision. Unpublished posts
-		// transition to 'scheduled' so they aren't visible before the time.
 		const newStatus = existing.status === "published" ? "published" : "scheduled";
 
 		await sql`
@@ -1546,12 +1309,6 @@ export class ContentRepository {
 		return updated;
 	}
 
-	/**
-	 * Unschedule content
-	 *
-	 * Clears the scheduled time. Published posts stay published;
-	 * draft/scheduled posts revert to 'draft'.
-	 */
 	async unschedule(type: string, id: string): Promise<ContentItem> {
 		const tableName = getTableName(type);
 		const now = new Date().toISOString();
@@ -1561,8 +1318,6 @@ export class ContentRepository {
 			throw new EmDashValidationError("Content item not found");
 		}
 
-		// Published posts keep their status — just clear the pending schedule.
-		// Draft/scheduled posts revert to 'draft'.
 		const newStatus = existing.status === "published" ? "published" : "draft";
 
 		await sql`
@@ -1585,24 +1340,10 @@ export class ContentRepository {
 		return updated;
 	}
 
-	/**
-	 * Find content that is ready to be published
-	 *
-	 * Returns all content where scheduled_at <= now, regardless of status.
-	 * This covers both draft-scheduled posts (status='scheduled') and
-	 * published posts with scheduled draft changes (status='published').
-	 *
-	 * `limit` (optional) caps how many due rows are returned, oldest-due first.
-	 * The scheduled-publishing sweep passes a limit so a large backlog can't
-	 * fan out unbounded publish/webhook work in a single tick (and blow a Worker
-	 * invocation's CPU/subrequest budget); the remainder drains on later ticks.
-	 */
 	async findReadyToPublish(type: string, limit?: number): Promise<ContentItem[]> {
 		const tableName = getTableName(type);
 		const now = new Date().toISOString();
 
-		// Embed an empty fragment when unbounded so callers that want every due
-		// row (manual flows, tests) keep the original behaviour.
 		const limitClause =
 			typeof limit === "number" && Number.isInteger(limit) && limit > 0
 				? sql`LIMIT ${limit}`
@@ -1620,9 +1361,6 @@ export class ContentRepository {
 		return result.rows.map((row) => this.mapRow(type, row));
 	}
 
-	/**
-	 * Find all translations in a translation group
-	 */
 	async findTranslations(type: string, translationGroup: string): Promise<ContentItem[]> {
 		const tableName = getTableName(type);
 
@@ -1636,26 +1374,6 @@ export class ContentRepository {
 		return result.rows.map((row) => this.mapRow(type, row));
 	}
 
-	/**
-	 * Batch variant of {@link findTranslations}: every (non-deleted) locale
-	 * variant for any of `translationGroups`, in one `WHERE translation_group IN
-	 * (...)` query chunked at `SQL_BATCH_SIZE` for D1's bind-parameter limit.
-	 * Lets callers resolve many edge groups without an N+1 per group. The caller
-	 * groups the flat result by `translationGroup` itself.
-	 *
-	 * `translation_group` leads the sort so the ordering follows
-	 * `idx_{table}_del_tg_locale` past its `deleted_at` equality; callers group by
-	 * `translationGroup`, so the per-group locale order they rely on is preserved.
-	 *
-	 * `publishedOnly` restricts the result to `status = 'published'` — reference
-	 * reads pass this for callers without `content:read_drafts` so draft/scheduled
-	 * entries never leak through an edge traversal.
-	 *
-	 * A reference edge stores only a collection slug (no SQL FK), so the table may
-	 * have been dropped since the edge was written. That is a tolerated dangling
-	 * state, not an error: a missing table resolves to no rows, mirroring how the
-	 * content read handlers treat `isMissingTableError`.
-	 */
 	async findTranslationsForGroups(
 		type: string,
 		translationGroups: string[],
@@ -1684,19 +1402,6 @@ export class ContentRepository {
 		return items;
 	}
 
-	/**
-	 * Batch variant of {@link findByIdOrSlug}: resolve many identifiers (each an
-	 * id OR a slug) within `type` in a constant number of queries — one `WHERE id
-	 * IN (...)` and one `WHERE slug IN (...)`, each chunked at `SQL_BATCH_SIZE`.
-	 * Returns a map from the input identifier to its resolved item; identifiers
-	 * that match nothing are absent. Used on write paths that accept a list of
-	 * references, so a single request doesn't fan out to an N+1 of point lookups.
-	 *
-	 * Resolution mirrors {@link findByIdOrSlug}: a ULID-shaped identifier prefers
-	 * the id match and falls back to slug; anything else prefers the slug match
-	 * and falls back to id. Slug matches collapse to the lowest-locale variant
-	 * (`ORDER BY locale ASC`), matching the slug-without-locale lookup.
-	 */
 	async findManyByIdOrSlug(type: string, identifiers: string[]): Promise<Map<string, ContentItem>> {
 		const resolved = new Map<string, ContentItem>();
 		const unique = [...new Set(identifiers)];
@@ -1726,15 +1431,10 @@ export class ContentRepository {
 				`.execute(this.db);
 				for (const row of slugRows.rows) {
 					const item = this.mapRow(type, row);
-					// First write wins → lowest locale, matching findBySlug without a locale.
 					if (item.slug != null && !bySlug.has(item.slug)) bySlug.set(item.slug, item);
 				}
 			}
 		} catch (error) {
-			// A collection dropped after a relation was created leaves the relation
-			// pointing at a missing table. Treat it like an empty collection (no
-			// matches) so callers surface a structured NOT_FOUND, not a 500 —
-			// mirroring findTranslationsForGroups.
 			if (isMissingTableError(error)) return resolved;
 			throw error;
 		}
@@ -1749,26 +1449,6 @@ export class ContentRepository {
 		return resolved;
 	}
 
-	/**
-	 * Publish the current draft
-	 *
-	 * Promotes draft_revision_id to live_revision_id and clears draft pointer.
-	 * Syncs the draft revision's data into the content table columns so the
-	 * content table always reflects the published version.
-	 * If no draft revision exists, creates one from current data and publishes it.
-	 * When `promoteRevision` is false, publishes the current content-table data
-	 * by changing lifecycle metadata only.
-	 *
-	 * `publishedAt` (optional) overrides the publication timestamp. If omitted,
-	 * the existing `published_at` is preserved (idempotent re-publish keeps the
-	 * original date) and falls back to the current time on first publish. Pass
-	 * an explicit value to backdate a publish (e.g. when migrating content from
-	 * another CMS).
-	 *
-	 * `requireDue` gates the final update on the row still being due.
-	 * `expectedScheduledAt` additionally fences changes made after a sweep
-	 * selected the row but before publication preparation began.
-	 */
 	async publish(
 		type: string,
 		id: string,
@@ -2025,12 +1705,6 @@ export class ContentRepository {
 		}
 	}
 
-	/**
-	 * Unpublish content
-	 *
-	 * Removes live pointer but preserves draft. If no draft exists,
-	 * creates one from the live version so the content isn't lost.
-	 */
 	async unpublish(type: string, id: string): Promise<ContentItem> {
 		const tableName = getTableName(type);
 		const now = new Date().toISOString();
@@ -2040,7 +1714,6 @@ export class ContentRepository {
 			throw new EmDashValidationError("Content item not found");
 		}
 
-		// If no draft exists, create one from the live version
 		if (!existing.draftRevisionId && existing.liveRevisionId) {
 			const revisionRepo = new RevisionRepository(this.db);
 			const liveRevision = await revisionRepo.findById(existing.liveRevisionId);
@@ -2079,17 +1752,6 @@ export class ContentRepository {
 		return updated;
 	}
 
-	/**
-	 * Set the draft revision pointer for a content item.
-	 *
-	 * Used by seed/import paths that stage a new revision's data before
-	 * promoting it to live via `publish()`.
-	 *
-	 * Validates that the content item exists and is not soft-deleted, that
-	 * the revision exists, and that the revision belongs to the same
-	 * collection and entry. Without these checks, a caller could leave the
-	 * content row pointing at a missing or unrelated revision.
-	 */
 	async setDraftRevision(type: string, id: string, revisionId: string): Promise<void> {
 		const existing = await this.findById(type, id);
 		if (!existing) {
@@ -2137,12 +1799,6 @@ export class ContentRepository {
 		return (result.numAffectedRows ?? 0n) > 0n;
 	}
 
-	/**
-	 * Discard pending draft changes
-	 *
-	 * Clears draft_revision_id. The content table columns already hold the
-	 * published version, so no data sync is needed.
-	 */
 	async discardDraft(type: string, id: string): Promise<ContentItem> {
 		const tableName = getTableName(type);
 
@@ -2152,13 +1808,9 @@ export class ContentRepository {
 		}
 
 		if (!existing.draftRevisionId) {
-			// No draft to discard
 			return existing;
 		}
 
-		// Discarding a draft restores the state from before the draft was
-		// staged — nothing about the live entry changed in between, so
-		// updated_at stays at its pre-draft value (#2143).
 		await sql`
 			UPDATE ${sql.ref(tableName)}
 			SET draft_revision_id = NULL
@@ -2174,11 +1826,6 @@ export class ContentRepository {
 		return updated;
 	}
 
-	/**
-	 * Count content items with a pending schedule.
-	 * Includes both draft-scheduled (status='scheduled') and published
-	 * posts with scheduled draft changes (status='published', scheduled_at set).
-	 */
 	async countScheduled(type: string): Promise<number> {
 		const tableName = getTableName(type);
 
@@ -2191,11 +1838,6 @@ export class ContentRepository {
 		return Number(result.rows[0]?.count || 0);
 	}
 
-	/**
-	 * Map database row to ContentItem
-	 * Extracts system columns and puts content fields in data
-	 * Excludes null values from data to match input semantics
-	 */
 	private mapRow(type: string, row: Record<string, unknown>): ContentItem {
 		const data: Record<string, unknown> = {};
 
@@ -2421,19 +2063,10 @@ export class ContentRepository {
 		return next;
 	}
 
-	/**
-	 * Map order field names to database columns.
-	 * Only allows known fields to prevent column enumeration via crafted orderBy values.
-	 */
 	private mapOrderField(field: string, sortableExtras: readonly string[] = []): string {
 		const mapped = ORDER_FIELD_COLUMNS[field];
 		if (mapped) return mapped;
 
-		// A collection's configured titleField/dateField are allowed as
-		// sort columns. The caller passes the collection's *actual* values (resolved
-		// server-side, never client-supplied), so this stays a closed set per
-		// request and doesn't reopen the column-enumeration hole. The slug is a
-		// validated identifier that maps directly to the column.
 		if (sortableExtras.includes(field)) {
 			validateIdentifier(field, "order field");
 			return field;

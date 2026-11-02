@@ -158,7 +158,6 @@ describe("PluginStorageRepository", () => {
 	describe("putMany()", () => {
 		it("should handle empty array", async () => {
 			await repo.putMany([]);
-			// Should not throw
 		});
 
 		it("should store multiple documents atomically", async () => {
@@ -236,7 +235,6 @@ describe("PluginStorageRepository", () => {
 
 	describe("query()", () => {
 		beforeEach(async () => {
-			// Setup test data
 			await repo.putMany([
 				{
 					id: "doc1",
@@ -306,8 +304,6 @@ describe("PluginStorageRepository", () => {
 		});
 
 		it("should reject malicious orderBy field names (SQL injection defense)", async () => {
-			// Create a repo that declares a malicious index name to bypass the
-			// "field must be indexed" check and hit the jsonExtract validation
 			const evilRepo = new PluginStorageRepository<TestDocument>(db, "test-plugin", "items", [
 				"'); DROP TABLE _plugin_storage--",
 			]);
@@ -342,7 +338,6 @@ describe("PluginStorageRepository", () => {
 			expect(page2.items).toHaveLength(1);
 			expect(page2.cursor).toBeUndefined();
 
-			// Ensure no duplicates
 			const allIds = [...page1.items, ...page2.items].map((i) => i.id);
 			expect(new Set(allIds).size).toBe(3);
 		});
@@ -400,9 +395,6 @@ describe("PluginStorageRepository", () => {
 			await expect(repo.count({ title: "Alpha" })).rejects.toThrow(StorageQueryError);
 		});
 	});
-
-	// Note: v2 API removed async iterator list() in favor of paginated query()
-	// Use query() with cursor for iteration
 
 	describe("plugin isolation", () => {
 		it("should not see documents from other plugins", async () => {

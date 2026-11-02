@@ -1,4 +1,3 @@
-/** Recently opened menu pages, kept per instance and operator for the command palette. */
 export interface FrontRecentPage {
 	href: string;
 	label: string;
@@ -35,7 +34,6 @@ export function readFrontRecentPages(key: string): FrontRecentPage[] {
 	}
 }
 
-/** Moves the page to the front of the list; storage failures (private mode, quota) are ignored. */
 export function recordFrontRecentPage(key: string, page: FrontRecentPage) {
 	try {
 		const pages = [page, ...readFrontRecentPages(key).filter(({ href }) => href !== page.href)];

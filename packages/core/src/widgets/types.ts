@@ -6,10 +6,9 @@ export interface Widget {
 	id: string;
 	type: WidgetType;
 	title?: string;
-	// Type-specific fields
-	content?: PortableTextBlock[]; // For content type
-	menuName?: string; // For menu type
-	componentId?: string; // For component type
+	content?: PortableTextBlock[];
+	menuName?: string;
+	componentId?: string;
 	componentProps?: Record<string, unknown>;
 }
 
@@ -21,17 +20,16 @@ export interface WidgetArea {
 	widgets: Widget[];
 }
 
-// For DB layer
 export interface WidgetRow {
 	id: string;
 	area_id: string;
 	sort_order: number;
 	type: WidgetType;
 	title: string | null;
-	content: string | null; // JSON string
+	content: string | null;
 	menu_name: string | null;
 	component_id: string | null;
-	component_props: string | null; // JSON string
+	component_props: string | null;
 	created_at: string;
 }
 
@@ -43,10 +41,9 @@ export interface WidgetAreaRow {
 	created_at: string;
 }
 
-// Component registration
 export interface WidgetComponentDef {
-	id: string; // 'core:recent-posts'
-	label: string; // 'Recent Posts'
+	id: string;
+	label: string;
 	description?: string;
 	props: Record<string, PropDef>;
 }
@@ -55,10 +52,9 @@ export interface PropDef {
 	type: "string" | "number" | "boolean" | "select";
 	label: string;
 	default?: unknown;
-	options?: Array<{ value: string; label: string }>; // For select
+	options?: Array<{ value: string; label: string }>;
 }
 
-// Admin API types
 export interface CreateWidgetAreaInput {
 	name: string;
 	label: string;

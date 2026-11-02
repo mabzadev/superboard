@@ -5,7 +5,6 @@ import { useCallback } from "react";
 import { useRouter } from "./useRouter";
 
 export interface NextAuthHook {
-	// All methods from useAuth
 	isAuthenticated: boolean;
 	isAuthenticating: boolean;
 	authenticationError: string;
@@ -20,7 +19,6 @@ export interface NextAuthHook {
 	loginError: string;
 	logoutError: string;
 
-	// Next.js specific methods
 	loginRedirect: (request?: Partial<LoginRedirectRequest>) => Promise<void>;
 	logoutRedirect: (request?: { returnTo?: string }) => Promise<void>;
 	refreshSession: () => Promise<void>;
@@ -44,14 +42,12 @@ export function useNextAuth(): NextAuthHook {
 	const logoutRedirect = useCallback(
 		async (request?: { returnTo?: string }) => {
 			try {
-				// Build the logout URL with returnTo parameter
 				const returnTo =
 					request?.returnTo || (typeof window !== "undefined" ? window.location.origin : "/");
 
 				await auth.logoutRedirect({ postLogoutRedirectUri: returnTo });
 			} catch (error) {
 				console.error("Logout redirect error:", error);
-				// Fallback: if logout fails, at least navigate to the desired location
 				if (request?.returnTo) {
 					router.push(request.returnTo);
 				} else {
@@ -64,9 +60,8 @@ export function useNextAuth(): NextAuthHook {
 
 	const refreshSession = useCallback(async () => {
 		try {
-			// Force token refresh
 			await auth.acquireToken();
-			router.refresh(); // Refresh server components
+			router.refresh();
 		} catch (error) {
 			console.error("Session refresh error:", error);
 		}

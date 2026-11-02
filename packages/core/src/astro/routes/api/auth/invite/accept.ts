@@ -1,10 +1,3 @@
-/**
- * GET /_emdash/api/auth/invite/accept
- *
- * Validate an invite token and return invite data for the UI.
- * This is called when the invitee clicks the email link.
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;

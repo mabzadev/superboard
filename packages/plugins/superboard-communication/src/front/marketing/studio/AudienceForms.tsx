@@ -38,7 +38,6 @@ function emptyDraft(locale: string): Draft {
 	};
 }
 
-/** Signup forms: list, a single editor with sensible defaults and copy-paste snippets. */
 export function AudienceForms({ project }: { project: string }) {
 	const { t, locale } = useStudioI18n();
 	const [forms, setForms] = useState<SignupForm[]>([]);

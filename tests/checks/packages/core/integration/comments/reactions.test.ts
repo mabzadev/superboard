@@ -188,15 +188,12 @@ describe("CommentReactionRepository", () => {
 
 		it("does not error when two toggles for the same voter race (idempotent add)", async () => {
 			const c = await approvedComment();
-			// Fire both concurrently — the old read-then-write path could throw a
-			// unique-constraint 500 here; ON CONFLICT makes it safe.
 			const [a, b] = await Promise.all([
 				handleReactionToggle(db, { ...base, commentId: c.id, reaction: "like", voterHash: "v1" }),
 				handleReactionToggle(db, { ...base, commentId: c.id, reaction: "like", voterHash: "v1" }),
 			]);
 			expect(a.success).toBe(true);
 			expect(b.success).toBe(true);
-			// Invariant: never more than one row for the same (comment, voter, reaction).
 			const counts = await reactions.countsForComments([c.id]);
 			expect((counts.get(c.id)?.like ?? 0) <= 1).toBe(true);
 		});

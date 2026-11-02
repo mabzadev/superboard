@@ -12,15 +12,10 @@ import type { Database, MediaRow } from "../types.js";
 import type { FindManyResult } from "./types.js";
 import { encodeCursor, decodeCursor } from "./types.js";
 
-/** Escape LIKE wildcard characters and the escape char itself in user-supplied values */
 function escapeLike(value: string): string {
 	return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
 }
 
-/**
- * Normalize a mimeType filter (string or array) into a clean string[].
- * Entries that are empty strings are dropped.
- */
 function normalizeMimeFilter(input?: string | readonly string[]): string[] {
 	if (!input) return [];
 	const arr = Array.isArray(input) ? input : [input];
@@ -31,11 +26,6 @@ function normalizeMimeFilter(input?: string | readonly string[]): string[] {
 		);
 }
 
-/**
- * Build a WHERE clause that matches `mime_type` against any of the given
- * filter entries — exact equality for full MIMEs, LIKE prefix for entries
- * ending in "/".
- */
 function mimeMatchExpr(eb: ExpressionBuilder<Database, "media">, filters: string[]) {
 	return eb.or(
 		filters.map((entry) =>
@@ -88,12 +78,9 @@ export interface CreateMediaInput {
 export interface FindManyMediaOptions {
 	limit?: number;
 	cursor?: string;
-	/** Filter by MIME type. Pass a string for a single prefix/exact, or an array to match any. Strings ending with "/" are treated as LIKE prefix matches; others are exact equality. */
 	mimeType?: string | readonly string[];
-	status?: MediaStatus | "all"; // Filter by status, defaults to "ready"
-	/** Case-insensitive substring matched against the filename (covers filename and extension). */
+	status?: MediaStatus | "all";
 	q?: string;
-	/** Omit for all media, pass null for the Main library, or pass a folder ID. */
 	folderId?: string | null;
 }
 
@@ -117,15 +104,9 @@ export interface MediaPageResult {
 const UPLOAD_ATTEMPT_CLEANUP_AGE_MS = 60 * 60 * 1000;
 const UPLOAD_ATTEMPT_CLEANUP_BATCH_SIZE = 100;
 
-/**
- * Media repository for database operations
- */
 export class MediaRepository {
 	constructor(private db: Kysely<Database>) {}
 
-	/**
-	 * Create a new media item
-	 */
 	async create(input: CreateMediaInput): Promise<MediaItem> {
 		const id = ulid();
 		const now = new Date().toISOString();
@@ -156,9 +137,6 @@ export class MediaRepository {
 		return this.rowToItem(row);
 	}
 
-	/**
-	 * Create a pending media item (for signed URL upload flow)
-	 */
 	async createPending(input: {
 		filename: string;
 		mimeType: string;
@@ -296,9 +274,6 @@ export class MediaRepository {
 		return Number(result.numUpdatedRows ?? 0) > 0;
 	}
 
-	/**
-	 * Confirm upload (mark as ready)
-	 */
 	async confirmUpload(
 		id: string,
 		metadata?: {
@@ -335,9 +310,6 @@ export class MediaRepository {
 		return row ? this.rowToItem(row) : null;
 	}
 
-	/**
-	 * Mark upload as failed
-	 */
 	async markFailed(id: string, expectedStorageKey?: string): Promise<MediaItem | null> {
 		let query = this.db.updateTable("media").set({ status: "failed" }).where("id", "=", id);
 		if (expectedStorageKey !== undefined) {
@@ -348,9 +320,6 @@ export class MediaRepository {
 		return row ? this.rowToItem(row) : null;
 	}
 
-	/**
-	 * Find media by ID
-	 */
 	async findById(id: string): Promise<MediaItem | null> {
 		const row = await this.db
 			.selectFrom("media")
@@ -361,10 +330,6 @@ export class MediaRepository {
 		return row ? this.rowToItem(row) : null;
 	}
 
-	/**
-	 * Find media by filename
-	 * Useful for idempotent imports
-	 */
 	async findByFilename(filename: string): Promise<MediaItem | null> {
 		const row = await this.db
 			.selectFrom("media")
@@ -375,10 +340,6 @@ export class MediaRepository {
 		return row ? this.rowToItem(row) : null;
 	}
 
-	/**
-	 * Find media by content hash
-	 * Used for deduplication - same content = same hash
-	 */
 	async findByContentHash(contentHash: string): Promise<MediaItem | null> {
 		const row = await this.db
 			.selectFrom("media")
@@ -390,12 +351,6 @@ export class MediaRepository {
 		return row ? this.rowToItem(row) : null;
 	}
 
-	/**
-	 * Find many media items with cursor pagination
-	 *
-	 * Uses keyset pagination (cursor-based) for consistent results.
-	 * The cursor encodes the created_at and id of the last item.
-	 */
 	async findMany(options: FindManyMediaOptions = {}): Promise<FindManyResult<MediaItem>> {
 		const limit = Math.min(options.limit || 50, 100);
 
@@ -405,11 +360,9 @@ export class MediaRepository {
 			.orderBy("id", "desc")
 			.limit(limit + 1);
 
-		// Handle cursor-based pagination — throws on invalid cursor.
 		if (options.cursor) {
 			const { orderValue: createdAt, id: cursorId } = decodeCursor(options.cursor);
 
-			// Keyset pagination: get items where (created_at, id) < cursor
 			query = query.where((eb) =>
 				eb.or([
 					eb("created_at", "<", createdAt),
@@ -453,9 +406,6 @@ export class MediaRepository {
 		};
 	}
 
-	/**
-	 * Update media metadata
-	 */
 	async update(id: string, input: UpdateMediaInput): Promise<MediaItem | null> {
 		const existing = await this.findById(id);
 		if (!existing) {
@@ -480,9 +430,6 @@ export class MediaRepository {
 		return this.findById(id);
 	}
 
-	/**
-	 * Delete media item
-	 */
 	async deleteWithStorageKey(id: string): Promise<string | null> {
 		const deleted = await this.db
 			.deleteFrom("media")
@@ -497,9 +444,6 @@ export class MediaRepository {
 		return (await this.deleteWithStorageKey(id)) !== null;
 	}
 
-	/**
-	 * Count media items
-	 */
 	async count(mimeType?: string | readonly string[]): Promise<number> {
 		const filters = normalizeMimeFilter(mimeType);
 		let query = this.db.selectFrom("media").select((eb) => eb.fn.count<number>("id").as("count"));
@@ -544,13 +488,6 @@ export class MediaRepository {
 		return query;
 	}
 
-	/**
-	 * Delete pending uploads older than the given age.
-	 * Pending uploads that were never confirmed indicate abandoned upload flows.
-	 *
-	 * Returns the storage keys of deleted rows so callers can remove the
-	 * corresponding files from object storage.
-	 */
 	async cleanupPendingUploads(maxAgeMs: number = 60 * 60 * 1000): Promise<string[]> {
 		const cutoff = new Date(Date.now() - maxAgeMs).toISOString();
 
@@ -564,9 +501,6 @@ export class MediaRepository {
 		return rows.map((r) => r.storage_key);
 	}
 
-	/**
-	 * Convert database row to MediaItem
-	 */
 	private rowToItem(row: MediaRow): MediaItem {
 		const focalPoint = normalizeFocalPoint(row.focal_x, row.focal_y);
 		return {

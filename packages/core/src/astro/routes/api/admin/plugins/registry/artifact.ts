@@ -1,26 +1,3 @@
-/**
- * Registry artifact proxy
- *
- * GET /_emdash/api/admin/plugins/registry/artifact?did=&slug=&version=&kind=&index=
- *
- * Proxies an icon / screenshot / banner image referenced by a registry
- * release record so the admin UI can display it without cross-origin
- * requests to arbitrary publisher hosting.
- *
- * Trust model (CRITICAL): the proxy never accepts an artifact URL from the
- * client. The caller addresses an artifact by its coordinates
- * `(did, slug, version, kind, index)`; the server resolves the *declared*
- * URL from the validated release record fetched from the configured
- * aggregator. The proxy can therefore only ever fetch a URL the publisher
- * declared in their signed release — not an arbitrary caller-supplied URL.
- *
- * The publisher-declared URL is still untrusted (an attacker who controls a
- * publisher record, or the aggregator, can point it anywhere), so the
- * resolved URL passes through the SSRF defences (`assertSafeArtifactUrl`,
- * re-validated on every redirect hop) before any fetch, and only allowlisted
- * image content types are served back.
- */
-
 import type { Did } from "@atcute/lexicons";
 import { evaluateRegistryReleaseWithdrawal } from "@emdash-cms/registry-client/withdrawal";
 import type { APIRoute } from "astro";
@@ -35,15 +12,6 @@ import { coerceRegistryConfig, validateAggregatorUrl } from "../../../../../../r
 
 export const prerender = false;
 
-/**
- * Image content types the proxy will pass through. Anything else is rejected.
- *
- * SVG is deliberately excluded: it is active content (an `<svg><script>`
- * executes when navigated to as a top-level document), and the publisher
- * supplies the bytes. Rather than serve it behind mitigations, we refuse it
- * end-to-end — the publish CLI rejects SVG artifacts too, so a conforming
- * release never references one. AVIF is included.
- */
 const ALLOWED_IMAGE_TYPES = new Set([
 	"image/png",
 	"image/jpeg",
@@ -52,34 +20,24 @@ const ALLOWED_IMAGE_TYPES = new Set([
 	"image/avif",
 ]);
 
-/** Artifact kinds the proxy can resolve. `screenshot` additionally needs `index`. */
 const ALLOWED_KINDS = new Set(["icon", "banner", "screenshot"]);
 
-/** Loose DID shape (`did:method:id`); the aggregator lexicon is authoritative. */
 const DID_PATTERN = /^did:[a-z]+:.+/;
-/** Slug grammar: ASCII letter then letters / digits / `-` / `_`. Mirrors the install route. */
 const SLUG_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
 const CID_PATTERN = /^b[a-z2-7]+$/;
-/** Non-negative integer, for the screenshot index param. */
 const INDEX_PATTERN = /^\d+$/;
 
-/** Cap proxied images so a hostile host can't stream an unbounded body. */
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** Redirect hops to follow, re-validating each target against SSRF rules. */
 const MAX_REDIRECTS = 5;
 
-/** Wall-clock budget covering connect + headers + body for the artifact fetch. */
 const FETCH_TIMEOUT_MS = 15_000;
 
-/** Per-aggregator-request timeout and overall budget for release resolution. */
 const AGGREGATOR_REQUEST_TIMEOUT_MS = 15_000;
 const AGGREGATOR_TOTAL_BUDGET_MS = 30_000;
 
-/** Bound the version search: 20 pages * 50 per page = 1000 releases worth. */
 const MAX_LIST_PAGES = 20;
 
-/** Build a fetch that enforces a per-request and per-budget timeout. Mirrors the install handler. */
 function timedFetch(totalDeadline: number): typeof fetch {
 	return (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
 		const now = Date.now();
@@ -101,15 +59,6 @@ function timedFetch(totalDeadline: number): typeof fetch {
 	};
 }
 
-/**
- * Narrow one entry of a release's `artifacts` map to a usable image URL.
- *
- * The embedded `release` record is lexicon-validated at the DiscoveryClient
- * boundary, but `artifacts` is an aggregator pass-through typed `unknown`, so
- * the entry's shape is not guaranteed. Returns the `url` string only when the
- * value is an object carrying a non-empty string `url`; everything else
- * (missing key, wrong type, no `url`) yields `null`.
- */
 interface DeclaredArtifact {
 	url: string;
 	checksum: string;
@@ -132,11 +81,6 @@ function declaredArtifact(value: unknown): DeclaredArtifact | null {
 	return { url, checksum };
 }
 
-/**
- * Resolve the declared artifact URL for `(kind, index)` from a release's
- * `artifacts` map. Returns `null` when the requested artifact isn't present
- * or doesn't carry a usable URL.
- */
 function resolveDeclaredArtifact(
 	artifacts: unknown,
 	kind: string,
@@ -148,7 +92,6 @@ function resolveDeclaredArtifact(
 
 	if (kind === "icon") return declaredArtifact(map.icon);
 	if (kind === "banner") return declaredArtifact(map.banner);
-	// kind === "screenshot"
 	const screenshots = map.screenshots;
 	if (!Array.isArray(screenshots)) return null;
 	if (index < 0 || index >= screenshots.length) return null;
@@ -220,7 +163,6 @@ export const GET: APIRoute = async ({ url, locals }) => {
 		return apiError("REGISTRY_NOT_CONFIGURED", "Registry aggregator URL is invalid", 500);
 	}
 
-	// Resolve the publisher-declared artifact URL from the release record.
 	let descriptor: DeclaredArtifact;
 	try {
 		const resolved = await resolveArtifact(registryConfig, did, slug, version, cid, kind, index);
@@ -235,10 +177,6 @@ export const GET: APIRoute = async ({ url, locals }) => {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 	try {
-		// `assertSafeArtifactUrl` validates scheme / credentials / loopback +
-		// resolves the hostname and rejects private / link-local / metadata
-		// targets (DNS-rebinding defence). It throws a plain Error on any
-		// block, so a rejection here means the URL is unsafe.
 		let current: URL;
 		try {
 			current = await assertSafeArtifactUrl(descriptor.url);
@@ -271,9 +209,6 @@ export const GET: APIRoute = async ({ url, locals }) => {
 			return apiError("ARTIFACT_FETCH_FAILED", "Failed to fetch artifact", 502);
 		}
 
-		// Content-Type allowlist: only image types are proxied. A non-image
-		// (HTML error page, JSON, octet-stream) is rejected so the admin
-		// never renders publisher-controlled markup from the EmDash origin.
 		const rawType = response.headers.get("content-type") ?? "";
 		const contentType = rawType.split(";", 1)[0]!.trim().toLowerCase();
 		if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
@@ -300,15 +235,6 @@ export const GET: APIRoute = async ({ url, locals }) => {
 			);
 		}
 
-		// Only the allowlisted Content-Type is forwarded — never copy other
-		// upstream headers. `private, no-store` keeps publisher images out of
-		// shared caches in the authenticated admin origin.
-		//
-		// SVG is not in the allowlist, so active-content bytes never reach
-		// here. `Content-Disposition: attachment`, the sandbox CSP, and
-		// `nosniff` remain as defence-in-depth: they force a download and
-		// neutralise script/plugins for any image type if a client navigates
-		// directly to the proxy URL.
 		return new Response(bytes, {
 			headers: {
 				"Content-Type": contentType,
@@ -325,15 +251,6 @@ export const GET: APIRoute = async ({ url, locals }) => {
 	}
 };
 
-/**
- * Resolve the declared artifact URL for `(did, slug, version, kind, index)`
- * from the aggregator's release record. Mirrors the install handler's release
- * lookup. Returns `null` when the package/release/artifact isn't found.
- *
- * Self-contained to this route: the install/update handlers are intentionally
- * left untouched, so a small amount of resolution-pattern duplication is
- * accepted here.
- */
 async function resolveArtifact(
 	registryConfig: { aggregatorUrl: string; acceptLabelers?: string },
 	did: string,
@@ -343,8 +260,6 @@ async function resolveArtifact(
 	kind: string,
 	index: number,
 ): Promise<DeclaredArtifact | null> {
-	// Lazy-load the discovery client so the `@atcute/client` dependency only
-	// loads when the registry path is exercised.
 	const { DiscoveryClient, registryLabelerPolicy } =
 		await import("@emdash-cms/registry-client/discovery");
 
@@ -403,11 +318,6 @@ async function resolveArtifact(
 	return resolveDeclaredArtifact(releaseView.release.artifacts, kind, index);
 }
 
-/**
- * Read a response body into memory, aborting once it exceeds `limit`. Returns
- * `null` when the cap is breached (the streamed body lied about / omitted
- * Content-Length). The cap is the real defence against an unbounded body.
- */
 async function readCapped(response: Response, limit: number): Promise<Uint8Array | null> {
 	const body = response.body;
 	if (!body) {

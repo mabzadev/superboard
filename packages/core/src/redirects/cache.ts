@@ -1,19 +1,3 @@
-/**
- * Redirect rule cache.
- *
- * Worker-isolate cache for enabled redirect rules. The middleware populates
- * this on first request; route handlers invalidate it on writes. Cached rules
- * expire so writes handled by another isolate become visible here too.
- *
- * Both exact-match and pattern rules are loaded from one query and cached
- * together: exact rules indexed by source path in a Map, pattern rules
- * pre-compiled into an array. A single warm request issues zero database
- * queries; a cold or expired isolate issues one.
- *
- * This module deliberately has NO Astro imports so it can be safely imported
- * from handlers, seed, CLI, and tests without dragging in `astro:middleware`.
- */
-
 import { after } from "../after.js";
 import type { Redirect } from "../database/repositories/redirect.js";
 import {
@@ -31,9 +15,7 @@ export interface CachedRedirectRule {
 }
 
 export interface CachedRedirects {
-	/** Exact-match rules indexed by source path (`source` -> `Redirect`). */
 	exact: Map<string, Redirect>;
-	/** Pattern rules with their compiled regexes, preserving insertion order. */
 	patterns: CachedRedirectRule[];
 }
 
@@ -62,10 +44,6 @@ const cacheState: RedirectCacheState =
 		return state;
 	})();
 
-/**
- * Invalidate the cached redirects (both exact and pattern).
- * Call when redirects are created, updated, or deleted.
- */
 export function invalidateRedirectCache(): void {
 	cacheState.generation++;
 	cacheState.redirects = null;
@@ -73,9 +51,6 @@ export function invalidateRedirectCache(): void {
 	invalidateSingleFlightCache(cacheState.refresh);
 }
 
-/**
- * Get the cached redirects, or null if the cache is cold.
- */
 function getCachedRedirects(): CachedRedirects | null {
 	if (cacheState.redirects && Date.now() >= cacheState.expiresAt) {
 		invalidateRedirectCache();
@@ -83,7 +58,6 @@ function getCachedRedirects(): CachedRedirects | null {
 	return cacheState.redirects;
 }
 
-/** Compile enabled database rows into the in-memory lookup structures. */
 function compileRedirects(redirects: Redirect[]): CachedRedirects {
 	const exact = new Map<string, Redirect>();
 	const patterns: CachedRedirectRule[] = [];
@@ -129,10 +103,6 @@ export async function loadCachedRedirects(
 	throw new Error("Redirect cache refresh exhausted without loading rules");
 }
 
-/**
- * Match a path against the cached pattern rules.
- * Returns the resolved destination and matching redirect, or null.
- */
 export function matchCachedPatterns(
 	rules: CachedRedirectRule[],
 	pathname: string,

@@ -347,8 +347,6 @@ async function eraseSubject(
 				`DELETE FROM analytics_projection_receipts
          WHERE project_id = ? AND event_id IN (${eventPlaceholders})`,
 			).bind(projectId, ...chunk),
-			// Keep a content-free tombstone so a delayed or malicious replay cannot
-			// recreate data that was already erased.
 			env.DB.prepare(
 				`UPDATE analytics_event_receipts SET status = 'erased', archive_key = NULL,
           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')

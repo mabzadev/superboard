@@ -25,8 +25,6 @@ import {
 } from "../../../../../packages/admin/src/lib/plugin-context";
 import { render } from "../utils/render.tsx";
 
-// Mock child components with their own data fetching so the panel tests
-// only assert section visibility, not child behaviour.
 vi.mock("../../../../../packages/admin/src/components/RevisionHistory", () => ({
 	RevisionHistory: () => <div data-testid="revision-history">Revision History</div>,
 }));
@@ -701,7 +699,6 @@ describe("ContentSettingsPanel", () => {
 		);
 
 		await expect.element(screen.getByRole("heading", { name: "Publish" })).toBeInTheDocument();
-		// No trash, no translations, no taxonomies, no SEO, no revisions for new items
 		expect(screen.container.textContent).not.toContain("Move to Trash");
 		expect(screen.container.textContent).not.toContain("Translations");
 		expect(screen.container.querySelector('[data-testid="taxonomy-sidebar"]')).toBeNull();
@@ -876,7 +873,6 @@ describe("SettingsActionBar", () => {
 
 		expect(screen.container.textContent).not.toContain("Publish");
 		expect(screen.container.textContent).not.toContain("Unpublish");
-		// Save is still available
 		await expect.element(screen.getByRole("button", { name: /Save/ })).toBeInTheDocument();
 	});
 

@@ -65,11 +65,6 @@ import { LocaleSwitcher } from "./LocaleSwitcher";
 import { RouterLinkButton } from "./RouterLinkButton.js";
 import { TableToolbar, TableToolbarSearch } from "./TableToolbar.js";
 
-/**
- * Sortable content list columns. The named values map to the server's system
- * order fields; a collection's configured titleField/dateField slug is also
- * accepted, which the server validates against the collection.
- */
 export type ContentListSortField = "title" | "status" | "locale" | "updatedAt" | (string & {});
 export interface ContentListSort {
 	field: ContentListSortField;
@@ -83,28 +78,20 @@ export interface ContentListColumn {
 	options?: Array<{ value: string; label: string }>;
 }
 
-/** Status filter values. `"all"` clears the status filter. */
 export type ContentStatusFilter = "all" | "published" | "draft" | "scheduled" | "archived";
 
-/**
- * Date-range filter state. `from`/`to` are raw `YYYY-MM-DD` values from the
- * date inputs (empty string = unset); the parent converts them to UTC day
- * boundaries before calling the API.
- */
 export interface ContentDateFilter {
 	field: ContentDateField;
 	from: string;
 	to: string;
 }
 
-/** An empty (inactive) date filter, defaulting to the created-at column. */
 export const EMPTY_DATE_FILTER: ContentDateFilter = { field: "createdAt", from: "", to: "" };
 
 export interface ContentListProps {
 	collection: string;
 	collectionLabel: string;
 	items: ContentItem[];
-	/** Validated custom-field columns from the collection manifest. */
 	listColumns?: ContentListColumn[];
 	trashedItems?: TrashedContentItem[];
 	isLoading?: boolean;
@@ -118,74 +105,30 @@ export interface ContentListProps {
 	hasMore?: boolean;
 	hasMoreTrashed?: boolean;
 	trashedCount?: number;
-	/** i18n config — present when multiple locales are configured */
 	i18n?: { defaultLocale: string; locales: string[] };
-	/** Currently active locale filter */
 	activeLocale?: string;
-	/** Callback when locale filter changes */
 	onLocaleChange?: (locale: string) => void;
-	/** URL pattern for published content links (e.g. `/blog/{slug}`) */
 	urlPattern?: string;
-	/** Whether entries have public web URLs. */
 	routable?: boolean;
-	/** Collection field slug powering the Title column (falls back to the title chain). */
 	titleField?: string;
-	/** Collection field slug (datetime) powering the Date column (falls back to updated date). */
 	dateField?: string;
-	/**
-	 * Controlled sort state. When `onSortChange` is also provided, the column
-	 * headers become sort controls that invoke it. Uncontrolled sort keeps
-	 * the backward-compatible "static headers, server-default ordering"
-	 * behavior for callers that haven't opted in yet.
-	 */
 	sort?: ContentListSort;
 	onSortChange?: (sort: ContentListSort) => void;
-	/**
-	 * Total rows matching the current filters (ignoring pagination). When
-	 * set, the pagination denominator reflects this stable count instead of
-	 * growing as more API pages are fetched.
-	 */
 	total?: number;
-	/**
-	 * When provided, search is performed server-side: the (debounced) query is
-	 * reported here so the caller can refetch, and `items`/`total` are assumed
-	 * to already reflect the filter. Without it, the list falls back to
-	 * filtering the loaded page client-side (legacy behavior).
-	 */
 	onSearchChange?: (q: string) => void;
-	/**
-	 * Filter controls. The whole bar is opt-in: it only renders when
-	 * `onStatusFilterChange` is provided, keeping the component
-	 * backward-compatible for callers that haven't wired filters yet. Each
-	 * control renders independently based on the presence of its callback
-	 * (and, for the author filter, a non-empty `authors` list).
-	 */
 	statusFilter?: ContentStatusFilter;
 	onStatusFilterChange?: (status: ContentStatusFilter) => void;
-	/** Authors who have content in this collection, for the author filter. */
 	authors?: ContentAuthor[];
-	/** Selected author id; empty string means "all authors". */
 	authorFilter?: string;
 	onAuthorFilterChange?: (authorId: string) => void;
-	/** Controlled date-range filter state. */
 	dateFilter?: ContentDateFilter;
 	onDateFilterChange?: (filter: ContentDateFilter) => void;
-	/** Controlled byline filter state. */
 	bylineFilter?: BylineFilterState;
 	onBylineFilterChange?: (filter: BylineFilterState) => void;
-	/**
-	 * Bulk actions. Each is opt-in: the selection checkboxes only appear when at
-	 * least one bulk handler is provided, and each toolbar button renders only
-	 * when its handler is present. Handlers receive the selected entry ids and
-	 * resolve with the ids that failed (empty array on full success); those
-	 * rows stay selected so a partial failure can be retried.
-	 */
 	onBulkPublish?: BulkActionHandler;
 	onBulkUnpublish?: BulkActionHandler;
 	onBulkDelete?: BulkActionHandler;
-	/** Current role used only for contributed-column visibility, not authorization. */
 	userRole?: number;
-	/** Manifest state used to omit disabled or stale trusted-plugin contributions. */
 	pluginStates?: AdminManifest["plugins"];
 }
 
@@ -197,12 +140,6 @@ const PAGE_SIZE = 20;
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/**
- * Parse a dateField value for the Date column. Returns null if missing or
- * unparseable (so the caller falls back to a system date instead of showing
- * "Invalid Date"). Bare `YYYY-MM-DD` is read as local midnight to avoid a
- * previous-day shift in negative-UTC timezones.
- */
 function parseListDate(value: unknown): Date | null {
 	if (typeof value !== "string" || !value) return null;
 	const normalized = DATE_ONLY_RE.test(value) ? `${value}T00:00:00` : value;
@@ -228,9 +165,6 @@ function formatDateOnly(date: Date | undefined): string {
 	return `${year}-${month}-${day}`;
 }
 
-/**
- * Content list view with table display and trash tab
- */
 export function ContentList({
 	collection,
 	collectionLabel,
@@ -281,21 +215,14 @@ export function ContentList({
 	const [page, setPage] = React.useState(0);
 	const [selectedIds, setSelectedIds] = React.useState<Set<string>>(() => new Set());
 
-	// Bulk selection is opt-in: the checkbox column + toolbar only render when
-	// the parent wired at least one bulk handler.
 	const bulkEnabled = !!(onBulkPublish || onBulkUnpublish || onBulkDelete);
 
-	// Server-side search mode: the caller refetches based on the (debounced)
-	// query, so `items`/`total` already reflect the filter and we must not
-	// re-filter client-side (that would re-introduce the "only matches the
-	// loaded page" bug for non-title columns).
 	const serverSearch = !!onSearchChange;
 	const debouncedSearch = useDebouncedValue(searchQuery, 300);
 	React.useEffect(() => {
 		if (onSearchChange) onSearchChange(debouncedSearch.trim());
 	}, [debouncedSearch, onSearchChange]);
 
-	// Reset page when search changes
 	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setSearchQuery(e.target.value);
 		setPage(0);
@@ -307,40 +234,19 @@ export function ContentList({
 		return items.filter((item) => getEntryTitle(item, titleField).toLowerCase().includes(query));
 	}, [items, searchQuery, serverSearch, titleField]);
 
-	// The query the current `items` reflect: server-side filtering lags behind
-	// typing by the debounce, so the empty-state message must use the debounced
-	// term; client-side filtering is immediate, so it uses the live query.
 	const activeSearch = serverSearch ? debouncedSearch.trim() : searchQuery;
 
-	// When the server reports a total, it's the source of truth for the
-	// denominator. In server-search mode that total already reflects the query,
-	// so we use it even while searching; in client mode an active query falls
-	// back to the filtered client count.
 	const effectiveTotal =
 		typeof total === "number" && (serverSearch || !searchQuery) ? total : filteredItems.length;
 	const totalPages = Math.max(1, Math.ceil(effectiveTotal / PAGE_SIZE));
 
-	// Clamp the current page in case filters collapse the count (user was on
-	// page 5 of 10, then typed a query narrowing to 1 page). Without clamping
-	// we'd render an empty table until the next refetch.
 	const clampedPage = Math.min(page, totalPages - 1);
 	const paginatedItems = filteredItems.slice(
 		clampedPage * PAGE_SIZE,
 		(clampedPage + 1) * PAGE_SIZE,
 	);
 
-	// Auto-fetch the next API page when the user is on a client page whose
-	// items haven't been loaded yet. Skip during client-side search because
-	// filtering can collapse `filteredItems` below the loaded count and
-	// trigger a spurious fetch.
-	//
-	// Safety: relies on `onLoadMore` being deduped against concurrent calls.
-	// The router wires this to TanStack Query's `fetchNextPage`, which is
-	// idempotent while a fetch is in flight.
 	React.useEffect(() => {
-		// In client-search mode we skip auto-fetch while a query is active
-		// (filtering can collapse the list). In server-search mode the loaded
-		// items already are the matches, so paging forward should keep fetching.
 		if (!hasMore || !onLoadMore || (!serverSearch && searchQuery)) return;
 		const loadedPages = Math.ceil(filteredItems.length / PAGE_SIZE);
 		if (clampedPage >= loadedPages - 1) {
@@ -348,8 +254,6 @@ export function ContentList({
 		}
 	}, [clampedPage, filteredItems.length, hasMore, onLoadMore, searchQuery, serverSearch]);
 
-	// Drop selections for rows that left the current result set (filter/locale
-	// change, deletion) so a bulk action never targets a now-hidden id.
 	React.useEffect(() => {
 		setSelectedIds((prev) => {
 			if (prev.size === 0) return prev;
@@ -393,14 +297,9 @@ export function ContentList({
 		setBulkBusy(true);
 		void (async () => {
 			try {
-				// Clear only after the batch settles, keeping the failed ids
-				// selected — a partial failure stays retryable instead of the
-				// selection vanishing while requests are still in flight.
 				const failedIds = await fn(ids);
 				setSelectedIds(new Set(failedIds));
 			} catch {
-				// Unexpected (non-per-item) error: keep the selection for a retry.
-				// The parent's mutation surfaces the error toast.
 			} finally {
 				setBulkBusy(false);
 			}
@@ -411,7 +310,6 @@ export function ContentList({
 
 	return (
 		<div className="space-y-4">
-			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-4">
 					<h1 className="text-2xl font-semibold leading-tight">{collectionLabel}</h1>
@@ -435,7 +333,6 @@ export function ContentList({
 				</RouterLinkButton>
 			</div>
 
-			{/* Tabs */}
 			<Tabs
 				variant="underline"
 				value={activeTab}
@@ -457,7 +354,6 @@ export function ContentList({
 				]}
 			/>
 
-			{/* Content based on active tab */}
 			{activeTab === "all" ? (
 				<>
 					{(serverSearch || items.length > 0 || onStatusFilterChange) && (
@@ -487,7 +383,6 @@ export function ContentList({
 						</TableToolbar>
 					)}
 
-					{/* Bulk action toolbar — appears once one or more rows are selected */}
 					{bulkEnabled && selectedCount > 0 && (
 						<div className="flex flex-wrap items-center gap-3 rounded-md border bg-kumo-tint/40 px-4 py-2">
 							<span className="text-sm font-medium">
@@ -576,7 +471,6 @@ export function ContentList({
 						</div>
 					)}
 
-					{/* Table */}
 					<div className="rounded-md border bg-kumo-base overflow-x-auto">
 						<table className="w-full">
 							<thead>
@@ -590,8 +484,6 @@ export function ContentList({
 											/>
 										</th>
 									)}
-									{/* The Title/Date columns sort by the collection's configured
-									    titleField/dateField when set */}
 									<SortableTh
 										field={titleField ?? "title"}
 										sort={sort}
@@ -702,7 +594,6 @@ export function ContentList({
 						</table>
 					</div>
 
-					{/* Pagination */}
 					{totalPages > 1 && (
 						<div className="flex items-center justify-between">
 							<span className="text-sm text-kumo-subtle">
@@ -740,7 +631,6 @@ export function ContentList({
 						</div>
 					)}
 
-					{/* Load more */}
 					{hasMore && (
 						<div className="flex justify-center">
 							<Button variant="outline" onClick={onLoadMore} disabled={isLoading}>
@@ -751,7 +641,6 @@ export function ContentList({
 				</>
 			) : (
 				<>
-					{/* Trash Table */}
 					<div className="rounded-md border bg-kumo-base overflow-x-auto">
 						<table className="w-full">
 							<thead>
@@ -798,7 +687,6 @@ export function ContentList({
 						</table>
 					</div>
 
-					{/* Load more trashed */}
 					{hasMoreTrashed && (
 						<div className="flex justify-center">
 							<Button variant="outline" onClick={onLoadMoreTrashed} disabled={isTrashedLoading}>
@@ -822,17 +710,9 @@ interface FilterBarProps {
 	onDateFilterChange?: (filter: ContentDateFilter) => void;
 	bylineFilter: BylineFilterState;
 	onBylineFilterChange?: (filter: BylineFilterState) => void;
-	/** Locale the list is showing, so the byline picker offers matching rows. */
 	locale?: string;
 }
 
-/**
- * Filter controls for the content list: status, author, byline, and a date
- * range over a chosen timestamp column. All controls report changes to
- * the parent, which owns the state and refetches. Filtering happens
- * server-side, so it works across the whole collection rather than the loaded
- * page.
- */
 function FilterBar({
 	statusFilter,
 	onStatusFilterChange,
@@ -877,8 +757,6 @@ function FilterBar({
 		onStatusFilterChange("all");
 		onAuthorFilterChange?.("");
 		onDateFilterChange?.(EMPTY_DATE_FILTER);
-		// Clearing drops the selection but keeps the inferred-byline
-		// preference, which is a display choice rather than an active filter.
 		onBylineFilterChange?.({
 			...EMPTY_BYLINE_FILTER,
 			includeInferred: bylineFilter.includeInferred,
@@ -1074,17 +952,6 @@ interface SortableThProps {
 	label: string;
 }
 
-/**
- * Table header that doubles as a sort control when the parent opted in by
- * passing `onSortChange`. When no callback is provided we fall back to a
- * plain `<th>` so legacy callers (and screen readers) see exactly the same
- * markup as before this change.
- *
- * The button's accessible name is just the column label — the sort state
- * is conveyed via `aria-sort` on the <th>, which screen readers announce
- * automatically. Adding a verbose aria-label would make each header re-read
- * the sort instruction on every focus, which is noisy.
- */
 function SortableTh({ field, sort, onSortChange, label }: SortableThProps) {
 	const isActive = sort?.field === field;
 	const direction = isActive ? sort?.direction : undefined;
@@ -1104,8 +971,6 @@ function SortableTh({ field, sort, onSortChange, label }: SortableThProps) {
 		: "none";
 
 	const handleClick = () => {
-		// Default to descending for a new column; toggle direction when
-		// clicking the already-active one.
 		if (isActive) {
 			onSortChange({ field, direction: direction === "asc" ? "desc" : "asc" });
 		} else {
@@ -1165,16 +1030,6 @@ function ExtensionColumnHeader({ column, collection, locale }: ExtensionColumnHe
 	);
 }
 
-/**
- * Render the row-count line above pagination. The rules are:
- * - A search query always wins — say how many matches there are. In
- *   server-search mode the server reports the full match count via `total`;
- *   `filteredCount` is only the loaded page, so it would undercount.
- * - When the server reported a total, use it (no `+` suffix needed —
- *   we know the count).
- * - Otherwise fall back to the pre-refactor behavior: loaded count,
- *   with `+` when there are more pages the user hasn't fetched yet.
- */
 function renderItemCount({
 	searchQuery,
 	filteredCount,
@@ -1244,8 +1099,6 @@ function ContentListItem({
 }: ContentListItemProps) {
 	const { t } = useLingui();
 	const title = getEntryTitle(item, titleField);
-	// A configured dateField drives the Date column; fall back to the
-	// last-updated / created date when it's unset, empty, or unparseable.
 	const customDate = dateField ? parseListDate(item.data[dateField]) : null;
 	const date = customDate ?? parseTimestamp(item.updatedAt || item.createdAt);
 

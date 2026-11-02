@@ -1,9 +1,3 @@
-/**
- * Discard draft changes - reverts to live version
- *
- * POST /_emdash/api/content/{collection}/{id}/discard-draft
- */
-
 import type { APIRoute } from "astro";
 
 import { requireOwnerPerm } from "#api/authorize.js";
@@ -22,7 +16,6 @@ export const POST: APIRoute = async ({ params, locals, url, cache }) => {
 
 	const locale = url.searchParams.get("locale") || undefined;
 
-	// Fetch item to check ownership
 	const existing = await emdash.handleContentGet(collection, id, locale);
 	if (!existing.success) {
 		return apiError(
@@ -36,7 +29,6 @@ export const POST: APIRoute = async ({ params, locals, url, cache }) => {
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- handler returns unknown data; narrowed by typeof check above
 				(existing.data as Record<string, unknown>)
 			: undefined;
-	// Handler returns { item, _rev } — extract the item for ownership check
 	const existingItem =
 		existingData?.item && typeof existingData.item === "object"
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed by typeof check above

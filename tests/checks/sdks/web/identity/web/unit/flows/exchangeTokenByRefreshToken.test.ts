@@ -4,7 +4,6 @@ import { describe, it, expect, vi } from "vitest";
 import { exchangeTokenByRefreshToken } from "../../../../../../../../sdks/web/identity/web/src/flows/exchangeTokenByRefreshToken";
 import { postTokenByRefreshToken } from "../../../../../../../../sdks/web/identity/web/src/requests";
 
-// Mock the requests module
 vi.mock("../../../../../../../../sdks/web/identity/web/src/requests", () => ({
 	postTokenByRefreshToken: vi.fn(),
 }));

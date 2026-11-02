@@ -112,7 +112,6 @@ const messages = {
 
 export type SettingsMessage = keyof (typeof messages)["en"];
 
-/** Operator-language copy for the core settings front (EN fallback outside the Front shell). */
 export function useSettingsI18n() {
 	const locale = useOptionalFrontContext()?.locale === "fr" ? "fr" : "en";
 	const catalog: Record<SettingsMessage, string> = messages[locale];

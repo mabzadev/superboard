@@ -1,18 +1,4 @@
 ---
-/**
- * EmDash custom block override for `astro-portabletext`.
- *
- * Renders the same HTML as the upstream Block component (h1..h6, blockquote,
- * `<p>` for `normal`) and additionally surfaces `textAlign` from the rich-text
- * editor as a WordPress-style `has-text-align-{value}` class on the rendered
- * paragraph or heading.
- *
- * `left` is the editor default and intentionally does not produce a class —
- * paragraphs/headings without explicit alignment render exactly as they did
- * before this fix, so existing content is byte-for-byte unchanged.
- *
- * Related: https://github.com/emdash-cms/emdash/issues/1201
- */
 import type { BlockProps } from "astro-portabletext/types";
 
 import { textAlignClassName } from "./portable-text-text-align.js";
@@ -25,8 +11,6 @@ const { node, index: _index, isInline: _isInline, ...attrs } = props;
 
 const styleIs = (style: string) => style === node.style;
 
-// Allowlist-based; attacker-controlled PT data cannot inject arbitrary classes.
-// See `./portable-text-text-align.ts`.
 const alignClass = textAlignClassName(node.textAlign);
 ---
 

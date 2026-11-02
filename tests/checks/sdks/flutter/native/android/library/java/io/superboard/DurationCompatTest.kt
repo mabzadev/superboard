@@ -7,9 +7,6 @@ import io.superboard.utils.InstantCompat
 import org.junit.Assert.*
 import org.junit.Test
 
-/**
- * Core tests for DurationCompat utility class.
- */
 class DurationCompatTest {
 
     @Test

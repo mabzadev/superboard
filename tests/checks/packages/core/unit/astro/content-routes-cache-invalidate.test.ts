@@ -1,9 +1,3 @@
-/**
- * PUT content updates must only purge edge cache tags when live/public
- * content actually changed. Pure draft staging on revision collections
- * leaves live columns untouched and must not thrash Workers Cache.
- */
-
 import { Role } from "@emdash-cms/auth";
 import { describe, it, expect, vi } from "vitest";
 

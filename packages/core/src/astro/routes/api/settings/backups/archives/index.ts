@@ -1,11 +1,3 @@
-/**
- * Backup archives — create
- *
- * POST /_emdash/api/settings/backups/archives — generate a backup and store
- * it in the storage backend under `backups/`, pruning archives beyond the
- * configured retention.
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

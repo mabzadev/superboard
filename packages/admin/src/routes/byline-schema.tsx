@@ -1,24 +1,3 @@
-/**
- * Byline custom-field schema management (Phase 5 of Discussion #1174).
- *
- * Admin can create / edit / delete / reorder byline custom-field
- * definitions. Modelled on the content-type management UX but uses the
- * purpose-built `BylineFieldEditor` (5-type subset + `translatable`
- * toggle).
- *
- * Reorder uses ↑/↓ buttons per row rather than drag-and-drop — the v1
- * registry caps the field set at a small number (admins typically
- * register 2–5 custom fields per site), accessibility is better without
- * pulling in a DnD dependency, and screen-reader users get usable
- * keyboard semantics for free. The reorder API takes the full slug list
- * in the desired order; clicking ↑ swaps the row with its neighbour and
- * fires the mutation.
- *
- * Permission gate: `ROLE_ADMIN`. The route is also gated at the sidebar
- * level (`minRole: ROLE_ADMIN`), but a manually-typed URL still hits
- * this page — so the in-component check is the source of truth.
- */
-
 import { Button, Loader, Toast } from "@cloudflare/kumo";
 import { plural } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
@@ -41,15 +20,8 @@ import {
 } from "../lib/api/byline-fields.js";
 import { useCurrentUser } from "../lib/api/current-user.js";
 
-// Mirror of `packages/auth/src/rbac.ts:Role.ADMIN`. Inline here for the
-// same reason the existing routes inline `ROLE_EDITOR` / `ROLE_ADMIN`:
-// avoids a circular dep through `@emdash-cms/auth` for the admin SPA.
 const ROLE_ADMIN = 50;
 
-// Shared with `routes/bylines.tsx` so schema mutations invalidate the
-// byline form's field-defs cache in the same session. The "usage"
-// subkeys below stay under a `byline-schema` prefix — they're a
-// per-field impact lookup, not the field list itself.
 const QUERY_KEY = ["byline-fields"] as const;
 
 export function BylineSchemaPage() {
@@ -65,15 +37,9 @@ export function BylineSchemaPage() {
 	const fieldsQuery = useQuery({
 		queryKey: QUERY_KEY,
 		queryFn: listBylineFields,
-		// Only fetch when the user actually has permission. Skipping the
-		// query for non-admins avoids a 403 in the console.
 		enabled: !!currentUser && currentUser.role >= ROLE_ADMIN,
 	});
 
-	// Usage is fetched on demand (edit dialog open) so the `translatable`
-	// toggle's lock state is accurate without a per-field query at list
-	// time. Disabled until a field is selected; the cache key includes the
-	// slug so re-opening a different field doesn't show stale counts.
 	const usageQuery = useQuery({
 		queryKey: ["byline-schema", "usage", editingField?.slug ?? null],
 		queryFn: () => (editingField ? getBylineFieldUsage(editingField.slug) : Promise.resolve(null)),
@@ -164,9 +130,6 @@ export function BylineSchemaPage() {
 		);
 	}
 
-	// Permission gate. Sidebar already hides the entry for non-admins, but
-	// direct URL navigation still lands here — render an access-denied
-	// surface rather than silently fetching and 403ing.
 	if (!currentUser || currentUser.role < ROLE_ADMIN) {
 		return (
 			<div className="flex items-center justify-center min-h-[50vh]">
@@ -193,9 +156,6 @@ export function BylineSchemaPage() {
 	};
 
 	const handleCreate = (input: CreateBylineFieldInput | UpdateBylineFieldInput) => {
-		// In create mode the editor produces a CreateBylineFieldInput; the
-		// type guard documents that contract rather than relying on the
-		// caller threading the right variant.
 		if ("slug" in input && "type" in input) {
 			createMutation.mutate(input);
 		}
@@ -203,8 +163,6 @@ export function BylineSchemaPage() {
 
 	const handleEdit = (input: CreateBylineFieldInput | UpdateBylineFieldInput) => {
 		if (!editingField) return;
-		// The editor sends Update shapes from edit mode — no `slug`/`type`
-		// keys present. Narrow defensively before forwarding.
 		if (!("slug" in input) && !("type" in input)) {
 			updateMutation.mutate({ slug: editingField.slug, input });
 		}
@@ -212,7 +170,6 @@ export function BylineSchemaPage() {
 
 	return (
 		<div className="space-y-4">
-			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-2xl font-semibold leading-tight">{t`Byline schema`}</h1>
@@ -225,7 +182,6 @@ export function BylineSchemaPage() {
 				</Button>
 			</div>
 
-			{/* Table */}
 			<div className="rounded-md border bg-kumo-base overflow-x-auto">
 				<table className="w-full">
 					<thead>
@@ -258,11 +214,6 @@ export function BylineSchemaPage() {
 								</td>
 							</tr>
 						) : fieldsQuery.isError ? (
-							// Distinguish "couldn't load" from "empty list" — falling
-							// through to the empty-state copy would tell the admin "no
-							// fields exist" when the list fetch actually failed (network
-							// error, 5xx, auth glitch). Surface the error message
-							// directly and a Retry action.
 							<tr>
 								<td colSpan={6} className="px-4 py-8 text-center">
 									<p className="text-kumo-danger font-medium">{t`Couldn't load byline fields.`}</p>
@@ -313,7 +264,6 @@ export function BylineSchemaPage() {
 				</table>
 			</div>
 
-			{/* Create dialog */}
 			<BylineFieldEditor
 				open={creating}
 				onOpenChange={(open) => {
@@ -327,8 +277,6 @@ export function BylineSchemaPage() {
 				error={createMutation.error}
 			/>
 
-			{/* Edit dialog — keyed on the field id so reopening with a different
-			    field rebuilds the form state from the new prop. */}
 			{editingField && (
 				<BylineFieldEditor
 					key={editingField.id}
@@ -347,8 +295,6 @@ export function BylineSchemaPage() {
 				/>
 			)}
 
-			{/* Delete confirmation — surfaces affected-row counts from /usage so
-			    admins know what they're losing before confirming. */}
 			<ConfirmDialog
 				open={!!deletingField}
 				onClose={() => {
@@ -360,12 +306,7 @@ export function BylineSchemaPage() {
 					deletingField
 						? deleteUsageQuery.isLoading
 							? t`Checking how many stored values reference "${deletingField.label}"…`
-							: // If the usage lookup itself failed, do NOT fall through to the
-								// "no stored values reference this field" copy — that would
-								// understate potential data loss. Tell the admin the check
-								// failed so they can retry or proceed with the explicit
-								// understanding that we don't know the count.
-								deleteUsageQuery.isError
+							: deleteUsageQuery.isError
 								? t`Couldn't verify how many values reference "${deletingField.label}". Deleting will still remove every stored value for this field — but the count above could not be checked.`
 								: deleteUsageQuery.data && deleteUsageQuery.data.totalAffectedRows > 0
 									? t`Deleting "${deletingField.label}" will also remove ${plural(

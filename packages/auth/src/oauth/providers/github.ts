@@ -1,7 +1,3 @@
-/**
- * GitHub OAuth provider
- */
-
 import { z } from "zod";
 
 import type { OAuthProvider, OAuthProfile } from "../types.js";
@@ -31,18 +27,14 @@ export const github: OAuthProvider = {
 		const user = gitHubUserSchema.parse(data);
 		return {
 			id: String(user.id),
-			email: user.email || "", // Will be fetched separately if needed
+			email: user.email || "",
 			name: user.name,
 			avatarUrl: user.avatar_url,
-			emailVerified: true, // GitHub verifies emails
+			emailVerified: true,
 		};
 	},
 };
 
-/**
- * Fetch the user's primary email from GitHub
- * (needed because email may not be returned in the basic user endpoint)
- */
 export async function fetchGitHubEmail(accessToken: string): Promise<string> {
 	const response = await fetch("https://api.github.com/user/emails", {
 		headers: {

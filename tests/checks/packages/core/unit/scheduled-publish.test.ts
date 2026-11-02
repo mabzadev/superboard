@@ -77,8 +77,6 @@ describe("publishDueContent()", () => {
 
 	it("promotes a scheduled draft whose time has passed", async () => {
 		const post = await repo.create(createPostFixture());
-		// schedule() rejects past dates, so set the past schedule directly —
-		// this is the state a post reaches once its future schedule arrives.
 		const past = new Date(Date.now() - 60_000).toISOString();
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
 
@@ -106,14 +104,12 @@ describe("publishDueContent()", () => {
 
 	it("records the scheduled time as published_at, not the (later) sweep time", async () => {
 		const post = await repo.create(createPostFixture());
-		// Scheduled for the past; the sweep runs "now", which is later.
 		const scheduledFor = new Date(Date.now() - 60_000).toISOString();
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: scheduledFor });
 
 		await publishDueContent(db);
 
 		const updated = await repo.findById("post", post.id);
-		// First publication should preserve the intended publish time.
 		expect(updated?.publishedAt).toBe(scheduledFor);
 	});
 
@@ -144,8 +140,6 @@ describe("publishDueContent()", () => {
 		const past = new Date(Date.now() - 60_000).toISOString();
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
 
-		// Simulate the unschedule-during-sweep race: the callback reports the
-		// item is no longer due. The sweep must treat this as a quiet skip.
 		const published = await publishDueContent(db, {
 			publish: async () => ({
 				success: false,
@@ -167,7 +161,6 @@ describe("publishDueContent()", () => {
 		expect(first).toHaveLength(2);
 		expect(first.map((r) => r.collection).toSorted()).toEqual(["page", "post"]);
 
-		// A second sweep finds nothing — publish cleared scheduled_at.
 		const second = await publishDueContent(db);
 		expect(second).toEqual([]);
 	});
@@ -179,7 +172,6 @@ describe("publishDueContent()", () => {
 			await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
 		}
 
-		// limit 2 → first sweep promotes 2, leaves 1 for the next tick.
 		const first = await publishDueContent(db, { limit: 2 });
 		expect(first).toHaveLength(2);
 
@@ -205,9 +197,7 @@ describe("publishDueContent()", () => {
 		});
 
 		expect(published).toHaveLength(2);
-		// One invocation per collection that published something.
 		expect(batches).toHaveLength(2);
-		// Each batch carries refs for exactly one collection (incremental purge).
 		for (const batch of batches) {
 			expect(new Set(batch.map((r) => r.collection)).size).toBe(1);
 		}
@@ -226,7 +216,6 @@ describe("publishDueContent()", () => {
 			},
 		});
 
-		// Both still published despite the hook throwing on every batch.
 		expect(published).toHaveLength(2);
 		expect((await repo.findById("post", post.id))?.status).toBe("published");
 		expect((await repo.findById("page", page.id))?.status).toBe("published");
@@ -246,8 +235,6 @@ describe("EmDashRuntime.runScheduledTasks()", () => {
 		await teardownTestDatabase(db);
 	});
 
-	// This is the exact method the Cloudflare scheduled() handler invokes via
-	// runScheduledTasks(). It must promote due content and report it.
 	it("promotes due content and returns it for cache invalidation", async () => {
 		const post = await repo.create(createPostFixture());
 		const past = new Date(Date.now() - 60_000).toISOString();
@@ -346,7 +333,6 @@ describe("ContentRepository.publish() requireDue gate", () => {
 		const post = await repo.create(createPostFixture());
 		const past = new Date(Date.now() - 60_000).toISOString();
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
-		// Editor unschedules between selection and publish.
 		await repo.unschedule("post", post.id);
 
 		await expect(repo.publish("post", post.id, undefined, true)).rejects.toBeInstanceOf(
@@ -401,7 +387,6 @@ describe("ContentRepository.publish() requireDue gate", () => {
 		const post = await repo.create(createPostFixture());
 		const past = new Date(Date.now() - 60_000).toISOString();
 		await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
-		// Pushed out to the future before the sweep reaches it.
 		const future = new Date(Date.now() + 86_400_000).toISOString();
 		await repo.update("post", post.id, { scheduledAt: future });
 
@@ -611,7 +596,6 @@ describe("ContentRepository.publish() requireDue gate", () => {
 
 	it("ignores the gate when requireDue is false (manual publish path)", async () => {
 		const post = await repo.create(createPostFixture());
-		// Plain draft, never scheduled.
 		const result = await repo.publish("post", post.id);
 		expect(result.status).toBe("published");
 	});

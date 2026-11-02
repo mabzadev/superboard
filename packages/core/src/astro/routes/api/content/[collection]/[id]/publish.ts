@@ -1,15 +1,3 @@
-/**
- * Publish content - promotes draft to live
- *
- * POST /_emdash/api/content/{collection}/{id}/publish
- *
- * Optional JSON body: { publishedAt?: string }
- *   publishedAt — ISO 8601 datetime to backdate the publish (e.g. when
- *   migrating content). Writing publishedAt requires content:publish_any.
- *   Without it, the existing published_at is preserved on re-publish and
- *   falls back to the current time on first publish.
- */
-
 import { hasPermission } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 
@@ -29,14 +17,11 @@ export const POST: APIRoute = async ({ params, request, locals, url, cache }) =>
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
 
-	// Body is optional — empty body means use the legacy behavior (preserve
-	// or default published_at). Pass `publishedAt` to backdate.
 	const body = await parseOptionalBody(request, contentPublishBody, {});
 	if (isParseError(body)) return body;
 
 	const locale = url.searchParams.get("locale") || undefined;
 
-	// Fetch item to check ownership
 	const existing = await emdash.handleContentGet(collection, id, locale);
 	if (!existing.success) {
 		return apiError(
@@ -60,12 +45,8 @@ export const POST: APIRoute = async ({ params, request, locals, url, cache }) =>
 	const denied = requireOwnerPerm(user, authorId, "content:publish_own", "content:publish_any");
 	if (denied) return denied;
 
-	// Schema narrows `publishedAt` to `string | undefined`; null is rejected
-	// at the schema layer (publish has no semantic meaning for "clear").
 	const publishedAt = body?.publishedAt;
 
-	// Backdating overwrites historical record — gate behind publish_any
-	// regardless of ownership.
 	if (publishedAt !== undefined && !hasPermission(user, "content:publish_any")) {
 		return apiError(
 			"FORBIDDEN",

@@ -7,13 +7,9 @@ export interface RichTextOptions {
 	helpText?: string;
 }
 
-/**
- * Rich text field - Markdown content
- */
 export function richText(options: RichTextOptions = {}): FieldDefinition<string> {
 	const stringSchema = z.string();
 
-	// Optional vs required
 	const schema: z.ZodTypeAny = options.required ? stringSchema : stringSchema.optional();
 
 	const ui: FieldUIHints = {

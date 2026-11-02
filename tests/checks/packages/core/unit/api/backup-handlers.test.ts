@@ -1,11 +1,3 @@
-/**
- * Backup handler tests
- *
- * Covers: full-fidelity export (drafts + trash included), secrets exclusion,
- * archive naming/validation, settings clamping, storage archive lifecycle
- * (create, list, prune, delete), and the scheduled-run gate.
- */
-
 import { sql } from "kysely";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -26,8 +18,6 @@ import { OptionsRepository } from "../../../../../../packages/core/src/database/
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import type { DownloadResult, Storage } from "../../../../../../packages/core/src/storage/types.js";
 import { setupTestDatabaseWithCollections } from "../../utils/test-db.js";
-
-// ── Storage fake ────────────────────────────────────────────────
 
 interface StoredFile {
 	key: string;
@@ -89,8 +79,6 @@ function createFakeStorage(): Storage & { files: Map<string, StoredFile> } {
 	};
 }
 
-// ── Tests ───────────────────────────────────────────────────────
-
 describe("backup handlers", () => {
 	let db: Kysely<Database>;
 
@@ -148,12 +136,10 @@ describe("backup handlers", () => {
 			expect(optionNames).not.toContain("plugin:some-plugin:api_key");
 			expect(optionNames).not.toContain("emdash:passkey_pending:user1");
 
-			// Raw string check: no secret value anywhere in the payload
 			const raw = await generateBackupJson(db);
 			expect(raw).not.toContain("super-secret-value");
 			expect(raw).not.toContain("plugin-secret");
 
-			// Auth tables excluded entirely
 			expect(backup.schema).not.toHaveProperty("users");
 			expect(backup.schema).not.toHaveProperty("sessions");
 			expect(backup.schema).not.toHaveProperty("credentials");
@@ -230,7 +216,6 @@ describe("backup handlers", () => {
 		it("prunes archives beyond retention, oldest first", async () => {
 			const storage = createFakeStorage();
 
-			// Seed three archives with distinct timestamps in their names
 			for (const stamp of ["2026-07-01T00-00-00", "2026-07-02T00-00-00", "2026-07-03T00-00-00"]) {
 				const key = `${BACKUP_STORAGE_PREFIX}emdash-backup-${stamp}-abcd1234.json`;
 				storage.files.set(key, {
@@ -241,7 +226,6 @@ describe("backup handlers", () => {
 				});
 			}
 
-			// Creating a fourth with retention 2 keeps only the 2 newest
 			const created = await runBackupToStorage(db, storage, 2);
 			expect(created.success).toBe(true);
 			if (!created.success) return;
@@ -289,7 +273,6 @@ describe("backup handlers", () => {
 			await maybeRunScheduledBackup(db, storage);
 			expect(storage.files.size).toBe(1);
 
-			// Immediately after, the last-run gate suppresses a second backup
 			await maybeRunScheduledBackup(db, storage);
 			expect(storage.files.size).toBe(1);
 		});
@@ -298,7 +281,6 @@ describe("backup handlers", () => {
 			const storage = createFakeStorage();
 			await updateBackupSettings(db, { enabled: true, retention: 7 });
 
-			// Simulate a last run 24h ago
 			const options = new OptionsRepository(db);
 			await options.set(
 				"emdash:backups_last_run",

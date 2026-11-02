@@ -1,12 +1,5 @@
 import { z } from "zod";
 
-// ---------------------------------------------------------------------------
-// Setup
-// ---------------------------------------------------------------------------
-
-/** Registration credential — duplicated reference for setup flow.
- *  The canonical definition lives in auth.ts but setup needs it independently
- *  because setup runs before auth is configured. */
 const authenticatorTransport = z.enum(["usb", "nfc", "ble", "internal", "hybrid"]);
 
 const registrationCredential = z.object({

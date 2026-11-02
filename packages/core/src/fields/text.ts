@@ -11,13 +11,9 @@ export interface TextOptions {
 	helpText?: string;
 }
 
-/**
- * Text field - single line text input
- */
 export function text(options: TextOptions = {}): FieldDefinition<string> {
 	let stringSchema = z.string();
 
-	// Apply constraints
 	if (options.minLength !== undefined) {
 		stringSchema = stringSchema.min(
 			options.minLength,
@@ -36,7 +32,6 @@ export function text(options: TextOptions = {}): FieldDefinition<string> {
 		stringSchema = stringSchema.regex(options.pattern, "Invalid format");
 	}
 
-	// Optional vs required
 	const schema: z.ZodTypeAny = options.required ? stringSchema : stringSchema.optional();
 
 	const ui: FieldUIHints = {

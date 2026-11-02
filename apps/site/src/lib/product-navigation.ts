@@ -10,11 +10,6 @@ const queryOf = (href: string) => {
 	parameters.delete("lang");
 	return parameters;
 };
-/**
- * Entries sharing a pathname are told apart by their query: an entry whose parameters are all
- * present in the current URL wins, the most specific first (e.g. Environment settings › API keys
- * on `/auth/settings?tab=security&section=keys`); otherwise the least specific entry wins.
- */
 const queryRank = (href: string, current: URLSearchParams) => {
 	const parameters = queryOf(href);
 	const satisfied = [...parameters].every(([name, value]) => current.get(name) === value);

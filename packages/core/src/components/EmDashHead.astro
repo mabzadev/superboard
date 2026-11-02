@@ -1,21 +1,4 @@
 ---
-/**
- * Renders base SEO metadata, plugin-contributed metadata, and trusted head fragments.
- *
- * Base SEO metadata (meta tags, OG, Twitter Card, canonical, JSON-LD) is generated
- * from the page context's seo/articleMeta/siteName fields. Contributions are
- * composed in the order `[...plugin, ...site, ...base]` and resolved by
- * `resolvePageMetadata()` with first-wins dedup. Plugins sit at the front of
- * the array, so for any given key plugin contributions override site-level
- * ones, which override base ones.
- *
- * Usage:
- * ```astro
- * <head>
- *   <EmDashHead page={page} />
- * </head>
- * ```
- */
 import type { PublicPageContext, PageMetadataContribution } from "../plugins/types.js";
 // @ts-ignore - virtual module
 import virtualConfig from "virtual:emdash/config";
@@ -51,32 +34,12 @@ let fragmentsHtml = "";
 let jsonLdScripts: ResolvedPageMetadata["jsonld"] = [];
 
 if (runtime) {
-	// Run independent async loads in parallel: site settings (SEO meta
-	// tags + favicon) and plugin page-metadata contributions. Plugin
-	// contributions come BEFORE site/base in the contribution array,
-	// so resolvePageMetadata's first-wins dedup lets plugins override
-	// defaults.
-	//
-	// `getSiteSettings()` is request-cached and worker-cached, so when
-	// a parent template has already called it (the standard pattern in
-	// `Base.astro`), this is free. Otherwise it's a single batched
-	// query that supersedes any per-key fetch this component would
-	// otherwise have done.
 	const [siteSettings, pluginContributions, fragments] = await Promise.all([
 		getSiteSettings(),
 		runtime.collectPageMetadata(page),
 		runtime.collectPageFragments(page),
 	]);
 
-	// Site-level default OG image: applied per-page in base contributions
-	// rather than emitted unconditionally, so per-content images still win.
-	// `resolveMediaReference` populates `.url` on read; only the mediaId is
-	// stored, so an empty/orphaned reference safely yields undefined here.
-	//
-	// Absolutize so `og:image` / `twitter:image` / JSON-LD `image` carry a
-	// fully-qualified URL: many social-card scrapers (Slack, LinkedIn) refuse
-	// to follow relative paths even when the rest of the page provides
-	// canonical context.
 	const defaultOgImage = absolutizeMediaUrl(
 		siteSettings.seo?.defaultOgImage?.url,
 		siteSettings.url,
@@ -87,11 +50,6 @@ if (runtime) {
 		defaultOgImage,
 	);
 
-	// hreflang alternates for translated content entries (#1690). Only
-	// queried when i18n is enabled and this page renders a content entry;
-	// non-i18n sites skip this entirely. Contributions sit with the base
-	// layer, so plugins can override individual hreflang entries (dedup
-	// key is the hreflang value).
 	let hreflangContributions: PageMetadataContribution[] = [];
 	if (page.content && isI18nEnabled()) {
 		const siteUrl = page.siteUrl || siteSettings.url || new URL(page.url).origin;
@@ -119,7 +77,6 @@ if (runtime) {
 	siteIdentityHtml = renderSiteIdentity({ favicon: siteSettings.favicon });
 	fragmentsHtml = renderFragments(fragments, "head");
 } else {
-	// No runtime (EmDash not initialized) — still render base SEO
 	const baseContributions: PageMetadataContribution[] = generateBaseSeoContributions(page);
 	const resolved = resolvePageMetadata(baseContributions);
 	jsonLdScripts = resolved.jsonld;

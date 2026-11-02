@@ -1,10 +1,3 @@
-/**
- * Content Picker Modal
- *
- * A modal for browsing and selecting content items to add to menus.
- * Uses cursor pagination to allow browsing beyond the initial page.
- */
-
 import { Button, Dialog, Input, Loader, Select } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { MagnifyingGlass, FolderOpen, X } from "@phosphor-icons/react";
@@ -39,8 +32,6 @@ export function ContentPickerModal({ open, onOpenChange, onSelect }: ContentPick
 		enabled: open,
 	});
 
-	// Reuse the cached manifest (same query key as the rest of the admin) to
-	// resolve the selected collection's titleField for entry titles.
 	const { data: manifest } = useQuery({
 		queryKey: ["manifest"],
 		queryFn: fetchManifest,
@@ -48,7 +39,6 @@ export function ContentPickerModal({ open, onOpenChange, onSelect }: ContentPick
 	});
 	const titleField = manifest?.collections[selectedCollection]?.titleField;
 
-	// Default to first collection when collections load
 	React.useEffect(() => {
 		if (collections.length > 0 && !selectedCollection) {
 			setSelectedCollection(collections[0]!.slug);
@@ -61,7 +51,6 @@ export function ContentPickerModal({ open, onOpenChange, onSelect }: ContentPick
 		enabled: open && !!selectedCollection,
 	});
 
-	// Sync initial page into accumulated items
 	React.useEffect(() => {
 		if (contentResult) {
 			setAllItems(contentResult.items);
@@ -90,7 +79,6 @@ export function ContentPickerModal({ open, onOpenChange, onSelect }: ContentPick
 		return allItems.filter((item) => getEntryTitle(item, titleField).toLowerCase().includes(query));
 	}, [allItems, debouncedSearch, titleField]);
 
-	// Reset state when modal opens or collection changes
 	React.useEffect(() => {
 		if (open) {
 			setSearchQuery("");
@@ -133,7 +121,6 @@ export function ContentPickerModal({ open, onOpenChange, onSelect }: ContentPick
 					/>
 				</div>
 
-				{/* Search and collection filter */}
 				<div className="flex items-center gap-4 py-4 border-b">
 					<div className="relative flex-1">
 						<MagnifyingGlass className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-kumo-subtle" />
@@ -157,7 +144,6 @@ export function ContentPickerModal({ open, onOpenChange, onSelect }: ContentPick
 					/>
 				</div>
 
-				{/* Content list */}
 				<div className="flex-1 overflow-y-auto py-4">
 					{contentLoading ? (
 						<div className="flex items-center justify-center h-32">
@@ -234,7 +220,6 @@ export function ContentPickerModal({ open, onOpenChange, onSelect }: ContentPick
 					)}
 				</div>
 
-				{/* Footer */}
 				<div className="flex justify-end gap-2 pt-4 border-t">
 					<Button variant="outline" onClick={() => onOpenChange(false)}>
 						{t`Cancel`}

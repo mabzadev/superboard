@@ -32,20 +32,6 @@ import java.lang.ref.WeakReference
 import java.net.URLDecoder
 import kotlin.coroutines.resumeWithException
 
-/**
- * SuperBoardManager is the core manager for the SuperBoard SDK.
- * 
- * This class can be configured with custom service and events manager implementations
- * for testing purposes. By default, it creates real implementations.
- * 
- * @param context The Android context
- * @param application The Android application instance
- * @param superboardContext The SuperBoard context containing SDK settings and state
- * @param apiKey The API key for authenticating with SuperBoard backend
- * @param superboardService Optional custom service implementation for testing (defaults to real service)
- * @param eventsManager Optional custom events manager for testing (defaults to real manager)
- * @param appDetailsHelper Optional custom app details helper for testing (defaults to real helper)
- */
 class SuperBoardManager(
     val context: Context,
     val application: Application,
@@ -71,16 +57,12 @@ class SuperBoardManager(
 
     private var lastIntentHandledReference: WeakReference<Intent>? = null
     private var handledIntentTokens: MutableList<Int> = mutableListOf()
-    /// Stores if attributes needs to be updated after auth
     private var shouldUpdateAttributes = false
 
-    /// A flag indicating whether the user is authenticated with the SuperBoard backend.
     var authenticationState: AuthenticationState = AuthenticationState.UNAUTHENTICATED
 
     private val prefs = context.getSharedPreferences(SUPERBOARD_PREFS_NAME, Context.MODE_PRIVATE)
 
-    /// Last known install referrer value
-    /// Lazily-loaded, in-memory cached value
     private var _lastReferrer: String? = null
 
     private var lastReferrerUrl: String?
@@ -138,7 +120,6 @@ class SuperBoardManager(
         when (result) {
             is LSResult.Success -> {
                 eventsManager.setLinkToNewFutureActions(result.data.link, delayEvents = delayEvents)
-                // if link and data are null we consider we have no deeplink
                 if ((result.data.data == null) && (result.data.link == null)) {
                     return null
                 } else {
@@ -186,7 +167,6 @@ class SuperBoardManager(
                     authenticationState = AuthenticationState.AUTHENTICATED
                     superboardContext.superboardId = result.data.superboardId
 
-                    // Update context attributes if needed
                     if (shouldUpdateAttributes) {
                         updateAttributesIfNeeded()
                     } else {
@@ -253,7 +233,6 @@ class SuperBoardManager(
     }
 
     fun start() {
-        // Implementation for starting the SuperBoardManager, if needed.
     }
 
     suspend fun handleIntent(intent: Intent, delayEvents: Boolean, cacheIntent: Boolean = false): DeeplinkDetails? {
@@ -266,15 +245,12 @@ class SuperBoardManager(
             return null
         }
 
-        // avoid handling same link multiple times (onStart gives same intent each time)
         if (intent.hashCode() == lastIntentHandledReference?.get()?.hashCode()) {
             if (intent.data != null) {
                 DebugLogger.instance.log(LogLevel.INFO, "Explicit deeplink intent already handled, ignoring it.")
                 return null
             }
 
-            // An empty launcher intent can still resolve deferred attribution.
-            // Keep that lookup available when Android reuses the same Intent object.
             return getDataForDevice(null, delayEvents = delayEvents)
         }
         lastIntentHandledReference = WeakReference(intent)
@@ -337,7 +313,6 @@ class SuperBoardManager(
                                 val referrerDetails = referrerClient.installReferrer
                                 val referrerUrl = referrerDetails.installReferrer
                                 DebugLogger.instance.log(LogLevel.INFO, "Got url from InstallReferrer: $referrerUrl")
-                                // referrer gets cached by install referrer so we need to avoid handling it multiple times
                                 if (referrerUrl != lastReferrerUrl) {
                                     lastReferrerUrl = referrerUrl
 
@@ -367,7 +342,6 @@ class SuperBoardManager(
                 }
             })
 
-            // Ensure that if the coroutine is cancelled, the connection is ended
             continuation.invokeOnCancellation {
                 referrerClient.endConnection()
             }

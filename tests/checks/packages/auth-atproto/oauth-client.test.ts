@@ -2,9 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const LOCALHOST_RE = /^http:\/\/localhost/;
 
-// Reset the module singleton between tests by re-importing fresh copies
 async function freshImport() {
-	// Clear the module cache so the singleton resets
 	vi.resetModules();
 	return import("../../../../packages/auth-atproto/src/oauth-client.js");
 }
@@ -80,7 +78,6 @@ describe("getAtprotoOAuthClient (localhost - loopback public client)", () => {
 	it("uses http://localhost client_id (loopback format)", async () => {
 		const { getAtprotoOAuthClient } = await freshImport();
 		const client = await getAtprotoOAuthClient("http://localhost:4321");
-		// Loopback clients have client_id starting with http://localhost
 		expect(client.metadata.client_id).toMatch(LOCALHOST_RE);
 	});
 

@@ -58,9 +58,6 @@ export type ContentMediaUsageProjectionAdmissionResult =
 	| { outcome: "intrinsic_resource_limit" }
 	| { outcome: "claim_budget_deferred" };
 
-// These maps only de-dupe usage work inside the current isolate/process. Cross-worker
-// correctness comes from expected-generation guards on repository writes.
-
 export type ContentMediaUsageRefreshErrorCode =
 	| "CONTENT_NOT_FOUND"
 	| "DRAFT_REVISION_NOT_FOUND"
@@ -1012,7 +1009,6 @@ export async function withContentUsageCollectionLock<T>(
 	collectionSlug: string,
 	fn: () => Promise<T>,
 ): Promise<T> {
-	// Coarse by design: row refreshes and collection source deletes must not interleave.
 	const locks = getContentUsageCollectionLocks();
 	const previous = locks.get(collectionSlug) ?? Promise.resolve();
 	let releaseCurrent!: () => void;

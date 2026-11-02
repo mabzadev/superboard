@@ -3,21 +3,8 @@ package io.superboard
 import io.mockk.*
 import org.junit.Assert.*
 
-/**
- * Custom assertion helpers that provide detailed context in failure messages.
- * Every assertion includes a 'context' parameter describing the test setup state.
- */
 object TestAssertions {
 
-    // ==================== Value Assertions with Context ====================
-
-    /**
-     * Assert equality with detailed context.
-     * @param expected The expected value
-     * @param actual The actual value
-     * @param valueName Name of the value being checked (e.g., "superboardId", "authenticationState")
-     * @param context Description of the test setup (e.g., "after configure() with valid API key")
-     */
     fun <T> assertEqualsWithContext(expected: T, actual: T, valueName: String, context: String) {
         assertEquals(
             "Expected $valueName to be '$expected' $context, but was '$actual'",
@@ -26,9 +13,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert value is null with detailed context.
-     */
     fun assertNullWithContext(actual: Any?, valueName: String, context: String) {
         assertNull(
             "Expected $valueName to be null $context, but was '$actual'",
@@ -36,9 +20,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert value is not null with detailed context.
-     */
     fun assertNotNullWithContext(actual: Any?, valueName: String, context: String) {
         assertNotNull(
             "Expected $valueName to be non-null $context, but was null",
@@ -46,12 +27,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert condition is true with detailed context.
-     * @param condition The condition to check
-     * @param conditionName Description of what the condition represents (e.g., "SDK is enabled")
-     * @param context Description of the test setup
-     */
     fun assertTrueWithContext(condition: Boolean, conditionName: String, context: String) {
         assertTrue(
             "Expected '$conditionName' to be true $context, but was false",
@@ -59,9 +34,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert condition is false with detailed context.
-     */
     fun assertFalseWithContext(condition: Boolean, conditionName: String, context: String) {
         assertFalse(
             "Expected '$conditionName' to be false $context, but was true",
@@ -69,11 +41,6 @@ object TestAssertions {
         )
     }
 
-    // ==================== State Assertions ====================
-
-    /**
-     * Assert SuperBoardManager is in AUTHENTICATED state.
-     */
     fun assertAuthenticated(manager: io.superboard.handlers.SuperBoardManager, context: String) {
         val actual = manager.authenticationState
         assertEquals(
@@ -83,9 +50,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert SuperBoardManager is in UNAUTHENTICATED state.
-     */
     fun assertUnauthenticated(manager: io.superboard.handlers.SuperBoardManager, context: String) {
         val actual = manager.authenticationState
         assertEquals(
@@ -95,9 +59,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert SDK is enabled.
-     */
     fun assertSdkEnabled(superboardContext: io.superboard.handlers.SuperBoardContext, context: String) {
         assertTrue(
             "Expected SDK to be enabled $context, but sdkEnabled was false",
@@ -105,9 +66,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert SDK is disabled.
-     */
     fun assertSdkDisabled(superboardContext: io.superboard.handlers.SuperBoardContext, context: String) {
         assertFalse(
             "Expected SDK to be disabled $context, but sdkEnabled was true",
@@ -115,9 +73,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert allowedToSendToBackend state.
-     */
     fun assertAllowedToSendToBackend(
         eventsManager: io.superboard.handlers.EventsManager,
         expected: Boolean,
@@ -131,11 +86,6 @@ object TestAssertions {
         )
     }
 
-    // ==================== Callback/Async Assertions ====================
-
-    /**
-     * Assert callback was invoked with expected link and no error.
-     */
     fun assertCallbackInvokedWithLink(
         link: String?,
         error: Exception?,
@@ -157,9 +107,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert callback was invoked with an error containing expected message.
-     */
     fun assertCallbackInvokedWithError(
         error: Exception?,
         expectedMessageContains: String,
@@ -175,9 +122,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert CountDownLatch completed within timeout.
-     */
     fun assertLatchCompleted(
         latch: java.util.concurrent.CountDownLatch,
         timeoutMs: Long,
@@ -190,9 +134,6 @@ object TestAssertions {
         )
     }
 
-    /**
-     * Assert a callback was invoked (boolean flag check with timeout context).
-     */
     fun assertCallbackInvoked(invoked: Boolean, timeoutMs: Long, context: String) {
         assertTrue(
             "Expected callback to be invoked within ${timeoutMs}ms $context, but it was not",
@@ -200,12 +141,6 @@ object TestAssertions {
         )
     }
 
-    // ==================== Mock Verification Assertions ====================
-
-    /**
-     * Assert an event was sent to the backend via mock service.
-     * Wraps coVerify to provide better error messages.
-     */
     suspend fun assertEventSent(
         eventType: io.superboard.model.EventType,
         mockService: io.superboard.service.ISuperBoardService,
@@ -220,9 +155,6 @@ object TestAssertions {
         }
     }
 
-    /**
-     * Assert an event was stored in mock storage.
-     */
     suspend fun assertEventStored(
         eventType: io.superboard.model.EventType,
         mockStorage: io.superboard.storage.IEventsStorage,
@@ -237,26 +169,6 @@ object TestAssertions {
         }
     }
 
-    // PURCHASE_EVENT_DISABLED: /**
-    // PURCHASE_EVENT_DISABLED:  * Assert a payment event was stored.
-    // PURCHASE_EVENT_DISABLED:  */
-    // PURCHASE_EVENT_DISABLED: suspend fun assertPaymentEventStored(
-    // PURCHASE_EVENT_DISABLED:     eventType: io.superboard.model.events.PaymentEventType,
-    // PURCHASE_EVENT_DISABLED:     mockStorage: io.superboard.storage.IEventsStorage,
-    // PURCHASE_EVENT_DISABLED:     context: String
-    // PURCHASE_EVENT_DISABLED: ) {
-    // PURCHASE_EVENT_DISABLED:     try {
-    // PURCHASE_EVENT_DISABLED:         coVerify { mockStorage.addPaymentEvent(match { it.eventType == eventType }) }
-    // PURCHASE_EVENT_DISABLED:     } catch (e: AssertionError) {
-    // PURCHASE_EVENT_DISABLED:         throw AssertionError(
-    // PURCHASE_EVENT_DISABLED:             "Expected $eventType payment event to be stored $context, but it was not. Original: ${e.message}"
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:     }
-    // PURCHASE_EVENT_DISABLED: }
-
-    /**
-     * Assert no events were sent to backend.
-     */
     suspend fun assertNoEventsSent(
         mockService: io.superboard.service.ISuperBoardService,
         context: String
@@ -270,9 +182,6 @@ object TestAssertions {
         }
     }
 
-    /**
-     * Assert event was removed from storage.
-     */
     suspend fun assertEventRemoved(
         mockStorage: io.superboard.storage.IEventsStorage,
         context: String
@@ -286,11 +195,6 @@ object TestAssertions {
         }
     }
 
-    // ==================== Result Type Assertions ====================
-
-    /**
-     * Assert LSResult is Success and return the data.
-     */
     fun <T : Any> assertResultSuccess(result: io.superboard.utils.LSResult<T>, context: String): T {
         assertTrue(
             "Expected LSResult.Success $context, but was LSResult.Error: ${(result as? io.superboard.utils.LSResult.Error)?.exception?.message}",
@@ -299,9 +203,6 @@ object TestAssertions {
         return (result as io.superboard.utils.LSResult.Success).data
     }
 
-    /**
-     * Assert LSResult is Error.
-     */
     fun <T : Any> assertResultError(result: io.superboard.utils.LSResult<T>, context: String): Exception {
         assertTrue(
             "Expected LSResult.Error $context, but was LSResult.Success",
@@ -310,9 +211,6 @@ object TestAssertions {
         return (result as io.superboard.utils.LSResult.Error).exception
     }
 
-    /**
-     * Assert LSResult is Error with message containing expected text.
-     */
     fun <T : Any> assertResultErrorContains(
         result: io.superboard.utils.LSResult<T>,
         expectedMessageContains: String,

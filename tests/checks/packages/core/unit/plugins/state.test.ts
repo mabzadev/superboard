@@ -1,12 +1,3 @@
-/**
- * PluginStateRepository Tests
- *
- * Tests the database-backed plugin state storage for:
- * - CRUD operations (get, getAll, upsert, delete)
- * - Enable/disable convenience methods
- * - Timestamp tracking
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -21,7 +12,6 @@ describe("PluginStateRepository", () => {
 	let repo: PluginStateRepository;
 
 	beforeEach(async () => {
-		// Create in-memory SQLite database
 		sqliteDb = new Database(":memory:");
 
 		db = new Kysely<DbSchema>({
@@ -30,7 +20,6 @@ describe("PluginStateRepository", () => {
 			}),
 		});
 
-		// Run migrations to create tables
 		await runMigrations(db);
 
 		repo = new PluginStateRepository(db);
@@ -48,7 +37,6 @@ describe("PluginStateRepository", () => {
 		});
 
 		it("returns state for existing plugin", async () => {
-			// Insert directly
 			await db
 				.insertInto("_plugin_state")
 				.values({
@@ -162,10 +150,8 @@ describe("PluginStateRepository", () => {
 		});
 
 		it("updates existing state", async () => {
-			// Create initial state
 			await repo.upsert("test-plugin", "1.0.0", "active");
 
-			// Update it
 			const state = await repo.upsert("test-plugin", "1.1.0", "inactive");
 
 			expect(state.pluginId).toBe("test-plugin");
@@ -174,35 +160,28 @@ describe("PluginStateRepository", () => {
 		});
 
 		it("sets activated_at when activating", async () => {
-			// Create as inactive
 			await repo.upsert("test-plugin", "1.0.0", "inactive");
 
-			// Activate
 			const state = await repo.upsert("test-plugin", "1.0.0", "active");
 
 			expect(state.activatedAt).toBeInstanceOf(Date);
 		});
 
 		it("sets deactivated_at when deactivating", async () => {
-			// Create as active
 			await repo.upsert("test-plugin", "1.0.0", "active");
 
-			// Deactivate
 			const state = await repo.upsert("test-plugin", "1.0.0", "inactive");
 
 			expect(state.deactivatedAt).toBeInstanceOf(Date);
 		});
 
 		it("does not change activated_at if already active", async () => {
-			// Create as active
 			const initial = await repo.upsert("test-plugin", "1.0.0", "active");
 			const initialActivatedAt = initial.activatedAt!.getTime();
 
-			// Wait a bit then update version (still active)
 			await new Promise((r) => setTimeout(r, 10));
 			const updated = await repo.upsert("test-plugin", "1.1.0", "active");
 
-			// activated_at should be the same
 			expect(updated.activatedAt!.getTime()).toBe(initialActivatedAt);
 		});
 	});
@@ -255,7 +234,6 @@ describe("PluginStateRepository", () => {
 
 			expect(deleted).toBe(true);
 
-			// Verify it's gone
 			const state = await repo.get("test-plugin");
 			expect(state).toBeNull();
 		});

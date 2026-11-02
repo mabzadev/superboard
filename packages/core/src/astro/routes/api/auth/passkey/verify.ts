@@ -1,9 +1,3 @@
-/**
- * POST /_emdash/api/auth/passkey/verify
- *
- * Verify a passkey authentication and create a session
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -31,7 +25,6 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 		const body = await parseBody(request, passkeyVerifyBody);
 		if (isParseError(body)) return body;
 
-		// Get passkey config
 		const url = new URL(request.url);
 		const options = new OptionsRepository(emdash.db);
 		const siteName = (await options.get<string>("emdash:site_title")) ?? undefined;
@@ -42,7 +35,6 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 		);
 		const passkeyConfig = getPasskeyConfig(url, siteName, siteUrl, allowedOrigins);
 
-		// Authenticate with passkey
 		const adapter = createKyselyAdapter(emdash.db);
 		const challengeStore = createChallengeStore(emdash.db);
 
@@ -53,7 +45,6 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 			challengeStore,
 		);
 
-		// Create session
 		if (session) {
 			session.set("user", { id: user.id });
 			session.set("strongReauthentication", {

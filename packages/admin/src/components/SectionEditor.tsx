@@ -1,9 +1,3 @@
-/**
- * Section editor page component
- *
- * Edit a section's content and metadata.
- */
-
 import { Input, InputArea, Label, Loader, Toast } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -61,7 +55,6 @@ export function SectionEditor() {
 		onSuccess: (updated) => {
 			void queryClient.invalidateQueries({ queryKey: ["sections"] });
 			void queryClient.invalidateQueries({ queryKey: ["sections", slug] });
-			// If slug changed, navigate to new URL
 			if (updated.slug !== slug) {
 				void navigate({ to: "/sections/$slug", params: { slug: updated.slug } });
 			}
@@ -127,12 +120,11 @@ function SectionEditorForm({ section, isSaving, pluginBlocks, onSave }: SectionE
 	const { t } = useLingui();
 	const [title, setTitle] = React.useState(section.title);
 	const [sectionSlug, setSectionSlug] = React.useState(section.slug);
-	const [slugTouched, setSlugTouched] = React.useState(true); // Existing sections have touched slugs
+	const [slugTouched, setSlugTouched] = React.useState(true);
 	const [description, setDescription] = React.useState(section.description || "");
 	const [keywords, setKeywords] = React.useState(section.keywords.join(", "));
 	const [content, setContent] = React.useState<unknown[]>(section.content);
 
-	// Track initial state for dirty checking
 	const [lastSavedData] = React.useState(() =>
 		JSON.stringify({
 			title: section.title,
@@ -143,7 +135,6 @@ function SectionEditorForm({ section, isSaving, pluginBlocks, onSave }: SectionE
 		}),
 	);
 
-	// Auto-generate slug from title if editing title and slug hasn't been manually changed
 	React.useEffect(() => {
 		if (!slugTouched && title && title !== section.title) {
 			setSectionSlug(slugify(title));
@@ -156,8 +147,6 @@ function SectionEditorForm({ section, isSaving, pluginBlocks, onSave }: SectionE
 	);
 	const isDirty = currentData !== lastSavedData;
 
-	// Block sidebar state populated when a node view (e.g. ImageNode) requests
-	// sidebar space.
 	const [blockSidebarPanel, setBlockSidebarPanel] = React.useState<BlockSidebarPanel | null>(null);
 
 	const handleBlockSidebarOpen = React.useCallback((panel: BlockSidebarPanel) => {
@@ -208,9 +197,7 @@ function SectionEditorForm({ section, isSaving, pluginBlocks, onSave }: SectionE
 			</EditorHeader>
 
 			<div className="grid grid-cols-12 gap-6">
-				{/* Main content */}
 				<div className="col-span-8 space-y-6">
-					{/* Content editor */}
 					<div className="rounded-lg border bg-kumo-base p-6">
 						<Label className="text-lg font-semibold mb-4 block">{t`Content`}</Label>
 						<PortableTextEditor
@@ -222,9 +209,6 @@ function SectionEditorForm({ section, isSaving, pluginBlocks, onSave }: SectionE
 						/>
 					</div>
 
-					{/* Save action at the bottom of the main column so users hit
-					    it naturally when they finish editing, without needing to
-					    scroll past the entire sidebar. */}
 					<div className="flex items-center justify-end gap-2">
 						<SaveButton
 							isSaving={isSaving}
@@ -235,7 +219,6 @@ function SectionEditorForm({ section, isSaving, pluginBlocks, onSave }: SectionE
 					</div>
 				</div>
 
-				{/* Sidebar */}
 				<div className="col-span-4 space-y-6">
 					{blockSidebarPanel?.type === "image" ? (
 						<ImageDetailPanel
@@ -264,7 +247,6 @@ function SectionEditorForm({ section, isSaving, pluginBlocks, onSave }: SectionE
 						/>
 					) : (
 						<>
-							{/* Metadata */}
 							<div className="rounded-lg border bg-kumo-base p-6 space-y-4">
 								<h2 className="text-lg font-semibold">{t`Section Details`}</h2>
 
@@ -310,7 +292,6 @@ function SectionEditorForm({ section, isSaving, pluginBlocks, onSave }: SectionE
 								</div>
 							</div>
 
-							{/* Source info */}
 							<div className="rounded-lg border bg-kumo-base p-6">
 								<h2 className="text-lg font-semibold mb-2">{t`Source`}</h2>
 								<p className="text-sm text-kumo-subtle">

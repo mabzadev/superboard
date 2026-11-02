@@ -4,8 +4,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { BlockKitMediaPickerField } from "../../../../../packages/admin/src/components/BlockKitMediaPickerField";
 import { render } from "../utils/render";
 
-// Stub MediaPickerModal as a test seam so tests can drive the picker selection
-// flow (local pick, URL pick, close) without spinning up the real modal.
 vi.mock("../../../../../packages/admin/src/components/MediaPickerModal", () => ({
 	MediaPickerModal: ({
 		open,
@@ -145,8 +143,6 @@ describe("BlockKitMediaPickerField", () => {
 		});
 
 		it("falls back to the placeholder for javascript: URLs", async () => {
-			// Cast to any to bypass DOM-style typing on src; this string is what an
-			// admin user could paste into a text_input-compatible value.
 			const { screen } = await renderField({ value: "javascript:alert(1)" });
 			await expect.element(screen.getByText("Select media")).toBeInTheDocument();
 			expect(document.querySelector("img")).toBeNull();
@@ -171,14 +167,11 @@ describe("BlockKitMediaPickerField", () => {
 				value: "/_emdash/api/media/file/missing.png",
 			});
 
-			// Image should render initially
 			const img = await waitForImg();
 			expect(img.getAttribute("src")).toBe("/_emdash/api/media/file/missing.png");
 
-			// Simulate image load failure
 			img.dispatchEvent(new Event("error"));
 
-			// Broken-image placeholder should appear
 			await expect.element(screen.getByText("Image not found")).toBeInTheDocument();
 		});
 
@@ -190,7 +183,6 @@ describe("BlockKitMediaPickerField", () => {
 			const img = await waitForImg();
 			img.dispatchEvent(new Event("error"));
 
-			// Both action buttons must remain in the DOM and accessible
 			await expect.element(screen.getByLabelText("Remove")).toBeInTheDocument();
 			await expect.element(screen.getByText("Change")).toBeInTheDocument();
 		});
@@ -203,11 +195,8 @@ describe("BlockKitMediaPickerField", () => {
 			const img = await waitForImg();
 			img.dispatchEvent(new Event("error"));
 
-			// The broken-image placeholder should be visible (its presence confirms
-			// the container didn't collapse — a zero-height container can't show text)
 			await expect.element(screen.getByText("Image not found")).toBeInTheDocument();
 
-			// The remove button must remain accessible via label
 			await expect.element(screen.getByLabelText("Remove")).toBeInTheDocument();
 		});
 	});

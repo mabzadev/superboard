@@ -1,11 +1,3 @@
-/**
- * Tests for withEmDashRuntime() (#1887): the request-free runtime accessor
- * for queue consumers and scheduled() handlers.
- *
- * Covers the stateless-adapter fast path, the connection-backed adapter path
- * (event-scoped db in ALS + guaranteed commit/close), and error propagation.
- */
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("astro:middleware", () => ({
@@ -78,7 +70,6 @@ const RUNTIME_HOLDER_KEY = Symbol.for("emdash:runtime-holder");
 
 describe("withEmDashRuntime (#1887)", () => {
 	beforeEach(() => {
-		// Reset the globalThis runtime singleton so each test builds fresh
 		delete (globalThis as Record<symbol, unknown>)[RUNTIME_HOLDER_KEY];
 		vi.mocked(createRequestScopedDb).mockReset().mockReturnValue(null);
 		mockGetLastContentWriteAt.mockClear();
@@ -125,11 +116,8 @@ describe("withEmDashRuntime (#1887)", () => {
 		expect(dbSeenByCallback).toBe(scopedDb);
 		expect(commit).toHaveBeenCalledTimes(1);
 		expect(close).toHaveBeenCalledTimes(1);
-		// The event context must not leak past the call
 		expect(getRequestContext()).toBeUndefined();
 
-		// The scope must be flagged as a write workload so connection-backed
-		// adapters route queue jobs to the primary.
 		const opts = vi.mocked(createRequestScopedDb).mock.calls[0]?.[0];
 		expect(opts).toMatchObject({ isAuthenticated: false, isWrite: true });
 	});

@@ -14,14 +14,4 @@ export default defineConfig({
 			database: sqlite({ url: "file:./data.db" }),
 		}),
 	],
-	// Optional: Add custom fonts
-	// experimental: {
-	// 	fonts: [
-	// 		{
-	// 			provider: "google",
-	// 			family: "Inter",
-	// 			weights: [400, 500, 600, 700],
-	// 		},
-	// 	],
-	// },
 });

@@ -1,39 +1,3 @@
-/**
- * Shared build pipeline used by `build` and `bundle`.
- *
- * One canonical source-to-artifact pipeline so neither `build` nor `bundle`
- * has to maintain its own copy of the probe + transpile + extract logic.
- * `build` writes the dist artifacts to disk; `bundle` calls into the same
- * machinery to produce a `ResolvedPlugin` it then validates and tarballs.
- *
- * The phases:
- *
- *   1. `resolveSources(pluginDir)` — read + normalise `emdash-plugin.jsonc`,
- *      optionally read `package.json` for name/version, locate `src/plugin.ts`.
- *      Reconciles the manifest's optional `version` with `package.json#version`
- *      via `normaliseManifest` (mismatch / missing → error).
- *
- *   2. `probeAndAssemble({ entries, tmpDir })` — build `src/plugin.ts`
- *      unminified to a temp file, dynamically `import()` it, and harvest
- *      the hook/route surface into a `ResolvedPlugin`. Identity + trust
- *      contract come from the manifest, not the code.
- *
- *   3. `buildRuntime({ entries, outDir, tmpDir })` — build `src/plugin.ts`
- *      again, this time minified + tree-shaken + with `.d.mts` types, to
- *      produce `<outDir>/plugin.mjs` and `<outDir>/plugin.d.mts`. Probe
- *      and runtime builds differ deliberately in minification and dts
- *      output; the probe only reads `default.hooks` / `default.routes`
- *      *keys*, which minification doesn't rename (object literal keys
- *      stay stable). Both pass the same source through tsdown with no
- *      `external` and no `alias` — sandboxed plugins must not import
- *      from `emdash` at runtime (types come from `emdash/plugin` and
- *      are erased before bundling).
- *
- * Errors throw `BuildPipelineError` with a structured code. Wrappers translate
- * to their own error classes so the CLI's `BuildError` / `BundleError`
- * surfaces don't change.
- */
-
 import { copyFile, mkdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -61,10 +25,6 @@ import {
 const PLUGIN_ENTRY_PATH = "src/plugin.ts";
 const PACKAGE_JSON_PATH = "package.json";
 
-// ──────────────────────────────────────────────────────────────────────────
-// Errors
-// ──────────────────────────────────────────────────────────────────────────
-
 export type BuildPipelineErrorCode =
 	| "MISSING_MANIFEST"
 	| "MISSING_PLUGIN_ENTRY"
@@ -86,10 +46,6 @@ export class BuildPipelineError extends Error {
 	}
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Logger surface (shared by build + bundle wrappers)
-// ──────────────────────────────────────────────────────────────────────────
-
 export interface PipelineLogger {
 	start?(message: string): void;
 	info?(message: string): void;
@@ -97,26 +53,12 @@ export interface PipelineLogger {
 	warn?(message: string): void;
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Phase 1: source resolution
-// ──────────────────────────────────────────────────────────────────────────
-
 export interface ResolvedSources {
 	pluginDir: string;
 	pluginEntry: string;
 	manifest: NormalisedManifest;
 	manifestPath: string;
-	/**
-	 * Package name from `package.json#name`, or `undefined` if no
-	 * `package.json` exists (registry-only plugin).
-	 */
 	packageName: string | undefined;
-	/**
-	 * Whether a sibling `package.json` was found. Determines whether
-	 * the descriptor module (`dist/index.mjs`) is emitted — a plugin
-	 * without `package.json` can't be `pnpm add`-ed, so the descriptor
-	 * has no consumer.
-	 */
 	hasPackageJson: boolean;
 }
 
@@ -152,10 +94,6 @@ export async function resolveSources(
 		);
 	}
 
-	// `package.json` is optional. Common case (npm-distributed plugin):
-	// present, drives the version and the descriptor's entrypoint
-	// specifier. Edge case (registry-only plugin): absent, version
-	// lives in the manifest, no descriptor module is emitted.
 	const packageJsonPath = join(resolvedDir, PACKAGE_JSON_PATH);
 	const hasPackageJson = await fileExists(packageJsonPath);
 	let packageName: string | undefined;
@@ -214,9 +152,6 @@ async function readPackageMeta(packageJsonPath: string): Promise<PackageMeta> {
 			`${packageJsonPath} has no "name" field. The build derives the runtime entrypoint specifier from package.json#name.`,
 		);
 	}
-	// `version` is optional (registry-only plugins may rely on the
-	// manifest's version); when present, it must be a non-empty
-	// string.
 	const versionRaw = (parsed as { version?: unknown }).version;
 	let packageVersion: string | undefined;
 	if (versionRaw === undefined) {
@@ -232,33 +167,16 @@ async function readPackageMeta(packageJsonPath: string): Promise<PackageMeta> {
 	return { packageName: name, packageVersion };
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Phase 2: probe + assemble
-// ──────────────────────────────────────────────────────────────────────────
-
 export interface ProbeAndAssembleContext {
 	entries: ResolvedSources;
 	tmpDir: string;
 	build: typeof import("tsdown").build;
 }
 
-/**
- * Build `src/plugin.ts` once for hook/route probing, import it, and
- * assemble a `ResolvedPlugin` from the manifest's identity / trust
- * contract plus the probed surface.
- *
- * The probe build is *not* minified — keeping function bodies intact
- * makes the `pluginModule.default.hooks[x]` handler reads stable. The
- * later runtime build is minified separately by `buildRuntime`.
- */
 export async function probeAndAssemble(ctx: ProbeAndAssembleContext): Promise<ResolvedPlugin> {
 	const { entries, tmpDir, build } = ctx;
 
 	const resolvedPlugin: ResolvedPlugin = {
-		// `id` on the bundled manifest is the publisher's natural slug.
-		// The runtime rewrites it to the opaque `r_<hash>` at install
-		// time (see makeRegistryPluginId), but on-wire the slug is what
-		// the install handler matches against the registry's record key.
 		id: entries.manifest.slug,
 		version: entries.manifest.version,
 		capabilities: entries.manifest.capabilities,
@@ -343,29 +261,11 @@ export async function probeAndAssemble(ctx: ProbeAndAssembleContext): Promise<Re
 	return resolvedPlugin;
 }
 
-/**
- * Validate the probed default export against `ProbedDefaultSchema` and
- * translate any Zod issue into a `BuildPipelineError`. The first issue
- * wins so authors see one focused message rather than an issue tree.
- *
- * Path-keyed dispatch: an issue at `["hooks", "X"]` produces the
- * "must be a function or { handler, ... }" message; an issue at
- * `["hooks", "X", "field", ...]` produces the "has invalid FIELD VALUE"
- * message. Anything else falls back to a generic path-prefixed message.
- *
- * Exported so tests can lock in the error-message contract without
- * spinning up a real probe build.
- */
 export function parseProbedDefault(pluginEntry: string, definition: unknown): ProbedDefault {
 	let result: ReturnType<typeof ProbedDefaultSchema.safeParse>;
 	try {
 		result = ProbedDefaultSchema.safeParse(definition);
 	} catch (error) {
-		// Defensive: Zod 4 has been observed to throw `TypeError` when an
-		// entry is an exotic shape it doesn't expect. The schema's
-		// `normaliseEntry` preprocess catches the cases we know about,
-		// but wrap `safeParse` so any future surprise still surfaces as a
-		// `BuildPipelineError` rather than a raw stack trace.
 		const message = error instanceof Error ? error.message : String(error);
 		throw new BuildPipelineError(
 			"INVALID_PLUGIN_FORMAT",
@@ -392,10 +292,6 @@ export function parseProbedDefault(pluginEntry: string, definition: unknown): Pr
 				`${pluginEntry}: ${kind} "${entryName}" must be a function or { handler: function, ... }. Got ${describeShape(entry)}.`,
 			);
 		}
-		// Per-field issue (errorPolicy, priority, timeout, dependencies,
-		// public, …). The displayed value is the field as a whole, not
-		// the deeper element the path points at; the Zod message
-		// describes the actual fault.
 		const field = formatFieldPath(rest);
 		const fieldValue = typeof rest[0] === "string" ? getProperty(entry, rest[0]) : undefined;
 		throw new BuildPipelineError(
@@ -410,11 +306,6 @@ export function parseProbedDefault(pluginEntry: string, definition: unknown): Pr
 	);
 }
 
-/**
- * Render an issue path inside a hook/route entry as `field`,
- * `field[index]`, or `field.sub`. Used for human-readable error
- * messages only; never fed back into property lookups.
- */
 function formatFieldPath(path: readonly PropertyKey[]): string {
 	let out = "";
 	for (const segment of path) {
@@ -429,33 +320,17 @@ function formatFieldPath(path: readonly PropertyKey[]): string {
 	return out || "<unknown>";
 }
 
-/**
- * Read a property off an `unknown` value, returning `undefined` for any
- * non-object input. Used only to recover the original user-supplied
- * value back off the definition for error-message formatting, never to
- * drive control flow. Exotic objects (Array, Map, Date, class
- * instances) return whatever the runtime gives them — harmless for
- * an error-message helper.
- */
 function getProperty(value: unknown, key: string): unknown {
 	if (value === null || typeof value !== "object") return undefined;
 	// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- error-message helper; widening to Record<string,unknown> for plain-object lookup is intentional, exotic objects return harmless results
 	return (value as Record<string, unknown>)[key];
 }
 
-/**
- * `JSON.stringify` that survives values it can't serialise (`BigInt`,
- * cyclic structures, `undefined`, functions, symbols) by falling back
- * to `describeShape`. Used only to embed user-supplied values in
- * `BuildPipelineError` messages.
- */
 function safeStringify(value: unknown): string {
 	try {
 		const json = JSON.stringify(value, (_key, v) =>
 			typeof v === "bigint" ? `${v.toString()}n` : v,
 		);
-		// `JSON.stringify(undefined)` is `undefined` (not a string). Fall
-		// through to the shape description in that case.
 		if (json === undefined) return describeShape(value);
 		return json;
 	} catch {
@@ -464,9 +339,6 @@ function safeStringify(value: unknown): string {
 }
 
 function assembleHook(entry: ProbedHookEntry, pluginId: string): ResolvedPlugin["hooks"][string] {
-	// `preprocess` in `probe-schema.ts` normalises the bare-function form
-	// into `{ handler }` before validation, so every entry that reaches
-	// here is in the config form.
 	return {
 		handler: entry.handler,
 		priority: entry.priority ?? 100,
@@ -490,10 +362,6 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Phase 3: runtime build
-// ──────────────────────────────────────────────────────────────────────────
-
 export interface BuildRuntimeContext {
 	entries: ResolvedSources;
 	outDir: string;
@@ -506,17 +374,6 @@ export interface RuntimeFiles {
 	runtimeTypes: string;
 }
 
-/**
- * Build `src/plugin.ts` into `<outDir>/plugin.mjs` + `<outDir>/plugin.d.mts`.
- *
- * Same source as the probe; the configuration differs only in
- * `minify: true` and `dts: true`. The probe stays unminified for
- * stable property-key reads (`default.hooks`, `default.routes`); the
- * runtime build minifies because this output is what runs in the
- * isolate (loader string-embeds it) or is `import`-ed in-process. No
- * `external`, no `alias` — sandboxed plugins must not import from
- * `emdash` at runtime.
- */
 export async function buildRuntime(ctx: BuildRuntimeContext): Promise<RuntimeFiles> {
 	const { entries, outDir, tmpDir, build } = ctx;
 
@@ -562,10 +419,6 @@ export async function buildRuntime(ctx: BuildRuntimeContext): Promise<RuntimeFil
 
 	return { runtime, runtimeTypes };
 }
-
-// ──────────────────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────────────────
 
 function describeShape(value: unknown): string {
 	if (value === null) return "null";

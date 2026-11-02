@@ -1,12 +1,3 @@
-/**
- * Comment Notification Emails
- *
- * Sends email notifications to content authors when comments are
- * approved on their content. Used by:
- *   - Public comment POST route (comment:afterCreate, if auto-approved)
- *   - Admin moderation route (comment:afterModerate, when approving)
- */
-
 import type { Kysely } from "kysely";
 
 import { escapeHtml } from "../api/escape.js";
@@ -27,9 +18,6 @@ export interface CommentNotificationData {
 	adminBaseUrl: string;
 }
 
-/**
- * Build an email notification for a new comment.
- */
 export function buildCommentNotificationEmail(
 	to: string,
 	data: CommentNotificationData,
@@ -61,15 +49,6 @@ export function buildCommentNotificationEmail(
 	return { to, subject, text, html };
 }
 
-/**
- * Send a comment notification to the content author if all conditions are met:
- * 1. Comment status is "approved"
- * 2. Content author exists and has an email
- * 3. Email provider is configured
- * 4. Commenter is not the content author (no self-notifications)
- *
- * Returns true if the email was sent, false if skipped.
- */
 export async function sendCommentNotification(params: {
 	email: EmailPipeline;
 	comment: {
@@ -102,12 +81,6 @@ export async function sendCommentNotification(params: {
 	return true;
 }
 
-/**
- * Look up a content item's author from the database.
- *
- * Used by the admin moderation route where content info isn't
- * readily available (only the comment record is at hand).
- */
 export async function lookupContentAuthor(
 	db: Kysely<Database>,
 	collection: string,

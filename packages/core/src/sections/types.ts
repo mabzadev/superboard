@@ -1,19 +1,7 @@
-/**
- * Section types
- *
- * Sections are reusable content blocks that can be inserted into any Portable Text field.
- */
-
 import type { PortableTextBlock } from "../fields/index.js";
 
-/**
- * Section source types
- */
 export type SectionSource = "theme" | "user" | "import";
 
-/**
- * Section as returned to templates/admin
- */
 export interface Section {
 	id: string;
 	slug: string;
@@ -28,16 +16,13 @@ export interface Section {
 	updatedAt: string;
 }
 
-/**
- * Section as stored in database
- */
 export interface SectionRow {
 	id: string;
 	slug: string;
 	title: string;
 	description: string | null;
-	keywords: string | null; // JSON array
-	content: string; // JSON: Portable Text array
+	keywords: string | null;
+	content: string;
 	preview_media_id: string | null;
 	source: SectionSource;
 	theme_id: string | null;
@@ -45,9 +30,6 @@ export interface SectionRow {
 	updated_at: string;
 }
 
-/**
- * Input for creating a section
- */
 export interface CreateSectionInput {
 	slug: string;
 	title: string;
@@ -59,9 +41,6 @@ export interface CreateSectionInput {
 	themeId?: string;
 }
 
-/**
- * Input for updating a section
- */
 export interface UpdateSectionInput {
 	slug?: string;
 	title?: string;
@@ -71,16 +50,9 @@ export interface UpdateSectionInput {
 	previewMediaId?: string | null;
 }
 
-/**
- * Options for querying sections
- */
 export interface GetSectionsOptions {
-	/** Filter by source */
 	source?: SectionSource;
-	/** Search title, description, keywords */
 	search?: string;
-	/** Limit results */
 	limit?: number;
-	/** Cursor for pagination */
 	cursor?: string;
 }

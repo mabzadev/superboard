@@ -1,10 +1,3 @@
-/**
- * Visible term counts are demand-driven: the aggregate over the assignment
- * pivot runs only for a caller that asked for counts. Assertions are on the SQL
- * actually executed, because with no object-cache backend `cachedQuery` is a
- * passthrough and every render pays the aggregate again.
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,7 +9,6 @@ import type { Database as DatabaseSchema } from "../../../../../../packages/core
 import { runWithContext } from "../../../../../../packages/core/src/request-context.js";
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 
-// Mock loader.getDb so the runtime taxonomy functions read from our test db.
 vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 	getDb: vi.fn(),
 }));
@@ -29,10 +21,8 @@ import {
 	resetTaxonomyDefsCacheForTests,
 } from "../../../../../../packages/core/src/taxonomies/index.js";
 
-/** SQL of every query executed against the test database. */
 let queries: string[] = [];
 
-/** `per_collection` is the visible-count aggregate's subquery alias. */
 function countAggregateQueries(): string[] {
 	return queries.filter((q) => q.includes("per_collection"));
 }
@@ -57,9 +47,6 @@ describe("visible term counts are only computed on demand", () => {
 		resetTaxonomyDefsCacheForTests();
 		invalidateTermCache();
 
-		// Migrations seed the `category` (hierarchical) and `tag` defs declaring
-		// a `posts` collection; point them at the collection this test creates so
-		// the aggregate runs against a real table.
 		await new SchemaRegistry(db).createCollection({
 			slug: "post",
 			label: "Posts",
@@ -116,7 +103,6 @@ describe("visible term counts are only computed on demand", () => {
 			await prefetchLayoutData();
 
 			expect(countAggregateQueries()).toEqual([]);
-			// The term lists themselves are still warmed, one query per taxonomy.
 			expect(termListQueries()).toHaveLength(2);
 		});
 	});
@@ -134,7 +120,6 @@ describe("visible term counts are only computed on demand", () => {
 			const categories = await getTaxonomyTerms("category");
 			expect(categories[0]!.count).toBe(2);
 			expect(categories[0]!.children[0]!.count).toBe(1);
-			// One aggregate, and no second read of the warmed term list.
 			expect(countAggregateQueries()).toHaveLength(1);
 			expect(termListQueries()).toEqual([]);
 		});

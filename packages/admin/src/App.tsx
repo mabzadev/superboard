@@ -1,13 +1,3 @@
-/**
- * EmDash Admin React Application
- *
- * This is the main entry point for the admin SPA.
- * Uses TanStack Router for client-side routing and TanStack Query for data fetching.
- *
- * Plugin admin components are passed via the pluginAdmins prop and made
- * available throughout the app via PluginAdminContext.
- */
-
 import { LinkProvider, Toasty, type LinkComponentProps } from "@cloudflare/kumo";
 import { i18n } from "@lingui/core";
 import type { Messages } from "@lingui/core";
@@ -23,17 +13,15 @@ import { PluginAdminProvider, type PluginAdmins } from "./lib/plugin-context";
 import { LocaleDirectionProvider } from "./locales/index.js";
 import { createAdminRouter } from "./router";
 
-// Create a query client
 const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
-			staleTime: 1000 * 60, // 1 minute
+			staleTime: 1000 * 60,
 			retry: 1,
 		},
 	},
 });
 
-// Create the router with query client context
 const router = createAdminRouter(queryClient);
 const ADMIN_BASEPATH = "/_emdash/admin";
 
@@ -105,21 +93,13 @@ const KumoRouterLink = React.forwardRef<HTMLAnchorElement, LinkComponentProps>(
 KumoRouterLink.displayName = "KumoRouterLink";
 
 export interface AdminAppProps {
-	/** Plugin admin modules keyed by plugin ID */
 	pluginAdmins?: PluginAdmins;
-	/** Auth provider UI modules keyed by provider ID */
 	authProviders?: AuthProviders;
-	/** Configured admin white-label branding (logo, site name) */
 	adminBranding?: AdminBranding;
-	/** Active locale code */
 	locale?: string;
-	/** Compiled Lingui messages for the active locale */
 	messages?: Messages;
 }
 
-/**
- * Main Admin Application
- */
 const EMPTY_PLUGINS: PluginAdmins = {};
 const EMPTY_AUTH_PROVIDERS: AuthProviders = {};
 const EMPTY_ADMIN_BRANDING: AdminBranding = {};

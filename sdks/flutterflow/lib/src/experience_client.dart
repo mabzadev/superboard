@@ -326,7 +326,6 @@ class SuperBoardExperienceClient {
       } on SuperBoardExperienceException catch (error) {
         if (!error.retryable) return false;
       } catch (_) {
-        // Retry once using the exact same event and idempotency key.
       }
     }
     return false;

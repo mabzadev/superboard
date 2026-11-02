@@ -14,11 +14,6 @@ export const DEFAULT_FETCH_LIMITS = {
 } as const;
 
 export type FetchImplementation = (input: URL, init: RequestInit) => Promise<Response>;
-/**
- * Resolves every hostname before it is fetched. Returned addresses are checked
- * for local and private ranges. Workers cannot pin fetch() to these addresses,
- * so callers with private-network access must use an egress proxy that does.
- */
 export type HostnameResolver = (hostname: string) => Promise<readonly string[]>;
 
 export interface FetchVerifiedResourceOptions {
@@ -275,10 +270,6 @@ async function readWithTimeout(
 	}
 }
 
-/**
- * Every operation has both fulfillment and rejection handlers, so an operation
- * that loses the timeout race cannot later become an unhandled rejection.
- */
 function withTimeout<T>(
 	operation: Promise<T>,
 	timeoutMs: number,

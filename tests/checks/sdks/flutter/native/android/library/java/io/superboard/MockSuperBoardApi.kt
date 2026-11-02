@@ -21,18 +21,8 @@ import okhttp3.ResponseBody
 import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Response
 
-/**
- * Mock implementation of SuperBoardApi for testing purposes.
- * 
- * This mock allows configuring responses for each API endpoint to test
- * different scenarios like success, errors, and edge cases.
- */
 class MockSuperBoardApi : SuperBoardApi {
 
-    // =====================================================================
-    // Configuration for mock responses
-    // =====================================================================
-    
     var authenticateResponse: Response<AuthenticationResponse>? = null
     var generateLinkResponse: Response<GenerateLinkResponse>? = null
     var payloadResponse: Response<DeeplinkDetails>? = null
@@ -47,17 +37,12 @@ class MockSuperBoardApi : SuperBoardApi {
     var markNotificationAsReadResponse: Response<Unit>? = null
     var notificationsToDisplayAutomaticallyResponse: Response<NotificationsResponse>? = null
 
-    // Track method calls for verification
     var authenticateCalls = mutableListOf<AppDetails>()
     var generateLinkCalls = mutableListOf<GenerateLinkRequest>()
     var addEventCalls = mutableListOf<Event>()
     var addPaymentEventCalls = mutableListOf<PaymentEvent>()
     var updateAttributesCalls = mutableListOf<UpdateAttributesRequest>()
     var linkDetailsCalls = mutableListOf<LinkDetailsRequest>()
-
-    // =====================================================================
-    // SuperBoardApi Implementation
-    // =====================================================================
 
     override suspend fun payloadFor(request: AppDetails): Response<DeeplinkDetails> {
         return payloadResponse ?: createSuccessDeeplinkResponse()
@@ -117,10 +102,6 @@ class MockSuperBoardApi : SuperBoardApi {
         return notificationsToDisplayAutomaticallyResponse ?: createSuccessNotificationsResponse()
     }
 
-    // =====================================================================
-    // Helper methods to reset and verify
-    // =====================================================================
-
     fun reset() {
         authenticateResponse = null
         generateLinkResponse = null
@@ -148,10 +129,6 @@ class MockSuperBoardApi : SuperBoardApi {
     fun verifyGenerateLinkCalled(): Boolean = generateLinkCalls.isNotEmpty()
     fun verifyAddEventCalled(): Boolean = addEventCalls.isNotEmpty()
     fun verifyAddPaymentEventCalled(): Boolean = addPaymentEventCalls.isNotEmpty()
-
-    // =====================================================================
-    // Default success response factories
-    // =====================================================================
 
     companion object {
         private const val TEST_SUPERBOARD_ID = "superboard_id_12345"
@@ -195,7 +172,6 @@ class MockSuperBoardApi : SuperBoardApi {
             return Response.success(NumberOfUnreadNotificationsResponse(numberOfUnreadNotifications = 0))
         }
 
-        // Error response factories
         fun createErrorResponse(code: Int, message: String): Response<Any> {
             return Response.error(
                 code,

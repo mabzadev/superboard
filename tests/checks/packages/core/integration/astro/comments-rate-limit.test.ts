@@ -1,17 +1,3 @@
-/**
- * Rate-limit behaviour on POST /_emdash/api/comments/:collection/:contentId.
- *
- * Specifically covers the removal of the user-agent-hash fallback. Before,
- * a submitter with no trusted IP could rotate their User-Agent string to
- * get a fresh rate-limit bucket each time; the route now buckets all
- * trusted-IP-less requests together into the shared "unknown" bucket.
- *
- * Operators behind a reverse proxy they control should set
- * `trustedProxyHeaders` (or EMDASH_TRUSTED_PROXY_HEADERS) so this path
- * isn't hit for legitimate traffic. Those tests live alongside the
- * extractRequestMeta unit tests.
- */
-
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -22,9 +8,6 @@ import type { Database } from "../../../../../../packages/core/src/database/type
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
-// Keep the env-derived trusted-header cache from leaking into this file
-// (a stale EMDASH_TRUSTED_PROXY_HEADERS would route every UA to its own
-// bucket and make the test pass for the wrong reason).
 const ORIGINAL_TRUSTED_ENV = process.env.EMDASH_TRUSTED_PROXY_HEADERS;
 
 function buildRequest(opts: { userAgent?: string; body: unknown }): Request {
@@ -47,9 +30,7 @@ function buildContext(opts: { db: Kysely<Database>; request: Request }): APICont
 				db: opts.db,
 				config: {},
 				hooks: {
-					// Pass-through beforeCreate (returns the event unchanged).
 					runCommentBeforeCreate: async (event: unknown) => event,
-					// No moderator configured — returns null (route coerces to pending).
 					invokeExclusiveHook: async () => null,
 					runCommentAfterCreate: async () => undefined,
 				},
@@ -75,7 +56,6 @@ describe("POST /comments — UA-hash rate-limit removal", () => {
 			commentsEnabled: true,
 		});
 		await registry.createField("post", { slug: "title", label: "Title", type: "string" });
-		// Create a published content row so the comment route can target it.
 		await db
 			.insertInto("ec_post" as never)
 			.values({
@@ -99,10 +79,6 @@ describe("POST /comments — UA-hash rate-limit removal", () => {
 	});
 
 	it("buckets no-trusted-IP requests together regardless of User-Agent", async () => {
-		// Submit 20 comments from different UA strings but without any
-		// trusted IP header. The limit for the "unknown" bucket is 20/10min.
-		// Before the fix, rotating UAs would give each request its own
-		// bucket; with the fix, they share the "unknown" bucket.
 		for (let i = 0; i < 20; i++) {
 			const res = await postComment(
 				buildContext({
@@ -120,8 +96,6 @@ describe("POST /comments — UA-hash rate-limit removal", () => {
 			expect([200, 201]).toContain(res.status);
 		}
 
-		// 21st call with a fresh UA must still hit the shared bucket and
-		// get rate-limited.
 		const limitedRes = await postComment(
 			buildContext({
 				db,

@@ -11,35 +11,12 @@ interface SelectOption {
 	value: string;
 }
 
-/**
- * Grid widget — a two-dimensional matrix of rows × columns with configurable
- * cell types. Stores as a nested JSON object.
- *
- * Seed usage:
- *   {
- *     "slug": "availability",
- *     "type": "json",
- *     "widget": "field-kit:grid",
- *     "options": {
- *       "rows": [
- *         { "key": "mon", "label": "Monday" },
- *         { "key": "tue", "label": "Tuesday" }
- *       ],
- *       "columns": [
- *         { "key": "morning", "label": "Morning" },
- *         { "key": "afternoon", "label": "Afternoon" }
- *       ],
- *       "cell": "toggle"
- *     }
- *   }
- *
- * Stored value: { "mon": { "morning": true, "afternoon": false }, ... }
- */
 export function Grid({ value, onChange, label, required, options, minimal }: FieldWidgetProps) {
 	const rows = (options?.rows as GridAxisDef[] | undefined) ?? [];
 	const columns = (options?.columns as GridAxisDef[] | undefined) ?? [];
 	const cellType = ((options?.cell as string | undefined) ?? "toggle") as CellType;
-	const cellOptions = (options?.cellOptions as SelectOption[] | string[] | undefined) ?? [];
+	const rawCellOptions = options?.cellOptions as SelectOption[] | string[] | undefined;
+	const cellOptions = React.useMemo(() => rawCellOptions ?? [], [rawCellOptions]);
 	const helpText = options?.helpText as string | undefined;
 
 	const data = normalizeGrid(value, rows, columns);

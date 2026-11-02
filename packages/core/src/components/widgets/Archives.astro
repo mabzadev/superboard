@@ -8,12 +8,10 @@ interface Props {
 
 const { type = "monthly", limit = 12 } = Astro.props;
 
-// Get all posts to build archives
 const { entries: posts } = await getEmDashCollection("posts", {
 	orderBy: { published_at: "desc" },
 });
 
-// Group posts by date
 const archives = new Map<string, { label: string; count: number; url: string }>();
 
 for (const post of posts) {
@@ -47,7 +45,6 @@ for (const post of posts) {
 	archives.get(key)!.count++;
 }
 
-// Convert to array and limit
 const archiveList = [...archives.values()].slice(0, limit);
 ---
 

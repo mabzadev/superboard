@@ -1,9 +1,3 @@
-/**
- * emdash seed
- *
- * Apply a seed file to the database
- */
-
 import { readFile, access, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -43,14 +37,7 @@ async function readPackageJson(cwd: string): Promise<PackageJson | null> {
 	}
 }
 
-/**
- * Resolve seed file path from:
- * 1. Positional argument (if provided)
- * 2. .emdash/seed.json (convention)
- * 3. package.json emdash.seed (config)
- */
 async function resolveSeedPath(cwd: string, positional?: string): Promise<string | null> {
-	// 1. Positional argument
 	if (positional) {
 		const resolved = resolve(cwd, positional);
 		if (await fileExists(resolved)) {
@@ -60,13 +47,11 @@ async function resolveSeedPath(cwd: string, positional?: string): Promise<string
 		return null;
 	}
 
-	// 2. Convention: .emdash/seed.json
 	const conventionPath = resolve(cwd, ".emdash", "seed.json");
 	if (await fileExists(conventionPath)) {
 		return conventionPath;
 	}
 
-	// 3. package.json emdash.seed
 	const pkg = await readPackageJson(cwd);
 	if (pkg?.emdash?.seed) {
 		const pkgSeedPath = resolve(cwd, pkg.emdash.seed);
@@ -131,7 +116,6 @@ export const seedCommand = defineCommand({
 		const cwd = resolve(args.cwd);
 		consola.start("Loading seed file...");
 
-		// Resolve seed file path
 		const seedPath = await resolveSeedPath(cwd, args.path);
 		if (!seedPath) {
 			consola.error("No seed file found");
@@ -141,7 +125,6 @@ export const seedCommand = defineCommand({
 
 		consola.info(`Seed file: ${seedPath}`);
 
-		// Load and parse seed file
 		let seed: SeedFile;
 		try {
 			const content = await readFile(seedPath, "utf-8");
@@ -151,7 +134,6 @@ export const seedCommand = defineCommand({
 			process.exit(1);
 		}
 
-		// Validate seed
 		consola.start("Validating seed file...");
 		const validation = validateSeed(seed);
 
@@ -171,19 +153,16 @@ export const seedCommand = defineCommand({
 
 		consola.success("Seed file is valid");
 
-		// If validate-only mode, exit here
 		if (args.validate) {
 			consola.success("Validation complete");
 			return;
 		}
 
-		// Connect to database
 		const dbPath = resolve(cwd, args.database);
 		consola.info(`Database: ${dbPath}`);
 
 		const db = createDatabase({ url: `file:${dbPath}` });
 
-		// Run migrations
 		consola.start("Running migrations...");
 		try {
 			const { applied } = await runMigrations(db);
@@ -198,7 +177,6 @@ export const seedCommand = defineCommand({
 			process.exit(1);
 		}
 
-		// Set up storage for $media resolution
 		const uploadsDir = resolve(cwd, args["uploads-dir"]);
 		await mkdir(uploadsDir, { recursive: true });
 
@@ -207,7 +185,6 @@ export const seedCommand = defineCommand({
 			baseUrl: args["media-base-url"],
 		});
 
-		// Prepare apply options
 		const onConflictRaw = args["on-conflict"];
 		if (onConflictRaw !== "skip" && onConflictRaw !== "update" && onConflictRaw !== "error") {
 			consola.error(`Invalid --on-conflict value: ${onConflictRaw}`);
@@ -222,7 +199,6 @@ export const seedCommand = defineCommand({
 			storage,
 		};
 
-		// Apply seed
 		consola.start("Applying seed...");
 		try {
 			const result = await applySeed(db, seed, options);
@@ -230,7 +206,6 @@ export const seedCommand = defineCommand({
 			consola.success("Seed applied successfully!");
 			consola.log("");
 
-			// Print summary
 			if (result.settings.applied > 0) {
 				consola.info(`Settings: ${result.settings.applied} applied`);
 			}

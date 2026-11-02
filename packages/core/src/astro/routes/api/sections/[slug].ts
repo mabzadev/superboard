@@ -1,11 +1,3 @@
-/**
- * Section by slug endpoints
- *
- * GET    /_emdash/api/sections/:slug - Get section
- * PUT    /_emdash/api/sections/:slug - Update section
- * DELETE /_emdash/api/sections/:slug - Delete section
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

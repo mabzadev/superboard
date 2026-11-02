@@ -5,7 +5,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AdminBrandingProvider } from "../../../../../packages/admin/src/lib/admin-branding-context";
 import { render } from "../utils/render.tsx";
 
-// Mock router
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual("@tanstack/react-router");
 	return {
@@ -19,7 +18,6 @@ vi.mock("@tanstack/react-router", async () => {
 	};
 });
 
-// Mock API — keep a reference so tests can override fetchAuthMode
 const mockFetchAuthMode = vi.fn().mockResolvedValue({
 	authMode: "passkey",
 });
@@ -35,13 +33,11 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	};
 });
 
-// Mock WebAuthn APIs so PasskeyLogin doesn't bail out
 Object.defineProperty(window, "PublicKeyCredential", {
 	value: function PublicKeyCredential() {},
 	writable: true,
 });
 
-// Import after mocks
 const { LoginPage } = await import("../../../../../packages/admin/src/components/LoginPage");
 
 function QueryWrapper({ children }: { children: React.ReactNode }) {
@@ -53,7 +49,6 @@ function QueryWrapper({ children }: { children: React.ReactNode }) {
 
 describe("LoginPage", () => {
 	beforeEach(() => {
-		// Clean URL params
 		window.history.replaceState({}, "", window.location.pathname);
 	});
 
@@ -83,7 +78,6 @@ describe("LoginPage", () => {
 		);
 		const emailButton = screen.getByText("Sign in with email link");
 		await emailButton.click();
-		// Heading should change
 		await expect.element(screen.getByText("Sign in with email")).toBeInTheDocument();
 	});
 
@@ -93,11 +87,8 @@ describe("LoginPage", () => {
 				<LoginPage />
 			</QueryWrapper>,
 		);
-		// Switch to magic link
 		await screen.getByText("Sign in with email link").click();
-		// Check for email input (by placeholder)
 		await expect.element(screen.getByPlaceholder("you@example.com")).toBeInTheDocument();
-		// Check for submit button
 		await expect.element(screen.getByText("Send magic link")).toBeInTheDocument();
 	});
 
@@ -107,12 +98,9 @@ describe("LoginPage", () => {
 				<LoginPage />
 			</QueryWrapper>,
 		);
-		// Switch to magic link
 		await screen.getByText("Sign in with email link").click();
 		await expect.element(screen.getByText("Sign in with email")).toBeInTheDocument();
-		// Click back
 		await screen.getByText("Back to login").click();
-		// Should see passkey button again
 		await expect.element(screen.getByText("Sign in with Passkey")).toBeInTheDocument();
 	});
 
@@ -122,9 +110,7 @@ describe("LoginPage", () => {
 				<LoginPage />
 			</QueryWrapper>,
 		);
-		// Wait for manifest to load (passkey button appears)
 		await expect.element(screen.getByText("Sign in with Passkey")).toBeInTheDocument();
-		// Sign up link should NOT be present
 		expect(screen.getByText("Sign up").query()).toBeNull();
 	});
 
@@ -142,9 +128,6 @@ describe("LoginPage", () => {
 		await expect.element(screen.getByText("Sign up")).toBeInTheDocument();
 	});
 
-	// Regression test for #639 / PR #705: the login page must reflect the
-	// configured admin.logo/siteName (white-label branding), not the stock
-	// hardcoded EmDash mark — same as the Sidebar and SetupWizard already do.
 	it("renders the configured admin logo and site name instead of the stock EmDash mark", async () => {
 		const screen = await render(
 			<QueryWrapper>
@@ -158,7 +141,6 @@ describe("LoginPage", () => {
 		const logoImg = screen.getByRole("img", { name: "Acme CMS" });
 		await expect.element(logoImg).toBeInTheDocument();
 		expect(logoImg.element().getAttribute("src")).toBe("https://example.com/logo.png");
-		// The stock lockup must not also be rendered
 		expect(screen.getByRole("img", { name: "EmDash" }).query()).toBeNull();
 	});
 

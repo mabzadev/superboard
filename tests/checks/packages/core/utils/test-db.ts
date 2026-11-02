@@ -21,43 +21,14 @@ import { waitForDeferredTasks } from "../../../../../packages/core/src/deferred-
 import { SchemaRegistry } from "../../../../../packages/core/src/schema/registry.js";
 import { resetTaxonomyDefsCacheForTests } from "../../../../../packages/core/src/taxonomies/index.js";
 
-/**
- * Clear the isolate-wide, schema-derived caches that live on globalThis and
- * therefore persist across tests within a vitest worker. A freshly created
- * test database must never be served another database's cached taxonomy
- * definitions, so we reset every time a new test DB is created.
- *
- * Note: we deliberately don't import from `../../src/loader.js` here — several
- * test files `vi.mock` that module to stub `getDb`, and pulling another export
- * through this shared util would blow up under those mocks. The loader's own
- * taxonomy-names cache predates this util and is reset via its public path.
- */
 function resetSchemaCachesForTests(): void {
 	resetTaxonomyDefsCacheForTests();
 }
 
-// ---------------------------------------------------------------------------
-// Environment
-// ---------------------------------------------------------------------------
-
-/**
- * PostgreSQL connection string for tests.
- * When set, Postgres tests run; when absent, they're skipped.
- */
 export const PG_CONNECTION_STRING = process.env.EMDASH_TEST_PG ?? "";
 
-/**
- * Whether a Postgres test database is available.
- */
 export const hasPgTestDatabase = PG_CONNECTION_STRING.length > 0;
 
-// ---------------------------------------------------------------------------
-// SQLite helpers (unchanged)
-// ---------------------------------------------------------------------------
-
-/**
- * Create an in-memory SQLite database for testing
- */
 export function createTestDatabase(): Kysely<DatabaseSchema> {
 	resetSchemaCachesForTests();
 	const sqlite = openNodeSqliteDatabase(":memory:");
@@ -69,24 +40,16 @@ export function createTestDatabase(): Kysely<DatabaseSchema> {
 	});
 }
 
-/**
- * Setup a test database with migrations run
- */
 export async function setupTestDatabase(): Promise<Kysely<DatabaseSchema>> {
 	const db = createTestDatabase();
 	await runMigrations(db);
 	return db;
 }
 
-/**
- * Setup a test database with standard test collections (post, page)
- * This creates the ec_post and ec_page tables with title and content fields
- */
 export async function setupTestDatabaseWithCollections(): Promise<Kysely<DatabaseSchema>> {
 	const db = await setupTestDatabase();
 	const registry = new SchemaRegistry(db);
 
-	// Create post collection
 	await registry.createCollection({
 		slug: "post",
 		label: "Posts",
@@ -103,7 +66,6 @@ export async function setupTestDatabaseWithCollections(): Promise<Kysely<Databas
 		type: "portableText",
 	});
 
-	// Create page collection
 	await registry.createCollection({
 		slug: "page",
 		label: "Pages",
@@ -123,19 +85,11 @@ export async function setupTestDatabaseWithCollections(): Promise<Kysely<Databas
 	return db;
 }
 
-/**
- * Cleanup and destroy a test database
- */
 export async function teardownTestDatabase(db: Kysely<DatabaseSchema>): Promise<void> {
 	await waitForDeferredTasks();
 	await db.destroy();
 }
 
-/**
- * Number of terms Cloudflare D1 allows in a compound SELECT
- * (SQLITE_LIMIT_COMPOUND_SELECT). Measured against a real D1: five
- * `UNION ALL` branches compile, six are rejected.
- */
 export const D1_COMPOUND_SELECT_LIMIT = 5;
 
 class LimitedCompoundSelectAdapter extends SqliteAdapter {
@@ -159,20 +113,9 @@ class LimitedCompoundSelectDialect extends SqliteDialect {
 
 export interface CompoundSelectTestDatabase {
 	db: Kysely<DatabaseSchema>;
-	/** Every statement prepared against the database, in order. */
 	statements: string[];
 }
 
-/**
- * Test database standing in for a backend with — or without — a
- * compound-SELECT ceiling.
- *
- * SQLite's upstream default is 500, so query shapes that D1 rejects run
- * happily in tests. Pass a number and the dialect declares the ceiling the way
- * the D1 dialect does, while prepare() rejects statements past it — where SQLite
- * itself raises the error — with D1's error text, so code that inspects the
- * message behaves the same. Pass null for a backend that imposes no ceiling.
- */
 export async function setupTestDatabaseWithCompoundSelectLimit(
 	limit: number | null = D1_COMPOUND_SELECT_LIMIT,
 ): Promise<CompoundSelectTestDatabase> {
@@ -197,38 +140,12 @@ export async function setupTestDatabaseWithCompoundSelectLimit(
 	return { db, statements };
 }
 
-// ---------------------------------------------------------------------------
-// PostgreSQL helpers
-// ---------------------------------------------------------------------------
-
-// --- Per-worker database isolation -----------------------------------------
-//
-// Vitest runs test files in parallel worker processes that all share one
-// Postgres server. The original harness isolated each test in its own *schema*
-// inside one shared database. That breaks down under parallelism: Kysely's
-// migrator introspects the catalog database-wide (`pg_namespace`, `pg_class`)
-// with no schema filter, so a migration in one worker sees — and races against
-// — the sibling schemas other workers are concurrently creating and dropping.
-// The result is intermittent `schema/relation/column "test_…" does not exist`
-// failures during setup (issue #1333).
-//
-// Postgres catalogs are *per database*, so giving each worker its own database
-// fully isolates introspection. Within a worker, schemas are still created and
-// dropped per test, but sequentially (Vitest runs one file at a time per
-// worker and awaits hooks in order), so there is no concurrent catalog churn.
-
-/** Validate an identifier we must interpolate into DDL (no bind params allowed). */
 function assertSafeIdentifier(id: string): void {
 	if (!/^[a-z][a-z0-9_]*$/.test(id) || id.length > 63) {
 		throw new Error(`Unsafe SQL identifier: ${id}`);
 	}
 }
 
-/**
- * Name of the Postgres database dedicated to the current Vitest worker.
- * `VITEST_POOL_ID` is the stable worker-slot id (reused across files within a
- * worker); we fall back to the pid so the harness still works outside Vitest.
- */
 function workerDatabaseName(): string {
 	const raw = process.env.VITEST_POOL_ID ?? process.env.VITEST_WORKER_ID ?? String(process.pid);
 	const slug = raw.toLowerCase().replace(/[^a-z0-9]+/g, "_");
@@ -237,25 +154,17 @@ function workerDatabaseName(): string {
 	return name;
 }
 
-/** Swap the database in a connection string for the per-worker database. */
 function withDatabase(connectionString: string, database: string): string {
 	const url = new URL(connectionString);
 	url.pathname = `/${database}`;
 	return url.toString();
 }
 
-/**
- * Ensure the per-worker database exists and resolve its connection string.
- * Memoised per process so the create-database round-trip happens once.
- */
 let workerConnPromise: Promise<string> | null = null;
 function getWorkerConnectionString(): Promise<string> {
 	if (!workerConnPromise) {
 		workerConnPromise = (async () => {
 			const dbName = workerDatabaseName();
-			// Connect to the maintenance database from the original connection
-			// string to issue CREATE DATABASE (which cannot run while connected
-			// to its target, nor inside a transaction).
 			const admin = new Pool({ connectionString: PG_CONNECTION_STRING, max: 1 });
 			try {
 				const { rows } = await admin.query<{ exists: number }>(
@@ -263,8 +172,6 @@ function getWorkerConnectionString(): Promise<string> {
 					[dbName],
 				);
 				if (rows.length === 0) {
-					// Concurrent CREATE DATABASE calls (different worker names) can
-					// still collide on the template1 lock; retry a few times.
 					await createDatabaseWithRetry(admin, dbName);
 				}
 			} finally {
@@ -283,10 +190,7 @@ async function createDatabaseWithRetry(admin: Pool, dbName: string): Promise<voi
 			return;
 		} catch (error) {
 			const msg = String(error instanceof Error ? error.message : error);
-			// 42P04 = duplicate_database (another check-then-create raced us).
 			if (/already exists|duplicate_database/i.test(msg)) return;
-			// "source database … is being accessed by other users" — template1
-			// is locked by another concurrent CREATE DATABASE; back off and retry.
 			if (attempt < 9 && /being accessed by other users/i.test(msg)) {
 				await new Promise((resolve) => setTimeout(resolve, 50 + attempt * 50));
 				continue;
@@ -296,10 +200,6 @@ async function createDatabaseWithRetry(admin: Pool, dbName: string): Promise<voi
 	}
 }
 
-/**
- * Shared pool for the current worker's Postgres database. One pool per test
- * process, used for schema create/drop. Created lazily.
- */
 let sharedPool: Pool | null = null;
 
 async function getSharedPool(): Promise<Pool> {
@@ -310,14 +210,6 @@ async function getSharedPool(): Promise<Pool> {
 	return sharedPool;
 }
 
-/**
- * Generate a unique schema name for test isolation.
- *
- * Unique within the worker database via a monotonic counter (clock resolution
- * independent) plus crypto entropy, so two contexts in the same process can
- * never collide on a name. PostgreSQL identifiers are capped at 63 bytes; this
- * stays well under.
- */
 let schemaCounter = 0;
 function uniqueSchemaName(): string {
 	const seq = (schemaCounter++).toString(36);
@@ -330,22 +222,12 @@ export interface PgTestContext {
 	schemaName: string;
 }
 
-/**
- * Create an isolated Postgres database for a single test.
- *
- * Each call creates a unique schema inside the worker's database and returns a
- * Kysely instance whose search_path is set to that schema. Tables are fully
- * isolated.
- *
- * Call `teardownTestPostgresDatabase()` in afterEach to drop the schema.
- */
 export async function createTestPostgresDatabase(): Promise<PgTestContext> {
 	resetSchemaCachesForTests();
 	const connectionString = await getWorkerConnectionString();
 	const pool = await getSharedPool();
 	const schemaName = uniqueSchemaName();
 
-	// Create the isolated schema using a raw connection
 	const client = await pool.connect();
 	try {
 		await client.query(`CREATE SCHEMA ${schemaName}`);
@@ -353,9 +235,6 @@ export async function createTestPostgresDatabase(): Promise<PgTestContext> {
 		client.release();
 	}
 
-	// Create a Kysely instance that targets this schema.
-	// Test schema comes first so CREATE TABLE goes there.
-	// public is included for Postgres system functions and extensions.
 	const testPool = new Pool({
 		connectionString,
 		max: 5,
@@ -363,26 +242,18 @@ export async function createTestPostgresDatabase(): Promise<PgTestContext> {
 	});
 
 	const db = new Kysely<DatabaseSchema>({
-		// Same dialect as the production Postgres adapters so every PG test
-		// exercises the fail-fast migration lock.
 		dialect: new FailFastPostgresDialect({ pool: testPool }),
 	});
 
 	return { db, schemaName };
 }
 
-/**
- * Setup a Postgres test database with migrations run.
- */
 export async function setupTestPostgresDatabase(): Promise<PgTestContext> {
 	const ctx = await createTestPostgresDatabase();
 	await runMigrations(ctx.db, { migrationTableSchema: ctx.schemaName });
 	return ctx;
 }
 
-/**
- * Setup a Postgres test database with standard test collections (post, page).
- */
 export async function setupTestPostgresDatabaseWithCollections(): Promise<PgTestContext> {
 	const ctx = await setupTestPostgresDatabase();
 	const registry = new SchemaRegistry(ctx.db);
@@ -422,15 +293,10 @@ export async function setupTestPostgresDatabaseWithCollections(): Promise<PgTest
 	return ctx;
 }
 
-/**
- * Tear down a Postgres test database — drops the schema and closes the pool.
- */
 export async function teardownTestPostgresDatabase(ctx: PgTestContext): Promise<void> {
 	await waitForDeferredTasks();
-	// Destroy the test pool first
 	await ctx.db.destroy();
 
-	// Drop the schema using the shared pool
 	const pool = await getSharedPool();
 	const client = await pool.connect();
 	try {
@@ -440,9 +306,6 @@ export async function teardownTestPostgresDatabase(ctx: PgTestContext): Promise<
 	}
 }
 
-/**
- * Shut down the shared Postgres pool. Call once at the end of the test run.
- */
 export async function destroySharedPool(): Promise<void> {
 	if (sharedPool) {
 		await sharedPool.end();
@@ -450,22 +313,14 @@ export async function destroySharedPool(): Promise<void> {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Dialect-parametric test helpers
-// ---------------------------------------------------------------------------
-
 export type DialectName = "sqlite" | "postgres";
 
 export interface DialectTestContext {
 	db: Kysely<DatabaseSchema>;
 	dialect: DialectName;
-	/** Only present for Postgres — needed for teardown */
 	pgCtx?: PgTestContext;
 }
 
-/**
- * Create a bare test database for a given dialect (no migrations).
- */
 export async function createForDialect(dialect: DialectName): Promise<DialectTestContext> {
 	if (dialect === "postgres") {
 		const pgCtx = await createTestPostgresDatabase();
@@ -475,9 +330,6 @@ export async function createForDialect(dialect: DialectName): Promise<DialectTes
 	return { db, dialect };
 }
 
-/**
- * Create a test database for a given dialect (with migrations).
- */
 export async function setupForDialect(dialect: DialectName): Promise<DialectTestContext> {
 	if (dialect === "postgres") {
 		const pgCtx = await setupTestDatabase_pg();
@@ -487,9 +339,6 @@ export async function setupForDialect(dialect: DialectName): Promise<DialectTest
 	return { db, dialect };
 }
 
-/**
- * Create a test database with collections for a given dialect.
- */
 export async function setupForDialectWithCollections(
 	dialect: DialectName,
 ): Promise<DialectTestContext> {
@@ -501,9 +350,6 @@ export async function setupForDialectWithCollections(
 	return { db, dialect };
 }
 
-/**
- * Tear down a test database for any dialect.
- */
 export async function teardownForDialect(ctx: DialectTestContext | undefined): Promise<void> {
 	if (!ctx) return;
 	if (ctx.pgCtx) {
@@ -527,28 +373,8 @@ export function getExactMigrationStatusForDialect(
 	return getExactMigrationStatus(ctx.db, { migrationTableSchema: ctx.pgCtx?.schemaName });
 }
 
-// Private alias to avoid name collision
 const setupTestDatabase_pg = setupTestPostgresDatabase;
 
-/**
- * Run a describe block once per available dialect.
- *
- * When EMDASH_TEST_PG is not set, only SQLite runs.
- * When set, the suite runs for both SQLite and Postgres.
- *
- * @example
- * ```ts
- * describeEachDialect("Migrations", (dialectName) => {
- *   let ctx: DialectTestContext;
- *   beforeEach(async () => { ctx = await setupForDialect(dialectName); });
- *   afterEach(async () => { await teardownForDialect(ctx); });
- *
- *   it("creates tables", async () => {
- *     // ctx.db works with either dialect
- *   });
- * });
- * ```
- */
 export function describeEachDialect(name: string, fn: (dialect: DialectName) => void): void {
 	const dialects: DialectName[] = ["sqlite"];
 	if (hasPgTestDatabase) {

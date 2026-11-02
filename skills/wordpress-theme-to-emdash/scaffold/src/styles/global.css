@@ -1,10 +1,3 @@
-/**
- * Global Styles - Scaffold Theme
- *
- * Minimal styles for demonstration. Replace with your theme's design tokens.
- */
-
-/* Reset */
 *,
 *::before,
 *::after {
@@ -13,7 +6,6 @@
 	padding: 0;
 }
 
-/* Variables - replace with your theme's tokens */
 :root {
 	--color-text: #1a1a1a;
 	--color-text-muted: #666;
@@ -33,7 +25,6 @@
 	--container-width: 60rem;
 }
 
-/* Base */
 html {
 	font-family: var(--font-body);
 	font-size: 16px;
@@ -53,7 +44,6 @@ main {
 	padding: var(--space-xl) var(--space-md);
 }
 
-/* Layout */
 .container {
 	max-width: var(--container-width);
 	margin: 0 auto;
@@ -64,7 +54,6 @@ main {
 	max-width: var(--content-width);
 }
 
-/* Header */
 .site-header {
 	padding: var(--space-md) 0;
 	border-bottom: 1px solid var(--color-border);
@@ -98,7 +87,6 @@ main {
 	color: var(--color-text);
 }
 
-/* Footer */
 .site-footer {
 	padding: var(--space-lg) 0;
 	border-top: 1px solid var(--color-border);
@@ -116,7 +104,6 @@ main {
 	color: inherit;
 }
 
-/* Typography */
 h1,
 h2,
 h3,
@@ -153,14 +140,12 @@ code {
 	border-radius: 3px;
 }
 
-/* Images */
 img {
 	max-width: 100%;
 	height: auto;
 	display: block;
 }
 
-/* Post Card */
 .post-card {
 	margin-bottom: var(--space-lg);
 	padding-bottom: var(--space-lg);
@@ -203,7 +188,6 @@ img {
 	color: var(--color-text-muted);
 }
 
-/* Single Post/Page */
 .post-header,
 .page-header {
 	margin-bottom: var(--space-lg);
@@ -225,7 +209,6 @@ img {
 	border-radius: 4px;
 }
 
-/* Taxonomy terms */
 .post-categories a,
 .post-tags a {
 	color: var(--color-text-muted);
@@ -252,7 +235,6 @@ img {
 	color: var(--color-bg);
 }
 
-/* Prose (PortableText content) */
 .prose > * + * {
 	margin-top: var(--space-md);
 }
@@ -263,12 +245,10 @@ img {
 	margin-top: var(--space-lg);
 }
 
-/* Archive header */
 .archive-header {
 	margin-bottom: var(--space-lg);
 }
 
-/* Utility */
 .text-muted {
 	color: var(--color-text-muted);
 }

@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { renderHook, act } from "../../../render.js";
 
-// Track router.replace calls and provide controllable searchParams
 let mockSearchParams = new URLSearchParams();
 const mockReplace = vi.fn();
 
@@ -137,7 +136,6 @@ describe("useTableParams", () => {
 			expect(mockReplace).toHaveBeenCalledWith(expect.stringContaining("perPage=50"), {
 				scroll: false,
 			});
-			// page should be removed (reset)
 			expect(mockReplace).toHaveBeenCalledWith(expect.not.stringContaining("page="), {
 				scroll: false,
 			});
@@ -147,7 +145,7 @@ describe("useTableParams", () => {
 			const { result } = renderHook(() => useTableParams());
 
 			act(() => {
-				result.current.setRowsPerPage(25); // default
+				result.current.setRowsPerPage(25);
 			});
 
 			expect(mockReplace).toHaveBeenCalledWith("/test-path", { scroll: false });

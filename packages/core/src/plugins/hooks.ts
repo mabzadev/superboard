@@ -1,15 +1,3 @@
-/**
- * Plugin Hooks System v2
- *
- * Uses the unified PluginContext for all hooks.
- * Manages lifecycle hooks with:
- * - Deterministic ordering via priority + dependencies
- * - Timeout enforcement
- * - Error isolation
- * - Observability
- *
- */
-
 import { PluginContextFactory, type PluginContextFactoryOptions } from "./context.js";
 import type {
 	ResolvedPlugin,
@@ -57,7 +45,6 @@ import type {
 	PageFragmentContribution,
 } from "./types.js";
 
-// Hook name type for v2
 type HookNameV2 =
 	| "plugin:install"
 	| "plugin:activate"
@@ -85,9 +72,6 @@ type HookNameV2 =
 	| "page:metadata"
 	| "page:fragments";
 
-/**
- * Map from hook name to handler type — used for type-safe hook retrieval
- */
 type ContentStateChangeHookName =
 	| "content:afterPublish"
 	| "content:afterUnpublish"
@@ -123,9 +107,6 @@ interface HookHandlerMap {
 	"page:fragments": PageFragmentHandler;
 }
 
-/**
- * Hook execution result
- */
 export interface HookResult<T> {
 	success: boolean;
 	value?: T;
@@ -134,23 +115,14 @@ export interface HookResult<T> {
 	duration: number;
 }
 
-/**
- * Hook pipeline for executing hooks in order
- */
 export class HookPipeline {
 	private hooks: Map<HookNameV2, Array<ResolvedHook<unknown>>> = new Map();
 	private pluginMap: Map<string, ResolvedPlugin> = new Map();
 	private contextFactory: PluginContextFactory | null = null;
-	/** Stored so setContextFactory can merge incrementally. */
 	private contextFactoryOptions: Partial<PluginContextFactoryOptions> = {};
 
-	/** Hook names where at least one handler declared exclusive: true */
 	private exclusiveHookNames: Set<string> = new Set();
 
-	/**
-	 * Selected provider plugin ID for each exclusive hook.
-	 * Set by the PluginManager after resolution.
-	 */
 	private exclusiveSelections: Map<string, string> = new Map();
 
 	constructor(plugins: ResolvedPlugin[], factoryOptions?: PluginContextFactoryOptions) {
@@ -165,24 +137,12 @@ export class HookPipeline {
 		this.registerPlugins(plugins);
 	}
 
-	/**
-	 * Set or update the context factory options.
-	 *
-	 * When called on a pipeline that already has a factory, the new options
-	 * are merged on top of the existing ones so that callers don't need to
-	 * repeat every field (e.g. adding `cronReschedule` without losing
-	 * `storage` / `getUploadUrl`).
-	 */
 	setContextFactory(options: Partial<PluginContextFactoryOptions>): void {
 		const merged = { ...this.contextFactoryOptions, ...options };
-		// The first call must include `db`; subsequent calls merge incrementally.
 		this.contextFactory = new PluginContextFactory(merged as PluginContextFactoryOptions);
 		this.contextFactoryOptions = merged;
 	}
 
-	/**
-	 * Get context for a plugin
-	 */
 	private getContext(pluginId: string): PluginContext {
 		const plugin = this.pluginMap.get(pluginId);
 		if (!plugin) {
@@ -194,22 +154,9 @@ export class HookPipeline {
 		return this.contextFactory.createContext(plugin);
 	}
 
-	/**
-	 * Get typed hooks for a specific hook name.
-	 * The internal map stores ResolvedHook<unknown>, but we know each name
-	 * maps to a specific handler type via HookHandlerMap.
-	 *
-	 * Exclusive hooks that have a selected provider are filtered out — they
-	 * should only run via invokeExclusiveHook(), not in the regular pipeline.
-	 */
 	private getTypedHooks<N extends HookNameV2>(name: N): Array<ResolvedHook<HookHandlerMap[N]>> {
-		// The map stores hooks as ResolvedHook<unknown>. Each hook name corresponds
-		// to a specific handler type. The cast here is the single point where we
-		// bridge the untyped map to the typed API — callers never need to cast.
 		const all = (this.hooks.get(name) ?? []) as Array<ResolvedHook<HookHandlerMap[N]>>;
 
-		// If this hook has an exclusive selection, filter out all exclusive handlers
-		// so they don't run in the regular pipeline
 		if (this.exclusiveSelections.has(name)) {
 			return all.filter((h) => !h.exclusive);
 		}
@@ -217,13 +164,6 @@ export class HookPipeline {
 		return all;
 	}
 
-	/**
-	 * Register all hooks from plugins.
-	 *
-	 * Registers each hook name individually to preserve type safety. The
-	 * internal map stores ResolvedHook<unknown> since it's keyed by string,
-	 * but getTypedHooks() restores the correct handler type on retrieval.
-	 */
 	private registerPlugins(plugins: ResolvedPlugin[]): void {
 		for (const plugin of plugins) {
 			this.registerPluginHook(plugin, "plugin:install");
@@ -253,30 +193,15 @@ export class HookPipeline {
 			this.registerPluginHook(plugin, "page:fragments");
 		}
 
-		// Sort hooks by priority and dependencies
 		for (const [hookName, hooks] of this.hooks) {
 			this.hooks.set(hookName, this.sortHooks(hooks));
 		}
 	}
 
-	/**
-	 * Maps hook names to the capability required to register them.
-	 *
-	 * Hooks not listed here have no capability requirement (e.g. lifecycle
-	 * hooks, cron). Any plugin declaring a listed hook without the required
-	 * capability will have that hook silently skipped at registration time.
-	 */
 	private static readonly HOOK_REQUIRED_CAPABILITY: ReadonlyMap<string, string> = new Map([
-		// Email — registering email:beforeSend/afterSend/deliver requires the
-		// matching `hooks.email-*:register` capability. These are distinct
-		// from `email:send` (which gates ctx.email) so that "this plugin
-		// reads/writes email events" is visible separately from "this
-		// plugin can send email".
 		["email:beforeSend", "hooks.email-events:register"],
 		["email:afterSend", "hooks.email-events:register"],
 		["email:deliver", "hooks.email-transport:register"],
-		// Content — beforeSave can mutate content, so requires content:write.
-		// afterSave is read-only notification, so content:read suffices.
 		["content:beforeSave", "content:write"],
 		["content:afterSave", "content:read"],
 		["content:beforeDelete", "content:read"],
@@ -286,28 +211,19 @@ export class HookPipeline {
 		["content:afterRestore", "content:read"],
 		["content:afterSchedule", "content:read"],
 		["content:afterUnschedule", "content:read"],
-		// Media
 		["media:beforeUpload", "media:write"],
 		["media:afterUpload", "media:read"],
-		// Comments — hooks expose author email, IP hash, user agent
 		["comment:beforeCreate", "users:read"],
 		["comment:moderate", "users:read"],
 		["comment:afterCreate", "users:read"],
 		["comment:afterModerate", "users:read"],
-		// Page fragments — can inject arbitrary scripts into every public page
 		["page:fragments", "hooks.page-fragments:register"],
 	]);
 
-	/**
-	 * Register a single plugin's hook by name
-	 */
 	private registerPluginHook(plugin: ResolvedPlugin, name: HookNameV2): void {
 		const hook = plugin.hooks[name];
 		if (!hook) return;
 
-		// Hooks that expose sensitive data or inject into pages require specific
-		// capabilities. Plugins without the required capability have the hook
-		// silently skipped to prevent unauthorized data access or page injection.
 		const requiredCapability = HookPipeline.HOOK_REQUIRED_CAPABILITY.get(name);
 		if (requiredCapability && !plugin.capabilities.includes(requiredCapability as never)) {
 			console.warn(
@@ -316,41 +232,29 @@ export class HookPipeline {
 			return;
 		}
 
-		// Track exclusive hooks
 		if (hook.exclusive) {
 			this.exclusiveHookNames.add(name);
 		}
 
-		// ResolvedHook<SpecificHandler> is assignable to ResolvedHook<unknown>
-		// because the handler property is covariant
 		this.registerHook(name, hook);
 	}
 
-	/**
-	 * Register a single hook
-	 */
 	private registerHook(name: HookNameV2, hook: ResolvedHook<unknown>): void {
 		const existing = this.hooks.get(name) || [];
 		existing.push(hook);
 		this.hooks.set(name, existing);
 	}
 
-	/**
-	 * Sort hooks by priority and dependencies
-	 */
 	private sortHooks(hooks: Array<ResolvedHook<unknown>>): Array<ResolvedHook<unknown>> {
 		const sorted: Array<ResolvedHook<unknown>> = [];
 		const remaining = [...hooks];
 
-		// Simple topological sort with priority as tiebreaker
 		while (remaining.length > 0) {
-			// Find hooks whose dependencies are satisfied
 			const ready = remaining.filter((hook) =>
 				hook.dependencies.every((dep) => sorted.some((s) => s.pluginId === dep)),
 			);
 
 			if (ready.length === 0) {
-				// Circular dependency or missing dependency - log warning and fall back to priority
 				const pluginIds = remaining.map((h) => h.pluginId).join(", ");
 				console.warn(
 					`[hooks] Hook dependency cycle or missing dependency detected among plugins: ${pluginIds}. Falling back to priority order.`,
@@ -360,7 +264,6 @@ export class HookPipeline {
 				break;
 			}
 
-			// Sort ready hooks by priority and add the first one
 			ready.sort((a, b) => a.priority - b.priority);
 			const next = ready[0];
 			sorted.push(next);
@@ -370,9 +273,6 @@ export class HookPipeline {
 		return sorted;
 	}
 
-	/**
-	 * Execute a hook with timeout
-	 */
 	private async executeWithTimeout<T>(fn: () => Promise<T>, timeout: number): Promise<T> {
 		let timer: ReturnType<typeof setTimeout>;
 		const timeoutPromise = new Promise<T>(
@@ -386,39 +286,22 @@ export class HookPipeline {
 		}
 	}
 
-	// =========================================================================
-	// Lifecycle Hooks
-	// =========================================================================
-
-	/**
-	 * Run plugin:install hooks
-	 */
 	async runPluginInstall(pluginId: string): Promise<HookResult<void>[]> {
 		return this.runLifecycleHook("plugin:install", pluginId);
 	}
 
-	/**
-	 * Run plugin:activate hooks
-	 */
 	async runPluginActivate(pluginId: string): Promise<HookResult<void>[]> {
 		return this.runLifecycleHook("plugin:activate", pluginId);
 	}
 
-	/**
-	 * Run plugin:deactivate hooks
-	 */
 	async runPluginDeactivate(pluginId: string): Promise<HookResult<void>[]> {
 		return this.runLifecycleHook("plugin:deactivate", pluginId);
 	}
 
-	/**
-	 * Run plugin:uninstall hooks
-	 */
 	async runPluginUninstall(pluginId: string, deleteData: boolean): Promise<HookResult<void>[]> {
 		const hooks = this.getTypedHooks("plugin:uninstall");
 		const results: HookResult<void>[] = [];
 
-		// Only run the hook for the specific plugin being uninstalled
 		const hook = hooks.find((h) => h.pluginId === pluginId);
 		if (!hook) return results;
 
@@ -453,7 +336,6 @@ export class HookPipeline {
 		const hooks = this.getTypedHooks(hookName);
 		const results: HookResult<void>[] = [];
 
-		// Only run the hook for the specific plugin
 		const hook = hooks.find((h) => h.pluginId === pluginId);
 		if (!hook) return results;
 
@@ -481,14 +363,6 @@ export class HookPipeline {
 		return results;
 	}
 
-	// =========================================================================
-	// Content Hooks
-	// =========================================================================
-
-	/**
-	 * Run content:beforeSave hooks
-	 * Returns modified content from the pipeline
-	 */
 	async runContentBeforeSave(
 		content: Record<string, unknown>,
 		collection: string,
@@ -513,7 +387,6 @@ export class HookPipeline {
 
 			try {
 				const result = await this.executeWithTimeout(() => handler(event, ctx), hook.timeout);
-				// Handler can return modified content or void (keep current)
 				if (result !== undefined) {
 					currentContent = result;
 				}
@@ -540,9 +413,6 @@ export class HookPipeline {
 		return { content: currentContent, results };
 	}
 
-	/**
-	 * Run content:afterSave hooks
-	 */
 	async runContentAfterSave(
 		content: Record<string, unknown>,
 		collection: string,
@@ -581,10 +451,6 @@ export class HookPipeline {
 		return results;
 	}
 
-	/**
-	 * Run content:beforeDelete hooks
-	 * Returns whether deletion is allowed
-	 */
 	async runContentBeforeDelete(
 		id: string,
 		collection: string,
@@ -601,7 +467,6 @@ export class HookPipeline {
 
 			try {
 				const result = await this.executeWithTimeout(() => handler(event, ctx), hook.timeout);
-				// Handler returns false to block, true or void to allow
 				if (result === false) {
 					allowed = false;
 				}
@@ -628,9 +493,6 @@ export class HookPipeline {
 		return { allowed, results };
 	}
 
-	/**
-	 * Run content:afterDelete hooks
-	 */
 	async runContentAfterDelete(
 		id: string,
 		collection: string,
@@ -669,9 +531,6 @@ export class HookPipeline {
 		return results;
 	}
 
-	/**
-	 * Run content state-change hooks that all share the same event shape.
-	 */
 	private async runContentStateChangeHook(
 		name: ContentStateChangeHookName,
 		content: Record<string, unknown>,
@@ -710,9 +569,6 @@ export class HookPipeline {
 		return results;
 	}
 
-	/**
-	 * Run content:afterPublish hooks (fire-and-forget).
-	 */
 	async runContentAfterPublish(
 		content: Record<string, unknown>,
 		collection: string,
@@ -720,9 +576,6 @@ export class HookPipeline {
 		return this.runContentStateChangeHook("content:afterPublish", content, collection);
 	}
 
-	/**
-	 * Run content:afterUnpublish hooks (fire-and-forget).
-	 */
 	async runContentAfterUnpublish(
 		content: Record<string, unknown>,
 		collection: string,
@@ -730,9 +583,6 @@ export class HookPipeline {
 		return this.runContentStateChangeHook("content:afterUnpublish", content, collection);
 	}
 
-	/**
-	 * Run content:afterRestore hooks (fire-and-forget).
-	 */
 	async runContentAfterRestore(
 		content: Record<string, unknown>,
 		collection: string,
@@ -740,9 +590,6 @@ export class HookPipeline {
 		return this.runContentStateChangeHook("content:afterRestore", content, collection);
 	}
 
-	/**
-	 * Run content:afterSchedule hooks (fire-and-forget).
-	 */
 	async runContentAfterSchedule(
 		content: Record<string, unknown>,
 		collection: string,
@@ -750,9 +597,6 @@ export class HookPipeline {
 		return this.runContentStateChangeHook("content:afterSchedule", content, collection);
 	}
 
-	/**
-	 * Run content:afterUnschedule hooks (fire-and-forget).
-	 */
 	async runContentAfterUnschedule(
 		content: Record<string, unknown>,
 		collection: string,
@@ -760,13 +604,6 @@ export class HookPipeline {
 		return this.runContentStateChangeHook("content:afterUnschedule", content, collection);
 	}
 
-	// =========================================================================
-	// Media Hooks
-	// =========================================================================
-
-	/**
-	 * Run media:beforeUpload hooks
-	 */
 	async runMediaBeforeUpload(file: { name: string; type: string; size: number }): Promise<{
 		file: { name: string; type: string; size: number };
 		results: HookResult<{ name: string; type: string; size: number }>[];
@@ -787,7 +624,6 @@ export class HookPipeline {
 
 			try {
 				const result = await this.executeWithTimeout(() => handler(event, ctx), hook.timeout);
-				// Handler can return modified file info or void
 				if (result !== undefined) {
 					currentFile = result;
 				}
@@ -814,9 +650,6 @@ export class HookPipeline {
 		return { file: currentFile, results };
 	}
 
-	/**
-	 * Run media:afterUpload hooks
-	 */
 	async runMediaAfterUpload(media: {
 		id: string;
 		filename: string;
@@ -858,16 +691,6 @@ export class HookPipeline {
 		return results;
 	}
 
-	// =========================================================================
-	// Cron Hook (per-plugin dispatch)
-	// =========================================================================
-
-	/**
-	 * Invoke the cron hook for a specific plugin.
-	 *
-	 * Unlike other hooks which broadcast to all plugins, the cron hook is
-	 * dispatched only to the target plugin — the one that owns the task.
-	 */
 	async invokeCronHook(pluginId: string, event: CronEvent): Promise<HookResult<void>> {
 		const hooks = this.getTypedHooks("cron");
 		const hook = hooks.find((h) => h.pluginId === pluginId);
@@ -902,17 +725,6 @@ export class HookPipeline {
 		}
 	}
 
-	// =========================================================================
-	// Email Hooks
-	// =========================================================================
-
-	/**
-	 * Run email:beforeSend hooks (middleware pipeline).
-	 *
-	 * Each handler receives the message and returns a modified message or
-	 * `false` to cancel delivery. The pipeline chains message transformations —
-	 * each handler receives the output of the previous one.
-	 */
 	async runEmailBeforeSend(
 		message: EmailMessage,
 		source: string,
@@ -923,8 +735,6 @@ export class HookPipeline {
 
 		for (const hook of hooks) {
 			const { handler } = hook;
-			// Shallow-clone message to prevent handlers from mutating
-			// the shared reference and leaking changes to subsequent stages
 			const event: EmailBeforeSendEvent = { message: { ...currentMessage }, source };
 			const ctx = this.getContext(hook.pluginId);
 			const start = Date.now();
@@ -933,7 +743,6 @@ export class HookPipeline {
 				const result = await this.executeWithTimeout(() => handler(event, ctx), hook.timeout);
 
 				if (result === false) {
-					// Cancelled
 					results.push({
 						success: true,
 						value: false,
@@ -943,7 +752,6 @@ export class HookPipeline {
 					return { message: false, results };
 				}
 
-				// Handler returned a modified message
 				if (result && typeof result === "object") {
 					currentMessage = result;
 				}
@@ -971,11 +779,6 @@ export class HookPipeline {
 		return { message: currentMessage, results };
 	}
 
-	/**
-	 * Run email:afterSend hooks (fire-and-forget).
-	 *
-	 * Errors are logged but don't propagate — they don't affect the caller.
-	 */
 	async runEmailAfterSend(message: EmailMessage, source: string): Promise<HookResult<void>[]> {
 		const hooks = this.getTypedHooks("email:afterSend");
 		const results: HookResult<void>[] = [];
@@ -994,7 +797,6 @@ export class HookPipeline {
 					duration: Date.now() - start,
 				});
 			} catch (error) {
-				// Fire-and-forget: log but don't propagate
 				console.error(
 					`[email:afterSend] Plugin "${hook.pluginId}" error:`,
 					error instanceof Error ? error.message : error,
@@ -1011,17 +813,6 @@ export class HookPipeline {
 		return results;
 	}
 
-	// =========================================================================
-	// Comment Hooks
-	// =========================================================================
-
-	/**
-	 * Run comment:beforeCreate hooks (middleware pipeline).
-	 *
-	 * Each handler receives the event and returns a modified event or
-	 * `false` to reject the comment. The pipeline chains transformations —
-	 * each handler receives the output of the previous one.
-	 */
 	async runCommentBeforeCreate(
 		event: CommentBeforeCreateEvent,
 	): Promise<CommentBeforeCreateEvent | false> {
@@ -1061,11 +852,6 @@ export class HookPipeline {
 		return currentEvent;
 	}
 
-	/**
-	 * Run comment:afterCreate hooks (fire-and-forget).
-	 *
-	 * Errors are logged but don't propagate — they don't affect the caller.
-	 */
 	async runCommentAfterCreate(event: CommentAfterCreateEvent): Promise<void> {
 		const hooks = this.getTypedHooks("comment:afterCreate");
 
@@ -1084,11 +870,6 @@ export class HookPipeline {
 		}
 	}
 
-	/**
-	 * Run comment:afterModerate hooks (fire-and-forget).
-	 *
-	 * Errors are logged but don't propagate — they don't affect the caller.
-	 */
 	async runCommentAfterModerate(event: CommentAfterModerateEvent): Promise<void> {
 		const hooks = this.getTypedHooks("comment:afterModerate");
 
@@ -1107,14 +888,6 @@ export class HookPipeline {
 		}
 	}
 
-	// =========================================================================
-	// Public Page Hooks
-	// =========================================================================
-
-	/**
-	 * Run page:metadata hooks. Each handler returns contributions that are
-	 * merged by the metadata collector. Errors are logged but don't propagate.
-	 */
 	async runPageMetadata(
 		event: PageMetadataEvent,
 	): Promise<Array<{ pluginId: string; contributions: PageMetadataContribution[] }>> {
@@ -1146,10 +919,6 @@ export class HookPipeline {
 		return results;
 	}
 
-	/**
-	 * Run page:fragments hooks. Only trusted plugins should be registered
-	 * for this hook. Errors are logged but don't propagate.
-	 */
 	async runPageFragments(
 		event: PageFragmentEvent,
 	): Promise<Array<{ pluginId: string; contributions: PageFragmentContribution[] }>> {
@@ -1181,103 +950,49 @@ export class HookPipeline {
 		return results;
 	}
 
-	// =========================================================================
-	// Utilities
-	// =========================================================================
-
-	/**
-	 * Check if any hooks are registered for a given name
-	 */
 	hasHooks(name: HookNameV2): boolean {
 		const hooks = this.hooks.get(name);
 		return hooks !== undefined && hooks.length > 0;
 	}
 
-	/**
-	 * Get hook count for debugging
-	 */
 	getHookCount(name: HookNameV2): number {
 		return this.hooks.get(name)?.length || 0;
 	}
 
-	/**
-	 * Get all registered hook names
-	 */
 	getRegisteredHooks(): HookNameV2[] {
 		return [...this.hooks.keys()];
 	}
 
-	// =========================================================================
-	// Exclusive Hook Support
-	// =========================================================================
-
-	/**
-	 * Returns hook names where at least one handler declared exclusive: true
-	 */
 	getRegisteredExclusiveHooks(): string[] {
 		return [...this.exclusiveHookNames];
 	}
 
-	/**
-	 * Check if a hook is exclusive
-	 */
 	isExclusiveHook(name: string): boolean {
 		return this.exclusiveHookNames.has(name);
 	}
 
-	/**
-	 * Set the selected provider for an exclusive hook.
-	 * Called by PluginManager after resolution.
-	 */
 	setExclusiveSelection(hookName: string, pluginId: string): void {
 		this.exclusiveSelections.set(hookName, pluginId);
 	}
 
-	/**
-	 * Clear the selected provider for an exclusive hook.
-	 */
 	clearExclusiveSelection(hookName: string): void {
 		this.exclusiveSelections.delete(hookName);
 	}
 
-	/**
-	 * Get the selected provider for an exclusive hook (if any).
-	 */
 	getExclusiveSelection(hookName: string): string | undefined {
 		return this.exclusiveSelections.get(hookName);
 	}
 
-	/**
-	 * Get all plugins that registered a handler for a given exclusive hook.
-	 */
 	getExclusiveHookProviders(hookName: string): Array<{ pluginId: string }> {
 		const hooks = this.hooks.get(hookName as HookNameV2) ?? [];
 		return hooks.filter((h) => h.exclusive).map((h) => ({ pluginId: h.pluginId }));
 	}
 
-	/**
-	 * Get all plugins that registered a non-exclusive handler for a given
-	 * hook (e.g. `email:beforeSend`, `email:afterSend`), preserving priority
-	 * order. Partitions with `getExclusiveHookProviders()`, which returns
-	 * plugins whose registration is marked `exclusive: true`.
-	 */
 	getHookProviders(hookName: string): Array<{ pluginId: string }> {
 		const hooks = this.hooks.get(hookName as HookNameV2) ?? [];
 		return hooks.filter((h) => !h.exclusive).map((h) => ({ pluginId: h.pluginId }));
 	}
 
-	/**
-	 * Invoke an exclusive hook — dispatch only to the selected provider.
-	 * Returns null if no provider is selected or if the selected hook
-	 * is not found in the pipeline.
-	 *
-	 * This is a generic dispatch used by the email pipeline and other
-	 * exclusive hook consumers. The handler type is unknown — callers
-	 * must know the expected signature.
-	 *
-	 * Errors are isolated: a failing handler returns an error result
-	 * instead of propagating the exception to the caller.
-	 */
 	async invokeExclusiveHook(
 		hookName: string,
 		event: unknown,
@@ -1306,9 +1021,6 @@ export class HookPipeline {
 	}
 }
 
-/**
- * Create a hook pipeline from plugins
- */
 export function createHookPipeline(
 	plugins: ResolvedPlugin[],
 	factoryOptions?: PluginContextFactoryOptions,
@@ -1316,59 +1028,24 @@ export function createHookPipeline(
 	return new HookPipeline(plugins, factoryOptions);
 }
 
-// ── Shared exclusive hook resolution ─────────────────────────────────────────
-
-/**
- * Options for exclusive hook resolution.
- */
 export interface ExclusiveHookResolutionOptions {
 	pipeline: HookPipeline;
-	/**
-	 * Check whether a plugin ID is currently active.
-	 * Used to filter providers — only active providers participate in selection.
-	 */
 	isActive: (pluginId: string) => boolean;
-	/** Read an option value from persistent storage. */
 	getOption: (key: string) => Promise<string | null>;
-	/**
-	 * Batch-read option values for many keys in a single round trip.
-	 * When provided, resolution reads all current selections through this
-	 * instead of one getOption() call per hook. Keys absent from the
-	 * returned map are treated as unset.
-	 */
 	getOptions?: (keys: string[]) => Promise<ReadonlyMap<string, string>>;
-	/** Write an option value to persistent storage. */
 	setOption: (key: string, value: string) => Promise<void>;
-	/** Delete an option from persistent storage. */
 	deleteOption: (key: string) => Promise<void>;
-	/**
-	 * Map of pluginId → hook names the plugin prefers to handle.
-	 * Used as a tiebreaker when no DB selection exists and multiple providers are active.
-	 */
 	preferredHints?: Map<string, string[]>;
 }
 
-/** Options table key prefix for exclusive hook selections */
 const EXCLUSIVE_HOOK_KEY_PREFIX = "emdash:exclusive_hook:";
 
-/**
- * Resolve exclusive hook selections.
- *
- * Shared algorithm used by both PluginManager and EmDashRuntime:
- * 1. If a DB selection exists and that plugin is active → keep it.
- * 2. If DB selection is stale (plugin inactive/gone) → clear it.
- * 3. If no selection and only one active provider → auto-select it.
- * 4. If preferred hints match an active provider → first match wins.
- * 5. If multiple providers and no hint → leave unselected (admin must choose).
- */
 export async function resolveExclusiveHooks(opts: ExclusiveHookResolutionOptions): Promise<void> {
 	const { pipeline, isActive, getOption, getOptions, setOption, deleteOption, preferredHints } =
 		opts;
 	const exclusiveHookNames = pipeline.getRegisteredExclusiveHooks();
 	if (exclusiveHookNames.length === 0) return;
 
-	// Batch-read current selections in one round trip when the caller
-	// provides a batch reader (1 query instead of N sequential gets).
 	let batchedSelections: ReadonlyMap<string, string> | undefined;
 	if (getOptions) {
 		try {
@@ -1376,9 +1053,6 @@ export async function resolveExclusiveHooks(opts: ExclusiveHookResolutionOptions
 				exclusiveHookNames.map((hookName) => `${EXCLUSIVE_HOOK_KEY_PREFIX}${hookName}`),
 			);
 		} catch {
-			// Options table may not be ready. Matches the per-key tolerance
-			// below: every hook's read would fail, so resolution is skipped
-			// entirely without touching any selection.
 			return;
 		}
 	}
@@ -1397,48 +1071,37 @@ export async function resolveExclusiveHooks(opts: ExclusiveHookResolutionOptions
 			try {
 				currentSelection = await getOption(key);
 			} catch {
-				// Options table may not be ready
 				continue;
 			}
 		}
 
-		// If selection exists and the plugin is still active → keep it
 		if (currentSelection && activeProviderIds.has(currentSelection)) {
 			pipeline.setExclusiveSelection(hookName, currentSelection);
 			continue;
 		}
 
-		// Selection is stale or missing — clear it
 		if (currentSelection) {
 			try {
 				await deleteOption(key);
-			} catch {
-				// Non-fatal
-			}
+			} catch {}
 		}
 
-		// Auto-select if only one active provider
 		if (activeProviderIds.size === 1) {
 			const [onlyProvider] = activeProviderIds;
 			try {
 				await setOption(key, onlyProvider);
-			} catch {
-				// Non-fatal
-			}
+			} catch {}
 			pipeline.setExclusiveSelection(hookName, onlyProvider);
 			continue;
 		}
 
-		// Check preferred hints
 		if (preferredHints) {
 			let found = false;
 			for (const [pluginId, hooks] of preferredHints) {
 				if (hooks.includes(hookName) && activeProviderIds.has(pluginId)) {
 					try {
 						await setOption(key, pluginId);
-					} catch {
-						// Non-fatal
-					}
+					} catch {}
 					pipeline.setExclusiveSelection(hookName, pluginId);
 					found = true;
 					break;
@@ -1447,7 +1110,6 @@ export async function resolveExclusiveHooks(opts: ExclusiveHookResolutionOptions
 			if (found) continue;
 		}
 
-		// Multiple providers, no hint — leave unselected
 		pipeline.clearExclusiveSelection(hookName);
 	}
 }

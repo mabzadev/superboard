@@ -24,10 +24,6 @@ echarts.use([
 	CanvasRenderer,
 ]);
 
-// ── Security: HTML-escape untrusted strings before they reach ECharts ────────
-// ECharts tooltip renders via innerHTML. Plugin-supplied names/labels must be
-// escaped to prevent stored XSS in the admin dashboard.
-
 const RE_AMP = /&/g;
 const RE_LT = /</g;
 const RE_GT = />/g;
@@ -43,13 +39,6 @@ function escapeHtml(str: string): string {
 		.replace(RE_APOS, "&#039;");
 }
 
-// ── Security: Sanitize custom ECharts options ────────────────────────────────
-// Plugin-supplied options are passed to chart.setOption(). ECharts accepts
-// formatter strings rendered via innerHTML, tooltip HTML, and graphic elements
-// that can execute arbitrary code. We strip dangerous properties and force
-// richText tooltip mode to eliminate HTML injection vectors.
-
-/** Keys that accept HTML strings or executable content in ECharts options */
 const DANGEROUS_KEYS = new Set(["formatter", "rich", "graphic", "axisPointer"]);
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -62,11 +51,6 @@ function containsHtml(v: unknown): boolean {
 	return typeof v === "string" && RE_HTML_TAG.test(v);
 }
 
-/**
- * Deep-clone an ECharts options object, stripping properties that could
- * inject HTML or executable content. Strings containing HTML tags are
- * replaced with escaped versions.
- */
 function sanitizeOptions(obj: Record<string, unknown>): Record<string, unknown> {
 	const result: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(obj)) {
@@ -124,7 +108,6 @@ function CustomChartBlock({ block, isDarkMode }: { block: ChartBlock; isDarkMode
 
 	const safeOptions = useMemo(() => {
 		const sanitized = sanitizeOptions(config.options);
-		// Force richText tooltip mode — renders via canvas, not innerHTML
 		if (isRecord(sanitized.tooltip)) {
 			sanitized.tooltip.renderMode = "richText";
 		} else {

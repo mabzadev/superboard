@@ -1,11 +1,3 @@
-/**
- * Multi-select behavior of MediaPickerModal (`multiple` + `onSelectMany`),
- * used by the gallery block's "Add Images" flow. The existing
- * `tests/components/MediaPickerModal.test.tsx` suite covers single-select —
- * this file guards the multi-select accumulation/toggle/order semantics
- * added for galleries (#1436), plus a regression check that single-select
- * mode still works.
- */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -102,8 +94,6 @@ describe("MediaPickerModal — multi-select", () => {
 
 		await expect.element(screen.getByRole("option", { name: "photo.jpg" })).toBeInTheDocument();
 
-		// Click landscape, then photo, then portrait — order should be preserved
-		// as the gallery insertion order, not the grid's display order.
 		optionButton(screen, "landscape.png").click();
 		await expect
 			.element(screen.getByRole("option", { name: "landscape.png" }))
@@ -149,7 +139,6 @@ describe("MediaPickerModal — multi-select", () => {
 			.element(screen.getByRole("option", { name: "landscape.png" }))
 			.toHaveAttribute("aria-selected", "true");
 
-		// Deselect the first click
 		optionButton(screen, "photo.jpg").click();
 		await expect
 			.element(screen.getByRole("option", { name: "photo.jpg" }))

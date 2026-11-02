@@ -1,10 +1,3 @@
-/**
- * Taxonomy Terms Manager
- *
- * Provides UI for managing taxonomy terms (categories, tags, custom taxonomies).
- * Shows hierarchical structure for categories, flat list for tags.
- */
-
 import { Button, Checkbox, Dialog, Input, InputArea, Select, Toast } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { CaretDown, CaretUp, Plus, Pencil, Trash, X } from "@phosphor-icons/react";
@@ -39,24 +32,14 @@ interface TaxonomyManagerProps {
 	taxonomyName: string;
 }
 
-// Regex patterns for taxonomy name generation and validation (module-scoped per lint rules)
 const NON_ALPHANUMERIC_PATTERN = /[^a-z0-9]+/g;
 const LEADING_TRAILING_UNDERSCORE_PATTERN = /^_|_$/g;
 const TAXONOMY_NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 
-/**
- * Flatten tree to get all terms
- */
 function flattenTerms(terms: TaxonomyTerm[]): TaxonomyTerm[] {
 	return terms.flatMap((t) => [t, ...flattenTerms(t.children)]);
 }
 
-/**
- * Return valid parent candidates in tree order.
- *
- * The current term and its complete subtree are excluded while editing so a
- * parent change cannot create a taxonomy cycle.
- */
 export function getAvailableParentTerms(
 	terms: TaxonomyTerm[],
 	currentTerm?: TaxonomyTerm,
@@ -71,29 +54,14 @@ export function getAvailableParentTerms(
 	return flatTerms.filter((term) => !excludedIds.has(term.id));
 }
 
-/** The translation group a term belongs to — what `parentId` and reorder ids hold. */
 export function termGroup(term: TaxonomyTerm): string {
 	return term.translationGroup ?? term.id;
 }
 
-/**
- * Whether a term is rendered in a group it isn't a member of.
- *
- * A child whose parent has no row in this locale is listed at the top level so
- * it isn't lost, but its position belongs to its parent's group. It can't be
- * moved from here, and it can't be named in a reorder of the group it's drawn in.
- */
 export function isStranded(term: TaxonomyTerm, parentId: string | null): boolean {
 	return parentId === null && !!term.parentId;
 }
 
-/**
- * Permute `movable` into the slots those same terms occupy in `rendered`,
- * leaving everything else where it is.
- *
- * Mirrors what the reorder endpoint does with the ids it's given, so the
- * optimistic list matches what comes back.
- */
 export function reorderWithinSlots(
 	rendered: TaxonomyTerm[],
 	movable: TaxonomyTerm[],
@@ -110,12 +78,6 @@ export function reorderWithinSlots(
 	return next;
 }
 
-/**
- * Replace one sibling group in a term tree with a reordered copy of itself.
- *
- * `parentId` is a translation group (what `term.parentId` holds), so it matches
- * the parent in whichever locale is on screen. `null` replaces the roots.
- */
 export function replaceSiblingGroup(
 	terms: TaxonomyTerm[],
 	parentId: string | null,
@@ -143,13 +105,6 @@ interface TermRowCallbacks {
 	canTranslate: boolean;
 }
 
-/**
- * One sibling group's rows, in display order.
- *
- * The movable subset is worked out once for the whole group: each row needs it
- * to know whether its carets are live, and a move needs the same list to build
- * the order it sends.
- */
 function TermGroup({
 	siblings,
 	parentId,
@@ -180,19 +135,6 @@ function TermGroup({
 	);
 }
 
-/**
- * Term row component (recursive for hierarchy)
- *
- * `siblings` is the group the term is rendered from, in display order, and
- * `parentId` is that group's parent. Moving a term reorders that group and
- * never changes its parent.
- *
- * A term whose parent has no row in this locale is rendered at the top level so
- * it isn't lost, but it belongs to its parent's group — a group this locale
- * can't show. Its move buttons are disabled rather than silently addressing the
- * wrong group, and `place` is -1 because it holds no slot in the group it is
- * drawn in.
- */
 function TermRow({
 	term,
 	siblings,
@@ -224,8 +166,6 @@ function TermRow({
 				</div>
 				<div className="text-sm text-kumo-subtle">{term.count || 0}</div>
 				<div className="flex gap-2">
-					{/* The buttons inside are disabled and take no pointer events, so the
-					    explanation has to hang off something that still receives hover. */}
 					<span
 						className="flex gap-2"
 						title={
@@ -303,9 +243,6 @@ function TermRow({
 	);
 }
 
-/**
- * Dialog to pick a target locale for creating a term translation.
- */
 function TranslateTermDialog({
 	term,
 	taxonomyName,
@@ -386,9 +323,6 @@ function TranslateTermDialog({
 	);
 }
 
-/**
- * Term form dialog
- */
 function TermFormDialog({
 	open,
 	onClose,
@@ -419,7 +353,6 @@ function TermFormDialog({
 	const [autoSlug, setAutoSlug] = React.useState(!term);
 	const [error, setError] = React.useState<string | null>(null);
 
-	// Sync form state when term prop changes (for edit mode)
 	React.useEffect(() => {
 		setLabel(term?.label || "");
 		setSlug(term?.slug || "");
@@ -429,7 +362,6 @@ function TermFormDialog({
 		setError(null);
 	}, [term]);
 
-	// Auto-generate slug from label
 	React.useEffect(() => {
 		if (autoSlug && label) {
 			setSlug(slugify(label));
@@ -482,7 +414,6 @@ function TermFormDialog({
 		},
 	});
 
-	// Translations list (only when editing an existing term and i18n is on).
 	const { data: translationsData } = useQuery({
 		queryKey: ["term-translations", taxonomyName, term?.id ?? null],
 		queryFn: () => {
@@ -674,9 +605,6 @@ function TermFormDialog({
 	);
 }
 
-/**
- * Create Taxonomy dialog
- */
 function CreateTaxonomyDialog({
 	open,
 	onClose,
@@ -707,7 +635,6 @@ function CreateTaxonomyDialog({
 			}))
 		: [];
 
-	// Auto-generate name from label
 	React.useEffect(() => {
 		if (autoName && label) {
 			setName(
@@ -885,9 +812,6 @@ function CreateTaxonomyDialog({
 	);
 }
 
-/**
- * Main TaxonomyManager component
- */
 export function TaxonomyManager({ taxonomyName }: TaxonomyManagerProps) {
 	const { t } = useLingui();
 	const queryClient = useQueryClient();
@@ -908,17 +832,11 @@ export function TaxonomyManager({ taxonomyName }: TaxonomyManagerProps) {
 		if (i18n && !activeLocale) setActiveLocale(i18n.defaultLocale);
 	}, [i18n, activeLocale]);
 
-	// The taxonomy definition is looked up without filtering by locale — the
-	// def is primarily structural ("does this taxonomy exist, is it
-	// hierarchical, which collections use it"). Label translations exist per
-	// locale but are not required for the page to render.
 	const { data: taxonomyDef, isLoading: defLoading } = useQuery({
 		queryKey: ["taxonomy-def", taxonomyName],
 		queryFn: () => fetchTaxonomyDef(taxonomyName),
 	});
 
-	// The count mode belongs in the key: the editor's taxonomy picker reads the
-	// same endpoint without counts, and this page renders them.
 	const termsQueryKey = ["taxonomy-terms", taxonomyName, activeLocale, { includeCounts: true }];
 	const { data: terms = [], isLoading: termsLoading } = useQuery({
 		queryKey: termsQueryKey,
@@ -938,8 +856,6 @@ export function TaxonomyManager({ taxonomyName }: TaxonomyManagerProps) {
 	const reorderMutationKey = ["taxonomy-terms-reorder", taxonomyName];
 	const reorderMutation = useMutation({
 		mutationKey: reorderMutationKey,
-		// Each body is an absolute order, so queued moves have to land in click
-		// order; a shared scope serializes them.
 		scope: { id: `taxonomy-reorder:${taxonomyName}` },
 		mutationFn: ({ parentId, ids }: { parentId: string | null; ids: string[] }) =>
 			reorderTerms(taxonomyName, { parentId, ids }),
@@ -947,8 +863,6 @@ export function TaxonomyManager({ taxonomyName }: TaxonomyManagerProps) {
 			toastManager.add({ title: t`Error`, description: error.message, type: "error" });
 		},
 		onSettled: () => {
-			// The count includes this mutation, so >1 means another move is queued
-			// behind it and refetching now would serve a stale order.
 			if (queryClient.isMutating({ mutationKey: reorderMutationKey }) > 1) return;
 			void queryClient.invalidateQueries({ queryKey: ["taxonomy-terms", taxonomyName] });
 		},

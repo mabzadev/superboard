@@ -33,7 +33,6 @@ vi.mock("../../../../../packages/admin/src/components/MediaUsedIn.js", () => ({
 	),
 }));
 
-// Import the mocked functions for assertions
 import {
 	updateMedia,
 	deleteMedia,
@@ -82,11 +81,6 @@ const STREAM_HLS = "https://customer-abc123.cloudflarestream.com/UID/manifest/vi
 const STREAM_DASH = "https://customer-abc123.cloudflarestream.com/UID/manifest/video.mpd";
 const STREAM_POSTER = "https://customer-abc123.cloudflarestream.com/UID/thumbnails/thumbnail.jpg";
 
-/**
- * A Cloudflare Stream item. The distinguishing trait is that `url` is a poster
- * image rather than a playable file; the video itself is only reachable through
- * `meta.playback`.
- */
 function makeStreamItem(overrides: Partial<MediaItem> = {}): MediaItem {
 	return {
 		id: "6a4677c7694f6e2e4270540231dd47ff",
@@ -103,7 +97,6 @@ function makeStreamItem(overrides: Partial<MediaItem> = {}): MediaItem {
 	};
 }
 
-/** A locally stored video, whose `url` *is* the playable file. */
 function makeLocalVideoItem(overrides: Partial<MediaItem> = {}): MediaItem {
 	return {
 		id: "media-3",
@@ -169,10 +162,8 @@ describe("MediaDetailPanel", () => {
 	it("displays filename and file size", async () => {
 		const item = makeImageItem({ size: 204800 });
 		const screen = await renderPanel({ item });
-		// Filename is in a disabled input
 		const filenameInput = screen.getByLabelText("Filename");
 		await expect.element(filenameInput).toHaveValue("photo.jpg");
-		// 204800 bytes = 200 KB
 		await expect.element(screen.getByText("200 KB")).toBeInTheDocument();
 	});
 
@@ -482,7 +473,6 @@ describe("MediaDetailPanel", () => {
 	it("does not show image preview for non-image mimeTypes", async () => {
 		const item = makePdfItem();
 		const screen = await renderPanel({ item });
-		// Should show the mime type text instead of img
 		await expect.element(screen.getByText("application/pdf")).toBeInTheDocument();
 		expect(screen.getByRole("dialog").element().querySelector('[role="tablist"]')).toBeNull();
 		expect(screen.getByText("Focal point").query()).toBeNull();
@@ -503,7 +493,6 @@ describe("MediaDetailPanel", () => {
 	it("shows caption textarea only for images", async () => {
 		const imageItem = makeImageItem();
 		const screen = await renderPanel({ item: imageItem });
-		// Caption textarea should exist for images - find by placeholder
 		const captionArea = screen.getByPlaceholder("Optional caption for display");
 		await expect.element(captionArea).toBeInTheDocument();
 		await expect.element(captionArea).toHaveValue("Photo caption");
@@ -942,14 +931,11 @@ describe("MediaDetailPanel", () => {
 		const deleteBtn = screen.getByRole("button", { name: "Delete" });
 		deleteBtn.element().click();
 
-		// ConfirmDialog should appear
 		await expect.element(screen.getByText("Delete Media?")).toBeInTheDocument();
 
-		// Direct DOM click to bypass Base UI inert overlay
 		const allDeleteBtns = screen.getByRole("button", { name: "Delete" }).all();
 		allDeleteBtns.at(-1)!.element().click();
 
-		// Wait for mutation to complete
 		await vi.waitFor(() => {
 			expect(deleteMedia).toHaveBeenCalledWith("media-1");
 			expect(onClose).toHaveBeenCalled();
@@ -984,10 +970,8 @@ describe("MediaDetailPanel", () => {
 		const deleteBtn = screen.getByRole("button", { name: "Delete" });
 		deleteBtn.element().click();
 
-		// ConfirmDialog should appear
 		await expect.element(screen.getByText("Delete Media?")).toBeInTheDocument();
 
-		// Direct DOM click to bypass Base UI inert overlay
 		screen.getByRole("button", { name: "Cancel" }).all().at(-1)!.element().click();
 
 		expect(deleteMedia).not.toHaveBeenCalled();
@@ -1067,18 +1051,15 @@ describe("MediaDetailPanel", () => {
 
 		const screen = await renderPanel({ item: item1 });
 
-		// Verify item1 alt is shown
 		const altInput = screen.getByLabelText("Alt Text");
 		await expect.element(altInput).toHaveValue("Alt one");
 
-		// Rerender with item2
 		await screen.rerender(
 			<QueryWrapper>
 				<MediaDetailPanel open item={item2} onClose={vi.fn()} onDeleted={vi.fn()} />
 			</QueryWrapper>,
 		);
 
-		// The alt text should now show item2's alt
 		await expect.element(screen.getByLabelText("Alt Text")).toHaveValue("Alt two");
 	});
 });
@@ -1135,7 +1116,6 @@ describe("MediaDetailPanel file URL", () => {
 	});
 
 	describe("video preview", () => {
-		// The dialog may portal outside the render container, so query the document.
 		const findVideo = () => document.querySelector("video");
 
 		it("plays a streaming item's HLS/DASH sources rather than its poster URL", async () => {
@@ -1148,8 +1128,6 @@ describe("MediaDetailPanel file URL", () => {
 			const video = findVideo();
 			expect(video).not.toBeNull();
 
-			// Regression: `url` is the thumbnail. Using it as `src` produced a
-			// player stuck at 0:00 for every Stream asset.
 			expect(video?.getAttribute("src")).toBeNull();
 			expect(video?.getAttribute("poster")).toBe(STREAM_POSTER);
 
@@ -1182,7 +1160,6 @@ describe("MediaDetailPanel file URL", () => {
 
 			const video = findVideo();
 			expect(video?.getAttribute("src")).toBe(item.url);
-			// No streaming sources: nothing to negotiate for a plain file.
 			expect(document.querySelectorAll("video source")).toHaveLength(0);
 		});
 	});

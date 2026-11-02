@@ -1,15 +1,9 @@
-/**
- * Manifest generation handlers
- */
-
 import { hashString } from "../../utils/hash.js";
 import type { ManifestResponse, FieldDescriptor } from "../types.js";
 
-/** Pattern to add spaces before capital letters */
 const CAMEL_CASE_PATTERN = /([A-Z])/g;
 const FIRST_CHAR_PATTERN = /^./;
 
-// Collection definition shape for manifest generation
 interface CollectionDefinition {
 	schema: {
 		_def?: { shape?: () => Record<string, unknown> };
@@ -24,9 +18,6 @@ interface CollectionDefinition {
 }
 type CollectionMap = Record<string, CollectionDefinition>;
 
-/**
- * Generate admin manifest from collections
- */
 export async function generateManifest(
 	collections: CollectionMap,
 	plugins: Record<
@@ -40,7 +31,6 @@ export async function generateManifest(
 	const manifestCollections: ManifestResponse["collections"] = {};
 
 	for (const [name, definition] of Object.entries(collections)) {
-		// Extract field descriptors from Zod schema
 		const fields = extractFieldDescriptors(definition.schema);
 
 		manifestCollections[name] = {
@@ -52,7 +42,6 @@ export async function generateManifest(
 		};
 	}
 
-	// Generate hash from collections (for cache invalidation)
 	const hash = await hashString(JSON.stringify(manifestCollections));
 
 	return {
@@ -63,17 +52,12 @@ export async function generateManifest(
 	};
 }
 
-/**
- * Extract field descriptors from Zod schema
- * Note: This is a simplified implementation that handles common types
- */
 function extractFieldDescriptors(schema: {
 	_def?: { shape?: () => Record<string, unknown> };
 	shape?: Record<string, unknown>;
 }): Record<string, FieldDescriptor> {
 	const fields: Record<string, FieldDescriptor> = {};
 
-	// Handle Zod object schema
 	const shape = typeof schema._def?.shape === "function" ? schema._def.shape() : schema.shape || {};
 
 	for (const [name, fieldSchema] of Object.entries(shape)) {
@@ -83,10 +67,6 @@ function extractFieldDescriptors(schema: {
 	return fields;
 }
 
-/**
- * Extract field type from Zod schema
- */
-/** Type guard: check if a value is a non-null object */
 function isObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null;
 }
@@ -96,7 +76,6 @@ function extractFieldType(name: string, schema: unknown): FieldDescriptor {
 		return { kind: "string", label: formatLabel(name) };
 	}
 
-	// Check for custom field markers
 	if (schema.isPortableText) {
 		return { kind: "portableText", label: formatLabel(name) };
 	}
@@ -107,7 +86,6 @@ function extractFieldType(name: string, schema: unknown): FieldDescriptor {
 		return { kind: "reference", label: formatLabel(name) };
 	}
 
-	// Handle standard Zod types
 	const def = isObject(schema._def) ? schema._def : undefined;
 	const typeName = typeof def?.typeName === "string" ? def.typeName : undefined;
 
@@ -139,7 +117,6 @@ function extractFieldType(name: string, schema: unknown): FieldDescriptor {
 			return { kind: "object", label: formatLabel(name) };
 		case "ZodOptional":
 		case "ZodDefault":
-			// Unwrap optional/default types
 			if (def?.innerType) {
 				return extractFieldType(name, def.innerType);
 			}
@@ -149,9 +126,6 @@ function extractFieldType(name: string, schema: unknown): FieldDescriptor {
 	}
 }
 
-/**
- * Format field name as label
- */
 function formatLabel(name: string): string {
 	return name
 		.replace(CAMEL_CASE_PATTERN, " $1")

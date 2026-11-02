@@ -154,7 +154,6 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 	const [campaigns, setCampaigns] = useState<LinkCampaign[] | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	// `?create=1` (e.g. from the command palette) opens the Create link dialog on arrival.
 	const [dialogOpen, setDialogOpen] = useState(() => !itemId && createLinkRequested());
 	const [saving, setSaving] = useState(false);
 	const [form, setForm] = useState<LinkForm>(() =>
@@ -266,7 +265,6 @@ export default function LinksPageContent({ campaignId }: { campaignId?: string }
 		setDialogOpen(true);
 	};
 
-	// The parameter is dropped once read so a reload or Back does not reopen the dialog.
 	const [createRequest, setCreateRequest] = useUrlState("create", "");
 	useEffect(() => {
 		if (createRequest) setCreateRequest("");

@@ -190,8 +190,6 @@ export async function enforceIdentityProjectCutover({ suppliedReceipt, expected,
 			sha256: suppliedReceipt.sha256,
 		});
 	}
-	// Caller-provided receipts are audit evidence only. A fresh remote read is
-	// mandatory immediately before activating the Identity Worker.
 	const remote = await verifyIdentityProjectCutover(verification);
 	await readIdentityCutoverReceipt(remote.path, {
 		...expected,

@@ -1,12 +1,3 @@
-/**
- * Locale switcher component for i18n-enabled sites.
- *
- * Used in both the content list (to filter by locale) and the content editor
- * (to switch between locale versions of a content item).
- *
- * Only renders when i18n is configured (manifest.i18n is present).
- */
-
 import { useLingui } from "@lingui/react/macro";
 import { GlobeSimple } from "@phosphor-icons/react";
 import React from "react";
@@ -18,17 +9,11 @@ interface LocaleSwitcherProps {
 	defaultLocale: string;
 	value: string;
 	onChange: (locale: string) => void;
-	/** Show "All locales" option (for list filtering) */
 	showAll?: boolean;
 	className?: string;
-	/** Size variant */
 	size?: "sm" | "md";
 }
 
-/**
- * Get a display label for a locale code.
- * Uses Intl.DisplayNames when available, falls back to uppercase code.
- */
 function getLocaleLabel(code: string): string {
 	try {
 		const names = new Intl.DisplayNames(["en"], { type: "language" });
@@ -77,10 +62,6 @@ export function LocaleSwitcher({
 	);
 }
 
-/**
- * Compact locale badges showing which translations exist for a content item.
- * Renders as a row of small locale codes, with existing translations highlighted.
- */
 export function LocaleBadges({
 	locales,
 	existingLocales,
@@ -122,10 +103,6 @@ export function LocaleBadges({
 	);
 }
 
-/**
- * Hook to get i18n config from the manifest query.
- * Returns null if i18n is not configured.
- */
 export function useI18nConfig(
 	manifest: { i18n?: { defaultLocale: string; locales: string[] } } | undefined,
 ) {

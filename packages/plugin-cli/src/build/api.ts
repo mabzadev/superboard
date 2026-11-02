@@ -1,38 +1,3 @@
-/**
- * Programmatic plugin-build API.
- *
- * `emdash-plugin build` produces the on-disk distribution artifacts
- * for an npm-installed sandboxed plugin:
- *
- *   - `dist/plugin.mjs` (+ `dist/plugin.d.mts`) — runtime bytes (hooks +
- *     routes), built with `emdash` aliased to a no-op shim. The same
- *     artifact is consumed two ways at install time:
- *       1. In-process (`plugins: [...]`): the integration `import`s the
- *          package's `./sandbox` export and wraps the default with
- *          `adaptSandboxEntry`.
- *       2. Isolate (`sandboxed: [...]`): the integration resolves the
- *          same `./sandbox` export, reads the file's bytes, and
- *          string-embeds them into a generated module the sandbox
- *          runner loads.
- *   - `dist/manifest.json` — wire-shape `PluginManifest`. Same shape
- *     the registry bundle tarball carries; `bundle` packs this file
- *     verbatim (renaming `plugin.mjs` → `backend.js` inside the
- *     archive). Includes hooks + routes harvested from probing
- *     `src/plugin.ts`.
- *   - `dist/index.mjs` (+ `dist/index.d.mts`) — descriptor module,
- *     default-exporting the bare `PluginDescriptor`. Emitted only
- *     when a sibling `package.json` exists (registry-only plugins
- *     skip this because nothing would `import` it).
- *
- * The plugin author writes only `emdash-plugin.jsonc` + `src/plugin.ts`.
- * Identity (slug, publisher) and trust contract (capabilities,
- * allowedHosts, storage) come from the manifest; the version is either
- * in the manifest or in `package.json#version` (`normaliseManifest`
- * reconciles).
- *
- * Failures throw `BuildError` with a structured `code`.
- */
-
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -50,10 +15,6 @@ import {
 	type ResolvedSources,
 } from "./pipeline.js";
 
-// ──────────────────────────────────────────────────────────────────────────
-// Public types
-// ──────────────────────────────────────────────────────────────────────────
-
 export type BuildErrorCode = BuildPipelineErrorCode;
 
 export class BuildError extends Error {
@@ -69,51 +30,25 @@ export class BuildError extends Error {
 export type BuildLogger = PipelineLogger;
 
 export interface BuildOptions {
-	/** Plugin source directory, must contain `emdash-plugin.jsonc` + `src/plugin.ts`. */
 	dir: string;
-	/**
-	 * Output directory for `dist/*`, relative to `dir` if not absolute.
-	 * Defaults to `<dir>/dist`.
-	 */
 	outDir?: string;
-	/** Optional progress reporter. */
 	logger?: BuildLogger;
 }
 
 export interface BuildResult {
-	/** The normalised source manifest (post-version-reconciliation). */
 	manifest: NormalisedManifest;
-	/** Package name from `package.json#name`, or `undefined` (registry-only plugin). */
 	packageName: string | undefined;
-	/**
-	 * Wire-shape manifest written to `dist/manifest.json`. Includes
-	 * hooks + routes harvested from probing `src/plugin.ts`. Bundle
-	 * consumes this directly when packing the tarball.
-	 */
 	wireManifest: PluginManifest;
-	/**
-	 * The probed `ResolvedPlugin` — manifest identity + trust contract
-	 * plus harvested hook/route handlers. Bundle uses this for its
-	 * trusted-only / admin-route consistency checks without re-probing.
-	 */
 	resolvedPlugin: ResolvedPlugin;
-	/** Absolute path of the dist directory. */
 	outDir: string;
-	/** Absolute paths of the files produced. */
 	files: {
 		runtime: string;
 		runtimeTypes: string;
 		manifestJson: string;
-		/** Only set when `package.json` exists. */
 		descriptor: string | undefined;
-		/** Only set when `package.json` exists. */
 		descriptorTypes: string | undefined;
 	};
 }
-
-// ──────────────────────────────────────────────────────────────────────────
-// Implementation
-// ──────────────────────────────────────────────────────────────────────────
 
 export async function buildPlugin(options: BuildOptions): Promise<BuildResult> {
 	const log = options.logger ?? {};
@@ -139,7 +74,6 @@ export async function buildPlugin(options: BuildOptions): Promise<BuildResult> {
 
 		await mkdir(outDir, { recursive: true });
 
-		// ── 1. Build src/plugin.ts → dist/plugin.mjs (+ .d.mts) ──
 		log.start?.("Building runtime entry...");
 		const runtimeFiles = await runPipelineStep(() =>
 			buildRuntime({
@@ -151,7 +85,6 @@ export async function buildPlugin(options: BuildOptions): Promise<BuildResult> {
 		);
 		log.success?.("Built plugin.mjs");
 
-		// ── 2. Probe src/plugin.ts for hooks + routes ──
 		log.start?.("Probing plugin surface...");
 		const resolvedPlugin = await runPipelineStep(() =>
 			probeAndAssemble({
@@ -177,15 +110,10 @@ export async function buildPlugin(options: BuildOptions): Promise<BuildResult> {
 			}`,
 		);
 
-		// ── 3. Write dist/manifest.json (wire shape) ──
 		const manifestJson = join(outDir, "manifest.json");
 		await writeFile(manifestJson, `${JSON.stringify(wireManifest, null, 2)}\n`, "utf-8");
 		log.success?.("Wrote manifest.json");
 
-		// ── 4. Generate dist/index.mjs (+ .d.mts) — descriptor module ──
-		// Only emitted when a sibling package.json exists. Registry-only
-		// plugins (no package.json) can't be `pnpm add`-ed, so nothing
-		// would `import` the descriptor module.
 		let descriptor: string | undefined;
 		let descriptorTypes: string | undefined;
 		if (sources.hasPackageJson && sources.packageName) {
@@ -222,13 +150,6 @@ export async function buildPlugin(options: BuildOptions): Promise<BuildResult> {
 	}
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────────────────
-
-/**
- * Translate `BuildPipelineError` to `BuildError`. Other errors pass through.
- */
 async function runPipelineStep<T>(fn: () => Promise<T>): Promise<T> {
 	try {
 		return await fn();
@@ -252,19 +173,6 @@ interface DescriptorFiles {
 	descriptorTypes: string;
 }
 
-/**
- * Emit `dist/index.mjs` + `dist/index.d.mts`.
- *
- * The descriptor is a frozen plain object — no factory call, no named
- * exports. Consumers write `import auditLog from "@.../plugin-audit-log"`
- * and pass `auditLog` into the integration's `plugins:` or `sandboxed:`
- * array directly. Per-install configuration moves to the admin UI's
- * settings (KV-backed) so the import shape has no need for a factory.
- *
- * The descriptor's `entrypoint` is `<package-name>/sandbox`. Plugins
- * MUST expose a `./sandbox` export in their `package.json` pointing at
- * `./dist/plugin.mjs` — the runtime bytes the integration loads.
- */
 async function writeDescriptor(ctx: WriteDescriptorContext): Promise<DescriptorFiles> {
 	const { outDir, manifest, wireManifest, packageName } = ctx;
 
@@ -281,9 +189,6 @@ async function writeDescriptor(ctx: WriteDescriptorContext): Promise<DescriptorF
 		...(manifest.admin.widgets.length > 0 ? { adminWidgets: manifest.admin.widgets } : {}),
 	};
 
-	// Pretty-print so the generated file is human-readable when debugging.
-	// Tab-indent for consistency with the surrounding generated file's
-	// surrounding tab-based formatting; matches the project's oxfmt config.
 	const descriptorLiteral = JSON.stringify(descriptorObject, null, "\t");
 
 	const descriptorSource = `// Auto-generated by emdash-plugin build. Do not edit.

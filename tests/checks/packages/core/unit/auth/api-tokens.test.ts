@@ -1,7 +1,3 @@
-/**
- * Unit tests for API token generation, hashing, and scope utilities.
- */
-
 import { Role, scopesForRole, clampScopes } from "@emdash-cms/auth";
 import { describe, it, expect } from "vitest";
 
@@ -14,7 +10,6 @@ import {
 	VALID_SCOPES,
 } from "../../../../../../packages/core/src/auth/api-tokens.js";
 
-// Regex patterns for token validation
 const PAT_PREFIX_REGEX = /^ec_pat_/;
 const OAUTH_ACCESS_PREFIX_REGEX = /^ec_oat_/;
 const OAUTH_REFRESH_PREFIX_REGEX = /^ec_ort_/;
@@ -73,7 +68,6 @@ describe("hashApiToken", () => {
 	});
 
 	it("hashes the full prefixed token", () => {
-		// Same suffix but different prefix should produce different hashes
 		const hash1 = hashApiToken("ec_pat_abc123");
 		const hash2 = hashApiToken("ec_oat_abc123");
 		expect(hash1).not.toBe(hash2);
@@ -81,9 +75,7 @@ describe("hashApiToken", () => {
 
 	it("produces URL-safe base64 output", () => {
 		const hash = hashApiToken("ec_pat_test");
-		// Should not contain +, /, or = (standard base64 chars)
 		expect(hash).not.toMatch(BASE64URL_INVALID_CHARS_REGEX);
-		// Should only contain base64url chars
 		expect(hash).toMatch(BASE64URL_VALID_REGEX);
 	});
 });
@@ -151,10 +143,6 @@ describe("hasScope", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// scopesForRole — maps roles to maximum allowed scopes
-// ---------------------------------------------------------------------------
-
 describe("scopesForRole", () => {
 	it("SUBSCRIBER gets only read scopes for content and media", () => {
 		const scopes = scopesForRole(Role.SUBSCRIBER);
@@ -200,10 +188,6 @@ describe("scopesForRole", () => {
 		expect(scopes).toContain("admin");
 	});
 });
-
-// ---------------------------------------------------------------------------
-// clampScopes — intersects requested scopes with role-allowed scopes
-// ---------------------------------------------------------------------------
 
 describe("clampScopes", () => {
 	it("strips admin scope from non-admin role", () => {

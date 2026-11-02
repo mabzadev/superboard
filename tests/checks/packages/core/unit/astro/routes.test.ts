@@ -66,9 +66,6 @@ describe("core media route injection", () => {
 		expect(routes).toContainEqual(
 			expect.objectContaining({
 				pattern: "/_emdash/api/media/file/[...key]",
-				// Route entrypoints resolve to the compiled artifact; `[`/`]` are
-				// rewritten to `_` (routeArtifactName) so rolldown's reserved
-				// output placeholders can't mangle dynamic-route filenames.
 				entrypoint: expect.stringContaining("api/media/file/_...key_"),
 			}),
 		);

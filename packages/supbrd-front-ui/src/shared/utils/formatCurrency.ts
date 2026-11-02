@@ -13,6 +13,5 @@ export function formatCurrencyFromCents(
 		maximumFractionDigits: 2,
 	}).format(dollars);
 
-	// remove 'US$', 'CA$', etc. → leave only '$'
 	return formatted.replace(/[A-Z]{1,3}\$/g, "$");
 }

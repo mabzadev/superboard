@@ -3,8 +3,6 @@ import XCTest
 
 final class DictionaryExtensionTests: XCTestCase {
 
-    // MARK: - dictToData
-
     func testDictToDataRoundTrip() {
         let dict: [String: Any] = ["key": "value", "number": 42]
         guard let data = dict.dictToData() else {
@@ -35,14 +33,11 @@ final class DictionaryExtensionTests: XCTestCase {
         XCTAssertNotNil(data, "dictToData should succeed for empty dictionary")
     }
 
-    // MARK: - toString
-
     func testToStringReturnsValidJSON() {
         let dict: [String: Any] = ["hello": "world"]
         let string = dict.toString()
         XCTAssertFalse(string.isEmpty)
 
-        // Verify it's valid JSON
         guard let data = string.data(using: .utf8) else {
             XCTFail("toString output should be valid UTF-8")
             return

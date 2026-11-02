@@ -1,5 +1,3 @@
-// components/date-range-picker.tsx
-
 "use client";
 
 import { endOfDay, format, startOfDay, sub } from "date-fns";
@@ -23,7 +21,7 @@ const defaultPresets: Preset[] = [
 export function DateRangePicker({
 	date,
 	setDate,
-	presets = defaultPresets, // 👈 allow presets as param, default to built-in
+	presets = defaultPresets,
 }: {
 	date: DateRange | undefined;
 	setDate: (date: DateRange | undefined) => void;

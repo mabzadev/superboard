@@ -1,9 +1,3 @@
-/**
- * Comment status change
- *
- * PUT /_emdash/api/admin/comments/:id/status - Change comment status
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -38,7 +32,6 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
 		const newStatus = body.status;
 
-		// Build hook runner for the service
 		const hookRunner: CommentHookRunner = {
 			async runBeforeCreate(event) {
 				return emdash.hooks.runCommentBeforeCreate(event);
@@ -71,7 +64,6 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 			},
 		};
 
-		// Read the comment before updating so we know the previous status
 		const existing = await handleCommentGet(emdash.db, id);
 		if (!existing.success) {
 			return unwrapResult(existing);
@@ -90,7 +82,6 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 			return apiError("NOT_FOUND", "Comment not found", 404);
 		}
 
-		// Send notification when a comment is newly approved
 		if (newStatus === "approved" && previousStatus !== "approved" && emdash.email) {
 			try {
 				const adminBaseUrl = await getSiteBaseUrl(emdash.db, request, emdash.config);

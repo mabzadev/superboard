@@ -20,7 +20,6 @@ describe("matchInternalMediaKey", () => {
 		expect(matchInternalMediaKey("https://example.com/_emdash/api/media/file/01J5ABC.webp")).toBe(
 			"01J5ABC.webp",
 		);
-		// Host-agnostic: the key is read from our own storage, href is never fetched.
 		expect(matchInternalMediaKey("http://localhost:4444/_emdash/api/media/file/a-b_c.png")).toBe(
 			"a-b_c.png",
 		);
@@ -47,11 +46,8 @@ describe("matchInternalMediaKey", () => {
 	});
 
 	it("rejects traversal and unsafe key characters", () => {
-		// ".." collapses the path back out of the media prefix
 		expect(matchInternalMediaKey("/_emdash/api/media/file/../secret")).toBeNull();
-		// a slash in the key (sub-path) is not the flat storage-key shape
 		expect(matchInternalMediaKey("/_emdash/api/media/file/a/b.jpg")).toBeNull();
-		// percent-encoding is rejected by the safe-key charset
 		expect(matchInternalMediaKey("/_emdash/api/media/file/x%2e%2e")).toBeNull();
 	});
 });
@@ -97,9 +93,6 @@ describe("parseTransformParams", () => {
 	});
 
 	it("defaults format to webp, leaves quality and height undefined when not requested", () => {
-		// Quality stays undefined when no `q` is requested: the Cloudflare
-		// endpoint applies DEFAULT_TRANSFORM_QUALITY for lossy formats itself,
-		// while lossless PNG must get none (explicit PNG quality → lossy PNG8).
 		const r = parse("w=800");
 		expect(r).toEqual({
 			ok: true,

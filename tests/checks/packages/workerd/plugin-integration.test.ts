@@ -1,30 +1,9 @@
-/**
- * Plugin Integration Tests
- *
- * Exercises the bridge handler with the same operations that EmDash's
- * shipped plugins perform. Uses a real SQLite database with migrations
- * to test against the actual schema, not hand-rolled test tables.
- *
- * This validates that the workerd bridge handler produces the same
- * results as the Cloudflare PluginBridge for real plugin workloads.
- *
- * Tests are modeled after the sandboxed-test plugin's routes:
- * - kv/test: set, get, delete a KV entry
- * - storage/test: put, get, count in a declared storage collection
- * - content/list: list content with read:content capability
- * - content lifecycle: create, read, update, soft-delete
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect, sql } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createBridgeHandler } from "../../../../packages/workerd/src/sandbox/bridge-handler.js";
 
-/**
- * Create a test database with the minimum schema needed for plugin operations.
- * Matches the real migration schema (001_initial + 004_plugins).
- */
 function createTestDb() {
 	const sqlite = new Database(":memory:");
 	const db = new Kysely<any>({
@@ -64,7 +43,6 @@ async function runMigrations(db: Kysely<any>) {
 		.addPrimaryKeyConstraint("pk_revision_prune_queue", ["collection", "entry_id"])
 		.execute();
 
-	// Plugin storage (migration 004)
 	await db.schema
 		.createTable("_plugin_storage")
 		.addColumn("plugin_id", "text", (col) => col.notNull())
@@ -76,7 +54,6 @@ async function runMigrations(db: Kysely<any>) {
 		.addPrimaryKeyConstraint("pk_plugin_storage", ["plugin_id", "collection", "id"])
 		.execute();
 
-	// Users (migration 001)
 	await db.schema
 		.createTable("users")
 		.addColumn("id", "text", (col) => col.primaryKey())
@@ -86,7 +63,6 @@ async function runMigrations(db: Kysely<any>) {
 		.addColumn("created_at", "text", (col) => col.notNull())
 		.execute();
 
-	// Media (migration 001)
 	await db.schema
 		.createTable("media")
 		.addColumn("id", "text", (col) => col.primaryKey())
@@ -98,7 +74,6 @@ async function runMigrations(db: Kysely<any>) {
 		.addColumn("created_at", "text", (col) => col.notNull())
 		.execute();
 
-	// Content table for posts (created by SchemaRegistry in real code)
 	await db.schema
 		.createTable("ec_posts")
 		.addColumn("id", "text", (col) => col.primaryKey())
@@ -149,11 +124,6 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 		sqlite.close();
 	});
 
-	/**
-	 * Create a bridge handler matching the sandboxed-test plugin's capabilities:
-	 * read:content, network:fetch with allowedHosts: ["httpbin.org"]
-	 * storage: { events: { indexes: ["timestamp", "type"] } }
-	 */
 	function makePluginHandler() {
 		return createBridgeHandler({
 			pluginId: "sandboxed-test",
@@ -180,36 +150,27 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 		return response.json() as Promise<{ result?: unknown; error?: string }>;
 	}
 
-	// ── Mirrors sandboxed-test plugin's kv/test route ────────────────────
-
 	it("KV round-trip: set, get, delete", async () => {
 		const handler = makePluginHandler();
 
-		// Set
 		await call(handler, "kv/set", {
 			key: "sandbox-test-key",
 			value: { tested: true, time: 12345 },
 		});
 
-		// Get
 		const getResult = await call(handler, "kv/get", { key: "sandbox-test-key" });
 		expect(getResult.result).toEqual({ tested: true, time: 12345 });
 
-		// Delete
 		const deleteResult = await call(handler, "kv/delete", { key: "sandbox-test-key" });
 		expect(deleteResult.result).toBe(true);
 
-		// Verify deleted
 		const afterDelete = await call(handler, "kv/get", { key: "sandbox-test-key" });
 		expect(afterDelete.result).toBeNull();
 	});
 
-	// ── Mirrors sandboxed-test plugin's storage/test route ───────────────
-
 	it("Storage round-trip: put, get, count", async () => {
 		const handler = makePluginHandler();
 
-		// Put
 		await call(handler, "storage/put", {
 			collection: "events",
 			id: "event-1",
@@ -220,7 +181,6 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 			},
 		});
 
-		// Get
 		const getResult = await call(handler, "storage/get", {
 			collection: "events",
 			id: "event-1",
@@ -231,17 +191,13 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 			message: "Sandboxed plugin storage test",
 		});
 
-		// Count
 		const countResult = await call(handler, "storage/count", { collection: "events" });
 		expect(countResult.result).toBe(1);
 	});
 
-	// ── Mirrors sandboxed-test plugin's content/list route ───────────────
-
 	it("Content list with read:content capability", async () => {
 		const handler = makePluginHandler();
 
-		// Seed some content
 		const now = new Date().toISOString();
 		await db
 			.insertInto("ec_posts" as any)
@@ -276,17 +232,12 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 		};
 		expect(data.items).toHaveLength(2);
 		expect(data.hasMore).toBe(false);
-		// Items should be transformed via rowToContentItem
 		expect(data.items[0]!.type).toBe("posts");
 		expect(data.items[0]!.data.title).toBeDefined();
 	});
 
-	// ── Content lifecycle: create, read, update, soft-delete ─────────────
-
 	describe("content lifecycle (requires read:content + write:content)", () => {
 		function makeWriteHandler(i18nConfig?: { defaultLocale: string; locales: string[] } | null) {
-			// Bridge enforces capabilities strictly: write:content does NOT
-			// imply read:content. Plugins that need both must declare both.
 			return createBridgeHandler({
 				pluginId: "sandboxed-test",
 				version: "0.0.1",
@@ -302,7 +253,6 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 		it("create, read, update, delete", async () => {
 			const handler = makeWriteHandler();
 
-			// Create
 			const createResult = await call(handler, "content/create", {
 				collection: "posts",
 				data: { title: "New Post", body: "Content here", slug: "new-post", status: "draft" },
@@ -326,7 +276,6 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 					.executeTakeFirstOrThrow(),
 			).resolves.toEqual({ translation_group: created.id });
 
-			// Read
 			const readResult = await call(handler, "content/get", {
 				collection: "posts",
 				id: created.id,
@@ -340,7 +289,6 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 			expect(read.data.title).toBe("New Post");
 			expect(read.locale).toBe("en");
 
-			// Update
 			const updateResult = await call(handler, "content/update", {
 				collection: "posts",
 				id: created.id,
@@ -355,14 +303,12 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 			expect(updated.data.title).toBe("Updated Post");
 			expect(updated.locale).toBe("en");
 
-			// Delete (soft-delete)
 			const deleteResult = await call(handler, "content/delete", {
 				collection: "posts",
 				id: created.id,
 			});
 			expect(deleteResult.result).toBe(true);
 
-			// Verify soft-deleted: get returns null
 			const afterDelete = await call(handler, "content/get", {
 				collection: "posts",
 				id: created.id,
@@ -517,8 +463,6 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 		});
 	});
 
-	// ── Capability enforcement matches real plugin config ─────────────────
-
 	it("sandboxed-test plugin cannot write content (only has read:content)", async () => {
 		const handler = makePluginHandler();
 		const result = await call(handler, "content/create", {
@@ -529,10 +473,6 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 	});
 
 	it("write-only plugin cannot read content (no implicit upgrade)", async () => {
-		// Plugins with only write:content cannot call ctx.content.get/list.
-		// This matches the Cloudflare PluginBridge: capabilities are enforced
-		// strictly as declared in the manifest. A plugin that needs both
-		// reads and writes must declare both capabilities.
 		await db.schema
 			.createTable("ec_pages")
 			.addColumn("id", "text", (col) => col.primaryKey())
@@ -558,20 +498,17 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 			emailSend: () => null,
 		});
 
-		// content/get should fail
 		const getResult = await call(writeOnlyHandler, "content/get", {
 			collection: "pages",
 			id: "any",
 		});
 		expect(getResult.error).toContain("Missing capability: read:content");
 
-		// content/list should also fail
 		const listResult = await call(writeOnlyHandler, "content/list", {
 			collection: "pages",
 		});
 		expect(listResult.error).toContain("Missing capability: read:content");
 
-		// content/create should still succeed (has write:content)
 		const createResult = await call(writeOnlyHandler, "content/create", {
 			collection: "pages",
 			data: { title: "Allowed" },
@@ -580,7 +517,6 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 	});
 
 	it("write-only media plugin cannot read media", async () => {
-		// Same enforcement for media: write:media does NOT imply read:media.
 		const writeOnlyHandler = createBridgeHandler({
 			pluginId: "write-only-media",
 			version: "1.0.0",
@@ -614,8 +550,6 @@ describe("Plugin integration: sandboxed-test plugin operations", () => {
 		});
 		expect(result.error).toContain("Storage collection not declared: secrets");
 	});
-
-	// ── Cross-plugin isolation ────────────────────────────────────────────
 
 	it("two plugins cannot see each other's KV data", async () => {
 		const pluginA = createBridgeHandler({

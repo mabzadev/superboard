@@ -1,9 +1,3 @@
-/**
- * Tests for `makeRegistryPluginId`: collision resistance + determinism +
- * format. Backfills the coverage deferred from PR #1011 (the install
- * handler shipped without dedicated unit tests for the opaque-id helper).
- */
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -38,9 +32,6 @@ describe("makeRegistryPluginId", () => {
 	});
 
 	it("collision-resistant across 10 000 distinct (did, slug) pairs", async () => {
-		// 80-bit ids — birthday collision is around 2^40 ≈ 10^12 inputs.
-		// 10 000 inputs should give zero collisions with overwhelming
-		// probability (~ 10^-12 chance per pair).
 		const ids = await Promise.all(
 			Array.from({ length: 10_000 }, (_, i) =>
 				makeRegistryPluginId(`did:plc:test${i.toString(36).padStart(8, "0")}`, "x"),

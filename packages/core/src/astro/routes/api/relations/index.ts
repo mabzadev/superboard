@@ -1,10 +1,3 @@
-/**
- * Relation definitions endpoint
- *
- * GET  /_emdash/api/relations[?locale=xx] - List relation definitions
- * POST /_emdash/api/relations              - Create a relation definition
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

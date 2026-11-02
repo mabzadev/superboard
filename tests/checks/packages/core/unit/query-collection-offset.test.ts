@@ -54,7 +54,6 @@ describe("getEmDashCollection offset pagination", () => {
 	});
 
 	it("reports hasMore=true when the loader returns more than the requested limit", async () => {
-		// limit 20 over-fetches as 21; loader returns 21 ⇒ a next page exists.
 		vi.mocked(getLiveCollection).mockResolvedValue({
 			entries: makeEntries(21),
 			cacheHint: {},
@@ -105,10 +104,8 @@ describe("getEmDashCollection offset pagination", () => {
 	});
 
 	it("rejects supplying both cursor and offset (compile-time)", () => {
-		// Each pagination mode is valid on its own...
 		const cursorOnly: CollectionFilter = { limit: 10, cursor: "abc" };
 		const offsetOnly: CollectionFilter = { limit: 10, offset: 20 };
-		// ...but they are mutually exclusive, so combining them is a type error.
 		// @ts-expect-error cursor and offset cannot be supplied together
 		const both: CollectionFilter = { limit: 10, cursor: "abc", offset: 20 };
 		expect([cursorOnly, offsetOnly, both]).toHaveLength(3);

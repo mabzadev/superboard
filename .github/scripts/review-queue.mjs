@@ -1,26 +1,7 @@
 #!/usr/bin/env node
-// review-queue.mjs -- maintainer CLI for the review/* label workflow.
-//
-// Zero external deps: only node: builtins, shelling out to `gh`.
-//
-// Usage:
-//   node .github/scripts/review-queue.mjs [list]            List open PRs grouped by review state.
-//   node .github/scripts/review-queue.mjs request <pr>...   Post `/review` on one or more PRs.
-//   node .github/scripts/review-queue.mjs request --needs-review
-//                                                           Post `/review` on every PR labeled
-//                                                           review/needs-review.
-//   node .github/scripts/review-queue.mjs --help            Show this help.
-//
-// Options:
-//   --repo <owner/name>   Target repo (default: detected via `gh repo view`).
-//
-// Requires an authenticated `gh` CLI.
 
 import { spawnSync } from "node:child_process";
 
-// --- gh helpers -------------------------------------------------------------
-
-// Run a gh command, returning stdout. On non-zero exit, print stderr and exit 1.
 function gh(args) {
 	const result = spawnSync("gh", args, { encoding: "utf8" });
 	if (result.error) {
@@ -40,15 +21,11 @@ function detectRepo() {
 	return out.trim();
 }
 
-// --- review state derivation ------------------------------------------------
-
 const STATE_ORDER = ["needs-rereview", "needs-review", "awaiting-author", "approved", "unlabeled"];
 
-// PR number argument: optional leading "#", then digits.
 const PR_NUMBER_RE = /^#?\d+$/;
 const PR_HASH_RE = /^#/;
 
-// Derive a PR's review state from its review/* label.
 function reviewState(pr) {
 	const labels = new Set((pr.labels || []).map((l) => l.name));
 	for (const state of STATE_ORDER) {
@@ -58,27 +35,23 @@ function reviewState(pr) {
 	return "unlabeled";
 }
 
-// Collect the size/* and area/* labels for display.
 function tagLabels(pr) {
 	return (pr.labels || [])
 		.map((l) => l.name)
 		.filter((n) => n.startsWith("size/") || n.startsWith("area/"));
 }
 
-// Derive a coarse CI status from the statusCheckRollup array.
 function ciStatus(pr) {
 	const rollup = pr.statusCheckRollup || [];
 	if (rollup.length === 0) return "none";
 	let pending = false;
 	let failed = false;
 	for (const check of rollup) {
-		// Check runs use `status` + `conclusion`; status contexts use `state`.
 		const conclusion = (check.conclusion || "").toUpperCase();
 		const status = (check.status || "").toUpperCase();
 		const state = (check.state || "").toUpperCase();
 
 		if (status && status !== "COMPLETED") {
-			// IN_PROGRESS, QUEUED, PENDING, WAITING, etc.
 			pending = true;
 			continue;
 		}
@@ -98,7 +71,6 @@ function ciStatus(pr) {
 			pending = true;
 			continue;
 		}
-		// SUCCESS / NEUTRAL / SKIPPED count as pass.
 	}
 	if (failed) return "fail";
 	if (pending) return "pending";
@@ -117,8 +89,6 @@ function truncate(str, max) {
 	return s.slice(0, max - 1) + "\u2026";
 }
 
-// --- commands ---------------------------------------------------------------
-
 function fetchOpenPrs(repo) {
 	const out = gh([
 		"pr",
@@ -128,7 +98,6 @@ function fetchOpenPrs(repo) {
 		"--state",
 		"open",
 		"--limit",
-		// gh's effective max; avoids silently omitting PRs from list / --needs-review.
 		"1000",
 		"--json",
 		"number,title,labels,createdAt,updatedAt,author,isDraft,mergeable,reviewDecision,statusCheckRollup",
@@ -144,7 +113,6 @@ function fetchOpenPrs(repo) {
 function cmdList(repo) {
 	const prs = fetchOpenPrs(repo);
 
-	// Bucket PRs by derived state.
 	const groups = new Map(STATE_ORDER.map((s) => [s, []]));
 	for (const pr of prs) {
 		groups.get(reviewState(pr)).push(pr);
@@ -161,7 +129,6 @@ function cmdList(repo) {
 			console.log("");
 			continue;
 		}
-		// Sort oldest-first within a group so the most stale floats to the top.
 		bucket.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 		for (const pr of bucket) {
 			const num = `#${pr.number}`.padEnd(6);
@@ -231,8 +198,6 @@ function printHelp() {
 	);
 }
 
-// --- arg parsing ------------------------------------------------------------
-
 function main() {
 	const argv = process.argv.slice(2);
 
@@ -241,7 +206,6 @@ function main() {
 		return;
 	}
 
-	// Pull out --repo <value> if present; the rest are positional.
 	let repoOverride;
 	const rest = [];
 	for (let i = 0; i < argv.length; i++) {

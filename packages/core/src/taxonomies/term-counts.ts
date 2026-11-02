@@ -1,18 +1,3 @@
-/**
- * Shared visible-usage counts for taxonomy terms (issue #581).
- *
- * `content_taxonomies` rows are written for every entry regardless of status
- * and are never pruned on unpublish/trash, so counting the pivot directly
- * inflates counts with drafts and soft-deleted entries. Every user-facing
- * count (public widget, single-term page, admin term list) must instead count
- * only entries that have completed publication:
- * `status = 'published'` AND `deleted_at IS NULL`.
- *
- * The public render path is latency-sensitive on D1, so per-collection counts
- * are combined with UNION ALL — one query per taxonomy, never one per
- * collection, split only where the backend caps compound-SELECT terms.
- */
-
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 
@@ -27,22 +12,6 @@ interface CountRow {
 	count: number | string | bigint;
 }
 
-/**
- * Per-collection count branch. `taxonomy_id` stores the term's
- * translation_group, so results are keyed by group (locale-independent) and
- * each assignment is counted once per content translation group. When a
- * locale is provided, only that group's matching content row contributes.
- *
- * Scoping to the taxonomy uses `translation_group IN (...)` rather than a
- * join on `taxonomies.id` — the anchor row (id == group) can be deleted while
- * sibling translations survive, and a plain join on `translation_group` would
- * multiply counts by the number of locales.
- *
- * CROSS JOIN with the join predicate in WHERE keeps stats-blind SQLite/D1 from
- * reordering content_taxonomies out of the outer position; it touches ec_* only
- * through the translation-group index. Postgres treats this as an ordinary
- * inner join and plans freely.
- */
 function collectionBranch(
 	db: Kysely<Database>,
 	taxonomyName: string,
@@ -86,10 +55,6 @@ function addCounts(into: Map<string, number>, from: Map<string, number>): void {
 	for (const [group, count] of from) into.set(group, (into.get(group) ?? 0) + count);
 }
 
-/**
- * Counts for one batch of collections, degrading to a query per collection
- * when a declared collection has no ec_* table so the rest still contribute.
- */
 async function runBatch(
 	db: Kysely<Database>,
 	taxonomyName: string,
@@ -113,29 +78,6 @@ async function runBatch(
 	return counts;
 }
 
-/**
- * Count publicly-visible term assignments for one taxonomy, keyed by the
- * term's translation_group (what `content_taxonomies.taxonomy_id` stores).
- * When `locale` is provided, only entries in that locale contribute. Omitting
- * it preserves the locale-agnostic API used by legacy callers.
- *
- * Counts are scoped to the taxonomy's declared collections — pass
- * `TaxonomyDef.collections` (`_emdash_taxonomy_defs.collections`). Collections
- * whose `ec_*` table doesn't exist (pre-migration drift, a declared collection
- * that was never created) are skipped, yielding a partial-but-correct count
- * rather than a throw.
- *
- * One database round-trip for the whole taxonomy (UNION ALL across
- * collections). On a backend that caps compound-SELECT terms — D1 allows five
- * — the branches are split into one statement per batch, since a taxonomy
- * declaring more collections than that would otherwise take down every path
- * that shows counts. Per-collection sums are commutative, so batching cannot
- * change the total.
- *
- * Callers on the public render path should go through the request-cached
- * wrapper in `taxonomies/index.ts` so a page rendering both the widget and a
- * term detail shares one computation.
- */
 export async function fetchVisibleTermCounts(
 	db: Kysely<Database>,
 	taxonomyName: string,

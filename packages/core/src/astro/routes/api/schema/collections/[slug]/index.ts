@@ -1,11 +1,3 @@
-/**
- * Schema collection CRUD endpoints
- *
- * GET    /_emdash/api/schema/collections/{slug} - Get collection
- * PUT    /_emdash/api/schema/collections/{slug} - Update collection
- * DELETE /_emdash/api/schema/collections/{slug} - Delete collection
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

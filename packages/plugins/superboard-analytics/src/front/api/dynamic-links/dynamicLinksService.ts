@@ -117,11 +117,6 @@ function numericValue(source: Record<string, unknown>, ...keys: string[]) {
 	return 0;
 }
 
-/**
- * Maps the canonical statistics vocabulary while accepting the richer event
- * names emitted by newer SDKs. This keeps the dashboard compatible during the
- * event-schema rollout without calling any legacy analytics endpoint.
- */
 export function toCampaignAnalytics(
 	campaign: LinkCampaign,
 	statistics: LinkStatistics,

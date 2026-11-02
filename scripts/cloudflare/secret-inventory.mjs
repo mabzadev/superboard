@@ -211,12 +211,6 @@ const PRODUCTION_SECRET_METADATA = Object.freeze({
 	}),
 });
 
-/**
- * Build a value-free graph describing which Worker secret bindings must receive
- * the same logical value. This is deliberately separate from secret generation:
- * production values belong to the approved secret manager and are never read by
- * this command.
- */
 export function secretCoordinationPlan(target, environment) {
 	const requirements = requiredSecretInventory(target, environment);
 	const requiredByService = new Map(

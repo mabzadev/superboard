@@ -121,7 +121,6 @@ describe("flattenContentRecord()", () => {
 		const record = flattenContentRecord(hookContent);
 		expect(record.title).toBe("Bonjour le monde");
 		expect(record.body).toBe("Le renard brun rapide");
-		// System columns at the top level are preserved.
 		expect(record.slug).toBe("hello-world");
 		expect(record.status).toBe("published");
 		expect(record.locale).toBe("fr");

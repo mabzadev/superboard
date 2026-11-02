@@ -1,9 +1,5 @@
 import { SuperBoardSupportException } from "./error.js";
 
-/**
- * Accessible, dependency-free Support widget rendered inside a closed Shadow
- * DOM. All user content is assigned through `textContent`.
- */
 export class SuperBoardSupportWidget {
 	constructor({
 		client,

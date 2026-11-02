@@ -1,14 +1,3 @@
-/**
- * Tests for the custom HtmlBlockExtension (first-class HTML block node view).
- *
- * Verifies that:
- *   - The extension registers the `htmlBlock` schema node.
- *   - The `html` attribute round-trips through getJSON.
- *   - DOM/clipboard serialization stores the markup in a semantic
- *     `data-html-content` attribute rather than leaking a bare `html="..."`
- *     attribute, and parses it back on the way in.
- */
-
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -56,7 +45,6 @@ describe("HtmlBlockExtension", () => {
 		});
 		const serialized = editor.getHTML();
 		expect(serialized).toContain("data-html-content");
-		// The raw markup must not leak as a top-level `html="..."` attribute.
 		expect(serialized).not.toMatch(/\shtml="/);
 	});
 

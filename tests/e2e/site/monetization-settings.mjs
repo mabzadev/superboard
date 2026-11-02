@@ -114,7 +114,6 @@ try {
 			await page
 				.getByRole("tab", { name: locale === "fr" ? "Passerelles" : "Gateways", exact: true })
 				.click();
-			// Store credentials live in the collapsed Advanced section of the Gateways tab.
 			const advancedLabel = locale === "fr" ? "Avancé" : "Advanced";
 			const advanced = page.locator("details", {
 				has: page.getByText(advancedLabel, { exact: true }),
@@ -164,7 +163,6 @@ try {
 			await hydrate();
 			for (const field of secretFields)
 				await expect(page.locator(`#setting-${field}`)).toHaveValue("");
-			// Plugin health and lifecycle are owned by the central Plugins page.
 			await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 			await expect(
 				page.getByRole("link", {
@@ -183,7 +181,6 @@ try {
 				assert.ok(
 					inventory.workers.some((worker) => worker.service === service && worker.physicalName),
 				);
-			// Legacy configuration links open the Gateways tab with Advanced expanded.
 			await page.goto(
 				new URL(`/monetization/settings?lang=${locale}&tab=configuration`, origin).href,
 			);

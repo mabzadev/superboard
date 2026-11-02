@@ -1,9 +1,3 @@
-/**
- * `emdash-plugin search <query> [--capability <name>] [--limit <n>] [--cursor <c>]`
- *
- * Free-text search the aggregator. Read-only; no auth required.
- */
-
 import { DiscoveryClient } from "@emdash-cms/registry-client";
 import { defineCommand } from "citty";
 import { consola } from "consola";
@@ -69,7 +63,6 @@ export const searchCommand = defineCommand({
 
 		console.log();
 		for (const pkg of result.packages) {
-			// `pkg.profile` is lexicon-validated by DiscoveryClient (or null).
 			const profile = pkg.profile;
 			console.log(`${pc.bold(profile?.name ?? pkg.slug)} ${pc.dim(`(${pkg.slug})`)}`);
 			if (profile?.description) console.log(`  ${profile.description}`);
@@ -78,9 +71,6 @@ export const searchCommand = defineCommand({
 		}
 
 		if (result.cursor) {
-			// Cursor-based pagination: callers paginate by passing the cursor
-			// back in, not by bumping --limit. The aggregator caps `limit` at
-			// 100, so suggesting "increase the limit" was misleading advice.
 			consola.info(
 				`More results available. Continue with: ${pc.cyan(
 					`emdash-plugin search "${args.query}" --cursor ${result.cursor}`,

@@ -11,10 +11,8 @@ import type { Env, MarketingQueueJob } from "./types.js";
 import { readJsonObject } from "./validation.js";
 
 const LOCAL_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/u;
-/** Contact time zone, read from the `time_zone` custom field (or `timezone`). */
 const CONTACT_TIME_ZONE_SQL =
 	"COALESCE(json_extract(subscriber.attributes_json, '$.time_zone'), json_extract(subscriber.attributes_json, '$.timezone'), '')";
-// The earliest and latest UTC offsets in use (Kiribati and Baker Island).
 const EARLIEST_OFFSET_MINUTES = 14 * 60;
 const LATEST_OFFSET_MINUTES = -12 * 60;
 
@@ -67,17 +65,14 @@ function zoneOffsetMinutes(zone: string, instant: number) {
 	return Math.round((asUtc - instant) / 60_000);
 }
 
-/** UTC instant of a wall-clock time (`YYYY-MM-DDTHH:MM`) in an IANA time zone. */
 export function zonedLocalTimeToUtc(local: string, zone: string): Date {
 	const wall = parseLocal(local);
 	if (wall === null) throw failure("LOCAL_SEND_AT_INVALID", "Choose a valid local date and time.");
 	let instant = wall - zoneOffsetMinutes(zone, wall) * 60_000;
-	// A second pass settles daylight-saving transitions.
 	instant = wall - zoneOffsetMinutes(zone, instant) * 60_000;
 	return new Date(instant);
 }
 
-/** Local calendar date (`YYYY-MM-DD`) and hour of an instant in a time zone. */
 export function zonedDateParts(zone: string, instant: Date) {
 	const parts = Object.fromEntries(
 		new Intl.DateTimeFormat("en-US", {
@@ -101,10 +96,6 @@ async function sendWindow(db: D1Database, projectId: number, campaignId: string)
 		.first<WindowRow>();
 }
 
-/**
- * Creates deliveries for the time-zone buckets whose local send time arrived.
- * Returns false when the campaign does not send in recipient time zones.
- */
 export async function insertLocalTimeDeliveries(
 	db: D1Database,
 	projectId: number,
@@ -164,7 +155,6 @@ export async function sendWindowHoldsCampaign(
 	);
 }
 
-/** Re-dispatches running local-time campaigns so later time zones are picked up. */
 export async function dispatchOpenSendWindows(env: Env) {
 	const rows = await env.DB.prepare(
 		`SELECT send_window.project_id, send_window.campaign_id FROM marketing_campaign_send_windows send_window
@@ -197,7 +187,6 @@ sendTimeRoutes.get("/campaigns/:campaignId/local-schedule", async (c) =>
 	}),
 );
 
-/** Schedules a campaign at one local time in each contact's time zone. */
 sendTimeRoutes.post("/campaigns/:campaignId/local-schedule", async (c) => {
 	const projectId = c.get("project").projectId;
 	const campaignId = c.req.param("campaignId");

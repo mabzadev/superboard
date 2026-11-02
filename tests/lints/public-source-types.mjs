@@ -1,28 +1,4 @@
 #!/usr/bin/env node
-/**
- * Guard: no subpath export ships raw TypeScript source.
- *
- * `emdash` used to expose `./routes/*`, `./api/*`, `./auth/providers/*` (and
- * more) as raw `./src/*.ts`. `skipLibCheck` does not skip `.ts`, so a strict
- * consumer's `tsc` type-checked our source and its transitive graph against
- * their config -- and, because the raw source imported `Database` etc. from
- * `src` while `emdash/locals` provided the compiled `dist` identity, hit a
- * dual-package type-identity wall (issue #1053 was one symptom).
- *
- * The fix was structural: those subpaths are now compiled to
- * `dist/*.mjs` + `dist/*.d.mts`, so consumers only ever see declarations
- * (`skipLibCheck` covers them). This guard keeps it that way: it fails CI if
- * any subpath export target is a raw `.ts`/`.tsx` file again.
- *
- * Documented exception: modules that bridge into `.astro` cannot be compiled
- * (the consumer's Astro build must process the `.astro`), so they ship as
- * source by necessity, exactly like the `.astro` files themselves. The
- * allowlist below names them; `.astro` targets are always fine.
- *
- * This replaced an earlier fixture-based consumer-typecheck harness: once raw
- * source is not shipped, there is no raw-source graph to type-check, so a
- * static export-shape check is the whole guarantee.
- */
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -31,23 +7,15 @@ import { fileURLToPath } from "node:url";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const pkgPath = resolve(repoRoot, "packages/core/package.json");
 
-/**
- * Export keys allowed to ship raw source because they bridge a runtime the
- * consumer supplies and whose own build must process them -- the same class
- * as the `.astro` targets. Keep this list short and justified.
- */
 const RUNTIME_COUPLED = new Set([
-	"./ui", // src/ui.ts -- re-exports Astro <Image>/<PortableText> components
-	"./ui/comments", // src/ui-comments.ts -- re-exports Astro <Comments>/<CommentForm>
-	"./auth/providers/github-admin", // .tsx -- admin React + @cloudflare/kumo
-	"./auth/providers/google-admin", // .tsx -- admin React + @cloudflare/kumo
+	"./ui",
+	"./ui/comments",
+	"./auth/providers/github-admin",
+	"./auth/providers/google-admin",
 ]);
 
-// `.ts`/`.tsx` source, but NOT `.d.ts` declarations (those are the desired
-// shipping form -- `skipLibCheck` covers them).
 const RAW_SOURCE = /(?<!\.d)\.tsx?$/;
 
-/** Walk an exports value (string | conditions object) collecting targets. */
 function targets(value) {
 	if (typeof value === "string") return [value];
 	if (value && typeof value === "object") return Object.values(value).flatMap(targets);

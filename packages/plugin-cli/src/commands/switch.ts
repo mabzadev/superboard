@@ -1,15 +1,3 @@
-/**
- * `emdash-plugin switch <did>`
- *
- * Change the active publisher session. The DID must already be in the
- * credentials store (i.e. you've previously logged in as it). Use
- * `emdash-plugin whoami` to see stored sessions.
- *
- * The OAuth library still resolves a refreshed access token by DID on the
- * next publish; this command only changes which DID is "current" for the
- * convenience of subsequent commands.
- */
-
 import { isDid } from "@atcute/lexicons/syntax";
 import { FileCredentialStore } from "@emdash-cms/registry-client";
 import { defineCommand } from "citty";

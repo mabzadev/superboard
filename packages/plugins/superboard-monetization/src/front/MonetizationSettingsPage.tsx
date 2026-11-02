@@ -23,7 +23,6 @@ export default function MonetizationSettingsPage() {
 	const [requested] = useState(() =>
 		typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab"),
 	);
-	// Plugin health moved to the Plugins page; old `?tab=configuration` links open the advanced store credentials.
 	const [tab, setTab] = useState(() =>
 		requested === "configuration"
 			? "gateways"

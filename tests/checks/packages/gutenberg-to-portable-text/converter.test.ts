@@ -1,7 +1,3 @@
-/**
- * Tests for the main Gutenberg to Portable Text converter
- */
-
 import { describe, it, expect } from "vitest";
 
 import {
@@ -330,7 +326,6 @@ describe("gutenbergToPortableText", () => {
 
 			const result = gutenbergToPortableText(content);
 
-			// Should have quote block + citation block
 			expect(result.length).toBeGreaterThanOrEqual(1);
 			expect(result[0]).toMatchObject({
 				_type: "block",
@@ -978,7 +973,6 @@ https://${domain}/123456
 
 			const result = gutenbergToPortableText(content);
 
-			// Group should be flattened - we get the inner blocks directly
 			expect(result.some((b) => (b as PortableTextTextBlock).style === "normal")).toBe(true);
 			expect(result.some((b) => (b as PortableTextTextBlock).style === "h2")).toBe(true);
 		});
@@ -1069,7 +1063,6 @@ https://${domain}/123456
 
 			const result = gutenbergToPortableText(content);
 
-			// h1 + p + image + 2 list items + quote = 6 blocks
 			expect(result.length).toBeGreaterThanOrEqual(5);
 
 			const types = result.map((b) => b._type);
@@ -1149,40 +1142,32 @@ describe("htmlToPortableText", () => {
 });
 
 describe("WordPress.com classic editor content", () => {
-	// Test case from sparge.wordpress.com - classic editor with linked images
-	// and HTML entities in URLs (&#038; instead of &)
 	const spargePostContent = `<p><a href="https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg"><img data-attachment-id="238" data-permalink="https://sparge.wordpress.com/2011/11/27/now-brewing-hip-hop-nelson-sauvin/hip-hop/" data-orig-file="https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg" data-orig-size="384,560" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;}" data-image-title="hip-hop" data-image-description="" data-image-caption="" data-medium-file="https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg?w=205" data-large-file="https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg?w=384" class="alignright size-medium wp-image-238" title="hip-hop" src="https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg?w=205&#038;h=300" alt="" width="205" height="300" /></a>Hip Hops Nelson Sauvin is the first of my Christmas brews.</p>
 <p>It's inspired by <a href="http://www.brewdog.com/product/77-lager" target="_blank" rel="noopener">BrewDog 77</a>, which is a classic lager dry-hopped with Nelson Sauvin. OK, so Hip Hops is 6.3% rather than 4.9%, and uses ordinary Saaz in the boil, but the essence is the same: it's a delicious, crisp German-style lager, given a New Zealand accent with a big hit of Nelson Sauvin.</p>`;
 
 	it("extracts linked images with decoded URLs", () => {
 		const result = htmlToPortableText(spargePostContent);
 
-		// Should have at least one image block
 		const imageBlocks = result.filter((b) => b._type === "image");
 		expect(imageBlocks.length).toBeGreaterThanOrEqual(1);
 
-		// First block should be the image
 		const img = imageBlocks[0];
 		expect(img._type).toBe("image");
 
-		// URL should have decoded HTML entities (& not &#038;)
 		expect(img.asset.url).toBe(
 			"https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg?w=205&h=300",
 		);
 		expect(img.asset.url).not.toContain("&#038;");
 
-		// Link should be preserved
 		expect(img.link).toBe("https://sparge.wordpress.com/wp-content/uploads/2011/11/hip-hop.jpg");
 	});
 
 	it("preserves text content alongside images", () => {
 		const result = htmlToPortableText(spargePostContent);
 
-		// Should have text blocks with the paragraph content
 		const textBlocks = result.filter((b) => b._type === "block");
 		expect(textBlocks.length).toBeGreaterThanOrEqual(1);
 
-		// Check that text content is preserved
 		const allText = textBlocks.flatMap((b) => b.children.map((c) => c.text)).join("");
 		expect(allText).toContain("Hip Hops Nelson Sauvin");
 		expect(allText).toContain("Christmas brews");
@@ -1191,10 +1176,8 @@ describe("WordPress.com classic editor content", () => {
 	it("preserves links in text", () => {
 		const result = htmlToPortableText(spargePostContent);
 
-		// Should have text blocks with links
 		const textBlocks = result.filter((b) => b._type === "block");
 
-		// Find block with BrewDog link
 		const blockWithLink = textBlocks.find((b) => b.markDefs?.length);
 		expect(blockWithLink).toBeDefined();
 		expect(blockWithLink?.markDefs).toContainEqual(
@@ -1231,7 +1214,6 @@ describe("WordPress.com classic editor content", () => {
 		expect(img.asset.url).toBe("https://example.com/photo.jpg?a=1&b=2");
 	});
 
-	// Test for figure with HTML entities
 	it("decodes HTML entities in figure images", () => {
 		const html = `<figure><img src="https://example.com/photo.jpg?w=200&#038;h=300" alt="test"><figcaption>Caption</figcaption></figure>`;
 		const result = htmlToPortableText(html);

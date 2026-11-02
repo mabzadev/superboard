@@ -24,10 +24,6 @@ function acceptedSources(policy: RegistryLabelerPolicy): string[] | undefined {
 		.filter((source): source is string => Boolean(source));
 }
 
-/**
- * Evaluates hydrated release-withdrawal labels through the shared moderation
- * policy. Malformed hydrated labels fail closed instead of being skipped.
- */
 export function evaluateRegistryReleaseWithdrawal(
 	release: Pick<ValidatedReleaseView, "uri" | "cid" | "labels">,
 	policy: RegistryLabelerPolicy,

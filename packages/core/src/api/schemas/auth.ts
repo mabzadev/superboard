@@ -2,13 +2,8 @@ import { z } from "zod";
 
 import { roleLevel } from "./common.js";
 
-// ---------------------------------------------------------------------------
-// WebAuthn credential schemas (matching @emdash-cms/auth/passkey types)
-// ---------------------------------------------------------------------------
-
 const authenticatorTransport = z.enum(["usb", "nfc", "ble", "internal", "hybrid"]);
 
-/** RegistrationResponse — sent by the browser after navigator.credentials.create() */
 const registrationCredential = z.object({
 	id: z.string(),
 	rawId: z.string(),
@@ -21,7 +16,6 @@ const registrationCredential = z.object({
 	authenticatorAttachment: z.enum(["platform", "cross-platform"]).optional(),
 });
 
-/** AuthenticationResponse — sent by the browser after navigator.credentials.get() */
 const authenticationCredential = z.object({
 	id: z.string(),
 	rawId: z.string(),
@@ -34,10 +28,6 @@ const authenticationCredential = z.object({
 	}),
 	authenticatorAttachment: z.enum(["platform", "cross-platform"]).optional(),
 });
-
-// ---------------------------------------------------------------------------
-// Auth: Input schemas
-// ---------------------------------------------------------------------------
 
 export const signupRequestBody = z
 	.object({

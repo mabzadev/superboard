@@ -1,5 +1,3 @@
-/** HTTP API router for the perf monitor. */
-
 import { runMeasurements } from "./measure.js";
 import {
 	DEFAULT_SITE_ID,
@@ -19,7 +17,6 @@ import {
 	type Source,
 } from "./store.js";
 
-/** Route the request to the correct handler. */
 export async function handleApi(request: Request, url: URL, env: Env): Promise<Response | null> {
 	const path = url.pathname;
 
@@ -42,28 +39,19 @@ export async function handleApi(request: Request, url: URL, env: Env): Promise<R
 	return null;
 }
 
-/** Narrow a query string to the allowed source values without a cast. */
 function parseSource(raw: string | null): Source | undefined {
 	if (raw === "deploy" || raw === "cron" || raw === "manual") return raw;
 	return undefined;
 }
 
-/**
- * Resolve the requested site param against the known SITES list. Falls back
- * to the default site when absent so existing clients (dashboard) keep
- * working unchanged.
- */
 function parseSiteParam(raw: string | null): string {
 	if (raw && getSite(raw)) return raw;
 	return DEFAULT_SITE_ID;
 }
 
-/** GET /api/results?route=X&region=Y&source=Z&site=W&since=ISO&limit=N */
 async function handleResults(url: URL, env: Env): Promise<Response> {
 	const source = parseSource(url.searchParams.get("source"));
 	const siteParam = url.searchParams.get("site");
-	// Results is intentionally loose: no site param = return across all sites
-	// (for raw tabular inspection). Summary/chart default to a single site.
 	const site = siteParam && getSite(siteParam) ? siteParam : undefined;
 
 	const results = await queryResults(env.DB, {
@@ -78,7 +66,6 @@ async function handleResults(url: URL, env: Env): Promise<Response> {
 	return Response.json({ results });
 }
 
-/** GET /api/summary?site=X -- latest per route+region, rolling averages */
 async function handleSummary(url: URL, env: Env): Promise<Response> {
 	const site = parseSiteParam(url.searchParams.get("site"));
 
@@ -99,14 +86,6 @@ async function handleSummary(url: URL, env: Env): Promise<Response> {
 	});
 }
 
-/**
- * GET /api/chart?route=X&region=Y&site=W&since=ISO[&bucket=day&limit=N]
- *
- * `bucket=day` returns one true-median point per UTC day -- used by the 7d/30d/
- * 90d views, where raw samples (48/day) overflow any row limit and truncate the
- * window. Without it, returns raw per-sample rows plus deploy markers for the
- * sub-day (1h/24h) views.
- */
 async function handleChart(url: URL, env: Env): Promise<Response> {
 	const route = url.searchParams.get("route");
 	const region = url.searchParams.get("region");
@@ -141,13 +120,8 @@ async function handleChart(url: URL, env: Env): Promise<Response> {
 		getDeployResults(env.DB, site, since),
 	]);
 
-	// Query returns DESC -- reverse to chronological. Manual (ad-hoc) runs are
-	// stripped from the graph so they don't create visual noise; they still
-	// appear in the /api/results table.
 	const graphResults = results.filter((r) => r.source !== "manual").toReversed();
 
-	// Deduplicate deploy results by SHA — multiple route/region combos produce
-	// duplicates, but we only want one marker per deploy on the chart.
 	const seenShas = new Set<string>();
 	const deployMarkers = deployResults
 		.filter((r) => {
@@ -181,7 +155,6 @@ async function handleChart(url: URL, env: Env): Promise<Response> {
 	});
 }
 
-/** GET /api/config -- available sites, routes, and regions */
 async function handleConfig(): Promise<Response> {
 	return Response.json({
 		sites: SITES.map((s) => ({ id: s.id, label: s.label, targetUrl: s.targetUrl })),
@@ -191,32 +164,8 @@ async function handleConfig(): Promise<Response> {
 	});
 }
 
-/** Accept short abbreviated or full-length hex SHAs. */
 const SHA_RE = /^[a-f0-9]{7,40}$/i;
 
-/**
- * POST /api/trigger -- run an ad-hoc measurement, optionally record it.
- *
- * Body (all optional):
- *   {
- *     "note"?: string,
- *     "sha"?: string,
- *     "prNumber"?: number,
- *     "ephemeral"?: boolean,  // if true, run the probes but don't persist
- *     "site"?: string         // site id; omit to measure every site
- *   }
- *
- * No auth in-Worker: this endpoint is expected to be protected by a
- * Cloudflare Access policy at the edge. If Access misroutes or is
- * misconfigured, the request will still run measurements -- keep Access
- * scoped tightly to POST /api/trigger.
- *
- * Persisted runs are tagged source=manual and are excluded from the
- * dashboard graph and summary cards but appear in the results table with
- * a "manual" badge. Ephemeral runs run the probes for real but skip the
- * insert entirely -- useful for private/local checks that shouldn't
- * appear on the dashboard at all.
- */
 async function handleTrigger(request: Request, env: Env): Promise<Response> {
 	let body: {
 		note?: unknown;
@@ -273,7 +222,6 @@ async function handleTrigger(request: Request, env: Env): Promise<Response> {
 		sha,
 		prNumber,
 		sites: sites.map((s) => s.id),
-		// Echo the structured result so the CLI can print it without a follow-up query.
 		results: results.map((r) => ({
 			site: r.site,
 			route: r.route,

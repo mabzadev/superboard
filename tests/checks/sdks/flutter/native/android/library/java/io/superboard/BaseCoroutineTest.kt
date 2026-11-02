@@ -12,26 +12,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 
-/**
- * Base test class for tests that require coroutine support.
- * 
- * Provides:
- * - StandardTestDispatcher for coroutine testing
- * - Automatic Dispatchers.Main setup/teardown
- * - DebugLogger initialization
- * - MockK cleanup
- * 
- * Usage:
- * ```kotlin
- * class MyTest : BaseCoroutineTest() {
- *     @BeforeEach
- *     override fun setUp() {
- *         super.setUp()
- *         // Additional setup
- *     }
- * }
- * ```
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class BaseCoroutineTest {
 

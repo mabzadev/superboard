@@ -1,14 +1,3 @@
-/**
- * Regression test for SQLITE_CORRUPT_VTAB on publish.
- *
- * Reproduces the corruption pattern reported in the issue: create a content
- * item, publish it, edit and publish again. The FTS5 update trigger uses the
- * external-content-safe `'delete'` command, so the index stays consistent
- * and FTS5's own `'integrity-check'` command (issued via
- * `INSERT INTO fts(fts) VALUES('integrity-check')`, which walks the
- * inverted index and throws on a malformed segment) reports it clean.
- */
-
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -31,8 +20,6 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 		repo = new ContentRepository(db);
 		ftsManager = new FTSManager(db);
 
-		// Mirror the default `pages` collection: search enabled, title + content
-		// (portableText, stored as JSON) both searchable.
 		await registry.createCollection({
 			slug: "pages",
 			label: "Pages",
@@ -78,18 +65,8 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 			},
 		});
 
-		// First publish — promotes draft into the live columns and fires the
-		// update trigger on `ec_pages`. With the broken triggers from
-		// pre-fix versions this is the operation that begins corrupting
-		// the index.
 		await repo.publish("pages", created.id);
 
-		// Edit the content (this is what the `publish` API route does after
-		// a draft is saved — it issues an UPDATE against `ec_pages`). The
-		// previously broken AFTER UPDATE trigger then issues
-		// `DELETE FROM fts WHERE rowid = OLD.rowid`, which reads NEW
-		// column values out of the (already updated) content table and
-		// corrupts the inverted index.
 		await repo.update("pages", created.id, {
 			data: {
 				title: "About v2",
@@ -110,44 +87,27 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 			},
 		});
 
-		// FTS5 exposes integrity-check as a special command. With the broken
-		// triggers it throws SQLITE_CORRUPT_VTAB after the UPDATE above.
-		// This assertion is the actual regression test for the reported bug.
 		await expect(
 			sql
 				.raw(`INSERT INTO _emdash_fts_pages(_emdash_fts_pages) VALUES('integrity-check')`)
 				.execute(db),
 		).resolves.toBeDefined();
 
-		// Republish — this is the call from the issue trace
-		// (`Content publish error: ... SQLITE_CORRUPT_VTAB`). With the
-		// broken triggers it throws on the first UPDATE inside `publish`.
 		await expect(repo.publish("pages", created.id)).resolves.toBeDefined();
 
-		// And one more integrity-check after the republish.
 		await expect(
 			sql
 				.raw(`INSERT INTO _emdash_fts_pages(_emdash_fts_pages) VALUES('integrity-check')`)
 				.execute(db),
 		).resolves.toBeDefined();
 
-		// FTS docsize must still match the content table (one non-deleted row).
 		const docsize = await sql<{ count: number }>`
 			SELECT COUNT(*) as count FROM "_emdash_fts_pages_docsize"
 		`.execute(db);
 		expect(docsize.rows[0]?.count).toBe(1);
 	});
 
-	// Upgrade-from-pre-fix-version is covered by the migration test:
-	// `tests/unit/database/migrations/039_fix_fts5_triggers.test.ts`.
-
 	it("survives the full trash lifecycle (soft-delete -> restore -> integrity-check)", async () => {
-		// The INSERT trigger only indexes rows where `deleted_at IS NULL`, so
-		// the UPDATE/DELETE triggers must gate `'delete'` on the same
-		// condition. Without that gate, restoring a row from trash issues
-		// `'delete'` for a rowid that's not in the FTS index, which raises
-		// `SQLITE_CORRUPT_VTAB`. Reproduces the regression introduced
-		// alongside the original fix.
 		const created = await repo.create({
 			type: "pages",
 			slug: "trashable",
@@ -167,7 +127,6 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 
 		await repo.publish("pages", created.id);
 
-		// Soft-delete -- this UPDATE moves OLD (in-index) -> NEW (deleted).
 		await expect(repo.delete("pages", created.id)).resolves.toBe(true);
 		await expect(
 			sql
@@ -175,9 +134,6 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 				.execute(db),
 		).resolves.toBeDefined();
 
-		// Restore -- OLD has `deleted_at IS NOT NULL` (not in index), NEW
-		// has `deleted_at IS NULL`. The UPDATE trigger must NOT issue
-		// `'delete'` here.
 		await expect(repo.restore("pages", created.id)).resolves.toEqual(
 			expect.objectContaining({ id: created.id }),
 		);
@@ -187,13 +143,11 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 				.execute(db),
 		).resolves.toBeDefined();
 
-		// After restore the row should be back in the index.
 		const docsizeAfterRestore = await sql<{ count: number }>`
 			SELECT COUNT(*) as count FROM "_emdash_fts_pages_docsize"
 		`.execute(db);
 		expect(docsizeAfterRestore.rows[0]?.count).toBe(1);
 
-		// Edit after restore -- exercises the normal indexed-OLD path again.
 		await repo.update("pages", created.id, {
 			data: {
 				title: "Restored and edited",
@@ -215,10 +169,6 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 	});
 
 	it("survives permanent delete of a soft-deleted row without corrupting the index", async () => {
-		// `permanentDelete` is a hard `DELETE FROM ec_pages WHERE id = ?`
-		// applied to a row that's already soft-deleted (i.e. not in the FTS
-		// index). The DELETE trigger must not issue `'delete'` for this
-		// rowid -- otherwise SQLITE_CORRUPT_VTAB.
 		const created = await repo.create({
 			type: "pages",
 			slug: "purgeable",
@@ -238,7 +188,6 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 		await repo.publish("pages", created.id);
 		await expect(repo.delete("pages", created.id)).resolves.toBe(true);
 
-		// Permanent delete of a soft-deleted row.
 		await expect(repo.permanentDelete("pages", created.id)).resolves.toBe(true);
 		await expect(
 			sql
@@ -253,10 +202,6 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 	});
 
 	it("survives editing a row while it's in the trash without corrupting the index", async () => {
-		// An UPDATE on a row whose OLD.deleted_at is set should not issue
-		// `'delete'` to the FTS index (the row was never indexed). The
-		// regression hit any UPDATE on a soft-deleted row, including the
-		// ones the API issues when restoring metadata.
 		const created = await repo.create({
 			type: "pages",
 			slug: "edit-while-trashed",
@@ -269,8 +214,6 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 		await repo.publish("pages", created.id);
 		await expect(repo.delete("pages", created.id)).resolves.toBe(true);
 
-		// Update directly via SQL -- repo.update filters out deleted rows,
-		// but other paths (admin tooling, migrations) can UPDATE in place.
 		await sql`
 			UPDATE ec_pages
 			SET title = 'edited while trashed'
@@ -294,9 +237,6 @@ describe("FTS corruption on publish (SQLITE_CORRUPT_VTAB)", () => {
 
 		await repo.publish("pages", created.id);
 
-		// Many cycles is what tends to surface FTS5 corruption -- a single
-		// bad UPDATE leaves a small amount of garbage; repeated bad UPDATEs
-		// compound it until SQLite refuses to read the segment.
 		for (let i = 0; i < 25; i++) {
 			await repo.update("pages", created.id, {
 				data: {

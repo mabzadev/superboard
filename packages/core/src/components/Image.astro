@@ -1,10 +1,4 @@
 ---
-/**
- * Portable Text Image block component
- *
- * Renders image blocks from WordPress imports and EmDash media.
- * Uses the provider's getSrc function for responsive srcset generation.
- */
 import { Image as AstroImage } from "astro:assets";
 import type { ImageEmbed } from "../media/types.js";
 import { getMediaProvider } from "../media/provider-loader.js";
@@ -19,36 +13,22 @@ export interface Props {
 		asset: {
 			_ref: string;
 			url?: string;
-			/** Provider ID for external media (e.g., "cloudflare-images") */
 			provider?: string;
-			/** Provider metadata. LQIP is read from first-class fields below;
-			 *  `meta` only remains as a fallback for legacy snapshots. */
 			meta?: Record<string, unknown>;
 		};
 		alt?: string;
 		caption?: string;
-		/** Original image width */
 		width?: number;
-		/** Original image height */
 		height?: number;
-		/** LQIP blurhash — first-class field (legacy snapshots store it in `asset.meta`). */
 		blurhash?: string;
-		/** LQIP dominant color — first-class field (legacy snapshots store it in `asset.meta`). */
 		dominantColor?: string;
-		/** Display width for this instance (overrides original) */
 		displayWidth?: number;
-		/** Display height for this instance (overrides original) */
 		displayHeight?: number;
-		/** Alignment for this image instance (e.g. from a WordPress import) */
 		alignment?: "left" | "center" | "right" | "wide" | "full";
 	};
-	/** Render the LQIP placeholder as an inline background. Disable for strict CSP. */
 	placeholder?: boolean;
 }
 
-/**
- * Generate srcset using provider's getSrc function
- */
 function generateSrcset(
 	getSrc: NonNullable<ImageEmbed["getSrc"]>,
 	maxWidth: number,
@@ -70,10 +50,8 @@ if (!node?.asset) {
 
 const { asset, alt = "", caption, width, height, displayWidth, displayHeight, alignment } = node;
 
-// Calculate aspect ratio from original dimensions
 const aspectRatio = width && height ? width / height : undefined;
 
-// Calculate render dimensions
 let renderWidth: number | undefined;
 let renderHeight: number | undefined;
 
@@ -91,7 +69,6 @@ if (displayWidth && displayHeight) {
 	renderHeight = height;
 }
 
-// Get the image source URL and srcset
 let src = "";
 let srcset: string | undefined;
 let sizes: string | undefined;
@@ -99,7 +76,6 @@ let astroImageSrc = "";
 const providerId = asset.provider;
 
 if (providerId && providerId !== "local") {
-	// External provider
 	const provider = await getMediaProvider(providerId);
 	if (provider) {
 		try {
@@ -118,7 +94,6 @@ if (providerId && providerId !== "local") {
 			if (embed.type === "image") {
 				src = embed.src;
 
-				// Generate srcset if provider supports dynamic sizing
 				if (embed.getSrc) {
 					const maxWidth = renderWidth || 1200;
 					const ar = renderWidth && renderHeight ? renderWidth / renderHeight : aspectRatio;
@@ -134,9 +109,6 @@ if (providerId && providerId !== "local") {
 	}
 }
 
-// Fallback for local provider. `asset.url` carries the storage key with
-// extension when present; `asset._ref` is a bare ULID that only the internal
-// `/file/{id}` route can resolve. `buildRenderMediaUrl` picks the right shape.
 if (!src) {
 	src = buildRenderMediaUrl(Astro.locals.emdash?.getPublicMediaUrl, {
 		url: asset.url,
@@ -147,8 +119,6 @@ if (!src) {
 	}
 }
 
-// Build placeholder background style. Prefer first-class LQIP fields; fall
-// back to `asset.meta` for legacy snapshots persisted before LQIP was promoted.
 const blurhash = (node.blurhash ?? (asset.meta?.blurhash as string | undefined)) as
 	| string
 	| undefined;
@@ -210,7 +180,6 @@ if (placeholder && blurhash) {
 		margin-top: 0.5rem;
 		text-align: center;
 	}
-	/* Alignment (WordPress-style). Floats wrap surrounding text; wide/full span the column. */
 	.emdash-image--align-left,
 	.emdash-image--align-right {
 		width: fit-content;
@@ -232,7 +201,6 @@ if (placeholder && blurhash) {
 	.emdash-image--align-full {
 		width: 100%;
 	}
-	/* On narrow screens, un-float left/right so the image is not cramped beside text. */
 	@media (max-width: 640px) {
 		.emdash-image--align-left,
 		.emdash-image--align-right {

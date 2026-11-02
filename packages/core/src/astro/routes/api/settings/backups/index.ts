@@ -1,11 +1,3 @@
-/**
- * Backup settings + archive listing
- *
- * GET /_emdash/api/settings/backups — scheduled-backup settings, stored
- *   archives, and whether a storage backend is available.
- * PUT /_emdash/api/settings/backups — update scheduled-backup settings.
- */
-
 import type { APIRoute } from "astro";
 import { z } from "zod";
 

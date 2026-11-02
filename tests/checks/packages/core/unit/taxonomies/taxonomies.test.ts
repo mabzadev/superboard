@@ -183,7 +183,6 @@ describe("TaxonomyRepository", () => {
 				label: "JavaScript",
 			});
 
-			// Same slug, different name
 			const found = await repo.findBySlug("category", "javascript");
 			expect(found).toBeNull();
 		});
@@ -237,7 +236,7 @@ describe("TaxonomyRepository", () => {
 			expect(children).toHaveLength(2);
 
 			const roots = await repo.findByName("category", { parentId: null });
-			expect(roots).toHaveLength(2); // tech and design
+			expect(roots).toHaveLength(2);
 		});
 
 		it("should return terms in their manual order, not by label", async () => {
@@ -245,9 +244,6 @@ describe("TaxonomyRepository", () => {
 			await repo.create({ name: "tags", slug: "a", label: "Apple" });
 			await repo.create({ name: "tags", slug: "m", label: "Mango" });
 
-			// Each term appends, so the group reads back in creation order rather
-			// than alphabetically. Reordering itself is covered through the handler
-			// in term-reorder.test.ts.
 			expect((await repo.findByName("tags")).map((tag) => tag.label)).toEqual([
 				"Zebra",
 				"Apple",
@@ -304,7 +300,7 @@ describe("TaxonomyRepository", () => {
 			const updated = await repo.update(term.id, { label: "JS" });
 
 			expect(updated?.label).toBe("JS");
-			expect(updated?.slug).toBe("js"); // unchanged
+			expect(updated?.slug).toBe("js");
 		});
 
 		it("should update term slug", async () => {
@@ -395,7 +391,6 @@ describe("TaxonomyRepository", () => {
 		});
 
 		it("should remove content associations when deleted", async () => {
-			// Setup: need a collection with content
 			db = await setupTestDatabaseWithCollections();
 			repo = new TaxonomyRepository(db);
 			const contentRepo = new ContentRepository(db);
@@ -414,14 +409,11 @@ describe("TaxonomyRepository", () => {
 
 			await repo.attachToEntry("post", content.id, term.id);
 
-			// Verify attached
 			const termsBefore = await repo.getTermsForEntry("post", content.id);
 			expect(termsBefore).toHaveLength(1);
 
-			// Delete term
 			await repo.delete(term.id);
 
-			// Verify association removed
 			const termsAfter = await repo.getTermsForEntry("post", content.id);
 			expect(termsAfter).toHaveLength(0);
 		});
@@ -432,7 +424,6 @@ describe("TaxonomyRepository", () => {
 		let contentId: string;
 
 		beforeEach(async () => {
-			// Need collections for content
 			db = await setupTestDatabaseWithCollections();
 			repo = new TaxonomyRepository(db);
 			contentRepo = new ContentRepository(db);
@@ -498,7 +489,6 @@ describe("TaxonomyRepository", () => {
 					label: "Test",
 				});
 
-				// Should not throw
 				await expect(repo.detachFromEntry("post", contentId, term.id)).resolves.toBeUndefined();
 			});
 		});
@@ -572,11 +562,9 @@ describe("TaxonomyRepository", () => {
 					label: "Rust",
 				});
 
-				// Initial state: js and ts
 				await repo.attachToEntry("post", contentId, tag1.id);
 				await repo.attachToEntry("post", contentId, tag2.id);
 
-				// Set to: ts and rust (removes js, keeps ts, adds rust)
 				await repo.setTermsForEntry("post", contentId, "tags", [tag2.id, tag3.id]);
 
 				const terms = await repo.getTermsForEntry("post", contentId, "tags");
@@ -599,7 +587,6 @@ describe("TaxonomyRepository", () => {
 				await repo.attachToEntry("post", contentId, tag.id);
 				await repo.attachToEntry("post", contentId, cat.id);
 
-				// Clear tags but keep categories
 				await repo.setTermsForEntry("post", contentId, "tags", []);
 
 				const tags = await repo.getTermsForEntry("post", contentId, "tags");
@@ -643,7 +630,6 @@ describe("TaxonomyRepository", () => {
 					label: "JavaScript",
 				});
 
-				// Create more posts
 				const post2 = await contentRepo.create({
 					type: "post",
 					slug: "post-2",
@@ -657,7 +643,6 @@ describe("TaxonomyRepository", () => {
 
 				await repo.attachToEntry("post", contentId, tag.id);
 				await repo.attachToEntry("post", post2.id, tag.id);
-				// post3 doesn't have the tag
 
 				const count = await repo.countEntriesWithTerm(tag.id);
 				expect(count).toBe(2);

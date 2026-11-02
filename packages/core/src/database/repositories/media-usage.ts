@@ -271,7 +271,6 @@ export interface MediaUsageSource {
 export interface MediaUsageGuardedReplaceResult {
 	replaced: boolean;
 	unchanged: boolean;
-	/** Populated only when a guarded replacement did not win the current source row. */
 	source: MediaUsageSource | null;
 }
 
@@ -295,7 +294,6 @@ export interface MediaUsageGuardedAbsentDeleteResult extends MediaUsageGuardedDe
 
 export interface MediaUsageGuardedAttemptResult {
 	attempted: boolean;
-	/** Populated only when a guarded attempted mark did not win the current source row. */
 	source: MediaUsageSource | null;
 }
 
@@ -570,7 +568,6 @@ interface GroupedUsageRow extends JoinedUsageRow {
 	has_more: number;
 }
 
-/** Persistence-only repository for the internal media usage projection tables. */
 export class MediaUsageRepository {
 	constructor(private db: Kysely<Database>) {}
 
@@ -3682,8 +3679,6 @@ export class MediaUsageRepository {
 			source_version: source.sourceVersion ?? null,
 			source_fingerprint: source.sourceFingerprint ?? null,
 			identity_version: source.identityVersion ?? null,
-			// Complete means this source was fully refreshed for the extractor's current
-			// schema/version coverage, not that every possible reference shape is known.
 			source_completeness: source.sourceCompleteness ?? "complete",
 			last_attempted_at: source.lastAttemptedAt ?? now,
 			last_error_code: null,

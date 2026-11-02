@@ -1,8 +1,3 @@
-import {
-	resolveRouteDestination,
-	type RouteDestination,
-	type RouteOptions,
-} from "@superboard/contracts/route-registry";
 import { runPluginTask, PluginTaskUnavailable } from "@superboard/contracts/plugin-task";
 import {
 	signProjectContext,
@@ -11,16 +6,21 @@ import {
 	type ProjectContext,
 	type ProjectEnvironment,
 } from "@superboard/contracts/project-context";
+import {
+	resolveRouteDestination,
+	type RouteDestination,
+	type RouteOptions,
+} from "@superboard/contracts/route-registry";
 import type { SiteOperatorIdentity } from "@superboard/contracts/site-operator";
 import type { Context } from "hono";
 
+import { collectSdkTelemetry } from "../routes/core-collection.js";
 import type { Env } from "../types";
 import { getRequestAuthContext } from "./auth";
 import { isFlowsLegacyCutoverEnabled } from "./flows-cutover-state";
 import { flowsInternalToken } from "./flows-internal-auth";
 import { readJsonObjectLimited } from "./http-limits";
 import { resolveSiteOperatorInstance } from "./site-operator-scope";
-import { collectSdkTelemetry } from "../routes/core-collection.js";
 
 export const DOMAIN_MODULES = {
 	app: { binding: "APP_MODULE", pluginId: "superboard-user" },
@@ -277,11 +277,6 @@ export async function proxyDomainModule(
 	}
 }
 
-/**
- * Keep legacy dashboard contracts alive without keeping their Workers active.
- * Development forwards these routes to Flows; a target that has not cut over
- * yet keeps using its original service binding.
- */
 export async function proxyLegacyDomainModule(
 	c: GatewayContext,
 	legacyModuleName: LegacyDomainModuleName,
@@ -479,12 +474,6 @@ export async function proxyDomainSdkModule(
 	}
 }
 
-/**
- * The public Flows SDK authenticates with its project/environment contract in
- * the Flows Worker, not with a Dashboard bearer session. The API
- * gateway therefore streams the request unchanged to the private binding and
- * preserves WebSocket upgrades.
- */
 export async function proxyPublicFlows(c: GatewayContext, internalPath: string): Promise<Response> {
 	const requestId = requestIdFrom(c.req.raw);
 	if (!c.env.FLOWS_MODULE) {
@@ -669,8 +658,6 @@ export async function isProjectReadOnly(db: D1Database, projectId: number): Prom
 		.prepare("SELECT enabled FROM module_cutover_maintenance WHERE project_id = ? LIMIT 1")
 		.bind(projectId)
 		.first<{ enabled: number }>()
-		// The gateway can be rolled back before migration 0051 without blocking all
-		// traffic. A failed/missing cutover table therefore means maintenance off.
 		.catch(() => null);
 	return Number(row?.enabled ?? 0) === 1;
 }
@@ -724,8 +711,6 @@ export async function forwardDomainRequest(
 	const headers = internalHeaders(c.req.raw.headers, context, internalToken, signature);
 
 	try {
-		// Constructing from the source Request preserves body streaming without
-		// buffering it or requiring Node's non-standard `duplex` RequestInit key.
 		const forwardedRequest = new Request(internalUrl, c.req.raw);
 		const response = await service.fetch(new Request(forwardedRequest, { headers }));
 		const responseHeaders = new Headers(response.headers);

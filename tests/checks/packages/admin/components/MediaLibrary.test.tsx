@@ -75,10 +75,6 @@ vi.mock("../../../../../packages/admin/src/components/RouterLinkButton.js", () =
 	),
 }));
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const UPLOAD_CTA_PATTERN = /Upload images, videos, and documents to keep reusable assets/;
 const UPLOAD_TO_LIBRARY_PATTERN = /Upload to Library/;
 const UPLOAD_FILES_PATTERN = /Upload Files/;
@@ -933,9 +929,7 @@ describe("MediaLibrary", () => {
 				makeMediaItem({ id: "2", filename: "image2.jpg" }),
 			];
 			const screen = await renderLibrary({ items });
-			// Grid view is default — items render as buttons with alt text
 			await expect.element(screen.getByRole("tab", { name: "Grid view" })).toBeInTheDocument();
-			// Images should be present via their img alt attributes
 			await expect.element(screen.getByAltText("image1.jpg")).toBeInTheDocument();
 			await expect.element(screen.getByAltText("image2.jpg")).toBeInTheDocument();
 		});
@@ -963,13 +957,10 @@ describe("MediaLibrary", () => {
 			const items = [makeMediaItem({ id: "1", filename: "test.jpg" })];
 			const screen = await renderLibrary({ items });
 
-			// Default is grid
 			const listBtn = screen.getByRole("tab", { name: "List view" });
 			await listBtn.click();
 
-			// In list view, filename appears in table cell
 			await expect.element(screen.getByText("test.jpg")).toBeInTheDocument();
-			// Table headers should be visible
 			await expect.element(screen.getByText("Filename")).toBeInTheDocument();
 			await expect.element(screen.getByText("Type", { exact: true })).toBeInTheDocument();
 			await expect.element(screen.getByText("Size")).toBeInTheDocument();
@@ -1093,10 +1084,8 @@ describe("MediaLibrary", () => {
 			const items = [makeMediaItem({ id: "1", filename: "photo.jpg", alt: "A photo" })];
 			const screen = await renderLibrary({ items });
 
-			// Click the grid item button
 			await screen.getByRole("button", { name: "photo.jpg" }).click();
 
-			// MediaDetailPanel should open showing the item details
 			await expect.element(screen.getByText("Media Details")).toBeInTheDocument();
 		});
 
@@ -1209,7 +1198,6 @@ describe("MediaLibrary", () => {
 	describe("loading state", () => {
 		it("displays loading state", async () => {
 			const screen = await renderLibrary({ isLoading: true });
-			// When loading, neither empty state nor items are shown
 			expect(screen.getByText("Your media library is empty").query()).toBeNull();
 		});
 	});
@@ -1226,7 +1214,6 @@ describe("MediaLibrary", () => {
 			];
 			const screen = await renderLibrary({ items });
 
-			// Switch to list view
 			await screen.getByRole("tab", { name: "List view" }).click();
 
 			await expect.element(screen.getByText("document.pdf")).toBeInTheDocument();
@@ -1364,7 +1351,6 @@ describe("MediaLibrary", () => {
 		});
 	});
 
-	// #1221: the local library gained filename search + a type filter.
 	describe("local search and filter", () => {
 		it("reports the debounced filename query upward", async () => {
 			const onLocalSearchChange = vi.fn();
@@ -1383,7 +1369,6 @@ describe("MediaLibrary", () => {
 			const items = [makeMediaItem({ id: "1", filename: "a.jpg" })];
 			const screen = await renderLibrary({ items, onLocalMimeFilterChange });
 
-			// Open the type filter and choose Images.
 			await screen.getByRole("combobox", { name: "Filter by type" }).click();
 			await screen.getByRole("option", { name: "Images" }).click();
 
@@ -1482,8 +1467,6 @@ describe("MediaLibrary", () => {
 		const STREAM_POSTER =
 			"https://customer-abc123.cloudflarestream.com/UID/thumbnails/thumbnail.jpg";
 
-		// A Cloudflare Stream item: not an image, poster in `previewUrl`, and the
-		// byte size reported only under `meta`.
 		function makeStreamProviderItem(overrides: Partial<MediaProviderItem> = {}): MediaProviderItem {
 			return {
 				id: "6a4677c7694f6e2e4270540231dd47ff",

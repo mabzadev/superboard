@@ -1,13 +1,3 @@
-/**
- * Robots.txt endpoint
- *
- * GET /robots.txt - Serves robots.txt with sitemap reference
- *
- * If a custom robots.txt is configured in SEO settings, that is returned.
- * Otherwise generates a default that allows all crawlers and references
- * the sitemap.
- */
-
 import type { APIRoute } from "astro";
 
 import { getPublicOrigin } from "#api/public-url.js";
@@ -21,7 +11,6 @@ export const GET: APIRoute = async ({ locals, url }) => {
 	const { emdash } = locals;
 
 	if (!emdash?.db) {
-		// Return a permissive default if CMS isn't initialized
 		return new Response("User-agent: *\nAllow: /\n", {
 			status: 200,
 			headers: { "Content-Type": "text/plain; charset=utf-8" },
@@ -36,9 +25,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
 		);
 		const sitemapUrl = `${siteUrl}/sitemap.xml`;
 
-		// Use custom robots.txt if configured
 		if (settings.seo?.robotsTxt) {
-			// Append sitemap directive if not already present
 			let content = settings.seo.robotsTxt;
 			if (!content.toLowerCase().includes("sitemap:")) {
 				content = `${content.trimEnd()}\n\nSitemap: ${sitemapUrl}\n`;
@@ -53,7 +40,6 @@ export const GET: APIRoute = async ({ locals, url }) => {
 			});
 		}
 
-		// Generate default robots.txt
 		const defaultRobots = [
 			"User-agent: *",
 			"Allow: /",

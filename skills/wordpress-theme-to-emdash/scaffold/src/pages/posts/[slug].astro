@@ -1,14 +1,4 @@
 ---
-/**
- * Single Post
- *
- * Demonstrates:
- * - getEmDashEntry for fetching a single entry
- * - getEntryTerms for taxonomy terms (NO db parameter!)
- * - PortableText component for rich content
- * - Proper image field access
- */
-
 import { getEmDashEntry, getEntryTerms } from "emdash";
 import { PortableText } from "emdash/ui";
 import Base from "../../layouts/Base.astro";
@@ -25,7 +15,6 @@ if (!post) {
 	return Astro.redirect("/404");
 }
 
-// Get taxonomy terms - NOTE: no db parameter!
 const categories = await getEntryTerms("posts", post.id, "categories");
 const tags = await getEntryTerms("posts", post.id, "tags");
 
@@ -67,7 +56,6 @@ const formattedDate = post.data.published_at
 				</div>
 			</header>
 
-			{/* IMPORTANT: Check .src, not just the field */}
 			{
 				post.data.featured_image?.src && (
 					<div class="post-featured-image">

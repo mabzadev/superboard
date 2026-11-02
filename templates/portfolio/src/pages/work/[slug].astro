@@ -18,21 +18,16 @@ if (!project) {
 
 if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
 
-// Related projects: order by date in the DB and request a small lookahead
-// so we can drop the current entry without re-querying. Avoids loading
-// every project just to slice off two.
 const { entries: relatedProjects } = await getEmDashCollection("projects", {
 	orderBy: { published_at: "desc" },
 	limit: 3,
 });
 const otherProjects = relatedProjects.filter((p) => p.id !== project.id).slice(0, 2);
 
-// Parse gallery if present
 const gallery = project.data.gallery as
 	| Array<{ url: string; alt?: string }>
 	| undefined;
 
-// Get image src for OG image
 function getImageSrc(img: unknown): string | undefined {
 	if (!img || typeof img !== "object") return undefined;
 	const image = img as Record<string, unknown>;

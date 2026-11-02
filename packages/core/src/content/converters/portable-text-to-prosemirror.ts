@@ -1,9 +1,3 @@
-/**
- * Portable Text to ProseMirror Converter
- *
- * Converts Portable Text to TipTap's ProseMirror JSON format for editing.
- */
-
 import { sanitizeGalleryImages } from "./gallery.js";
 import {
 	UnsupportedPortableTextMarksError,
@@ -28,9 +22,6 @@ import type {
 	PortableTextCodeBlock,
 } from "./types.js";
 
-/**
- * Convert Portable Text to ProseMirror document
- */
 export function portableTextToProsemirror(blocks: PortableTextBlock[]): ProseMirrorDocument {
 	if (!blocks || blocks.length === 0) {
 		return {
@@ -46,17 +37,7 @@ export function portableTextToProsemirror(blocks: PortableTextBlock[]): ProseMir
 	while (i < blocks.length) {
 		const block = blocks[i];
 
-		// Check for list items
 		if (isTextBlock(block) && block.listItem) {
-			// Collect a list "run": the level=1 anchor plus everything that
-			// nests under it (level > 1, regardless of listItem type — a number
-			// child under a bullet parent is still part of the same tree). A
-			// level=1 block with a different listItem ends the run. Without the
-			// `level > 1` carve-out the run breaks on the first nested type
-			// switch and the descendant subtree leaks out as its own top-level
-			// list (e.g. `[bullet L1, number L2, bullet L1]` would render as
-			// three sibling lists instead of one bullet list with a numbered
-			// child).
 			const listBlocks: PortableTextTextBlock[] = [];
 			const listType = block.listItem;
 			const runStart = i;
@@ -82,12 +63,6 @@ export function portableTextToProsemirror(blocks: PortableTextBlock[]): ProseMir
 
 			content.push(convertList(listBlocks, listType, `root:${runStart}`));
 		} else if (isTextBlock(block) && block.style === "blockquote") {
-			// Collect a blockquote "run": Portable Text is flat, so a
-			// multi-paragraph quote is stored as consecutive blocks with
-			// style "blockquote" (that's what the Gutenberg importer emits
-			// and what prosemirrorToPortableText serializes back to).
-			// Without this grouping each paragraph became its own quote
-			// node, and editor merges reverted on reload.
 			const quoteBlocks: PortableTextTextBlock[] = [];
 			while (i < blocks.length) {
 				const current = blocks[i];
@@ -153,19 +128,10 @@ function belongsToNestedGroup(
 	return anchorId ? itemId === anchorId : itemId === undefined;
 }
 
-/**
- * Type guard for text blocks
- */
 function isTextBlock(block: PortableTextBlock): block is PortableTextTextBlock {
 	return block._type === "block";
 }
 
-/**
- * Type guard for image blocks.
- * Checks both `_type` and that `asset` is a valid object — image blocks
- * without an `asset` wrapper (e.g. `{ _type: "image", url: "..." }`) are
- * malformed and should not be cast to `PortableTextImageBlock`.
- */
 function isImageBlock(block: PortableTextBlock): block is PortableTextImageBlock {
 	return (
 		block._type === "image" &&
@@ -175,24 +141,14 @@ function isImageBlock(block: PortableTextBlock): block is PortableTextImageBlock
 	);
 }
 
-/**
- * Type guard for gallery blocks. Requires an `images` array — a gallery
- * without one is malformed and falls through to the unknown-block path.
- */
 function isGalleryBlock(block: PortableTextBlock): block is PortableTextGalleryBlock {
 	return block._type === "gallery" && "images" in block && Array.isArray(block.images);
 }
 
-/**
- * Type guard for code blocks
- */
 function isCodeBlock(block: PortableTextBlock): block is PortableTextCodeBlock {
 	return block._type === "code";
 }
 
-/**
- * Convert a single Portable Text block to ProseMirror node
- */
 function convertBlock(block: PortableTextBlock): ProseMirrorNode | null {
 	if (isTextBlock(block)) {
 		return convertTextBlock(block);
@@ -201,7 +157,6 @@ function convertBlock(block: PortableTextBlock): ProseMirrorNode | null {
 		return convertImage(block);
 	}
 	if (block._type === "image") {
-		// Malformed image block (no asset wrapper) — extract url from top level
 		return convertMalformedImage(block);
 	}
 	if (isGalleryBlock(block)) {
@@ -226,7 +181,6 @@ function convertBlock(block: PortableTextBlock): ProseMirrorNode | null {
 	if (block._type === "break") {
 		return { type: "horizontalRule" };
 	}
-	// Unknown block - wrap in a div or preserve as placeholder
 	return {
 		type: "paragraph",
 		content: [
@@ -239,16 +193,11 @@ function convertBlock(block: PortableTextBlock): ProseMirrorNode | null {
 	};
 }
 
-/**
- * Convert text block to ProseMirror paragraph or heading
- */
 function convertTextBlock(block: PortableTextTextBlock): ProseMirrorNode | null {
 	const { style = "normal", children, markDefs = [] } = block;
 
-	// Convert children to ProseMirror nodes
 	const content = convertSpans(children, markDefs);
 
-	// Determine node type based on style
 	switch (style) {
 		case "h1":
 		case "h2":
@@ -288,15 +237,11 @@ function convertTextBlock(block: PortableTextTextBlock): ProseMirrorNode | null 
 	}
 }
 
-/**
- * Convert list items to ProseMirror list
- */
 function convertList(
 	items: PortableTextTextBlock[],
 	listType: "bullet" | "number",
 	context: string,
 ): ProseMirrorNode {
-	// Group items by level
 	const rootItems: ProseMirrorNode[] = [];
 	let i = 0;
 
@@ -305,7 +250,6 @@ function convertList(
 		const level = item.level || 1;
 
 		if (level === 1) {
-			// Collect nested items for this root item
 			const nestedItems: PortableTextTextBlock[] = [];
 			i++;
 
@@ -318,7 +262,6 @@ function convertList(
 				convertListItem(item, nestedItems, listType, `${context}:${rootItems.length}`),
 			);
 		} else {
-			// Orphan nested item - treat as root
 			rootItems.push(convertListItem(item, [], listType, `${context}:${rootItems.length}`));
 			i++;
 		}
@@ -334,9 +277,6 @@ function convertList(
 	};
 }
 
-/**
- * Convert a single list item to ProseMirror
- */
 function convertListItem(
 	item: PortableTextTextBlock,
 	nestedItems: PortableTextTextBlock[],
@@ -345,24 +285,13 @@ function convertListItem(
 ): ProseMirrorNode {
 	const content: ProseMirrorNode[] = [];
 
-	// Add paragraph content
 	const spans = convertSpans(item.children, item.markDefs || []);
 	content.push({
 		type: "paragraph",
 		content: spans.length > 0 ? spans : undefined,
 	});
 
-	// Handle nested items
 	if (nestedItems.length > 0) {
-		// The shallowest level in `nestedItems` is the effective root of this
-		// item's nested subtree. A new sub-list only starts when we hit
-		// another block at that root level with a different `listItem` type;
-		// deeper blocks (level > minLevel) belong to the current group as
-		// descendants regardless of their own `listItem`. The previous
-		// grouping broke on any type change at any depth, so a deep mixed
-		// tree like `bullet L1 → number L2 → bullet L3 → number L2` would
-		// emit C(L3) as a sibling list under A(L1) instead of nesting it
-		// under B(L2), then degrade C to L2 on round-trip.
 		let minLevel = Infinity;
 		for (const ni of nestedItems) {
 			const level = ni.level || 2;
@@ -384,7 +313,6 @@ function convertListItem(
 			);
 
 			if (nestedGroup.length > 0) {
-				// Decrease level for nested conversion
 				const adjustedGroup = nestedGroup.map((ni) => ({
 					...ni,
 					level: (ni.level || 2) - 1,
@@ -402,9 +330,6 @@ function convertListItem(
 	};
 }
 
-/**
- * Convert Portable Text spans to ProseMirror text nodes
- */
 function convertSpans(
 	spans: PortableTextSpan[],
 	markDefs: PortableTextMarkDef[],
@@ -415,13 +340,11 @@ function convertSpans(
 	for (const span of spans) {
 		if (span._type !== "span") continue;
 
-		// Handle newlines in text
 		const parts = span.text.split("\n");
 
 		for (let i = 0; i < parts.length; i++) {
 			const text = parts[i];
 
-			// Add text node
 			if (text.length > 0) {
 				const marks = convertMarks(span.marks || [], markDefsMap);
 				const node: ProseMirrorNode = {
@@ -434,7 +357,6 @@ function convertSpans(
 				nodes.push(node);
 			}
 
-			// Add hard break between parts (not after last)
 			if (i < parts.length - 1) {
 				nodes.push({ type: "hardBreak" });
 			}
@@ -444,9 +366,6 @@ function convertSpans(
 	return nodes;
 }
 
-/**
- * Convert Portable Text marks to ProseMirror marks
- */
 function convertMarks(
 	marks: string[],
 	markDefs: Map<string, PortableTextMarkDef>,
@@ -484,7 +403,6 @@ function convertMarks(
 				break;
 
 			default: {
-				// Check if it's a mark definition reference
 				const markDef = markDefs.get(mark);
 				if (markDef?._type === "link") {
 					pmMarks.push({
@@ -507,9 +425,6 @@ function convertMarks(
 	return pmMarks;
 }
 
-/**
- * Convert image block to ProseMirror
- */
 function convertImage(block: PortableTextImageBlock): ProseMirrorNode {
 	return {
 		type: "image",
@@ -527,13 +442,7 @@ function convertImage(block: PortableTextImageBlock): ProseMirrorNode {
 	};
 }
 
-/**
- * Convert a malformed image block (missing `asset` wrapper) to ProseMirror.
- * Handles blocks like `{ _type: "image", url: "...", alt: "..." }` that may
- * originate from migrations or third-party imports.
- */
 function convertMalformedImage(block: PortableTextBlock): ProseMirrorNode {
-	// PortableTextUnknownBlock allows indexed access via [key: string]: unknown
 	const url = "url" in block && typeof block.url === "string" ? block.url : "";
 	const alt = "alt" in block && typeof block.alt === "string" ? block.alt : "";
 	const caption = "caption" in block && typeof block.caption === "string" ? block.caption : "";
@@ -563,9 +472,6 @@ function convertMalformedImage(block: PortableTextBlock): ProseMirrorNode {
 	};
 }
 
-/**
- * Convert code block to ProseMirror
- */
 function convertCodeBlock(block: PortableTextCodeBlock): ProseMirrorNode {
 	return {
 		type: "codeBlock",

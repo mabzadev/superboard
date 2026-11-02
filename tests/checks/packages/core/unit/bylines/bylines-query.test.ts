@@ -9,7 +9,6 @@ import { setI18nConfig } from "../../../../../../packages/core/src/i18n/config.j
 import { SQL_BATCH_SIZE } from "../../../../../../packages/core/src/utils/chunks.js";
 import { setupTestDatabaseWithCollections, teardownTestDatabase } from "../../utils/test-db.js";
 
-// Mock the loader's getDb to return our test database
 vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 	getDb: vi.fn(),
 }));
@@ -79,10 +78,6 @@ describe("Byline query functions", () => {
 		});
 
 		it("walks the locale fallback chain when the requested locale has no row", async () => {
-			// Identity lookup pattern — mirrors getTerm / getMenu in PR #916.
-			// Locale fallback IS appropriate here ("show me this byline") in
-			// contrast to credit hydration ("what should render on this
-			// entry"), which stays strict.
 			setI18nConfig({ defaultLocale: "en", locales: ["en", "fr", "de"] });
 			try {
 				const anchor = await bylineRepo.create({
@@ -96,8 +91,6 @@ describe("Byline query functions", () => {
 					locale: "fr",
 					translationOf: anchor.id,
 				});
-				// No de sibling. Requesting de falls back through the chain to
-				// the configured defaultLocale (en).
 				const result = await getBylineBySlug("jane", { locale: "de" });
 				expect(result?.locale).toBe("en");
 				expect(result?.displayName).toBe("Jane Doe");
@@ -163,7 +156,6 @@ describe("Byline query functions", () => {
 		});
 
 		it("falls back to user-linked byline when no explicit credits", async () => {
-			// Create a user
 			const userRepo = new UserRepository(db);
 			const user = await userRepo.create({
 				email: "author@example.com",
@@ -171,14 +163,12 @@ describe("Byline query functions", () => {
 				role: "editor",
 			});
 
-			// Create a byline linked to the user
 			await bylineRepo.create({
 				slug: "author-user",
 				displayName: "Author User",
 				userId: user.id,
 			});
 
-			// Create a post with this user as author, no explicit bylines
 			const post = await contentRepo.create({
 				type: "post",
 				slug: "authored-post",
@@ -307,7 +297,6 @@ describe("Byline query functions", () => {
 				{ bylineId: author1.id },
 				{ bylineId: author2.id, roleLabel: "Contributor" },
 			]);
-			// post3 has no bylines
 
 			const result = await getBylinesForEntries(
 				"post",
@@ -355,23 +344,8 @@ describe("Byline query functions", () => {
 		});
 
 		it("hydrates customFields on author-fallback bylines across disjoint locale buckets", async () => {
-			// Regression for the Phase 3 review's "author-fallback still
-			// calls findByUserIds per bucket and hydrates inside each
-			// call" finding. Even with the explicit-credit path batched,
-			// the per-bucket findByUserIds calls each fired their own
-			// group-shared query for the author's translation_group — and
-			// when authors differ per locale (the disjoint case), the
-			// groups don't overlap, so the per-bucket caches don't help.
-			//
-			// Fix: `findByUserIds` gains `skipHydration`, the author-
-			// fallback path uses it, and the fallback bylines feed into
-			// the same `hydrationTargets` array as the explicit credits.
-			// One batched `hydrateBylineCustomFields` covers all bylines
-			// at the end of `getBylinesForEntries`.
 			const userRepo = new UserRepository(db);
 
-			// Two distinct authors (disjoint identities → disjoint
-			// translation_groups), one credited in each locale.
 			const userEn = await userRepo.create({
 				email: "en-author@example.com",
 				displayName: "EN Author",
@@ -396,11 +370,6 @@ describe("Byline query functions", () => {
 				locale: "fr",
 			});
 
-			// Register a non-translatable byline custom field and seed
-			// distinct values for each author's translation_group. Verifying
-			// that BOTH authors' values surface after a single
-			// getBylinesForEntries call proves the batched hydration
-			// covers the fallback path.
 			const { BylineSchemaRegistry } =
 				await import("../../../../../../packages/core/src/schema/byline-registry.js");
 			const { sql } = await import("kysely");
@@ -440,12 +409,6 @@ describe("Byline query functions", () => {
 				authorId: userFr.id,
 			});
 
-			// Count queries against `_emdash_byline_field_group_values`
-			// to assert the AC envelope holds. The pre-fix path fired one
-			// query per locale bucket (2 here, since the buckets reference
-			// disjoint translation_groups). The fix defers fallback
-			// hydration into the single batched call and lands at exactly
-			// one query for the whole pass.
 			let groupValueQueries = 0;
 			const originalSelectFrom = db.selectFrom.bind(db);
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- spy on a Kysely chain entry point; the chain values flow through unchanged
@@ -468,15 +431,9 @@ describe("Byline query functions", () => {
 			const frCredits = result.get(frPost.id) ?? [];
 			expect(enCredits[0]?.source).toBe("inferred");
 			expect(frCredits[0]?.source).toBe("inferred");
-			// Both bylines must carry their group-shared customFields.
 			expect(enCredits[0]?.byline.customFields?.twitter_handle).toBe("@en");
 			expect(frCredits[0]?.byline.customFields?.twitter_handle).toBe("@fr");
 
-			// Phase 3 AC #8: "+1 batched query per hydration pass" for
-			// group-shared values — meaning one query for the entire
-			// `getBylinesForEntries` call regardless of bucket count. The
-			// pre-fix author-fallback path issued one per bucket; this
-			// asserts it now lands at one.
 			expect(groupValueQueries).toBe(1);
 		});
 
@@ -754,14 +711,11 @@ describe("Byline query functions", () => {
 				authorId: user.id,
 			});
 
-			// No fr sibling exists for the user's byline. Strict hydration
-			// returns no inferred credit — same rule as explicit credits.
 			const result = await getBylinesForEntries("post", [
 				{ id: frPost.id, authorId: frPost.authorId, locale: "fr" },
 			]);
 			expect(result.get(frPost.id)).toEqual([]);
 
-			// EN entry by the same author DOES get the inferred byline.
 			const enPost = await contentRepo.create({
 				type: "post",
 				slug: "en-inferred",

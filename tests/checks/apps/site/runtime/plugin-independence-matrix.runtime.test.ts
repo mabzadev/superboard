@@ -38,9 +38,7 @@ async function assertContribution(plugin: (typeof baseline.plugins)[number], pre
 	expect(release).not.toBeNull();
 	const routes = release!.runtime_release.front_route_manifest.routes;
 	for (const route of plugin.routes) {
-		// The historical login transition now belongs to the always-available operator core.
 		if (route.path === "/login") continue;
-		// Historical pages relocated by the Front path contract are served at their new path.
 		const relocated = new URL(
 			canonicalFrontHref(retiredFrontPageDestination(route.path) ?? route.path),
 			"https://superboard.invalid",

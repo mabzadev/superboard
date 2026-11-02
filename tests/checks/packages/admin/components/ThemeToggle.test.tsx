@@ -19,10 +19,6 @@ describe("ThemeToggle", () => {
 		document.documentElement.removeAttribute("data-theme");
 	});
 
-	// Kumo 2.x's <Button title="..."> wraps the button in a Tooltip popup
-	// rather than setting the native `title` attribute. The current theme is
-	// also exposed in `aria-label`, which is what these assertions read.
-
 	it("renders with system theme by default", async () => {
 		const screen = await render(<TestThemeToggle />);
 		const button = screen.getByRole("button");
@@ -41,18 +37,14 @@ describe("ThemeToggle", () => {
 		const screen = await render(<TestThemeToggle />);
 		const button = screen.getByRole("button");
 
-		// Start: system
 		await expect.element(button).toHaveAttribute("aria-label", expect.stringContaining("System"));
 
-		// Click 1: light
 		await button.click();
 		await expect.element(button).toHaveAttribute("aria-label", expect.stringContaining("Light"));
 
-		// Click 2: dark
 		await button.click();
 		await expect.element(button).toHaveAttribute("aria-label", expect.stringContaining("Dark"));
 
-		// Click 3: back to system
 		await button.click();
 		await expect.element(button).toHaveAttribute("aria-label", expect.stringContaining("System"));
 	});
@@ -60,7 +52,7 @@ describe("ThemeToggle", () => {
 	it("persists theme to localStorage", async () => {
 		const screen = await render(<TestThemeToggle />);
 		const button = screen.getByRole("button");
-		await button.click(); // system -> light
+		await button.click();
 		expect(localStorage.getItem("emdash-theme")).toBe("light");
 	});
 

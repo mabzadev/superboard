@@ -124,8 +124,6 @@ describe("Support widget authentication", () => {
 			await signedRequest({ idempotencyKey: "widget-mutation-other" }),
 		];
 
-		// Every vector is signed using its own changed value above. Replace its
-		// signature with the original request signature to prove canonical binding.
 		const originalSignature = signed.headers.get("x-superboard-widget-signature")!;
 		for (const request of vectors) {
 			request.headers.set("x-superboard-widget-signature", originalSignature);

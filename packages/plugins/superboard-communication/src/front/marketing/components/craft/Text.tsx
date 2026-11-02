@@ -81,7 +81,7 @@ export const TextComponent = ({
 	const handleMouseLeave = () => {
 		hoverTimeout.current = setTimeout(() => {
 			setIsHovered(false);
-		}, 100); // Delay hiding by 200ms
+		}, 100);
 		setIsHovered(false);
 	};
 

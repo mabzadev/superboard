@@ -1,10 +1,3 @@
-/**
- * Integration tests for the configurable media upload size limit.
- *
- * Starts a server with maxUploadSize=1 MB and verifies that both
- * upload paths (direct multipart and signed-URL) enforce the limit.
- */
-
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { assertNodeVersion, createTestServer, type TestServerContext } from "../server.js";
@@ -65,7 +58,6 @@ describe("direct multipart upload", () => {
 			body,
 		});
 
-		// 201 = created successfully
 		expect(res.status).toBe(201);
 	});
 });
@@ -92,8 +84,6 @@ describe("signed-URL upload (upload-url endpoint)", () => {
 	});
 
 	it("passes size validation for a declared size within maxUploadSize", async () => {
-		// Local storage does not support signed URLs, so a valid-size request
-		// proceeds past Zod validation and fails later with 501.
 		const res = await fetch(`${ctx.baseUrl}/_emdash/api/media/upload-url`, {
 			method: "POST",
 			headers: {
@@ -108,8 +98,6 @@ describe("signed-URL upload (upload-url endpoint)", () => {
 			}),
 		});
 
-		// 501 means the request passed size validation and hit the storage layer.
-		// A size-rejection would produce 400.
 		expect(res.status).toBe(501);
 	});
 });

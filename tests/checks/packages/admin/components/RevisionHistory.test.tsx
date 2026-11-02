@@ -8,7 +8,6 @@ import { RevisionHistory } from "../../../../../packages/admin/src/components/Re
 import type { Revision, RevisionListResponse } from "../../../../../packages/admin/src/lib/api";
 import { render } from "../utils/render.tsx";
 
-// Mock the API module
 vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	const actual = await vi.importActual("../../../../../packages/admin/src/lib/api");
 	return {
@@ -18,7 +17,6 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	};
 });
 
-// Import mocked functions for test control
 import { fetchRevisions, restoreRevision } from "../../../../../packages/admin/src/lib/api";
 
 const mockFetchRevisions = fetchRevisions as Mock;
@@ -47,7 +45,7 @@ function makeRevision(overrides: Partial<Revision> = {}): Revision {
 		entryId: "entry-1",
 		data: { title: "Hello World", body: "Content here" },
 		authorId: "user-1",
-		createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+		createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
 		...overrides,
 	};
 }
@@ -61,8 +59,6 @@ beforeEach(() => {
 });
 
 describe("RevisionHistory", () => {
-	// ---- Starts collapsed ----
-
 	it("starts collapsed with only header visible", async () => {
 		const screen = await render(
 			<QueryWrapper>
@@ -71,7 +67,6 @@ describe("RevisionHistory", () => {
 		);
 
 		await expect.element(screen.getByText("Revisions")).toBeInTheDocument();
-		// The expanded content should not be visible
 		const noRevisionsText = screen.getByText("No revisions yet");
 		await expect.element(noRevisionsText).not.toBeInTheDocument();
 	});
@@ -87,8 +82,6 @@ describe("RevisionHistory", () => {
 		expect(trigger.style.width).toBe("calc(100% - 1.5rem)");
 	});
 
-	// ---- Query only fires when expanded ----
-
 	it("does not fetch revisions until expanded", async () => {
 		await render(
 			<QueryWrapper>
@@ -96,7 +89,6 @@ describe("RevisionHistory", () => {
 			</QueryWrapper>,
 		);
 
-		// Should not have called fetchRevisions while collapsed
 		expect(mockFetchRevisions).not.toHaveBeenCalled();
 	});
 
@@ -109,17 +101,13 @@ describe("RevisionHistory", () => {
 			</QueryWrapper>,
 		);
 
-		// Click header to expand
 		const header = screen.getByText("Revisions");
 		await header.click();
 
 		expect(mockFetchRevisions).toHaveBeenCalledWith("posts", "entry-1", { limit: 20 });
 	});
 
-	// ---- Shows loading state ----
-
 	it("shows loading state when expanded and fetching", async () => {
-		// Never resolve — keeps it in loading state
 		mockFetchRevisions.mockReturnValue(new Promise(() => {}));
 
 		const screen = await render(
@@ -130,25 +118,21 @@ describe("RevisionHistory", () => {
 
 		await screen.getByRole("button", { name: REVISIONS_BUTTON_REGEX }).click();
 
-		// Loader renders an SVG spinner — verify the loading container is present
-		// and that none of the "loaded" states are showing
 		const emptyText = screen.getByText("No revisions yet");
 		await expect.element(emptyText).not.toBeInTheDocument();
 		const errorText = screen.getByText("Failed to load revisions");
 		await expect.element(errorText).not.toBeInTheDocument();
 	});
 
-	// ---- Shows revision list with relative times ----
-
 	it("shows revision list with relative times", async () => {
 		const revisions = [
 			makeRevision({
 				id: "rev-1",
-				createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 mins ago
+				createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
 			}),
 			makeRevision({
 				id: "rev-2",
-				createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
+				createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
 			}),
 		];
 		mockFetchRevisions.mockResolvedValue(makeRevisionList(revisions));
@@ -164,8 +148,6 @@ describe("RevisionHistory", () => {
 		await expect.element(screen.getByText(TIME_REGEX_5_MINS)).toBeInTheDocument();
 		await expect.element(screen.getByText(TIME_REGEX_3_HOURS)).toBeInTheDocument();
 	});
-
-	// ---- First revision has "Current" badge ----
 
 	it("shows 'Current' badge on the first (latest) revision", async () => {
 		const revisions = [
@@ -188,8 +170,6 @@ describe("RevisionHistory", () => {
 		await expect.element(screen.getByText("Current")).toBeInTheDocument();
 	});
 
-	// ---- First revision does NOT have restore button ----
-
 	it("does not show restore button on the latest revision", async () => {
 		const revisions = [makeRevision({ id: "rev-1" })];
 		mockFetchRevisions.mockResolvedValue(makeRevisionList(revisions));
@@ -202,15 +182,11 @@ describe("RevisionHistory", () => {
 
 		await screen.getByText("Revisions").click();
 
-		// Wait for revision to appear
 		await expect.element(screen.getByText("Current")).toBeInTheDocument();
 
-		// The restore button has title "Restore this version" — should not exist for latest
 		const restoreButton = screen.getByRole("button", { name: RESTORE_BUTTON_REGEX });
 		await expect.element(restoreButton).not.toBeInTheDocument();
 	});
-
-	// ---- Non-latest revisions have restore button ----
 
 	it("shows restore button on non-latest revisions", async () => {
 		const revisions = [
@@ -230,15 +206,11 @@ describe("RevisionHistory", () => {
 
 		await screen.getByText("Revisions").click();
 
-		// Wait for revisions to load
 		await expect.element(screen.getByText("Current")).toBeInTheDocument();
 
-		// There should be a restore button for the non-latest revision
 		const restoreButton = screen.getByRole("button", { name: RESTORE_BUTTON_REGEX });
 		await expect.element(restoreButton).toBeInTheDocument();
 	});
-
-	// ---- Clicking revision toggles selection (shows content snapshot) ----
 
 	it("toggles content snapshot when clicking a revision", async () => {
 		const revisions = [makeRevision({ id: "rev-1", data: { title: "Latest content" } })];
@@ -253,24 +225,18 @@ describe("RevisionHistory", () => {
 		await screen.getByText("Revisions").click();
 		await expect.element(screen.getByText("Current")).toBeInTheDocument();
 
-		// Content snapshot should not be visible initially
 		const snapshotLabel = screen.getByText("Content snapshot:");
 		await expect.element(snapshotLabel).not.toBeInTheDocument();
 
-		// Click the revision to select it
 		const revisionButton = screen.getByText("Current").element().closest("button")!;
 		await userEvent.click(revisionButton);
 
-		// Content snapshot should now be visible
 		await expect.element(screen.getByText("Content snapshot:")).toBeInTheDocument();
 
-		// Click again to deselect
 		await userEvent.click(revisionButton);
 
 		await expect.element(screen.getByText("Content snapshot:")).not.toBeInTheDocument();
 	});
-
-	// ---- Restore calls confirm() then restoreRevision ----
 
 	it("opens confirm dialog then restoreRevision when confirmed", async () => {
 		mockRestoreRevision.mockResolvedValue({});
@@ -294,14 +260,11 @@ describe("RevisionHistory", () => {
 		await screen.getByText("Revisions").click();
 		await expect.element(screen.getByText("Current")).toBeInTheDocument();
 
-		// Click the restore button on the second revision
 		const restoreButton = screen.getByRole("button", { name: RESTORE_BUTTON_REGEX });
 		await restoreButton.click();
 
-		// ConfirmDialog should appear
 		await expect.element(screen.getByText("Restore Revision?")).toBeInTheDocument();
 
-		// Direct DOM click to bypass Base UI inert overlay
 		screen.getByRole("button", { name: "Restore" }).element().click();
 
 		await vi.waitFor(() => {
@@ -331,16 +294,12 @@ describe("RevisionHistory", () => {
 		const restoreButton = screen.getByRole("button", { name: RESTORE_BUTTON_REGEX });
 		await restoreButton.click();
 
-		// ConfirmDialog should appear
 		await expect.element(screen.getByText("Restore Revision?")).toBeInTheDocument();
 
-		// Direct DOM click to bypass Base UI inert overlay
 		screen.getByRole("button", { name: "Cancel" }).element().click();
 
 		expect(mockRestoreRevision).not.toHaveBeenCalled();
 	});
-
-	// ---- Error state ----
 
 	it("shows error message when fetching revisions fails", async () => {
 		mockFetchRevisions.mockRejectedValue(new Error("Network error"));
@@ -356,8 +315,6 @@ describe("RevisionHistory", () => {
 		await expect.element(screen.getByText("Failed to load revisions")).toBeInTheDocument();
 	});
 
-	// ---- Empty state ----
-
 	it("shows empty state when no revisions exist", async () => {
 		mockFetchRevisions.mockResolvedValue(makeRevisionList([]));
 
@@ -372,8 +329,6 @@ describe("RevisionHistory", () => {
 		await expect.element(screen.getByText("No revisions yet")).toBeInTheDocument();
 	});
 
-	// ---- Collapse hides revision content ----
-
 	it("hides revision content when collapsed after expanding", async () => {
 		mockFetchRevisions.mockResolvedValue(makeRevisionList([]));
 
@@ -385,18 +340,13 @@ describe("RevisionHistory", () => {
 
 		const headerButton = screen.getByRole("button", { name: REVISIONS_BUTTON_REGEX });
 
-		// Expand
 		await headerButton.click();
 		await expect.element(screen.getByText("No revisions yet")).toBeInTheDocument();
 
-		// Collapse
 		await headerButton.click();
 
-		// Content should be hidden
 		await expect.element(screen.getByText("No revisions yet")).not.toBeInTheDocument();
 	});
-
-	// ---- Shows total count in header ----
 
 	it("shows total count in header when revisions exist", async () => {
 		const revisions = [
@@ -420,11 +370,8 @@ describe("RevisionHistory", () => {
 
 		await screen.getByText("Revisions").click();
 
-		// Should show (3) next to "Revisions"
 		await expect.element(screen.getByText("(3)")).toBeInTheDocument();
 	});
-
-	// ---- Visual diff view ----
 
 	it("shows visual diff when selecting a non-latest revision", async () => {
 		const revisions = [
@@ -450,16 +397,13 @@ describe("RevisionHistory", () => {
 		await screen.getByText("Revisions").click();
 		await expect.element(screen.getByText("Current")).toBeInTheDocument();
 
-		// Click the second (non-latest) revision
 		const revisionButtons = screen.getByText("1 day ago").element().closest("button")!;
 		await userEvent.click(revisionButtons);
 
-		// Should show diff, not raw snapshot
 		await expect
 			.element(screen.getByText("from next revision", { exact: false }))
 			.toBeInTheDocument();
 
-		// Changed field values should appear in the diff
 		await expect.element(screen.getByText("Original Title")).toBeInTheDocument();
 		await expect.element(screen.getByText("Updated Title")).toBeInTheDocument();
 	});
@@ -487,11 +431,9 @@ describe("RevisionHistory", () => {
 
 		await screen.getByText("Revisions").click();
 
-		// Click the latest revision
 		const latestButton = screen.getByText("Current").element().closest("button")!;
 		await userEvent.click(latestButton);
 
-		// Should show raw JSON snapshot, not diff
 		await expect.element(screen.getByText("Content snapshot:")).toBeInTheDocument();
 	});
 });

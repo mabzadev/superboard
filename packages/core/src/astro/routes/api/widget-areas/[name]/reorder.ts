@@ -1,9 +1,3 @@
-/**
- * Reorder widgets endpoint
- *
- * POST /_emdash/api/widget-areas/:name/reorder
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -26,7 +20,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 	}
 
 	try {
-		// Get the area
 		const area = await db
 			.selectFrom("_emdash_widget_areas")
 			.select("id")
@@ -40,7 +33,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		const body = await parseBody(request, reorderWidgetsBody);
 		if (isParseError(body)) return body;
 
-		// Verify all widget IDs belong to this area
 		const existingWidgets = await db
 			.selectFrom("_emdash_widgets")
 			.select("id")
@@ -54,7 +46,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			}
 		}
 
-		// Update sort_order for each widget
 		await Promise.all(
 			body.widgetIds.map((id, index) =>
 				db.updateTable("_emdash_widgets").set({ sort_order: index }).where("id", "=", id).execute(),

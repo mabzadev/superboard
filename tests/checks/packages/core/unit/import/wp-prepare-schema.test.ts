@@ -1,10 +1,3 @@
-/**
- * Tests for WordPress import prepare schema validation
- *
- * Regression test for #167: wpPrepareBody schema defined fields as z.record()
- * but all producers (analyzer, admin UI) send an array of ImportFieldDef.
- */
-
 import { describe, expect, it } from "vitest";
 
 import { wpPrepareBody } from "../../../../../../packages/core/src/api/schemas/import.js";
@@ -84,7 +77,6 @@ describe("wpPrepareBody schema", () => {
 					fields: [
 						{
 							slug: "content",
-							// missing label, type, required
 						},
 					],
 				},

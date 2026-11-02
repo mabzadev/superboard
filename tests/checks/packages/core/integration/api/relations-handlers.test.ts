@@ -23,9 +23,6 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
-// setupForDialectWithCollections registers two collections: "post" and "page".
-// Relation create validates that both collections exist, so the handler tests
-// use those real slugs rather than fabricated names.
 const baseInput = {
 	name: "manages",
 	parentCollection: "post",
@@ -157,7 +154,6 @@ describeEachDialect("relations definition handlers", (dialect) => {
 			translationOf: en.data.relation.id,
 		});
 		expect(fr.success).toBe(true);
-		// A second fr translation collides on (translation_group, locale).
 		const dup = await handleRelationCreate(ctx.db, {
 			...baseInput,
 			locale: "fr",

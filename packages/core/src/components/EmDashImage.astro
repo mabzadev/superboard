@@ -1,21 +1,4 @@
 ---
-/**
- * EmDash Image component
- *
- * Renders images with responsive srcset for CDN providers that support it.
- * Uses the provider's getSrc function for URL-based image transformations.
- *
- * Usage:
- * ```astro
- * ---
- * import { Image } from "emdash/ui";
- * ---
- * <Image image={post.data.featured_image} />
- *
- * <!-- With overrides -->
- * <Image image={post.data.featured_image} class="hero" />
- * ```
- */
 import type { MediaValue } from "../fields/types.js";
 import type { HTMLAttributes } from "astro/types";
 import { Image as AstroImage, getImage } from "astro:assets";
@@ -34,17 +17,11 @@ interface Props extends Omit<
 	HTMLAttributes<"img">,
 	"src" | "width" | "height"
 > {
-	/** Image value from content field or media library */
 	image: MediaValue | string | undefined | null;
-	/** Override alt text (uses image.alt by default) */
 	alt?: string;
-	/** Override width (uses image.width by default) */
 	width?: number;
-	/** Override height (uses image.height by default) */
 	height?: number;
-	/** Priority loading (disables lazy loading) */
 	priority?: boolean;
-	/** Render the LQIP placeholder as an inline background. Disable for strict CSP. */
 	placeholder?: boolean;
 }
 
@@ -59,7 +36,6 @@ const {
 	...attrs
 } = Astro.props;
 
-// Normalize string URLs to object form
 function normalizeImage(
 	img: MediaValue | string | undefined | null
 ): MediaValue | null {
@@ -70,10 +46,6 @@ function normalizeImage(
 	return img;
 }
 
-/**
- * Build the URL for a local image. Prefers `meta.storageKey`; falls back to
- * the internal proxy with `img.id` when no storage key is available.
- */
 function buildLocalImageUrl(img: MediaValue): string {
 	return buildRenderMediaUrl(Astro.locals.emdash?.getPublicMediaUrl, {
 		storageKey: img.meta?.storageKey as string | undefined,
@@ -81,15 +53,12 @@ function buildLocalImageUrl(img: MediaValue): string {
 	});
 }
 
-/**
- * Generate srcset using provider's getSrc function
- */
 function generateSrcset(
 	getSrc: NonNullable<ImageEmbed["getSrc"]>,
 	maxWidth: number,
 	aspectRatio?: number
 ): string {
-	return RESPONSIVE_BREAKPOINTS.filter((w) => w <= maxWidth * 2) // Include up to 2x for retina
+	return RESPONSIVE_BREAKPOINTS.filter((w) => w <= maxWidth * 2)
 		.map((w) => {
 			const h = aspectRatio ? Math.round(w / aspectRatio) : undefined;
 			return `${getSrc({ width: w, height: h })} ${w}w`;
@@ -99,14 +68,12 @@ function generateSrcset(
 
 const img = normalizeImage(image);
 
-// Determine final dimensions (props override image metadata)
 const finalWidth = width ?? img?.width;
 const finalHeight = height ?? img?.height;
 const finalAlt = alt ?? img?.alt ?? "";
 const aspectRatio =
 	finalWidth && finalHeight ? finalWidth / finalHeight : undefined;
 
-// Get the image source URL and srcset
 let src = "";
 let srcset: string | undefined;
 let sizes: string | undefined;
@@ -134,7 +101,6 @@ if (img) {
 			}
 		}
 	} else {
-		// External provider
 		try {
 			const provider = await getMediaProvider(providerId);
 			if (provider) {
@@ -146,9 +112,7 @@ if (img) {
 				if (embed.type === "image") {
 					src = embed.src;
 
-					// Generate srcset if provider supports dynamic sizing
 					if (embed.getSrc) {
-						// Use image width, or default to 1200 for responsive images
 						const maxWidth = finalWidth || 1200;
 						srcset = generateSrcset(embed.getSrc, maxWidth, aspectRatio);
 						sizes = finalWidth
@@ -166,15 +130,12 @@ if (img) {
 			);
 		}
 
-		// Fallback to local URL if provider failed
 		if (!src) {
 			src = buildLocalImageUrl(img);
 		}
 	}
 }
 
-// Build placeholder background style. Prefer the first-class MediaValue fields;
-// fall back to `meta` for snapshots stored before LQIP was promoted off `meta`.
 const blurhash =
 	img?.blurhash ?? (img?.meta?.blurhash as string | undefined);
 const dominantColor =

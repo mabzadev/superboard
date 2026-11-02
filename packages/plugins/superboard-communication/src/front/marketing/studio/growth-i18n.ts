@@ -2,11 +2,6 @@ import { useMemo } from "react";
 
 import { useStudioI18n } from "./i18n.js";
 
-/**
- * Copy for analytics, brand kit, A/B tests, local-time sending and native
- * automation triggers. Keys are the English copy; unknown keys fall back to
- * the shared Studio catalog.
- */
 const fr: Record<string, string> = {
 	"Brand kit": "Identité de marque",
 	"New emails start with your logo, colors, font and footer. Each email can still change them.":

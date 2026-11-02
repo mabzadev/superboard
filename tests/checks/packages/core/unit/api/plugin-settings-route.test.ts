@@ -1,12 +1,3 @@
-/**
- * Plugin settings route (#341): registration, authorization, and the
- * secret-masking contract at the HTTP boundary.
- *
- * Reading settings can reveal plugin configuration and updating can
- * change plugin behaviour, so both methods require `plugins:manage`
- * (admin), not just `plugins:read` (editor).
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -112,9 +103,6 @@ describe("plugin settings route", () => {
 	});
 
 	it("GET resolves a runtime-installed (marketplace) plugin via the runtime schema fallback", async () => {
-		// The plugin is not in configuredPlugins/sandboxedPluginEntries, so the
-		// static lookup misses and the route must fall back to
-		// getRuntimePluginSettingsSchema — the fix for runtime-installed plugins.
 		const runtimeLocals = {
 			emdash: {
 				db,
@@ -165,7 +153,6 @@ describe("plugin settings route", () => {
 		};
 		expect(body.values.siteKey).toBe("abc");
 		expect(body.secretsSet).toEqual({ secretKey: true });
-		// The secret round-trips into storage but never back to the client.
 		expect("secretKey" in body.values).toBe(false);
 	});
 });

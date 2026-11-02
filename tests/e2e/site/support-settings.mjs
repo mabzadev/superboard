@@ -69,7 +69,6 @@ try {
 		for (const locale of ["en", "fr"]) {
 			const fr = locale === "fr";
 			await open("general", locale);
-			// The former Configuration tab moved to the central Plugins page.
 			await expect(page.getByRole("tab")).toHaveCount(8);
 			await expect(
 				page.getByLabel(fr ? "Fonctionnalités (JSON)" : "Feature flags", { exact: true }),
@@ -170,7 +169,6 @@ try {
 				await expect(page.locator("main h1")).toHaveCount(1);
 			}
 
-			// Plugin health and lifecycle are owned by the central Plugins page; old links open General.
 			await open("configuration", locale);
 			await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 			await expect(

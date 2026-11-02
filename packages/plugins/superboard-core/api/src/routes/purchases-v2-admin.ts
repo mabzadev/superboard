@@ -50,10 +50,15 @@ import { testStoreCredentials } from "../lib/store-verification";
 import { authMiddleware } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
-const admin = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.purchases-v2-admin.admin","pluginId":"superboard-billing","surface":"internal","access":"operator"});
+const admin = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {
+	service: "api",
+	module: "routes.purchases-v2-admin.admin",
+	pluginId: "superboard-billing",
+	surface: "internal",
+	access: "operator",
+});
 admin.use("*", authMiddleware);
 
-// Keep historical rows readable, but expose and create only supported providers.
 const PROVIDERS = ["apple", "google"] as const;
 const ENVIRONMENTS = ["sandbox", "production"] as const;
 const FEATURE_FLAGS = [

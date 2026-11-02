@@ -1,11 +1,3 @@
-/**
- * EmDash Visual Editing Toolbar
- *
- * A floating pill injected via middleware for authenticated editors.
- * Renders as a plain HTML string with inline styles and a <script> tag.
- * No dependencies — works on any page with a </body> tag.
- */
-
 interface ToolbarConfig {
 	editMode: boolean;
 	isPreview: boolean;

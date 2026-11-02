@@ -6,13 +6,6 @@ import { Hono } from "hono";
 import { readJsonObjectLimited } from "../lib/http-limits";
 import type { Env } from "../types";
 
-/**
- * Public transactional email API (server-side secret keys only).
- *
- * The gateway never interprets the secret: it forwards the bearer key to the
- * Email Worker, which owns the hashed key store, scopes, per-project rate
- * limits, validation, suppressions, quotas and idempotency.
- */
 const EMAIL_PUBLIC_SEND_BODY_LIMIT = 15 * 1024 * 1024;
 const KEY_FORMAT = /^sb_email_[a-f0-9]{64}$/;
 const FORWARDED_HEADERS = ["content-type", "idempotency-key", "user-agent"];
@@ -108,7 +101,6 @@ export async function proxyEmailPublicApi(
 	headers.set("x-request-id", requestId);
 	try {
 		const target = new URL(`https://email.internal${internalPath}`);
-		// Constructing from the source Request streams the body without buffering it.
 		const forwarded = new Request(target, request);
 		const response = await env.EMAIL_SERVICE.fetch(new Request(forwarded, { headers }));
 		const responseHeaders = new Headers();
@@ -137,11 +129,6 @@ export async function proxyEmailPublicApi(
 	}
 }
 
-/**
- * Internal callback for the Email Worker: loads the published Email Studio
- * template of a project from the Marketing worker with a gateway-signed,
- * read-only project context.
- */
 export async function resolveEmailTemplateSource(env: Env, request: Request): Promise<Response> {
 	const requestId = safeRequestId(request.headers.get("x-request-id"));
 	if (
@@ -184,8 +171,6 @@ export async function resolveEmailTemplateSource(env: Env, request: Request): Pr
 			environment,
 			actorId: 0,
 			operatorId: "email-api",
-			// The published-template read is restricted to project administrators;
-			// the gateway signs this single read on behalf of the Email Worker.
 			role: "admin",
 			requestId,
 			issuedAt: Math.floor(Date.now() / 1_000),

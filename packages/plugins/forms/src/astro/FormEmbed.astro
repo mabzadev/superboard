@@ -1,11 +1,4 @@
 ---
-/**
- * Form embed component for Portable Text blocks.
- *
- * Server-renders the full form with all pages as <fieldset> elements.
- * Without JavaScript, all pages are visible as one long form.
- * The client-side script enhances with multi-page navigation, AJAX, etc.
- */
 import { getPublicPluginApiRouteHandler } from "emdash/plugin-utils";
 
 import { loadPublicFormDefinition } from "../public-definition.js";
@@ -34,7 +27,6 @@ const hasFiles = form.pages.some((p: FormPage) =>
 	p.fields.some((f: FormField) => f.type === "file")
 );
 
-/** Generate an element ID for a field */
 function fieldId(name: string): string {
 	return `${formId}-${name}`;
 }

@@ -18,26 +18,15 @@ export interface Relation {
 
 export interface CreateRelationInput {
 	name: string;
-	/** Required for a base relation; ignored (inherited from the source) when
-	 * `translationOf` is set. */
 	parentCollection?: string;
-	/** Required for a base relation; ignored (inherited from the source) when
-	 * `translationOf` is set. */
 	childCollection?: string;
 	parentLabel: string;
 	childLabel: string;
-	/** Omit to let the DB default (current value: 'en') apply. Higher layers
-	 * resolve locale from request context / i18n config. */
 	locale?: string;
-	/** When set, joins the source relation's translation_group AND inherits its
-	 * structural fields (name, parentCollection, childCollection). Only locale +
-	 * labels may differ on a translation. */
 	translationOf?: string;
 }
 
 export interface UpdateRelationInput {
-	/** Only localized fields are mutable per row. Changing structural fields
-	 * (name/collections) is a cross-group operation deferred to a later slice. */
 	parentLabel?: string;
 	childLabel?: string;
 }
@@ -50,29 +39,9 @@ export interface ContentReference {
 	sortOrder: number;
 }
 
-/**
- * Content-references repository.
- *
- * Owns relation *definitions* (`_emdash_relations`, row-per-locale, mirroring
- * `_emdash_taxonomy_defs`) and the *edge* junction (`_emdash_content_references`,
- * keyed by `translation_group` so edges are locale-agnostic, mirroring
- * `content_taxonomies`).
- *
- * Like `TaxonomyRepository`, this is not the validation boundary: it trusts its
- * typed inputs. The API slice supplies Zod schemas at the route and enforces
- * collection-agreement / relation-existence invariants in the handler. The repo
- * does not resolve locale fallbacks — callers pass the locale they want.
- */
 export class RelationRepository {
 	constructor(private db: Kysely<Database>) {}
 
-	/**
-	 * Create a relation. Without `translationOf`, mints a fresh group
-	 * (`translation_group = id`, matching the migration backfill pattern). With
-	 * `translationOf`, the structural fields (name, parentCollection,
-	 * childCollection) and the translation_group are inherited from the source;
-	 * locale and the two labels are taken from `input`.
-	 */
 	async create(input: CreateRelationInput): Promise<Relation> {
 		const id = ulid();
 		const now = new Date().toISOString();
@@ -84,18 +53,12 @@ export class RelationRepository {
 
 		if (input.translationOf) {
 			const source = await this.findById(input.translationOf);
-			// translation_group is NOT NULL here, so we cannot fall back to a
-			// fresh group like TaxonomyRepository does — a bad translationOf must
-			// fail loudly rather than silently mint an unlinked relation.
 			if (!source) throw new Error("Source relation for translation not found");
 			translationGroup = source.translationGroup;
 			name = source.name;
 			parentCollection = source.parentCollection;
 			childCollection = source.childCollection;
 		} else {
-			// A base relation carries its own structural fields. The API layer's Zod
-			// schema enforces this; guard here too since the repo trusts its inputs
-			// and the columns are NOT NULL.
 			if (input.parentCollection === undefined || input.childCollection === undefined) {
 				throw new Error(
 					"parentCollection and childCollection are required unless translationOf is set",
@@ -117,8 +80,6 @@ export class RelationRepository {
 				child_label: input.childLabel,
 				created_at: now,
 				updated_at: now,
-				// Omit `locale` so the DB DEFAULT (configured defaultLocale)
-				// applies — matches TaxonomyRepository.create.
 				...(input.locale !== undefined ? { locale: input.locale } : {}),
 				translation_group: translationGroup,
 			})
@@ -138,12 +99,6 @@ export class RelationRepository {
 		return row ? this.rowToRelation(row) : null;
 	}
 
-	/**
-	 * Find a relation by name. With `locale`, filter by it; without, return the
-	 * lowest-locale-code match deterministically. Mirrors
-	 * `TaxonomyRepository.findBySlug` — note this returns a single row, unlike
-	 * `TaxonomyRepository.findByName` which returns every term in a taxonomy.
-	 */
 	async findByName(name: string, locale?: string): Promise<Relation | null> {
 		let query = this.db.selectFrom("_emdash_relations").selectAll().where("name", "=", name);
 		if (locale !== undefined) query = query.where("locale", "=", locale);
@@ -151,7 +106,6 @@ export class RelationRepository {
 		return row ? this.rowToRelation(row) : null;
 	}
 
-	/** Every translation sibling (including itself) sharing a translation_group. */
 	async findTranslations(translationGroup: string): Promise<Relation[]> {
 		const rows = await this.db
 			.selectFrom("_emdash_relations")
@@ -162,10 +116,6 @@ export class RelationRepository {
 		return rows.map((row) => this.rowToRelation(row));
 	}
 
-	/**
-	 * All relations, ordered by name then id (id is a stable tiebreak for
-	 * relations sharing a name across locales). Optionally filtered by locale.
-	 */
 	async list(locale?: string): Promise<Relation[]> {
 		let query = this.db
 			.selectFrom("_emdash_relations")
@@ -177,7 +127,6 @@ export class RelationRepository {
 		return rows.map((row) => this.rowToRelation(row));
 	}
 
-	/** Relations where `collection` is the parent OR the child side. */
 	async findForCollection(collection: string, locale?: string): Promise<Relation[]> {
 		let query = this.db
 			.selectFrom("_emdash_relations")
@@ -192,10 +141,6 @@ export class RelationRepository {
 		return rows.map((row) => this.rowToRelation(row));
 	}
 
-	/**
-	 * Update the localized labels of one relation row. Structural fields are
-	 * immutable here (a cross-group concern). No-ops when nothing is supplied.
-	 */
 	async update(id: string, input: UpdateRelationInput): Promise<Relation | null> {
 		const existing = await this.findById(id);
 		if (!existing) return null;
@@ -212,11 +157,6 @@ export class RelationRepository {
 		return this.findById(id);
 	}
 
-	/**
-	 * Delete one relation row. When it is the *last* translation of its group,
-	 * purge edges referencing that group (application-layer cascade — group
-	 * linking precludes a SQL FK). Mirrors `TaxonomyRepository.delete`.
-	 */
 	async delete(id: string): Promise<boolean> {
 		const relation = await this.findById(id);
 		if (!relation) return false;
@@ -241,9 +181,6 @@ export class RelationRepository {
 		return (result.numDeletedRows ?? 0n) > 0n;
 	}
 
-	/** Normalize a relation id OR group to its translation_group. Returns null
-	 * for an unknown relation (edge methods then no-op, matching
-	 * `TaxonomyRepository.attachToEntry`). */
 	private async resolveRelationGroup(idOrGroup: string): Promise<string | null> {
 		const row = await this.db
 			.selectFrom("_emdash_relations")
@@ -263,16 +200,6 @@ export class RelationRepository {
 		};
 	}
 
-	/**
-	 * Link `parentGroup → childGroup` under a relation. `relation` is a relation
-	 * id or group. Idempotent (onConflict doNothing against the unique edge).
-	 * `sortOrder` defaults to append: max(sort_order)+1 within (relation, parent).
-	 *
-	 * The default-append MAX→INSERT is not atomic: concurrent appends without an
-	 * explicit `sortOrder` may both read the same max and collide on sort_order,
-	 * and onConflict silently drops the loser. Callers needing strict ordering
-	 * under concurrency should pass `sortOrder` explicitly (or serialize).
-	 */
 	async addReference(
 		relation: string,
 		parentGroup: string,
@@ -307,7 +234,6 @@ export class RelationRepository {
 			.execute();
 	}
 
-	/** Remove one `parentGroup → childGroup` edge under a relation. */
 	async removeReference(relation: string, parentGroup: string, childGroup: string): Promise<void> {
 		const relationGroup = await this.resolveRelationGroup(relation);
 		if (!relationGroup) return;
@@ -320,7 +246,6 @@ export class RelationRepository {
 			.execute();
 	}
 
-	/** Forward traversal: a parent's children for a relation, ordered. */
 	async getChildren(relation: string, parentGroup: string): Promise<ContentReference[]> {
 		const relationGroup = await this.resolveRelationGroup(relation);
 		if (!relationGroup) return [];
@@ -336,13 +261,6 @@ export class RelationRepository {
 		return rows.map((row) => this.rowToReference(row));
 	}
 
-	/**
-	 * Forward traversal, paginated: one page of a parent's children for a
-	 * relation, ordered by `(sort_order, id)`. Use this on request paths — a
-	 * parent's children are capped but still up to 1000, and an unbounded read
-	 * scales poorly. Returns `{ items, nextCursor? }`; the cursor's order value is
-	 * the row's `sort_order`. Default limit 50, max 100.
-	 */
 	async getChildrenPage(
 		relation: string,
 		parentGroup: string,
@@ -362,10 +280,6 @@ export class RelationRepository {
 		if (options.cursor) {
 			const decoded = decodeCursor(options.cursor);
 			const sortOrder = Number(decoded.orderValue);
-			// `decodeCursor` only guarantees `orderValue` is a string; a hand-crafted
-			// cursor with a non-numeric order value would coerce to NaN and blow up at
-			// the driver bind as a 500. A bad cursor is a client error — surface it as
-			// INVALID_CURSOR (400). Server-issued cursors are always numeric here.
 			if (!Number.isFinite(sortOrder)) throw new InvalidCursorError(options.cursor);
 			query = query.where((eb) =>
 				eb.or([
@@ -391,7 +305,6 @@ export class RelationRepository {
 		return result;
 	}
 
-	/** Backlink traversal: the parents that reference a child for a relation. */
 	async getParents(relation: string, childGroup: string): Promise<ContentReference[]> {
 		const relationGroup = await this.resolveRelationGroup(relation);
 		if (!relationGroup) return [];
@@ -406,28 +319,6 @@ export class RelationRepository {
 		return rows.map((row) => this.rowToReference(row));
 	}
 
-	/**
-	 * Replace all children of `parentGroup` under a relation with `childGroups`,
-	 * assigning positional sort_order (index in the deduped array). Deletes the
-	 * old set for this (relation, parent) and re-inserts — simple and correct;
-	 * the set is small (one parent's children). Mirrors the intent of
-	 * `TaxonomyRepository.setTermsForEntry`.
-	 *
-	 * A parent references a given child at most once (the unique edge), so
-	 * duplicate `childGroups` are collapsed first-occurrence-wins rather than
-	 * relying on the insert's onConflict to silently drop them. Not wrapped in a
-	 * transaction: a crash between the delete and insert leaves the parent with
-	 * no children — acceptable for a replace-all, since a retry restores state.
-	 *
-	 * Concurrency: two simultaneous replace-all calls for the same (relation,
-	 * parent) can interleave their deletes and inserts and merge into the union of
-	 * both sets (a lost update — neither "replace" wins). This is non-corrupting —
-	 * keyset pagination stays totally ordered via the `(sort_order, id)` tiebreak
-	 * even with duplicate sort_orders — and a single client editing one parent's
-	 * children serially never hits it. A D1-portable fix isn't available (no
-	 * multi-statement transactions), so concurrent replace-all on one parent is
-	 * unsupported by design rather than guarded here.
-	 */
 	async setChildren(relation: string, parentGroup: string, childGroups: string[]): Promise<void> {
 		const relationGroup = await this.resolveRelationGroup(relation);
 		if (!relationGroup) return;
@@ -438,7 +329,6 @@ export class RelationRepository {
 			.where("parent_group", "=", parentGroup)
 			.execute();
 
-		// Collapse duplicates so positional sort_order has no gaps.
 		const uniqueChildGroups = [...new Set(childGroups)];
 		if (uniqueChildGroups.length === 0) return;
 
@@ -455,21 +345,10 @@ export class RelationRepository {
 					created_at: now,
 				})),
 			)
-			// Belt-and-suspenders: the DELETE above already cleared this
-			// (relation, parent), so no conflict is possible within one call.
-			// This is NOT a concurrency guarantee — delete-then-insert is not atomic.
 			.onConflict((oc) => oc.doNothing())
 			.execute();
 	}
 
-	/**
-	 * Backlink traversal, paginated: one page of the parents that reference a
-	 * child for a relation, ordered by `id`. Unlike a parent's children, a
-	 * child's backlinks are *unbounded* — one popular entry can be referenced by
-	 * arbitrarily many parents — so this read must paginate. Returns
-	 * `{ items, nextCursor? }`; the cursor's order value is the row `id`. Default
-	 * limit 50, max 100.
-	 */
 	async getParentsPage(
 		relation: string,
 		childGroup: string,
@@ -506,13 +385,6 @@ export class RelationRepository {
 		return result;
 	}
 
-	/**
-	 * Remove every edge where `group` is the parent OR the child — i.e. ensure no
-	 * orphaned reference edges survive when a content entry is deleted. The
-	 * application-layer cascade that group-linking precludes at the SQL level.
-	 * Wiring this into the content-delete path is a later (handler) slice.
-	 * Returns the number of edges removed.
-	 */
 	async clearReferencesForGroup(group: string): Promise<number> {
 		const result = await this.db
 			.deleteFrom("_emdash_content_references")
@@ -521,7 +393,6 @@ export class RelationRepository {
 		return Number(result.numDeletedRows ?? 0);
 	}
 
-	/** Count a parent's children under a relation. */
 	async countChildren(relation: string, parentGroup: string): Promise<number> {
 		const relationGroup = await this.resolveRelationGroup(relation);
 		if (!relationGroup) return 0;
@@ -534,7 +405,6 @@ export class RelationRepository {
 		return Number(result?.count ?? 0);
 	}
 
-	/** Count a child's parents (backlinks) under a relation. */
 	async countParents(relation: string, childGroup: string): Promise<number> {
 		const relationGroup = await this.resolveRelationGroup(relation);
 		if (!relationGroup) return 0;
@@ -547,12 +417,6 @@ export class RelationRepository {
 		return Number(result?.count ?? 0);
 	}
 
-	/**
-	 * Batch child-counts for many parents under a relation. Chunks at
-	 * SQL_BATCH_SIZE for D1's bind-parameter limit. Returns parent_group → count
-	 * (parents with no children are absent from the map). Mirrors
-	 * `TaxonomyRepository.countEntriesForTerms`.
-	 */
 	async countChildrenForParents(
 		relation: string,
 		parentGroups: string[],

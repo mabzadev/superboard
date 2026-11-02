@@ -1,10 +1,3 @@
-/**
- * GET /_emdash/api/auth/me
- *
- * Returns the current authenticated user's info.
- * Used by the admin UI to display user info in the header.
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -33,12 +26,8 @@ export const GET: APIRoute = async ({ locals }) => {
 		}
 	}
 
-	// Check if this is the user's first login (for welcome modal).
-	// The flag is persisted in the user's `data` JSON column so it survives
-	// session expiry / rotation.
 	const isFirstLogin = !userData?.welcomeDismissed;
 
-	// Return safe user info (no sensitive data)
 	return apiSuccess({
 		id: user.id,
 		email: user.email,
@@ -49,11 +38,6 @@ export const GET: APIRoute = async ({ locals }) => {
 	});
 };
 
-/**
- * POST /_emdash/api/auth/me
- *
- * Mark that the user has seen the welcome modal.
- */
 export const POST: APIRoute = async ({ request, locals }) => {
 	const { user, emdash } = locals;
 
@@ -68,7 +52,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 	if (body.action === "dismissWelcome") {
 		try {
-			// Persist in the user's data column so it survives session expiry.
 			const userRepo = new UserRepository(emdash.db);
 			await userRepo.update(user.id, {
 				data: { ...user.data, welcomeDismissed: true },

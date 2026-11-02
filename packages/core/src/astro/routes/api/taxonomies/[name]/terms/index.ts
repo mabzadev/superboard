@@ -1,10 +1,3 @@
-/**
- * Taxonomy terms list and create endpoint
- *
- * GET  /_emdash/api/taxonomies/:name/terms[?locale=xx] - List terms (tree for hierarchical)
- * POST /_emdash/api/taxonomies/:name/terms              - Create a new term (body may include locale & translationOf)
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -15,9 +8,6 @@ import { createTermBody, termListQuery } from "#api/schemas.js";
 
 export const prerender = false;
 
-/**
- * List all terms for a taxonomy
- */
 export const GET: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { name } = params;
@@ -44,9 +34,6 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
 	}
 };
 
-/**
- * Create a new term
- */
 export const POST: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { name } = params;

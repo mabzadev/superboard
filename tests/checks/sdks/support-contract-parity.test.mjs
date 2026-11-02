@@ -2,10 +2,6 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-// The Web and Flutter SDKs ship their own copies of the Support contract
-// constants (they cannot import packages/contracts at runtime). This check
-// keeps those copies aligned with the canonical definitions.
-
 const root = new URL("../../../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 
@@ -25,7 +21,6 @@ function quotedStrings(source) {
 	return [...source.matchAll(/["']([^"']+)["']/gu)].map((match) => match[1]);
 }
 
-// Only integer products such as `64 * 1024` appear in these limits.
 function integerExpression(expression, label) {
 	const text = expression.trim();
 	assert.match(text, /^\d[\d_]*(?:\s*\*\s*\d[\d_]*)*$/u, `${label} is not a constant product`);
@@ -101,7 +96,6 @@ test("Flutter SDK Support limits match SUPPORT_LIMITS", () => {
 		constant(dartClient, /^const int maxSupportAttachmentBytes = ([^;]+);/mu, "attachment bytes"),
 		contractLimits.attachmentBytesMaximum,
 	);
-	// The Dart client inlines the remaining limits at each call site.
 	const inlined = [
 		[/limit\.clamp\(1, (\d+)\)/gu, "pageSizeMaximum"],
 		[/_boundedValue\(cursor, 'cursor', (\d+)\)/gu, "cursorLengthMaximum"],

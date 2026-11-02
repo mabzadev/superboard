@@ -5,7 +5,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { AuthService } from "../../../../../../../sdks/web/identity/angular/src/auth.service";
 import { acquireToken } from "../../../../../../../sdks/web/identity/angular/src/utils";
 
-// Mock the external dependencies
 vi.mock("@melody-auth/web", () => ({
 	triggerLogin: vi.fn(),
 	getUserInfo: vi.fn(),
@@ -25,7 +24,6 @@ vi.mock("../../../../../../../sdks/web/identity/angular/src/utils", () => ({
 	handleTokenExchangeByAuthCode: vi.fn(),
 }));
 
-// Create a helper to mimic Angular's signal
 function fakeSignal<T>(initialValue: T) {
 	let value = initialValue;
 	const signalFunc = () => value;
@@ -41,7 +39,6 @@ function fakeSignal<T>(initialValue: T) {
 	return signalFunc;
 }
 
-// Create a fake state and AuthContext for testing purposes using fakeSignal
 function createFakeState() {
 	return fakeSignal({
 		accessTokenStorage: { accessToken: "fake-access-token" },
@@ -70,7 +67,6 @@ describe("AuthService", () => {
 		authService = new AuthService(fakeAuthContext);
 	});
 
-	// Test getters that delegate to the authContext state
 	describe("getters", () => {
 		it("should return accessToken from state", () => {
 			expect(authService.accessToken).toBe("fake-access-token");
@@ -134,7 +130,6 @@ describe("AuthService", () => {
 			expect(authService.logoutError).toBe("logout error");
 		});
 
-		// --- New tests for missing storage objects ---
 		it("should return null for accessToken when no accessTokenStorage is present", () => {
 			fakeState.set({ accessTokenStorage: undefined });
 			expect(authService.accessToken).toBeNull();
@@ -156,7 +151,6 @@ describe("AuthService", () => {
 		});
 	});
 
-	// Tests for login method and its variants
 	describe("login method", () => {
 		it("should return early if authenticationError exists", async () => {
 			fakeState.set({ authenticationError: "Some error" });
@@ -186,7 +180,6 @@ describe("AuthService", () => {
 		});
 
 		it("should call triggerLogin with correct parameters on successful login", async () => {
-			// Set state such that login can proceed:
 			fakeState.set({ isAuthenticated: false });
 			fakeState.set({ isAuthenticating: false });
 			fakeState.set({ authenticationError: "" });
@@ -199,7 +192,6 @@ describe("AuthService", () => {
 			const callArgs = (triggerLogin as any).mock.calls[0];
 			expect(callArgs[0]).toBe("popup");
 			expect(callArgs[1]).toEqual({ testConfig: true });
-			// Verify that authorizePopupHandler is defined and props are merged
 			expect(typeof callArgs[2].authorizePopupHandler).toBe("function");
 			expect(callArgs[2].locale).toBe("en");
 			expect(callArgs[2].policy).toBe("some_policy");
@@ -207,27 +199,22 @@ describe("AuthService", () => {
 
 		it("should handle errors thrown by triggerLogin and update state.loginError", async () => {
 			const simulatedError = new Error("Simulated login error");
-			// Make triggerLogin throw an error
 			(triggerLogin as any).mockImplementation(() => {
 				throw simulatedError;
 			});
 
 			const handleErrorSpy = vi.mocked(handleError).mockReturnValue("Fake login error");
 
-			// Clear any previous loginError
 			fakeState.set({ loginError: "" });
 
-			// Act: call the login method
 			await authService.login("popup");
 
-			// Assert: verify that loginError is updated as expected
 			expect(fakeState().loginError).toBe("Fake login error");
 
 			handleErrorSpy.mockRestore();
 		});
 
 		it("should invoke authorizePopupHandler and call handleTokenExchangeByAuthCode with correct parameters", async () => {
-			// Arrange: Ensure login can proceed by resetting state and provide props with locale.
 			fakeState.set({
 				isAuthenticated: false,
 				isAuthenticating: false,
@@ -238,30 +225,24 @@ describe("AuthService", () => {
 				policy: "some_policy",
 			};
 
-			// Spy on handleTokenExchangeByAuthCode in utils module
 			const utils = await import("../../../../../../../sdks/web/identity/angular/src/utils");
 			const handleTokenExchangeSpy = vi
 				.spyOn(utils, "handleTokenExchangeByAuthCode")
 				.mockReturnValue(undefined);
 
-			// Act: Call login so that triggerLogin is invoked with the merged options.
 			await authService.login("popup", props);
 
-			// Extract the configuration object (third argument) passed to triggerLogin.
 			const thirdArg = (triggerLogin as any).mock.calls[0][2];
 			expect(typeof thirdArg.authorizePopupHandler).toBe("function");
 
-			// Prepare test values for the handler.
 			const testRequestState = { foo: "bar" };
 			const testCode = "abc123";
 
-			// Invoke the authorizePopupHandler.
 			thirdArg.authorizePopupHandler({
 				state: testRequestState,
 				code: testCode,
 			});
 
-			// Assert: Verify that handleTokenExchangeByAuthCode is called with the proper parameters.
 			expect(handleTokenExchangeSpy).toHaveBeenCalledWith(
 				testCode,
 				testRequestState,
@@ -295,14 +276,12 @@ describe("AuthService", () => {
 		});
 	});
 
-	// Tests for token acquisition
 	describe("acquireToken", () => {
 		it("should call acquireToken and return its value", async () => {
 			(acquireToken as any).mockResolvedValue("acquired-token");
 			const token = await authService.acquireToken();
 			expect(token).toBe("acquired-token");
 			expect(acquireToken).toHaveBeenCalledTimes(1);
-			// Check that acquireToken was called with the authContext.state function
 			expect(acquireToken).toHaveBeenCalledWith(fakeAuthContext.state);
 		});
 	});
@@ -352,7 +331,6 @@ describe("AuthService", () => {
 		});
 	});
 
-	// Tests for logoutRedirect method
 	describe("logoutRedirect", () => {
 		it("should call logout with appropriate parameters when tokens are available", async () => {
 			(acquireToken as any).mockResolvedValue("acquired-token");
@@ -367,14 +345,13 @@ describe("AuthService", () => {
 				"acquired-token",
 				"fake-refresh-token",
 				"http://redirect.com",
-				false, // accessToken and refreshToken exist and localOnly is false
+				false,
 			);
 
 			vi.clearAllMocks();
 		});
 
 		it("should call logout with isLocalOnly true when tokens are missing", async () => {
-			// Scenario: Missing tokens
 			(acquireToken as any).mockResolvedValue(null);
 			fakeState.set({ refreshTokenStorage: { refreshToken: null } });
 			await authService.logoutRedirect({
@@ -383,17 +360,10 @@ describe("AuthService", () => {
 			});
 			expect(acquireToken).toHaveBeenCalledTimes(1);
 
-			expect(logout).toHaveBeenCalledWith(
-				{ testConfig: true },
-				"",
-				"",
-				"",
-				true, // accessToken and refreshToken exist and localOnly is false
-			);
+			expect(logout).toHaveBeenCalledWith({ testConfig: true }, "", "", "", true);
 		});
 
 		it("should call logout with isLocalOnly true even if tokens exist", async () => {
-			// Scenario: localOnly flag is true even if tokens exist
 			(acquireToken as any).mockResolvedValue("acquired-token");
 			fakeState.set({ refreshTokenStorage: { refreshToken: "fake-refresh-token" } });
 			await authService.logoutRedirect({

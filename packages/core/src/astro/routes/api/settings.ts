@@ -1,10 +1,3 @@
-/**
- * Site Settings API endpoint
- *
- * GET  /_emdash/api/settings - Get all site settings
- * POST /_emdash/api/settings - Update site settings
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -15,12 +8,6 @@ import { settingsUpdateBody } from "#api/schemas.js";
 
 export const prerender = false;
 
-/**
- * GET /_emdash/api/settings
- *
- * Returns all site settings as a JSON object.
- * Unset values are undefined. Media references include resolved URLs.
- */
 export const GET: APIRoute = async ({ locals }) => {
 	const { emdash, user } = locals;
 
@@ -39,12 +26,6 @@ export const GET: APIRoute = async ({ locals }) => {
 	}
 };
 
-/**
- * POST /_emdash/api/settings
- *
- * Updates site settings. Accepts a partial settings object.
- * Merges with existing settings and returns the updated settings.
- */
 export const POST: APIRoute = async ({ request, locals }) => {
 	const { emdash, user } = locals;
 

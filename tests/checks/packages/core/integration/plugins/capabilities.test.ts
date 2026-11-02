@@ -1,11 +1,3 @@
-/**
- * Capability Enforcement Integration Tests (v2)
- *
- * Tests the capability-based access gating in the v2 plugin context.
- * v2 always enforces capabilities - there's no "trusted mode" bypass.
- *
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect, sql } from "kysely";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -32,15 +24,11 @@ import {
 } from "../../../../../../packages/core/src/plugins/context.js";
 import type { ResolvedPlugin } from "../../../../../../packages/core/src/plugins/types.js";
 
-// Test regex patterns
 const NOT_ALLOWED_FETCH_REGEX = /not allowed to fetch from host/;
 const NO_ALLOWED_FETCH_REGEX = /not allowed to fetch/;
 const NO_NETWORK_FETCH_REGEX = /does not have the "network:request" capability/;
 const SEO_NOT_ENABLED_REGEX = /does not have SEO enabled/;
 
-/**
- * Create a minimal resolved plugin for testing
- */
 function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlugin {
 	return {
 		id: "test-plugin",
@@ -60,10 +48,6 @@ function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlug
 	};
 }
 
-/**
- * Minimal in-memory Storage backend for media write tests.
- * Records uploaded keys so tests can assert bytes were persisted.
- */
 function createFakeStorage() {
 	const uploads = new Map<string, Uint8Array>();
 	return {
@@ -103,7 +87,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 	let sqliteDb: Database.Database;
 
 	beforeEach(async () => {
-		// Create in-memory SQLite database
 		sqliteDb = new Database(":memory:");
 
 		db = new Kysely<DbSchema>({
@@ -112,11 +95,8 @@ describe("Capability Enforcement Integration (v2)", () => {
 			}),
 		});
 
-		// Run migrations
 		await runMigrations(db);
 
-		// Create test content table with actual field columns (not JSON data column)
-		// The ContentRepository expects real columns for each field
 		await sql`
 			CREATE TABLE IF NOT EXISTS ec_posts (
 				id TEXT PRIMARY KEY,
@@ -138,7 +118,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 			)
 		`.execute(db);
 
-		// Insert test content with actual column values
 		await sql`
 			INSERT INTO ec_posts (id, slug, status, title, content, locale, translation_group)
 			VALUES 
@@ -225,8 +204,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 			});
 
 			it("paginates consistently with where filters", async () => {
-				// Three more published posts so the total published count is 4.
-				// A limit of 2 should yield two pages: [2, 2] — never drafts.
 				await sql`
 					INSERT INTO ec_posts (id, slug, status, title, content, locale, translation_group)
 					VALUES
@@ -253,10 +230,8 @@ describe("Capability Enforcement Integration (v2)", () => {
 				expect(page2.hasMore).toBe(false);
 				for (const item of page2.items) expect(item.status).toBe("published");
 
-				// No overlap between pages
 				const ids = new Set([...page1.items, ...page2.items].map((i) => i.id));
 				expect(ids.size).toBe(4);
-				// Drafts never surface
 				expect(ids.has("post-2")).toBe(false);
 			});
 
@@ -269,8 +244,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 		describe("taxonomy read access", () => {
 			beforeEach(async () => {
-				// Migrations seed the default `category`/`tag` defs — clear them
-				// so the assertions below only see the fixtures.
 				await sql`DELETE FROM _emdash_taxonomy_defs`.execute(db);
 				await sql`
 					INSERT INTO _emdash_taxonomy_defs (id, name, label, label_singular, hierarchical, collections, locale, translation_group)
@@ -286,8 +259,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 						('term-news-fr', 'genre', 'actualites', 'Actualités', NULL, NULL, 'fr', 'term-news'),
 						('term-ai', 'topic', 'ai', 'AI', NULL, '{"description":"Artificial intelligence"}', 'en', 'term-ai')
 				`.execute(db);
-				// The pivot stores the term's translation_group, so one
-				// assignment spans every locale of the term.
 				await sql`
 					INSERT INTO content_taxonomies (collection, entry_id, taxonomy_id)
 					VALUES
@@ -373,8 +344,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 			});
 
 			it("resolves entry terms into the requested locale", async () => {
-				// The assignment points at the term's translation_group, so
-				// asking for 'fr' surfaces the French translation of the term.
 				const access = createTaxonomyAccess(db);
 				const terms = await access.getEntryTerms("posts", "post-1", {
 					taxonomy: "genre",
@@ -395,14 +364,12 @@ describe("Capability Enforcement Integration (v2)", () => {
 				const defs = await withCap.taxonomies!.getAll();
 				expect(defs).toHaveLength(2);
 
-				// content:read alone does NOT grant taxonomy access...
 				const contentOnly = factory.createContext(
 					createTestPlugin({ id: "content-reader", capabilities: ["content:read"] }),
 				);
 				expect(contentOnly.taxonomies).toBeUndefined();
 				expect(contentOnly.content).toBeDefined();
 
-				// ...and taxonomies:read alone does not grant content access.
 				const taxOnly = factory.createContext(
 					createTestPlugin({ id: "tax-only", capabilities: ["taxonomies:read"] }),
 				);
@@ -437,7 +404,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 				expect(created.id).toBeDefined();
 				expect(created.data.title).toBe("New Post");
 
-				// Verify it was created
 				const found = await access.get("posts", created.id);
 				expect(found).not.toBeNull();
 			});
@@ -503,8 +469,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 		describe("SEO panel integration", () => {
 			beforeEach(async () => {
-				// Register the "posts" collection with SEO enabled so the plugin
-				// content API routes `seo` writes to the core SEO panel.
 				await sql`
 					INSERT INTO _emdash_collections (slug, label, label_singular, has_seo)
 					VALUES ('posts', 'Posts', 'Post', 1)
@@ -526,7 +490,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 			});
 
 			it("omits seo from get() for collections without SEO enabled", async () => {
-				// Reset has_seo on posts so it behaves like a non-SEO collection
 				await db
 					.updateTable("_emdash_collections")
 					.set({ has_seo: 0 })
@@ -543,8 +506,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 			it("update() routes `seo` to the SEO panel instead of failing on missing column", async () => {
 				const access = createContentAccessWithWrite(db);
 
-				// Regression for #374: previously this threw
-				// "SQLite error: no such column: seo"
 				const updated = await access.update("posts", "post-1", {
 					seo: {
 						title: "Custom SEO Title",
@@ -562,7 +523,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 					noIndex: false,
 				});
 
-				// Verify it persisted via a subsequent read
 				const fresh = await access.get("posts", "post-1");
 				expect(fresh!.seo?.title).toBe("Custom SEO Title");
 				expect(fresh!.seo?.description).toBe("A better meta description");
@@ -596,7 +556,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 				});
 
 				expect(updated.seo?.title).toBe("Updated Title");
-				// description must not be clobbered by a partial update
 				expect(updated.seo?.description).toBe("Initial Description");
 			});
 
@@ -621,7 +580,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 			});
 
 			it("update() throws when seo is provided on a collection without SEO enabled", async () => {
-				// Disable SEO on posts
 				await db
 					.updateTable("_emdash_collections")
 					.set({ has_seo: 0 })
@@ -662,8 +620,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 			it("allows requests to allowed hosts", async () => {
 				const http = createHttpAccess("test-plugin", ["example.com"]);
 
-				// We can't actually make the request in tests, but we can verify
-				// the function doesn't throw for allowed hosts
 				expect(typeof http.fetch).toBe("function");
 			});
 
@@ -676,8 +632,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 			it("supports wildcard host patterns", { timeout: 15000 }, async () => {
 				const http = createHttpAccess("test-plugin", ["*.example.com"]);
 
-				// Should not throw for subdomains
-				// (Can't test actual fetch, but verify pattern matching logic)
 				await expect(http.fetch("https://api.example.com/test")).rejects.not.toThrow(
 					NO_ALLOWED_FETCH_REGEX,
 				);
@@ -700,8 +654,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 			it("does not throw for any host", async () => {
 				const http = createUnrestrictedHttpAccess("unrestricted-plugin");
-				// Can't make a real request in tests, but verify it doesn't throw a
-				// host-validation error — it will throw a network error instead.
 				await expect(http.fetch("https://any-host-at-all.example.com/test")).rejects.not.toThrow(
 					NOT_ALLOWED_FETCH_REGEX,
 				);
@@ -747,11 +699,9 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 			await storage1.items.put("doc-1", { value: "from plugin 1" });
 
-			// Plugin 2 should not see plugin 1's data
 			const fromPlugin2 = await storage2.items.get("doc-1");
 			expect(fromPlugin2).toBeNull();
 
-			// Plugin 1 should still see its data
 			const fromPlugin1 = await storage1.items.get("doc-1");
 			expect(fromPlugin1).toEqual({ value: "from plugin 1" });
 		});
@@ -764,7 +714,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 			await kv.set("my-key", { foo: "bar" });
 
-			// Verify the key is prefixed in the database
 			const rawValue = await optionsRepo.get("plugin:test-plugin:my-key");
 			expect(rawValue).toEqual({ foo: "bar" });
 		});
@@ -799,7 +748,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 		it("prefixes messages with plugin ID", () => {
 			const log = createLogAccess("test-plugin");
 
-			// These just verify the methods exist and don't throw
 			expect(() => log.debug("test message")).not.toThrow();
 			expect(() => log.info("test message", { extra: "data" })).not.toThrow();
 			expect(() => log.warn("test warning")).not.toThrow();
@@ -818,7 +766,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 			const ctx = factory.createContext(readOnlyPlugin);
 
-			// Content should be read-only (no create/update/delete)
 			expect(ctx.content).toBeDefined();
 			expect(typeof ctx.content!.get).toBe("function");
 			expect(typeof ctx.content!.list).toBe("function");
@@ -887,7 +834,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 			const ctx = factory.createContext(plugin);
 			expect(ctx.http).toBeDefined();
-			// With network:fetch:any, arbitrary hosts should not throw a host validation error
 			await expect(ctx.http!.fetch("https://unrestricted.example.com/test")).rejects.not.toThrow(
 				NOT_ALLOWED_FETCH_REGEX,
 			);
@@ -981,9 +927,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 		});
 
 		it("provides writable media (upload) for media:write when storage is configured", () => {
-			// Regression: the runtime threads `storage` but never `getUploadUrl`,
-			// so media:write plugins silently fell through to read-only media with
-			// no upload(). Storage is all upload() needs.
 			// eslint-disable-next-line typescript/no-unsafe-type-assertion -- minimal fake Storage for test
 			const storage = createFakeStorage() as never;
 			const factory = new PluginContextFactory({ db, storage });
@@ -1018,7 +961,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 			expect(result.storageKey).toMatch(/\.png$/);
 			expect(fakeStorage.uploads.has(result.storageKey)).toBe(true);
 
-			// The media record is retrievable via the read surface.
 			const fetched = await ctx.media!.get(result.mediaId);
 			expect(fetched?.filename).toBe("logo.png");
 		});
@@ -1034,17 +976,12 @@ describe("Capability Enforcement Integration (v2)", () => {
 				});
 
 				const ctx = factory.createContext(plugin);
-				// Re-create the context: hooks/routes do this on every invocation,
-				// so the warning must not fire again for the same plugin.
 				factory.createContext(plugin);
 
-				// Read access still works, but write is unavailable.
 				expect(ctx.media).toBeDefined();
 				expect(typeof ctx.media!.get).toBe("function");
 				expect(ctx.media!.upload).toBeUndefined();
 
-				// The author gets a signal rather than silent degradation — but
-				// only once per factory, not on every context creation.
 				expect(warnSpy).toHaveBeenCalledTimes(1);
 				expect(String(warnSpy.mock.calls[0]?.[1])).toContain("media:write");
 			} finally {
@@ -1063,7 +1000,7 @@ describe("Capability Enforcement Integration (v2)", () => {
 			});
 
 			expect(info.name).toBe("My Site");
-			expect(info.url).toBe("https://example.com"); // trailing slash stripped
+			expect(info.url).toBe("https://example.com");
 			expect(info.locale).toBe("fr");
 			expect(info.trailingSlash).toBe("never");
 		});
@@ -1074,7 +1011,7 @@ describe("Capability Enforcement Integration (v2)", () => {
 			expect(info.name).toBe("");
 			expect(info.url).toBe("");
 			expect(info.locale).toBe("en");
-			expect(info.trailingSlash).toBe("ignore"); // Astro's default
+			expect(info.trailingSlash).toBe("ignore");
 		});
 
 		it("strips trailing slash from URL", () => {
@@ -1122,7 +1059,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 		beforeEach(async () => {
 			userRepo = new UserRepository(db);
 
-			// Create test users with all 5 role levels
 			await userRepo.create({ email: "admin@test.com", name: "Admin User", role: "admin" });
 			await userRepo.create({ email: "editor@test.com", name: "Editor User", role: "editor" });
 			await userRepo.create({ email: "author@test.com", name: "Author User", role: "author" });
@@ -1146,7 +1082,7 @@ describe("Capability Enforcement Integration (v2)", () => {
 			expect(result).not.toBeNull();
 			expect(result!.email).toBe("admin@test.com");
 			expect(result!.name).toBe("Admin User");
-			expect(result!.role).toBe(50); // admin = 50
+			expect(result!.role).toBe(50);
 		});
 
 		it("gets user by email", async () => {
@@ -1155,7 +1091,7 @@ describe("Capability Enforcement Integration (v2)", () => {
 			const result = await access.getByEmail("editor@test.com");
 			expect(result).not.toBeNull();
 			expect(result!.email).toBe("editor@test.com");
-			expect(result!.role).toBe(40); // editor = 40
+			expect(result!.role).toBe(40);
 		});
 
 		it("returns null for non-existent user", async () => {
@@ -1170,7 +1106,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 			const result = await access.list();
 			expect(result.items).toHaveLength(5);
-			// All users should have role as number
 			for (const user of result.items) {
 				expect(typeof user.role).toBe("number");
 			}
@@ -1181,14 +1116,12 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 			const result = await access.list();
 			for (const user of result.items) {
-				// UserInfo should only have: id, email, name, role, createdAt
 				const keys = Object.keys(user);
 				expect(keys).toContain("id");
 				expect(keys).toContain("email");
 				expect(keys).toContain("name");
 				expect(keys).toContain("role");
 				expect(keys).toContain("createdAt");
-				// Should NOT have sensitive fields
 				expect(keys).not.toContain("avatarUrl");
 				expect(keys).not.toContain("emailVerified");
 				expect(keys).not.toContain("data");
@@ -1219,7 +1152,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 		it("clamps limit to maximum of 100", async () => {
 			const access = createUserAccess(db);
 
-			// Should not throw for large limits — just clamp
 			const result = await access.list({ limit: 500 });
 			expect(result.items).toHaveLength(5);
 		});
@@ -1227,14 +1159,11 @@ describe("Capability Enforcement Integration (v2)", () => {
 		it("clamps negative limit to minimum of 1", async () => {
 			const access = createUserAccess(db);
 
-			// Negative limit should be clamped to 1, not passed through
 			const result = await access.list({ limit: -999 });
 			expect(result.items).toHaveLength(1);
 		});
 
 		it("preserves contributor (20) and author (30) roles", async () => {
-			// beforeEach creates users via UserRepository with all 5 roles.
-			// Verify that contributor (20) and author (30) survive the round-trip.
 			const access = createUserAccess(db);
 
 			const contributor = await access.getByEmail("contrib@test.com");
@@ -1247,7 +1176,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 		});
 
 		it("filters users by exact role number", async () => {
-			// beforeEach creates one user per role level (10, 20, 30, 40, 50)
 			const access = createUserAccess(db);
 
 			const contributors = await access.list({ role: 20 });
@@ -1269,7 +1197,6 @@ describe("Capability Enforcement Integration (v2)", () => {
 			const access = createUserAccess(db);
 			const seen = new Set<string>();
 
-			// Page through all 5 users one at a time
 			let cursor: string | undefined;
 			let pageCount = 0;
 			// eslint-disable-next-line no-constant-condition
@@ -1279,11 +1206,11 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 				expect(page.items).toHaveLength(1);
 				const userId = page.items[0]!.id;
-				expect(seen.has(userId)).toBe(false); // no duplicates
+				expect(seen.has(userId)).toBe(false);
 				seen.add(userId);
 				pageCount++;
 
-				if (!page.nextCursor) break; // last page
+				if (!page.nextCursor) break;
 				cursor = page.nextCursor;
 			}
 

@@ -33,18 +33,14 @@ if (!post) {
 
 Astro.cache.set(cacheHint);
 
-// Get featured image URL for OG fallback
-// The image may have src (external) or meta.storageKey (local)
 function getImageUrl(img: unknown): string | undefined {
 	if (!img || typeof img !== "object") return undefined;
 	const image = img as Record<string, unknown>;
-	// Check for direct src
 	if (typeof image.src === "string" && image.src) {
 		return image.src.startsWith("http")
 			? image.src
 			: `${Astro.url.origin}${image.src}`;
 	}
-	// Build from storageKey for local images
 	const meta = image.meta as Record<string, unknown> | undefined;
 	const storageKey =
 		(typeof meta?.storageKey === "string" ? meta.storageKey : undefined) ||
@@ -57,7 +53,6 @@ function getImageUrl(img: unknown): string | undefined {
 const featuredImageUrl = getImageUrl(post.data.featured_image);
 const { siteTitle } = resolveBlogSiteIdentity(await getSiteSettings());
 
-// Generate SEO meta from content
 const seo = getSeoMeta(post, {
 	siteTitle,
 	siteUrl: Astro.url.origin,
@@ -65,19 +60,12 @@ const seo = getSeoMeta(post, {
 	defaultOgImage: featuredImageUrl,
 });
 
-// Bylines are already hydrated by getEmDashEntry
 const bylines = post.data.bylines ?? [];
 
-// Get reading time
 const readingTime = getReadingTime(post.data.content);
 
-// Fetch this post's tags and the related-posts list in parallel — they're
-// independent queries, so running them concurrently halves the round-trip
-// cost on remote databases.
-// Note: post.id is the slug, post.data.id is the database ULID.
 const [tags, { entries: recentPosts }] = await Promise.all([
 	getEntryTerms("posts", post.data.id, "tag"),
-	// Fetch a few extra in case the current post is among them
 	getEmDashCollection("posts", {
 		orderBy: { published_at: "desc" },
 		limit: 4,
@@ -85,8 +73,6 @@ const [tags, { entries: recentPosts }] = await Promise.all([
 ]);
 const otherPosts = recentPosts.filter((p) => p.id !== post.id).slice(0, 3);
 
-// Single batched query for related-posts tags, rather than one
-// getEntryTerms() call per related post.
 const otherTagsByEntry = await getTermsForEntries(
 	"posts",
 	otherPosts.map((p) => p.data.id),
@@ -119,7 +105,6 @@ const publishDate =
 	content={{ collection: "posts", id: post.data.id, slug }}
 >
 	<article class="article">
-		{/* Hero: Full-width featured image */}
 		{
 			post.data.featured_image && (
 				<div class="article-hero" {...post.edit.featured_image}>
@@ -128,9 +113,7 @@ const publishDate =
 			)
 		}
 
-		{/* Three-column layout */}
 		<div class="article-grid">
-			{/* Left gutter: Meta information */}
 			<aside class="article-meta-col">
 				<div class="meta-sticky">
 					{
@@ -192,7 +175,6 @@ const publishDate =
 				</div>
 			</aside>
 
-			{/* Main content */}
 			<div class="article-main">
 				<header class="article-header">
 					<div class="article-meta">
@@ -239,13 +221,11 @@ const publishDate =
 				</div>
 			</div>
 
-			{/* Right gutter: TOC + Sidebar widgets */}
 			<aside class="article-sidebar">
 				<div class="sidebar-sticky">
 					<nav class="toc" aria-label="Table of contents">
 						<h4 class="toc-title">On this page</h4>
 						<div class="toc-content" id="toc-content">
-							<!-- Populated by JS -->
 						</div>
 					</nav>
 					<div class="sidebar-widgets">
@@ -283,7 +263,6 @@ const publishDate =
 	}
 
 	<script>
-		// Build table of contents from h2/h3 headings
 		function buildToc() {
 			const content = document.querySelector(".article-content");
 			const tocContainer = document.getElementById("toc-content");
@@ -291,7 +270,6 @@ const publishDate =
 
 			const headings = content.querySelectorAll("h2, h3");
 			if (headings.length === 0) {
-				// Hide TOC if no headings
 				const toc = document.querySelector(".toc") as HTMLElement | null;
 				if (toc) toc.style.display = "none";
 				return;
@@ -301,7 +279,6 @@ const publishDate =
 			list.className = "toc-list";
 
 			headings.forEach((heading, index) => {
-				// Add ID if missing
 				if (!heading.id) {
 					heading.id = `heading-${index}`;
 				}
@@ -321,7 +298,6 @@ const publishDate =
 
 			tocContainer.appendChild(list);
 
-			// Highlight current section on scroll
 			const observer = new IntersectionObserver(
 				(entries) => {
 					entries.forEach((entry) => {
@@ -348,13 +324,11 @@ const publishDate =
 </Base>
 
 <style>
-	/* Article container */
 	.article {
 		max-width: var(--wide-width);
 		margin: 0 auto;
 	}
 
-	/* Hero image - full width within container */
 	.article-hero {
 		margin: var(--spacing-16) var(--spacing-6);
 		border-radius: var(--radius-lg);
@@ -368,7 +342,6 @@ const publishDate =
 		object-fit: cover;
 	}
 
-	/* Three-column grid */
 	.article-grid {
 		display: grid;
 		grid-template-columns:
@@ -380,7 +353,6 @@ const publishDate =
 		margin: var(--spacing-16) 0;
 	}
 
-	/* Left column: Meta */
 	.article-meta-col {
 		display: block;
 	}
@@ -434,7 +406,6 @@ const publishDate =
 		background: var(--color-border);
 	}
 
-	/* Byline styles */
 	.bylines {
 		display: flex;
 		flex-direction: column;
@@ -470,7 +441,6 @@ const publishDate =
 		color: var(--color-muted);
 	}
 
-	/* Main content column */
 	.article-main {
 		min-width: 0;
 	}
@@ -509,7 +479,6 @@ const publishDate =
 		color: var(--color-text-secondary);
 	}
 
-	/* Article content typography */
 	.article-content {
 		font-size: var(--font-size-lg);
 		line-height: var(--leading-relaxed);
@@ -600,7 +569,6 @@ const publishDate =
 		text-decoration-thickness: 2px;
 	}
 
-	/* Right column: TOC + Sidebar */
 	.article-sidebar {
 		display: block;
 	}
@@ -654,7 +622,6 @@ const publishDate =
 		color: var(--color-text);
 	}
 
-	/* Sidebar widgets */
 	.sidebar-widgets :global(.widget-area) {
 		display: flex;
 		flex-direction: column;
@@ -679,7 +646,6 @@ const publishDate =
 		line-height: var(--leading-relaxed);
 	}
 
-	/* Sidebar search widget */
 	.sidebar-widgets :global(.widget-search) {
 		display: flex;
 		flex-direction: column;
@@ -715,7 +681,6 @@ const publishDate =
 		display: none;
 	}
 
-	/* Sidebar categories widget */
 	.sidebar-widgets :global(.widget-categories) {
 		list-style: none;
 		padding: 0;
@@ -752,7 +717,6 @@ const publishDate =
 		border-radius: var(--radius);
 	}
 
-	/* Sidebar tags widget - pill style */
 	.sidebar-widgets :global(.widget-tags__cloud) {
 		list-style: none;
 		padding: 0;
@@ -788,7 +752,6 @@ const publishDate =
 		display: none;
 	}
 
-	/* Sidebar recent posts widget */
 	.sidebar-widgets :global(.widget-recent-posts) {
 		list-style: none;
 		padding: 0;
@@ -815,7 +778,6 @@ const publishDate =
 		color: var(--color-text);
 	}
 
-	/* Sidebar archives widget */
 	.sidebar-widgets :global(.widget-archives) {
 		list-style: none;
 		padding: 0;
@@ -852,7 +814,6 @@ const publishDate =
 		border-radius: var(--radius);
 	}
 
-	/* Comments section */
 	.article-comments {
 		margin-top: var(--spacing-16);
 		padding-top: var(--spacing-10);
@@ -899,7 +860,6 @@ const publishDate =
 		color: var(--color-on-accent) !important;
 	}
 
-	/* More posts section */
 	.more-posts {
 		background: var(--color-bg-subtle);
 		padding: var(--spacing-16) 0;
@@ -925,7 +885,6 @@ const publishDate =
 		gap: var(--spacing-8);
 	}
 
-	/* Responsive */
 	@media (max-width: 1100px) {
 		.article-grid {
 			grid-template-columns: minmax(0, var(--content-width));

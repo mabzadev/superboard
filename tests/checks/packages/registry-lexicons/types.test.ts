@@ -24,21 +24,6 @@ describe("delegated release permission", () => {
 	});
 });
 
-/**
- * Smoke tests over the generated types and validation schemas. The goal isn't
- * exhaustive coverage of the lexicons (the JSON files are the spec; codegen is
- * deterministic) -- it's to catch:
- *
- *   1. Codegen drift: if a regen produces something importable but broken.
- *   2. Schema-vs-type drift: types and runtime schemas come from the same
- *      generation, so they should always agree.
- *   3. NSID typos in our hand-maintained `NSID` map.
- *
- * Each test builds a representative record, validates it via the runtime
- * schema, and uses the inferred type for the variable so a TS error surfaces
- * if the shape ever changes incompatibly.
- */
-
 describe("PackageProfile", () => {
 	it("validates a minimal valid profile", () => {
 		const profile: PackageProfile.Main = {
@@ -60,7 +45,6 @@ describe("PackageProfile", () => {
 			id: "at://did:plc:abc123/com.emdashcms.experimental.package.profile/gallery",
 			type: "emdash-plugin",
 			license: "MIT",
-			// authors omitted
 			security: [{ email: "security@example.com" }],
 		};
 
@@ -126,7 +110,6 @@ describe("PackageProfile", () => {
 		};
 
 		expect(safeParse(PackageProfile.mainSchema, profile)).toMatchObject({ ok: true });
-		// Consumers validate an entry only after dispatching its NSID to this schema.
 		expect(
 			is(PackageProfileExtension.mainSchema, {
 				$type: NSID.packageProfileExtension,
@@ -227,7 +210,6 @@ describe("PackageRelease", () => {
 					url: "https://example.com/icon.png",
 					checksum: "bcixyz",
 				},
-				// no `package` artifact
 			},
 		};
 
@@ -267,7 +249,6 @@ describe("PackageReleaseExtension", () => {
 	});
 
 	it("does not enforce profile policy across records", () => {
-		// requireProvenance is enforced by later consumers, not a cross-record Lexicon rule.
 		expect(
 			is(PackageProfileExtension.mainSchema, {
 				$type: NSID.packageProfileExtension,
@@ -286,8 +267,6 @@ describe("PackageReleaseExtension", () => {
 
 describe("PublisherProfile", () => {
 	it("validates a publisher profile with only required fields", () => {
-		// Only `displayName` is required by the lexicon. Verification records bind
-		// against this value, so it's the one field a publisher must commit to.
 		const profile: PublisherProfile.Main = {
 			$type: NSID.publisherProfile,
 			displayName: "Acme Plugin Co.",
@@ -308,9 +287,6 @@ describe("PublisherProfile", () => {
 
 describe("NSID map", () => {
 	it("has every NSID we generated a module for", () => {
-		// If you add a lexicon, regen, and forget to update the NSID map, this
-		// test reminds you. It's a coarse check by count, but the values are
-		// also sanity-checked in the schema modules' `$type` literals above.
 		const expected = [
 			"com.emdashcms.experimental.package.profile",
 			"com.emdashcms.experimental.package.profileExtension",

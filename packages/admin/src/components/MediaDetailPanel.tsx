@@ -1,10 +1,3 @@
-/**
- * Media Detail Dialog
- *
- * A centered dialog for viewing and editing media item metadata.
- * Opens when clicking an item in the MediaLibrary.
- */
-
 import {
 	Button,
 	ClipboardText,
@@ -82,9 +75,6 @@ export interface MediaDetailPanelProps {
 	onDeleted?: () => void;
 }
 
-/**
- * Centered dialog for viewing and editing media metadata.
- */
 export function MediaDetailPanel({
 	open,
 	item,
@@ -110,7 +100,6 @@ export function MediaDetailPanel({
 	const isImage = item.mimeType.startsWith("image/");
 	const isVideo = item.mimeType.startsWith("video/");
 	const isAudio = item.mimeType.startsWith("audio/");
-	// Present when the item streams rather than resolving to a playable file.
 	const playback = metaPlayback(item.meta);
 	const canEditMetadata = !isProviderAsset && isImage;
 	const canDelete = !isProviderAsset || Boolean(canDeleteProp);

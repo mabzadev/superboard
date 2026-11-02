@@ -79,7 +79,6 @@ describe("redirect patterns", () => {
 		});
 
 		it("validates consecutively without regex state leaking", () => {
-			// Calling validatePattern multiple times should not have stateful regex issues
 			expect(validatePattern("/[a]")).toBeNull();
 			expect(validatePattern("/[b]")).toBeNull();
 			expect(validatePattern("/[c]/[...rest]")).toBeNull();
@@ -141,7 +140,6 @@ describe("redirect patterns", () => {
 
 		it("escapes regex-special characters in literal parts", () => {
 			const compiled = compilePattern("/blog.old/[slug]");
-			// The dot should be escaped, not matching any character
 			expect(compiled.regex.test("/blog.old/test")).toBe(true);
 			expect(compiled.regex.test("/blogXold/test")).toBe(false);
 		});
@@ -238,7 +236,6 @@ describe("redirect patterns", () => {
 			const params = matchPattern(source, "/v1/news/hello");
 			expect(params).toEqual({ category: "news", slug: "hello" });
 
-			// Destination only uses slug, drops category
 			const destination = interpolateDestination("/posts/[slug]", params!);
 			expect(destination).toBe("/posts/hello");
 		});

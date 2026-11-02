@@ -1,11 +1,3 @@
-/**
- * Dashboard stats handler
- *
- * Returns summary data for the admin dashboard in a single request:
- * collection content counts, media count, user count, and recent
- * content across all collections.
- */
-
 import { sql, type Kysely } from "kysely";
 
 import { ContentRepository } from "../../database/repositories/content.js";
@@ -45,18 +37,11 @@ export interface DashboardStats {
 	schedulerHealth: SchedulerHealth;
 }
 
-/**
- * Fetch dashboard statistics.
- *
- * Queries are intentionally lightweight — counts use indexed columns,
- * and recent items are capped at 10.
- */
 export async function handleDashboardStats(
 	db: Kysely<Database>,
 	now = new Date(),
 ): Promise<ApiResult<DashboardStats>> {
 	try {
-		// Discover collections from the system table
 		const collections = await db
 			.selectFrom("_emdash_collections")
 			.select(["slug", "label", "title_field"])
@@ -64,7 +49,6 @@ export async function handleDashboardStats(
 			.orderBy("slug", "asc")
 			.execute();
 
-		// Gather per-collection counts in parallel
 		const contentRepo = new ContentRepository(db);
 		const collectionStats: CollectionStats[] = await Promise.all(
 			collections.map(async (col) => {
@@ -81,7 +65,6 @@ export async function handleDashboardStats(
 			}),
 		);
 
-		// Media and user counts
 		const mediaRepo = new MediaRepository(db);
 		const userRepo = new UserRepository(db);
 		const [mediaCount, userCount, schedulerHealth] = await Promise.all([
@@ -90,7 +73,6 @@ export async function handleDashboardStats(
 			getSchedulerHealth(db, now),
 		]);
 
-		// Recent items across all collections (last 10 updated, any status)
 		const recentItems = await fetchRecentItems(db, collections);
 
 		return {
@@ -115,7 +97,6 @@ export async function handleDashboardStats(
 	}
 }
 
-/** Raw row shape from the UNION ALL query — all snake_case. */
 interface RecentItemRow {
 	id: string;
 	collection: string;
@@ -127,24 +108,12 @@ interface RecentItemRow {
 	author_id: string | null;
 }
 
-/**
- * Fetch the 10 most recently updated items across all collections.
- *
- * Uses UNION ALL over each ec_* table. The query is safe because
- * collection slugs come from the system table and are validated.
- *
- * `title` is not a standard column — it's a user-defined field. We query
- * `_emdash_fields` to discover which collections have one and fall back
- * to `slug` (which is always present) otherwise.
- */
 async function fetchRecentItems(
 	db: Kysely<Database>,
 	collections: Array<{ slug: string; label: string; title_field: string | null }>,
 ): Promise<RecentItem[]> {
 	if (collections.length === 0) return [];
 
-	// Preserve the legacy title-column fallback for collections without an
-	// explicit display field.
 	const titleFields = await db
 		.selectFrom("_emdash_fields as f")
 		.innerJoin("_emdash_collections as c", "c.id", "f.collection_id")
@@ -154,11 +123,6 @@ async function fetchRecentItems(
 
 	const collectionsWithTitle = new Set(titleFields.map((r) => r.collection_slug));
 
-	// Issue one query per collection in parallel, then merge in JS.
-	// A single UNION ALL across N collections trips D1's
-	// SQLITE_LIMIT_COMPOUND_SELECT cap when N is large enough (#895);
-	// per-collection queries side-step that. Each query fetches at most
-	// 10 rows, so the merge handles at most N * 10 rows before slicing.
 	const perCollection = await Promise.all(
 		collections.map(async (col) => {
 			validateIdentifier(col.slug);
@@ -166,9 +130,6 @@ async function fetchRecentItems(
 			const titleField = col.title_field ?? (collectionsWithTitle.has(col.slug) ? "title" : null);
 			if (titleField) validateIdentifier(titleField);
 
-			// Use the collection's display field when configured, otherwise fall
-			// back to the conventional title column, slug, then id.
-			// All output uses snake_case to avoid SQLite quoting issues on D1.
 			const titleExpr = titleField
 				? sql`COALESCE(${sql.ref(titleField)}, slug, id)`
 				: sql`COALESCE(slug, id)`;
@@ -192,13 +153,11 @@ async function fetchRecentItems(
 		}),
 	);
 
-	// Merge across collections, sort by updated_at desc, take top 10.
 	const merged = perCollection
 		.flat()
 		.toSorted((a, b) => (a.updated_at < b.updated_at ? 1 : a.updated_at > b.updated_at ? -1 : 0))
 		.slice(0, 10);
 
-	// Map snake_case DB rows to camelCase API shape
 	return merged.map((row) => ({
 		id: row.id,
 		collection: row.collection,

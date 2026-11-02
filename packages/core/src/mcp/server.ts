@@ -1,14 +1,3 @@
-/**
- * EmDash MCP Server
- *
- * Exposes content, schema, media, search, taxonomy, and menu operations
- * as MCP tools over the Streamable HTTP transport.
- *
- * Tools use the EmDashHandlers interface (same as locals.emdash) so
- * they work with the pre-bound handlers that the middleware provides.
- * The handlers instance is passed per-request via authInfo on the transport.
- */
-
 import type { Permission, RoleLevel } from "@emdash-cms/auth";
 import { canActOnOwn, hasPermission, Permissions, Role } from "@emdash-cms/auth";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -35,16 +24,9 @@ import type { RouteCallerInput } from "../plugins/routes.js";
 import { decodeBase64, encodeBase64 } from "../utils/base64.js";
 
 const COLLECTION_SLUG_PATTERN = /^[a-z][a-z0-9_]*$/;
-/** http(s) scheme matcher used by `settings_update` URL validation. */
 const HTTP_SCHEME_PATTERN = /^https?:\/\//i;
 const TAXONOMY_CURSOR_VERSION = 2;
 const MAX_TAXONOMY_CURSOR_LENGTH = 2048;
-
-// ---------------------------------------------------------------------------
-// Shared schemas — kept in sync with `api/schemas/settings.ts` (which the
-// REST handler validates against). Defined inline to match the rest of the
-// MCP tool registrations rather than reaching across into the REST layer.
-// ---------------------------------------------------------------------------
 
 const settingsMediaReferenceSchema = z.object({
 	mediaId: z.string().describe("Media item ID (use media_create or media_list)"),
@@ -193,10 +175,6 @@ const schemaUpdateFieldToolSchema = z.object({
 	),
 });
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 type HandlerResult = {
 	success: boolean;
 	data?: unknown;
@@ -267,22 +245,12 @@ function decodeTaxonomyCursor(cursor: string): TaxonomyListCursor {
 	return { id: legacy.id };
 }
 
-/**
- * Return a successful tool response with the data as pretty-printed JSON.
- */
 function respondData(data: unknown): SuccessEnvelope {
 	return {
 		content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
 	};
 }
 
-/**
- * Return a structured error tool response.
- *
- * The error code is emitted both in the human-readable message (as a stable
- * `[CODE]` prefix that callers can match on) and in `_meta.code` so MCP-aware
- * clients can read it programmatically once the SDK supports forwarding meta.
- */
 function respondError(
 	code: string,
 	message: string,
@@ -298,15 +266,6 @@ function respondError(
 	};
 }
 
-/**
- * Auth/permission errors thrown from `requireScope` / `requireRole` /
- * `requireOwnership` / `requireDraftAccess`. Carries a stable string `code`
- * field so `respondHandlerError` can surface it through `_meta.code` and
- * the message prefix.
- *
- * Distinct from `McpError` (which the SDK catches at JSON-RPC level — the
- * code there is numeric, not a stable EmDash error code).
- */
 class EmDashAuthError extends Error {
 	override readonly name = "EmDashAuthError";
 	constructor(
@@ -317,26 +276,6 @@ class EmDashAuthError extends Error {
 	}
 }
 
-/**
- * Map an unknown thrown error to a structured error envelope.
- *
- * Recognises (in priority order):
- *  - `EmDashAuthError` — `code` is a stable EmDash auth code
- *    (`UNAUTHORIZED`, `INSUFFICIENT_SCOPE`, `INSUFFICIENT_PERMISSIONS`).
- *  - `Error` objects with an `apiError: { code, details? }` annotation
- *    (handlers throw these for NOT_FOUND / CONFLICT inside transactions;
- *    see `api/handlers/content.ts:538`).
- *  - `SchemaError` (and any error with a string `code` field) — the code
- *    is forwarded verbatim. `details` is forwarded too if present.
- *  - Plain `Error` instances — message preserved, code falls back to
- *    `fallbackCode` (or `INTERNAL_ERROR`).
- *  - Strings — used directly as the message.
- *  - Anything else — coerced via `String()`.
- *
- * The original message is always preserved so tests and humans can see the
- * specific failure cause. Numeric `code` values (e.g. on `McpError`) are
- * ignored — the field is reserved for stable string codes.
- */
 function respondHandlerError(error: unknown, fallbackCode = "INTERNAL_ERROR"): ErrorEnvelope {
 	let code = fallbackCode;
 	let message: string;
@@ -354,9 +293,6 @@ function respondHandlerError(error: unknown, fallbackCode = "INTERNAL_ERROR"): E
 				details = apiError.details as Record<string, unknown>;
 			}
 		} else {
-			// Errors that carry their own `code` (SchemaError, custom errors).
-			// Skip numeric codes (McpError, Node fs errors) — `_meta.code` is
-			// reserved for stable string codes.
 			const rawCode = (error as { code?: unknown }).code;
 			if (typeof rawCode === "string" && rawCode) {
 				code = rawCode;
@@ -375,14 +311,6 @@ function respondHandlerError(error: unknown, fallbackCode = "INTERNAL_ERROR"): E
 	return respondError(code, message, details);
 }
 
-/**
- * Unwrap an ApiResult<T> into MCP tool result format.
- *
- * On success returns the data as JSON. On failure propagates the structured
- * `{ code, message, details }` from the handler so the caller sees both a
- * machine-readable code (in `_meta.code` and as a `[CODE]` message prefix)
- * and the original human-readable message.
- */
 function unwrap(result: HandlerResult): SuccessEnvelope | ErrorEnvelope {
 	if (result.success && result.data !== undefined) {
 		return respondData(result.data);
@@ -401,27 +329,15 @@ function unwrap(result: HandlerResult): SuccessEnvelope | ErrorEnvelope {
 	return respondError(code, message, details);
 }
 
-/**
- * Return a JSON text block (success path for tools that don't go through
- * the ApiResult-returning handler layer, e.g. schema/menu/taxonomy).
- */
 function jsonResult(data: unknown): SuccessEnvelope {
 	return respondData(data);
 }
-
-// ---------------------------------------------------------------------------
-// Context extraction
-//
-// The route handler passes the runtime and authenticated user in authInfo.extra.
-// ---------------------------------------------------------------------------
 
 interface EmDashExtra {
 	emdash: EmDashHandlers;
 	user: RouteCallerInput;
 	userId: string;
-	/** The authenticated user's RBAC role level. */
 	userRole: RoleLevel;
-	/** Token scopes — undefined for session auth (all access allowed). */
 	tokenScopes?: string[];
 }
 
@@ -459,12 +375,6 @@ async function getCollectionFields(
 	}
 }
 
-/**
- * Convert markdown strings to Portable Text for `portableText` fields on write.
- * Non-string values pass through, so callers may still send Portable Text. If
- * the schema can't be loaded, data is returned unchanged for the handler to
- * validate.
- */
 async function convertWriteData(
 	ec: EmDashHandlers,
 	collection: string,
@@ -475,11 +385,6 @@ async function convertWriteData(
 	return convertDataForWrite(data, fields);
 }
 
-/**
- * Convert `portableText` field values on each item's `data` to markdown,
- * mutating in place. Inverse of {@link convertWriteData}, gated on the read
- * tools' `markdown` argument.
- */
 async function applyReadMarkdown(
 	ec: EmDashHandlers,
 	collection: string,
@@ -504,13 +409,6 @@ async function invalidateBylines(): Promise<void> {
 	invalidateBylineCache();
 }
 
-/**
- * Enforce a scope requirement on the current request.
- *
- * When tokenScopes is undefined (session auth), all operations are allowed
- * since session users have full access based on their role. When scopes are
- * present (token auth), the required scope must be included.
- */
 function requireScope(
 	extra: { authInfo?: { extra?: Record<string, unknown> } },
 	scope: string,
@@ -521,13 +419,6 @@ function requireScope(
 	}
 }
 
-/**
- * Defense-in-depth: enforce a minimum RBAC role on the current request.
- *
- * This is checked in addition to scope requirements. Even if a token has
- * the right scopes (e.g. due to a bug in scope clamping), the user's
- * actual role must still meet the minimum.
- */
 function requireRole(
 	extra: { authInfo?: { extra?: Record<string, unknown> } },
 	minRole: RoleLevel,
@@ -541,20 +432,11 @@ function requireRole(
 	}
 }
 
-/**
- * Whether the current user may read non-published content (drafts, scheduled,
- * trashed, revisions, compare). SUBSCRIBER may hold content:read for
- * member-only published content but must not see drafts.
- */
 function canReadDrafts(extra: { authInfo?: { extra?: Record<string, unknown> } }): boolean {
 	const payload = getExtra(extra);
 	return hasPermission({ role: payload.userRole }, "content:read_drafts");
 }
 
-/**
- * Throw if the current user cannot read non-published content. Used by
- * editor-only views (revisions, compare, trash, preview-url).
- */
 function requireDraftAccess(extra: { authInfo?: { extra?: Record<string, unknown> } }): void {
 	if (!canReadDrafts(extra)) {
 		throw new EmDashAuthError(
@@ -564,13 +446,6 @@ function requireDraftAccess(extra: { authInfo?: { extra?: Record<string, unknown
 	}
 }
 
-/**
- * Enforce ownership-based permission checks, mirroring the REST API's
- * requireOwnerPerm() pattern.
- *
- * If the user is the owner, checks ownPermission. Otherwise checks
- * anyPermission (which requires EDITOR+ role).
- */
 function requireOwnership(
 	extra: { authInfo?: { extra?: Record<string, unknown> } },
 	ownerId: string,
@@ -587,16 +462,6 @@ function requireOwnership(
 	}
 }
 
-/**
- * Extract the author ID from a content handler response.
- *
- * Content handlers return `{ item: { id, authorId, ... }, _rev? }`.
- * This helper navigates that shape safely. Returns "" when authorId is
- * missing or non-string (e.g. seed-imported content with no author);
- * `canActOnOwn` then decides based on the caller's permissions —
- * an actor with `*:edit_any` succeeds, an actor with only `*:edit_own`
- * is denied with a clean permission error.
- */
 function extractContentAuthorId(data: unknown): string {
 	if (!data || typeof data !== "object") return "";
 	const obj = data as Record<string, unknown>;
@@ -605,10 +470,6 @@ function extractContentAuthorId(data: unknown): string {
 	return typeof item?.authorId === "string" ? item.authorId : "";
 }
 
-/**
- * Extract the resolved ID from a content handler response.
- * Handles slug -> ID resolution performed by the handler.
- */
 function extractContentId(data: unknown): string | undefined {
 	if (!data || typeof data !== "object") return undefined;
 	const obj = data as Record<string, unknown>;
@@ -616,10 +477,6 @@ function extractContentId(data: unknown): string | undefined {
 		obj.item && typeof obj.item === "object" ? (obj.item as Record<string, unknown>) : obj;
 	return typeof item?.id === "string" ? item.id : undefined;
 }
-
-// ---------------------------------------------------------------------------
-// Server factory
-// ---------------------------------------------------------------------------
 
 export interface PluginMcpRegistration {
 	pluginId: string;
@@ -641,14 +498,6 @@ export function createMcpServer(
 		{ capabilities: { logging: {} } },
 	);
 
-	// Wrap every tool registration's callback so EmDashAuthError throws
-	// (from requireScope / requireRole / requireOwnership / requireDraftAccess)
-	// surface as structured `_meta.code`-bearing tool error envelopes
-	// instead of the SDK's text-only fallback in createToolError().
-	//
-	// Type-erased on purpose — the SDK's overloads are too narrow for a
-	// generic wrapper, but the runtime contract (callback returns the tool
-	// result envelope) holds for every registered tool.
 	const originalRegisterTool = server.registerTool.bind(server);
 	(server as { registerTool: typeof server.registerTool }).registerTool = ((
 		name: string,
@@ -742,10 +591,6 @@ export function createMcpServer(
 		);
 	}
 
-	// =====================================================================
-	// Content tools
-	// =====================================================================
-
 	server.registerTool(
 		"content_list",
 		{
@@ -795,8 +640,6 @@ export function createMcpServer(
 		async (args, extra) => {
 			requireScope(extra, "content:read");
 			const ec = getEmDash(extra);
-			// Subscribers must only see published content; force the status
-			// filter regardless of caller-supplied value.
 			const status = canReadDrafts(extra) ? args.status : "published";
 			const result = await ec.handleContentList(args.collection, {
 				status,
@@ -851,8 +694,6 @@ export function createMcpServer(
 			requireScope(extra, "content:read");
 			const ec = getEmDash(extra);
 			const result = await ec.handleContentGet(args.collection, args.id, args.locale);
-			// Hide non-published items from users without draft access. Return a
-			// not-found error so subscribers can't enumerate draft IDs by status.
 			if (result.success && !canReadDrafts(extra)) {
 				const data =
 					result.data && typeof result.data === "object"
@@ -932,7 +773,6 @@ export function createMcpServer(
 			requireRole(extra, Role.CONTRIBUTOR);
 			const { emdash, userId } = getExtra(extra);
 
-			// Creating a translation requires edit permission on the source item
 			if (args.translationOf) {
 				const source = await emdash.handleContentGet(args.collection, args.translationOf);
 				if (!source.success) return unwrap(source);
@@ -946,7 +786,6 @@ export function createMcpServer(
 
 			const data = await convertWriteData(emdash, args.collection, args.data);
 
-			// Publishing requires publish permission — create as draft then publish
 			if (args.status === "published") {
 				const user = { id: userId, role: getExtra(extra).userRole };
 				if (!hasPermission(user, "content:publish_own")) {
@@ -1021,11 +860,6 @@ export function createMcpServer(
 					.describe(
 						"New status. Setting to 'published' requires publish permission. Setting to 'draft' unpublishes the item and also requires publish permission.",
 					),
-				// Reuse the REST schema rather than redefining inline. The REST schema's
-				// `canonical` field is gated through `httpUrl` (validates the URL parses
-				// AND has an http(s) scheme) which rejects javascript:/data: URIs that
-				// would otherwise become stored XSS in the rendered <link rel="canonical">.
-				// Inlining a looser shape here would let MCP callers bypass that.
 				seo: contentSeoInput
 					.optional()
 					.describe(
@@ -1060,7 +894,6 @@ export function createMcpServer(
 			requireRole(extra, Role.AUTHOR);
 			const { emdash, userId, userRole } = getExtra(extra);
 
-			// Fetch item to check ownership
 			const existing = await emdash.handleContentGet(args.collection, args.id, args.locale);
 			if (!existing.success) {
 				return unwrap(existing);
@@ -1072,9 +905,6 @@ export function createMcpServer(
 				? await convertWriteData(emdash, args.collection, args.data)
 				: args.data;
 
-			// Writing publishedAt directly (incl. clearing to null) overwrites
-			// historical record — gate behind publish_any, mirroring the REST PUT
-			// route. Status-driven publishes are gated separately below.
 			if (args.publishedAt !== undefined) {
 				const user = { id: userId, role: userRole };
 				if (!hasPermission(user, "content:publish_any")) {
@@ -1087,7 +917,6 @@ export function createMcpServer(
 
 			const resolvedId = extractContentId(existing.data) ?? args.id;
 
-			// Status transitions route through dedicated handlers for proper revision management
 			if (args.status === "published") {
 				requireOwnership(extra, ownerId, "content:publish_own", "content:publish_any");
 				if (
@@ -1175,7 +1004,6 @@ export function createMcpServer(
 			requireRole(extra, Role.AUTHOR);
 			const ec = getEmDash(extra);
 
-			// Fetch item to check ownership
 			const existing = await ec.handleContentGet(args.collection, args.id);
 			if (!existing.success) {
 				return unwrap(existing);
@@ -1207,7 +1035,6 @@ export function createMcpServer(
 			requireRole(extra, Role.AUTHOR);
 			const ec = getEmDash(extra);
 
-			// Fetch trashed item to check ownership
 			const existing = await ec.handleContentGetIncludingTrashed(args.collection, args.id);
 			if (!existing.success) {
 				return unwrap(existing);
@@ -1273,7 +1100,6 @@ export function createMcpServer(
 			requireRole(extra, Role.AUTHOR);
 			const { emdash, userId, userRole } = getExtra(extra);
 
-			// Fetch item to check ownership
 			const existing = await emdash.handleContentGet(args.collection, args.id);
 			if (!existing.success) {
 				return unwrap(existing);
@@ -1281,8 +1107,6 @@ export function createMcpServer(
 			const ownerId = extractContentAuthorId(existing.data);
 			requireOwnership(extra, ownerId, "content:publish_own", "content:publish_any");
 
-			// Backdating overwrites historical record — gate behind publish_any
-			// regardless of ownership (mirrors the REST PUT route's publishedAt gate).
 			if (args.publishedAt !== undefined) {
 				const user = { id: userId, role: userRole };
 				if (!hasPermission(user, "content:publish_any")) {
@@ -1319,7 +1143,6 @@ export function createMcpServer(
 			requireRole(extra, Role.AUTHOR);
 			const ec = getEmDash(extra);
 
-			// Fetch item to check ownership
 			const existing = await ec.handleContentGet(args.collection, args.id);
 			if (!existing.success) {
 				return unwrap(existing);
@@ -1357,7 +1180,6 @@ export function createMcpServer(
 			requireRole(extra, Role.AUTHOR);
 			const ec = getEmDash(extra);
 
-			// Fetch item to check ownership
 			const existing = await ec.handleContentGet(args.collection, args.id);
 			if (!existing.success) {
 				return unwrap(existing);
@@ -1448,7 +1270,6 @@ export function createMcpServer(
 			requireRole(extra, Role.AUTHOR);
 			const ec = getEmDash(extra);
 
-			// Fetch item to check ownership
 			const existing = await ec.handleContentGet(args.collection, args.id);
 			if (!existing.success) {
 				return unwrap(existing);
@@ -1531,8 +1352,6 @@ export function createMcpServer(
 			requireScope(extra, "content:read");
 			const ec = getEmDash(extra);
 			const result = await ec.handleContentTranslations(args.collection, args.id);
-			// Filter out non-published translations for users without draft
-			// access so a subscriber can't enumerate locales that aren't yet live.
 			if (result.success && !canReadDrafts(extra)) {
 				const data =
 					result.data && typeof result.data === "object"
@@ -1549,10 +1368,6 @@ export function createMcpServer(
 			return unwrap(result);
 		},
 	);
-
-	// =====================================================================
-	// Byline tools
-	// =====================================================================
 
 	server.registerTool(
 		"byline_list",
@@ -1727,10 +1542,6 @@ export function createMcpServer(
 		},
 	);
 
-	// =====================================================================
-	// Schema tools
-	// =====================================================================
-
 	server.registerTool(
 		"schema_list_collections",
 		{
@@ -1836,8 +1647,6 @@ export function createMcpServer(
 					labelSingular: args.labelSingular,
 					description: args.description,
 					icon: args.icon,
-					// SchemaRegistry.createCollection now defaults `supports` to
-					// ['drafts', 'revisions'] when undefined; pass through verbatim.
 					supports: args.supports,
 					routable: args.routable,
 				});
@@ -2066,10 +1875,6 @@ export function createMcpServer(
 		},
 	);
 
-	// =====================================================================
-	// Media tools
-	// =====================================================================
-
 	server.registerTool(
 		"media_list",
 		{
@@ -2251,7 +2056,6 @@ export function createMcpServer(
 			requireRole(extra, Role.AUTHOR);
 			const ec = getEmDash(extra);
 
-			// Fetch media item for ownership check
 			const existing = await ec.handleMediaGet(args.id);
 			if (!existing.success) {
 				return unwrap(existing);
@@ -2291,7 +2095,6 @@ export function createMcpServer(
 			requireRole(extra, Role.AUTHOR);
 			const ec = getEmDash(extra);
 
-			// Fetch media item for ownership check
 			const existing = await ec.handleMediaGet(args.id);
 			if (!existing.success) {
 				return unwrap(existing);
@@ -2342,10 +2145,6 @@ export function createMcpServer(
 		},
 	);
 
-	// =====================================================================
-	// Search tool
-	// =====================================================================
-
 	server.registerTool(
 		"search",
 		{
@@ -2392,10 +2191,6 @@ export function createMcpServer(
 			}
 		},
 	);
-
-	// =====================================================================
-	// Taxonomy tools
-	// =====================================================================
 
 	server.registerTool(
 		"taxonomy_list",
@@ -2656,10 +2451,6 @@ export function createMcpServer(
 		},
 	);
 
-	// =====================================================================
-	// Menu tools
-	// =====================================================================
-
 	server.registerTool(
 		"menu_list",
 		{
@@ -2743,9 +2534,6 @@ export function createMcpServer(
 				"name shown in the admin. Menus are per-locale, so pass `locale` when " +
 				"the same menu name exists in multiple translations. Add items afterwards " +
 				"with menu_set_items. If `translationOf` is set, `locale` must also be set.",
-			// `locale`-when-`translationOf` is enforced inside handleMenuCreate
-			// so REST/SDK callers get the same guard. The description above
-			// documents the rule; the handler returns VALIDATION_ERROR.
 			inputSchema: z.object({
 				name: z
 					.string()
@@ -2865,11 +2653,6 @@ export function createMcpServer(
 							titleAttr: z.string().optional().describe("HTML title attribute"),
 							target: z.string().optional().describe("HTML target attribute, e.g. '_blank'"),
 							cssClasses: z.string().optional().describe("Space-separated CSS classes"),
-							/**
-							 * Items are positioned by array index, but parents may be referenced
-							 * by their array index — items with `parentIndex` set are nested under
-							 * the item at that position. Items without `parentIndex` are top-level.
-							 */
 							parentIndex: z
 								.number()
 								.int()
@@ -2897,10 +2680,6 @@ export function createMcpServer(
 			}
 		},
 	);
-
-	// =====================================================================
-	// Revision tools
-	// =====================================================================
 
 	server.registerTool(
 		"revision_list",
@@ -2946,7 +2725,6 @@ export function createMcpServer(
 			requireRole(extra, Role.AUTHOR);
 			const { emdash, userId } = getExtra(extra);
 
-			// Fetch the revision to discover the parent content entry
 			const revision = await emdash.handleRevisionGet(args.revisionId);
 			if (!revision.success) {
 				return unwrap(revision);
@@ -2959,7 +2737,6 @@ export function createMcpServer(
 				);
 			}
 
-			// Fetch the content entry to check ownership
 			const existing = await emdash.handleContentGet(revItem.collection, revItem.entryId);
 			if (!existing.success) {
 				return unwrap(existing);
@@ -2974,10 +2751,6 @@ export function createMcpServer(
 			return unwrap(await emdash.handleRevisionRestore(args.revisionId, userId));
 		},
 	);
-
-	// =====================================================================
-	// Settings tools
-	// =====================================================================
 
 	server.registerTool(
 		"settings_get",

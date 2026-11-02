@@ -1,14 +1,3 @@
-/**
- * Self-contained inline Portable Text editor for visual editing.
- *
- * Uses TipTap directly with content extensions — no admin UI deps.
- * Includes BubbleMenu for inline formatting (bold, italic, etc.)
- * but no toolbar, no media picker, no section picker.
- *
- * Converts between Portable Text and ProseMirror on mount/save.
- * Auto-saves on blur, dispatches custom events for toolbar integration.
- */
-
 import { autoUpdate, flip, offset, shift, useFloating } from "@floating-ui/react";
 import { Extension, Node, mergeAttributes, type JSONContent, type Range } from "@tiptap/core";
 import Focus from "@tiptap/extension-focus";
@@ -42,8 +31,6 @@ import { CodeMarkExtension } from "./code-mark.js";
 import { InlineCodeBlockExtension } from "./inline-code-block.js";
 import { EmDashOrderedList } from "./ordered-list.js";
 
-// ── Portable Text types ────────────────────────────────────────────
-
 interface PTSpan {
 	_type: "span";
 	_key: string;
@@ -72,19 +59,15 @@ interface PTTextBlock {
 
 type PTBlock = PTTextBlock | { _type: string; _key: string; [key: string]: unknown };
 
-/** Type guard for PTTextBlock */
 function isPTTextBlock(block: PTBlock): block is PTTextBlock {
 	return block._type === "block";
 }
 
-/** Type guard for ProseMirror JSON document node */
 function isPMNode(value: unknown): value is PMNode {
 	return (
 		typeof value === "object" && value !== null && "type" in value && typeof value.type === "string"
 	);
 }
-
-// ── Helpers ────────────────────────────────────────────────────────
 
 function k(): string {
 	return Math.random().toString(36).substring(2, 11);
@@ -132,8 +115,6 @@ function createUnsupportedFileHandlers(showGuidance: () => void) {
 	};
 }
 
-// ── ProseMirror → Portable Text ────────────────────────────────────
-
 type PMNode = {
 	type: string;
 	attrs?: Record<string, unknown>;
@@ -142,19 +123,16 @@ type PMNode = {
 	text?: string;
 };
 
-/** Safely extract a string attribute from ProseMirror attrs */
 function attrStr(attrs: Record<string, unknown> | undefined, key: string): string {
 	const v = attrs?.[key];
 	return typeof v === "string" ? v : "";
 }
 
-/** Safely extract an optional string attribute from ProseMirror attrs */
 function attrStrOpt(attrs: Record<string, unknown> | undefined, key: string): string | undefined {
 	const v = attrs?.[key];
 	return typeof v === "string" ? v : undefined;
 }
 
-/** Safely extract a number attribute from ProseMirror attrs */
 function attrNum(attrs: Record<string, unknown> | undefined, key: string): number | undefined {
 	const v = attrs?.[key];
 	return typeof v === "number" ? v : undefined;
@@ -260,11 +238,6 @@ function convertPMNode(node: PMNode, path: string): PTBlock | PTBlock[] | null {
 			const provider = attrStrOpt(node.attrs, "provider");
 			const blurhash = attrStrOpt(node.attrs, "blurhash");
 			const dominantColor = attrStrOpt(node.attrs, "dominantColor");
-			// Persist LQIP as first-class block fields (matching the image-field
-			// MediaValue path) rather than nesting in `asset.meta`, so read sites
-			// and normalize don't need a dual-shape fallback. `asset.meta` is left
-			// to carry only provider-specific data — it isn't reconstructed here,
-			// so non-LQIP meta keys are never silently dropped on editor round-trip.
 			return {
 				_type: "image",
 				_key: k(),
@@ -286,9 +259,6 @@ function convertPMNode(node: PMNode, path: string): PTBlock | PTBlock[] | null {
 		case "horizontalRule":
 			return { _type: "break", _key: k(), style: "lineBreak" };
 		case "pluginBlock": {
-			// Spread the captured data back out so the block round-trips losslessly.
-			// `data` holds every field except _type / _key / id (which live on
-			// dedicated attrs).
 			const { blockType, id, data } = node.attrs ?? {};
 			return {
 				...(data && typeof data === "object" ? data : {}),
@@ -419,8 +389,6 @@ function convertPMMark(
 	}
 }
 
-// ── Portable Text → ProseMirror ────────────────────────────────────
-
 function portableTextToPM(blocks: PTBlock[]): JSONContent {
 	if (!blocks || blocks.length === 0) return { type: "doc", content: [{ type: "paragraph" }] };
 
@@ -458,11 +426,6 @@ function portableTextToPM(blocks: PTBlock[]): JSONContent {
 			block.style === "blockquote" &&
 			block.listItem === undefined
 		) {
-			// Group consecutive blockquote blocks into ONE blockquote node —
-			// PT is flat, so a multi-paragraph quote is stored as a run of
-			// blockquote-styled blocks. Mirrors the grouping in
-			// content/converters/portable-text-to-prosemirror.ts; without it
-			// merges revert on reload in the inline editor too.
 			const quoteBlocks: PTTextBlock[] = [];
 			while (i < blocks.length) {
 				const cur = blocks[i];
@@ -562,7 +525,6 @@ function convertPTBlock(block: PTBlock): PMNode | null {
 			caption?: string;
 			width?: number;
 			height?: number;
-			/** LQIP — first-class field (legacy snapshots keep it in `asset.meta`). */
 			blurhash?: string;
 			dominantColor?: string;
 			displayWidth?: number;
@@ -570,7 +532,6 @@ function convertPTBlock(block: PTBlock): PMNode | null {
 		};
 		const asset = ib.asset;
 		const meta = asset?.meta;
-		// Prefer first-class LQIP fields; fall back to `asset.meta` for legacy.
 		const blurhash =
 			typeof ib.blurhash === "string"
 				? ib.blurhash
@@ -601,15 +562,10 @@ function convertPTBlock(block: PTBlock): PMNode | null {
 			},
 		};
 	}
-	// Unknown block types — treat as plugin blocks. Capture every field other
-	// than the well-known ones into `data` so the block round-trips losslessly,
-	// even if no plugin currently registers this type. Matches the admin
-	// editor's behaviour at PortableTextEditor.tsx:572-588.
 	const { _type, _key, id, url, ...rest } = block as { _type: string; _key: string } & Record<
 		string,
 		unknown
 	>;
-	// Filter out _-prefixed keys to prevent accumulation across edit cycles.
 	const data = Object.fromEntries(Object.entries(rest).filter(([key]) => !key.startsWith("_")));
 	return {
 		type: "pluginBlock",
@@ -791,8 +747,6 @@ function convertPTMarks(marks: string[], markDefs: Map<string, PTMarkDef>): Mark
 	return pm;
 }
 
-// ── Inline BubbleMenu ──────────────────────────────────────────────
-
 function InlineBubbleMenu({ editor }: { editor: Editor }) {
 	const [showLinkInput, setShowLinkInput] = React.useState(false);
 	const [linkUrl, setLinkUrl] = React.useState("");
@@ -926,8 +880,6 @@ function InlineBubbleMenu({ editor }: { editor: Editor }) {
 	);
 }
 
-// ── Slash Menu ──────────────────────────────────────────────────────
-
 interface SlashCommandItem {
 	id: string;
 	title: string;
@@ -1041,7 +993,6 @@ const slashCommands: SlashCommandItem[] = [
 		aliases: ["img", "photo", "picture"],
 		command: ({ editor, range }) => {
 			editor.chain().focus().deleteRange(range).run();
-			// Signal the component to open the media picker
 			document.dispatchEvent(new CustomEvent("emdash:open-media-picker"));
 		},
 	},
@@ -1063,13 +1014,6 @@ const initialSlashMenuState: SlashMenuState = {
 	range: null,
 };
 
-/**
- * Minimal `htmlBlock` TipTap node for the inline (visual-editing) editor.
- *
- * Like PluginBlockNode below, this renders as a read-only placeholder so the
- * block's data is preserved across edits in the visual editor. Full editing
- * (textarea + preview) is only available in the admin editor.
- */
 const HtmlBlockNode = Node.create({
 	name: "htmlBlock",
 	group: "block",
@@ -1101,22 +1045,6 @@ const HtmlBlockNode = Node.create({
 	},
 });
 
-/**
- * Minimal `pluginBlock` TipTap node for the inline (visual-editing) editor.
- *
- * Plugin-contributed Portable Text block types (e.g. `marketing.hero`) are
- * editable in the admin via a Block Kit modal. The visual-editing surface
- * deliberately does NOT offer that UX — it would need to fetch the manifest,
- * mount the modal, and round-trip through plugin-block plumbing that lives in
- * `@emdash-cms/admin`. Instead, the inline editor renders these blocks as a
- * read-only placeholder so editors can see they exist and edit the surrounding
- * content without losing the block's data.
- *
- * The full block payload is preserved on `data` and round-tripped losslessly
- * through PT ↔ PM conversion (see convertPTBlock/convertPMNode). Without this
- * extension, ProseMirror's schema would silently filter unknown nodes on load
- * and the next save would persist the block's disappearance.
- */
 const PluginBlockNode = Node.create({
 	name: "pluginBlock",
 	group: "block",
@@ -1125,9 +1053,6 @@ const PluginBlockNode = Node.create({
 	draggable: true,
 
 	addAttributes() {
-		// All three attributes are stored on the ProseMirror node but not
-		// rendered as DOM attributes — they're metadata for the round-trip,
-		// not styling or behaviour the placeholder DOM needs to expose.
 		const noDom = { rendered: false, parseHTML: () => null };
 		return {
 			blockType: { default: "", ...noDom },
@@ -1259,7 +1184,6 @@ function InlineSlashMenu({
 }) {
 	const containerRef = React.useRef<HTMLDivElement>(null);
 
-	// Track whether we have a positioned reference to avoid rendering at (0,0)
 	const [hasReference, setHasReference] = React.useState(false);
 
 	const { refs, floatingStyles } = useFloating({
@@ -1281,7 +1205,6 @@ function InlineSlashMenu({
 		}
 	}, [state.clientRect, refs]);
 
-	// Reset reference tracking when menu closes
 	React.useEffect(() => {
 		if (!state.isOpen) setHasReference(false);
 	}, [state.isOpen]);
@@ -1292,7 +1215,6 @@ function InlineSlashMenu({
 		if (!container) return;
 		const selected = container.querySelector(`[data-index="${state.selectedIndex}"]`);
 		if (selected instanceof HTMLElement) {
-			// Use scrollIntoView only within the menu container to avoid scrolling the page
 			const containerTop = container.scrollTop;
 			const containerBottom = containerTop + container.clientHeight;
 			const itemTop = selected.offsetTop;
@@ -1389,8 +1311,6 @@ function InlineSlashMenu({
 	);
 }
 
-// ── Media Picker ───────────────────────────────────────────────────
-
 interface MediaItemData {
 	id: string;
 	filename: string;
@@ -1443,7 +1363,6 @@ function InlineMediaPicker({
 	const [selectedId, setSelectedId] = React.useState<string | null>(null);
 	const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-	// Fetch providers on open
 	React.useEffect(() => {
 		if (!open) return;
 		setSelectedId(null);
@@ -1454,7 +1373,6 @@ function InlineMediaPicker({
 			.catch(() => setProviders([]));
 	}, [open]);
 
-	// Fetch items when provider changes
 	React.useEffect(() => {
 		if (!open) return;
 		setLoading(true);
@@ -1500,8 +1418,6 @@ function InlineMediaPicker({
 	const handleUpload = async (file: File) => {
 		setUploading(true);
 		try {
-			// Detect dimensions and generate a thumbnail for large images to
-			// avoid OOM in server-side blurhash generation on Workers.
 			const dims = await new Promise<{
 				width?: number;
 				height?: number;
@@ -1512,7 +1428,6 @@ function InlineMediaPicker({
 				img.onload = () => {
 					const w = img.naturalWidth;
 					const h = img.naturalHeight;
-					// 32 MB RGBA threshold — matches server MAX_DECODED_BYTES
 					if (w * h * 4 > 32 * 1024 * 1024) {
 						const { width: thumbW, height: thumbH } = computeThumbnailSize(w, h);
 						try {
@@ -1528,9 +1443,7 @@ function InlineMediaPicker({
 								}, "image/png");
 								return;
 							}
-						} catch {
-							// Canvas allocation or draw failed — fall through to no-thumbnail path
-						}
+						} catch {}
 					}
 					URL.revokeObjectURL(img.src);
 					resolve({ width: w, height: h });
@@ -1643,7 +1556,6 @@ function InlineMediaPicker({
 				}}
 				className="emdash-media-picker"
 			>
-				{/* Header */}
 				<div
 					style={{
 						display: "flex",
@@ -1672,7 +1584,6 @@ function InlineMediaPicker({
 					</button>
 				</div>
 
-				{/* Provider tabs */}
 				{providerTabs.length > 1 && (
 					<div
 						style={{
@@ -1716,7 +1627,6 @@ function InlineMediaPicker({
 					</div>
 				)}
 
-				{/* Upload bar */}
 				<div
 					style={{
 						display: "flex",
@@ -1760,7 +1670,6 @@ function InlineMediaPicker({
 					/>
 				</div>
 
-				{/* Grid */}
 				<div
 					style={{
 						flex: 1,
@@ -1922,7 +1831,6 @@ function InlineMediaPicker({
 					)}
 				</div>
 
-				{/* Footer */}
 				<div
 					style={{
 						display: "flex",
@@ -1972,8 +1880,6 @@ function InlineMediaPicker({
 	);
 }
 
-// ── Component ──────────────────────────────────────────────────────
-
 export interface InlinePortableTextEditorProps {
 	value: PTBlock[];
 	collection: string;
@@ -1991,7 +1897,6 @@ export function InlinePortableTextEditor({
 	const savingRef = React.useRef(false);
 	const editorRef = React.useRef<ReturnType<typeof useEditor>>(null);
 
-	// Media picker state
 	const [mediaPickerOpen, setMediaPickerOpen] = React.useState(false);
 	const [unsupportedFileGuidance, setUnsupportedFileGuidance] = React.useState<{
 		message: string;
@@ -2009,14 +1914,12 @@ export function InlinePortableTextEditor({
 		[showUnsupportedFileGuidance],
 	);
 
-	// Listen for the slash command's media picker event
 	React.useEffect(() => {
 		const handler = () => setMediaPickerOpen(true);
 		document.addEventListener("emdash:open-media-picker", handler);
 		return () => document.removeEventListener("emdash:open-media-picker", handler);
 	}, []);
 
-	// Slash menu state — use ref to avoid re-creating the extension on state change
 	const [slashMenuState, setSlashMenuState] = React.useState<SlashMenuState>(initialSlashMenuState);
 	const slashMenuStateRef = React.useRef(slashMenuState);
 	slashMenuStateRef.current = slashMenuState;
@@ -2031,10 +1934,7 @@ export function InlinePortableTextEditor({
 		);
 	});
 
-	const initialContent = React.useMemo(
-		() => portableTextToPM(value || []),
-		[], // Only compute once on mount
-	);
+	const [initialContent] = React.useState(() => portableTextToPM(value || []));
 
 	const getBlocks = React.useCallback((): PTBlock[] => {
 		const editor = editorRef.current;
@@ -2046,9 +1946,6 @@ export function InlinePortableTextEditor({
 
 	const save = React.useCallback(
 		async (options?: { keepalive?: boolean }) => {
-			// A pagehide flush must not be skipped: an in-flight blur save is
-			// cancelled by the navigation, so the keepalive request is the only
-			// one that can still land.
 			if (savingRef.current && !options?.keepalive) return;
 
 			const current = JSON.stringify(getBlocks());
@@ -2090,21 +1987,12 @@ export function InlinePortableTextEditor({
 		[collection, entryId, field, getBlocks],
 	);
 
-	// Flush unsaved edits when the page goes away (browser back/forward,
-	// link click, tab close). The blur handler doesn't cover this: unload
-	// doesn't reliably fire React blur, and a plain fetch started during
-	// unload is cancelled by the navigation — edits were silently lost.
-	// `keepalive` lets the PUT outlive the page.
-	// Caveat: keepalive caps the body at 64KB — a very long document
-	// can still be lost on unload. Upgrade path: debounced autosave
-	// while typing (like the admin editor) so unload flushes are rare.
 	React.useEffect(() => {
 		const flush = () => void save({ keepalive: true });
 		window.addEventListener("pagehide", flush);
 		return () => window.removeEventListener("pagehide", flush);
 	}, [save]);
 
-	// Create slash commands extension once — uses refs to avoid re-render loop
 	const slashCommandsExtension = React.useMemo(
 		() =>
 			createSlashCommandsExtension({
@@ -2120,9 +2008,7 @@ export function InlinePortableTextEditor({
 			StarterKit.configure({
 				heading: { levels: [1, 2, 3] },
 				dropcursor: { color: "#3b82f6", width: 2 },
-				// Replaced with InlineCodeBlockExtension below (adds language picker).
 				codeBlock: false,
-				// Replaced with CodeMarkExtension so inline code can combine with link/etc.
 				code: false,
 				orderedList: false,
 			}),
@@ -2180,12 +2066,10 @@ export function InlinePortableTextEditor({
 		},
 	});
 
-	// Store editor ref for getBlocks
 	React.useEffect(() => {
 		editorRef.current = editor;
 	}, [editor]);
 
-	// Slash menu command handler
 	const handleSlashCommand = React.useCallback(
 		(item: SlashCommandItem) => {
 			if (!editor || !slashMenuStateRef.current.range) return;
@@ -2195,7 +2079,6 @@ export function InlinePortableTextEditor({
 		[editor],
 	);
 
-	// Handle media selection from the picker
 	const handleMediaSelect = React.useCallback(
 		(item: MediaItemData) => {
 			if (!editor) return;
@@ -2220,15 +2103,12 @@ export function InlinePortableTextEditor({
 		[editor, save],
 	);
 
-	// Save on blur — but not when interacting with slash menu or media picker
 	const handleBlur = React.useCallback(
 		(e: React.FocusEvent<HTMLDivElement>) => {
 			if (mediaPickerOpen) return;
 			const related = e.relatedTarget instanceof HTMLElement ? e.relatedTarget : null;
 			if (related && e.currentTarget.contains(related)) return;
-			// The copy fallback briefly moves focus to its textarea before restoring the editor.
 			if (related?.hasAttribute("data-emdash-clipboard-fallback")) return;
-			// Don't save if focus moved to the slash menu (portalled to body)
 			if (related?.closest(".emdash-slash-menu")) return;
 			if (related?.closest(".emdash-media-picker")) return;
 			void save();
@@ -2545,7 +2425,6 @@ export function InlinePortableTextEditor({
 	);
 }
 
-// Test-only exports for unit tests.
 export { pmToPortableText as _pmToPortableText };
 export { portableTextToPM as _portableTextToPM };
 export { createUnsupportedFileHandlers as _createUnsupportedFileHandlers };

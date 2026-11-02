@@ -40,9 +40,7 @@ export function parseSecretNames(output) {
 					) {
 						candidates.push(rows.map((row) => row.name));
 					}
-				} catch {
-					/* Ignore non-JSON status lines surrounding the inventory. */
-				}
+				} catch {}
 				break;
 			}
 		}

@@ -19,10 +19,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-/**
- * E2E tests for revenue tracking (logInAppPurchase / logCustomPurchase).
- * Verifies the full flow from public API to HTTP requests hitting MockWebServer.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class RevenueTrackingE2ETest {
@@ -107,12 +103,9 @@ class RevenueTrackingE2ETest {
         }
     }
 
-    // ==================== logInAppPurchase Tests ====================
-
     @Test
     fun `logInAppPurchase sends payment event to backend`() {
         runBlocking {
-            // Arrange
             installPaymentCapturingDispatcher()
 
             E2ETestUtils.configureAndWaitForAuthOnly(
@@ -120,10 +113,8 @@ class RevenueTrackingE2ETest {
                 baseURL = mockWebServer.url("/").toString()
             )
 
-            // Act
             SuperBoard.logInAppPurchase(originalJson = singleProductJson)
 
-            // Assert
             waitForPaymentEvent("in-app purchase")
 
             synchronized(capturedPaymentBodies) {
@@ -136,12 +127,9 @@ class RevenueTrackingE2ETest {
         }
     }
 
-    // ==================== logCustomPurchase Tests ====================
-
     @Test
     fun `logCustomPurchase with BUY type sends payment event`() {
         runBlocking {
-            // Arrange
             installPaymentCapturingDispatcher()
 
             E2ETestUtils.configureAndWaitForAuthOnly(
@@ -149,7 +137,6 @@ class RevenueTrackingE2ETest {
                 baseURL = mockWebServer.url("/").toString()
             )
 
-            // Act
             SuperBoard.logCustomPurchase(
                 type = PaymentEventType.BUY,
                 priceInCents = 1999,
@@ -157,7 +144,6 @@ class RevenueTrackingE2ETest {
                 productId = "pro_plan"
             )
 
-            // Assert
             waitForPaymentEvent("custom BUY purchase")
 
             synchronized(capturedPaymentBodies) {
@@ -175,7 +161,6 @@ class RevenueTrackingE2ETest {
     @Test
     fun `logCustomPurchase with CANCEL type sends correct eventType`() {
         runBlocking {
-            // Arrange
             installPaymentCapturingDispatcher()
 
             E2ETestUtils.configureAndWaitForAuthOnly(
@@ -183,7 +168,6 @@ class RevenueTrackingE2ETest {
                 baseURL = mockWebServer.url("/").toString()
             )
 
-            // Act
             SuperBoard.logCustomPurchase(
                 type = PaymentEventType.CANCEL,
                 priceInCents = 999,
@@ -191,7 +175,6 @@ class RevenueTrackingE2ETest {
                 productId = "basic_plan"
             )
 
-            // Assert
             waitForPaymentEvent("custom CANCEL purchase")
 
             synchronized(capturedPaymentBodies) {
@@ -203,16 +186,10 @@ class RevenueTrackingE2ETest {
         }
     }
 
-    // ==================== Attribution Tests ====================
-
     @Test
     fun `payment event waits for authentication before sending`() {
         runBlocking {
-            // Arrange - install dispatcher but DON'T configure/authenticate yet
             installPaymentCapturingDispatcher()
-
-            // Act - log purchase before SDK is configured
-            // The SDK should queue the event and send after auth
 
             E2ETestUtils.configureAndWaitForAuthOnly(
                 application,
@@ -226,7 +203,6 @@ class RevenueTrackingE2ETest {
                 productId = "test_item"
             )
 
-            // Assert - after auth, the payment event should eventually be sent
             waitForPaymentEvent("post-auth purchase")
 
             synchronized(capturedPaymentBodies) {

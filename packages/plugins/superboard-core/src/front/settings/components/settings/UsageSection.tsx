@@ -33,7 +33,6 @@ function savedDate(range: unknown, key: "from" | "to") {
 	return typeof value === "string" && value ? value : undefined;
 }
 
-/** The reporting period saved for this browser session, else the last 30 days. */
 function initialDateRange(): DateRange {
 	try {
 		const saved = SessionStorage.getDateFilter();
@@ -46,16 +45,13 @@ function initialDateRange(): DateRange {
 				to: to ? new Date(to) : undefined,
 			};
 		}
-	} catch {
-		// Storage unavailable or invalid filter — use the default range
-	}
+	} catch {}
 	const to = new Date();
 	const from = new Date();
 	from.setDate(to.getDate() - 30);
 	return { from, to };
 }
 
-/** Environment settings › Usage: daily active users and their CSV export. */
 export default function UsageSection() {
 	const { t } = useSettingsI18n();
 	const { selectedInstance } = useProjectSelection();

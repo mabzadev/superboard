@@ -13,9 +13,6 @@ import {
 } from "../../../../../packages/admin/src/components/PortableTextEditor";
 import { render } from "../utils/render.tsx";
 
-// The msg macro hashes to the same message id as the corresponding macro call
-// in EditorFooter, so this catalog binds translations for exactly the messages
-// the footer renders.
 const deMessages = {
 	[msg`{words, plural, one {# word} other {# words}}`.id!]:
 		"{words, plural, one {# Wort} other {# Wörter}}",

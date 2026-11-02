@@ -30,7 +30,6 @@ describeEachDialect("Loader byline credit filter", (dialectName: DialectName) =>
 			.where("name", "in", ["category", "tag"])
 			.execute();
 		resetTaxonomyNamesCache();
-		// Add a 'series' field so we can test byline + field combinations.
 		const registry = new SchemaRegistry(db);
 		await registry.createField("post", {
 			slug: "series",
@@ -52,11 +51,6 @@ describeEachDialect("Loader byline credit filter", (dialectName: DialectName) =>
 		return result.data!.item;
 	}
 
-	/**
-	 * Insert an explicit byline credit. `bylineGroup` is the byline's
-	 * translation_group, matching what `_emdash_content_bylines.byline_id`
-	 * stores since migration 040.
-	 */
 	async function credit(contentId: string, bylineGroup: string, sortOrder = 0) {
 		await db
 			.insertInto("_emdash_content_bylines" as never)
@@ -88,8 +82,6 @@ describeEachDialect("Loader byline credit filter", (dialectName: DialectName) =>
 	});
 
 	it("returns co-authored entries where the byline is a secondary credit", async () => {
-		// This is the core bug from #1358: filtering on primary_byline_id
-		// alone misses entries where the byline is not first.
 		const post = await createPost("Co-authored");
 		await credit(post.id, "byline_alice", 0);
 		await credit(post.id, "byline_bob", 1);
@@ -135,7 +127,6 @@ describeEachDialect("Loader byline credit filter", (dialectName: DialectName) =>
 
 		const result = await load({ byline: ["byline_alice", "byline_bob"] });
 
-		// SELECT DISTINCT collapses the two-row join fan-out.
 		expect(result.entries).toHaveLength(1);
 		expect(result.entries[0]!.data.title).toBe("Duo");
 	});
@@ -160,8 +151,6 @@ describeEachDialect("Loader byline credit filter", (dialectName: DialectName) =>
 				name: "category",
 				slug: "news",
 				label: "News",
-				// content_taxonomies.taxonomy_id stores the term's translation_group
-				// (migration 036); single-locale terms seed translation_group = id.
 				translation_group: "tax_cat_news",
 			} as never)
 			.execute();
@@ -170,8 +159,6 @@ describeEachDialect("Loader byline credit filter", (dialectName: DialectName) =>
 		const b = await createPost("Bob Other");
 		await credit(a.id, "byline_bob", 0);
 		await credit(b.id, "byline_bob", 0);
-		// Attach through the repository so the pivot row carries the denormalized
-		// filter/sort columns the pivot-drive listing seeks on (migration 051).
 		await new TaxonomyRepository(db).attachToEntry("post", a.id, "tax_cat_news");
 
 		const result = await load({ byline: "byline_bob", category: "news" });
@@ -192,9 +179,6 @@ describeEachDialect("Loader byline credit filter", (dialectName: DialectName) =>
 	it("ignores range operators on the byline key", async () => {
 		const credited = await createPost("Credited");
 		await credit(credited.id, "byline_alice", 0);
-		// A second published post with NO byline credit. If the byline filter
-		// were (incorrectly) applied, this entry would be excluded; if the
-		// range is correctly dropped, both entries return.
 		await createPost("Uncredited");
 
 		const result = await load({ byline: { gte: "a" } });
@@ -222,7 +206,6 @@ describeEachDialect("Loader byline credit filter", (dialectName: DialectName) =>
 			.values({ collection: "post", entry_id: post.id, taxonomy_id: "tax_cat_news" } as never)
 			.execute();
 
-		// An empty taxonomy array must short-circuit, not emit `t.slug IN ()`.
 		const result = await load({ category: [] });
 
 		expect(result.entries).toHaveLength(0);

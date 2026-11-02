@@ -28,12 +28,6 @@ function recentDates(days: number): string[] {
 	return dates;
 }
 
-/**
- * Half-open UTC day range for sargable `created_at` filters. Every writer of
- * `events.created_at` stores a UTC timestamp that starts with `YYYY-MM-DD`
- * (`datetime('now')` or `Date#toISOString()`), so `[day, nextDay)` selects the
- * same rows as `date(created_at) = day` while letting SQLite use the index.
- */
 function dayRange(date: string): [string, string] {
 	const next = new Date(`${date}T00:00:00.000Z`);
 	next.setUTCDate(next.getUTCDate() + 1);
@@ -42,12 +36,6 @@ function dayRange(date: string): [string, string] {
 
 const DAILY_MAINTENANCE_MARKER_PREFIX = "superboard:maintenance:daily:";
 
-/**
- * Older days only need recomputing once per UTC day; the scheduled run fires
- * every few minutes. KV is eventually consistent, so in the worst case the
- * daily pass runs twice, which is idempotent. Without KV every run is "due",
- * preserving the previous behaviour.
- */
 async function dailyMaintenanceDue(env: Env, today: string): Promise<boolean> {
 	try {
 		return !(await env.KV.get(`${DAILY_MAINTENANCE_MARKER_PREFIX}${today}`));
@@ -61,12 +49,9 @@ async function markDailyMaintenanceDone(env: Env, today: string): Promise<void> 
 		await env.KV.put(`${DAILY_MAINTENANCE_MARKER_PREFIX}${today}`, new Date().toISOString(), {
 			expirationTtl: 172_800,
 		});
-	} catch {
-		// Missing KV only means the next run repeats the daily pass.
-	}
+	} catch {}
 }
 
-/** Rows changed by a cleanup statement; a failed statement counts as zero. */
 async function changedRows(statement: D1PreparedStatement): Promise<number> {
 	const result = await statement.run().catch(() => null);
 	return result?.meta?.changes || 0;
@@ -105,18 +90,10 @@ export async function cleanupExpiredMcp(
 	return { authorizationCodes, tokens, clients };
 }
 
-/**
- * Stale handled actions are found through `idx_actions_handled_updated_at`.
- * The orphan sweep has to visit every action (orphans appear when a link or
- * device is deleted), so scheduled maintenance only runs it once per day via
- * `includeOrphans: false` on the other runs.
- */
 export async function cleanupOrphanedActions(
 	db: D1Database,
 	options: { includeOrphans?: boolean } = {},
 ): Promise<number> {
-	// Day granularity keeps the comparison valid for both `datetime('now')` and
-	// ISO-8601 values; rows are kept for at most one extra day.
 	const staleBefore = dateDaysAgo(30);
 	let deleted = await changedRows(
 		db
@@ -190,10 +167,6 @@ export async function cleanupExpiredDownloads(env: Env): Promise<number> {
 	let deleted = 0;
 	let cursor: string | undefined;
 	do {
-		// Download exports (lib/files.ts) are stored at the bucket root, while
-		// quick-link images and billing exports live under `quick-links/` and
-		// `purchases/`. The delimiter keeps those nested objects out of the scan.
-		// `customMetadata` is only returned when explicitly included.
 		const listed = await env.R2.list({
 			cursor,
 			limit: 100,
@@ -448,18 +421,10 @@ async function backfillDailyProjectMetrics(db: D1Database, date: string): Promis
 }
 
 type RunMaintenanceOptions = {
-	/**
-	 * Scheduled runs: aggregate only today on every run (plus yesterday during
-	 * the first UTC hour) and recompute the older days, plus the full
-	 * orphaned-action sweep, once per UTC day from 01:00.
-	 * Explicit admin/automation runs leave this off and recompute every day.
-	 */
 	incremental?: boolean;
 };
 
 function incrementalDates(allDates: string[], now: Date): string[] {
-	// During the first UTC hour yesterday keeps receiving late events, so it is
-	// refreshed on every run until the daily pass finalises it.
 	return now.getUTCHours() === 0 ? allDates.slice(-2) : allDates.slice(-1);
 }
 
@@ -467,7 +432,6 @@ export async function runMaintenance(env: Env, days = 3, options: RunMaintenance
 	const now = new Date();
 	const allDates = recentDates(days);
 	const today = allDates[allDates.length - 1];
-	// The daily pass waits for 01:00 UTC so yesterday's late events are included.
 	const dailyPass =
 		!options.incremental || (now.getUTCHours() >= 1 && (await dailyMaintenanceDue(env, today)));
 	const summary = {

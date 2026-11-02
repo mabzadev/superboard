@@ -23,10 +23,6 @@ export const createRelationBody = z
 		locale: localeCode.optional(),
 		translationOf: z.string().min(1).optional(),
 	})
-	// A translation inherits its structural fields (name, parentCollection,
-	// childCollection) from the source relation, so the handler ignores any
-	// collections supplied alongside `translationOf`. Require them only when
-	// minting a base relation, so callers aren't forced to pass discarded values.
 	.refine(
 		(body) =>
 			body.translationOf !== undefined ||
@@ -40,9 +36,6 @@ export const updateRelationBody = z
 		parentLabel: z.string().min(1).max(200).optional(),
 		childLabel: z.string().min(1).max(200).optional(),
 	})
-	// Reject empty payloads: an update touching no field is a client mistake, not
-	// a successful no-op. Without this, `{}` validates and the handler returns 200
-	// with the unchanged row, so a typo'd payload looks like it landed.
 	.refine((body) => body.parentLabel !== undefined || body.childLabel !== undefined, {
 		message: "At least one of parentLabel or childLabel is required",
 	})
@@ -93,10 +86,6 @@ export const entryRefSchema = z
 		id: z.string(),
 		slug: z.string().nullable(),
 		collection: z.string(),
-		// The actual locale of the resolved variant. When no variant matches the
-		// requesting entry's locale, the ref falls back to another locale's row;
-		// this field makes that substitution explicit instead of silently
-		// presenting a wrong-locale entry under the requested context.
 		locale: z.string().nullable(),
 		sortOrder: z.number().int().optional(),
 	})

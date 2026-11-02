@@ -117,7 +117,6 @@ void test("the release graph contains no route or submenu outside the generated 
 				.replaceAll("[id]", ":id")
 				.replaceAll("[authId]", ":authId"),
 		);
-	// Historical Dashboard paths are served at the canonical path the Site redirects them to.
 	const servedPath = (path) =>
 		new URL(
 			canonicalFrontHref(retiredFrontPageDestination(path) ?? path),

@@ -1,15 +1,3 @@
-/**
- * Smoke test for the aggregator's test infrastructure.
- *
- * Proves the workers-pool wiring is healthy: migrations apply into the test
- * D1 instance, the schema accepts a write, and the worker module loads. No
- * business logic is exercised — the actual ingest and read paths are tested
- * in their own files as later PRs land them.
- *
- * If this test fails after a migration change, fix the migration; the rest
- * of the suite assumes this passes.
- */
-
 import { applyD1Migrations, env } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -85,9 +73,6 @@ describe("aggregator scaffold smoke test", () => {
 	});
 
 	it("rejects a release whose did/package does not match an existing profile (FK)", async () => {
-		// Releases reference packages via composite FK; SQLite enforces this when
-		// FK checks are enabled. workers-pool's miniflare D1 has FK checks on by
-		// default per Cloudflare's runtime configuration.
 		const now = new Date().toISOString();
 		const insertOrphan = testEnv.DB.prepare(
 			`INSERT INTO releases (

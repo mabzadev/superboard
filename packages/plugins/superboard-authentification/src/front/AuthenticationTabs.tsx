@@ -111,10 +111,6 @@ export function AuthenticationSection({ name, children }: { name: string; childr
 	);
 }
 
-/**
- * Selected tab and section of an authentication view. Former tab names keep
- * working; a tab that moved to the other view is opened there instead.
- */
 export function useAuthenticationTab(view: AuthenticationView) {
 	const search = useSearchParams();
 	const router = useRouter();
@@ -139,7 +135,6 @@ export function useAuthenticationTab(view: AuthenticationView) {
 	};
 }
 
-/** Secondary choice inside a tab (user source, access control section…). */
 export function AuthenticationChoices({
 	label,
 	items,

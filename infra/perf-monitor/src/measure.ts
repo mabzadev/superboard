@@ -1,5 +1,3 @@
-/** Orchestrates a measurement run across all regional probes. */
-
 import type { MeasureResponse } from "../probe/src/measure.js";
 import { REGIONS, SITES, TARGET_ROUTES, WARM_REQUESTS } from "./routes.js";
 import type { Region, Site } from "./routes.js";
@@ -23,26 +21,17 @@ function generateId(): string {
 	return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Options for {@link runMeasurements} beyond the source tag. */
 export interface RunOptions {
 	source: Source;
 	sha?: string | null;
 	prNumber?: number | null;
 	note?: string | null;
-	/**
-	 * Sites to measure. Defaults to every site in {@link SITES}. Pass a subset
-	 * when a caller wants to target only one deployment (e.g. manual triggers).
-	 */
 	sites?: readonly Site[];
 }
 
-/** Dispatch measurements to all regional probes in parallel, for every site. */
 export async function runMeasurements(env: Env, opts: RunOptions): Promise<InsertParams[]> {
 	const { source, sha = null, prNumber = null, note = null, sites = SITES } = opts;
 
-	// Fan out across (site × region). We run all probes in parallel -- each one
-	// issues N requests per route on its own, so the measurement load on the
-	// demos is bounded regardless of how many sites we have.
 	const probePromises = sites.flatMap((site) =>
 		REGIONS.map(async (region) => {
 			const binding = PROBE_BINDINGS[region];

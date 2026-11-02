@@ -1,22 +1,3 @@
-/**
- * EmDashClient — typed HTTP client for the EmDash REST API.
- *
- * Handles auth, CSRF, PT ↔ Markdown conversion, and optional `_rev`
- * concurrency tokens. Shared foundation for the CLI and future MCP server.
- *
- * @example
- * ```ts
- * import { EmDashClient } from "emdash/client";
- *
- * const client = new EmDashClient({
- *   baseUrl: "http://localhost:4321",
- *   devBypass: true,
- * });
- *
- * const posts = await client.list("posts", { status: "published" });
- * ```
- */
-
 import mime from "mime/lite";
 
 import type { ContentFieldFilters } from "../content-list-query.js";
@@ -31,56 +12,37 @@ import {
 	tokenInterceptor,
 } from "./transport.js";
 
-// Regex patterns for client utilities
 const TRAILING_SLASH_PATTERN = /\/$/;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function mimeFromFilename(filename: string): string {
 	return mime.getType(filename) ?? "application/octet-stream";
 }
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface EmDashClientOptions {
-	/** Base URL of the EmDash instance */
 	baseUrl: string;
-	/** API token (ec_pat_...) or OAuth token (ec_oat_...) */
 	token?: string;
-	/** OAuth refresh token for auto-refresh on 401 */
 	refreshToken?: string;
-	/** Called when a token is refreshed (for persisting new access token) */
 	onTokenRefresh?: (accessToken: string, expiresIn: number) => void;
-	/** Use dev-bypass authentication (localhost only) */
 	devBypass?: boolean;
-	/** Additional request interceptors */
 	interceptors?: Interceptor[];
 }
 
-/** Standard API error shape */
 export interface ApiError {
 	code: string;
 	message: string;
 	details?: Record<string, unknown>;
 }
 
-/** Standard API response wrapper */
 export interface ClientResponse<T> {
 	success: true;
 	data: T;
 }
 
-/** Paginated list response */
 export interface ListResult<T> {
 	items: T[];
 	nextCursor?: string;
 }
 
-/** Content item as returned by the API */
 export interface ContentItem {
 	id: string;
 	type: string;
@@ -99,7 +61,6 @@ export interface ContentItem {
 	_rev?: string;
 }
 
-/** Collection metadata */
 export interface Collection {
 	slug: string;
 	label: string;
@@ -109,12 +70,10 @@ export interface Collection {
 	supports: string[];
 }
 
-/** Collection with fields */
 export interface CollectionWithFields extends Collection {
 	fields: Field[];
 }
 
-/** Field metadata */
 export interface Field {
 	slug: string;
 	label: string;
@@ -128,7 +87,6 @@ export interface Field {
 	sortOrder?: number;
 }
 
-/** Aggregate trust state for media usage reads */
 export type MediaUsageCoverageStatus =
 	| "complete"
 	| "never"
@@ -138,19 +96,16 @@ export type MediaUsageCoverageStatus =
 	| "stale"
 	| "unknown";
 
-/** Aggregate media usage coverage across all content collections */
 export interface MediaUsageCoverage {
 	scope: "all_content_collections";
 	status: MediaUsageCoverageStatus;
 }
 
-/** Coverage-aware usage count for a media item */
 export interface MediaUsageSummary {
 	count: number | null;
 	coverage: MediaUsageCoverage;
 }
 
-/** One indexed media reference within a content source */
 export interface MediaUsageOccurrenceDetail {
 	fieldSlug: string;
 	fieldPath: string;
@@ -158,13 +113,11 @@ export interface MediaUsageOccurrenceDetail {
 	referenceType: "image_field" | "file_field" | "portable_text_image" | "unknown";
 }
 
-/** Indexed references from one visible content source */
 export interface MediaUsageSourceDetail {
 	variant: "columns" | "draft_overlay";
 	occurrences: MediaUsageOccurrenceDetail[];
 }
 
-/** One content entry that references a media item */
 export interface MediaUsageEntryDetail {
 	collection: string;
 	contentId: string;
@@ -177,14 +130,12 @@ export interface MediaUsageEntryDetail {
 	sources: MediaUsageSourceDetail[];
 }
 
-/** Entry-grouped media usage details */
 export interface MediaUsageDetailsResponse {
 	items: MediaUsageEntryDetail[];
 	nextCursor?: string;
 	coverage: MediaUsageCoverage;
 }
 
-/** Media item */
 export interface MediaItem {
 	id: string;
 	filename: string;
@@ -203,25 +154,20 @@ export interface MediaItem {
 	usage?: MediaUsageSummary;
 }
 
-/** Result of assigning local media to a folder or the Main library */
 export interface MediaFolderAssignment {
 	id: string;
 	folderId: string | null;
 }
 
-/** Flat media-library folder */
 export interface MediaFolder {
 	id: string;
 	name: string;
 }
 
-/** Media usage repair request */
 export type MediaUsageRepairInput = { scope: "collection"; collection: string } | { scope: "all" };
 
-/** Media usage repair status */
 export type MediaUsageRepairStatus = "complete" | "partial" | "failed" | "stale";
 
-/** Per-collection media usage repair summary */
 export interface MediaUsageRepairCollectionSummary {
 	collection: string;
 	status: MediaUsageRepairStatus;
@@ -234,7 +180,6 @@ export interface MediaUsageRepairCollectionSummary {
 	completedAt: string | null;
 }
 
-/** Media usage repair response */
 export interface MediaUsageRepairResponse {
 	status: MediaUsageRepairStatus;
 	indexedSourceCount: number;
@@ -256,10 +201,8 @@ export interface MediaUsageProgressAdvanceResponse {
 	nextRequestInMs: 0 | 30_000 | null;
 }
 
-/** Durable media usage entry-work state */
 export type MediaUsageWorkState = "pending" | "retry" | "leased" | "failed";
 
-/** Redacted operator view of one durable media usage job */
 export interface MediaUsageWorkItem {
 	collectionId: string;
 	collectionSlug: string;
@@ -273,7 +216,6 @@ export interface MediaUsageWorkItem {
 	updatedAt: string;
 }
 
-/** Filters and pagination for durable media usage work */
 export interface MediaUsageWorkListOptions {
 	collection: string;
 	state?: MediaUsageWorkState;
@@ -281,19 +223,16 @@ export interface MediaUsageWorkListOptions {
 	cursor?: string;
 }
 
-/** One bounded page of durable media usage work */
 export interface MediaUsageWorkListResponse {
 	items: MediaUsageWorkItem[];
 	nextCursor?: string;
 }
 
-/** Identity for explicitly retrying one durable media usage job */
 export interface MediaUsageWorkRetryInput {
 	collectionId: string;
 	contentId: string;
 }
 
-/** Result of explicitly retrying one durable media usage job */
 export interface MediaUsageWorkRetryResponse {
 	changed: boolean;
 	item: MediaUsageWorkItem;
@@ -346,7 +285,6 @@ export interface MediaUsageCollectionDeletionListResponse {
 	nextCursor?: string;
 }
 
-/** Search result */
 export interface SearchResult {
 	id: string;
 	collection: string;
@@ -355,14 +293,12 @@ export interface SearchResult {
 	score: number;
 }
 
-/** Taxonomy */
 export interface Taxonomy {
 	name: string;
 	label: string;
 	hierarchical: boolean;
 }
 
-/** Taxonomy term */
 export interface Term {
 	id: string;
 	slug: string;
@@ -372,18 +308,15 @@ export interface Term {
 	count?: number;
 }
 
-/** Menu */
 export interface Menu {
 	name: string;
 	label: string;
 }
 
-/** Menu with items */
 export interface MenuWithItems extends Menu {
 	items: MenuItem[];
 }
 
-/** Menu item */
 export interface MenuItem {
 	id: string;
 	type: string;
@@ -396,7 +329,6 @@ export interface MenuItem {
 	sortOrder: number;
 }
 
-/** Full schema export (returned by /api/schema) */
 export interface SchemaExport {
 	collections: Array<{
 		slug: string;
@@ -420,7 +352,6 @@ export interface SchemaExport {
 	version: string;
 }
 
-/** Manifest — full schema + field descriptors */
 export interface Manifest {
 	version: string;
 	hash: string;
@@ -434,10 +365,6 @@ export interface Manifest {
 		}
 	>;
 }
-
-// ---------------------------------------------------------------------------
-// Client errors
-// ---------------------------------------------------------------------------
 
 export class EmDashApiError extends Error {
 	constructor(
@@ -458,21 +385,15 @@ export class EmDashClientError extends Error {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Client
-// ---------------------------------------------------------------------------
-
 export class EmDashClient {
 	private readonly baseUrl: string;
 	private readonly transport: { fetch: (request: Request) => Promise<Response> };
 
-	/** Cached field schemas per collection for PT conversion */
 	private fieldSchemaCache = new Map<string, FieldSchema[]>();
 
 	constructor(options: EmDashClientOptions) {
 		this.baseUrl = options.baseUrl.replace(TRAILING_SLASH_PATTERN, "");
 
-		// Build interceptor chain
 		const interceptors: Interceptor[] = [csrfInterceptor()];
 
 		if (options.token) {
@@ -481,7 +402,6 @@ export class EmDashClient {
 			interceptors.push(devBypassInterceptor(this.baseUrl));
 		}
 
-		// Auto-refresh expired OAuth tokens
 		if (options.refreshToken) {
 			interceptors.push(
 				refreshInterceptor({
@@ -504,24 +424,17 @@ export class EmDashClient {
 		this.transport = createTransport({ interceptors });
 	}
 
-	// -----------------------------------------------------------------------
-	// Schema
-	// -----------------------------------------------------------------------
-
-	/** List all collections */
 	async collections(): Promise<Collection[]> {
 		const data = await this.request<{ items: Collection[] }>("GET", "/schema/collections");
 		return data.items;
 	}
 
-	/** Get a single collection with its fields */
 	async collection(slug: string): Promise<CollectionWithFields> {
 		const data = await this.request<{ item: CollectionWithFields }>(
 			"GET",
 			`/schema/collections/${encodeURIComponent(slug)}?includeFields=true`,
 		);
 		const col = data.item;
-		// Cache field schemas for PT conversion
 		if (col.fields) {
 			this.fieldSchemaCache.set(
 				slug,
@@ -531,7 +444,6 @@ export class EmDashClient {
 		return col;
 	}
 
-	/** Create a collection */
 	async createCollection(input: {
 		slug: string;
 		label: string;
@@ -544,12 +456,10 @@ export class EmDashClient {
 		return data.item;
 	}
 
-	/** Delete a collection */
 	async deleteCollection(slug: string): Promise<void> {
 		await this.request<unknown>("DELETE", `/schema/collections/${encodeURIComponent(slug)}`);
 	}
 
-	/** Create a field on a collection */
 	async createField(
 		collection: string,
 		input: {
@@ -570,12 +480,10 @@ export class EmDashClient {
 			`/schema/collections/${encodeURIComponent(collection)}/fields`,
 			input,
 		);
-		// Invalidate field cache
 		this.fieldSchemaCache.delete(collection);
 		return data.item;
 	}
 
-	/** Delete a field from a collection */
 	async deleteField(collection: string, fieldSlug: string): Promise<void> {
 		await this.request<unknown>(
 			"DELETE",
@@ -584,28 +492,20 @@ export class EmDashClient {
 		this.fieldSchemaCache.delete(collection);
 	}
 
-	/** Get full manifest (schema + field descriptors + features) */
 	async manifest(): Promise<Manifest> {
 		return this.request<Manifest>("GET", "/manifest");
 	}
 
-	/** Export full schema as JSON (used by `emdash types`) */
 	async schemaExport(): Promise<SchemaExport> {
 		return this.request<SchemaExport>("GET", "/schema");
 	}
 
-	/** Export schema as TypeScript type definitions (used by `emdash types`) */
 	async schemaTypes(): Promise<string> {
 		const response = await this.requestRaw("GET", "/schema?format=typescript");
 		await this.assertOk(response);
 		return response.text();
 	}
 
-	// -----------------------------------------------------------------------
-	// Content
-	// -----------------------------------------------------------------------
-
-	/** List content in a collection */
 	async list(
 		collection: string,
 		options?: {
@@ -615,7 +515,6 @@ export class EmDashClient {
 			orderBy?: string;
 			order?: "asc" | "desc";
 			locale?: string;
-			/** AND-combined filters over custom fields explicitly marked as indexed. */
 			fieldFilters?: ContentFieldFilters;
 		},
 	): Promise<ListResult<ContentItem>> {
@@ -635,7 +534,6 @@ export class EmDashClient {
 		return this.request<ListResult<ContentItem>>("GET", path);
 	}
 
-	/** Async iterator that auto-follows cursors */
 	async *listAll(
 		collection: string,
 		options?: {
@@ -644,7 +542,6 @@ export class EmDashClient {
 			orderBy?: string;
 			order?: "asc" | "desc";
 			locale?: string;
-			/** AND-combined filters over custom fields explicitly marked as indexed. */
 			fieldFilters?: ContentFieldFilters;
 		},
 	): AsyncGenerator<ContentItem> {
@@ -658,10 +555,6 @@ export class EmDashClient {
 		} while (cursor);
 	}
 
-	/**
-	 * Get a single content item. Returns the item with a `_rev` token
-	 * that can be passed to update() for optimistic concurrency.
-	 */
 	async get(
 		collection: string,
 		id: string,
@@ -682,12 +575,10 @@ export class EmDashClient {
 		const json = raw.data;
 		const item = json.item;
 
-		// Attach _rev to the item so callers can pass it back on update
 		if (json._rev) {
 			item._rev = json._rev;
 		}
 
-		// Convert PT fields to markdown unless raw is requested
 		if (!options?.raw && item.data) {
 			const fields = await this.getFieldSchemas(collection);
 			item.data = convertDataForRead(item.data, fields, false);
@@ -696,7 +587,6 @@ export class EmDashClient {
 		return item;
 	}
 
-	/** Create a new content item */
 	async create(
 		collection: string,
 		input: {
@@ -707,7 +597,6 @@ export class EmDashClient {
 			translationOf?: string;
 		},
 	): Promise<ContentItem> {
-		// Convert markdown strings to PT for portableText fields
 		const fields = await this.getFieldSchemas(collection);
 		const data = convertDataForWrite(input.data, fields);
 
@@ -719,11 +608,6 @@ export class EmDashClient {
 		return result.item;
 	}
 
-	/**
-	 * Update a content item. Pass `_rev` from a prior get() for optimistic
-	 * concurrency — the server returns 409 if the item has changed.
-	 * Omit `_rev` for a blind write (no conflict detection).
-	 */
 	async update(
 		collection: string,
 		id: string,
@@ -735,7 +619,6 @@ export class EmDashClient {
 			locale?: string;
 		},
 	): Promise<ContentItem> {
-		// Convert markdown strings to PT
 		let data = input.data;
 		if (data) {
 			const fields = await this.getFieldSchemas(collection);
@@ -763,7 +646,6 @@ export class EmDashClient {
 		return item;
 	}
 
-	/** Delete (soft) a content item */
 	async delete(collection: string, id: string): Promise<void> {
 		await this.request<unknown>(
 			"DELETE",
@@ -771,7 +653,6 @@ export class EmDashClient {
 		);
 	}
 
-	/** Publish a content item */
 	async publish(collection: string, id: string): Promise<void> {
 		await this.request<unknown>(
 			"POST",
@@ -779,7 +660,6 @@ export class EmDashClient {
 		);
 	}
 
-	/** Unpublish a content item */
 	async unpublish(collection: string, id: string): Promise<void> {
 		await this.request<unknown>(
 			"POST",
@@ -787,7 +667,6 @@ export class EmDashClient {
 		);
 	}
 
-	/** Schedule publishing */
 	async schedule(collection: string, id: string, options: { at: string }): Promise<void> {
 		await this.request<unknown>(
 			"POST",
@@ -796,7 +675,6 @@ export class EmDashClient {
 		);
 	}
 
-	/** Restore a trashed content item */
 	async restore(collection: string, id: string): Promise<void> {
 		await this.request<unknown>(
 			"POST",
@@ -804,7 +682,6 @@ export class EmDashClient {
 		);
 	}
 
-	/** Compare live and draft revisions */
 	async compare(
 		collection: string,
 		id: string,
@@ -820,7 +697,6 @@ export class EmDashClient {
 		}>("GET", `/content/${encodeURIComponent(collection)}/${encodeURIComponent(id)}/compare`);
 	}
 
-	/** Discard draft revision, reverting to the published version */
 	async discardDraft(collection: string, id: string): Promise<void> {
 		await this.request<unknown>(
 			"POST",
@@ -828,10 +704,6 @@ export class EmDashClient {
 		);
 	}
 
-	/**
-	 * Get all translations of a content item.
-	 * Returns the translation group ID and a summary of each locale version.
-	 */
 	async translations(
 		collection: string,
 		id: string,
@@ -851,11 +723,6 @@ export class EmDashClient {
 		);
 	}
 
-	// -----------------------------------------------------------------------
-	// Media
-	// -----------------------------------------------------------------------
-
-	/** List media items */
 	async mediaList(options?: {
 		mimeType?: string;
 		limit?: number;
@@ -883,7 +750,6 @@ export class EmDashClient {
 		);
 	}
 
-	/** Get a single media item */
 	async mediaGet(id: string, options?: { includeUsage?: boolean }): Promise<MediaItem> {
 		const params = new URLSearchParams();
 		if (options?.includeUsage === true) params.set("includeUsage", "1");
@@ -896,7 +762,6 @@ export class EmDashClient {
 		return data.item;
 	}
 
-	/** List media folders */
 	async mediaFolderList(
 		options: { limit?: number; cursor?: string; q?: string } = {},
 	): Promise<ListResult<MediaFolder>> {
@@ -908,7 +773,6 @@ export class EmDashClient {
 		return this.request<ListResult<MediaFolder>>("GET", `/media/folders${qs ? `?${qs}` : ""}`);
 	}
 
-	/** Get one media folder */
 	async mediaFolderGet(id: string): Promise<MediaFolder> {
 		const data = await this.request<{ item: MediaFolder }>(
 			"GET",
@@ -917,13 +781,11 @@ export class EmDashClient {
 		return data.item;
 	}
 
-	/** Create a media folder */
 	async mediaFolderCreate(name: string): Promise<MediaFolder> {
 		const data = await this.request<{ item: MediaFolder }>("POST", "/media/folders", { name });
 		return data.item;
 	}
 
-	/** Rename a media folder */
 	async mediaFolderUpdate(id: string, name: string): Promise<MediaFolder> {
 		const data = await this.request<{ item: MediaFolder }>(
 			"PUT",
@@ -933,12 +795,10 @@ export class EmDashClient {
 		return data.item;
 	}
 
-	/** Delete a media folder */
 	async mediaFolderDelete(id: string): Promise<void> {
 		await this.request<unknown>("DELETE", `/media/folders/${encodeURIComponent(id)}`);
 	}
 
-	/** Assign media to a folder, or return it to the Main library */
 	async mediaSetFolder(id: string, folderId: string | null): Promise<MediaFolderAssignment> {
 		const data = await this.request<{ item: MediaFolderAssignment }>(
 			"PUT",
@@ -948,7 +808,6 @@ export class EmDashClient {
 		return { id: data.item.id, folderId: data.item.folderId };
 	}
 
-	/** Get entry-grouped usage details for a media item */
 	async mediaGetUsage(
 		id: string,
 		options?: { limit?: number; cursor?: string },
@@ -964,7 +823,6 @@ export class EmDashClient {
 		);
 	}
 
-	/** Upload a media file */
 	async mediaUpload(
 		file: Uint8Array | Blob,
 		filename: string,
@@ -972,7 +830,6 @@ export class EmDashClient {
 	): Promise<MediaItem> {
 		const formData = new FormData();
 
-		// Handle different file types
 		if (file instanceof Blob) {
 			formData.append("file", file, filename);
 		} else {
@@ -996,32 +853,26 @@ export class EmDashClient {
 		return raw.data.item;
 	}
 
-	/** Delete a media item */
 	async mediaDelete(id: string): Promise<void> {
 		await this.request<unknown>("DELETE", `/media/${encodeURIComponent(id)}`);
 	}
 
-	/** Repair content media usage indexes for one collection or all collections */
 	async mediaRepairUsage(input: MediaUsageRepairInput): Promise<MediaUsageRepairResponse> {
 		return this.request<MediaUsageRepairResponse>("POST", "/admin/media-usage/repair", input);
 	}
 
-	/** Read aggregate Media Usage indexing progress */
 	async mediaGetUsageProgress(): Promise<MediaUsageProgress> {
 		return this.request<MediaUsageProgress>("GET", "/admin/media-usage/progress");
 	}
 
-	/** Advance exactly one Media Usage maintenance step */
 	async mediaAdvanceUsageProgress(): Promise<MediaUsageProgressAdvanceResponse> {
 		return this.request<MediaUsageProgressAdvanceResponse>("POST", "/admin/media-usage/progress");
 	}
 
-	/** Read the redacted controlled-activation status */
 	async mediaGetUsageActivation(): Promise<MediaUsageActivationStatus> {
 		return this.request<MediaUsageActivationStatus>("GET", "/admin/media-usage/activation");
 	}
 
-	/** Advance exactly one controlled-activation batch */
 	async mediaAdvanceUsageActivation(
 		input: MediaUsageActivationAdvanceInput,
 	): Promise<MediaUsageActivationAdvanceResponse> {
@@ -1032,7 +883,6 @@ export class EmDashClient {
 		);
 	}
 
-	/** List a bounded page of durable media usage entry work */
 	async mediaListUsageWork(
 		options: MediaUsageWorkListOptions,
 	): Promise<MediaUsageWorkListResponse> {
@@ -1043,7 +893,6 @@ export class EmDashClient {
 		return this.request<MediaUsageWorkListResponse>("GET", `/admin/media-usage/work?${params}`);
 	}
 
-	/** Explicitly retry one durable media usage entry job */
 	async mediaRetryUsageWork(input: MediaUsageWorkRetryInput): Promise<MediaUsageWorkRetryResponse> {
 		return this.request<MediaUsageWorkRetryResponse>(
 			"POST",
@@ -1075,11 +924,6 @@ export class EmDashClient {
 		});
 	}
 
-	// -----------------------------------------------------------------------
-	// Search
-	// -----------------------------------------------------------------------
-
-	/** Full-text search */
 	async search(
 		query: string,
 		options?: { collection?: string; locale?: string; limit?: number },
@@ -1093,17 +937,11 @@ export class EmDashClient {
 		return data.items;
 	}
 
-	// -----------------------------------------------------------------------
-	// Taxonomies
-	// -----------------------------------------------------------------------
-
-	/** List taxonomies */
 	async taxonomies(): Promise<Taxonomy[]> {
 		const data = await this.request<{ taxonomies: Taxonomy[] }>("GET", "/taxonomies");
 		return data.taxonomies;
 	}
 
-	/** List terms in a taxonomy */
 	async terms(
 		taxonomy: string,
 		options?: { limit?: number; cursor?: string },
@@ -1120,7 +958,6 @@ export class EmDashClient {
 		return { items: data.terms };
 	}
 
-	/** Create a taxonomy term */
 	async createTerm(
 		taxonomy: string,
 		input: { slug: string; label: string; parentId?: string; description?: string },
@@ -1128,26 +965,14 @@ export class EmDashClient {
 		return this.request<Term>("POST", `/taxonomies/${encodeURIComponent(taxonomy)}/terms`, input);
 	}
 
-	// -----------------------------------------------------------------------
-	// Menus
-	// -----------------------------------------------------------------------
-
-	/** List menus */
 	async menus(): Promise<Menu[]> {
-		// Handler returns a bare array, not { items: [...] }
 		return this.request<Menu[]>("GET", "/menus");
 	}
 
-	/** Get a menu with its items */
 	async menu(name: string): Promise<MenuWithItems> {
 		return this.request<MenuWithItems>("GET", `/menus/${encodeURIComponent(name)}`);
 	}
 
-	// -----------------------------------------------------------------------
-	// Internal helpers
-	// -----------------------------------------------------------------------
-
-	/** Make a typed JSON request to the API */
 	private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
 		const response = await this.requestRaw(method, path, body);
 		await this.assertOk(response);
@@ -1155,7 +980,6 @@ export class EmDashClient {
 		return json.data;
 	}
 
-	/** Make a raw request — caller handles response */
 	private async requestRaw(method: string, path: string, body?: unknown): Promise<Response> {
 		const url = `${this.baseUrl}/_emdash/api${path}`;
 		const headers: Record<string, string> = {
@@ -1177,7 +1001,6 @@ export class EmDashClient {
 		return this.transport.fetch(request);
 	}
 
-	/** Assert a response is OK, throw typed error if not */
 	private async assertOk(response: Response): Promise<void> {
 		if (response.ok) return;
 
@@ -1195,14 +1018,12 @@ export class EmDashClient {
 				details = json.error.details;
 			}
 		} catch {
-			// Response body isn't JSON — use status text
 			message = response.statusText || message;
 		}
 
 		throw new EmDashApiError(response.status, code, message, details);
 	}
 
-	/** Get cached field schemas for a collection, fetching if needed */
 	private async getFieldSchemas(collection: string): Promise<FieldSchema[]> {
 		let cached = this.fieldSchemaCache.get(collection);
 		if (cached) return cached;
@@ -1213,7 +1034,6 @@ export class EmDashClient {
 			this.fieldSchemaCache.set(collection, cached);
 			return cached;
 		} catch {
-			// If we can't fetch the schema, skip conversion
 			return [];
 		}
 	}
@@ -1224,7 +1044,6 @@ type _MediaRepairUsageRequiresExplicitInput = _AssertTrue<
 	Parameters<EmDashClient["mediaRepairUsage"]> extends [MediaUsageRepairInput] ? true : false
 >;
 
-// Re-export transport types for interceptor authors
 export type { Interceptor } from "./transport.js";
 export {
 	createTransport,

@@ -1,22 +1,3 @@
-/**
- * Kysely dialect for the production Durable Object SQL database.
- *
- * Proxies queries to an `EmDashDB` stub via RPC. Two properties matter for
- * latency and correctness:
- *
- *   1. **One stub, reused.** The dialect resolves a single DO stub lazily (on
- *      the first query, inside a request's I/O context) and reuses it for every
- *      query. Resolving a fresh stub per query is the main source of D1-style
- *      per-query round-trip overhead; the request-scoped factory in `do-sql.ts`
- *      gives each request its own dialect, so this is "one stub per request".
- *
- *   2. **No interactive transactions**, matching D1 (kysely-d1). The driver
- *      rejects `beginTransaction` with the message EmDash's `withTransaction`
- *      helper probes for, so transaction callbacks degrade to direct execution
- *      against the primary-routed connection — the same atomicity profile the
- *      codebase already runs under on D1.
- */
-
 import type {
 	CompiledQuery,
 	DatabaseConnection,
@@ -32,40 +13,15 @@ import { D1Introspector } from "./d1-introspector.js";
 import type { DOQueryOptions, EmDashDBStub } from "./do-sql-types.js";
 import { isReadStatement } from "./do-sql-types.js";
 
-/** Mutable holder for the latest write bookmark, read by the request `commit()`. */
 export interface BookmarkSink {
 	latest?: string;
 }
 
 export interface DOSqlDialectConfig {
-	/**
-	 * Resolves the DO stub. Called once per query (per `acquireConnection`).
-	 * The implementation owns the stub's lifetime: the request-scoped factory
-	 * memoizes within a single request ("one stub per request"); the singleton
-	 * factory returns a fresh stub each call because a DO stub cannot cross
-	 * request boundaries.
-	 */
 	resolveStub: () => EmDashDBStub;
-	/**
-	 * The request's initial read-your-writes bookmark, from the client's cookie
-	 * (authenticated requests only). Used as the floor for reads until a write
-	 * in this request mints a fresher one into the sink.
-	 */
 	readBookmark?: string;
-	/**
-	 * Carries the latest write bookmark. Updated with the bookmark returned by
-	 * each write, and consulted on subsequent reads (taking precedence over
-	 * `readBookmark`) so read-after-write within a request is consistent. Also
-	 * read by the request `commit()` to persist the bookmark cookie.
-	 */
 	bookmarkSink?: BookmarkSink;
-	/**
-	 * Called once per physical RPC to the DO (each `query`/`batchQuery`). Lets
-	 * the runtime count round trips separately from logical queries. Injected
-	 * rather than imported so the dialect stays decoupled from core.
-	 */
 	onRpc?: () => void;
-	/** Route reads through the primary for mutation and maintenance scopes. */
 	forcePrimary?: boolean;
 }
 
@@ -103,21 +59,10 @@ class DOSqlDriver implements Driver {
 	async init(): Promise<void> {}
 
 	async acquireConnection(): Promise<DatabaseConnection> {
-		// Resolve the stub on every acquire and let `resolveStub` decide its
-		// lifetime. A DO stub is a per-request I/O object: it cannot be reused
-		// across requests, so the driver must NOT cache it (the singleton dialect
-		// is itself cached across requests on globalThis — caching a stub here
-		// would bind it to a stale request and throw "Cannot perform I/O on
-		// behalf of a different request"). The request-scoped factory passes a
-		// closure that memoizes per request, giving "one stub per request"
-		// without crossing request boundaries.
 		return new DOSqlConnection(this.#config.resolveStub(), this.#config);
 	}
 
 	async beginTransaction(): Promise<void> {
-		// Match kysely-d1: interactive transactions are unsupported. EmDash's
-		// withTransaction() probes for this exact message and falls back to
-		// running the callback directly against the connection.
 		throw new Error("Transactions are not supported");
 	}
 
@@ -148,13 +93,6 @@ class DOSqlConnection implements DatabaseConnection {
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- CompiledQuery.parameters is ReadonlyArray<unknown>, stub expects unknown[]
 		const params = compiledQuery.parameters as unknown[];
 
-		// Forward a read-your-writes bookmark only on reads. Prefer the freshest
-		// write bookmark seen this request (sink) over the request's initial
-		// cookie bookmark, so a read issued AFTER a write in the same request
-		// waits for that write to replicate before serving. Without this, a
-		// read-after-write (e.g. create() then findById()) on a replica would
-		// miss the just-written row. Writes always proxy to the primary and mint
-		// a fresh bookmark, so they don't carry one inbound.
 		let opts: DOQueryOptions | undefined;
 		if (isReadStatement(sqlText)) {
 			const bookmark = this.#config.bookmarkSink?.latest ?? this.#config.readBookmark;

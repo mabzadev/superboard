@@ -39,8 +39,6 @@ beforeAll(async () => {
 	({ onRequest } = await import("../../../../../../packages/core/src/astro/middleware/auth.js"));
 });
 
-// Restore env stubs so `import.meta.env.DEV` does not leak into other test
-// files sharing this Vitest worker.
 afterAll(() => {
 	vi.unstubAllEnvs();
 });

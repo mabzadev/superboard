@@ -51,7 +51,6 @@ describe("atproto auth config", () => {
 			const descriptor = atproto();
 			expect(descriptor.publicRoutes).toBeDefined();
 			expect(descriptor.publicRoutes).toContain("/_emdash/api/auth/atproto/");
-			// Should not have overly broad prefixes
 			expect(descriptor.publicRoutes).not.toContain("/_emdash/.well-known/");
 		});
 	});

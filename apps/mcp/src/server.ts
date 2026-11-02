@@ -46,7 +46,6 @@ export type ToolResult = {
 	content: Array<{ type: "text"; text: string }>;
 };
 
-/** Extracts token from extra, calls handler, catches all errors. */
 export async function runWithAuth(
 	extra: ToolExtra,
 	handler: (token: string) => Promise<ToolResult>,
@@ -68,8 +67,6 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
 		version: "1.0.0",
 	});
 
-	// --- Status ---
-
 	server.registerTool(
 		"get_status",
 		{
@@ -90,8 +87,6 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
 		(extra) => runWithAuth(extra, (token) => handleGetPlatformStatus(token, client)),
 	);
 
-	// --- Usage ---
-
 	server.registerTool(
 		"get_usage",
 		{
@@ -106,8 +101,6 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
 			runWithAuth(extra, (token) => handleGetUsage(token, instance_id, client)),
 	);
 
-	// --- Projects ---
-
 	server.registerTool(
 		"create_project",
 		{
@@ -120,8 +113,6 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
 		},
 		({ name }, extra) => runWithAuth(extra, (token) => handleCreateProject(token, name, client)),
 	);
-
-	// --- Links ---
 
 	server.registerTool(
 		"create_link",
@@ -362,8 +353,6 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
 			),
 	);
 
-	// --- Analytics ---
-
 	server.registerTool(
 		"get_analytics_overview",
 		{
@@ -443,8 +432,6 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
 				handleGetTopLinks(token, project_id, { start_date, end_date, platform, limit }, client),
 			),
 	);
-
-	// --- Configuration ---
 
 	server.registerTool(
 		"configure_redirects",
@@ -539,8 +526,6 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
 			),
 	);
 
-	// --- Campaigns ---
-
 	server.registerTool(
 		"create_campaign",
 		{
@@ -560,7 +545,6 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
 			runWithAuth(extra, (token) => handleCreateCampaign(token, project_id, name, client)),
 	);
 
-	// Backed by the /campaigns/search endpoint (api.searchCampaigns) under the hood.
 	server.registerTool(
 		"list_campaigns",
 		{

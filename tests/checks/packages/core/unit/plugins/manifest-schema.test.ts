@@ -5,7 +5,6 @@ import {
 	normalizeManifestRoute,
 } from "../../../../../../packages/core/src/plugins/manifest-schema.js";
 
-/** Minimal valid manifest for testing — only storage fields vary */
 function makeManifest(storage: Record<string, { indexes: Array<string | string[]> }>) {
 	return {
 		id: "test-plugin",
@@ -22,7 +21,6 @@ function makeManifest(storage: Record<string, { indexes: Array<string | string[]
 describe("pluginManifestSchema — route entries", () => {
 	it("should accept plain string routes", () => {
 		const result = pluginManifestSchema.safeParse(makeManifest({}));
-		// Baseline with empty routes is valid
 		expect(result.success).toBe(true);
 
 		const withRoutes = pluginManifestSchema.safeParse({

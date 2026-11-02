@@ -6,8 +6,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { AdminManifest, Section } from "../../../../../packages/admin/src/lib/api";
 import { render } from "../utils/render.tsx";
 
-// Capture props passed to PortableTextEditor so the test can invoke the
-// block-sidebar callbacks the way the image node view does at runtime.
 const portableTextProps: { current: Record<string, unknown> | null } = { current: null };
 
 vi.mock("../../../../../packages/admin/src/components/PortableTextEditor", () => ({
@@ -49,7 +47,6 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	};
 });
 
-// Import after mocks so the module under test picks up the mocked deps.
 const { SectionEditor } =
 	await import("../../../../../packages/admin/src/components/SectionEditor");
 
@@ -101,7 +98,6 @@ describe("SectionEditor", () => {
 	it("opens the image settings panel when a block requests the sidebar", async () => {
 		const screen = await render(<SectionEditor />, { wrapper: Wrapper });
 
-		// Editor must mount (and capture its props) before we can simulate.
 		await expect.element(screen.getByTestId("portable-text-editor")).toBeInTheDocument();
 
 		const onBlockSidebarOpen = portableTextProps.current?.onBlockSidebarOpen as
@@ -111,14 +107,9 @@ describe("SectionEditor", () => {
 			| (() => void)
 			| undefined;
 
-		// Both callbacks must be wired — without them, clicking the image-settings
-		// icon in the editor is a silent no-op (#845).
 		expect(typeof onBlockSidebarOpen).toBe("function");
 		expect(typeof onBlockSidebarClose).toBe("function");
 
-		// Simulate the image node view asking for sidebar space, the same shape
-		// it sends from ImageNode.openSidebar(). expect.element below polls until
-		// React flushes the state update, so we don't need an explicit act wrapper.
 		onBlockSidebarOpen!({
 			type: "image",
 			attrs: {
@@ -134,8 +125,6 @@ describe("SectionEditor", () => {
 			onClose: vi.fn(),
 		});
 
-		// The Image Settings panel should now be rendered in the sidebar slot.
-		// The panel renders the image preview using the src we passed.
 		await expect.element(screen.getByRole("img", { name: "Logo" })).toBeInTheDocument();
 	});
 

@@ -1,11 +1,3 @@
-/**
- * Tests for site settings import:
- * - writes the real `site:*` options read by getSiteSettings()
- * - overwrite semantics (seeded titles are replaced during migration)
- * - logo/favicon applied as media references
- * - parseSiteSettingsFromPlugin field mapping
- */
-
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {

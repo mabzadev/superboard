@@ -6,7 +6,6 @@ import {
 	parseContentId,
 } from "../../../../../../packages/core/src/preview/tokens.js";
 
-// Regex patterns for token validation
 const BASE64URL_INVALID_CHARS_REGEX = /[+/=]/;
 const BASE64_PLUS_PATTERN = /\+/g;
 const BASE64_SLASH_PATTERN = /\//g;
@@ -23,15 +22,12 @@ describe("preview tokens", () => {
 				secret: testSecret,
 			});
 
-			// Token should be non-empty string
 			expect(token).toBeTruthy();
 			expect(typeof token).toBe("string");
 
-			// Token should have two parts (payload.signature)
 			const parts = token.split(".");
 			expect(parts.length).toBe(2);
 
-			// Should be URL-safe (no +, /, or =)
 			expect(token).not.toMatch(BASE64URL_INVALID_CHARS_REGEX);
 		});
 
@@ -45,7 +41,6 @@ describe("preview tokens", () => {
 			expect(result.valid).toBe(true);
 
 			if (result.valid) {
-				// Should expire in roughly 1 hour
 				const now = Math.floor(Date.now() / 1000);
 				const expectedExpiry = now + 3600;
 				expect(result.payload.exp).toBeGreaterThan(now);
@@ -71,7 +66,7 @@ describe("preview tokens", () => {
 		it("supports numeric duration (seconds)", async () => {
 			const token = await generatePreviewToken({
 				contentId: "posts:test",
-				expiresIn: 7200, // 2 hours
+				expiresIn: 7200,
 				secret: testSecret,
 			});
 
@@ -133,14 +128,12 @@ describe("preview tokens", () => {
 		it("rejects expired token", async () => {
 			vi.useFakeTimers();
 
-			// Generate a token that expires in 60 seconds
 			const token = await generatePreviewToken({
 				contentId: "posts:abc123",
 				expiresIn: 60,
 				secret: testSecret,
 			});
 
-			// Fast-forward past expiry
 			vi.advanceTimersByTime(61 * 1000);
 
 			const result = await verifyPreviewToken({ token, secret: testSecret });
@@ -158,7 +151,6 @@ describe("preview tokens", () => {
 				secret: testSecret,
 			});
 
-			// Tamper with the payload
 			const [_payload, signature] = token.split(".");
 			const tamperedPayload = btoa(JSON.stringify({ cid: "posts:hacked", exp: 9999999999, iat: 0 }))
 				.replace(BASE64_PLUS_PATTERN, "-")
@@ -226,16 +218,10 @@ describe("preview tokens", () => {
 		});
 
 		it("rejects token with missing fields", async () => {
-			// Create a token with incomplete payload
 			const _incompletePayload = btoa(JSON.stringify({ cid: "posts:abc" }))
 				.replace(BASE64_PLUS_PATTERN, "-")
 				.replace(BASE64_SLASH_PATTERN, "_")
 				.replace(BASE64_PADDING_PATTERN, "");
-
-			// Need to sign it properly for the signature check to pass
-			// but payload validation should fail
-			// Actually, this will fail at signature validation since we can't sign without the secret
-			// Let's test a different case - token where JSON is valid but fields are wrong type
 
 			const badPayload = btoa(JSON.stringify({ cid: 123, exp: "not-a-number", iat: null }))
 				.replace(BASE64_PLUS_PATTERN, "-")

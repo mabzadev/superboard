@@ -1,10 +1,3 @@
-/**
- * Image Detail Panel for Editor
- *
- * A slide-out panel for editing image properties in the rich text editor.
- * Shows preview and allows editing alt text, caption, and link settings.
- */
-
 import { Button, Input, InputArea, Label, LinkButton } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import {
@@ -29,19 +22,12 @@ export interface ImageAttributes {
 	title?: string;
 	caption?: string;
 	mediaId?: string;
-	/** Original image width */
 	width?: number;
-	/** Original image height */
 	height?: number;
-	/** LQIP blurhash placeholder */
 	blurhash?: string;
-	/** LQIP dominant-color placeholder */
 	dominantColor?: string;
-	/** Display width for this instance (defaults to original) */
 	displayWidth?: number;
-	/** Display height for this instance (defaults to original) */
 	displayHeight?: number;
-	/** Alignment for this image instance (e.g. from a WordPress import) */
 	alignment?: "left" | "center" | "right" | "wide" | "full";
 }
 
@@ -51,15 +37,9 @@ export interface ImageDetailPanelProps {
 	onReplace: (attrs: ImageAttributes) => void;
 	onDelete: () => void;
 	onClose: () => void;
-	/** When true, renders inline within the sidebar column instead of as a fixed overlay */
 	inline?: boolean;
 }
 
-/**
- * Panel for editing image properties in the editor.
- * Renders as a fixed slide-out overlay by default, or inline within
- * the content sidebar when `inline` is true.
- */
 export function ImageDetailPanel({
 	attributes,
 	onUpdate,
@@ -69,13 +49,11 @@ export function ImageDetailPanel({
 	inline = false,
 }: ImageDetailPanelProps) {
 	const { t } = useLingui();
-	// Form state
 	const [alt, setAlt] = React.useState(attributes.alt ?? "");
 	const [caption, setCaption] = React.useState(attributes.caption ?? "");
 	const [title, setTitle] = React.useState(attributes.title ?? "");
 	const [showMediaPicker, setShowMediaPicker] = React.useState(false);
 
-	// Dimension state - default to display dimensions, fall back to original
 	const [displayWidth, setDisplayWidth] = React.useState<number | undefined>(
 		attributes.displayWidth ?? attributes.width,
 	);
@@ -87,7 +65,6 @@ export function ImageDetailPanel({
 		attributes.alignment,
 	);
 
-	// Calculate aspect ratio from original dimensions
 	const aspectRatio =
 		attributes.width && attributes.height ? attributes.width / attributes.height : undefined;
 
@@ -121,7 +98,6 @@ export function ImageDetailPanel({
 			height: item.height,
 			blurhash: item.blurhash,
 			dominantColor: item.dominantColor,
-			// Clear caption/title since it's a new image
 			caption: undefined,
 			title: undefined,
 		});
@@ -129,7 +105,6 @@ export function ImageDetailPanel({
 		onClose();
 	};
 
-	// Track if form has unsaved changes
 	const hasChanges = React.useMemo(() => {
 		const originalDisplayWidth = attributes.displayWidth ?? attributes.width;
 		const originalDisplayHeight = attributes.displayHeight ?? attributes.height;
@@ -173,7 +148,6 @@ export function ImageDetailPanel({
 	const stableOnClose = useStableCallback(onClose);
 	const stableHandleSave = useStableCallback(handleSave);
 
-	// Handle keyboard shortcuts
 	React.useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") {
@@ -218,7 +192,6 @@ export function ImageDetailPanel({
 	if (inline) {
 		return (
 			<div className="rounded-lg border bg-kumo-base flex flex-col">
-				{/* Header */}
 				<div className="flex items-center justify-between p-4 border-b">
 					<div className="flex items-center gap-2">
 						<SlidersHorizontal className="h-4 w-4 text-kumo-subtle" />
@@ -230,7 +203,6 @@ export function ImageDetailPanel({
 					</Button>
 				</div>
 
-				{/* Preview */}
 				<div className="p-4 border-b">
 					<div className="aspect-video bg-kumo-tint rounded-lg overflow-hidden flex items-center justify-center relative group">
 						<img
@@ -250,7 +222,6 @@ export function ImageDetailPanel({
 						</div>
 					</div>
 
-					{/* Original dimensions */}
 					{(attributes.width || attributes.height) && (
 						<div className="flex items-center gap-2 text-sm mt-3">
 							<Ruler className="h-4 w-4 text-kumo-subtle" />
@@ -262,7 +233,6 @@ export function ImageDetailPanel({
 					)}
 				</div>
 
-				{/* Display Size — shown for any image; migrated images may lack original dims */}
 				{attributes.src && (
 					<div className="p-4 border-b space-y-3">
 						<div className="flex items-center justify-between">
@@ -318,7 +288,6 @@ export function ImageDetailPanel({
 					</div>
 				)}
 
-				{/* Alignment */}
 				{attributes.src && (
 					<div className="p-4 border-b space-y-3">
 						<Label>{t`Alignment`}</Label>
@@ -338,7 +307,6 @@ export function ImageDetailPanel({
 					</div>
 				)}
 
-				{/* Editable Fields */}
 				<div className="p-4 space-y-4">
 					<Input
 						label={t`Alt Text`}
@@ -365,7 +333,6 @@ export function ImageDetailPanel({
 						description={t`Shown when hovering over the image.`}
 					/>
 
-					{/* Source URL - only show for external images (no mediaId) */}
 					{!attributes.mediaId && attributes.src && (
 						<div>
 							<Label>{t`Source`}</Label>
@@ -386,7 +353,6 @@ export function ImageDetailPanel({
 					)}
 				</div>
 
-				{/* Actions */}
 				<div className="p-4 border-t flex items-center justify-between gap-2">
 					<Button variant="destructive" size="sm" onClick={handleDelete}>
 						{t`Remove Image`}
@@ -403,7 +369,6 @@ export function ImageDetailPanel({
 
 	return (
 		<div className="fixed inset-y-0 end-0 w-96 bg-kumo-base border-s shadow-xl z-50 flex flex-col">
-			{/* Header */}
 			<div className="flex items-center justify-between border-b p-4">
 				<div className="flex items-center gap-2">
 					<SlidersHorizontal className="h-4 w-4 text-kumo-subtle" />
@@ -415,9 +380,7 @@ export function ImageDetailPanel({
 				</Button>
 			</div>
 
-			{/* Content */}
 			<div className="flex-1 overflow-y-auto">
-				{/* Preview */}
 				<div className="p-4 border-b">
 					<div className="aspect-video bg-kumo-tint rounded-lg overflow-hidden flex items-center justify-center relative group">
 						<img
@@ -438,7 +401,6 @@ export function ImageDetailPanel({
 					</div>
 				</div>
 
-				{/* Image Info - original dimensions */}
 				{(attributes.width || attributes.height) && (
 					<div className="p-4 border-b">
 						<div className="flex items-center gap-2 text-sm">
@@ -451,7 +413,6 @@ export function ImageDetailPanel({
 					</div>
 				)}
 
-				{/* Display Size — shown for any image; migrated images may lack original dims */}
 				{attributes.src && (
 					<div className="p-4 border-b space-y-3">
 						<div className="flex items-center justify-between">
@@ -507,7 +468,6 @@ export function ImageDetailPanel({
 					</div>
 				)}
 
-				{/* Alignment */}
 				{attributes.src && (
 					<div className="p-4 border-b space-y-3">
 						<Label>{t`Alignment`}</Label>
@@ -527,7 +487,6 @@ export function ImageDetailPanel({
 					</div>
 				)}
 
-				{/* Editable Fields */}
 				<div className="p-4 space-y-4">
 					<Input
 						label={t`Alt Text`}
@@ -554,7 +513,6 @@ export function ImageDetailPanel({
 						description={t`Shown when hovering over the image.`}
 					/>
 
-					{/* Source URL - only show for external images (no mediaId) */}
 					{!attributes.mediaId && attributes.src && (
 						<div>
 							<Label>{t`Source`}</Label>
@@ -576,7 +534,6 @@ export function ImageDetailPanel({
 				</div>
 			</div>
 
-			{/* Footer */}
 			<div className="p-4 border-t flex items-center justify-between gap-2">
 				<Button variant="destructive" size="sm" onClick={handleDelete}>
 					{t`Remove Image`}

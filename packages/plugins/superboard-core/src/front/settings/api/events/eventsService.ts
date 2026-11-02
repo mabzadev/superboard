@@ -9,8 +9,6 @@ import type { AxiosResponse } from "axios";
 
 import { GET, POST } from "../../transport.js";
 
-// --- Response types ---
-
 interface EventsSearchResponse {
 	events: AppEvent[];
 	meta?: {
@@ -42,8 +40,6 @@ interface EventsOverviewResponse {
 interface EventsPaymentScreenResponse {
 	metrics_values: Record<string, number>;
 }
-
-// --- API calls ---
 
 export const getEventsForSearchParamsAPICall = async (
 	projectId: string,

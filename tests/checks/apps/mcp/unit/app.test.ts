@@ -5,7 +5,6 @@ import { createApp, _ipRequests, _tokenCache } from "../../../../../apps/mcp/src
 
 const app = createApp("https://api.example.test", "https://mcp.example.test");
 
-// Build a Response-like object for mocking global fetch.
 function mockFetchResponse(status: number, body: unknown, headers: Record<string, string> = {}) {
 	return new Response(JSON.stringify(body), {
 		status,
@@ -16,7 +15,6 @@ function mockFetchResponse(status: number, body: unknown, headers: Record<string
 beforeEach(() => {
 	_ipRequests.clear();
 	_tokenCache.clear();
-	// Default: Rails says token is valid. Individual tests override.
 	vi.spyOn(global, "fetch").mockResolvedValue(mockFetchResponse(200, { valid: true }));
 });
 
@@ -69,8 +67,6 @@ describe("auth middleware", () => {
 	});
 
 	it("passes with valid Bearer token (Rails says 200)", async () => {
-		// With a valid token, the request reaches the MCP handler.
-		// It won't return 401 — it will either process or fail with MCP error.
 		const res = await request(app)
 			.post("/mcp")
 			.set("Authorization", "Bearer valid-token")
@@ -85,10 +81,6 @@ describe("auth middleware", () => {
 		expect(res.status).not.toBe(401);
 	});
 
-	// The MCP TS server MUST validate the Bearer token against Rails upfront.
-	// Otherwise, Rails' 401 (from the tool handler's API call) gets swallowed by runWithAuth
-	// and wrapped in a successful MCP tool response — Claude Code never sees the 401,
-	// so OAuthClientProvider.onUnauthorized() never fires and the token is never refreshed.
 	it("forwards 401 from Rails when the token is invalid", async () => {
 		vi.mocked(global.fetch).mockResolvedValueOnce(
 			mockFetchResponse(
@@ -113,7 +105,6 @@ describe("auth middleware", () => {
 			});
 
 		expect(res.status).toBe(401);
-		// Must forward error="invalid_token" so Claude Code's OAuth client triggers a refresh.
 		expect(res.headers["www-authenticate"]).toContain('error="invalid_token"');
 	});
 
@@ -140,7 +131,6 @@ describe("auth middleware", () => {
 	it("caches valid tokens so Rails is not called on every request", async () => {
 		const fetchSpy = vi.mocked(global.fetch);
 
-		// Two consecutive requests with the same token.
 		for (let i = 0; i < 2; i++) {
 			await request(app)
 				.post("/mcp")
@@ -154,7 +144,6 @@ describe("auth middleware", () => {
 				});
 		}
 
-		// Rails should only have been called once — the second request hits the cache.
 		expect(fetchSpy).toHaveBeenCalledTimes(1);
 	});
 
@@ -163,9 +152,6 @@ describe("auth middleware", () => {
 
 		const res = await request(app)
 			.post("/mcp")
-			// Use a token unique to this cache-miss scenario. Reusing the token from
-			// the preceding validation test can make this assertion depend on cache
-			// timing when the full monorepo suite is under load.
 			.set("Authorization", "Bearer unreachable-token")
 			.set("Content-Type", "application/json")
 			.send({});
@@ -192,7 +178,6 @@ describe("DELETE /mcp", () => {
 
 describe("rate limiting", () => {
 	it("returns 429 after exceeding 100 requests in a window", async () => {
-		// Pre-fill the rate limit bucket for the test IP
 		const ip = "::ffff:127.0.0.1";
 		const now = Date.now();
 		_ipRequests.set(
@@ -207,7 +192,6 @@ describe("rate limiting", () => {
 	});
 
 	it("allows requests under the limit", async () => {
-		// First request should not be rate-limited (gets 401 from auth instead)
 		const res = await request(app).post("/mcp").send({});
 
 		expect(res.status).not.toBe(429);

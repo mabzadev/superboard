@@ -32,10 +32,6 @@ import { ArrowNext } from "./ArrowIcons.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
 import { DialogError, getMutationError } from "./DialogError.js";
 
-// ---------------------------------------------------------------------------
-// Redirect form dialog (create + edit)
-// ---------------------------------------------------------------------------
-
 function RedirectFormDialog({
 	open,
 	onClose,
@@ -44,9 +40,7 @@ function RedirectFormDialog({
 }: {
 	open: boolean;
 	onClose: () => void;
-	/** Pass for edit mode */
 	redirect?: Redirect;
-	/** Pre-fill source for create mode (e.g. from 404 list) */
 	defaultSource?: string;
 }) {
 	const { t } = useLingui();
@@ -59,7 +53,6 @@ function RedirectFormDialog({
 	const [enabled, setEnabled] = useState(redirect?.enabled ?? true);
 	const [groupName, setGroupName] = useState(redirect?.groupName ?? "");
 
-	// Terminal statuses (410 Gone / 451) serve a status directly — no destination.
 	const isTerminal = type === "410" || type === "451";
 
 	const createMutation = useMutation({
@@ -198,10 +191,6 @@ function RedirectFormDialog({
 	);
 }
 
-// ---------------------------------------------------------------------------
-// 404 Summary panel
-// ---------------------------------------------------------------------------
-
 function NotFoundPanel({
 	items,
 	onCreateRedirect,
@@ -264,10 +253,6 @@ function NotFoundPanel({
 	);
 }
 
-// ---------------------------------------------------------------------------
-// Main Redirects page
-// ---------------------------------------------------------------------------
-
 type TabKey = "redirects" | "404s";
 
 export function Redirects() {
@@ -279,19 +264,16 @@ export function Redirects() {
 	const [filterEnabled, setFilterEnabled] = useState<string>("all");
 	const [filterAuto, setFilterAuto] = useState<string>("all");
 
-	// Debounce search input
 	useEffect(() => {
 		const timer = setTimeout(setDebouncedSearch, 300, search);
 		return () => clearTimeout(timer);
 	}, [search]);
 
-	// Dialog state
 	const [showCreate, setShowCreate] = useState(false);
 	const [editRedirect, setEditRedirect] = useState<Redirect | null>(null);
 	const [deleteId, setDeleteId] = useState<string | null>(null);
 	const [prefillSource, setPrefillSource] = useState("");
 
-	// Queries
 	const enabledFilter = filterEnabled === "all" ? undefined : filterEnabled === "true";
 	const autoFilter = filterAuto === "all" ? undefined : filterAuto === "true";
 
@@ -315,7 +297,6 @@ export function Redirects() {
 		enabled: tab === "404s",
 	});
 
-	// Delete mutation
 	const deleteMutation = useMutation({
 		mutationFn: (id: string) => deleteRedirect(id),
 		onSuccess: () => {
@@ -324,7 +305,6 @@ export function Redirects() {
 		},
 	});
 
-	// Toggle enabled mutation
 	const toggleMutation = useMutation({
 		mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
 			updateRedirect(id, { enabled }),
@@ -336,7 +316,6 @@ export function Redirects() {
 		},
 	});
 
-	// One-click "Gone": create a 410 rule (no destination) for a 404 path.
 	const markGoneMutation = useMutation({
 		mutationFn: (path: string) =>
 			createRedirect({ source: path, destination: "", type: 410, enabled: true }),
@@ -358,7 +337,6 @@ export function Redirects() {
 
 	return (
 		<div className="space-y-6">
-			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-2xl font-semibold leading-tight">{t`Redirects`}</h1>
@@ -371,7 +349,6 @@ export function Redirects() {
 				</Button>
 			</div>
 
-			{/* Tabs */}
 			<div className="flex gap-1 border-b">
 				<button
 					onClick={() => setTab("redirects")}
@@ -403,10 +380,8 @@ export function Redirects() {
 				</button>
 			</div>
 
-			{/* Tab content */}
 			{tab === "redirects" && (
 				<>
-					{/* Filters */}
 					<div className="flex items-center gap-4">
 						<div className="relative flex-1 max-w-md">
 							<MagnifyingGlass
@@ -434,7 +409,6 @@ export function Redirects() {
 						/>
 					</div>
 
-					{/* Loop warning banner */}
 					{loopRedirectIds.size > 0 && (
 						<div
 							role="alert"
@@ -459,7 +433,6 @@ export function Redirects() {
 						</div>
 					)}
 
-					{/* Redirect list */}
 					{redirectsQuery.isLoading ? (
 						<div className="py-12 text-center text-kumo-subtle">{t`Loading redirects...`}</div>
 					) : redirects.length === 0 ? (
@@ -574,7 +547,6 @@ export function Redirects() {
 				/>
 			)}
 
-			{/* Create dialog */}
 			{showCreate && (
 				<RedirectFormDialog
 					open
@@ -586,12 +558,10 @@ export function Redirects() {
 				/>
 			)}
 
-			{/* Edit dialog */}
 			{editRedirect && (
 				<RedirectFormDialog open onClose={() => setEditRedirect(null)} redirect={editRedirect} />
 			)}
 
-			{/* Delete confirmation */}
 			<ConfirmDialog
 				open={!!deleteId}
 				onClose={() => {

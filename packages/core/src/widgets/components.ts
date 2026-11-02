@@ -1,9 +1,5 @@
 import type { WidgetComponentDef } from "./types.js";
 
-/**
- * Core widget components registry
- * These are built-in widgets that ship with EmDash
- */
 export const coreWidgetComponents: WidgetComponentDef[] = [
 	{
 		id: "core:recent-posts",
@@ -96,10 +92,6 @@ export const coreWidgetComponents: WidgetComponentDef[] = [
 	},
 ];
 
-/**
- * Get all widget component definitions (core + plugin-registered)
- * For now, only returns core components. Plugin widgets will be added later.
- */
 export function getWidgetComponents(): WidgetComponentDef[] {
 	return [...coreWidgetComponents];
 }

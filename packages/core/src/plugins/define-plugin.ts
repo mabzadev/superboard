@@ -1,15 +1,3 @@
-/**
- * definePlugin() Helper
- *
- * Native plugin authoring entry. Returns a fully-resolved
- * `ResolvedPlugin` ready for the host integration to mount.
- *
- * Sandboxed plugins do NOT use this function. They default-export
- * a bare `{ hooks?, routes? }` object with a `satisfies SandboxedPlugin`
- * annotation from `emdash/plugin`. See the `emdash` changeset for the
- * authoring shape.
- */
-
 import { normalizeCapabilities } from "./types.js";
 import type {
 	PluginDefinition,
@@ -24,55 +12,9 @@ import type {
 
 const MCP_TOOL_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
-/**
- * Define a native EmDash plugin.
- *
- * Native plugins ship as regular npm modules, get installed via
- * `pnpm add` + an `astro.config.mjs` edit, and run in the host
- * process. They have full access to the runtime — capabilities are
- * still enforced by `PluginContextFactory`, but there is no isolation
- * boundary.
- *
- * @example
- * ```typescript
- * import { definePlugin } from "emdash";
- *
- * export default definePlugin({
- *   id: "my-plugin",
- *   version: "1.0.0",
- *   capabilities: ["content:read"],
- *   hooks: {
- *     "content:beforeSave": async (event, ctx) => {
- *       ctx.log.info("Saving content", { collection: event.collection });
- *       return event.content;
- *     }
- *   },
- *   routes: {
- *     "sync": {
- *       handler: async (ctx) => {
- *         return { status: "ok" };
- *       }
- *     }
- *   }
- * });
- * ```
- *
- * Sandboxed-format plugins do not use `definePlugin`. They
- * default-export a bare `{ hooks?, routes? }` object with a
- * `satisfies SandboxedPlugin` annotation from `emdash/plugin`. Calling
- * `definePlugin` with an object that has no `id` throws at runtime
- * (the type system already rejects it at compile time — this check is
- * for callers that bypass typechecking).
- */
 export function definePlugin<TStorage extends PluginStorageConfig>(
 	definition: PluginDefinition<TStorage>,
 ): ResolvedPlugin<TStorage> {
-	// Semantic check, not a structural one: `id` is what makes this a
-	// native definition. Sandboxed plugins (the only other shape that
-	// might land here at runtime) intentionally never have an `id` —
-	// identity comes from the manifest's `slug` + `publisher`, computed
-	// at install time. So "no id" is the unambiguous signal that the
-	// caller meant the sandboxed authoring flow.
 	if (typeof definition.id !== "string" || definition.id.length === 0) {
 		throw new Error(
 			`definePlugin() requires \`id\` (got ${typeof definition.id}). ` +
@@ -85,19 +27,9 @@ export function definePlugin<TStorage extends PluginStorageConfig>(
 	return defineNativePlugin(definition);
 }
 
-/**
- * Internal: define a native-format plugin with full validation and normalization.
- */
 function defineNativePlugin<TStorage extends PluginStorageConfig>(
 	definition: PluginDefinition<TStorage>,
 ): ResolvedPlugin<TStorage> {
-	// Declared function-local (not module scope) on purpose. Under
-	// `ssr.noExternal` the worker entry can instantiate native plugins during a
-	// circular module init, reaching this function before module-scope consts
-	// initialize -> "Cannot access 'SIMPLE_ID' before initialization" -> every
-	// route 500s on Cloudflare Workers. Call-time consts evaluate after the
-	// literals are parsed, so the temporal dead zone cannot occur regardless of
-	// bundle ordering. See #1370.
 	// oxlint-disable-next-line e18e/prefer-static-regex -- call-time on purpose (see #1370)
 	const SIMPLE_ID = /^[a-z0-9-]+$/;
 	// oxlint-disable-next-line e18e/prefer-static-regex -- call-time on purpose (see #1370)
@@ -116,21 +48,14 @@ function defineNativePlugin<TStorage extends PluginStorageConfig>(
 		admin = {},
 	} = definition;
 
-	// Default to empty object if no storage declared.
-	// The empty object satisfies PluginStorageConfig (Record<string, ...>).
-	// The cast is structurally safe because an empty record has no keys to conflict.
 	const storage = (definition.storage ?? {}) as TStorage;
 
-	// Validate id format: either simple (my-plugin) or scoped (@scope/my-plugin)
-	// Simple: lowercase alphanumeric with dashes
-	// Scoped: @scope/name where both parts are lowercase alphanumeric with dashes
 	if (!SIMPLE_ID.test(id) && !SCOPED_ID.test(id)) {
 		throw new Error(
 			`Invalid plugin id "${id}". Must be lowercase alphanumeric with dashes (e.g., "my-plugin" or "@scope/my-plugin").`,
 		);
 	}
 
-	// Validate version format (basic semver)
 	if (!SEMVER_PATTERN.test(version)) {
 		throw new Error(`Invalid plugin version "${version}". Must be semver format (e.g., "1.0.0").`);
 	}
@@ -147,12 +72,7 @@ function defineNativePlugin<TStorage extends PluginStorageConfig>(
 		}
 	}
 
-	// Validate capabilities. Both current names and deprecated aliases are
-	// accepted; aliases are silently rewritten to current names below so the
-	// runtime only ever sees the canonical form. Authors are warned at
-	// bundle/validate and hard-failed at publish.
 	const validCapabilities = new Set<string>([
-		// Current names
 		"network:request",
 		"network:request:unrestricted",
 		"content:read",
@@ -165,7 +85,6 @@ function defineNativePlugin<TStorage extends PluginStorageConfig>(
 		"hooks.email-transport:register",
 		"hooks.email-events:register",
 		"hooks.page-fragments:register",
-		// Deprecated aliases
 		"network:fetch",
 		"network:fetch:any",
 		"read:content",
@@ -183,15 +102,8 @@ function defineNativePlugin<TStorage extends PluginStorageConfig>(
 		}
 	}
 
-	// Silent normalization: rewrite deprecated names to current names. Done
-	// before the implication pass so implications work on canonical names.
-	// `as PluginCapability[]` is safe because `normalizeCapabilities` only
-	// returns strings from the validated input plus current names from the
-	// rename map, all of which are in the union.
 	const canonical = normalizeCapabilities(capabilities) as PluginCapability[];
 
-	// Capability implications: broader capabilities imply narrower ones.
-	// Operates on canonical names only.
 	const normalizedCapabilities: PluginCapability[] = [...canonical];
 	if (canonical.includes("content:write") && !canonical.includes("content:read")) {
 		normalizedCapabilities.push("content:read");
@@ -206,7 +118,6 @@ function defineNativePlugin<TStorage extends PluginStorageConfig>(
 		normalizedCapabilities.push("network:request");
 	}
 
-	// Normalize hooks
 	const resolvedHooks = resolveHooks(hooks, id);
 
 	return {
@@ -222,13 +133,6 @@ function defineNativePlugin<TStorage extends PluginStorageConfig>(
 	};
 }
 
-/**
- * Resolve hooks to normalized format with defaults.
- *
- * PluginHooks and ResolvedPluginHooks share the same keys — each input value is
- * `HookConfig<H> | H` and the output is `ResolvedHook<H>`.  TS can't narrow
- * the handler type through a dynamic key, so we assert at the loop boundary.
- */
 function resolveHooks(hooks: PluginHooks, pluginId: string): ResolvedPluginHooks {
 	const resolved: ResolvedPluginHooks = {};
 
@@ -242,23 +146,16 @@ function resolveHooks(hooks: PluginHooks, pluginId: string): ResolvedPluginHooks
 	return resolved;
 }
 
-/**
- * Check if a hook value is a config object (has a `handler` property)
- */
 function isHookConfig<THandler>(
 	hook: HookConfig<THandler> | THandler,
 ): hook is HookConfig<THandler> {
 	return typeof hook === "object" && hook !== null && "handler" in hook;
 }
 
-/**
- * Resolve a single hook to normalized format
- */
 function resolveHook<THandler>(
 	hook: HookConfig<THandler> | THandler,
 	pluginId: string,
 ): ResolvedHook<THandler> {
-	// If it's a config object with handler property
 	if (isHookConfig(hook)) {
 		if (hook.exclusive !== undefined && typeof hook.exclusive !== "boolean") {
 			throw new Error(
@@ -276,7 +173,6 @@ function resolveHook<THandler>(
 		};
 	}
 
-	// It's just a handler function
 	return {
 		priority: 100,
 		timeout: 5000,

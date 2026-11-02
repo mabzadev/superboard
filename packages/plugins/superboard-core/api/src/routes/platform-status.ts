@@ -2152,16 +2152,13 @@ async function proxyEmail(env: Env, path: string, init: RequestInit = {}): Promi
 
 export default platform;
 
-/** Reads a binding declared by name in the Worker topology. */
 function envBinding(env: Env, name: string): unknown {
 	return Reflect.get(env, name);
 }
 
-/** Service bindings are objects or, for RPC-capable Workers, callable stubs. */
 function isFetcher(value: unknown): value is Fetcher {
 	return (
 		((typeof value === "object" && value !== null) || typeof value === "function") &&
-		// Read through `get`: test and RPC stubs are proxies without a `has` trap.
 		typeof Reflect.get(value, "fetch") === "function"
 	);
 }

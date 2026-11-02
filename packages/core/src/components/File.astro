@@ -1,11 +1,6 @@
 ---
 import { sanitizeHref } from "../utils/url.js";
 
-/**
- * Portable Text File block component
- *
- * Renders a downloadable file link from WordPress imports.
- */
 export interface Props {
 	node: {
 		_type: "file";
@@ -20,7 +15,6 @@ const { node } = Astro.props;
 const { url: rawUrl, filename, showDownloadButton = true } = node ?? {};
 const url = sanitizeHref(rawUrl);
 
-// Extract filename from URL if not provided
 const displayName = filename || url?.split("/").pop()?.split("?")[0] || "Download";
 ---
 

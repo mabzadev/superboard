@@ -1,18 +1,3 @@
-/**
- * `emdash-plugin build`
- *
- * Thin citty wrapper around `buildPlugin` from `./api.js`. Produces the
- * on-disk dist artifacts for an npm-installed sandboxed plugin:
- *
- *   - `dist/plugin.mjs` (+ `.d.mts`) — runtime bytes (hooks + routes).
- *   - `dist/index.mjs` (+ `.d.mts`) — descriptor module, bare default export.
- *   - `dist/manifest.json` — normalised manifest, kept in sync.
- *
- * Plugin authors run this from their package's `prepublishOnly` (or a
- * `pnpm build` script that delegates). Bundling for the registry (the
- * tarball form) is a separate command — see `emdash-plugin bundle`.
- */
-
 import { defineCommand } from "citty";
 import consola from "consola";
 import pc from "picocolors";

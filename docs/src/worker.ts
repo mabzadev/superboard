@@ -3,11 +3,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createMcpHandler } from "agents/mcp";
 import { z } from "zod";
 
-/**
- * Build a fresh McpServer per request. createMcpHandler is stateless, and the
- * underlying transport asserts that the server is not already connected, so we
- * cannot reuse a single server instance across requests.
- */
 const searchDocsTool = {
 	title: "Search EmDash documentation",
 	description:

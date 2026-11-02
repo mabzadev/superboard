@@ -151,7 +151,6 @@ Future<bool> superboardFlowsDispose() async {
   return true;
 }
 
-/// Invisible FlutterFlow custom widget that owns the Flows lifecycle.
 class SuperBoardFlowsBootstrap extends StatefulWidget {
   const SuperBoardFlowsBootstrap({
     super.key,
@@ -226,7 +225,6 @@ class _SuperBoardFlowsBootstrapState extends State<SuperBoardFlowsBootstrap> {
       SizedBox(width: widget.width, height: widget.height);
 }
 
-/// FlutterFlow-friendly slot widget. It delegates rendering to the native SDK.
 class SuperBoardFlutterFlowFlowsSlot extends StatelessWidget {
   const SuperBoardFlutterFlowFlowsSlot({
     super.key,
@@ -247,7 +245,6 @@ class SuperBoardFlutterFlowFlowsSlot extends StatelessWidget {
   );
 }
 
-/// FlutterFlow-friendly host for floating native Flow components.
 class SuperBoardFlutterFlowFlowsOverlay extends StatelessWidget {
   const SuperBoardFlutterFlowFlowsOverlay({
     super.key,
@@ -271,11 +268,6 @@ class SuperBoardFlutterFlowFlowsOverlay extends StatelessWidget {
   );
 }
 
-/// Non-interactive FlutterFlow target region for hints, tooltips, and tours.
-///
-/// Add [superboardFlowsNotifyAnchorInteraction] to the target control's action
-/// chain when a workflow uses a click trigger. The region itself ignores
-/// pointers so it never blocks the real FlutterFlow control underneath it.
 class SuperBoardFlutterFlowFlowAnchor extends StatelessWidget {
   const SuperBoardFlutterFlowFlowAnchor({
     super.key,

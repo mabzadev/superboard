@@ -232,8 +232,6 @@ async function createNodeRegistryArtifactTransport(): Promise<RegistryArtifactTr
 								port: parseHttpsPort(input.url),
 								path: `${input.url.pathname}${input.url.search}`,
 								method: "GET",
-								// A pooled socket may have been opened for the same hostname
-								// before this address set was resolved.
 								agent: false,
 								headers: {
 									Host: input.url.host,

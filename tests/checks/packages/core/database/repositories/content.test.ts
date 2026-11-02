@@ -14,13 +14,11 @@ describe("ContentRepository", () => {
 	let registry: SchemaRegistry;
 
 	beforeEach(async () => {
-		// Fresh in-memory database for each test
 		db = createDatabase({ url: ":memory:" });
 		await runMigrations(db);
 		repo = new ContentRepository(db);
 		registry = new SchemaRegistry(db);
 
-		// Create collections needed for tests (this creates ec_post and ec_page tables)
 		await registry.createCollection({
 			slug: "post",
 			label: "Posts",
@@ -32,7 +30,6 @@ describe("ContentRepository", () => {
 			labelSingular: "Page",
 		});
 
-		// Add fields to both collections
 		await registry.createField("post", {
 			slug: "title",
 			label: "Title",
@@ -161,7 +158,6 @@ describe("ContentRepository", () => {
 		});
 
 		it("should store complex nested data in JSON columns", async () => {
-			// Portable Text content is stored as JSON
 			const portableTextContent = [
 				{
 					_type: "block",
@@ -287,7 +283,6 @@ describe("ContentRepository", () => {
 
 	describe("findMany", () => {
 		beforeEach(async () => {
-			// Create test data
 			for (let i = 0; i < 5; i++) {
 				await repo.create({
 					type: "post",
@@ -351,7 +346,6 @@ describe("ContentRepository", () => {
 			});
 			expect(page2.items).toHaveLength(2);
 
-			// Items should be different
 			const page1Ids = page1.items.map((i) => i.id);
 			const page2Ids = page2.items.map((i) => i.id);
 			expect(page1Ids).not.toEqual(page2Ids);
@@ -367,7 +361,6 @@ describe("ContentRepository", () => {
 		it("should order by createdAt desc by default", async () => {
 			const result = await repo.findMany("post");
 
-			// Items should be in descending order (newest first)
 			for (let i = 1; i < result.items.length; i++) {
 				expect(result.items[i - 1].createdAt >= result.items[i].createdAt).toBe(true);
 			}
@@ -381,14 +374,12 @@ describe("ContentRepository", () => {
 				},
 			});
 
-			// Items should be in ascending order (oldest first)
 			for (let i = 1; i < result.items.length; i++) {
 				expect(result.items[i - 1].createdAt <= result.items[i].createdAt).toBe(true);
 			}
 		});
 
 		it("should default limit to 50", async () => {
-			// Create more than 50 items
 			for (let i = 0; i < 60; i++) {
 				await repo.create({
 					type: "page",
@@ -404,7 +395,6 @@ describe("ContentRepository", () => {
 		it("should cap limit at 100", async () => {
 			const result = await repo.findMany("post", { limit: 200 });
 
-			// Even with limit: 200, should not return more than 100
 			expect(result.items.length).toBeLessThanOrEqual(100);
 		});
 
@@ -524,15 +514,11 @@ describe("ContentRepository", () => {
 				).rejects.toThrow(EmDashValidationError);
 			});
 
-			// Regression guard for "table headers aren't sort controls": the
-			// admin now sends orderBy={field,direction} — the repo must accept
-			// the columns the UI wants to expose, not just dates.
 			it("accepts status as an order field", async () => {
 				const result = await repo.findMany("post", {
 					orderBy: { field: "status", direction: "asc" },
 				});
 
-				// alphabetical asc places 'draft' before 'published'
 				expect(result.items[0]!.status).toBe("draft");
 			});
 
@@ -540,7 +526,6 @@ describe("ContentRepository", () => {
 				await repo.findMany("post", {
 					orderBy: { field: "locale", direction: "desc" },
 				});
-				// no throw = pass
 			});
 
 			it("rejects unknown fields to block column enumeration", async () => {
@@ -785,10 +770,6 @@ describe("ContentRepository", () => {
 		});
 
 		describe("total", () => {
-			// Regression guard for the admin "denominator grows as you page
-			// forward" bug: each list response must include the full count so
-			// the UI doesn't have to reverse-engineer it from accumulated
-			// pages.
 			it("reports total rows regardless of limit", async () => {
 				const result = await repo.findMany("post", { limit: 2 });
 
@@ -887,7 +868,6 @@ describe("ContentRepository", () => {
 				status: "published",
 			});
 
-			// Only status should change
 			expect(updated.status).toBe("published");
 			expect(updated.slug).toBe("test-slug");
 			expect(updated.data).toEqual({
@@ -903,7 +883,6 @@ describe("ContentRepository", () => {
 		});
 
 		it("should persist removal of array items in JSON fields (multiSelect)", async () => {
-			// Add a multiSelect (JSON) field to the post collection
 			await registry.createField("post", {
 				slug: "tags",
 				label: "Tags",
@@ -917,14 +896,12 @@ describe("ContentRepository", () => {
 
 			expect(created.data.tags).toEqual(["news", "sports", "tech"]);
 
-			// Remove "sports" from the array (simulates unchecking a checkbox)
 			const updated = await repo.update("post", created.id, {
 				data: { title: "Test", tags: ["news", "tech"] },
 			});
 
 			expect(updated.data.tags).toEqual(["news", "tech"]);
 
-			// Verify it persists when re-reading
 			const fetched = await repo.findById("post", updated.id);
 			expect(fetched!.data.tags).toEqual(["news", "tech"]);
 		});
@@ -941,7 +918,6 @@ describe("ContentRepository", () => {
 				data: { title: "Test", categories: ["news"] },
 			});
 
-			// Uncheck all items
 			const updated = await repo.update("post", created.id, {
 				data: { title: "Test", categories: [] },
 			});
@@ -971,7 +947,6 @@ describe("ContentRepository", () => {
 				data: { title: "Test" },
 			});
 
-			// Small delay to ensure timestamp difference
 			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			const updated = await repo.update("post", created.id, {
@@ -993,7 +968,6 @@ describe("ContentRepository", () => {
 
 			expect(result).toBe(true);
 
-			// Verify content is not found
 			const found = await repo.findById("post", created.id);
 			expect(found).toBeNull();
 		});
@@ -1035,8 +1009,6 @@ describe("ContentRepository", () => {
 
 			await repo.delete("post", created.id);
 
-			// Directly query database to check deleted_at
-			// Use raw SQL since ec_post is a dynamic table
 			const { sql } = await import("kysely");
 			const result = await sql<{ deleted_at: string | null }>`
 				SELECT deleted_at FROM ec_post WHERE id = ${created.id}
@@ -1049,7 +1021,6 @@ describe("ContentRepository", () => {
 
 	describe("count", () => {
 		beforeEach(async () => {
-			// Create test data
 			for (let i = 0; i < 10; i++) {
 				await repo.create({
 					type: "post",
@@ -1084,7 +1055,6 @@ describe("ContentRepository", () => {
 				authorId: "author-1",
 			});
 
-			// Posts 0, 2, 4 are published by author-1
 			expect(count).toBe(3);
 		});
 
@@ -1104,13 +1074,12 @@ describe("ContentRepository", () => {
 
 			const count = await repo.count("post");
 
-			expect(count).toBe(10); // Not 11
+			expect(count).toBe(10);
 		});
 	});
 
 	describe("integration scenarios", () => {
 		it("should handle full CRUD lifecycle", async () => {
-			// Create
 			const created = await repo.create({
 				type: "post",
 				slug: "test-post",
@@ -1121,11 +1090,9 @@ describe("ContentRepository", () => {
 			expect(created.id).toBeDefined();
 			expect(created.status).toBe("draft");
 
-			// Read
 			const found = await repo.findBySlug("post", "test-post");
 			expect(found!.id).toBe(created.id);
 
-			// Update
 			const updated = await repo.update("post", created.id, {
 				data: { title: "Updated Post", content: "New content" },
 				status: "published",
@@ -1134,17 +1101,14 @@ describe("ContentRepository", () => {
 			expect(updated.data.title).toBe("Updated Post");
 			expect(updated.status).toBe("published");
 
-			// Delete
 			const deleted = await repo.delete("post", created.id);
 			expect(deleted).toBe(true);
 
-			// Verify not found
 			const notFound = await repo.findById("post", created.id);
 			expect(notFound).toBeNull();
 		});
 
 		it("should handle concurrent operations", async () => {
-			// Create multiple items concurrently
 			const promises = Array.from({ length: 10 }, (_, i) =>
 				repo.create({
 					type: "post",
@@ -1155,11 +1119,10 @@ describe("ContentRepository", () => {
 			const created = await Promise.all(promises);
 
 			expect(created).toHaveLength(10);
-			expect(new Set(created.map((c) => c.id)).size).toBe(10); // All unique IDs
+			expect(new Set(created.map((c) => c.id)).size).toBe(10);
 		});
 
 		it("should persist complex nested data structures", async () => {
-			// Use the content field (portableText type) for complex nested data
 			const complexContent = [
 				{
 					_type: "block",

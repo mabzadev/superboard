@@ -1,24 +1,8 @@
-/**
- * Zod schema for PluginManifest validation
- *
- * Used to validate manifest.json from plugin bundles at every parse site:
- * - Client-side download (marketplace.ts extractBundle)
- * - R2 load (api/handlers/marketplace.ts loadBundleFromR2)
- * - CLI publish preview (cli/commands/publish.ts readManifestFromTarball)
- * - Marketplace ingest extends this with publishing-specific fields
- */
-
 import { z } from "zod";
 
 import { capabilitiesToDeclaredAccess, declaredAccessToCapabilities } from "./index.js";
 import type { PluginManifest } from "./index.js";
 
-// ── Enum values (must stay in sync with types.ts) ───────────────
-
-/**
- * Current capability names — the ones authors should use going forward.
- * See `PluginCapability` in `types.ts` for documentation of each.
- */
 export const CURRENT_PLUGIN_CAPABILITIES = [
 	"network:request",
 	"network:request:unrestricted",
@@ -34,12 +18,6 @@ export const CURRENT_PLUGIN_CAPABILITIES = [
 	"hooks.page-fragments:register",
 ] as const;
 
-/**
- * Legacy capability names accepted during the deprecation window.
- * Normalized to current names via `normalizeCapability()` in types.ts
- * before reaching the runtime. Plugin authors are warned at bundle/validate
- * and hard-failed at publish.
- */
 export const DEPRECATED_PLUGIN_CAPABILITIES = [
 	"network:fetch",
 	"network:fetch:any",
@@ -53,19 +31,11 @@ export const DEPRECATED_PLUGIN_CAPABILITIES = [
 	"page:inject",
 ] as const;
 
-/**
- * Full set of accepted capability strings — current + deprecated.
- *
- * The manifest schema accepts both during the transition. The runtime only
- * ever sees current names because `normalizeCapability()` rewrites legacy
- * names at every external boundary (definePlugin, adaptSandboxEntry).
- */
 export const PLUGIN_CAPABILITIES = [
 	...CURRENT_PLUGIN_CAPABILITIES,
 	...DEPRECATED_PLUGIN_CAPABILITIES,
 ] as const;
 
-/** Must stay in sync with FieldType in schema/types.ts */
 const FIELD_TYPES = [
 	"string",
 	"text",
@@ -112,10 +82,6 @@ export const HOOK_NAMES = [
 	"page:fragments",
 ] as const;
 
-/**
- * Structured hook entry for manifest — name plus optional metadata.
- * During a transition period, both plain strings and objects are accepted.
- */
 const manifestHookEntrySchema = z.object({
 	name: z.enum(HOOK_NAMES),
 	exclusive: z.boolean().optional(),
@@ -123,12 +89,6 @@ const manifestHookEntrySchema = z.object({
 	timeout: z.number().int().positive().optional(),
 });
 
-/**
- * Structured route entry for manifest — name plus optional metadata.
- * Both plain strings and objects are accepted; strings are normalized
- * to `{ name }` objects via `normalizeManifestRoute()`.
- */
-/** Route names must be safe path segments — alphanumeric, hyphens, underscores, forward slashes */
 const routeNamePattern = /^[a-zA-Z0-9][a-zA-Z0-9_\-/]*$/;
 
 const manifestRouteEntrySchema = z.object({
@@ -136,9 +96,6 @@ const manifestRouteEntrySchema = z.object({
 	public: z.boolean().optional(),
 });
 
-// ── Sub-schemas ─────────────────────────────────────────────────
-
-/** Index field names must be valid identifiers to prevent SQL injection via JSON path expressions */
 const indexFieldName = z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/);
 
 const storageCollectionSchema = z.object({
@@ -226,20 +183,8 @@ const pluginAdminConfigSchema = z.object({
 		.optional(),
 });
 
-// ── declaredAccess ──────────────────────────────────────────────
-
-/**
- * An operation's constraint object. Open vocabulary: keys the runtime
- * recognises are enforced, others are advisory. The bundler emits `{}` for a
- * granted operation; presence (not value) signals the grant.
- */
 const accessConstraints = z.record(z.string(), z.unknown());
 
-/**
- * Structured trust contract embedded in the bundle manifest. Mirrors
- * `DeclaredAccess` in `@emdash-cms/plugin-types`. Categories are host
- * subsystems; operations are modes of participation.
- */
 const declaredAccessSchema = z.object({
 	content: z
 		.object({ read: accessConstraints.optional(), write: accessConstraints.optional() })
@@ -250,10 +195,6 @@ const declaredAccessSchema = z.object({
 		.optional(),
 	network: z
 		.object({
-			// allowedHosts: absent = unrestricted; present = host-restricted. Reject
-			// an empty array (which the decoder would otherwise have to treat as
-			// deny-all) to match the record lexicon's `minLength: 1` and keep the
-			// "absent vs empty" distinction from ever reaching enforcement ambiguous.
 			request: z.object({ allowedHosts: z.array(z.string()).min(1).optional() }).optional(),
 		})
 		.optional(),
@@ -268,18 +209,6 @@ const declaredAccessSchema = z.object({
 	users: z.object({ read: accessConstraints.optional() }).optional(),
 });
 
-// ── Main schema ─────────────────────────────────────────────────
-
-/**
- * Zod schema matching the PluginManifest interface from types.ts.
- *
- * Every JSON.parse of a manifest.json should validate through this.
- *
- * `declaredAccess` is the trust contract; `capabilities`/`allowedHosts` are the
- * runtime's enforcement currency. Apply `reconcileManifestAccess` after parsing
- * to make them consistent (declaredAccess authoritative when present). Kept a
- * plain object (no `.transform`) because callers `.pick()`/`.extend()` it.
- */
 export const pluginManifestSchema = z.object({
 	id: z.string().min(1),
 	version: z.string().min(1),
@@ -287,17 +216,7 @@ export const pluginManifestSchema = z.object({
 	capabilities: z.array(z.enum(PLUGIN_CAPABILITIES)),
 	allowedHosts: z.array(z.string()),
 	storage: z.record(z.string(), storageCollectionSchema),
-	/**
-	 * Hook declarations — accepts both plain name strings (legacy) and
-	 * structured objects with exclusive/priority/timeout metadata.
-	 * Plain strings are normalized to `{ name }` objects after parsing.
-	 */
 	hooks: z.array(z.union([z.enum(HOOK_NAMES), manifestHookEntrySchema])),
-	/**
-	 * Route declarations — accepts both plain name strings and
-	 * structured objects with public metadata.
-	 * Plain strings are normalized to `{ name }` objects after parsing.
-	 */
 	routes: z.array(
 		z.union([
 			z.string().min(1).regex(routeNamePattern, "Route name must be a safe path segment"),
@@ -309,14 +228,6 @@ export const pluginManifestSchema = z.object({
 
 export type ValidatedPluginManifest = z.infer<typeof pluginManifestSchema>;
 
-/**
- * Reconcile a parsed manifest's trust contract with its enforcement currency.
- * `declaredAccess` is authoritative: when present, `capabilities`/`allowedHosts`
- * are re-derived from it so what the runtime enforces always matches what was
- * recorded and consented to. A pre-migration bundle without `declaredAccess`
- * has it derived from the legacy capability list instead. The result always
- * carries both, mutually consistent. Apply this at every bundle-parse site.
- */
 export function reconcileManifestAccess(manifest: ValidatedPluginManifest): PluginManifest {
 	const reconciled: ValidatedPluginManifest = manifest.declaredAccess
 		? { ...manifest, ...declaredAccessToCapabilities(manifest.declaredAccess) }
@@ -327,9 +238,6 @@ export function reconcileManifestAccess(manifest: ValidatedPluginManifest): Plug
 	return reconciled;
 }
 
-/**
- * Normalize a manifest hook entry — plain strings become `{ name }` objects.
- */
 export function normalizeManifestHook(
 	entry: string | { name: string; exclusive?: boolean; priority?: number; timeout?: number },
 ): { name: string; exclusive?: boolean; priority?: number; timeout?: number } {
@@ -339,9 +247,6 @@ export function normalizeManifestHook(
 	return entry;
 }
 
-/**
- * Normalize a manifest route entry — plain strings become `{ name }` objects.
- */
 export function normalizeManifestRoute(entry: string | { name: string; public?: boolean }): {
 	name: string;
 	public?: boolean;

@@ -21,7 +21,6 @@ describeEachDialect("repeater media-field normalization", (dialect) => {
 		const registry = new SchemaRegistry(ctx.db);
 		await registry.createCollection({ slug: "posts", label: "Posts" });
 		await registry.createField("posts", { slug: "title", label: "Title", type: "string" });
-		// A top-level image field, used as the reference for how a bare media id should normalize.
 		await registry.createField("posts", { slug: "hero", label: "Hero", type: "image" });
 		await registry.createField("posts", {
 			slug: "gallery",
@@ -71,9 +70,6 @@ describeEachDialect("repeater media-field normalization", (dialect) => {
 		const gallery = data.gallery as Array<Record<string, unknown>>;
 		const subImage = gallery[0].image;
 
-		// Before the fix the bare id string was stored verbatim inside the repeater item, so the
-		// admin rendered "Image not found". It must now be normalized exactly like the top-level
-		// `hero` field (a MediaValue object, not the raw id string).
 		expect(typeof subImage).toBe("object");
 		expect(subImage).not.toBe(mediaId);
 		expect(subImage).toEqual(hero);

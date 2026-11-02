@@ -19,7 +19,6 @@ export function useTableParams(options?: UseTableParamsOptions) {
 	const router = useRouter();
 	const pathname = usePathname();
 
-	// Helper to update multiple params at once
 	const updateParams = useCallback(
 		(updates: Record<string, string | null>) => {
 			const params = new URLSearchParams(globalThis.location?.search ?? searchParams.toString());
@@ -36,7 +35,6 @@ export function useTableParams(options?: UseTableParamsOptions) {
 		[searchParams, router, pathname],
 	);
 
-	// --- Page ---
 	const page = useMemo(() => {
 		const raw = searchParams.get("page");
 		return raw ? Math.max(1, parseInt(raw, 10) || 1) : 1;
@@ -47,7 +45,6 @@ export function useTableParams(options?: UseTableParamsOptions) {
 		[updateParams],
 	);
 
-	// --- Rows per page ---
 	const rowsPerPage = useMemo(() => {
 		const raw = searchParams.get("perPage");
 		return raw ? parseInt(raw, 10) || defaultPageSize : defaultPageSize;
@@ -57,12 +54,11 @@ export function useTableParams(options?: UseTableParamsOptions) {
 		(n: number) =>
 			updateParams({
 				perPage: n === defaultPageSize ? null : String(n),
-				page: null, // reset page
+				page: null,
 			}),
 		[updateParams, defaultPageSize],
 	);
 
-	// --- Sort ---
 	const sort: SortType = useMemo(() => {
 		const raw = searchParams.get("sort");
 		if (raw) {
@@ -78,13 +74,12 @@ export function useTableParams(options?: UseTableParamsOptions) {
 			const isDefault = s.sortKey === defaultSortKey && s.ascending === false;
 			updateParams({
 				sort: isDefault ? null : `${s.sortKey}:${s.ascending ? "asc" : "desc"}`,
-				page: null, // reset page
+				page: null,
 			});
 		},
 		[updateParams, defaultSortKey, sort],
 	);
 
-	// --- Search term (debounced URL write) ---
 	const [searchTerm, setSearchTermLocal] = useState(() => {
 		return searchParams.get("q") ?? "";
 	});
@@ -101,20 +96,17 @@ export function useTableParams(options?: UseTableParamsOptions) {
 		[updateParams],
 	);
 
-	// Cleanup debounce on unmount
 	useEffect(() => {
 		return () => {
 			if (debounceRef.current) clearTimeout(debounceRef.current);
 		};
 	}, []);
 
-	// Sync from URL on back/forward navigation
 	useEffect(() => {
 		const urlTerm = searchParams.get("q") ?? "";
 		setSearchTermLocal(urlTerm);
 	}, [searchParams]);
 
-	// --- Date range ---
 	const getDefaultDates = useCallback(() => {
 		if (defaultDateRange) return defaultDateRange;
 		const now = new Date();
@@ -150,7 +142,6 @@ export function useTableParams(options?: UseTableParamsOptions) {
 		[updateParams],
 	);
 
-	// --- Platform ---
 	const platform = useMemo(() => searchParams.get("platform") ?? "", [searchParams]);
 
 	const setPlatform = useCallback(
@@ -158,7 +149,6 @@ export function useTableParams(options?: UseTableParamsOptions) {
 		[updateParams],
 	);
 
-	// --- Total pages / total rows (server-driven, not URL) ---
 	const [totalPages, setTotalPages] = useState(0);
 	const [totalRows, setTotalRows] = useState(0);
 

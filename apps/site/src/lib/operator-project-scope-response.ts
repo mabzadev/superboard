@@ -3,8 +3,6 @@ import type {
 	OperatorProjectSummary as Project,
 } from "@superboard/contracts/site-operator";
 
-// Hand-written guards keep a schema library out of the Front shell entry. They accept
-// exactly the shapes the previous object schemas accepted and drop unknown keys.
 type UnknownRecord = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is UnknownRecord =>

@@ -1,11 +1,3 @@
-/**
- * Regression test: import fields (seo_title, seo_description, ...) must be
- * auto-created even when the first imported item of a collection doesn't
- * carry them. The field-ensure pass used to run once per collection, gated
- * on the first item's data — a later post with a Yoast SEO override then
- * failed with `seo_title: unknown field on collection`.
- */
-
 import type { Kysely } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -57,7 +49,6 @@ describe("WordPress plugin import — field auto-creation", () => {
 			postTypeMappings: { post: { collection: "post", enabled: true } },
 			skipExisting: false,
 		};
-		// ponytail: minimal stub — importContent only touches db + handleContentCreate
 		const emdash = {
 			db,
 			handleContentCreate: (collection: string, body: { data: Record<string, unknown> }) =>
@@ -86,15 +77,10 @@ describe("WordPress plugin import — field auto-creation", () => {
 		expect(result.errors).toEqual([]);
 		expect(result.imported).toBe(2);
 
-		// The WP-ID maps must be populated for created items -- menus,
-		// comments, and taxonomy attachment all resolve through them.
-		// Regression: the route read `data.id` but the create handler
-		// returns `{ item, _rev }`, so the maps stayed empty (309 comments
-		// skipped on a live migration).
 		expect([...contentIdMap.keys()]).toEqual([1, 2]);
 		expect(collectionByWpId.get(1)).toBe("post");
 		for (const id of contentIdMap.values()) {
-			expect(id).toMatch(/^[0-9A-Z]{26}$/); // ULID
+			expect(id).toMatch(/^[0-9A-Z]{26}$/);
 		}
 
 		const row = await db
@@ -135,7 +121,6 @@ describe("WordPress plugin import — field auto-creation", () => {
 		expect(result.errors).toEqual([]);
 		expect(result.imported).toBe(1);
 
-		// Neither the field nor the value may be created
 		const field = await db
 			.selectFrom("_emdash_fields")
 			.select("slug")
@@ -178,11 +163,9 @@ describe("WordPress plugin import — custom taxonomy def auto-creation", () => 
 					post_types: ["company", "skipped_cpt"],
 					terms: [term],
 				},
-				// builtins and empty taxonomies must be skipped
 				{ name: "category", label: "Categories", hierarchical: true, terms: [term] },
 				{ name: "post_format", label: "Formats", hierarchical: false, terms: [term] },
 				{ name: "empty_tax", label: "Empty", hierarchical: false, terms: [] },
-				// names outside /^[a-z][a-z0-9_]*$/ stay in missingTaxonomies
 				{ name: "bad-name", label: "Bad", hierarchical: false, terms: [term] },
 			],
 			config,
@@ -198,7 +181,6 @@ describe("WordPress plugin import — custom taxonomy def auto-creation", () => 
 		expect(row.label).toBe("Companies");
 		expect(row.label_singular).toBe("Company");
 		expect(row.hierarchical).toBe(1);
-		// disabled mapping (skipped_cpt -> old) must not leak into collections
 		expect(JSON.parse(row.collections ?? "[]")).toEqual(["post"]);
 	});
 
@@ -214,15 +196,12 @@ describe("WordPress plugin import — custom taxonomy def auto-creation", () => 
 			.selectAll()
 			.where("name", "=", "plattform")
 			.executeTakeFirstOrThrow();
-		// no post_types -> no collection filter ("any collection")
 		expect(JSON.parse(row.collections ?? "[]")).toEqual([]);
 	});
 });
 
 describe("coerceToFieldType", () => {
 	it("coerces stringly-typed WP meta to the field type, drops incoercible values", () => {
-		// Real-world failures from a live migration: a field inferred as
-		// integer from one sample, but other posts hold strings/booleans.
 		expect(coerceToFieldType("5", "integer")).toBe(5);
 		expect(coerceToFieldType("abc", "integer")).toBeUndefined();
 		expect(coerceToFieldType(false, "string")).toBeUndefined();

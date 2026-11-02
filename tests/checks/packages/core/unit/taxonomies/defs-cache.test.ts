@@ -1,15 +1,3 @@
-/**
- * Isolate-wide taxonomy-definitions cache (perf: removes the per-render
- * `SELECT * FROM _emdash_taxonomy_defs` on warm isolates).
- *
- * The cache lives on globalThis and is keyed by resolved locale. Because
- * `requestCached` dedupes within a single request scope, we exercise the
- * isolate cache by running each `getTaxonomyDefs()` call inside its own
- * `runWithContext` scope (a fresh context object => a fresh per-request
- * cache bucket), so a second call only avoids the DB if the *isolate*
- * cache served it.
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { ulid } from "ulidx";
@@ -53,7 +41,6 @@ async function insertDef(db: Kysely<EmDashDatabase>, name: string): Promise<void
 		.execute();
 }
 
-/** Run a getter in a fresh per-request scope with the test db as the ALS db. */
 function inScope<T>(
 	db: Kysely<EmDashDatabase>,
 	fn: () => Promise<T>,
@@ -69,8 +56,6 @@ describe("getTaxonomyDefs — isolate cache", () => {
 	beforeEach(async () => {
 		({ db, sqlite } = makeDb());
 		await runMigrations(db);
-		// Holder lives on globalThis; reset so sibling tests don't leak the
-		// previous test's db/promise into this one.
 		resetTaxonomyDefsCacheForTests();
 		await insertDef(db, "genre");
 		queryCount = 0;
@@ -86,8 +71,6 @@ describe("getTaxonomyDefs — isolate cache", () => {
 		expect(queryCount).toBe(1);
 		expect(first.map((d) => d.name)).toContain("genre");
 
-		// A separate request scope: per-request cache can't help, so a second
-		// query would fire unless the isolate cache served it.
 		const second = await inScope(db, () => getTaxonomyDefs());
 		expect(queryCount).toBe(1);
 		expect(second.map((d) => d.name).toSorted()).toEqual(first.map((d) => d.name).toSorted());
@@ -109,7 +92,6 @@ describe("getTaxonomyDefs — isolate cache", () => {
 
 		await insertDef(db, "topic");
 
-		// Still cached — stale read is expected without an explicit bump.
 		const stale = await inScope(db, () => getTaxonomyDefs());
 		expect(stale.map((d) => d.name)).not.toContain("topic");
 
@@ -122,7 +104,6 @@ describe("getTaxonomyDefs — isolate cache", () => {
 	it("bypasses the isolate cache for isolated databases (playground / DO preview)", async () => {
 		await inScope(db, () => getTaxonomyDefs(), { dbIsIsolated: true });
 		await inScope(db, () => getTaxonomyDefs(), { dbIsIsolated: true });
-		// Never cached across requests => one query each.
 		expect(queryCount).toBe(2);
 	});
 });

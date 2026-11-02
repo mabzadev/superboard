@@ -147,7 +147,6 @@ describe("Audience tags", () => {
 		expect(single.body.data.tag_ids).not.toContain(vip.body.data.id);
 		expect(single.body.data.tag_ids).toHaveLength(1);
 
-		// Another project never sees these tags.
 		expect((await call<unknown[]>("/internal/v1/audience/tags", project + 1)).body.data).toEqual(
 			[],
 		);
@@ -240,7 +239,6 @@ describe("Dynamic segments", () => {
 				`INSERT INTO email_events (id, project_id, campaign_id, subscriber_id, event_type, occurred_at)
          VALUES (?, ?, ?, ?, 'open', strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-2 days'))`,
 			).bind(crypto.randomUUID(), project, campaignId, opener),
-			// SQLite-format timestamps from older rows are compared correctly too.
 			env.DB.prepare(
 				`INSERT INTO email_events (id, project_id, campaign_id, subscriber_id, event_type, occurred_at)
          VALUES (?, ?, ?, ?, 'open', datetime('now', '-90 days'))`,
@@ -316,7 +314,6 @@ describe("Dynamic segments", () => {
 			).status,
 		).toBe(404);
 
-		// A contact who starts engaging after the segment was saved still receives the campaign.
 		const late = await contact(project, "late@example.com");
 		await env.DB.prepare(
 			`INSERT INTO email_events (id, project_id, campaign_id, subscriber_id, event_type)
@@ -455,7 +452,6 @@ describe("CSV import with mapping", () => {
 			`/internal/v1/email/subscribers/${existing}`,
 			project,
 		);
-		// Profile data is refreshed but a previous unsubscribe is never undone by an import.
 		expect(updated.body.data).toMatchObject({
 			name: "After",
 			status: "unsubscribed",
@@ -626,7 +622,6 @@ describe("Hosted preference center", () => {
 				.all(),
 		).resolves.toMatchObject({ results: [{ list_id: news.body.data.id }] });
 
-		// The footer unsubscribe link still unsubscribes and now lands on the preference center.
 		const unsubscribe = await trackingToken(env, {
 			projectId: project,
 			deliveryId,
@@ -855,7 +850,6 @@ describe("Embeddable signup forms", () => {
 			env.DB.prepare("SELECT status FROM subscribers WHERE id = ?").bind(blocked).first(),
 		).resolves.toMatchObject({ status: "blocklisted" });
 
-		// A contact who unsubscribed must confirm by email before coming back.
 		const left = await contact(project, "left-form@example.com");
 		await call(`/internal/v1/email/subscribers/${left}/unsubscribe`, project, "POST", {});
 		await publicForm(path, { email: "left-form@example.com" });

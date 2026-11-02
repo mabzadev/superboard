@@ -1,13 +1,3 @@
-/**
- * Pipeline Rebuild Tests
- *
- * Verifies that rebuilding the HookPipeline after plugin enable/disable
- * correctly includes/excludes hooks from the affected plugins.
- *
- * This tests the fix for #105: disabled plugins' hooks kept firing because
- * the pipeline was constructed once at startup and never rebuilt.
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -21,10 +11,6 @@ import type {
 	ResolvedHook,
 	ContentHookEvent,
 } from "../../../../../../packages/core/src/plugins/types.js";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlugin {
 	return {
@@ -59,10 +45,6 @@ function createTestHook<T>(
 		...overrides,
 	};
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 	let sqlite: InstanceType<typeof Database>;
@@ -108,12 +90,10 @@ describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 
 		const allPlugins = [pluginA, pluginB];
 
-		// Initial pipeline with both plugins enabled
 		const pipeline1 = createHookPipeline(allPlugins, { db });
 		expect(pipeline1.hasHooks("content:beforeSave")).toBe(true);
 		expect(pipeline1.getHookCount("content:beforeSave")).toBe(2);
 
-		// Run hooks — both should fire
 		const result1 = await pipeline1.runContentBeforeSave({ title: "test" }, "posts", true);
 		expect(handlerA).toHaveBeenCalledTimes(1);
 		expect(handlerB).toHaveBeenCalledTimes(1);
@@ -122,13 +102,11 @@ describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 		handlerA.mockClear();
 		handlerB.mockClear();
 
-		// Simulate disabling plugin-b: rebuild pipeline with only plugin-a
 		const enabledPlugins = allPlugins.filter((p) => p.id !== "plugin-b");
 		const pipeline2 = createHookPipeline(enabledPlugins, { db });
 		expect(pipeline2.hasHooks("content:beforeSave")).toBe(true);
 		expect(pipeline2.getHookCount("content:beforeSave")).toBe(1);
 
-		// Run hooks — only plugin-a should fire
 		const result2 = await pipeline2.runContentBeforeSave({ title: "test" }, "posts", true);
 		expect(handlerA).toHaveBeenCalledTimes(1);
 		expect(handlerB).not.toHaveBeenCalled();
@@ -163,7 +141,6 @@ describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 
 		const allPlugins = [pluginA, pluginB];
 
-		// Start with only plugin-a (plugin-b is disabled)
 		const pipeline1 = createHookPipeline([pluginA], { db });
 		const result1 = await pipeline1.runContentBeforeSave({ title: "test" }, "posts", true);
 		expect(handlerA).toHaveBeenCalledTimes(1);
@@ -172,7 +149,6 @@ describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 
 		handlerA.mockClear();
 
-		// Re-enable plugin-b: rebuild pipeline with both
 		const pipeline2 = createHookPipeline(allPlugins, { db });
 		const result2 = await pipeline2.runContentBeforeSave({ title: "test" }, "posts", true);
 		expect(handlerA).toHaveBeenCalledTimes(1);
@@ -200,19 +176,15 @@ describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 			},
 		});
 
-		// Both enabled — two providers, no auto-select
 		const pipeline1 = createHookPipeline([pluginA, pluginB], { db });
 		expect(pipeline1.getExclusiveHookProviders("email:deliver")).toHaveLength(2);
 
-		// Manually select provider-b (simulating admin selection)
 		pipeline1.setExclusiveSelection("email:deliver", "provider-b");
 		expect(pipeline1.getExclusiveSelection("email:deliver")).toBe("provider-b");
 
-		// Disable provider-b: rebuild with only provider-a
 		const pipeline2 = createHookPipeline([pluginA], { db });
 		expect(pipeline2.getExclusiveHookProviders("email:deliver")).toHaveLength(1);
 
-		// Run exclusive hook resolution — should auto-select the sole provider
 		const options = new Map<string, string>();
 		await resolveExclusiveHooks({
 			pipeline: pipeline2,
@@ -240,11 +212,9 @@ describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 			},
 		});
 
-		// Pipeline with the plugin
 		const pipeline1 = createHookPipeline([plugin], { db });
 		expect(pipeline1.hasHooks("content:beforeSave")).toBe(true);
 
-		// Disable it: rebuild with empty list
 		const pipeline2 = createHookPipeline([], { db });
 		expect(pipeline2.hasHooks("content:beforeSave")).toBe(false);
 		expect(pipeline2.getHookCount("content:beforeSave")).toBe(0);
@@ -262,12 +232,10 @@ describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 			},
 		});
 
-		// Pipeline with plugin
 		const pipeline1 = createHookPipeline([plugin], { db });
 		expect(pipeline1.hasHooks("plugin:install")).toBe(true);
 		expect(pipeline1.hasHooks("plugin:activate")).toBe(true);
 
-		// Pipeline without plugin (disabled)
 		const pipeline2 = createHookPipeline([], { db });
 		expect(pipeline2.hasHooks("plugin:install")).toBe(false);
 		expect(pipeline2.hasHooks("plugin:activate")).toBe(false);
@@ -283,7 +251,6 @@ describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 			},
 		});
 
-		// Simulate enabling: rebuild pipeline with plugin included, then invoke activate
 		const pipeline = createHookPipeline([plugin], { db });
 		await pipeline.runPluginActivate("my-plugin");
 
@@ -300,13 +267,11 @@ describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 			},
 		});
 
-		// Simulate disabling: invoke deactivate on the current pipeline, then rebuild without the plugin
 		const pipeline = createHookPipeline([plugin], { db });
 		await pipeline.runPluginDeactivate("my-plugin");
 
 		expect(deactivateHandler).toHaveBeenCalledTimes(1);
 
-		// Rebuild without the plugin — hook should no longer be registered
 		const disabledPipeline = createHookPipeline([], { db });
 		expect(disabledPipeline.hasHooks("plugin:deactivate")).toBe(false);
 	});
@@ -330,7 +295,6 @@ describe("HookPipeline rebuild on plugin disable/enable (#105)", () => {
 
 		const pipeline = createHookPipeline([pluginA, pluginB], { db });
 
-		// Enabling only plugin-a should not fire plugin-b's activate
 		await pipeline.runPluginActivate("plugin-a");
 
 		expect(activateA).toHaveBeenCalledTimes(1);

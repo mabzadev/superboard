@@ -1,9 +1,3 @@
-/**
- * Relation translations endpoint
- *
- * GET /_emdash/api/relations/:id/translations - List locale siblings of a relation
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

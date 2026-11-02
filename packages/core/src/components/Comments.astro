@@ -1,18 +1,4 @@
 ---
-/**
- * Server-rendered comment list for a content item.
- *
- * Fetches approved comments directly from the repository (no API call).
- * Renders semantic HTML with CSS custom properties for styling.
- *
- * @example
- * ```astro
- * ---
- * import { Comments } from "emdash/ui/comments";
- * ---
- * <Comments collection="posts" contentId={post.id} threaded />
- * ```
- */
 import type { PublicComment } from "../database/repositories/comment.js";
 import { getComments } from "../comments/query.js";
 import { getCollectionInfo } from "../schema/query.js";
@@ -21,9 +7,7 @@ interface Props {
 	collection: string;
 	contentId: string;
 	threaded?: boolean;
-	/** Show a like/reaction button per comment (opt-in). */
 	reactions?: boolean;
-	/** Order of top-level comments: chronological (default) or Wilson-ranked. */
 	sort?: "oldest" | "best";
 	class?: string;
 }
@@ -69,9 +53,6 @@ function formatBody(text: string): string {
 	return autoLinkUrls(escapeHtml(text));
 }
 
-// Progressive-enhancement script for reactions. Emitted verbatim (is:inline)
-// only when `reactions` is enabled, so non-reaction pages ship zero extra JS.
-// Avoids template literals internally so it survives the outer backticks.
 const REACTION_SCRIPT = `
 (() => {
   const sections = document.querySelectorAll('[data-ec-comments][data-ec-reactions]');

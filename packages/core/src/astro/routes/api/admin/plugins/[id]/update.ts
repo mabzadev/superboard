@@ -1,9 +1,3 @@
-/**
- * Marketplace plugin update endpoint
- *
- * POST /_emdash/api/admin/plugins/:id/update - Update a marketplace plugin
- */
-
 import type { APIRoute } from "astro";
 import { z } from "zod";
 

@@ -68,11 +68,6 @@ vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 
 import onRequest from "../../../../../../packages/core/src/astro/middleware.js";
 
-/**
- * Stand-in for Astro's `AstroCache`, mirroring the accumulation rules the real
- * one applies in `core/cache/runtime/cache.js`: `lastModified` keeps the later
- * date, `set(false)` clears accumulated state, and any later `set()` re-enables.
- */
 function createCache(enabled = true) {
 	let disabled = false;
 	const options: { lastModified?: Date; tags?: string[] } = {};
@@ -118,7 +113,6 @@ function anonymousPublicPageContext(cache: TestCache) {
 	} as Record<string, unknown>;
 }
 
-/** A page rendering with `Astro.cache.set(cacheHint)`, as the demos do. */
 function pageSetting(cache: TestCache, hint: { lastModified?: Date; tags?: string[] } | false) {
 	return async () => {
 		cache.set(hint);

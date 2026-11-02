@@ -5,10 +5,7 @@ import {
 } from "@superboard/contracts/analytics";
 
 import type { BillingEnv } from "../types";
-import {
-	canonicalAnalyticsEventId,
-	enqueueAnalyticsFactStatement,
-} from "./analytics-facts";
+import { canonicalAnalyticsEventId, enqueueAnalyticsFactStatement } from "./analytics-facts";
 import { entitlementIsActive } from "./billing-state";
 import { recordCanonicalBillingEvent } from "./purchases-v2";
 import { recordRefundCaseForPurchase } from "./refunds";
@@ -609,11 +606,6 @@ async function queuePurchaseWebhook(
 	});
 }
 
-/**
- * Emits the single authoritative entitlement projection consumed by the application backend.
- * The delivery layer signs the exact body and timestamp with the endpoint HMAC
- * secret, so consumers never need access to a Billing signing private key.
- */
 export async function queueCustomerEntitlementChanged(
 	env: BillingEnv,
 	params: {
@@ -662,8 +654,6 @@ export async function applyVerifiedPurchase(env: BillingEnv, purchase: VerifiedP
 		analyticsEventType,
 	].join(":");
 	const analyticsEventId = await canonicalAnalyticsEventId("purchase", analyticsIdentity);
-	// Keep the domain identity readable and stable so historical backfills and
-	// live verification converge on the same producer-outbox row.
 	const analyticsFactKey = `purchase:${analyticsIdentity}`;
 	const analyticsEvent: AnalyticsEventV1 = {
 		schema_version: 1,

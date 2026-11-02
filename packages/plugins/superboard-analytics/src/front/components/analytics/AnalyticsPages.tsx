@@ -130,7 +130,6 @@ const qualityTabs: readonly AnalyticsTab[] = [
 	{ kind: "feedback", label: "User feedback" },
 ];
 
-/** In-page tab rows that group the Analytics child pages behind their parent entry. */
 function analyticsTabRows(kind: AnalyticsPageKind) {
 	if (audienceTabs.some((tab) => tab.kind === kind))
 		return [{ label: "Audience and usage", tabs: audienceTabs, active: kind }];
@@ -147,7 +146,6 @@ function analyticsTabRows(kind: AnalyticsPageKind) {
 	return quality ? [reports, { label: "Quality", tabs: qualityTabs, active: kind }] : [reports];
 }
 
-/** Child pages are tabs of their parent entry, kept in `?tab=` so the parent stays selected. */
 function analyticsTabHref(kind: AnalyticsPageKind, locale: string) {
 	const parent = audienceTabs.some((tab) => tab.kind === kind) ? "users" : "reports";
 	return kind === parent
@@ -182,7 +180,6 @@ function AnalyticsTabRows({ rows }: { rows: NonNullable<ReturnType<typeof analyt
 }
 
 export function AnalyticsPage({ kind: routeKind }: { kind: AnalyticsPageKind }) {
-	// Read the host section navigation before overriding it so grouped pages keep it above their tabs.
 	const hostNavigation = SectionNavigation();
 	const requested = useSearchParams().get("tab");
 	const group = routeKind === "users" ? audienceTabs : routeKind === "reports" ? qualityTabs : [];
@@ -359,7 +356,6 @@ function EventsPage() {
 	const [property, setProperty] = useState("");
 	const [analysis, setAnalysis] = useState<AnalyticsEventAnalysis | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	// `?user=<id>` (e.g. from a person sheet) narrows the stream to one application user.
 	const search = useSearchParams();
 	const router = useRouter();
 	const pathname = usePathname();

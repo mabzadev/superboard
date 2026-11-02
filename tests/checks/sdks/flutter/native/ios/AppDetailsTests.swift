@@ -3,8 +3,6 @@ import XCTest
 
 final class AppDetailsTests: XCTestCase {
 
-    // MARK: - toBackend() key mapping
-
     func testToBackendMapsAllFieldsCorrectly() {
         let details = AppDetails(
             version: "1.0",
@@ -75,8 +73,6 @@ final class AppDetailsTests: XCTestCase {
         XCTAssertNil(dict["bundle"], "bundle should not be in backend representation")
     }
 
-    // MARK: - Boundary values
-
     func testToBackendWithEmptyStrings() {
         let details = AppDetails(
             version: "",
@@ -103,8 +99,6 @@ final class AppDetailsTests: XCTestCase {
         XCTAssertEqual(dict["language"] as? String, "")
         XCTAssertEqual(dict["timezone"] as? String, "")
     }
-
-    // MARK: - Codable round-trip
 
     func testCodableRoundTripPreservesAllFields() throws {
         let original = AppDetails(

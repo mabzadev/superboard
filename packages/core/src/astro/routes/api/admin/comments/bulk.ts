@@ -1,9 +1,3 @@
-/**
- * Bulk comment operations
- *
- * POST /_emdash/api/admin/comments/bulk - Bulk status change or delete
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -24,7 +18,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const body = await parseBody(request, commentBulkBody);
 		if (isParseError(body)) return body;
 
-		// Bulk delete requires ADMIN, bulk status change requires EDITOR
 		if (body.action === "delete") {
 			const denied = requirePerm(user, "comments:delete");
 			if (denied) return denied;

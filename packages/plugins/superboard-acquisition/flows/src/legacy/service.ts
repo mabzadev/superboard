@@ -1,7 +1,7 @@
-import { createFetchRouter } from "@superboard/contracts/route-registry";
 import { localizeExperienceDefinition } from "@superboard/contracts/experience-localization";
 import type { FlowGraph, FlowQueueEvent } from "@superboard/contracts/flows";
 import { readJsonObjectLimited } from "@superboard/contracts/request-body";
+import { createFetchRouter } from "@superboard/contracts/route-registry";
 import type { Context } from "hono";
 
 import { sha256 } from "../d1/helpers";
@@ -1180,8 +1180,6 @@ async function ingestLegacyEvents(context: LegacyContext, source: Source, body: 
 			legacyEventType: type,
 			sourceEventId: id,
 			legacySourceModule: source,
-			// Legacy telemetry must never fabricate authoritative purchase, revenue
-			// or installation counts.
 		});
 	}
 	let accepted = 0;
@@ -1501,7 +1499,6 @@ function definitionGraph(source: Source, workflowId: string, definition: Row) {
 		: onboardingDefinitionToGraph(workflowId, definition);
 }
 
-/** Rebuild the active canonical release after every successful legacy write. */
 async function synchronizeLegacyWorkflow(
 	context: LegacyContext,
 	source: Source,
@@ -1820,9 +1817,7 @@ async function auditLegacyResponse(
 	let responseData: Row = {};
 	try {
 		responseData = record((await readJsonObjectLimited(response, 1_048_576)).data);
-	} catch {
-		// A successful empty response is still audited with the route as entity.
-	}
+	} catch {}
 	const pathname = new URL(context.req.url).pathname;
 	const entityId =
 		optionalText(responseData.id) ?? context.req.header("idempotency-key") ?? pathname;
@@ -1985,8 +1980,6 @@ export async function legacyVariantBucket(
 	modulo: number,
 ): Promise<number> {
 	if (source === "onboardings") {
-		// The removed Onboardings Worker reused the same subject bucket for both
-		// traffic selection and the variant cursor.
 		return stableBucket(subject, 10_000) % modulo;
 	}
 	return sha256Bucket(`${projectId}:${experienceId}:${subject}`, modulo);

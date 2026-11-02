@@ -1,14 +1,3 @@
-/**
- * Registry plugin update endpoint (experimental)
- *
- * POST /_emdash/api/admin/plugins/registry/:id/update — Update a
- * registry-source plugin to a newer release. Mirrors the marketplace
- * update route's escalation gates: `CAPABILITY_ESCALATION` if the new
- * version declares new capabilities and `confirmCapabilityChanges` is
- * absent, and `ROUTE_VISIBILITY_ESCALATION` if it newly exposes public
- * routes and `confirmRouteVisibilityChanges` is absent.
- */
-
 import { hostEnvFromVersions } from "@emdash-cms/registry-client/env";
 import type { APIRoute } from "astro";
 import { z } from "zod";
@@ -24,18 +13,8 @@ import { VERSION } from "../../../../../../../version.js";
 export const prerender = false;
 
 const updateBodySchema = z.object({
-	/** Optional explicit target version. Defaults to the aggregator's latest. */
 	version: z.string().min(1).max(64).optional(),
-	/**
-	 * Set by the admin's capability re-consent dialog when the new version
-	 * declares capabilities the installed version did not. Without this,
-	 * the handler returns `CAPABILITY_ESCALATION` carrying the diff.
-	 */
 	confirmCapabilityChanges: z.boolean().optional(),
-	/**
-	 * Set by the admin's route-visibility re-consent dialog when the new
-	 * version newly exposes a public (unauthenticated) route.
-	 */
 	confirmRouteVisibilityChanges: z.boolean().optional(),
 	confirmMcpTools: z.boolean().optional(),
 });

@@ -38,13 +38,8 @@ describe("EditorHeader", () => {
 				<h1>Just a title</h1>
 			</EditorHeader>,
 		);
-		// The actions container has flex + gap utility classes; assert it
-		// isn't present in the header subtree. Looking at the underlying DOM
-		// avoids relying on global queries that may be affected by leftover
-		// nodes from earlier tests in the shared browser session.
 		const wrapper = screen.getByText("Just a title").element().closest("[data-editor-header]");
 		expect(wrapper).not.toBeNull();
-		// Only one direct child div (the title group) — no actions div.
 		const directChildren = wrapper!.children;
 		expect(directChildren.length).toBe(1);
 	});

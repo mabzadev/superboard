@@ -1,10 +1,3 @@
-/**
- * Marketplace Browse
- *
- * Grid of plugin cards with search and sorting.
- * Navigates to plugin detail on card click.
- */
-
 import { Badge, Button, Input, Select } from "@cloudflare/kumo";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg, plural } from "@lingui/core/macro";
@@ -46,7 +39,6 @@ const SORT_LABELS: Record<SortOption, MessageDescriptor> = {
 };
 
 export interface MarketplaceBrowseProps {
-	/** IDs of plugins already installed on this site */
 	installedPluginIds?: Set<string>;
 }
 
@@ -57,7 +49,6 @@ export function MarketplaceBrowse({ installedPluginIds = new Set() }: Marketplac
 	const [capability, setCapability] = React.useState<string>("");
 	const [debouncedQuery, setDebouncedQuery] = React.useState("");
 
-	// Debounce search input
 	React.useEffect(() => {
 		const timer = setTimeout(setDebouncedQuery, 300, searchQuery);
 		return () => clearTimeout(timer);
@@ -82,7 +73,6 @@ export function MarketplaceBrowse({ installedPluginIds = new Set() }: Marketplac
 
 	return (
 		<div className="space-y-6">
-			{/* Header */}
 			<div>
 				<h1 className="text-2xl font-semibold leading-tight">{t`Marketplace`}</h1>
 				<p className="mt-1 text-sm leading-5 text-pretty text-kumo-subtle">
@@ -90,7 +80,6 @@ export function MarketplaceBrowse({ installedPluginIds = new Set() }: Marketplac
 				</p>
 			</div>
 
-			{/* Search + Sort */}
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 				<div className="relative flex-1">
 					<MagnifyingGlass className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kumo-subtle" />
@@ -126,7 +115,6 @@ export function MarketplaceBrowse({ installedPluginIds = new Set() }: Marketplac
 				/>
 			</div>
 
-			{/* Error state */}
 			{error && (
 				<div className="rounded-lg border border-kumo-danger/50 bg-kumo-danger/10 p-6 text-center">
 					<Warning className="mx-auto h-8 w-8 text-kumo-danger" />
@@ -145,7 +133,6 @@ export function MarketplaceBrowse({ installedPluginIds = new Set() }: Marketplac
 				</div>
 			)}
 
-			{/* Loading state */}
 			{isLoading && (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{Array.from({ length: 6 }).map((_, i) => (
@@ -166,7 +153,6 @@ export function MarketplaceBrowse({ installedPluginIds = new Set() }: Marketplac
 				</div>
 			)}
 
-			{/* Results grid */}
 			{plugins && !isLoading && (
 				<>
 					{plugins.length === 0 ? (
@@ -209,10 +195,6 @@ export function MarketplaceBrowse({ installedPluginIds = new Set() }: Marketplac
 	);
 }
 
-// ---------------------------------------------------------------------------
-// PluginCard
-// ---------------------------------------------------------------------------
-
 interface PluginCardProps {
 	plugin: MarketplacePluginSummary;
 	isInstalled: boolean;
@@ -233,7 +215,6 @@ function PluginCard({ plugin, isInstalled }: PluginCardProps) {
 			className="group block rounded-lg border bg-kumo-base p-4 transition-colors hover:border-kumo-brand/50 hover:bg-kumo-tint/30"
 		>
 			<div className="flex items-start gap-3">
-				{/* Icon */}
 				{iconSrc ? (
 					<img
 						src={iconSrc}
@@ -246,7 +227,6 @@ function PluginCard({ plugin, isInstalled }: PluginCardProps) {
 					<PluginAvatar name={plugin.name} />
 				)}
 
-				{/* Name + meta */}
 				<div className="min-w-0 flex-1">
 					<div className="flex items-center gap-2">
 						<h3 className="truncate font-semibold group-hover:text-kumo-link">{plugin.name}</h3>
@@ -272,12 +252,10 @@ function PluginCard({ plugin, isInstalled }: PluginCardProps) {
 				</div>
 			</div>
 
-			{/* Description */}
 			{plugin.description && (
 				<p className="mt-2 line-clamp-2 text-sm text-kumo-subtle">{plugin.description}</p>
 			)}
 
-			{/* Footer: install count + audit + capabilities */}
 			<div className="mt-3 flex items-center justify-between">
 				<div className="flex items-center gap-2 text-xs text-kumo-subtle">
 					<DownloadSimple className="h-3.5 w-3.5" />
@@ -298,10 +276,6 @@ function PluginCard({ plugin, isInstalled }: PluginCardProps) {
 		</Link>
 	);
 }
-
-// ---------------------------------------------------------------------------
-// Shared small components
-// ---------------------------------------------------------------------------
 
 function PluginAvatar({ name }: { name: string }) {
 	const initial = name.charAt(0).toUpperCase();

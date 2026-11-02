@@ -1,12 +1,8 @@
-/// Tracking parameters for UTM analytics
 class TrackingParams {
-  /// UTM campaign parameter
   final String? utmCampaign;
 
-  /// UTM source parameter
   final String? utmSource;
 
-  /// UTM medium parameter
   final String? utmMedium;
 
   TrackingParams({this.utmCampaign, this.utmSource, this.utmMedium});
@@ -28,15 +24,11 @@ class TrackingParams {
   }
 }
 
-/// Represents the details of a deeplink received from SuperBoard
 class DeeplinkDetails {
-  /// The deeplink URL
   final String? link;
 
-  /// The payload data associated with the deeplink
   final Map<String, dynamic>? data;
 
-  /// The tracking parameters associated with the deeplink
   final TrackingParams? tracking;
 
   DeeplinkDetails({this.link, this.data, this.tracking});
@@ -56,14 +48,9 @@ class DeeplinkDetails {
   }
 }
 
-/// Custom link redirect configuration
 class CustomLinkRedirect {
-  /// The URL to redirect to
   final String url;
 
-  /// Whether to open the app if installed (default: true)
-  /// true: if the app is installed it will handle the link
-  /// false: even if the app is installed, the link should be opened in the browser
   final bool openAppIfInstalled;
 
   CustomLinkRedirect({required this.url, this.openAppIfInstalled = true});
@@ -73,7 +60,6 @@ class CustomLinkRedirect {
   }
 }
 
-/// Custom redirects for different platforms
 class CustomRedirects {
   final CustomLinkRedirect? ios;
   final CustomLinkRedirect? android;
@@ -90,33 +76,23 @@ class CustomRedirects {
   }
 }
 
-/// Parameters for generating a SuperBoard link
 class GenerateLinkParams {
-  /// The title of the link
   final String title;
 
-  /// The subtitle of the link
   final String? subtitle;
 
-  /// URL to an image for the link preview
   final String? imageURL;
 
-  /// Custom data to be passed with the link
   final Map<String, dynamic>? data;
 
-  /// Tags for organizing links
   final List<String>? tags;
 
-  /// Custom redirect URLs for different platforms
   final CustomRedirects? customRedirects;
 
-  /// Whether to show preview on iOS
   final bool? showPreviewIos;
 
-  /// Whether to show preview on Android
   final bool? showPreviewAndroid;
 
-  /// Tracking parameters for UTM analytics
   final TrackingParams? tracking;
 
   GenerateLinkParams({
@@ -146,7 +122,6 @@ class GenerateLinkParams {
   }
 }
 
-/// Exception thrown by SuperBoard SDK
 class SuperBoardException implements Exception {
   final String message;
   final String? code;
@@ -158,14 +133,10 @@ class SuperBoardException implements Exception {
       'SuperBoardException: $message${code != null ? ' (code: $code)' : ''}';
 }
 
-/// Type of transaction for revenue tracking
 enum TransactionType {
-  /// A purchase transaction
   buy,
 
-  /// A cancellation transaction
   cancel,
 
-  /// A refund transaction
   refund,
 }

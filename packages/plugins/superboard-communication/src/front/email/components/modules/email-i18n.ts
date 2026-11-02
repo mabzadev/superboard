@@ -2,7 +2,6 @@ import { useMemo } from "react";
 
 import { useStudioI18n } from "../../../marketing/studio/i18n.js";
 
-/** French copy of the Email delivery settings (domain authentication, API keys, event webhooks). */
 const fr: Record<string, string> = {
 	"Domain authentication": "Authentification du domaine",
 	"Add these DNS records at your DNS provider, then verify them.":
@@ -135,7 +134,6 @@ const fr: Record<string, string> = {
 		"Politique DMARC héritée de {domain} : p={policy}.",
 };
 
-/** English labels of API values; they are translated through the dictionary above. */
 export const EMAIL_VALUE_LABELS: Record<string, string> = {
 	verified: "Verified",
 	missing: "Missing",
@@ -159,7 +157,6 @@ function interpolate(template: string, values?: Record<string, string | number>)
 		: template;
 }
 
-/** Studio translations extended with the Email delivery settings copy. */
 export function useEmailI18n() {
 	const { locale, t } = useStudioI18n();
 	const translate = useMemo(

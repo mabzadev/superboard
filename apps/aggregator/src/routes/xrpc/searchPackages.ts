@@ -1,25 +1,3 @@
-/**
- * `com.emdashcms.experimental.aggregator.searchPackages` — FTS5 search over
- * `packages_fts` with optional capability filter.
- *
- * Pagination: offset-based (cursor encodes `{offset}`), since BM25 ranking
- * isn't stable across queries — a cursor encoding `(rank, slug)` would
- * misbehave if the corpus changed between calls. Offset is the simplest
- * stable pagination contract for ranked search; the trade is that deep
- * pagination scans more rows. At Slice 1 scale (hundreds of packages) it's
- * a non-issue.
- *
- * Takedown filter joins `label_state` even though that table is empty in
- * Slice 1 — keeps the contract honest for Slice 2 (when the labeller starts
- * writing), and the optimiser short-circuits the NOT EXISTS subquery
- * cheaply when no rows match. See plan §Search.
- *
- * `q` is passed directly to FTS5 MATCH. Special characters in user input
- * are escaped via `quoteFtsQuery` so a stray `"`/`*`/`(` doesn't blow up
- * the FTS parser. Empty query returns all packages (paginated, ordered by
- * last_updated DESC) — the lexicon's documented behaviour.
- */
-
 import { InvalidRequestError, json } from "@atcute/xrpc-server";
 import { type AggregatorDefs, type AggregatorSearchPackages } from "@emdash-cms/registry-lexicons";
 
@@ -79,8 +57,6 @@ export async function searchPackages(
 			.all<PackageRow>();
 		rows = result.results ?? [];
 	} else {
-		// No query → ordered list of all packages, label-filtered. last_updated
-		// DESC keeps the "what's new" view sensible for an empty search box.
 		const result = await session
 			.prepare(buildBrowseSql(policy, hasCapability))
 			.bind(
@@ -159,11 +135,6 @@ function buildFtsBindings(
 }
 
 function buildBrowseSql(policy: ListingPolicyConfig, hasCapability: boolean): string {
-	// Stable tiebreakers (did, slug) so offset pagination doesn't shuffle
-	// rows across pages when many packages share `last_updated` (or it's
-	// NULL — `last_updated` comes from the optional record.lastUpdated
-	// field). NULLS LAST keeps NULL `last_updated` rows out of the way
-	// of the freshness sort but still reachable via pagination.
 	if (policy.mode === "projection") {
 		return `
 			SELECT ${packageColumns("p.")}, p.labels_json
@@ -211,13 +182,6 @@ const CAPABILITY_FILTER_SQL = `
 	AND EXISTS (SELECT 1 FROM json_each(p.capabilities) WHERE value = ?)
 `;
 
-/** Quote a user-supplied search string for FTS5 MATCH. FTS5 treats `"`,
- * `*`, `(`, `)`, `.`, `:`, `^`, `+`, `-` as syntax. The simplest robust
- * escape is to wrap the whole query as a single phrase string and double
- * any embedded quotes. This loses prefix-search functionality
- * (`"foo*"` is treated literally) but is safe and sufficient for v1; if
- * advanced query syntax becomes a product feature we'll layer a parsed
- * mode on top. */
 const FTS_QUOTE_RE = /"/g;
 function quoteFtsQuery(raw: string): string {
 	return `"${raw.replace(FTS_QUOTE_RE, '""')}"`;

@@ -1,11 +1,3 @@
-/**
- * SEO Panel for Content Editor Sidebar
- *
- * Shows SEO metadata fields (OG image, title, description, canonical URL,
- * noIndex) when the collection has `hasSeo` enabled. Changes are sent
- * alongside content updates via the `seo` field on the update body.
- */
-
 import { Input, InputArea, Switch } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import * as React from "react";
@@ -18,9 +10,7 @@ export interface SeoPanelProps {
 	contentKey: string;
 	seo?: ContentSeo;
 	onChange: (seo: ContentSeoInput) => void;
-	/** Title `getSeoMeta` uses when this panel has none, shown as placeholder text. */
 	defaultTitle?: string | null;
-	/** Description `getSeoMeta` uses when this panel has none, shown as placeholder text. */
 	defaultDescription?: string | null;
 }
 

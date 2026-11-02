@@ -31,7 +31,6 @@ function definedFilters(filters: InsightFilters): InsightFilters {
 	return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== undefined));
 }
 
-/** Rates, attributed revenue and per-link clicks for an email, a campaign or the project. */
 export function EmailInsights({
 	project,
 	filters,
@@ -44,7 +43,6 @@ export function EmailInsights({
 	const { t, locale } = useGrowthI18n();
 	const { campaign_id, template_id, from, to } = filters;
 	const key = JSON.stringify([project, campaign_id, template_id, from, to]);
-	// Results are kept with the request they answer, so a filter change shows the loader.
 	const [state, setState] = useState<{ key: string; data?: EmailInsightsData; failed?: boolean }>();
 	useEffect(() => {
 		let active = true;

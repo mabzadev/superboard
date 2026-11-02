@@ -7,12 +7,6 @@ import {
 	parseQuery,
 } from "../../../../../../packages/core/src/api/parse.js";
 
-/**
- * `parseBody`/`parseQuery` are the shared request validators used by almost
- * every route. Their validation-failure response must carry the documented
- * `{ success: false, error }` envelope so it matches the OpenAPI `ApiError`
- * schema attached to those routes.
- */
 describe("request parser validation envelope", () => {
 	const schema = z.object({ limit: z.coerce.number().min(1) });
 

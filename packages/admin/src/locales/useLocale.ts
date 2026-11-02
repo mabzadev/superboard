@@ -9,10 +9,6 @@ function setCookie(code: string) {
 	document.cookie = `emdash-locale=${code}; Path=/_emdash; SameSite=Lax; Max-Age=31536000${secure}`;
 }
 
-/**
- * Get the current locale and a function to switch locales.
- * Loads the new catalog dynamically and sets a cookie for server-side persistence.
- */
 export function useLocale() {
 	const { i18n } = useLingui();
 	const [locale, setLocaleState] = React.useState(i18n.locale);
@@ -30,7 +26,6 @@ export function useLocale() {
 		[i18n],
 	);
 
-	// Subscribe to i18n change events to trigger re-renders
 	React.useEffect(() => {
 		const unsubscribe = i18n.on("change", () => {
 			setLocaleState(i18n.locale);

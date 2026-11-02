@@ -233,10 +233,6 @@ export function evaluateListingVisibility(
 	return evaluateListingVisibilityCore(input);
 }
 
-/**
- * Evaluates structurally validated labels loaded from an already authenticated store.
- * This function does not verify signatures and must never receive network or client input.
- */
 export function evaluateHydratedListingVisibility(
 	input: EvaluateHydratedListingVisibilityInput,
 ): ListingVisibility {
@@ -279,7 +275,6 @@ export function selectLatestApprovedRevision(
 	return candidates[0] ?? null;
 }
 
-/** Selects from labels whose signatures were verified before persistence. */
 export function selectLatestHydratedApprovedRevision(
 	input: SelectHydratedApprovedRevisionInput,
 ): ListingSubjectRevision | null {

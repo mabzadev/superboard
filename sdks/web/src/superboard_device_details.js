@@ -1,4 +1,3 @@
-// Define the SuperBoardDeviceDetails class
 class SuperBoardDeviceDetails {
 	/**
 	 * Helper function to check if running in Electron.
@@ -16,7 +15,6 @@ class SuperBoardDeviceDetails {
 		const userAgent =
 			typeof navigator !== "undefined" && navigator.userAgent ? navigator.userAgent : "unknown";
 
-		// Initialize return values object
 		const returnValues = {
 			user_agent: userAgent,
 			app_version: "0",
@@ -33,16 +31,16 @@ class SuperBoardDeviceDetails {
 	 */
 	static getValue(name) {
 		if (this.isElectron()) {
-			return localStorage.getItem(name); // Use local storage in Electron
+			return localStorage.getItem(name);
 		} else if (typeof document !== "undefined") {
-			const cookies = document.cookie.split(";"); // Split cookies into an array
+			const cookies = document.cookie.split(";");
 			for (const cookie of cookies) {
-				const [key, value] = cookie.trim().split("="); // Split each cookie into name and value
+				const [key, value] = cookie.trim().split("=");
 				if (key === name) {
-					return decodeURIComponent(value); // Return the decoded cookie value
+					return decodeURIComponent(value);
 				}
 			}
-			return null; // Return null if the item is not found
+			return null;
 		}
 		return null;
 	}
@@ -53,9 +51,8 @@ class SuperBoardDeviceDetails {
 	 */
 	static removeValue(name) {
 		if (this.isElectron()) {
-			localStorage.removeItem(name); // Remove item from local storage in Electron
+			localStorage.removeItem(name);
 		} else if (typeof document !== "undefined") {
-			// Set the cookie's expiration date to the past
 			document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
 		}
 	}
@@ -67,13 +64,11 @@ class SuperBoardDeviceDetails {
 	 */
 	static setValue(name, value) {
 		if (this.isElectron()) {
-			localStorage.setItem(name, value); // Set value in local storage in Electron
+			localStorage.setItem(name, value);
 		} else if (typeof document !== "undefined") {
-			// Set expiration date to a far-future date
 			const farFutureDate = new Date("9999-12-31");
 			const expires = "expires=" + farFutureDate.toUTCString();
 
-			// Set the cookie
 			document.cookie = name + "=" + encodeURIComponent(value) + ";" + expires + ";path=/";
 		}
 	}
@@ -90,14 +85,8 @@ class SuperBoardDeviceDetails {
 			typeof window.location.href === "string"
 		) {
 			try {
-				// URLSearchParams already percent-decodes once. Calling
-				// decodeURIComponent here would corrupt values containing a literal
-				// percent-encoded sequence such as `a%2Fb`.
 				superBoardValue = new URL(window.location.href).searchParams.get("SuperBoard");
-			} catch {
-				// A host can expose a partial Location mock. Treat an invalid href as
-				// absent input instead of breaking SDK initialization.
-			}
+			} catch {}
 		}
 
 		if (superBoardValue != null) {
@@ -105,12 +94,10 @@ class SuperBoardDeviceDetails {
 			return superBoardValue;
 		}
 
-		// Return a persisted attribution only once.
 		const value = this.getValue("SuperBoard_path");
 		this.removeValue("SuperBoard_path");
 		return value;
 	}
 }
 
-// Export the SuperBoardDeviceDetails class
 export default SuperBoardDeviceDetails;

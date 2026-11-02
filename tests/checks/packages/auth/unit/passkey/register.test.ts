@@ -11,14 +11,6 @@ import type {
 	PasskeyConfig,
 } from "../../../../../../packages/auth/src/passkey/types.js";
 
-/**
- * Locks in origin-check parity with `authenticate.ts`. The two functions
- * share the same 3-line block; without this test, a divergence would slip
- * through. The challenge mock satisfies the prior steps so origin verification
- * is the next gate the function reaches — `attestationObject` is junk, which
- * never gets parsed because the origin check fires first.
- */
-
 const config: PasskeyConfig = {
 	rpName: "Test Site",
 	rpId: "example.com",
@@ -87,17 +79,14 @@ describe("verifyRegistrationResponse", () => {
 			}),
 		);
 
-		// Generate a real RSA key pair to get valid modulus and exponent
 		const { publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 		const jwk = publicKey.export({ format: "jwk" });
 		const nBuf = Buffer.from(jwk.n!, "base64url");
 		const eBuf = Buffer.from(jwk.e!, "base64url");
 
-		// oslojs expects these to be BigInts for its internal math
 		const n = BigInt("0x" + nBuf.toString("hex"));
 		const e = BigInt("0x" + eBuf.toString("hex"));
 
-		// Mock the parsed attestation object to bypass CBOR parsing and inject our RSA key
 		vi.mocked(parseAttestationObject).mockReturnValueOnce({
 			authenticatorData: {
 				rpIdHash: new Uint8Array(32),
@@ -128,7 +117,7 @@ describe("verifyRegistrationResponse", () => {
 				type: "public-key",
 				response: {
 					clientDataJSON: base64url(clientDataJSON),
-					attestationObject: "AA", // Mocked
+					attestationObject: "AA",
 				},
 			},
 			makeChallengeStore(),
@@ -137,7 +126,6 @@ describe("verifyRegistrationResponse", () => {
 		expect(result.algorithm).toBe(coseAlgorithmRS256);
 		expect(result.publicKey).toBeInstanceOf(Uint8Array);
 
-		// Verify the round-trip: encodePKIX() was called, so decodePKIXRSAPublicKey() should work
 		const decoded = decodePKIXRSAPublicKey(result.publicKey);
 		expect(decoded.n).toEqual(n);
 		expect(decoded.e).toEqual(e);

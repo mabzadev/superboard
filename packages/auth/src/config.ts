@@ -1,73 +1,36 @@
-/**
- * Configuration schema for @emdash-cms/auth
- */
-
 import { z } from "zod";
 
 import type { RoleName } from "./types.js";
 
-/** Matches http(s) scheme at start of URL */
 const HTTP_SCHEME_RE = /^https?:\/\//i;
 
-/** Validates that a URL string uses http or https scheme. Rejects javascript:/data: URI XSS vectors. */
 const httpUrl = z
 	.string()
 	.url()
 	.refine((url) => HTTP_SCHEME_RE.test(url), "URL must use http or https");
 
-/**
- * OAuth provider configuration
- */
 const oauthProviderSchema = z.object({
 	clientId: z.string(),
 	clientSecret: z.string(),
 });
 
-/**
- * Full auth configuration schema
- */
 export const authConfigSchema = z.object({
-	/**
-	 * Secret key for encrypting tokens and session data.
-	 * Generate with: `emdash auth secret`
-	 */
 	secret: z.string().min(32, "Auth secret must be at least 32 characters"),
 
-	/**
-	 * Passkey (WebAuthn) configuration
-	 */
 	passkeys: z
 		.object({
-			/**
-			 * Relying party name shown to users during passkey registration
-			 */
 			rpName: z.string(),
-			/**
-			 * Relying party ID (domain). Defaults to the hostname from baseUrl.
-			 */
 			rpId: z.string().optional(),
 		})
 		.optional(),
 
-	/**
-	 * Self-signup configuration
-	 */
 	selfSignup: z
 		.object({
-			/**
-			 * Email domains allowed to self-register
-			 */
 			domains: z.array(z.string()),
-			/**
-			 * Default role for self-registered users
-			 */
 			defaultRole: z.enum(["subscriber", "contributor", "author"] as const).default("contributor"),
 		})
 		.optional(),
 
-	/**
-	 * OAuth provider configurations (for "Login with X")
-	 */
 	oauth: z
 		.object({
 			github: oauthProviderSchema.optional(),
@@ -75,40 +38,22 @@ export const authConfigSchema = z.object({
 		})
 		.optional(),
 
-	/**
-	 * Configure EmDash as an OAuth provider
-	 */
 	provider: z
 		.object({
 			enabled: z.boolean(),
-			/**
-			 * Issuer URL for OIDC. Defaults to site URL.
-			 */
 			issuer: httpUrl.optional(),
 		})
 		.optional(),
 
-	/**
-	 * Enterprise SSO configuration
-	 */
 	sso: z
 		.object({
 			enabled: z.boolean(),
 		})
 		.optional(),
 
-	/**
-	 * Session configuration
-	 */
 	session: z
 		.object({
-			/**
-			 * Session max age in seconds. Default: 30 days
-			 */
 			maxAge: z.number().default(30 * 24 * 60 * 60),
-			/**
-			 * Extend session on activity. Default: true
-			 */
 			sliding: z.boolean().default(true),
 		})
 		.optional(),
@@ -116,9 +61,6 @@ export const authConfigSchema = z.object({
 
 export type AuthConfig = z.infer<typeof authConfigSchema>;
 
-/**
- * Validated and resolved auth configuration
- */
 export interface ResolvedAuthConfig {
 	secret: string;
 	baseUrl: string;
@@ -167,9 +109,6 @@ const selfSignupRoleMap: Record<"subscriber" | "contributor" | "author", RoleNam
 	author: "AUTHOR",
 };
 
-/**
- * Resolve auth configuration with defaults
- */
 export function resolveConfig(
 	config: AuthConfig,
 	baseUrl: string,

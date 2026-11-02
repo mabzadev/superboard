@@ -1,11 +1,3 @@
-/**
- * Inline editor htmlBlock round-trip tests.
- *
- * Tests the Portable Text ↔ ProseMirror conversion for `htmlBlock` through
- * the seams the inline (visual-editing) editor actually exercises. Mirrors the
- * core converter round-trip test against the in-file converters.
- */
-
 import { describe, it, expect } from "vitest";
 
 import {

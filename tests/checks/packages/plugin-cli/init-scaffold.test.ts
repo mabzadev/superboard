@@ -1,13 +1,3 @@
-/**
- * End-to-end coverage for `scaffold()`: the filesystem half of init.
- *
- * Each test runs against a fresh tempdir so writes don't collide. The
- * suite's job is to verify the file tree, the overwrite policy, and
- * the "the scaffold round-trips through the loader" invariant — the
- * scaffolder shouldn't produce a manifest that its own validator
- * rejects (when the user has supplied all required fields).
- */
-
 import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -44,16 +34,11 @@ describe("scaffold", () => {
 	let targetDir: string;
 
 	beforeEach(async () => {
-		// Each test gets its own tempdir, then immediately removes the
-		// dir so the scaffolder is creating from scratch (matches what
-		// a real `init` invocation does into a brand-new directory).
 		const root = await mkdtemp(join(tmpdir(), "emdash-init-test-"));
 		targetDir = join(root, "plugin");
 	});
 
 	afterEach(async () => {
-		// rm the parent root, not just targetDir, so we don't leak
-		// the mkdtemp parent behind.
 		const root = targetDir.replace(/\/plugin$/, "");
 		await rm(root, { recursive: true, force: true });
 	});
@@ -62,7 +47,6 @@ describe("scaffold", () => {
 		const result = await scaffold({ targetDir, inputs: FULL_INPUTS, force: false });
 		expect(result.written).toHaveLength(7);
 
-		// Spot-check the structure rather than pinning the array order.
 		const fileSet = new Set(result.written.map((p) => p.replace(`${targetDir}/`, "")));
 		expect(fileSet.has("emdash-plugin.jsonc")).toBe(true);
 		expect(fileSet.has("package.json")).toBe(true);
@@ -77,17 +61,12 @@ describe("scaffold", () => {
 		await scaffold({ targetDir, inputs: FULL_INPUTS, force: false });
 		const { manifest } = await loadManifest(targetDir);
 		expect(manifest.slug).toBe("gallery");
-		// `version` is intentionally omitted from the scaffold manifest;
-		// the build reads it from package.json instead.
 		expect(manifest.version).toBeUndefined();
 		expect(manifest.publisher).toBe("did:plc:abc123def456");
 		expect(manifest.license).toBe("MIT");
 	});
 
 	it("produces a minimal manifest that round-trips through the loader (with empty publisher)", async () => {
-		// Minimal scaffold writes TODO placeholders. The loader's JSONC
-		// parse succeeds; the schema rejects on `publisher` being empty.
-		// We catch that explicitly so the user knows what to fix.
 		await scaffold({ targetDir, inputs: MINIMAL_INPUTS, force: false });
 		await expect(loadManifest(targetDir)).rejects.toMatchObject({
 			name: "ManifestError",
@@ -96,7 +75,6 @@ describe("scaffold", () => {
 	});
 
 	it("refuses to overwrite an existing file without --force", async () => {
-		// Pre-create one of the target files with different content.
 		const { mkdir } = await import("node:fs/promises");
 		await mkdir(targetDir, { recursive: true });
 		await writeFile(join(targetDir, "package.json"), "{}", "utf8");
@@ -107,14 +85,11 @@ describe("scaffold", () => {
 			conflicts: ["package.json"],
 		});
 
-		// The original file must be untouched.
 		const contents = await readFile(join(targetDir, "package.json"), "utf8");
 		expect(contents).toBe("{}");
 	});
 
 	it("does not partially write when a conflict is detected", async () => {
-		// Same setup as above. The conflict check runs BEFORE any
-		// write, so nothing else should appear in the target dir.
 		const { mkdir } = await import("node:fs/promises");
 		await mkdir(targetDir, { recursive: true });
 		await writeFile(join(targetDir, "package.json"), "{}", "utf8");
@@ -124,7 +99,6 @@ describe("scaffold", () => {
 		);
 
 		const entries = await readdir(targetDir);
-		// Only the pre-existing file should be there.
 		expect(entries).toEqual(["package.json"]);
 	});
 
@@ -135,7 +109,6 @@ describe("scaffold", () => {
 
 		await scaffold({ targetDir, inputs: FULL_INPUTS, force: true });
 		const contents = await readFile(join(targetDir, "package.json"), "utf8");
-		// The scaffold wrote the real package.json over the stub.
 		const parsed = JSON.parse(contents) as { name: string };
 		expect(parsed.name).toBe("gallery");
 	});
@@ -156,9 +129,6 @@ describe("scaffold", () => {
 			force: false,
 			onFileWritten: (rel) => calls.push(rel),
 		});
-		// The seven files, in some deterministic order (see FILES in
-		// scaffold.ts). The exact order is part of the API surface
-		// for CLI progress output.
 		expect(calls).toEqual([
 			"emdash-plugin.jsonc",
 			"package.json",

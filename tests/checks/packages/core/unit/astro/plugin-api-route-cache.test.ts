@@ -1,11 +1,3 @@
-/**
- * Cache-Control for the plugin API catch-all (`/_emdash/api/plugins/{id}/*`).
- *
- * Public routes may opt in to caching via `cacheControl` on the route
- * definition. The header must only appear on successful GET/HEAD responses of
- * public routes — everything else keeps the API default `private, no-store`.
- */
-
 import type { APIRoute } from "astro";
 import { describe, expect, it, vi } from "vitest";
 
@@ -29,7 +21,6 @@ function createLocals({
 			user: null,
 			emdash: {
 				handlePluginApiRoute,
-				// Mirrors getRouteMeta: cacheControl is only ever present on public routes.
 				getPluginRouteMeta: () => ({ public: true, cacheControl }),
 			},
 		},

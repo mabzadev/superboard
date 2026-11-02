@@ -1,15 +1,3 @@
-/**
- * generateSiteSeoContributions() Tests
- *
- * Bug context: SiteSettings.seo.googleVerification and bingVerification are
- * stored in the database and editable in the admin UI, but were never emitted
- * as <meta> tags into <head>. This left Google Search Console and Bing
- * Webmaster Tools verification impossible via meta-tag method.
- *
- * Fix: A new pure function generates the verification meta contributions from
- * site SEO settings, and EmDashHead.astro loads settings and includes them.
- */
-
 import { describe, it, expect } from "vitest";
 
 import { generateSiteSeoContributions } from "../../../../../../packages/core/src/page/seo-contributions.js";

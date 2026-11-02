@@ -8,7 +8,6 @@ import authContext from "../../../../../../../sdks/web/identity/react/src/contex
 import { useAuth } from "../../../../../../../sdks/web/identity/react/src/useAuth";
 import * as utils from "../../../../../../../sdks/web/identity/react/src/utils";
 
-// Mock the functions from web-sdk so that they are spies.
 vi.mock("@melody-auth/web", () => ({
 	triggerLogin: vi.fn(),
 	logout: vi.fn(),
@@ -24,7 +23,6 @@ vi.mock("@melody-auth/shared", async () => {
 	};
 });
 
-// A simple wrapper component that calls the useAuth hook and passes its value to onRender.
 const HookWrapper = ({
 	onRender,
 }: {
@@ -57,11 +55,9 @@ describe("useAuth Hook", () => {
 			loginError: null,
 			logoutError: null,
 		};
-		// Reset all mocks before each test.
 		vi.resetAllMocks();
 	});
 
-	// A helper that renders the hook within its context and returns the hook's value.
 	const renderHookWithState = (stateOverride = {}): ReturnType<typeof useAuth> => {
 		const state = {
 			...defaultState,
@@ -87,7 +83,7 @@ describe("useAuth Hook", () => {
 	};
 
 	it("should return computed accessToken and refreshToken", () => {
-		const futureTime = Math.floor(new Date().getTime() / 1000) + 1000; // valid token
+		const futureTime = Math.floor(new Date().getTime() / 1000) + 1000;
 		const state = {
 			accessTokenStorage: {
 				accessToken: "access123",
@@ -129,7 +125,6 @@ describe("useAuth Hook", () => {
 			isAuthenticated: false,
 			isAuthenticating: false,
 		});
-		// Ensure triggerLogin does not throw.
 		(triggerLogin as any).mockImplementation(() => {});
 		const props = {
 			locale: "en",
@@ -146,9 +141,7 @@ describe("useAuth Hook", () => {
 			isAuthenticated: true,
 			isAuthenticating: false,
 		});
-		// Ensure rawLoginRedirect does not throw.
 		(triggerLogin as any).mockImplementation(() => {});
-		// Use a custom policy that is not "sign_in_or_sign_up".
 		const props = {
 			locale: "en",
 			state: "test",
@@ -160,18 +153,15 @@ describe("useAuth Hook", () => {
 	});
 
 	it("loginRedirect should dispatch setLoginError when rawLoginRedirect throws", () => {
-		// Simulate rawLoginRedirect throwing an error.
 		(triggerLogin as any).mockImplementation(() => {
 			throw new Error("Test error");
 		});
-		// Spy on handleError to return a predictable error message.
 		vi.mocked(handleError).mockReturnValue("handled error message");
 		const auth = renderHookWithState({
 			isAuthenticated: false,
 			isAuthenticating: false,
 		});
 
-		// Call loginRedirect which should catch the error and dispatch the login error action.
 		auth.loginRedirect({ locale: "en" });
 
 		expect(dispatch).toHaveBeenCalledWith({
@@ -205,7 +195,6 @@ describe("useAuth Hook", () => {
 				expiresOn: currentTime + 1000,
 			},
 		};
-		// Simulate exchangeTokenByRefreshToken returning a new access token object.
 		const newAccessTokenObj = {
 			accessToken: "newAccess",
 			expiresOn: currentTime + 1000,
@@ -233,9 +222,7 @@ describe("useAuth Hook", () => {
 				expiresOn: currentTime + 1000,
 			},
 		};
-		// Force handleError to return a predictable error message
 		vi.mocked(handleError).mockReturnValue("handled acquire token error");
-		// Simulate exchangeTokenByRefreshToken throwing an error.
 		(exchangeTokenByRefreshToken as any).mockRejectedValue(new Error("Test error"));
 		const auth = renderHookWithState(state);
 		let token: string = "";
@@ -247,7 +234,6 @@ describe("useAuth Hook", () => {
 			type: "setAcquireTokenError",
 			payload: "handled acquire token error",
 		});
-		// Assuming on error the hook returns an empty string
 		expect(token).toBe("");
 	});
 
@@ -295,9 +281,7 @@ describe("useAuth Hook", () => {
 			},
 			userInfo: null,
 		};
-		// Force handleError to return a predictable error message.
 		vi.mocked(handleError).mockReturnValue("handled fetch user info error");
-		// Simulate getUserInfo throwing an error.
 		(getUserInfo as any).mockRejectedValue(new Error("Test error"));
 		const auth = renderHookWithState(state);
 		let info: any;
@@ -309,7 +293,6 @@ describe("useAuth Hook", () => {
 			type: "setAcquireUserInfoError",
 			payload: "handled fetch user info error",
 		});
-		// Assuming on error the hook returns undefined.
 		expect(info).toBeUndefined();
 	});
 
@@ -335,7 +318,7 @@ describe("useAuth Hook", () => {
 			"accessValid",
 			"refreshValid",
 			"https://redirect",
-			false, // isLocalOnly is false because both tokens are present
+			false,
 		);
 	});
 
@@ -352,13 +335,7 @@ describe("useAuth Hook", () => {
 				localOnly: true,
 			});
 		});
-		expect(logout).toHaveBeenCalledWith(
-			defaultState.config,
-			"", // accessToken will be an empty string because acquireToken returns '' when no valid token is available
-			null,
-			"https://redirect",
-			true, // isLocalOnly true because tokens are missing or forced localOnly
-		);
+		expect(logout).toHaveBeenCalledWith(defaultState.config, "", null, "https://redirect", true);
 	});
 
 	it("logoutRedirect should dispatch setLogoutError when logout fails", async () => {
@@ -417,7 +394,6 @@ describe("useAuth Hook", () => {
 			isAuthenticated: false,
 			isAuthenticating: false,
 		});
-		// Ensure triggerLogin does not throw.
 		(triggerLogin as any).mockImplementation(() => {});
 		const props = {
 			locale: "en",
@@ -432,11 +408,9 @@ describe("useAuth Hook", () => {
 	});
 
 	it("loginPopup should dispatch setLoginError when triggerLogin throws", () => {
-		// Simulate triggerLogin throwing an error.
 		(triggerLogin as any).mockImplementation(() => {
 			throw new Error("Test error");
 		});
-		// Spy on handleError to return a predictable error message.
 		vi.mocked(handleError).mockReturnValue("handled error message");
 		const auth = renderHookWithState({
 			isAuthenticated: false,
@@ -450,19 +424,16 @@ describe("useAuth Hook", () => {
 	});
 
 	it("authorizePopupHandler should call handleTokenExchangeByAuthCode with correct parameters", () => {
-		// Render hook with proper state.
 		const auth = renderHookWithState({
 			isAuthenticated: false,
 			isAuthenticating: false,
 		});
 
-		// Capture the authorizePopupHandler callback from triggerLogin
 		let capturedHandler: ((params: { state: string; code: string }) => any) | undefined;
 		(triggerLogin as any).mockImplementation((method, config, props) => {
 			capturedHandler = props.authorizePopupHandler;
 		});
 
-		// Call loginPopup to trigger capture of authorizePopupHandler.
 		const props = {
 			locale: "en",
 			state: "test",
@@ -471,10 +442,8 @@ describe("useAuth Hook", () => {
 		auth.loginPopup(props);
 		expect(capturedHandler).toBeDefined();
 
-		// Spy on handleTokenExchangeByAuthCode.
 		const handleSpy = vi.spyOn(utils, "handleTokenExchangeByAuthCode").mockImplementation(() => {});
 
-		// Define sample payload to pass to authorizePopupHandler.
 		const testPayload = {
 			state: "request_state",
 			code: "test_code",

@@ -144,12 +144,10 @@ describe("urlPattern", () => {
 				urlPattern: "/blog/{slug}",
 			});
 
-			// Setting to undefined in the update should clear it
 			const updated = await registry.updateCollection("posts", {
 				urlPattern: undefined,
 			});
 
-			// urlPattern was not in the update input, so it should keep the old value
 			expect(updated.urlPattern).toBe("/blog/{slug}");
 		});
 
@@ -160,12 +158,10 @@ describe("urlPattern", () => {
 				urlPattern: "/blog/{slug}",
 			});
 
-			// Explicitly passing null (via the update interface) should clear it
 			const updated = await registry.updateCollection("posts", {
-				urlPattern: "" as any, // empty string to clear
+				urlPattern: "" as any,
 			});
 
-			// Empty string is falsy but still a defined value
 			expect(updated.urlPattern).toBe("");
 		});
 
@@ -193,7 +189,6 @@ describe("urlPattern", () => {
 
 	describe("menu URL resolution", () => {
 		it("should use urlPattern for content URL resolution", async () => {
-			// Create a pages collection with urlPattern
 			await registry.createCollection({
 				slug: "pages",
 				label: "Pages",
@@ -205,13 +200,11 @@ describe("urlPattern", () => {
 				type: "string",
 			});
 
-			// Insert a page
 			const pageId = ulid();
 			await sql`
 				INSERT INTO ec_pages (id, slug, status) VALUES (${pageId}, ${"about"}, ${"published"})
 			`.execute(db);
 
-			// Create a menu with a page reference
 			const menuId = ulid();
 			await db
 				.insertInto("_emdash_menus")
@@ -238,7 +231,6 @@ describe("urlPattern", () => {
 		});
 
 		it("should fall back to /{collection}/{slug} when no urlPattern", async () => {
-			// Create a posts collection without urlPattern
 			await registry.createCollection({
 				slug: "posts",
 				label: "Posts",
@@ -249,13 +241,11 @@ describe("urlPattern", () => {
 				type: "string",
 			});
 
-			// Insert a post
 			const postId = ulid();
 			await sql`
 				INSERT INTO ec_posts (id, slug, status) VALUES (${postId}, ${"hello"}, ${"published"})
 			`.execute(db);
 
-			// Create a menu with a post reference
 			const menuId = ulid();
 			await db
 				.insertInto("_emdash_menus")
@@ -320,7 +310,6 @@ describe("urlPattern", () => {
 		});
 
 		it("should handle multiple collections with different patterns", async () => {
-			// Pages: /{slug}
 			await registry.createCollection({
 				slug: "pages",
 				label: "Pages",
@@ -332,7 +321,6 @@ describe("urlPattern", () => {
 				type: "string",
 			});
 
-			// Posts: /blog/{slug}
 			await registry.createCollection({
 				slug: "posts",
 				label: "Posts",

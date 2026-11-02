@@ -1,21 +1,9 @@
-/**
- * Bridge Handler Conformance Tests
- *
- * Tests the shared bridge handler that both the production (workerd)
- * and dev (miniflare) runners use. This is the conformance test suite
- * that ensures identical behavior across all sandbox runners.
- *
- * These tests exercise capability enforcement, KV isolation, and
- * error handling at the bridge level.
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import { createBridgeHandler } from "../../../../packages/workerd/src/sandbox/bridge-handler.js";
 
-// Set up an in-memory SQLite database with the minimum tables needed
 function createTestDb() {
 	const sqlite = new Database(":memory:");
 	const db = new Kysely<any>({
@@ -25,7 +13,6 @@ function createTestDb() {
 }
 
 async function setupTables(db: Kysely<any>) {
-	// Plugin storage table (used for both KV and document storage)
 	await db.schema
 		.createTable("_plugin_storage")
 		.addColumn("plugin_id", "text", (col) => col.notNull())
@@ -37,7 +24,6 @@ async function setupTables(db: Kysely<any>) {
 		.addPrimaryKeyConstraint("pk_plugin_storage", ["plugin_id", "collection", "id"])
 		.execute();
 
-	// Users table (matches migration 001)
 	await db.schema
 		.createTable("users")
 		.addColumn("id", "text", (col) => col.primaryKey())
@@ -47,7 +33,6 @@ async function setupTables(db: Kysely<any>) {
 		.addColumn("created_at", "text", (col) => col.notNull())
 		.execute();
 
-	// Insert a test user
 	await db
 		.insertInto("users" as any)
 		.values({
@@ -108,8 +93,6 @@ describe("Bridge Handler Conformance", () => {
 		return response.json() as Promise<{ result?: unknown; error?: string }>;
 	}
 
-	// ── KV Operations ────────────────────────────────────────────────────
-
 	describe("KV operations", () => {
 		it("set and get a value", async () => {
 			const handler = makeHandler({});
@@ -164,20 +147,15 @@ describe("Bridge Handler Conformance", () => {
 				emailSend: () => null,
 			});
 
-			// Plugin A sets a value
 			await call(handlerA, "kv/set", { key: "secret", value: "a-data" });
 
-			// Plugin B cannot see it
 			const resultB = await call(handlerB, "kv/get", { key: "secret" });
 			expect(resultB.result).toBeNull();
 
-			// Plugin A can see it
 			const resultA = await call(handlerA, "kv/get", { key: "secret" });
 			expect(resultA.result).toBe("a-data");
 		});
 	});
-
-	// ── Capability Enforcement ────────────────────────────────────────────
 
 	describe("capability enforcement", () => {
 		it("rejects content read without read:content capability", async () => {
@@ -190,7 +168,6 @@ describe("Bridge Handler Conformance", () => {
 		});
 
 		it("allows content read with read:content", async () => {
-			// Create a content table first
 			await db.schema
 				.createTable("ec_posts")
 				.addColumn("id", "text", (col) => col.primaryKey())
@@ -203,16 +180,11 @@ describe("Bridge Handler Conformance", () => {
 				collection: "posts",
 				id: "123",
 			});
-			// No error, returns null (post doesn't exist)
 			expect(result.error).toBeUndefined();
 			expect(result.result).toBeNull();
 		});
 
 		it("write:content does NOT imply read:content (matches Cloudflare bridge)", async () => {
-			// The bridge enforces capabilities strictly: a plugin that declares
-			// only write:content cannot call ctx.content.get/list. This matches
-			// the Cloudflare PluginBridge behavior. The plugin must declare
-			// read:content explicitly to read.
 			await db.schema
 				.createTable("ec_posts")
 				.addColumn("id", "text", (col) => col.primaryKey())
@@ -229,8 +201,6 @@ describe("Bridge Handler Conformance", () => {
 		});
 
 		it("rejects taxonomy read without taxonomies:read capability", async () => {
-			// content:read does not grant taxonomy access — it's a separate
-			// capability (and a new one, so the canonical name is checked).
 			const handler = makeHandler({ capabilities: ["read:content"] });
 			const result = await call(handler, "taxonomy/list", {});
 			expect(result.error).toContain("Missing capability: taxonomies:read");
@@ -309,7 +279,6 @@ describe("Bridge Handler Conformance", () => {
 						label: "Science-Fiction",
 						locale: "de",
 						translation_group: "tg-scifi",
-						// Same group as term-en, so the same position.
 						sort_order: 0,
 					},
 					{
@@ -319,13 +288,10 @@ describe("Bridge Handler Conformance", () => {
 						label: "Fantasy",
 						locale: "en",
 						translation_group: "tg-fantasy",
-						// Placed after Sci-Fi by hand, against its label — so the
-						// assertion below fails if the manual order stops leading.
 						sort_order: 1,
 					},
 				])
 				.execute();
-			// The pivot stores the term's translation_group, not a row id.
 			await db
 				.insertInto("content_taxonomies" as any)
 				.values({ collection: "posts", entry_id: "post-1", taxonomy_id: "tg-scifi" })
@@ -342,7 +308,6 @@ describe("Bridge Handler Conformance", () => {
 
 			const handler = makeHandler({ capabilities: ["taxonomies:read"] });
 
-			// terms: locale filter + data JSON parsing + translation group
 			const terms = await call(handler, "taxonomy/terms", { taxonomy: "genre", locale: "en" });
 			expect(terms.error).toBeUndefined();
 			const termRows = terms.result as Array<Record<string, unknown>>;
@@ -353,7 +318,6 @@ describe("Bridge Handler Conformance", () => {
 				translationGroup: "tg-scifi",
 			});
 
-			// entryTerms: pivot join on translation_group resolves both locales
 			const entryTerms = await call(handler, "taxonomy/entryTerms", {
 				collection: "posts",
 				entryId: "post-1",
@@ -362,7 +326,6 @@ describe("Bridge Handler Conformance", () => {
 			const entryRows = entryTerms.result as Array<Record<string, unknown>>;
 			expect(entryRows.map((t) => t.id)).toEqual(["term-de", "term-en"]);
 
-			// entryTerms: locale narrows to one row per assignment
 			const localized = await call(handler, "taxonomy/entryTerms", {
 				collection: "posts",
 				entryId: "post-1",
@@ -402,8 +365,6 @@ describe("Bridge Handler Conformance", () => {
 			expect(result.error).toContain("Missing capability: email:send");
 		});
 	});
-
-	// ── Storage (document store) ──────────────────────────────────────────
 
 	describe("plugin storage", () => {
 		it("rejects access to undeclared storage collection", async () => {
@@ -465,7 +426,6 @@ describe("Bridge Handler Conformance", () => {
 				data: { owner: "a" },
 			});
 
-			// Plugin B cannot see plugin A's data
 			const resultB = await call(handlerB, "storage/get", {
 				collection: "data",
 				id: "item-1",
@@ -473,8 +433,6 @@ describe("Bridge Handler Conformance", () => {
 			expect(resultB.result).toBeNull();
 		});
 	});
-
-	// ── Error Handling ────────────────────────────────────────────────────
 
 	describe("error handling", () => {
 		it("returns error for unknown bridge method", async () => {
@@ -489,8 +447,6 @@ describe("Bridge Handler Conformance", () => {
 			expect(result.error).toContain("Missing required string parameter");
 		});
 	});
-
-	// ── Limit clamping ────────────────────────────────────────────────────
 
 	describe("list endpoints clamp negative limit", () => {
 		it("content/list clamps negative limit to 1", async () => {
@@ -593,8 +549,6 @@ describe("Bridge Handler Conformance", () => {
 		});
 	});
 
-	// ── Logging ───────────────────────────────────────────────────────────
-
 	describe("logging", () => {
 		it("log call succeeds without capabilities", async () => {
 			const handler = makeHandler({});
@@ -606,8 +560,6 @@ describe("Bridge Handler Conformance", () => {
 			expect(result.result).toBeNull();
 		});
 	});
-
-	// ── Batch transactionality ────────────────────────────────────────────
 
 	it("checks the activation fence at the sandbox content-write boundary", async () => {
 		const beforeContentWrite = vi.fn(async () => {
@@ -664,7 +616,6 @@ describe("Bridge Handler Conformance", () => {
 
 		it("contentCreateMany rolls back when a mid-batch insert fails", async () => {
 			const handler = makeHandler({ capabilities: ["write:content"] });
-			// Pre-insert a row that will collide with item index 2's slug.
 			await call(handler, "content/create", {
 				collection: "atomic_posts",
 				data: { slug: "conflict", title: "existing" },
@@ -687,7 +638,6 @@ describe("Bridge Handler Conformance", () => {
 			});
 			expect(result.error).toBeDefined();
 
-			// After the failed batch, only the pre-existing row should remain.
 			const after = await db
 				.selectFrom("ec_atomic_posts" as any)
 				.selectAll()

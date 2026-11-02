@@ -1,14 +1,3 @@
-/**
- * Environment-compatibility gate for registry install/update.
- *
- * `handleRegistryInstall` and `handleRegistryUpdate` both call
- * `assertEnvCompatible` after release selection / yank-check and before the
- * artifact fetch. The full handler path needs a mocked DiscoveryClient (tracked
- * separately); these tests exercise the gate's decision logic directly — the
- * same helper both handlers use — plus the host-env builder and the error-code
- * status mapping that surfaces `ENV_INCOMPATIBLE` to the admin.
- */
-
 import { describe, expect, it } from "vitest";
 
 import { mapErrorStatus } from "../../../../../../packages/core/src/api/errors.js";

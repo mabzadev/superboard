@@ -91,8 +91,6 @@ describe("redirect handlers — loop detection", () => {
 				destination: "/c",
 			});
 
-			// /a → /c, /b → /c — no loop (both point to /c)
-			// Actually this is fine, let me create a real loop scenario
 			expect(result.success).toBe(true);
 		});
 
@@ -109,7 +107,6 @@ describe("redirect handlers — loop detection", () => {
 
 			if (!r3.success) throw new Error("setup failed");
 
-			// Update /c → /d to /c → /a, creating /a → /b → /c → /a
 			const result = await handleRedirectUpdate(db, r3.data.id, {
 				destination: "/a",
 			});

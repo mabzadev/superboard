@@ -1,10 +1,3 @@
-/**
- * Redirect Loop Detection E2E Tests
- *
- * Tests write-time loop prevention, pattern-aware detection,
- * cache behavior, and admin UI warnings.
- */
-
 import { test, expect } from "../../fixtures/emdash-browser";
 
 function apiHeaders(token: string, baseUrl: string) {
@@ -16,7 +9,6 @@ function apiHeaders(token: string, baseUrl: string) {
 	};
 }
 
-/** Create a redirect via API, return the id */
 async function create(
 	page: import("@playwright/test").Page,
 	baseUrl: string,
@@ -36,7 +28,6 @@ async function create(
 	return body.data.id;
 }
 
-/** Try to create a redirect, expect rejection. Return error message. */
 async function createExpectError(
 	page: import("@playwright/test").Page,
 	baseUrl: string,
@@ -53,7 +44,6 @@ async function createExpectError(
 	return body.error?.message ?? "unknown error";
 }
 
-/** Try to create a redirect, expect success */
 async function createExpectSuccess(
 	page: import("@playwright/test").Page,
 	baseUrl: string,
@@ -71,7 +61,6 @@ async function createExpectSuccess(
 	);
 }
 
-/** Delete all redirects */
 async function cleanup(
 	page: import("@playwright/test").Page,
 	baseUrl: string,
@@ -96,20 +85,12 @@ test.describe("redirect loop detection", () => {
 		await cleanup(page, serverInfo.baseUrl, serverInfo.token);
 	});
 
-	// -----------------------------------------------------------------------
-	// Pattern template loops
-	// -----------------------------------------------------------------------
-
 	test("rejects matching pattern template loop: [...path]", async ({ page, serverInfo }) => {
 		const { baseUrl, token } = serverInfo;
 		await createExpectSuccess(page, baseUrl, token, "/old/[...path]", "/new/[...path]");
 		const msg = await createExpectError(page, baseUrl, token, "/new/[...path]", "/old/[...path]");
 		expect(msg).toContain("loop");
 	});
-
-	// -----------------------------------------------------------------------
-	// Admin UI warnings
-	// -----------------------------------------------------------------------
 
 	test("admin UI shows no loop banner when no loops exist", async ({ admin, page, serverInfo }) => {
 		const { baseUrl, token } = serverInfo;
@@ -123,10 +104,6 @@ test.describe("redirect loop detection", () => {
 		await expect(page.locator("text=Redirect loop detected")).toBeHidden();
 	});
 
-	// -----------------------------------------------------------------------
-	// Error message format
-	// -----------------------------------------------------------------------
-
 	test("error message shows template names, not __p__ dummy values", async ({
 		page,
 		serverInfo,
@@ -138,10 +115,6 @@ test.describe("redirect loop detection", () => {
 		expect(msg).toContain("/articles/hello");
 		expect(msg).toContain("/blog/hello");
 	});
-
-	// -----------------------------------------------------------------------
-	// Update-time loop detection
-	// -----------------------------------------------------------------------
 
 	test("rejects update that would create a loop", async ({ page, serverInfo }) => {
 		const { baseUrl, token } = serverInfo;
@@ -208,10 +181,6 @@ test.describe("redirect loop detection", () => {
 		expect(body.error?.message).toContain("loop");
 	});
 
-	// -----------------------------------------------------------------------
-	// Edge cases
-	// -----------------------------------------------------------------------
-
 	test("disabled redirect does not participate in loop detection", async ({ page, serverInfo }) => {
 		const { baseUrl, token } = serverInfo;
 		const headers = apiHeaders(token, baseUrl);
@@ -230,8 +199,6 @@ test.describe("redirect loop detection", () => {
 		page,
 		serverInfo,
 	}) => {
-		// Users who had redirects before upgrade should be able to toggle
-		// them freely. The warning banner alerts them to the loop.
 		const { baseUrl, token } = serverInfo;
 		const headers = apiHeaders(token, baseUrl);
 		await createExpectSuccess(page, baseUrl, token, "/a", "/b");
@@ -244,10 +211,6 @@ test.describe("redirect loop detection", () => {
 		});
 		expect(res.ok()).toBe(true);
 	});
-
-	// -----------------------------------------------------------------------
-	// Advanced pattern combinations
-	// -----------------------------------------------------------------------
 
 	test("rejects pattern with different param names that still loops", async ({
 		page,
@@ -282,10 +245,6 @@ test.describe("redirect loop detection", () => {
 		const msg = await createExpectError(page, baseUrl, token, "/c/[...path]", "/a/sub/[...path]");
 		expect(msg).toContain("loop");
 	});
-
-	// -----------------------------------------------------------------------
-	// Long chains (20+)
-	// -----------------------------------------------------------------------
 
 	test("rejects loop at the end of a 25-redirect chain", async ({ page, serverInfo }) => {
 		const { baseUrl, token } = serverInfo;

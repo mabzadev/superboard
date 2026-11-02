@@ -2,40 +2,28 @@ import { CookieStorage as SharedCookieStorage } from "@melody-auth/shared";
 import { getCookie, setCookie, deleteCookie } from "cookies-next";
 import type { NextRequest, NextResponse } from "next/server";
 
-/**
- * Determines if cookies should be secure based on the actual connection
- */
 function shouldUseSecureCookies(request?: NextRequest): boolean {
-	// If explicitly set, use that
 	if (process.env.NODE_ENV === "development") {
-		return false; // Allow non-HTTPS in development
+		return false;
 	}
 
-	// Check the actual request protocol if available
 	if (request && request.headers) {
 		try {
 			const protocol =
 				request.headers.get("x-forwarded-proto") ||
 				(request.nextUrl && request.nextUrl.protocol) ||
-				"https:"; // Default to secure in production
+				"https:";
 			return protocol === "https:";
-		} catch {
-			// If request object is malformed, fall through to defaults
-		}
+		} catch {}
 	}
 
-	// Check window location if available (client-side)
 	if (typeof window !== "undefined" && window.location) {
 		return window.location.protocol === "https:";
 	}
 
-	// Default to secure in production, insecure in development
 	return process.env.NODE_ENV === "production";
 }
 
-/**
- * Next.js specific cookie options
- */
 export interface CookieOptions {
 	request?: NextRequest;
 	response?: NextResponse;
@@ -47,17 +35,12 @@ export interface CookieOptions {
 	maxAge?: number;
 }
 
-/**
- * Cookie storage implementation for Next.js
- * Wraps the shared CookieStorage with Next.js specific adapters
- */
 export class CookieStorage {
 	private storage: SharedCookieStorage;
 
 	constructor(private options: CookieOptions = {}) {
 		const isSecure = options.secure ?? shouldUseSecureCookies(options.request);
 
-		// Create shared storage with Next.js specific cookie handlers
 		this.storage = new SharedCookieStorage({
 			httpOnly: options.httpOnly ?? true,
 			secure: isSecure,

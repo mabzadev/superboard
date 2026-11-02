@@ -1,16 +1,3 @@
-/**
- * Public comment reaction endpoints (Tier 1 of the best-in-class comments RFC).
- *
- * GET  /_emdash/api/comments/:collection/:contentId/reactions
- *   - Aggregate reaction counts for the content's approved comments, plus the
- *     current visitor's active reactions.
- * POST /_emdash/api/comments/:collection/:contentId/reactions
- *   - Toggle a reaction on a comment. Public, honeypot- and rate-limit-gated.
- *
- * Inherits the `/_emdash/api/comments/` public prefix (no auth); the POST still
- * requires the `X-EmDash-Request: 1` CSRF header like the comment POST.
- */
-
 import type { APIRoute } from "astro";
 
 import { apiError, apiSuccess, handleError, requireDb, unwrapResult } from "#api/error.js";
@@ -35,12 +22,6 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
 	if (dbErr) return dbErr;
 
 	try {
-		// Salted voter hash from request IP (same primitive as comment ip_hash).
-		// Behind Cloudflare (CF-Connecting-IP) or a configured trusted proxy this
-		// is per-visitor. Without a trusted IP it collapses to a shared "unknown"
-		// bucket, so reaction dedup degrades for those visitors — a real
-		// per-visitor token is Tier 2 (visitor identity). Operators should set
-		// trustedProxyHeaders; see the comment ingest route for the same note.
 		const meta = extractRequestMeta(request, emdash.config);
 		let voterHash = "unknown";
 		if (meta.ip) {
@@ -70,7 +51,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		const body = await parseBody(request, createReactionBody);
 		if (isParseError(body)) return body;
 
-		// Anti-spam: honeypot — hidden field filled only by bots. Silently accept.
 		if (body.website_url) {
 			return apiSuccess({ reacted: false, counts: {} });
 		}

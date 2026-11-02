@@ -4,10 +4,6 @@ import { describe, it, expect } from "vitest";
 import { PreviewDODialect } from "../../../../../packages/cloudflare/src/db/do-dialect.js";
 import type { PreviewDBStub } from "../../../../../packages/cloudflare/src/db/do-dialect.js";
 
-/**
- * Recreates the playground's dummy dialect logic inline to avoid
- * importing playground.ts which re-exports do-class.ts (cloudflare:workers).
- */
 function createTestDialect() {
 	const notInitialized: PreviewDBStub = {
 		async query(): Promise<{ rows: Record<string, unknown>[] }> {

@@ -1,12 +1,3 @@
-/**
- * Plugin Cron System
- *
- * Provides scheduled task execution for plugins:
- * - CronExecutor: claims overdue tasks, invokes per-plugin cron hook, updates next run.
- * - CronAccessImpl: per-plugin API for schedule/cancel/list.
- *
- */
-
 import { Cron } from "croner";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
@@ -16,38 +7,13 @@ import type { Database } from "../database/types.js";
 import { isMissingTableError } from "../utils/db-errors.js";
 import type { CronAccess, CronEvent, CronTaskInfo } from "./types.js";
 
-/** Stale lock threshold in minutes */
 const STALE_LOCK_MINUTES = 10;
 
-/**
- * Callback to invoke a plugin's cron hook.
- * Provided by PluginManager so CronExecutor stays decoupled from the hook pipeline.
- */
 export type InvokeCronHookFn = (pluginId: string, event: CronEvent) => Promise<void>;
 
-/**
- * Callback to notify the scheduler that the next due time may have changed.
- */
 export type RescheduleFn = () => void;
 
-// ─── CronExecutor ──────────────────────────────────────────────────────────
-
-/**
- * Executes overdue cron tasks.
- *
- * Called by the platform driver: the NodeCronScheduler timer on Node, or the
- * Worker's `scheduled()` handler (via runScheduledTasks) on Cloudflare.
- * Stateless — all state lives in the database.
- */
 export class CronExecutor {
-	/**
-	 * Resolves the database connection to use for this tick. A resolver (not a
-	 * captured instance) so connection-backed adapters work across events: on
-	 * Cloudflare the `scheduled()` handler installs an event-scoped connection
-	 * in ALS, and this resolves to it instead of the per-isolate singleton
-	 * whose socket belongs to an earlier request. Accepts a plain `Kysely` too
-	 * (wrapped in a constant resolver) for callers/tests that don't need ALS.
-	 */
 	private readonly resolveDb: () => Kysely<Database>;
 
 	constructor(
@@ -61,19 +27,10 @@ export class CronExecutor {
 		return this.resolveDb();
 	}
 
-	/**
-	 * Process all overdue tasks.
-	 *
-	 * 1. Atomically claim tasks whose next_run_at <= now, status = idle, enabled = 1.
-	 * 2. For each claimed task, invoke the plugin's cron hook.
-	 * 3. On success: compute next_run_at and reset to idle, or delete one-shots.
-	 * 4. On failure: reset to idle (retry on next tick).
-	 */
 	async tick(): Promise<number> {
 		const now = new Date().toISOString();
 		let processed = 0;
 
-		// Claim overdue tasks atomically
 		const claimed = await sql<{
 			id: string;
 			plugin_id: string;
@@ -97,7 +54,6 @@ export class CronExecutor {
 		`.execute(this.db);
 
 		for (const task of claimed.rows) {
-			// Parse task data safely ��� malformed JSON must not crash the entire batch
 			let parsedData: Record<string, unknown> | undefined;
 			if (task.data) {
 				try {
@@ -131,8 +87,6 @@ export class CronExecutor {
 
 			if (task.is_oneshot) {
 				if (hookFailed) {
-					// Retry metadata is namespaced under __emdash to avoid collisions
-					// with plugin-controlled data fields.
 					const meta =
 						parsedData?.__emdash != null && typeof parsedData.__emdash === "object"
 							? (parsedData.__emdash as Record<string, unknown>)
@@ -150,7 +104,6 @@ export class CronExecutor {
 						DELETE FROM _emdash_cron_tasks WHERE id = ${task.id}
 					`.execute(this.db);
 					} else {
-						// Retry with exponential backoff: 1m, 2m, 4m, 8m, 16m
 						const backoffMs = 60_000 * Math.pow(2, retryCount);
 						const retryAt = new Date(Date.now() + backoffMs).toISOString();
 						const updatedData = JSON.stringify({
@@ -164,13 +117,11 @@ export class CronExecutor {
 					`.execute(this.db);
 					}
 				} else {
-					// Success: delete the one-shot task
 					await sql`
 						DELETE FROM _emdash_cron_tasks WHERE id = ${task.id}
 					`.execute(this.db);
 				}
 			} else {
-				// Recurring: compute next run and reset
 				const nextRun = nextCronTime(task.schedule);
 				await sql`
 					UPDATE _emdash_cron_tasks
@@ -188,10 +139,6 @@ export class CronExecutor {
 		return processed;
 	}
 
-	/**
-	 * Recover tasks stuck in 'running' for more than STALE_LOCK_MINUTES.
-	 * These likely crashed mid-execution.
-	 */
 	async recoverStaleLocks(): Promise<number> {
 		const cutoff = new Date(Date.now() - STALE_LOCK_MINUTES * 60 * 1000).toISOString();
 
@@ -205,10 +152,6 @@ export class CronExecutor {
 		return Number(result.numAffectedRows ?? 0);
 	}
 
-	/**
-	 * Get the next due time across all enabled tasks.
-	 * Returns null if no tasks are scheduled.
-	 */
 	async getNextDueTime(): Promise<string | null> {
 		const result = await sql<{ next: string | null }>`
 			SELECT MIN(next_run_at) as next
@@ -220,12 +163,6 @@ export class CronExecutor {
 	}
 }
 
-// ─── CronAccessImpl ────────────────────────────────────────────────────────
-
-/**
- * Per-plugin cron API implementation.
- * Scoped to a single plugin ID — plugins cannot see or modify other plugins' tasks.
- */
 export class CronAccessImpl implements CronAccess {
 	constructor(
 		private db: Kysely<Database>,
@@ -245,8 +182,6 @@ export class CronAccessImpl implements CronAccess {
 		const dataJson = opts.data ? JSON.stringify(opts.data) : null;
 		const id = ulid();
 
-		// Upsert: if task already exists for this plugin+name, update it.
-		// Guard: don't clobber a task that is currently executing.
 		await sql`
 			INSERT INTO _emdash_cron_tasks (id, plugin_id, task_name, schedule, is_oneshot, data, next_run_at, status, enabled)
 			VALUES (${id}, ${this.pluginId}, ${name}, ${opts.schedule}, ${oneshot ? 1 : 0}, ${dataJson}, ${nextRun}, 'idle', 1)
@@ -294,13 +229,6 @@ export class CronAccessImpl implements CronAccess {
 	}
 }
 
-// ─── Cron task lifecycle helpers ────────────────────────────────────────────
-
-/**
- * Enable or disable all cron tasks for a plugin.
- * Called by admin disable/enable endpoints and PluginManager lifecycle.
- * Gracefully handles the cron table not existing yet (pre-migration).
- */
 export async function setCronTasksEnabled(
 	db: Kysely<Database>,
 	pluginId: string,
@@ -317,13 +245,6 @@ export async function setCronTasksEnabled(
 	}
 }
 
-// ─── Cron utilities ────────────────────────────────────────────────────────
-
-/**
- * Compute the next fire time for a cron expression.
- * Supports standard cron (5-field), extended (6-field with seconds), and
- * aliases like @daily, @weekly, @hourly, @monthly, @yearly.
- */
 export function nextCronTime(expression: string): string {
 	const job = new Cron(expression);
 	const next = job.nextRun();
@@ -333,12 +254,8 @@ export function nextCronTime(expression: string): string {
 	return next.toISOString();
 }
 
-/**
- * Check whether a string is a valid cron expression.
- */
 function isCronExpression(schedule: string): boolean {
 	try {
-		// Cron constructor validates; we discard the instance immediately.
 		const _cron = new Cron(schedule);
 		void _cron;
 		return true;
@@ -347,29 +264,15 @@ function isCronExpression(schedule: string): boolean {
 	}
 }
 
-/**
- * Check if a schedule string is a one-shot (ISO 8601 datetime) rather than
- * a recurring cron expression.
- *
- * Tries to parse as a cron expression first. Only if that fails does it
- * attempt Date.parse. This avoids misclassifying cron range expressions
- * like "1-5 * * * *" which Date.parse accepts as valid dates.
- */
 export function isOneShot(schedule: string): boolean {
 	if (schedule.startsWith("@")) return false;
 	if (isCronExpression(schedule)) return false;
 	return !isNaN(Date.parse(schedule));
 }
 
-/** Max length for a task name */
 const MAX_TASK_NAME_LENGTH = 128;
-/** Task name pattern: alphanumeric, dashes, underscores */
 const TASK_NAME_RE = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
 
-/**
- * Validate a cron task name.
- * Must be non-empty, ≤128 chars, alphanumeric with dashes/underscores.
- */
 export function validateTaskName(name: string): void {
 	if (!name || name.length > MAX_TASK_NAME_LENGTH) {
 		throw new Error(
@@ -383,16 +286,11 @@ export function validateTaskName(name: string): void {
 	}
 }
 
-/**
- * Validate a schedule string at registration time.
- * Must be a valid cron expression or a parseable ISO 8601 datetime.
- */
 export function validateSchedule(schedule: string): void {
 	if (!schedule || schedule.length > 256) {
 		throw new Error(`Invalid schedule: must be 1-256 characters, got ${schedule.length}`);
 	}
 
-	// Try cron first
 	if (isCronExpression(schedule)) return;
 
 	const parsed = Date.parse(schedule);

@@ -193,7 +193,6 @@ async function lintSyntax(paths) {
 		"pnpm-lock.yaml",
 	])
 		configurationHash.update(readFileSync(resolve(root, path)));
-	// Loaded lazily so analyzers that only reuse the baseline helpers do not pay for ESLint.
 	const { ESLint } = await import("eslint");
 	const eslint = new ESLint({
 		allowInlineConfig: false,

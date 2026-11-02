@@ -19,14 +19,12 @@ if (!post) {
 if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
 const { siteTitle } = resolveStarterSiteIdentity(await getSiteSettings());
 
-// SEO meta from content fields
 const seo = getSeoMeta(post, {
 	siteTitle,
 	siteUrl: Astro.url.origin,
 	path: `/posts/${slug}`,
 });
 
-// Taxonomy terms are already hydrated onto the entry by getEmDashEntry.
 const tags = post.data.terms?.tag ?? [];
 const categories = post.data.terms?.category ?? [];
 ---

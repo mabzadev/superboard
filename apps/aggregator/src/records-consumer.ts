@@ -1,34 +1,3 @@
-/**
- * Records queue consumer. Replaces the no-op `queue()` handler in `index.ts`.
- *
- * For each `RecordsJob` from the Records Queue:
- *
- *   1. `delete` operations short-circuit to a tombstone / hard-delete write.
- *   2. `create` / `update` go through the verification pipeline:
- *      a. Resolve publisher's PDS endpoint + signing key (cached in
- *         `known_publishers`).
- *      b. Fetch + verify the record via `com.atproto.sync.getRecord`
- *         (`@atcute/repo` does MST + signature in one call).
- *      c. Cross-check the verified record against the Jetstream-supplied copy
- *         (verified always wins; mismatch is logged as a Jetstream-correctness
- *         signal).
- *      d. Lexicon-validate against the generated runtime schema for the
- *         specific collection.
- *      e. Per-collection structural checks (rkey-vs-version for releases,
- *         rkey=='self' for publisher.profile, contact validation, etc.).
- *      f. Write to D1.
- *
- * Error policy:
- *   - Verification failure (signature, MST, lexicon, structural): write a
- *     `dead_letters` row with the structured reason + payload, ack the message.
- *     Never retry — these are malicious or broken upstream.
- *   - Transient PDS failure (network, timeout, 5xx): `retry()` so Cloudflare
- *     Queues backs off and retries. After `max_retries` (5) it lands in the
- *     configured DLQ.
- *   - Unexpected programming errors: log loud, write a `dead_letters` row,
- *     ack the message. Never crash the worker — that would block the queue.
- */
-
 import {
 	AtprotoWebDidDocumentResolver,
 	CompositeDidDocumentResolver,
@@ -55,22 +24,11 @@ import {
 } from "./pds-verify.js";
 import { boundFetch, isPlainObject, parseSignatureMetadataCid } from "./utils.js";
 
-/**
- * Deps the consumer needs at runtime. Constructed once per `processBatch` call
- * (per workerd invocation). Tests inject their own.
- */
 export interface ConsumerDeps {
 	db: D1Database;
 	resolver: DidResolver;
 	fetch?: typeof fetch;
 	now?: () => Date;
-	/**
-	 * Optional override for the PDS-verification step. Used by tests to inject
-	 * synthetic `VerifiedPdsRecord` payloads without standing up a real CAR
-	 * fixture (the FakePublisher/MockPds toolkit can't run inside the workers
-	 * test pool — see `@atproto/repo` lex-data incompatibility). Defaults to
-	 * `fetchAndVerifyRecord`.
-	 */
 	verify?: (opts: {
 		pds: string;
 		did: string;
@@ -81,28 +39,20 @@ export interface ConsumerDeps {
 	}) => Promise<VerifiedPdsRecord>;
 }
 
-/** Subset of `cloudflare:workers` `Message` we use; defining inline so tests
- * don't need to import workerd types. */
 export interface MessageController {
 	ack(): void;
 	retry(): void;
 }
 
-/** Subset of a `MessageBatch`. Workers' real batch object satisfies this. */
 export interface MessageBatchLike<T> {
 	readonly messages: ReadonlyArray<MessageController & { body: T }>;
 }
 
-/** Reason codes written to `dead_letters.reason`. PDS-verification reasons
- * pass through verbatim from `PdsVerificationError`; the rest are structural
- * checks the consumer enforces locally. */
 export type DeadLetterReason =
-	// from pds-verify (only the permanent ones — transient ones retry)
 	| "RECORD_NOT_FOUND"
 	| "RESPONSE_TOO_LARGE"
 	| "INVALID_PROOF"
 	| "PDS_HTTP_ERROR"
-	// structural checks (consumer-enforced)
 	| "LEXICON_VALIDATION_FAILED"
 	| "RKEY_MISMATCH"
 	| "CONTACT_VALIDATION_FAILED"
@@ -110,20 +60,10 @@ export type DeadLetterReason =
 	| "UNKNOWN_COLLECTION"
 	| "UNEXPECTED_ERROR";
 
-/**
- * Thrown by writers when the input is well-formed but the dependency it
- * needs isn't yet present (e.g. a release whose parent profile hasn't been
- * ingested). Distinct from `IngestError` because the right action is
- * `controller.retry()` — the next attempt may succeed once the parent
- * arrives. After Cloudflare Queues exhausts `max_retries` (5) the message
- * lands in the configured DLQ and the reconciliation pass picks it up.
- */
 export class MissingDependencyError extends Error {
 	override readonly name = "MissingDependencyError";
 }
 
-/** Thrown by writers and structural checks. Carries the reason for the
- * `dead_letters` row plus an optional human-readable detail. */
 export class IngestError extends Error {
 	override readonly name = "IngestError";
 	constructor(
@@ -141,12 +81,6 @@ export async function processBatch(
 	depsOverride?: ConsumerDeps,
 ): Promise<void> {
 	const deps = depsOverride ?? createProductionDeps(env);
-	// Process jobs independently — a single failed verification must not fail
-	// the whole batch and trigger redeliveries for already-acked messages.
-	// Wrap each call: a `writeDeadLetter` throw inside `processMessage`
-	// (e.g. transient D1 hiccup mid-batch) would otherwise escape and halt
-	// the for-loop, leaving subsequent messages without ack/retry. Same
-	// shape as `drainDeadLetterBatch`.
 	for (const message of batch.messages) {
 		try {
 			await processMessage(message.body, message, deps);
@@ -162,16 +96,6 @@ export async function processBatch(
 	}
 }
 
-/**
- * Drain the records DLQ. Today's policy is "log + ack" — we record the
- * dead-lettered job to Workers logs (and `dead_letters` in D1, for
- * structured queryability) so operators can observe drift, and ack the
- * message so the DLQ doesn't grow unbounded. The reconciliation pass
- * (Slice 1, not yet built) will replace this with retry-from-listRecords;
- * until then this prevents legitimate-but-out-of-order messages
- * (MissingDependencyError exhausting retries) from being permanently
- * dropped without trace.
- */
 export async function drainDeadLetterBatch(
 	batch: MessageBatchLike<RecordsJob>,
 	env: Env,
@@ -189,10 +113,6 @@ export async function drainDeadLetterBatch(
 			await writeDeadLetter(env.DB, job, "UNEXPECTED_ERROR", "drained from DLQ", now);
 			message.ack();
 		} catch (err) {
-			// Don't ack on D1 failure — workerd will redeliver per the DLQ
-			// consumer's max_retries, and after exhaustion the message is
-			// dropped (no DLQ-of-DLQ). Better to retry than silently lose
-			// forensics on a transient hiccup.
 			console.error("[aggregator] DLQ drain: failed to write forensics row, retrying", {
 				did: job.did,
 				rkey: job.rkey,
@@ -216,13 +136,10 @@ export async function processMessage(
 			controller.ack();
 		} catch (err) {
 			if (err instanceof IngestError) {
-				// Structural: unknown collection. Don't retry — the schema
-				// problem won't fix itself across attempts. Forensics + ack.
 				await writeDeadLetter(deps.db, job, err.reason, err.detail ?? err.message, now());
 				controller.ack();
 				return;
 			}
-			// Transient (D1 unavailable, etc.) — retry.
 			console.error("[aggregator] delete failed", {
 				did: job.did,
 				collection: job.collection,
@@ -244,11 +161,6 @@ export async function processMessage(
 				controller.retry();
 				return;
 			}
-			// Compute the mapped reason in its own try/catch — `mapPdsReason`
-			// throws on the supposedly-unreachable PDS_NETWORK_ERROR case;
-			// without this guard, the throw escapes the catch we're inside
-			// (function-arg evaluation runs before writeDeadLetter) and the
-			// whole batch crashes. Fall back to UNEXPECTED_ERROR loudly.
 			let mapped: DeadLetterReason;
 			try {
 				mapped = mapPdsReason(err.reason);
@@ -269,9 +181,6 @@ export async function processMessage(
 			return;
 		}
 		if (err instanceof MissingDependencyError) {
-			// Out-of-order Jetstream delivery (release before its profile is a
-			// common case). Retry; after max_retries the message lands in the
-			// DLQ for the reconciliation pass to recover.
 			console.warn("[aggregator] missing dependency, retrying", {
 				did: job.did,
 				collection: job.collection,
@@ -281,9 +190,6 @@ export async function processMessage(
 			controller.retry();
 			return;
 		}
-		// Unexpected — log loud, dead-letter, ack so the queue isn't blocked.
-		// We don't retry because we have no evidence the next attempt will
-		// succeed and unbounded retries on a poison message stall the slot.
 		console.error("[aggregator] unexpected consumer error", {
 			did: job.did,
 			collection: job.collection,
@@ -313,13 +219,6 @@ async function verifyAndIngest(job: RecordsJob, deps: ConsumerDeps): Promise<voi
 		fetch: deps.fetch,
 	});
 
-	// Cross-check vs Jetstream copy intentionally omitted: the verified PDS
-	// copy is canonical and always wins, so the comparison is a monitoring
-	// signal only. JSON.stringify isn't a canonical comparator — key order
-	// and undefined-vs-missing differences fire false positives constantly.
-	// Add a CBOR-canonical comparator when Jetstream-correctness monitoring
-	// becomes load-bearing; for now the verified copy is what gets written.
-
 	const now = (deps.now ?? (() => new Date()))();
 
 	switch (job.collection) {
@@ -340,8 +239,6 @@ async function verifyAndIngest(job: RecordsJob, deps: ConsumerDeps): Promise<voi
 	}
 }
 
-// ─── Writers ────────────────────────────────────────────────────────────────
-
 export async function ingestPackageProfile(
 	db: D1Database,
 	job: RecordsJob,
@@ -357,12 +254,6 @@ export async function ingestPackageProfile(
 		);
 	}
 	const record = validation.value;
-	// Lexicon requires `id` to be the canonical AT URI of the record itself;
-	// aggregators MUST reject records where it disagrees with the URI we
-	// fetched from. verifyRecord binds the body to (did, collection, rkey)
-	// via the MST proof, but the publisher could put a bogus `id` value in
-	// the body and it would still verify — that's exactly what this check
-	// catches.
 	const expectedId = `at://${job.did}/${NSID.packageProfile}/${job.rkey}`;
 	if (record.id !== expectedId) {
 		throw new IngestError(
@@ -370,18 +261,12 @@ export async function ingestPackageProfile(
 			`package.profile record.id '${record.id}' does not match AT URI '${expectedId}'`,
 		);
 	}
-	// Slug is optional — when absent, clients use the rkey as the display
-	// slug. When present, lexicon requires it to equal the rkey.
 	if (record.slug !== undefined && record.slug !== job.rkey) {
 		throw new IngestError(
 			"RKEY_MISMATCH",
 			`package.profile rkey '${job.rkey}' does not match record.slug '${record.slug}'`,
 		);
 	}
-	// Lexicon-can't-express constraint (`profile.json` line 113): each
-	// security[] entry MUST carry at least one of url/email; aggregators
-	// MUST reject otherwise. authors[] only SHOULDs the same so we don't
-	// enforce there.
 	for (const c of record.security) {
 		if (!c.url && !c.email) {
 			throw new IngestError(
@@ -442,10 +327,6 @@ export async function ingestPackageProfile(
 			   record_blob = excluded.record_blob,
 			   signature_metadata = excluded.signature_metadata,
 			   verified_at = excluded.verified_at`,
-			// indexed_at intentionally NOT in DO UPDATE SET — we want the
-			// first-observed timestamp preserved across re-ingest. SQLite's
-			// upsert leaves untouched columns alone, so omitting from SET
-			// keeps the original value.
 		)
 		.bind(
 			job.did,
@@ -459,12 +340,12 @@ export async function ingestPackageProfile(
 			record.keywords ? JSON.stringify(record.keywords) : null,
 			record.sections ? JSON.stringify(record.sections) : null,
 			record.lastUpdated ?? null,
-			null, // latest_version — populated by release writer, not the profile writer
-			null, // capabilities — populated by release writer
+			null,
+			null,
 			verified.carBytes,
 			sigMeta,
 			nowIso,
-			nowIso, // indexed_at on first insert; preserved on conflict (see SQL comment)
+			nowIso,
 		);
 	const moveCurrentPointer = db
 		.prepare(
@@ -478,9 +359,6 @@ export async function ingestPackageProfile(
 		)
 		.bind(job.did, slug, verified.cid, nowIso);
 
-	// The revision must exist before the current pointer moves. D1 batches are
-	// transactional, so a failure leaves both the old pointer and old mutable
-	// compatibility row intact.
 	await db.batch([retainRevision, updateCurrentPackage, moveCurrentPointer]);
 }
 
@@ -499,12 +377,6 @@ export async function ingestPackageRelease(
 		);
 	}
 	const record = validation.value;
-	// Lexicon describes the slug format ("ASCII letter followed by ASCII
-	// letters, digits, '-', or '_'") but doesn't pin a regex. `record.package`
-	// must obey the same shape since it's the slug of the parent profile;
-	// without this check, `package: "foo:bar"` builds an ambiguous rkey
-	// `foo:bar:1.0.0` indistinguishable from `package: "foo"` + `version:
-	// "bar:1.0.0"`. Two rows for what looks like the same release.
 	if (!PACKAGE_SLUG_RE.test(record.package)) {
 		throw new IngestError(
 			"RKEY_MISMATCH",
@@ -527,11 +399,6 @@ export async function ingestPackageRelease(
 		);
 	}
 
-	// Lexicon mandates releases of type emdash-plugin include a
-	// releaseExtension entry under the keyed open-union `extensions` map.
-	// `extensions` is typed as `unknown` in the generated schema so we
-	// validate the inner shape ourselves; without this, malformed extension
-	// payloads land in `releases.emdash_extension` and break the read API.
 	if (!isPlainObject(record.extensions)) {
 		throw new IngestError(
 			"LEXICON_VALIDATION_FAILED",
@@ -554,12 +421,6 @@ export async function ingestPackageRelease(
 		);
 	}
 
-	// Parent-profile presence check. The schema's FK would catch this at
-	// INSERT time, but a raw FK violation surfaces as an opaque error that
-	// gets dead-lettered as UNEXPECTED_ERROR with no recovery path. Doing
-	// the lookup explicitly lets us throw MissingDependencyError → retry,
-	// so out-of-order Jetstream delivery (release before profile) recovers
-	// once the profile arrives.
 	const parent = await db
 		.prepare(
 			`SELECT 1
@@ -594,56 +455,25 @@ export async function ingestPackageRelease(
 			JSON.stringify(record.artifacts),
 			record.requires ? JSON.stringify(record.requires) : null,
 			record.suggests ? JSON.stringify(record.suggests) : null,
-			// Store only the validated releaseExtension contents, not the
-			// arbitrary `record.extensions` map. Schema comment for
-			// `emdash_extension` matches this shape.
 			JSON.stringify(extValidation.value),
 			record.repo ?? null,
-			// cts column intentionally mirrors verified_at: the release lexicon
-			// has no creation-timestamp field today and the atproto MST commit
-			// rev isn't surfaced by verifyRecord. Tracked: revisit if the
-			// lexicon adds a createdAt or @atcute/repo exposes commit metadata.
 			nowIso,
 			verified.carBytes,
 			sigMeta,
 			nowIso,
-			// Releases use ON CONFLICT DO NOTHING (versions are immutable per
-			// FAIR PR #77), so indexed_at is only ever set on first insert —
-			// no preservation logic needed.
 			nowIso,
 		);
 
-	// Atomic with the refresh: D1 wraps a batch in a single transaction. If
-	// the insert succeeds but the refresh fails (transient D1 hiccup), both
-	// roll back together and the message retries to a clean state. Without
-	// the batch, an insert-success / refresh-failure could leave
-	// `packages.latest_version` permanently stale.
 	const batchResults = await db.batch([
 		insertStmt,
 		refreshPackageLatestStmt(db, job.did, record.package),
 	]);
 	const insertResult = batchResults[0];
 	if (!insertResult) {
-		// Defensive: D1.batch() guarantees one result per statement; if it
-		// ever returns fewer, surface loudly rather than silently no-oping.
 		throw new Error("D1 batch returned no result for INSERT statement");
 	}
 
 	if (insertResult.meta.changes === 0) {
-		// Conflict path. Three sub-cases:
-		//   1. Same content, not tombstoned → legitimate idempotent replay,
-		//      silent no-op (the refresh in the batch above is a no-op too).
-		//   2. Same content, tombstoned → publisher re-published a previously
-		//      deleted release; clear the tombstone + refresh so it reappears
-		//      in read results.
-		//   3. Different content → immutability violation; audit it.
-		//
-		// Comparison is on the verified record CID (content-addressed), NOT
-		// on raw CAR bytes. CARs include the publisher's commit + MST proof,
-		// which change whenever the publisher writes ANY other record in
-		// the same repo — so a benign re-fetch of an unchanged record
-		// produces different bytes. CIDs only change when the record itself
-		// changes.
 		const existing = await db
 			.prepare(
 				`SELECT signature_metadata, tombstoned_at
@@ -665,14 +495,6 @@ export async function ingestPackageRelease(
 					refreshPackageLatestStmt(db, job.did, record.package),
 				]);
 			} else if (!sameContent) {
-				// On true-duplicate (same hostile content pumped repeatedly,
-				// distinguished by CID), DO UPDATE so the audit row tracks
-				// the latest attempt rather than freezing at the first one.
-				// Operators querying "is this attack ongoing?" read
-				// `rejected_at` for freshness. The bytes are kept in
-				// `attempted_record_blob` for forensics — operators can see
-				// what was actually attempted even if the publisher has
-				// since deleted the offending record from their PDS.
 				await db
 					.prepare(
 						`INSERT INTO release_duplicate_attempts
@@ -696,43 +518,8 @@ export async function ingestPackageRelease(
 			}
 		}
 	}
-
-	// TODO(slice 3): enqueue artifact-mirror task for this release. Until then,
-	// `mirrored_artifacts` stays empty for new releases.
 }
 
-/**
- * Recompute `packages.latest_version` and `capabilities` from the current
- * max-version-sort, non-tombstoned release.
- *
- * Single UPDATE with correlated subqueries — race-safe under concurrent
- * release ingest because the read and write happen in one statement, which
- * D1/SQLite serialises against other writers. A naïve SELECT-then-UPDATE
- * pair could see two workers each read max=v1, then race to write — final
- * value depends on commit order rather than actual current state.
- *
- * Capabilities are the keys of the latest release's `declaredAccess` map,
- * extracted via SQLite's json1 functions. When no release exists or
- * `declaredAccess` is missing/non-object, json_each over NULL yields an
- * empty set and `json_group_array()` returns `'[]'`. App code treats `'[]'`
- * and NULL equivalently for capability filtering.
- */
-// The WHERE clause guard prevents the UPDATE from touching `packages` when
-// the computed values match what's already stored. Without it, every
-// idempotent refresh (the common case for Jetstream redelivery of an
-// already-ingested release) fires `packages_au` AFTER UPDATE which DELETEs
-// and re-INSERTs into `packages_fts` even though name/description/keywords
-// /authors/sections didn't change. SQL-level no-op short-circuit avoids the
-// trigger fire entirely. Subqueries duplicate by design — SQLite can share
-// them via expression CSE; even un-shared the cost is two extra index seeks
-// on a path that already does the same lookups.
-//
-// The capabilities subquery wraps `json_each` in `(SELECT key ORDER BY key)`
-// so the resulting JSON array is order-stable. Without the ORDER BY,
-// `json_each` enumerates in unspecified order — `{content, network}` could
-// serialise as `["content","network"]` one run and `["network","content"]`
-// the next, defeating the IS NOT short-circuit and re-firing the trigger
-// on every idempotent refresh.
 const REFRESH_PACKAGE_LATEST_SQL = `
 	UPDATE packages SET
 		latest_version = (
@@ -827,8 +614,6 @@ export async function ingestPublisherProfile(
 			`publisher.profile rkey must be 'self', got '${job.rkey}'`,
 		);
 	}
-	// Lexicon can't express "at least one of url|email" on contact entries.
-	// Enforce at the consumer.
 	for (const c of record.contact ?? []) {
 		if (!c.url && !c.email) {
 			throw new IngestError(
@@ -854,8 +639,6 @@ export async function ingestPublisherProfile(
 			   record_blob = excluded.record_blob,
 			   signature_metadata = excluded.signature_metadata,
 			   verified_at = excluded.verified_at`,
-			// indexed_at omitted from DO UPDATE SET — first-observed
-			// timestamp preserved across re-ingest. Same pattern as packages.
 		)
 		.bind(
 			job.did,
@@ -905,8 +688,6 @@ export async function ingestPublisherVerification(
 			   signature_metadata = excluded.signature_metadata,
 			   verified_at = excluded.verified_at,
 			   tombstoned_at = NULL`,
-			// indexed_at omitted from DO UPDATE SET — same first-observed
-			// preservation as packages/publishers.
 		)
 		.bind(
 			job.did,
@@ -924,13 +705,9 @@ export async function ingestPublisherVerification(
 		.run();
 }
 
-// ─── Delete handling ────────────────────────────────────────────────────────
-
 export async function applyDelete(db: D1Database, job: RecordsJob, now: Date): Promise<void> {
 	switch (job.collection) {
 		case NSID.packageProfile:
-			// Keep verified revision and release history, but make the source
-			// deletion authoritative over every projection immediately.
 			await db.batch([
 				db
 					.prepare(
@@ -958,27 +735,13 @@ export async function applyDelete(db: D1Database, job: RecordsJob, now: Date): P
 			]);
 			return;
 		case NSID.packageRelease: {
-			// Releases are version-immutable but a publisher CAN delete them
-			// (yanking from the source). Soft-delete: read APIs filter on
-			// `tombstoned_at IS NULL` so they disappear from listings.
-			// Parse rkey back to (package, version) so we hit the PK index
-			// instead of the partial idx_releases_latest, which has to scan
-			// for did=? then filter by rkey.
 			const parsed = parseReleaseRkey(job.rkey);
 			if (!parsed) {
-				// Surface the malformed delete so an operator investigating
-				// "why didn't this delete take effect?" has an audit trail.
-				// IngestError → dispatcher writes a dead_letters row + acks.
 				throw new IngestError(
 					"RKEY_MISMATCH",
 					`package.release delete with malformed rkey: '${job.rkey}'`,
 				);
 			}
-			// Batch tombstone + refresh: D1 wraps in a single transaction so
-			// the visible-release set and the denormalised latest_version
-			// commit together. Refresh runs even on idempotent re-deletes
-			// (changes=0) — refresh is itself idempotent and the cost is one
-			// extra UPDATE that touches no row when state is already correct.
 			await db.batch([
 				db
 					.prepare(
@@ -1010,12 +773,9 @@ export async function applyDelete(db: D1Database, job: RecordsJob, now: Date): P
 			return;
 		}
 		case NSID.publisherProfile:
-			// Hard-delete; one-per-DID, no audit value in retaining it.
 			await db.prepare(`DELETE FROM publishers WHERE did = ?`).bind(job.did).run();
 			return;
 		case NSID.publisherVerification:
-			// Soft-delete to preserve the audit trail. `(issuer_did, rkey)`
-			// is the AT-URI primary key.
 			await db
 				.prepare(
 					`UPDATE publisher_verifications SET tombstoned_at = ?
@@ -1025,12 +785,6 @@ export async function applyDelete(db: D1Database, job: RecordsJob, now: Date): P
 				.run();
 			return;
 		default:
-			// Reach here only if a future collection is added to
-			// WANTED_COLLECTIONS without an applyDelete arm. Throw so the
-			// dispatcher writes a dead_letters row instead of silently
-			// dropping the delete — silent drops let the table drift out of
-			// sync with the publisher's repo until someone notices the
-			// inconsistency.
 			throw new IngestError(
 				"UNKNOWN_COLLECTION",
 				`delete for unhandled collection: ${job.collection}`,
@@ -1039,8 +793,6 @@ export async function applyDelete(db: D1Database, job: RecordsJob, now: Date): P
 	}
 }
 
-// ─── Forensics ─────────────────────────────────────────────────────────────
-
 async function writeDeadLetter(
 	db: D1Database,
 	job: RecordsJob,
@@ -1048,9 +800,6 @@ async function writeDeadLetter(
 	detail: string | null,
 	now: Date,
 ): Promise<void> {
-	// `payload` holds whatever Jetstream gave us, encoded as JSON. If the job
-	// didn't carry a jetstreamRecord (delete operations don't), store the
-	// envelope of operation+cid so the row is still inspectable.
 	const payload = JSON.stringify(job.jetstreamRecord ?? { operation: job.operation, cid: job.cid });
 	const payloadBytes = new TextEncoder().encode(payload);
 	await db
@@ -1062,8 +811,6 @@ async function writeDeadLetter(
 		.bind(job.did, job.collection, job.rkey, reason, detail, payloadBytes, now.toISOString())
 		.run();
 }
-
-// ─── Production wiring ─────────────────────────────────────────────────────
 
 function createProductionDeps(env: Env): ConsumerDeps {
 	const composite = new CompositeDidDocumentResolver({
@@ -1078,24 +825,10 @@ function createProductionDeps(env: Env): ConsumerDeps {
 			cache: createD1DidDocCache(env.DB),
 			resolver: composite,
 		}),
-		// PDS verify uses this fetch for the CAR fetch. workerd's `fetch`
-		// rejects calls made through a stored reference, so we hand off
-		// the bound wrapper rather than letting `pds-verify.ts` fall
-		// back to bare global `fetch`.
 		fetch: boundFetch,
 	};
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
-/**
- * Translate a permanent `PdsVerificationError.reason` to its `DeadLetterReason`
- * counterpart. The parameter type is the imported `VerificationFailureReason`
- * union so a new variant added in `pds-verify.ts` becomes a compile-time
- * error here. Transient reasons (PDS_NETWORK_ERROR today) are unreachable
- * because the caller filters them via `isTransient`; we throw rather than
- * silently dead-letter to surface the broken invariant loudly.
- */
 function mapPdsReason(reason: VerificationFailureReason): DeadLetterReason {
 	switch (reason) {
 		case "RECORD_NOT_FOUND":
@@ -1114,33 +847,12 @@ function mapPdsReason(reason: VerificationFailureReason): DeadLetterReason {
 	}
 }
 
-/**
- * Encode a semver version string for use in the release rkey per the lexicon's
- * `<package>:<encoded-version>` rule. Atproto rkeys allow `[A-Za-z0-9._~-]`;
- * semver versions can include `+` for build metadata which must be
- * percent-encoded. Our lexicon disallows `+` so this is conservative.
- */
 const PACKAGE_SLUG_RE = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
 const PLUS_RE = /\+/g;
 function encodeRkeyVersion(version: string): string {
 	return version.replace(PLUS_RE, "%2B");
 }
 
-/**
- * Parse a release rkey of the form `<package>:<encoded-version>` back into
- * its components. Validates BOTH parts against the regexes the consumer uses
- * elsewhere — a malformed rkey like `demo:1.0.0:extra` would otherwise split
- * to `pkg="demo"`, `version="1.0.0:extra"` and silently no-op the delete (no
- * row matches an illegal version), losing the audit trail.
- *
- * Returns null on any malformation. Callers decide what to do — `applyDelete`
- * throws `IngestError("RKEY_MISMATCH", …)` to surface the malformed delete
- * in `dead_letters`.
- *
- * `decodeURIComponent` throws URIError on malformed `%`-escapes (e.g.
- * `1.0.0%XX`). Caught here so the function's contract is "returns null OR a
- * validated pair, never throws".
- */
 function parseReleaseRkey(rkey: string): { pkg: string; version: string } | null {
 	const idx = rkey.indexOf(":");
 	if (idx <= 0 || idx === rkey.length - 1) return null;
@@ -1161,26 +873,6 @@ const SEMVER_RE = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
 const NUMERIC_RE = /^\d+$/;
 const pad = (s: string) => s.padStart(10, "0");
 
-/**
- * Pre-compute a fixed-width sortable string for a semver version.
- *
- * Format: `<10-digit-major>.<10-digit-minor>.<10-digit-patch>.<prerelease-or-FINAL_SENTINEL>`
- *
- * - Numeric components are zero-padded to 10 digits so lexicographic sort
- *   matches numeric order ('1.10.0' > '1.9.0').
- * - The final-release sentinel `~` is one character above the prerelease
- *   alphabet (`[0-9A-Za-z-]`, max char `z` at ASCII 122; `~` at 126), so
- *   any final release sorts after any prerelease at the same
- *   major.minor.patch — including pathological prereleases like
- *   `1.0.0-zzzz` that would beat a `zzz` sentinel by being longer.
- * - Within a prerelease tag, numeric identifiers are zero-padded too. This
- *   matches semver precedence rules approximately; the "numeric < non-numeric"
- *   wrinkle isn't fully captured but the typical patterns ('rc.1', 'beta.2')
- *   sort correctly.
- *
- * Returns null when the input doesn't parse as our supported semver subset
- * (the lexicon disallows build metadata '+...').
- */
 const FINAL_VERSION_SENTINEL = "~";
 function computeVersionSort(version: string): string | null {
 	const m = SEMVER_RE.exec(version);
@@ -1190,8 +882,6 @@ function computeVersionSort(version: string): string | null {
 	const patch = m[3] ?? "0";
 	const pre = m[4];
 	if (major.length > 10 || minor.length > 10 || patch.length > 10) {
-		// 10-digit pad ceiling — versions past this can't be ordered correctly
-		// by simple zero-padding. ~10 billion is well past reasonable.
 		return null;
 	}
 	if (pre) {
@@ -1199,7 +889,7 @@ function computeVersionSort(version: string): string | null {
 		const padded: string[] = [];
 		for (const p of parts) {
 			if (NUMERIC_RE.test(p)) {
-				if (p.length > 10) return null; // same ceiling for prerelease numerics
+				if (p.length > 10) return null;
 				padded.push(pad(p));
 			} else {
 				padded.push(p);

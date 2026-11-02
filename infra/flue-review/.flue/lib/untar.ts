@@ -1,16 +1,9 @@
-// Streaming untar for GitHub source tarballs (post-gunzip). The parser is the
-// trust boundary between an externally-supplied archive and the review
-// workspace: entry paths and symlink targets are validated so no write can
-// land outside the destination directory.
-
-/** The subset of the Workspace surface the untar needs; narrow for testing. */
 export interface UntarTarget {
 	mkdir(path: string, options?: { recursive?: boolean }): Promise<void>;
 	symlink(target: string, linkPath: string): Promise<void>;
 	writeFileBytes(path: string, content: Uint8Array): Promise<void>;
 }
 
-/** Ceiling on a single entry's declared size; content is buffered in DO memory. */
 const MAX_ENTRY_SIZE = 64 * 1024 * 1024;
 
 const OCTAL_FIELD = /^[0-7]*$/;
@@ -40,13 +33,6 @@ function normalizeSegments(path: string): string[] | undefined {
 	return out;
 }
 
-/**
- * Untar a ustar stream into `destDir`, stripping the archive's single
- * top-level directory. Handles regular files, directories, symlinks, GNU
- * longname/longlink ('L'/'K') and pax ('x') path/linkpath overrides. One
- * entry's content is buffered at a time, capped at MAX_ENTRY_SIZE. Rejects
- * any entry path or symlink target that would resolve outside `destDir`.
- */
 export async function untarInto(
 	target: UntarTarget,
 	stream: ReadableStream<Uint8Array>,
@@ -92,7 +78,6 @@ export async function untarInto(
 	while (await need(512)) {
 		const header = buffer.subarray(0, 512);
 		buffer = buffer.subarray(512);
-		// Two consecutive zero blocks terminate the archive.
 		if (header.every((b) => b === 0)) break;
 
 		const rawName = readCString(header.subarray(0, 100));
@@ -102,8 +87,6 @@ export async function untarInto(
 			throw new Error(`tar entry size is not octal ("${sizeField}"): ${rawName}`);
 		}
 		const size = sizeField ? parseInt(sizeField, 8) : 0;
-		// Mode bytes (100-108) are ignored: the workspace has no chmod and the
-		// reviewer never executes files.
 		const type = String.fromCharCode(header[156] ?? 48);
 
 		if (size > MAX_ENTRY_SIZE) {
@@ -125,7 +108,6 @@ export async function untarInto(
 			continue;
 		}
 		if (type === "x" || type === "g") {
-			// pax records: "<len> key=value\n"
 			const text = decoder.decode(content);
 			for (const line of text.split("\n")) {
 				const eq = line.indexOf("=");
@@ -162,8 +144,6 @@ export async function untarInto(
 			if (linkTarget.startsWith("/")) {
 				throw new Error(`tar symlink target is absolute: ${fullName} -> ${linkTarget}`);
 			}
-			// Resolve the target against the link's directory; it must stay
-			// inside destDir even before the workspace resolves anything.
 			const resolved = normalizeSegments(`${segments.slice(0, -1).join("/")}/${linkTarget}`);
 			if (resolved === undefined) {
 				throw new Error(`tar symlink target escapes the destination: ${fullName} -> ${linkTarget}`);
@@ -172,12 +152,10 @@ export async function untarInto(
 			await target.symlink(linkTarget, dest);
 		} else if (type === "0" || type === "\0" || type === "7") {
 			await ensureDir(parentOf(dest));
-			// Copy out of the rolling buffer: content is a subarray view.
 			await target.writeFileBytes(dest, new Uint8Array(content));
 			files += 1;
 			bytes += size;
 		}
-		// Hardlinks and other exotic types don't occur in GitHub tarballs; skip.
 	}
 	return { files, bytes };
 }

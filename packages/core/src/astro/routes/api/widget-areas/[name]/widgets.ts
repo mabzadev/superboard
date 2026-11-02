@@ -1,9 +1,3 @@
-/**
- * Widgets CRUD endpoints
- *
- * POST /_emdash/api/widget-areas/:name/widgets - Add widget
- */
-
 import type { APIRoute } from "astro";
 import { ulid } from "ulidx";
 
@@ -29,7 +23,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 	}
 
 	try {
-		// Get the area
 		const area = await db
 			.selectFrom("_emdash_widget_areas")
 			.select("id")
@@ -43,7 +36,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		const body = await parseBody(request, createWidgetBody);
 		if (isParseError(body)) return body;
 
-		// Get max sort_order
 		const maxOrder = await db
 			.selectFrom("_emdash_widgets")
 			.select(({ fn }) => fn.max("sort_order").as("maxOrder"))
@@ -52,7 +44,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 
 		const sortOrder = (maxOrder?.maxOrder ?? -1) + 1;
 
-		// Prepare values
 		const id = ulid();
 		await db
 			.insertInto("_emdash_widgets")

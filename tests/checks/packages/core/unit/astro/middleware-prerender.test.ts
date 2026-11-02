@@ -4,9 +4,6 @@ vi.mock("astro:middleware", () => ({
 	defineMiddleware: (handler: unknown) => handler,
 }));
 
-// vi.mock factories are hoisted above normal `const` declarations; use
-// vi.hoisted so the marker object is available both to the mock factory and
-// to assertions below.
 const { DB_CONFIG_MARKER, DB_DESCRIPTOR_MARKER, mockGetLastContentWriteAt } = vi.hoisted(() => {
 	const config = { binding: "DB", session: "auto" };
 	return {
@@ -114,7 +111,6 @@ vi.mock(
 	() => ({
 		createDialect: vi.fn(),
 		createRequestScopedDb: vi.fn().mockReturnValue(null),
-		// Absent on non-batching backends; the runtime falls back to the singleton.
 		createCoalescingDialect: undefined,
 	}),
 	{ virtual: true },
@@ -168,7 +164,6 @@ import onRequest from "../../../../../../packages/core/src/astro/middleware.js";
 import { getDb } from "../../../../../../packages/core/src/loader.js";
 import { getRequestContext } from "../../../../../../packages/core/src/request-context.js";
 
-/** Reset the globalThis-backed singletons between tests. */
 const SETUP_VERIFIED_KEY = Symbol.for("emdash:setup-verified");
 const RUNTIME_HOLDER_KEY = Symbol.for("emdash:runtime-holder");
 function resetSetupVerified() {
@@ -176,7 +171,6 @@ function resetSetupVerified() {
 	delete (globalThis as Record<symbol, unknown>)[RUNTIME_HOLDER_KEY];
 }
 
-/** A getDb stub whose migrations-probe query throws `error`. */
 function getDbThatFailsProbe(error: Error) {
 	return {
 		selectFrom: () => ({
@@ -275,9 +269,6 @@ describe("astro middleware prerendered routes", () => {
 		const emdash = locals.emdash as Record<string, unknown>;
 		expect(typeof emdash.handlePluginApiRoute).toBe("function");
 		expect(typeof emdash.handlePublicPluginApiRoute).toBe("function");
-		// Regression for #1462: the author filter route reads
-		// `locals.emdash.handleContentAuthors`; it must be wired onto the
-		// runtime helpers object or every `/authors` request 500s.
 		expect(typeof emdash.handleContentAuthors).toBe("function");
 	});
 
@@ -323,10 +314,6 @@ describe("astro middleware anonymous session reads", () => {
 	});
 
 	it("does not read the Astro session when no astro-session cookie is present", async () => {
-		// Regression test for #733: on Cloudflare Workers the Astro session
-		// backend is KV, so calling session.get() on every anonymous public
-		// request produces a flood of KV read misses. The middleware must
-		// skip the session lookup entirely when no astro-session cookie is set.
 		const cookies = {
 			get: vi.fn((name: string) => {
 				if (name === "astro-session") return undefined;
@@ -593,9 +580,6 @@ describe("astro middleware request-scoped db", () => {
 		expect(response.status).toBe(200);
 		expect(createRequestScopedDb).toHaveBeenCalledTimes(1);
 		const opts = vi.mocked(createRequestScopedDb).mock.calls[0]?.[0];
-		// Opts shape matches the RequestScopedDbOpts contract declared in
-		// virtual-modules.d.ts. The `config` field name must match exactly —
-		// it's what the D1 adapter reads; a rename silently breaks D1 sessions.
 		expect(opts).toMatchObject({
 			config: DB_CONFIG_MARKER,
 			isAuthenticated: false,
@@ -604,19 +588,10 @@ describe("astro middleware request-scoped db", () => {
 		});
 		expect(dbSeenByNext).toBe(scopedDb);
 		expect(commit).toHaveBeenCalledTimes(1);
-		// ALS must be fully torn down after the middleware returns; otherwise
-		// a refactor to enterWith() could silently leak request state into
-		// other async work on the same worker.
 		expect(getRequestContext()).toBeUndefined();
 	});
 
 	it("marks an API-token (Bearer) request as authenticated even without a session cookie", async () => {
-		// API tokens (ec_pat_*) and OAuth tokens (ec_oat_*) authenticate via the
-		// Authorization header, not the astro-session cookie, so sessionUser is
-		// null. They still expect read-your-writes, so the adapter must see
-		// isAuthenticated: true (keeps them on the primary/uncached connection,
-		// not a replica or the Hyperdrive query cache). These hit /_emdash/api/*,
-		// which is the main scoped path (the anonymous fast path is public-only).
 		const commit = vi.fn();
 		vi.mocked(createRequestScopedDb).mockReturnValue({
 			db: { _marker: "scoped" } as never,
@@ -682,15 +657,11 @@ describe("astro middleware request-scoped db", () => {
 
 describe("astro middleware setup probe", () => {
 	beforeEach(() => {
-		// The "setup verified" flag is a globalThis singleton that latches once a
-		// probe (or runtime init) succeeds. Reset it so each test exercises a
-		// fresh probe.
 		resetSetupVerified();
 		vi.mocked(createRequestScopedDb).mockReset().mockReturnValue(null);
 		vi.mocked(getDb).mockReset();
 	});
 
-	/** Anonymous GET to a public frontend page (e.g. a category page). */
 	function anonymousCategoryPageContext() {
 		const cookies = {
 			get: vi.fn((name: string) => {
@@ -717,7 +688,6 @@ describe("astro middleware setup probe", () => {
 	}
 
 	it("redirects to setup when the migrations table is genuinely missing", async () => {
-		// Fresh, un-migrated database: the probe query reports a missing table.
 		vi.mocked(getDb).mockResolvedValue(
 			getDbThatFailsProbe(new Error("no such table: _emdash_migrations")) as never,
 		);
@@ -734,9 +704,6 @@ describe("astro middleware setup probe", () => {
 	});
 
 	it("does NOT redirect to setup on a transient DB error (regression)", async () => {
-		// A set-up site whose probe hits a transient failure (D1 connection
-		// loss, replica unavailable, timeout, locked SQLite) must keep serving
-		// the page — never bounce real visitors to the setup wizard.
 		vi.mocked(getDb).mockResolvedValue(
 			getDbThatFailsProbe(new Error("D1_ERROR: Network connection lost")) as never,
 		);
@@ -752,11 +719,6 @@ describe("astro middleware setup probe", () => {
 	});
 
 	it("does NOT redirect to setup during prerender even when migrations are missing (regression)", async () => {
-		// A prerendered route is built to static HTML. If the setup probe ran at
-		// build time it would see CI's legitimately-empty database, report a
-		// missing migrations table, and bake context.redirect("/_emdash/admin/setup")
-		// into every prerendered page -- shipping that redirect to production. The
-		// probe must be skipped entirely when prerendering.
 		vi.mocked(getDb).mockResolvedValue(
 			getDbThatFailsProbe(new Error("no such table: _emdash_migrations")) as never,
 		);

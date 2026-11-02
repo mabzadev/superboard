@@ -30,7 +30,6 @@ export function openNodeSqliteDatabase(
 	try {
 		database.exec("PRAGMA busy_timeout = 5000");
 		database.exec("PRAGMA foreign_keys = ON");
-		// Negative cache_size values are kibibytes.
 		database.exec("PRAGMA cache_size = -16000");
 		if (options.journalMode === "wal") {
 			database.exec("PRAGMA journal_mode = WAL");

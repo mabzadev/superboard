@@ -1,9 +1,3 @@
-/**
- * emdash search
- *
- * Full-text search across content
- */
-
 import { defineCommand } from "citty";
 import { consola } from "consola";
 

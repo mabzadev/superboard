@@ -8,11 +8,6 @@ import {
 	tokenInterceptor,
 } from "../../../../../../packages/core/src/client/transport.js";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Create an interceptor that adds a header to the request */
 function createHeaderInterceptor(name: string, value: string): Interceptor {
 	return async (req, next) => {
 		const headers = new Headers(req.headers);
@@ -21,7 +16,6 @@ function createHeaderInterceptor(name: string, value: string): Interceptor {
 	};
 }
 
-/** Create a mock fetch that returns a fixed response */
 function mockFetch(body: unknown = {}, status: number = 200): Interceptor {
 	return async () =>
 		new Response(JSON.stringify(body), {
@@ -29,10 +23,6 @@ function mockFetch(body: unknown = {}, status: number = 200): Interceptor {
 			headers: { "Content-Type": "application/json" },
 		});
 }
-
-// ---------------------------------------------------------------------------
-// createTransport
-// ---------------------------------------------------------------------------
 
 describe("createTransport", () => {
 	it("calls global fetch when no interceptors are provided", async () => {
@@ -120,10 +110,6 @@ describe("createTransport", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// csrfInterceptor
-// ---------------------------------------------------------------------------
-
 describe("csrfInterceptor", () => {
 	it("adds X-EmDash-Request header to POST requests", async () => {
 		let capturedHeader: string | null = null;
@@ -186,10 +172,6 @@ describe("csrfInterceptor", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// tokenInterceptor
-// ---------------------------------------------------------------------------
-
 describe("tokenInterceptor", () => {
 	it("adds Authorization Bearer header to all requests", async () => {
 		let capturedAuth: string | null = null;
@@ -223,14 +205,6 @@ describe("tokenInterceptor", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Interceptor composition
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// refreshInterceptor
-// ---------------------------------------------------------------------------
-
 describe("refreshInterceptor", () => {
 	it("unwraps { success, data: { access_token } } envelope from token endpoint", async () => {
 		let retryAuth: string | null = null;
@@ -246,14 +220,11 @@ describe("refreshInterceptor", () => {
 			},
 		});
 
-		// Mock: first call returns 401, refresh endpoint returns wrapped envelope,
-		// retry should use the new token
 		let callCount = 0;
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = async (input: string | URL | Request) => {
 			const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
 			if (url.includes("/oauth/token/refresh")) {
-				// Server wraps in { success, data: ... } via apiSuccess/unwrapResult
 				return new Response(
 					JSON.stringify({
 						success: true,
@@ -321,8 +292,6 @@ describe("refreshInterceptor", () => {
 
 		try {
 			const backend: Interceptor = async (req) => {
-				// Read the body, as a real fetch does — this is what leaves the
-				// request used and makes it unusable as a template for the retry
 				seenBodies.push(await req.text());
 				if (seenBodies.length === 1) {
 					return new Response("unauthorized", { status: 401 });
@@ -351,10 +320,6 @@ describe("refreshInterceptor", () => {
 		}
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Interceptor composition
-// ---------------------------------------------------------------------------
 
 describe("interceptor composition", () => {
 	it("csrf + token interceptors compose correctly", async () => {

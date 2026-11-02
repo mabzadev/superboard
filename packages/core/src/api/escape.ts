@@ -1,4 +1,3 @@
-/** HTML-escape a string to prevent XSS when interpolated into HTML/JS */
 export function escapeHtml(str: string): string {
 	return str
 		.replaceAll("&", "&amp;")

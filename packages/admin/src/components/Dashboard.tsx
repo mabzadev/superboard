@@ -34,9 +34,6 @@ export interface DashboardProps {
 	manifest: AdminManifest;
 }
 
-/**
- * Admin dashboard — quick actions, status, collections, recent activity.
- */
 export function Dashboard({ manifest }: DashboardProps) {
 	const { t } = useLingui();
 	const {
@@ -65,7 +62,6 @@ export function Dashboard({ manifest }: DashboardProps) {
 					{stats && <SchedulerWarning stats={stats} />}
 					<SummaryMetrics stats={stats} loading={isLoading} />
 
-					{/* Collections + Recent activity */}
 					<div className="grid gap-6 lg:grid-cols-2">
 						<CollectionList
 							collections={stats?.collections ?? []}
@@ -77,7 +73,6 @@ export function Dashboard({ manifest }: DashboardProps) {
 				</>
 			)}
 
-			{/* Plugin widgets */}
 			<PluginWidgets manifest={manifest} />
 		</div>
 	);
@@ -140,8 +135,6 @@ function DashboardCardInset({ className, ...props }: React.ComponentPropsWithout
 	return <div className={cn("px-3", className)} {...props} />;
 }
 
-// --- Quick actions ---
-
 function QuickActions({ manifest }: { manifest: AdminManifest }) {
 	const { t } = useLingui();
 	const collections = visibleCollectionEntries(manifest.collections);
@@ -166,8 +159,6 @@ function QuickActions({ manifest }: { manifest: AdminManifest }) {
 		</div>
 	);
 }
-
-// --- Summary metrics ---
 
 function SummaryMetrics({ stats, loading }: { stats?: DashboardStats; loading: boolean }) {
 	if (loading) {
@@ -251,8 +242,6 @@ function SkeletonRows({ count }: { count: number }) {
 		</DashboardCardInset>
 	);
 }
-
-// --- Collection list with counts ---
 
 function CollectionList({
 	collections,
@@ -339,8 +328,6 @@ function CountBadge({
 	);
 }
 
-// --- Recent activity ---
-
 function RecentActivity({ items, loading }: { items: RecentItem[]; loading: boolean }) {
 	const { t } = useLingui();
 
@@ -403,8 +390,6 @@ function StatusDot({ status }: { status: string }) {
 		/>
 	);
 }
-
-// --- Plugin widgets ---
 
 function PluginWidgets({ manifest }: { manifest: AdminManifest }) {
 	const widgets: Array<{

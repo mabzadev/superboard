@@ -21,7 +21,6 @@ extension Array where Element == Any {
         }
     }
     
-    /// Wraps a `([Any]) -> Void` closure as a `([T]?) -> Void` closure.
     static func convertClosure<T>(
         _ closure: @escaping ([Any]) -> Void,
         toOptionalArrayOf type: T.Type
@@ -49,9 +48,7 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
         eventChannel.setStreamHandler(instance)
     }
 
-    // Hook into didFinishLaunchingWithOptions
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
-        // Read API key and test environment flag from Info.plist
         if let infoDictionary = Bundle.main.infoDictionary,
            let apiKey = (infoDictionary["SuperBoardApiKey"] as? String),
            !apiKey.isEmpty,
@@ -67,12 +64,10 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
         return true
     }
     
-    // Handle universal link continuation
     public func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([Any]) -> Void) -> Bool {
         return SuperBoard.handleAppDelegate(continue: userActivity, restorationHandler: Array.convertClosure(restorationHandler, toOptionalArrayOf: UIUserActivityRestoring.self))
     }
 
-    // Handle URI opening
     public func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
         return SuperBoard.handleAppDelegate(open: url, options: options)
     }
@@ -108,7 +103,6 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
             let showPreviewAndroid = args["showPreviewAndroid"] as? Bool
             let trackingMap = args["tracking"] as? [String: String]
             
-            // Parse custom redirects
             var customRedirects: CustomRedirects?
             if let redirectsMap = customRedirectsMap {
                 var ios: CustomLinkRedirect?
@@ -137,7 +131,6 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
                 customRedirects = CustomRedirects(ios: ios, android: android, desktop: desktop)
             }
             
-            // Extract tracking parameters
             let trackingCampaign = trackingMap?["utm_campaign"]
             let trackingSource = trackingMap?["utm_source"]
             let trackingMedium = trackingMap?["utm_medium"]
@@ -281,7 +274,6 @@ public class SuperBoardPlugin: NSObject, FlutterPlugin {
     }
 }
 
-// MARK: - SuperBoardDelegate
 extension SuperBoardPlugin: SuperBoardDelegate {
     public func superboardReceivedPayloadFromDeeplink(link: String?, payload: [String : Any]?, tracking: [String : Any]?) {
         guard let eventSink = eventSink else { return }
@@ -301,7 +293,6 @@ extension SuperBoardPlugin: SuperBoardDelegate {
     }
 }
 
-// MARK: - FlutterStreamHandler
 extension SuperBoardPlugin: FlutterStreamHandler {
     public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         self.eventSink = events

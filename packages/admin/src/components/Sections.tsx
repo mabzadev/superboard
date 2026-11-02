@@ -1,9 +1,3 @@
-/**
- * Sections library page component
- *
- * Browse, create, and manage reusable content sections (block patterns).
- */
-
 import { Button, Dialog, Input, InputArea, Select, Toast } from "@cloudflare/kumo";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
@@ -57,14 +51,12 @@ export function Sections() {
 	const [searchQuery, setSearchQuery] = React.useState("");
 	const [selectedSource, setSelectedSource] = React.useState<SectionSource | null>(null);
 
-	// Create form state
 	const [createTitle, setCreateTitle] = React.useState("");
 	const [createSlug, setCreateSlug] = React.useState("");
 	const [createDescription, setCreateDescription] = React.useState("");
 	const [slugTouched, setSlugTouched] = React.useState(false);
 	const [createError, setCreateError] = React.useState<string | null>(null);
 
-	// Reset form when dialog closes
 	React.useEffect(() => {
 		if (!isCreateOpen) {
 			setCreateTitle("");
@@ -91,7 +83,6 @@ export function Sections() {
 			void queryClient.invalidateQueries({ queryKey: ["sections"] });
 			setIsCreateOpen(false);
 			toastManager.add({ title: t`Section created` });
-			// Navigate to edit the new section
 			void navigate({ to: "/sections/$slug", params: { slug: section.slug } });
 		},
 		onError: (error: Error) => {
@@ -115,7 +106,7 @@ export function Sections() {
 			slug: createSlug,
 			title: createTitle,
 			description: createDescription || undefined,
-			content: [], // Start with empty content
+			content: [],
 		});
 	};
 
@@ -128,7 +119,6 @@ export function Sections() {
 
 	return (
 		<div className="space-y-6">
-			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-2xl font-semibold leading-tight">{t`Sections`}</h1>
@@ -217,9 +207,7 @@ export function Sections() {
 				</Dialog.Root>
 			</div>
 
-			{/* Filters */}
 			<div className="flex items-center gap-4">
-				{/* Search */}
 				<div className="relative flex-1 max-w-md">
 					<MagnifyingGlass className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-kumo-subtle" />
 					<Input
@@ -230,7 +218,6 @@ export function Sections() {
 					/>
 				</div>
 
-				{/* Source filter */}
 				<Select
 					value={selectedSource ?? ""}
 					onValueChange={(v) => {
@@ -246,7 +233,6 @@ export function Sections() {
 				/>
 			</div>
 
-			{/* Section Grid */}
 			{sectionsLoading ? (
 				<div className="flex items-center justify-center h-64">
 					<div className="text-kumo-subtle">{t`Loading sections...`}</div>
@@ -286,7 +272,6 @@ export function Sections() {
 				</div>
 			)}
 
-			{/* Delete confirmation */}
 			<ConfirmDialog
 				open={!!deleteSlug}
 				onClose={() => {
@@ -331,7 +316,6 @@ function SectionCard({
 
 	return (
 		<div className="rounded-lg border bg-kumo-base overflow-hidden">
-			{/* Preview area */}
 			<div className="aspect-video bg-kumo-tint flex items-center justify-center">
 				{section.previewUrl ? (
 					<img
@@ -344,7 +328,6 @@ function SectionCard({
 				)}
 			</div>
 
-			{/* Content */}
 			<div className="p-4">
 				<div className="flex items-start justify-between gap-2">
 					<div className="flex-1 min-w-0">
@@ -380,7 +363,6 @@ function SectionCard({
 					</div>
 				)}
 
-				{/* Actions */}
 				<div className="mt-4 flex items-center gap-2">
 					<Button
 						variant="outline"

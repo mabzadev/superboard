@@ -9,9 +9,6 @@ import 'application_actions.dart';
 import 'application_client.dart';
 import 'models.dart';
 
-/// Ephemeral values emitted by native callbacks for no-code action flows.
-///
-/// Deep-link payloads are deliberately kept in memory and are never persisted.
 abstract final class SuperBoardFlutterFlowState {
   static String lastDeepLinkJson = '';
   static String lastPurchaseResultJson = '';
@@ -19,15 +16,11 @@ abstract final class SuperBoardFlutterFlowState {
   static String lastError = '';
 }
 
-/// Emits only CustomerInfo payloads that have already passed SDK JWS
-/// verification. Hosts can use this stream to update no-code application
-/// state when a pending or recovered purchase resolves asynchronously.
 Stream<String> get superboardVerifiedCustomerInfoJsonStream =>
     SuperBoardPurchases.instance.customerInfoStream.map(
       (customerInfo) => jsonEncode(customerInfo.toJson()),
     );
 
-/// Emits structured terminal and pending purchase results for host bridges.
 Stream<String> get superboardPurchaseResultJsonStream => SuperBoardPurchases
     .instance
     .purchaseResultStream
@@ -54,9 +47,6 @@ Future<bool> superboardInitialize({
   return true;
 }
 
-/// Initializes SuperBoard Purchases using the Bundle ID/package name reported by
-/// the native app. The native SuperBoard SDK itself is configured automatically
-/// from Info.plist/AndroidManifest.xml before this action runs.
 Future<bool> superboardInitializeAuto({
   required String projectKey,
   required String sdkBaseUrl,
@@ -77,8 +67,6 @@ Future<bool> superboardInitializeAuto({
   );
 }
 
-/// Initializes Purchases only after the application authentication gateway has
-/// exchanged its existing access token for a short-lived ES256 identity token.
 Future<bool> superboardInitializeAuthenticated({
   required String projectKey,
   required String applicationAccessToken,
@@ -206,9 +194,6 @@ String _purchasesBaseUrl(String sdkBaseUrl) {
   return '${Uri.parse(base).origin}/v1/monetization/purchases';
 }
 
-/// Submits structured evidence from the authenticated FlutterFlow build to an
-/// active Purchases certification run. The challenge is issued from the
-/// dashboard and is never persisted by this wrapper.
 Future<String> superboardRecordCertificationResultJson({
   required String runId,
   required String deviceChallenge,
@@ -238,10 +223,6 @@ Future<String> superboardRecordCertificationResultJson({
   return jsonEncode(result.toJson());
 }
 
-/// Associates both SuperBoard attribution and verified purchases with a user.
-///
-/// Pass the server-issued SuperBoard identity JWT when purchase identity should
-/// be merged. The JWT is never persisted by this wrapper.
 Future<bool> superboardIdentify({
   required String userIdentifier,
   String identityToken = '',
@@ -354,15 +335,10 @@ Future<String> superboardGetLastDeepLinkJson() async {
   return SuperBoardFlutterFlowState.lastDeepLinkJson;
 }
 
-/// Returns the latest purchase result emitted by the native store listener.
-///
-/// This includes terminal results that resolve after an action first returned
-/// `pending` and results recovered after an application restart.
 Future<String> superboardGetLastPurchaseResultJson() async {
   return SuperBoardFlutterFlowState.lastPurchaseResultJson;
 }
 
-/// Returns the latest CustomerInfo received from the verified SDK stream.
 Future<String> superboardGetLastVerifiedCustomerInfoJson() async {
   return SuperBoardFlutterFlowState.lastVerifiedCustomerInfoJson;
 }

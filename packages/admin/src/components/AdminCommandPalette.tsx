@@ -1,10 +1,3 @@
-/**
- * Admin Command Palette
- *
- * Quick navigation and search across the admin interface.
- * Opens with Cmd+K (Mac) or Ctrl+K (Windows/Linux).
- */
-
 import { CommandPalette } from "@cloudflare/kumo";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
@@ -26,28 +19,20 @@ import {
 } from "./admin-navigation-icons.js";
 import { resolvePluginPageLabel } from "./Sidebar.js";
 
-/** Subset of manifest fields used by the palette (matches `Shell` props shape). */
 type CommandPaletteManifest = {
 	collections: Record<string, { label: string; labelSingular?: string }>;
 	plugins: AdminManifest["plugins"];
 };
 
-// Role levels (matching @emdash-cms/auth)
 const ROLE_ADMIN = 50;
 const ROLE_EDITOR = 40;
 
-// Regex for replacing route params like $collection with actual values
 const ROUTE_PARAM_REGEX = /\$(\w+)/g;
 
-// Debounce delay for content search (ms)
 const SEARCH_DEBOUNCE_MS = 300;
 
-// Detect macOS for keyboard shortcut display
 const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
-/**
- * Custom hook for debouncing a value
- */
 function useDebouncedValue<T>(value: T, delay: number): T {
 	const [debouncedValue, setDebouncedValue] = React.useState(value);
 
@@ -134,7 +119,6 @@ export function buildNavItems(
 		},
 	];
 
-	// Add collection links
 	for (const [name, config] of Object.entries(manifest.collections)) {
 		items.push({
 			id: `collection-${name}`,
@@ -146,7 +130,6 @@ export function buildNavItems(
 		});
 	}
 
-	// Add core admin links
 	items.push(
 		{
 			id: "media",
@@ -247,13 +230,10 @@ export function buildNavItems(
 		},
 	);
 
-	// Add plugin pages
 	for (const [pluginId, config] of Object.entries(manifest.plugins)) {
 		if (config.enabled === false) continue;
 		if (config.adminPages && config.adminPages.length > 0) {
 			for (const page of config.adminPages) {
-				// Same treatment as the sidebar: declared labels go through the
-				// shared i18n instance so plugin catalogs can localize them.
 				const label = resolvePluginPageLabel(page.label, pluginId, translateLabel);
 
 				items.push({
@@ -267,7 +247,6 @@ export function buildNavItems(
 		}
 	}
 
-	// Filter by role
 	return items.filter((item) => !item.minRole || userRole >= item.minRole);
 }
 
@@ -288,24 +267,17 @@ function filterNavItems(
 
 export function AdminCommandPalette({ manifest }: AdminCommandPaletteProps) {
 	const { t } = useLingui();
-	// The runtime hook (the macro useLingui() omits `_`): `_` translates the
-	// dynamic plugin labels, and both it and `i18n.locale` invalidate the
-	// nav-items memo below. `i18n.locale` is the documented signal for locale
-	// switches; the `_` rebind covers catalog merges that arrive without a
-	// locale change (plugins load their catalogs asynchronously).
 	const { _: translateDynamic, i18n } = useLinguiContext();
 	const [open, setOpen] = React.useState(false);
 	const [query, setQuery] = React.useState("");
 	const navigate = useNavigate();
 
-	// Debounce the search query to avoid flickering on every keystroke
 	const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
 
 	const { data: user } = useCurrentUser();
 
 	const userRole = user?.role ?? 0;
 
-	// Search content when debounced query is long enough
 	const { data: searchResults, isFetching: isSearching } = useQuery({
 		queryKey: ["command-palette-search", debouncedQuery],
 		queryFn: () => searchContent(debouncedQuery),
@@ -313,27 +285,22 @@ export function AdminCommandPalette({ manifest }: AdminCommandPaletteProps) {
 		staleTime: 30 * 1000,
 	});
 
-	// Show loading while waiting for debounce or API response
 	const isWaitingForDebounce = query.length >= 2 && query !== debouncedQuery;
 	const isPendingSearch = isWaitingForDebounce || isSearching;
 
-	// Build navigation items
 	const allNavItems = React.useMemo(
 		() => buildNavItems(manifest, userRole, translateDynamic),
 		[manifest, userRole, translateDynamic, i18n.locale],
 	);
 
-	// Filter nav items based on query
 	const filteredNavItems = React.useMemo(
 		() => filterNavItems(allNavItems, query, t),
 		[allNavItems, query, t],
 	);
 
-	// Build result groups
 	const resultGroups = React.useMemo((): ResultGroup[] => {
 		const groups: ResultGroup[] = [];
 
-		// Navigation group
 		if (filteredNavItems.length > 0) {
 			groups.push({
 				id: "navigation",
@@ -354,7 +321,6 @@ export function AdminCommandPalette({ manifest }: AdminCommandPaletteProps) {
 			});
 		}
 
-		// Content search results
 		if (searchResults?.items && searchResults.items.length > 0) {
 			const contentItems = searchResults.items.map((result) => {
 				const collectionConfig = manifest.collections[result.collection];
@@ -383,13 +349,11 @@ export function AdminCommandPalette({ manifest }: AdminCommandPaletteProps) {
 		return groups;
 	}, [filteredNavItems, searchResults, manifest.collections, t]);
 
-	// Keyboard shortcut to open (Cmd+K / Ctrl+K)
 	useHotkeys("mod+k", (e) => {
 		e.preventDefault();
 		setOpen(true);
 	});
 
-	// Reset query when closing
 	React.useEffect(() => {
 		if (!open) {
 			setQuery("");
@@ -400,13 +364,11 @@ export function AdminCommandPalette({ manifest }: AdminCommandPaletteProps) {
 		(item: ResultItem, options: { newTab: boolean }) => {
 			setOpen(false);
 			if (options.newTab) {
-				// Build the full URL for new tab
 				const path = item.params
 					? item.to.replace(ROUTE_PARAM_REGEX, (_, key) => item.params?.[key] ?? "")
 					: item.to;
 				window.open(`/_emdash/admin${path}`, "_blank");
 			} else {
-				// Navigate within the app
 				void navigate({
 					to: item.to as "/",
 					params: item.params,

@@ -538,7 +538,6 @@ export default function SupportIntegrationsPage() {
 			setFormError(detail);
 			showErrorNotification(detail);
 		} finally {
-			// Credentials are write-only and must not outlive a submission attempt.
 			setCredentials({});
 			setSaving(false);
 		}
@@ -606,7 +605,6 @@ export default function SupportIntegrationsPage() {
 			setConfigurationError(detail);
 			showErrorNotification(detail);
 		} finally {
-			// Never retain a submitted secret, including after a failed request.
 			setConfigurationCredentials({});
 			setConfiguring(false);
 		}

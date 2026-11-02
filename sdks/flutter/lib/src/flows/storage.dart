@@ -136,7 +136,6 @@ abstract interface class SuperBoardFlowStorage {
   Future<void> clear();
 }
 
-/// Encrypted device storage used by default by the Flows SDK.
 class SuperBoardSecureFlowStorage implements SuperBoardFlowStorage {
   SuperBoardSecureFlowStorage({
     FlutterSecureStorage? secureStorage,

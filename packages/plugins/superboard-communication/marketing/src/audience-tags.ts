@@ -89,10 +89,6 @@ audienceTagRoutes.delete("/audience/tags/:tagId", async (c) => {
 	return c.json({ data: { deleted: true } });
 });
 
-/**
- * Adds or removes tags on many contacts at once. Unknown tag names are created
- * on "add" so operators can tag a selection without visiting tag management.
- */
 audienceTagRoutes.post("/audience/tags/assign", async (c) => {
 	const projectId = c.get("project").projectId;
 	const body = await readJsonObject(c.req.raw);
@@ -183,7 +179,6 @@ async function existingTagIds(db: D1Database, projectId: number, ids: string[]) 
 	return found;
 }
 
-/** Resolves tag names case-insensitively; returns a lowercase-name -> id map. */
 async function tagIdsByName(db: D1Database, projectId: number, names: string[]) {
 	const result = new Map<string, string>();
 	const unique = [...new Set(names.map((name) => name.toLowerCase()))];
@@ -201,7 +196,6 @@ async function tagIdsByName(db: D1Database, projectId: number, names: string[]) 
 	return result;
 }
 
-/** Returns ids for the given names, creating missing tags. */
 export async function ensureTags(db: D1Database, projectId: number, names: string[]) {
 	const byName = await tagIdsByName(db, projectId, names);
 	const missing = [

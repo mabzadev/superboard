@@ -115,7 +115,6 @@ try {
 			assert.equal(new URL(page.url()).searchParams.get("tab"), tab);
 			assert.equal(new URL(page.url()).searchParams.get("lang"), locale);
 		}
-		// Plugin health and lifecycle are owned by the central Plugins page.
 		await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 		await expect(
 			page.getByRole("link", { name: fr ? "Ouvrir dans Plugins" : "Open in Plugins", exact: true }),
@@ -129,7 +128,6 @@ try {
 		const result = await checked.json();
 		assert.ok(result.checkedAt);
 		assert.ok(result.diagnostic.workers.every((worker) => worker.physicalName));
-		// Legacy configuration links fall back to the default Environments tab.
 		await open(`/acquisition/settings?lang=${locale}&tab=configuration`);
 		await expect(
 			page.getByRole("tab", { name: fr ? "Environnements" : "Environments", exact: true }),

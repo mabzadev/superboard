@@ -1,7 +1,3 @@
-/**
- * Redirect CRUD and 404 log handlers
- */
-
 import type { Kysely } from "kysely";
 
 import { OptionsRepository } from "../../database/repositories/options.js";
@@ -19,13 +15,6 @@ import { validatePattern, validateDestinationParams, isPattern } from "../../red
 import { isTerminalStatus } from "../../redirects/status.js";
 import type { ApiResult } from "../types.js";
 
-// ---------------------------------------------------------------------------
-// Redirects
-// ---------------------------------------------------------------------------
-
-/**
- * List redirects with cursor pagination and optional filters
- */
 export async function handleRedirectList(
 	db: Kysely<Database>,
 	params: {
@@ -64,9 +53,6 @@ export async function handleRedirectList(
 	}
 }
 
-/**
- * Create a redirect rule
- */
 export async function handleRedirectCreate(
 	db: Kysely<Database>,
 	input: {
@@ -81,12 +67,9 @@ export async function handleRedirectCreate(
 		const repo = new RedirectRepository(db);
 
 		const type = input.type ?? 301;
-		// Terminal statuses (410 Gone / 451) are served directly and have no
-		// destination — skip the destination/loop checks for them.
 		const terminal = isTerminalStatus(type);
 		const destination = terminal ? "" : (input.destination ?? "");
 
-		// Source and destination must differ
 		if (!terminal && input.source === destination) {
 			return {
 				success: false,
@@ -97,7 +80,6 @@ export async function handleRedirectCreate(
 			};
 		}
 
-		// If source looks like a pattern, validate it
 		const sourceIsPattern = isPattern(input.source);
 		if (sourceIsPattern) {
 			const patternError = validatePattern(input.source);
@@ -108,8 +90,6 @@ export async function handleRedirectCreate(
 				};
 			}
 
-			// Validate destination params reference valid source params
-			// (terminal rules have no destination to interpolate)
 			if (!terminal) {
 				const destError = validateDestinationParams(input.source, destination);
 				if (destError) {
@@ -121,7 +101,6 @@ export async function handleRedirectCreate(
 			}
 		}
 
-		// Check for duplicate source (exact match only for non-patterns)
 		const existing = await repo.findBySource(input.source);
 		if (existing) {
 			return {
@@ -133,8 +112,6 @@ export async function handleRedirectCreate(
 			};
 		}
 
-		// Check for redirect loops (skip if creating as disabled, or terminal —
-		// a Gone rule has no destination, so it can't form a loop)
 		if (!terminal && input.enabled !== false) {
 			const edges = toEdges(await repo.findAllEnabled());
 			const loopPath = wouldCreateLoop(input.source, destination, edges);
@@ -159,9 +136,6 @@ export async function handleRedirectCreate(
 	}
 }
 
-/**
- * Get a redirect by ID
- */
 export async function handleRedirectGet(
 	db: Kysely<Database>,
 	id: string,
@@ -186,9 +160,6 @@ export async function handleRedirectGet(
 	}
 }
 
-/**
- * Update a redirect by ID
- */
 export async function handleRedirectUpdate(
 	db: Kysely<Database>,
 	id: string,
@@ -214,7 +185,6 @@ export async function handleRedirectUpdate(
 		const newSource = input.source ?? existing.source;
 		const newDest = input.destination ?? existing.destination;
 
-		// Source and destination must differ
 		if (newSource === newDest) {
 			return {
 				success: false,
@@ -225,7 +195,6 @@ export async function handleRedirectUpdate(
 			};
 		}
 
-		// If source is changing, validate patterns
 		if (input.source !== undefined) {
 			const sourceIsPattern = isPattern(input.source);
 			if (sourceIsPattern) {
@@ -241,7 +210,6 @@ export async function handleRedirectUpdate(
 				}
 			}
 
-			// Check for duplicate source (exclude self)
 			const dup = await repo.findBySource(input.source);
 			if (dup && dup.id !== id) {
 				return {
@@ -254,7 +222,6 @@ export async function handleRedirectUpdate(
 			}
 		}
 
-		// Validate destination params against the (possibly updated) source
 		const newSourceIsPattern = isPattern(newSource);
 		if (newSourceIsPattern) {
 			const destError = validateDestinationParams(newSource, newDest);
@@ -266,7 +233,6 @@ export async function handleRedirectUpdate(
 			}
 		}
 
-		// Check for redirect loops if source or destination changed
 		if (input.source !== undefined || input.destination !== undefined) {
 			const edges = toEdges(await repo.findAllEnabled());
 			const loopPath = wouldCreateLoop(newSource, newDest, edges, id);
@@ -288,7 +254,6 @@ export async function handleRedirectUpdate(
 			};
 		}
 
-		// Recompute cache — redirect was modified, so re-fetch
 		await updateLoopCache(db);
 
 		return { success: true, data: updated };
@@ -300,9 +265,6 @@ export async function handleRedirectUpdate(
 	}
 }
 
-/**
- * Delete a redirect by ID
- */
 export async function handleRedirectDelete(
 	db: Kysely<Database>,
 	id: string,
@@ -328,10 +290,6 @@ export async function handleRedirectDelete(
 		};
 	}
 }
-
-// ---------------------------------------------------------------------------
-// Loop analysis cache
-// ---------------------------------------------------------------------------
 
 function loopError(loopPath: string[]): ApiResult<never> {
 	const hops = loopPath
@@ -359,9 +317,6 @@ function toEdges(redirects: Redirect[]): RedirectEdge[] {
 
 const LOOP_CACHE_KEY = "_redirect_loop_ids";
 
-/**
- * Recompute loop redirect IDs and store in the options table.
- */
 async function updateLoopCache(db: Kysely<Database>): Promise<void> {
 	try {
 		const options = new OptionsRepository(db);
@@ -373,16 +328,12 @@ async function updateLoopCache(db: Kysely<Database>): Promise<void> {
 	}
 }
 
-/**
- * Get loop redirect IDs from cache, computing lazily on first access.
- */
 async function getLoopRedirectIds(db: Kysely<Database>): Promise<string[]> {
 	try {
 		const options = new OptionsRepository(db);
 		const cached = await options.get<string[]>(LOOP_CACHE_KEY);
 		if (cached !== null) return cached;
 
-		// First access after upgrade — compute and cache
 		await updateLoopCache(db);
 		return (await options.get<string[]>(LOOP_CACHE_KEY)) ?? [];
 	} catch {
@@ -390,13 +341,6 @@ async function getLoopRedirectIds(db: Kysely<Database>): Promise<string[]> {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// 404 Log
-// ---------------------------------------------------------------------------
-
-/**
- * List 404 log entries with cursor pagination
- */
 export async function handleNotFoundList(
 	db: Kysely<Database>,
 	params: { cursor?: string; limit?: number; search?: string },
@@ -419,9 +363,6 @@ export async function handleNotFoundList(
 	}
 }
 
-/**
- * Get 404 summary (grouped by path, sorted by count)
- */
 export async function handleNotFoundSummary(
 	db: Kysely<Database>,
 	limit?: number,
@@ -438,9 +379,6 @@ export async function handleNotFoundSummary(
 	}
 }
 
-/**
- * Clear all 404 log entries
- */
 export async function handleNotFoundClear(
 	db: Kysely<Database>,
 ): Promise<ApiResult<{ deleted: number }>> {
@@ -456,9 +394,6 @@ export async function handleNotFoundClear(
 	}
 }
 
-/**
- * Prune 404 log entries older than a given date
- */
 export async function handleNotFoundPrune(
 	db: Kysely<Database>,
 	olderThan: string,

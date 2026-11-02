@@ -8,12 +8,6 @@ import {
 	teardownForDialect,
 } from "../../utils/test-db.js";
 
-// Regression: `listTablesLike` (and the migration column-existence checks)
-// must scope to the connection's active schema, not a hardcoded `public`.
-// On a Postgres deployment using a non-public schema — including the
-// per-test schemas this harness creates — hardcoding `public` returns tables
-// from the wrong schema, or none at all. The Postgres variant of this test
-// fails against the old `WHERE table_schema = 'public'` query.
 describeEachDialect("listTablesLike schema scoping", (dialect) => {
 	let ctx: DialectTestContext;
 

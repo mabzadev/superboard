@@ -28,7 +28,6 @@ const MemberSectionElement = ({
 
 	return (
 		<div className="grid grid-cols-[1fr_140px_40px] items-center px-4 py-3 hover:bg-muted/30 transition-colors">
-			{/* Member info */}
 			<div className="flex items-center gap-3 min-w-0">
 				<Avatar className="h-8 w-8 rounded-full shrink-0">
 					<AvatarFallback className="rounded-full text-[11px] font-medium">
@@ -41,7 +40,6 @@ const MemberSectionElement = ({
 				</div>
 			</div>
 
-			{/* Role */}
 			<div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
 				{member.role === ADMIN_ROLE ? (
 					<ShieldUser className="h-3.5 w-3.5" />
@@ -51,7 +49,6 @@ const MemberSectionElement = ({
 				{member.role === ADMIN_ROLE ? "Administrator" : "Member"}
 			</div>
 
-			{/* Actions */}
 			<div className="flex items-center justify-end">
 				{userRef.current?.id !== member.id && (
 					<AdminOnlyDisplay>

@@ -1,7 +1,3 @@
-/**
- * Redirects API client
- */
-
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -60,9 +56,6 @@ export interface RedirectListResult {
 	loopRedirectIds?: string[];
 }
 
-/**
- * List redirects with optional filters
- */
 export async function fetchRedirects(options?: RedirectListOptions): Promise<RedirectListResult> {
 	const params = new URLSearchParams();
 	if (options?.cursor) params.set("cursor", options.cursor);
@@ -77,9 +70,6 @@ export async function fetchRedirects(options?: RedirectListOptions): Promise<Red
 	return parseApiResponse<RedirectListResult>(response, "Failed to fetch redirects");
 }
 
-/**
- * Create a redirect
- */
 export async function createRedirect(input: CreateRedirectInput): Promise<Redirect> {
 	const response = await apiFetch(`${API_BASE}/redirects`, {
 		method: "POST",
@@ -89,9 +79,6 @@ export async function createRedirect(input: CreateRedirectInput): Promise<Redire
 	return parseApiResponse<Redirect>(response, "Failed to create redirect");
 }
 
-/**
- * Update a redirect
- */
 export async function updateRedirect(id: string, input: UpdateRedirectInput): Promise<Redirect> {
 	const response = await apiFetch(`${API_BASE}/redirects/${encodeURIComponent(id)}`, {
 		method: "PUT",
@@ -101,9 +88,6 @@ export async function updateRedirect(id: string, input: UpdateRedirectInput): Pr
 	return parseApiResponse<Redirect>(response, "Failed to update redirect");
 }
 
-/**
- * Delete a redirect
- */
 export async function deleteRedirect(id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/redirects/${encodeURIComponent(id)}`, {
 		method: "DELETE",
@@ -111,9 +95,6 @@ export async function deleteRedirect(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete redirect`));
 }
 
-/**
- * Fetch 404 summary (grouped by path, sorted by count)
- */
 export async function fetch404Summary(limit?: number): Promise<NotFoundSummary[]> {
 	const params = new URLSearchParams();
 	if (limit != null) params.set("limit", String(limit));

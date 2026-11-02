@@ -1,7 +1,3 @@
-/**
- * Schema/collection management handlers
- */
-
 import type { Kysely } from "kysely";
 
 import type { Database } from "../../database/types.js";
@@ -45,9 +41,6 @@ export interface FieldResponse {
 	item: Field;
 }
 
-/**
- * List all collections
- */
 export async function handleSchemaCollectionList(
 	db: Kysely<Database>,
 ): Promise<ApiResult<CollectionListResponse>> {
@@ -70,9 +63,6 @@ export async function handleSchemaCollectionList(
 	}
 }
 
-/**
- * Get a collection by slug
- */
 export async function handleSchemaCollectionGet(
 	db: Kysely<Database>,
 	slug: string,
@@ -124,9 +114,6 @@ export async function handleSchemaCollectionGet(
 	}
 }
 
-/**
- * Create a collection
- */
 export async function handleSchemaCollectionCreate(
 	db: Kysely<Database>,
 	input: CreateCollectionInput,
@@ -161,9 +148,6 @@ export async function handleSchemaCollectionCreate(
 	}
 }
 
-/**
- * Update a collection
- */
 export async function handleSchemaCollectionUpdate(
 	db: Kysely<Database>,
 	slug: string,
@@ -198,9 +182,6 @@ export async function handleSchemaCollectionUpdate(
 	}
 }
 
-/**
- * Delete a collection
- */
 export async function handleSchemaCollectionDelete(
 	db: Kysely<Database>,
 	slug: string,
@@ -235,9 +216,6 @@ export async function handleSchemaCollectionDelete(
 	}
 }
 
-/**
- * List fields for a collection
- */
 export async function handleSchemaFieldList(
 	db: Kysely<Database>,
 	collectionSlug: string,
@@ -273,9 +251,6 @@ export async function handleSchemaFieldList(
 	}
 }
 
-/**
- * Get a field
- */
 export async function handleSchemaFieldGet(
 	db: Kysely<Database>,
 	collectionSlug: string,
@@ -310,9 +285,6 @@ export async function handleSchemaFieldGet(
 	}
 }
 
-/**
- * Create a field
- */
 export async function handleSchemaFieldCreate(
 	db: Kysely<Database>,
 	collectionSlug: string,
@@ -322,7 +294,6 @@ export async function handleSchemaFieldCreate(
 		const registry = new SchemaRegistry(db);
 		const item = await registry.createField(collectionSlug, input);
 
-		// Content snapshots embed field values; a column change invalidates them.
 		invalidateFieldCaches(collectionSlug);
 
 		return {
@@ -350,9 +321,6 @@ export async function handleSchemaFieldCreate(
 	}
 }
 
-/**
- * Update a field
- */
 export async function handleSchemaFieldUpdate(
 	db: Kysely<Database>,
 	collectionSlug: string,
@@ -390,9 +358,6 @@ export async function handleSchemaFieldUpdate(
 	}
 }
 
-/**
- * Delete a field
- */
 export async function handleSchemaFieldDelete(
 	db: Kysely<Database>,
 	collectionSlug: string,
@@ -429,9 +394,6 @@ export async function handleSchemaFieldDelete(
 	}
 }
 
-/**
- * Reorder collections in the admin sidebar
- */
 export async function handleSchemaCollectionReorder(
 	db: Kysely<Database>,
 	slugs: string[],
@@ -466,9 +428,6 @@ export async function handleSchemaCollectionReorder(
 	}
 }
 
-/**
- * Reorder fields
- */
 export async function handleSchemaFieldReorder(
 	db: Kysely<Database>,
 	collectionSlug: string,
@@ -503,10 +462,6 @@ export async function handleSchemaFieldReorder(
 	}
 }
 
-// ============================================
-// Orphaned Table Discovery
-// ============================================
-
 export interface OrphanedTable {
 	slug: string;
 	tableName: string;
@@ -517,9 +472,6 @@ export interface OrphanedTableListResponse {
 	items: OrphanedTable[];
 }
 
-/**
- * List orphaned content tables
- */
 export async function handleOrphanedTableList(
 	db: Kysely<Database>,
 ): Promise<ApiResult<OrphanedTableListResponse>> {
@@ -543,9 +495,6 @@ export async function handleOrphanedTableList(
 	}
 }
 
-/**
- * Register an orphaned table as a collection
- */
 export async function handleOrphanedTableRegister(
 	db: Kysely<Database>,
 	slug: string,

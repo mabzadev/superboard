@@ -44,7 +44,6 @@ const EVENT_TYPES: EmailEventType[] = [
 	"failed",
 ];
 
-/** Server API keys and outbound event webhooks of the transactional email API. */
 export function EmailDeveloperSettings({ project }: { project: string }) {
 	const { t, locale } = useEmailI18n();
 	const [keys, setKeys] = useState<EmailApiKey[]>([]);

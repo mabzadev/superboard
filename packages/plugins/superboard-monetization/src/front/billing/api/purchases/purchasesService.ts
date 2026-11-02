@@ -3,8 +3,6 @@ import { config } from "@superboard/front-ui/lib/config.js";
 import type { Purchase, RevenueMetric, GetRevenueParams } from "@superboard/front-ui/types";
 import type { AxiosResponse } from "axios";
 
-// --- Response interfaces ---
-
 export interface PurchasesListResponse {
 	data: Purchase[];
 	total_pages: number;

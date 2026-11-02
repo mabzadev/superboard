@@ -1,13 +1,3 @@
-/**
- * E2E tests for WordPress import CLI
- *
- * Tests the full two-phase import flow:
- * - Phase 1: Prepare (analyze WXR, generate config)
- * - Phase 2: Execute (import content using config)
- *
- * Also tests: --dry-run, --resume, --json flags
- */
-
 import { mkdtemp, rm, readFile, writeFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -49,15 +39,12 @@ describe("WordPress Import Integration", () => {
 				json: false,
 			});
 
-			// Check config was created
 			const configContent = await readFile(configPath, "utf-8");
 			const config: MigrationConfig = JSON.parse(configContent);
 
-			// Verify site info
 			expect(config.site.title).toBe("Test Blog");
 			expect(config.site.url).toBe("https://example.com");
 
-			// Verify collections discovered
 			expect(config.collections.post).toEqual({
 				collection: "posts",
 				enabled: true,
@@ -69,12 +56,10 @@ describe("WordPress Import Integration", () => {
 				count: 2,
 			});
 
-			// nav_menu_item should be disabled (if it exists in the export)
 			if (config.collections.nav_menu_item) {
 				expect(config.collections.nav_menu_item.enabled).toBe(false);
 			}
 
-			// Verify custom fields discovered
 			expect(config.fields._yoast_wpseo_title).toEqual({
 				field: "seo.title",
 				type: "string",
@@ -86,7 +71,6 @@ describe("WordPress Import Integration", () => {
 			expect(config.fields._thumbnail_id?.field).toBe("featuredImage");
 			expect(config.fields.custom_field?.enabled).toBe(true);
 
-			// Internal fields should be disabled
 			expect(config.fields._edit_last?.enabled).toBe(false);
 		});
 
@@ -104,7 +88,6 @@ describe("WordPress Import Integration", () => {
 			const liveConfigPath = join(testDir, "suggested-live.config.ts");
 			const liveConfig = await readFile(liveConfigPath, "utf-8");
 
-			// Collections are now created via Admin UI, so this generates helpful comments
 			expect(liveConfig).toContain("Suggested EmDash collections");
 			expect(liveConfig).toContain("/_emdash/admin/content-types");
 			expect(liveConfig).toContain('post → "posts"');
@@ -123,14 +106,12 @@ describe("WordPress Import Integration", () => {
 				json: false,
 			});
 
-			// Result should indicate dry run
 			expect(result.dryRun).toBe(true);
 			expect(result.files).toContainEqual({
 				path: configPath,
 				action: "would_create",
 			});
 
-			// Files should NOT exist
 			await expect(readFile(configPath)).rejects.toThrow();
 			await expect(readFile(join(testDir, "suggested-live.config.ts"))).rejects.toThrow();
 		});
@@ -148,7 +129,7 @@ describe("WordPress Import Integration", () => {
 
 			expect(result.success).toBe(true);
 			expect(result.phase).toBe("prepare");
-			expect(result.summary.postsAnalyzed).toBe(7); // 3 posts + 2 pages + 1 attachment + 1 wp_block (excludes nav_menu_item)
+			expect(result.summary.postsAnalyzed).toBe(7);
 			expect(result.files.length).toBe(2);
 			expect(result.nextSteps.length).toBeGreaterThan(0);
 		});
@@ -158,7 +139,6 @@ describe("WordPress Import Integration", () => {
 		let configPath: string;
 
 		beforeEach(async () => {
-			// Run prepare first to create config
 			configPath = join(testDir, ".wp-migration.json");
 			await prepareWordPressImport(FIXTURE_PATH, {
 				outputDir: testDir,
@@ -180,14 +160,12 @@ describe("WordPress Import Integration", () => {
 				resume: false,
 			});
 
-			// Check posts directory
 			const posts = await readdir(join(testDir, "posts"));
 			expect(posts).toContain("hello-world.json");
 			expect(posts).toContain("advanced-features.json");
 			expect(posts).toContain("work-in-progress.json");
 			expect(posts.length).toBe(3);
 
-			// Check pages directory
 			const pages = await readdir(join(testDir, "pages"));
 			expect(pages).toContain("about.json");
 			expect(pages).toContain("contact.json");
@@ -208,15 +186,12 @@ describe("WordPress Import Integration", () => {
 			const postContent = await readFile(join(testDir, "posts", "hello-world.json"), "utf-8");
 			const post = JSON.parse(postContent);
 
-			// Check content is Portable Text array
 			expect(Array.isArray(post.content)).toBe(true);
 			expect(post.content.length).toBeGreaterThan(0);
 
-			// Check for expected block types
 			const blockTypes = post.content.map((b: { _type: string }) => b._type);
-			expect(blockTypes).toContain("block"); // paragraphs and headings
+			expect(blockTypes).toContain("block");
 
-			// Check paragraph content
 			const firstBlock = post.content[0];
 			expect(firstBlock._type).toBe("block");
 			expect(firstBlock.children[0].text).toContain("Welcome to our new blog");
@@ -236,11 +211,9 @@ describe("WordPress Import Integration", () => {
 			const postContent = await readFile(join(testDir, "posts", "hello-world.json"), "utf-8");
 			const post = JSON.parse(postContent);
 
-			// Check SEO fields (nested)
 			expect(post.seo?.title).toBe("Hello World - Welcome Post");
 			expect(post.seo?.description).toBe("Our first blog post welcoming visitors.");
 
-			// Check custom field
 			expect(post.custom_field).toBe("custom value");
 		});
 
@@ -265,7 +238,6 @@ describe("WordPress Import Integration", () => {
 			expect(post.categories).toContain("tutorials");
 			expect(post.tags).toContain("featured");
 
-			// Check WordPress metadata preserved
 			expect(post._wp.id).toBe(1);
 			expect(post._wp.link).toBe("https://example.com/2025/01/hello-world/");
 		});
@@ -319,11 +291,9 @@ describe("WordPress Import Integration", () => {
 			expect(result.dryRun).toBe(true);
 			expect(result.summary.postsImported).toBe(5);
 
-			// Check files would be created
 			const wouldCreate = result.files.filter((f) => f.action === "would_create");
 			expect(wouldCreate.length).toBeGreaterThan(0);
 
-			// Actual files should NOT exist
 			await expect(readdir(join(testDir, "posts"))).rejects.toThrow();
 		});
 
@@ -343,12 +313,11 @@ describe("WordPress Import Integration", () => {
 
 			expect(progress.importedPosts.length).toBe(5);
 			expect(progress.stats.importedPosts).toBe(5);
-			expect(progress.stats.totalPosts).toBe(7); // 3 posts + 2 pages + 1 attachment + 1 wp_block (nav_menu_item excluded)
+			expect(progress.stats.totalPosts).toBe(7);
 			expect(progress.errors.length).toBe(0);
 		});
 
 		it("resume skips already-imported posts", async () => {
-			// First import
 			await executeWordPressImport(FIXTURE_PATH, {
 				outputDir: testDir,
 				configPath,
@@ -359,7 +328,6 @@ describe("WordPress Import Integration", () => {
 				resume: false,
 			});
 
-			// Second import with resume
 			const result = await executeWordPressImport(FIXTURE_PATH, {
 				outputDir: testDir,
 				configPath,
@@ -370,13 +338,11 @@ describe("WordPress Import Integration", () => {
 				resume: true,
 			});
 
-			// All should be skipped (resumed)
 			expect(result.summary.postsImported).toBe(0);
-			expect(result.summary.postsSkipped).toBe(7); // 5 content items + 1 attachment + 1 wp_block
+			expect(result.summary.postsSkipped).toBe(7);
 		});
 
 		it("resume imports only new posts", async () => {
-			// First import
 			await executeWordPressImport(FIXTURE_PATH, {
 				outputDir: testDir,
 				configPath,
@@ -387,21 +353,17 @@ describe("WordPress Import Integration", () => {
 				resume: false,
 			});
 
-			// Modify progress to simulate partial import
 			const progressPath = join(testDir, ".wp-migration-progress.json");
 			const progressContent = await readFile(progressPath, "utf-8");
 			const progress: ImportProgress = JSON.parse(progressContent);
 
-			// Remove last 2 posts from imported list
 			progress.importedPosts = progress.importedPosts.slice(0, 3);
 			progress.stats.importedPosts = 3;
 			await writeFile(progressPath, JSON.stringify(progress, null, 2));
 
-			// Delete those files too
 			await rm(join(testDir, "pages", "about.json"));
 			await rm(join(testDir, "pages", "contact.json"));
 
-			// Resume import
 			const result = await executeWordPressImport(FIXTURE_PATH, {
 				outputDir: testDir,
 				configPath,
@@ -412,11 +374,9 @@ describe("WordPress Import Integration", () => {
 				resume: true,
 			});
 
-			// Should import only the 2 missing pages
 			expect(result.summary.postsImported).toBe(2);
-			expect(result.summary.postsSkipped).toBe(5); // 3 + 1 attachment + 1 wp_block
+			expect(result.summary.postsSkipped).toBe(5);
 
-			// Files should exist again
 			const pages = await readdir(join(testDir, "pages"));
 			expect(pages).toContain("about.json");
 			expect(pages).toContain("contact.json");
@@ -442,7 +402,6 @@ describe("WordPress Import Integration", () => {
 		});
 
 		it("skips disabled post types", async () => {
-			// Modify config to disable pages
 			const config: MigrationConfig = JSON.parse(await readFile(configPath, "utf-8"));
 			config.collections.page.enabled = false;
 			await writeFile(configPath, JSON.stringify(config, null, 2));
@@ -457,11 +416,9 @@ describe("WordPress Import Integration", () => {
 				resume: false,
 			});
 
-			// Only posts should be imported
 			expect(result.summary.postsImported).toBe(3);
-			expect(result.summary.postsSkipped).toBe(4); // 2 pages + 1 attachment + 1 wp_block
+			expect(result.summary.postsSkipped).toBe(4);
 
-			// Pages directory should not exist
 			await expect(readdir(join(testDir, "pages"))).rejects.toThrow();
 		});
 	});
@@ -484,7 +441,6 @@ describe("WordPress Import Integration", () => {
 		});
 
 		it("handles empty progress file on resume", async () => {
-			// Create config first
 			const configPath = join(testDir, ".wp-migration.json");
 			await prepareWordPressImport(FIXTURE_PATH, {
 				outputDir: testDir,
@@ -494,7 +450,6 @@ describe("WordPress Import Integration", () => {
 				json: false,
 			});
 
-			// Resume without prior import should work (fresh start)
 			const result = await executeWordPressImport(FIXTURE_PATH, {
 				outputDir: testDir,
 				configPath,

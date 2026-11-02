@@ -19,7 +19,6 @@ describe("presentSections", () => {
 	it("keeps non-empty sections in SECTION_ORDER", () => {
 		const result = presentSections({
 			sections: {
-				// Deliberately out of display order to prove ordering is by SECTION_ORDER.
 				security: "Report issues to security@example.com",
 				description: "# Hello\n\nA plugin.",
 				installation: "Run `npm i`.",

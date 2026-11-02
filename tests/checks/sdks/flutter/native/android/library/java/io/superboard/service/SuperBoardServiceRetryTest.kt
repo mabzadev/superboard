@@ -28,11 +28,6 @@ import retrofit2.Response
 import java.io.IOException
 import kotlin.random.Random
 
-/**
- * Exercises the production retry policy used by [SuperBoardService]: bounded attempts,
- * exponential backoff with jitter, final failures on non-retryable statuses and on empty
- * 2xx bodies, and no swallowing of non-network exceptions.
- */
 @ExperimentalCoroutinesApi
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [28])
@@ -55,7 +50,6 @@ class SuperBoardServiceRetryTest {
     private fun <T> error(code: Int): Response<T> =
         Response.error(code, """{"error": "status $code"}""".toResponseBody("application/json".toMediaType()))
 
-    /** Returns the scripted responses in order and counts the attempts. */
     private class Script<T>(vararg steps: () -> Response<T>) {
         private val remaining = ArrayDeque(steps.toList())
         var calls = 0
@@ -173,13 +167,10 @@ class SuperBoardServiceRetryTest {
         val service = SuperBoardService(RuntimeEnvironment.getApplication(), "test-api-key", context)
         server.enqueue(MockResponse().setResponseCode(503).setBody("""{"error": "busy"}"""))
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"number_of_unread_notifications": 3}"""))
-        // markNotificationAsRead answers 2xx without a body; this used to loop forever.
         server.enqueue(MockResponse().setResponseCode(200))
         server.enqueue(MockResponse().setResponseCode(400).setBody("""{"error": "bad request"}"""))
         server.enqueue(MockResponse().setResponseCode(200))
 
-        // The user agent header needs the main looper, so pump it while the requests run
-        // (with a real, single backoff delay).
         val results = E2ETestUtils.runWithLooperPumping(timeoutMs = 20_000, failOnTimeout = true) {
             listOf(
                 service.numberOfUnreadNotifications(),

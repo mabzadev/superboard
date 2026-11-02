@@ -1,12 +1,3 @@
-/**
- * Document Outline
- *
- * Displays a tree structure of headings from the TipTap editor.
- * - Shows H1 at root, H2 indented, H3 further indented
- * - Click-to-navigate to heading position
- * - Highlights the current section based on cursor position
- */
-
 import { Button, Collapsible, Text } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { CaretDown } from "@phosphor-icons/react";
@@ -41,23 +32,13 @@ function getTextClass(level: number) {
 	}
 }
 
-/**
- * Heading item extracted from editor document
- */
 export interface HeadingItem {
-	/** Heading level (1-3) */
 	level: number;
-	/** Heading text content */
 	text: string;
-	/** Position in document for navigation */
 	pos: number;
-	/** Unique key for React */
 	key: string;
 }
 
-/**
- * Extract headings from the TipTap editor document
- */
 export function extractHeadings(editor: Editor | null): HeadingItem[] {
 	if (!editor) return [];
 
@@ -84,13 +65,9 @@ export function extractHeadings(editor: Editor | null): HeadingItem[] {
 	return headings;
 }
 
-/**
- * Find the current heading based on cursor position
- */
 export function findCurrentHeading(headings: HeadingItem[], cursorPos: number): HeadingItem | null {
 	if (headings.length === 0) return null;
 
-	// Find the heading that contains or precedes the cursor
 	let current: HeadingItem | null = null;
 	for (const heading of headings) {
 		if (heading.pos <= cursorPos) {
@@ -104,17 +81,11 @@ export function findCurrentHeading(headings: HeadingItem[], cursorPos: number): 
 }
 
 export interface DocumentOutlineProps {
-	/** TipTap editor instance */
 	editor: Editor | null;
-	/** Additional CSS classes */
 	className?: string;
-	/** Reserve the inline end of the disclosure header for an external control. */
 	reserveHeaderEnd?: boolean;
 }
 
-/**
- * Document outline component showing heading tree structure
- */
 export function DocumentOutline({
 	editor,
 	className,
@@ -125,7 +96,6 @@ export function DocumentOutline({
 	const [headings, setHeadings] = React.useState<HeadingItem[]>([]);
 	const [currentPos, setCurrentPos] = React.useState(0);
 
-	// Extract headings when editor content changes
 	React.useEffect(() => {
 		if (!editor) return;
 
@@ -133,10 +103,8 @@ export function DocumentOutline({
 			setHeadings(extractHeadings(editor));
 		};
 
-		// Initial extraction
 		updateHeadings();
 
-		// Update on content changes
 		editor.on("update", updateHeadings);
 
 		return () => {
@@ -144,7 +112,6 @@ export function DocumentOutline({
 		};
 	}, [editor]);
 
-	// Track cursor position for current section highlight
 	React.useEffect(() => {
 		if (!editor) return;
 
@@ -153,10 +120,8 @@ export function DocumentOutline({
 			setCurrentPos(from);
 		};
 
-		// Initial position
 		updatePosition();
 
-		// Update on selection changes
 		editor.on("selectionUpdate", updatePosition);
 
 		return () => {
@@ -169,7 +134,6 @@ export function DocumentOutline({
 	const handleHeadingClick = (heading: HeadingItem) => {
 		if (!editor) return;
 
-		// Navigate to heading and scroll into view
 		editor.chain().focus().setTextSelection(heading.pos).scrollIntoView().run();
 	};
 

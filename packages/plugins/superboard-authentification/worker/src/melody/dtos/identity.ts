@@ -129,9 +129,6 @@ export const parseGetProcess = async (c: Context<typeConfig.Context>) => {
 
 export class PostProcessDto extends GetProcessDto {}
 
-/**
- * DTO for MFA
- */
 export class PostProcessMfaEnrollDto extends GetProcessDto {
 	@IsEnum(userModel.MfaType)
 	@IsNotEmpty()
@@ -181,9 +178,6 @@ export class PostSetupSmsMfaDto extends GetProcessDto {
 	}
 }
 
-/**
- * DTO for Passkey
- */
 export class PostProcessPasskeyEnrollDto extends GetProcessDto {
 	@IsNotEmpty()
 	enrollInfo: RegistrationResponseJSON;
@@ -219,9 +213,6 @@ export class PostAuthorizePasskeyVerifyDto extends oauthDto.GetAuthorizeDto {
 	}
 }
 
-/**
- * DTO for Social-signin
- */
 export class PostAuthorizeSocialSignInDto extends oauthDto.GetAuthorizeDto {
 	@IsString()
 	@IsNotEmpty()
@@ -238,9 +229,6 @@ export class PostAuthorizeSocialSignInDto extends oauthDto.GetAuthorizeDto {
 	}
 }
 
-/**
- * DTO for policies
- */
 export class PostChangePasswordDto extends GetProcessDto {
 	@IsString()
 	@IsNotEmpty()
@@ -314,9 +302,6 @@ export class PostUpdateInfoDto extends GetProcessDto {
 	}
 }
 
-/**
- * DTO for other requests
- */
 export class PostVerifyEmailDto {
 	@IsString()
 	@IsNotEmpty()
@@ -352,9 +337,6 @@ export class PostResetPasswordDto {
 	}
 }
 
-/**
- * DTO for views
- */
 export class GetVerifyEmailViewDto {
 	@IsString()
 	@IsOptional()

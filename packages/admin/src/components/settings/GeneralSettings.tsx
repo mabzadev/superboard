@@ -1,10 +1,3 @@
-/**
- * General Settings sub-page
- *
- * Site Identity (title, tagline, URL, logo, favicon) and Reading settings
- * (posts per page, date format, timezone).
- */
-
 import { Banner, Button, Input, Loader, useKumoToastManager } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { WarningCircle, Upload, X } from "@phosphor-icons/react";

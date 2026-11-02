@@ -39,10 +39,6 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 
 import * as api from "../../../../../packages/admin/src/lib/api";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const MAIN_MENU_ITEMS_REGEX = /main.*3 items/;
 const FOOTER_MENU_ITEMS_REGEX = /footer.*1 item(?!s)/;
 const DELETE_MENU_CONFIRMATION_REGEX = /Are you sure you want to delete this menu/;

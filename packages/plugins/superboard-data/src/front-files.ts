@@ -3,7 +3,6 @@ import {
 	navigationGroup,
 } from "../../../supbrd-core/src/plugin-front-runtime.js";
 
-// Fallback navigation (used only when the EmDash menu is missing) mirrors the seeded section.
 const navigation = navigationGroup({
 	group_id: "data",
 	group_label: "Data",

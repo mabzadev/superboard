@@ -133,7 +133,6 @@ const french: Record<string, string> = {
 	apple: "Apple",
 	google: "Google",
 	stripe: "Stripe",
-	// Offerings & Entitlements general
 	Catalog: "Catalogue",
 	Offerings: "Offres",
 	"Manage the store catalog, packages and SDK-resolved offerings.":
@@ -148,7 +147,6 @@ const french: Record<string, string> = {
 	"Application identities, subscriptions, entitlements, balances, transactions and paywall activity.":
 		"Identités d’application, abonnements, droits d’accès, soldes, transactions et activité du paywall.",
 
-	// State tabs & filters
 	All: "Tous",
 	Active: "Actifs",
 	Inactive: "Inactifs",
@@ -161,7 +159,6 @@ const french: Record<string, string> = {
 	To: "Au",
 	"Financial customer": "Client financier",
 
-	// Buttons
 	"Add entitlement": "Ajouter un droit d’accès",
 	"Create entitlement": "Créer un droit d’accès",
 	"Edit entitlement": "Modifier le droit d’accès",
@@ -193,7 +190,6 @@ const french: Record<string, string> = {
 	Offering: "Offre",
 	Cancel: "Annuler",
 
-	// Table Headers
 	Identifier: "Identifiant",
 	"Display Name": "Nom affiché",
 	"Display name": "Nom affiché",
@@ -215,7 +211,6 @@ const french: Record<string, string> = {
 	Imported: "Importés",
 	Deactivated: "Désactivés",
 
-	// Section Titles
 	"iOS (Apple App Store)": "iOS (Apple App Store)",
 	"Android (Google Play)": "Android (Google Play)",
 	"Offerings (SDK Placements)": "Offres (emplacements SDK)",
@@ -228,7 +223,6 @@ const french: Record<string, string> = {
 	"Dedicated sandbox products allow simulation of purchases and entitlements in development and test environments.":
 		"Les produits sandbox dédiés permettent de simuler les achats et les droits d’accès dans les environnements de développement et de test.",
 
-	// Empty States
 	"No entitlements configured.": "Aucun droit d’accès configuré.",
 	"No products": "Aucun produit",
 	"No offerings configured.": "Aucune offre configurée.",
@@ -245,13 +239,11 @@ const french: Record<string, string> = {
 	Unlinked: "Non lié",
 	"Test / Sandbox": "Test / Sandbox",
 
-	// Catalog Sync
 	"Import Apple App Store, Google Play or Sandbox catalog payloads.":
 		"Importez les catalogues Apple App Store, Google Play ou Sandbox.",
 	"Synchronize catalog": "Synchroniser le catalogue",
 	"Catalog JSON": "JSON du catalogue",
 
-	// Dialog descriptions & field labels
 	"A purchasable catalog item": "Un article de catalogue achetable",
 	"Connect a product to an offering": "Associer un produit à une offre",
 	"Special package for testing without store credentials":
@@ -269,7 +261,6 @@ const french: Record<string, string> = {
 	"No product (standalone / test package)": "Aucun produit (package autonome / test)",
 	"Included Packages": "Packages inclus",
 
-	// Placeholders
 	"Identifier (e.g. premium)": "Identifiant (ex. premium)",
 	"Display name (e.g. Premium access)": "Nom affiché (ex. Accès Premium)",
 	"e.g. premium_monthly": "ex. premium_monthly",
@@ -280,7 +271,6 @@ const french: Record<string, string> = {
 	"e.g. Default Offering": "ex. Offre par défaut",
 	"e.g. default, ios, android, test": "ex. default, ios, android, test",
 
-	// Notifications
 	"Entitlement created": "Droit d’accès créé",
 	"Entitlement updated": "Droit d’accès mis à jour",
 	"Entitlement archived": "Droit d’accès archivé",
@@ -299,7 +289,6 @@ const french: Record<string, string> = {
 	"Subscription restored": "Abonnement restauré",
 	"Subscription cancelled": "Abonnement annulé",
 
-	// Settings
 	"Store environment": "Environnement des boutiques",
 	"Catalog synchronization": "Synchronisation du catalogue",
 	"Apple issuer ID": "Identifiant d’émetteur Apple",

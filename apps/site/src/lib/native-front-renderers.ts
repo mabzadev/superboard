@@ -7,8 +7,6 @@ import type {
 	RendererDescriptor,
 } from "@superboard/supbrd-core";
 
-// Browser-safe renderer registry. The build compatibility catalogue stays in
-// native-front-plugins.ts so the client entry does not ship it.
 const discoveredModules = import.meta.glob<{ nativeFrontPlugin: NativeFrontPluginModule }>(
 	["../front-plugins/*.ts", "../../../../packages/plugins/superboard-*/src/front-*.ts"],
 	{ eager: true },
@@ -17,7 +15,6 @@ const discoveredModules = import.meta.glob<{ nativeFrontPlugin: NativeFrontPlugi
 export const nativeFrontPlugins = new Map<string, NativeFrontPluginModule>();
 const legacyComponentPrefix = /^supbrd-(?:plug|plugmod)-/u;
 
-// Releases published before the superboard-* namespace keep their original ids.
 export function currentComponentId(id: string): string {
 	return id.replace(legacyComponentPrefix, "superboard-");
 }
@@ -69,11 +66,6 @@ export function resolveLockedNativeFrontPlugin(
 	return plugin;
 }
 
-/**
- * Client mount path. The server verifies every renderer build checksum against the
- * compatibility catalogue (assertReleasePresentation) before it projects the page,
- * so the browser only re-checks the Release lock and the renderer export.
- */
 export function mountProjectedNativeFrontRenderer(input: {
 	mount: NativeRendererMountInput;
 	plugin_lock: readonly PluginLockEntry[];

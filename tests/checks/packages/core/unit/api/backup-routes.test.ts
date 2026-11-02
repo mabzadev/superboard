@@ -1,13 +1,3 @@
-/**
- * Backup route tests
- *
- * - Route registration for all four backup endpoints
- * - Authorization: every endpoint requires the admin-only backups:manage
- *   permission
- * - The public media file route must never serve keys under backups/
- *   (archives contain the site's full content export)
- */
-
 import { describe, expect, it, vi } from "vitest";
 
 import { injectCoreRoutes } from "../../../../../../packages/core/src/astro/integration/routes.js";
@@ -23,7 +13,6 @@ import {
 	PUT as backupsPut,
 } from "../../../../../../packages/core/src/astro/routes/api/settings/backups/index.js";
 
-// Minimal APIContext stand-in; routes only touch locals/params/request.
 // eslint-disable-next-line typescript/no-explicit-any -- test double for APIContext
 function ctx(overrides: Record<string, unknown>): any {
 	return {

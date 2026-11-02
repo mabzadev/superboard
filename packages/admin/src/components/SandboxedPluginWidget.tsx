@@ -1,10 +1,3 @@
-/**
- * SandboxedPluginWidget
- *
- * Renders a plugin's dashboard widget using Block Kit. Sends a page_load
- * interaction with page="widget:<widgetId>" to the plugin's admin route.
- */
-
 import { SkeletonLine } from "@cloudflare/kumo";
 import { BlockRenderer } from "@emdash-cms/blocks";
 import type { Block, BlockInteraction, BlockResponse } from "@emdash-cms/blocks";
@@ -49,7 +42,6 @@ export function SandboxedPluginWidget({ pluginId, widgetId }: SandboxedPluginWid
 		[pluginId],
 	);
 
-	// Initial widget load
 	useEffect(() => {
 		setLoading(true);
 		void sendInteraction({ type: "page_load", page: `widget:${widgetId}` }).finally(() =>

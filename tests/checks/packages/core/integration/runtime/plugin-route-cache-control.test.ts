@@ -1,13 +1,3 @@
-/**
- * End-to-end wiring for plugin-route `cacheControl`.
- *
- * The route-layer unit tests mock `getPluginRouteMeta`; this test exercises
- * the real path — a `ResolvedPlugin` with `cacheControl` registered on
- * `EmDashRuntime`, metadata resolved via `runtime.getPluginRouteMeta`, and the
- * catch-all handler applying the header — so a runtime that drops the field
- * (the original review finding) fails here.
- */
-
 import { randomUUID } from "node:crypto";
 
 import Database from "better-sqlite3";
@@ -46,8 +36,6 @@ function createDeps(): RuntimeDependencies {
 						public: true,
 						handler: async () => ({ items: [] }),
 					},
-					// Misconfigured on purpose: cacheControl on a private route
-					// must never surface.
 					admin: {
 						cacheControl: CACHE_VALUE,
 						handler: async () => ({ secret: true }),

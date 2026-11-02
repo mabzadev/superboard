@@ -136,7 +136,6 @@ describe("findNodeBuiltinImports", () => {
 	});
 
 	it("does not flag user-land package names that share a name with a builtin substring", () => {
-		// "events-utils" is not the "events" builtin
 		expect(findNodeBuiltinImports(`require("events-utils")`)).toEqual([]);
 	});
 
@@ -188,7 +187,7 @@ describe("findSourceExports", () => {
 	it("ignores non-string, non-import exports", () => {
 		expect(
 			findSourceExports({
-				".": { types: "./dist/index.d.ts" }, // no `import` field
+				".": { types: "./dist/index.d.ts" },
 				"./empty": null,
 			}),
 		).toEqual([]);
@@ -201,9 +200,6 @@ describe("validateBundleSize", () => {
 	});
 
 	it("accepts a bundle that sits exactly at every cap", () => {
-		// 19 small files + one file at the per-file cap. Total stays under
-		// MAX_BUNDLE_SIZE because per-file cap × file count is much larger
-		// than the bundle cap; we deliberately undershoot the total.
 		const entries = [
 			{ name: "backend.js", bytes: MAX_FILE_SIZE },
 			...Array.from({ length: MAX_FILE_COUNT - 1 }, (_, i) => ({
@@ -215,9 +211,6 @@ describe("validateBundleSize", () => {
 	});
 
 	it("flags total bundle size when it exceeds MAX_BUNDLE_SIZE without tripping per-file cap", () => {
-		// Three files at exactly MAX_FILE_SIZE each — per-file cap is satisfied
-		// (`>` not `>=`), but the sum (3 × 128 KB = 384 KB) exceeds the 256 KB
-		// total cap. Isolates the total-size assertion from per-file noise.
 		const entries = [
 			{ name: "a.js", bytes: MAX_FILE_SIZE },
 			{ name: "b.js", bytes: MAX_FILE_SIZE },
@@ -229,8 +222,6 @@ describe("validateBundleSize", () => {
 	});
 
 	it("does not flag a bundle exactly at MAX_BUNDLE_SIZE", () => {
-		// Use MAX_FILE_SIZE-bounded files so per-file cap is satisfied too.
-		// MAX_BUNDLE_SIZE / MAX_FILE_SIZE = 256/128 = 2 files.
 		const entries = [
 			{ name: "a.js", bytes: MAX_FILE_SIZE },
 			{ name: "b.js", bytes: MAX_FILE_SIZE },
@@ -258,8 +249,6 @@ describe("validateBundleSize", () => {
 		const violations = validateBundleSize(entries);
 		const fileViolations = violations.filter((v) => v.startsWith("File "));
 		expect(fileViolations).toHaveLength(2);
-		// Alphabetical ordering — huge-a before huge-b — keeps error text
-		// deterministic for the same bundle.
 		expect(fileViolations[0]).toMatch(/File huge-a\.js/);
 		expect(fileViolations[1]).toMatch(/File huge-b\.js/);
 	});
@@ -270,7 +259,6 @@ describe("validateBundleSize", () => {
 			bytes: MAX_FILE_SIZE + 1,
 		}));
 		const violations = validateBundleSize(entries);
-		// One total-size violation, one file-count violation, one per oversized file.
 		expect(violations[0]).toMatch(/Bundle size/);
 		expect(violations[1]).toMatch(/contains/);
 		expect(violations.length).toBe(2 + entries.length);

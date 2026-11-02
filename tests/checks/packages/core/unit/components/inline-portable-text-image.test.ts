@@ -1,13 +1,3 @@
-/**
- * Inline editor image LQIP round-trip tests.
- *
- * Verifies blurhash/dominantColor survive the Portable Text ↔ ProseMirror
- * conversion the inline (visual-editing) editor exercises, so author-inserted
- * images keep their placeholders. LQIP is persisted as first-class block fields
- * (matching the image-field path); `asset.meta` is only a read fallback for
- * legacy snapshots.
- */
-
 import { describe, it, expect } from "vitest";
 
 import {
@@ -51,7 +41,6 @@ describe("Image LQIP round-trip (inline editor seam)", () => {
 			dominantColor?: string;
 		};
 
-		// Promoted to first-class fields on save; asset.meta no longer carries them.
 		expect(restored._type).toBe("image");
 		expect(restored.blurhash).toBe("LEHV6nWB2yk8pyo0adR*.7kCMdnj");
 		expect(restored.dominantColor).toBe("#aabbcc");

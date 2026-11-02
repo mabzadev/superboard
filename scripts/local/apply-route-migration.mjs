@@ -1,6 +1,6 @@
-import { homedir } from "node:os";
 import { execSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 
 import { compileFrontRelease } from "../../packages/supbrd-core/dist/index.js";
@@ -33,7 +33,6 @@ const dbPaths = [
 ];
 
 const urlMap = {
-	// Authentification
 	"/app/users": "/auth/users",
 	"/identity/en/apps": "/auth/apps?lang=en",
 	"/identity/fr/apps": "/auth/apps?lang=fr",
@@ -42,18 +41,15 @@ const urlMap = {
 	"/identity/en/logs": "/auth/logs?lang=en",
 	"/identity/fr/logs": "/auth/logs?lang=fr",
 
-	// Data
 	"/system/content": "/data/content",
 	"/system/files": "/data/files",
 
-	// Monetization
 	"/products/purchases": "/monetization/purchases",
 	"/products/customers": "/monetization/customers",
 	"/products": "/monetization/products",
 	"/products/offerings": "/monetization/offerings",
 	"/products/entitlements": "/monetization/entitlements",
 
-	// Communication
 	"/marketing/campaigns": "/communication/campaigns",
 	"/marketing/in-app-messages": "/communication/in-app-messages",
 	"/marketing/email": "/communication/marketing-email",
@@ -64,7 +60,6 @@ const urlMap = {
 	"/system/email": "/communication/email",
 	"/marketing/journeys": "/communication/journeys",
 
-	// Acquisition
 	"/paywalls": "/acquisition/paywalls",
 	"/paywalls/statistics": "/acquisition/paywalls/statistics",
 	"/flows/workflows": "/acquisition/workflows",
@@ -425,7 +420,6 @@ async function main() {
 		if (!existsSync(dbPath)) continue;
 		console.log(`\n=== Migrating database: ${dbPath} ===`);
 
-		// 1. Update _emdash_menu_items
 		console.log("Updating _emdash_menu_items...");
 		let updatedMenuItems = 0;
 		for (const [fromUrl, toUrl] of Object.entries(urlMap)) {
@@ -442,7 +436,6 @@ async function main() {
 		}
 		console.log(`Updated ${updatedMenuItems} menu item URLs in _emdash_menu_items.`);
 
-		// 2. Insert/update ec_views
 		console.log("Updating ec_views...");
 		let insertedViews = 0;
 		for (const m of routeMappings) {
@@ -452,7 +445,6 @@ async function main() {
 			).trim();
 			const rows = existing ? JSON.parse(existing) : [];
 			if (rows.length === 0) {
-				// Find bindings from source view if available
 				const sourceJson = execSync(
 					`sqlite3 -json "${dbPath}" "SELECT * FROM ec_views WHERE route_id = '${m.routeId}' LIMIT 1;"`,
 					{ encoding: "utf8" },
@@ -473,7 +465,6 @@ async function main() {
 		}
 		console.log(`Inserted ${insertedViews} views into ec_views.`);
 
-		// 3. Update release candidate
 		console.log("Updating superboard_front_release_candidates...");
 		const candidateId = "028EB65DB83A646B3822608769";
 		const activeRelJson = execSync(
@@ -496,7 +487,6 @@ async function main() {
 		const { gateway_checksum: _gateway_checksum, ...cleanGatewayManifest } = input.gateway_manifest;
 		input.gateway_manifest = cleanGatewayManifest;
 
-		// Update routes
 		for (const m of routeMappings) {
 			const source = input.front_route_manifest.routes.find((r) => r.route_id === m.routeId);
 			if (source) {
@@ -505,7 +495,6 @@ async function main() {
 				if (m.query !== undefined) source.query = m.query;
 			}
 
-			// Add or update legacy alias
 			const aliasId = `${m.routeId}_legacy`;
 			let alias = input.front_route_manifest.routes.find((r) => r.route_id === aliasId);
 			if (!alias && source) {
@@ -520,7 +509,6 @@ async function main() {
 			}
 		}
 
-		// Update presentation navigation
 		for (const group of input.presentation.navigation) {
 			for (const item of group.items) {
 				if (item.href === "/identity/en/apps") item.href = "/auth/apps";
@@ -533,14 +521,12 @@ async function main() {
 			}
 		}
 
-		// Compile and re-sign release
 		const compiled = await compileFrontRelease(input, {
 			kid: "local-operator-release",
 			private_key: privateKey,
 		});
 		console.log(`Recompiled release. Content checksum: ${compiled.content_checksum}`);
 
-		// Update DB candidate
 		const compiledJson = JSON.stringify(compiled).replace(/'/g, "''");
 		const updateSql = `
 UPDATE superboard_front_release_candidates

@@ -15,14 +15,11 @@ import {
 } from "../db/queries.js";
 import { getAuditEnforcement, resolveVersionStatus } from "../env.js";
 
-// ── Types ───────────────────────────────────────────────────────
-
 export interface AuditParams {
 	pluginId: string;
 	version: string;
 	bundleKey: string;
 	versionId: string;
-	/** Manifest fields needed for audit input */
 	manifest: {
 		id: string;
 		version: string;
@@ -30,7 +27,6 @@ export interface AuditParams {
 		allowedHosts?: string[];
 		admin?: { settingsSchema?: Record<string, unknown> };
 	};
-	/** Whether the tarball contains images to audit */
 	hasImages: boolean;
 }
 
@@ -50,8 +46,6 @@ interface ImageAuditStepResult {
 	durationMs: number;
 }
 
-// ── Constants ───────────────────────────────────────────────────
-
 const RE_LEADING_DOT_SLASH = /^\.\//;
 const RE_LEADING_PACKAGE = /^package\//;
 const MAX_DECOMPRESSED_BYTES = 50 * 1024 * 1024;
@@ -66,13 +60,10 @@ const RETRY_CONFIG = {
 	},
 };
 
-// ── Workflow ─────────────────────────────────────────────────────
-
 export class AuditWorkflow extends WorkflowEntrypoint<Env, AuditParams> {
 	override async run(event: Readonly<WorkflowEvent<AuditParams>>, step: WorkflowStep) {
 		const { pluginId, version, bundleKey, versionId, manifest, hasImages } = event.payload;
 
-		// Step 1: Run code audit
 		const auditResult = await step.do("code-audit", RETRY_CONFIG, async () => {
 			const { backendCode, adminCode } = await this.extractCodeFromR2(bundleKey);
 			const auditor = createWorkersAIAuditor(this.env.AI);
@@ -82,7 +73,6 @@ export class AuditWorkflow extends WorkflowEntrypoint<Env, AuditParams> {
 				adminCode,
 			};
 			const result = await auditor.audit(input);
-			// Return a plain serializable object (no class instances)
 			return {
 				verdict: result.verdict,
 				riskScore: result.riskScore,
@@ -93,7 +83,6 @@ export class AuditWorkflow extends WorkflowEntrypoint<Env, AuditParams> {
 			} satisfies CodeAuditStepResult;
 		});
 
-		// Step 2: Run image audit (skip if no images)
 		const imageAuditResult = hasImages
 			? await step.do("image-audit", RETRY_CONFIG, async () => {
 					const imageFiles = await this.extractImagesFromR2(bundleKey);
@@ -109,9 +98,7 @@ export class AuditWorkflow extends WorkflowEntrypoint<Env, AuditParams> {
 				})
 			: null;
 
-		// Step 3: Store results in D1 and link to version
 		await step.do("store-results", async () => {
-			// Store code audit
 			const auditRow = await createAudit(this.env.DB, {
 				pluginId,
 				version,
@@ -124,7 +111,6 @@ export class AuditWorkflow extends WorkflowEntrypoint<Env, AuditParams> {
 			});
 			await linkAuditToVersion(this.env.DB, versionId, auditRow.id, auditResult.verdict);
 
-			// Store image audit if available
 			if (imageAuditResult) {
 				const imageAuditRow = await createImageAudit(this.env.DB, {
 					pluginId,
@@ -143,7 +129,6 @@ export class AuditWorkflow extends WorkflowEntrypoint<Env, AuditParams> {
 			}
 		});
 
-		// Step 4: Resolve version status and update D1
 		await step.do("finalize", async () => {
 			const enforcement = getAuditEnforcement(this.env);
 			const status = resolveVersionStatus(
@@ -156,8 +141,6 @@ export class AuditWorkflow extends WorkflowEntrypoint<Env, AuditParams> {
 
 		return { auditResult, imageAuditResult };
 	}
-
-	// ── Helpers ────────────────────────────────────────────────
 
 	private async extractCodeFromR2(
 		bundleKey: string,
@@ -196,8 +179,6 @@ export class AuditWorkflow extends WorkflowEntrypoint<Env, AuditParams> {
 		return imageFiles;
 	}
 }
-
-// ── Tarball extraction (shared with author.ts) ──────────────────
 
 async function collectStream(
 	stream: ReadableStream<Uint8Array>,

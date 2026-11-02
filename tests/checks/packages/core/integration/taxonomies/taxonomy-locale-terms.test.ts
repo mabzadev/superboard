@@ -1,15 +1,3 @@
-/**
- * Locale-aware term resolution for content entries (issue #1218).
- *
- * `content_taxonomies` stores translation groups for both content and terms.
- * Resolving the terms for an entry must still scope to the entry's own locale,
- * otherwise every locale variant of the term is returned.
- *
- * The bug was that the admin content-editor terms route
- * (`/content/:collection/:id/terms/:taxonomy`) never passed a locale, so a
- * French post showed both the English and French variants of its tag.
- */
-
 import { Role, type RoleLevel } from "@emdash-cms/auth";
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
@@ -55,7 +43,6 @@ async function seedLocalizedTags(db: Kysely<Database>): Promise<TermFixture> {
 	const contentRepo = new ContentRepository(db);
 	const taxRepo = new TaxonomyRepository(db);
 
-	// Two content rows: EN + FR, same translation group.
 	const enContent = await contentRepo.create({
 		type: "post",
 		slug: "hello",
@@ -70,7 +57,6 @@ async function seedLocalizedTags(db: Kysely<Database>): Promise<TermFixture> {
 		translationOf: enContent.id,
 	});
 
-	// One tag with an EN + FR translation (shared translation_group).
 	const enTag = await taxRepo.create({
 		name: "tags",
 		slug: "news",
@@ -85,7 +71,6 @@ async function seedLocalizedTags(db: Kysely<Database>): Promise<TermFixture> {
 		translationOf: enTag.id,
 	});
 
-	// One group assignment covers both content translations.
 	await taxRepo.attachToEntry("post", enContent.id, enTag.id);
 
 	return {
@@ -306,7 +291,7 @@ describeEachDialect("content terms route locale-awareness (#1218)", (dialect) =>
 		const taxRepo = new TaxonomyRepository(ctx.db);
 
 		const all = await taxRepo.getTermsForEntry("post", fx.frContentId, "tags");
-		expect(all).toHaveLength(2); // bug surface: both locales without a filter
+		expect(all).toHaveLength(2);
 
 		const frOnly = await taxRepo.getTermsForEntry("post", fx.frContentId, "tags", "fr");
 		expect(frOnly).toHaveLength(1);
@@ -354,7 +339,6 @@ describeEachDialect("content terms route locale-awareness (#1218)", (dialect) =>
 	it("POST response echoes only the entry-locale variant", async () => {
 		const fx = await seedLocalizedTags(ctx.db);
 
-		// Re-set the FR entry's tags via the EN term id (resolved to the group).
 		const res = await postTerms(
 			buildPostContext(ctx.db, { collection: "post", id: fx.frContentId, taxonomy: "tags" }, [
 				fx.enTagId,
@@ -570,10 +554,6 @@ describeEachDialect("content terms route locale-awareness (#1218)", (dialect) =>
 	});
 });
 
-/**
- * Parent links are stored as the parent's translation_group, not a locale-bound
- * row id, so a child stays nested under the parent in every locale (#1347).
- */
 async function insertHierarchicalDef(db: Kysely<Database>, name: string): Promise<void> {
 	await db
 		.insertInto("_emdash_taxonomy_defs")
@@ -612,8 +592,6 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 	});
 
 	it("nests a child under a parent translated AFTER the child", async () => {
-		// Child is translated before the parent: the FR parent does not exist
-		// when the FR child is created.
 		const enParent = await unwrap(
 			handleTermCreate(ctx.db, "categories", { slug: "news", label: "News", locale: "en" }),
 		);
@@ -635,7 +613,6 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 			}),
 		);
 
-		// Now translate the parent into FR.
 		await unwrap(
 			handleTermCreate(ctx.db, "categories", {
 				slug: "actus",
@@ -647,12 +624,10 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 
 		const frList = await handleTermList(ctx.db, "categories", { locale: "fr" });
 		if (!frList.success) throw new Error(frList.error.message);
-		// The FR child must be nested under the FR parent, not flattened to root.
 		expect(frList.data.terms.map((t) => t.slug)).toEqual(["actus"]);
 		const frParent = frList.data.terms[0]!;
 		expect(frParent.children.map((c) => c.slug)).toEqual(["actualites"]);
 
-		// EN tree is unaffected.
 		const enList = await handleTermList(ctx.db, "categories", { locale: "en" });
 		if (!enList.success) throw new Error(enList.error.message);
 		expect(enList.data.terms.map((t) => t.slug)).toEqual(["news"]);
@@ -689,9 +664,6 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 			}),
 		);
 
-		// No locale filter: rows from both locales are returned. Each child must
-		// stay under the parent in its own locale, not collapse onto a shared
-		// translation_group key.
 		const list = await handleTermList(ctx.db, "categories");
 		if (!list.success) throw new Error(list.error.message);
 		const roots = list.data.terms.toSorted((a, b) => a.slug.localeCompare(b.slug));
@@ -706,8 +678,6 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 		const enTerm = await unwrap(
 			handleTermCreate(ctx.db, "categories", { slug: "news", label: "News", locale: "en" }),
 		);
-		// Creating an FR translation of enTerm whose parent is enTerm (same group)
-		// is a cross-locale self-parent and must be rejected, not silently stored.
 		const res = await handleTermCreate(ctx.db, "categories", {
 			slug: "actus",
 			label: "Actus",
@@ -737,9 +707,8 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 	});
 
 	it("backfills legacy locale-bound parent_id to the translation_group", async () => {
-		// Simulate pre-#1347 rows by writing locale-bound parent ids directly.
 		const enParentId = ulid();
-		const group = enParentId; // anchor row: translation_group == id
+		const group = enParentId;
 		const frParentId = ulid();
 		const enChildId = ulid();
 		const childGroup = enChildId;
@@ -773,7 +742,7 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 					name: "categories",
 					slug: "breaking",
 					label: "Breaking",
-					parent_id: enParentId, // legacy: anchor row id (== group)
+					parent_id: enParentId,
 					data: null,
 					locale: "en",
 					translation_group: childGroup,
@@ -783,7 +752,7 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 					name: "categories",
 					slug: "actualites",
 					label: "Actualités",
-					parent_id: frParentId, // legacy: cross-locale row id (the bug)
+					parent_id: frParentId,
 					data: null,
 					locale: "fr",
 					translation_group: childGroup,
@@ -796,11 +765,9 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 		const repo = new TaxonomyRepository(ctx.db);
 		const frChild = await repo.findById(frChildId);
 		const enChild = await repo.findById(enChildId);
-		// Both children now reference the parent's translation_group.
 		expect(frChild!.parentId).toBe(group);
 		expect(enChild!.parentId).toBe(group);
 
-		// And the FR tree renders nested rather than flattened.
 		const frList = await handleTermList(ctx.db, "categories", { locale: "fr" });
 		if (!frList.success) throw new Error(frList.error.message);
 		const frParent = findInTree(frList.data.terms, "actus");
@@ -808,9 +775,6 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 	});
 
 	it("leaves a group where only one row has a parent split across locales", async () => {
-		// The shape `handleTermUpdate` produces: a reparent applied to one row.
-		// 045 rewrites parent_id values, so it converges rows that all point at
-		// some parent; a row still holding NULL is outside its WHERE clause.
 		const parentId = ulid();
 		const enChildId = ulid();
 		const frChildId = ulid();
@@ -844,7 +808,7 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 					name: "categories",
 					slug: "actualites",
 					label: "Actualités",
-					parent_id: null, // never reparented — the update named the EN row
+					parent_id: null,
 					data: null,
 					locale: "fr",
 					translation_group: childGroup,
@@ -856,10 +820,8 @@ describeEachDialect("taxonomy parent stays nested across locales (#1347)", (dial
 
 		const repo = new TaxonomyRepository(ctx.db);
 		const rows = await repo.findTranslations(childGroup);
-		// 045 cannot converge this: the group still holds two parents.
 		expect(new Set(rows.map((row) => row.parentId))).toEqual(new Set([parentId, null]));
 
-		// So the term is a child in EN and a root in FR.
 		const frList = await handleTermList(ctx.db, "categories", { locale: "fr" });
 		if (!frList.success) throw new Error(frList.error.message);
 		expect(frList.data.terms.map((term) => term.slug)).toEqual(["actualites"]);

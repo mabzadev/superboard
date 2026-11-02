@@ -1,10 +1,3 @@
-/**
- * Media Provider List/Upload Endpoint
- *
- * GET /_emdash/api/media/providers/:providerId - List media from provider
- * POST /_emdash/api/media/providers/:providerId - Upload to provider
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -12,9 +5,6 @@ import { apiError, apiSuccess, handleError } from "#api/error.js";
 
 export const prerender = false;
 
-/**
- * List media from a specific provider
- */
 export const GET: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { providerId } = params;
@@ -59,9 +49,6 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
 	}
 };
 
-/**
- * Upload media to a specific provider
- */
 export const POST: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { providerId } = params;
@@ -97,7 +84,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			return apiError("NO_FILE", "No file provided", 400);
 		}
 
-		// Basic size validation (default 50MB, configurable via maxUploadSize)
 		const maxSize = emdash.config?.maxUploadSize ?? 50 * 1024 * 1024;
 		if (file.size > maxSize) {
 			return apiError(

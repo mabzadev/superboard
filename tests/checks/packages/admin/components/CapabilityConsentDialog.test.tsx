@@ -73,7 +73,6 @@ describe("CapabilityConsentDialog", () => {
 			/>,
 		);
 
-		// The NEW badge should appear for network:fetch (exact match to avoid matching "New" in header)
 		const newBadges = screen.getByText("NEW", { exact: true }).all();
 		expect(newBadges.length).toBeGreaterThanOrEqual(1);
 	});

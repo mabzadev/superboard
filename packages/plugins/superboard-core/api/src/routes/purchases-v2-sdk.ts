@@ -37,7 +37,14 @@ function brandedHeader(c: any, suffix: string): string | undefined {
 	return c.req.header(`X-SuperBoard-${suffix}`);
 }
 
-const sdk = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.purchases-v2-sdk.sdk","pluginId":"superboard-billing","surface":"sdk","access":"sdk-key","public":{"surface":"sdk","prefix":"/v1/monetization/purchases","aliases":["/purchases/v2"]}});
+const sdk = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {
+	service: "api",
+	module: "routes.purchases-v2-sdk.sdk",
+	pluginId: "superboard-billing",
+	surface: "sdk",
+	access: "sdk-key",
+	public: { surface: "sdk", prefix: "/v1/monetization/purchases", aliases: ["/purchases/v2"] },
+});
 
 async function body(c: any): Promise<Record<string, any>> {
 	return readApiJson(c.req.raw);
@@ -60,14 +67,14 @@ async function context(c: Context<{ Bindings: Env; Variables: AppVariables }>) {
   `)
 		.bind(String(projectId))
 		.first<{
-		id: number;
-		instance_id: number;
-		is_test: number;
-		purchases_enabled: number;
-		purchases_core: number;
-		paywalls: number;
-		virtual_currencies: number;
-	}>();
+			id: number;
+			instance_id: number;
+			is_test: number;
+			purchases_enabled: number;
+			purchases_core: number;
+			paywalls: number;
+			virtual_currencies: number;
+		}>();
 	if (!project)
 		throw purchasesError("invalid_sdk_project", "Invalid project for SDK credentials", 403);
 	if (!isPurchasesEnabled(c.env, project.purchases_enabled))
@@ -112,7 +119,9 @@ function fail(c: Context<{ Bindings: Env; Variables: AppVariables }>, error: unk
 			message: (error as Error)?.message || String(error),
 		}),
 	);
-	return Response.json(errorEnvelope(error, c.req.header("cf-ray") || crypto.randomUUID()), { status: value?.status || 422 });
+	return Response.json(errorEnvelope(error, c.req.header("cf-ray") || crypto.randomUUID()), {
+		status: value?.status || 422,
+	});
 }
 
 function requestCountry(c: any) {
@@ -152,10 +161,6 @@ sdk.get("/configuration", async (c) => {
 			placement,
 			targetingContext(c, ctx.customer),
 			{
-				// Once this target has cut over, Flows is the only presentation
-				// authority. Products keeps placements, offerings and verified store
-				// transactions, but the historical billing_paywalls projection must
-				// no longer be read or accidentally returned.
 				paywallsEnabled: ctx.features.paywalls && !flowsCutoverEnabled,
 			},
 		);

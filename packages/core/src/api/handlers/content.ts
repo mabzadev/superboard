@@ -1,7 +1,3 @@
-/**
- * Content CRUD handlers
- */
-
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 
@@ -43,11 +39,6 @@ import { encodeRev, validateRev } from "../rev.js";
 import type { ApiResult, ContentListResponse, ContentResponse } from "../types.js";
 import { validateMediaFields } from "./validate-media-fields.js";
 
-/**
- * Narrow a caught error to one carrying a structured `apiError` discriminant.
- * Used by transaction callbacks that want to surface a specific error code
- * through the standard Error throwing path.
- */
 function hasApiError(error: unknown): error is Error & { apiError: { code: string } } {
 	if (!(error instanceof Error) || !("apiError" in error)) return false;
 	const { apiError } = error;
@@ -59,17 +50,12 @@ function hasApiError(error: unknown): error is Error & { apiError: { code: strin
 	);
 }
 
-/**
- * Extract a slug source (title or name) from content data.
- * Returns null if no suitable string field is found.
- */
 function getSlugSource(data: Record<string, unknown>): string | null {
 	if (typeof data.title === "string" && data.title.length > 0) return data.title;
 	if (typeof data.name === "string" && data.name.length > 0) return data.name;
 	return null;
 }
 
-/** Default SEO values for content without an explicit SEO row */
 const SEO_DEFAULTS: ContentSeo = {
 	title: null,
 	description: null,
@@ -78,9 +64,6 @@ const SEO_DEFAULTS: ContentSeo = {
 	noIndex: false,
 };
 
-/**
- * Check if a collection has SEO enabled.
- */
 async function collectionHasSeo(db: Kysely<Database>, collection: string): Promise<boolean> {
 	const row = await db
 		.selectFrom("_emdash_collections")
@@ -112,9 +95,6 @@ function requireRoutablePublishSlug(routable: boolean, slug: string | null | und
 	}
 }
 
-/**
- * Hydrate SEO data on a single content item if the collection has SEO enabled.
- */
 async function hydrateSeo(
 	db: Kysely<Database>,
 	collection: string,
@@ -126,9 +106,6 @@ async function hydrateSeo(
 	item.seo = await seoRepo.get(collection, item.id);
 }
 
-/**
- * Hydrate SEO data on multiple content items using a single batch query.
- */
 async function hydrateSeoMany(
 	db: Kysely<Database>,
 	collection: string,
@@ -152,9 +129,6 @@ async function hydrateBylines(
 	item: ContentItem,
 ): Promise<void> {
 	const bylineRepo = new BylineRepository(db);
-	// Strict per-locale (migration 040): a credit at locale X renders iff a
-	// byline row exists at locale X in the credited translation_group. The
-	// junction itself spans translations; rendering does not fall back.
 	const localeOpt = item.locale ? { locale: item.locale } : undefined;
 	const bylines = await bylineRepo.getContentBylines(collection, item.id, localeOpt);
 
@@ -164,9 +138,6 @@ async function hydrateBylines(
 		return;
 	}
 
-	// `primaryBylineId` is set iff junction rows exist; non-null
-	// suppresses author fallback even when the credit doesn't resolve
-	// at this locale.
 	if (item.primaryBylineId) {
 		item.bylines = [];
 		item.byline = null;
@@ -174,10 +145,6 @@ async function hydrateBylines(
 	}
 
 	if (item.authorId) {
-		// Same strict-locale rule as explicit credits: a user-linked byline
-		// renders on the entry only when a sibling exists at the entry's
-		// locale. Without this we'd silently surface the default-locale
-		// row, which contradicts the per-locale model.
 		const fallback = await bylineRepo.findByUserId(item.authorId, localeOpt);
 		if (fallback) {
 			item.bylines = [{ byline: fallback, sortOrder: 0, roleLabel: null, source: "inferred" }];
@@ -190,14 +157,6 @@ async function hydrateBylines(
 	item.byline = null;
 }
 
-/**
- * Batch-hydrate bylines for multiple items using two bulk queries instead of N+1.
- *
- * Items may live at different locales (e.g. a list endpoint returning the
- * translations of an entry). Group by `item.locale` and call the strict
- * per-locale repo method once per group so each item resolves against its
- * own locale's byline rows.
- */
 async function hydrateBylinesMany(
 	db: Kysely<Database>,
 	collection: string,
@@ -207,9 +166,6 @@ async function hydrateBylinesMany(
 
 	const bylineRepo = new BylineRepository(db);
 
-	// 1. Bucket items by locale so we can call the strict-locale repo
-	//    once per bucket. Items with a null/undefined locale (pre-i18n
-	//    rows on a single-locale install) share an "unscoped" bucket.
 	const localeBuckets = new Map<string | null, ContentItem[]>();
 	for (const item of items) {
 		const key = item.locale ?? null;
@@ -218,10 +174,6 @@ async function hydrateBylinesMany(
 		else localeBuckets.set(key, [item]);
 	}
 
-	// 2. Per-locale: fetch explicit credits. Items whose credits don't
-	//    resolve at this locale go through a locale-agnostic "has any
-	//    junction" check before being considered for author inference —
-	//    explicit editorial intent at any locale beats inferred fallback.
 	const bylinesByItem = new Map<string, ContentBylineCredit[]>();
 	const itemsNeedingAuthorCheck: ContentItem[] = [];
 	for (const [locale, bucket] of localeBuckets) {
@@ -236,8 +188,6 @@ async function hydrateBylinesMany(
 		}
 	}
 
-	// 3. Author fallback applies only when no explicit credit exists
-	//    (primaryBylineId null).
 	const fallbackByItem = new Map<string, BylineSummary>();
 	if (itemsNeedingAuthorCheck.length > 0) {
 		const authorBuckets = new Map<string | null, ContentItem[]>();
@@ -263,7 +213,6 @@ async function hydrateBylinesMany(
 		}
 	}
 
-	// 4. Assign to each item.
 	for (const item of items) {
 		const explicit = bylinesByItem.get(item.id);
 		if (explicit && explicit.length > 0) {
@@ -284,11 +233,6 @@ async function hydrateBylinesMany(
 	}
 }
 
-/**
- * Resolve an identifier (ID or slug) to a real content ID.
- * Returns the ID if found, null if not found.
- * When locale is provided, slug lookups are scoped to that locale.
- */
 async function resolveId(
 	repo: ContentRepository,
 	collection: string,
@@ -303,10 +247,6 @@ async function resolveId(
 	return item?.id ?? null;
 }
 
-/**
- * Resolve an identifier (ID or slug) to a real content ID,
- * including trashed (soft-deleted) items.
- */
 async function resolveIdIncludingTrashed(
 	repo: ContentRepository,
 	collection: string,
@@ -321,9 +261,6 @@ async function resolveIdIncludingTrashed(
 	return item?.id ?? null;
 }
 
-/**
- * Trashed content item with deletion timestamp
- */
 export interface TrashedContentItem {
 	id: string;
 	type: string;
@@ -337,14 +274,6 @@ export interface TrashedContentItem {
 	deletedAt: string;
 }
 
-/**
- * Resolve the columns a content-list search should match against. Always
- * includes `slug` (a standard column), adds the configured `titleField` plus
- * the `title`/`name` display fields when the collection actually defines them,
- * mirroring the admin's item-title resolution (titleField -> title -> name ->
- * slug), and includes every field explicitly marked searchable. Returning only
- * schema-backed columns avoids "no such column" errors.
- */
 async function resolveSearchColumns(db: Kysely<Database>, collection: string): Promise<string[]> {
 	const row = await db
 		.selectFrom("_emdash_collections")
@@ -362,8 +291,6 @@ async function resolveSearchColumns(db: Kysely<Database>, collection: string): P
 	const columns = new Set(["slug"]);
 	const fieldSlugs = new Set(fields.map((f) => f.slug));
 
-	// A configured titleField takes precedence, then the conventional
-	// title/name fields. A null title_field falls through to those defaults.
 	if (row.title_field && fieldSlugs.has(row.title_field)) columns.add(row.title_field);
 	for (const candidate of ["title", "name"]) {
 		if (fieldSlugs.has(candidate)) columns.add(candidate);
@@ -374,15 +301,6 @@ async function resolveSearchColumns(db: Kysely<Database>, collection: string): P
 	return [...columns];
 }
 
-/**
- * Decide whether the content-list `q` filter can be served from the
- * collection's FTS5 index instead of a full-scan substring LIKE (#1517).
- *
- * Requires SQLite (FTS5 is SQLite-only), search enabled on the collection,
- * every non-slug display column present in the searchable-field set (or the
- * index would miss matches the LIKE finds), and the index table actually
- * existing.
- */
 async function canUseFtsForListFilter(
 	db: Kysely<Database>,
 	collection: string,
@@ -398,12 +316,6 @@ async function canUseFtsForListFilter(
 	return ftsManager.ftsTableExists(collection);
 }
 
-/**
- * Create a 301 auto-redirect from an entry's old URL to its new one after a
- * slug change, using the collection's URL pattern. Shared by
- * handleContentUpdate (direct slug edits) and handleContentPublish (slug edits
- * staged as `_slug` in a draft revision, which only land on publish).
- */
 async function createSlugChangeRedirect(
 	db: Kysely<Database>,
 	collection: string,
@@ -411,13 +323,6 @@ async function createSlugChangeRedirect(
 	newSlug: string,
 	contentId: string,
 ): Promise<void> {
-	// A URL pattern has no locale token, so every locale variant of an entry
-	// generates the same URL, and slugs are unique per (slug, locale) — a
-	// translation may still hold the old slug. Redirecting away from a URL
-	// another row still answers on would take that page down: the redirect
-	// middleware runs `order: "pre"`, so routing never gets a chance.
-	// Any surviving row counts, published or not: a draft that publishes later
-	// would otherwise be shadowed by the redirect.
 	if (await slugStillTaken(db, collection, oldSlug, contentId)) return;
 
 	const collectionRow = await db
@@ -437,7 +342,6 @@ async function createSlugChangeRedirect(
 	invalidateRedirectCache();
 }
 
-/** Whether a row other than `contentId` still holds `slug` in this collection. */
 async function slugStillTaken(
 	db: Kysely<Database>,
 	collection: string,
@@ -455,31 +359,14 @@ async function slugStillTaken(
 	return result.rows.length > 0;
 }
 
-/** Matches a date-only `YYYY-MM-DD` bound (no time component). */
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/**
- * Normalize a date-range bound to an ISO datetime for lexicographic comparison
- * against stored ISO 8601 timestamps. A bare `YYYY-MM-DD` is widened to the
- * appropriate UTC day boundary so the range stays inclusive: a `start` bound
- * becomes the start of the day and an `end` bound the end of the day.
- * Otherwise a date-only upper bound would exclude every same-day row (since
- * `2024-06-01T12:00:00Z` sorts after `2024-06-01`). Full datetimes pass
- * through unchanged.
- */
 function normalizeDateBound(value: string | undefined, edge: "start" | "end"): string | undefined {
 	if (!value) return undefined;
 	if (!DATE_ONLY_RE.test(value)) return value;
 	return edge === "start" ? `${value}T00:00:00.000Z` : `${value}T23:59:59.999Z`;
 }
 
-/**
- * Build the repository's byline filter from the wire params.
- *
- * `locale` is the locale the list is scoped to, which is the locale an
- * inferred credit has to resolve at — the admin list is always scoped to the
- * locale picked in its switcher.
- */
 function resolveBylineFilter(
 	params: { bylines?: string[]; bylinesNone?: boolean; includeInferredBylines?: boolean },
 	locale: string | undefined,
@@ -494,9 +381,6 @@ function resolveBylineFilter(
 	return { mode: "any", bylineIds, includeInferred, locale };
 }
 
-/**
- * Create content list handler
- */
 export async function handleContentList(
 	db: Kysely<Database>,
 	collection: string,
@@ -532,8 +416,6 @@ export async function handleContentList(
 		const bylineFilter = resolveBylineFilter(params, locale);
 		if (bylineFilter) where.bylineFilter = bylineFilter;
 
-		// A date range requires a target column; ignore stray from/to without
-		// a field so a half-specified filter doesn't silently drop all rows.
 		if (params.dateField && (params.dateFrom || params.dateTo)) {
 			where.dateFilter = {
 				field: params.dateField,
@@ -549,9 +431,6 @@ export async function handleContentList(
 			where.useFts = await canUseFtsForListFilter(db, collection, where.searchColumns);
 		}
 
-		// Sorting by a non-system field (a collection's titleField/dateField)
-		// needs the collection's *actual* sort fields resolved server-side,
-		// so the orderBy set stays closed. Only query when it's not a system field.
 		let sortableExtras: string[] | undefined;
 		if (params.orderBy && !isSystemOrderField(params.orderBy)) {
 			const coll = await db
@@ -574,7 +453,6 @@ export async function handleContentList(
 			sortableExtras,
 		});
 
-		// Hydrate SEO data if the collection has SEO enabled
 		const hasSeo = await collectionHasSeo(db, collection);
 		await hydrateSeoMany(db, collection, result.items, hasSeo);
 		await hydrateBylinesMany(db, collection, result.items);
@@ -613,7 +491,6 @@ export async function handleContentList(
 			};
 		}
 		if (error instanceof EmDashValidationError) {
-			// e.g. invalid orderBy field
 			return {
 				success: false,
 				error: { code: "VALIDATION_ERROR", message: error.message },
@@ -630,7 +507,6 @@ export async function handleContentList(
 	}
 }
 
-/** A content author option for the admin author filter. */
 export interface ContentAuthor {
 	id: string;
 	name: string | null;
@@ -638,14 +514,6 @@ export interface ContentAuthor {
 	avatarUrl: string | null;
 }
 
-/**
- * List the distinct authors of a collection's live content.
- *
- * Backs the admin content-list author filter. Unlike `/admin/users` (ADMIN
- * only), this is gated on `content:read`, so any editor can filter by author.
- * Returns only users who have authored at least one non-trashed entry, sorted
- * by display name then email for a stable dropdown order.
- */
 export async function handleContentAuthors(
 	db: Kysely<Database>,
 	collection: string,
@@ -686,9 +554,6 @@ export async function handleContentAuthors(
 	}
 }
 
-/**
- * Get single content item
- */
 export async function handleContentGet(
 	db: Kysely<Database>,
 	collection: string,
@@ -713,7 +578,6 @@ export async function handleContentGet(
 			};
 		}
 
-		// Hydrate SEO data if the collection has SEO enabled
 		const hasSeo = await collectionHasSeo(db, collection);
 		await hydrateSeo(db, collection, item, hasSeo);
 		await hydrateBylines(db, collection, item);
@@ -734,10 +598,6 @@ export async function handleContentGet(
 	}
 }
 
-/**
- * Get a content item by id, including trashed items.
- * Used by restore endpoint for ownership checks on soft-deleted items.
- */
 export async function handleContentGetIncludingTrashed(
 	db: Kysely<Database>,
 	collection: string,
@@ -762,7 +622,6 @@ export async function handleContentGetIncludingTrashed(
 			};
 		}
 
-		// Hydrate SEO data if the collection has SEO enabled
 		const hasSeo = await collectionHasSeo(db, collection);
 		await hydrateSeo(db, collection, item, hasSeo);
 		await hydrateBylines(db, collection, item);
@@ -783,13 +642,6 @@ export async function handleContentGetIncludingTrashed(
 	}
 }
 
-/**
- * Create content item.
- *
- * Content + SEO writes are wrapped in a transaction so either both succeed
- * or neither does. If `body.seo` is provided for a non-SEO collection, the
- * API returns a validation error rather than silently dropping it.
- */
 export async function handleContentCreate(
 	db: Kysely<Database>,
 	collection: string,
@@ -810,7 +662,6 @@ export async function handleContentCreate(
 	try {
 		const hasSeo = await collectionHasSeo(db, collection);
 
-		// Reject SEO input for non-SEO collections
 		if (body.seo && !hasSeo) {
 			return {
 				success: false,
@@ -824,14 +675,10 @@ export async function handleContentCreate(
 		const mimeCheck = await validateMediaFields(db, collection, body.data);
 		if (!mimeCheck.success) return mimeCheck;
 
-		// Wrap content + SEO writes in a transaction for atomicity
 		const item = await withTransaction(db, async (trx) => {
 			const repo = new ContentRepository(trx);
 			const bylineRepo = new BylineRepository(trx);
 
-			// Default to the configured site locale rather than the repo's
-			// hard-coded "en" — otherwise non-English default-locale sites
-			// silently create entries in a locale the editor never chose.
 			const effectiveLocale = body.locale
 				? resolveConfiguredLocale(body.locale)
 				: getI18nConfig()?.defaultLocale;
@@ -862,25 +709,12 @@ export async function handleContentCreate(
 
 			if (body.bylines !== undefined) {
 				const credits = await bylineRepo.setContentBylines(collection, created.id, body.bylines);
-				// `setContentBylines` translates wire row ids to their
-				// `translation_group` before writing. The response-shape
-				// `primaryBylineId` must match what's now in the DB, so read
-				// it from the returned credit (whose `byline` came from a
-				// hydration round-trip).
 				created.primaryBylineId = credits[0]?.byline.translationGroup ?? null;
 			}
 
-			// Taxonomy assignments already belong to the content translation
-			// group. Byline credits remain per content row and need copying.
-			// Explicit `body.bylines` wins — `copyContentBylines` no-ops
-			// when the target already has credits, but the cleaner guard
-			// is to skip the call entirely.
 			if (body.translationOf) {
 				if (body.bylines === undefined) {
 					await bylineRepo.copyContentBylines(collection, body.translationOf, created.id);
-					// `copyContentBylines` writes the source's primary
-					// pointer onto the new row; reflect it in-memory so the
-					// response includes it before hydrateBylines runs.
 					const source = await repo.findById(collection, body.translationOf);
 					if (source) created.primaryBylineId = source.primaryBylineId;
 				}
@@ -888,23 +722,13 @@ export async function handleContentCreate(
 
 			await hydrateBylines(trx, collection, created);
 
-			// Side-write SEO data if provided
 			if (body.seo && hasSeo) {
 				const seoRepo = new SeoRepository(trx);
 				created.seo = await seoRepo.upsert(collection, created.id, body.seo);
 			} else if (hasSeo) {
-				// Assign defaults in-memory — no DB round-trip needed
 				created.seo = { ...SEO_DEFAULTS };
 			}
 
-			// Attach taxonomy terms in the same transaction. The MCP tool
-			// (and the REST create body) previously accepted a `taxonomies`
-			// field on `content_create` without doing anything with it, so
-			// agents publishing a categorized/tagged entry had to make N
-			// follow-up REST calls per taxonomy. This resolves each slug in
-			// the entry's locale and pipes it through the same
-			// `setTermsForEntry` path the `.../terms/{taxonomy}` REST route
-			// uses, so the two entry points can't drift.
 			if (body.taxonomies) {
 				await assignTaxonomies(trx, collection, created.id, effectiveLocale, body.taxonomies);
 			}
@@ -932,14 +756,8 @@ export async function handleContentCreate(
 				error: { code: "VALIDATION_ERROR", message: error.message },
 			};
 		}
-		// SQLite UNIQUE constraint OR Postgres unique_violation — slug
-		// collisions and any other unique violations land here. Match
-		// specifically on "unique constraint failed" / "duplicate key" so we
-		// don't false-positive on NOT NULL or CHECK violations whose
-		// messages also contain "constraint failed".
 		const message = error instanceof Error ? error.message.toLowerCase() : "";
 		if (message.includes("unique constraint failed") || message.includes("duplicate key")) {
-			// Detect slug-specific collisions by message fingerprint
 			if (message.includes("slug")) {
 				return {
 					success: false,
@@ -968,13 +786,6 @@ export async function handleContentCreate(
 	}
 }
 
-/**
- * Update content item.
- * If `_rev` is provided, validates it against the current version before writing.
- * No `_rev` = blind write (backwards-compatible for admin UI).
- *
- * Content + SEO writes are wrapped in a transaction for atomicity.
- */
 export async function handleContentUpdate(
 	db: Kysely<Database>,
 	collection: string,
@@ -995,7 +806,6 @@ export async function handleContentUpdate(
 	try {
 		const hasSeo = await collectionHasSeo(db, collection);
 
-		// Reject SEO input for non-SEO collections
 		if (body.seo && !hasSeo) {
 			return {
 				success: false,
@@ -1013,23 +823,17 @@ export async function handleContentUpdate(
 
 		const repo = new ContentRepository(db);
 
-		// Resolve slug → ID if needed
 		const resolvedId = (await resolveId(repo, collection, id, body.locale)) ?? id;
 
-		// Wrap content + SEO writes in a transaction for atomicity.
-		// The _rev check is inside the transaction so the read-then-write
-		// is atomic -- no concurrent write can slip between the check and update.
 		const item = await withTransaction(db, async (trx) => {
 			const trxRepo = new ContentRepository(trx);
 			const bylineRepo = new BylineRepository(trx);
 
-			// Read existing item once for both _rev check and old slug capture
 			const existing =
 				body._rev || body.slug !== undefined || body.status === "published"
 					? await trxRepo.findById(collection, resolvedId)
 					: null;
 
-			// Validate _rev if provided (optimistic concurrency)
 			if (body._rev) {
 				if (!existing) {
 					throw Object.assign(new Error(`Content item not found: ${id}`), {
@@ -1045,7 +849,6 @@ export async function handleContentUpdate(
 				}
 			}
 
-			// Capture old slug before update for auto-redirect
 			let oldSlug: string | undefined;
 			if (body.slug && existing?.slug && existing.slug !== body.slug) {
 				oldSlug = existing.slug;
@@ -1073,21 +876,13 @@ export async function handleContentUpdate(
 
 			if (body.bylines !== undefined) {
 				const credits = await bylineRepo.setContentBylines(collection, resolvedId, body.bylines);
-				// `setContentBylines` translates wire row ids to their
-				// `translation_group` before writing. Read the in-memory
-				// pointer from the persisted credit so the response shape
-				// matches the DB. See the matching block in handleContentCreate.
 				updated.primaryBylineId = credits[0]?.byline.translationGroup ?? null;
 			}
 
-			// Create auto-redirect when slug changes
 			if (oldSlug && body.slug) {
 				await createSlugChangeRedirect(trx, collection, oldSlug, body.slug, resolvedId);
 			}
 
-			// Sync non-translatable fields to sibling locales in the same
-			// translation group. Only runs when i18n is enabled, data was updated,
-			// and the item belongs to a translation group with siblings.
 			if (isI18nEnabled() && body.data && updated.translationGroup) {
 				await syncNonTranslatableFields(
 					trx,
@@ -1098,7 +893,6 @@ export async function handleContentUpdate(
 				);
 			}
 
-			// Side-write SEO data if provided, always hydrate for SEO-enabled collections
 			if (body.seo && hasSeo) {
 				const seoRepo = new SeoRepository(trx);
 				updated.seo = await seoRepo.upsert(collection, resolvedId, body.seo);
@@ -1109,10 +903,6 @@ export async function handleContentUpdate(
 
 			await hydrateBylines(trx, collection, updated);
 
-			// Replace taxonomy assignments in the same transaction. Uses the
-			// entry's own locale (post-update) to resolve slugs so an update
-			// that also changes locale still lands on the correct term
-			// variants. See handleContentCreate for rationale.
 			if (body.taxonomies) {
 				await assignTaxonomies(
 					trx,
@@ -1131,8 +921,6 @@ export async function handleContentUpdate(
 			data: { item, _rev: encodeRev(item) },
 		};
 	} catch (error) {
-		// Handle structured errors thrown from inside the transaction
-		// (rev check failures, not-found)
 		if (hasApiError(error)) {
 			return {
 				success: false,
@@ -1184,12 +972,6 @@ export async function handleContentUpdate(
 	}
 }
 
-/**
- * Duplicate content item.
- *
- * Only copies SEO data if the collection has SEO enabled.
- * Always returns consistent `seo` shape for SEO-enabled collections.
- */
 export async function handleContentDuplicate(
 	db: Kysely<Database>,
 	collection: string,
@@ -1199,7 +981,6 @@ export async function handleContentDuplicate(
 	try {
 		const hasSeo = await collectionHasSeo(db, collection);
 
-		// Wrap duplicate + SEO copy in a transaction for atomicity
 		const duplicate = await withTransaction(db, async (trx) => {
 			const repo = new ContentRepository(trx);
 			const bylineRepo = new BylineRepository(trx);
@@ -1219,10 +1000,8 @@ export async function handleContentDuplicate(
 			}
 
 			if (hasSeo) {
-				// Copy SEO data from the original (clears canonical)
 				const seoRepo = new SeoRepository(trx);
 				await seoRepo.copyForDuplicate(collection, resolvedId, dup.id);
-				// Always hydrate SEO for consistent response shape
 				dup.seo = await seoRepo.get(collection, dup.id);
 			}
 
@@ -1256,9 +1035,6 @@ export async function handleContentDuplicate(
 	}
 }
 
-/**
- * Delete content item (soft delete - moves to trash)
- */
 export async function handleContentDelete(
 	db: Kysely<Database>,
 	collection: string,
@@ -1300,9 +1076,6 @@ export async function handleContentDelete(
 	}
 }
 
-/**
- * Restore content item from trash
- */
 export async function handleContentRestore(
 	db: Kysely<Database>,
 	collection: string,
@@ -1341,10 +1114,6 @@ export async function handleContentRestore(
 	}
 }
 
-/**
- * Permanently delete content item (cannot be undone).
- * Also cleans up associated SEO data.
- */
 export async function handleContentPermanentDelete(
 	db: Kysely<Database>,
 	collection: string,
@@ -1354,19 +1123,15 @@ export async function handleContentPermanentDelete(
 		const repo = new ContentRepository(db);
 		const resolvedId = (await resolveIdIncludingTrashed(repo, collection, id)) ?? id;
 
-		// Wrap content delete + SEO/comment cleanup in a transaction
 		const deleted = await withTransaction(db, async (trx) => {
 			const trxRepo = new ContentRepository(trx);
 			const wasDeleted = await trxRepo.permanentDelete(collection, resolvedId);
 
 			if (wasDeleted) {
-				// Clean up SEO data for permanently deleted content
 				const seoRepo = new SeoRepository(trx);
 				await seoRepo.delete(collection, resolvedId);
-				// Clean up comments for permanently deleted content
 				const commentRepo = new CommentRepository(trx);
 				await commentRepo.deleteByContent(collection, resolvedId);
-				// Clean up revisions for permanently deleted content
 				const revisionRepo = new RevisionRepository(trx);
 				await revisionRepo.deleteByEntry(collection, resolvedId);
 			}
@@ -1400,9 +1165,6 @@ export async function handleContentPermanentDelete(
 	}
 }
 
-/**
- * List trashed content items
- */
 export async function handleContentListTrashed(
 	db: Kysely<Database>,
 	collection: string,
@@ -1451,9 +1213,6 @@ export async function handleContentListTrashed(
 	}
 }
 
-/**
- * Count trashed content items
- */
 export async function handleContentCountTrashed(
 	db: Kysely<Database>,
 	collection: string,
@@ -1478,9 +1237,6 @@ export async function handleContentCountTrashed(
 	}
 }
 
-/**
- * Schedule content for future publishing
- */
 export async function handleContentSchedule(
 	db: Kysely<Database>,
 	collection: string,
@@ -1527,9 +1283,6 @@ export async function handleContentSchedule(
 	}
 }
 
-/**
- * Unschedule content (revert to draft)
- */
 export async function handleContentUnschedule(
 	db: Kysely<Database>,
 	collection: string,
@@ -1570,12 +1323,6 @@ export async function handleContentUnschedule(
 	}
 }
 
-/**
- * Publish content immediately.
- *
- * Publication is one atomic content-row statement. On databases that support
- * transactions, the existing slug-redirect side write remains grouped with it.
- */
 export async function handleContentPublish(
 	db: Kysely<Database>,
 	collection: string,
@@ -1592,11 +1339,6 @@ export async function handleContentPublish(
 			const resolvedId = (await resolveId(repo, collection, id)) ?? id;
 			const publishConfig = await getCollectionPublishConfig(trx, collection);
 
-			// Capture the pre-publish state. For revision-supporting collections a
-			// slug edit is staged as `_slug` in the draft revision and only lands
-			// on the live `slug` column here, inside `repo.publish()` — it never
-			// passes through handleContentUpdate, where slug-change auto-redirects
-			// are normally created.
 			const existing = await repo.findById(collection, resolvedId);
 
 			const published = await repo.publish(
@@ -1609,9 +1351,6 @@ export async function handleContentPublish(
 				publishConfig.routable,
 			);
 
-			// Leave a 301 behind when publishing changed the slug of an entry that
-			// was already published — its old URL was live and may be indexed or
-			// linked. A first publish is excluded: a draft's URL was never public.
 			if (
 				existing?.status === "published" &&
 				existing.slug &&
@@ -1641,8 +1380,6 @@ export async function handleContentPublish(
 				},
 			};
 		}
-		// The scheduled sweep gates publish on the row still being due; a row
-		// unscheduled in the meantime is a silent skip, not a failure.
 		if (error instanceof ScheduledNotDueError) {
 			return {
 				success: false,
@@ -1653,8 +1390,6 @@ export async function handleContentPublish(
 			};
 		}
 		if (error instanceof EmDashValidationError) {
-			// The staged-slug pre-check tags its error so it maps to the same
-			// 409 SLUG_CONFLICT as direct slug edits in create/update.
 			const details: unknown = error.details;
 			const isSlugConflict =
 				typeof details === "object" &&
@@ -1669,10 +1404,6 @@ export async function handleContentPublish(
 				},
 			};
 		}
-		// Backstop for the pre-check inside repo.publish(): a concurrent write
-		// can still take the slug between the check and the UPDATE, in which
-		// case the `(slug, locale)` unique constraint fires. Same fingerprint
-		// mapping as create/update — never a raw SQLite error to the client.
 		const message = error instanceof Error ? error.message.toLowerCase() : "";
 		if (
 			(message.includes("unique constraint failed") || message.includes("duplicate key")) &&
@@ -1697,12 +1428,6 @@ export async function handleContentPublish(
 	}
 }
 
-/**
- * Unpublish content (revert to draft).
- *
- * Wrapped in a transaction — unpublish may create a draft revision
- * from the live version then update the status, which is multi-step.
- */
 export async function handleContentUnpublish(
 	db: Kysely<Database>,
 	collection: string,
@@ -1743,9 +1468,6 @@ export async function handleContentUnpublish(
 	}
 }
 
-/**
- * Count scheduled content items
- */
 export async function handleContentCountScheduled(
 	db: Kysely<Database>,
 	collection: string,
@@ -1770,9 +1492,6 @@ export async function handleContentCountScheduled(
 	}
 }
 
-/**
- * Discard draft changes (revert to live version)
- */
 export async function handleContentDiscardDraft(
 	db: Kysely<Database>,
 	collection: string,
@@ -1813,9 +1532,6 @@ export async function handleContentDiscardDraft(
 	}
 }
 
-/**
- * Compare live and draft revisions
- */
 export async function handleContentCompare(
 	db: Kysely<Database>,
 	collection: string,
@@ -1867,10 +1583,6 @@ export async function handleContentCompare(
 	}
 }
 
-/**
- * Get all translations for a content item.
- * Returns the item's translation group members with locale and status info.
- */
 export async function handleContentTranslations(
 	db: Kysely<Database>,
 	collection: string,
@@ -1948,20 +1660,6 @@ export async function handleContentTranslations(
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Non-translatable field sync
-// ---------------------------------------------------------------------------
-
-/**
- * Sync non-translatable fields to sibling locales.
- *
- * When a content item is updated and it belongs to a translation group,
- * any non-translatable fields in the update data are written to all other
- * rows in the same translation group within the same transaction.
- *
- * Non-translatable fields are **copied, not linked** — each row owns its
- * own data. This keeps queries simple and avoids cross-row joins.
- */
 async function syncNonTranslatableFields(
 	trx: Kysely<Database>,
 	collectionSlug: string,
@@ -1969,7 +1667,6 @@ async function syncNonTranslatableFields(
 	translationGroup: string,
 	data: Record<string, unknown>,
 ): Promise<void> {
-	// Get the collection to find its fields
 	const collection = await trx
 		.selectFrom("_emdash_collections")
 		.select("id")
@@ -1978,7 +1675,6 @@ async function syncNonTranslatableFields(
 
 	if (!collection) return;
 
-	// Find non-translatable fields that are present in the update data
 	const fields = await trx
 		.selectFrom("_emdash_fields")
 		.select("slug")
@@ -1989,7 +1685,6 @@ async function syncNonTranslatableFields(
 	const nonTranslatableSlugs = fields.map((f) => f.slug);
 	if (nonTranslatableSlugs.length === 0) return;
 
-	// Filter to only the non-translatable fields present in this update
 	const syncData: Record<string, unknown> = {};
 	for (const slug of nonTranslatableSlugs) {
 		if (slug in data) {
@@ -1998,11 +1693,9 @@ async function syncNonTranslatableFields(
 	}
 	if (Object.keys(syncData).length === 0) return;
 
-	// Build the SET clause for sibling rows
 	validateIdentifier(collectionSlug, "collection slug");
 	const tableName = `ec_${collectionSlug}`;
 
-	// Update all sibling rows (same translation_group, different id)
 	const setClauses = Object.entries(syncData).map(([key, value]) => {
 		validateIdentifier(key, "field slug");
 		const serialized = typeof value === "object" && value !== null ? JSON.stringify(value) : value;
@@ -2017,18 +1710,6 @@ async function syncNonTranslatableFields(
 	`.execute(trx);
 }
 
-/**
- * Resolve a `{ taxonomyName: [slug, ...] }` map to term IDs and replace the
- * entry's assignments for each named taxonomy.
- *
- * Shared by handleContentCreate and handleContentUpdate so both MCP entry
- * points behave identically. Slug resolution is scoped to `locale`; passing
- * `undefined` lets `findBySlug` fall back to its default (lowest locale code)
- * so callers on single-locale sites don't need to know the site's default.
- *
- * Throws EmDashValidationError on unknown slug or wrong shape; the calling
- * handler translates that into a VALIDATION_ERROR response.
- */
 async function assignTaxonomies(
 	trx: Kysely<Database>,
 	collection: string,
@@ -2066,7 +1747,5 @@ async function assignTaxonomies(
 		anyChange = true;
 	}
 
-	// Match the REST route's behaviour: taxonomy term assignments changed,
-	// so invalidate the taxonomy object cache used during hydration.
 	if (anyChange) invalidateTermCache();
 }

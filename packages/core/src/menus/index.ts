@@ -1,13 +1,3 @@
-/**
- * Navigation menu runtime functions.
- *
- * These are called from templates to query menus and resolve URLs. All queries
- * are locale-aware: when a locale is configured (or passed explicitly) items
- * are filtered to that locale, and menu item references resolve against the
- * referenced content's translation_group so the URL points at the right
- * per-locale row.
- */
-
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 
@@ -22,20 +12,9 @@ import { sanitizeHref } from "../utils/url.js";
 import type { Menu, MenuItem, MenuItemRow } from "./types.js";
 
 export interface MenuQueryOptions {
-	/** Override the locale used for the lookup. When omitted, the locale comes
-	 * from the request context or the configured defaultLocale. */
 	locale?: string;
 }
 
-/**
- * Get a menu by name with resolved URLs.
- *
- * @example
- * ```ts
- * const menu = await getMenu("primary");
- * const menuEs = await getMenu("primary", { locale: "es" });
- * ```
- */
 export function getMenu(name: string, options: MenuQueryOptions = {}): Promise<Menu | null> {
 	const locale = resolveLocale(options.locale);
 	return requestCached(`menu:${name}:${locale ?? "*"}`, () =>
@@ -50,10 +29,6 @@ export function getMenu(name: string, options: MenuQueryOptions = {}): Promise<M
 	);
 }
 
-/**
- * Get menu by name with resolved URLs (with explicit db). Internal helper for
- * admin routes that already have a database handle.
- */
 export async function getMenuWithDb(
 	name: string,
 	db: Kysely<Database>,
@@ -96,10 +71,6 @@ export async function getMenuWithDb(
 	};
 }
 
-/**
- * Get all menus (without items, locale-filtered — for admin list / site nav
- * summaries). When no locale is configured, returns menus across all locales.
- */
 export async function getMenus(
 	options: MenuQueryOptions = {},
 ): Promise<Array<{ id: string; name: string; label: string; locale: string }>> {
@@ -107,12 +78,6 @@ export async function getMenus(
 	return getMenusWithDb(db, options);
 }
 
-/**
- * Get all menus (with explicit db)
- *
- * @internal Use `getMenus()` in templates. This variant is for admin routes
- * that already have a database handle.
- */
 export async function getMenusWithDb(
 	db: Kysely<Database>,
 	options: MenuQueryOptions = {},
@@ -126,11 +91,6 @@ export async function getMenusWithDb(
 	return query.execute();
 }
 
-/**
- * Build a hierarchical menu tree from a flat list of items. Items are
- * resolved against the given `locale` so references land on the right
- * per-locale content rows.
- */
 async function buildMenuTree(
 	items: MenuItemRow[],
 	db: Kysely<Database>,
@@ -215,12 +175,6 @@ function getContentReference(item: MenuItemRow): { collection: string; id: strin
 	return null;
 }
 
-/**
- * Look up the `url_pattern` for a set of collection slugs, request-cached so
- * a page rendering several menus (header, footer, ...) only pays for the
- * lookup once per distinct slug set. Callers must treat the returned map as
- * read-only — it is shared across cache hits within the request.
- */
 function getCollectionUrlPatterns(
 	db: Kysely<Database>,
 	collectionSlugs: Set<string>,
@@ -238,11 +192,6 @@ function getCollectionUrlPatterns(
 	});
 }
 
-/**
- * Resolve a single menu item's URL. `reference_id` is a translation_group
- * (migration 036 remapped all existing references); we look it up against
- * the per-locale ec_* row or per-locale taxonomy row.
- */
 function resolveMenuItem(
 	item: MenuItemRow,
 	urlPatterns: Map<string, string | null>,
@@ -273,10 +222,6 @@ function resolveMenuItem(
 			break;
 
 		case "collection":
-			// Two shapes share this type: the admin content picker stores
-			// entries from custom collections as "collection" with a
-			// reference_id, while archive links carry only the collection
-			// slug. Entry references resolve like page/post items.
 			if (!item.reference_collection) return null;
 			if (item.reference_id) {
 				url = resolveContentUrl(
@@ -319,11 +264,6 @@ function resolveMenuItem(
 const SLUG_PLACEHOLDER = /\{slug\}/g;
 const ID_PLACEHOLDER = /\{id\}/g;
 
-/**
- * Interpolate a URL pattern with entry data
- *
- * Replaces `{slug}` and `{id}` placeholders.
- */
 function interpolateUrlPattern(pattern: string, slug: string, id: string): string {
 	return pattern.replace(SLUG_PLACEHOLDER, slug).replace(ID_PLACEHOLDER, id);
 }
@@ -406,12 +346,6 @@ function shouldPreferLocalizedRow(
 	);
 }
 
-/**
- * Resolve the URL for a content reference. `referenceGroup` is the content
- * row's translation_group; we look up the row in the requested locale
- * (falling back to the source if no translation exists so the menu link is
- * still clickable).
- */
 function resolveContentUrl(
 	collection: string,
 	referenceGroup: string | null,
@@ -482,10 +416,6 @@ async function resolveTaxonomyReferences(
 	return lookup;
 }
 
-/**
- * Resolve URL for a taxonomy term reference. `referenceGroup` is the term's
- * translation_group; we pick the row in the active locale (or fall back).
- */
 function resolveTaxonomyUrl(
 	referenceGroup: string | null,
 	taxonomyLookup: TaxonomyReferenceLookup,

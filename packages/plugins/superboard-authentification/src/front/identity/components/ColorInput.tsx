@@ -8,7 +8,6 @@ interface ColorInputProps extends Omit<React.ComponentProps<"input">, "type" | "
 
 const ColorInput = ({ onChange, value, ...props }: ColorInputProps) => {
 	const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-		// Ensure the color is in hex format (e.g., #FF0000)
 		const hexColor = e.target.value.toUpperCase();
 		onChange(hexColor);
 	};

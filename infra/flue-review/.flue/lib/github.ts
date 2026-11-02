@@ -1,14 +1,3 @@
-// GitHub App helpers, used only by trusted Worker/Durable-Object code (the
-// review workflow's run()). None of this runs in the agent's container, so the
-// installation token is never reachable by the model-directed shell.
-//
-// Auth model: a GitHub App authenticates as an installation. We mint a short
-// JWT signed with the app's private key (RS256), exchange it for an
-// installation access token (valid ~1h, scoped to the installation's repos and
-// the app's permissions), and use that token for reads and for posting the
-// review. The app needs `pull_requests: write`, `checks: write`, and
-// `contents: read`.
-
 import type { ReviewResult } from "./review-schema.js";
 
 const GITHUB_API = "https://api.github.com";
@@ -30,12 +19,10 @@ function githubFetch(input: string, init: RequestInit = {}): Promise<Response> {
 
 export interface GitHubAppCreds {
 	appId: string;
-	/** PKCS#8 PEM ("BEGIN PRIVATE KEY"). Convert a GitHub PKCS#1 key with `openssl pkcs8`. */
 	privateKeyPem: string;
 	installationId: string;
 }
 
-/** Returns creds if all three are present, else null (dev mode: skip posting). */
 export function readAppCreds(env: Env): GitHubAppCreds | null {
 	const appId = env.GITHUB_APP_ID;
 	const privateKeyPem = env.GITHUB_APP_PRIVATE_KEY;
@@ -81,7 +68,6 @@ async function signAppJwt(creds: GitHubAppCreds): Promise<string> {
 		["sign"],
 	);
 	const now = Math.floor(Date.now() / 1000);
-	// iat backdated 60s for clock skew; GitHub caps exp at 10 minutes.
 	const header = { alg: "RS256", typ: "JWT" };
 	const payload = { iat: now - 60, exp: now + 540, iss: creds.appId };
 	const signingInput = `${base64UrlFromString(JSON.stringify(header))}.${base64UrlFromString(JSON.stringify(payload))}`;
@@ -93,7 +79,6 @@ async function signAppJwt(creds: GitHubAppCreds): Promise<string> {
 	return `${signingInput}.${base64UrlFromBytes(new Uint8Array(signature))}`;
 }
 
-/** Mint a short-lived installation access token. */
 export async function mintInstallationToken(creds: GitHubAppCreds): Promise<string> {
 	const jwt = await signAppJwt(creds);
 	const res = await githubFetch(
@@ -313,12 +298,6 @@ export async function removePullRequestLabel(
 	if (res.status !== 404) await requireGitHubResponse(res, "remove pull request label");
 }
 
-/**
- * Fetch the PR's unified diff (the canonical base...head diff, 3-dot). Used to
- * stage the exact changed lines into the agent's workspace, since the cf-shell
- * sandbox has no `git` CLI. `token` is optional (public repos work anonymously,
- * but a token avoids low rate limits). Returns the raw diff text.
- */
 export async function fetchUnifiedDiff(
 	owner: string,
 	repo: string,
@@ -359,11 +338,6 @@ export async function fetchPullRequestHeadSha(
 	return pull.head.sha;
 }
 
-/**
- * Fetch the most recent emdashbot[bot] review body for a re-review, so the
- * agent can avoid re-flagging already-addressed findings. Returns undefined on
- * a first review or any failure (non-fatal: we just review fresh).
- */
 export async function fetchPriorReview(
 	token: string,
 	owner: string,
@@ -402,11 +376,6 @@ export async function fetchPriorReview(
 	}
 }
 
-/**
- * Add an 👀 reaction to the PR to signal "review in progress". Returns the
- * reaction id (to remove later) or undefined on failure. Non-fatal: a missing
- * progress marker should never block a review.
- */
 export async function addEyesReaction(
 	token: string,
 	owner: string,
@@ -436,7 +405,6 @@ export async function addEyesReaction(
 	}
 }
 
-/** Remove a previously-added reaction (the in-progress marker). Non-fatal. */
 export async function removeReaction(
 	token: string,
 	owner: string,
@@ -457,9 +425,7 @@ export async function removeReaction(
 				},
 			},
 		);
-	} catch {
-		// Best-effort cleanup; leaving a stray reaction is harmless.
-	}
+	} catch {}
 }
 
 function verdictToEvent(
@@ -490,14 +456,8 @@ function findingToComment(finding: ReviewResult["findings"][number]) {
 	return base;
 }
 
-/** GitHub rejects a COMMENT review with an empty body, so we must never send one. */
 const FALLBACK_SUMMARY = "Automated review completed.";
 
-/**
- * Render findings as a markdown list. Used for the body-only fallback so that
- * when GitHub can't anchor inline comments (a finding points outside the diff),
- * the findings still reach the PR in the review body instead of being dropped.
- */
 function renderFindingsMarkdown(findings: ReviewResult["findings"]): string {
 	if (findings.length === 0) return "";
 	const lines = findings.map((f) => {
@@ -558,12 +518,6 @@ async function reviewWasPosted(
 	}
 }
 
-/**
- * Post the review. Maps verdict -> review event and findings -> line comments.
- * If GitHub rejects the inline comments (a comment anchors outside the diff),
- * retry body-only with the findings folded into the body so nothing is lost.
- * The body is always non-empty -- GitHub 422s a blank COMMENT review body.
- */
 export async function postReview(
 	token: string,
 	owner: string,
@@ -608,9 +562,6 @@ export async function postReview(
 	}
 	if (res.ok) return;
 
-	// Most likely cause: a comment anchors to a line outside the diff
-	// ("Path could not be resolved"). Fall back to a body-only review that
-	// carries the summary AND the findings inline, so the review still lands.
 	const firstError = await res.text();
 	if (res.status !== 422) {
 		if (commitId && marker) {

@@ -52,8 +52,6 @@ const pageCtx = createPublicPageContext({
 			href="/rss.xml"
 		/>
 		<script is:inline>
-			// Apply an explicit theme choice immediately to prevent flash.
-			// With no cookie, color-scheme: light dark follows the OS.
 			(function () {
 				var c = document.cookie;
 				var i = c.indexOf("theme=");
@@ -132,7 +130,6 @@ const pageCtx = createPublicPageContext({
 		</footer>
 
 		<script>
-			// Theme switcher
 			const THEME_REGEX = /theme=([^;]+)/;
 			const themeBtns =
 				document.querySelectorAll<HTMLButtonElement>(".theme-btn");
@@ -162,7 +159,6 @@ const pageCtx = createPublicPageContext({
 				return match ? match[1] : "system";
 			}
 
-			// Initialize - apply stored theme on load
 			const storedTheme = getStoredTheme();
 			setTheme(storedTheme);
 
@@ -174,11 +170,6 @@ const pageCtx = createPublicPageContext({
 		</script>
 
 		<style is:global>
-			/*
-			 * Establish layer order: "base" has lower priority than unlayered
-			 * styles, so theme.css overrides always win regardless of source
-			 * order in the bundled CSS.
-			 */
 			@layer base;
 
 			@layer base {
@@ -190,14 +181,6 @@ const pageCtx = createPublicPageContext({
 					padding: 0;
 				}
 
-				/*
-				 * Design tokens live in src/styles/tokens.css. Colors are
-				 * defined with light-dark(); these rules pin the scheme when
-				 * the footer switcher sets an explicit choice. With no class,
-				 * color-scheme: light dark follows the OS preference. The
-				 * @supports guard keeps the toggle from forcing dark UA form
-				 * controls on browsers stuck on the plain-light fallback.
-				 */
 				@supports (color: light-dark(#000, #fff)) {
 					:root.light {
 						color-scheme: light;

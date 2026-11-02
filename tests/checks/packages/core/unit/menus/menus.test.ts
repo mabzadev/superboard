@@ -18,7 +18,6 @@ describe("Navigation Menus", () => {
 	let db: Kysely<Database>;
 
 	beforeEach(async () => {
-		// Fresh in-memory database for each test
 		db = createDatabase({ url: ":memory:" });
 		await runMigrations(db);
 	});
@@ -86,13 +85,6 @@ describe("Navigation Menus", () => {
 		});
 
 		it("strips the menu_id FK so DROP TABLE _emdash_menus is safe on D1 (#1021)", async () => {
-			// Migration 036 rebuilds _emdash_menu_items without the
-			// `ON DELETE CASCADE` FKs declared in migration 005. The cascade
-			// on `menu_id` fired on D1 when the i18n migration dropped the
-			// old _emdash_menus, wiping every menu item (#1021). The
-			// application deletes children explicitly anyway
-			// (see MenuRepository.delete), so the FK is no longer
-			// load-bearing.
 			const rows = await sql<{ table: string }>`
 				PRAGMA foreign_key_list(_emdash_menu_items)
 			`.execute(db);
@@ -272,7 +264,6 @@ describe("Navigation Menus", () => {
 			const menuId = ulid();
 			const itemId = ulid();
 
-			// Create menu with item referencing non-existent content
 			await db
 				.insertInto("_emdash_menus")
 				.values({
@@ -297,7 +288,6 @@ describe("Navigation Menus", () => {
 
 			const menu = await getMenuWithDb("primary", db);
 			expect(menu).not.toBeNull();
-			// Item should be filtered out because the page doesn't exist
 			expect(menu!.items).toHaveLength(0);
 		});
 
@@ -315,7 +305,6 @@ describe("Navigation Menus", () => {
 				})
 				.execute();
 
-			// Create parent item
 			await db
 				.insertInto("_emdash_menu_items")
 				.values({
@@ -328,7 +317,6 @@ describe("Navigation Menus", () => {
 				})
 				.execute();
 
-			// Create child item
 			await db
 				.insertInto("_emdash_menu_items")
 				.values({
@@ -402,13 +390,6 @@ describe("Navigation Menus", () => {
 	});
 
 	describe("collection menu items", () => {
-		// The admin content picker stores entries from custom collections
-		// (anything that isn't pages/posts) as type "collection" with
-		// referenceCollection + referenceId. The resolver used to ignore the
-		// reference_id for this type and emit the archive URL, so picking
-		// "Widget Co" from a "projects" collection produced a menu link to
-		// /projects/ instead of the entry.
-
 		async function setupProjectsCollection(urlPattern?: string): Promise<void> {
 			const registry = new SchemaRegistry(db);
 			await registry.createCollection({
@@ -477,9 +458,6 @@ describe("Navigation Menus", () => {
 		});
 
 		it("resolves items without a reference_id to the collection archive URL", async () => {
-			// Archive links (no entry reference) keep their root-relative
-			// /{collection}/ shape — the same URL shape as every other
-			// same-site item type.
 			await setupProjectsCollection();
 			await insertMenuWithCollectionItem({ referenceCollection: "projects" });
 
@@ -490,8 +468,6 @@ describe("Navigation Menus", () => {
 		});
 
 		it("skips entry references whose content row no longer exists", async () => {
-			// Same contract as page/post items: an unresolvable reference
-			// hides the item instead of rendering a dead link.
 			await setupProjectsCollection();
 			await insertMenuWithCollectionItem({
 				referenceCollection: "projects",
@@ -643,11 +619,6 @@ describe("Navigation Menus", () => {
 	});
 
 	describe("handleMenuSetItems", () => {
-		// The MCP boundary uses Zod with `.nonnegative()` so callers can't
-		// pass a negative `parentIndex` from there. Direct handler callers
-		// (REST routes, future programmatic users) bypass that guard, so
-		// the handler enforces the same constraint.
-
 		async function setupMenu(name: string, locale = "en"): Promise<string> {
 			const id = ulid();
 			await db.insertInto("_emdash_menus").values({ id, name, label: name, locale }).execute();
@@ -683,10 +654,6 @@ describe("Navigation Menus", () => {
 			const { handleMenuSetItems } =
 				await import("../../../../../../packages/core/src/api/handlers/menus.js");
 
-			// Seed a real menu with items so the rollback assertion has
-			// something to potentially clobber. A regression where the
-			// handler deleted ALL items before the existence check (the
-			// shape of the bug we want to guard against) would wipe these.
 			const otherMenuId = await setupMenu("real");
 			const otherItemId = ulid();
 			await db
@@ -707,8 +674,6 @@ describe("Navigation Menus", () => {
 			expect(result.success).toBe(false);
 			expect(result.error?.code).toBe("NOT_FOUND");
 
-			// Unrelated menu's item survives — confirms the transaction
-			// rolled back (or never started its destructive phase).
 			const items = await db.selectFrom("_emdash_menu_items").selectAll().execute();
 			expect(items).toHaveLength(1);
 			expect(items[0]?.id).toBe(otherItemId);
@@ -734,8 +699,6 @@ describe("Navigation Menus", () => {
 			const { handleMenuSetItems } =
 				await import("../../../../../../packages/core/src/api/handlers/menus.js");
 
-			// Two menus with the same name in different locales — exactly the
-			// shape that used to silently let the wrong translation be rewritten.
 			await setupMenu("main", "en");
 			await setupMenu("main", "fr-fr");
 
@@ -745,12 +708,10 @@ describe("Navigation Menus", () => {
 
 			expect(result.success).toBe(false);
 			expect(result.error?.code).toBe("AMBIGUOUS_LOCALE");
-			// Both locales surface in the message so callers can recover.
 			expect(result.error?.message).toContain("en");
 			expect(result.error?.message).toContain("fr-fr");
 			expect(result.error?.message).toMatch(/multiple locales/);
 
-			// Transaction must have rolled back — no items written to either menu.
 			const items = await db.selectFrom("_emdash_menu_items").selectAll().execute();
 			expect(items).toEqual([]);
 		});
@@ -797,8 +758,6 @@ describe("Navigation Menus", () => {
 			);
 			expect(result.success).toBe(true);
 
-			// The EN menu must remain untouched; otherwise the locale-aware
-			// lookup regressed back to "first matching row wins".
 			const enItems = await db
 				.selectFrom("_emdash_menu_items")
 				.select(["label", "custom_url", "locale"])
@@ -826,12 +785,6 @@ describe("Navigation Menus", () => {
 	});
 
 	describe("item handlers — multi-locale ambiguity", () => {
-		// Item-level handlers (create/update/delete/reorder) had the same
-		// `name`-only lookup as the menu-level handlers, so they used to
-		// silently target an arbitrary translation on multi-locale installs.
-		// These tests pin down the AMBIGUOUS_LOCALE behavior so a future
-		// regression to "first matching row wins" gets caught.
-
 		async function setupTwoLocales(name = "main") {
 			const enId = ulid();
 			const frId = ulid();
@@ -861,7 +814,6 @@ describe("Navigation Menus", () => {
 			expect(result.error?.message).toContain("en");
 			expect(result.error?.message).toContain("fr-fr");
 
-			// No item written to either menu.
 			const items = await db.selectFrom("_emdash_menu_items").selectAll().execute();
 			expect(items).toEqual([]);
 		});
@@ -870,7 +822,6 @@ describe("Navigation Menus", () => {
 			const { handleMenuItemUpdate } =
 				await import("../../../../../../packages/core/src/api/handlers/menus.js");
 			const { enId } = await setupTwoLocales();
-			// Seed an item on the EN menu so the update would otherwise resolve.
 			const itemId = ulid();
 			await db
 				.insertInto("_emdash_menu_items")
@@ -890,7 +841,6 @@ describe("Navigation Menus", () => {
 			expect(result.success).toBe(false);
 			expect(result.error?.code).toBe("AMBIGUOUS_LOCALE");
 
-			// Label untouched.
 			const after = await db
 				.selectFrom("_emdash_menu_items")
 				.select("label")
@@ -922,7 +872,6 @@ describe("Navigation Menus", () => {
 			expect(result.success).toBe(false);
 			expect(result.error?.code).toBe("AMBIGUOUS_LOCALE");
 
-			// Item still present.
 			const surviving = await db
 				.selectFrom("_emdash_menu_items")
 				.select("id")
@@ -956,7 +905,6 @@ describe("Navigation Menus", () => {
 			expect(result.success).toBe(false);
 			expect(result.error?.code).toBe("AMBIGUOUS_LOCALE");
 
-			// sort_order untouched (not 99).
 			const after = await db
 				.selectFrom("_emdash_menu_items")
 				.select("sort_order")
@@ -966,7 +914,6 @@ describe("Navigation Menus", () => {
 		});
 
 		it("handleMenuItemCreate: with locale, succeeds and tags item locale", async () => {
-			// Sanity check that the disambiguated path still works.
 			const { handleMenuItemCreate } =
 				await import("../../../../../../packages/core/src/api/handlers/menus.js");
 			await setupTwoLocales();
@@ -988,7 +935,6 @@ describe("Navigation Menus", () => {
 			const { handleMenuCreate } =
 				await import("../../../../../../packages/core/src/api/handlers/menus.js");
 
-			// Seed a source menu so the call would otherwise be valid.
 			const sourceId = ulid();
 			await db
 				.insertInto("_emdash_menus")
@@ -999,18 +945,13 @@ describe("Navigation Menus", () => {
 				name: "primary",
 				label: "Principal",
 				translationOf: sourceId,
-				// locale intentionally omitted
 			});
 
-			// Previously this guard lived only at the MCP boundary, so REST/SDK
-			// callers could clone into the default locale by accident. The
-			// handler now refuses and the MCP layer relies on this check.
 			expect(result.success).toBe(false);
 			expect(result.error?.code).toBe("VALIDATION_ERROR");
 			expect(result.error?.message).toMatch(/locale/i);
 			expect(result.error?.message).toMatch(/translationOf/i);
 
-			// No row created.
 			const created = await db
 				.selectFrom("_emdash_menus")
 				.selectAll()
@@ -1064,8 +1005,6 @@ describe("Navigation Menus", () => {
 				.where("locale", "=", "es")
 				.executeTakeFirstOrThrow();
 
-			// Cloned item inherits source's translation_group so EN/ES rows
-			// identify as the same logical nav entry across translations.
 			expect(cloned.id).not.toBe(sourceItemId);
 			expect(cloned.translation_group).toBe(sourceItemId);
 		});

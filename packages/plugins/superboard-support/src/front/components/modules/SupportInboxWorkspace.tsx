@@ -34,7 +34,6 @@ const hubSections = {
 
 export default function SupportInboxWorkspace() {
 	const search = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
-	// `?id=` opens one conversation; `?q=` (a customer email or id) lists that customer's conversations.
 	if (search?.has("id") || search?.get("q")?.trim()) return <InboxPage />;
 	if (search?.has("inbox")) return <InboxEntities />;
 	return <InboxHub />;

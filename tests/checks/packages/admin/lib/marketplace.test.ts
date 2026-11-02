@@ -25,10 +25,6 @@ describe("marketplace API client", () => {
 		globalThis.fetch = originalFetch;
 	});
 
-	// -----------------------------------------------------------------------
-	// searchMarketplace
-	// -----------------------------------------------------------------------
-
 	describe("searchMarketplace", () => {
 		it("calls correct URL with no params", async () => {
 			fetchSpy.mockResolvedValue(
@@ -83,10 +79,6 @@ describe("marketplace API client", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// fetchMarketplacePlugin
-	// -----------------------------------------------------------------------
-
 	describe("fetchMarketplacePlugin", () => {
 		it("calls correct URL with encoded ID", async () => {
 			fetchSpy.mockResolvedValue(
@@ -122,10 +114,6 @@ describe("marketplace API client", () => {
 			await expect(fetchMarketplacePlugin("broken")).rejects.toThrow("Failed to fetch plugin");
 		});
 	});
-
-	// -----------------------------------------------------------------------
-	// installMarketplacePlugin
-	// -----------------------------------------------------------------------
 
 	describe("installMarketplacePlugin", () => {
 		it("POSTs to correct URL", async () => {
@@ -202,10 +190,6 @@ describe("marketplace API client", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// updateMarketplacePlugin
-	// -----------------------------------------------------------------------
-
 	describe("updateMarketplacePlugin", () => {
 		it("POSTs to plugin update endpoint (not marketplace proxy)", async () => {
 			fetchSpy.mockResolvedValue(new Response("{}", { status: 200 }));
@@ -226,10 +210,6 @@ describe("marketplace API client", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// uninstallMarketplacePlugin
-	// -----------------------------------------------------------------------
-
 	describe("uninstallMarketplacePlugin", () => {
 		it("POSTs to the uninstall endpoint", async () => {
 			fetchSpy.mockResolvedValue(new Response("{}", { status: 200 }));
@@ -247,10 +227,6 @@ describe("marketplace API client", () => {
 			expect(JSON.parse(init.body)).toEqual({});
 		});
 	});
-
-	// -----------------------------------------------------------------------
-	// checkPluginUpdates
-	// -----------------------------------------------------------------------
 
 	describe("checkPluginUpdates", () => {
 		it("GETs the updates endpoint and returns items", async () => {
@@ -272,10 +248,6 @@ describe("marketplace API client", () => {
 		});
 	});
 });
-
-// ---------------------------------------------------------------------------
-// describeCapability helper
-// ---------------------------------------------------------------------------
 
 describe("describeCapability", () => {
 	it("returns known capability label", () => {
@@ -305,7 +277,6 @@ describe("describeCapability", () => {
 describe("CAPABILITY_LABELS", () => {
 	it("has entries for all known capabilities", () => {
 		expect(Object.keys(CAPABILITY_LABELS)).toEqual([
-			// Canonical
 			"content:read",
 			"content:write",
 			"taxonomies:read",
@@ -314,7 +285,6 @@ describe("CAPABILITY_LABELS", () => {
 			"users:read",
 			"network:request",
 			"network:request:unrestricted",
-			// Legacy aliases
 			"read:content",
 			"write:content",
 			"read:media",

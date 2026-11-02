@@ -65,7 +65,6 @@ describe("acceptInviteViaOAuth", () => {
 		const account = await adapter.getOAuthAccount("google", "google-123");
 		expect(account?.userId).toBe(user.id);
 
-		// Single-use: the consumed token can no longer be replayed.
 		await expect(
 			acceptInviteViaOAuth(adapter, "google", makeProfile({ id: "google-999" }), token),
 		).rejects.toMatchObject({ code: "invite_invalid" });
@@ -74,8 +73,6 @@ describe("acceptInviteViaOAuth", () => {
 	it("matches the invited email case-insensitively", async () => {
 		const token = await invite("Invitee@Example.com");
 
-		// Invited as "Invitee@Example.com", provider reports "invitee@example.com":
-		// the differing case still completes the invite (email is normalized on store).
 		const user = await acceptInviteViaOAuth(
 			adapter,
 			"google",
@@ -99,7 +96,6 @@ describe("acceptInviteViaOAuth", () => {
 			),
 		).rejects.toMatchObject({ code: "invite_email_mismatch" });
 
-		// No account was created for the mismatched email.
 		expect(await adapter.getUserByEmail("someone-else@example.com")).toBeNull();
 	});
 
@@ -115,8 +111,6 @@ describe("acceptInviteViaOAuth", () => {
 
 	it("consumes the invite token when linking to a pre-existing account", async () => {
 		const token = await invite("invitee@example.com");
-		// A user with the invited email is created another way after the invite is
-		// issued (e.g. an admin-created user or a passkey-accept race).
 		await adapter.createUser({
 			email: "invitee@example.com",
 			name: "Invitee",
@@ -128,7 +122,6 @@ describe("acceptInviteViaOAuth", () => {
 		expect(user.email).toBe("invitee@example.com");
 		expect(await adapter.getOAuthAccount("google", "google-123")).not.toBeNull();
 
-		// Single-use: the linked-and-consumed token cannot be replayed.
 		await expect(
 			acceptInviteViaOAuth(adapter, "google", makeProfile({ id: "google-777" }), token),
 		).rejects.toMatchObject({ code: "invite_invalid" });
@@ -136,8 +129,6 @@ describe("acceptInviteViaOAuth", () => {
 
 	it("rejects (and does not consume) when the already-linked account's user has a different email", async () => {
 		const token = await invite("invitee@example.com");
-		// An OAuth identity is already linked to a user whose EmDash email differs
-		// from the invited address (e.g. the email was changed after linking).
 		const other = await adapter.createUser({
 			email: "other@example.com",
 			name: "Other",
@@ -159,7 +150,6 @@ describe("acceptInviteViaOAuth", () => {
 			),
 		).rejects.toMatchObject({ code: "invite_email_mismatch" });
 
-		// The invite was not consumed: a fresh, correctly-matched identity still works.
 		const user = await acceptInviteViaOAuth(adapter, "google", makeProfile(), token);
 		expect(user.email).toBe("invitee@example.com");
 	});

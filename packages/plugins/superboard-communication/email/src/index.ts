@@ -212,7 +212,6 @@ const lifecycleWorker = {
 			try {
 				const job = emailWorkerJob(message.body);
 				if (job?.type === "email.webhook") {
-					// Webhook retries are scheduled explicitly with backoff by deliverWebhook.
 					await deliverWebhook(env, job.deliveryId);
 					message.ack();
 					continue;
@@ -710,8 +709,6 @@ async function enqueueMessage(
 					).bind(now, stored.id),
 				]);
 			}
-			// Re-sending the tiny queue command is safe: delivery acquisition below is
-			// conditional, so concurrent or at-least-once Queue messages cannot both send.
 			await env.EMAIL_QUEUE.send({
 				type: "email.deliver",
 				messageId: stored.id,
@@ -959,7 +956,6 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 	if (dispatch?.state === "scheduled") {
 		const remaining = Math.ceil((Date.parse(dispatch.scheduled_at ?? "") - Date.now()) / 1_000);
 		if (remaining > 1) {
-			// Queue delays are bounded; long schedules hop through several delayed jobs.
 			await emailQueue(env).send(
 				{ type: "email.deliver", messageId },
 				{ delaySeconds: Math.min(QUEUE_MAX_DELAY_SECONDS, remaining) },
@@ -1008,8 +1004,6 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 				encrypted_config: storedSender.encrypted_config,
 			}
 		: undefined;
-	// Amazon SES managed identities carry no SMTP credentials of their own: the
-	// central SES credentials and configuration set are used for them.
 	const managedSnapshot = Boolean(
 		snapshot && env.MAIL_PROVIDER === "aws-ses" && !snapshot.publicConfig.username,
 	);
@@ -1206,9 +1200,7 @@ async function recordQuarantinedFailures(env: Env, body: unknown): Promise<void>
 				eventId: `failed:${row.id}`,
 				detail: { error: "delivery_attempts_exhausted" },
 			});
-	} catch {
-		// The dead letter is already durable; timeline events are best effort.
-	}
+	} catch {}
 }
 
 function providerEventDetail(eventType: string, metadata: Record<string, unknown>) {
@@ -1982,7 +1974,6 @@ function safeJson(value: string): Record<string, string> {
 	}
 }
 
-/** Reads a queue message body; both job shapes share the queue (see emailQueue). */
 function emailWorkerJob(body: unknown): EmailWorkerJob | null {
 	if (typeof body !== "object" || body === null || !("type" in body)) return null;
 	if (body.type === "email.webhook" && "deliveryId" in body && typeof body.deliveryId === "string")
@@ -1992,7 +1983,6 @@ function emailWorkerJob(body: unknown): EmailWorkerJob | null {
 	return null;
 }
 
-/** Sender snapshot written with JSON.stringify(EmailSmtpPublicConfig) at accept time. */
 function storedPublicConfig(value: string): EmailSmtpPublicConfig {
 	const parsed: unknown = JSON.parse(value);
 	const config: Record<string, unknown> =

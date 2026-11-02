@@ -12,9 +12,6 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
-// Regression for #1219: content list search was client-side over the loaded
-// page only, so an entry far back in a large collection could not be found.
-// The list query now accepts a server-side `q` substring filter.
 describeEachDialect("content list server-side search (#1219)", (dialect) => {
 	let ctx: DialectTestContext;
 
@@ -30,7 +27,6 @@ describeEachDialect("content list server-side search (#1219)", (dialect) => {
 			searchable: true,
 		});
 
-		// Seed 60 ordinary posts plus a "deep" needle far past the first page.
 		for (let i = 0; i < 60; i++) {
 			const created = await handleContentCreate(ctx.db, "posts", {
 				slug: `post-${String(i).padStart(3, "0")}`,
@@ -44,7 +40,6 @@ describeEachDialect("content list server-side search (#1219)", (dialect) => {
 		});
 		if (!needle.success) throw new Error("needle seed failed");
 
-		// A title containing a literal % to prove wildcards are escaped.
 		const pct = await handleContentCreate(ctx.db, "posts", {
 			slug: "percent-post",
 			data: { title: "50% off sale" },
@@ -88,8 +83,6 @@ describeEachDialect("content list server-side search (#1219)", (dialect) => {
 	});
 
 	it("treats LIKE wildcards in the query literally", async () => {
-		// "50%" must match only the "50% off sale" title — not every row (which
-		// is what an unescaped trailing % wildcard would do).
 		const result = await handleContentList(ctx.db, "posts", { q: "50%", limit: 100 });
 		const titles = titlesOf(result);
 		expect(titles).toContain("50% off sale");
@@ -99,7 +92,6 @@ describeEachDialect("content list server-side search (#1219)", (dialect) => {
 	it("returns the full unfiltered list when no query is given", async () => {
 		const result = await handleContentList(ctx.db, "posts", { limit: 20 });
 		if (!result.success) throw new Error("list failed");
-		// 62 total rows; first page capped at the limit.
 		expect(result.data.items).toHaveLength(20);
 		expect(result.data.total).toBe(62);
 	});

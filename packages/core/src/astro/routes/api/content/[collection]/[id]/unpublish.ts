@@ -1,9 +1,3 @@
-/**
- * Unpublish content - removes from public view, preserves draft
- *
- * POST /_emdash/api/content/{collection}/{id}/unpublish
- */
-
 import type { APIRoute } from "astro";
 
 import { requireOwnerPerm } from "#api/authorize.js";
@@ -22,7 +16,6 @@ export const POST: APIRoute = async ({ params, locals, url, cache }) => {
 
 	const locale = url.searchParams.get("locale") || undefined;
 
-	// Fetch item to check ownership
 	const existing = await emdash.handleContentGet(collection, id, locale);
 	if (!existing.success) {
 		return apiError(

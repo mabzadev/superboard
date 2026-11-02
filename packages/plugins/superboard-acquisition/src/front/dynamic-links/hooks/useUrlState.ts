@@ -24,7 +24,6 @@ export function useUrlState<T = string>(
 	const router = useRouter();
 	const pathname = usePathname();
 
-	// Use refs for options to avoid dependency instability from inline objects
 	const parseRef = useRef(options?.parse);
 	parseRef.current = options?.parse;
 	const serializeRef = useRef(options?.serialize);

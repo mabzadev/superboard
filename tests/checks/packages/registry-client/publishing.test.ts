@@ -11,7 +11,6 @@ function buildHandler(responses: Record<string, { status: number; body: unknown 
 	const calls: Array<{ pathname: string; init: RequestInit }> = [];
 	const handler = vi.fn(async (pathname: string, init: RequestInit) => {
 		calls.push({ pathname, init });
-		// `pathname` from atcute is `/xrpc/<nsid>` plus an optional `?...` query.
 		const cleanPath = pathname.split("?")[0]!;
 		const match = responses[cleanPath];
 		if (!match) {
@@ -61,9 +60,6 @@ describe("PublishingClient", () => {
 
 		const call = calls[0]!;
 		expect(call.pathname).toMatch(/^\/xrpc\/com\.atproto\.repo\.putRecord/);
-		// atcute issues procedures with a lowercase "post" method. We assert the
-		// literal value so a regression in either direction (atcute upper-cases,
-		// or our wrapper accidentally uses GET) trips the test.
 		expect(call.init.method).toBe("post");
 
 		const body = JSON.parse(call.init.body as string);
@@ -71,8 +67,6 @@ describe("PublishingClient", () => {
 			repo: did,
 			collection: "com.emdashcms.experimental.package.profile",
 			rkey: "gallery",
-			// validate: true is the default. The PDS lexicon-validates every
-			// record we write; opting out (skipValidation: true) is a footgun.
 			validate: true,
 		});
 	});
@@ -107,9 +101,6 @@ describe("PublishingClient", () => {
 
 		const client = PublishingClient.fromHandler({ handler, did, pds });
 		try {
-			// Use unsafePutRecord so we can pass an opaque record without
-			// satisfying the registry-lexicons typed shape -- this test is
-			// about the error-mapping path, not the body.
 			await client.unsafePutRecord({
 				collection: "com.emdashcms.experimental.package.profile",
 				rkey: "x",
@@ -139,9 +130,7 @@ describe("PublishingClient", () => {
 		});
 
 		expect(result.value).toEqual({ foo: 1 });
-		// atcute issues queries with a lowercase "get" method.
 		expect(calls[0]!.init.method).toBe("get");
-		// The URL with query params is in the pathname for atcute handlers.
 		expect(calls[0]!.pathname).toContain("repo=did%3Aplc%3Aabc123");
 		expect(calls[0]!.pathname).toContain("collection=com.emdashcms.experimental.package.profile");
 		expect(calls[0]!.pathname).toContain("rkey=gallery");
@@ -195,8 +184,6 @@ describe("PublishingClient", () => {
 					op: "create",
 					collection: "com.emdashcms.experimental.package.profile",
 					rkey: "x",
-					// Cast: real callers build records via the lexicon types; the
-					// test asserts shape, not record contents.
 					record: { foo: 1 } as never,
 				},
 				{
@@ -212,7 +199,6 @@ describe("PublishingClient", () => {
 		expect(result.results[0]).toMatchObject({ op: "create" });
 		expect(result.results[1]).toMatchObject({ op: "update" });
 
-		// One XRPC call, lexicon-validate enabled by default.
 		expect(calls).toHaveLength(1);
 		const body = JSON.parse(calls[0]!.init.body as string);
 		expect(body.validate).toBe(true);

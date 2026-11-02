@@ -3,8 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("virtual:emdash/wait-until", () => ({ waitUntil: undefined }), { virtual: true });
 
-// Mock loader.getDb so the runtime taxonomy functions read from our test db
-// (and so we can simulate D1 being unavailable on the second, cached read).
 vi.mock("../../../../../../packages/core/src/loader.js", () => ({ getDb: vi.fn() }));
 
 import { ContentRepository } from "../../../../../../packages/core/src/database/repositories/content.js";
@@ -49,10 +47,6 @@ describe("entry-term reads are served from the object cache", () => {
 		db = await setupTestDatabaseWithCollections();
 		vi.mocked(getDb).mockResolvedValue(db);
 
-		// Configure the object cache up front (wide revalidate window so the
-		// namespace epoch stays stable across reads). Injecting before any
-		// write means the seeding writes' deferred epoch bumps resolve the
-		// backend to this stub rather than triggering the virtual-module import.
 		__setObjectCacheBackendForTests(memoryBackend(), { revalidate: 60_000, defaultTtl: 3600 });
 
 		const taxRepo = new TaxonomyRepository(db);
@@ -62,7 +56,6 @@ describe("entry-term reads are served from the object cache", () => {
 		postId = post.id;
 		await taxRepo.attachToEntry("post", post.id, tag.id);
 
-		// Let the seeding writes' deferred epoch bumps settle before the reads.
 		await flush();
 	});
 
@@ -77,9 +70,8 @@ describe("entry-term reads are served from the object cache", () => {
 			getEntryTerms("post", postId, "tag"),
 		);
 		expect(first.map((t) => t.slug)).toEqual(["web"]);
-		await flush(); // let the deferred cache set land
+		await flush();
 
-		// Simulate D1 being unavailable — a cached read must not need it.
 		vi.mocked(getDb).mockRejectedValue(new Error("D1 unavailable"));
 
 		const second = await runWithContext({ editMode: false, db }, () =>
@@ -100,7 +92,6 @@ describe("entry-term reads are served from the object cache", () => {
 		const second = await runWithContext({ editMode: false, db }, () =>
 			getTermsForEntries("post", [postId], "tag"),
 		);
-		// Map rebuilt correctly from the cached array-of-pairs.
 		expect(second).toBeInstanceOf(Map);
 		expect(second.get(postId)?.map((t) => t.slug)).toEqual(["web"]);
 	});

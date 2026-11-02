@@ -1,4 +1,3 @@
-//sidebarNav options
 export const CONFIGURATION = "Configuration" as const;
 export const NOTIFICATIONS = "Notifications" as const;
 export const MESSAGES = "Messages" as const;
@@ -13,7 +12,6 @@ export const AUDIENCE = "Audience" as const;
 export const HELP = "Get live help" as const;
 export const DOMAIN = "domain" as const;
 
-//desktop radio , link-type select
 export const GENERATED = "generated" as const;
 export const CUSTOM = "Custom" as const;
 export const APP_OR_FALLBACK = "app_or_fallback" as const;
@@ -25,10 +23,8 @@ export const REFERRALS = "referrals" as const;
 export const AUTOMATIC = "automatic" as const;
 export const SHOW_PREVIEWS = "show_previews" as const;
 
-//android app radio
 export const INSTORE = "in_store" as const;
 
-//header switch
 export const TEST = "Test" as const;
 export const PRODUCTION = "Production" as const;
 export const WEB_SWITCH = "Web" as const;
@@ -40,7 +36,6 @@ export const SUCCESS = "success" as const;
 export const INFO = "info" as const;
 export const WARNING = "warning" as const;
 
-//social mediaType
 export const FACEBOOK = "facebook" as const;
 export const X = "x" as const;
 export const LINKEDIN = "linkedin" as const;
@@ -49,11 +44,9 @@ export const META = "meta" as const;
 export const TIKTOK = "tiktok" as const;
 export const QUICK_LINK = "quick-link" as const;
 
-//image Type
 export const FILE = "file" as const;
 export const LINK = "link" as const;
 
-//SDK TYPE
 export const COCOAPODS = "cocoapods" as const;
 export const SPM = "spm" as const;
 export const GRADLE = "gradle" as const;
@@ -64,7 +57,6 @@ export const NPM = "npm" as const;
 export const YARN = "yarn" as const;
 export const NATIVE = "native" as const;
 
-//variables for calls
 export const IOS = "ios" as const;
 export const WEB = "web" as const;
 export const MOBILE = "mobile" as const;
@@ -82,7 +74,6 @@ export const ARCHIVE_LINK = "archive_link" as const;
 export const DELETE_PROJECT = "delete_project" as const;
 export const REMOVE_MESSAGE = "remove_message" as const;
 
-//SETTINGS OPTIONS
 export const MEMBERS_OPTION = "membersSettings" as const;
 
 export const DEFAULT_PLACEHOLDER_LINK = "/social-media-placeholder.svg" as const;

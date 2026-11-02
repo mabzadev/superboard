@@ -74,7 +74,6 @@ const AddNewMemberDialog = ({
 				</DialogHeader>
 
 				<div className="flex flex-col gap-4 w-full">
-					{/* Members */}
 					<div className="flex flex-col gap-4 max-w-[800px]">
 						<DialogDescription className="text-sm text-muted-foreground">
 							You can add new members to your project, giving them access to specific areas based on

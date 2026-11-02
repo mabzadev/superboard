@@ -1,19 +1,7 @@
-/**
- * Marketplace API client
- *
- * Calls the site-side proxy endpoints (/_emdash/api/admin/plugins/marketplace/*)
- * which forward to the marketplace Worker. This avoids CORS issues since the
- * admin UI doesn't need to know the marketplace URL.
- */
-
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
 import { API_BASE, apiFetch, parseApiResponse, throwResponseError } from "./client.js";
-
-// ---------------------------------------------------------------------------
-// Types — matches the marketplace REST API response shapes
-// ---------------------------------------------------------------------------
 
 export interface MarketplaceAuthor {
 	name: string;
@@ -41,7 +29,6 @@ export interface MarketplaceVersion {
 	publishedAt: string;
 }
 
-/** Summary shown in browse cards */
 export interface MarketplacePluginSummary {
 	id: string;
 	name: string;
@@ -60,7 +47,6 @@ export interface MarketplacePluginSummary {
 	updatedAt: string;
 }
 
-/** Full detail returned by GET /plugins/:id */
 export interface MarketplacePluginDetail extends MarketplacePluginSummary {
 	license?: string;
 	repositoryUrl?: string;
@@ -81,7 +67,6 @@ export interface MarketplaceSearchOpts {
 	limit?: number;
 }
 
-/** Update check result per plugin */
 export interface PluginUpdateInfo {
 	pluginId: string;
 	installed: string;
@@ -89,7 +74,6 @@ export interface PluginUpdateInfo {
 	hasCapabilityChanges: boolean;
 }
 
-/** Install request body */
 export interface InstallPluginOpts {
 	version?: string;
 	confirmMcpTools?: boolean;
@@ -134,29 +118,17 @@ function getMcpConsentTools(body: unknown): PluginMcpConsentTool[] | null {
 	return valid.length > 0 ? valid : null;
 }
 
-/** Update request body */
 export interface UpdatePluginOpts {
-	/** User has confirmed new capabilities */
 	confirmCapabilityChanges?: boolean;
 	confirmMcpTools?: boolean;
 }
 
-/** Uninstall request body */
 export interface UninstallPluginOpts {
-	/** Delete plugin storage data */
 	deleteData?: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// API functions — proxy through site endpoints
-// ---------------------------------------------------------------------------
-
 const MARKETPLACE_BASE = `${API_BASE}/admin/plugins/marketplace`;
 
-/**
- * Search the marketplace catalog.
- * Proxied through /_emdash/api/admin/plugins/marketplace
- */
 export async function searchMarketplace(
 	opts: MarketplaceSearchOpts = {},
 ): Promise<MarketplaceSearchResult> {
@@ -173,10 +145,6 @@ export async function searchMarketplace(
 	return parseApiResponse<MarketplaceSearchResult>(response, "Marketplace search failed");
 }
 
-/**
- * Get full plugin detail.
- * Proxied through /_emdash/api/admin/plugins/marketplace/:id
- */
 export async function fetchMarketplacePlugin(id: string): Promise<MarketplacePluginDetail> {
 	const response = await apiFetch(`${MARKETPLACE_BASE}/${encodeURIComponent(id)}`);
 	if (response.status === 404) {
@@ -185,10 +153,6 @@ export async function fetchMarketplacePlugin(id: string): Promise<MarketplacePlu
 	return parseApiResponse<MarketplacePluginDetail>(response, "Failed to fetch plugin");
 }
 
-/**
- * Install a plugin from the marketplace.
- * POST /_emdash/api/admin/plugins/marketplace/:id/install
- */
 export async function installMarketplacePlugin(
 	id: string,
 	opts: InstallPluginOpts = {},
@@ -209,10 +173,6 @@ export async function installMarketplacePlugin(
 	}
 }
 
-/**
- * Update a marketplace plugin to a newer version.
- * POST /_emdash/api/admin/plugins/:id/update
- */
 export async function updateMarketplacePlugin(
 	id: string,
 	opts: UpdatePluginOpts = {},
@@ -233,10 +193,6 @@ export async function updateMarketplacePlugin(
 	}
 }
 
-/**
- * Uninstall a marketplace plugin.
- * POST /_emdash/api/admin/plugins/:id/uninstall
- */
 export async function uninstallMarketplacePlugin(
 	id: string,
 	opts: UninstallPluginOpts = {},
@@ -249,10 +205,6 @@ export async function uninstallMarketplacePlugin(
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to uninstall plugin`));
 }
 
-/**
- * Check all marketplace plugins for available updates.
- * GET /_emdash/api/admin/plugins/updates
- */
 export async function checkPluginUpdates(): Promise<PluginUpdateInfo[]> {
 	const response = await apiFetch(`${API_BASE}/admin/plugins/updates`);
 	const result = await parseApiResponse<{ items: PluginUpdateInfo[] }>(
@@ -262,20 +214,9 @@ export async function checkPluginUpdates(): Promise<PluginUpdateInfo[]> {
 	return result.items;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Human-readable labels for plugin capabilities.
- *
- * Canonical names are the keys; legacy names alias to the same labels so
- * old manifests still render meaningful copy until they're republished.
- */
 import type { MessageDescriptor } from "@lingui/core";
 
 export const CAPABILITY_LABELS: Record<string, MessageDescriptor> = {
-	// Canonical
 	"content:read": msg`Read your content`,
 	"content:write": msg`Create, update, and delete content`,
 	"taxonomies:read": msg`Read your taxonomies and terms`,
@@ -284,7 +225,6 @@ export const CAPABILITY_LABELS: Record<string, MessageDescriptor> = {
 	"users:read": msg`Read user accounts`,
 	"network:request": msg`Make network requests`,
 	"network:request:unrestricted": msg`Make network requests to any host (unrestricted)`,
-	// Legacy aliases (still emitted by older installed manifests)
 	"read:content": msg`Read your content`,
 	"write:content": msg`Create, update, and delete content`,
 	"read:media": msg`Access your media library`,
@@ -294,18 +234,8 @@ export const CAPABILITY_LABELS: Record<string, MessageDescriptor> = {
 	"network:fetch:any": msg`Make network requests to any host (unrestricted)`,
 };
 
-/** Capability names that grant scoped network access (legacy + canonical). */
 const NETWORK_REQUEST_CAPABILITIES = new Set(["network:request", "network:fetch"]);
 
-/**
- * Get a human-readable description for a capability.
- * For scoped network capabilities, appends the allowed hosts if provided.
- *
- * Module-scope so calls outside React components work; uses the global i18n
- * instance for translation. Components that have access to `useLingui` can
- * also resolve `CAPABILITY_LABELS[capability]` directly with `t(...)` if they
- * need the translated string without the host suffix.
- */
 export function describeCapability(capability: string, allowedHosts?: string[]): string {
 	const descriptor = CAPABILITY_LABELS[capability];
 	const base = descriptor ? i18n._(descriptor) : capability;

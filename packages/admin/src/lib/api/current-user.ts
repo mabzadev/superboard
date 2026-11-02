@@ -1,7 +1,3 @@
-/**
- * Current user query — shared across Shell, Header, Sidebar, and CommandPalette.
- */
-
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { useQuery } from "@tanstack/react-query";

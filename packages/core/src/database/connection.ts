@@ -12,16 +12,8 @@ export interface DatabaseConfig {
 	authToken?: string;
 }
 
-/**
- * Creates a Kysely database instance
- * Supports:
- * - file:./path/to/db.sqlite (local SQLite)
- * - :memory: (in-memory SQLite for testing)
- * - libsql://... (Turso/libSQL with auth token) - TODO
- */
 export function createDatabase(config: DatabaseConfig): Kysely<Database> {
 	try {
-		// Handle file-based SQLite
 		if (config.url.startsWith("file:") || config.url === ":memory:") {
 			const dbPath = config.url === ":memory:" ? ":memory:" : config.url.replace("file:", "");
 
@@ -34,12 +26,10 @@ export function createDatabase(config: DatabaseConfig): Kysely<Database> {
 			return new Kysely<Database>({ dialect, log: kyselyLogOption() });
 		}
 
-		// Handle libSQL (Turso)
 		if (config.url.startsWith("libsql:")) {
 			if (!config.authToken) {
 				throw new EmDashDatabaseError("Auth token required for remote libSQL database");
 			}
-			// LibSQL implementation would use @libsql/kysely-libsql
 			throw new EmDashDatabaseError("LibSQL not yet implemented");
 		}
 

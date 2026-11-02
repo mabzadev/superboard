@@ -1,9 +1,3 @@
-/**
- * emdash dev
- *
- * Start development server with optional schema sync from remote
- */
-
 import { spawn } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -93,13 +87,11 @@ export const devCommand = defineCommand({
 
 		const dbPath = resolve(cwd, args.database);
 
-		// Run migrations if database doesn't exist
 		const dbExists = await fileExists(dbPath);
 		if (!dbExists) {
 			consola.start("Database not found, initializing...");
 		}
 
-		// Always run migrations (they're idempotent)
 		const db = createDatabase({ url: `file:${dbPath}` });
 		try {
 			consola.start("Checking database migrations...");
@@ -116,7 +108,6 @@ export const devCommand = defineCommand({
 		}
 		await db.destroy();
 
-		// Generate types from remote if requested
 		if (args.types) {
 			const remoteUrl = pkg.emdash?.url || process.env.EMDASH_URL;
 
@@ -146,12 +137,10 @@ export const devCommand = defineCommand({
 			}
 		}
 
-		// Start Astro dev server
 		consola.start("Starting Astro dev server...");
 
 		const astroArgs = ["astro", "dev", "--port", args.port];
 
-		// Check if using pnpm, npm, or yarn
 		const pnpmLockExists = await fileExists(resolve(cwd, "pnpm-lock.yaml"));
 		const yarnLockExists = await fileExists(resolve(cwd, "yarn.lock"));
 
@@ -176,7 +165,6 @@ export const devCommand = defineCommand({
 			stdio: "inherit",
 			env: {
 				...process.env,
-				// Pass database path to Astro
 				EMDASH_DATABASE_URL: `file:${dbPath}`,
 			},
 		});
@@ -190,7 +178,6 @@ export const devCommand = defineCommand({
 			process.exit(code ?? 0);
 		});
 
-		// Handle termination signals
 		const cleanup = () => {
 			child.kill("SIGTERM");
 		};

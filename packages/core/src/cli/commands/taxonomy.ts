@@ -1,16 +1,9 @@
-/**
- * emdash taxonomy
- *
- * Manage taxonomies and terms via the EmDash REST API.
- */
-
 import { defineCommand } from "citty";
 import { consola } from "consola";
 
 import { connectionArgs, createClientFromArgs } from "../client-factory.js";
 import { configureOutputMode, output } from "../output.js";
 
-/** Pattern to replace whitespace with hyphens for slug generation */
 const WHITESPACE_PATTERN = /\s+/g;
 
 const listCommand = defineCommand({

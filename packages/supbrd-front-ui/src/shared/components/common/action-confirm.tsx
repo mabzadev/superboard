@@ -46,11 +46,6 @@ const ActionConfirm = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			{/* <DialogTrigger asChild>
-
-        <div onClick={() => setOpen(true)}>{children}</div>
-      </DialogTrigger> */}
-
 			<DialogContent showCloseButton={showCloseButton}>
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>

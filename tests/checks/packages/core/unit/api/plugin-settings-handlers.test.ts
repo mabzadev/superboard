@@ -1,11 +1,3 @@
-/**
- * Plugin settings handlers: auto-generated settings UI backend (#341).
- *
- * Values must land under `plugin:{id}:settings:{key}` in the options
- * table — the same keys plugins read via `ctx.kv.get("settings:{key}")` —
- * and secret fields must never be echoed back to the client.
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -133,7 +125,6 @@ describe("plugin settings handlers", () => {
 			note: null,
 		});
 		expect(result.data.secretsSet).toEqual({ apiKey: false });
-		// Secret values never appear in `values`.
 		expect("apiKey" in result.data.values).toBe(false);
 	});
 
@@ -171,7 +162,6 @@ describe("plugin settings handlers", () => {
 		expect(result.success).toBe(true);
 		if (!result.success) return;
 
-		// Response reflects the new values, secrets masked but flagged.
 		expect(result.data.values.apiUrl).toBe("https://api.example.com");
 		expect(result.data.values.retries).toBe(5);
 		expect(result.data.values.enabled).toBe(false);
@@ -179,7 +169,6 @@ describe("plugin settings handlers", () => {
 		expect(result.data.secretsSet).toEqual({ apiKey: true });
 		expect("apiKey" in result.data.values).toBe(false);
 
-		// Stored exactly where `ctx.kv.get("settings:{key}")` reads.
 		const options = new OptionsRepository(db);
 		expect(await options.get(`plugin:${PLUGIN_ID}:settings:apiKey`)).toBe("s3cret");
 		expect(await options.get(`plugin:${PLUGIN_ID}:settings:retries`)).toBe(5);
@@ -211,7 +200,6 @@ describe("plugin settings handlers", () => {
 		if (result.success) return;
 		expect(result.error.code).toBe("VALIDATION_ERROR");
 
-		// Validation happens before any write — the valid key wasn't stored either.
 		const options = new OptionsRepository(db);
 		expect(await options.get(`plugin:${PLUGIN_ID}:settings:retries`)).toBeNull();
 	});

@@ -15,13 +15,10 @@ final class DebugLoggerTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - Helpers
-
-    /// Captures stdout during the execution of `block` and returns it as a string.
     private func captureStdout(_ block: () -> Void) -> String {
         let pipe = Pipe()
         let original = dup(STDOUT_FILENO)
-        setvbuf(stdout, nil, _IONBF, 0)  // disable buffering
+        setvbuf(stdout, nil, _IONBF, 0)
         dup2(pipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
 
         block()
@@ -33,8 +30,6 @@ final class DebugLoggerTests: XCTestCase {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         return String(data: data, encoding: .utf8) ?? ""
     }
-
-    // MARK: - Filtering
 
     func testInfoMessageFilteredWhenLevelIsError() {
         DebugLogger.shared.logLevel = .error
@@ -68,8 +63,6 @@ final class DebugLoggerTests: XCTestCase {
         XCTAssertTrue(output.contains("warn visible"), "Warn message should pass when level is .info")
     }
 
-    // MARK: - Output format
-
     func testOutputContainsLevelLabel() {
         DebugLogger.shared.logLevel = .info
         let output = captureStdout {
@@ -83,7 +76,6 @@ final class DebugLoggerTests: XCTestCase {
         let output = captureStdout {
             DebugLogger.shared.log(.info, "location test")
         }
-        // The logger extracts the filename from #file and includes #function
         XCTAssertTrue(output.contains("DebugLoggerTests.swift"), "Output should contain calling file name")
         XCTAssertTrue(output.contains("testOutputContainsFileAndFunction"), "Output should contain calling function")
         XCTAssertTrue(output.contains("[Line"), "Output should contain line number marker")
@@ -105,8 +97,6 @@ final class DebugLoggerTests: XCTestCase {
         }
         XCTAssertFalse(output.hasPrefix("\n\n\n"), "Info message should NOT get triple newline padding")
     }
-
-    // MARK: - LogLevel enum
 
     func testLogLevelComparable() {
         XCTAssertTrue(LogLevel.info < LogLevel.warn)

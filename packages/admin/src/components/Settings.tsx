@@ -22,9 +22,6 @@ import { SUPPORTED_LOCALES } from "../locales/index.js";
 import { useLocale } from "../locales/useLocale.js";
 import { SettingsNavRow, SettingsSection } from "./settings/SettingsLayout.js";
 
-/**
- * Settings hub page — links to all settings sub-pages.
- */
 export function Settings() {
 	const { data: currentUser } = useCurrentUser();
 	const { data: manifest } = useQuery({

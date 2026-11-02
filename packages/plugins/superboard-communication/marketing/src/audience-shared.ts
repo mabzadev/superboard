@@ -8,9 +8,7 @@ export type AudienceBindings = {
 	Variables: { project: ProjectContext };
 };
 
-/** D1 accepts at most 100 bound parameters per statement; keep headroom for scope values. */
 export const D1_PARAMETER_CHUNK = 90;
-/** D1 batches stay small so one slow statement never holds the whole request. */
 export const D1_BATCH_SIZE = 100;
 
 export function chunks<T>(values: readonly T[], size: number): T[][] {
@@ -24,7 +22,6 @@ export async function runBatches(db: D1Database, statements: D1PreparedStatement
 	for (const part of chunks(statements, D1_BATCH_SIZE)) if (part.length) await db.batch(part);
 }
 
-/** Text of a primitive input value; missing values and objects read as empty text. */
 export function plainText(value: unknown): string {
 	if (typeof value === "string") return value;
 	if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint")
@@ -72,7 +69,6 @@ export function isFrench(locale: unknown) {
 	return plainText(locale).toLowerCase().startsWith("fr");
 }
 
-/** Picks the visitor language from an explicit value, then Accept-Language. */
 export function requestLocale(explicit: unknown, acceptLanguage: string | null | undefined) {
 	if (typeof explicit === "string" && explicit.trim()) return isFrench(explicit) ? "fr" : "en";
 	const first = String(acceptLanguage ?? "")
@@ -82,7 +78,6 @@ export function requestLocale(explicit: unknown, acceptLanguage: string | null |
 	return first?.startsWith("fr") ? "fr" : "en";
 }
 
-/** Minimal, dependency-free public page shell used by preference center and forms. */
 export function publicPage({
 	title,
 	body,

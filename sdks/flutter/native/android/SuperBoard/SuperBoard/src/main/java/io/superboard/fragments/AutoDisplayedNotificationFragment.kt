@@ -57,7 +57,6 @@ class AutoDisplayedNotificationFragment(val superboardService: SuperBoardService
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
         binding = FragmentAutoDisplayedNotificationBinding.inflate(inflater, container, false)
 
         return binding.root
@@ -85,7 +84,6 @@ class AutoDisplayedNotificationFragment(val superboardService: SuperBoardService
             onDialogDismissed?.invoke()
         }
 
-        // Configure the WebView settings
         binding.webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
@@ -100,11 +98,10 @@ class AutoDisplayedNotificationFragment(val superboardService: SuperBoardService
             }
         }
         val webSettings: WebSettings = binding.webView.settings
-        webSettings.javaScriptEnabled = true  // Enable JavaScript if needed
+        webSettings.javaScriptEnabled = true
 
         binding.webView.setBackgroundColor(Color.TRANSPARENT)
 
-        // Load a URL in the WebView
         notification?.accessURL?.let {
             binding.webView.loadUrl("https://$it")
         }

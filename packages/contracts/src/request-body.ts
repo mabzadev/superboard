@@ -43,10 +43,6 @@ export async function readBytesLimited(
 			if (done) break;
 			total += value.byteLength;
 			if (total > maxBytes) {
-				// A cloned Request body is a tee. Awaiting cancellation of one branch
-				// can wait forever while the untouched downstream branch remains
-				// open; cancellation is therefore best-effort and the bounded reader
-				// rejects immediately without consuming more bytes.
 				void reader.cancel("body_too_large").catch(() => undefined);
 				throw new RequestBodyError("body_too_large", `Body exceeds ${maxBytes} bytes`, 413);
 			}

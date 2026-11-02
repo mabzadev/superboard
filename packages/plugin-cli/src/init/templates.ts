@@ -1,91 +1,16 @@
-/**
- * Pure file-content producers for `emdash-plugin init`.
- *
- * No filesystem access here — each function takes the inputs and returns
- * the bytes that should land at the target path. Keeping these as pure
- * functions makes the scaffolder testable without touching disk and
- * keeps every template inspectable in one place.
- *
- * The shape produced is the authoring contract:
- *
- *   emdash-plugin.jsonc   — identity + trust contract + profile
- *   src/plugin.ts         — `{ routes?, hooks? } satisfies SandboxedPlugin`
- *   package.json          — type:module, devDep on @emdash-cms/plugin-cli
- *   tsconfig.json         — strict, standalone
- *   .gitignore
- *   README.md
- *   tests/plugin.test.ts
- *
- * No `src/index.ts`, no `dist/` in source control. `emdash-plugin build`
- * generates `dist/` artefacts (plugin.mjs, manifest.json, index.mjs).
- */
-
 import type { ManifestAuthor, ManifestSecurityContact } from "../manifest/schema.js";
 
-/**
- * Inputs to the scaffolder.
- *
- * Every field except `slug` is optional. Missing fields produce a
- * placeholder in the generated manifest — either a `TODO:` line
- * comment marking a value the author must fill in before the plugin
- * works, or an outright omission of an optional field that the
- * schema doesn't require.
- *
- * The contract: a scaffold produced from `{ slug }` alone is a valid
- * starting point that the author can `cd` into, fix the TODOs in,
- * and ship. There are no "init failed because you didn't pass enough
- * flags" surprises.
- */
 export interface ScaffoldInputs {
-	/** Plugin slug. Used as the directory name and the `slug` field. */
 	slug: string;
-	/**
-	 * Pre-filled publisher DID (resolved from a handle if the user
-	 * typed one). When undefined, the manifest carries a TODO comment
-	 * and an empty string; the author must set this before the plugin
-	 * will load.
-	 *
-	 * The runtime only ever compares DIDs, so we write a DID — even if
-	 * the user typed a handle. The handle, when known, is emitted as a
-	 * `// <handle>` line comment next to the pinned DID via
-	 * `publisherHandle` below.
-	 */
 	publisher: string | undefined;
-	/**
-	 * Optional handle that resolved to the `publisher` DID. Rendered as
-	 * a `// <handle>` line comment next to the pinned DID so a `git
-	 * diff` reviewer sees a human-readable name for the publisher. The
-	 * CLI ignores the comment on subsequent reads — only the DID is
-	 * authoritative.
-	 */
 	publisherHandle: string | undefined;
-	/** SPDX license expression. Defaults to "MIT" when undefined. */
 	license: string | undefined;
-	/**
-	 * Author block. When undefined, the manifest carries a TODO
-	 * comment and a placeholder name; author.url and author.email
-	 * are omitted from the output entirely (the schema makes them
-	 * optional).
-	 */
 	author: ManifestAuthor | undefined;
-	/**
-	 * Security contact. When undefined, the manifest carries a TODO
-	 * comment and a placeholder email; the author replaces it with
-	 * a real contact before publishing.
-	 */
 	security: ManifestSecurityContact | undefined;
-	/** Optional short description. Omitted from the manifest when undefined. */
 	description: string | undefined;
-	/** Optional repo URL. Omitted from the manifest when undefined. */
 	repo: string | undefined;
 }
 
-/**
- * `emdash-plugin.jsonc` — the manifest. Includes a `$schema` pointer
- * for editor completion. JSONC: tab-indented, no trailing comma on the
- * final field. Fields omitted when the input is empty so the generated
- * file is the smallest valid manifest, not a sea of `""`.
- */
 export function renderManifest(input: ScaffoldInputs): string {
 	const lines: string[] = [];
 	lines.push("{");
@@ -94,10 +19,6 @@ export function renderManifest(input: ScaffoldInputs): string {
 	);
 	lines.push("");
 	lines.push(`\t"slug": ${jsonString(input.slug)},`);
-	// `version` deliberately omitted — the build reads it from
-	// `package.json` so there's a single source of truth. Registry-only
-	// plugins (no package.json) would set it here, but the scaffold
-	// always emits one.
 
 	if (!input.publisher) {
 		lines.push(
@@ -105,9 +26,6 @@ export function renderManifest(input: ScaffoldInputs): string {
 		);
 		lines.push('\t"publisher": "",');
 	} else {
-		// When we know the handle that resolved to this DID, append it
-		// as a line comment for `git diff` readability. The handle is
-		// purely informational — the CLI never reads it back.
 		const trailer = input.publisherHandle ? ` // ${input.publisherHandle}` : "";
 		lines.push(`\t"publisher": ${jsonString(input.publisher)},${trailer}`);
 	}
@@ -156,10 +74,6 @@ export function renderManifest(input: ScaffoldInputs): string {
 	return lines.join("\n");
 }
 
-/**
- * Render a single author object as a JSONC inline value. Always
- * single-line so the generated manifest stays compact.
- */
 function renderAuthor(author: ManifestAuthor): string {
 	const parts: string[] = [`"name": ${jsonString(author.name)}`];
 	if (author.url) parts.push(`"url": ${jsonString(author.url)}`);
@@ -167,9 +81,6 @@ function renderAuthor(author: ManifestAuthor): string {
 	return `{ ${parts.join(", ")} }`;
 }
 
-/**
- * Render a single security contact as a JSONC inline value.
- */
 function renderSecurityContact(contact: ManifestSecurityContact): string {
 	const parts: string[] = [];
 	if (contact.email) parts.push(`"email": ${jsonString(contact.email)}`);
@@ -177,12 +88,6 @@ function renderSecurityContact(contact: ManifestSecurityContact): string {
 	return `{ ${parts.join(", ")} }`;
 }
 
-/**
- * `src/plugin.ts` — runtime code. One route, no hooks. Demonstrates the
- * two primitives a sandboxed plugin author needs: the strict
- * `SandboxedPlugin` type (which infers handler signatures per hook /
- * route name) and a default-exported `{ hooks?, routes? }` object.
- */
 export function renderPluginEntry(): string {
 	return `import type { SandboxedPlugin } from "emdash/plugin";
 
@@ -205,17 +110,6 @@ export default {
 `;
 }
 
-/**
- * `package.json` — npm-shape so the plugin is `pnpm add`-able. The
- * scaffold sets `private: true` defensively; flip it off when you're
- * ready to publish to npm. `version` here is the single source of
- * truth — the build reads it and writes it into the bundled manifest.
- *
- * `./sandbox` export points at the built runtime bytes that both
- * in-process and isolate loaders consume. `main` / `import` point at
- * the auto-generated descriptor module the integration imports for
- * default in `astro.config.mjs`.
- */
 export function renderPackageJson(input: ScaffoldInputs): string {
 	const pkg = {
 		name: input.slug,
@@ -250,12 +144,6 @@ export function renderPackageJson(input: ScaffoldInputs): string {
 	return `${JSON.stringify(pkg, null, "\t")}\n`;
 }
 
-/**
- * `tsconfig.json` — strict, ES2022, bundler resolution. Mirrors the
- * `node22 + bundler` style the rest of the EmDash workspace uses, but
- * doesn't extend anything from the workspace so the scaffold is
- * self-contained.
- */
 export function renderTsconfig(): string {
 	const config = {
 		compilerOptions: {
@@ -274,24 +162,11 @@ export function renderTsconfig(): string {
 	return `${JSON.stringify(config, null, "\t")}\n`;
 }
 
-/**
- * `.gitignore` — node_modules + dist (build output should not be
- * committed; rebuild on every install).
- */
 export function renderGitignore(): string {
 	return "node_modules/\ndist/\n";
 }
 
-/**
- * `README.md` — three sections: develop, publish, version-bump rules.
- * Nothing else. The author can extend; the scaffold doesn't pre-write
- * marketing copy.
- */
 export function renderReadme(input: ScaffoldInputs): string {
-	// The slug is the package title in headings + the import specifier,
-	// but it can contain hyphens (e.g. `my-plugin`) which aren't legal
-	// JS identifiers. Derive a camelCase binding name for the import +
-	// integration call.
 	const title = input.slug;
 	const importBinding = toCamelCase(input.slug);
 	return `# ${title}
@@ -335,12 +210,6 @@ behaviour slip past consent.
 `;
 }
 
-/**
- * `tests/plugin.test.ts` — one passing test that exercises the
- * hello route. Uses a minimal stubbed PluginContext rather than
- * pulling in the runtime: the test asserts the handler returns the
- * expected shape, not that the runtime wires it up correctly.
- */
 export function renderTest(): string {
 	return `import { describe, expect, it } from "vitest";
 
@@ -374,23 +243,12 @@ function makeTestContext() {
 `;
 }
 
-/**
- * JSON-stringify a string with double quotes and proper escaping.
- * Trivially `JSON.stringify` does the job, but wrapping it gives us
- * a single place to switch quote styles or escape behaviour later.
- */
 function jsonString(value: string): string {
 	return JSON.stringify(value);
 }
 
 const SLUG_SEPARATOR_RE = /[-_]([a-z0-9])/g;
 
-/**
- * Convert a plugin slug (`my-plugin`, `my_plugin`) into a JS identifier
- * for use as an import binding. Slugs are validated to start with a
- * letter (see `PLUGIN_SLUG_RE`), so the result is always a legal
- * identifier.
- */
 function toCamelCase(slug: string): string {
 	return slug.replace(SLUG_SEPARATOR_RE, (_, ch: string) => ch.toUpperCase());
 }

@@ -17,13 +17,11 @@ export type QueueJob =
 	| { type: "actions.cleanup" }
 	| BillingQueueJob;
 
-/** Reads the `days` field of a loosely typed maintenance job, clamped to 1-14. */
 function maintenanceDays(job: unknown): number {
 	const days = job && typeof job === "object" && "days" in job ? job.days : undefined;
 	return Math.max(1, Math.min(14, Number(days || 3)));
 }
 
-/** Reads the `type` field of a loosely typed queue job for error reporting. */
 function queueJobType(job: unknown): string | undefined {
 	return job && typeof job === "object" && "type" in job && typeof job.type === "string"
 		? job.type
@@ -34,7 +32,6 @@ export async function dispatchQueueJob(env: Env, job: QueueJob | any) {
 	if (isBillingQueueJob(job)) return dispatchBillingJob(env, job);
 	switch (job?.type) {
 		case "maintenance.run":
-			// Only the scheduled handler enqueues this job; aggregate incrementally.
 			return runMaintenance(env, maintenanceDays(job), { incremental: true });
 		case "events.aggregate":
 			return runMaintenance(env, maintenanceDays(job));

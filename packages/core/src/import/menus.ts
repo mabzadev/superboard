@@ -1,9 +1,3 @@
-/**
- * Menu import functions
- *
- * Import navigation menus from WordPress WXR exports or plugin API.
- */
-
 import type { Kysely } from "kysely";
 import { ulid } from "ulidx";
 
@@ -11,26 +5,16 @@ import type { WxrNavMenu, WxrNavMenuItem } from "../cli/wxr/parser.js";
 import type { Database } from "../database/types.js";
 import type { MenuItemType } from "../menus/types.js";
 
-/**
- * Result of menu import operation
- */
 export interface MenuImportResult {
-	/** Number of menus created */
 	menusCreated: number;
-	/** Number of menu items created */
 	itemsCreated: number;
-	/** Mapping from WP menu slug to EmDash menu ID */
 	menuIdMap: Map<string, string>;
-	/** Errors encountered during import */
 	errors: Array<{ menu: string; error: string }>;
 }
 
-/**
- * Plugin API menu format (matches /emdash/v1/menus response)
- */
 export interface PluginMenu {
 	id: number;
-	name: string; // slug
+	name: string;
 	label: string;
 	items: PluginMenuItem[];
 }
@@ -40,7 +24,7 @@ export interface PluginMenuItem {
 	parent_id: number | null;
 	sort_order: number;
 	type: "custom" | "post_type" | "taxonomy";
-	object: string | null; // 'page', 'post', 'category'
+	object: string | null;
 	object_id: number | null;
 	url: string;
 	title: string;
@@ -48,14 +32,6 @@ export interface PluginMenuItem {
 	classes: string | null;
 }
 
-/**
- * Import navigation menus from WXR export
- *
- * @param menus - Parsed navigation menus from WXR
- * @param db - Database connection
- * @param contentIdMap - Map from WP post ID to EmDash content ID (for resolving references)
- * @returns Import result with counts and ID mapping
- */
 export async function importMenusFromWxr(
 	menus: WxrNavMenu[],
 	db: Kysely<Database>,
@@ -70,7 +46,6 @@ export async function importMenusFromWxr(
 
 	for (const menu of menus) {
 		try {
-			// Check if menu already exists
 			const existing = await db
 				.selectFrom("_emdash_menus")
 				.select("id")
@@ -79,10 +54,9 @@ export async function importMenusFromWxr(
 
 			if (existing) {
 				result.menuIdMap.set(menu.name, existing.id);
-				continue; // Skip existing menus
+				continue;
 			}
 
-			// Create the menu
 			const menuId = ulid();
 			await db
 				.insertInto("_emdash_menus")
@@ -96,7 +70,6 @@ export async function importMenusFromWxr(
 			result.menusCreated++;
 			result.menuIdMap.set(menu.name, menuId);
 
-			// Import menu items
 			const itemsCreated = await importWxrMenuItems(menu.items, menuId, db, contentIdMap);
 			result.itemsCreated += itemsCreated;
 		} catch (error) {
@@ -110,14 +83,6 @@ export async function importMenusFromWxr(
 	return result;
 }
 
-/**
- * Import navigation menus from Plugin API
- *
- * @param menus - Menus from plugin API
- * @param db - Database connection
- * @param contentIdMap - Map from WP post ID to EmDash content ID
- * @returns Import result with counts and ID mapping
- */
 export async function importMenusFromPlugin(
 	menus: PluginMenu[],
 	db: Kysely<Database>,
@@ -132,7 +97,6 @@ export async function importMenusFromPlugin(
 
 	for (const menu of menus) {
 		try {
-			// Check if menu already exists
 			const existing = await db
 				.selectFrom("_emdash_menus")
 				.select("id")
@@ -144,7 +108,6 @@ export async function importMenusFromPlugin(
 				continue;
 			}
 
-			// Create the menu
 			const menuId = ulid();
 			await db
 				.insertInto("_emdash_menus")
@@ -158,7 +121,6 @@ export async function importMenusFromPlugin(
 			result.menusCreated++;
 			result.menuIdMap.set(menu.name, menuId);
 
-			// Import menu items
 			const itemsCreated = await importPluginMenuItems(menu.items, menuId, db, contentIdMap);
 			result.itemsCreated += itemsCreated;
 		} catch (error) {
@@ -172,23 +134,17 @@ export async function importMenusFromPlugin(
 	return result;
 }
 
-/**
- * Import menu items from WXR format
- */
 async function importWxrMenuItems(
 	items: WxrNavMenuItem[],
 	menuId: string,
 	db: Kysely<Database>,
 	contentIdMap: Map<number, string>,
 ): Promise<number> {
-	// Build a map of WP menu item IDs to EmDash IDs for parent resolution
 	const itemIdMap = new Map<number, string>();
 	let count = 0;
 
-	// Sort items by sort order to maintain hierarchy
 	const sortedItems = items.toSorted((a, b) => a.sortOrder - b.sortOrder);
 
-	// First pass: create all items with temporary parent IDs
 	for (const item of sortedItems) {
 		const itemId = ulid();
 		itemIdMap.set(item.id, itemId);
@@ -200,7 +156,7 @@ async function importWxrMenuItems(
 			.values({
 				id: itemId,
 				menu_id: menuId,
-				parent_id: null, // Will be set in second pass
+				parent_id: null,
 				sort_order: item.sortOrder,
 				type,
 				reference_collection: collection,
@@ -216,7 +172,6 @@ async function importWxrMenuItems(
 		count++;
 	}
 
-	// Second pass: update parent IDs
 	for (const item of sortedItems) {
 		if (item.parentId) {
 			const itemId = itemIdMap.get(item.id);
@@ -235,9 +190,6 @@ async function importWxrMenuItems(
 	return count;
 }
 
-/**
- * Import menu items from Plugin API format
- */
 async function importPluginMenuItems(
 	items: PluginMenuItem[],
 	menuId: string,
@@ -276,7 +228,6 @@ async function importPluginMenuItems(
 		count++;
 	}
 
-	// Second pass: update parent IDs
 	for (const item of sortedItems) {
 		if (item.parent_id) {
 			const itemId = itemIdMap.get(item.id);
@@ -295,9 +246,6 @@ async function importPluginMenuItems(
 	return count;
 }
 
-/**
- * Map WXR menu item to EmDash format
- */
 function mapWxrMenuItem(
 	item: WxrNavMenuItem,
 	contentIdMap: Map<number, string>,
@@ -317,11 +265,9 @@ function mapWxrMenuItem(
 			};
 
 		case "post_type": {
-			// Map WordPress object type to collection
 			const collection = mapObjectToCollection(item.objectType);
 			const referenceId = item.objectId ? contentIdMap.get(item.objectId) || null : null;
 
-			// If we can't resolve the reference, fall back to custom URL
 			if (!referenceId && item.url) {
 				return {
 					type: "custom",
@@ -340,8 +286,6 @@ function mapWxrMenuItem(
 		}
 
 		case "taxonomy":
-			// For taxonomies, we need taxonomy support in menus
-			// Fall back to custom URL for now
 			return {
 				type: "custom",
 				collection: null,
@@ -359,9 +303,6 @@ function mapWxrMenuItem(
 	}
 }
 
-/**
- * Map Plugin menu item to EmDash format
- */
 function mapPluginMenuItem(
 	item: PluginMenuItem,
 	contentIdMap: Map<number, string>,
@@ -419,9 +360,6 @@ function mapPluginMenuItem(
 	}
 }
 
-/**
- * Map WordPress object type to EmDash collection name
- */
 function mapObjectToCollection(objectType: string | undefined | null): string {
 	if (!objectType) return "posts";
 

@@ -3,13 +3,8 @@ import * as React from "react";
 import type { RolesSelectRow } from "../users/useRolesConfig.js";
 import { useRolesConfig } from "../users/useRolesConfig.js";
 
-/** Self-signup default role must not be Admin (API / product rule). */
 const MAX_SELF_SIGNUP_DEFAULT_ROLE = 40;
 
-/**
- * Role labels and selects for Allowed Domains (Subscriber–Editor only for defaults).
- * Built on {@link useRolesConfig}; keeps the filter + `Select` `items` shape in one place.
- */
 export function useAllowedDomainsRolesConfig(): {
 	getRoleLabel: (level: number) => string;
 	signupRoles: readonly RolesSelectRow[];

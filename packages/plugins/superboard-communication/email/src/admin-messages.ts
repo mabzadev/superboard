@@ -77,7 +77,6 @@ emailMessageRoutes.get(
 		)
 			.bind(id)
 			.all();
-		// Status timeline (accepted/scheduled → sent → delivered/bounced/…) and attachment metadata.
 		const [timeline, attachments] = await Promise.all([
 			env.DB.prepare(
 				"SELECT event_type AS type,recipient,occurred_at,detail FROM email_message_events WHERE message_id=? ORDER BY occurred_at,id LIMIT 200",

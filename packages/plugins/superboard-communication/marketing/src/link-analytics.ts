@@ -12,11 +12,6 @@ export function rate(value: number, total: number) {
 	return total > 0 ? Math.round((value / total) * 10_000) / 100 : 0;
 }
 
-/**
- * Counts every click on a tracked link. The first click of a recipient on a
- * link shares its id with the email_events row, so unique clicks keep coming
- * from email_events and the total comes from this counter.
- */
 export async function recordLinkClick(db: D1Database, payload: ClickPayload, target: string) {
 	const eventId = `click:${payload.deliveryId}:${await sha256(target)}`;
 	await db
@@ -38,7 +33,6 @@ export async function recordLinkClick(db: D1Database, payload: ClickPayload, tar
 		.run();
 }
 
-/** Rates for the project statistics totals, computed from email event counts. */
 export function deliverabilityRates(totals: Record<string, number>) {
 	const sent = totals.sent || 0;
 	const base = totals.delivered || sent;
@@ -78,7 +72,6 @@ export function insightScope(params: URLSearchParams): InsightScope {
 	return scope;
 }
 
-/** SQL restricting `alias` email_events rows to a campaign, journey or template. */
 function eventScopeSql(projectId: number, scope: InsightScope, alias = "e") {
 	const clauses = [`${alias}.project_id = ?`];
 	const values: Array<string | number> = [projectId];
@@ -150,7 +143,6 @@ type LinkReportRow = {
 	click_rate: number;
 };
 
-/** Per-link clicks for a campaign, journey or email; CTR is unique clicks per recipient. */
 export async function linkReport(
 	db: D1Database,
 	projectId: number,

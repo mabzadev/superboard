@@ -1,9 +1,3 @@
-/**
- * Menu Editor component
- *
- * Edit menu items with basic reordering (simplified version without drag-and-drop)
- */
-
 import { Button, Dialog, Input, Select, Toast } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import {
@@ -36,17 +30,11 @@ import { DialogError, getMutationError } from "./DialogError.js";
 import { useI18nConfig } from "./LocaleSwitcher.js";
 import { TranslationsPanel } from "./TranslationsPanel.js";
 
-/** A menu item with its nesting depth, in parent-then-children display order. */
 interface DisplayItem {
 	item: MenuItem;
 	depth: number;
 }
 
-/**
- * Flattens items into parent-then-children display order. Guards against
- * cyclic parentId data (not currently possible via this UI, but the API
- * doesn't validate against it either) with a visited set.
- */
 function buildDisplayList(items: MenuItem[]): DisplayItem[] {
 	const childrenByParent = new Map<string | null, MenuItem[]>();
 	for (const item of items) {
@@ -69,7 +57,6 @@ function buildDisplayList(items: MenuItem[]): DisplayItem[] {
 	return result;
 }
 
-/** IDs of `rootId` and everything nested under it, so it can't become its own descendant's child. */
 function getSelfAndDescendantIds(items: MenuItem[], rootId: string): Set<string> {
 	const childrenByParent = new Map<string | null, MenuItem[]>();
 	for (const item of items) {
@@ -117,9 +104,6 @@ export function MenuEditor() {
 		staleTime: Infinity,
 	});
 
-	// The locale we lock mutations to: explicit URL param wins; else fall back
-	// to whatever the loaded menu row says (handles entry from the old /menus/$name
-	// URL without a locale query).
 	const menuLocale = routeLocale ?? menu?.locale;
 
 	const { data: translationsData } = useQuery({
@@ -143,7 +127,6 @@ export function MenuEditor() {
 				title: t`Translation created`,
 				description: t`Menu "${translated.label}" (${translated.locale.toUpperCase()}) created.`,
 			});
-			// Switch the editor to the new locale so the user keeps editing.
 			void navigate({
 				to: "/menus/$name",
 				params: { name },
@@ -159,7 +142,6 @@ export function MenuEditor() {
 		},
 	});
 
-	// Sync local items with fetched data
 	React.useEffect(() => {
 		if (menu?.items) {
 			setLocalItems(menu.items);
@@ -253,12 +235,6 @@ export function MenuEditor() {
 	};
 
 	const handleAddContent = (item: { collection: string; id: string; title: string }) => {
-		// The API's menuItemTypeEnum accepts singular values
-		// ("custom" | "page" | "post" | "taxonomy" | "collection"), but the
-		// ContentPickerModal hands us the collection slug (e.g. "pages",
-		// "posts", or any custom collection slug). Map the slug to the
-		// matching enum value and let the API resolve the real URL from
-		// referenceCollection + referenceId.
 		const type =
 			item.collection === "pages" ? "page" : item.collection === "posts" ? "post" : "collection";
 		createMutation.mutate({
@@ -290,8 +266,6 @@ export function MenuEditor() {
 		});
 	};
 
-	// Moves an item relative to its siblings (same parentId) only, so reordering
-	// can't accidentally move an item into a different parent's children.
 	const moveItem = (itemId: string, direction: "up" | "down") => {
 		const currentItem = localItems.find((i) => i.id === itemId);
 		if (!currentItem) return;
@@ -309,7 +283,6 @@ export function MenuEditor() {
 		newItems[currentPos] = targetItem;
 		newItems[targetPos] = currentItem;
 
-		// Update sort orders
 		const reorderedItems = newItems.map((item, i) => ({
 			id: item.id,
 			parentId: item.parentId,

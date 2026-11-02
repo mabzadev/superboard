@@ -56,7 +56,6 @@ export function EmailContacts({
 	const [lists, setLists] = useState<SubscriberList[]>([]);
 	const [tags, setTags] = useState<AudienceTag[]>([]);
 	const [fields, setFields] = useState<AudienceField[]>([]);
-	// `?q=` opens the list already searched, e.g. from the Authentication person sheet.
 	const linkedQuery = useSearchParams().get("q") ?? "";
 	const [query, setQuery] = useState(linkedQuery);
 	const [appliedLinkedQuery, setAppliedLinkedQuery] = useState(linkedQuery);
@@ -105,7 +104,6 @@ export function EmailContacts({
 		} finally {
 			setLoading(false);
 		}
-		// Tags and fields are optional enrichments: the list stays usable without them.
 		const [tagResult, fieldResult] = await Promise.allSettled([
 			getAudienceTags(project),
 			getAudienceFields(project),
@@ -714,7 +712,6 @@ function TagChips({
 	);
 }
 
-/** Shows a stored custom field value in a text control; structured values stay empty. */
 function fieldText(value: unknown) {
 	return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
 		? String(value)

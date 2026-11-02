@@ -1,11 +1,3 @@
-/**
- * Single content item endpoints - injected by EmDash integration
- *
- * GET    /_emdash/api/content/{collection}/{id} - Get content
- * PUT    /_emdash/api/content/{collection}/{id} - Update content
- * DELETE /_emdash/api/content/{collection}/{id} - Delete content
- */
-
 import { hasPermission } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 
@@ -29,8 +21,6 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
 
 	const result = await emdash.handleContentGet(collection, id, locale);
 
-	// Hide non-published items from users without content:read_drafts. Return
-	// 404 (not 403) so subscribers can't enumerate draft IDs by status code.
 	if (result.success && !hasPermission(user, "content:read_drafts")) {
 		const data =
 			result.data && typeof result.data === "object"
@@ -47,10 +37,6 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
 			return apiError("NOT_FOUND", `Content item not found: ${id}`, 404);
 		}
 
-		// Strip draft hydration data from response for users without read_drafts.
-		// handleContentGet overlays draft revision data onto item.data and exposes
-		// the published values in item.liveData. Without this, subscribers see
-		// unpublished edits in the data field.
 		if (item) {
 			if (item.liveData && typeof item.liveData === "object") {
 				item.data = item.liveData;
@@ -75,7 +61,6 @@ export const PUT: APIRoute = async ({ params, request, locals, cache }) => {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
 
-	// Fetch item to check ownership
 	const existing = await emdash.handleContentGet(collection, id, locale);
 	if (!existing.success) {
 		return apiError(
@@ -90,7 +75,6 @@ export const PUT: APIRoute = async ({ params, request, locals, cache }) => {
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- handler returns unknown data; narrowed by typeof check above
 				(existing.data as Record<string, unknown>)
 			: undefined;
-	// Handler returns { item, _rev } — extract the item for ownership and ID resolution
 	const existingItem =
 		existingData?.item && typeof existingData.item === "object"
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed by typeof check above
@@ -100,7 +84,6 @@ export const PUT: APIRoute = async ({ params, request, locals, cache }) => {
 	const editDenied = requireOwnerPerm(user, authorId, "content:edit_own", "content:edit_any");
 	if (editDenied) return editDenied;
 
-	// Only EDITOR+ can write publishedAt directly — incl. clearing to null.
 	if (body.publishedAt !== undefined && !hasPermission(user, "content:publish_any")) {
 		return apiError(
 			"FORBIDDEN",
@@ -109,15 +92,12 @@ export const PUT: APIRoute = async ({ params, request, locals, cache }) => {
 		);
 	}
 
-	// Use the resolved ID (handles slug → ID resolution)
 	const resolvedId = typeof existingItem?.id === "string" ? existingItem.id : id;
 
-	// Only allow authorId changes if user has content:edit_any permission (editor+)
 	const canChangeAuthor =
 		body.authorId !== undefined && user && hasPermission(user, "content:edit_any");
 	const updateBody = canChangeAuthor ? body : { ...body, authorId: undefined };
 
-	// Pass _rev through for optimistic concurrency validation
 	const result = await emdash.handleContentUpdate(collection, resolvedId, {
 		...updateBody,
 		locale,
@@ -144,7 +124,6 @@ export const DELETE: APIRoute = async ({ params, locals, url, cache }) => {
 
 	const locale = url.searchParams.get("locale") || undefined;
 
-	// Fetch item to check ownership
 	const existing = await emdash.handleContentGet(collection, id, locale);
 	if (!existing.success) {
 		return apiError(
@@ -159,7 +138,6 @@ export const DELETE: APIRoute = async ({ params, locals, url, cache }) => {
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- handler returns unknown data; narrowed by typeof check above
 				(existing.data as Record<string, unknown>)
 			: undefined;
-	// Handler returns { item, _rev } — extract the item for ownership and ID resolution
 	const deleteItem =
 		deleteData?.item && typeof deleteData.item === "object"
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed by typeof check above
@@ -169,7 +147,6 @@ export const DELETE: APIRoute = async ({ params, locals, url, cache }) => {
 	const deleteDenied = requireOwnerPerm(user, authorId, "content:delete_own", "content:delete_any");
 	if (deleteDenied) return deleteDenied;
 
-	// Use the resolved ID (handles slug → ID resolution)
 	const resolvedId = typeof deleteItem?.id === "string" ? deleteItem.id : id;
 
 	const result = await emdash.handleContentDelete(collection, resolvedId);

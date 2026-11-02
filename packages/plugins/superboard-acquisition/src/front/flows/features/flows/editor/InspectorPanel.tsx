@@ -1208,9 +1208,7 @@ function JsonValueEditor({
 				setText(event.target.value);
 				try {
 					onChange(JSON.parse(event.target.value) as unknown);
-				} catch {
-					/* Retain draft text until JSON becomes valid. */
-				}
+				} catch {}
 			}}
 		/>
 	);

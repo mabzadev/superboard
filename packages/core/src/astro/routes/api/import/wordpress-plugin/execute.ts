@@ -1,11 +1,3 @@
-/**
- * WordPress Plugin execute import endpoint
- *
- * POST /_emdash/api/import/wordpress-plugin/execute
- *
- * Imports content from WordPress via EmDash Exporter plugin API.
- */
-
 import type { APIRoute } from "astro";
 import {
 	ContentRepository,
@@ -53,9 +45,7 @@ import { importMediaWithProgress } from "../wordpress/media.js";
 export const prerender = false;
 
 export interface WpPluginImportConfig extends ImportConfig {
-	/** Author mappings (WP author login -> EmDash user ID) */
 	authorMappings?: Record<string, string | null>;
-	/** Wizard toggles. Absent means enabled (older admins don't send them). */
 	importMenus?: boolean;
 	importSiteTitle?: boolean;
 	importLogo?: boolean;
@@ -68,20 +58,6 @@ export interface WpPluginImportResponse {
 	error?: { message: string };
 }
 
-// =============================================================================
-// Chunked mode (issue #475)
-//
-// A single-invocation import of a large site exceeds Cloudflare Worker
-// resource limits (CPU time, subrequests). In chunked mode the admin drives
-// the import as a loop of bounded requests: one WP content page per call,
-// then paginated comments, then a small finalize step (menus + site
-// identity). Cross-chunk state — the WP-ID -> EmDash-ID map, translation
-// groups, comment threading roots — is accumulated by the client and sent
-// back with each request, so the server stays stateless and an aborted
-// import simply re-runs (skipExisting rebuilds the map while skipping work).
-// =============================================================================
-
-/** Posts per content chunk. 50 posts ≈ a few hundred D1 ops per invocation. */
 const CONTENT_CHUNK_SIZE = 50;
 
 interface ChunkCursor {
@@ -89,7 +65,6 @@ interface ChunkCursor {
 	page: number;
 }
 
-/** Per-chunk response payload: partial result + state the client must carry. */
 interface ChunkResponse {
 	success: boolean;
 	result: ImportResult;
@@ -149,8 +124,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const body = await parseBody(request, wpPluginExecuteBody);
 		if (isParseError(body)) return body;
 
-		// SSRF: reject internal/private network targets. Uses DNS resolution
-		// to catch hostnames that resolve to private addresses.
 		try {
 			await resolveAndValidateExternalUrl(body.url);
 		} catch (e) {
@@ -161,13 +134,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Zod schema output narrowed to WpPluginImportConfig
 		const config = body.config as unknown as WpPluginImportConfig;
 
-		// Get the WordPress plugin source
 		const source = getSource("wordpress-plugin");
 		if (!source) {
 			return apiError("NOT_CONFIGURED", "WordPress plugin source not available", 500);
 		}
 
-		// Build the list of post types to fetch
 		const postTypes = Object.entries(config.postTypeMappings)
 			.filter(([_, mapping]) => mapping.enabled)
 			.map(([postType]) => postType);
@@ -179,15 +150,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		console.log("[WP Plugin Import] Starting import for:", body.url);
 		console.log("[WP Plugin Import] Post types:", postTypes);
 
-		// Chunked mode: one bounded unit of work per invocation (issue #475).
 		if (body.phase) {
 			const chunk = await runImportPhase(emdash, body, config, postTypes, emdashManifest);
 			return apiSuccess(chunk);
 		}
 
-		// Pre-create taxonomy defs (for custom CPT taxonomies) and terms so
-		// per-post assignments can attach.
-		// Non-fatal: a site whose /taxonomies call fails still gets content.
 		let taxonomyPlan: TaxonomyImportPlan | undefined;
 		let taxonomyDefsCreated: string[] = [];
 		try {
@@ -198,7 +165,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			console.warn("[WP Plugin Import] Taxonomy pre-import failed:", e);
 		}
 
-		// Import content (including drafts since we have auth)
 		const { result, contentIdMap, collectionByWpId } = await importContent(
 			source.fetchContent(
 				{ type: "url", url: body.url, token: body.token },
@@ -210,15 +176,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			taxonomyPlan,
 		);
 
-		// Import navigation menus, resolving item references through the
-		// WP-post-ID -> EmDash-ID map collected during the content pass.
 		if (config.importMenus !== false) {
 			await importMenusInto(result, emdash, body.url, body.token, contentIdMap);
 		}
 
-		// Import comments into EmDash's native comments table, preserving
-		// authors, dates, threading, and approval status.
-		// Non-fatal: older plugin versions have no /comments endpoint.
 		try {
 			const comments = await fetchPluginComments(body.url, body.token);
 			if (comments.length > 0) {
@@ -243,9 +204,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			console.warn("[WP Plugin Import] Comment import failed:", e);
 		}
 
-		// Apply site identity (title, tagline, logo, favicon) from the source
-		// site's options, replacing the starter template's seed placeholders.
-		// Non-fatal: content is already imported at this point.
 		try {
 			result.siteSettings = await applySiteSettings(emdash, body.url, body.token, config);
 		} catch (e) {
@@ -267,11 +225,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	}
 };
 
-/**
- * Import navigation menus into `result`, resolving item references through
- * the WP-post-ID -> EmDash-ID map collected during the content pass.
- * Non-fatal: older plugin versions have no /menus endpoint.
- */
 async function importMenusInto(
 	result: ImportResult,
 	emdash: EmDashHandlers,
@@ -298,7 +251,6 @@ async function importMenusInto(
 
 type ExecuteBody = z.infer<typeof wpPluginExecuteBody>;
 
-/** Dispatch one chunk of work for the requested phase. */
 async function runImportPhase(
 	emdash: EmDashHandlers,
 	body: ExecuteBody,
@@ -321,11 +273,6 @@ async function runImportPhase(
 	}
 }
 
-/**
- * Import one page of one post type. The first chunk additionally runs the
- * taxonomy setup (def + term creation); later chunks only reload the
- * lookup maps from the database.
- */
 async function runContentChunk(
 	emdash: EmDashHandlers,
 	body: ExecuteBody,
@@ -363,8 +310,6 @@ async function runContentChunk(
 		includeDrafts: true,
 	});
 
-	// Seed translation-group state from earlier chunks so a translation in
-	// this page links to its sibling imported three chunks ago.
 	const translationGroupMap = new Map(Object.entries(body.translationGroups ?? {}));
 
 	const { result, contentIdMap, collectionByWpId } = await importContent(
@@ -380,9 +325,6 @@ async function runContentChunk(
 		result.taxonomiesCreated = taxonomyDefsCreated;
 	}
 
-	// Advance: next page of this post type, first page of the next one,
-	// or done. An empty last page (totalPages can shrink while paginating
-	// a live site) still terminates because page >= totalPages.
 	let next: ChunkCursor | undefined;
 	if (cursor.page < page.totalPages) {
 		next = { postTypeIndex: cursor.postTypeIndex, page: cursor.page + 1 };
@@ -402,11 +344,6 @@ async function runContentChunk(
 	};
 }
 
-/**
- * Import one page of comments (500 per page, ordered by WP comment ID so
- * parents precede children across pages). Requires the accumulated idMap
- * from the content phase; threading roots accumulate in `commentRoots`.
- */
 async function runCommentsChunk(emdash: EmDashHandlers, body: ExecuteBody): Promise<ChunkResponse> {
 	const page = body.cursor?.page ?? 1;
 	const result = emptyImportResult();
@@ -451,7 +388,6 @@ async function runCommentsChunk(emdash: EmDashHandlers, body: ExecuteBody): Prom
 	};
 }
 
-/** Menus + site identity — small, runs as a single closing chunk. */
 async function runFinalizePhase(
 	emdash: EmDashHandlers,
 	body: ExecuteBody,
@@ -474,7 +410,6 @@ async function runFinalizePhase(
 	return { success: true, result, done: true };
 }
 
-/** Fields that should be auto-created if they don't exist */
 const IMPORT_FIELDS: Array<{
 	slug: string;
 	label: string;
@@ -521,12 +456,6 @@ const IMPORT_FIELDS: Array<{
 
 const SEO_FIELD_SLUGS = new Set(["seo_title", "seo_description"]);
 
-/**
- * Coerce a WordPress meta value to an EmDash field type. WP postmeta is
- * stringly typed and inconsistent across posts (the same key can hold
- * "5", 5, "", or false). Returns `undefined` when the value can't
- * reasonably represent the target type — the caller drops it.
- */
 export function coerceToFieldType(value: unknown, fieldType: string): unknown {
 	switch (fieldType) {
 		case "integer": {
@@ -549,7 +478,6 @@ export function coerceToFieldType(value: unknown, fieldType: string): unknown {
 			return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 		}
 		case "json":
-			// Anything serializes; objects/arrays pass through as-is
 			return value;
 		case "string":
 		case "text":
@@ -561,19 +489,10 @@ export function coerceToFieldType(value: unknown, fieldType: string): unknown {
 			if (typeof value === "number") return String(value);
 			return undefined;
 		default:
-			// Complex types (image, portableText, repeater, multiSelect, file):
-			// raw meta can't be coerced reliably -- pass through only if it
-			// already has a non-primitive shape.
 			return typeof value === "object" ? value : undefined;
 	}
 }
 
-/**
- * Pull the per-post SEO title/description out of the Yoast / Rank Math
- * blobs the plugin source stashes in `item.meta`. Empty strings mean "not
- * overridden for this post" (the plugin exports the raw meta values) and
- * are treated as absent.
- */
 function pickSeoValue(blob: unknown, key: string): string | undefined {
 	if (typeof blob !== "object" || blob === null) return undefined;
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed to non-null object above
@@ -590,25 +509,10 @@ function extractSeo(item: NormalizedItem): { title?: string; description?: strin
 	};
 }
 
-/**
- * Fetch the site's taxonomies from the plugin API and pre-create all terms,
- * reusing the WXR taxonomy machinery (same def-lookup, idempotency, and
- * collection-filter semantics).
- */
-/** WP built-in taxonomies that either map to seeded defs or are not content taxonomies. */
 const BUILTIN_TAXONOMIES = new Set(["category", "post_tag", "nav_menu", "post_format"]);
 
-/** Mirrors NAME_PATTERN in the taxonomy handler -- names that fail stay in missingTaxonomies. */
 const TAXONOMY_NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 
-/**
- * Create EmDash taxonomy defs for custom WP taxonomies (e.g. CPT taxonomies
- * like `company` or `plattform`) that don't exist yet, scoped to the
- * collections the enabled post-type mappings target. Returns the names of
- * the defs created. Runs before term pre-import so the terms and per-post
- * assignments flow through the existing machinery instead of being dropped
- * as `missingTaxonomies`.
- */
 export async function ensureCustomTaxonomyDefs(
 	db: EmDashHandlers["db"],
 	taxonomies: Awaited<ReturnType<typeof fetchPluginTaxonomies>>,
@@ -620,8 +524,6 @@ export async function ensureCustomTaxonomyDefs(
 		if (taxonomy.terms.length === 0) continue;
 		if (!TAXONOMY_NAME_PATTERN.test(taxonomy.name)) continue;
 
-		// handleTaxonomyCreate's duplicate guard is locale-scoped; check
-		// name-wide existence ourselves to stay idempotent on re-runs.
 		const existing = await db
 			.selectFrom("_emdash_taxonomy_defs")
 			.select("id")
@@ -629,9 +531,6 @@ export async function ensureCustomTaxonomyDefs(
 			.executeTakeFirst();
 		if (existing) continue;
 
-		// Scope the def to the collections the WP post types map onto.
-		// Older plugin versions don't send post_types -> empty list = no
-		// collection filter, which the term machinery treats as "any".
 		const collections = (taxonomy.post_types ?? [])
 			.map((postType) => config.postTypeMappings[postType])
 			.filter((mapping) => mapping?.enabled)
@@ -692,14 +591,6 @@ async function buildTaxonomyPlan(
 	return { plan, defsCreated };
 }
 
-/**
- * Fetch the source site's options and apply its identity (title, tagline,
- * logo, favicon) as EmDash site settings, overwriting seed placeholders.
- * Logo/favicon files are side-loaded into media storage first; the later
- * full media pass dedupes them by content hash.
- *
- * Returns the list of applied setting keys.
- */
 async function applySiteSettings(
 	emdash: EmDashHandlers,
 	url: string,
@@ -756,10 +647,6 @@ async function applySiteSettings(
 	return settingsResult.applied;
 }
 
-/**
- * Adapt a NormalizedItem's taxonomy assignments to the WxrPost shape the
- * shared attach helper consumes.
- */
 function toWxrAssignments(item: NormalizedItem): WxrPost {
 	return {
 		categories: item.categories ?? [],
@@ -771,7 +658,6 @@ function toWxrAssignments(item: NormalizedItem): WxrPost {
 	};
 }
 
-/** Exported for tests (field auto-creation regression coverage). */
 export async function importContent(
 	items: AsyncIterable<NormalizedItem> | Iterable<NormalizedItem>,
 	config: WpPluginImportConfig,
@@ -792,31 +678,19 @@ export async function importContent(
 		byCollection: {},
 	};
 
-	// WP post ID -> EmDash content ID, used to resolve menu item references
 	const contentIdMap = new Map<number, string>();
 
-	// WP post ID -> EmDash collection slug, used by the comment import
 	const collectionByWpId = new Map<number, string>();
 
-	// Create content repository for checking existing items
 	const contentRepo = new ContentRepository(emdash.db);
 	const bylineRepo = new BylineRepository(emdash.db);
 	const bylineCache = new Map<string, string>();
 	const schemaRegistry = new SchemaRegistry(emdash.db);
 
-	// Track which (collection, field) pairs have been ensured. Keyed per
-	// field, not per collection: a field like seo_title may first be
-	// needed by the 30th item, and gating on the first item would skip it.
 	const ensuredFields = new Set<string>();
 
-	// Field slug -> type per collection, for mapping custom meta/ACF onto
-	// real fields (and coercing values to the field's type)
 	const fieldTypesByCollection = new Map<string, Map<string, string>>();
 
-	// Track source translationGroup -> EmDash item ID for translation linking.
-	// Maps source-side translation group ID to the EmDash ID of the first item
-	// imported for that group (the default-locale item). The chunked import
-	// seeds this from earlier chunks so groups can span page boundaries.
 	const translationGroupMap = seedTranslationGroups ?? new Map<string, string>();
 
 	for await (const item of items) {
@@ -833,7 +707,6 @@ export async function importContent(
 
 		const mapping = config.postTypeMappings[item.postType];
 
-		// Skip if not mapped or disabled
 		if (!mapping || !mapping.enabled) {
 			result.skipped++;
 			continue;
@@ -841,7 +714,6 @@ export async function importContent(
 
 		const collection = mapping.collection;
 
-		// Check if collection exists in manifest
 		if (!manifest?.collections[collection]) {
 			result.errors.push({
 				title: item.title || "Untitled",
@@ -851,10 +723,6 @@ export async function importContent(
 		}
 
 		try {
-			// Ensure required fields exist in the collection schema. Checked
-			// per field and item (not once per collection): whether a field
-			// is needed depends on the item — the first post may have no SEO
-			// override while a later one does.
 			for (const field of IMPORT_FIELDS) {
 				if (config.importSeo === false && SEO_FIELD_SLUGS.has(field.slug)) continue;
 				const ensureKey = `${collection}:${field.slug}`;
@@ -874,7 +742,6 @@ export async function importContent(
 						});
 						fieldTypesByCollection.get(collection)?.set(field.slug, field.type);
 					} catch (e) {
-						// Field might already exist from concurrent creation
 						console.log(
 							`[WP Plugin Import] Field "${field.slug}" creation skipped:`,
 							e instanceof Error ? e.message : e,
@@ -883,9 +750,6 @@ export async function importContent(
 				}
 			}
 
-			// Load the collection's field types once, so custom meta / ACF
-			// values can land in matching schema fields (created by the
-			// prepare step or already present).
 			let fieldTypes = fieldTypesByCollection.get(collection);
 			if (!fieldTypes) {
 				fieldTypes = new Map<string, string>();
@@ -898,18 +762,14 @@ export async function importContent(
 				fieldTypesByCollection.set(collection, fieldTypes);
 			}
 
-			// Generate slug from item slug or title
 			const slug = item.slug || slugify(item.title || `post-${item.sourceId}`);
 
-			// Check if already exists (idempotency) — locale-aware lookup
 			if (config.skipExisting) {
 				const existing = await contentRepo.findBySlug(collection, slug, item.locale);
 				if (existing) {
-					// Still track the translation group mapping for later items
 					if (item.translationGroup) {
 						translationGroupMap.set(item.translationGroup, existing.id);
 					}
-					// Menus and comments may reference this post even when we skip it
 					const wpId = Number(item.sourceId);
 					if (Number.isFinite(wpId)) {
 						contentIdMap.set(wpId, existing.id);
@@ -920,13 +780,10 @@ export async function importContent(
 				}
 			}
 
-			// Map WordPress status to EmDash status
 			const status = mapStatus(item.status);
 
-			// Build data object - add all applicable fields
 			const data: Record<string, unknown> = {};
 
-			// Add standard fields
 			data.title = item.title || "Untitled";
 			data.content = item.content;
 
@@ -938,7 +795,6 @@ export async function importContent(
 				console.log("[WP Plugin Import] Adding featured_image:", item.featuredImage);
 			}
 
-			// Per-post SEO overrides from Yoast / Rank Math
 			if (config.importSeo !== false) {
 				const seo = extractSeo(item);
 				if (seo.title) {
@@ -949,15 +805,6 @@ export async function importContent(
 				}
 			}
 
-			// Map ACF values and custom meta onto schema fields with the same
-			// (sanitized) slug — the same sanitization the analysis applied
-			// when suggesting the fields, so keys like `event-date` land in
-			// the `event_date` field the prepare step created. Values without
-			// a matching field are dropped -- the user controls the schema,
-			// we don't invent fields per meta key. Values are coerced to the
-			// field's type (the analysis inferred it from ONE sample; real
-			// values vary) and dropped when incoercible, so one odd meta
-			// value can't fail the whole item.
 			const assignMetaValue = (key: string, value: unknown) => {
 				if (value === null || value === "") return;
 				const fieldSlug = sanitizeFieldSlug(key);
@@ -976,13 +823,11 @@ export async function importContent(
 			}
 			if (item.meta) {
 				for (const [key, value] of Object.entries(item.meta)) {
-					// Underscore keys are WP-internal or handled above (_acf/_yoast/_rankmath)
 					if (key.startsWith("_")) continue;
 					assignMetaValue(key, value);
 				}
 			}
 
-			// Resolve author ID from mappings
 			let authorId: string | undefined;
 			if (config.authorMappings && item.author) {
 				const mappedUserId = config.authorMappings[item.author];
@@ -993,14 +838,12 @@ export async function importContent(
 
 			const bylineId = await resolveImportByline(
 				item.author,
-				item.author, // display name fallback is the login
+				item.author,
 				authorId,
 				bylineRepo,
 				bylineCache,
 			);
 
-			// Resolve translation link: if this item has a translationGroup and
-			// we've already imported another item in the same group, link them.
 			let translationOf: string | undefined;
 			if (item.translationGroup) {
 				const existingGroupItem = translationGroupMap.get(item.translationGroup);
@@ -1009,7 +852,6 @@ export async function importContent(
 				}
 			}
 
-			// Preserve original dates from the source
 			const itemDateTime = item.date?.getTime();
 			const createdAt =
 				itemDateTime !== undefined && !Number.isNaN(itemDateTime)
@@ -1017,7 +859,6 @@ export async function importContent(
 					: undefined;
 			const publishedAt = status === "published" && createdAt ? createdAt : undefined;
 
-			// Create the content item
 			const createResult = await emdash.handleContentCreate(collection, {
 				data,
 				slug,
@@ -1045,7 +886,6 @@ export async function importContent(
 						collectionByWpId.set(wpId, collection);
 					}
 
-					// Attach category/tag/custom-taxonomy assignments
 					if (taxonomyPlan) {
 						try {
 							const attached = await attachPostTaxonomies(
@@ -1064,7 +904,6 @@ export async function importContent(
 					}
 				}
 
-				// Track translation group: first item in a group establishes the mapping
 				if (item.translationGroup && !translationGroupMap.has(item.translationGroup) && createdId) {
 					translationGroupMap.set(item.translationGroup, createdId);
 				}

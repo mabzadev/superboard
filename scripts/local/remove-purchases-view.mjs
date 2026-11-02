@@ -1,6 +1,6 @@
-import { homedir } from "node:os";
 import { execSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 
 import { compileFrontRelease } from "../../packages/supbrd-core/dist/index.js";
@@ -57,7 +57,6 @@ async function main() {
 		if (!existsSync(dbPath)) continue;
 		console.log(`\n=== Processing database: ${dbPath} ===`);
 
-		// 1. Remove purchases from _emdash_menu_items
 		console.log("Cleaning _emdash_menu_items...");
 		execSync(
 			`sqlite3 "${dbPath}" "DELETE FROM _emdash_menu_items WHERE custom_url IN ('/monetization/purchases', '/products/purchases') AND parent_id IS NOT NULL;"`,
@@ -66,13 +65,11 @@ async function main() {
 			`sqlite3 "${dbPath}" "UPDATE _emdash_menu_items SET custom_url = '/monetization/customers' WHERE custom_url IN ('/monetization/purchases', '/products/purchases') AND parent_id IS NULL;"`,
 		);
 
-		// 2. Remove purchases from ec_views
 		console.log("Cleaning ec_views...");
 		execSync(
 			`sqlite3 "${dbPath}" "DELETE FROM ec_views WHERE path IN ('/monetization/purchases', '/products/purchases') OR slug IN ('monetization--purchases', 'products--purchases');"`,
 		);
 
-		// 3. Update candidates in superboard_front_release_candidates
 		console.log("Updating superboard_front_release_candidates...");
 		const candidateRowsJson = execSync(
 			`sqlite3 -json "${dbPath}" "SELECT candidate_id, status FROM superboard_front_release_candidates;"`,
@@ -113,7 +110,6 @@ async function main() {
 				input.gateway_manifest;
 			input.gateway_manifest = cleanGatewayManifest;
 
-			// Filter out purchases routes
 			input.front_route_manifest.routes = input.front_route_manifest.routes.filter(
 				(r) =>
 					r.route_id !== "superboard.products_purchases" &&
@@ -122,7 +118,6 @@ async function main() {
 					r.path_pattern !== "/products/purchases",
 			);
 
-			// Filter out purchases navigation items
 			if (input.presentation?.navigation) {
 				for (const group of input.presentation.navigation) {
 					if (group.items) {
@@ -134,7 +129,6 @@ async function main() {
 				}
 			}
 
-			// Compile and re-sign release
 			const compiled = await compileFrontRelease(input, {
 				kid: "local-operator-release",
 				private_key: privateKey,
@@ -143,7 +137,6 @@ async function main() {
 				`Candidate ${cand.candidate_id} recompiled. New checksum: ${compiled.content_checksum}`,
 			);
 
-			// Update DB candidate
 			const compiledJson = JSON.stringify(compiled).replace(/'/g, "''");
 			const updateSql = `
 UPDATE superboard_front_release_candidates

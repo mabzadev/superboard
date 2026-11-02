@@ -63,7 +63,6 @@ export async function resolveTxtRecords(
 	return [...new Set(nested.flat())];
 }
 
-/** Returns the CNAME targets published at `name` (lowercase, without the trailing dot). */
 async function resolveCnameRecords(name: string, fetcher: Fetcher = fetch): Promise<string[]> {
 	const records = await queryDns(name, 5, fetcher);
 	return [...new Set(records.cnames.map((target) => target.toLowerCase()))];
@@ -277,24 +276,14 @@ function base64Url(bytes: Uint8Array): string {
 	return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
-/* -------------------------------------------------------------------------- */
-/* Domain authentication wizard                                               */
-/* -------------------------------------------------------------------------- */
-
 type EmailAuthenticationProvider = "smtp" | "aws-ses";
 export type DomainAuthenticationConfig = {
-	/** SPF include of a custom SMTP provider, for example `_spf.mailgun.org`. */
 	spf_include?: string | null;
-	/** DKIM record published by a custom SMTP provider. */
 	dkim_type?: "txt" | "cname" | null;
 	dkim_selector?: string | null;
-	/** Expected TXT public key (`v=DKIM1; k=rsa; p=…`) or CNAME target. */
 	dkim_value?: string | null;
-	/** Amazon SES Easy DKIM tokens shown by the SES console. */
 	dkim_tokens?: string[];
-	/** DMARC aggregate report mailbox. Defaults to dmarc-reports@<domain>. */
 	dmarc_rua?: string | null;
-	/** Optional Amazon SES custom MAIL FROM subdomain (aligns SPF). */
 	mail_from_domain?: string | null;
 };
 type DnsRecordStatus = "verified" | "missing" | "mismatch" | "unconfigured";
@@ -305,13 +294,11 @@ type ExpectedDnsRecord = {
 	host: string;
 	value: string;
 	priority?: number;
-	/** Name of the wizard input to fill when the record cannot be generated yet. */
 	needs?: "spf_include" | "dkim" | "dkim_tokens";
 };
 type DnsRecordCheck = ExpectedDnsRecord & {
 	status: DnsRecordStatus;
 	found: string[];
-	/** English explanation; `detail_key` + `detail_params` let clients localize it. */
 	detail: string;
 	detail_key: string;
 	detail_params: Record<string, string>;
@@ -338,7 +325,6 @@ type DomainAuthenticationInput = {
 const HOSTNAME = /^(?=.{1,253}$)(?:[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$/;
 const SES_DKIM_TOKEN = /^[a-z0-9]{16,64}$/;
 
-/** Validates and normalizes wizard input. Throws `{ code }` errors for the admin API. */
 export function normalizeDomainAuthenticationConfig(
 	value: unknown,
 	fromAddress: string,
@@ -401,7 +387,6 @@ export function normalizeDomainAuthenticationConfig(
 	};
 }
 
-/** Generates the exact DNS records an operator must publish for a sender domain. */
 export function expectedDnsRecords(input: DomainAuthenticationInput): ExpectedDnsRecord[] {
 	const domain = senderDomain(input.fromAddress);
 	const config = input.config;
@@ -517,11 +502,6 @@ export function expectedDnsRecords(input: DomainAuthenticationInput): ExpectedDn
 	return records;
 }
 
-/**
- * Resolves every expected record over DNS-over-HTTPS and compares VALUES, not
- * only existence: the SPF include, the DKIM key or CNAME target, the DMARC
- * policy syntax, the SES MAIL FROM MX target, and identifier alignment.
- */
 export async function verifyDomainAuthentication(
 	input: DomainAuthenticationInput,
 	fetcher: Fetcher = fetch,
@@ -594,8 +574,6 @@ async function checkRecord(
 		const found = (await resolveTxtRecords(record.host, fetcher)).filter((value) =>
 			/^v=spf1(?:\s|$)/i.test(value),
 		);
-		// Envelope MAIL FROM is the sender address for custom SMTP, and the custom
-		// MAIL FROM subdomain for SES; both are relaxed-aligned with the From domain.
 		const aligned = input.provider === "smtp" || Boolean(input.config.mail_from_domain);
 		if (!found.length)
 			return result("missing", [], "No SPF record is published at this host.", aligned);
@@ -731,7 +709,6 @@ async function checkRecord(
 		: result("verified", found, "DMARC policy: p={policy}.", true, { policy });
 }
 
-/** Inserts a provider include into an existing SPF record, before its `all` term. */
 export function suggestSpfRecord(existing: string, include: string): string {
 	const terms = existing.trim().split(/\s+/);
 	const allIndex = terms.findIndex((term) => /^[~?+-]?all$/i.test(term));

@@ -1,7 +1,3 @@
-/**
- * Comment moderation API client
- */
-
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -12,10 +8,6 @@ import {
 	throwResponseError,
 	type FindManyResult,
 } from "./client.js";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export type CommentStatus = "pending" | "approved" | "spam" | "trash";
 
@@ -40,13 +32,6 @@ export type CommentCounts = Record<CommentStatus, number>;
 
 export type BulkAction = "approve" | "spam" | "trash" | "delete";
 
-// ---------------------------------------------------------------------------
-// Queries
-// ---------------------------------------------------------------------------
-
-/**
- * Fetch comments for the moderation inbox
- */
 export async function fetchComments(options?: {
 	status?: CommentStatus;
 	collection?: string;
@@ -66,29 +51,16 @@ export async function fetchComments(options?: {
 	return parseApiResponse<FindManyResult<AdminComment>>(response, "Failed to fetch comments");
 }
 
-/**
- * Fetch comment status counts for inbox badges
- */
 export async function fetchCommentCounts(): Promise<CommentCounts> {
 	const response = await apiFetch(`${API_BASE}/admin/comments/counts`);
 	return parseApiResponse<CommentCounts>(response, "Failed to fetch comment counts");
 }
 
-/**
- * Fetch a single comment by ID
- */
 export async function fetchComment(id: string): Promise<AdminComment> {
 	const response = await apiFetch(`${API_BASE}/admin/comments/${id}`);
 	return parseApiResponse<AdminComment>(response, "Failed to fetch comment");
 }
 
-// ---------------------------------------------------------------------------
-// Mutations
-// ---------------------------------------------------------------------------
-
-/**
- * Update a comment's status
- */
 export async function updateCommentStatus(
 	id: string,
 	status: CommentStatus,
@@ -101,9 +73,6 @@ export async function updateCommentStatus(
 	return parseApiResponse<AdminComment>(response, "Failed to update comment status");
 }
 
-/**
- * Hard delete a comment (ADMIN only)
- */
 export async function deleteComment(id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/admin/comments/${id}`, {
 		method: "DELETE",
@@ -111,9 +80,6 @@ export async function deleteComment(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete comment`));
 }
 
-/**
- * Bulk status change or delete
- */
 export async function bulkCommentAction(
 	ids: string[],
 	action: BulkAction,

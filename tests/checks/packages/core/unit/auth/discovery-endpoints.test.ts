@@ -1,20 +1,9 @@
-/**
- * Unit tests for OAuth discovery endpoint response shapes.
- *
- * These endpoints are public, unauthenticated, and return JSON metadata
- * that MCP clients use to discover OAuth endpoints. The response shapes
- * are contractual — changing them breaks MCP client compatibility.
- */
-
 import { describe, it, expect } from "vitest";
 
 import { GET as getAuthorizationServer } from "../../../../../../packages/core/src/astro/routes/api/well-known/oauth-authorization-server.js";
-// We import the GET handlers directly — they're plain functions that take
-// an Astro-like context and return a Response.
 import { GET as getProtectedResource } from "../../../../../../packages/core/src/astro/routes/api/well-known/oauth-protected-resource.js";
 import { VALID_SCOPES } from "../../../../../../packages/core/src/auth/api-tokens.js";
 
-/** Minimal mock of what the route handlers actually use from the Astro context. */
 function mockContext(origin = "https://example.com") {
 	return {
 		url: new URL("/.well-known/test", origin),

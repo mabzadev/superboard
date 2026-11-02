@@ -1,12 +1,3 @@
-/**
- * Gallery Node for TipTap
- *
- * Node view for the Portable Text `gallery` block (grid of images with
- * optional per-image captions and a column count). Provides a WYSIWYG grid
- * preview, selection state, and a settings button that opens the gallery
- * detail panel in the content sidebar (same wiring as ImageNode).
- */
-
 import { Button } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { Images, Trash, SlidersHorizontal } from "@phosphor-icons/react";
@@ -18,7 +9,6 @@ import * as React from "react";
 import { getMediaObjectPosition } from "../../lib/media-utils.js";
 import { cn } from "../../lib/utils";
 
-/** One image inside a gallery block — mirrors the Portable Text shape. */
 export interface GalleryImage {
 	_type: "image";
 	_key: string;
@@ -26,7 +16,6 @@ export interface GalleryImage {
 		_type?: "reference";
 		_ref: string;
 		url?: string;
-		/** Provider ID for external media (e.g., "cloudflare-images") */
 		provider?: string;
 	};
 	alt?: string;
@@ -35,9 +24,7 @@ export interface GalleryImage {
 	height?: number;
 	focalX?: number;
 	focalY?: number;
-	/** LQIP blurhash placeholder (images only) */
 	blurhash?: string;
-	/** LQIP dominant-color placeholder, as a CSS color (images only) */
 	dominantColor?: string;
 }
 
@@ -46,15 +33,8 @@ export interface GalleryAttributes {
 	columns?: number;
 }
 
-/** Panel descriptor passed to the block sidebar (see BlockSidebarPanel). */
 export interface GallerySidebarPanel {
 	type: "gallery";
-	/**
-	 * `selectedImageKey` is transient UI state (which image's settings card
-	 * is open) and `nodeKey` identifies which gallery node this panel
-	 * instance belongs to (from `getPos()`) — both must never be written
-	 * into node attrs via `updateAttributes`.
-	 */
 	attrs: GalleryAttributes & { selectedImageKey?: string; nodeKey?: string };
 	onUpdate: (attrs: Partial<GalleryAttributes>) => void;
 	onReplace: (attrs: GalleryAttributes) => void;
@@ -70,7 +50,6 @@ declare module "@tiptap/react" {
 	}
 }
 
-/** Resolve the admin preview URL for a gallery image. */
 export function galleryImageUrl(image: GalleryImage): string {
 	if (image.asset.url) return image.asset.url;
 	if (image.asset._ref) return `/_emdash/api/media/file/${encodeURIComponent(image.asset._ref)}`;
@@ -103,10 +82,6 @@ function GalleryNodeView({
 			sidebarOpenRef.current = true;
 			onOpen({
 				type: "gallery",
-				// `nodeKey` is transient UI state identifying which gallery node this
-				// panel instance is for — used by GalleryDetailPanel to key its resync
-				// effect on node identity rather than attrs object identity. Never
-				// written to node attrs via `updateAttributes`.
 				attrs: { ...getAttrs(), selectedImageKey, nodeKey: String(getPos?.() ?? "") },
 				onUpdate: (attrs) => updateAttributes(attrs),
 				onReplace: (attrs) => updateAttributes(attrs),
@@ -136,7 +111,6 @@ function GalleryNodeView({
 		}
 	};
 
-	// Close sidebar when this node is deselected
 	React.useEffect(() => {
 		if (!selected) {
 			closeSidebar();
@@ -198,7 +172,6 @@ function GalleryNodeView({
 				</div>
 			)}
 
-			{/* Selection overlay with actions */}
 			{selected && (
 				<div className="absolute top-2 end-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 					<Button
@@ -242,9 +215,7 @@ export const GalleryExtension = Node.create({
 
 	addStorage() {
 		return {
-			/** Callback set by PortableTextEditor to open gallery settings in the content sidebar */
 			onOpenBlockSidebar: null as ((panel: GallerySidebarPanel) => void) | null,
-			/** Callback set by PortableTextEditor to close the sidebar */
 			onCloseBlockSidebar: null as (() => void) | null,
 		};
 	},

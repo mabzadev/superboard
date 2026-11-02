@@ -1,14 +1,3 @@
-/**
- * Tests for render-path hreflang alternates (#1690).
- *
- * Mirrors the sitemap route's semantics: alternates per published
- * translation sibling (including self), `x-default` on the
- * default-locale variant, unroutable locales dropped, and empty output
- * when i18n is disabled. `astro:i18n` isn't available under vitest, so
- * `localizePath` uses its manual-prefix fallback — the same behaviour
- * default-routing sites get.
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -143,7 +132,7 @@ describe("getHreflangAlternates (#1690)", () => {
 			slug: "hallo",
 			data: { title: "Hallo" },
 			status: "published",
-			locale: "de", // not in ["en", "fr"]
+			locale: "de",
 			translationOf: en.id,
 		});
 

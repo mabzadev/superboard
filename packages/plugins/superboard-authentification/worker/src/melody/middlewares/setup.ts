@@ -1,95 +1,73 @@
-import {
-  Context, Next,
-} from 'hono'
-import { env } from 'hono/adapter'
-import {
-  CookieStore, sessionMiddleware,
-} from 'hono-sessions'
-import {
-  errorConfig, messageConfig, typeConfig,
-} from '../configs'
-import {
-  loggerUtil, requestUtil,
-} from '../utils'
-import { kvService } from '../services'
+import { Context, Next } from "hono";
+import { CookieStore, sessionMiddleware } from "hono-sessions";
+import { env } from "hono/adapter";
 
-const store = new CookieStore()
+import { errorConfig, messageConfig, typeConfig } from "../configs";
+import { kvService } from "../services";
+import { loggerUtil, requestUtil } from "../utils";
 
-export const session = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const { SERVER_SESSION_EXPIRES_IN: expiresIn } = env(c)
-  if (!expiresIn) {
-    await next()
-    return
-  }
+const store = new CookieStore();
 
-  const secret = await kvService.getSessionSecret(c)
+export const session = async (c: Context<typeConfig.Context>, next: Next) => {
+	const { SERVER_SESSION_EXPIRES_IN: expiresIn } = env(c);
+	if (!expiresIn) {
+		await next();
+		return;
+	}
 
-  const session = sessionMiddleware({
-    store,
-    encryptionKey: secret,
-    expireAfterSeconds: expiresIn,
-    cookieOptions: {
-      sameSite: 'Lax',
-      path: '/',
-      httpOnly: true,
-    },
-  })
-  // hono-sessions currently resolves its Hono peer independently. The runtime
-  // Context is compatible, but its private request symbol differs by version.
-  return session(c as unknown as Parameters<typeof session>[0], next)
-}
+	const secret = await kvService.getSessionSecret(c);
 
-export const validOrigin = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const origin = c.req.header('origin')
-  const { AUTH_SERVER_URL: serverUrl } = env(c)
+	const session = sessionMiddleware({
+		store,
+		encryptionKey: secret,
+		expireAfterSeconds: expiresIn,
+		cookieOptions: {
+			sameSite: "Lax",
+			path: "/",
+			httpOnly: true,
+		},
+	});
+	return session(c as unknown as Parameters<typeof session>[0], next);
+};
 
-  if (origin && requestUtil.stripEndingSlash(serverUrl) !== origin) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Warn,
-      messageConfig.RequestError.WrongOrigin,
-    )
-    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongOrigin)
-  }
+export const validOrigin = async (c: Context<typeConfig.Context>, next: Next) => {
+	const origin = c.req.header("origin");
+	const { AUTH_SERVER_URL: serverUrl } = env(c);
 
-  await next()
-}
+	if (origin && requestUtil.stripEndingSlash(serverUrl) !== origin) {
+		loggerUtil.triggerLogger(
+			c,
+			loggerUtil.LoggerLevel.Warn,
+			messageConfig.RequestError.WrongOrigin,
+		);
+		throw new errorConfig.Forbidden(messageConfig.RequestError.WrongOrigin);
+	}
 
-export const validEmbeddedOrigin = async (
-  c: Context<typeConfig.Context>, next: Next,
-) => {
-  const origin = c.req.header('origin')
+	await next();
+};
 
-  const {
-    AUTH_SERVER_URL: serverUrl,
-    EMBEDDED_AUTH_ORIGINS: origins,
-  } = env(c)
+export const validEmbeddedOrigin = async (c: Context<typeConfig.Context>, next: Next) => {
+	const origin = c.req.header("origin");
 
-  if (!origins.length) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Error,
-      messageConfig.ConfigError.EmbeddedAuthFeatureNotEnabled,
-    )
-    throw new errorConfig.Forbidden(messageConfig.ConfigError.EmbeddedAuthFeatureNotEnabled)
-  }
+	const { AUTH_SERVER_URL: serverUrl, EMBEDDED_AUTH_ORIGINS: origins } = env(c);
 
-  if (
-    origin &&
-    requestUtil.stripEndingSlash(serverUrl) !== origin &&
-    !origins.includes(origin)
-  ) {
-    loggerUtil.triggerLogger(
-      c,
-      loggerUtil.LoggerLevel.Warn,
-      messageConfig.RequestError.WrongOrigin,
-    )
-    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongOrigin)
-  }
+	if (!origins.length) {
+		loggerUtil.triggerLogger(
+			c,
+			loggerUtil.LoggerLevel.Error,
+			messageConfig.ConfigError.EmbeddedAuthFeatureNotEnabled,
+		);
+		throw new errorConfig.Forbidden(messageConfig.ConfigError.EmbeddedAuthFeatureNotEnabled);
+	}
 
-  await next()
-}
+	if (origin && requestUtil.stripEndingSlash(serverUrl) !== origin && !origins.includes(origin)) {
+		loggerUtil.triggerLogger(
+			c,
+			loggerUtil.LoggerLevel.Warn,
+			messageConfig.RequestError.WrongOrigin,
+		);
+		throw new errorConfig.Forbidden(messageConfig.RequestError.WrongOrigin);
+	}
+
+	await next();
+};

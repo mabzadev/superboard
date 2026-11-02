@@ -40,8 +40,6 @@ import type {
 	TabPanel,
 } from "./types.js";
 
-// ── Block Builders ───────────────────────────────────────────────────────────
-
 function header(text: string, opts?: { blockId?: string }): HeaderBlock {
 	return {
 		type: "header",
@@ -165,8 +163,6 @@ function bannerBlock(
 		...(opts.blockId !== undefined && { block_id: opts.blockId }),
 	};
 }
-
-// ── Element Builders ─────────────────────────────────────────────────────────
 
 function textInput(
 	actionId: string,
@@ -494,8 +490,6 @@ function accordion(opts: {
 		...(opts.blockId !== undefined && { block_id: opts.blockId }),
 	};
 }
-
-// ── Exports ──────────────────────────────────────────────────────────────────
 
 export const blocks = {
 	header,

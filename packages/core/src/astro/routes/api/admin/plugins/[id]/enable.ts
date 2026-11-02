@@ -1,9 +1,3 @@
-/**
- * Plugin enable endpoint
- *
- * POST /_emdash/api/admin/plugins/:id/enable - Enable a plugin
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -41,9 +35,6 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
 	if (!result.success) return unwrapResult(result);
 
-	// If this is a runtime-installed plugin (marketplace or registry),
-	// the sandbox bundle may not be in memory yet -- a sync reloads it
-	// from R2 so the just-enabled plugin can actually run hooks.
 	const source = result.data.item.source;
 	if (source === "registry") {
 		await emdash.syncRegistryPlugins();

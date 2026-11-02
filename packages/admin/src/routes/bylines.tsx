@@ -35,14 +35,7 @@ interface BylineFormState {
 	websiteUrl: string;
 	userId: string | null;
 	isGuest: boolean;
-	/** Media id of the byline's avatar image, or null when unset (#1250). */
 	avatarMediaId: string | null;
-	/**
-	 * Custom-field values keyed by field slug (Phase 6 of #1174). Always
-	 * a defined object — `{}` when no fields are registered or the byline
-	 * has no stored values — so callers can spread it into update bodies
-	 * unconditionally.
-	 */
 	customFields: Record<string, unknown>;
 }
 
@@ -53,10 +46,6 @@ export interface LoadMoreSnapshot {
 	cursor: string;
 }
 
-/**
- * True when the load-more snapshot still matches the current filter state.
- * Used to discard appends from requests whose filters have changed mid-flight.
- */
 export function loadMoreSnapshotMatches(
 	snapshot: LoadMoreSnapshot,
 	current: Omit<LoadMoreSnapshot, "cursor">,
@@ -105,9 +94,6 @@ export function BylinesPage() {
 	const navigate = useNavigate();
 	const { locale: routeLocale } = useSearch({ from: "/_admin/bylines" });
 	const [search, setSearch] = React.useState("");
-	// Debounce the search before it feeds the query key/fetch so typing stays
-	// responsive — the input stays bound to raw `search` while only the
-	// debounced value drives refetches.
 	const debouncedSearch = useDebouncedValue(search, 300);
 	const [guestFilter, setGuestFilter] = React.useState<"all" | "guest" | "linked">("all");
 	const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -115,8 +101,6 @@ export function BylinesPage() {
 	const [allItems, setAllItems] = React.useState<BylineSummary[]>([]);
 	const [nextCursor, setNextCursor] = React.useState<string | undefined>(undefined);
 
-	// Manifest powers the locale switcher: the configured locales + default
-	// locale come from the site's emdash config, exposed on the manifest.
 	const { data: manifest } = useQuery({
 		queryKey: ["manifest"],
 		queryFn: fetchManifest,
@@ -126,10 +110,6 @@ export function BylinesPage() {
 
 	const { data: currentUser } = useCurrentUser();
 	const canManageBylineSchema = (currentUser?.role ?? 0) >= BYLINE_SCHEMA_NAV_ITEM.minRole;
-	// `activeLocale` is the URL search param when present, else the default.
-	// Picker on a translated post can be expected to scope to the post's
-	// locale (Phase 4 wires that up); for the bylines manager itself the
-	// active locale just filters the list and seeds new bylines.
 	const activeLocale = routeLocale ?? i18n?.defaultLocale ?? undefined;
 
 	const handleLocaleChange = (locale: string) => {
@@ -137,9 +117,6 @@ export function BylinesPage() {
 			to: "/bylines",
 			search: { locale: locale || undefined },
 		});
-		// Switching locales invalidates the previously-selected byline (it
-		// belongs to a different list); clear selection so the editor opens
-		// in "create" mode at the new locale.
 		setSelectedId(null);
 	};
 
@@ -152,16 +129,9 @@ export function BylinesPage() {
 				locale: activeLocale,
 				limit: 50,
 			}),
-		// Keep the previous results on screen while a new search/filter query
-		// loads. Without this, changing the query key drops `data` to
-		// `undefined`, the `isLoading && !data` gate re-engages, and the whole
-		// page collapses into the full-page loader on every settled keystroke —
-		// the focus-losing "reload" reported in #1220 that the debounce alone
-		// only reduced in frequency. Matches ContentEditor's search pattern.
 		placeholderData: keepPreviousData,
 	});
 
-	// Reset accumulated items when filters change
 	React.useEffect(() => {
 		if (data) {
 			setAllItems(data.items);
@@ -176,12 +146,6 @@ export function BylinesPage() {
 
 	const users = usersData?.items ?? [];
 
-	// Phase 6 of #1174: render registered custom fields as inputs in the
-	// edit form. List is fetched once per page mount; the registry's
-	// version counter invalidates content-side caches but the admin UI
-	// just relies on react-query's staleTime for now — admins rarely
-	// add/remove fields while another admin is editing a byline, and the
-	// next page navigation refetches anyway.
 	const { data: customFieldsList, error: customFieldsError } = useQuery({
 		queryKey: ["byline-fields"],
 		queryFn: listBylineFields,
@@ -189,9 +153,6 @@ export function BylinesPage() {
 	});
 	const customFieldDefs = customFieldsList?.items ?? [];
 
-	// Snapshot filters at click-time and discard the response if the user
-	// changed any of them while the request was in flight — otherwise stale
-	// pages from a different filter set get appended to the visible list.
 	const loadMoreMutation = useMutation({
 		mutationFn: async (snapshot: LoadMoreSnapshot) => {
 			const result = await fetchBylines({
@@ -219,10 +180,6 @@ export function BylinesPage() {
 	});
 
 	const items = allItems;
-	// The selected row may live in `allItems` (visible at the active locale)
-	// or be a sibling of the open byline reached via TranslationsPanel. Fetch
-	// directly by id so the editor stays consistent when the selection
-	// crosses locale boundaries.
 	const { data: selectedRemote } = useQuery({
 		queryKey: ["byline", selectedId],
 		queryFn: () => (selectedId ? fetchByline(selectedId) : Promise.resolve(null)),
@@ -236,9 +193,6 @@ export function BylinesPage() {
 		setForm(toFormState(selected));
 	}, [selected]);
 
-	// Translations: only fetched when a multi-locale install has a byline
-	// open. The panel renders one row per configured locale, with Translate
-	// or Edit buttons depending on which siblings exist.
 	const { data: translationsData } = useQuery({
 		queryKey: ["byline-translations", selectedId],
 		queryFn: () =>
@@ -248,9 +202,6 @@ export function BylinesPage() {
 
 	const createMutation = useMutation({
 		mutationFn: () => {
-			// Mirrors updateMutation's customFields guard: omit the key
-			// when field-defs failed to load so the new row starts blank
-			// instead of echoing an empty hydration back.
 			const body: Parameters<typeof createByline>[0] = {
 				slug: form.slug,
 				displayName: form.displayName,
@@ -276,17 +227,6 @@ export function BylinesPage() {
 	const updateMutation = useMutation({
 		mutationFn: () => {
 			if (!selectedId) throw new Error("No byline selected");
-			// Phase 6 of #1174: forward registered custom-field values
-			// when we have field-defs to render them. If the
-			// `byline-fields` list failed to load, the inputs aren't
-			// rendered so the editor cannot see what they'd be saving;
-			// omit the key entirely so the server-side repo skips the
-			// customFields branch and preserves stored values verbatim
-			// (`undefined` triggers the skip path in
-			// `BylineRepository.update`). Sending `form.customFields`
-			// would echo the hydrated values back — usually a no-op,
-			// but in a "field deleted server-side mid-session" scenario
-			// it would surface as a 400, surprising the editor.
 			const body: Parameters<typeof updateByline>[1] = {
 				slug: form.slug,
 				displayName: form.displayName,
@@ -321,9 +261,6 @@ export function BylinesPage() {
 		},
 	});
 
-	// Translate-this-byline action: creates a sibling row in the target locale
-	// joined to the same translation_group. We track `pendingTranslationLocale`
-	// so the TranslationsPanel can disable the right button while in flight.
 	const [pendingTranslationLocale, setPendingTranslationLocale] = React.useState<string | null>(
 		null,
 	);
@@ -343,8 +280,6 @@ export function BylinesPage() {
 					queryKey: ["byline-translations", selectedId],
 				});
 			}
-			// Switch the admin locale to the new sibling's locale and open it
-			// in the editor — same flow as menus/taxonomies after Translate.
 			void navigate({
 				to: "/bylines",
 				search: { locale: created.locale },
@@ -519,12 +454,6 @@ export function BylinesPage() {
 							}}
 							className="w-full"
 						/>
-						{/*
-						 * Render registered custom-field inputs inline with
-						 * the fixed fields. TODO: when a third extensible
-						 * system table needs custom fields, file a refactor
-						 * Discussion to extract <FieldRenderer> for reuse.
-						 */}
 						{customFieldDefs.length > 0 &&
 							customFieldDefs.map((field) => (
 								<CustomFieldInput
@@ -631,21 +560,6 @@ export function BylinesPage() {
 	);
 }
 
-/**
- * Renders a single registered byline custom field as the appropriate
- * Kumo input for its type (Phase 6 of #1174).
- *
- * Five v1 type cases mirror `BylineFieldType` and the inputs that
- * `BylineFieldEditor` allows admins to register. Empty string inputs
- * coerce to `null` on save so the repo's "null clears the row"
- * storage semantic engages — server-side `BylineRepository.update`
- * deletes the value row rather than storing an empty-string JSON.
- *
- * `field.required` adds a `*` after the label as a visual hint; the
- * server is authoritative on validation (Phase 6 ACs don't include a
- * client-side required check — the registry's `required` flag is
- * descriptive rather than enforced in the write path today).
- */
 function CustomFieldInput({
 	field,
 	value,
@@ -687,10 +601,6 @@ function CustomFieldInput({
 				/>
 			);
 		case "boolean":
-			// Booleans are always definite once the field is registered —
-			// `null` would mean "no row stored", which conceptually maps
-			// to `false` for a yes/no toggle. The Switch sends a real
-			// boolean and the storage path persists it verbatim.
 			return (
 				<Switch
 					label={label}
@@ -700,8 +610,6 @@ function CustomFieldInput({
 			);
 		case "select": {
 			const options = field.validation?.options ?? [];
-			// Null-prototype object so options that collide with
-			// `Object.prototype` keys (`__proto__`, `toString`) survive.
 			const items: Record<string, string> = Object.create(null);
 			items[""] = t`-- Select --`;
 			for (const opt of options) items[opt] = opt;

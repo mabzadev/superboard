@@ -6,11 +6,6 @@ import { attributeSignalRevenue } from "./revenue-attribution.js";
 import type { Env, MarketingQueueJob } from "./types.js";
 import { parseStoredJson } from "./validation.js";
 
-/**
- * Native automation triggers. Each one maps a friendly business moment onto
- * the events SuperBoard actually emits (core collection, billing and the
- * Marketing audience itself). Journeys store them as `native:<key>`.
- */
 type NativeTriggerEvent = { event_name: string; when?: Record<string, string[]> };
 type NativeTrigger = {
 	key: string;
@@ -113,7 +108,6 @@ export const NATIVE_TRIGGERS: readonly NativeTrigger[] = [
 	{ key: "date_attribute", group: "dates", label: "Date or anniversary", events: [] },
 ];
 
-/** Business moments with no event producer in SuperBoard today. */
 export const UNAVAILABLE_NATIVE_TRIGGERS = [
 	{ key: "subscription_expired", reason: "Billing maps store expirations to initial_purchase." },
 	{ key: "trial_ending", reason: "No trial-will-end event is emitted." },
@@ -146,14 +140,12 @@ function matchesEvent(
 	);
 }
 
-/** Every `native:<key>` trigger an incoming signal satisfies. */
 export function nativeTriggerKeys(signal: Pick<MarketingSignalV1, "event_name" | "properties">) {
 	return NATIVE_TRIGGERS.filter((trigger) =>
 		trigger.events.some((event) => matchesEvent(event, signal)),
 	).map((trigger) => NATIVE_PREFIX + trigger.key);
 }
 
-/** An event key is a raw event name or a `native:<key>` trigger. */
 export function eventKeyMatches(
 	key: string,
 	signal: Pick<MarketingSignalV1, "event_name" | "properties">,
@@ -175,7 +167,6 @@ export function validateEventKey(value: unknown, field: string, allowDate = fals
 	return key;
 }
 
-/** Extra trigger settings, currently the date-based trigger configuration. */
 export function validateNativeTriggerSettings(
 	eventName: string,
 	source: Record<string, unknown>,
@@ -195,7 +186,6 @@ export function validateNativeTriggerSettings(
 	return { date: { attribute, anniversary: raw.anniversary !== false, offset_days: offset, hour } };
 }
 
-/** Wait-until-event step: returns whether the step is still waiting or how it ended. */
 export async function evaluateWaitStep(
 	db: D1Database,
 	enrollment: { id: string; project_id: number; subscriber_id: string },
@@ -251,7 +241,6 @@ export async function evaluateWaitStep(
 	};
 }
 
-/** True when the enrollment already reached its journey goal and must stop. */
 export async function enrollmentReachedGoal(
 	db: D1Database,
 	projectId: number,
@@ -346,10 +335,6 @@ async function reachJourneyGoals(
 	return reached;
 }
 
-/**
- * Runs for every signal matched to a contact, before journey entry: revenue
- * attribution, journey goals (converted contacts exit) and waiting steps.
- */
 export async function onSubscriberSignal(
 	env: Env,
 	projectId: number,
@@ -362,7 +347,6 @@ export async function onSubscriberSignal(
 	return { revenue_attributed: revenue.attributed, goals_reached: goals, waits_resumed: woken };
 }
 
-/** Goal conversions and attributed revenue shown with journey statistics. */
 export async function journeyOutcomes(db: D1Database, projectId: number, journeyId: string) {
 	const row = await db
 		.prepare(

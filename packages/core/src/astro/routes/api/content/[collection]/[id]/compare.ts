@@ -1,9 +1,3 @@
-/**
- * Compare live and draft revisions
- *
- * GET /_emdash/api/content/{collection}/{id}/compare
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

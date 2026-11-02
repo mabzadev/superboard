@@ -55,7 +55,6 @@ export async function buildInstance(env = process.env, execute = run) {
 	await execute("pnpm", ["--dir", "sdks/web", "build"], testEnv);
 	for (const script of [
 		"build",
-		// Astro generates the declarations required by typed lint during its type check.
 		"typecheck",
 		"lint",
 		"lint:contracts",

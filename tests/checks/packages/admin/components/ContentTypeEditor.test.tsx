@@ -11,12 +11,10 @@ import type {
 } from "../../../../../packages/admin/src/lib/api";
 import { render } from "../utils/render";
 
-// Regexes hoisted to module scope to avoid recompilation per call
 const EDIT_TITLE_RE = /Edit Title field/i;
 const EDIT_BODY_RE = /Edit Body field/i;
 const URL_PATTERN_SLUG_RE = /must include.*\{slug\}/i;
 
-// Mock tanstack router — Link renders as <a>, useNavigate is a no-op
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual("@tanstack/react-router");
 	return {
@@ -26,7 +24,6 @@ vi.mock("@tanstack/react-router", async () => {
 	};
 });
 
-// Mock FieldEditor — just expose open state via data attribute
 vi.mock("../../../../../packages/admin/src/components/FieldEditor", () => ({
 	FieldEditor: ({ open }: { open: boolean }) =>
 		open ? <div data-testid="field-editor-dialog">Field Editor</div> : null,
@@ -98,8 +95,6 @@ const CODE_DEFINED_MSG_REGEX = /This collection is defined in code/i;
 const SYSTEM_FIELDS_REGEX = /6 system \+ 2 custom fields/;
 
 describe("ContentTypeEditor", () => {
-	// ---- Title for new vs edit mode ----
-
 	it("shows 'New Content Type' title when isNew", async () => {
 		const screen = await render(<ContentTypeEditor {...defaultProps()} isNew />);
 		await expect.element(screen.getByText("New Content Type")).toBeInTheDocument();
@@ -111,54 +106,40 @@ describe("ContentTypeEditor", () => {
 		await expect.element(screen.getByText("Articles")).toBeInTheDocument();
 	});
 
-	// ---- Auto-slug from label when isNew ----
-
 	it("auto-generates slug from label when isNew", async () => {
 		const screen = await render(<ContentTypeEditor {...defaultProps()} isNew />);
 
 		const labelInput = screen.getByLabelText("Label (Plural)");
 		await labelInput.fill("Blog Posts");
 
-		// The slug input should auto-populate from the label
 		const slugInput = screen.getByLabelText("Slug", { exact: true });
 		await expect.element(slugInput).toHaveValue("blog_posts");
 	});
-
-	// ---- Slug disabled when editing ----
 
 	it("does not show slug input when editing existing collection", async () => {
 		const collection = makeCollection();
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
 
-		// Slug input is only rendered when isNew, so it shouldn't exist
 		const slugInput = screen.getByLabelText("Slug", { exact: true });
 		await expect.element(slugInput).not.toBeInTheDocument();
 	});
-
-	// ---- Supports checkboxes toggle correctly ----
 
 	it("toggles support checkboxes", async () => {
 		const collection = makeCollection({ supports: ["drafts"] });
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
 
-		// "Drafts" should be checked initially
 		const draftsCheckbox = screen.getByRole("checkbox", { name: DRAFTS_CHECKBOX_REGEX });
 		await expect.element(draftsCheckbox).toBeChecked();
 
-		// "Revisions" should not be checked
 		const revisionsCheckbox = screen.getByRole("checkbox", { name: REVISIONS_CHECKBOX_REGEX });
 		await expect.element(revisionsCheckbox).not.toBeChecked();
 
-		// Toggle revisions on
 		await revisionsCheckbox.click();
 		await expect.element(revisionsCheckbox).toBeChecked();
 
-		// Toggle drafts off
 		await draftsCheckbox.click();
 		await expect.element(draftsCheckbox).not.toBeChecked();
 	});
-
-	// ---- Save button disabled when no changes ----
 
 	it("save button is disabled when no changes have been made", async () => {
 		const collection = makeCollection();
@@ -167,8 +148,6 @@ describe("ContentTypeEditor", () => {
 		const saveButton = screen.getByRole("button", { name: "Saved", exact: true }).last();
 		await expect.element(saveButton).toBeDisabled();
 	});
-
-	// ---- Save button enabled after changing a field ----
 
 	it("save button is enabled after changing label", async () => {
 		const collection = makeCollection({ label: "Posts" });
@@ -180,8 +159,6 @@ describe("ContentTypeEditor", () => {
 		const saveButton = screen.getByRole("button", { name: "Save", exact: true }).last();
 		await expect.element(saveButton).toBeEnabled();
 	});
-
-	// ---- onSave called with correct input shape ----
 
 	it("calls onSave with correct input when creating new collection", async () => {
 		const onSave = vi.fn();
@@ -200,7 +177,7 @@ describe("ContentTypeEditor", () => {
 			description: undefined,
 			urlPattern: undefined,
 			routable: true,
-			supports: ["drafts", "revisions"], // default
+			supports: ["drafts", "revisions"],
 			hasSeo: false,
 		});
 	});
@@ -232,8 +209,6 @@ describe("ContentTypeEditor", () => {
 		});
 	});
 
-	// ---- Field list displays existing fields with type and badges ----
-
 	it("displays custom fields with type and badges", async () => {
 		const fields: SchemaField[] = [
 			makeField({ slug: "title", label: "Title", type: "string", required: true, unique: true }),
@@ -249,24 +224,19 @@ describe("ContentTypeEditor", () => {
 
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
 
-		// Verify fields render by checking their edit buttons (unique aria-labels)
 		await expect.element(screen.getByRole("button", { name: EDIT_TITLE_RE })).toBeInTheDocument();
 		await expect.element(screen.getByRole("button", { name: EDIT_BODY_RE })).toBeInTheDocument();
 
-		// Badges — use exact: true to avoid matching system field descriptions like "Unique identifier"
 		await expect.element(screen.getByText("Required", { exact: true })).toBeInTheDocument();
 		await expect.element(screen.getByText("Unique", { exact: true })).toBeInTheDocument();
 		await expect.element(screen.getByText("Searchable", { exact: true })).toBeInTheDocument();
 	});
-
-	// ---- System fields always shown ----
 
 	it("shows system fields section", async () => {
 		const collection = makeCollection();
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
 
 		await expect.element(screen.getByText("System Fields")).toBeInTheDocument();
-		// System fields show descriptions — use those as unambiguous locators
 		await expect.element(screen.getByText("Unique identifier (ULID)")).toBeInTheDocument();
 		await expect.element(screen.getByText("URL-friendly identifier")).toBeInTheDocument();
 		await expect.element(screen.getByText("draft, published, or archived")).toBeInTheDocument();
@@ -275,25 +245,18 @@ describe("ContentTypeEditor", () => {
 		await expect.element(screen.getByText("When the entry was published")).toBeInTheDocument();
 	});
 
-	// ---- Add field button opens FieldEditor dialog ----
-
 	it("opens FieldEditor dialog when Add Field is clicked", async () => {
 		const collection = makeCollection();
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
 
-		// Field editor should not be visible initially
 		const dialog = screen.getByTestId("field-editor-dialog");
 		await expect.element(dialog).not.toBeInTheDocument();
 
-		// Click Add Field
 		const addButton = screen.getByRole("button", { name: ADD_FIELD_BUTTON_REGEX });
 		await addButton.click();
 
-		// Dialog should now be visible
 		await expect.element(screen.getByTestId("field-editor-dialog")).toBeInTheDocument();
 	});
-
-	// ---- Delete field with confirm dialog calls onDeleteField ----
 
 	it("calls onDeleteField when delete is confirmed via dialog", async () => {
 		const onDeleteField = vi.fn();
@@ -308,10 +271,8 @@ describe("ContentTypeEditor", () => {
 		const deleteButton = screen.getByRole("button", { name: DELETE_FIELD_BUTTON_PATTERN });
 		await deleteButton.click();
 
-		// ConfirmDialog should appear
 		await expect.element(screen.getByText("Delete Field?")).toBeInTheDocument();
 
-		// Direct DOM click to bypass Base UI inert overlay
 		screen.getByRole("button", { name: "Delete" }).element().click();
 
 		expect(onDeleteField).toHaveBeenCalledWith("title");
@@ -330,40 +291,31 @@ describe("ContentTypeEditor", () => {
 		const deleteButton = screen.getByRole("button", { name: DELETE_FIELD_BUTTON_REGEX });
 		await deleteButton.click();
 
-		// ConfirmDialog should appear
 		await expect.element(screen.getByText("Delete Field?")).toBeInTheDocument();
 
-		// Direct DOM click to bypass Base UI inert overlay
 		screen.getByRole("button", { name: "Cancel" }).element().click();
 
 		expect(onDeleteField).not.toHaveBeenCalled();
 	});
 
-	// ---- Code-source collections show disabled inputs and info banner ----
-
 	it("shows info banner and disables inputs for code-source collections", async () => {
 		const collection = makeCollection({ source: "code" });
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
 
-		// Info banner text
 		await expect.element(screen.getByText(CODE_DEFINED_MSG_REGEX)).toBeInTheDocument();
 
-		// Label inputs should be disabled
 		const labelInput = screen.getByLabelText("Label (Plural)");
 		await expect.element(labelInput).toBeDisabled();
 
 		const singularInput = screen.getByLabelText("Label (Singular)");
 		await expect.element(singularInput).toBeDisabled();
 
-		// Description uses InputArea — locate via placeholder
 		const descInput = screen.getByPlaceholder("A brief description of this content type");
 		await expect.element(descInput).toBeDisabled();
 
-		// Save button should not exist for code-source collections
 		const saveButton = screen.getByRole("button", { name: "Save", exact: true }).last();
 		await expect.element(saveButton).not.toBeInTheDocument();
 
-		// Add Field button should not exist
 		const addFieldButton = screen.getByRole("button", { name: ADD_FIELD_BUTTON_REGEX });
 		await expect.element(addFieldButton).not.toBeInTheDocument();
 	});
@@ -380,8 +332,6 @@ describe("ContentTypeEditor", () => {
 		await expect.element(deleteButton).not.toBeInTheDocument();
 	});
 
-	// ---- Empty field list shows "No custom fields yet" ----
-
 	it("shows empty state when collection has no custom fields", async () => {
 		const collection = makeCollection({ fields: [] });
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
@@ -392,16 +342,12 @@ describe("ContentTypeEditor", () => {
 			.toBeInTheDocument();
 	});
 
-	// ---- Fields section hidden for new collections ----
-
 	it("does not show fields section when creating new collection", async () => {
 		const screen = await render(<ContentTypeEditor {...defaultProps()} isNew />);
 
 		const fieldsHeading = screen.getByRole("heading", { name: "Fields" });
 		await expect.element(fieldsHeading).not.toBeInTheDocument();
 	});
-
-	// ---- isSaving shows saving state ----
 
 	it("shows 'Saving...' when isSaving is true", async () => {
 		const collection = makeCollection();
@@ -415,14 +361,10 @@ describe("ContentTypeEditor", () => {
 		}
 	});
 
-	// ---- Sticky-header save (issue #233) ----
-
 	it("renders a sticky-header save button when editing existing collection", async () => {
 		const collection = makeCollection();
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
 
-		// Both actions communicate their saved state directly. Saving remains
-		// reachable from the sticky header and at the end of the form.
 		await expect
 			.element(screen.getByRole("button", { name: "Saved", exact: true }).first())
 			.toBeInTheDocument();
@@ -436,13 +378,11 @@ describe("ContentTypeEditor", () => {
 		const collection = makeCollection({ label: "Posts" });
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
 
-		// Initially clean -> disabled "Saved"
 		await expect
 			.element(screen.getByRole("button", { name: "Saved", exact: true }).first())
 			.toBeDisabled();
 		expect(screen.getByRole("status").element().textContent).toBe("Saved");
 
-		// Make a change -> sticky button remains "Save" and becomes enabled.
 		await screen.getByLabelText("Label (Plural)").fill("Articles");
 		await expect
 			.element(screen.getByRole("button", { name: "Save", exact: true }).first())
@@ -466,7 +406,6 @@ describe("ContentTypeEditor", () => {
 		const collection = makeCollection({ source: "code" });
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
 
-		// Neither save action appears for code-source collections.
 		await expect
 			.element(screen.getByRole("button", { name: "Save", exact: true }).first())
 			.not.toBeInTheDocument();
@@ -475,13 +414,10 @@ describe("ContentTypeEditor", () => {
 	it("does not render sticky-header save when creating a new collection", async () => {
 		const screen = await render(<ContentTypeEditor {...defaultProps()} isNew />);
 
-		// On the new flow only the bottom 'Create Content Type' button is expected.
 		await expect
 			.element(screen.getByRole("button", { name: "Save", exact: true }).first())
 			.not.toBeInTheDocument();
 	});
-
-	// ---- URL Pattern field ----
 
 	it("shows URL Pattern input", async () => {
 		const collection = makeCollection();
@@ -564,7 +500,6 @@ describe("ContentTypeEditor", () => {
 			<ContentTypeEditor {...defaultProps({ onSave })} collection={collection} />,
 		);
 
-		// Change label to enable save (urlPattern empty is fine)
 		await screen.getByLabelText("Label (Plural)").fill("Articles");
 
 		const saveButton = screen.getByRole("button", { name: "Save", exact: true }).last();
@@ -590,7 +525,6 @@ describe("ContentTypeEditor", () => {
 		const collection = makeCollection({ fields });
 		const screen = await render(<ContentTypeEditor {...defaultProps()} collection={collection} />);
 
-		// Should show "6 system + 2 custom fields"
 		await expect.element(screen.getByText(SYSTEM_FIELDS_REGEX)).toBeInTheDocument();
 	});
 });

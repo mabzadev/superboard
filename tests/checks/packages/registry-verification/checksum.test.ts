@@ -11,7 +11,6 @@ const encoder = new TextEncoder();
 
 describe("multihash checksums", () => {
 	it("computes the sha2-256 multibase multihash known vector", async () => {
-		// Independently fixed SHA-256 multihash vector for the UTF-8 bytes "hello".
 		const result = await computeMultihash(encoder.encode("hello"));
 		expect(result).toEqual({
 			success: true,

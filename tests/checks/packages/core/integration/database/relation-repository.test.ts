@@ -14,7 +14,7 @@ describeEachDialect("RelationRepository", (dialect) => {
 	let repo: RelationRepository;
 
 	beforeEach(async () => {
-		ctx = await setupForDialect(dialect); // runs all migrations
+		ctx = await setupForDialect(dialect);
 		repo = new RelationRepository(ctx.db);
 	});
 
@@ -115,7 +115,7 @@ describeEachDialect("RelationRepository", (dialect) => {
 		expect(fr?.locale).toBe("fr");
 
 		const any = await repo.findByName("manages");
-		expect(any?.locale).toBe("en"); // lowest locale code wins deterministically
+		expect(any?.locale).toBe("en");
 
 		expect(await repo.findByName("missing")).toBeNull();
 	});
@@ -149,7 +149,6 @@ describeEachDialect("RelationRepository", (dialect) => {
 		expect(all.map((r) => r.name)).toEqual(["manages", "manages", "writes"]);
 
 		const enOnly = await repo.list("en");
-		// The 'fr' row must be filtered out — assert the filter actually removes it.
 		expect(enOnly.length).toBeLessThan(all.length);
 		expect(enOnly.every((r) => r.locale === "en")).toBe(true);
 	});
@@ -169,7 +168,6 @@ describeEachDialect("RelationRepository", (dialect) => {
 		});
 
 		const forPosts = await repo.findForCollection("posts");
-		// Asserted in returned order to also verify the (name, id) ORDER BY.
 		expect(forPosts.map((r) => r.name)).toEqual(["tags_rel", "writes"]);
 
 		const forTags = await repo.findForCollection("tags");
@@ -182,7 +180,6 @@ describeEachDialect("RelationRepository", (dialect) => {
 
 		expect(updated?.parentLabel).toBe("Lead");
 		expect(updated?.childLabel).toBe("Report");
-		// Structural fields untouched.
 		expect(updated?.name).toBe("manages");
 		expect(updated?.parentCollection).toBe("employees");
 
@@ -198,7 +195,6 @@ describeEachDialect("RelationRepository", (dialect) => {
 			childLabel: "Subordonné",
 			translationOf: anchor.id,
 		});
-		// Seed an edge directly (addReference arrives in Task 4).
 		await ctx.db
 			.insertInto("_emdash_content_references")
 			.values({
@@ -211,9 +207,7 @@ describeEachDialect("RelationRepository", (dialect) => {
 			.execute();
 
 		expect(await repo.delete(fr.id)).toBe(true);
-		// The 'en' anchor row must survive (only the 'fr' translation was deleted)...
 		expect(await repo.findById(anchor.id)).not.toBeNull();
-		// ...and so must its edges.
 		const edges = await ctx.db
 			.selectFrom("_emdash_content_references")
 			.selectAll()
@@ -249,7 +243,7 @@ describeEachDialect("RelationRepository", (dialect) => {
 		const rel = await repo.create({ ...baseInput });
 		await repo.addReference(rel.id, "p1", "cA");
 		await repo.addReference(rel.id, "p1", "cB");
-		await repo.addReference(rel.id, "p1", "cA"); // duplicate — no-op
+		await repo.addReference(rel.id, "p1", "cA");
 
 		const children = await repo.getChildren(rel.translationGroup, "p1");
 		expect(children.map((c) => c.childGroup)).toEqual(["cA", "cB"]);
@@ -309,7 +303,6 @@ describeEachDialect("RelationRepository", (dialect) => {
 		expect(children.map((c) => c.childGroup)).toEqual(["a", "b", "c"]);
 		expect(children.map((c) => c.sortOrder)).toEqual([0, 1, 2]);
 
-		// Reorder + drop 'a' + add 'd'.
 		await repo.setChildren(rel.id, "p1", ["c", "b", "d"]);
 		children = await repo.getChildren(rel.translationGroup, "p1");
 		expect(children.map((c) => c.childGroup)).toEqual(["c", "b", "d"]);
@@ -338,9 +331,9 @@ describeEachDialect("RelationRepository", (dialect) => {
 
 	it("clearReferencesForGroup removes edges where the group is parent OR child", async () => {
 		const rel = await repo.create({ ...baseInput });
-		await repo.addReference(rel.id, "X", "a"); // X as parent
-		await repo.addReference(rel.id, "b", "X"); // X as child
-		await repo.addReference(rel.id, "b", "c"); // unrelated
+		await repo.addReference(rel.id, "X", "a");
+		await repo.addReference(rel.id, "b", "X");
+		await repo.addReference(rel.id, "b", "c");
 
 		const removed = await repo.clearReferencesForGroup("X");
 		expect(removed).toBe(2);
@@ -353,7 +346,6 @@ describeEachDialect("RelationRepository", (dialect) => {
 	it("clearReferencesForGroup purges the group's edges across every relation", async () => {
 		const relA = await repo.create({ ...baseInput, name: "rel_a" });
 		const relB = await repo.create({ ...baseInput, name: "rel_b" });
-		// The same content group "X" participates in edges under two relations.
 		await repo.addReference(relA.id, "X", "a");
 		await repo.addReference(relB.id, "b", "X");
 
@@ -372,7 +364,6 @@ describeEachDialect("RelationRepository", (dialect) => {
 		expect(await repo.countChildren(rel.id, "p1")).toBe(2);
 		expect(await repo.countParents(rel.id, "a")).toBe(2);
 
-		// Unknown relation resolves to no group → zero.
 		expect(await repo.countChildren("unknown-relation", "p1")).toBe(0);
 		expect(await repo.countParents("unknown-relation", "a")).toBe(0);
 	});

@@ -37,7 +37,6 @@ function keyFromLabel(label: string) {
 		.slice(0, 64);
 }
 
-/** Custom contact fields and tags, managed side by side. */
 export function AudienceFields({ project }: { project: string }) {
 	const { t, locale } = useStudioI18n();
 	const [fields, setFields] = useState<AudienceField[]>([]);

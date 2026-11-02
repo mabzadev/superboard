@@ -1,19 +1,7 @@
-/**
- * definePlugin() Tests
- *
- * Tests the plugin definition helper for:
- * - ID validation (simple and scoped formats)
- * - Version validation (semver)
- * - Capability validation and normalization
- * - Hook resolution (function vs config object)
- * - Default value handling
- */
-
 import { describe, it, expect, vi } from "vitest";
 
 import { definePlugin } from "../../../../../../packages/core/src/plugins/define-plugin.js";
 
-// Error message patterns for test assertions
 const INVALID_PLUGIN_ID_PATTERN = /Invalid plugin id/;
 const INVALID_PLUGIN_VERSION_PATTERN = /Invalid plugin version/;
 const INVALID_CAPABILITY_PATTERN = /Invalid capability/;
@@ -84,9 +72,6 @@ describe("definePlugin", () => {
 		});
 
 		it("rejects empty ID", () => {
-			// Empty id is treated as "no id" — same code path as the
-			// sandboxed-shape rejection, with a pointer at the new
-			// `satisfies SandboxedPlugin` authoring flow.
 			expect(() =>
 				definePlugin({
 					id: "",
@@ -161,11 +146,6 @@ describe("definePlugin", () => {
 		});
 	});
 
-	// Regression: #1370 — the id/version validation patterns must stay
-	// function-local (evaluated at call time). As module-scope consts, a
-	// circular module init on Cloudflare Workers could reach defineNativePlugin
-	// before they initialized, throwing "Cannot access 'SIMPLE_ID' before
-	// initialization" and 500-ing every route. Validation must keep working.
 	describe("#1370 — call-time validation regexes", () => {
 		it("validates id and version on every call", () => {
 			expect(definePlugin({ id: "first", version: "1.0.0" }).id).toBe("first");
@@ -266,11 +246,6 @@ describe("definePlugin", () => {
 			expect(plugin.capabilities).toEqual([]);
 		});
 
-		// ── Deprecation alias layer ────────────────────────────────
-		// During the deprecation window we accept the old names and
-		// silently rewrite them to the new names. The runtime should
-		// only ever see canonical (new) names.
-
 		it("accepts and normalizes deprecated capability names", () => {
 			const plugin = definePlugin({
 				id: "test",
@@ -289,7 +264,6 @@ describe("definePlugin", () => {
 				],
 			});
 
-			// Normalized to current names
 			expect(plugin.capabilities).toContain("content:read");
 			expect(plugin.capabilities).toContain("content:write");
 			expect(plugin.capabilities).toContain("media:read");
@@ -301,7 +275,6 @@ describe("definePlugin", () => {
 			expect(plugin.capabilities).toContain("hooks.email-events:register");
 			expect(plugin.capabilities).toContain("hooks.page-fragments:register");
 
-			// And the deprecated names do NOT appear in the resolved capabilities
 			expect(plugin.capabilities).not.toContain("read:content");
 			expect(plugin.capabilities).not.toContain("write:content");
 			expect(plugin.capabilities).not.toContain("network:fetch");
@@ -315,7 +288,6 @@ describe("definePlugin", () => {
 			const plugin = definePlugin({
 				id: "test",
 				version: "1.0.0",
-				// Same capability, both spellings
 				capabilities: ["read:content", "content:read"],
 			});
 
@@ -324,8 +296,6 @@ describe("definePlugin", () => {
 		});
 
 		it("normalizes deprecated names before applying implications", () => {
-			// `write:content` (deprecated) should still imply `content:read`
-			// after rewrite, not `read:content`.
 			const plugin = definePlugin({
 				id: "test",
 				version: "1.0.0",
@@ -394,7 +364,6 @@ describe("definePlugin", () => {
 					"content:afterSave": {
 						handler,
 						priority: 200,
-						// timeout, dependencies, errorPolicy use defaults
 					},
 				},
 			});

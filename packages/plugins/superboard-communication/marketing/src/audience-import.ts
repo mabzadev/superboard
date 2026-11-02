@@ -59,11 +59,6 @@ export const audienceImportRoutes = registerRouter(new Hono<AudienceBindings>(),
 	access: "internal",
 });
 
-/**
- * Imports mapped CSV rows (up to 10,000 per request). The operator states how
- * consent was collected; new contacts are never confirmed silently. Existing
- * contacts get profile, tag and list updates but their consent never changes.
- */
 audienceImportRoutes.post("/audience/imports", async (c) => {
 	const projectId = c.get("project").projectId;
 	const body = await readJsonObject(c.req.raw, MAX_IMPORT_BYTES);
@@ -177,7 +172,6 @@ audienceImportRoutes.post("/audience/imports", async (c) => {
 			skip(row.line, row.email, "no_consent");
 			continue;
 		}
-		// Lists that require double opt-in always get a confirmation email for new contacts.
 		const pending = consent === "double_opt_in" || doubleLists.length > 0;
 		creates.push({ ...row, id: crypto.randomUUID(), pending });
 	}

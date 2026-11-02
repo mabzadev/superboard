@@ -1,30 +1,9 @@
-/**
- * Markdown Link Extension Tests
- *
- * Tests the MarkdownLinkExtension which converts [text](url) syntax
- * into proper link marks:
- * - Extension registration and input/paste rule presence
- * - Input rule converts typed [text](url) to a linked text node
- * - Paste rule converts pasted markdown links inline
- * - Disallowed protocols (javascript:) are rejected
- * - Edge cases: empty text, empty href, whitespace trimming
- * - No conflict with StarterKit's Link extension commands
- */
-
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { MarkdownLinkExtension } from "../../../../../packages/admin/src/components/editor/MarkdownLinkExtension";
 
-/**
- * Simulate typing text character-by-character into the editor.
- *
- * TipTap InputRules only fire on the `handleTextInput` view prop,
- * which requires dispatching through the EditorView — insertContent()
- * bypasses it. We call `view.someProp("handleTextInput", ...)` for
- * each character, matching how ProseMirror's input rules plugin works.
- */
 function simulateTyping(editor: Editor, text: string) {
 	for (const char of text) {
 		const { from, to } = editor.state.selection;
@@ -33,23 +12,15 @@ function simulateTyping(editor: Editor, text: string) {
 			f(editor.view, from, to, char, deflt),
 		);
 		if (!handled) {
-			// If no input rule consumed it, insert as plain text
 			editor.view.dispatch(deflt());
 		}
 	}
 }
 
-/**
- * Simulate pasting plain text into the editor.
- *
- * Uses ProseMirror's `pasteText()` which runs through the full paste
- * pipeline including TipTap's PasteRule handlers.
- */
 function simulatePaste(editor: Editor, text: string) {
 	editor.view.pasteText(text);
 }
 
-/** Extract all link marks from the editor doc for assertions. */
 function extractLinks(editor: Editor): Array<{ text: string; href: string }> {
 	const links: Array<{ text: string; href: string }> = [];
 	editor.state.doc.descendants((node) => {
@@ -98,7 +69,6 @@ describe("Markdown Link Extension", () => {
 		it("registers input rules", () => {
 			const ext = editor.extensionManager.extensions.find((e) => e.name === "markdownLink");
 			expect(ext).toBeDefined();
-			// The extension defines addInputRules, verify it produced rules
 			const plugins = editor.state.plugins;
 			const inputRulesPlugin = plugins.find(
 				(p) => (p.spec as Record<string, unknown>).isInputRules,
@@ -125,7 +95,6 @@ describe("Markdown Link Extension", () => {
 			expect(links).toHaveLength(1);
 			expect(links[0]).toEqual({ text: "Example", href: "https://example.com" });
 
-			// Preceding text should still be present as plain text
 			const plainText = editor.getText();
 			expect(plainText).toContain("Visit");
 			expect(plainText).toContain("Example");
@@ -178,7 +147,6 @@ describe("Markdown Link Extension", () => {
 
 			const links = extractLinks(editor);
 			expect(links).toHaveLength(0);
-			// The raw markdown syntax should remain as literal text
 			expect(editor.getText()).toContain("[click me](javascript:alert(1))");
 		});
 
@@ -285,13 +253,10 @@ describe("Markdown Link Extension", () => {
 		});
 
 		it("markdown link input does not break subsequent link commands", () => {
-			// First, create a link via markdown syntax
 			editor.commands.focus();
 			simulateTyping(editor, "[md link](https://md.example.com) ");
 
-			// Then create a link via command API
 			editor.commands.insertContent("cmd link");
-			// Select just the "cmd link" text
 			const docSize = editor.state.doc.content.size;
 			editor.commands.setTextSelection({ from: docSize - 8, to: docSize - 1 });
 			editor.commands.setLink({ href: "https://cmd.example.com" });

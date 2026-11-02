@@ -31,10 +31,8 @@ describe("reference field", () => {
 		const required = reference("posts", { required: true });
 		const optional = reference("posts", { required: false });
 
-		// Required should reject undefined
 		expect(() => required.schema.parse(undefined)).toThrow();
 
-		// Optional should accept undefined
 		expect(() => optional.schema.parse(undefined)).not.toThrow();
 	});
 });

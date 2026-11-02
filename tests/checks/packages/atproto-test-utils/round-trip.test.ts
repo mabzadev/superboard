@@ -1,14 +1,3 @@
-/**
- * Round-trip test: prove the test infrastructure produces records that pass
- * a real verifier.
- *
- * This is the load-bearing test for the whole mock stack. If a record signed
- * and stored in a FakeRepo, fetched via MockPds.sync.getRecord as a CAR, and
- * fed into @atcute/repo's `verifyRecord` doesn't pass, the mocks aren't
- * exercising the code path the aggregator will run in production. Every
- * other consumer of these mocks builds on this guarantee.
- */
-
 import { P256PublicKey } from "@atcute/crypto";
 import { verifyRecord } from "@atcute/repo";
 import { describe, expect, it } from "vitest";
@@ -95,7 +84,6 @@ describe("FakeRepo + MockPds → @atcute/repo verifyRecord", () => {
 		await carol.publishProfile({ slug: "p", license: "MIT", securityEmail: "x@y.test" });
 		const car = await carol.repo.getRecordCar(PROFILE_NSID, "p");
 
-		// Use dave's public key against carol's CAR. Verification must reject.
 		const wrongKey = await loadPublicKey(dave.repo.didKey());
 		await expect(
 			verifyRecord({
@@ -152,14 +140,10 @@ describe("MockPds XRPC dispatch", () => {
 		expect(body.records).toHaveLength(2);
 		expect(body.records.map((r) => r.uri)).toContain(`at://${frank.did}/${PROFILE_NSID}/a`);
 		expect(body.records.map((r) => r.uri)).toContain(`at://${frank.did}/${PROFILE_NSID}/b`);
-		// At end-of-stream, cirrus's rpcListRecords omits cursor; aggregator
-		// reads `body.cursor` and treats undefined as "no more pages."
 		expect(body.cursor).toBeUndefined();
 	});
 
 	it("returns 405 when the wrong HTTP method is used on a known endpoint", async () => {
-		// Real PDSes reject method mismatches. Tests asserting POST-vs-GET
-		// behaviour catch a different class of regression than 404 routing.
 		const fixture = createFakePublisherFixture();
 		await fixture.createPublisher({ did: "did:plc:lola000000000000000000000" });
 
@@ -174,7 +158,6 @@ describe("MockPds XRPC dispatch", () => {
 		const mike = await fixture.createPublisher({ did: "did:plc:mike000000000000000000000" });
 		await mike.publishProfile({ slug: "p", license: "MIT", securityEmail: "x@y.test" });
 
-		// Update — re-publish with a different license.
 		const updateRes = await fixture.pds.handle("/xrpc/com.atproto.repo.applyWrites", {
 			method: "POST",
 			body: JSON.stringify({
@@ -201,7 +184,6 @@ describe("MockPds XRPC dispatch", () => {
 		const updated = mike.repo.getRecordValue(PROFILE_NSID, "p") as { license: string };
 		expect(updated.license).toBe("Apache-2.0");
 
-		// Delete — record should be gone afterwards.
 		const deleteRes = await fixture.pds.handle("/xrpc/com.atproto.repo.applyWrites", {
 			method: "POST",
 			body: JSON.stringify({
@@ -220,11 +202,6 @@ describe("MockPds XRPC dispatch", () => {
 	});
 
 	it("returns an exclusion-proof CAR for a missing record (verifyRecord rejects)", async () => {
-		// Real PDSes return 200 + a CAR containing an exclusion proof when
-		// asked for a non-existent record (that's the spec). The CAR itself
-		// is structurally valid; verifyRecord rejects because the record
-		// can't be reached from the MST root. Confirm both halves of that
-		// behaviour.
 		const fixture = createFakePublisherFixture();
 		const grace = await fixture.createPublisher({ did: "did:plc:grace0000000000000000000" });
 		await grace.publishProfile({ slug: "real", license: "MIT", securityEmail: "x@y.test" });
@@ -318,10 +295,6 @@ describe("MockJetstream", () => {
 	});
 
 	it("treats cursor as last-seen: reconnect skips the cursor event itself", async () => {
-		// Real Jetstream's cursor semantics: "I have this one, give me what's
-		// after." A reconnect with cursor=N must NOT redeliver the event whose
-		// time_us is exactly N. This test was the off-by-one MockJetstream had
-		// before — kept here to prevent regression.
 		const fixture = createFakePublisherFixture();
 		const evt = fixture.jetstream.emitCommit({
 			did: "did:plc:jill000000000000000000000",
@@ -344,8 +317,6 @@ describe("MockJetstream", () => {
 	});
 
 	it("exposes a per-subscriber cursor reflecting the last yielded event", async () => {
-		// The exposed `cursor` must be per-subscriber, not the global head, so
-		// reconnecting with it resumes from where THIS subscriber stopped.
 		const fixture = createFakePublisherFixture();
 		const a = fixture.jetstream.emitCommit({
 			did: "did:plc:kate000000000000000000000",
@@ -359,9 +330,9 @@ describe("MockJetstream", () => {
 		});
 
 		const sub = fixture.jetstream.subscribe({});
-		expect(sub.cursor).toBe(0); // nothing delivered yet
+		expect(sub.cursor).toBe(0);
 		const iter = sub[Symbol.asyncIterator]();
-		await iter.next(); // event "a"
+		await iter.next();
 		expect(sub.cursor).toBe(a.time_us);
 		sub.close();
 	});
@@ -389,9 +360,6 @@ describe("MockDidResolver", () => {
 
 describe("FakePublisher.publishProfile lexicon constraints", () => {
 	it("throws when no security contact is provided", async () => {
-		// The profile lexicon requires `security` minLength: 1. The helper
-		// must not silently produce lex-invalid records that would pass today
-		// but break as soon as the aggregator's lexicon validator runs.
 		const fixture = createFakePublisherFixture();
 		const ned = await fixture.createPublisher({ did: "did:plc:ned000000000000000000000" });
 		await expect(ned.publishProfile({ slug: "no-security", license: "MIT" })).rejects.toThrow(
@@ -417,8 +385,6 @@ describe("FakePublisher.publishProfile lexicon constraints", () => {
 		expect(value.authors[0]?.name).toBe("olive.test");
 	});
 });
-
-// ── helpers ────────────────────────────────────────────────────────────────
 
 async function loadPublicKey(didKey: string): Promise<P256PublicKey> {
 	const parsed = parseDidKey(didKey);

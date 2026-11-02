@@ -1,5 +1,5 @@
-import { registerRouter } from "@superboard/contracts/route-registry";
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
 import { getRequestAuthUserId } from "../lib/auth";
@@ -26,7 +26,13 @@ import { resolveSiteOperatorInstance } from "../lib/site-operator-scope";
 import { Env } from "../types";
 import { buildPlatformStatus } from "./platform-status";
 
-const mcp = registerRouter(new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>(), {"service":"api","module":"routes.mcp.mcp","pluginId":"superboard-mcp","surface":"internal","access":"operator"});
+const mcp = registerRouter(new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>(), {
+	service: "api",
+	module: "routes.mcp.mcp",
+	pluginId: "superboard-mcp",
+	surface: "internal",
+	access: "operator",
+});
 mcp.use("*", siteOperatorAdapter("mcp"));
 const nativeDynamicPath = /^\/api\/v1\/mcp\/(?:links|campaigns|analytics|redirects)(?:\/|$)/u;
 mcp.use("*", async (c, next) => {
@@ -659,7 +665,6 @@ mcp.get("/usage", async (c) => {
 	});
 });
 
-// GET /api/v1/mcp/tokens
 mcp.get("/consent-request", async (c) => {
 	if ((await getAuthUserId(c)) === null) return c.json({ error: "Unauthorized" }, 401);
 	const clientId = c.req.query("client_id") ?? "";
@@ -715,7 +720,6 @@ mcp.get("/tokens", async (c) => {
 	});
 });
 
-// DELETE /api/v1/mcp/tokens/:tokenId
 mcp.delete("/tokens/:tokenId", async (c) => {
 	const userId = await getAuthUserId(c);
 	if (userId === null) return c.json({ error: "Unauthorized" }, 401);
@@ -735,7 +739,6 @@ mcp.delete("/tokens/:tokenId", async (c) => {
 	return c.json({ message: "Token revoked" });
 });
 
-// POST /api/v1/mcp/approve_consent
 mcp.post("/approve_consent", async (c) => {
 	const userId = await getAuthUserId(c);
 	if (userId === null) return c.json({ error: "Unauthorized" }, 401);

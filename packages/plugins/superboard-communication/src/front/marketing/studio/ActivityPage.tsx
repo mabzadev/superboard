@@ -71,7 +71,6 @@ export function ActivityPage({ tab, fallback }: { tab: string; fallback: string 
 	);
 }
 
-/** Campaign and journey deliveries come from Marketing; system and transactional mail from the Email Worker. */
 function MessageLog({ project }: { project: string }) {
 	const { t } = useStudioI18n();
 	const [source, setSource] = useState<"marketing" | "transactional">("marketing");

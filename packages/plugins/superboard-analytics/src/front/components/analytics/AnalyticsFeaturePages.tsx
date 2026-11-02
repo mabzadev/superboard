@@ -1542,7 +1542,6 @@ export function AnalyticsSettingsPage() {
 	const { selectedProject } = useProjectSelection();
 	const [tab, setTab] = useState(() => {
 		const requested = new URLSearchParams(globalThis.location?.search ?? "").get("tab");
-		// Plugin health moved to the Plugins page, so old `?tab=configuration` links open Applications.
 		return requested && ["applications", "collection", "hooks", "annotations"].includes(requested)
 			? requested
 			: "applications";

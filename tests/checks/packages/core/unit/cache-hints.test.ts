@@ -51,7 +51,6 @@ describe("Cache hints", () => {
 			);
 
 			expect(result.cacheHint!.lastModified).toBeInstanceOf(Date);
-			// lastModified should be >= the second post's updated_at
 			const secondUpdated = new Date(second.updatedAt);
 			expect(result.cacheHint!.lastModified!.getTime()).toBeGreaterThanOrEqual(
 				secondUpdated.getTime(),
@@ -96,7 +95,6 @@ describe("Cache hints", () => {
 				loader.loadEntry!({ filter: { type: "post", id: post.slug } }),
 			);
 
-			// loadEntry returns the entry directly (LiveDataEntry), not { entry, cacheHint }
 			expect(result).toBeDefined();
 			expect(result!.cacheHint).toBeDefined();
 			expect(result!.cacheHint!.tags).toEqual([post.id]);
@@ -112,15 +110,10 @@ describe("Cache hints", () => {
 				loader.loadCollection!({ filter: { type: "post" } }),
 			);
 
-			// The route invalidates with tags: [collection, id]
-			// Collection pages are tagged with [type] -> matches "collection" tag
-			// Entry pages are tagged with [entryId] -> matches "id" tag
 			const invalidationTags = ["post", post.id];
 
-			// Collection-level tag should be hit by invalidation
 			expect(invalidationTags).toContain(collectionResult.cacheHint!.tags![0]);
 
-			// Entry-level tag should be hit by invalidation
 			const entry = collectionResult.entries![0];
 			expect(invalidationTags).toContain(entry.cacheHint!.tags![0]);
 		});

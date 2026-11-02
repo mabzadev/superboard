@@ -34,14 +34,11 @@ describe("generateSandboxedPluginsModule", () => {
 	});
 
 	async function setupFakeProject(exportPath: string, content: string) {
-		// Create a fake project root with package.json
 		await writeFile(join(tmpDir, "package.json"), JSON.stringify({ name: "test-project" }));
 
-		// Create the plugin package inside node_modules
 		const pluginDir = join(tmpDir, "node_modules", "@test", "plugin");
 		await mkdir(pluginDir, { recursive: true });
 
-		// Determine the directory for the export file
 		const fileParts = exportPath.split("/");
 		if (fileParts.length > 1) {
 			const dir = join(pluginDir, ...fileParts.slice(0, -1));

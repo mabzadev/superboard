@@ -1,23 +1,9 @@
-/**
- * Admin UI fix verification tests
- *
- * API correctness:
- *   1. Media metadata updates (alt text, dimensions) save and persist
- *   2. Upload success feedback only appears after upload completes
- *   3. Taxonomy term deletion shows ConfirmDialog (not browser confirm)
- *
- * Content editor performance:
- *   4. Autosave still triggers correctly after useMemo/useRef optimizations
- */
-
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 import type { Page } from "@playwright/test";
 
 import { test, expect } from "../../fixtures/emdash-browser";
-
-// ---------- regex patterns (module scope for linter) ----------
 
 const MEDIA_API_PATTERN = /\/api\/media/;
 const MEDIA_UPLOAD_PATTERN = /\/api\/media(?:\/upload-url)?$/;
@@ -27,7 +13,6 @@ const ALT_LABEL_PATTERN = /alt/i;
 const SAVE_BUTTON_PATTERN = /save/i;
 const UPLOAD_BUTTON_PATTERN = /Upload/;
 const BROWSE_FILES_LABEL = "Browse files to upload";
-// ---------- helpers ----------
 
 const TEST_ASSETS_DIR = join(process.cwd(), "tests/fixtures/emdash-browser/assets");
 
@@ -35,7 +20,6 @@ function ensureTestImage(): string {
 	if (!existsSync(TEST_ASSETS_DIR)) mkdirSync(TEST_ASSETS_DIR, { recursive: true });
 	const testImagePath = join(TEST_ASSETS_DIR, "test-image.png");
 	if (!existsSync(testImagePath)) {
-		// Minimal valid PNG (1x1 red pixel)
 		const pngData = Buffer.from([
 			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
 			0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90,
@@ -76,10 +60,6 @@ async function uploadTestImage(page: Page, testImagePath: string) {
 	await expect(dialog).not.toBeVisible();
 }
 
-// ==========================================================================
-// Media metadata updates save and persist (updateMedia return path fix)
-// ==========================================================================
-
 test.describe("Media metadata updates", () => {
 	test.beforeEach(async ({ admin }) => {
 		await admin.devBypassAuth();
@@ -88,34 +68,27 @@ test.describe("Media metadata updates", () => {
 	test("updating alt text on a media item persists after reload", async ({ admin, page }) => {
 		const testImagePath = ensureTestImage();
 
-		// Upload an image via the UI
 		await admin.goToMedia();
 		await admin.waitForLoading();
 
 		await uploadTestImage(page, testImagePath);
 		await admin.waitForLoading();
 
-		// Wait for the image to appear in the grid
 		const mediaGrid = page.locator("[data-media-grid]");
 		await expect(mediaGrid.locator("img").first()).toBeVisible({ timeout: 5000 });
 
-		// Click the image to open the detail panel
 		await mediaGrid.locator("button").first().click();
 
-		// Wait for the detail panel — it's a slide-out div, not a dialog
 		await expect(page.locator("text=Media Details")).toBeVisible({ timeout: 5000 });
 
-		// Find the alt text input and fill it
 		const altInput = page.getByLabel(ALT_LABEL_PATTERN);
 		await expect(altInput).toBeVisible({ timeout: 3000 });
 		const altText = `Test alt ${Date.now()}`;
 		await altInput.fill(altText);
 
-		// The Save button should become enabled after editing
 		const saveButton = page.getByRole("button", { name: SAVE_BUTTON_PATTERN });
 		await expect(saveButton).toBeEnabled({ timeout: 3000 });
 
-		// Intercept the PUT response to verify the server returns the item
 		const putResponse = page.waitForResponse(
 			(res) =>
 				MEDIA_PUT_PATTERN.test(res.url()) &&
@@ -127,16 +100,11 @@ test.describe("Media metadata updates", () => {
 		await saveButton.click();
 		const response = await putResponse;
 
-		// Verify the response contains the item (the fix: result.item, not result.data?.item)
 		const body = await response.json();
 		expect(body.data.item).toBeDefined();
 		expect(body.data.item.alt).toBe(altText);
 	});
 });
-
-// ==========================================================================
-// Upload success only after completion (premature success fix)
-// ==========================================================================
 
 test.describe("Upload completion timing", () => {
 	test.beforeEach(async ({ admin }) => {
@@ -151,7 +119,6 @@ test.describe("Upload completion timing", () => {
 		const dialog = page.getByRole("dialog");
 		await expect(dialog).toBeVisible();
 
-		// Set up response listener BEFORE triggering upload
 		const uploadResponse = page.waitForResponse(
 			(res) =>
 				MEDIA_UPLOAD_PATTERN.test(res.url()) &&
@@ -160,22 +127,14 @@ test.describe("Upload completion timing", () => {
 			{ timeout: 15000 },
 		);
 
-		// Trigger upload
 		await dialog.getByLabel(BROWSE_FILES_LABEL).setInputFiles(testImagePath);
 
-		// Should see uploading state (or at least no success yet while request is pending)
-		// Wait for the response to come back
 		await uploadResponse;
 
-		// Now success feedback should appear
 		const successIndicator = dialog.getByText("Complete", { exact: true });
 		await expect(successIndicator).toBeVisible({ timeout: 5000 });
 	});
 });
-
-// ==========================================================================
-// Taxonomy term deletion uses ConfirmDialog instead of browser confirm()
-// ==========================================================================
 
 test.describe("Taxonomy ConfirmDialog", () => {
 	let headers: Record<string, string>;
@@ -195,7 +154,6 @@ test.describe("Taxonomy ConfirmDialog", () => {
 		baseUrl = serverInfo.baseUrl;
 		headers = apiHeaders(serverInfo.token, baseUrl);
 
-		// Check if any taxonomies exist
 		const taxRes = await fetch(`${baseUrl}/_emdash/api/taxonomies`, { headers });
 		const taxData: any = await taxRes.json();
 
@@ -206,7 +164,6 @@ test.describe("Taxonomy ConfirmDialog", () => {
 
 		const taxonomy = taxData.data.taxonomies[0];
 
-		// Create a term to delete
 		const termRes = await fetch(`${baseUrl}/_emdash/api/taxonomies/${taxonomy.name}/terms`, {
 			method: "POST",
 			headers,
@@ -221,40 +178,30 @@ test.describe("Taxonomy ConfirmDialog", () => {
 			return;
 		}
 
-		// Navigate to the taxonomy page
 		await admin.goto(`/taxonomies/${taxonomy.name}`);
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
-		// Ensure the term we created is visible
 		await expect(page.locator("text=E2E Delete Test Term")).toBeVisible({ timeout: 5000 });
 
-		// Set up a listener to ensure NO browser dialog appears
 		let browserDialogAppeared = false;
 		page.on("dialog", async (dialog) => {
 			browserDialogAppeared = true;
 			await dialog.dismiss();
 		});
 
-		// Click the delete button for the term
 		await page.getByRole("button", { name: "Delete E2E Delete Test Term" }).click();
 
-		// A ConfirmDialog (React dialog) should appear — NOT a browser confirm()
-		// The dialog title is "Delete {labelSingular}?" e.g. "Delete Category?"
 		const confirmDialog = page.locator('[role="dialog"]').filter({ hasText: "permanently" });
 		await expect(confirmDialog).toBeVisible({ timeout: 3000 });
 
-		// The dialog should have a "Delete" button and "Cancel" button
 		await expect(confirmDialog.getByRole("button", { name: "Delete" })).toBeVisible();
 		await expect(confirmDialog.getByRole("button", { name: "Cancel" })).toBeVisible();
 
-		// The dialog should mention the term name (rendered in curly quotes)
 		await expect(confirmDialog.getByText("E2E Delete Test Term")).toBeVisible();
 
-		// No browser dialog should have appeared
 		expect(browserDialogAppeared).toBe(false);
 
-		// Actually delete it (confirm)
 		const deleteResponse = page.waitForResponse(
 			(res) => TAXONOMY_DELETE_PATTERN.test(res.url()) && res.request().method() === "DELETE",
 			{ timeout: 10000 },
@@ -262,17 +209,11 @@ test.describe("Taxonomy ConfirmDialog", () => {
 		await confirmDialog.getByRole("button", { name: "Delete" }).click();
 		await deleteResponse;
 
-		// Dialog should close
 		await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
 
-		// Term should be gone
 		await expect(page.locator("text=E2E Delete Test Term")).not.toBeVisible({ timeout: 5000 });
 	});
 });
-
-// ==========================================================================
-// Autosave still triggers after useMemo/useRef perf optimizations
-// ==========================================================================
 
 test.describe("Autosave after perf optimizations", () => {
 	let collectionSlug: string;
@@ -286,7 +227,6 @@ test.describe("Autosave after perf optimizations", () => {
 		baseUrl = serverInfo.baseUrl;
 		headers = apiHeaders(serverInfo.token, baseUrl);
 
-		// Create a collection with revision + draft support
 		collectionSlug = `autosave_test_${Date.now()}`;
 		await fetch(`${baseUrl}/_emdash/api/schema/collections`, {
 			method: "POST",
@@ -305,7 +245,6 @@ test.describe("Autosave after perf optimizations", () => {
 			body: JSON.stringify({ slug: "title", type: "string", label: "Title", required: true }),
 		});
 
-		// Create a draft post (autosave works on existing items, no need to publish)
 		const createRes = await fetch(`${baseUrl}/_emdash/api/content/${collectionSlug}`, {
 			method: "POST",
 			headers,
@@ -335,8 +274,6 @@ test.describe("Autosave after perf optimizations", () => {
 		const titleInput = page.locator("#field-title");
 		await expect(titleInput).toHaveValue("Autosave Test");
 
-		// Wait for a PUT whose request body contains the updated title
-		// (an initial autosave with old data may fire first — skip it)
 		const autosavePut = page.waitForResponse(
 			(res) => {
 				if (!res.url().includes(contentUrl) || res.request().method() !== "PUT") return false;
@@ -349,15 +286,12 @@ test.describe("Autosave after perf optimizations", () => {
 		await titleInput.fill("Autosave Perf Test Edit");
 		const response = await autosavePut;
 
-		// Autosave should succeed (200)
 		expect(response.status()).toBe(200);
 
-		// SaveButton live region should settle on "Saved" after autosave completes
 		await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible({
 			timeout: 5000,
 		});
 
-		// Regression: autosave should not snap the input back to older cached server state.
 		await expect(titleInput).toHaveValue("Autosave Perf Test Edit");
 		await page.waitForTimeout(500);
 		await expect(titleInput).toHaveValue("Autosave Perf Test Edit");
@@ -375,10 +309,8 @@ test.describe("Autosave after perf optimizations", () => {
 		const titleInput = page.locator("#field-title");
 		await expect(titleInput).toHaveValue("Autosave Test");
 
-		// Wait for any initial autosave to settle before tracking
 		await page.waitForTimeout(3000);
 
-		// Track PUT requests only from this point forward
 		const putRequests: any[] = [];
 		page.on("response", (res) => {
 			if (res.url().includes(contentUrl) && res.request().method() === "PUT") {
@@ -386,25 +318,17 @@ test.describe("Autosave after perf optimizations", () => {
 			}
 		});
 
-		// Type multiple characters rapidly (within the 2s debounce window)
 		await titleInput.fill("");
 		await titleInput.pressSequentially("ABCDEF", { delay: 50 });
 
-		// Wait for autosave to trigger (debounce is 2s + some margin)
 		await page.waitForTimeout(4000);
 
-		// Should have exactly 1 PUT request (debounced)
 		expect(putRequests.length).toBe(1);
 
-		// Verify the PUT sent the correct final value
 		const postData = putRequests[0].request().postData() ?? "";
 		expect(postData).toContain("ABCDEF");
 	});
 });
-
-// ==========================================================================
-// Admin favicon uses the configured Site Icon (#1477)
-// ==========================================================================
 
 test.describe("Admin favicon from Site Icon", () => {
 	test("admin shell links the Site Icon with its MIME type", async ({
@@ -416,14 +340,11 @@ test.describe("Admin favicon from Site Icon", () => {
 		const baseUrl = serverInfo.baseUrl;
 		const headers = apiHeaders(serverInfo.token, baseUrl);
 
-		// Upload an SVG — the case that needs type="image/svg+xml" (Chromium
-		// ignores SVG favicons served from extension-less URLs without it).
 		const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><rect fill="red" width="1" height="1"/></svg>`;
 		const form = new FormData();
 		form.append("file", new File([svg], "e2e-site-icon.svg", { type: "image/svg+xml" }));
 		const uploadRes = await fetch(`${baseUrl}/_emdash/api/media`, {
 			method: "POST",
-			// No Content-Type header — fetch sets the multipart boundary itself
 			headers: {
 				Authorization: headers.Authorization,
 				"X-EmDash-Request": "1",
@@ -439,7 +360,6 @@ test.describe("Admin favicon from Site Icon", () => {
 		const mediaId = uploadData.data?.item?.id;
 		expect(mediaId).toBeTruthy();
 
-		// Set it as the Site Icon
 		const settingsRes = await fetch(`${baseUrl}/_emdash/api/settings`, {
 			method: "POST",
 			headers,
@@ -447,7 +367,6 @@ test.describe("Admin favicon from Site Icon", () => {
 		});
 		expect(settingsRes.ok).toBe(true);
 
-		// The admin shell should link the Site Icon and carry its MIME type
 		await page.goto(`${baseUrl}/_emdash/admin`);
 		const icon = page.locator('link[rel="icon"]');
 		await expect(icon).toHaveAttribute("href", /\/_emdash\/api\/media\/file\//);

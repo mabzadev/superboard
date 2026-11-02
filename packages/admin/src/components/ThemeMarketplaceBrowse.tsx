@@ -1,10 +1,3 @@
-/**
- * Theme Marketplace Browse
- *
- * Visual-first grid of theme cards with large thumbnails.
- * Navigates to theme detail on card click.
- */
-
 import { Button, Input, Select } from "@cloudflare/kumo";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
@@ -72,7 +65,6 @@ export function ThemeMarketplaceBrowse() {
 
 	return (
 		<div className="space-y-6">
-			{/* Header */}
 			<div>
 				<h1 className="text-2xl font-semibold leading-tight">{t`Themes`}</h1>
 				<p className="mt-1 text-sm leading-5 text-pretty text-kumo-subtle">
@@ -80,7 +72,6 @@ export function ThemeMarketplaceBrowse() {
 				</p>
 			</div>
 
-			{/* Search + Sort */}
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 				<div className="relative flex-1">
 					<MagnifyingGlass className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kumo-subtle" />
@@ -105,7 +96,6 @@ export function ThemeMarketplaceBrowse() {
 				/>
 			</div>
 
-			{/* Error state */}
 			{error && (
 				<div className="rounded-lg border border-kumo-danger/50 bg-kumo-danger/10 p-6 text-center">
 					<Warning className="mx-auto h-8 w-8 text-kumo-danger" />
@@ -124,7 +114,6 @@ export function ThemeMarketplaceBrowse() {
 				</div>
 			)}
 
-			{/* Loading state — skeleton cards with thumbnail aspect ratio */}
 			{isLoading && (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{Array.from({ length: 6 }).map((_, i) => (
@@ -140,7 +129,6 @@ export function ThemeMarketplaceBrowse() {
 				</div>
 			)}
 
-			{/* Results grid */}
 			{themes && !isLoading && (
 				<>
 					{themes.length === 0 ? (
@@ -179,10 +167,6 @@ export function ThemeMarketplaceBrowse() {
 	);
 }
 
-// ---------------------------------------------------------------------------
-// ThemeCard
-// ---------------------------------------------------------------------------
-
 function ThemeCard({ theme }: { theme: ThemeSummary }) {
 	const { t } = useLingui();
 	const thumbnailUrl = theme.thumbnailUrl
@@ -198,7 +182,6 @@ function ThemeCard({ theme }: { theme: ThemeSummary }) {
 
 	return (
 		<div className="group rounded-lg border bg-kumo-base overflow-hidden transition-colors hover:border-kumo-brand/50">
-			{/* Thumbnail */}
 			<Link to={"/themes/marketplace/$themeId"} params={{ themeId: theme.id }} className="block">
 				{thumbnailUrl ? (
 					<img
@@ -214,7 +197,6 @@ function ThemeCard({ theme }: { theme: ThemeSummary }) {
 				)}
 			</Link>
 
-			{/* Info */}
 			<div className="p-4">
 				<Link to={"/themes/marketplace/$themeId"} params={{ themeId: theme.id }} className="block">
 					<h3 className="font-semibold group-hover:text-kumo-link truncate">{theme.name}</h3>
@@ -229,7 +211,6 @@ function ThemeCard({ theme }: { theme: ThemeSummary }) {
 					<p className="mt-2 text-sm text-kumo-subtle line-clamp-2">{theme.description}</p>
 				)}
 
-				{/* Action buttons */}
 				<div className="mt-3 flex items-center gap-2">
 					<Button
 						variant="primary"

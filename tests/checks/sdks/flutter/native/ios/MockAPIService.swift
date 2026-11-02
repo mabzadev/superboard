@@ -3,11 +3,7 @@ import Foundation
 
 class MockAPIService: APIServiceProtocol {
 
-    /// Optional queue for dispatching completions asynchronously.
-    /// When nil (default), completions fire synchronously.
     var completionQueue: DispatchQueue?
-
-    // MARK: - addEvent
 
     var addEventResult: Bool = true
     var addEventCallCount = 0
@@ -21,8 +17,6 @@ class MockAPIService: APIServiceProtocol {
         dispatch { completion(result) }
     }
 
-    // MARK: - addPaymentEvent
-
     var addPaymentEventResult: Bool = true
     var addPaymentEventCallCount = 0
     var allTransactionData: [TransactionData] = []
@@ -35,9 +29,6 @@ class MockAPIService: APIServiceProtocol {
         dispatch { completion(result) }
     }
 
-    // MARK: - Reset
-
-    /// Resets call counts and results. Does NOT reset completionQueue — set it separately.
     func reset() {
         addEventResult = true
         addEventCallCount = 0
@@ -48,8 +39,6 @@ class MockAPIService: APIServiceProtocol {
         allTransactionData.removeAll()
         addPaymentEventHandler = nil
     }
-
-    // MARK: - Private
 
     private func dispatch(_ block: @escaping () -> Void) {
         if let queue = completionQueue {

@@ -1,15 +1,3 @@
-/**
- * Manifest route admin branding.
- *
- * The admin branding (logo, siteName, favicon) configured via the EmDash
- * integration must be reflected in `/_emdash/api/manifest` so the React SPA
- * can render the custom logo and site name. The route reads the branding
- * from the per-request config on `locals.emdash.config.admin` (the same
- * source `admin.astro` uses), not from a build-time global.
- *
- * Regression test for issue #835.
- */
-
 import type { APIContext } from "astro";
 import { describe, expect, it } from "vitest";
 
@@ -34,7 +22,6 @@ function makeContext(
 	const locals = {
 		emdash: adminBranding
 			? {
-					// db is intentionally undefined so the signup-enabled query is skipped.
 					config: { admin: adminBranding },
 					getManifest: async () => manifest ?? null,
 				}

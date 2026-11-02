@@ -2,9 +2,7 @@ import { ClientResponseError } from "@atcute/client";
 import type { ListingVisibilityState } from "@emdash-cms/registry-moderation";
 
 export interface RegistryLabelerPolicy {
-	/** Official clients always require the aggregator's approved listing projection. */
 	enforcement: "required";
-	/** Optional bare-DID declaration used for requests and cache identity; aggregator policy remains authoritative. */
 	acceptLabelers?: string;
 }
 

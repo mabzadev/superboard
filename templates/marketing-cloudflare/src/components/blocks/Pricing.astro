@@ -4,11 +4,7 @@ interface RawPlan {
 	price: string;
 	period?: string;
 	description?: string;
-	// Features are stored as a newline-separated string (Block Kit has no
-	// list-of-strings element, so a multiline text input is the closest fit).
 	features?: string;
-	// CTAs are flattened to sibling fields because Block Kit has no
-	// object-group element.
 	ctaLabel?: string;
 	ctaUrl?: string;
 	highlighted?: boolean;

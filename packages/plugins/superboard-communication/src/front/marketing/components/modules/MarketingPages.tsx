@@ -210,7 +210,6 @@ export function MarketingStatistics() {
 	);
 }
 
-/** Campaign and journey jobs that need an operator: double opt-in outbox and terminal Queue jobs. */
 export function MarketingOperations() {
 	const { t, locale } = useStudioI18n();
 	const { selectedProject } = useProjectSelection();

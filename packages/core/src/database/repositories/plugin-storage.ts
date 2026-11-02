@@ -1,12 +1,3 @@
-/**
- * Plugin Storage Repository
- *
- * Provides a document store API for plugin data storage.
- * Uses a single _plugin_storage table with JSON documents and expression indexes.
- *
- * @see PLUGIN-SYSTEM.md § Plugin Storage > Full API Reference
- */
-
 import type { Kysely, RawBuilder } from "kysely";
 import { sql } from "kysely";
 
@@ -27,11 +18,6 @@ import { withTransaction } from "../transaction.js";
 import type { Database } from "../types.js";
 import { encodeCursor, decodeCursor } from "./types.js";
 
-/**
- * Interleave a `?`-placeholder SQL string with its params into a single
- * boolean raw expression. Used as a WHERE predicate directly — wrapping it
- * in `(...) = 1` breaks on Postgres, which has a strict boolean type (#920).
- */
 function rawWhereExpr(sqlText: string, params: unknown[]): RawBuilder<boolean> {
 	const parts: ReturnType<typeof sql>[] = [];
 	let paramIndex = 0;
@@ -47,11 +33,6 @@ function rawWhereExpr(sqlText: string, params: unknown[]): RawBuilder<boolean> {
 	return sql<boolean>`(${sql.join(parts, sql.raw(""))})`;
 }
 
-/**
- * Plugin Storage Repository
- *
- * Implements the StorageCollection interface for a specific plugin and collection.
- */
 export class PluginStorageRepository<T = unknown> implements StorageCollection<T> {
 	private indexedFields: Set<string>;
 
@@ -64,9 +45,6 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 		this.indexedFields = getIndexedFields(indexes);
 	}
 
-	/**
-	 * Get a document by ID
-	 */
 	async get(id: string): Promise<T | null> {
 		const row = await this.db
 			.selectFrom("_plugin_storage")
@@ -81,9 +59,6 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 		return JSON.parse(row.data) as T;
 	}
 
-	/**
-	 * Store a document
-	 */
 	async put(id: string, data: T): Promise<void> {
 		const now = new Date().toISOString();
 		const jsonData = JSON.stringify(data);
@@ -107,9 +82,6 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 			.execute();
 	}
 
-	/**
-	 * Delete a document
-	 */
 	async delete(id: string): Promise<boolean> {
 		const result = await this.db
 			.deleteFrom("_plugin_storage")
@@ -121,9 +93,6 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 		return (result.numDeletedRows ?? 0) > 0;
 	}
 
-	/**
-	 * Check if a document exists
-	 */
 	async exists(id: string): Promise<boolean> {
 		const row = await this.db
 			.selectFrom("_plugin_storage")
@@ -136,9 +105,6 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 		return !!row;
 	}
 
-	/**
-	 * Get multiple documents by ID
-	 */
 	async getMany(ids: string[]): Promise<Map<string, T>> {
 		if (ids.length === 0) return new Map();
 
@@ -158,16 +124,11 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 		return result;
 	}
 
-	/**
-	 * Store multiple documents
-	 */
 	async putMany(items: Array<{ id: string; data: T }>): Promise<void> {
 		if (items.length === 0) return;
 
 		const now = new Date().toISOString();
 
-		// SQLite doesn't support batch upserts well, so we do them one at a time
-		// In a transaction for atomicity
 		await withTransaction(this.db, async (trx) => {
 			for (const item of items) {
 				const jsonData = JSON.stringify(item.data);
@@ -192,9 +153,6 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 		});
 	}
 
-	/**
-	 * Delete multiple documents
-	 */
 	async deleteMany(ids: string[]): Promise<number> {
 		if (ids.length === 0) return 0;
 
@@ -208,33 +166,26 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 		return Number(result.numDeletedRows ?? 0);
 	}
 
-	/**
-	 * Query documents with filters
-	 */
 	async query(options: QueryOptions = {}): Promise<PaginatedResult<{ id: string; data: T }>> {
 		const { where = {}, orderBy = {}, cursor } = options;
 		const limit = Math.min(options.limit ?? 50, 100);
 
-		// Validate that all queried fields are indexed
 		validateWhereClause(where, this.indexedFields, this.pluginId, this.collection);
 		if (Object.keys(orderBy).length > 0) {
 			validateOrderByClause(orderBy, this.indexedFields, this.pluginId, this.collection);
 		}
 
-		// Build base query
 		let query = this.db
 			.selectFrom("_plugin_storage")
 			.select(["id", "data", "created_at"])
 			.where("plugin_id", "=", this.pluginId)
 			.where("collection", "=", this.collection);
 
-		// Add JSON extraction WHERE conditions
 		const whereResult = buildWhereClause(this.db, where);
 		if (whereResult.sql) {
 			query = query.where(rawWhereExpr(whereResult.sql, whereResult.params));
 		}
 
-		// Handle cursor-based pagination — throws on invalid cursor.
 		if (cursor) {
 			const decoded = decodeCursor(cursor);
 			query = query.where(({ eb }) =>
@@ -242,22 +193,17 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 			);
 		}
 
-		// Build ORDER BY using sql template
 		if (Object.keys(orderBy).length > 0) {
 			for (const [field, direction] of Object.entries(orderBy)) {
-				// Order over the jsonb-native value on Postgres so numeric fields sort
-				// numerically, not lexically. See pluginDataOrderExpr.
 				const extract = jsonOrderExtract(this.db, field);
 				const orderExpr =
 					direction === "desc" ? sql`${sql.raw(extract)} desc` : sql`${sql.raw(extract)} asc`;
 				query = query.orderBy(orderExpr);
 			}
 		} else {
-			// Default ordering for consistent pagination
 			query = query.orderBy("created_at", "asc").orderBy("id", "asc");
 		}
 
-		// Apply limit (fetch one extra to detect if there's more)
 		query = query.limit(limit + 1);
 
 		const rows = await query.execute();
@@ -269,7 +215,6 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 			data: JSON.parse(row.data) as T,
 		}));
 
-		// Generate cursor for next page if there are more results
 		let nextCursor: string | undefined;
 		if (hasMore) {
 			const lastItem = rows[limit - 1];
@@ -281,9 +226,6 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 		return { items, cursor: nextCursor, hasMore };
 	}
 
-	/**
-	 * Count documents matching a filter
-	 */
 	async count(where?: WhereClause): Promise<number> {
 		if (where && Object.keys(where).length > 0) {
 			validateWhereClause(where, this.indexedFields, this.pluginId, this.collection);
@@ -295,7 +237,6 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 			.where("plugin_id", "=", this.pluginId)
 			.where("collection", "=", this.collection);
 
-		// Add JSON extraction WHERE conditions
 		if (where && Object.keys(where).length > 0) {
 			const whereResult = buildWhereClause(this.db, where);
 			if (whereResult.sql) {
@@ -304,14 +245,10 @@ export class PluginStorageRepository<T = unknown> implements StorageCollection<T
 		}
 
 		const result = await query.executeTakeFirst();
-		// Number() because the pg driver returns COUNT(*) (bigint) as a string.
 		return Number(result?.count ?? 0);
 	}
 }
 
-/**
- * Create a scoped storage accessor for a plugin
- */
 export function createPluginStorageAccessor(
 	db: Kysely<Database>,
 	pluginId: string,
@@ -335,9 +272,6 @@ export function createPluginStorageAccessor(
 	return accessor;
 }
 
-/**
- * Delete all storage data for a plugin
- */
 export async function deleteAllPluginStorage(
 	db: Kysely<Database>,
 	pluginId: string,
@@ -350,9 +284,6 @@ export async function deleteAllPluginStorage(
 	return Number(result.numDeletedRows ?? 0);
 }
 
-/**
- * Delete all storage data for a plugin collection
- */
 export async function deletePluginCollection(
 	db: Kysely<Database>,
 	pluginId: string,

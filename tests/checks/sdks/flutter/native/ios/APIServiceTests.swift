@@ -19,21 +19,17 @@ final class APIServiceTests: XCTestCase {
         return APIService(apiKey: "test-api-key", bundleID: "com.test.bundle", useTestEnvironment: useTestEnvironment, baseURL: "https://sdk.example.com")
     }
 
-    // MARK: - addEvent
-
     func testAddEventSendsCorrectRequestOnSuccess() {
         let service = makeService()
         let event = Event(type: .appOpen, createdAt: Date(), link: "https://test.com")
 
         MockURLProtocol.requestHandlers["/v1/data/event"] = { request in
-            // Verify headers
             XCTAssertEqual(request.value(forHTTPHeaderField: "PROJECT-KEY"), "test-api-key")
             XCTAssertEqual(request.value(forHTTPHeaderField: "IDENTIFIER"), "com.test.bundle")
             XCTAssertEqual(request.value(forHTTPHeaderField: "PLATFORM"), "ios")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
             XCTAssertEqual(request.httpMethod, "POST")
 
-            // Verify body contains event data
             if let body = request.httpBody, let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any] {
                 XCTAssertEqual(json["event"] as? String, "app_open")
                 XCTAssertEqual(json["link"] as? String, "https://test.com")
@@ -71,8 +67,6 @@ final class APIServiceTests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - addPaymentEvent
 
     func testAddPaymentEventSendsCorrectBody() {
         let service = makeService()
@@ -131,8 +125,6 @@ final class APIServiceTests: XCTestCase {
         wait(for: [exp], timeout: 5)
     }
 
-    // MARK: - Test environment key prefix
-
     func testTestEnvironmentAddsKeyPrefix() {
         let service = makeService(useTestEnvironment: true)
         let event = Event(type: .view, createdAt: Date())
@@ -173,8 +165,6 @@ final class APIServiceTests: XCTestCase {
         wait(for: [exp], timeout: 5)
     }
 
-    // MARK: - SDK Version header
-
     func testSDKVersionHeaderIsSet() {
         let service = makeService()
         let event = Event(type: .appOpen, createdAt: Date())
@@ -195,8 +185,6 @@ final class APIServiceTests: XCTestCase {
         wait(for: [exp], timeout: 5)
     }
 
-    // MARK: - Helpers
-
     private var testAppDetails: AppDetails {
         AppDetails(version: "1.0", build: "1", bundle: "com.test",
                    device: "iPhone", deviceID: "test-device",
@@ -216,15 +204,12 @@ final class APIServiceTests: XCTestCase {
         return (response, data)
     }
 
-    // MARK: - authenticate
-
     func testAuthenticateReturnsCredentialsOnSuccess() {
         let service = makeService()
 
         MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             XCTAssertEqual(request.httpMethod, "POST")
 
-            // Verify request body contains app details
             if let body = request.httpBody,
                let bodyJSON = try? JSONSerialization.jsonObject(with: body) as? [String: Any] {
                 XCTAssertEqual(bodyJSON["vendor_id"] as? String, "test-device")
@@ -261,7 +246,6 @@ final class APIServiceTests: XCTestCase {
         let service = makeService()
 
         MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
-            // Missing linksquared and uri_scheme
             return try self.okResponse(for: request, json: ["other": "data"])
         }
 
@@ -274,8 +258,6 @@ final class APIServiceTests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - payloadFor(appDetails:)
 
     func testPayloadForDeviceReturnsDataLinkTracking() {
         let service = makeService()
@@ -318,8 +300,6 @@ final class APIServiceTests: XCTestCase {
         wait(for: [exp], timeout: 5)
     }
 
-    // MARK: - payloadFor(appDetails:url:)
-
     func testPayloadForDeviceAndURLIncludesURLInBody() {
         let service = makeService()
 
@@ -350,8 +330,6 @@ final class APIServiceTests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - generateLink
 
     func testGenerateLinkReturnsURLOnSuccess() {
         let service = makeService()
@@ -394,8 +372,6 @@ final class APIServiceTests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - notifications
 
     func testNotificationsDecodesResponseOnSuccess() {
         let service = makeService()
@@ -447,8 +423,6 @@ final class APIServiceTests: XCTestCase {
         wait(for: [exp], timeout: 5)
     }
 
-    // MARK: - numberOfUnreadNotifications
-
     func testNumberOfUnreadNotificationsReturnsCount() {
         let service = makeService()
 
@@ -479,8 +453,6 @@ final class APIServiceTests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - markNotificationAsRead
 
     func testMarkNotificationAsReadSendsIDAndReturnsTrue() {
         let service = makeService()
@@ -521,8 +493,6 @@ final class APIServiceTests: XCTestCase {
         wait(for: [exp], timeout: 5)
     }
 
-    // MARK: - notificationsToDisplayAutomatically
-
     func testNotificationsToDisplayAutomaticallyDecodesResponse() {
         let service = makeService()
 
@@ -552,8 +522,6 @@ final class APIServiceTests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - updateAttributes
 
     func testUpdateAttributesReturnsTrueOnSuccess() {
         let service = makeService()
@@ -585,8 +553,6 @@ final class APIServiceTests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - linkDetails
 
     func testLinkDetailsReturnsDataOnSuccess() {
         let service = makeService()

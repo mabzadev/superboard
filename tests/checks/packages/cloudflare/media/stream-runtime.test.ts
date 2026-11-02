@@ -1,7 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-// `stream-runtime` imports `env` from cloudflare:workers at module scope. This
-// suite supplies credentials through config, so an empty env is sufficient.
 vi.mock("cloudflare:workers", () => ({ env: {} }));
 
 import type { MediaValue } from "emdash/media";
@@ -15,7 +13,6 @@ const PREVIEW_URL = "https://customer-abc12345.cloudflarestream.com/UID/thumbnai
 
 const provider = createMediaProvider({ accountId: ACCOUNT_ID, apiToken: "test-token" });
 
-/** Resolve an embed and narrow it to the video variant, which is the only one Stream returns. */
 async function videoEmbed(value: MediaValue) {
 	const getEmbed = provider.getEmbed;
 	if (!getEmbed) throw new Error("Stream provider does not implement getEmbed");
@@ -24,10 +21,6 @@ async function videoEmbed(value: MediaValue) {
 	return result;
 }
 
-/**
- * A value shaped the way the media picker stores it: playback URLs under
- * `meta.playback`, poster in `previewUrl`, and no `meta.thumbnail`.
- */
 function streamValue(overrides: Partial<MediaValue> = {}): MediaValue {
 	return {
 		id: "UID",
@@ -43,8 +36,6 @@ function streamValue(overrides: Partial<MediaValue> = {}): MediaValue {
 
 describe("cloudflare stream getEmbed", () => {
 	it("takes the poster from previewUrl, where list()/get() actually report it", async () => {
-		// Regression: reading only `meta.thumbnail` dropped the poster for every
-		// value the media picker produces, because neither list() nor get() set it.
 		expect((await videoEmbed(streamValue())).poster).toBe(PREVIEW_URL);
 	});
 

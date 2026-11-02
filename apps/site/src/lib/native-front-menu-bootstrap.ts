@@ -33,9 +33,6 @@ const acquisitionMenuPaths = new Set([
 	"/acquisition/settings/sdk",
 ]);
 
-// Seeded entries whose page became an in-page tab of a sibling entry. They are removed from
-// customized menus only while they keep their seeded label and have no custom children;
-// renamed entries keep working because their link opens the matching tab.
 const mergedDefaultItems = new Map<string, readonly string[]>([
 	["/monetization/products?tab=offerings", ["Offerings", "Offres"]],
 	["/monetization/products?tab=entitlements", ["Entitlements", "Droits d’accès"]],
@@ -50,9 +47,7 @@ const mergedDefaultItems = new Map<string, readonly string[]>([
 	["/core/libraries?tab=ios", ["iOS setup", "Configurer iOS"]],
 	["/core/libraries?tab=android", ["Android setup", "Configurer Android"]],
 ]);
-// Grouped parents that repeated themselves as their first child.
 const selfNestedParents = new Set(["/analytics/users", "/analytics/reports"]);
-// Seeded sub-entries renamed in place: [previous labels, English label, French label].
 const renamedDefaultItems = new Map<string, readonly [readonly string[], string, string]>([
 	["/monetization/products", [["Products", "Produits"], "Catalog", "Catalogue"]],
 	["/data/settings", [["Settings", "Paramètres"], "Configuration", "Configuration"]],

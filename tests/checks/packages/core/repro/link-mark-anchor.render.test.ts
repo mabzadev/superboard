@@ -1,10 +1,3 @@
-/**
- * Same-page anchor links (`#section`) must never open in a new tab, even when
- * the stored link mark has `blank: true`. Opening an on-page jump in a new tab
- * is never desirable — it should stay in the same tab (`_self`).
- *
- * Regression: external links with `blank: true` must still open in a new tab.
- */
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import { describe, expect, test } from "vitest";
 

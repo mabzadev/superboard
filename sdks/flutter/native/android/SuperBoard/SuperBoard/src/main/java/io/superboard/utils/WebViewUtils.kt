@@ -15,24 +15,15 @@ class WebViewUtils {
         private val defaultUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
         private var cachedUserAgent: String? = null
 
-        /**
-         * Returns the user agent string of a WebView.
-         *
-         * @param context The context to use for creating a WebView instance.
-         * @return The user agent string of the WebView.
-         */
         fun getUserAgent(context: Context): String {
             cachedUserAgent?.let { return it }
 
             try {
-                // Perform a thread check before using runBlocking
                 if (Thread.currentThread().name.contains("main", ignoreCase = true)) {
                     val webView = WebView(context)
 
-                    // Get WebSettings from the WebView
                     val webSettings: WebSettings = webView.settings
 
-                    // Retrieve and return the user agent string
                     val userAgent = webSettings.userAgentString
                     val processedUserAgent = parseUserAgent(userAgent = userAgent, browserVersion = getChromeVersion(context = context))
 
@@ -41,13 +32,10 @@ class WebViewUtils {
                     return processedUserAgent
                 } else {
                     val result = runBlocking(Dispatchers.Main) {
-                        // Create a WebView instance
                         val webView = WebView(context)
 
-                        // Get WebSettings from the WebView
                         val webSettings: WebSettings = webView.settings
 
-                        // Retrieve and return the user agent string
                         val userAgent = webSettings.userAgentString
                         val processedUserAgent = parseUserAgent(userAgent = userAgent, browserVersion = getChromeVersion(context = context))
 
@@ -86,19 +74,16 @@ class WebViewUtils {
 
             return try {
                 val packageInfo: PackageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    // API 33+: use new method
                     packageManager.getPackageInfo(
                         chromePackage,
                         PackageManager.PackageInfoFlags.of(0)
                     )
                 } else {
-                    // API 21–32: use legacy method
                     @Suppress("DEPRECATION")
                     packageManager.getPackageInfo(chromePackage, 0)
                 }
 
                 val fullVersion = packageInfo.versionName
-                // Extract the major version before the first dot
                 fullVersion?.substringBefore('.')
             } catch (e: PackageManager.NameNotFoundException) {
                 null

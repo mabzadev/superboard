@@ -1,7 +1,3 @@
-/**
- * Integration tests for route auth metadata on config-declared sandboxed plugins.
- */
-
 import { randomUUID } from "node:crypto";
 
 import Database from "better-sqlite3";

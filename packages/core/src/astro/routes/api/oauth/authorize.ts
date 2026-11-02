@@ -1,18 +1,3 @@
-/**
- * GET/POST /_emdash/oauth/authorize
- *
- * OAuth 2.1 Authorization Endpoint. Handles both the consent page (GET)
- * and consent submission (POST).
- *
- * GET: Renders an HTML consent page showing which client is requesting
- *      access and which scopes are being requested.
- * POST: Processes the user's decision (approve/deny) and redirects
- *       to the client's redirect_uri with an authorization code or error.
- *
- * Requires an authenticated session (not token auth). If unauthenticated,
- * redirects to login with a return URL.
- */
-
 import type { APIRoute } from "astro";
 
 import { escapeHtml } from "#api/escape.js";
@@ -27,27 +12,15 @@ import { isValidScope } from "#auth/api-tokens.js";
 
 export const prerender = false;
 
-// ---------------------------------------------------------------------------
-// CSRF (SEC-18): Double-submit cookie pattern
-// ---------------------------------------------------------------------------
-
 const CSRF_COOKIE_NAME = "emdash_oauth_csrf";
 
-/** Generate a 32-byte random token as hex. */
 function generateCsrfToken(): string {
 	const bytes = new Uint8Array(32);
 	crypto.getRandomValues(bytes);
 	return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Build the Set-Cookie header value for the CSRF token. */
 function csrfCookieHeader(token: string, request: Request, siteUrl?: string): string {
-	// SameSite=Strict prevents cross-site form submission.
-	// HttpOnly: the token value is embedded in the form hidden field server-side,
-	// so JS never needs to read the cookie. HttpOnly adds defense-in-depth.
-	// Secure is set when:
-	//   - siteUrl is configured and uses https (proxy case — request may be http internally), OR
-	//   - the actual request is over https (non-proxy case, preserve existing behaviour)
 	const isSecure = siteUrl
 		? siteUrl.startsWith("https:")
 		: new URL(request.url).protocol === "https:";
@@ -55,17 +28,12 @@ function csrfCookieHeader(token: string, request: Request, siteUrl?: string): st
 	return `${CSRF_COOKIE_NAME}=${token}; Path=/_emdash/oauth/authorize; HttpOnly; SameSite=Strict${secure}`;
 }
 
-/** Extract the CSRF token from the request's cookies. */
 function getCsrfCookie(request: Request): string | null {
 	const cookieHeader = request.headers.get("Cookie");
 	if (!cookieHeader) return null;
 	const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${CSRF_COOKIE_NAME}=([^;]+)`));
 	return match?.[1] ?? null;
 }
-
-// ---------------------------------------------------------------------------
-// Human-readable scope labels
-// ---------------------------------------------------------------------------
 
 const SCOPE_LABELS: Record<string, string> = {
 	"content:read": "Read content (posts, pages, etc.)",
@@ -82,14 +50,9 @@ const SCOPE_LABELS: Record<string, string> = {
 	admin: "Full administrative access",
 };
 
-// ---------------------------------------------------------------------------
-// GET: Render consent page
-// ---------------------------------------------------------------------------
-
 export const GET: APIRoute = async ({ url, request, locals }) => {
 	const { emdash, user } = locals;
 
-	// Validate required OAuth params before rendering
 	const clientId = url.searchParams.get("client_id");
 	const redirectUri = url.searchParams.get("redirect_uri");
 	const responseType = url.searchParams.get("response_type");
@@ -98,7 +61,6 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
 	const scope = url.searchParams.get("scope");
 	const state = url.searchParams.get("state");
 
-	// Basic validation — detailed validation happens on POST
 	if (!clientId || !redirectUri || responseType !== "code" || !codeChallenge) {
 		return new Response(
 			renderErrorPage("Invalid authorization request. Missing required parameters."),
@@ -116,10 +78,6 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
 		});
 	}
 
-	// Validate client_id is registered and redirect_uri is in the allowlist.
-	// This check happens BEFORE authentication so we never redirect to an
-	// unregistered URI (even for the login redirect, we only redirect to our
-	// own login page, not to the client's redirect_uri).
 	if (emdash?.db) {
 		const client = await lookupOAuthClient(emdash.db, clientId);
 		if (!client) {
@@ -138,14 +96,12 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
 		}
 	}
 
-	// If not authenticated, redirect to login with return URL
 	if (!user) {
 		const loginUrl = new URL("/_emdash/admin/login", getPublicOrigin(url, emdash?.config));
 		loginUrl.searchParams.set("redirect", url.pathname + url.search);
 		return Response.redirect(loginUrl.toString(), 302);
 	}
 
-	// Parse and validate scopes
 	const requestedScopes = [
 		...new Set((scope ?? "").split(" ").filter(Boolean).filter(isValidScope)),
 	];
@@ -157,10 +113,8 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
 		});
 	}
 
-	// SEC-18: Generate CSRF token for the consent form (double-submit cookie pattern)
 	const csrfToken = generateCsrfToken();
 
-	// Render the consent page
 	const html = renderConsentPage({
 		clientId,
 		scopes: requestedScopes,
@@ -181,10 +135,6 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
 		},
 	});
 };
-
-// ---------------------------------------------------------------------------
-// POST: Process consent
-// ---------------------------------------------------------------------------
 
 export const POST: APIRoute = async ({ request, locals }) => {
 	const { emdash, user } = locals;
@@ -224,9 +174,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		),
 	];
 
-	// SEC-18: Validate CSRF token (double-submit cookie pattern).
-	// The form includes a hidden csrf_token field; the cookie has the same value.
-	// An attacker cannot read the cookie to forge the form field (HttpOnly + SameSite=Strict).
 	const formCsrf = field("csrf_token");
 	const cookieCsrf = getCsrfCookie(request);
 	const csrfError = new Response(
@@ -235,10 +182,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	);
 	if (!formCsrf || !cookieCsrf) return csrfError;
 
-	// Constant-time comparison: hash both values to fixed-length 32-byte digests,
-	// then XOR every byte pair. This avoids crypto.subtle.timingSafeEqual which is
-	// a Cloudflare Workers extension and doesn't exist in Node.js.
-	// The SHA-256 pre-hash ensures fixed length, eliminating length-leaking.
 	const csrfEncoder = new TextEncoder();
 	const [csrfHashA, csrfHashB] = await Promise.all([
 		crypto.subtle.digest("SHA-256", csrfEncoder.encode(formCsrf)),
@@ -262,7 +205,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		});
 	}
 
-	// Validate redirect_uri scheme/host before using it for any redirect
 	const uriError = validateRedirectUri(redirectUri);
 	if (uriError) {
 		return new Response(renderErrorPage(escapeHtml(uriError)), {
@@ -271,8 +213,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		});
 	}
 
-	// User denied — SEC-44: validate redirect_uri against client's registered URIs
-	// before redirecting, to prevent open redirect on the deny path.
 	if (action === "deny") {
 		const clientId = field("client_id");
 		if (!clientId) {
@@ -302,7 +242,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		return Response.redirect(denyUrl, 302);
 	}
 
-	// User approved — process the authorization
 	const result = await handleAuthorizationApproval(emdash.db, user.id, user.role, {
 		response_type: field("response_type", "code"),
 		client_id: field("client_id"),
@@ -317,8 +256,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	if (!result.success) {
 		const errMsg = result.error?.message ?? "Authorization failed";
 		const invalidScope = result.error?.code === "INVALID_SCOPE";
-		// On error, redirect back with error params — use generic description to avoid
-		// leaking internal error details to the (already-validated) redirect target
 		try {
 			const errorUrl = new URL(redirectUri);
 			errorUrl.searchParams.set("error", invalidScope ? "invalid_scope" : "server_error");
@@ -338,10 +275,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 	return Response.redirect(result.data.redirect_url, 302);
 };
-
-// ---------------------------------------------------------------------------
-// HTML rendering
-// ---------------------------------------------------------------------------
 
 function renderConsentPage(params: {
 	clientId: string;

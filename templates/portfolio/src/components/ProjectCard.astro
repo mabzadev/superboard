@@ -15,7 +15,6 @@ interface Props {
 
 const { title, summary, featuredImage, href, client, year, categories, tags } =
 	Astro.props;
-// Combine categories and tags for display
 const allTags = [...(categories || []), ...(tags || [])];
 ---
 
@@ -85,7 +84,6 @@ const allTags = [...(categories || []), ...(tags || [])];
 		transition: background var(--transition-base);
 	}
 
-	/* Over-image chip: white regardless of theme */
 	.card-view {
 		font-family: var(--font-heading);
 		font-size: var(--font-size-sm);

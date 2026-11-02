@@ -102,7 +102,6 @@ const hierarchicalTermsResponse = JSON.stringify({
 	},
 });
 
-/** Two siblings under one parent, so a nested group can actually be reordered. */
 const nestedSiblingsTermsResponse = JSON.stringify({
 	data: {
 		terms: [
@@ -151,11 +150,6 @@ const nestedSiblingsTermsResponse = JSON.stringify({
 	},
 });
 
-/**
- * A term whose parent has no row in this locale, rendered between two real
- * roots. The server lists it at the top level so it isn't lost, but it belongs
- * to its parent's group and can't be moved or named from here.
- */
 const untranslatedParentTermsResponse = JSON.stringify({
 	data: {
 		terms: [
@@ -203,10 +197,6 @@ vi.mock("../../../../../packages/admin/src/lib/api/client.js", async () => {
 
 import { apiFetch } from "../../../../../packages/admin/src/lib/api/client.js";
 
-/**
- * Hold the reorder responses until `release()` is called, so a test can look at
- * the list while the request is still in flight.
- */
 function deferReorders() {
 	const pending: Array<() => void> = [];
 	let open = false;
@@ -217,8 +207,6 @@ function deferReorders() {
 		});
 	return {
 		hold: (): Promise<Response> => {
-			// `scope` serializes the reorder mutation, so a queued move only calls
-			// this once the one before it settles — stay open so those land too.
 			if (open) return Promise.resolve(ok());
 			return new Promise((resolve) => pending.push(() => resolve(ok())));
 		},
@@ -299,9 +287,7 @@ describe("TaxonomyManager", () => {
 			wrapper: Wrapper,
 		});
 
-		// Use locators that target the specific label spans (font-medium class)
 		await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
-		// "Science" also appears in "(science)" slug, so target the font-medium span
 		await expect.element(screen.getByText("(science)")).toBeInTheDocument();
 	});
 
@@ -319,12 +305,10 @@ describe("TaxonomyManager", () => {
 			wrapper: Wrapper,
 		});
 
-		// Wait for content to load, then click the button
 		await expect.element(screen.getByRole("heading", { name: "Categories" })).toBeInTheDocument();
 
 		await screen.getByRole("button", { name: ADD_CATEGORY_BUTTON_REGEX }).click();
 
-		// Verify the dialog heading opened
 		await expect
 			.element(screen.getByRole("heading", { name: ADD_CATEGORY_HEADING_REGEX }))
 			.toBeInTheDocument();
@@ -341,7 +325,6 @@ describe("TaxonomyManager", () => {
 
 		await expect.element(screen.getByLabelText("Name")).toBeInTheDocument();
 		await expect.element(screen.getByLabelText("Slug")).toBeInTheDocument();
-		// The InputArea uses "Description (optional)" as label
 		await expect.element(screen.getByText("Description (optional)")).toBeInTheDocument();
 	});
 
@@ -428,7 +411,6 @@ describe("TaxonomyManager", () => {
 
 		await screen.getByRole("button", { name: "Edit Technology" }).click();
 
-		// Should open the edit dialog with "Edit Category" heading
 		await expect
 			.element(screen.getByRole("heading", { name: EDIT_CATEGORY_HEADING_REGEX }))
 			.toBeInTheDocument();
@@ -443,7 +425,6 @@ describe("TaxonomyManager", () => {
 
 		await screen.getByRole("button", { name: "Delete Technology" }).click();
 
-		// Should open a ConfirmDialog (not window.confirm)
 		await expect
 			.element(screen.getByRole("heading", { name: DELETE_CATEGORY_HEADING_REGEX }))
 			.toBeInTheDocument();
@@ -452,7 +433,6 @@ describe("TaxonomyManager", () => {
 		await expect.element(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
 	});
 
-	/** Parsed body of the reorder request, or undefined if none was sent. */
 	function reorderRequestBody(): unknown {
 		const call = vi
 			.mocked(apiFetch)
@@ -461,7 +441,6 @@ describe("TaxonomyManager", () => {
 		return typeof body === "string" ? JSON.parse(body) : undefined;
 	}
 
-	/** Parsed bodies of every reorder request, in the order they were sent. */
 	function reorderRequestBodies(): unknown[] {
 		return vi
 			.mocked(apiFetch)
@@ -469,7 +448,6 @@ describe("TaxonomyManager", () => {
 			.map(([, init]) => (typeof init?.body === "string" ? JSON.parse(init.body) : undefined));
 	}
 
-	/** How many times the term list has been fetched. */
 	function termFetchCount(): number {
 		return vi
 			.mocked(apiFetch)
@@ -482,10 +460,6 @@ describe("TaxonomyManager", () => {
 			).length;
 	}
 
-	/**
-	 * Labels of the rendered rows, top to bottom, read off each row's move
-	 * button rather than the markup around it.
-	 */
 	function renderedOrder(): string[] {
 		const buttons = document.querySelectorAll<HTMLElement>('button[aria-label$=" up"]');
 		return Array.from(buttons, (button) =>
@@ -517,7 +491,6 @@ describe("TaxonomyManager", () => {
 
 		await screen.getByRole("button", { name: "Move Technology down" }).click();
 
-		// Still in flight, and the list has already moved.
 		expect(defer.inFlight).toBe(1);
 		expect(renderedOrder()).toEqual(["Science", "Technology"]);
 
@@ -534,8 +507,6 @@ describe("TaxonomyManager", () => {
 		await expect.element(screen.getByText("Technology", { exact: true })).toBeInTheDocument();
 		const fetchesBefore = termFetchCount();
 
-		// Two clicks before either response lands: down, then back up. The list
-		// tracks both without waiting for the round trip.
 		await screen.getByRole("button", { name: "Move Technology down" }).click();
 		expect(renderedOrder()).toEqual(["Science", "Technology"]);
 		await screen.getByRole("button", { name: "Move Technology up" }).click();
@@ -544,15 +515,11 @@ describe("TaxonomyManager", () => {
 		defer.release();
 		await vi.waitFor(() => expect(reorderRequestBodies()).toHaveLength(2));
 
-		// Each body is an absolute order taken from the list at click time, so
-		// applying them in click order is what makes the last one win.
 		expect(reorderRequestBodies()).toEqual([
 			{ parentId: null, ids: ["2", "1"] },
 			{ parentId: null, ids: ["1", "2"] },
 		]);
 
-		// Only the last of the queued moves refetches; an earlier one would serve
-		// a stale order and snap the list back.
 		expect(termFetchCount()).toBe(fetchesBefore + 1);
 	});
 
@@ -610,8 +577,6 @@ describe("TaxonomyManager", () => {
 
 		await expect.element(screen.getByText("Nino", { exact: true })).toBeInTheDocument();
 
-		// The label carries the reason: a disabled caret with no explanation is
-		// two dead buttons on an arbitrary row.
 		const up = screen.getByRole("button", {
 			name: "Move Nino up — unavailable, its parent has no translation in this locale",
 		});
@@ -630,8 +595,6 @@ describe("TaxonomyManager", () => {
 
 		await expect.element(screen.getByText("Gamma", { exact: true })).toBeInTheDocument();
 
-		// Beta and Gamma are the only real roots, so Beta's "down" is enabled even
-		// though Nino sits between them, and Nino is not named in the request.
 		await screen.getByRole("button", { name: "Move Beta down" }).click();
 
 		expect(reorderRequestBody()).toEqual({
@@ -657,8 +620,6 @@ describe("TaxonomyManager", () => {
 
 		const next = reorderWithinSlots(terms, movable, [gamma!, beta!]);
 
-		// Nino keeps the slot it was rendered in; Beta and Gamma swap the two
-		// slots they held around it.
 		expect(next.map((term) => term.label)).toEqual(["Gamma", "Nino", "Beta"]);
 		expect(next[1]).toBe(nino);
 	});

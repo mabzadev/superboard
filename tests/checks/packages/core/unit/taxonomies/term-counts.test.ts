@@ -1,11 +1,3 @@
-/**
- * Visible term counts (#581): term usage counts must reflect only entries
- * that are currently visible on the public site — committed published rows,
- * not scheduled or soft-deleted — across every count path (public
- * widget, single-term page, admin term list/get), scoped to the taxonomy's
- * declared collections.
- */
-
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { ulid } from "ulidx";
@@ -31,7 +23,6 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
-// Mock loader.getDb so the runtime taxonomy functions read from our test db.
 vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 	getDb: vi.fn(),
 }));
@@ -49,8 +40,6 @@ describeEachDialect("visible term counts (#581)", (dialect) => {
 		taxRepo = new TaxonomyRepository(ctx.db);
 		contentRepo = new ContentRepository(ctx.db);
 		vi.mocked(getDb).mockResolvedValue(ctx.db);
-		// The migration-seeded defs declare `["posts"]`; counts are scoped to
-		// the declared collections, so point them at the test collections.
 		await ctx.db
 			.updateTable("_emdash_taxonomy_defs")
 			.set({ collections: JSON.stringify(["post"]) })
@@ -124,27 +113,21 @@ describeEachDialect("visible term counts (#581)", (dialect) => {
 			await taxRepo.attachToEntry("post", entry.id, term.id);
 		}
 
-		// Only the committed published row is visible. Elapsed scheduling makes
-		// a row eligible for promotion but does not expose it.
 		const group = term.translationGroup ?? term.id;
 		const counts = await fetchVisibleTermCounts(ctx.db, "category", ["post"]);
 		expect(counts.get(group)).toBe(1);
 
-		// Public widget (getTaxonomyTerms).
 		const widgetTerms = await getTaxonomyTerms("category");
 		expect(widgetTerms).toHaveLength(1);
 		expect(widgetTerms[0]!.count).toBe(1);
 
-		// Public single-term page (getTerm).
 		const termPage = await getTerm("category", "tech");
 		expect(termPage?.count).toBe(1);
 
-		// Admin term list.
 		const list = await handleTermList(ctx.db, "category");
 		if (!list.success) throw new Error(list.error.message);
 		expect(list.data.terms[0]!.count).toBe(1);
 
-		// Admin single-term get.
 		const get = await handleTermGet(ctx.db, "category", "tech");
 		if (!get.success) throw new Error(get.error.message);
 		expect(get.data.term.count).toBe(1);
@@ -166,9 +149,6 @@ describeEachDialect("visible term counts (#581)", (dialect) => {
 	});
 
 	it("excludes assignments in collections the taxonomy does not declare", async () => {
-		// `category` declares only ["post"]; a pivot row written for a `page`
-		// entry (schema drift — the route does not validate the collection) must
-		// not inflate the count.
 		const term = await taxRepo.create({ name: "category", slug: "tech", label: "Technology" });
 		const post = await createEntry("post", "in-scope");
 		const page = await createEntry("page", "out-of-scope");
@@ -191,7 +171,6 @@ describeEachDialect("visible term counts (#581)", (dialect) => {
 
 		const categoryCounts = await fetchVisibleTermCounts(ctx.db, "category", ["post"]);
 		expect(categoryCounts.get(cat.translationGroup ?? cat.id)).toBe(2);
-		// The tag term's group must not appear in the category map at all.
 		expect(categoryCounts.has(tag.translationGroup ?? tag.id)).toBe(false);
 
 		const tagCounts = await fetchVisibleTermCounts(ctx.db, "tag", ["post"]);
@@ -199,8 +178,6 @@ describeEachDialect("visible term counts (#581)", (dialect) => {
 	});
 
 	it("counts one logical content group once for each assigned term group", async () => {
-		// Defs are per-locale — translate the seeded `category` def into FR so
-		// the FR widget view resolves (same declared collections).
 		const enDef = await ctx.db
 			.selectFrom("_emdash_taxonomy_defs")
 			.selectAll()
@@ -254,7 +231,6 @@ describeEachDialect("visible term counts (#581)", (dialect) => {
 			locale: "fr",
 			translationOf: enPost.id,
 		});
-		// Attaching via either locale's term id resolves to the shared group.
 		await taxRepo.attachToEntry("post", enPost.id, enTerm.id);
 		await taxRepo.attachToEntry("post", frPost.id, featured.id);
 
@@ -262,7 +238,6 @@ describeEachDialect("visible term counts (#581)", (dialect) => {
 		expect(counts.get(enTerm.translationGroup ?? enTerm.id)).toBe(1);
 		expect(counts.get(featured.translationGroup ?? featured.id)).toBe(1);
 
-		// Both locale views of the taxonomy surface the same group count.
 		const enTerms = await getTaxonomyTerms("category", { locale: "en" });
 		const frTerms = await getTaxonomyTerms("category", { locale: "fr" });
 		expect(enTerms.find((term) => term.id === enTerm.id)?.count).toBe(1);
@@ -304,8 +279,6 @@ describeEachDialect("visible term counts (#581)", (dialect) => {
 	});
 
 	it("skips missing ec_* tables and returns a partial count", async () => {
-		// A declared collection whose table was never created (pre-migration
-		// drift) must not break counting for the collections that do exist.
 		await ctx.db
 			.updateTable("_emdash_taxonomy_defs")
 			.set({ collections: JSON.stringify(["ghost", "post"]) })
@@ -324,10 +297,6 @@ describeEachDialect("visible term counts (#581)", (dialect) => {
 	});
 
 	it("does not share request-cached counts across differing collection scopes", async () => {
-		// Nothing forces per-locale rows of the same def to declare identical
-		// collections. When they drift, a request that renders both locales must
-		// not serve the first locale's counts to the second — the request-cache
-		// key has to include the collection scope, not just the taxonomy name.
 		const enDefId = await insertDef("drifty", ["post"], "en");
 		await insertDef("drifty", ["page"], "fr", enDefId);
 
@@ -367,7 +336,6 @@ describeEachDialect("visible term counts (#581)", (dialect) => {
 		await runWithContext({ editMode: false }, async () => {
 			const enTerms = await getTaxonomyTerms("drifty", { locale: "en" });
 			const frTerms = await getTaxonomyTerms("drifty", { locale: "fr" });
-			// EN def scopes to ["post"] (1 entry), FR def to ["page"] (2 entries).
 			expect(enTerms[0]!.count).toBe(1);
 			expect(frTerms[0]!.count).toBe(2);
 		});
@@ -429,12 +397,10 @@ describe("visible term counts past the compound-SELECT ceiling", () => {
 	let db: Kysely<DatabaseSchema>;
 	let statements: string[];
 
-	/** Back the test by a database that declares `limit` (null: no ceiling). */
 	async function useDatabase(limit: number | null): Promise<void> {
 		({ db, statements } = await setupTestDatabaseWithCompoundSelectLimit(limit));
 	}
 
-	/** How many statements the count query took; its subquery alias is unique to it. */
 	function countStatements(): number {
 		return statements.filter((source) => source.includes("per_collection")).length;
 	}
@@ -443,10 +409,6 @@ describe("visible term counts past the compound-SELECT ceiling", () => {
 		await teardownTestDatabase(db);
 	});
 
-	/**
-	 * Declare `collections` on a taxonomy, create a table and one published,
-	 * term-tagged entry for each of `existing`, and return the term.
-	 */
 	async function seedTaxonomy(collections: string[], existing: string[]) {
 		const registry = new SchemaRegistry(db);
 		const contentRepo = new ContentRepository(db);

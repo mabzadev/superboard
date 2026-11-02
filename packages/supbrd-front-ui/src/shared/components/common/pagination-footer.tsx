@@ -50,11 +50,7 @@ export const PaginationFooter = ({
 
 	return (
 		<div className="flex justify-between items-center px-4 py-3 text-sm w-full justify-between mt-auto">
-			{/* Selected count */}
-
-			{/* Pagination controls */}
 			<div className="flex items-center gap-4  w-full justify-between">
-				{/* Rows per page */}
 				<div className="flex items-center gap-2">
 					<span className="text-muted-foreground">{i18n._("size")}</span>
 					<Select
@@ -80,10 +76,8 @@ export const PaginationFooter = ({
 					</Select>
 				</div>
 
-				{/* Page info */}
 				<span className="text-muted-foreground">{i18n._("page", { page, total: pageCount })}</span>
 
-				{/* Pagination buttons */}
 				<div className="flex gap-2">
 					<button
 						aria-label={i18n._("first")}

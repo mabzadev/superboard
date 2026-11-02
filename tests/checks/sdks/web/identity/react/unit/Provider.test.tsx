@@ -20,12 +20,10 @@ import authContext from "../../../../../../../sdks/web/identity/react/src/contex
 import { AuthProvider, reducer } from "../../../../../../../sdks/web/identity/react/src/Provider";
 import { identityClaims } from "../../../../../../fixtures/identity/claims.js";
 
-// --- Mock the Setup component so that it doesn't interfere ---
 vi.mock("../../../../../../../sdks/web/identity/react/src/Setup", () => ({
 	default: () => <div data-testid="setup">Setup</div>,
 }));
 
-// --- Create a simple consumer component that uses the auth context ---
 const Consumer: React.FC = () => {
 	const { state } = useContext(authContext);
 	return (
@@ -48,25 +46,22 @@ const render = (ui: React.ReactElement, options = {}) =>
 
 describe("AuthProvider", () => {
 	beforeEach(() => {
-		// Clear storage before each test.
 		window.localStorage.clear();
 		window.sessionStorage.clear();
 	});
 
 	it("dispatches setAuth when a valid refresh token is found in localStorage", async () => {
 		const now = Math.floor(Date.now() / 1000);
-		// Create a valid token that expires in 60 sec (now + 60) so that it passes the ">= now + 5" check.
 		const validToken = {
 			refreshToken: "valid-token",
 			expiresIn: 60,
 			expiresOn: now + 60,
 		};
 		const idTokenBody = {
-			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
+			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature",
 			account: identityClaims({ username: "testuser" }),
 		};
 
-		// Save token and account into localStorage using keys from shared.
 		window.localStorage.setItem(StorageKey.RefreshToken, JSON.stringify(validToken));
 		window.localStorage.setItem(StorageKey.IdToken, JSON.stringify(idTokenBody));
 
@@ -82,7 +77,6 @@ describe("AuthProvider", () => {
 		);
 
 		await waitFor(() => {
-			// Because setAuth also sets checkedStorage to true, we expect true and the correct account object.
 			const checkedStorages = screen.getAllByTestId("checkedStorage");
 			const accounts = screen.getAllByTestId("account");
 			expect(checkedStorages[checkedStorages.length - 1].textContent).toBe("true");
@@ -107,7 +101,6 @@ describe("AuthProvider", () => {
 		);
 
 		await waitFor(() => {
-			// In absence of token, the provider dispatches the setCheckedStorage action.
 			const checkedStorages = screen.getAllByTestId("checkedStorage");
 			const accounts = screen.getAllByTestId("account");
 			expect(checkedStorages[checkedStorages.length - 1].textContent).toBe("true");
@@ -117,7 +110,6 @@ describe("AuthProvider", () => {
 
 	it("dispatches setCheckedStorage when the refresh token is invalid (expired) in localStorage", async () => {
 		const now = Math.floor(Date.now() / 1000);
-		// Create an invalid token by setting expiresOn to a time less than "now + 5"
 		const expiredToken = {
 			refreshToken: "expired-token",
 			expiresIn: 60,
@@ -129,7 +121,7 @@ describe("AuthProvider", () => {
 			StorageKey.IdToken,
 			JSON.stringify({
 				idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature",
-				account: identityClaims({ username: "testuser" }), // gitleaks:allow -- deterministic test JWT
+				account: identityClaims({ username: "testuser" }),
 			}),
 		);
 
@@ -164,7 +156,7 @@ describe("AuthProvider", () => {
 			expiresOn: now + 60,
 		};
 		const idTokenBody = {
-			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
+			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature",
 			account: identityClaims({ sub: "user123", exp: now + 6 }),
 		};
 
@@ -234,7 +226,7 @@ describe("AuthProvider", () => {
 		const now = Math.floor(Date.now() / 1000);
 
 		const idTokenBody = {
-			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
+			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature",
 			account: identityClaims({ sub: "user123", exp: now + 6 }),
 		};
 
@@ -271,7 +263,7 @@ describe("AuthProvider", () => {
 			expiresOn: now + 60,
 		};
 		const idTokenBody = {
-			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature", // gitleaks:allow -- deterministic test JWT
+			idToken: "header.eyJzdWIiOiIxMjM0NSJ9.signature",
 			account: identityClaims({ sub: "user123", exp: now }),
 		};
 
@@ -310,7 +302,6 @@ describe("AuthProvider", () => {
 			expiresIn: 60,
 			expiresOn: now + 60,
 		};
-		// Set valid token in localStorage, but do not set a stored account.
 		window.localStorage.setItem(StorageKey.RefreshToken, JSON.stringify(validToken));
 		window.localStorage.removeItem(StorageKey.IdToken);
 
@@ -328,8 +319,6 @@ describe("AuthProvider", () => {
 		await waitFor(() => {
 			const checkedStorages = screen.getAllByTestId("checkedStorage");
 			const accounts = screen.getAllByTestId("account");
-			// Even though the token is valid, since no account is stored,
-			// the ternary operator sets parsedAccount to null and the Consumer renders "null".
 			expect(checkedStorages[checkedStorages.length - 1].textContent).toBe("true");
 			expect(accounts[accounts.length - 1].textContent).toBe("null");
 		});
@@ -506,7 +495,6 @@ describe("reducer", () => {
 	});
 
 	it("handles setIsLoadingToken", () => {
-		// For setIsLoadingToken, we only set isLoadingToken to true.
 		const action = {
 			type: "setIsLoadingToken",
 			payload: undefined,

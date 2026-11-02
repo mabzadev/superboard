@@ -23,7 +23,7 @@ export const parseSecondsInDaysHoursMinutesSeconds = (value: number | null | und
 
 	const totalSeconds = Number(value);
 
-	const days = Math.floor(totalSeconds / 86400); // 24 * 3600
+	const days = Math.floor(totalSeconds / 86400);
 	const hours = Math.floor((totalSeconds % 86400) / 3600);
 	const minutes = Math.floor((totalSeconds % 3600) / 60);
 	const seconds = Math.floor(totalSeconds % 60);
@@ -46,7 +46,6 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 	if (Object.is(a, b)) return true;
 
 	if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) {
-		// Handle NaN === NaN (Object.is already covers this, but be explicit)
 		if (typeof a === "number" && typeof b === "number") {
 			return Number.isNaN(a) && Number.isNaN(b);
 		}
@@ -71,10 +70,6 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 	return true;
 }
 
-/**
- * Deep clone a JSON-serializable value. Non-serializable values (File, Date, Map, etc.)
- * will be lost — only use on plain objects/arrays with primitive values.
- */
 export function deepClone<T>(obj: T): T {
 	return JSON.parse(JSON.stringify(obj));
 }

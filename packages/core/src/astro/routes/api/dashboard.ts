@@ -1,9 +1,3 @@
-/**
- * Dashboard stats endpoint
- *
- * GET /_emdash/api/dashboard - Collection counts, media/user counts, recent items
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

@@ -3,36 +3,23 @@ import * as React from "react";
 
 import type { AdminManifest, ContentItem } from "./api.js";
 
-/** Context passed to a trusted plugin's content-list column header. */
 export interface ContentListColumnHeaderContext {
 	collection: string;
 	locale?: string;
 }
 
-/** Context passed to a trusted plugin's content-list column cell. */
 export interface ContentListColumnCellContext extends ContentListColumnHeaderContext {
 	item: ContentItem;
-	/**
-	 * Items rendered on the current page after host filtering and pagination.
-	 * Batch remote data for these items under one shared query key; cells mount once per row.
-	 */
 	visibleItems: readonly ContentItem[];
 }
 
-/** A content-list column contributed by a trusted React plugin. */
 export interface ContentListColumnExtension {
-	/** Stable identifier, unique within this plugin's list columns. */
 	id: string;
-	/** Host-rendered fallback label and shared Lingui message id for the column header. */
 	label: string;
 	cell: React.ComponentType<ContentListColumnCellContext>;
-	/** Optional custom header content. The host still owns the table header. */
 	header?: React.ComponentType<ContentListColumnHeaderContext>;
-	/** Restrict this column to selected collections. Omit to support every collection. */
 	collections?: readonly string[] | ((collection: string) => boolean);
-	/** Minimum numeric admin role required to see this column. */
 	minRole?: number;
-	/** Lower values render first among contributed columns. */
 	order?: number;
 	align?: "start" | "end";
 }
@@ -140,11 +127,6 @@ function appliesToCollection(
 	}
 }
 
-/**
- * Select valid trusted-plugin columns for one active content collection list.
- * Invalid, disabled, unauthorized, and inapplicable contributions are omitted
- * so a plugin cannot make the host list unusable.
- */
 export function resolveContentListColumns(
 	pluginAdmins: ContentListColumnRegistry,
 	collection: string,
@@ -200,7 +182,6 @@ interface ContentListColumnBoundaryState {
 	hasError: boolean;
 }
 
-/** Prevents one faulty trusted column from unmounting the content list. */
 export class ContentListColumnBoundary extends React.Component<
 	ContentListColumnBoundaryProps,
 	ContentListColumnBoundaryState

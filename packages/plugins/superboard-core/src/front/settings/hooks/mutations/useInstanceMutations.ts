@@ -154,7 +154,6 @@ export function useCompleteSetupStepMutation(instanceId: string | undefined) {
 	});
 }
 
-// Platform configuration mutations
 export function useSetIosConfigMutation(instanceId: string | undefined) {
 	const queryClient = useQueryClient();
 

@@ -41,7 +41,6 @@ export async function loadPluginClientView(pluginId: string, routeId: string) {
 
 const preloadedViews = new Map<string, ReturnType<typeof loadPluginClientView>>();
 
-// Starts the view import once per route so it can run alongside the scope request.
 export function preloadPluginClientView(pluginId: string, routeId: string) {
 	const key = `${pluginId}\0${routeId}`;
 	let view = preloadedViews.get(key);

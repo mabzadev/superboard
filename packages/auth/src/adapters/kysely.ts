@@ -1,7 +1,3 @@
-/**
- * Kysely database adapter for @emdash-cms/auth
- */
-
 import type { Kysely, Insertable, Selectable, Updateable } from "kysely";
 import { ulid } from "ulidx";
 
@@ -24,10 +20,6 @@ import {
 	type AllowedDomain,
 	type RoleLevel,
 } from "../types.js";
-
-// ============================================================================
-// Database schema types
-// ============================================================================
 
 export interface AuthTables {
 	users: UserTable;
@@ -89,20 +81,11 @@ interface AllowedDomainTable {
 	created_at: string;
 }
 
-// ============================================================================
-// Adapter implementation
-// ============================================================================
-
 export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAdapter {
-	// Type cast to work with generic Kysely instance
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- generic Kysely<T extends AuthTables> narrowed to concrete AuthTables for internal queries
 	const kdb = db as unknown as Kysely<AuthTables>;
 
 	return {
-		// ========================================================================
-		// Users
-		// ========================================================================
-
 		async getUserById(id: string): Promise<User | null> {
 			const row = await kdb.selectFrom("users").selectAll().where("id", "=", id).executeTakeFirst();
 
@@ -210,7 +193,6 @@ export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAd
 				.orderBy("users.created_at", "desc")
 				.limit(limit + 1);
 
-			// Apply filters
 			if (options?.search) {
 				const searchPattern = `%${options.search}%`;
 				query = query.where((eb) =>
@@ -226,7 +208,6 @@ export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAd
 			}
 
 			if (options?.cursor) {
-				// Get the cursor user's created_at for pagination
 				const cursorUser = await kdb
 					.selectFrom("users")
 					.select("created_at")
@@ -240,7 +221,6 @@ export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAd
 
 			const rows = await query.execute();
 
-			// Get OAuth providers for all users in this batch
 			const userIds = rows.slice(0, limit).map((r) => r.id);
 			const oauthAccounts =
 				userIds.length > 0
@@ -251,7 +231,6 @@ export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAd
 							.execute()
 					: [];
 
-			// Group OAuth providers by user
 			const oauthByUser = new Map<string, string[]>();
 			for (const account of oauthAccounts) {
 				const providers = oauthByUser.get(account.user_id) ?? [];
@@ -306,7 +285,6 @@ export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAd
 				kdb.selectFrom("oauth_accounts").selectAll().where("user_id", "=", id).execute(),
 			]);
 
-			// Find last login from most recent credential use
 			const lastLogin = credentials.reduce<Date | null>((latest, cred) => {
 				const lastUsed = new Date(cred.last_used_at);
 				return !latest || lastUsed > latest ? lastUsed : latest;
@@ -330,10 +308,6 @@ export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAd
 
 			return result.count;
 		},
-
-		// ========================================================================
-		// Credentials
-		// ========================================================================
 
 		async getCredentialById(id: string): Promise<Credential | null> {
 			const row = await kdb
@@ -418,10 +392,6 @@ export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAd
 			return result.count;
 		},
 
-		// ========================================================================
-		// Auth Tokens
-		// ========================================================================
-
 		async createToken(token: NewAuthToken): Promise<void> {
 			const row: Insertable<AuthTokenTable> = {
 				hash: token.hash,
@@ -458,10 +428,6 @@ export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAd
 				.where("expires_at", "<", new Date().toISOString())
 				.execute();
 		},
-
-		// ========================================================================
-		// OAuth Accounts
-		// ========================================================================
 
 		async getOAuthAccount(
 			provider: string,
@@ -514,10 +480,6 @@ export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAd
 				.where("provider_account_id", "=", providerAccountId)
 				.execute();
 		},
-
-		// ========================================================================
-		// Allowed Domains
-		// ========================================================================
 
 		async getAllowedDomain(domain: string): Promise<AllowedDomain | null> {
 			const row = await kdb
@@ -581,10 +543,6 @@ export function createKyselyAdapter<T extends AuthTables>(db: Kysely<T>): AuthAd
 	};
 }
 
-// ============================================================================
-// Row converters
-// ============================================================================
-
 function rowToUser(row: Selectable<UserTable>): User {
 	return {
 		id: row.id,
@@ -646,10 +604,6 @@ function rowToAllowedDomain(row: Selectable<AllowedDomainTable>): AllowedDomain 
 		createdAt: new Date(row.created_at),
 	};
 }
-
-// ============================================================================
-// Migration SQL
-// ============================================================================
 
 export const AUTH_TABLES_SQL = `
 -- Users (no password_hash)

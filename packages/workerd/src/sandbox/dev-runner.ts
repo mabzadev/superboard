@@ -1,18 +1,3 @@
-/**
- * Miniflare Dev Runner
- *
- * Uses miniflare for plugin sandboxing during development.
- * Provides the same SandboxRunner interface as WorkerdSandboxRunner
- * but uses miniflare's serviceBindings-as-functions pattern instead
- * of raw workerd + capnp + HTTP backing service.
- *
- * Advantages over raw workerd in dev:
- * - No HTTP backing service needed (bridge calls are Node functions)
- * - No capnp config generation
- * - No child process management
- * - Faster startup
- */
-
 import { randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 
@@ -37,19 +22,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const SAFE_ID_RE = /[^a-z0-9_-]/gi;
 
-/**
- * Stub for the "emdash" module that sandbox-entry plugins import to get
- * `definePlugin`. The marketplace bundler inlines this via an alias, but
- * statically-loaded sandboxed plugins (from `sandboxed: [...]`) embed
- * their `dist/sandbox-entry.mjs` as-is, which still has the bare import.
- * Providing the module here keeps that path working without rebuilding
- * every plugin. Mirrors `EMDASH_SHIM` in @emdash-cms/cloudflare.
- */
 const EMDASH_SHIM = "export const definePlugin = (d) => d;\n";
 
-/**
- * Miniflare-based sandbox runner for development.
- */
 export class MiniflareDevRunner implements SandboxRunner {
 	private options: SandboxOptions;
 	private siteInfo?: {
@@ -60,22 +34,12 @@ export class MiniflareDevRunner implements SandboxRunner {
 	};
 	private emailSendCallback: SandboxEmailSendCallback | null = null;
 
-	/** Miniflare instance (lazily created) */
 	private mf: InstanceType<typeof import("miniflare").Miniflare> | null = null;
 
-	/** Loaded plugins */
 	private plugins = new Map<string, { manifest: PluginManifest; code: string }>();
 
-	/** Whether miniflare is running */
 	private running = false;
 
-	/**
-	 * Per-startup token sent on every hook/route invocation. Plugins reject
-	 * requests without this token. In dev mode the plugin worker is only
-	 * reachable through miniflare's dispatchFetch, but we still wire the
-	 * token for consistency with production and so the wrapper template
-	 * is identical in both modes.
-	 */
 	private devInvokeToken: string;
 
 	constructor(options: SandboxOptions) {
@@ -89,7 +53,6 @@ export class MiniflareDevRunner implements SandboxRunner {
 		return this.options.limits?.wallTimeMs ?? DEFAULT_WALL_TIME_MS;
 	}
 
-	/** Get the per-startup invoke token (sent on hook/route requests to plugins) */
 	get invokeAuthToken() {
 		return this.devInvokeToken;
 	}
@@ -116,7 +79,6 @@ export class MiniflareDevRunner implements SandboxRunner {
 		const pluginId = `${manifest.id}:${manifest.version}`;
 		this.plugins.set(pluginId, { manifest, code });
 
-		// Rebuild miniflare with all plugins
 		await this.rebuild();
 
 		return new MiniflareDevPlugin(pluginId, manifest, this);
@@ -131,22 +93,12 @@ export class MiniflareDevRunner implements SandboxRunner {
 		this.running = false;
 	}
 
-	/**
-	 * Unload a single plugin and rebuild miniflare without it.
-	 * Called from MiniflareDevPlugin.terminate() so marketplace
-	 * update/uninstall flows actually drop the old plugin from
-	 * the dev sandbox instead of leaving stale entries.
-	 */
 	async unloadPlugin(pluginId: string): Promise<void> {
 		if (this.plugins.delete(pluginId)) {
 			await this.rebuild();
 		}
 	}
 
-	/**
-	 * Rebuild miniflare with current plugin configuration.
-	 * Called on each plugin load/unload.
-	 */
 	private async rebuild(): Promise<void> {
 		if (this.mf) {
 			await this.mf.dispose();
@@ -160,10 +112,6 @@ export class MiniflareDevRunner implements SandboxRunner {
 
 		const { Miniflare } = await import("miniflare");
 
-		// Build worker configs with outboundService to intercept bridge calls.
-		// The wrapper code does fetch("http://bridge/method", ...).
-		// outboundService intercepts all outbound fetches and routes bridge
-		// calls to the Node handler function.
 		const workerConfigs = [];
 
 		for (const [pluginId, { manifest, code }] of this.plugins) {
@@ -188,14 +136,8 @@ export class MiniflareDevRunner implements SandboxRunner {
 				invokeToken: this.devInvokeToken,
 			});
 
-			// outboundService intercepts all fetch() calls from this worker.
-			// Calls to http://bridge/... go to the Node bridge handler.
-			// Other calls pass through for network:fetch.
 			workerConfigs.push({
 				name: pluginId.replace(SAFE_ID_RE, "_"),
-				// The wrapper imports "sandbox-plugin.js", so we provide both
-				// the wrapper as the main module and the plugin code as a
-				// named module that the wrapper can import.
 				modulesRoot: "/",
 				modules: [
 					{ type: "ESModule" as const, path: "worker.js", contents: wrapperCode },
@@ -204,11 +146,6 @@ export class MiniflareDevRunner implements SandboxRunner {
 				],
 				outboundService: async (request: Request) => {
 					const url = new URL(request.url);
-					// Only allow bridge calls. Any other outbound fetch is blocked
-					// to enforce that all network access goes through ctx.http.fetch
-					// (which routes via the bridge with capability + host validation).
-					// Without this, plugins could bypass network:fetch / allowedHosts
-					// by calling plain fetch() directly.
 					if (url.hostname === "bridge") {
 						return bridgeHandler(request);
 					}
@@ -224,14 +161,6 @@ export class MiniflareDevRunner implements SandboxRunner {
 		this.running = true;
 	}
 
-	/**
-	 * Dispatch a fetch to a specific plugin worker in miniflare.
-	 *
-	 * Miniflare's `worker.fetch` uses undici's Request/Response/RequestInit
-	 * types, which are structurally compatible with the platform globals but
-	 * declared as distinct nominal types. Callers only consume status/ok and
-	 * the body via text()/json(), so we widen at this boundary.
-	 */
 	async dispatchToPlugin(pluginId: string, url: string, init?: RequestInit): Promise<Response> {
 		if (!this.mf) {
 			throw new Error(`Miniflare not running, cannot dispatch to ${pluginId}`);
@@ -246,9 +175,6 @@ export class MiniflareDevRunner implements SandboxRunner {
 	}
 }
 
-/**
- * A plugin running in a miniflare dev isolate.
- */
 class MiniflareDevPlugin implements SandboxedPluginInstance {
 	readonly id: string;
 	private manifest: PluginManifest;
@@ -307,9 +233,7 @@ class MiniflareDevPlugin implements SandboxedPluginInstance {
 				let envelope = null;
 				try {
 					envelope = getSandboxRouteErrorEnvelope(JSON.parse(text));
-				} catch {
-					// The generic route error below preserves non-protocol failures.
-				}
+				} catch {}
 				if (envelope) {
 					throw createSandboxRouteError(envelope.error.code);
 				}
@@ -341,8 +265,6 @@ class MiniflareDevPlugin implements SandboxedPluginInstance {
 	}
 
 	async terminate(): Promise<void> {
-		// Drop this plugin from the runner so marketplace update/uninstall
-		// actually removes it from the dev sandbox.
 		await this.runner.unloadPlugin(this.id);
 	}
 }

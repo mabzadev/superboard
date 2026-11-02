@@ -85,10 +85,6 @@ export default function CommunicationSettingsPage({
 	);
 }
 
-/**
- * Sender identities moved from Marketing to the Email Worker (migration 0012).
- * Profiles still stored only in Marketing are shown read-only until they are moved.
- */
 function LegacyMarketingSenders({ project }: { project: string }) {
 	const { t, locale } = useStudioI18n();
 	const [legacy, setLegacy] = useState<SmtpSettings[]>([]);
@@ -109,7 +105,6 @@ function LegacyMarketingSenders({ project }: { project: string }) {
 					),
 				);
 			},
-			// Without both lists nothing can be called legacy safely.
 			() => undefined,
 		);
 		return () => {

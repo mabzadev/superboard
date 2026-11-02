@@ -160,7 +160,6 @@ signupFormRoutes.delete("/audience/forms/:formId", async (c) => {
 	return c.json({ data: { deleted: true } });
 });
 
-/** Ready-to-paste snippets. The server builds them so every channel shares one markup. */
 signupFormRoutes.get("/audience/forms/:formId/embed", async (c) => {
 	const projectId = c.get("project").projectId;
 	const row = await signupForm(c.env.DB, projectId, c.req.param("formId"));
@@ -175,10 +174,6 @@ signupFormRoutes.get("/audience/forms/:formId/embed", async (c) => {
 		},
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Public endpoints (reached through the API gateway without a Dashboard session)
-// ---------------------------------------------------------------------------
 
 export const publicSignupFormRoutes = registerRouter(new Hono<AudienceBindings>(), {
 	service: "marketing",
@@ -262,7 +257,6 @@ publicSignupFormRoutes.post("/public/v1/forms/:formId", async (c) => {
 	};
 	if (!form) return respond(404, false, copy[locale].unavailable);
 	const text = copy[form.settings.locale];
-	// Bots fill every input; humans never see the honeypot. Pretend success.
 	const trap = values[HONEYPOT];
 	if (trap != null && (typeof trap === "object" || plainText(trap).trim()))
 		return respond(200, true, form.settings.success_message || text.success);
@@ -342,7 +336,6 @@ async function submittedValues(request: Request): Promise<Record<string, unknown
 	}
 }
 
-/** Fixed window per form and hashed client address; old windows are pruned lazily. */
 async function withinRateLimit(db: D1Database, formId: string, request: Request) {
 	const client =
 		request.headers.get("cf-connecting-ip") ||
@@ -358,7 +351,6 @@ async function withinRateLimit(db: D1Database, formId: string, request: Request)
 		)
 		.bind(formId, await sha256(`${formId}:${client}`), windowStart)
 		.first<{ attempts: number }>();
-	// Prune old windows on about one submission in twenty.
 	if ((crypto.getRandomValues(new Uint8Array(1))[0] ?? 0) < 13)
 		await db
 			.prepare("DELETE FROM marketing_form_rate_limits WHERE window_start < ?")
@@ -367,13 +359,6 @@ async function withinRateLimit(db: D1Database, formId: string, request: Request)
 	return Number(row?.attempts || 0) <= RATE_LIMIT_ATTEMPTS;
 }
 
-/**
- * Creates or updates the contact behind a submission. New addresses and any
- * address that previously left (unsubscribed, revoked, pending) must confirm by
- * email when the form or one of its lists uses double opt-in; returning
- * contacts who left always confirm. Blocked or bounced addresses are ignored
- * silently so the form never reveals who is on the list.
- */
 async function subscribeFromForm(
 	env: Env,
 	form: PublicForm,
@@ -648,12 +633,6 @@ function formMarkup(
 	return `<form class="sb-form" method="post" action="${escapeHtml(url)}" accept-charset="utf-8" data-superboard-form="${escapeHtml(formId)}">${embedded ? '<input type="hidden" name="_embed" value="1">' : ""}<label><span>${escapeHtml(text.email)} *</span><input type="email" name="email" autocomplete="email" maxlength="320" required></label>${inputs}<div class="sb-hp" aria-hidden="true"><label>Website<input type="text" name="${HONEYPOT}" tabindex="-1" autocomplete="off"></label></div><button type="submit">${escapeHtml(settings.submit_label)}</button></form>`;
 }
 
-/**
- * Tiny dependency-free loader. Inline mode renders the form where the script
- * tag sits; popup mode opens it after the configured delay once per session.
- * Submissions go to a hidden iframe and report back with postMessage, so no
- * CORS configuration is needed on the visitor's site.
- */
 function embedScript(url: string, form: PublicForm, definitions: FieldDefinition[]) {
 	const redirect = Boolean(form.settings.redirect_url);
 	const markup = formMarkup(url, form.id, form.settings, definitions, !redirect);

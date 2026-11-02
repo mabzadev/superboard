@@ -1,14 +1,7 @@
-//
-//  UIDevice+Extension.swift
-//
-//  superboard
-//
-
 import UIKit
 
 extension UIDevice {
 
-    /// Retrieves the model name of the device.
     static let modelName: String = {
         var systemInfo = utsname()
         uname(&systemInfo)
@@ -18,10 +11,6 @@ extension UIDevice {
             return identifier + String(UnicodeScalar(UInt8(value)))
         }
 
-        /// Maps device identifiers to model names.
-        ///
-        /// - Parameter identifier: The device identifier string.
-        /// - Returns: The corresponding model name.
         func mapToDevice(identifier: String) -> String { // swiftlint:disable:this cyclomatic_complexity
             #if os(iOS)
             switch identifier {

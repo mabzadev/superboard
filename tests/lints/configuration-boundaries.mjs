@@ -424,7 +424,6 @@ async function assertAuthorityPathsExist(workspaceRoot, contract, errors) {
 		...contract.authorities.sharedPlatform.runtimeRoots,
 		contract.authorities.applications.targetDirectory,
 		contract.authorities.applications.targetSchema,
-		// Projection directories are created when an application snapshot is recorded.
 		...contract.authorities.applications.derivedProjectionPaths.filter((path) => extname(path)),
 		...contract.scan.localWranglerTemplates,
 	];

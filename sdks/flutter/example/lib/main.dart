@@ -8,12 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize SuperBoard SDK
   final superboard = SuperBoard();
   try {
     await superboard.setDebugLevel('info');
 
-    // Set user information (optional)
     await superboard.setUserIdentifier('demo-user-123');
     await superboard.setUserAttributes({
       'name': 'Demo User',
@@ -64,9 +62,7 @@ class _MyAppState extends State<MyApp> {
             'Link: ${deeplinkDetails.link}\nData: ${deeplinkDetails.data}\nTracking: ${deeplinkDetails.tracking?.toMap()}';
       });
 
-      // Show a dialog when deeplink is received
       if (mounted) {
-        // Defer the dialog to the next frame to ensure Material localizations are available
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             showDialog(

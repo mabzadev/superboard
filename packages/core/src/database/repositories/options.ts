@@ -6,18 +6,9 @@ function escapeLike(value: string): string {
 	return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
 }
 
-/**
- * Options repository for key-value settings storage
- *
- * Used for site settings, plugin configuration, and other arbitrary key-value data.
- * Values are stored as JSON for flexibility.
- */
 export class OptionsRepository {
 	constructor(private db: Kysely<Database>) {}
 
-	/**
-	 * Get an option value
-	 */
 	async get<T = unknown>(name: string): Promise<T | null> {
 		const row = await this.db
 			.selectFrom("options")
@@ -30,24 +21,17 @@ export class OptionsRepository {
 		return JSON.parse(row.value) as T;
 	}
 
-	/**
-	 * Get an option value with a default
-	 */
 	async getOrDefault<T>(name: string, defaultValue: T): Promise<T> {
 		const value = await this.get<T>(name);
 		return value ?? defaultValue;
 	}
 
-	/**
-	 * Set an option value (creates or updates)
-	 */
 	async set<T = unknown>(name: string, value: T): Promise<void> {
 		const row: OptionTable = {
 			name,
 			value: JSON.stringify(value),
 		};
 
-		// Upsert: insert or replace
 		await this.db
 			.insertInto("options")
 			.values(row)
@@ -55,14 +39,6 @@ export class OptionsRepository {
 			.execute();
 	}
 
-	/**
-	 * Set an option value only if no row with that name exists. Atomic at the
-	 * database level via INSERT ... ON CONFLICT DO NOTHING, so concurrent
-	 * callers can't race past the check.
-	 *
-	 * Returns true when the row was inserted, false when a row already
-	 * existed (regardless of its value — even an empty string or null).
-	 */
 	async setIfAbsent<T = unknown>(name: string, value: T): Promise<boolean> {
 		const row: OptionTable = {
 			name,
@@ -75,23 +51,15 @@ export class OptionsRepository {
 			.onConflict((oc) => oc.column("name").doNothing())
 			.executeTakeFirst();
 
-		// SQLite reports numInsertedOrUpdatedRows; Postgres reports the same.
-		// When the ON CONFLICT branch fires and does nothing, the count is 0.
 		return (result.numInsertedOrUpdatedRows ?? 0n) > 0n;
 	}
 
-	/**
-	 * Delete an option
-	 */
 	async delete(name: string): Promise<boolean> {
 		const result = await this.db.deleteFrom("options").where("name", "=", name).executeTakeFirst();
 
 		return (result.numDeletedRows ?? 0) > 0;
 	}
 
-	/**
-	 * Check if an option exists
-	 */
 	async exists(name: string): Promise<boolean> {
 		const row = await this.db
 			.selectFrom("options")
@@ -102,9 +70,6 @@ export class OptionsRepository {
 		return !!row;
 	}
 
-	/**
-	 * Get multiple options at once
-	 */
 	async getMany<T = unknown>(names: string[]): Promise<Map<string, T>> {
 		if (names.length === 0) return new Map();
 
@@ -122,9 +87,6 @@ export class OptionsRepository {
 		return result;
 	}
 
-	/**
-	 * Set multiple options at once
-	 */
 	async setMany<T = unknown>(options: Record<string, T>): Promise<void> {
 		const entries = Object.entries(options);
 		if (entries.length === 0) return;
@@ -134,9 +96,6 @@ export class OptionsRepository {
 		}
 	}
 
-	/**
-	 * Get all options (use sparingly)
-	 */
 	async getAll(): Promise<Map<string, unknown>> {
 		const rows = await this.db.selectFrom("options").select(["name", "value"]).execute();
 
@@ -147,9 +106,6 @@ export class OptionsRepository {
 		return result;
 	}
 
-	/**
-	 * Get all options matching a prefix
-	 */
 	async getByPrefix<T = unknown>(prefix: string): Promise<Map<string, T>> {
 		const pattern = `${escapeLike(prefix)}%`;
 		const rows = await this.db
@@ -166,9 +122,6 @@ export class OptionsRepository {
 		return result;
 	}
 
-	/**
-	 * Delete all options matching a prefix
-	 */
 	async deleteByPrefix(prefix: string): Promise<number> {
 		const pattern = `${escapeLike(prefix)}%`;
 		const result = await this.db

@@ -12,9 +12,6 @@ export type RolesSelectRow = {
 	description: string;
 };
 
-/**
- * Shared resolved role strings + descriptor rows for selects (after `i18n` is active).
- */
 export function useRolesConfig(): {
 	roleLabels: Record<string, string>;
 	getRoleLabel: (level: number) => string;

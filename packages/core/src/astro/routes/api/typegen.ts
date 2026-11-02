@@ -1,17 +1,3 @@
-/**
- * Typegen endpoint - generates emdash-env.d.ts content
- *
- * POST /_emdash/api/typegen - Generate types and return as JSON
- * GET /_emdash/api/typegen - Return types as text (for preview/debugging)
- *
- * The caller (integration or CLI) is responsible for writing the file to disk.
- * This endpoint only generates the content — it has no filesystem access,
- * which is essential for Cloudflare Workers where process.cwd() is "/" and
- * node:fs may not be available.
- *
- * Dev-only endpoint - disabled in production.
- */
-
 import type { APIRoute } from "astro";
 
 import { apiError, apiSuccess, handleError } from "#api/error.js";
@@ -19,14 +5,10 @@ import type { SchemaRegistry } from "#schema/registry.js";
 
 export const prerender = false;
 
-/**
- * Safely list collections, returning empty array if tables don't exist yet
- */
 async function safeListCollections(registry: SchemaRegistry) {
 	try {
 		return await registry.listCollections();
 	} catch (error) {
-		// Handle missing tables for new sites that haven't run setup yet
 		if (error instanceof Error && error.message.includes("no such table")) {
 			return [];
 		}
@@ -34,9 +16,6 @@ async function safeListCollections(registry: SchemaRegistry) {
 	}
 }
 
-/**
- * Generate types content and metadata from the current schema.
- */
 async function generateTypes(registry: SchemaRegistry) {
 	const { generateTypesFile, generateSchemaHash } = await import("#schema/zod-generator.js");
 
@@ -54,9 +33,6 @@ async function generateTypes(registry: SchemaRegistry) {
 	return { types, hash, collections: collections.length };
 }
 
-/**
- * GET - Return types as plain text (for preview/debugging)
- */
 export const GET: APIRoute = async ({ locals }) => {
 	if (!import.meta.env.DEV) {
 		return apiError("FORBIDDEN", "Typegen is only available in development", 403);
@@ -85,12 +61,6 @@ export const GET: APIRoute = async ({ locals }) => {
 	}
 };
 
-/**
- * POST - Generate types and return as JSON
- *
- * The caller writes the file to disk. Response shape:
- * { types: string, hash: string, collections: number }
- */
 export const POST: APIRoute = async ({ locals }) => {
 	if (!import.meta.env.DEV) {
 		return apiError("FORBIDDEN", "Typegen is only available in development", 403);

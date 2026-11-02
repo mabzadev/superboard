@@ -1,11 +1,3 @@
-/**
- * HTML Block Conversion Tests (admin editor seam)
- *
- * Tests the Portable Text ↔ ProseMirror conversion for `htmlBlock` through
- * the seams the admin rich-text editor actually exercises. Mirrors the core
- * converter round-trip test against the in-file converters.
- */
-
 import { describe, it, expect } from "vitest";
 
 import {

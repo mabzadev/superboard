@@ -12,11 +12,6 @@ interface BlockKitFieldWidgetProps {
 	onChange: (value: unknown) => void;
 }
 
-/**
- * Renders Block Kit elements as a field widget for sandboxed plugins.
- * Decomposes a JSON value into per-element values keyed by action_id,
- * and recomposes on change.
- */
 export function BlockKitFieldWidget({
 	label,
 	elements,
@@ -25,8 +20,6 @@ export function BlockKitFieldWidget({
 }: BlockKitFieldWidgetProps) {
 	const obj = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
 
-	// Use a ref to avoid stale closure -- rapid changes to different elements
-	// would otherwise lose updates because each callback spreads from a stale obj.
 	const objRef = React.useRef(obj);
 	objRef.current = obj;
 
@@ -37,7 +30,6 @@ export function BlockKitFieldWidget({
 		[onChange],
 	);
 
-	// Filter out elements without action_id -- they can't be mapped to values
 	const validElements = elements.filter((el) => el.action_id);
 
 	return (

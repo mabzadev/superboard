@@ -212,7 +212,6 @@ app.get("/internal/v1/overview", async (c) =>
 app.get("/internal/v1/events", async (c) => {
 	const url = new URL(c.req.url);
 	const projectId = String(c.get("project").projectId);
-	// `user_id` is the application user id; it is hashed here so raw identifiers never reach storage.
 	const userId = url.searchParams.get("user_id")?.trim().slice(0, 1_024);
 	const userIdHashes = userId
 		? await identityHashCandidates(c.env, projectId, "user", userId)

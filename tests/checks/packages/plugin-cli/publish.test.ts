@@ -66,7 +66,6 @@ describe("publishRelease", () => {
 			expect(result.profileUri).toBe(`at://${TEST_DID}/${NSID.packageProfile}/test-plugin`);
 			expect(result.releaseUri).toBe(`at://${TEST_DID}/${NSID.packageRelease}/test-plugin:1.0.0`);
 
-			// Both records should be in the mock PDS.
 			expect(pds.records.size).toBe(2);
 			expect(pds.records.has(result.profileUri)).toBe(true);
 			expect(pds.records.has(result.releaseUri)).toBe(true);
@@ -76,15 +75,11 @@ describe("publishRelease", () => {
 			const pds = new MockPds({ did: TEST_DID });
 			await publishRelease(buildOptions(pds));
 
-			// Atomicity contract: ONE applyWrites call, with both records as
-			// writes. Two separate putRecord calls would mean an interrupted
-			// publish could leave a profile without a release.
 			const applyWrites = pds.callsTo("com.atproto.repo.applyWrites");
 			expect(applyWrites).toHaveLength(1);
 			const body = applyWrites[0]!.body as { writes: unknown[] };
 			expect(body.writes).toHaveLength(2);
 
-			// putRecord must NOT be used for the publish path.
 			expect(pds.callsTo("com.atproto.repo.putRecord")).toHaveLength(0);
 		});
 
@@ -174,8 +169,6 @@ describe("publishRelease", () => {
 				code: "PROFILE_BOOTSTRAP_MISSING_FIELD",
 			});
 			expect(pds.records.size).toBe(0);
-			// applyWrites must not have been called -- a partial write would be
-			// catastrophic for an atomic-publish promise.
 			expect(pds.callsTo("com.atproto.repo.applyWrites")).toHaveLength(0);
 		});
 
@@ -230,20 +223,16 @@ describe("publishRelease", () => {
 			expect(result.releaseOverwritten).toBe(false);
 			expect(result.releaseUri).toBe(`at://${TEST_DID}/${NSID.packageRelease}/test-plugin:1.1.0`);
 
-			// Identity fields preserved -- the existing profile owns these.
 			const profileNow = pds.records.get(`at://${TEST_DID}/${NSID.packageProfile}/test-plugin`);
 			const value = profileNow!.value as Record<string, unknown> & { lastUpdated: string };
 			expect(value.license).toBe(wellShapedProfile.license);
 			expect(value.authors).toEqual(wellShapedProfile.authors);
 			expect(value.security).toEqual(wellShapedProfile.security);
-			// But lastUpdated has been bumped to a fresher timestamp.
 			expect(value.lastUpdated).not.toBe(wellShapedProfile.lastUpdated);
 			expect(new Date(value.lastUpdated).getTime()).toBeGreaterThan(
 				new Date(wellShapedProfile.lastUpdated).getTime(),
 			);
 
-			// applyWrites batch contains exactly TWO writes: profile update +
-			// release create.
 			const applyWrites = pds.callsTo("com.atproto.repo.applyWrites");
 			expect(applyWrites).toHaveLength(1);
 			const body = applyWrites[0]!.body as {
@@ -256,9 +245,6 @@ describe("publishRelease", () => {
 
 		it("does not touch a malformed existing profile (just writes the release)", async () => {
 			const pds = new MockPds({ did: TEST_DID });
-			// Existing profile is missing required fields. We refuse to update
-			// it (overwriting bad bytes with slightly-different bad bytes is
-			// worse than leaving it alone) and only write the release.
 			pds.seedRecord(NSID.packageProfile, "test-plugin", { incomplete: true });
 
 			const result = await publishRelease(buildOptions(pds));
@@ -273,14 +259,11 @@ describe("publishRelease", () => {
 		});
 
 		it("reads existing profile and release in parallel before deciding", async () => {
-			// Verifies the API issues both lookups; the actual order is
-			// implementation detail (we use Promise.all). Two getRecord calls.
 			const pds = new MockPds({ did: TEST_DID });
 			pds.seedRecord(NSID.packageProfile, "test-plugin", wellShapedProfile);
 			await publishRelease(buildOptions(pds));
 			const reads = pds.callsTo("com.atproto.repo.getRecord");
 			expect(reads).toHaveLength(2);
-			// Reads check both rkeys: slug (profile) and slug:version (release).
 			const rkeys = reads
 				.map((c) => new URL(c.pathname, "http://mock.test").searchParams.get("rkey"))
 				.toSorted((a, b) => (a ?? "").localeCompare(b ?? ""));
@@ -332,12 +315,9 @@ describe("publishRelease", () => {
 				code: "RELEASE_ALREADY_PUBLISHED",
 			});
 
-			// Original bytes preserved (content-derived CID is identical for
-			// identical bytes).
 			const releaseNow = pds.records.get(original.uri);
 			expect(releaseNow?.cid).toBe(original.cid);
 			expect(releaseNow?.value).toEqual(original.value);
-			// applyWrites must not have been called -- the refusal is upstream.
 			expect(pds.callsTo("com.atproto.repo.applyWrites")).toHaveLength(0);
 		});
 
@@ -375,8 +355,6 @@ describe("publishRelease", () => {
 
 			expect(result.releaseOverwritten).toBe(true);
 
-			// Compare content directly. Mock CIDs are content-derived, so we
-			// don't lean on counter increments.
 			const releaseNow = pds.records.get(original.uri);
 			expect(releaseNow?.value).not.toEqual(original.value);
 			const value = releaseNow!.value as { artifacts: { package: { url: string } } };
@@ -472,9 +450,6 @@ describe("publishRelease", () => {
 		}
 
 		it("carries every facet, including hook registrations, when derived from a legacy bundle", async () => {
-			// A bundle with no declaredAccess (a pre-migration tarball) whose hook
-			// capabilities must still reach the record so the consent dialog can
-			// show them.
 			const pds = new MockPds({ did: TEST_DID });
 			await publishRelease(
 				buildOptions(pds, {
@@ -523,7 +498,6 @@ describe("publishRelease", () => {
 		it("rejects scoped names whose translated slug starts with a non-letter", async () => {
 			const pds = new MockPds({ did: TEST_DID });
 			const opts = buildOptions(pds, {
-				// `@/plugin` translates to `-plugin`, which doesn't start with a letter.
 				manifest: buildManifest({ id: "@/plugin" }),
 			});
 			await expect(publishRelease(opts)).rejects.toMatchObject({

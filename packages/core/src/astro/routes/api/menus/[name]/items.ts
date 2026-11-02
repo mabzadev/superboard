@@ -1,9 +1,3 @@
-/**
- * Menu items create endpoint
- *
- * POST /_emdash/api/menus/:name/items[?locale=xx] - Create a new menu item
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

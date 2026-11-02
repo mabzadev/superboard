@@ -1,11 +1,3 @@
-/**
- * Widgets page component
- *
- * Manage widget areas and widgets with drag-and-drop support.
- * Available widgets can be dragged from the palette into widget areas.
- * Widgets within an area can be reordered via drag-and-drop.
- */
-
 import { Button, Dialog, Input, Label, Select, Switch, Toast } from "@cloudflare/kumo";
 import {
 	DndContext,
@@ -67,14 +59,12 @@ import {
 	type PluginBlockDef,
 } from "./PortableTextEditor";
 
-/** Palette item types that can be dragged into areas */
 interface PaletteItemData {
 	source: "palette";
 	widgetInput: CreateWidgetInput;
 	label: string;
 }
 
-/** Identifies an existing widget being reordered */
 interface ExistingWidgetData {
 	source: "area";
 	areaName: string;
@@ -86,7 +76,6 @@ function isPaletteItem(data: DragItemData): data is PaletteItemData {
 	return data.source === "palette";
 }
 
-/** Built-in widget types available in the palette */
 const BUILTIN_WIDGETS: Array<{
 	id: string;
 	label: MessageDescriptor;
@@ -107,17 +96,9 @@ const BUILTIN_WIDGETS: Array<{
 	},
 ];
 
-/**
- * Localized labels/descriptions for built-in core widget components. The server
- * (packages/core/src/widgets/components.ts) ships these in English as stable
- * data; the admin maps them to translated strings client-side, the same way
- * error codes are localized. Plugin-provided components fall back to their
- * server-provided strings.
- */
 interface CoreWidgetMeta {
 	label: MessageDescriptor;
 	description: MessageDescriptor;
-	/** Prop-field labels keyed by prop key; `options` localizes select choices by option value. */
 	props?: Record<string, { label: MessageDescriptor; options?: Record<string, MessageDescriptor> }>;
 }
 
@@ -177,12 +158,10 @@ export function Widgets() {
 	const [activeDragData, setActiveDragData] = React.useState<DragItemData | null>(null);
 	const [expandedWidgets, setExpandedWidgets] = React.useState<Set<string>>(new Set());
 	const [blockSidebarPanel, setBlockSidebarPanel] = React.useState<BlockSidebarPanel | null>(null);
-	// Track palette drag source across the full drag lifecycle (including drop animation)
 	const draggingFromPaletteRef = React.useRef(false);
 
 	const handleBlockSidebarOpen = React.useCallback((panel: BlockSidebarPanel) => {
 		setBlockSidebarPanel((prev) => {
-			// Close any existing panel before opening a new one so only one is ever active
 			prev?.onClose();
 			return panel;
 		});
@@ -263,13 +242,9 @@ export function Widgets() {
 		}),
 	);
 
-	// Custom collision detection: palette items use rectIntersection (anywhere
-	// over the area counts) and only match area:* droppables. Existing widgets
-	// use closestCenter for precise reorder positioning.
 	const collisionDetection: CollisionDetection = React.useCallback((args) => {
 		const dragData = args.active.data.current as DragItemData | undefined;
 		if (dragData && isPaletteItem(dragData)) {
-			// Only consider area droppables, use generous rect intersection
 			const areaContainers = args.droppableContainers.filter((c) =>
 				String(c.id).startsWith("area:"),
 			);
@@ -310,10 +285,8 @@ export function Widgets() {
 
 		if (!over || !dragData) return;
 
-		// Case 1: Dragging from palette into an area
 		if (isPaletteItem(dragData)) {
 			const overId = String(over.id);
-			// The drop target is a widget area (droppable id = "area:{name}")
 			if (overId.startsWith("area:")) {
 				const areaName = overId.slice(5);
 				createWidgetMutation.mutate({
@@ -324,7 +297,6 @@ export function Widgets() {
 			return;
 		}
 
-		// Case 2: Reordering within an area
 		if (active.id === over.id) return;
 
 		const sourceArea = areas.find((area) => area.widgets?.some((w) => w.id === active.id));
@@ -357,10 +329,8 @@ export function Widgets() {
 		});
 	};
 
-	// Build the palette label for the drag overlay
 	const activePaletteLabel =
 		activeDragData && isPaletteItem(activeDragData) ? activeDragData.label : null;
-	// Find the existing widget being dragged for overlay
 	const activeWidget =
 		activeId && activeDragData && !isPaletteItem(activeDragData)
 			? areas.flatMap((a) => a.widgets ?? []).find((w) => w.id === activeId)
@@ -460,7 +430,6 @@ export function Widgets() {
 					</div>
 
 					<div className="grid grid-cols-12 gap-6">
-						{/* Available Widgets (draggable palette) */}
 						<div className="col-span-4">
 							<div className="rounded-lg border bg-kumo-base p-6 space-y-4">
 								<h2 className="text-xl font-semibold">{t`Available Widgets`}</h2>
@@ -497,7 +466,6 @@ export function Widgets() {
 							</div>
 						</div>
 
-						{/* Widget Areas (droppable + sortable) */}
 						<div className="col-span-8 space-y-4">
 							{areas.length === 0 ? (
 								<div className="rounded-lg border bg-kumo-base p-12 text-center">
@@ -522,8 +490,6 @@ export function Widgets() {
 					</div>
 				</div>
 
-				{/* Drag overlay — no drop animation for palette items (source stays in place).
-			    Use ref because state is cleared in handleDragEnd before animation runs. */}
 				<DragOverlay dropAnimation={draggingFromPaletteRef.current ? null : undefined}>
 					{activePaletteLabel ? (
 						<div className="rounded border bg-kumo-base p-3 shadow-lg opacity-90">
@@ -540,8 +506,6 @@ export function Widgets() {
 					) : null}
 				</DragOverlay>
 
-				{/* A single block-sidebar panel for the whole page — ensures only one is ever
-			    open at a time, preventing stacked fixed overlays and duplicated window listeners. */}
 				{blockSidebarPanel?.type === "image" && (
 					<ImageDetailPanel
 						attributes={blockSidebarPanel.attrs as unknown as ImageAttributes}
@@ -572,7 +536,6 @@ export function Widgets() {
 	);
 }
 
-/** A draggable item in the available widgets palette */
 function DraggablePaletteItem({
 	id,
 	label,
@@ -632,7 +595,6 @@ function WidgetAreaPanel({
 	const toastManager = Toast.useToastManager();
 	const [deleteAreaName, setDeleteAreaName] = React.useState<string | null>(null);
 
-	// Make the area a droppable target for palette items
 	const { setNodeRef: setDropRef, isOver } = useDroppable({
 		id: `area:${area.name}`,
 	});
@@ -688,7 +650,6 @@ function WidgetAreaPanel({
 						))}
 					</SortableContext>
 				) : null}
-				{/* Drop zone hint — shown when dragging a palette item */}
 				{isDraggingPalette && (
 					<div
 						className={`text-center py-4 rounded border-2 border-dashed transition-colors ${
@@ -835,7 +796,6 @@ function WidgetItem({
 	);
 }
 
-/** Inline editor form for a widget, rendered when the widget is expanded */
 function WidgetEditor({
 	widget,
 	components,
@@ -932,7 +892,6 @@ function WidgetEditor({
 						value={componentId}
 						onValueChange={(v) => {
 							setComponentId(v ?? "");
-							// Reset props when component changes
 							if (v !== componentId) {
 								const comp = components.find((c) => c.id === v);
 								if (comp) {
@@ -987,7 +946,6 @@ function WidgetEditor({
 	);
 }
 
-/** Renders a single prop field for a component widget based on PropDef type */
 function ComponentPropField({
 	componentId,
 	propKey,
@@ -1002,8 +960,6 @@ function ComponentPropField({
 	onChange: (value: unknown) => void;
 }) {
 	const { t } = useLingui();
-	// Localize built-in core widget prop labels/options; fall back to the
-	// server-provided string for plugin-registered components.
 	const propMeta = CORE_WIDGET_META[componentId]?.props?.[propKey];
 	const label = propMeta ? t(propMeta.label) : def.label;
 	const optionLabel = (optValue: string, fallback: string) => {

@@ -9,13 +9,9 @@ export interface DatetimeOptions {
 	helpText?: string;
 }
 
-/**
- * Datetime field - date and time picker
- */
 export function datetime(options: DatetimeOptions = {}): FieldDefinition<Date> {
 	let dateSchema = z.date();
 
-	// Apply constraints
 	if (options.min !== undefined) {
 		dateSchema = dateSchema.min(options.min, "Date is too early");
 	}
@@ -24,7 +20,6 @@ export function datetime(options: DatetimeOptions = {}): FieldDefinition<Date> {
 		dateSchema = dateSchema.max(options.max, "Date is too late");
 	}
 
-	// Optional vs required
 	const schema: z.ZodTypeAny = options.required ? dateSchema : dateSchema.optional();
 
 	const ui: FieldUIHints = {

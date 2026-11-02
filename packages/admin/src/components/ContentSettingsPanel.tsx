@@ -51,20 +51,14 @@ import {
 import { TaxonomySidebar, useHasApplicableTaxonomies } from "./TaxonomySidebar";
 import { TranslationsPanel } from "./TranslationsPanel.js";
 
-// Editor role level (40) from @emdash-cms/auth
 const ROLE_EDITOR = 40;
 
-/** Format scheduled date for display */
 function formatScheduledDate(dateStr: string | null) {
 	if (!dateStr) return null;
 	const date = parseTimestamp(dateStr);
 	return date.toLocaleString();
 }
 
-/**
- * Discard-draft confirmation shared by the settings action bar and the
- * distraction-free overlay, so the copy and behavior can't drift.
- */
 export function DiscardDraftDialog({
 	onDiscard,
 	triggerVariant = "ghost",
@@ -115,9 +109,7 @@ export interface SettingsActionBarProps {
 	isNew?: boolean;
 	isDirty: boolean;
 	isSaving: boolean;
-	/** Autosave in flight — reported by the save button's busy state. */
 	isAutosaving?: boolean;
-	/** Preserve operation blocking independently of the visual feedback state. */
 	saveDisabled?: boolean;
 	isLive: boolean;
 	hasPendingChanges: boolean;
@@ -210,15 +202,6 @@ export function PublishActions({
 	);
 }
 
-/**
- * Single action row pinned above the settings panel body. Publish-state
- * context lives in the Publish section below so the sidebar has one action
- * surface and one status surface.
- *
- * Deliberately NOT memoized — it exists so high-frequency props
- * (isDirty, isSaving, isAutosaving) stop here instead of busting the
- * memoized panel body below it.
- */
 export function SettingsActionBar({
 	collectionLabel,
 	isNew,
@@ -295,7 +278,6 @@ export interface ContentSettingsPanelProps {
 	item?: ContentItem | null;
 	isNew?: boolean;
 	manifest?: AdminManifest | null;
-	/** Locale this entry is bound to (URL `?locale=` for new entries). */
 	entryLocale?: string | null;
 	slug: string;
 	onSlugChange: (value: string) => void;
@@ -332,22 +314,12 @@ export interface ContentSettingsPanelProps {
 	onTranslate?: (locale: string) => void;
 	hasSeo: boolean;
 	onSeoChange?: (seo: ContentSeoInput) => void;
-	/** portableText editor for the document outline (null when none mounted) */
 	portableTextEditor: Editor | null;
-	/** When set, the panel shows the block's detail panel instead of settings */
 	blockSidebarPanel: BlockSidebarPanel | null;
 	onBlockSidebarClose: () => void;
 	onBlockSidebarDelete: () => void;
 }
 
-/**
- * Content settings sidebar: publish controls, ownership, bylines,
- * translations, taxonomies, SEO, document outline, and revision history.
- *
- * Memoized — ContentEditor re-renders on every keystroke (formData state),
- * and this subtree is expensive (queries + lists). All handler props must be
- * referentially stable or the memo is defeated.
- */
 export const ContentSettingsPanel = React.memo(function ContentSettingsPanel({
 	collection,
 	item,
@@ -445,7 +417,6 @@ export const ContentSettingsPanel = React.memo(function ContentSettingsPanel({
 	};
 
 	if (blockSidebarPanel) {
-		// A block requesting the sidebar replaces the default sections.
 		return blockSidebarPanel.type === "image" ? (
 			<div className="p-4">
 				<ImageDetailPanel
@@ -473,8 +444,6 @@ export const ContentSettingsPanel = React.memo(function ContentSettingsPanel({
 	}
 
 	return (
-		// The Kumo Sidebar wrapper sets `whitespace-nowrap` for its collapse
-		// animation, which would stop long field descriptions from wrapping.
 		<div className="flex flex-col whitespace-normal">
 			<SortableContentSettingsSections
 				collection={collection}
@@ -708,8 +677,6 @@ export const ContentSettingsPanel = React.memo(function ContentSettingsPanel({
 								onChange={onBylinesChange}
 								onQuickCreate={onQuickCreateByline}
 								onQuickEdit={onQuickEditByline}
-								// Existing entry: use its own locale. New entry: use the
-								// URL `?locale=` (passed in via `entryLocale`).
 								entryLocale={item?.locale ?? entryLocale}
 								i18n={i18n}
 							/>
@@ -738,7 +705,6 @@ export const ContentSettingsPanel = React.memo(function ContentSettingsPanel({
 					</SortableContentSettingsSection>
 				)}
 
-				{/* Do not register an empty sortable row when this collection has no taxonomies. */}
 				{item && hasApplicableTaxonomies && (
 					<SortableContentSettingsSection id="taxonomies" label={t`Taxonomies`}>
 						<TaxonomySidebar

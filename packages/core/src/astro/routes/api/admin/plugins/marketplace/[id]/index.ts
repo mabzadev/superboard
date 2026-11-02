@@ -1,9 +1,3 @@
-/**
- * Marketplace plugin detail proxy endpoint
- *
- * GET /_emdash/api/admin/plugins/marketplace/:id - Get plugin details
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

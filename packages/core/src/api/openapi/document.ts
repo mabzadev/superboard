@@ -1,12 +1,3 @@
-/**
- * OpenAPI 3.1 document generator.
- *
- * Builds the full OpenAPI spec from Zod schemas. The Zod schemas are the
- * single source of truth -- we never hand-write OpenAPI YAML.
- *
- * Covers all public API domains.
- */
-
 import { z } from "zod";
 import { createDocument, type ZodOpenApiPathsObject, type oas31 } from "zod-openapi";
 
@@ -165,13 +156,8 @@ import {
 	widgetSchema,
 } from "../schemas/widgets.js";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 const JSON_CONTENT = "application/json";
 
-/** Standard error responses shared across all authenticated endpoints */
 function standardErrors(
 	...codes: number[]
 ): Record<
@@ -200,12 +186,7 @@ function standardErrors(
 	return responses;
 }
 
-/** Common auth error responses (401 + 403) */
 const authErrors = standardErrors(401, 403);
-
-// ---------------------------------------------------------------------------
-// Content routes
-// ---------------------------------------------------------------------------
 
 const contentPaths = {
 	"/_emdash/api/content/{collection}": {
@@ -687,10 +668,6 @@ const contentPaths = {
 	},
 } as const;
 
-// ---------------------------------------------------------------------------
-// Media routes
-// ---------------------------------------------------------------------------
-
 function buildMediaPaths(maxUploadSize: number) {
 	return {
 		"/_emdash/api/media": {
@@ -1166,10 +1143,6 @@ function buildMediaPaths(maxUploadSize: number) {
 	} as const;
 }
 
-// ---------------------------------------------------------------------------
-// Schema routes
-// ---------------------------------------------------------------------------
-
 const schemaPaths = {
 	"/_emdash/api/schema/collections": {
 		get: {
@@ -1450,10 +1423,6 @@ const schemaPaths = {
 	},
 } as const;
 
-// ---------------------------------------------------------------------------
-// Comments routes
-// ---------------------------------------------------------------------------
-
 const commentsPaths = {
 	"/_emdash/api/comments/{collection}/{contentId}": {
 		get: {
@@ -1619,10 +1588,6 @@ const commentsPaths = {
 		},
 	},
 } as const;
-
-// ---------------------------------------------------------------------------
-// Taxonomy routes
-// ---------------------------------------------------------------------------
 
 const taxonomyPaths = {
 	"/_emdash/api/taxonomies": {
@@ -1863,10 +1828,6 @@ const taxonomyPaths = {
 	},
 } as const;
 
-// ---------------------------------------------------------------------------
-// Menu routes
-// ---------------------------------------------------------------------------
-
 const menuPaths = {
 	"/_emdash/api/menus": {
 		get: {
@@ -2043,10 +2004,6 @@ const menuPaths = {
 	},
 } as const;
 
-// ---------------------------------------------------------------------------
-// Section routes
-// ---------------------------------------------------------------------------
-
 const sectionPaths = {
 	"/_emdash/api/sections": {
 		get: {
@@ -2132,10 +2089,6 @@ const sectionPaths = {
 		},
 	},
 } as const;
-
-// ---------------------------------------------------------------------------
-// Widget routes
-// ---------------------------------------------------------------------------
 
 const widgetPaths = {
 	"/_emdash/api/widget-areas": {
@@ -2294,10 +2247,6 @@ const widgetPaths = {
 	},
 } as const;
 
-// ---------------------------------------------------------------------------
-// Settings routes
-// ---------------------------------------------------------------------------
-
 const settingsPaths = {
 	"/_emdash/api/settings": {
 		get: {
@@ -2329,10 +2278,6 @@ const settingsPaths = {
 		},
 	},
 } as const;
-
-// ---------------------------------------------------------------------------
-// Search routes
-// ---------------------------------------------------------------------------
 
 const searchPaths = {
 	"/_emdash/api/search": {
@@ -2447,10 +2392,6 @@ const searchPaths = {
 		},
 	},
 } as const;
-
-// ---------------------------------------------------------------------------
-// Redirect routes
-// ---------------------------------------------------------------------------
 
 const redirectPaths = {
 	"/_emdash/api/redirects": {
@@ -2607,10 +2548,6 @@ const redirectPaths = {
 		},
 	},
 } as const;
-
-// ---------------------------------------------------------------------------
-// User management routes
-// ---------------------------------------------------------------------------
 
 const userPaths = {
 	"/_emdash/api/admin/users": {
@@ -2817,10 +2754,6 @@ const userPaths = {
 	},
 } as const;
 
-// ---------------------------------------------------------------------------
-// Merge all paths
-// ---------------------------------------------------------------------------
-
 function buildAllPaths(maxUploadSize: number) {
 	return {
 		...contentPaths,
@@ -2838,16 +2771,6 @@ function buildAllPaths(maxUploadSize: number) {
 	} as const;
 }
 
-// ---------------------------------------------------------------------------
-// Document
-// ---------------------------------------------------------------------------
-
-/**
- * Generate the OpenAPI 3.1 document for the EmDash CMS API.
- *
- * Covers: Content, Media, Schema, Comments, Taxonomies, Menus,
- * Sections, Widgets, Settings, Search, Redirects, Users.
- */
 export function generateOpenApiDocument(
 	options: { maxUploadSize?: number } = {},
 ): oas31.OpenAPIObject {
@@ -2864,8 +2787,6 @@ export function generateOpenApiDocument(
 			{
 				url: "{baseUrl}",
 				description: "CMS instance",
-				// Note: `description` on server variables is valid per OAS 3.1 spec but
-				// swagger-parser rejects it as an unevaluated property. Omitted as a workaround.
 				variables: {
 					baseUrl: {
 						default: "http://localhost:4321",
@@ -2925,7 +2846,6 @@ export function generateOpenApiDocument(
 		],
 		components: {
 			schemas: {
-				// Preserve the previously published component while media reads use richer schemas.
 				MediaListResponse: mediaListResponseSchema,
 			},
 			securitySchemes: {

@@ -7,7 +7,6 @@ import { describe, it, expect, vi } from "vitest";
 
 import { render } from "./utils/render.js";
 
-// Test wrapper to render editor with Focus extension
 function TestEditor({ spotlightMode = false }: { spotlightMode?: boolean }) {
 	const editor = useEditor({
 		extensions: [
@@ -48,7 +47,6 @@ describe("Editor Focus Mode", () => {
 	it("Focus extension is configured correctly", async () => {
 		void render(<TestEditor />);
 
-		// Wait for editor to initialize (not just loading state)
 		await vi.waitFor(
 			() => {
 				const wrapper = screen.queryByTestId("editor-wrapper");
@@ -60,11 +58,9 @@ describe("Editor Focus Mode", () => {
 		const editorContent = screen.getByTestId("editor-content");
 		expect(editorContent).toBeDefined();
 
-		// The editor should be rendered with ProseMirror
 		const proseMirror = editorContent.querySelector(".ProseMirror");
 		expect(proseMirror).toBeTruthy();
 
-		// Verify the editor has the correct structure (3 paragraphs)
 		const paragraphs = proseMirror?.querySelectorAll("p");
 		expect(paragraphs?.length).toBe(3);
 	});
@@ -72,7 +68,6 @@ describe("Editor Focus Mode", () => {
 	it("spotlight mode applies CSS class to editor wrapper", async () => {
 		void render(<TestEditor spotlightMode={true} />);
 
-		// Wait for editor to initialize
 		await vi.waitFor(
 			() => {
 				const wrapper = screen.queryByTestId("editor-wrapper");
@@ -88,7 +83,6 @@ describe("Editor Focus Mode", () => {
 	it("non-spotlight mode does not have spotlight-mode class", async () => {
 		void render(<TestEditor spotlightMode={false} />);
 
-		// Wait for editor to initialize
 		await vi.waitFor(
 			() => {
 				const wrapper = screen.queryByTestId("editor-wrapper");
@@ -104,16 +98,13 @@ describe("Editor Focus Mode", () => {
 
 describe("Distraction-free mode state", () => {
 	it("can toggle between focus modes", () => {
-		// Simple state test - verifies the type and state pattern works
 		type FocusMode = "normal" | "spotlight";
 
 		let focusMode: FocusMode = "normal";
 
-		// Toggle to spotlight
 		focusMode = "spotlight";
 		expect(focusMode).toBe("spotlight");
 
-		// Toggle back to normal
 		focusMode = "normal";
 		expect(focusMode).toBe("normal");
 	});

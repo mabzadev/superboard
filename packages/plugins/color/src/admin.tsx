@@ -1,10 +1,3 @@
-/**
- * Color picker admin component.
- *
- * Exports a `fields` map with a "picker" widget that renders a color
- * input with hex value display and preview swatch.
- */
-
 import * as React from "react";
 
 interface FieldWidgetProps {
@@ -17,7 +10,6 @@ interface FieldWidgetProps {
 	minimal?: boolean;
 }
 
-/** Named CSS colors for the preset palette */
 const PRESETS = [
 	"#ef4444",
 	"#f97316",
@@ -35,13 +27,10 @@ const VALID_HEX_PATTERN = /^#[\da-f]{6}$/i;
 
 function ColorPicker({ value, onChange, label, id, required, minimal }: FieldWidgetProps) {
 	const rawColor = typeof value === "string" && value ? value : "#000000";
-	// Only pass valid 6-digit hex to the native color input and preview;
-	// partial input while typing would produce invalid color values.
 	const color = VALID_HEX_PATTERN.test(rawColor) ? rawColor : "#000000";
 
 	const handleHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const v = e.target.value;
-		// Allow partial input while typing
 		onChange(v);
 	};
 

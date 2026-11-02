@@ -30,15 +30,8 @@ import java.util.logging.Formatter
 import java.util.logging.LogRecord
 import java.util.logging.Logger
 
-/**
- * Shared utilities for E2E tests.
- * Provides MockWebServer management, response enqueuers, and SDK state helpers.
- */
 object E2ETestUtils {
 
-    // Replace default JUL formatter on OkHttp loggers to suppress redundant
-    // "Jan 28, 2026 4:07:35 PM okhttp3.internal.platform.Platform log" header lines.
-    // Keeps the actual HTTP log content visible.
     private val okhttpLoggers = listOf(
         Logger.getLogger("okhttp3.internal.platform.Platform"),
         Logger.getLogger("okhttp3.OkHttpClient"),
@@ -52,56 +45,28 @@ object E2ETestUtils {
         })
     }
 
-    // ==================== MockWebServer Management ====================
-
-    // Servers kept alive after tests so lifecycle and retry coroutines can complete
-    // their HTTP requests against a live server instead of hitting ConnectException +
-    // 10s OkHttp timeout + 5s retry delay. These are never explicitly shut down — the
-    // JVM process exit cleans them up. Keeping ~30 ephemeral ports alive is fine for a
-    // test suite.
     private val drainedServers = mutableListOf<MockWebServer>()
 
-    /**
-     * Creates and starts a MockWebServer.
-     * Call this in @Before methods.
-     */
     fun createMockWebServer(): MockWebServer {
         val server = MockWebServer()
         server.start()
         return server
     }
 
-    /**
-     * Sets up test application with mock Android ID and clears SDK SharedPreferences
-     * after the previous manager's tracked background work has been drained, preventing
-     * stale lifecycle data from contaminating the next test.
-     */
     fun setupTestApplication(application: Application) {
         Settings.Secure.putString(
             application.contentResolver,
             Settings.Secure.ANDROID_ID,
             "robolectric-test-device-id"
         )
-        // Clear all SDK SharedPreferences to start fresh
         application.getSharedPreferences("SuperBoardStorage", android.content.Context.MODE_PRIVATE)
             .edit().clear().apply()
         application.getSharedPreferences("superboard_prefs", android.content.Context.MODE_PRIVATE)
             .edit().clear().apply()
     }
 
-    /**
-     * Cleans up MockWebServer and test state.
-     * Instead of shutting down immediately, installs a permissive drain dispatcher
-     * that returns 200 OK for all requests. This lets lingering lifecycle coroutines
-     * (e.g., sendTimeSpentEventsToBackend retry loops from the previous test) complete
-     * their HTTP calls instantly rather than hitting ConnectException → 10s OkHttp
-     * connect timeout → 5s delay per event. The server is shut down in the next
-     * test's createMockWebServer() call.
-     * Call this in @After methods.
-     */
     fun cleanupMockWebServer(server: MockWebServer) {
         try {
-            // Install a catch-all dispatcher so lingering coroutines get fast 200 responses
             server.dispatcher = object : Dispatcher() {
                 override fun dispatch(request: RecordedRequest): MockResponse {
                     return MockResponse()
@@ -110,15 +75,11 @@ object E2ETestUtils {
                         .setBody("{}")
                 }
             }
-            // Keep server alive indefinitely for lingering coroutines
             drainedServers.add(server)
         } catch (e: Exception) {
-            // If we can't set the dispatcher, shut down immediately as fallback
-            try { server.shutdown() } catch (e2: Exception) { /* ignore */ }
+            try { server.shutdown() } catch (e2: Exception) { }
         }
     }
-
-    // ==================== Response Enqueuers ====================
 
     fun enqueueAuthenticationResponse(server: MockWebServer, superboardId: String = "test-superboard-id-123") {
         val response = """
@@ -331,15 +292,6 @@ object E2ETestUtils {
         )
     }
 
-    // PURCHASE_EVENT_DISABLED: fun enqueuePaymentEventResponse(server: MockWebServer) {
-    // PURCHASE_EVENT_DISABLED:     server.enqueue(
-    // PURCHASE_EVENT_DISABLED:         MockResponse()
-    // PURCHASE_EVENT_DISABLED:             .setResponseCode(200)
-    // PURCHASE_EVENT_DISABLED:             .setHeader("Content-Type", "application/json")
-    // PURCHASE_EVENT_DISABLED:             .setBody("{}")
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED: }
-
     fun enqueueAutoDisplayNotificationsResponse(server: MockWebServer, notifications: List<Map<String, Any>> = emptyList()) {
         val notificationsJson = notifications.joinToString(",", "[", "]") { notification ->
             notification.entries.joinToString(",", "{", "}") { (k, v) ->
@@ -364,12 +316,6 @@ object E2ETestUtils {
         )
     }
 
-    // ==================== Singleton/State Management ====================
-
-    /**
-     * Reset SuperBoard singleton state via reflection.
-     * This allows each test to start with a fresh SDK state.
-     */
     fun resetSuperBoardSingleton() {
         val errors = mutableListOf<String>()
 
@@ -380,9 +326,6 @@ object E2ETestUtils {
             val instance = instanceField.get(null)
                 ?: throw IllegalStateException("SuperBoard instance is null")
 
-            // Drain the previous manager's tracked background transition before its
-            // shared storage is cleared. Otherwise an old TIME_SPENT finalizer can
-            // wake up after the next test starts and mutate that test's events.
             try {
                 val managerField = superboardClass.getDeclaredField("superboardManager")
                 managerField.isAccessible = true
@@ -399,12 +342,6 @@ object E2ETestUtils {
                 errors.add("Failed to drain pending TIME_SPENT lifecycle work: ${e.message}")
             }
 
-            // Unregister lifecycle callbacks and reset numStarted to prevent
-            // accumulation across tests. Each configure() call registers the same
-            // observer object; without unregistering ALL copies, subsequent tests
-            // get duplicate onActivityStarted/onActivityStopped callbacks. This
-            // inflates numStarted so it never reaches 0, preventing
-            // onAppBackgrounded/onAppForegrounded from firing.
             try {
                 val appField = superboardClass.getDeclaredField("application")
                 appField.isAccessible = true
@@ -415,16 +352,11 @@ object E2ETestUtils {
                 val observer = observerField.get(instance) as? android.app.Application.ActivityLifecycleCallbacks
 
                 if (app != null && observer != null) {
-                    // Unregister multiple times to remove all accumulated registrations.
-                    // registerActivityLifecycleCallbacks adds to a list (not a set), so
-                    // N configure() calls = N registrations. Each unregister removes one.
                     repeat(10) {
                         app.unregisterActivityLifecycleCallbacks(observer)
                     }
                 }
 
-                // Reset numStarted to 0 so the next test's first onActivityStarted
-                // correctly detects numStarted==0 → foreground transition.
                 if (observer != null) {
                     try {
                         val numStartedField = observer.javaClass.getDeclaredField("numStarted")
@@ -438,7 +370,6 @@ object E2ETestUtils {
                 errors.add("Failed to unregister lifecycle callbacks: ${e.message}")
             }
 
-            // Reset nullable fields to null
             listOf(
                 "superboardManager",
                 "notificationsManager",
@@ -461,7 +392,6 @@ object E2ETestUtils {
                 }
             }
 
-            // Reset superboardContext to fresh instance
             try {
                 val contextField = superboardClass.getDeclaredField("superboardContext")
                 contextField.isAccessible = true
@@ -483,11 +413,6 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Pre-populate ScreenUtils cache with known values so the SDK sends
-     * predictable screen dimensions during authentication. These values
-     * must match what postDeviceFingerprint() sends to the browser device.
-     */
     fun setupMockScreenResolution(width: String = "393", height: String = "851") {
         try {
             val screenUtilsClass = Class.forName("io.superboard.utils.ScreenUtils")
@@ -496,7 +421,6 @@ object E2ETestUtils {
             cachedField.set(null, Pair(width, height))
             println("Mock screen resolution set to: ${width}x${height}")
         } catch (e: Exception) {
-            // ScreenUtils is a Kotlin object; try instance-based access
             try {
                 val screenUtilsClass = Class.forName("io.superboard.utils.ScreenUtils")
                 val instanceField = screenUtilsClass.getDeclaredField("INSTANCE")
@@ -512,9 +436,6 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Pre-populate GlUtils cache to avoid EGL errors in Robolectric.
-     */
     fun setupMockGlInfo() {
         try {
             val glUtilsClass = GlUtils::class.java
@@ -530,14 +451,8 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Set the cached user agent in WebViewUtils to match a browser profile.
-     * This ensures the SDK sends the same user agent as the simulated browser,
-     * allowing the backend to match browser sessions to SDK sessions.
-     */
     fun setupMockUserAgent(userAgent: String) {
         try {
-            // Kotlin stores private companion vars as static fields on the outer class
             val webViewUtilsClass = Class.forName("io.superboard.utils.WebViewUtils")
             val cachedField = webViewUtilsClass.getDeclaredField("cachedUserAgent")
             cachedField.isAccessible = true
@@ -548,9 +463,6 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Get the authenticationJob from SuperBoard singleton via reflection.
-     */
     fun getAuthenticationJob(): Job? {
         return try {
             val superboardClass = SuperBoard::class.java
@@ -567,9 +479,6 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Get the SuperBoard singleton instance via reflection.
-     */
     fun getSuperBoardInstance(): Any? {
         return try {
             val companionClass = Class.forName("io.superboard.SuperBoard\$Companion")
@@ -595,9 +504,6 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Get authentication state from SuperBoardManager.
-     */
     fun getAuthenticationState(): String? {
         return try {
             val instance = getSuperBoardInstance() ?: return null
@@ -615,9 +521,6 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Get superboardId from SuperBoardContext.
-     */
     fun setNumStarted(value: Int) {
         try {
             val instance = getSuperBoardInstance() ?: return
@@ -649,9 +552,6 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Check if SDK is enabled.
-     */
     fun isSdkEnabled(): Boolean {
         return try {
             val instance = getSuperBoardInstance() ?: return true
@@ -673,11 +573,6 @@ object E2ETestUtils {
         }
     }
 
-    // ==================== Request Helpers ====================
-
-    /**
-     * Collect all requests made to MockWebServer.
-     */
     fun collectAllRequests(server: MockWebServer): List<Pair<String, String>> {
         val requests = mutableListOf<Pair<String, String>>()
         while (true) {
@@ -689,18 +584,10 @@ object E2ETestUtils {
         return requests
     }
 
-    /**
-     * Find requests matching a path pattern.
-     */
     fun findRequestsByPath(requests: List<Pair<String, String>>, pathContains: String): List<Pair<String, String>> {
         return requests.filter { it.first.contains(pathContains) }
     }
 
-    // ==================== Assertion Helpers ====================
-
-    /**
-     * Assert authentication flow completed.
-     */
     fun assertAuthenticationCompleted() {
         val authState = getAuthenticationState()
         if (authState != null) {
@@ -708,16 +595,10 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Verify requests contain specific endpoint calls.
-     */
     fun assertRequestMade(requests: List<Pair<String, String>>, endpoint: String, message: String = "Request to $endpoint should be made") {
         assertTrue(message, requests.any { it.first.contains(endpoint) })
     }
 
-    /**
-     * Verify request body contains expected content.
-     */
     fun assertRequestBodyContains(requests: List<Pair<String, String>>, endpoint: String, content: String, message: String? = null) {
         val matchingRequests = requests.filter { it.first.contains(endpoint) }
         assertTrue(
@@ -726,28 +607,14 @@ object E2ETestUtils {
         )
     }
 
-    /**
-     * Verify SDK is functional after error/timeout by exercising public API
-     * properties and checking internal state is consistent.
-     *
-     * Checks:
-     * 1. Public properties (identifier, pushToken, attributes) are readable without exceptions
-     * 2. Public properties are writable without exceptions
-     * 3. Authentication state is a known valid enum value
-     * 4. SDK is still enabled
-     * 5. SuperBoard singleton instance exists
-     */
     fun assertSdkFunctionalAfterError() {
-        // 1. Verify singleton instance exists
         val instance = getSuperBoardInstance()
         assertNotNull("SuperBoard singleton instance should exist after error", instance)
 
-        // 2. Verify public properties are readable
         val identifier = SuperBoard.identifier
         val pushToken = SuperBoard.pushToken
         val attributes = SuperBoard.attributes
 
-        // 3. Verify public properties are writable (set, then restore)
         val originalIdentifier = identifier
         SuperBoard.identifier = "sdk-functional-check"
         assertEquals(
@@ -766,7 +633,6 @@ object E2ETestUtils {
         )
         SuperBoard.pushToken = originalPushToken
 
-        // 4. Verify authentication state is a known valid value
         val authState = getAuthenticationState()
         assertNotNull("Authentication state should be accessible after error", authState)
         assertTrue(
@@ -774,13 +640,9 @@ object E2ETestUtils {
             authState in listOf("AUTHENTICATED", "RETRYING", "UNAUTHENTICATED")
         )
 
-        // 5. Verify SDK is still enabled
         assertTrue("SDK should still be enabled after error", isSdkEnabled())
     }
 
-    /**
-     * Verify authentication is in progress or retrying.
-     */
     fun assertAuthenticationInProgress() {
         val authState = getAuthenticationState()
         assertNotNull("Authentication state should be accessible", authState)
@@ -790,34 +652,21 @@ object E2ETestUtils {
         )
     }
 
-    /**
-     * Verify event infrastructure works.
-     */
     fun verifyEventInfrastructureWorks(requests: List<Pair<String, String>>) {
         assertRequestMade(requests, "authenticate", "SDK should call authenticate endpoint")
         assertRequestMade(requests, "device_for_vendor_id", "SDK should call device_for_vendor_id endpoint")
     }
 
-    /**
-     * Verify payment infrastructure works.
-     */
     fun verifyPaymentInfrastructureWorks(requests: List<Pair<String, String>>) {
         assertRequestMade(requests, "authenticate", "SDK should call authenticate endpoint")
         assertRequestMade(requests, "device_for_vendor_id", "SDK should call device_for_vendor_id endpoint")
     }
-
-    // ==================== Request Value Assertions ====================
-    // These mirror the enqueue* functions — verifying the SDK sent expected values.
 
     private const val TEST_VENDOR_ID = "robolectric-test-device-id"
     private const val TEST_APP_VERSION = "1.0.0"
     private const val TEST_BUNDLE = "io.superboard.test"
     private const val TEST_DEVICE = "Unknown robolectric"
 
-    /**
-     * Assert the authenticate request was made with correct device info.
-     * Mirrors [enqueueAuthenticationResponse].
-     */
     fun assertAuthenticateRequestValues(requests: List<Pair<String, String>>) {
         val authRequests = findRequestsByPath(requests, "authenticate")
         assertTrue("Should call authenticate endpoint", authRequests.isNotEmpty())
@@ -832,10 +681,6 @@ object E2ETestUtils {
             body.contains("\"bundle\":\"$TEST_BUNDLE\""))
     }
 
-    /**
-     * Assert the device_for_vendor_id request was made with correct vendor_id.
-     * Mirrors [enqueueDeviceResponse].
-     */
     fun assertDeviceRequestValues(requests: List<Pair<String, String>>) {
         val deviceRequests = findRequestsByPath(requests, "device_for_vendor_id")
         assertTrue("Should call device_for_vendor_id endpoint", deviceRequests.isNotEmpty())
@@ -844,10 +689,6 @@ object E2ETestUtils {
             path.contains("vendor_id=$TEST_VENDOR_ID"))
     }
 
-    /**
-     * Assert event requests contain the expected event type.
-     * Mirrors [enqueueEventResponse].
-     */
     fun assertEventRequestValues(requests: List<Pair<String, String>>, eventType: String) {
         val eventRequests = findRequestsByPath(requests, "event")
         assertTrue("Should have event requests", eventRequests.isNotEmpty())
@@ -855,34 +696,6 @@ object E2ETestUtils {
             eventRequests.any { it.second.contains(eventType) })
     }
 
-    /**
-     * Assert a payment event request contains expected values.
-     * Mirrors [enqueuePaymentEventResponse].
-     */
-    // PURCHASE_EVENT_DISABLED: fun assertPaymentEventRequestValues(
-    // PURCHASE_EVENT_DISABLED:     requests: List<Pair<String, String>>,
-    // PURCHASE_EVENT_DISABLED:     priceInCents: Int,
-    // PURCHASE_EVENT_DISABLED:     currency: String,
-    // PURCHASE_EVENT_DISABLED:     productId: String
-    // PURCHASE_EVENT_DISABLED: ) {
-    // PURCHASE_EVENT_DISABLED:     val eventRequests = findRequestsByPath(requests, "event")
-    // PURCHASE_EVENT_DISABLED:     val paymentRequest = eventRequests.find {
-    // PURCHASE_EVENT_DISABLED:         it.second.contains(priceInCents.toString()) || it.second.contains(productId)
-    // PURCHASE_EVENT_DISABLED:     }
-    // PURCHASE_EVENT_DISABLED:     if (paymentRequest != null) {
-    // PURCHASE_EVENT_DISABLED:         assertTrue("Payment request should contain price $priceInCents",
-    // PURCHASE_EVENT_DISABLED:             paymentRequest.second.contains(priceInCents.toString()))
-    // PURCHASE_EVENT_DISABLED:         assertTrue("Payment request should contain currency $currency",
-    // PURCHASE_EVENT_DISABLED:             paymentRequest.second.contains(currency))
-    // PURCHASE_EVENT_DISABLED:         assertTrue("Payment request should contain productId $productId",
-    // PURCHASE_EVENT_DISABLED:             paymentRequest.second.contains(productId))
-    // PURCHASE_EVENT_DISABLED:     }
-    // PURCHASE_EVENT_DISABLED: }
-
-    /**
-     * Assert a visitor_attributes request contains expected field and value.
-     * Mirrors [enqueueVisitorAttributesResponse].
-     */
     fun assertVisitorAttributesRequestValues(
         requests: List<Pair<String, String>>,
         field: String,
@@ -893,15 +706,10 @@ object E2ETestUtils {
             assertTrue("visitor_attributes request should contain '$field' with '$value'",
                 attrRequests.any { it.second.contains(field) && it.second.contains(value) })
         } else {
-            // Async API call may not complete within test timeframe
             assertAuthenticationCompleted()
         }
     }
 
-    /**
-     * Assert the generate_link request contains expected parameters.
-     * Mirrors [enqueueGenerateLinkResponse].
-     */
     fun assertGenerateLinkRequestValues(
         requests: List<Pair<String, String>>,
         expectedTitle: String? = null,
@@ -918,10 +726,6 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Assert the data_for_device_and_url request was made with the expected deeplink URL.
-     * Mirrors [enqueueDataForDeviceResponse] / [enqueueDataForDeviceAndUrlResponse].
-     */
     fun assertDataForDeviceAndUrlRequestValues(
         requests: List<Pair<String, String>>,
         expectedScheme: String,
@@ -938,10 +742,6 @@ object E2ETestUtils {
             body.contains(TEST_VENDOR_ID))
     }
 
-    /**
-     * Assert the data_for_device request was made (no deeplink URL).
-     * Mirrors [enqueueDataForDeviceResponse].
-     */
     fun assertDataForDeviceRequestValues(requests: List<Pair<String, String>>) {
         val dataRequests = findRequestsByPath(requests, "data_for_device")
         assertTrue("SDK should call data_for_device endpoint", dataRequests.isNotEmpty())
@@ -950,11 +750,6 @@ object E2ETestUtils {
             body.contains(TEST_VENDOR_ID))
     }
 
-    // ==================== Async Helpers ====================
-
-    /**
-     * Run a suspend function that needs Dispatchers.Main while pumping the looper.
-     */
     fun <T> runWithLooperPumping(
         timeoutMs: Long = 5_000L,
         failOnTimeout: Boolean = false,
@@ -1000,13 +795,6 @@ object E2ETestUtils {
         }
     }
 
-    /**
-     * Wait for a condition to become true while pumping the main looper.
-     * Fails the test if the condition is not met within the timeout.
-     *
-     * Uses a [CountDownLatch] with looper pumping to handle async SDK callbacks
-     * that dispatch to Dispatchers.Main via the Android main looper.
-     */
     fun waitForCondition(
         timeoutMs: Long = 5_000L,
         description: String = "condition",
@@ -1020,11 +808,6 @@ object E2ETestUtils {
         assertTrue("Timed out waiting for $description after ${timeoutMs}ms", condition())
     }
 
-    /**
-     * Configure SDK and wait for authentication without creating an activity.
-     * Use this for tests that create their own activity (e.g., deeplink tests)
-     * to avoid a second handleIntent call consuming mock responses.
-     */
     fun configureAndWaitForAuthOnly(
         application: Application,
         apiKey: String = "test-api-key",
@@ -1039,9 +822,6 @@ object E2ETestUtils {
         Shadows.shadowOf(Looper.getMainLooper()).idle()
     }
 
-    /**
-     * Configure SDK and wait for authentication.
-     */
     suspend fun configureAndWaitForAuth(
         application: Application,
         apiKey: String = "test-api-key",
@@ -1064,34 +844,10 @@ object E2ETestUtils {
         return activityController
     }
 
-    /**
-     * Process main looper.
-     */
     fun processMainLooper() {
         Shadows.shadowOf(Looper.getMainLooper()).idle()
     }
 
-    // ==================== URL-Based Mock Dispatcher ====================
-
-    /**
-     * Set up a URL-based dispatcher on MockWebServer so responses are matched
-     * by endpoint path instead of consumed FIFO. This is needed for deeplink
-     * tests where multiple concurrent SDK calls (auth, events, notifications,
-     * deeplink resolution) would consume responses in unpredictable order.
-     *
-     * @param responses Map of path substring to MockResponse.
-     *   A request whose path contains the key gets the corresponding response.
-     *   Unmatched requests get a 200 OK with empty JSON body.
-     */
-    /**
-     * Enable immediate event sending by setting allowedToSendToBackend = true on the EventsManager
-     * and backdating firstRequestTime to 20 seconds ago. This bypasses the 15-second leeway delay
-     * that normally prevents events from being sent immediately.
-     *
-     * The backdating is necessary because checkEventsSendingAllowed() recalculates
-     * allowedToSendToBackend based on (now - firstRequestTime) > 14 seconds, which would
-     * overwrite a simple boolean set.
-     */
     fun enableImmediateEventSending() {
         try {
             val instance = getSuperBoardInstance() ?: return
@@ -1104,7 +860,6 @@ object E2ETestUtils {
             eventsManagerField.isAccessible = true
             val eventsManager = eventsManagerField.get(manager) ?: return
 
-            // Set firstRequestTime to 20 seconds ago so the duration check passes
             val firstRequestTimeField = eventsManager.javaClass.getDeclaredField("firstRequestTime")
             firstRequestTimeField.isAccessible = true
             val instantCompatClass = firstRequestTimeField.type
@@ -1112,7 +867,6 @@ object E2ETestUtils {
             val pastInstant = constructor.newInstance(System.currentTimeMillis() - 20_000)
             firstRequestTimeField.set(eventsManager, pastInstant)
 
-            // Set allowedToSendToBackend = true
             val allowedField = eventsManager.javaClass.getDeclaredField("allowedToSendToBackend")
             allowedField.isAccessible = true
             allowedField.setBoolean(eventsManager, true)
@@ -1133,7 +887,6 @@ object E2ETestUtils {
                         return response
                     }
                 }
-                // Default: return 200 OK for any unmatched request
                 return MockResponse()
                     .setResponseCode(200)
                     .setHeader("Content-Type", "application/json")

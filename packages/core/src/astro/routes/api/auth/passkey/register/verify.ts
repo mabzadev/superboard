@@ -1,9 +1,3 @@
-/**
- * POST /_emdash/api/auth/passkey/register/verify
- *
- * Verify and store a new passkey credential (authenticated user)
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -38,7 +32,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
 
-	// Require authentication
 	if (!user) {
 		return apiError("NOT_AUTHENTICATED", "Not authenticated", 401);
 	}
@@ -46,17 +39,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	try {
 		const adapter = createKyselyAdapter(emdash.db);
 
-		// Check passkey limit again (in case of concurrent requests)
 		const count = await adapter.countCredentialsByUserId(user.id);
 		if (count >= MAX_PASSKEYS) {
 			return apiError("PASSKEY_LIMIT", `Maximum of ${MAX_PASSKEYS} passkeys allowed`, 400);
 		}
 
-		// Parse request body
 		const body = await parseBody(request, passkeyRegisterVerifyBody);
 		if (isParseError(body)) return body;
 
-		// Get passkey config
 		const url = new URL(request.url);
 		const optionsRepo = new OptionsRepository(emdash.db);
 		const siteName = (await optionsRepo.get<string>("emdash:site_title")) ?? undefined;
@@ -67,7 +57,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		);
 		const passkeyConfig = getPasskeyConfig(url, siteName, siteUrl, allowedOrigins);
 
-		// Verify the registration response
 		const challengeStore = createChallengeStore(emdash.db);
 		const verified = await verifyRegistrationResponse(
 			passkeyConfig,
@@ -75,7 +64,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			challengeStore,
 		);
 
-		// Get passkey name - prefer body.name, then check stored pending name
 		let passKeyName: string | undefined = body.name ?? undefined;
 		if (!passKeyName) {
 			const pending = await optionsRepo.get<{ name?: string }>(`emdash:passkey_pending:${user.id}`);
@@ -84,13 +72,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			}
 		}
 
-		// Clean up pending state
 		await optionsRepo.delete(`emdash:passkey_pending:${user.id}`);
 
-		// Register the passkey
 		const credential = await registerPasskey(adapter, user.id, verified, passKeyName);
 
-		// Return the new passkey info
 		const passkey: PasskeyResponse = {
 			id: credential.id,
 			name: credential.name,
@@ -104,15 +89,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	} catch (error) {
 		console.error("Passkey registration verify error:", error);
 
-		// Handle specific errors
 		const message = error instanceof Error ? error.message : "";
 
-		// Check for duplicate credential error
 		if (message.includes("credential_exists") || message.includes("already")) {
 			return apiError("CREDENTIAL_EXISTS", "This passkey is already registered", 400);
 		}
 
-		// Check for challenge errors
 		if (message.includes("challenge") || message.includes("expired")) {
 			return apiError("CHALLENGE_EXPIRED", "Registration expired. Please try again.", 400);
 		}

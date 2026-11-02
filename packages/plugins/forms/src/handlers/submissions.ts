@@ -1,9 +1,3 @@
-/**
- * Submission management route handlers.
- *
- * Admin-only routes for viewing, updating, exporting, and deleting submissions.
- */
-
 import type { RouteContext, StorageCollection } from "emdash";
 import { PluginRouteError } from "emdash";
 
@@ -17,7 +11,6 @@ import type {
 } from "../schemas.js";
 import type { FormDefinition, Submission } from "../types.js";
 
-/** Typed access to plugin storage collections */
 function forms(ctx: RouteContext): StorageCollection<FormDefinition> {
 	return ctx.storage.forms as StorageCollection<FormDefinition>;
 }
@@ -25,8 +18,6 @@ function forms(ctx: RouteContext): StorageCollection<FormDefinition> {
 function submissions(ctx: RouteContext): StorageCollection<Submission> {
 	return ctx.storage.submissions as StorageCollection<Submission>;
 }
-
-// ─── List Submissions ────────────────────────────────────────────
 
 export async function submissionsListHandler(ctx: RouteContext<SubmissionsListInput>) {
 	const input = ctx.input;
@@ -49,8 +40,6 @@ export async function submissionsListHandler(ctx: RouteContext<SubmissionsListIn
 	};
 }
 
-// ─── Get Single Submission ───────────────────────────────────────
-
 export async function submissionGetHandler(ctx: RouteContext<SubmissionGetInput>) {
 	const sub = await submissions(ctx).get(ctx.input.id);
 	if (!sub) {
@@ -59,8 +48,6 @@ export async function submissionGetHandler(ctx: RouteContext<SubmissionGetInput>
 
 	return { id: ctx.input.id, ...sub };
 }
-
-// ─── Update Submission ───────────────────────────────────────────
 
 export async function submissionUpdateHandler(ctx: RouteContext<SubmissionUpdateInput>) {
 	const input = ctx.input;
@@ -82,8 +69,6 @@ export async function submissionUpdateHandler(ctx: RouteContext<SubmissionUpdate
 	return { id: input.id, ...updated };
 }
 
-// ─── Delete Submission ───────────────────────────────────────────
-
 export async function submissionDeleteHandler(ctx: RouteContext<SubmissionDeleteInput>) {
 	const input = ctx.input;
 
@@ -92,7 +77,6 @@ export async function submissionDeleteHandler(ctx: RouteContext<SubmissionDelete
 		throw PluginRouteError.notFound("Submission not found");
 	}
 
-	// Delete associated media files
 	if (existing.files && ctx.media && "delete" in ctx.media) {
 		const mediaWithDelete = ctx.media as { delete(id: string): Promise<boolean> };
 		for (const file of existing.files) {
@@ -102,7 +86,6 @@ export async function submissionDeleteHandler(ctx: RouteContext<SubmissionDelete
 
 	await submissions(ctx).delete(input.id);
 
-	// Update form counter using count() to avoid race conditions
 	if (existing.formId) {
 		const form = await forms(ctx).get(existing.formId);
 		if (form) {
@@ -117,12 +100,9 @@ export async function submissionDeleteHandler(ctx: RouteContext<SubmissionDelete
 	return { deleted: true };
 }
 
-// ��── Export Submissions ──────────────────────────────────────────
-
 export async function exportHandler(ctx: RouteContext<ExportInput>) {
 	const input = ctx.input;
 
-	// Load form definition
 	let form: FormDefinition | null = null;
 	const byId = await forms(ctx).get(input.formId);
 	if (byId) {
@@ -141,7 +121,6 @@ export async function exportHandler(ctx: RouteContext<ExportInput>) {
 		throw PluginRouteError.notFound("Form not found");
 	}
 
-	// Build where clause
 	const where: Record<string, string | number | boolean | null | Record<string, string>> = {
 		formId: input.formId,
 	};
@@ -153,7 +132,6 @@ export async function exportHandler(ctx: RouteContext<ExportInput>) {
 		where.createdAt = range;
 	}
 
-	// Collect all submissions (paginate through)
 	const allItems: Array<{ id: string; data: Submission }> = [];
 	let cursor: string | undefined;
 
@@ -180,7 +158,6 @@ export async function exportHandler(ctx: RouteContext<ExportInput>) {
 		};
 	}
 
-	// CSV
 	const csv = formatCsv(form, allItems);
 	return {
 		data: csv,

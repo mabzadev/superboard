@@ -1,26 +1,9 @@
-/**
- * Device Authorization Page
- *
- * Standalone page where users enter the code displayed by `emdash login`
- * to authorize a CLI or agent to access their account.
- *
- * Flow:
- * 1. User runs `emdash login` → sees a code like ABCD-1234
- * 2. User opens this page in their browser (already logged in)
- * 3. User enters the code → clicks Authorize
- * 4. CLI receives tokens and saves them
- */
-
 import { Button, Input } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 
 import { apiFetch, API_BASE, parseApiResponse } from "../lib/api";
-
-// ============================================================================
-// Types
-// ============================================================================
 
 interface UserInfo {
 	id: string;
@@ -30,10 +13,6 @@ interface UserInfo {
 }
 
 type PageState = "input" | "submitting" | "success" | "denied" | "error";
-
-// ============================================================================
-// Constants
-// ============================================================================
 
 const ROLE_NAMES: Record<number, string> = {
 	10: "Subscriber",
@@ -46,16 +25,11 @@ const ROLE_NAMES: Record<number, string> = {
 const DEVICE_CODE_INVALID_CHARS_REGEX = /[^A-Z0-9-]/g;
 const DEVICE_CODE_HYPHEN_REGEX = /-/g;
 
-// ============================================================================
-// Component
-// ============================================================================
-
 export function DeviceAuthorizePage() {
 	const [code, setCode] = React.useState("");
 	const [pageState, setPageState] = React.useState<PageState>("input");
 	const [errorMessage, setErrorMessage] = React.useState("");
 
-	// Check if user is logged in
 	const {
 		data: user,
 		isLoading,
@@ -69,7 +43,6 @@ export function DeviceAuthorizePage() {
 		retry: false,
 	});
 
-	// Pre-populate from URL query param (?code=ABCD-1234)
 	React.useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
 		const urlCode = params.get("code");
@@ -78,7 +51,6 @@ export function DeviceAuthorizePage() {
 		}
 	}, []);
 
-	// Not authenticated — redirect to login
 	React.useEffect(() => {
 		if (!isLoading && (authError || !user)) {
 			const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
@@ -130,16 +102,13 @@ export function DeviceAuthorizePage() {
 		}
 	}
 
-	// Format code as user types (insert hyphen after 4 chars)
 	function handleCodeChange(e: React.ChangeEvent<HTMLInputElement>) {
 		let value = e.target.value.toUpperCase().replace(DEVICE_CODE_INVALID_CHARS_REGEX, "");
 
-		// Auto-insert hyphen after 4 chars if not already present
 		if (value.length === 4 && !value.includes("-")) {
 			value = value + "-";
 		}
 
-		// Limit to 9 chars (XXXX-XXXX)
 		if (value.length > 9) {
 			value = value.slice(0, 9);
 		}
@@ -168,7 +137,6 @@ export function DeviceAuthorizePage() {
 	return (
 		<PageWrapper>
 			<div className="w-full max-w-sm">
-				{/* Header */}
 				<div className="text-center mb-8">
 					<div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-kumo-brand/10 mb-4">
 						<TerminalIcon className="w-6 h-6 text-kumo-link" />
@@ -177,7 +145,6 @@ export function DeviceAuthorizePage() {
 					<p className="text-kumo-subtle text-sm mt-1.5">{t`Enter the code from your terminal`}</p>
 				</div>
 
-				{/* Success state */}
 				{pageState === "success" && (
 					<div className="rounded-lg border border-kumo-success/50 bg-kumo-success-tint p-6 text-center">
 						<div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-kumo-success/15 mb-3">
@@ -191,7 +158,6 @@ export function DeviceAuthorizePage() {
 					</div>
 				)}
 
-				{/* Denied state */}
 				{pageState === "denied" && (
 					<div className="rounded-lg border border-kumo-line bg-kumo-base p-6 text-center">
 						<h2 className="font-medium">{t`Authorization denied`}</h2>
@@ -209,11 +175,9 @@ export function DeviceAuthorizePage() {
 					</div>
 				)}
 
-				{/* Input / Error state */}
 				{(pageState === "input" || pageState === "submitting" || pageState === "error") && (
 					<form onSubmit={handleSubmit}>
 						<div className="rounded-lg border border-kumo-line bg-kumo-base p-6">
-							{/* User badge */}
 							<div className="flex items-center gap-2 mb-5 pb-4 border-b border-kumo-line">
 								<div className="w-8 h-8 rounded-full bg-kumo-tint flex items-center justify-center text-xs font-medium">
 									{(user.name || user.email).charAt(0).toUpperCase()}
@@ -224,7 +188,6 @@ export function DeviceAuthorizePage() {
 								</div>
 							</div>
 
-							{/* Code input */}
 							<label className="block text-sm font-medium mb-2" htmlFor="user-code">
 								{t`Device code`}
 							</label>
@@ -241,12 +204,10 @@ export function DeviceAuthorizePage() {
 								disabled={pageState === "submitting"}
 							/>
 
-							{/* Error message */}
 							{pageState === "error" && errorMessage && (
 								<p className="text-sm text-kumo-danger mt-2">{errorMessage}</p>
 							)}
 
-							{/* Actions */}
 							<div className="flex gap-2 mt-4">
 								<Button
 									type="submit"
@@ -284,10 +245,6 @@ export function DeviceAuthorizePage() {
 	);
 }
 
-// ============================================================================
-// Layout wrapper
-// ============================================================================
-
 function PageWrapper({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-kumo-base p-4">
@@ -295,10 +252,6 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 		</div>
 	);
 }
-
-// ============================================================================
-// Icons (inline SVG to avoid dependency on icon library for this simple page)
-// ============================================================================
 
 function TerminalIcon({ className }: { className?: string }) {
 	return (

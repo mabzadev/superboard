@@ -8,9 +8,6 @@ describe("parseBylinesLocaleSearch", () => {
 	});
 
 	it("normalizes empty-string locale to undefined", () => {
-		// `/bylines?locale=` would otherwise leave `locale: ""` in route state.
-		// The bylines API client treats empty string as truthy-omit, so the
-		// page would fetch every locale's rows while UI says one is active.
 		expect(parseBylinesLocaleSearch({ locale: "" })).toEqual({ locale: undefined });
 	});
 

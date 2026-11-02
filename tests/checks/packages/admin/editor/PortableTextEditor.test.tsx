@@ -1,11 +1,3 @@
-/**
- * PortableTextEditor component tests.
- *
- * Tests the TipTap-based rich text editor in vitest browser mode,
- * covering Portable Text ↔ ProseMirror round-trip conversion,
- * toolbar behaviour, focus modes, and editor lifecycle.
- */
-
 import type { Editor } from "@tiptap/react";
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
@@ -20,10 +12,6 @@ import {
 	PortableTextEditor,
 } from "../../../../../packages/admin/src/components/PortableTextEditor";
 import { render } from "../utils/render";
-
-// ---------------------------------------------------------------------------
-// Mocks — heavy components that need network / Astro context
-// ---------------------------------------------------------------------------
 
 vi.mock("../../../../../packages/admin/src/components/MediaPickerModal", () => ({
 	MediaPickerModal: () => null,
@@ -103,13 +91,8 @@ vi.mock("../../../../../packages/admin/src/components/editor/PluginBlockNode", a
 	};
 });
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 const SPOTLIGHT_MODE_PATTERN = /Spotlight Mode/i;
 
-/** Wait for the ProseMirror editor to mount inside the container */
 async function waitForEditor(): Promise<HTMLElement> {
 	let pm: HTMLElement | null = null;
 	await vi.waitFor(
@@ -122,16 +105,11 @@ async function waitForEditor(): Promise<HTMLElement> {
 	return pm!;
 }
 
-/** Focus the ProseMirror contenteditable and wait for it to be focused */
 async function focusEditor(pm: HTMLElement) {
 	pm.focus();
 	await vi.waitFor(() => expect(document.activeElement).toBe(pm), { timeout: 1000 });
 }
 
-/**
- * Render the editor, wait for it to initialize, and return the Editor instance.
- * Useful for tests that need to type or manipulate content programmatically.
- */
 async function renderAndGetEditor(props: Partial<Parameters<typeof PortableTextEditor>[0]> = {}) {
 	let capturedEditor: Editor | null = null;
 	const screen = await render(
@@ -147,15 +125,10 @@ async function renderAndGetEditor(props: Partial<Parameters<typeof PortableTextE
 	return { screen, editor: capturedEditor!, pm };
 }
 
-/**
- * Simulate typing text into the editor via TipTap's API.
- * This avoids browser keyboard API issues and is more reliable in tests.
- */
 function typeIntoEditor(editor: Editor, text: string) {
 	editor.chain().focus().insertContent(text).run();
 }
 
-// Shorthand block builders
 function textBlock(
 	text: string,
 	opts: {
@@ -182,10 +155,6 @@ function textBlock(
 		markDefs: opts.markDefs,
 	};
 }
-
-// =============================================================================
-// 1. Plugin block helpers
-// =============================================================================
 
 describe("plugin block helpers", () => {
 	it("builds form state from field initial_value defaults", () => {
@@ -298,10 +267,6 @@ describe("plugin block helpers", () => {
 		});
 	});
 });
-
-// =============================================================================
-// 2. Portable Text ↔ ProseMirror Conversion (via component)
-// =============================================================================
 
 describe("Portable Text ↔ ProseMirror conversion", () => {
 	it("rejects mixed unsupported decorators across nested and spanning text", () => {
@@ -630,7 +595,6 @@ describe("Portable Text ↔ ProseMirror conversion", () => {
 			/>,
 		);
 		const pm = await waitForEditor();
-		// The mock ImageExtension renders as <img>
 		const img = pm.querySelector("img");
 		expect(img).toBeTruthy();
 		expect(img!.getAttribute("src")).toBe("/test.jpg");
@@ -654,10 +618,8 @@ describe("Portable Text ↔ ProseMirror conversion", () => {
 	it("renders empty editor when value is empty array", async () => {
 		await render(<PortableTextEditor value={[]} placeholder="Write here..." />);
 		const pm = await waitForEditor();
-		// Empty editor should have a single empty paragraph
 		const paragraphs = pm.querySelectorAll("p");
 		expect(paragraphs.length).toBeGreaterThanOrEqual(1);
-		// Placeholder should appear
 		expect(pm.textContent).toBe("");
 	});
 
@@ -665,7 +627,6 @@ describe("Portable Text ↔ ProseMirror conversion", () => {
 		await render(<PortableTextEditor placeholder="Start..." />);
 		const pm = await waitForEditor();
 		expect(pm).toBeTruthy();
-		// Empty editor — no meaningful text
 		const textContent = pm.textContent ?? "";
 		expect(textContent.trim()).toBe("");
 	});
@@ -700,7 +661,6 @@ describe("Portable Text ↔ ProseMirror conversion", () => {
 		const em = pm.querySelector("em");
 		expect(strong).toBeTruthy();
 		expect(em).toBeTruthy();
-		// The text is wrapped in both marks
 		expect(pm.textContent).toContain("Bold italic");
 	});
 
@@ -739,21 +699,14 @@ describe("Portable Text ↔ ProseMirror conversion", () => {
 	});
 });
 
-// =============================================================================
-// 2. Editor Component Behaviour
-// =============================================================================
-
 describe("Editor component behaviour", () => {
 	it("shows placeholder text in empty editor", async () => {
 		await render(<PortableTextEditor placeholder="Write something..." />);
 		const pm = await waitForEditor();
-		// TipTap sets placeholder via data-placeholder or a .is-empty class
-		// Check for the placeholder content in a before pseudo-element or attribute
 		const placeholderEl = pm.querySelector("[data-placeholder]");
 		if (placeholderEl) {
 			expect(placeholderEl.getAttribute("data-placeholder")).toBe("Write something...");
 		} else {
-			// Fallback: check the class-based placeholder
 			const emptyNode = pm.querySelector(".is-empty, .is-editor-empty");
 			expect(emptyNode).toBeTruthy();
 		}
@@ -796,7 +749,6 @@ describe("Editor component behaviour", () => {
 		);
 		await waitForEditor();
 
-		// The spotlight button has aria-label containing "Spotlight Mode"
 		const spotlightBtn = screen.getByRole("button", { name: SPOTLIGHT_MODE_PATTERN });
 		await spotlightBtn.click();
 		expect(onFocusModeChange).toHaveBeenCalledWith("spotlight");
@@ -808,10 +760,8 @@ describe("Editor component behaviour", () => {
 		const surface = document.querySelector("[data-emdash-editor-surface]");
 		expect(surface).not.toHaveClass("bg-kumo-base");
 		expect(surface).not.toHaveClass("-mx-4");
-		// Toolbar has role="toolbar" — should not exist
 		const toolbar = document.querySelector('[role="toolbar"]');
 		expect(toolbar).toBeNull();
-		// Footer shows word count — should not exist
 		const footer = document.querySelector(".border-t");
 		expect(footer).toBeNull();
 	});
@@ -857,10 +807,6 @@ describe("Editor component behaviour", () => {
 	});
 
 	it("calls onEditorReady with null on unmount so consumers can clear stale references", async () => {
-		// Without this cleanup, ContentEditor's `portableTextEditor` slot keeps
-		// pointing at a destroyed TipTap instance during the brief remount window
-		// when switching translations (FieldRenderer is re-keyed by item.id),
-		// causing DocumentOutline to render against a destroyed editor.
 		const onEditorReady = vi.fn();
 		const screen = await render(
 			<PortableTextEditor onEditorReady={onEditorReady} value={[textBlock("Mount/unmount")]} />,
@@ -870,7 +816,6 @@ describe("Editor component behaviour", () => {
 		await vi.waitFor(() => expect(onEditorReady).toHaveBeenCalledTimes(1), { timeout: 2000 });
 		expect(onEditorReady.mock.calls[0]![0]).toBeTruthy();
 
-		// Unmount and verify the cleanup fires onEditorReady(null).
 		await screen.unmount();
 
 		await vi.waitFor(() => expect(onEditorReady).toHaveBeenCalledTimes(2), { timeout: 2000 });
@@ -892,10 +837,6 @@ describe("Editor component behaviour", () => {
 		);
 	});
 });
-
-// =============================================================================
-// 3. Toolbar
-// =============================================================================
 
 describe("Toolbar", () => {
 	async function renderWithToolbar() {
@@ -1074,14 +1015,11 @@ describe("Toolbar", () => {
 		const undoBtn = screen.getByRole("button", { name: "Undo" });
 		const redoBtn = screen.getByRole("button", { name: "Redo" });
 
-		// Initially both disabled
 		await expect.element(undoBtn).toBeDisabled();
 		await expect.element(redoBtn).toBeDisabled();
 
-		// Type something via editor API
 		typeIntoEditor(editorRef!, "Some text");
 
-		// Undo should become enabled
 		await vi.waitFor(
 			async () => {
 				await expect.element(undoBtn).toBeEnabled();
@@ -1089,10 +1027,8 @@ describe("Toolbar", () => {
 			{ timeout: 2000 },
 		);
 
-		// Click undo
 		await undoBtn.click();
 
-		// Redo should become enabled
 		await vi.waitFor(
 			async () => {
 				await expect.element(redoBtn).toBeEnabled();
@@ -1138,10 +1074,6 @@ describe("Toolbar", () => {
 	});
 });
 
-// =============================================================================
-// 4. Slash Commands
-// =============================================================================
-
 describe("Slash commands", () => {
 	it("renders without errors with default commands", async () => {
 		await render(<PortableTextEditor value={[textBlock("Slash test")]} />);
@@ -1176,10 +1108,6 @@ describe("Slash commands", () => {
 		await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 2000 });
 	});
 });
-
-// =============================================================================
-// 5. Round-trip: onChange output shape
-// =============================================================================
 
 describe("onChange output shape", () => {
 	it("onChange returns blocks with _type and _key", async () => {
@@ -1221,7 +1149,6 @@ describe("onChange output shape", () => {
 
 		await vi.waitFor(() => expect(capturedEditor).toBeTruthy(), { timeout: 2000 });
 
-		// Verify the editor has a heading node
 		const json = capturedEditor!.getJSON();
 		const headingNode = json.content?.find((n: { type: string }) => n.type === "heading");
 		expect(headingNode).toBeTruthy();

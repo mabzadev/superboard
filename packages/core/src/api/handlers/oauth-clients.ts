@@ -1,22 +1,9 @@
-/**
- * OAuth client management handlers.
- *
- * CRUD operations for registered OAuth clients. Each client has a set
- * of pre-registered redirect URIs. The authorization endpoint rejects
- * any redirect_uri not in the client's registered set.
- */
-
 import type { Kysely } from "kysely";
 
 import type { Database } from "../../database/types.js";
 import { validateRedirectUri } from "../oauth/redirect-uri.js";
 import type { ApiResult } from "../types.js";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Parse a JSON string column into a typed value. */
 function parseJsonColumn<T>(value: string): T {
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns unknown, callers provide the expected shape
 	return JSON.parse(value) as T;
@@ -32,10 +19,6 @@ function validateRegisteredRedirectUris(redirectUris: string[]): string | null {
 	return null;
 }
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface OAuthClientInfo {
 	id: string;
 	name: string;
@@ -45,13 +28,6 @@ export interface OAuthClientInfo {
 	updatedAt: string;
 }
 
-// ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-/**
- * Create a new OAuth client.
- */
 export async function handleOAuthClientCreate(
 	db: Kysely<Database>,
 	input: {
@@ -83,7 +59,6 @@ export async function handleOAuthClientCreate(
 			};
 		}
 
-		// Check for duplicate client ID
 		const existing = await db
 			.selectFrom("_emdash_oauth_clients")
 			.select("id")
@@ -131,9 +106,6 @@ export async function handleOAuthClientCreate(
 	}
 }
 
-/**
- * List all registered OAuth clients.
- */
 export async function handleOAuthClientList(
 	db: Kysely<Database>,
 ): Promise<ApiResult<{ items: OAuthClientInfo[] }>> {
@@ -165,9 +137,6 @@ export async function handleOAuthClientList(
 	}
 }
 
-/**
- * Get a single OAuth client by ID.
- */
 export async function handleOAuthClientGet(
 	db: Kysely<Database>,
 	clientId: string,
@@ -208,9 +177,6 @@ export async function handleOAuthClientGet(
 	}
 }
 
-/**
- * Update an OAuth client.
- */
 export async function handleOAuthClientUpdate(
 	db: Kysely<Database>,
 	clientId: string,
@@ -274,7 +240,6 @@ export async function handleOAuthClientUpdate(
 
 		await db.updateTable("_emdash_oauth_clients").set(updates).where("id", "=", clientId).execute();
 
-		// Fetch the updated row
 		const updated = await db
 			.selectFrom("_emdash_oauth_clients")
 			.selectAll()
@@ -310,9 +275,6 @@ export async function handleOAuthClientUpdate(
 	}
 }
 
-/**
- * Delete an OAuth client.
- */
 export async function handleOAuthClientDelete(
 	db: Kysely<Database>,
 	clientId: string,
@@ -342,14 +304,6 @@ export async function handleOAuthClientDelete(
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Lookup helpers (used by authorization handler)
-// ---------------------------------------------------------------------------
-
-/**
- * Look up a registered OAuth client by ID.
- * Returns the client's redirect URIs or null if the client is not registered.
- */
 export async function lookupOAuthClient(
 	db: Kysely<Database>,
 	clientId: string,
@@ -368,18 +322,12 @@ export async function lookupOAuthClient(
 	};
 }
 
-/**
- * Validate that a redirect URI is in the client's registered set.
- *
- * Comparison is exact string match (per RFC 6749 §3.1.2.3).
- * Returns null if valid, or an error message if not.
- */
 export function validateClientRedirectUri(
 	redirectUri: string,
 	allowedUris: string[],
 ): string | null {
 	if (allowedUris.includes(redirectUri)) {
-		return null; // OK
+		return null;
 	}
 	return "redirect_uri is not registered for this client";
 }

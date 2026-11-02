@@ -70,12 +70,10 @@ describe("getEmDashCollection limit bucketing", () => {
 			fetchFilter: { limit: 50 },
 			requestedLimit: undefined,
 		});
-		// cursor-paginated calls bypass bucketing — pagination contract requires honouring the limit
 		expect(bucketFilter({ limit: 4, cursor: "abc" })).toEqual({
 			fetchFilter: { limit: 4, cursor: "abc" },
 			requestedLimit: undefined,
 		});
-		// offset-paginated calls bypass bucketing for the same reason
 		expect(bucketFilter({ limit: 4, offset: 8 })).toEqual({
 			fetchFilter: { limit: 4, offset: 8 },
 			requestedLimit: undefined,

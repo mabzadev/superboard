@@ -1,12 +1,9 @@
 import type { UnifiedInboxItem } from "./inboxService.js";
 
-// Support deep links intentionally contain only SuperBoard-native parameters.
-
 export type InboxDeepLink = {
 	sourceId: string;
 	type: "all" | UnifiedInboxItem["source_type"];
 	status: "" | UnifiedInboxItem["status"];
-	/** `?q=`: a customer email, user id or conversation id that narrows the conversation list. */
 	query: string;
 };
 
@@ -26,11 +23,6 @@ export function inboxDeepLink(search: string): InboxDeepLink {
 	};
 }
 
-/**
- * True when an Inbox item belongs to the searched customer: its customer reference is one of the
- * matching contacts' user ids, or the query appears in its ids, customer reference, subject,
- * preview or one of its plain-text source fields.
- */
 export function inboxItemMatchesQuery(
 	item: UnifiedInboxItem,
 	query: string,

@@ -1,11 +1,3 @@
-/**
- * Shared content helpers for ATProto outputs.
- *
- * These helpers intentionally stay small and boring so standard.site and
- * Bluesky can share path/field lookup behavior without coupling their
- * output-specific formatting logic.
- */
-
 export function getString(obj: Record<string, unknown>, key: string): string | undefined {
 	const value = obj[key];
 	return typeof value === "string" && value.length > 0 ? value : undefined;

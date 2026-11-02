@@ -1,10 +1,3 @@
-/**
- * Integration tests for OAuth client management and redirect URI allowlist.
- *
- * Tests that the authorization endpoint rejects unregistered clients and
- * redirect URIs not in the client's registered set.
- */
-
 import { computeS256Challenge, Role } from "@emdash-cms/auth";
 import { generateCodeVerifier } from "arctic";
 import type { Kysely } from "kysely";
@@ -28,7 +21,6 @@ let db: Kysely<Database>;
 beforeEach(async () => {
 	db = await setupTestDatabase();
 
-	// Create a test user
 	await db
 		.insertInto("users")
 		.values({
@@ -44,10 +36,6 @@ beforeEach(async () => {
 afterEach(async () => {
 	await db.destroy();
 });
-
-// ---------------------------------------------------------------------------
-// validateClientRedirectUri (unit-level)
-// ---------------------------------------------------------------------------
 
 describe("validateClientRedirectUri", () => {
 	it("should return null for a registered redirect URI", () => {
@@ -79,10 +67,6 @@ describe("validateClientRedirectUri", () => {
 		expect(result).toBeTruthy();
 	});
 });
-
-// ---------------------------------------------------------------------------
-// OAuth Client CRUD
-// ---------------------------------------------------------------------------
 
 describe("OAuth Client CRUD", () => {
 	it("should create a client", async () => {
@@ -255,10 +239,6 @@ describe("OAuth Client CRUD", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// lookupOAuthClient
-// ---------------------------------------------------------------------------
-
 describe("lookupOAuthClient", () => {
 	it("should return redirect URIs for a registered client", async () => {
 		await handleOAuthClientCreate(db, {
@@ -281,13 +261,8 @@ describe("lookupOAuthClient", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Authorization with client redirect URI validation
-// ---------------------------------------------------------------------------
-
 describe("Authorization with redirect URI allowlist", () => {
 	beforeEach(async () => {
-		// Register a client with specific redirect URIs
 		await handleOAuthClientCreate(db, {
 			id: "test-client",
 			name: "Test Client",

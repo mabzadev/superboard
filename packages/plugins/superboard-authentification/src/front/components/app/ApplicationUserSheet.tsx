@@ -24,10 +24,6 @@ const labels: Record<Section, string> = {
 	events: "Events",
 };
 
-/**
- * One person, every dimension. Data owned by other plugins is reached through
- * their own views (deep links), never by importing their code.
- */
 export default function ApplicationUserSheet({
 	detail,
 	account,

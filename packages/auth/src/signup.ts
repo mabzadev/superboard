@@ -1,35 +1,22 @@
-/**
- * Self-signup for allowed email domains
- */
-
 import { escapeHtml } from "./invite.js";
 import { generateTokenWithHash, hashToken } from "./tokens.js";
 import type { AuthAdapter, RoleLevel, EmailMessage, User } from "./types.js";
 
-const TOKEN_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
+const TOKEN_EXPIRY_MS = 15 * 60 * 1000;
 
-/** Function that sends an email (matches the EmailPipeline.send signature) */
 export type EmailSendFn = (message: EmailMessage) => Promise<void>;
 
-/**
- * Add artificial delay with jitter to prevent timing attacks.
- * Range approximates the time for token creation + email send.
- */
 async function timingDelay(): Promise<void> {
-	const delay = 100 + Math.random() * 150; // 100-250ms
+	const delay = 100 + Math.random() * 150;
 	await new Promise((resolve) => setTimeout(resolve, delay));
 }
 
 export interface SignupConfig {
 	baseUrl: string;
 	siteName: string;
-	/** Optional email sender. When omitted, signup verification cannot be sent. */
 	email?: EmailSendFn;
 }
 
-/**
- * Check if an email domain is allowed for self-signup
- */
 export async function canSignup(
 	adapter: AuthAdapter,
 	email: string,
@@ -48,11 +35,6 @@ export async function canSignup(
 	};
 }
 
-/**
- * Request self-signup (sends verification email).
- *
- * Requires `config.email` to be set. Throws if no email sender is configured.
- */
 export async function requestSignup(
 	config: SignupConfig,
 	adapter: AuthAdapter,
@@ -62,26 +44,20 @@ export async function requestSignup(
 		throw new SignupError("email_not_configured", "Email is not configured");
 	}
 
-	// Check if user already exists
 	const existing = await adapter.getUserByEmail(email);
 	if (existing) {
-		// Don't reveal that user exists - add delay to match successful path timing
 		await timingDelay();
 		return;
 	}
 
-	// Check if domain is allowed
 	const signup = await canSignup(adapter, email);
 	if (!signup) {
-		// Don't reveal that domain is not allowed - add delay to match successful path timing
 		await timingDelay();
 		return;
 	}
 
-	// Generate token
 	const { token, hash } = generateTokenWithHash();
 
-	// Store token with role info
 	await adapter.createToken({
 		hash,
 		email,
@@ -90,11 +66,9 @@ export async function requestSignup(
 		expiresAt: new Date(Date.now() + TOKEN_EXPIRY_MS),
 	});
 
-	// Build verification URL
 	const url = new URL("/_emdash/api/auth/signup/verify", config.baseUrl);
 	url.searchParams.set("token", token);
 
-	// Send email
 	const safeName = escapeHtml(config.siteName);
 	await config.email({
 		to: email,
@@ -120,9 +94,6 @@ export async function requestSignup(
 	});
 }
 
-/**
- * Validate a signup verification token
- */
 export async function validateSignupToken(
 	adapter: AuthAdapter,
 	token: string,
@@ -149,9 +120,6 @@ export async function validateSignupToken(
 	};
 }
 
-/**
- * Complete signup process (after passkey registration)
- */
 export async function completeSignup(
 	adapter: AuthAdapter,
 	token: string,
@@ -162,7 +130,6 @@ export async function completeSignup(
 ): Promise<User> {
 	const hash = signupTokenHash(token);
 
-	// Validate token one more time
 	const authToken = await adapter.getToken(hash, "email_verify");
 	if (!authToken || authToken.expiresAt < new Date()) {
 		throw new SignupError("invalid_token", "Invalid or expired verification");
@@ -172,17 +139,14 @@ export async function completeSignup(
 		throw new SignupError("invalid_token", "Invalid token data");
 	}
 
-	// Check user doesn't already exist
 	const existing = await adapter.getUserByEmail(authToken.email);
 	if (existing) {
 		await adapter.deleteToken(hash);
 		throw new SignupError("user_exists", "An account with this email already exists");
 	}
 
-	// Delete token (single-use)
 	await adapter.deleteToken(hash);
 
-	// Create user
 	const user = await adapter.createUser({
 		email: authToken.email,
 		name: userData.name,

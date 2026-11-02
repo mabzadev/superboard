@@ -1,14 +1,3 @@
-/**
- * Regression tests for #1884: consecutive Portable Text blocks with
- * style "blockquote" are one quote (that's what the Gutenberg importer
- * emits for a multi-paragraph <blockquote>), but the editor converter
- * turned each block into its own blockquote node. The visible symptoms:
- * a single quote renders/edits as several disconnected quotes, and
- * merging them in the editor never survives a reload because the
- * PM → PT serializer flattens a multi-paragraph quote back into
- * consecutive blocks.
- */
-
 import { describe, it, expect } from "vitest";
 
 import { portableTextToProsemirror } from "../../../../../../packages/core/src/content/converters/portable-text-to-prosemirror.js";
@@ -69,8 +58,6 @@ describe("blockquote grouping (#1884)", () => {
 		expect(first?.children[0]?.text).toBe("Paragraph one");
 		expect(second?.children[0]?.text).toBe("Paragraph two");
 
-		// …and importantly, loading that output again yields ONE quote node,
-		// so an editor merge doesn't revert on reload.
 		const reloaded = portableTextToProsemirror(roundTripped);
 		expect(reloaded.content).toHaveLength(1);
 		expect(reloaded.content[0]?.type).toBe("blockquote");

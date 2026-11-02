@@ -1,11 +1,3 @@
-/**
- * Plugin Block Conversion Tests
- *
- * Tests the Portable Text ↔ ProseMirror conversion for plugin blocks (embeds).
- * Covers round-trip fidelity, data isolation, and edge cases that caused
- * bugs in the initial implementation.
- */
-
 import { describe, it, expect } from "vitest";
 
 import {
@@ -13,16 +5,10 @@ import {
 	_portableTextToProsemirror as portableTextToProsemirror,
 } from "../../../../../packages/admin/src/components/PortableTextEditor";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Build a ProseMirror doc with the given content nodes */
 function pmDoc(...content: unknown[]) {
 	return { type: "doc", content };
 }
 
-/** Build a ProseMirror pluginBlock node */
 function pmPluginBlock(blockType: string, id: string, data: Record<string, unknown> = {}) {
 	return {
 		type: "pluginBlock",
@@ -30,7 +16,6 @@ function pmPluginBlock(blockType: string, id: string, data: Record<string, unkno
 	};
 }
 
-/** Build a Portable Text plugin block (unknown _type → embed) */
 function ptPluginBlock(type: string, id: string, extra: Record<string, unknown> = {}) {
 	return {
 		_type: type,
@@ -39,10 +24,6 @@ function ptPluginBlock(type: string, id: string, extra: Record<string, unknown> 
 		...extra,
 	};
 }
-
-// =============================================================================
-// ProseMirror → Portable Text (convertPMNode pluginBlock case)
-// =============================================================================
 
 describe("PM → PT: plugin blocks", () => {
 	it("converts a basic plugin block", () => {
@@ -103,10 +84,6 @@ describe("PM → PT: plugin blocks", () => {
 		expect(blocks[0]!._type).toBe("embed");
 	});
 });
-
-// =============================================================================
-// Portable Text → ProseMirror (convertPTBlock default case)
-// =============================================================================
 
 describe("PT → PM: plugin blocks", () => {
 	it("converts an unknown block type with id to pluginBlock", () => {
@@ -188,10 +165,6 @@ describe("PT → PM: plugin blocks", () => {
 	});
 });
 
-// =============================================================================
-// Round-trip: PT → PM → PT
-// =============================================================================
-
 describe("Plugin block round-trip", () => {
 	it("basic plugin block survives round-trip", () => {
 		const original = [ptPluginBlock("youtube", "https://youtu.be/abc")];
@@ -219,7 +192,6 @@ describe("Plugin block round-trip", () => {
 	});
 
 	it("_-prefixed keys do not accumulate across round-trips", () => {
-		// Simulate a block that somehow has _-prefixed keys in data
 		const withLeakyKeys = [
 			ptPluginBlock("youtube", "vid-1", {
 				_createdAt: "2024-01-01",
@@ -227,14 +199,12 @@ describe("Plugin block round-trip", () => {
 			}),
 		];
 
-		// First round-trip should strip _-prefixed keys
 		const pm1 = portableTextToProsemirror(withLeakyKeys);
 		const rt1 = prosemirrorToPortableText(pm1);
 
 		expect(rt1[0]).toMatchObject({ _type: "youtube", id: "vid-1", caption: "test" });
 		expect(rt1[0]).not.toHaveProperty("_createdAt");
 
-		// Second round-trip should be stable
 		const pm2 = portableTextToProsemirror(rt1);
 		const rt2 = prosemirrorToPortableText(pm2);
 
@@ -256,17 +226,14 @@ describe("Plugin block round-trip", () => {
 	});
 
 	it("data with _type/_key fields cannot overwrite block identity after round-trip", () => {
-		// Start from PM where data contains _type/_key as data fields
 		const doc = pmDoc(
 			pmPluginBlock("youtube", "vid-1", { _type: "evil", _key: "evil", caption: "test" }),
 		);
 
-		// PM → PT: fix 5 ensures _type/_key are set after data spread
 		const pt = prosemirrorToPortableText(doc);
 		expect(pt[0]!._type).toBe("youtube");
 		expect(pt[0]!._key).not.toBe("evil");
 
-		// PT → PM → PT: fix 6 strips _-prefixed keys, so they don't persist
 		const pm2 = portableTextToProsemirror(pt);
 		const rt = prosemirrorToPortableText(pm2);
 		expect(rt[0]!._type).toBe("youtube");

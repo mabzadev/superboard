@@ -1,13 +1,3 @@
-/**
- * Plugin Routes Tests
- *
- * Tests the v2 route system for:
- * - Route registration and invocation
- * - Input validation with Zod schemas
- * - Error handling (PluginRouteError)
- * - Route registry management
- */
-
 import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 
@@ -24,9 +14,6 @@ import {
 } from "../../../../../../packages/core/src/plugins/routes.js";
 import type { ResolvedPlugin } from "../../../../../../packages/core/src/plugins/types.js";
 
-/**
- * Create a minimal resolved plugin for testing
- */
 function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlugin {
 	return {
 		id: overrides.id ?? "test-plugin",
@@ -45,12 +32,9 @@ function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlug
 	};
 }
 
-/**
- * Create mock factory options (routes need DB for context)
- */
 function createMockFactoryOptions(): PluginContextFactoryOptions {
 	return {
-		db: {} as any, // Mock DB - routes will fail if they try to use DB features
+		db: {} as any,
 	};
 }
 
@@ -151,7 +135,6 @@ describe("toRouteCallerInfo", () => {
 	});
 
 	it("passes string createdAt through and strips extra fields", () => {
-		// Extra host-side fields (avatarUrl, data, …) must not leak to plugins.
 		const hostUser = {
 			id: "u1",
 			email: "a@b.c",
@@ -233,8 +216,6 @@ describe("PluginRouteHandler", () => {
 		});
 
 		it("never exposes cacheControl for private routes", () => {
-			// Private responses are per-user; a route that sets both flags must
-			// not become cacheable.
 			const plugin = createTestPlugin({
 				routes: {
 					admin: { cacheControl: "public, max-age=60", handler: vi.fn() },
@@ -320,7 +301,6 @@ describe("PluginRouteHandler", () => {
 			});
 			const handler = new PluginRouteHandler(plugin, createMockFactoryOptions());
 
-			// Invalid input
 			const result = await handler.invoke("create", {
 				request: new Request("http://test.com"),
 				body: { name: "", email: "not-an-email" },
@@ -450,11 +430,6 @@ describe("PluginRouteHandler", () => {
 		});
 
 		it("surfaces an actionable error when a handler reads the consumed request body (#1293)", async () => {
-			// EmDash parses the body once and exposes it as ctx.input; the same
-			// Request is then handed to the handler with its stream already spent.
-			// A handler that instinctively calls ctx.request.json() should get a
-			// message pointing at ctx.input, not the runtime's opaque
-			// "body already read" error.
 			const bodyMethods = ["json", "text", "arrayBuffer", "formData", "blob"] as const;
 			const plugin = createTestPlugin({
 				routes: {
@@ -492,13 +467,10 @@ describe("PluginRouteHandler", () => {
 				expect(data.errors[method]).toContain("ctx.input");
 				expect(data.errors[method]).toContain("[emdash]");
 			}
-			// The parsed body is still available as ctx.input.
 			expect(data.input).toEqual({ hello: "world" });
 		});
 
 		it("passes request url, method, and headers through the body guard (#1293)", async () => {
-			// The guard must not interfere with non-body members — notably the
-			// `headers.forEach` the sandbox-entry adapter relies on.
 			const plugin = createTestPlugin({
 				routes: {
 					meta: {
@@ -667,8 +639,6 @@ describe("PluginRouteRegistry", () => {
 
 			registry.register(plugin);
 
-			// This will fail because handler tries to create context with mock DB
-			// But we can verify it attempts to invoke
 			const result = await registry.invoke("my-plugin", "non-existent", {
 				request: new Request("http://test.com"),
 			});

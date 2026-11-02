@@ -64,7 +64,6 @@ async function readBody<T>(response: Response): Promise<T> {
 	return (await response.json()) as T;
 }
 
-/** Term slugs left in `taxonomies`, across every locale. */
 async function remainingTerms(db: Kysely<DatabaseSchema>, name: string): Promise<string[]> {
 	const rows = await db
 		.selectFrom("taxonomies")

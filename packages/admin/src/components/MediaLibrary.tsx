@@ -81,7 +81,6 @@ import { LOCAL_MEDIA_UPLOAD_ACCEPT, MediaUploadDialog } from "./MediaUploadDialo
 import { RouterLinkButton } from "./RouterLinkButton.js";
 import { TableToolbar, TableToolbarSearch } from "./TableToolbar.js";
 
-/** Maps a coarse type-filter choice to the media list's `mimeType` filter. */
 function mimeForTypeFilter(value: string): string | string[] | undefined {
 	switch (value) {
 		case "image":
@@ -103,16 +102,11 @@ export interface MediaLibraryProps {
 	onUpload?: (file: File, options?: MediaUploadOptions) => Promise<void> | void;
 	onSelect?: (item: MediaItem) => void;
 	onItemUpdated?: () => void;
-	/** True when more local-library items can be fetched via cursor pagination */
 	hasMore?: boolean;
-	/** Triggered to fetch the next page of local-library items */
 	onLoadMore?: () => void;
 	pagination?: MediaLibraryPagination;
-	/** Called (debounced) with the filename search term for the local library. */
 	onLocalSearchChange?: (q: string) => void;
-	/** Called with the MIME filter for the local library (undefined = all types). */
 	onLocalMimeFilterChange?: (mimeType: string | string[] | undefined) => void;
-	/** Bounded folder pages owned by the main local Media route. */
 	folders?: MediaFolder[];
 	foldersLoading?: boolean;
 	foldersError?: Error | null;
@@ -191,9 +185,6 @@ const centerMediaOverlayOnCursor: Modifier = ({
 };
 const MEDIA_DRAG_OVERLAY_MODIFIERS = [centerMediaOverlayOnCursor];
 
-/**
- * Media library component with upload, provider tabs, and grid view
- */
 export function MediaLibrary({
 	items = [],
 	isLoading,
@@ -271,7 +262,6 @@ export function MediaLibrary({
 	const paginationRootRef = React.useRef<HTMLDivElement>(null);
 	const paginationFocusTargetRef = React.useRef<HTMLElement | null>(null);
 	const paginationFocusFallbackRef = React.useRef<"page" | "page-size">("page");
-	// Debounced filename search reported up for the local library's server query.
 	const debouncedSearch = useDebouncedValue(searchQuery, 300);
 	React.useEffect(() => {
 		if (activeProvider === "local" && onLocalSearchChange) {
@@ -295,19 +285,16 @@ export function MediaLibrary({
 	const suppressDragClickRef = React.useRef(false);
 	const suppressDragClickTimerRef = React.useRef<number | null>(null);
 	const movePendingRef = React.useRef(false);
-	// Track loaded image dimensions for providers that don't return them (e.g., CF Images)
 	const [loadedDimensions, setLoadedDimensions] = React.useState<
 		Record<string, { width: number; height: number }>
 	>({});
 
-	// Fetch available providers
 	const { data: providers } = useQuery({
 		queryKey: ["media-providers"],
 		queryFn: fetchMediaProviders,
 		placeholderData: [],
 	});
 
-	// Fetch provider media when a non-local provider is selected
 	const {
 		data: providerData,
 		isLoading: providerLoading,
@@ -322,7 +309,6 @@ export function MediaLibrary({
 		enabled: activeProvider !== "local",
 	});
 
-	// Get active provider info
 	const activeProviderInfo = React.useMemo(() => {
 		if (activeProvider === "local") {
 			return {
@@ -483,7 +469,6 @@ export function MediaLibrary({
 		};
 	}, [canUploadHere, enqueueFiles, uploadDialogOpen]);
 
-	// Build provider tabs
 	const providerTabs = React.useMemo(() => {
 		const tabs: Array<{ id: string; name: string; icon?: string }> = [
 			{ id: "local", name: t`Library`, icon: undefined },
@@ -498,7 +483,6 @@ export function MediaLibrary({
 		return tabs;
 	}, [providers, t]);
 
-	// Get current items based on active provider
 	const currentItems = activeProvider === "local" ? items : [];
 	const currentProviderItems = activeProvider !== "local" ? providerData?.items || [] : [];
 	const currentLoading = activeProvider === "local" ? isLoading : providerLoading;
@@ -800,7 +784,6 @@ export function MediaLibrary({
 					</div>
 				</div>
 			)}
-			{/* Header: page title (start) + primary actions (end) */}
 			<div className="flex items-center justify-between gap-2 sm:gap-4">
 				<div className="min-w-0">
 					{activeProvider === "local" && folderId && (
@@ -897,7 +880,6 @@ export function MediaLibrary({
 				/>
 			) : null}
 
-			{/* Provider tabs (only when an external provider is configured) */}
 			{providerTabs.length > 1 && (
 				<Tabs
 					variant="underline"
@@ -928,8 +910,6 @@ export function MediaLibrary({
 				/>
 			)}
 
-			{/* Toolbar: search + type filter (start) · view toggle (end).
-			    Local library search/filter is handled server-side. */}
 			{showToolbar && (
 				<TableToolbar
 					className="flex-row flex-nowrap gap-2"
@@ -1068,7 +1048,6 @@ export function MediaLibrary({
 				</section>
 			)}
 
-			{/* Content */}
 			{currentLoading && currentItems.length === 0 && currentProviderItems.length === 0 ? (
 				<div className="flex items-center justify-center py-12">
 					<Loader />
@@ -1170,7 +1149,6 @@ export function MediaLibrary({
 									item={item}
 									selected={detailItem?.id === item.id}
 									onClick={() => {
-										// Merge loaded dimensions if provider didn't return them
 										const dims = loadedDimensions[item.id];
 										const itemWithDims = dims
 											? {
@@ -1366,7 +1344,6 @@ export function MediaLibrary({
 				upload={uploadFile}
 			/>
 
-			{/* Detail Dialog */}
 			{detailItem && (
 				<MediaDetailPanel
 					open={isDetailOpen}
@@ -1603,7 +1580,6 @@ function MediaDragOverlay({ item }: { item: LocalMediaItem }) {
 	);
 }
 
-/** Single-chip illustration: solid tinted circle + darker icon, decorative. */
 function MediaEmptyIllustration({ hero: Hero }: { hero: Icon }) {
 	return (
 		<div
@@ -1630,7 +1606,6 @@ interface MediaEmptyStateProps {
 	action?: React.ReactNode;
 }
 
-/** Centered empty / no-results panel with the media illustration. */
 function MediaEmptyState({ hero, title, description, action }: MediaEmptyStateProps) {
 	return (
 		<div
@@ -1710,14 +1685,12 @@ interface ProviderGridItemProps {
 	item: MediaProviderItem;
 	selected?: boolean;
 	onClick?: () => void;
-	/** Callback when image dimensions are loaded (for providers that don't return dimensions) */
 	onDimensionsLoaded?: (width: number, height: number) => void;
 }
 
 function ProviderGridItem({ item, selected, onClick, onDimensionsLoaded }: ProviderGridItemProps) {
 	const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
 		const img = e.currentTarget;
-		// Only report if we don't already have dimensions
 		if (onDimensionsLoaded && (!item.width || !item.height)) {
 			onDimensionsLoaded(img.naturalWidth, img.naturalHeight);
 		}
@@ -1825,7 +1798,6 @@ interface ProviderListItemProps {
 	item: MediaProviderItem;
 	selected?: boolean;
 	onClick?: () => void;
-	/** Callback when image dimensions are loaded (for providers that don't return dimensions) */
 	onDimensionsLoaded?: (width: number, height: number) => void;
 }
 

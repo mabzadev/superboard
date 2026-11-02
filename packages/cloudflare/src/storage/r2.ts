@@ -1,16 +1,3 @@
-/**
- * Cloudflare R2 Storage Implementation - RUNTIME ENTRY
- *
- * Uses R2 bindings directly when running on Cloudflare Workers.
- * This avoids the AWS SDK overhead and works with the native R2 API.
- *
- * This module imports directly from cloudflare:workers to access R2 bindings.
- * Do NOT import this at config time - use { r2 } from "@emdash-cms/cloudflare" instead.
- *
- * For Astro 6 / Cloudflare adapter v13+:
- * - Bindings are accessed via `import { env } from 'cloudflare:workers'`
- */
-
 import { env } from "cloudflare:workers";
 import type {
 	Storage,
@@ -23,12 +10,8 @@ import type {
 } from "emdash";
 import { EmDashStorageError } from "emdash";
 
-/** Regex to remove trailing slashes from URLs */
 const TRAILING_SLASH_REGEX = /\/$/;
 
-/**
- * R2 Storage implementation using native bindings
- */
 export class R2Storage implements Storage {
 	private bucket: R2Bucket;
 	private publicUrl?: string;
@@ -73,7 +56,6 @@ export class R2Storage implements Storage {
 				throw new EmDashStorageError(`File not found: ${key}`, "NOT_FOUND");
 			}
 
-			// R2ObjectBody has the body property — use it as a type guard
 			if (!("body" in object) || !object.body) {
 				throw new EmDashStorageError(`File not found: ${key}`, "NOT_FOUND");
 			}
@@ -93,7 +75,6 @@ export class R2Storage implements Storage {
 		try {
 			await this.bucket.delete(key);
 		} catch (error) {
-			// R2 delete is idempotent
 			throw new EmDashStorageError(`Failed to delete file: ${key}`, "DELETE_FAILED", error);
 		}
 	}
@@ -130,9 +111,6 @@ export class R2Storage implements Storage {
 	}
 
 	async getSignedUploadUrl(_options: SignedUploadOptions): Promise<SignedUploadUrl> {
-		// R2 doesn't support pre-signed URLs in the same way as S3
-		// For R2, uploads go through the Worker
-		// This method is here for interface compatibility but throws an error
 		throw new EmDashStorageError(
 			"R2 bindings do not support pre-signed upload URLs. " +
 				"Use the S3 API with R2 credentials for signed URL support, " +
@@ -145,18 +123,10 @@ export class R2Storage implements Storage {
 		if (this.publicUrl) {
 			return `${this.publicUrl.replace(TRAILING_SLASH_REGEX, "")}/${key}`;
 		}
-		// Without a public URL, we can't generate one for R2 bindings
-		// Return a relative path that should be served through the API
 		return `/_emdash/api/media/file/${key}`;
 	}
 }
 
-/**
- * Create R2 storage adapter
- * This is the factory function called at runtime
- *
- * Uses cloudflare:workers to access bindings directly.
- */
 export function createStorage(config: Record<string, unknown>): Storage {
 	const binding = typeof config.binding === "string" ? config.binding : "";
 	const publicUrl = typeof config.publicUrl === "string" ? config.publicUrl : undefined;
@@ -168,7 +138,6 @@ export function createStorage(config: Record<string, unknown>): Storage {
 		);
 	}
 
-	// env from cloudflare:workers doesn't have an index signature, so cast is needed
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- R2Bucket binding accessed from untyped env object
 	const bucket = (env as Record<string, unknown>)[binding] as R2Bucket | undefined;
 

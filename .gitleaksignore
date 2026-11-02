@@ -9,8 +9,6 @@ tests/checks/apps/labeler/runtime-public-assessment.test.ts:generic-api-key:74
 docs/src/content/docs/reference/field-types.mdx:generic-api-key:322
 docs/src/content/docs/reference/rest-api.mdx:generic-api-key:411
 tests/checks/packages/core/unit/api/ownership-extraction.test.ts:generic-api-key:105
-tests/checks/packages/core/unit/auth/signup.test.ts:generic-api-key:210
-tests/checks/packages/core/unit/auth/signup.test.ts:generic-api-key:316
 tests/checks/packages/core/unit/preview/urls.test.ts:generic-api-key:126
 tests/fixtures/packages/registry-moderation/tests/label-crypto.json:generic-api-key:3
 tests/fixtures/packages/registry-moderation/tests/label-crypto.json:generic-api-key:4
@@ -33,4 +31,14 @@ f7ee61d812bc5deb3e02a60a2eb36874751ad478:docs/src/content/docs/reference/rest-ap
 tests/checks/plugins/superboard-acquisition/flows/unit/services/crypto.test.ts:generic-api-key:10
 tests/checks/plugins/superboard-acquisition/flows/unit/services/crypto.test.ts:generic-api-key:15
 tests/checks/sdks/flutter/unit/customer_info_verifier_test.dart:jwt:21
-tests/checks/sdks/web/identity/react/unit/Provider.test.tsx:generic-api-key:116
+tests/checks/packages/core/unit/auth/signup.test.ts:generic-api-key:204
+tests/checks/packages/core/unit/auth/signup.test.ts:generic-api-key:298
+tests/checks/plugins/superboard-core/api/unit/routes/providers.test.ts:private-key:14
+tests/checks/sdks/web/identity/react/unit/Provider.test.tsx:generic-api-key:159
+tests/checks/sdks/web/identity/react/unit/Provider.test.tsx:generic-api-key:229
+tests/checks/sdks/web/identity/react/unit/Provider.test.tsx:generic-api-key:266
+tests/checks/sdks/web/identity/react/unit/Provider.test.tsx:generic-api-key:61
+tests/checks/sdks/web/identity/react/unit/Setup.test.tsx:generic-api-key:117
+tests/checks/sdks/web/identity/react/unit/Setup.test.tsx:generic-api-key:143
+tests/checks/sdks/web/identity/react/unit/Setup.test.tsx:generic-api-key:167
+tests/checks/sdks/web/identity/react/unit/Setup.test.tsx:generic-api-key:193

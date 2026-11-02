@@ -24,10 +24,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-/**
- * E2E tests for deep linking functionality.
- * Covers cold start, warm start, hot start, edge cases, and advanced scenarios.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class DeepLinkingE2ETest {
@@ -59,11 +55,8 @@ class DeepLinkingE2ETest {
         E2ETestUtils.configureAndWaitForAuth(application, apiKey, baseURL = mockWebServer.url("/").toString())
     }
 
-    // ==================== Cold Start Tests ====================
-
     @Test
     fun `test cold start from deeplink processes link parameter`() {
-        // Arrange - use URL-based dispatcher to avoid FIFO response ordering issues
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -79,10 +72,8 @@ class DeepLinkingE2ETest {
                 .setBody("""{"link":"https://test.superboard.io/abc123","data":null}""")
         ))
 
-        // Configure without creating an activity to avoid consuming the deeplink response
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-        // Act - create activity with deeplink intent
         val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("testapp://open?link=abc123")
         }
@@ -100,12 +91,10 @@ class DeepLinkingE2ETest {
         activityController.start()
 
 
-        // Wait for deeplink callback - outside runBlocking so main looper is free
         E2ETestUtils.waitForCondition(description = "deeplink callback") {
             receivedDeeplink != null
         }
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
         assertNotNull("Received deeplink should have a link", receivedDeeplink?.link)
         assertEquals("https://test.superboard.io/abc123", receivedDeeplink?.link)
@@ -117,7 +106,6 @@ class DeepLinkingE2ETest {
     @Test
     fun `test cold start without deeplink calls data_for_device`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -127,7 +115,6 @@ class DeepLinkingE2ETest {
 
             configureAndWaitForAuth()
 
-            // Act - create activity without deeplink
             val activityController = Robolectric.buildActivity(TestActivity::class.java)
             activityController.create()
     
@@ -138,7 +125,6 @@ class DeepLinkingE2ETest {
             delay(1000)
     
 
-            // Assert
             val requests = E2ETestUtils.collectAllRequests(mockWebServer)
             assertTrue(
                 "SDK should call device_for_vendor_id endpoint on cold start",
@@ -157,7 +143,6 @@ class DeepLinkingE2ETest {
 
     @Test
     fun `test cold start from deeplink with custom data processes link`() {
-        // Arrange - use URL-based dispatcher for deterministic response routing
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -173,10 +158,8 @@ class DeepLinkingE2ETest {
                 .setBody("""{"link":"https://test.superboard.io/campaign","data":{"campaign":"summer","source":"email"}}""")
         ))
 
-        // Configure without creating an activity to avoid consuming the deeplink response
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-        // Act
         val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("testapp://open?link=campaign")
         }
@@ -193,12 +176,10 @@ class DeepLinkingE2ETest {
         activityController.start()
 
 
-        // Wait for deeplink callback - outside runBlocking so main looper is free
         E2ETestUtils.waitForCondition(description = "deeplink data callback") {
             receivedData != null
         }
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
         assertTrue("Received data should not be empty", receivedData!!.isNotEmpty())
         assertEquals("Should receive campaign value", "summer", receivedData!!["campaign"])
@@ -207,11 +188,8 @@ class DeepLinkingE2ETest {
         activityController.stop().destroy()
     }
 
-    // ==================== Warm/Hot Start Tests ====================
-
     @Test
     fun `test warm start activity receives onNewIntent with deeplink`() {
-        // Arrange - use URL-based dispatcher for deterministic response routing
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -229,12 +207,10 @@ class DeepLinkingE2ETest {
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-        // Create and start activity (no deeplink)
         val activityController = Robolectric.buildActivity(TestActivity::class.java)
         activityController.create().start().resume()
 
 
-        // Simulate app going to background (warm start = activity stopped but not destroyed)
         activityController.pause().stop()
 
 
@@ -243,7 +219,6 @@ class DeepLinkingE2ETest {
             receivedDeeplink = details
         }
 
-        // Act - app brought back to foreground with a deeplink intent
         val newIntent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("testapp://open?link=warmstart")
         }
@@ -252,12 +227,10 @@ class DeepLinkingE2ETest {
         activityController.start().resume()
 
 
-        // Wait for deeplink callback
         E2ETestUtils.waitForCondition(description = "warm start deeplink callback") {
             receivedDeeplink != null
         }
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
         assertNotNull("Deeplink listener should receive link", receivedDeeplink?.link)
         assertEquals("https://test.superboard.io/warmstart", receivedDeeplink?.link)
@@ -267,7 +240,6 @@ class DeepLinkingE2ETest {
 
     @Test
     fun `test hot start - link received while app visible triggers processing`() {
-        // Arrange - use URL-based dispatcher for deterministic response routing
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -285,7 +257,6 @@ class DeepLinkingE2ETest {
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-        // Create activity in foreground
         val activityController = Robolectric.buildActivity(TestActivity::class.java)
         activityController.create().start().resume()
 
@@ -295,19 +266,16 @@ class DeepLinkingE2ETest {
             receivedDeeplink = details
         }
 
-        // Act - receive deeplink while in foreground
         val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("testapp://open?link=hotstart")
         }
         activityController.newIntent(deeplinkIntent)
 
 
-        // Wait for deeplink callback
         E2ETestUtils.waitForCondition(description = "hot start deeplink callback") {
             receivedDeeplink != null
         }
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
         assertNotNull("Deeplink listener should receive link", receivedDeeplink?.link)
         assertEquals("https://test.superboard.io/hotstart", receivedDeeplink?.link)
@@ -318,7 +286,6 @@ class DeepLinkingE2ETest {
     @Test
     fun `test warm start from recents without link does not trigger deeplink processing`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -326,7 +293,6 @@ class DeepLinkingE2ETest {
             
             configureAndWaitForAuth()
 
-            // Create and start activity first
             val activityController = Robolectric.buildActivity(TestActivity::class.java)
             activityController.create().start().resume()
     
@@ -336,18 +302,15 @@ class DeepLinkingE2ETest {
                 listenerCalled = true
             }
 
-            // Simulate app going to background
             activityController.pause().stop()
     
 
-            // Act - return from recents
             activityController.start().resume()
     
 
             delay(500)
     
 
-            // Assert
             assertFalse(
                 "Deeplink listener should not be called when returning from recents without link",
                 listenerCalled
@@ -359,7 +322,6 @@ class DeepLinkingE2ETest {
 
     @Test
     fun `test hot start - duplicate intent within 2 seconds ignored`() {
-        // Arrange - use URL-based dispatcher for deterministic response routing
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -388,7 +350,6 @@ class DeepLinkingE2ETest {
             receivedDeeplink = details
         }
 
-        // Act - send same deeplink intent twice quickly
         val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("testapp://open?link=duplicate-test")
         }
@@ -396,20 +357,16 @@ class DeepLinkingE2ETest {
         activityController.newIntent(deeplinkIntent)
 
 
-        // Wait for the first callback to arrive
         E2ETestUtils.waitForCondition(description = "first deeplink callback") {
             receivedDeeplink != null
         }
 
-        // Send the same intent again within 2 seconds
         activityController.newIntent(deeplinkIntent)
 
 
-        // Give time for a potential second callback
         Thread.sleep(500)
 
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
         assertNotNull("Deeplink listener should receive link", receivedDeeplink?.link)
         assertEquals("https://test.superboard.io/duplicate", receivedDeeplink?.link)
@@ -421,11 +378,8 @@ class DeepLinkingE2ETest {
         activityController.pause().stop().destroy()
     }
 
-    // ==================== Edge Case Tests ====================
-
     @Test
     fun `test malformed deeplink URL handled gracefully without crash`() {
-        // Arrange - return null link for the malformed URL
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -443,7 +397,6 @@ class DeepLinkingE2ETest {
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-        // Act - create activity with malformed URI
         val malformedIntent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("not-a-valid-uri-scheme")
         }
@@ -462,11 +415,9 @@ class DeepLinkingE2ETest {
             activityController.start()
     
 
-            // Give SDK time to process the malformed URL
             Thread.sleep(1000)
     
 
-            // Assert
             E2ETestUtils.assertAuthenticationCompleted()
             assertFalse(
                 "Deeplink listener should not be called for malformed URL",
@@ -481,7 +432,6 @@ class DeepLinkingE2ETest {
 
     @Test
     fun `test deeplink resolution timeout handled gracefully`() {
-        // Arrange - use URL dispatcher with a delayed data_for_device response
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -500,7 +450,6 @@ class DeepLinkingE2ETest {
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-        // Act
         val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("testapp://open?link=slow")
         }
@@ -517,11 +466,9 @@ class DeepLinkingE2ETest {
         activityController.start()
 
 
-        // Give SDK time to attempt the request (but not enough for the 30s delay)
         Thread.sleep(1000)
 
 
-        // Assert - SDK should attempt to resolve but listener should not be called (server too slow)
         E2ETestUtils.assertAuthenticationCompleted()
         assertTrue(
             "SDK should make requests even with slow server",
@@ -537,7 +484,6 @@ class DeepLinkingE2ETest {
 
     @Test
     fun `test listener set after deeplink received still works`() {
-        // Arrange - use URL-based dispatcher for deterministic response routing
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -555,7 +501,6 @@ class DeepLinkingE2ETest {
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-        // Act - create and start activity with deeplink BEFORE setting listener
         val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("testapp://open?link=pending")
         }
@@ -564,11 +509,9 @@ class DeepLinkingE2ETest {
         activityController.create().start()
 
 
-        // Wait for the deeplink to be processed (without a listener set)
         Thread.sleep(1000)
 
 
-        // Now set the listener after deeplink was already processed
         var listenerCalled = false
         SuperBoard.setOnDeeplinkReceivedListener(activityController.get()) { details ->
             listenerCalled = true
@@ -578,16 +521,13 @@ class DeepLinkingE2ETest {
         Thread.sleep(500)
 
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
 
-        // Listener should not be retroactively called (deeplink was already delivered)
         assertFalse(
             "Listener set after deeplink processed should not be retroactively called",
             listenerCalled
         )
 
-        // But openedLinkDetails should be available with the resolved link
         val openedLink = SuperBoard.openedLinkDetails
         assertNotNull("openedLinkDetails should be set after deeplink resolved", openedLink)
         assertEquals("https://test.superboard.io/pending", openedLink?.link)
@@ -595,11 +535,8 @@ class DeepLinkingE2ETest {
         activityController.stop().destroy()
     }
 
-    // ==================== Advanced Tests ====================
-
     @Test
     fun `test deep link with custom data payload passes data to listener`() {
-        // Arrange - use URL-based dispatcher for deterministic response routing
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -615,10 +552,8 @@ class DeepLinkingE2ETest {
                 .setBody("""{"link":"https://test.superboard.io/promo","data":{"promo_code":"SUMMER2024","discount":20}}""")
         ))
 
-        // Configure without creating an activity to avoid consuming the deeplink response
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-        // Act
         val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("testapp://open?link=promo")
         }
@@ -637,12 +572,10 @@ class DeepLinkingE2ETest {
         activityController.start()
 
 
-        // Wait for deeplink callback - outside runBlocking so main looper is free
         E2ETestUtils.waitForCondition(description = "deeplink data callback") {
             listenerCalled && receivedData != null
         }
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
 
         val data = receivedData!!
@@ -656,7 +589,6 @@ class DeepLinkingE2ETest {
 
     @Test
     fun `test multiple deep links in quick succession handled correctly`() {
-        // Arrange - use URL-based dispatcher for deterministic response routing
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -677,7 +609,6 @@ class DeepLinkingE2ETest {
         var callCount = 0
         val receivedLinks = mutableListOf<String?>()
 
-        // Act
         val activityController = Robolectric.buildActivity(TestActivity::class.java)
         activityController.create().start()
 
@@ -687,7 +618,6 @@ class DeepLinkingE2ETest {
             receivedLinks.add(details.link)
         }
 
-        // Rapidly handle multiple intents
         val intent1 = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("testapp://open?link=first")
         }
@@ -705,12 +635,10 @@ class DeepLinkingE2ETest {
         SuperBoard.onNewIntent(intent3, activityController.get())
 
 
-        // Wait for at least one callback
         E2ETestUtils.waitForCondition(description = "deeplink callback from rapid intents") {
             callCount > 0
         }
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
         assertTrue("Listener should be called at least once, got $callCount", callCount >= 1)
         assertTrue("All received links should be the resolved URL",
@@ -721,7 +649,6 @@ class DeepLinkingE2ETest {
 
     @Test
     fun `test deep link with tracking parameters preserves tracking data`() {
-        // Arrange - use URL-based dispatcher for deterministic response routing
         E2ETestUtils.setUrlDispatcher(mockWebServer, mapOf(
             "authenticate" to MockResponse()
                 .setResponseCode(200)
@@ -737,10 +664,8 @@ class DeepLinkingE2ETest {
                 .setBody("""{"link":"https://test.superboard.io/campaign","data":{"product":"premium"},"tracking":{"campaign":"email_blast","source":"newsletter","medium":"email"}}""")
         ))
 
-        // Configure without creating an activity to avoid consuming the deeplink response
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-        // Act
         val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("testapp://open?link=campaign")
         }
@@ -759,12 +684,10 @@ class DeepLinkingE2ETest {
         activityController.start()
 
 
-        // Wait for deeplink callback - outside runBlocking so main looper is free
         E2ETestUtils.waitForCondition(description = "deeplink tracking callback") {
             listenerCalled && receivedTracking != null
         }
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
 
         val tracking = receivedTracking!!

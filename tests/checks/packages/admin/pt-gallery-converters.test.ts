@@ -1,10 +1,3 @@
-/**
- * Guards against the core (`packages/core/src/content/converters`) and admin
- * (`PortableTextEditor.tsx`, duplicated for editor-only reasons) gallery
- * converter pair drifting apart. Round-trips a WordPress-shaped gallery
- * block — the exact shape emitted by `@emdash-cms/gutenberg-to-portable-text`
- * after the import media pass — through the admin's PT → PM → PT converters.
- */
 import { describe, it, expect } from "vitest";
 
 import {
@@ -77,9 +70,6 @@ describe("Gallery conversion (admin converters): PortableText ↔ ProseMirror", 
 			_type: "image",
 			asset: { _type: "reference", _ref: "42", url: "https://old-site.com/photo.jpg" },
 		});
-		// Local (non-external) provider must never round-trip as a literal
-		// "local" string on asset.provider — it's omitted, matching the image
-		// block and image-field paths.
 		expect(second?.asset).not.toHaveProperty("provider");
 	});
 });

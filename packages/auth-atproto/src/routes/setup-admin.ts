@@ -1,13 +1,3 @@
-/**
- * POST /_emdash/api/setup/atproto-admin
- *
- * Step 2 of setup for atproto auth: initiate OAuth flow with user's PDS.
- * Returns the authorization URL for the client to redirect to.
- *
- * The actual admin creation happens in the OAuth callback
- * (routes/callback.ts) when the PDS redirects back.
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -32,7 +22,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	}
 
 	try {
-		// Check if setup is already complete
 		const options = new OptionsRepository(emdash.db);
 		const setupComplete = await options.get("emdash:setup_complete");
 
@@ -40,11 +29,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			return apiError("SETUP_COMPLETE", "Setup already complete", 400);
 		}
 
-		// Parse request body
 		const body = await parseBody(request, setupAtprotoAdminBody);
 		if (isParseError(body)) return body;
 
-		// Merge into existing setup state (preserves title/tagline from step 1)
 		const existing = (await options.get<Record<string, unknown>>("emdash:setup_state")) ?? {};
 		await options.set("emdash:setup_state", {
 			...existing,
@@ -52,7 +39,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			handle: body.handle,
 		});
 
-		// Get OAuth client and generate authorization URL
 		const url = new URL(request.url);
 		const baseUrl = getPublicOrigin(url, emdash?.config);
 		const { getAtprotoOAuthClient } = await import("@emdash-cms/auth-atproto/oauth-client");

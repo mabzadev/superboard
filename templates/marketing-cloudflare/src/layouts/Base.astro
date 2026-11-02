@@ -57,8 +57,6 @@ const pageCtx = createPublicPageContext({
 		<EmDashHead page={pageCtx} />
 		<Font cssVariable="--font-body" preload />
 		<script is:inline>
-			// Apply an explicit theme choice immediately to prevent flash.
-			// With no cookie, color-scheme: light dark follows the OS.
 			(function () {
 				var c = document.cookie;
 				var i = c.indexOf("theme=");
@@ -161,7 +159,6 @@ const pageCtx = createPublicPageContext({
 		</footer>
 
 		<script>
-			// Theme switcher
 			const THEME_REGEX = /theme=([^;]+)/;
 			const themeBtns =
 				document.querySelectorAll<HTMLButtonElement>(".theme-btn");
@@ -191,7 +188,6 @@ const pageCtx = createPublicPageContext({
 				return match ? match[1] : "system";
 			}
 
-			// Initialize - apply stored theme on load
 			const storedTheme = getStoredTheme();
 			setTheme(storedTheme);
 
@@ -203,11 +199,6 @@ const pageCtx = createPublicPageContext({
 		</script>
 
 		<style is:global>
-			/*
-			 * Establish layer order: "base" has lower priority than unlayered
-			 * styles, so theme.css overrides always win regardless of source
-			 * order in the bundled CSS.
-			 */
 			@layer base;
 
 			@layer base {
@@ -219,14 +210,6 @@ const pageCtx = createPublicPageContext({
 					padding: 0;
 				}
 
-				/*
-				 * Design tokens live in src/styles/tokens.css. Colors are
-				 * defined with light-dark(); these rules pin the scheme when
-				 * the footer switcher sets an explicit choice. With no class,
-				 * color-scheme: light dark follows the OS preference. The
-				 * @supports guard keeps the toggle from forcing dark UA form
-				 * controls on browsers stuck on the plain-light fallback.
-				 */
 				@supports (color: light-dark(#000, #fff)) {
 					:root.light {
 						color-scheme: light;
@@ -256,9 +239,6 @@ const pageCtx = createPublicPageContext({
 					text-decoration: none;
 				}
 
-				/* Inline links in authored content (Portable Text renders bare
-				   <a> tags) need a visible style; component links restyle
-				   themselves via classes. */
 				p a:not([class]),
 				li a:not([class]) {
 					color: var(--color-brand);
@@ -297,7 +277,6 @@ const pageCtx = createPublicPageContext({
 					font-size: var(--font-size-xl);
 				}
 
-				/* Utility classes */
 				.container {
 					max-width: var(--wide-width);
 					margin: 0 auto;
@@ -462,7 +441,6 @@ const pageCtx = createPublicPageContext({
 				opacity: 0.5;
 			}
 
-			/* Compact variant of .btn.btn-primary for the header */
 			.nav-cta {
 				padding: var(--spacing-sm) var(--spacing-md);
 				border-radius: var(--radius-sm);

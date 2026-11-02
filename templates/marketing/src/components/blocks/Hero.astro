@@ -3,8 +3,6 @@ interface Props {
 	node: {
 		headline: string;
 		subheadline?: string;
-		// CTAs are flattened to sibling fields because Block Kit has no
-		// object-group element. Empty strings mean "no CTA".
 		primaryCtaLabel?: string;
 		primaryCtaUrl?: string;
 		secondaryCtaLabel?: string;
@@ -136,7 +134,6 @@ const secondaryCta =
 		filter: blur(20px);
 	}
 
-	/* Hero visual (external SVG image) */
 	.hero-visual {
 		position: relative;
 		width: 100%;

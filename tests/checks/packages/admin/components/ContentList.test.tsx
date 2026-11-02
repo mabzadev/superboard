@@ -17,10 +17,6 @@ import { render } from "../utils/render.tsx";
 const NO_RESULTS_PATTERN = /No results for/;
 const HAS_MORE_ITEMS_PATTERN = /21\+ items/;
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const NO_POSTS_YET_REGEX = /No posts yet/;
 const MOVE_TO_TRASH_CONFIRMATION_REGEX = /Move "Post" to trash/;
 const PERMANENT_DELETE_CONFIRMATION_REGEX = /Permanently delete "Old Post"/;
@@ -223,7 +219,6 @@ describe("ContentList", () => {
 
 		it("shows empty trash message in Trash tab", async () => {
 			const screen = await render(<ContentList {...defaultProps} items={[]} trashedItems={[]} />);
-			// Switch to Trash tab
 			await screen.getByText("Trash").click();
 			await expect.element(screen.getByText("Trash is empty")).toBeInTheDocument();
 		});
@@ -233,7 +228,6 @@ describe("ContentList", () => {
 		it("defaults to All tab", async () => {
 			const items = [makeItem()];
 			const screen = await render(<ContentList {...defaultProps} items={items} />);
-			// Items should be visible (All tab active)
 			await expect.element(screen.getByText("Hello World")).toBeInTheDocument();
 		});
 
@@ -469,13 +463,10 @@ describe("ContentList", () => {
 				<ContentList {...defaultProps} items={items} onDelete={onDelete} />,
 			);
 
-			// Click trash icon button to open the confirmation dialog
 			await screen.getByRole("button", { name: "Move Post to trash" }).click();
 
-			// Dialog should appear with confirmation text
 			await expect.element(screen.getByText("Move to Trash?")).toBeInTheDocument();
 			await expect.element(screen.getByText(MOVE_TO_TRASH_CONFIRMATION_REGEX)).toBeInTheDocument();
-			// Confirm and Cancel buttons should be visible
 			await expect
 				.element(screen.getByRole("button", { name: "Move to Trash" }))
 				.toBeInTheDocument();
@@ -501,13 +492,10 @@ describe("ContentList", () => {
 				/>,
 			);
 
-			// Switch to trash tab
 			await screen.getByText("Trash").click();
 
-			// Click permanent delete trigger button
 			await screen.getByRole("button", { name: "Permanently delete Old Post" }).click();
 
-			// Dialog should appear with correct text
 			await expect.element(screen.getByText("Delete Permanently?")).toBeInTheDocument();
 			await expect
 				.element(screen.getByText(PERMANENT_DELETE_CONFIRMATION_REGEX))
@@ -570,16 +558,13 @@ describe("ContentList", () => {
 
 		it("auto-fetches when user navigates to the last client-side page", async () => {
 			const onLoadMore = vi.fn();
-			// 21 items = 2 pages of 20; user starts on page 0 (not the last page)
 			const items = Array.from({ length: 21 }, (_, i) => makeItem({ id: `item_${i}` }));
 			const screen = await render(
 				<ContentList {...defaultProps} items={items} hasMore={true} onLoadMore={onLoadMore} />,
 			);
 
-			// On mount, page 0 is not the last page — no fetch yet
 			expect(onLoadMore).not.toHaveBeenCalled();
 
-			// Navigate to page 2 (the last page)
 			await screen.getByRole("button", { name: "Next page" }).click();
 
 			expect(onLoadMore).toHaveBeenCalledOnce();
@@ -587,7 +572,6 @@ describe("ContentList", () => {
 
 		it("does not auto-fetch when a search query is active", async () => {
 			const onLoadMore = vi.fn();
-			// 21 items so pagination exists, but search will collapse to 1 result / 1 page
 			const items = [
 				...Array.from({ length: 20 }, (_, i) =>
 					makeItem({ id: `item_${i}`, data: { title: `Post ${i}` } }),
@@ -598,10 +582,8 @@ describe("ContentList", () => {
 				<ContentList {...defaultProps} items={items} hasMore={true} onLoadMore={onLoadMore} />,
 			);
 
-			// No fetch on mount (page 0 is not the last page with 21 items)
 			expect(onLoadMore).not.toHaveBeenCalled();
 
-			// Search collapses results to 1 item — totalPages becomes 1, but should NOT fetch
 			await screen.getByRole("searchbox").fill("Unique Title");
 
 			expect(onLoadMore).not.toHaveBeenCalled();
@@ -621,9 +603,6 @@ describe("ContentList", () => {
 				<ContentList {...defaultProps} items={items} hasMore={true} onLoadMore={onLoadMore} />,
 			);
 
-			// With 1 item and hasMore=true, the auto-fetch effect fires on mount
-			// because page 0 is already the last client-side page.
-			// The button click adds a second call on top of that.
 			expect(onLoadMore).toHaveBeenCalledOnce();
 
 			await screen.getByRole("button", { name: "Load More" }).click();
@@ -682,9 +661,6 @@ describe("ContentList", () => {
 			await expect.element(screen.getByText(NO_RESULTS_PATTERN)).toBeInTheDocument();
 		});
 
-		// #1219: when the caller opts into server-side search it reports the
-		// (debounced) query and must NOT also filter the loaded page client-side
-		// (the server already returned the matching rows).
 		it("reports the query upward and does not client-filter in server mode", async () => {
 			const onSearchChange = vi.fn();
 			const items = [
@@ -697,19 +673,14 @@ describe("ContentList", () => {
 
 			await screen.getByRole("searchbox").fill("beta");
 
-			// Debounced callback fires with the typed term.
 			await vi.waitFor(() => {
 				expect(onSearchChange).toHaveBeenCalledWith("beta");
 			});
 
-			// Server mode shows whatever `items` the caller supplied — it does not
-			// hide "Alpha post" by filtering locally.
 			await expect.element(screen.getByText("Alpha post")).toBeInTheDocument();
 			await expect.element(screen.getByText("Beta post")).toBeInTheDocument();
 		});
 
-		// #1219: in server mode a zero-match query empties `items`. The search box
-		// must stay mounted so the user can clear the query.
 		it("keeps the search input mounted in server mode when there are no items", async () => {
 			const onSearchChange = vi.fn();
 			const screen = await render(
@@ -720,8 +691,6 @@ describe("ContentList", () => {
 				.toBeInTheDocument();
 		});
 
-		// #1219: a zero-match server search must not show "Create your first one"
-		// (there is content, it just doesn't match), it must report the query.
 		it("shows a no-results message, not the empty state, for a zero-match server search", async () => {
 			const onSearchChange = vi.fn();
 			const screen = await render(
@@ -734,8 +703,6 @@ describe("ContentList", () => {
 			expect(screen.getByText("Create your first one").query()).toBeNull();
 		});
 
-		// #1219: the match count must come from the server `total`, not the loaded
-		// page length, otherwise it undercounts when matches span multiple pages.
 		it("counts server-search matches using total, not the loaded page", async () => {
 			const onSearchChange = vi.fn();
 			const items = Array.from({ length: 20 }, (_, i) =>
@@ -780,27 +747,16 @@ describe("ContentList", () => {
 			);
 			const screen = await render(<ContentList {...defaultProps} items={items} />);
 
-			// Page 1 should show Post 0
 			await expect.element(screen.getByText("Post 0")).toBeInTheDocument();
 
-			// Go to page 2
 			await screen.getByRole("button", { name: "Next page" }).click();
 
 			await expect.element(screen.getByText("2 / 2")).toBeInTheDocument();
-			// Post 20 should be on page 2
 			await expect.element(screen.getByText("Post 20")).toBeInTheDocument();
-			// Post 0 should not be visible
 			expect(screen.getByText("Post 0").query()).toBeNull();
 		});
 
-		// Regression: before this change `totalPages` was derived only from
-		// loaded items, so the denominator grew in increments of 5 (API
-		// fetches 100, page size 20 → 5 client pages per fetch). When the
-		// parent supplies an authoritative `total`, the denominator must
-		// reflect it from the first render.
 		it("uses `total` as a stable denominator instead of items.length", async () => {
-			// Only the first 20 items have been loaded, but the server knows
-			// there are 143 total.
 			const items = Array.from({ length: 20 }, (_, i) =>
 				makeItem({ id: `item_${i}`, data: { title: `Post ${i}` } }),
 			);
@@ -808,7 +764,6 @@ describe("ContentList", () => {
 				<ContentList {...defaultProps} items={items} total={143} hasMore={true} />,
 			);
 
-			// 143 / 20 = 8 pages. The denominator should read 8, not "/5".
 			await expect.element(screen.getByText("1 / 8")).toBeInTheDocument();
 		});
 	});
@@ -862,8 +817,6 @@ describe("ContentList", () => {
 			const titleHeader = screen.getByRole("columnheader", { name: "Title" });
 			const statusHeader = screen.getByRole("columnheader", { name: "Status" });
 			await expect.element(titleHeader).toHaveAttribute("aria-sort", "ascending");
-			// Inactive columns explicitly advertise "none" so the header still
-			// announces as sortable.
 			await expect.element(statusHeader).toHaveAttribute("aria-sort", "none");
 		});
 
@@ -871,7 +824,6 @@ describe("ContentList", () => {
 			const items = [makeItem({ id: "1", data: { title: "Post" } })];
 			const screen = await render(<ContentList {...defaultProps} items={items} />);
 
-			// The header must not render as a button — it's just a label.
 			expect(screen.getByRole("button", { name: "Title" }).query()).toBeNull();
 		});
 

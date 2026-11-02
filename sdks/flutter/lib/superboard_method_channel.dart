@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'superboard_platform_interface.dart';
 import 'models/superboard_link.dart';
 
-/// An implementation of [SuperBoardPlatform] that uses method channels.
 class MethodChannelSuperBoard extends SuperBoardPlatform {
   MethodChannelSuperBoard({
     MethodChannel? methodChannel,
@@ -13,11 +12,9 @@ class MethodChannelSuperBoard extends SuperBoardPlatform {
        eventChannel =
            eventChannel ?? const EventChannel('superboard/deeplinks');
 
-  /// The method channel used to interact with the native platform.
   @visibleForTesting
   final MethodChannel methodChannel;
 
-  /// The event channel for receiving deeplink events
   @visibleForTesting
   final EventChannel eventChannel;
 

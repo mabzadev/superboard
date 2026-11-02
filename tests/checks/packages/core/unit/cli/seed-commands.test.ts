@@ -1,7 +1,3 @@
-/**
- * Tests for CLI seed commands
- */
-
 import { mkdtemp, rm, writeFile, mkdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -30,7 +26,6 @@ describe("CLI Seed Commands", () => {
 
 	describe("seed file resolution", () => {
 		it("should resolve .emdash/seed.json by convention", async () => {
-			// Create convention seed file
 			const emdashDir = join(tempDir, ".emdash");
 			await mkdir(emdashDir);
 			const seedPath = join(emdashDir, "seed.json");
@@ -41,14 +36,12 @@ describe("CLI Seed Commands", () => {
 			};
 			await writeFile(seedPath, JSON.stringify(seed));
 
-			// Read it back
 			const content = await readFile(seedPath, "utf-8");
 			const parsed = JSON.parse(content);
 			expect(parsed.settings.title).toBe("Convention Seed");
 		});
 
 		it("should resolve seed from package.json emdash.seed", async () => {
-			// Create seed file in custom location
 			const customDir = join(tempDir, "custom");
 			await mkdir(customDir);
 			const seedPath = join(customDir, "my-seed.json");
@@ -59,7 +52,6 @@ describe("CLI Seed Commands", () => {
 			};
 			await writeFile(seedPath, JSON.stringify(seed));
 
-			// Create package.json referencing it
 			const pkg = {
 				name: "test-project",
 				emdash: {
@@ -68,7 +60,6 @@ describe("CLI Seed Commands", () => {
 			};
 			await writeFile(join(tempDir, "package.json"), JSON.stringify(pkg));
 
-			// Verify the referenced path works
 			const content = await readFile(seedPath, "utf-8");
 			const parsed = JSON.parse(content);
 			expect(parsed.settings.title).toBe("Package.json Seed");
@@ -110,7 +101,7 @@ describe("CLI Seed Commands", () => {
 				version: "1",
 				collections: [
 					{
-						slug: "", // Invalid: empty slug
+						slug: "",
 						label: "Posts",
 						fields: [],
 					},
@@ -200,12 +191,10 @@ describe("CLI Seed Commands", () => {
 					],
 				};
 
-				// First apply
 				const result1 = await applySeed(db, seed, {});
 				expect(result1.collections.created).toBe(1);
 				expect(result1.collections.skipped).toBe(0);
 
-				// Second apply - should skip
 				const result2 = await applySeed(db, seed, {});
 				expect(result2.collections.created).toBe(0);
 				expect(result2.collections.skipped).toBe(1);
@@ -340,7 +329,6 @@ describe("CLI Seed Commands", () => {
 			try {
 				await runMigrations(db);
 
-				// Apply a seed first
 				const inputSeed: SeedFile = {
 					version: "1",
 					settings: { title: "Export Test" },
@@ -358,8 +346,6 @@ describe("CLI Seed Commands", () => {
 
 				await applySeed(db, inputSeed, {});
 
-				// Now export (simulating what export-seed does)
-				// For this test, we just verify the input seed validates
 				const validation = validateSeed(inputSeed);
 				expect(validation.valid).toBe(true);
 			} finally {

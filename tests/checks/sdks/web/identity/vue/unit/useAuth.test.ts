@@ -8,7 +8,6 @@ import { melodyAuthInjectionKey } from "../../../../../../../sdks/web/identity/v
 import { useAuth } from "../../../../../../../sdks/web/identity/vue/src/useAuth";
 import * as utils from "../../../../../../../sdks/web/identity/vue/src/utils";
 
-// Mock the external modules
 vi.mock("@melody-auth/web", () => ({
 	getUserInfo: vi.fn(),
 	logout: vi.fn(),
@@ -29,7 +28,6 @@ vi.mock("@melody-auth/shared", () => ({
 	},
 }));
 
-// Create a test harness component that provides the auth state
 const createTestHarness = (state) => {
 	return defineComponent({
 		setup() {
@@ -42,7 +40,6 @@ const createTestHarness = (state) => {
 	});
 };
 
-// Create a component that uses the composable
 const AuthConsumer = defineComponent({
 	setup() {
 		const auth = useAuth(); // eslint-disable-line react-hooks/rules-of-hooks
@@ -52,7 +49,6 @@ const AuthConsumer = defineComponent({
 });
 
 describe("useAuth", () => {
-	// Mock state for injection
 	const mockState = {
 		accessTokenStorage: { accessToken: "mock-access-token" },
 		refreshTokenStorage: { refreshToken: "mock-refresh-token" },
@@ -86,24 +82,19 @@ describe("useAuth", () => {
 	});
 
 	it("should throw error if melody-auth plugin is not installed", () => {
-		// When mounting the component without providing the injection, it should throw
 		expect(() => {
 			mount(AuthConsumer);
 		}).toThrow("Please install melody-auth plugin first.");
 	});
 
 	it("should provide auth properties and methods", async () => {
-		// Create the test harness with the mock state
 		const TestHarness = createTestHarness(mockState);
 
-		// Mount the test harness with the auth consumer as a child
 		wrapper = mount(TestHarness, { slots: { default: AuthConsumer } });
 
-		// Get the auth consumer component instance
 		const consumer = wrapper.findComponent(AuthConsumer);
 		const { auth } = consumer.vm;
 
-		// Check that all the expected properties and methods are available
 		expect(auth.accessToken.value).toBe("mock-access-token");
 		expect(auth.refreshToken.value).toBe("mock-refresh-token");
 		expect(auth.isAuthenticated.value).toBe(true);
@@ -151,12 +142,10 @@ describe("useAuth", () => {
 
 		await auth.loginPopup({ locale: "en-US" });
 
-		// Extract the authorizePopupHandler function from the call to triggerLogin
 		const triggerLoginCall = webModule.triggerLogin.mock.calls[0];
 		const options = triggerLoginCall[2];
 		const authorizePopupHandler = options.authorizePopupHandler;
 
-		// Call the authorizePopupHandler with test data
 		const authCode = "test-auth-code";
 		const requestState = "test-request-state";
 		await authorizePopupHandler({
@@ -164,7 +153,6 @@ describe("useAuth", () => {
 			code: authCode,
 		});
 
-		// Verify that handleTokenExchangeByAuthCode was called with the correct parameters
 		expect(utils.handleTokenExchangeByAuthCode).toHaveBeenCalledWith(
 			authCode,
 			requestState,

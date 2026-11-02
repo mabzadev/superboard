@@ -8,7 +8,6 @@ import io.superboard.model.AuthenticationResponse
 import io.superboard.model.DeeplinkDetails
 import io.superboard.model.GenerateLinkResponse
 import io.superboard.model.GetDeviceResponse
-// PURCHASE_EVENT_DISABLED: import io.superboard.model.events.PaymentEventType
 import io.superboard.utils.InstantCompat
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
@@ -25,9 +24,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import retrofit2.Response
 
-/**
- * Core integration tests for the SuperBoard SDK API layer.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SuperBoardSDKIntegrationTest {
 
@@ -48,8 +44,6 @@ class SuperBoardSDKIntegrationTest {
         unmockkAll()
         mockApi.reset()
     }
-
-    // ==================== Authentication Tests ====================
 
     @Test
     fun `MockSuperBoardApi authenticate returns superboardId and uriScheme on successful response`() = runTest {
@@ -107,8 +101,6 @@ class SuperBoardSDKIntegrationTest {
         )
     }
 
-    // ==================== Link Generation Tests ====================
-
     @Test
     fun `MockSuperBoardApi generateLink returns link URL on successful response`() = runTest {
         val expectedLink = "https://app.superboard.io/abc123"
@@ -156,8 +148,6 @@ class SuperBoardSDKIntegrationTest {
             "after generateLink() with rate limit exceeded"
         )
     }
-
-    // ==================== Deeplink Payload Tests ====================
 
     @Test
     fun `MockSuperBoardApi payloadFor returns DeeplinkDetails with data and tracking on success`() = runTest {
@@ -221,8 +211,6 @@ class SuperBoardSDKIntegrationTest {
         )
     }
 
-    // ==================== Events Tests ====================
-
     @Test
     fun `MockSuperBoardApi addEvent returns success and records event call`() = runTest {
         mockApi.addEventResponse = Response.success(Unit)
@@ -242,30 +230,8 @@ class SuperBoardSDKIntegrationTest {
         )
     }
 
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `MockSuperBoardApi addPaymentEvent returns success and records payment event call`() = runTest {
-    // PURCHASE_EVENT_DISABLED:     mockApi.addPaymentEventResponse = Response.success(Unit)
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     val paymentEvent = createTestPaymentEvent(PaymentEventType.BUY, 1999)
-    // PURCHASE_EVENT_DISABLED:     val result = mockApi.addPaymentEvent(paymentEvent)
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     assertTrueWithContext(
-    // PURCHASE_EVENT_DISABLED:         result.isSuccessful,
-    // PURCHASE_EVENT_DISABLED:         "response.isSuccessful",
-    // PURCHASE_EVENT_DISABLED:         "after addPaymentEvent() with BUY event"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:     assertTrueWithContext(
-    // PURCHASE_EVENT_DISABLED:         mockApi.verifyAddPaymentEventCalled(),
-    // PURCHASE_EVENT_DISABLED:         "addPaymentEvent was called",
-    // PURCHASE_EVENT_DISABLED:         "after addPaymentEvent() request"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED: }
-
-    // ==================== Complete Workflow Tests ====================
-
     @Test
     fun `Integration workflow device check then authenticate then generateLink succeeds`() = runTest {
-        // Step 1: Device check
         mockApi.getDeviceResponse = Response.success(GetDeviceResponse(lastSeen = null))
         val deviceResult = mockApi.getDeviceFor("new_device")
         assertTrueWithContext(
@@ -274,7 +240,6 @@ class SuperBoardSDKIntegrationTest {
             "after getDeviceFor() in workflow step 1"
         )
 
-        // Step 2: Authentication
         mockApi.authenticateResponse = Response.success(
             AuthenticationResponse(superboardId = "superboard_123", uriScheme = "app", sdkIdentifier = null, sdkAttributes = null)
         )
@@ -285,7 +250,6 @@ class SuperBoardSDKIntegrationTest {
             "after authenticate() in workflow step 2"
         )
 
-        // Step 3: Generate link
         mockApi.generateLinkResponse = Response.success(GenerateLinkResponse(link = "https://app.superboard.io/newlink"))
         val linkResult = mockApi.generateLink(createTestGenerateLinkRequest("Share this!"))
         assertTrueWithContext(
@@ -303,7 +267,6 @@ class SuperBoardSDKIntegrationTest {
 
     @Test
     fun `Integration workflow authenticate then payloadWithLinkFor then addEvent succeeds`() = runTest {
-        // Step 1: Authenticate
         mockApi.authenticateResponse = Response.success(
             AuthenticationResponse(superboardId = "superboard_456", uriScheme = "app", sdkIdentifier = null, sdkAttributes = null)
         )
@@ -313,7 +276,6 @@ class SuperBoardSDKIntegrationTest {
             "after authenticate() in deeplink workflow step 1"
         )
 
-        // Step 2: Get payload for deeplink
         val data = mapOf<String, Any>("promo" to "SUMMER50") as Map<String, Object>
         mockApi.payloadWithLinkResponse = Response.success(
             DeeplinkDetails(link = "https://app.superboard.io/summer", data = data, tracking = null)
@@ -331,7 +293,6 @@ class SuperBoardSDKIntegrationTest {
             "after payloadWithLinkFor() returns promo data"
         )
 
-        // Step 3: Track event
         mockApi.addEventResponse = Response.success(Unit)
         val eventResult = mockApi.addEvent(createTestEvent())
         assertTrueWithContext(
@@ -340,8 +301,6 @@ class SuperBoardSDKIntegrationTest {
             "after addEvent() in deeplink workflow step 3"
         )
     }
-
-    // ==================== Helper Methods ====================
 
     private fun createTestAppDetails() = io.superboard.model.AppDetails(
         version = "1.0.0",
@@ -377,20 +336,4 @@ class SuperBoardSDKIntegrationTest {
         link = null,
         engagementTime = null
     )
-
-    // PURCHASE_EVENT_DISABLED: private fun createTestPaymentEvent(
-    // PURCHASE_EVENT_DISABLED:     type: PaymentEventType = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:     priceCents: Long = 999
-    // PURCHASE_EVENT_DISABLED: ) = io.superboard.model.events.PaymentEvent(
-    // PURCHASE_EVENT_DISABLED:     eventType = type,
-    // PURCHASE_EVENT_DISABLED:     appId = "io.superboard.test",
-    // PURCHASE_EVENT_DISABLED:     priceCents = priceCents,
-    // PURCHASE_EVENT_DISABLED:     currency = "USD",
-    // PURCHASE_EVENT_DISABLED:     date = InstantCompat.now(),
-    // PURCHASE_EVENT_DISABLED:     transactionToken = "txn_123",
-    // PURCHASE_EVENT_DISABLED:     originalTransactionId = null,
-    // PURCHASE_EVENT_DISABLED:     productId = "test_product",
-    // PURCHASE_EVENT_DISABLED:     store = false,
-    // PURCHASE_EVENT_DISABLED:     link = null
-    // PURCHASE_EVENT_DISABLED: )
 }

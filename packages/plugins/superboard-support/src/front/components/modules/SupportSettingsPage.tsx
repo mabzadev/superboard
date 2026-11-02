@@ -109,7 +109,6 @@ export default function SupportSettingsPage() {
 	const [activeTab, setActiveTab] = useState(() => {
 		const requested =
 			typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab");
-		// Plugin health moved to the Plugins page, so old `?tab=configuration` links open General.
 		return requested &&
 			(["general", "notifications", "operations"].includes(requested) ||
 				Object.hasOwn(sharedSettings, requested))

@@ -8,14 +8,12 @@ import {
 } from "../../../../../../packages/core/src/api/public-url.js";
 import type { EmDashConfig } from "../../../../../../packages/core/src/astro/integration/runtime.js";
 
-// Snapshot env vars we'll mutate, and restore after every test.
 const origEmdashSiteUrl = process.env.EMDASH_SITE_URL;
 const origSiteUrl = process.env.SITE_URL;
 const origAllowedOrigins = process.env.EMDASH_ALLOWED_ORIGINS;
 
 afterEach(() => {
 	_resetEnvCache();
-	// Restore original env state (delete if originally absent)
 	if (origEmdashSiteUrl === undefined) delete process.env.EMDASH_SITE_URL;
 	else process.env.EMDASH_SITE_URL = origEmdashSiteUrl;
 	if (origSiteUrl === undefined) delete process.env.SITE_URL;
@@ -24,7 +22,6 @@ afterEach(() => {
 	else process.env.EMDASH_ALLOWED_ORIGINS = origAllowedOrigins;
 });
 
-// Ensure clean state before every test (no cache, no test env vars).
 beforeEach(() => {
 	_resetEnvCache();
 	delete process.env.EMDASH_SITE_URL;
@@ -57,7 +54,6 @@ describe("getPublicOrigin()", () => {
 
 	it("does not return empty string siteUrl (falsy)", () => {
 		const url = new URL("http://localhost:4321/x");
-		// Empty string should fall through to url.origin
 		expect(getPublicOrigin(url, { siteUrl: "" })).toBe("http://localhost:4321");
 	});
 });

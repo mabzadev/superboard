@@ -1,10 +1,3 @@
-/**
- * Media Provider Item Endpoint
- *
- * GET /_emdash/api/media/providers/:providerId/:itemId - Get single item
- * DELETE /_emdash/api/media/providers/:providerId/:itemId - Delete item
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -12,9 +5,6 @@ import { apiError, apiSuccess, handleError } from "#api/error.js";
 
 export const prerender = false;
 
-/**
- * Get a single media item from a provider
- */
 export const GET: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 	const denied = requirePerm(user, "media:read");
@@ -55,9 +45,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	}
 };
 
-/**
- * Delete a media item from a provider
- */
 export const DELETE: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 	const denied = requirePerm(user, "media:delete_any");

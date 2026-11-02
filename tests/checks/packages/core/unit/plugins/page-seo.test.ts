@@ -101,7 +101,6 @@ describe("page SEO metadata", () => {
 				name: "twitter:image",
 				content: defaultOg,
 			});
-			// Card upgrades to summary_large_image once an image is present.
 			expect(contributions).toContainEqual({
 				kind: "meta",
 				name: "twitter:card",
@@ -119,7 +118,6 @@ describe("page SEO metadata", () => {
 				property: "og:image",
 				content: "https://example.com/post-hero.png",
 			});
-			// Site default should NOT appear when the page has its own image.
 			expect(
 				contributions.some(
 					(c) => c.kind === "property" && c.property === "og:image" && c.content === defaultOg,
@@ -150,7 +148,6 @@ describe("page SEO metadata", () => {
 			expect(contributions.some((c) => c.kind === "property" && c.property === "og:image")).toBe(
 				false,
 			);
-			// Card stays at summary when no image.
 			expect(contributions).toContainEqual({
 				kind: "meta",
 				name: "twitter:card",

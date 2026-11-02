@@ -56,7 +56,6 @@ export default [
 			}),
 		],
 	},
-	// Type definitions
 	{
 		input: "src/index.tsx",
 		output: [{ file: "dist/index.d.ts", format: "es" }],

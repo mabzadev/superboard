@@ -1,10 +1,3 @@
-/**
- * Public form submission handler.
- *
- * This is the main entry point for form submissions from anonymous visitors.
- * Handles spam protection, validation, file uploads, notifications, and webhooks.
- */
-
 import type { RouteContext, StorageCollection } from "emdash";
 import { PluginRouteError } from "emdash";
 import { ulid } from "ulidx";
@@ -16,7 +9,6 @@ import type { FormDefinition, Submission, SubmissionFile } from "../types.js";
 import { getFormFields } from "../types.js";
 import { validateSubmission } from "../validation.js";
 
-/** Typed access to plugin storage collections */
 function forms(ctx: RouteContext): StorageCollection<FormDefinition> {
 	return ctx.storage.forms as StorageCollection<FormDefinition>;
 }
@@ -28,7 +20,6 @@ function submissions(ctx: RouteContext): StorageCollection<Submission> {
 export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 	const input = ctx.input;
 
-	// 1. Load form definition (by ID first, then by slug)
 	let formId = input.formId;
 	let form = await forms(ctx).get(formId);
 	if (!form) {
@@ -55,7 +46,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 
 	const settings = form.settings;
 
-	// 2. Spam protection
 	if (settings.spamProtection === "turnstile") {
 		const token = input.data["cf-turnstile-response"];
 		if (typeof token !== "string" || !token) {
@@ -84,7 +74,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 
 	if (settings.spamProtection === "honeypot") {
 		if (input.data._hp) {
-			// Honeypot triggered — return success silently
 			return {
 				success: true,
 				message: settings.confirmationMessage,
@@ -92,7 +81,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 		}
 	}
 
-	// 3. Validate submission data
 	const allFields = getFormFields(form);
 	const result = validateSubmission(allFields, input.data);
 
@@ -100,7 +88,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 		return { success: false, errors: result.errors };
 	}
 
-	// 4. Upload files
 	const files: SubmissionFile[] = [];
 	if (input.files && ctx.media && "upload" in ctx.media) {
 		const mediaWithWrite = ctx.media as {
@@ -115,7 +102,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 			const fileData = input.files[field.name];
 			if (!fileData) continue;
 
-			// Validate file type
 			if (field.validation?.accept) {
 				const allowed = field.validation.accept.split(",").map((s) => s.trim().toLowerCase());
 				const ext = `.${fileData.filename.split(".").pop()?.toLowerCase()}`;
@@ -130,7 +116,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 				}
 			}
 
-			// Validate file size
 			if (
 				field.validation?.maxFileSize &&
 				fileData.bytes.byteLength > field.validation.maxFileSize
@@ -156,7 +141,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 		}
 	}
 
-	// 5. Store submission
 	const submissionId = ulid();
 	const submission: Submission = {
 		formId,
@@ -175,8 +159,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 
 	await submissions(ctx).put(submissionId, submission);
 
-	// 6. Update form counters (use count() to avoid race conditions
-	// from concurrent submissions doing read-modify-write)
 	const submissionCount = await submissions(ctx).count({ formId });
 	await forms(ctx).put(formId, {
 		...form,
@@ -184,7 +166,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 		lastSubmissionAt: new Date().toISOString(),
 	});
 
-	// 7. Immediate email notifications (not digest)
 	if (settings.notifyEmails.length > 0 && !settings.digestEnabled && ctx.email) {
 		const text = formatSubmissionText(form, result.data, files);
 		for (const email of settings.notifyEmails) {
@@ -203,7 +184,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 		}
 	}
 
-	// 8. Autoresponder
 	if (settings.autoresponder && ctx.email) {
 		const emailField = allFields.find((f) => f.type === "email");
 		const submitterEmail = emailField ? result.data[emailField.name] : null;
@@ -220,7 +200,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 		}
 	}
 
-	// 9. Webhook (fire and forget)
 	if (settings.webhookUrl && ctx.http) {
 		const payload = formatWebhookPayload(form, submissionId, result.data, files);
 		ctx.http
@@ -237,7 +216,6 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 			});
 	}
 
-	// 10. Return success
 	return {
 		success: true,
 		message: settings.confirmationMessage,
@@ -245,14 +223,11 @@ export async function submitHandler(ctx: RouteContext<SubmitInput>) {
 	};
 }
 
-// ─── Public Form Definition Endpoint ─────────────────────────────
-
 export async function definitionHandler(
 	ctx: RouteContext<import("../schemas.js").DefinitionInput>,
 ) {
 	const { id } = ctx.input;
 
-	// Look up by ID first, then by slug
 	let form = await forms(ctx).get(id);
 
 	if (!form) {
@@ -273,14 +248,11 @@ export async function definitionHandler(
 		throw new PluginRouteError("FORM_PAUSED", "This form is not currently available", 410);
 	}
 
-	// Include Turnstile site key if configured
 	const turnstileSiteKey =
 		form.settings.spamProtection === "turnstile"
 			? await ctx.kv.get<string>("settings:turnstileSiteKey")
 			: null;
 
-	// Return only the settings needed for client rendering — never expose
-	// admin emails, webhook URLs, or other internal configuration.
 	return {
 		name: form.name,
 		slug: form.slug,

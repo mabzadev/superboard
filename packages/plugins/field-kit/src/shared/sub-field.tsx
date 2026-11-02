@@ -4,12 +4,6 @@ import * as React from "react";
 import type { SubFieldDef } from "./types";
 
 interface SubFieldProps {
-	/**
-	 * Unique DOM id for this sub-field instance. Required because the same
-	 * sub-field key (e.g. "name") may render many times in a `list` widget,
-	 * so the id must be composed per-instance by the caller to keep label
-	 * and input association correct.
-	 */
 	id: string;
 	def: SubFieldDef;
 	value: unknown;
@@ -23,11 +17,6 @@ function normalizeSelectItems(
 	return options.map((opt) => (typeof opt === "string" ? { label: opt, value: opt } : opt));
 }
 
-/**
- * Wrap a label with a required asterisk. Kumo's `Field` wrapper marks
- * non-required fields with "(optional)" but does not display `*` for
- * required ones, so we add it ourselves to make the requirement obvious.
- */
 function labelWithRequired(label: string, required: boolean | undefined): React.ReactNode {
 	if (!required) return label;
 	return (
@@ -38,10 +27,6 @@ function labelWithRequired(label: string, required: boolean | undefined): React.
 	);
 }
 
-/**
- * Renders a single sub-field input based on its type definition.
- * Used by object-form and list widgets.
- */
 export function SubField({ id, def, value, onChange }: SubFieldProps) {
 	const fieldId = id;
 

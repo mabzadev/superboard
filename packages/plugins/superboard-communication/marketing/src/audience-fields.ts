@@ -16,7 +16,6 @@ export type FieldDefinition = {
 	position: number;
 };
 
-/** Keys owned by the contact record itself or by system attributes. */
 const RESERVED_KEYS = new Set([
 	"id",
 	"email",
@@ -110,7 +109,6 @@ audienceFieldRoutes.patch("/audience/fields/:fieldId", async (c) => {
 	return c.json({ data: await fieldDefinition(c.env.DB, projectId, current.id) });
 });
 
-// Deleting a definition keeps stored values: the attribute becomes free-form again.
 audienceFieldRoutes.delete("/audience/fields/:fieldId", async (c) => {
 	const removed = await c.env.DB.prepare(
 		"DELETE FROM subscriber_field_definitions WHERE project_id = ? AND id = ? RETURNING id",
@@ -174,7 +172,6 @@ function fieldOptions(value: unknown, type: FieldType) {
 const TRUE_VALUES = new Set(["true", "1", "yes", "y", "oui", "on"]);
 const FALSE_VALUES = new Set(["false", "0", "no", "n", "non", "off"]);
 
-/** Converts one raw value to the defined type, or returns an error code. */
 export function coerceFieldValue(
 	definition: Pick<FieldDefinition, "field_type" | "options">,
 	value: unknown,
@@ -218,10 +215,6 @@ export function coerceFieldValue(
 	}
 }
 
-/**
- * Validates attribute values against project field definitions. Undefined keys
- * (system attributes such as locale) pass through untouched.
- */
 export function coerceAttributes(
 	definitions: readonly FieldDefinition[],
 	attributes: Record<string, unknown>,
@@ -238,7 +231,6 @@ export function coerceAttributes(
 	return { values, errors };
 }
 
-/** Throwing variant for API writes. */
 export async function validateAttributes(
 	db: D1Database,
 	projectId: number,

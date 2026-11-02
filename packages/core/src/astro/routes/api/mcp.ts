@@ -1,16 +1,3 @@
-/**
- * MCP Streamable HTTP endpoint
- *
- * Exposes an MCP server at /_emdash/api/mcp using the Streamable HTTP
- * transport (Web Standard variant). The server runs stateless — each
- * request creates a fresh transport, so no session tracking is needed.
- * Authentication is handled by the existing EmDash auth middleware.
- *
- * POST /_emdash/api/mcp — JSON-RPC tool calls
- * GET  /_emdash/api/mcp — SSE stream (not used in stateless mode)
- * DELETE /_emdash/api/mcp — Session close (not used in stateless mode)
- */
-
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { APIRoute } from "astro";
 
@@ -35,7 +22,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 	try {
 		const transport = new WebStandardStreamableHTTPServerTransport({
-			// Stateless: no session management
 			sessionIdGenerator: undefined,
 		});
 
@@ -79,9 +65,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	}
 };
 
-/**
- * GET — SSE stream. Not used in stateless mode.
- */
 export const GET: APIRoute = async () => {
 	return new Response(
 		JSON.stringify({
@@ -102,9 +85,6 @@ export const GET: APIRoute = async () => {
 	);
 };
 
-/**
- * DELETE — Session close. Not used in stateless mode.
- */
 export const DELETE: APIRoute = async () => {
 	return new Response(
 		JSON.stringify({

@@ -28,7 +28,6 @@ function useNativeTriggers(project: string) {
 			(values) => {
 				if (active) setTriggers(values);
 			},
-			// Without the catalog the picker still accepts a custom event name.
 			() => undefined,
 		);
 		return () => {
@@ -38,7 +37,6 @@ function useNativeTriggers(project: string) {
 	return triggers;
 }
 
-/** Friendly label of a stored trigger or event key, for lists and summaries. */
 export function useEventLabel(project: string) {
 	const { t } = useGrowthI18n();
 	const triggers = useNativeTriggers(project);
@@ -48,7 +46,6 @@ export function useEventLabel(project: string) {
 	};
 }
 
-/** Chooses one event: a native SuperBoard moment or a custom application event. */
 export function EventKeyPicker({
 	project,
 	label,
@@ -117,7 +114,6 @@ function withCondition(trigger: JourneyTrigger, field: string, value: string): J
 	};
 }
 
-/** Trigger of an automation, with the few extra settings some native triggers need. */
 export function TriggerPicker({
 	project,
 	value,

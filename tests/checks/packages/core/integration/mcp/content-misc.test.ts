@@ -1,16 +1,3 @@
-/**
- * MCP content tools — coverage for the remaining tools and edges.
- *
- * Covers:
- *   - content_duplicate
- *   - content_permanent_delete
- *   - content_translations + locale handling on create/get
- *   - _rev optimistic concurrency (happy + race)
- *   - Soft-delete visibility (content_get / content_list filtering)
- *   - Edit-while-trashed
- *   - Idempotency (publish twice, unpublish-on-draft, schedule + publish)
- */
-
 import { Role } from "@emdash-cms/auth";
 import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -26,10 +13,6 @@ import {
 import { setupTestDatabaseWithCollections, teardownTestDatabase } from "../../utils/test-db.js";
 
 const ADMIN_ID = "user_admin";
-
-// ---------------------------------------------------------------------------
-// content_duplicate
-// ---------------------------------------------------------------------------
 
 describe("content_duplicate", () => {
 	let db: Kysely<Database>;
@@ -61,7 +44,6 @@ describe("content_duplicate", () => {
 
 		expect(copy.id).not.toBe(original.id);
 		expect(copy.slug).not.toBe(original.slug);
-		// Created as draft per tool description
 		expect(copy.status).toBe("draft");
 	});
 
@@ -96,10 +78,6 @@ describe("content_duplicate", () => {
 		expect(result.isError).toBe(true);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// content_permanent_delete
-// ---------------------------------------------------------------------------
 
 describe("content_permanent_delete", () => {
 	let db: Kysely<Database>;
@@ -137,7 +115,6 @@ describe("content_permanent_delete", () => {
 		});
 		expect(result.isError, extractText(result)).toBeFalsy();
 
-		// Verify it's gone — not even in trash
 		const got = await harness.client.callTool({
 			name: "content_get",
 			arguments: { collection: "post", id },
@@ -167,10 +144,6 @@ describe("content_permanent_delete", () => {
 		expect(extractText(result)).toContain("01NEVEREXISTED");
 	});
 });
-
-// ---------------------------------------------------------------------------
-// content_translations + locale handling
-// ---------------------------------------------------------------------------
 
 describe("content_translations + locale", () => {
 	let db: Kysely<Database>;
@@ -324,10 +297,6 @@ describe("content_translations + locale", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// _rev optimistic concurrency
-// ---------------------------------------------------------------------------
-
 describe("_rev optimistic concurrency", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -390,13 +359,11 @@ describe("_rev optimistic concurrency", () => {
 		});
 		const oldRev = extractJson<{ _rev: string }>(got)._rev;
 
-		// First update: succeeds and bumps the rev
 		await harness.client.callTool({
 			name: "content_update",
 			arguments: { collection: "post", id, data: { title: "Update 1" }, _rev: oldRev },
 		});
 
-		// Second update with stale rev: should conflict
 		const result = await harness.client.callTool({
 			name: "content_update",
 			arguments: { collection: "post", id, data: { title: "Update 2" }, _rev: oldRev },
@@ -419,10 +386,6 @@ describe("_rev optimistic concurrency", () => {
 		expect(result.isError, extractText(result)).toBeFalsy();
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Soft-delete visibility
-// ---------------------------------------------------------------------------
 
 describe("soft-delete visibility", () => {
 	let db: Kysely<Database>;
@@ -564,10 +527,6 @@ describe("edit-while-trashed", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Idempotency
-// ---------------------------------------------------------------------------
-
 describe("idempotency", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -600,10 +559,6 @@ describe("idempotency", () => {
 		expect(firstItem.status).toBe("published");
 		expect(firstItem.publishedAt).toBeTruthy();
 
-		// Pin publishedAt to a known fixed value so the comparison can't be
-		// satisfied by coincidence (two publishes within the same ms would
-		// produce identical ISO strings even on a regression that drops the
-		// COALESCE preservation).
 		const KNOWN = "2020-01-01T00:00:00.000Z";
 		await sql`UPDATE ec_post SET published_at = ${KNOWN} WHERE id = ${id}`.execute(db);
 
@@ -611,9 +566,6 @@ describe("idempotency", () => {
 			name: "content_publish",
 			arguments: { collection: "post", id },
 		});
-		// Contract: publish is idempotent. Second call succeeds, status
-		// remains published, and publishedAt is preserved (the repository
-		// uses COALESCE so the existing timestamp survives a re-publish).
 		expect(second.isError, extractText(second)).toBeFalsy();
 		const secondItem = extractJson<{
 			item: { status: string; publishedAt: string | null };
@@ -633,8 +585,6 @@ describe("idempotency", () => {
 		const id = createdItem.id;
 		const versionBefore = createdItem.version;
 
-		// Item is born as draft. Contract: unpublish is idempotent — succeeds
-		// and the item stays draft.
 		const result = await harness.client.callTool({
 			name: "content_unpublish",
 			arguments: { collection: "post", id },
@@ -645,10 +595,6 @@ describe("idempotency", () => {
 		}>(result).item;
 		expect(item.status).toBe("draft");
 		expect(item.publishedAt).toBeNull();
-		// Idempotent: nothing meaningful changed. A regression that always
-		// bumps the version or creates a phantom revision would surface here.
-		// (updated_at can tick because the UPDATE re-runs; version is the
-		// stricter invariant.)
 		expect(item.version).toBe(versionBefore);
 	});
 
@@ -679,7 +625,6 @@ describe("idempotency", () => {
 			item: { status: string; scheduledAt: string | null };
 		}>(got).item;
 		expect(item.status).toBe("published");
-		// Once published, the future schedule is moot — should be cleared.
 		expect(item.scheduledAt).toBeNull();
 	});
 
@@ -703,10 +648,6 @@ describe("idempotency", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// content_unschedule gap (no MCP tool for this, only on runtime)
-// ---------------------------------------------------------------------------
-
 describe("content_unschedule gap", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -728,14 +669,12 @@ describe("content_unschedule gap", () => {
 	});
 
 	it("schedule + unschedule clears scheduledAt and re-publish still works (F12)", async () => {
-		// Create a draft item.
 		const created = await harness.client.callTool({
 			name: "content_create",
 			arguments: { collection: "post", data: { title: "Scheduled post" } },
 		});
 		const id = extractJson<{ item: { id: string } }>(created).item.id;
 
-		// Schedule for the near future.
 		const future = new Date(Date.now() + 60_000).toISOString();
 		const schedule = await harness.client.callTool({
 			name: "content_schedule",
@@ -743,7 +682,6 @@ describe("content_unschedule gap", () => {
 		});
 		expect(schedule.isError, extractText(schedule)).toBeFalsy();
 
-		// Sanity: scheduledAt is set.
 		const afterSchedule = await harness.client.callTool({
 			name: "content_get",
 			arguments: { collection: "post", id },
@@ -753,14 +691,12 @@ describe("content_unschedule gap", () => {
 		).item;
 		expect(scheduled.scheduledAt).toBeTruthy();
 
-		// Unschedule.
 		const unschedule = await harness.client.callTool({
 			name: "content_unschedule",
 			arguments: { collection: "post", id },
 		});
 		expect(unschedule.isError, extractText(unschedule)).toBeFalsy();
 
-		// scheduledAt is now null.
 		const afterUnschedule = await harness.client.callTool({
 			name: "content_get",
 			arguments: { collection: "post", id },
@@ -768,7 +704,6 @@ describe("content_unschedule gap", () => {
 		const cleared = extractJson<{ item: { scheduledAt: string | null } }>(afterUnschedule).item;
 		expect(cleared.scheduledAt).toBeNull();
 
-		// Re-publish still works after unschedule.
 		const republish = await harness.client.callTool({
 			name: "content_publish",
 			arguments: { collection: "post", id },

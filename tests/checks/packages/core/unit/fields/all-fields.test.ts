@@ -18,7 +18,6 @@ import {
 	portableText,
 } from "../../../../../../packages/core/src/fields/index.js";
 
-// Test regex patterns
 const UPPERCASE_PATTERN_REGEX = /^[A-Z]+$/;
 const SLUG_UPPERCASE_PATTERN_REGEX = /^[A-Z_]+$/;
 
@@ -249,7 +248,6 @@ describe("Field Types", () => {
 				height: 1080,
 			};
 			expect(() => field.schema.parse(validImage)).not.toThrow();
-			// Missing the required `id` must be rejected; local images may omit `src`.
 			expect(() => field.schema.parse({ alt: "no id" })).toThrow();
 			expect(() => field.schema.parse("not-an-object")).toThrow();
 		});
@@ -349,7 +347,6 @@ describe("Field Types", () => {
 				},
 			];
 			expect(() => field.schema.parse(blocks)).not.toThrow();
-			// Must be an array of blocks, each with `_type` and `_key`.
 			expect(() => field.schema.parse("not-an-array")).toThrow();
 			expect(() => field.schema.parse([{ _type: "block" }])).toThrow();
 		});

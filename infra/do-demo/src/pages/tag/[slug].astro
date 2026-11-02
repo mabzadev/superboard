@@ -23,8 +23,6 @@ const { entries: posts, cacheHint } = await getEmDashCollection("posts", {
 
 Astro.cache.set(cacheHint);
 
-// Single batched query for tags on every post tagged with this term,
-// rather than calling getEntryTerms() per post.
 const tagsByEntry = await getTermsForEntries(
 	"posts",
 	posts.map((p) => p.data.id),

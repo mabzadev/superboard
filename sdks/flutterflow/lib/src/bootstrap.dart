@@ -9,11 +9,6 @@ import 'actions.dart';
 import 'customer_events.dart';
 import 'experience_client.dart';
 
-/// One-time bootstrap widget for a FlutterFlow application's initial page.
-///
-/// Native collection starts from the generated Info.plist/AndroidManifest.xml.
-/// This widget initializes verified purchases and forwards every deep link as a
-/// JSON string suitable for a FlutterFlow callback.
 class SuperBoardBootstrap extends StatefulWidget {
   const SuperBoardBootstrap({
     super.key,
@@ -48,8 +43,6 @@ class SuperBoardBootstrap extends StatefulWidget {
   final String buildNumber;
   final String purchasesSdkVersion;
 
-  /// Set to false when the host app initializes Purchases after its own
-  /// authentication flow with [superboardInitializeAuthenticated].
   final bool initializePurchases;
   final Future<void> Function()? onInitialized;
   final Future<void> Function(String value)? onDeepLinkJson;

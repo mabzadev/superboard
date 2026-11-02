@@ -1,22 +1,14 @@
-//
-//  Message.swift
-//
-//  superboard
-//
-
 import Foundation
 
-/// A structure representing a notification.
 struct SuperBoardNotification: Codable {
-    let id: Int                  // Unique identifier for the notification.
-    let title: String            // The title of the notification.
-    let updatedAt: Date          // The date when the notification was last updated.
-    let subtitle: String?        // An optional subtitle for the notification.
-    let autoDisplay: Bool        // Indicates whether the notification should be displayed automatically.
-    let accessURL: URL?          // An optional URL associated with the notification.
-    let read: Bool               // Indicates whether the notification has been read.
+    let id: Int
+    let title: String
+    let updatedAt: Date
+    let subtitle: String?
+    let autoDisplay: Bool
+    let accessURL: URL?
+    let read: Bool
 
-    /// Coding keys for decoding and encoding the notification.
     enum CodingKeys: String, CodingKey {
         case id
         case title
@@ -29,14 +21,12 @@ struct SuperBoardNotification: Codable {
 }
 
 extension SuperBoardNotification {
-    /// Returns a `JSONDecoder` configured with the date format used by the backend.
     static func backendDecoder() -> JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .formatted(Date.backendDateFormatter())
         return decoder
     }
 
-    /// Returns a `JSONEncoder` configured with the date format used by the backend.
     static func backendEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .formatted(Date.backendDateFormatter())
@@ -44,7 +34,6 @@ extension SuperBoardNotification {
     }
 }
 
-/// A structure representing the response containing a list of notifications.
 struct SuperBoardNotificationsResponse: Codable {
-    let notifications: [SuperBoardNotification]  // Array of notifications.
+    let notifications: [SuperBoardNotification]
 }

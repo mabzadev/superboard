@@ -1,21 +1,3 @@
-/**
- * High-level test publisher. Wires up a FakeRepo, registers it with a MockPds
- * and a MockDidResolver, and exposes ergonomic helpers for the EmDash
- * registry record types (profile + release).
- *
- * Typical use:
- *
- * ```ts
- * const fixture = createFakePublisherFixture();
- * const alice = await fixture.createPublisher({ did: "did:plc:alice", handle: "alice.test" });
- * await alice.publishProfile({ slug: "foo", license: "MIT", securityEmail: "x@y.test" });
- * await alice.publishRelease({ slug: "foo", version: "1.0.0", checksum: "...", url: "..." });
- *
- * // Now the aggregator can fetch from fixture.pds, verify against
- * // fixture.didResolver, and ingest events from fixture.jetstream.
- * ```
- */
-
 import { parseDidKey } from "@atproto/crypto";
 
 import { FakeRepo, type FakeRepoOptions } from "./fake-repo.js";
@@ -68,12 +50,6 @@ export class FakePublisher {
 	}
 
 	async publishProfile(opts: PublishProfileOptions): Promise<{ rkey: string }> {
-		// The lexicon (com.emdashcms.experimental.package.profile) requires
-		// `authors` minLength: 1 and `security` minLength: 1. Defaulting to
-		// empty arrays would let test fixtures silently produce
-		// lexicon-invalid records that pass today (no validator runs) but
-		// would fail the moment a real validator does. Enforce both
-		// invariants in the helper instead.
 		const security: Array<Record<string, string>> = [];
 		if (opts.securityEmail) security.push({ email: opts.securityEmail });
 		if (opts.securityUrl) security.push({ url: opts.securityUrl });
@@ -128,11 +104,6 @@ export class FakePublisher {
 	}
 }
 
-/**
- * One-stop test fixture: a MockPds, MockDidResolver, and MockJetstream that
- * already know about each other. Every publisher created via the fixture is
- * registered with all three.
- */
 export interface FakePublisherFixture {
 	pds: MockPds;
 	didResolver: MockDidResolver;
@@ -161,9 +132,6 @@ export function createFakePublisherFixture(
 		async createPublisher(publisherOpts): Promise<FakePublisher> {
 			const repo = await FakeRepo.create(publisherOpts);
 			pds.mount(repo);
-			// `keypair.did()` returns "did:key:z<multikey>". The DID-document
-			// `publicKeyMultibase` field is just the multikey portion — drop
-			// the `did:key:` prefix.
 			const didKey = repo.didKey();
 			const signingKeyMultibase = didKey.replace(DID_KEY_PREFIX_RE, "");
 			const doc = buildDidDocument({
@@ -178,19 +146,8 @@ export function createFakePublisherFixture(
 	};
 }
 
-/**
- * Returns a `did:key`-style public key from the publisher's DID, suitable
- * for direct verification with `@atcute/repo`'s `verifyRecord({ publicKey })`.
- * The aggregator normally resolves DID documents and reads the multikey out;
- * tests that exercise the verification primitive directly can short-circuit
- * via this helper.
- */
 export function publisherDidKey(repo: FakeRepo): string {
 	return repo.didKey();
 }
 
-/**
- * Re-export `parseDidKey` so tests can convert the publisher's DID key string
- * into the `{ jwtAlg, keyBytes }` shape `@atcute/crypto` needs.
- */
 export { parseDidKey };

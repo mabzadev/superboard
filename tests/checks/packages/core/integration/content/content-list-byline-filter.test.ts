@@ -16,13 +16,8 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
-// Byline filtering in the admin content list: match entries credited to any of
-// the selected bylines, or entries with no byline at all. Credits inferred from
-// an entry's author are excluded unless explicitly opted into.
 describeEachDialect("content list byline filter", (dialect) => {
 	let ctx: DialectTestContext;
-	// `_emdash_content_bylines.byline_id` stores translation_groups, so the
-	// filter takes groups rather than row ids.
 	let adaGroup: string;
 	let graceGroup: string;
 	let turingGroup: string;
@@ -39,8 +34,6 @@ describeEachDialect("content list byline filter", (dialect) => {
 		const bylines = new BylineRepository(ctx.db);
 		const ada = await bylines.create({ slug: "ada", displayName: "Ada Lovelace" });
 		const grace = await bylines.create({ slug: "grace", displayName: "Grace Hopper" });
-		// Linked to a CMS user, so entries authored by that user get an
-		// inferred credit when they carry no explicit one.
 		const turing = await bylines.create({
 			slug: "turing",
 			displayName: "Alan Turing",
@@ -55,8 +48,6 @@ describeEachDialect("content list byline filter", (dialect) => {
 			{ slug: "grace-only", title: "Grace only", bylines: [grace.id] },
 			{ slug: "both", title: "Both", bylines: [ada.id, grace.id] },
 			{ slug: "uncredited", title: "Uncredited", bylines: [] },
-			// No explicit credit, but its author owns the Turing byline — the
-			// list renders "Alan Turing" against it by inference.
 			{ slug: "inferred", title: "Inferred", bylines: [], authorId: turingUser.id },
 		];
 		for (const s of seed) {
@@ -102,8 +93,6 @@ describeEachDialect("content list byline filter", (dialect) => {
 
 	it("matches entries with no byline credit", async () => {
 		const result = await handleContentList(ctx.db, "posts", { bylinesNone: true });
-		// `inferred` has no credit of its own, so it belongs here until
-		// inference is opted into.
 		expect(slugsOf(result)).toEqual(["inferred", "uncredited"]);
 	});
 
@@ -129,10 +118,6 @@ describeEachDialect("content list byline filter", (dialect) => {
 	});
 
 	it("does not infer a credit for an entry that already has one", async () => {
-		// `ada-only` is authored by nobody, but the guard matters generally:
-		// an explicit credit must suppress the author fallback, mirroring
-		// `hydrateBylinesMany`. Credit `inferred` to Ada and it should stop
-		// matching Turing even with inference on.
 		const bylines = new BylineRepository(ctx.db);
 		const ada = await bylines.findBySlug("ada");
 		if (!ada) throw new Error("ada byline missing");
@@ -146,12 +131,6 @@ describeEachDialect("content list byline filter", (dialect) => {
 	});
 
 	it("resolves inferred credits at the locale the list is scoped to", async () => {
-		// A byline translated into `fr` starts with a null user_id (the
-		// translations route makes linking an explicit step), so the Turing
-		// byline is user-linked at the default locale only. Move `inferred`
-		// to `fr` and the list renders no byline against it — the author
-		// fallback is strict per locale. The filter has to agree, or it
-		// returns an entry the list shows as uncredited.
 		const id = await idOfSlug("inferred");
 		const bylines = new BylineRepository(ctx.db);
 		const turing = await bylines.findBySlug("turing");
@@ -175,8 +154,6 @@ describeEachDialect("content list byline filter", (dialect) => {
 		});
 		expect(slugsOf(matched)).toEqual([]);
 
-		// The same entry must not fall through the gap either: with nothing
-		// rendered against it, it belongs under "no byline".
 		const none = await handleContentList(ctx.db, "posts", {
 			locale: "fr",
 			bylinesNone: true,
@@ -186,11 +163,6 @@ describeEachDialect("content list byline filter", (dialect) => {
 	});
 
 	it("ignores an explicit credit that does not resolve at the list's locale", async () => {
-		// Junction rows are copied to every translation of an entry
-		// (`copyContentBylines`) and store a translation_group, but a credit
-		// only renders where the group has a row at the list's locale. Ada
-		// exists in the default locale only, so an `fr` entry credited to her
-		// renders uncredited — and the filter has to agree in both directions.
 		const id = await idOfSlug("ada-only");
 		await sql`UPDATE ${sql.ref("ec_posts")} SET locale = 'fr' WHERE id = ${id}`.execute(ctx.db);
 
@@ -209,11 +181,6 @@ describeEachDialect("content list byline filter", (dialect) => {
 	});
 
 	it("does not infer a credit for an entry whose explicit credit fails to resolve", async () => {
-		// The entry carries an explicit credit that renders nothing at `fr`,
-		// and its author owns a byline that does exist at `fr`. Hydration still
-		// shows no credit: the author fallback applies only where the entry has
-		// no explicit credit at all, at any locale. So the inference gate stays
-		// locale-agnostic even though what renders is locale-scoped.
 		const bylines = new BylineRepository(ctx.db);
 		const ada = await bylines.findBySlug("ada");
 		const turing = await bylines.findBySlug("turing");
@@ -261,8 +228,6 @@ describeEachDialect("content list byline filter", (dialect) => {
 			bylines: [adaGroup, graceGroup],
 			status: "published",
 		});
-		// Seeded entries are drafts, so the intersection is empty — the byline
-		// filter must not override the status filter.
 		expect(slugsOf(result)).toEqual([]);
 	});
 
@@ -274,8 +239,6 @@ describeEachDialect("content list byline filter", (dialect) => {
 	});
 
 	it("matches nothing when a repository caller passes an empty byline list", async () => {
-		// The handler never builds this, but a filter that resolved to no ids
-		// must not degrade into "no filter" and return the whole collection.
 		const repo = new ContentRepository(ctx.db);
 		const result = await repo.findMany("posts", {
 			where: { bylineFilter: { mode: "any", bylineIds: [] } },

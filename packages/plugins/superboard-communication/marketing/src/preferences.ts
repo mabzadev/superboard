@@ -163,7 +163,6 @@ async function applyPreferenceAction(
 		)
 			.bind(projectId, subscriber.email)
 			.first<{ reason: string }>();
-		// Bounces, complaints, privacy deletions and team blocks stay authoritative.
 		if (
 			subscriber.status === "blocklisted" ||
 			(suppression && suppression.reason !== "unsubscribe")
@@ -209,7 +208,6 @@ async function applyPreferenceAction(
 	return "saved";
 }
 
-/** Renders the hosted preference center for one contact. */
 export async function renderPreferenceCenter(
 	env: Env,
 	projectId: number,
@@ -278,7 +276,6 @@ ${unsubscribed ? `<button type="submit" name="action" value="resubscribe" class=
 	return publicPage({ title: text.title, locale, body, accent: brand?.colors.accent });
 }
 
-/** Signed, non-expiring link to the preference center of one contact. */
 export async function preferencesUrl(env: Env, projectId: number, subscriberId: string) {
 	const encoded = base64Url(
 		new TextEncoder().encode(JSON.stringify({ p: projectId, s: subscriberId })),
@@ -307,10 +304,6 @@ async function verifyPreferenceToken(env: Env, value: string): Promise<Preferenc
 	}
 }
 
-/**
- * Adds a compact "manage preferences" footer to marketing HTML. Inserted after
- * click instrumentation so preference visits never count as engagement.
- */
 export function appendPreferenceFooter(
 	html: string,
 	links: {

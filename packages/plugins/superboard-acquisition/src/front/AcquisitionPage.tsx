@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, type ReactNode } from "react";
 
 const EmbeddedPageContext = createContext(false);
 
-/** Renders nested Acquisition pages as sections of the surrounding workspace. */
 export function EmbeddedPage({ children }: { children: ReactNode }) {
 	return <EmbeddedPageContext.Provider value>{children}</EmbeddedPageContext.Provider>;
 }

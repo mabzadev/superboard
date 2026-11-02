@@ -209,10 +209,6 @@ if (service === "identity" && !uploadOnly) {
 	});
 }
 
-// D1 convergence and other read-only verification helpers intentionally
-// generate a route-free Wrangler configuration at the canonical generated
-// path. Recreate the requested deployment configuration after those helpers
-// so an active deploy can never detach a public route or queue consumer.
 generateServiceConfig();
 
 if (service === "site") {

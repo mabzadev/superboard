@@ -178,8 +178,6 @@ function replacePackageNames(value, names) {
 	return output;
 }
 
-// Patches that must keep applying to the pinned source: fail the import loudly
-// instead of silently shipping the unpatched upstream behaviour.
 function replaceRequired(destinationPath, text, before, after) {
 	if (!text.includes(before)) {
 		throw new Error(`Flows upstream patch no longer applies to ${destinationPath}`);
@@ -651,10 +649,6 @@ export const sendActivate = async (blockId: string, blockStateId?: string): Prom
 	}
 
 	if (destinationPath === "packages/js/src/lib/websocket.ts") {
-		// Upstream returns the first socket's `disconnect` and reconnects through a
-		// detached timer, so a later disconnect closes nothing and the pending
-		// reconnect opens a socket nobody owns. Keep one owner per connection: its
-		// own attempt counter, the pending timer and whichever socket is current.
 		output = replaceRequired(
 			destinationPath,
 			output,
@@ -738,9 +732,6 @@ export const websocket = (props: Props): { disconnect: Disconnect } => {
 	}
 
 	if (destinationPath === "packages/js/src/init.ts") {
-		// Replace the 250 ms location polling with navigation events. History API
-		// navigations do not emit events, so pushState/replaceState are wrapped once
-		// (chaining whatever implementation is installed) to announce them.
 		output = replaceRequired(
 			destinationPath,
 			output,
@@ -1246,8 +1237,6 @@ function transformText(sourceKey, destinationPath, contents) {
 			if (Object.keys(configuration.options).length === 0) delete configuration.options;
 		}
 		if (sourceKey === "flows-sh" && destinationPath !== "product/.oxlintrc.json") {
-			// Product packages sit one level below product/, whose .oxlintrc.json is
-			// the imported flows.sh root configuration.
 			configuration.extends = (configuration.extends ?? []).map((path) =>
 				path === "../../.oxlintrc.json" ? "../.oxlintrc.json" : path,
 			);
@@ -1267,10 +1256,6 @@ function transformText(sourceKey, destinationPath, contents) {
 	if (sourceKey === "flows-sh") output = output.replaceAll('"icons"', '"@superboard/flows-icons"');
 	if (sourceKey === "flows-sdk") output = transformSdkRuntime(destinationPath, output);
 
-	// SuperBoard owns one Flows surface per project. The upstream SDK calls this
-	// boundary an organization, but keeping that name in our public packages
-	// would recreate a second tenant model. Rewrite the generated public API and
-	// its tests/docs after the upstream-specific patches have been applied.
 	if (sourceKey === "flows-sdk") {
 		output = output
 			.replaceAll("organizationId", "projectId")
@@ -1286,9 +1271,6 @@ function transformText(sourceKey, destinationPath, contents) {
 			.replaceAll("organization", "project")
 			.replaceAll("Organization", "Project")
 			.replaceAll("ORGANIZATION", "PROJECT")
-			// Billing and free-plan behavior do not exist in SuperBoard Flows. Keep
-			// the upstream component wiring as a permanently-disabled branding
-			// compatibility flag, without exposing an organization or plan model.
 			.replaceAll("freeOrganization", "legacyBranding")
 			.replaceAll("freeOrg", "legacyBranding")
 			.replaceAll("free_org", "legacy_branding")
@@ -1352,10 +1334,6 @@ interface BlocksResponse {
 	}
 
 	if (sourceKey === "flows-sh") {
-		// SuperBoard Flows is owned by the already-selected project. The upstream
-		// product references are useful for blocks, SDK setup, Launchpad, surveys,
-		// tours and localization, but its separate organization and MTU billing
-		// domains are intentionally not part of the imported product.
 		output = output
 			.replaceAll("organizationId", "projectId")
 			.replaceAll("organization ID", "project ID")
@@ -1501,9 +1479,6 @@ function createSelection(flowsShSource, flowsSdkSource) {
 		"reference/product-docs/content",
 		(path) => !isRetiredProductPath(`apps/docs/src/content/${path}`),
 	);
-	// Documentation images and the upstream example/template applications (about
-	// 127 MB) are not imported: nothing builds, tests or ships them, they remain
-	// available at the pinned upstream commits, and the licenses live in notices/.
 
 	const destinations = new Set();
 	for (const entry of selected) {

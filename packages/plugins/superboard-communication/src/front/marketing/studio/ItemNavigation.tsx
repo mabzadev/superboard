@@ -2,7 +2,6 @@ import { useRouter, useSearchParams } from "@superboard/front-ui/navigation";
 
 let leaveGuard: (() => Promise<boolean>) | null = null;
 
-/** Lets an open editor flush its pending save before the workspace navigates away. */
 export function setLeaveGuard(guard: (() => Promise<boolean>) | null) {
 	leaveGuard = guard;
 }

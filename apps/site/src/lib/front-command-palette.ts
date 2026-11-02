@@ -12,9 +12,7 @@ export interface FrontCommand {
 	id: string;
 	group: FrontCommandGroup;
 	label: string;
-	/** Where the entry lives, e.g. `Environment settings › API keys`. */
 	hint?: string;
-	/** Extra searchable words that are not displayed. */
 	keywords?: string;
 	href?: string;
 	target?: string;
@@ -31,15 +29,10 @@ function normalizeCommandText(value: string) {
 	return value.normalize("NFD").replace(DIACRITICS, "").toLowerCase().trim();
 }
 
-/** Pathname of a menu destination once legacy paths are canonicalized. */
 export function commandPathname(href: string) {
 	return canonicalFrontHref(href).split(SUFFIX, 1)[0] ?? "";
 }
 
-/**
- * The destination of the menu page at `pathname`, with extra query parameters (e.g. Dynamic links
- * with `create=1`). Undefined when the EmDash menu does not offer that page to this operator.
- */
 export function menuDestination(
 	commands: readonly FrontCommand[],
 	pathname: string,
@@ -55,7 +48,6 @@ export function menuDestination(
 	return url.href.slice(url.origin.length);
 }
 
-/** Every menu destination: sections, their pages and the pages' local tabs, without duplicates. */
 export function navigationCommands(groups: readonly NativeFrontNavigationGroup[]): FrontCommand[] {
 	const commands: FrontCommand[] = [];
 	const seen = new Set<string>();
@@ -100,10 +92,6 @@ export function recentCommands(
 		}));
 }
 
-/**
- * 0 when the entry does not match. Every query word must start a word of the label, hint or
- * keywords (or appear inside them); label prefixes rank first.
- */
 export function scoreCommand(command: FrontCommand, query: string) {
 	const needle = normalizeCommandText(query);
 	if (!needle) return 1;
@@ -123,15 +111,12 @@ export function scoreCommand(command: FrontCommand, query: string) {
 	return score;
 }
 
-/** Matching entries, grouped in palette order and ranked inside each group. */
 export function filterCommands(commands: readonly FrontCommand[], query: string): FrontCommand[] {
 	const searching = normalizeCommandText(query) !== "";
-	// A quick action that is exactly a menu page (e.g. API keys) replaces that page.
 	const actions = new Set(
 		commands.filter((command) => command.group === "actions" && command.href).map(identity),
 	);
 	const ranked = commands
-		// Recent pages repeat menu entries: while searching, the menu entry is enough.
 		.filter((command) => !(searching && command.group === "recent"))
 		.filter((command) => !(command.group === "pages" && actions.has(identity(command))))
 		.map((command, index) => ({ command, index, score: scoreCommand(command, query) }))

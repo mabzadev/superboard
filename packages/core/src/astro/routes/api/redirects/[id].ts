@@ -1,11 +1,3 @@
-/**
- * Redirect by ID endpoints
- *
- * GET    /_emdash/api/redirects/:id - Get redirect
- * PUT    /_emdash/api/redirects/:id - Update redirect
- * DELETE /_emdash/api/redirects/:id - Delete redirect
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

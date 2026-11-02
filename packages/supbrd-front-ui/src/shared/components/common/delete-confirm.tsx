@@ -13,7 +13,7 @@ import {
 
 type DeleteConfirmProps = {
 	onConfirm: () => void | Promise<void>;
-	children: ReactNode; // trigger (e.g., Delete button)
+	children: ReactNode;
 	title?: string;
 	description?: string;
 	confirmText?: string;
@@ -44,7 +44,6 @@ const DeleteConfirm = ({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				{/* Trigger element */}
 				<div onClick={() => setOpen(true)}>{children}</div>
 			</DialogTrigger>
 

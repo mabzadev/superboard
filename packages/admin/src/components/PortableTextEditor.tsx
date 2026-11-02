@@ -1,16 +1,3 @@
-/**
- * Portable Text Editor
- *
- * TipTap-based rich text editor that stores content as Portable Text.
- * Handles conversion between ProseMirror JSON and Portable Text automatically.
- *
- * Features:
- * - BubbleMenu for inline formatting
- * - Link popover for editing URLs (no window.prompt)
- * - Slash commands for block insertion
- * - Floating menu on empty lines
- */
-
 import {
 	Button,
 	Dialog,
@@ -149,9 +136,6 @@ type BubbleMenuCollisionOptions = () => {
 	padding: number;
 };
 
-// Import converters from inline module since we can't import from emdash package
-// These will be duplicated here until we set up proper package exports
-
 interface PortableTextSpan {
 	_type: "span";
 	_key: string;
@@ -186,9 +170,7 @@ interface PortableTextImageBlock {
 	caption?: string;
 	width?: number;
 	height?: number;
-	/** LQIP blurhash — first-class field (legacy snapshots store it in `asset.meta`). */
 	blurhash?: string;
-	/** LQIP dominant color — first-class field (legacy snapshots store it in `asset.meta`). */
 	dominantColor?: string;
 	displayWidth?: number;
 	displayHeight?: number;
@@ -215,16 +197,10 @@ type PortableTextBlock =
 	| PortableTextHtmlBlock
 	| { _type: string; _key: string; [key: string]: unknown };
 
-// Generate unique key
 function generateKey(): string {
 	return Math.random().toString(36).substring(2, 11);
 }
 
-/**
- * Normalize an untrusted gallery `images` value into well-formed entries.
- * Mirrors `sanitizeGalleryImages` in core's content/converters (duplicated
- * like the converters themselves — see note above).
- */
 function sanitizeGalleryImages(value: unknown, withKeys = false): GalleryImage[] {
 	if (!Array.isArray(value)) return [];
 	const images: GalleryImage[] = [];
@@ -257,7 +233,6 @@ function sanitizeGalleryImages(value: unknown, withKeys = false): GalleryImage[]
 	return images;
 }
 
-// Helpers for safely extracting typed values from ProseMirror attrs (Record<string, any>)
 const attrStr = (v: unknown): string | undefined => (typeof v === "string" && v ? v : undefined);
 const attrNum = (v: unknown): number | undefined => (typeof v === "number" && v ? v : undefined);
 
@@ -415,7 +390,6 @@ function normalizeOrderedListJson(doc: { type: "doc"; content: PortableTextProse
 	return normalized;
 }
 
-// ProseMirror to Portable Text converter
 function prosemirrorToPortableText(doc: {
 	type: string;
 	content?: Array<{
@@ -552,11 +526,6 @@ function convertPMNode(
 			const provider = attrStr(attrs.provider);
 			const blurhash = attrStr(attrs.blurhash);
 			const dominantColor = attrStr(attrs.dominantColor);
-			// Persist LQIP as first-class block fields, matching the image-field
-			// path (MediaValue.blurhash/dominantColor) so read sites and normalize
-			// don't need a `asset.meta` dual-shape. `asset.meta` is left to carry
-			// only provider-specific data (we don't reconstruct it here, so any
-			// non-LQIP meta keys are never silently dropped on editor round-trip).
 			return {
 				_type: "image",
 				_key: generateKey(),
@@ -845,7 +814,6 @@ function convertMark(
 	}
 }
 
-// Type guards for PortableText block variants
 function isTextBlock(block: PortableTextBlock): block is PortableTextTextBlock {
 	return block._type === "block";
 }
@@ -858,7 +826,6 @@ function isCodeBlock(block: PortableTextBlock): block is PortableTextCodeBlock {
 	return block._type === "code";
 }
 
-// Portable Text to ProseMirror converter
 function portableTextToProsemirror(blocks: PortableTextBlock[]): {
 	type: "doc";
 	content: unknown[];
@@ -883,9 +850,6 @@ function portableTextToProsemirror(blocks: PortableTextBlock[]): {
 			const runStart = i;
 			const rootId = listType === "number" ? normalizeListId(block.listId) : undefined;
 
-			// A list "run" is a level=1 anchor block plus everything that nests
-			// under it (level > 1) or repeats it at the same root level/type.
-			// A level=1 block with a different listItem ends the run.
 			while (i < blocks.length) {
 				const current = blocks[i]!;
 				if (!isTextBlock(current) || !current.listItem) break;
@@ -992,8 +956,6 @@ function convertPTBlock(block: PortableTextBlock): unknown {
 			if (!isImageBlock(block)) return null;
 			const imageBlock = block;
 			const meta = imageBlock.asset.meta;
-			// Prefer first-class LQIP fields; fall back to `asset.meta` for legacy
-			// snapshots persisted before LQIP was promoted out of the provider meta bag.
 			const blurhash =
 				typeof imageBlock.blurhash === "string"
 					? imageBlock.blurhash
@@ -1044,8 +1006,6 @@ function convertPTBlock(block: PortableTextBlock): unknown {
 
 		case "gallery": {
 			const galleryBlock = block as { _type: "gallery"; _key: string; [key: string]: unknown };
-			// A gallery without an images array is malformed — keep the visible
-			// placeholder rather than silently rendering an empty grid.
 			if (!Array.isArray(galleryBlock.images)) {
 				return {
 					type: "paragraph",
@@ -1136,11 +1096,7 @@ function convertPTBlock(block: PortableTextBlock): unknown {
 		}
 
 		default: {
-			// Treat unknown block types as plugin blocks (embeds)
-			// These have an id field (or url for backwards compat) for the embed source,
-			// OR Block Kit field data stored as top-level keys (e.g., formId for forms plugin)
 			const { _type, _key, id, url, ...rest } = block as Record<string, unknown>;
-			// Filter out _-prefixed keys to prevent accumulation across edit cycles
 			const data = Object.fromEntries(Object.entries(rest).filter(([k]) => !k.startsWith("_")));
 			const hasFieldData = Object.keys(data).length > 0;
 			if (id || url || hasFieldData) {
@@ -1153,7 +1109,6 @@ function convertPTBlock(block: PortableTextBlock): unknown {
 					},
 				};
 			}
-			// Truly unknown blocks with no data at all
 			return {
 				type: "paragraph",
 				content: [
@@ -1173,10 +1128,6 @@ function convertPTList(
 	listType: "bullet" | "number",
 	context: string,
 ): unknown {
-	// Group items into root-level items (level === 1) and their nested
-	// descendants (level > 1). For each root item, all subsequent items with
-	// level > 1 belong to its nested subtree — recurse on them with level
-	// decremented so the inner pass sees them as its own root level.
 	const rootItems: unknown[] = [];
 	let i = 0;
 
@@ -1195,8 +1146,6 @@ function convertPTList(
 				convertPTListItem(item, nestedItems, listType, `${context}:${rootItems.length}`),
 			);
 		} else {
-			// Orphan nested item with no preceding level=1 anchor — treat as root
-			// so we don't drop content.
 			rootItems.push(convertPTListItem(item, [], listType, `${context}:${rootItems.length}`));
 			i++;
 		}
@@ -1228,15 +1177,6 @@ function convertPTListItem(
 	});
 
 	if (nestedItems.length > 0) {
-		// The shallowest level in `nestedItems` is the effective root of this
-		// item's nested subtree. A new sub-list only starts when we hit
-		// another block at that root level with a different `listItem` type;
-		// deeper blocks (level > minLevel) belong to the current group as
-		// descendants regardless of their own `listItem`. The previous
-		// grouping broke on any type change at any depth, so a deep mixed
-		// tree like `bullet L1 → number L2 → bullet L3 → number L2` would
-		// emit C(L3) as a sibling list under A(L1) instead of nesting it
-		// under B(L2), then degrade C to L2 on round-trip.
 		let minLevel = Infinity;
 		for (const ni of nestedItems) {
 			const level = ni.level || 2;
@@ -1358,28 +1298,14 @@ function convertPTMarks(marks: string[], markDefs: Map<string, PortableTextMarkD
 	return pmMarks;
 }
 
-// =============================================================================
-// Slash Commands
-// =============================================================================
-
-/**
- * Slash command item definition
- */
 interface SlashCommandItem {
 	id: string;
-	/** Built-in commands use `msg`; plugin/API-sourced titles stay plain `string`. */
 	title: MessageDescriptor | string;
 	description: MessageDescriptor | string;
 	icon: Icon | React.ComponentType<{ className?: string }>;
 	command: (props: { editor: Editor; range: Range }) => void;
-	/** Delay document insertion until a modal-backed command returns a selection. */
 	deferInsertion?: boolean;
 	aliases?: string[];
-	/**
-	 * Display category. Built-in commands use `msg`-tagged descriptors;
-	 * plugin-supplied categories arrive as plain strings via the manifest
-	 * and are passed through verbatim when rendered.
-	 */
 	category?: MessageDescriptor | string;
 }
 
@@ -1389,9 +1315,6 @@ function insertHtmlBlock(editor: Editor, range?: Range) {
 	chain.insertContent({ type: "htmlBlock", attrs: { html: "" } }).run();
 }
 
-/**
- * Default slash commands for built-in block types
- */
 const defaultSlashCommands: SlashCommandItem[] = [
 	{
 		id: "heading1",
@@ -1528,9 +1451,6 @@ const defaultSlashCommands: SlashCommandItem[] = [
 	},
 ];
 
-/**
- * Slash menu state
- */
 interface SlashMenuState {
 	isOpen: boolean;
 	items: SlashCommandItem[];
@@ -1542,9 +1462,6 @@ interface SlashMenuState {
 	dismissedSlashFrom: number | null;
 }
 
-/**
- * Create the slash commands TipTap extension
- */
 function createSlashCommandsExtension(options: {
 	filterCommands: (query: string) => SlashCommandItem[];
 	onStateChange: React.Dispatch<React.SetStateAction<SlashMenuState>>;
@@ -1654,7 +1571,6 @@ function createSlashCommandsExtension(options: {
 	});
 }
 
-/** Slash command menu anchored to the TipTap caret. */
 function SlashCommandMenu({
 	state,
 	onCommand,
@@ -1676,7 +1592,6 @@ function SlashCommandMenu({
 		[state.clientRect],
 	);
 
-	// Scroll selected item into view
 	React.useEffect(() => {
 		if (!state.isOpen) return;
 		const container = containerRef.current;
@@ -1688,15 +1603,6 @@ function SlashCommandMenu({
 		}
 	}, [state.selectedIndex, state.isOpen]);
 
-	// Track whether the mouse has actually moved since the menu opened.
-	// The menu typically opens right at the text cursor, which may sit under
-	// a stationary mouse pointer. Reacting to mouseenter immediately would
-	// reset the selection to whichever item happens to be under the pointer
-	// the moment the menu renders -- overriding the keyboard-driven default
-	// (selectedIndex: 0) and any subsequent arrow-key navigation.
-	//
-	// Only flip the gate on mousemove, which fires only on real pointer
-	// movement, not on elements appearing under a stationary pointer.
 	const hasMouseMovedRef = React.useRef(false);
 	React.useEffect(() => {
 		if (!state.isOpen) {
@@ -1733,7 +1639,6 @@ function SlashCommandMenu({
 			}}
 		>
 			<PopoverPrimitive.Portal>
-				{/* TipTap owns focus, so Base UI's portal guards must stay out of the Tab order. */}
 				<PopoverPrimitive.Positioner
 					anchor={virtualAnchor}
 					side="bottom"
@@ -1791,9 +1696,6 @@ function SlashCommandMenu({
 										onPointerDown={(event) => event.preventDefault()}
 										onClick={() => onCommand(item)}
 										onMouseEnter={() => {
-											// Only react if the user has actually moved the
-											// mouse since the menu opened -- not when items
-											// appear under a stationary pointer.
 											if (hasMouseMovedRef.current) {
 												setSelectedIndex(index);
 											}
@@ -1848,11 +1750,6 @@ function hasPluginBlockFormData(values: Record<string, unknown>): boolean {
 	);
 }
 
-/**
- * Plugin block insertion/editing modal.
- * When the block has `fields`, renders Block Kit elements.
- * Otherwise falls back to a simple URL input.
- */
 function PluginBlockModal({
 	block,
 	initialValues,
@@ -1860,7 +1757,6 @@ function PluginBlockModal({
 	onInsert,
 }: {
 	block: PluginBlockDef | null;
-	/** Pre-populated values when editing an existing block */
 	initialValues?: Record<string, unknown>;
 	onClose: () => void;
 	onInsert: (values: Record<string, unknown>) => void;
@@ -1898,15 +1794,10 @@ function PluginBlockModal({
 	const isEditing = !!initialValues;
 	const hasFields = block?.fields && block.fields.length > 0;
 
-	// For simple URL mode, check if the URL is non-empty
-	// For Block Kit fields, require at least one field to have a value
 	const canSubmit = hasFields
 		? hasPluginBlockFormData(formValues)
 		: typeof formValues.id === "string" && formValues.id.trim().length > 0;
 
-	// Size the dialog based on field complexity. The default `sm` is right for
-	// simple URL embeds (one field) but cramps Block Kit forms with several
-	// fields or a repeater, which need room for inline sub-field inputs.
 	const dialogSize = (() => {
 		if (!hasFields) return "sm";
 		const fields = block?.fields ?? [];
@@ -1975,10 +1866,6 @@ function PluginBlockModal({
 	);
 }
 
-/**
- * Renders a single Block Kit field element.
- * Supports text_input, number_input, select (with optional async options), and toggle.
- */
 function BlockKitField({
 	field,
 	pluginId,
@@ -2070,8 +1957,6 @@ function BlockKitField({
 	}
 }
 
-// ── Repeater support ─────────────────────────────────────────────────────────
-
 type RepeaterItem = Record<string, unknown> & { _key: string };
 
 function ensureKeys(items: unknown[]): RepeaterItem[] {
@@ -2106,15 +1991,8 @@ function BlockKitRepeater({
 		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
 	);
 
-	// Track the array we just emitted upstream. When `value` flows back as
-	// the same reference, the resync below is a no-op and we skip the
-	// setState round-trip that would otherwise reseed local state on every
-	// keystroke.
 	const lastEmittedRef = React.useRef<unknown[] | null>(null);
 
-	// Preserve each item's _key by position so round-trips through onChange
-	// (which strips _key) don't remount children and flip them back to
-	// collapsed on every keystroke.
 	React.useEffect(() => {
 		if (lastEmittedRef.current === rawItems) return;
 		setItems((prev) =>
@@ -2136,9 +2014,6 @@ function BlockKitRepeater({
 	const maxItems = field.max_items;
 	const canAdd = maxItems === undefined || items.length < maxItems;
 	const canRemove = items.length > minItems;
-	// Only interpolate plugin-provided labels into translations; otherwise
-	// use a self-contained `Add item` string so message extractors and
-	// translators see whole, inflectable phrases.
 	const addButtonLabel = field.item_label ? t`Add ${field.item_label}` : t`Add item`;
 
 	const emit = (next: RepeaterItem[]) => {
@@ -2295,7 +2170,6 @@ function BlockKitRepeaterItem({
 		transition,
 	};
 
-	// Summary label: value of the first text_input sub-field, falling back to "Item N".
 	const summaryField = fields.find((f) => f.type === "text_input");
 	const summaryValue =
 		summaryField && typeof item[summaryField.action_id] === "string"
@@ -2364,10 +2238,6 @@ function BlockKitRepeaterItem({
 	);
 }
 
-/**
- * Select field that supports loading options dynamically via `optionsRoute`.
- * When `optionsRoute` is set, fetches `{ items: [{ id, name }] }` from the plugin route.
- */
 function DynamicSelect({
 	field,
 	pluginId,
@@ -2412,7 +2282,6 @@ function DynamicSelect({
 					}
 				}
 			} catch {
-				// Failed to load options or aborted — static options will be used
 			} finally {
 				if (!controller.signal.aborted) {
 					setLoading(false);
@@ -2444,10 +2313,8 @@ function DynamicSelect({
 	);
 }
 
-// Re-export for consumers
 export type { PluginBlockDef } from "./editor/PluginBlockNode";
 
-// Exported for unit testing (pure functions, no React dependencies)
 export { prosemirrorToPortableText as _prosemirrorToPortableText };
 export { portableTextToProsemirror as _portableTextToProsemirror };
 export {
@@ -2455,21 +2322,10 @@ export {
 	hasPluginBlockFormData as _hasPluginBlockFormData,
 };
 
-// =============================================================================
-// Editor Footer with Writing Metrics
-// =============================================================================
-
-// Reading speed used for the footer metrics. CJK characters get a separate,
-// higher rate because they are denser than space-delimited words. These mirror
-// the published reading-time util (templates/blog/src/utils/reading-time.ts,
-// covered by packages/core/tests/unit/templates/blog-reading-time.test.ts) so
-// the editor footer and the rendered site report the same numbers.
 const WORDS_PER_MINUTE = 200;
 const CJK_CHARACTERS_PER_MINUTE = 500;
 const WHITESPACE_REGEX = /\s+/;
 
-// CJK scripts do not separate words with spaces, so a split()-based count treats
-// a whole paragraph as a single word. Count those characters individually.
 const CJK_CHARACTER_REGEX =
 	/\p{Script=Han}|\p{Script=Hangul}|\p{Script=Hiragana}|\p{Script=Katakana}/gu;
 
@@ -2481,21 +2337,10 @@ function countNonCjkWords(text: string): number {
 	return text.replace(CJK_CHARACTER_REGEX, " ").split(WHITESPACE_REGEX).filter(Boolean).length;
 }
 
-/**
- * Word count for the editor footer. CJK characters are counted individually
- * because they are not delimited by spaces; other scripts are counted by word.
- * Used as the `wordCounter` for the CharacterCount extension, whose default
- * (`text.split(' ')`) reports a spaceless CJK paragraph as a single word.
- */
 export function countWords(text: string): number {
 	return countNonCjkWords(text) + countCjkCharacters(text);
 }
 
-/**
- * Calculate reading time in minutes for the given text. Word-based scripts are
- * read at WORDS_PER_MINUTE and CJK characters at CJK_CHARACTERS_PER_MINUTE.
- * Returns 0 for an empty document.
- */
 export function calculateReadingTime(text: string): number {
 	return Math.ceil(
 		countNonCjkWords(text) / WORDS_PER_MINUTE +
@@ -2503,9 +2348,6 @@ export function calculateReadingTime(text: string): number {
 	);
 }
 
-/**
- * Editor footer showing writing metrics (word count, character count, reading time)
- */
 function EditorFooter({ editor }: { editor: Editor }) {
 	const { words, characters, text } = useEditorState({
 		editor,
@@ -2520,7 +2362,6 @@ function EditorFooter({ editor }: { editor: Editor }) {
 		},
 	});
 
-	// Subscribes to locale changes so the plural messages below re-render.
 	useLinguiContext();
 	const readingTime = calculateReadingTime(text);
 
@@ -2535,10 +2376,8 @@ function EditorFooter({ editor }: { editor: Editor }) {
 
 export { EditorFooter as _EditorFooter };
 
-/** Focus mode state for the editor */
 export type FocusMode = "normal" | "spotlight";
 
-/** Describes a block sidebar panel request from a node view */
 export interface BlockSidebarPanel {
 	type: string;
 	attrs: Record<string, unknown>;
@@ -2548,36 +2387,22 @@ export interface BlockSidebarPanel {
 	onClose: () => void;
 }
 
-// Editor Props
 export interface PortableTextEditorProps {
 	value?: PortableTextBlock[];
 	onChange?: (value: PortableTextBlock[]) => void;
 	placeholder?: string;
 	className?: string;
 	editable?: boolean;
-	/** ID of label element for accessibility */
 	"aria-labelledby"?: string;
-	/** Plugin blocks available for insertion via slash commands */
 	pluginBlocks?: PluginBlockDef[];
-	/** Focus mode - controlled from parent for distraction-free mode coordination */
 	focusMode?: FocusMode;
-	/** Callback when focus mode changes */
 	onFocusModeChange?: (mode: FocusMode) => void;
-	/** Callback to receive the editor instance for external integrations.
-	 * Called with the editor on mount, and with `null` on unmount so consumers
-	 * can clear stale references (e.g. before the next instance mounts). */
 	onEditorReady?: (editor: Editor | null) => void;
-	/** Minimal chrome - hides toolbar, border, footer (distraction-free mode) */
 	minimal?: boolean;
-	/** Callback when a block node requests sidebar space (e.g. image settings) */
 	onBlockSidebarOpen?: (panel: BlockSidebarPanel) => void;
-	/** Callback when a block node closes its sidebar */
 	onBlockSidebarClose?: () => void;
 }
 
-/**
- * Portable Text Editor Component
- */
 export function PortableTextEditor({
 	value,
 	onChange,
@@ -2619,13 +2444,11 @@ export function PortableTextEditor({
 		};
 	}, []);
 
-	// Use a ref for onChange to avoid recreating the editor when the callback changes
 	const onChangeRef = React.useRef(onChange);
 	React.useEffect(() => {
 		onChangeRef.current = onChange;
 	}, [onChange]);
 
-	// Focus mode state - support both controlled and uncontrolled modes
 	const [internalFocusMode, setInternalFocusMode] = React.useState<FocusMode>("normal");
 	const focusMode = controlledFocusMode ?? internalFocusMode;
 	const setFocusMode = (mode: FocusMode) => {
@@ -2636,23 +2459,18 @@ export function PortableTextEditor({
 		}
 	};
 
-	// Media picker state (for image insertion)
 	const [mediaPickerOpen, setMediaPickerOpen] = React.useState(false);
 
-	// Multi-select media picker state (for gallery insertion)
 	const [galleryPickerOpen, setGalleryPickerOpen] = React.useState(false);
 	const [conversionErrorMarks, setConversionErrorMarks] = React.useState<string[]>([]);
 	const [sectionInsertErrorMarks, setSectionInsertErrorMarks] = React.useState<string[]>([]);
 
-	// Plugin block insertion/editing state
 	const [pluginBlockModal, setPluginBlockModal] = React.useState<PluginBlockDef | null>(null);
 	const [pluginBlockInitialValues, setPluginBlockInitialValues] = React.useState<
 		Record<string, unknown> | undefined
 	>(undefined);
-	/** When editing an existing block, store the node position for updateAttributes */
 	const editingBlockPosRef = React.useRef<number | null>(null);
 
-	// Section picker state (for inserting sections)
 	const [sectionPickerOpen, setSectionPickerOpen] = React.useState(false);
 	const pendingBlockInsertPosRef = React.useRef<number | null>(null);
 	const openToolbarImagePicker = React.useCallback(() => {
@@ -2660,7 +2478,6 @@ export function PortableTextEditor({
 		setMediaPickerOpen(true);
 	}, []);
 
-	// Slash commands state
 	const [slashMenuState, setSlashMenuStateRaw] = React.useState<SlashMenuState>({
 		isOpen: false,
 		items: [],
@@ -2672,26 +2489,6 @@ export function PortableTextEditor({
 		dismissedSlashFrom: null,
 	});
 
-	// Ref to access current state synchronously in keyboard handlers.
-	//
-	// TipTap's Suggestion plugin invokes onKeyDown handlers synchronously and
-	// reads state via getState() during the same call. A useEffect-based sync
-	// runs after commit -- too late, so keyboard handlers would see stale
-	// state (empty items, null range, stale selectedIndex) on the first event
-	// after a state change. This caused intermittent CI failures where Enter
-	// would not execute a command and arrow navigation would skip selections.
-	//
-	// To guarantee the ref is current even when callers pass a functional
-	// updater (which React would otherwise defer until it processes the
-	// queued update), we compute `next` synchronously from the ref's current
-	// value, write the ref immediately, and enqueue the React update using
-	// the precomputed `next`. The ref acts as the canonical "latest intent"
-	// store for any synchronous reader between setter call and React commit.
-	//
-	// Invariant: slashMenuStateRef.current reflects the most recent intent
-	// passed to setSlashMenuState, not necessarily committed React state. That
-	// is safe for synchronous keyboard handlers (which is all we use it for)
-	// but should not be relied on for interleaved concurrent renders.
 	const slashMenuStateRef = React.useRef(slashMenuState);
 	const setSlashMenuState: React.Dispatch<React.SetStateAction<SlashMenuState>> = React.useCallback(
 		(action) => {
@@ -2702,11 +2499,9 @@ export function PortableTextEditor({
 		[],
 	);
 
-	// Build slash commands
 	const slashCommands = React.useMemo(() => {
 		const cmds: SlashCommandItem[] = [...defaultSlashCommands];
 
-		// Add image command
 		cmds.push({
 			id: "image",
 			title: msg`Image`,
@@ -2721,7 +2516,6 @@ export function PortableTextEditor({
 			},
 		});
 
-		// Add gallery command
 		cmds.push({
 			id: "gallery",
 			title: msg`Gallery`,
@@ -2736,7 +2530,6 @@ export function PortableTextEditor({
 			},
 		});
 
-		// Add section command
 		cmds.push({
 			id: "section",
 			title: msg`Section`,
@@ -2751,8 +2544,6 @@ export function PortableTextEditor({
 			},
 		});
 
-		// Add plugin block commands (API labels/descriptions: plain strings, not msg-wrapped).
-		// Plugins can supply a custom `category` (plain string) — falls back to "Embeds".
 		for (const block of pluginBlocks) {
 			cmds.push({
 				id: `plugin-${block.pluginId}-${block.type}`,
@@ -2772,9 +2563,6 @@ export function PortableTextEditor({
 		return cmds;
 	}, [pluginBlocks, t]);
 
-	// Filter commands by query — accessed via ref so the Suggestion plugin
-	// (created once) always sees the latest command list without needing
-	// the extension to be recreated.
 	const filterCommandsRef = React.useRef((_q: string): SlashCommandItem[] => []);
 	filterCommandsRef.current = (query: string) => {
 		if (!query) return slashCommands;
@@ -2796,7 +2584,6 @@ export function PortableTextEditor({
 		return [...titleMatches, ...otherMatches];
 	};
 
-	// Convert initial value to ProseMirror format
 	const initialUnsupportedMarks = React.useMemo(
 		() => findUnsupportedPortableTextMarks(value || []),
 		[],
@@ -2805,19 +2592,12 @@ export function PortableTextEditor({
 		() => [...new Set([...initialUnsupportedMarks, ...conversionErrorMarks])].toSorted(),
 		[conversionErrorMarks, initialUnsupportedMarks],
 	);
-	const initialContent = React.useMemo(
-		() =>
-			initialUnsupportedMarks.length > 0
-				? { type: "doc" as const, content: [{ type: "paragraph" }] }
-				: portableTextToProsemirror(value || []),
-		[], // Only compute once on mount
+	const [initialContent] = React.useState(() =>
+		initialUnsupportedMarks.length > 0
+			? { type: "doc" as const, content: [{ type: "paragraph" }] }
+			: portableTextToProsemirror(value || []),
 	);
 
-	// Memoize the entire extensions array so TipTap never diffs/replaces
-	// plugins on re-render. The loop was: extension array changes → useEditor
-	// calls setOptions → old Suggestion plugin destroyed → onExit fires
-	// setSlashMenuState → re-render → new extension array → repeat.
-	// All mutable state (filterCommands, onChange) is accessed via refs.
 	const extensions = React.useMemo(
 		() => [
 			StarterKit.configure({
@@ -2828,12 +2608,9 @@ export function PortableTextEditor({
 					color: "#3b82f6",
 					width: 2,
 				},
-				// Replaced with CodeBlockExtension below (adds language picker node view).
 				codeBlock: false,
-				// Replaced with CodeMarkExtension so inline code can combine with link/etc.
 				code: false,
 				orderedList: false,
-				// StarterKit v3 includes Link and Underline
 				link: {
 					openOnClick: false,
 					enableClickSelection: true,
@@ -2879,12 +2656,9 @@ export function PortableTextEditor({
 			}),
 			Typography,
 		],
-		[], // Created once — all mutable state accessed via refs
+		[setSlashMenuState],
 	);
 
-	// Stable editorProps reference — a new object every render would cause
-	// compareOptions to call setOptions → updateState → plugin teardown →
-	// Suggestion onExit → setSlashMenuState → re-render → infinite loop.
 	const editorProps = React.useMemo(
 		() => ({
 			attributes: {
@@ -2906,7 +2680,6 @@ export function PortableTextEditor({
 			const cb = onChangeRef.current;
 			if (cb) {
 				const doc = updatedEditor.getJSON();
-				// TipTap's getJSON() returns JSONContent which is structurally compatible
 				const pmDoc = doc as Parameters<typeof prosemirrorToPortableText>[0];
 				try {
 					const portableText = prosemirrorToPortableText(pmDoc);
@@ -3092,9 +2865,6 @@ export function PortableTextEditor({
 		);
 	}, [editor, openBlockInsertMenuAt]);
 
-	// Notify when editor is ready, and on unmount so consumers can clear the
-	// reference before TipTap destroys the instance (e.g. when keying by item.id
-	// to switch translations).
 	React.useEffect(() => {
 		if (editor && onEditorReady && unsupportedMarks.length === 0) {
 			onEditorReady(editor);
@@ -3126,7 +2896,6 @@ export function PortableTextEditor({
 		};
 	}, [editor]);
 
-	// Register plugin blocks into editor storage so the node view can look up metadata
 	React.useEffect(() => {
 		if (editor) {
 			registerPluginBlocks(
@@ -3136,7 +2905,6 @@ export function PortableTextEditor({
 		}
 	}, [editor, pluginBlocks]);
 
-	// Wire up the onEditBlock callback so the node view can open the Block Kit modal
 	React.useEffect(() => {
 		if (!editor) return;
 		const storage = (editor.storage as unknown as Record<string, Record<string, unknown>>)
@@ -3159,7 +2927,6 @@ export function PortableTextEditor({
 		};
 	}, [editor, pluginBlocks]);
 
-	// Wire up block sidebar callbacks so node views (e.g. ImageNode) can request sidebar space
 	const onBlockSidebarOpenRef = React.useRef(onBlockSidebarOpen);
 	onBlockSidebarOpenRef.current = onBlockSidebarOpen;
 	const onBlockSidebarCloseRef = React.useRef(onBlockSidebarClose);
@@ -3168,7 +2935,6 @@ export function PortableTextEditor({
 	React.useEffect(() => {
 		if (!editor) return;
 		const editorStorage = editor.storage as unknown as Record<string, Record<string, unknown>>;
-		// Both node types share the same sidebar plumbing
 		const storages = [editorStorage.image, editorStorage.gallery].filter(
 			(storage): storage is Record<string, unknown> => storage !== undefined,
 		);
@@ -3188,12 +2954,9 @@ export function PortableTextEditor({
 		};
 	}, [editor]);
 
-	// Handle image selection from media picker
 	const handleImageSelect = React.useCallback(
 		(item: MediaItem) => {
 			if (editor) {
-				// For external providers, src is only used for admin preview
-				// The frontend Image component uses provider + mediaId to generate proper URLs
 				const attrs = {
 					src: item.url,
 					alt: item.alt || item.filename,
@@ -3218,7 +2981,6 @@ export function PortableTextEditor({
 		[editor],
 	);
 
-	// Handle gallery insertion from the multi-select media picker
 	const handleGallerySelect = React.useCallback(
 		(items: MediaItem[]) => {
 			if (editor && items.length > 0) {
@@ -3237,7 +2999,6 @@ export function PortableTextEditor({
 		[editor],
 	);
 
-	// Handle plugin block insertion or update
 	const handlePluginBlockInsert = React.useCallback(
 		(values: Record<string, unknown>) => {
 			if (!editor || !pluginBlockModal) return;
@@ -3246,10 +3007,6 @@ export function PortableTextEditor({
 			const editPos = editingBlockPosRef.current;
 
 			if (editPos !== null) {
-				// Editing an existing block — update its attributes in place.
-				// Use the chain API so TipTap's onUpdate fires reliably
-				// (raw view.dispatch may not trigger onUpdate for attribute-only
-				// changes on atom nodes in some TipTap versions).
 				editor
 					.chain()
 					.command(({ tr }) => {
@@ -3266,7 +3023,6 @@ export function PortableTextEditor({
 					})
 					.run();
 			} else {
-				// Inserting a new block
 				const content = {
 					type: "pluginBlock",
 					attrs: {
@@ -3292,7 +3048,6 @@ export function PortableTextEditor({
 		[editor, pluginBlockModal],
 	);
 
-	// Handle slash menu command execution
 	const handleSlashCommand = React.useCallback(
 		(item: SlashCommandItem) => {
 			const state = slashMenuStateRef.current;
@@ -3301,12 +3056,10 @@ export function PortableTextEditor({
 		[executeSlashCommand],
 	);
 
-	// Handle section selection - insert section content at cursor
 	const handleSectionSelect = React.useCallback(
 		(section: Section) => {
 			if (!editor || !section.content || section.content.length === 0) return;
 
-			// Convert Portable Text to ProseMirror format
 			const ptContent = Array.isArray(section.content)
 				? (section.content as PortableTextBlock[])
 				: [];
@@ -3429,7 +3182,6 @@ export function PortableTextEditor({
 				</div>
 				{!minimal && <EditorFooter editor={editor} />}
 
-				{/* Slash command menu */}
 				<SlashCommandMenu
 					state={slashMenuState}
 					onCommand={handleSlashCommand}
@@ -3439,7 +3191,6 @@ export function PortableTextEditor({
 					}
 				/>
 
-				{/* Media picker for image insertion */}
 				<MediaPickerModal
 					open={mediaPickerOpen}
 					onOpenChange={(open) => {
@@ -3451,7 +3202,6 @@ export function PortableTextEditor({
 					title={t`Select Image`}
 				/>
 
-				{/* Multi-select media picker for gallery insertion */}
 				<MediaPickerModal
 					open={galleryPickerOpen}
 					onOpenChange={(open) => {
@@ -3465,7 +3215,6 @@ export function PortableTextEditor({
 					title={t`Select Gallery Images`}
 				/>
 
-				{/* Plugin block insertion/editing modal */}
 				<PluginBlockModal
 					block={pluginBlockModal}
 					initialValues={pluginBlockInitialValues}
@@ -3478,7 +3227,6 @@ export function PortableTextEditor({
 					onInsert={handlePluginBlockInsert}
 				/>
 
-				{/* Section picker modal */}
 				<SectionPickerModal
 					open={sectionPickerOpen}
 					onOpenChange={(open) => {
@@ -3492,10 +3240,6 @@ export function PortableTextEditor({
 	);
 }
 
-/**
- * Bubble Menu - appears when text is selected
- * Shows inline formatting options and link editing
- */
 function EditorBubbleMenu({
 	editor,
 	appendTo,
@@ -3522,12 +3266,10 @@ function EditorBubbleMenu({
 			link: activeEditor.isActive("link"),
 		}),
 	});
-	// When bubble menu opens with link input, populate the URL
 	React.useEffect(() => {
 		if (showLinkInput) {
 			const existingUrl = editor.getAttributes("link").href || "";
 			setLinkUrl(existingUrl);
-			// Focus input after state update
 			setTimeout(() => inputRef.current?.focus(), 0);
 		}
 	}, [showLinkInput, editor]);
@@ -3693,10 +3435,6 @@ function EditorBubbleMenu({
 	);
 }
 
-/**
- * Table Bubble Menu - appears when cursor is in a table.
- * Shows table editing options: add/remove rows/columns, toggle header, delete table.
- */
 function TableBubbleMenu({
 	editor,
 	appendTo,
@@ -3871,12 +3609,6 @@ function getSelectionTextAlignment(editor: Editor): TextAlignment | null {
 	return alignments.size === 1 ? (alignments.values().next().value ?? null) : null;
 }
 
-/**
- * Editor Toolbar
- *
- * Implements WAI-ARIA toolbar pattern with proper keyboard navigation.
- * Arrow keys move focus between buttons, Home/End jump to first/last.
- */
 function EditorToolbar({
 	toolbarRef,
 	editor,
@@ -3897,7 +3629,6 @@ function EditorToolbar({
 	const [linkUrl, setLinkUrl] = React.useState("");
 	const linkInputRef = React.useRef<HTMLInputElement>(null);
 
-	// Subscribe to editor state changes for reactive button states
 	const editorState = useEditorState({
 		editor,
 		selector: (ctx) => {
@@ -3925,7 +3656,6 @@ function EditorToolbar({
 		},
 	});
 
-	// Populate link URL when opening popover
 	React.useEffect(() => {
 		if (showLinkPopover) {
 			const existingUrl = editor.getAttributes("link").href || "";
@@ -3961,7 +3691,6 @@ function EditorToolbar({
 		}
 	};
 
-	// Keyboard navigation for toolbar (WAI-ARIA toolbar pattern)
 	const handleKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
 		const toolbar = toolbarRef.current;
 		if (!toolbar) return;
@@ -4015,7 +3744,6 @@ function EditorToolbar({
 			style={{ justifyContent: "safe center" }}
 			onKeyDown={handleKeyDown}
 		>
-			{/* Text formatting */}
 			<ToolbarGroup>
 				<Tooltip
 					content={t`Insert block after current block`}
@@ -4074,14 +3802,12 @@ function EditorToolbar({
 
 			<ToolbarSeparator />
 
-			{/* Headings */}
 			<ToolbarGroup>
 				<HeadingDropdownMenu editor={editor} />
 			</ToolbarGroup>
 
 			<ToolbarSeparator />
 
-			{/* Lists and blocks */}
 			<ToolbarGroup>
 				<ToolbarButton
 					onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -4139,7 +3865,6 @@ function EditorToolbar({
 
 			<ToolbarSeparator />
 
-			{/* Text alignment */}
 			<ToolbarGroup>
 				<ToolbarButton
 					onClick={() => editor.chain().focus().setTextAlign("left").run()}
@@ -4166,7 +3891,6 @@ function EditorToolbar({
 
 			<ToolbarSeparator />
 
-			{/* Link */}
 			<ToolbarGroup>
 				<Popover
 					open={showLinkPopover}
@@ -4251,7 +3975,6 @@ function EditorToolbar({
 
 			<ToolbarSeparator aria-hidden="true" />
 
-			{/* History */}
 			<ToolbarGroup>
 				<ToolbarButton
 					onClick={() => editor.chain().focus().undo().run()}
@@ -4271,7 +3994,6 @@ function EditorToolbar({
 
 			<ToolbarSeparator aria-hidden="true" />
 
-			{/* Focus mode */}
 			<ToolbarGroup>
 				<ToolbarButton
 					onClick={() => onFocusModeChange(focusMode === "spotlight" ? "normal" : "spotlight")}
@@ -4299,7 +4021,7 @@ interface ToolbarButtonProps {
 	onClick?: () => void;
 	active?: boolean;
 	disabled?: boolean;
-	title: string; // Required for accessibility
+	title: string;
 	children: React.ReactNode;
 }
 

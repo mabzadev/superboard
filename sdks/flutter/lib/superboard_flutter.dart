@@ -1,4 +1,3 @@
-/// Canonical public entrypoint for the SuperBoard Flutter SDK.
 library;
 
 export 'superboard.dart';

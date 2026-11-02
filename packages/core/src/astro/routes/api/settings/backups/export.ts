@@ -1,11 +1,3 @@
-/**
- * One-click backup download
- *
- * GET /_emdash/api/settings/backups/export — generate a fresh backup and
- * stream it as a JSON download. Read-only (nothing is stored), so GET is
- * appropriate despite the cost of generating the payload.
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -32,7 +24,6 @@ export const GET: APIRoute = async ({ locals }) => {
 			headers: {
 				"Content-Type": "application/json",
 				"Content-Disposition": `attachment; filename="${archiveNameForDate(new Date())}"`,
-				// Session-specific full-content export — never cacheable anywhere.
 				"Cache-Control": "private, no-store",
 				"X-Content-Type-Options": "nosniff",
 			},

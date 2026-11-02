@@ -875,7 +875,6 @@ export function ProductsPage() {
 							</div>
 						</div>
 
-						{/* 1. iOS Section */}
 						<div className="space-y-4">
 							<CatalogTable
 								title={t("iOS (Apple App Store)")}
@@ -939,7 +938,6 @@ export function ProductsPage() {
 							</CatalogTable>
 						</div>
 
-						{/* 2. Android Section */}
 						<div className="space-y-4">
 							<CatalogTable
 								title={t("Android (Google Play)")}
@@ -1005,7 +1003,6 @@ export function ProductsPage() {
 							</CatalogTable>
 						</div>
 
-						{/* 3. Test Section */}
 						<div className="space-y-4">
 							<Card className="border-primary/30 bg-muted/20">
 								<CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1095,7 +1092,6 @@ export function ProductsPage() {
 							</CatalogTable>
 						</div>
 
-						{/* Product Dialog */}
 						<Dialog
 							open={modal !== null}
 							onOpenChange={(open) => {
@@ -1370,7 +1366,6 @@ export function OfferingsPage() {
 							</div>
 						</div>
 
-						{/* Offerings Section */}
 						<div className="space-y-4">
 							<CatalogTable
 								title={t("Offerings (SDK Placements)")}
@@ -1449,7 +1444,6 @@ export function OfferingsPage() {
 							</CatalogTable>
 						</div>
 
-						{/* Dialog modal for creating / editing */}
 						<Dialog
 							open={modal !== null}
 							onOpenChange={(open) => {

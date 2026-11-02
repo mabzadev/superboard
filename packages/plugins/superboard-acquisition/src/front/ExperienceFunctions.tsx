@@ -6,7 +6,6 @@ const functions = [
 	["components", "/acquisition/components"],
 ] as const;
 
-/** Project-wide experience functions, linked once from the Paywalls and Onboardings lists. */
 export function ExperienceFunctionLinks() {
 	const { t, tr, locale } = useFlowI18n();
 	const hint = tr("These functions are shared by the experiences in this project.");

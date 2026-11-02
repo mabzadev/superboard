@@ -4,14 +4,6 @@ import { describe, it, expect, vi } from "vitest";
 import { PUT as updateContent } from "../../../../../../packages/core/src/astro/routes/api/content/[collection]/[id].js";
 import { POST as createContent } from "../../../../../../packages/core/src/astro/routes/api/content/[collection]/index.js";
 
-/**
- * Regression tests for the `publishedAt` / `createdAt` permission gate.
- *
- * The gate must trigger on *any* explicit presence of these fields —
- * including `null` (explicit clear) — not just on non-null values. Checking
- * only `!= null` would let a regular AUTHOR clear `published_at` on any item
- * they can edit, bypassing `content:publish_any`.
- */
 describe("content route — publishedAt / createdAt permission gate", () => {
 	const makeUser = (role: (typeof Role)[keyof typeof Role]) => ({
 		id: "user-1",

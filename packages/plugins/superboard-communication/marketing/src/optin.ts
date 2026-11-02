@@ -23,7 +23,6 @@ type DoubleOptInCopy = {
 };
 type DoubleOptInSettings = { en: DoubleOptInCopy; fr: DoubleOptInCopy };
 
-/** Defaults reproduce the historical hard-coded confirmation email exactly. */
 const DEFAULT_DOUBLE_OPTIN: DoubleOptInSettings = {
 	en: {
 		subject: "Confirm your subscription",
@@ -122,7 +121,6 @@ function mergeSettings(
 	};
 }
 
-/** Builds the confirmation message for one recipient in their language. */
 export async function renderDoubleOptInMessage(
 	db: D1Database,
 	projectId: number,
@@ -147,7 +145,6 @@ export async function renderDoubleOptInMessage(
 	};
 }
 
-/** Lists in `listIds` that require double opt-in. */
 export async function doubleOptInListIds(db: D1Database, projectId: number, listIds: string[]) {
 	const found: string[] = [];
 	for (const part of chunks([...new Set(listIds)], D1_PARAMETER_CHUNK)) {
@@ -164,11 +161,6 @@ export async function doubleOptInListIds(db: D1Database, projectId: number, list
 	return found;
 }
 
-/**
- * Puts the given subscribers in pending consent with a fresh confirmation token
- * and queues one confirmation email each. Blocklisted contacts are never touched.
- * Returns the number of confirmation emails queued.
- */
 export async function queueDoubleOptIns(env: Env, projectId: number, subscriberIds: string[]) {
 	const unique = [...new Set(subscriberIds)];
 	if (!unique.length) return 0;
@@ -214,7 +206,6 @@ export async function queueDoubleOptIns(env: Env, projectId: number, subscriberI
 		);
 	}
 	await runBatches(env.DB, statements);
-	// Delivery is best effort here: pending outbox rows are retried by the scheduled job.
 	for (const part of chunks(jobs, 100)) {
 		try {
 			await env.MARKETING_QUEUE.sendBatch(part.map((body) => ({ body })));

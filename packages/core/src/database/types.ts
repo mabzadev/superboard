@@ -1,14 +1,10 @@
 import type { Generated } from "kysely";
 
-// Core database tables
-// Note: Content tables (ec_posts, ec_pages, etc.) are created dynamically
-// by the SchemaRegistry. They are not defined in this type file.
-
 export interface RevisionTable {
 	id: string;
-	collection: string; // e.g., 'posts'
-	entry_id: string; // ID in the ec_* table
-	data: string; // JSON snapshot
+	collection: string;
+	entry_id: string;
+	data: string;
 	author_id: string | null;
 	created_at: Generated<string>;
 }
@@ -25,21 +21,16 @@ export interface TaxonomyTable {
 	slug: string;
 	label: string;
 	parent_id: string | null;
-	data: string | null; // JSON
-	locale: Generated<string>; // e.g. 'en', 'es', 'fr'
-	translation_group: string | null; // shared across translations of the same term
-	// Manual order within a sibling group. 0 for terms that were never
-	// explicitly reordered, so listings fall back to alphabetical.
+	data: string | null;
+	locale: Generated<string>;
+	translation_group: string | null;
 	sort_order: Generated<number>;
 }
 
 export interface ContentTaxonomyTable {
-	collection: string; // e.g., 'posts'
-	entry_id: string; // stores the ec_* row's translation_group (locale-agnostic)
-	taxonomy_id: string; // stores taxonomies.translation_group (locale-agnostic)
-	// Legacy denormalized columns from migration 051. A group assignment spans
-	// locale rows whose status and dates may differ, so current reads use the
-	// authoritative ec_* rows and new pivot inserts leave these nullable.
+	collection: string;
+	entry_id: string;
+	taxonomy_id: string;
 	status: Generated<string | null>;
 	scheduled_at: Generated<string | null>;
 	deleted_at: Generated<string | null>;
@@ -53,8 +44,8 @@ export interface TaxonomyDefTable {
 	name: string;
 	label: string;
 	label_singular: string | null;
-	hierarchical: number; // 0 or 1 (SQLite boolean)
-	collections: string | null; // JSON array
+	hierarchical: number;
+	collections: string | null;
 	created_at: Generated<string>;
 	locale: Generated<string>;
 	translation_group: string | null;
@@ -72,8 +63,8 @@ export interface MediaTable {
 	alt: string | null;
 	caption: string | null;
 	storage_key: string;
-	status: string; // 'pending' | 'ready' | 'failed'
-	content_hash: string | null; // xxHash64 for deduplication
+	status: string;
+	content_hash: string | null;
 	blurhash: string | null;
 	dominant_color: string | null;
 	created_at: Generated<string>;
@@ -89,9 +80,8 @@ export interface MediaFolderTable {
 
 export interface MediaUploadAttemptTable {
 	storage_key: string;
-	// No foreign key: this row must survive media deletion until storage cleanup succeeds.
 	media_id: string;
-	status: string; // 'active' | 'cleanup'
+	status: string;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
 }
@@ -277,34 +267,34 @@ export interface UserTable {
 	email: string;
 	name: string | null;
 	avatar_url: string | null;
-	role: number; // RoleLevel: 10=SUBSCRIBER, 20=CONTRIBUTOR, 30=AUTHOR, 40=EDITOR, 50=ADMIN
-	email_verified: number; // 0 or 1
-	data: string | null; // JSON
-	disabled: Generated<number>; // 0 or 1
+	role: number;
+	email_verified: number;
+	data: string | null;
+	disabled: Generated<number>;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
 }
 
 export interface CredentialTable {
-	id: string; // Base64url credential ID
+	id: string;
 	user_id: string;
-	public_key: Uint8Array; // SEC1 or PKIX encoded public key
+	public_key: Uint8Array;
 	algorithm: number;
 	counter: number;
-	device_type: string; // 'singleDevice' | 'multiDevice'
-	backed_up: number; // 0 or 1
-	transports: string | null; // JSON array
+	device_type: string;
+	backed_up: number;
+	transports: string | null;
 	name: string | null;
 	created_at: Generated<string>;
 	last_used_at: Generated<string>;
 }
 
 export interface AuthTokenTable {
-	hash: string; // SHA-256 hash of token
+	hash: string;
 	user_id: string | null;
 	email: string | null;
-	type: string; // 'magic_link' | 'email_verify' | 'invite' | 'recovery'
-	role: number | null; // For invites
+	type: string;
+	role: number | null;
 	invited_by: string | null;
 	expires_at: string;
 	created_at: Generated<string>;
@@ -320,82 +310,80 @@ export interface OAuthAccountTable {
 export interface AllowedDomainTable {
 	domain: string;
 	default_role: number;
-	enabled: number; // 0 or 1
+	enabled: number;
 	created_at: Generated<string>;
 }
 
 export interface AuthChallengeTable {
-	challenge: string; // Base64url challenge (PK)
-	type: string; // 'registration' | 'authentication'
-	user_id: string | null; // For registration, the user being registered
-	data: string | null; // JSON for additional context
+	challenge: string;
+	type: string;
+	user_id: string | null;
+	data: string | null;
 	expires_at: string;
 	created_at: Generated<string>;
 }
-
-// API Tokens (programmatic access)
 
 export interface ApiTokenTable {
 	id: string;
 	name: string;
 	token_hash: string;
-	prefix: string; // First 8 chars for identification (e.g. "ec_pat_Ab")
+	prefix: string;
 	user_id: string;
-	scopes: string; // JSON array of scope strings
-	expires_at: string | null; // null = no expiry
+	scopes: string;
+	expires_at: string | null;
 	last_used_at: string | null;
 	created_at: Generated<string>;
 }
 
 export interface OAuthTokenTable {
-	token_hash: string; // SHA-256 hash (PK)
-	token_type: string; // 'access' | 'refresh'
+	token_hash: string;
+	token_type: string;
 	user_id: string;
-	scopes: string; // JSON array
-	client_type: string; // 'cli' | 'mcp'
+	scopes: string;
+	client_type: string;
 	expires_at: string;
-	refresh_token_hash: string | null; // links access → refresh
-	client_id: string | null; // Which OAuth client obtained this token
+	refresh_token_hash: string | null;
+	client_id: string | null;
 	created_at: Generated<string>;
 }
 
 export interface AuthorizationCodeTable {
-	code_hash: string; // SHA-256 hash (PK)
-	client_id: string; // CIMD URL or opaque string
-	redirect_uri: string; // Must match exactly on exchange
+	code_hash: string;
+	client_id: string;
+	redirect_uri: string;
 	user_id: string;
-	scopes: string; // JSON array
-	code_challenge: string; // S256 challenge
-	code_challenge_method: string; // 'S256'
-	resource: string | null; // RFC 8707 resource indicator
+	scopes: string;
+	code_challenge: string;
+	code_challenge_method: string;
+	resource: string | null;
 	expires_at: string;
 	created_at: Generated<string>;
 }
 
 export interface OAuthClientTable {
-	id: string; // Client ID (e.g. URL or opaque string)
-	name: string; // Human-readable name
-	redirect_uris: string; // JSON array of allowed redirect URIs
-	scopes: string | null; // JSON array of allowed scopes (null = all)
+	id: string;
+	name: string;
+	redirect_uris: string;
+	scopes: string | null;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
 }
 
 export interface DeviceCodeTable {
-	device_code: string; // opaque, high-entropy (PK)
-	user_code: string; // short, human-readable (ABCD-1234)
-	scopes: string; // JSON array
-	user_id: string | null; // set when user authorizes
-	status: string; // 'pending' | 'authorized' | 'denied' | 'expired'
+	device_code: string;
+	user_code: string;
+	scopes: string;
+	user_id: string | null;
+	status: string;
 	expires_at: string;
-	interval: number; // polling interval in seconds
-	last_polled_at: string | null; // RFC 8628 slow_down tracking
+	interval: number;
+	last_polled_at: string | null;
 	created_at: Generated<string>;
 }
 
 export interface OptionTable {
 	name: string;
-	value: string; // JSON
+	value: string;
 }
 
 export interface AuditLogTable {
@@ -406,7 +394,7 @@ export interface AuditLogTable {
 	action: string;
 	resource_type: string | null;
 	resource_id: string | null;
-	details: string | null; // JSON
+	details: string | null;
 	status: string | null;
 }
 
@@ -415,8 +403,6 @@ export interface MigrationTable {
 	timestamp: string;
 }
 
-// Schema Registry Tables
-
 export interface CollectionTable {
 	id: string;
 	slug: string;
@@ -424,21 +410,21 @@ export interface CollectionTable {
 	label_singular: string | null;
 	description: string | null;
 	icon: string | null;
-	admin_config: Generated<string | null>; // JSON: { listColumns?: string[] }
-	supports: string | null; // JSON array
+	admin_config: Generated<string | null>;
+	supports: string | null;
 	source: string | null;
-	search_config: string | null; // JSON: SearchConfig
-	has_seo: number; // 0 or 1 — opt-in SEO fields for this collection
-	title_field: string | null; // field slug for the admin list Title column (NULL = default)
-	date_field: string | null; // field slug (datetime) for the admin list Date column (NULL = default)
-	url_pattern: string | null; // URL pattern with {slug} placeholder (e.g. "/blog/{slug}")
-	routable: Generated<number>; // 0 or 1 — published entries require a slug when enabled
-	hidden: Generated<number>; // 0 or 1 — omit the auto-generated admin sidebar entry
-	sort_order: number | null; // explicit admin sidebar position; NULL = alphabetical fallback
-	comments_enabled: Generated<number>; // 0 or 1
-	comments_moderation: Generated<string>; // 'all' | 'first_time' | 'none'
-	comments_closed_after_days: Generated<number>; // 0 = never close
-	comments_auto_approve_users: Generated<number>; // 0 or 1
+	search_config: string | null;
+	has_seo: number;
+	title_field: string | null;
+	date_field: string | null;
+	url_pattern: string | null;
+	routable: Generated<number>;
+	hidden: Generated<number>;
+	sort_order: number | null;
+	comments_enabled: Generated<number>;
+	comments_moderation: Generated<string>;
+	comments_closed_after_days: Generated<number>;
+	comments_auto_approve_users: Generated<number>;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
 }
@@ -450,7 +436,7 @@ export interface SeoTable {
 	seo_description: string | null;
 	seo_image: string | null;
 	seo_canonical: string | null;
-	seo_no_index: number; // 0 or 1
+	seo_no_index: number;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
 }
@@ -462,26 +448,24 @@ export interface FieldTable {
 	label: string;
 	type: string;
 	column_type: string;
-	required: number; // boolean as 0/1
-	unique: number; // boolean as 0/1
-	default_value: string | null; // JSON
-	validation: string | null; // JSON
+	required: number;
+	unique: number;
+	default_value: string | null;
+	validation: string | null;
 	widget: string | null;
-	options: string | null; // JSON
+	options: string | null;
 	sort_order: number;
-	searchable: Generated<number>; // boolean as 0/1, defaults to 0
-	indexed: Generated<number>; // boolean as 0/1, defaults to 0
-	translatable: Generated<number>; // boolean as 0/1, defaults to 1
+	searchable: Generated<number>;
+	indexed: Generated<number>;
+	translatable: Generated<number>;
 	created_at: Generated<string>;
 }
-
-// Plugin Storage Tables
 
 export interface PluginStorageTable {
 	plugin_id: string;
 	collection: string;
 	id: string;
-	data: string; // JSON
+	data: string;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
 }
@@ -489,17 +473,15 @@ export interface PluginStorageTable {
 export interface PluginStateTable {
 	plugin_id: string;
 	version: string;
-	status: string; // 'installed' | 'active' | 'inactive'
+	status: string;
 	installed_at: Generated<string>;
 	activated_at: string | null;
 	deactivated_at: string | null;
-	data: string | null; // JSON
-	source: Generated<string>; // 'config' | 'marketplace' | 'registry'
+	data: string | null;
+	source: Generated<string>;
 	marketplace_version: string | null;
 	display_name: string | null;
 	description: string | null;
-	// Registry-specific columns (added by migration 038). Always null for
-	// `source = 'config' | 'marketplace'`; populated for `source = 'registry'`.
 	registry_publisher_did: string | null;
 	registry_slug: string | null;
 	mcp_tools_enabled: Generated<number>;
@@ -510,11 +492,9 @@ export interface PluginIndexTable {
 	plugin_id: string;
 	collection: string;
 	index_name: string;
-	fields: string; // JSON array of field paths
+	fields: string;
 	created_at: Generated<string>;
 }
-
-// Navigation Menus
 
 export interface MenuTable {
 	id: string;
@@ -533,7 +513,7 @@ export interface MenuItemTable {
 	sort_order: number;
 	type: string;
 	reference_collection: string | null;
-	reference_id: string | null; // stores translation_group of referenced content/term
+	reference_id: string | null;
 	custom_url: string | null;
 	label: string;
 	title_attr: string | null;
@@ -543,8 +523,6 @@ export interface MenuItemTable {
 	locale: Generated<string>;
 	translation_group: string | null;
 }
-
-// Widget Areas
 
 export interface WidgetAreaTable {
 	id: string;
@@ -558,33 +536,29 @@ export interface WidgetTable {
 	id: string;
 	area_id: string;
 	sort_order: number;
-	type: string; // 'content', 'menu', 'component'
+	type: string;
 	title: string | null;
-	content: string | null; // JSON: Portable Text
+	content: string | null;
 	menu_name: string | null;
 	component_id: string | null;
-	component_props: string | null; // JSON
+	component_props: string | null;
 	created_at: Generated<string>;
 }
-
-// Cron Tasks
 
 export interface CronTaskTable {
 	id: string;
 	plugin_id: string;
 	task_name: string;
 	schedule: string;
-	is_oneshot: number; // 0 or 1
-	data: string | null; // JSON
+	is_oneshot: number;
+	data: string | null;
 	next_run_at: string;
 	last_run_at: string | null;
-	status: string; // 'idle' | 'running'
+	status: string;
 	locked_at: string | null;
-	enabled: number; // 0 or 1
+	enabled: number;
 	created_at: Generated<string>;
 }
-
-// Comments
 
 export interface CommentTable {
 	id: string;
@@ -595,10 +569,10 @@ export interface CommentTable {
 	author_email: string;
 	author_user_id: string | null;
 	body: string;
-	status: string; // 'pending' | 'approved' | 'spam' | 'trash'
+	status: string;
 	ip_hash: string | null;
 	user_agent: string | null;
-	moderation_metadata: string | null; // JSON
+	moderation_metadata: string | null;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
 }
@@ -611,24 +585,20 @@ export interface CommentReactionTable {
 	created_at: Generated<string>;
 }
 
-// Sections
-
 export interface SectionTable {
 	id: string;
 	slug: string;
 	title: string;
 	description: string | null;
-	keywords: string | null; // JSON array
-	content: string; // JSON: Portable Text array
+	keywords: string | null;
+	content: string;
 	preview_media_id: string | null;
-	source: string; // 'theme', 'user', 'import'
+	source: string;
 	theme_id: string | null;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
 }
 
-// Database schema
-// Note: ec_* content tables are dynamic and not part of this type
 export interface Database {
 	_emdash_plugin_setting_versions: {
 		id: string;
@@ -708,8 +678,8 @@ export type MediaRow = {
 	alt: string | null;
 	caption: string | null;
 	storage_key: string;
-	status: string; // 'pending' | 'ready' | 'failed'
-	content_hash: string | null; // xxHash64 for deduplication
+	status: string;
+	content_hash: string | null;
 	blurhash: string | null;
 	dominant_color: string | null;
 	created_at: string;
@@ -721,13 +691,13 @@ export interface RedirectTable {
 	id: string;
 	source: string;
 	destination: string;
-	type: number; // 301, 302, 307, 308
-	is_pattern: number; // boolean: source contains [param] or [...splat]
-	enabled: number; // boolean
+	type: number;
+	is_pattern: number;
+	enabled: number;
 	hits: number;
 	last_hit_at: string | null;
 	group_name: string | null;
-	auto: number; // boolean: system-generated from slug change
+	auto: number;
 	created_at: string;
 	updated_at: string;
 }
@@ -739,13 +709,6 @@ export interface NotFoundLogTable {
 	user_agent: string | null;
 	ip: string | null;
 	hits: number;
-	/**
-	 * Migration 035 adds this as a nullable column (SQLite can't add a
-	 * NOT NULL column with a non-constant default to an existing table).
-	 * The `log404` upsert always writes a value, so new and updated rows
-	 * always have one, but existing rows pre-migration were backfilled
-	 * without a NOT NULL constraint. Typed as nullable to match the schema.
-	 */
 	last_seen_at: string | null;
 	created_at: string;
 }
@@ -761,20 +724,7 @@ export interface BylineTable {
 	is_guest: number;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
-	/**
-	 * Locale this byline row is presented in. Added by migration 040. Backfilled
-	 * to the configured `defaultLocale` for pre-040 rows. `(slug, locale)` is
-	 * unique; the partial unique on `user_id` widens to `(user_id, locale)`.
-	 */
 	locale: Generated<string>;
-	/**
-	 * Shared across translations of the same byline. Added by migration 040.
-	 * Equals `id` for the anchor row; siblings inherit it from their source.
-	 * `_emdash_content_bylines.byline_id` and `ec_*.primary_byline_id` store
-	 * this value rather than a row id, so credits span every locale variant of
-	 * a byline. Nullable in the schema for backwards compatibility; new rows
-	 * always populate it.
-	 */
 	translation_group: string | null;
 }
 
@@ -788,23 +738,13 @@ export interface ContentBylineTable {
 	created_at: Generated<string>;
 }
 
-// Byline custom fields (migration 041, Discussion #1174)
-//
-// `_emdash_byline_fields` stores definitions; values land in either
-// `_emdash_byline_field_values` (translatable, keyed by byline row id) or
-// `_emdash_byline_field_group_values` (non-translatable, keyed by
-// translation_group). Per-field `translatable` flag picks the home table.
-
 export interface BylineFieldTable {
 	id: string;
 	slug: string;
 	label: string;
-	/** One of: 'string', 'text', 'url', 'boolean', 'select'. v1 subset. */
 	type: string;
-	required: Generated<number>; // 0 or 1
-	/** 0 = group-shared, 1 = per-locale. Defaults to 1 at the DB level. */
+	required: Generated<number>;
 	translatable: Generated<number>;
-	/** JSON: `{ options?: string[] }` for `select`-type fields. */
 	validation: string | null;
 	sort_order: Generated<number>;
 	created_at: Generated<string>;
@@ -814,7 +754,6 @@ export interface BylineFieldTable {
 export interface BylineFieldValueTable {
 	byline_id: string;
 	field_id: string;
-	/** JSON-encoded value (`CustomFieldValue` after parse). */
 	value: string | null;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
@@ -823,18 +762,10 @@ export interface BylineFieldValueTable {
 export interface BylineFieldGroupValueTable {
 	translation_group: string;
 	field_id: string;
-	/** JSON-encoded value (`CustomFieldValue` after parse). */
 	value: string | null;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
 }
-
-// Content references
-//
-// `_emdash_relations` defines relationship types (row-per-locale, like
-// `_emdash_taxonomy_defs`). `_emdash_content_references` holds directed edges
-// between content entries, linked by `translation_group` so they are
-// locale-agnostic — no foreign keys, mirroring `content_taxonomies`.
 
 export interface RelationTable {
 	id: string;
@@ -851,20 +782,15 @@ export interface RelationTable {
 
 export interface ContentReferenceTable {
 	id: string;
-	/** Stores `_emdash_relations.translation_group` (locale-agnostic). No FK. */
 	relation_group: string;
-	/** Parent entry's `translation_group`. */
 	parent_group: string;
-	/** Child entry's `translation_group`. */
 	child_group: string;
 	sort_order: Generated<number>;
 	created_at: Generated<string>;
 }
 
-// Rate Limits
-
 export interface RateLimitTable {
-	key: string; // {ip}:{endpoint}
-	window: string; // ISO timestamp truncated to window size
+	key: string;
+	window: string;
 	count: number;
 }

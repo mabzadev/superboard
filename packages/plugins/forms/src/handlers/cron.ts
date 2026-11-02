@@ -1,16 +1,8 @@
-/**
- * Cron task handlers.
- *
- * - cleanup: Delete submissions past their retention period
- * - digest: Send daily digest emails for forms with digest enabled
- */
-
 import type { PluginContext, StorageCollection } from "emdash";
 
 import { formatDigestText } from "../format.js";
 import type { FormDefinition, Submission } from "../types.js";
 
-/** Typed access to plugin storage collections */
 function forms(ctx: PluginContext): StorageCollection<FormDefinition> {
 	return ctx.storage.forms as StorageCollection<FormDefinition>;
 }
@@ -19,9 +11,6 @@ function submissions(ctx: PluginContext): StorageCollection<Submission> {
 	return ctx.storage.submissions as StorageCollection<Submission>;
 }
 
-/**
- * Weekly cleanup: delete submissions past retention period.
- */
 export async function handleCleanup(ctx: PluginContext) {
 	let formsCursor: string | undefined;
 
@@ -49,7 +38,6 @@ export async function handleCleanup(ctx: PluginContext) {
 					cursor,
 				});
 
-				// Delete media files
 				if (ctx.media && "delete" in ctx.media) {
 					const mediaWithDelete = ctx.media as { delete(id: string): Promise<boolean> };
 					for (const item of batch.items) {
@@ -70,7 +58,6 @@ export async function handleCleanup(ctx: PluginContext) {
 				cursor = batch.cursor;
 			} while (cursor);
 
-			// Update form counter
 			if (deletedCount > 0) {
 				const count = await submissions(ctx).count({ formId: formItem.id });
 				await forms(ctx).put(formItem.id, {
@@ -90,11 +77,6 @@ export async function handleCleanup(ctx: PluginContext) {
 	} while (formsCursor);
 }
 
-/**
- * Daily digest: send summary email for a specific form.
- *
- * The cron task name contains the form ID: "digest:{formId}"
- */
 export async function handleDigest(formId: string, ctx: PluginContext) {
 	const form = await forms(ctx).get(formId);
 	if (!form) {
@@ -114,7 +96,6 @@ export async function handleDigest(formId: string, ctx: PluginContext) {
 		return;
 	}
 
-	// Get submissions since last 24 hours
 	const since = new Date();
 	since.setDate(since.getDate() - 1);
 

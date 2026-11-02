@@ -1,10 +1,3 @@
-/**
- * OAuth client management endpoints
- *
- * GET  /_emdash/api/admin/oauth-clients — List all registered OAuth clients
- * POST /_emdash/api/admin/oauth-clients — Register a new OAuth client
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 import { z } from "zod";
@@ -27,9 +20,6 @@ const createClientSchema = z.object({
 	scopes: z.array(z.string()).optional(),
 });
 
-/**
- * List all registered OAuth clients.
- */
 export const GET: APIRoute = async ({ locals }) => {
 	const { emdash, user } = locals;
 
@@ -45,9 +35,6 @@ export const GET: APIRoute = async ({ locals }) => {
 	return unwrapResult(result);
 };
 
-/**
- * Register a new OAuth client.
- */
 export const POST: APIRoute = async ({ request, locals }) => {
 	const { emdash, user } = locals;
 

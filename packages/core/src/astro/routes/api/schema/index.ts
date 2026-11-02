@@ -1,14 +1,3 @@
-/**
- * Schema export endpoint for CLI sync
- *
- * GET /_emdash/api/schema - Export full schema (requires schema:read permission)
- *
- * This endpoint is used by:
- * - CLI `emdash types` to fetch schema and generate types
- * - Local dev server to sync schema from remote
- * - CI/CD to detect schema drift
- */
-
 import type { APIRoute } from "astro";
 import { hashString } from "emdash";
 
@@ -31,7 +20,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 	try {
 		const registry = new SchemaRegistry(emdash.db);
 
-		// Get all collections with their fields
 		const collections = await registry.listCollections();
 		const collectionsWithFields = await Promise.all(
 			collections.map(async (c) => {
@@ -40,15 +28,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 			}),
 		);
 
-		// Check for format parameter
 		const url = new URL(request.url);
 		const format = url.searchParams.get("format");
 
 		if (format === "typescript") {
-			// Generate TypeScript definitions. Singularizing slugs can collapse
-			// distinct collections onto the same interface name, so resolve names
-			// up front to keep every emitted interface unique (`book` + `books`
-			// would otherwise both emit `Book`).
 			const interfaceNames = uniqueInterfaceNames(collectionsWithFields);
 			const types = collectionsWithFields
 				.map((c) => generateTypeScript(c, interfaceNames.get(c.slug)))
@@ -70,7 +53,6 @@ import type { PortableTextBlock } from "emdash";
 			});
 		}
 
-		// Default: JSON format
 		const schemaExport = {
 			collections: collectionsWithFields.map((c) => ({
 				slug: c.slug,

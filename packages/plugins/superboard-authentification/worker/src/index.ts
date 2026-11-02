@@ -1,11 +1,3 @@
-import { withRouteManifest } from "@superboard/contracts/route-manifest";
-import { registerImportedRouter } from "@superboard/contracts/route-registry";
-import {
-	createFetchRouter,
-	resolveRegisteredRoute,
-	mountRegisteredRouter,
-	registerRouter,
-} from "@superboard/contracts/route-registry";
 import {
 	APPLICATION_USER_ROUTES,
 	applicationUserRoute,
@@ -16,6 +8,14 @@ import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import { verifyInternalProjectContextRequest } from "@superboard/contracts/project-context";
 import { createProjectContextHeaders } from "@superboard/contracts/project-context";
 import { RequestBodyError, readJsonObjectLimited } from "@superboard/contracts/request-body";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerImportedRouter } from "@superboard/contracts/route-registry";
+import {
+	createFetchRouter,
+	resolveRegisteredRoute,
+	mountRegisteredRouter,
+	registerRouter,
+} from "@superboard/contracts/route-registry";
 import { configuredSecrets } from "@superboard/contracts/secret";
 import { compare, hash } from "bcryptjs";
 import { Hono, type Context, type Next } from "hono";
@@ -1233,7 +1233,6 @@ async function projectScopeState(
 		const unscoped = Number(row?.unscoped || 0);
 		return { ready: unscoped === 0, unscoped_rows: unscoped };
 	} catch {
-		// A pre-0002 schema is also unsafe: do not silently fall back to global data.
 		return { ready: false, unscoped_rows: null };
 	}
 }

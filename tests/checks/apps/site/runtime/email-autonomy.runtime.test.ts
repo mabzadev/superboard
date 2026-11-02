@@ -470,8 +470,6 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		SITE_OPERATOR_BRIDGE_TOKEN: "canonical-email-bridge",
 		EMAIL_INTERNAL_TOKEN: secret,
 		EMAIL_SERVICE: {
-			// Only the route manifest carries the instance identity; the command itself
-			// runs without the plugin task lifecycle, like the other Email checks here.
 			fetch: (forwarded: Request) =>
 				email.fetch(
 					forwarded,
@@ -487,8 +485,6 @@ test("canonical Email command and data source dispatch retain the owning plugin 
 		SUPERBOARD_ENVIRONMENT: "local",
 		SITE_OPERATOR_BRIDGE_TOKEN: "canonical-email-bridge",
 		SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: env.SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY,
-		// Route references are resolved with the instance identity; the command runs
-		// without the plugin task lifecycle, like the other Email checks here.
 		API_SERVICE: {
 			fetch: (forwarded: Request) =>
 				api.fetch(

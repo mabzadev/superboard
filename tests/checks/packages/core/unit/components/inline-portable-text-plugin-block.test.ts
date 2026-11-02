@@ -1,19 +1,3 @@
-/**
- * Inline editor plugin-block round-trip tests.
- *
- * Regression tests for the bug where the visual-editing inline editor
- * coerced unknown Portable Text block types (e.g. `marketing.hero`) into
- * `pluginBlock` ProseMirror nodes that only carried `{ blockType, id }`,
- * silently dropping every other field. On save, `pmToPortableText` then
- * serialised the block back as `{ _type, _key, id }`, persisting the data
- * loss.
- *
- * The fix preserves all non-well-known fields on a `data` attribute and
- * spreads them back out during the PM → PT direction. See
- * `InlinePortableTextEditor.tsx` `case "pluginBlock"` and the unknown-block
- * fallback in `convertPTBlock`.
- */
-
 import { describe, it, expect } from "vitest";
 
 import {
@@ -130,7 +114,6 @@ describe("inline editor: PM → PT (pluginBlock)", () => {
 	});
 
 	it("handles non-object data gracefully", () => {
-		// Defensive: data could be malformed if persisted from a buggy source.
 		const doc = pmDoc({
 			type: "pluginBlock",
 			attrs: { blockType: "embed", id: "u", data: null },

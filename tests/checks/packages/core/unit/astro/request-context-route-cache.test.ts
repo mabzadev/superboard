@@ -1,18 +1,3 @@
-/**
- * Regression tests: preview and toolbar responses must opt out of Astro's
- * route cache, not just set `Cache-Control`.
- *
- * `Cache-Control: private, no-store` governs browsers and downstream
- * proxies, but the shared edge cache (e.g. Workers Cache on Cloudflare)
- * follows the route-cache options — on Cloudflare the adapter emits
- * `Cloudflare-CDN-Cache-Control` from them. Verified on a stock deploy:
- * a valid preview URL was a MISS on request 1 and a shared-cache HIT on
- * requests 2+, i.e. draft content was served without any token
- * verification until TTL/purge, even after token expiry.
- *
- * The fix calls `context.cache.set(false)` for requests carrying a
- * `_preview` param and for toolbar-injected editor responses.
- */
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("astro:middleware", () => ({
@@ -51,8 +36,6 @@ const htmlResponse = () =>
 describe("route-cache opt-out for preview and toolbar responses", () => {
 	it("opts out of the route cache when a _preview param is present", async () => {
 		const cache = { set: vi.fn() };
-		// No emdash.db on locals — token can't be verified, but the response
-		// still must not be stored under the per-token URL.
 		const context = buildContext({ search: "?_preview=some-token", cache });
 
 		await onRequest(context, async () => htmlResponse());
@@ -66,7 +49,6 @@ describe("route-cache opt-out for preview and toolbar responses", () => {
 
 		const response = await onRequest(context, async () => htmlResponse());
 
-		// Confirm we're on the actual-injection path.
 		expect(await response.text()).toContain('id="emdash-toolbar"');
 		expect(cache.set).toHaveBeenCalledWith(false);
 	});

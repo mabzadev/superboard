@@ -1,9 +1,3 @@
-/**
- * Marketplace plugin install endpoint
- *
- * POST /_emdash/api/admin/plugins/marketplace/:id/install - Install a marketplace plugin
- */
-
 import type { APIRoute } from "astro";
 import { z } from "zod";
 

@@ -1,11 +1,3 @@
-/**
- * SEO OG Image field for the content editor.
- *
- * Renders an image picker (reusing MediaPickerModal) that stores the
- * selected image URL in `seo.image`. Designed to sit next to the
- * Featured Image field in a two-column grid.
- */
-
 import { Button } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { Image as ImageIcon, X } from "@phosphor-icons/react";

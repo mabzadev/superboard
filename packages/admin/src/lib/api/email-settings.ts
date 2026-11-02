@@ -1,15 +1,7 @@
-/**
- * Email settings API client functions
- */
-
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
 import { API_BASE, apiFetch, parseApiResponse } from "./client.js";
-
-// =============================================================================
-// Types
-// =============================================================================
 
 export interface EmailProvider {
 	pluginId: string;
@@ -24,10 +16,6 @@ export interface EmailSettings {
 		afterSend: string[];
 	};
 }
-
-// =============================================================================
-// API functions
-// =============================================================================
 
 export async function fetchEmailSettings(): Promise<EmailSettings> {
 	const res = await apiFetch(`${API_BASE}/settings/email`);

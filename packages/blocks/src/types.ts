@@ -1,5 +1,3 @@
-// ── Composition Objects ──────────────────────────────────────────────────────
-
 export interface ConfirmDialog {
 	title: string;
 	text: string;
@@ -7,8 +5,6 @@ export interface ConfirmDialog {
 	deny: string;
 	style?: "danger";
 }
-
-// ── Elements ─────────────────────────────────────────────────────────────────
 
 export interface ButtonElement {
 	type: "button";
@@ -43,7 +39,6 @@ export interface SelectElement {
 	label: string;
 	options: Array<{ label: string; value: string }>;
 	initial_value?: string;
-	/** Plugin route that returns `{ items: Array<{ id, name }> }` to populate options dynamically */
 	optionsRoute?: string;
 }
 
@@ -96,55 +91,27 @@ export interface RadioElement {
 	initial_value?: string;
 }
 
-/**
- * Sub-field types allowed inside a RepeaterElement. Limited to the scalar
- * inputs the admin widget currently renders inline.
- */
 export type RepeaterSubField =
 	| TextInputElement
 	| NumberInputElement
 	| SelectElement
 	| ToggleElement;
 
-/**
- * Array-of-objects field. Renders as a list of collapsible cards with inline
- * add/remove and drag-and-drop reordering. Sub-fields are scalar Block Kit
- * elements keyed by their `action_id`.
- *
- * Admin-authoring only: this element is rendered by the admin widget so plugin
- * blocks can capture repeating data. The runtime block renderer
- * (`renderElement`) deliberately returns `null` for `repeater` — repeater
- * values are persisted on the parent block and consumed by the plugin's own
- * runtime component, not re-rendered as a stand-alone block.
- */
 export interface RepeaterElement {
 	type: "repeater";
 	action_id: string;
 	label: string;
-	/** Singular label used in the UI (e.g. "FAQ" → "Add FAQ"). */
 	item_label?: string;
 	fields: RepeaterSubField[];
 	min_items?: number;
 	max_items?: number;
-	/**
-	 * Default rows for the field. Note: the admin widget seeds new rows from
-	 * the sub-field types (empty string / `false`), not from `initial_value`;
-	 * plugins should populate persisted state via the form `values` payload
-	 * instead of relying on `initial_value` for pre-filled rows.
-	 */
 	initial_value?: Array<Record<string, unknown>>;
 }
 
-/**
- * Picks an item from the media library (or uploads a new one). The stored value
- * is the selected asset's URL string, so this element is value-compatible with a
- * plain `text_input` — existing content continues to work after swapping.
- */
 export interface MediaPickerElement {
 	type: "media_picker";
 	action_id: string;
 	label: string;
-	/** Mime-type prefix filter (e.g. "image/"). Defaults to "image/". */
 	mime_type_filter?: string;
 	initial_value?: string;
 	placeholder?: string;
@@ -163,8 +130,6 @@ export type Element =
 	| RadioElement
 	| RepeaterElement
 	| MediaPickerElement;
-
-// ── Form Fields (elements + optional condition) ──────────────────────────────
 
 export type FieldCondition =
 	| { field: string; eq?: unknown; neq?: never }
@@ -185,8 +150,6 @@ export type FormField = (
 	condition?: FieldCondition;
 };
 
-// ── Block Sub-types ──────────────────────────────────────────────────────────
-
 export interface TableColumn {
 	key: string;
 	label: string;
@@ -201,48 +164,29 @@ export interface StatItem {
 	trend?: "up" | "down" | "neutral";
 }
 
-/** A single data series for a timeseries chart. */
 export interface ChartSeries {
-	/** Display name shown in tooltips and legends */
 	name: string;
-	/** Array of `[timestamp_ms, value]` tuples ordered by time */
 	data: [number, number][];
-	/**
-	 * Hex color for this series. If omitted, an automatic categorical color
-	 * from the Kumo palette is assigned based on the series index.
-	 */
 	color?: string;
 }
 
-/** Timeseries-specific chart configuration */
 export interface TimeseriesChartConfig {
 	chart_type: "timeseries";
-	/** Visual style of each series. Defaults to `"line"`. */
 	style?: "line" | "bar";
-	/** Array of time series to display */
 	series: ChartSeries[];
-	/** Label for the x-axis */
 	x_axis_name?: string;
-	/** Label for the y-axis */
 	y_axis_name?: string;
-	/** Height of the chart in pixels. Defaults to 350. */
 	height?: number;
-	/** Render a gradient fill beneath line series */
 	gradient?: boolean;
 }
 
-/** Custom chart configuration using raw ECharts options (pie, etc.) */
 export interface CustomChartConfig {
 	chart_type: "custom";
-	/** Raw ECharts option object — passed through to `chart.setOption()` */
 	options: Record<string, unknown>;
-	/** Height of the chart in pixels. Defaults to 350. */
 	height?: number;
 }
 
 export type ChartConfig = TimeseriesChartConfig | CustomChartConfig;
-
-// ── Blocks ───────────────────────────────────────────────────────────────────
 
 interface BlockBase {
 	block_id?: string;
@@ -384,8 +328,6 @@ export type Block =
 	| EmptyBlock
 	| AccordionBlock;
 
-// ── Interactions ─────────────────────────────────────────────────────────────
-
 export interface BlockAction {
 	type: "block_action";
 	action_id: string;
@@ -406,8 +348,6 @@ export interface PageLoad {
 }
 
 export type BlockInteraction = BlockAction | FormSubmit | PageLoad;
-
-// ── Response ─────────────────────────────────────────────────────────────────
 
 export interface BlockResponse {
 	blocks: Block[];

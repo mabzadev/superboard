@@ -4,10 +4,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { createGzipDecoder, unpackTar } from "modern-tar";
 import { z } from "zod";
 
-/** Matches http(s) scheme at start of URL */
 const HTTP_SCHEME_RE = /^https?:\/\//i;
 
-/** Validates that a URL string uses http or https scheme. Rejects javascript:/data: URI XSS vectors. */
 const httpUrl = z
 	.string()
 	.url()
@@ -29,13 +27,9 @@ import {
 import type { AuthorRow } from "../db/types.js";
 import type { AuditParams } from "../workflows/audit.js";
 
-// ── Types ───────────────────────────────────────────────────────
-
 type AuthEnv = { Bindings: Env; Variables: { author: AuthorRow; isSeedAuth: boolean } };
 
 export const authorRoutes = new Hono<AuthEnv>();
-
-// ── Auth: shared GitHub → JWT logic ─────────────────────────────
 
 interface GitHubUser {
 	id: number;
@@ -45,10 +39,6 @@ interface GitHubUser {
 	avatar_url: string;
 }
 
-/**
- * Given a GitHub access token, fetch the user, find-or-create author,
- * and return a marketplace JWT. Shared by code exchange and device flow.
- */
 async function authenticateWithGitHubToken(
 	githubAccessToken: string,
 	env: Env,
@@ -83,7 +73,7 @@ async function authenticateWithGitHubToken(
 		sub: author.id,
 		githubId,
 		iat: now,
-		exp: now + 86400 * 30, // 30 days
+		exp: now + 86400 * 30,
 	};
 
 	const token = await signJwt(payload, env.GITHUB_CLIENT_SECRET);
@@ -97,8 +87,6 @@ async function authenticateWithGitHubToken(
 		},
 	};
 }
-
-// ── Auth: GitHub OAuth code exchange (web flow) ─────────────────
 
 const githubAuthSchema = z.object({
 	code: z.string().min(1),
@@ -117,7 +105,6 @@ authorRoutes.post("/auth/github", async (c) => {
 	}
 
 	try {
-		// Exchange code for GitHub access token
 		const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
 			method: "POST",
 			headers: {
@@ -153,8 +140,6 @@ authorRoutes.post("/auth/github", async (c) => {
 	}
 });
 
-// ── Auth: GitHub device flow (CLI) ──────────────────────────────
-
 const githubDeviceAuthSchema = z.object({
 	access_token: z.string().min(1),
 });
@@ -183,13 +168,6 @@ authorRoutes.post("/auth/github/device", async (c) => {
 	}
 });
 
-// ── Auth middleware for all routes below ─────────────────────────
-
-/**
- * Timing-safe comparison of two strings.
- * Hashes both values to a fixed length before comparing, so neither
- * the length nor the content of the secret leaks via timing.
- */
 async function timingSafeEqual(a: string, b: string): Promise<boolean> {
 	const encoder = new TextEncoder();
 	const [hashA, hashB] = await Promise.all([
@@ -208,8 +186,6 @@ async function authMiddleware(c: Context<AuthEnv>, next: Next): Promise<Response
 
 	const token = header.slice(7);
 
-	// Seed token auth -- trusted publisher for CI seeding.
-	// Bypasses GitHub OAuth; resolves to a system author.
 	if (c.env.SEED_TOKEN && (await timingSafeEqual(token, c.env.SEED_TOKEN))) {
 		const author = await findOrCreateSystemAuthor(c.env.DB);
 		c.set("author", author);
@@ -217,14 +193,12 @@ async function authMiddleware(c: Context<AuthEnv>, next: Next): Promise<Response
 		return next();
 	}
 
-	// Standard JWT auth
 	try {
 		const payload = await verifyJwt(token, c.env.GITHUB_CLIENT_SECRET);
 		if (!payload || typeof payload.sub !== "string") {
 			return c.json({ error: "Invalid token" }, 401);
 		}
 
-		// Verify author still exists
 		const author = await c.env.DB.prepare("SELECT * FROM authors WHERE id = ?")
 			.bind(payload.sub)
 			.first<AuthorRow>();
@@ -241,18 +215,10 @@ async function authMiddleware(c: Context<AuthEnv>, next: Next): Promise<Response
 	}
 }
 
-// Apply auth middleware to author-only methods (POST/PUT) on /plugins/*
-// Using method-specific middleware avoids blocking public GET routes (icons, etc.)
-// that share the /plugins/* path when mounted on the same prefix.
 authorRoutes.post("/plugins/*", authMiddleware);
 authorRoutes.put("/plugins/*", authMiddleware);
 
-// ── POST /plugins — Register new plugin ─────────────────────────
-
-// Must stay in sync with PluginCapability in emdash core
-/** Must stay in sync with PLUGIN_CAPABILITIES in packages/core/src/plugins/manifest-schema.ts */
 const VALID_CAPABILITIES = [
-	// Current names
 	"network:request",
 	"network:request:unrestricted",
 	"content:read",
@@ -265,7 +231,6 @@ const VALID_CAPABILITIES = [
 	"hooks.email-transport:register",
 	"hooks.email-events:register",
 	"hooks.page-fragments:register",
-	// Deprecated aliases — accepted during the transition window.
 	"network:fetch",
 	"network:fetch:any",
 	"read:content",
@@ -311,7 +276,6 @@ authorRoutes.post("/plugins", async (c) => {
 	}
 
 	try {
-		// Check if plugin ID already exists
 		const existing = await getPlugin(c.env.DB, body.id);
 		if (existing) {
 			return c.json({ error: "Plugin ID already exists" }, 409);
@@ -336,19 +300,14 @@ authorRoutes.post("/plugins", async (c) => {
 	}
 });
 
-// ── POST /plugins/:id/versions — Publish version ────────────────
-
 authorRoutes.post("/plugins/:id/versions", async (c) => {
 	const author = c.get("author");
 	const isSeed = c.get("isSeedAuth") === true;
 	const pluginId = c.req.param("id");
 
 	try {
-		// Verify plugin exists and author owns it.
-		// Seed auth: auto-register the plugin if it doesn't exist, skip ownership check.
 		let plugin = await getPlugin(c.env.DB, pluginId);
 		if (!plugin && isSeed) {
-			// Auto-register for seed -- we'll update capabilities after manifest parse
 			plugin = await createPlugin(c.env.DB, {
 				id: pluginId,
 				name: pluginId,
@@ -358,12 +317,9 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 		} else if (!plugin) {
 			return c.json({ error: "Plugin not found" }, 404);
 		} else if (plugin.author_id !== author.id) {
-			// Ownership check applies to both seed and normal auth.
-			// Seed can only publish to plugins it created (system author).
 			return c.json({ error: "Not authorized to publish to this plugin" }, 403);
 		}
 
-		// Parse multipart form
 		const formData = await c.req.formData();
 		const bundleFile = formData.get("bundle");
 		if (!bundleFile || !(bundleFile instanceof File)) {
@@ -378,7 +334,6 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			return c.json({ error: `Bundle exceeds ${MAX_BUNDLE_BYTES} byte limit` }, 413);
 		}
 
-		// Extract tarball contents
 		let files: Map<string, Uint8Array>;
 		try {
 			files = await extractTarball(bundleData);
@@ -392,7 +347,6 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			);
 		}
 
-		// Read manifest
 		const manifestData = files.get("manifest.json");
 		if (!manifestData) {
 			return c.json({ error: "Bundle must contain manifest.json" }, 400);
@@ -405,7 +359,6 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			return c.json({ error: "Invalid manifest.json" }, 400);
 		}
 
-		// Validate manifest
 		const manifestResult = manifestSchema.safeParse(manifest);
 		if (!manifestResult.success) {
 			const issues = manifestResult.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`);
@@ -429,7 +382,6 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			);
 		}
 
-		// Validate semver > latest published version (skip for seed -- seed is idempotent)
 		if (!isSeed) {
 			const latestVersion = await getLatestVersion(c.env.DB, pluginId);
 			if (latestVersion) {
@@ -445,15 +397,11 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			}
 		}
 
-		// Check for duplicate version.
-		// Seed: allow re-publishing the same version (idempotent upsert).
-		// Normal: reject duplicate versions.
 		const existingVersion = await getPluginVersion(c.env.DB, pluginId, validManifest.version);
 		if (existingVersion && !isSeed) {
 			return c.json({ error: "Version already exists" }, 409);
 		}
 
-		// Detect capability escalation
 		const currentCaps = safeJsonParse<string[]>(plugin.capabilities, []);
 		const newCaps = validManifest.capabilities;
 		const escalated = newCaps.filter((cap) => !currentCaps.includes(cap));
@@ -461,19 +409,16 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			console.warn(`Capability escalation for ${pluginId}: ${escalated.join(", ")}`);
 		}
 
-		// Compute SHA-256 checksum
 		const hashBuffer = await crypto.subtle.digest("SHA-256", bundleData);
 		const checksum = Array.from(new Uint8Array(hashBuffer), (b) =>
 			b.toString(16).padStart(2, "0"),
 		).join("");
 
-		// Store tarball in R2
 		const bundleKey = `${pluginId}/${validManifest.version}.tar.gz`;
 		await c.env.R2.put(bundleKey, bundleData, {
 			httpMetadata: { contentType: "application/gzip" },
 		});
 
-		// Store extracted icon in R2
 		const iconData = files.get("icon.png");
 		const hasIcon = !!iconData;
 		if (iconData) {
@@ -482,7 +427,6 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			});
 		}
 
-		// Store screenshots in R2
 		const screenshotEntries = [...files.entries()].filter(([path]) =>
 			path.startsWith("screenshots/"),
 		);
@@ -492,15 +436,12 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			});
 		}
 
-		// Read optional files
 		const readmeBytes = files.get("README.md");
 		const readme = readmeBytes ? new TextDecoder().decode(readmeBytes) : undefined;
 		const changelog = validManifest.changelog;
 
-		// Create or update version row
 		let versionRow;
 		if (existingVersion && isSeed) {
-			// Re-seed: update existing version with new bundle data
 			await updateVersionForReseed(c.env.DB, existingVersion.id, {
 				bundleKey,
 				bundleSize: bundleData.byteLength,
@@ -525,19 +466,15 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 				hasIcon,
 				screenshotCount: screenshotEntries.length,
 				capabilities: validManifest.capabilities,
-				// Seed: publish immediately. Normal: pending audit.
 				status: isSeed ? "published" : "pending",
 			});
 		}
 
-		// Update plugin metadata with latest version info
 		await updatePlugin(c.env.DB, pluginId, {
 			capabilities: validManifest.capabilities,
 			hasIcon,
 		});
 
-		// Seed: skip audit, return 201 (published immediately).
-		// Normal: dispatch audit Workflow, return 202 (pending).
 		if (isSeed) {
 			return c.json(
 				{
@@ -551,10 +488,8 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			);
 		}
 
-		// Check if tarball contains images (for Workflow to know whether to run image audit)
 		const hasImages = hasIcon || [...files.keys()].some((path) => path.startsWith("screenshots/"));
 
-		// Dispatch audit Workflow asynchronously
 		const workflowParams: AuditParams = {
 			pluginId,
 			version: validManifest.version,
@@ -575,7 +510,6 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 			params: workflowParams,
 		});
 
-		// Store Workflow instance ID on version row
 		await setVersionWorkflowId(c.env.DB, versionRow.id, instance.id);
 
 		return c.json(
@@ -594,8 +528,6 @@ authorRoutes.post("/plugins/:id/versions", async (c) => {
 		return c.json({ error: "Internal server error" }, 500);
 	}
 });
-
-// ── PUT /plugins/:id — Update plugin metadata ───────────────────
 
 const updatePluginSchema = z.object({
 	name: z.string().min(1).max(100).optional(),
@@ -644,8 +576,6 @@ authorRoutes.put("/plugins/:id", async (c) => {
 	}
 });
 
-// ── POST /plugins/:id/versions/:version/retry-audit — Re-run audit ──
-
 authorRoutes.post("/plugins/:id/versions/:version/retry-audit", async (c) => {
 	const author = c.get("author");
 	const pluginId = c.req.param("id");
@@ -661,7 +591,6 @@ authorRoutes.post("/plugins/:id/versions/:version/retry-audit", async (c) => {
 		const versionRow = await getPluginVersion(c.env.DB, pluginId, version);
 		if (!versionRow) return c.json({ error: "Version not found" }, 404);
 
-		// Only allow retry for pending or rejected versions
 		if (versionRow.status !== "pending" && versionRow.status !== "rejected") {
 			return c.json(
 				{ error: `Cannot retry audit for version with status "${versionRow.status}"` },
@@ -669,10 +598,8 @@ authorRoutes.post("/plugins/:id/versions/:version/retry-audit", async (c) => {
 			);
 		}
 
-		// Check if tarball has images
 		const hasImages = versionRow.has_icon === 1 || versionRow.screenshot_count > 0;
 
-		// Parse capabilities from JSON
 		const capabilities = safeJsonParse<string[]>(versionRow.capabilities, []);
 
 		const workflowParams: AuditParams = {
@@ -706,8 +633,6 @@ authorRoutes.post("/plugins/:id/versions/:version/retry-audit", async (c) => {
 	}
 });
 
-// ── Regex constants (hoisted for lint) ──────────────────────────
-
 const RE_SEMVER_FULL = /^(\d+)\.(\d+)\.(\d+)$/;
 const RE_LEADING_DOT_SLASH = /^\.\//;
 const RE_LEADING_PACKAGE = /^package\//;
@@ -717,7 +642,6 @@ const MAX_DECOMPRESSED_BYTES = 50 * 1024 * 1024;
 const MAX_TAR_FILES = 200;
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
-/** Read an entire ReadableStream into a single Uint8Array, aborting if it exceeds `limit` bytes. */
 async function collectStream(
 	stream: ReadableStream<Uint8Array>,
 	limit: number,
@@ -747,8 +671,6 @@ async function collectStream(
 	return result;
 }
 
-// ── JWT helpers (HMAC-SHA256) ────────────────────────────────────
-
 async function signJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
 	const key = new TextEncoder().encode(secret);
 	return new SignJWT(payload)
@@ -768,9 +690,6 @@ async function verifyJwt(token: string, secret: string): Promise<Record<string, 
 	}
 }
 
-// ── Manifest validation ─────────────────────────────────────────
-
-/** Must stay in sync with HOOK_NAMES in packages/core/src/plugins/manifest-schema.ts */
 const VALID_HOOKS = [
 	"plugin:install",
 	"plugin:activate",
@@ -801,7 +720,6 @@ const storageCollectionSchema = z.object({
 	uniqueIndexes: z.array(z.union([z.string(), z.array(z.string())])).optional(),
 });
 
-/** Hook entry: plain string or structured object with metadata */
 const hookEntrySchema = z.union([
 	z.enum(VALID_HOOKS),
 	z.object({
@@ -812,7 +730,6 @@ const hookEntrySchema = z.union([
 	}),
 ]);
 
-/** Route entry: plain string or structured object with metadata */
 const routeNamePattern = /^[a-zA-Z0-9][a-zA-Z0-9_\-/]*$/;
 const routeEntrySchema = z.union([
 	z.string().min(1).regex(routeNamePattern, "Route name must be a safe path segment"),
@@ -823,7 +740,6 @@ const routeEntrySchema = z.union([
 ]);
 
 export const manifestSchema = z.object({
-	// Core PluginManifest fields
 	id: z.string().min(1),
 	version: z.string().regex(RE_SEMVER_FULL, "Must be valid semver"),
 	capabilities: z.array(z.enum(VALID_CAPABILITIES)),
@@ -849,14 +765,11 @@ export const manifestSchema = z.object({
 				.optional(),
 		})
 		.default({}),
-	// Marketplace publishing extras (not part of core PluginManifest)
 	name: z.string().min(1).max(100).optional(),
 	description: z.string().max(200).optional(),
 	minEmDashVersion: z.string().optional(),
 	changelog: z.string().optional(),
 });
-
-// ── Semver comparison (simplified) ──────────────────────────────
 
 function parseSemver(v: string): [number, number, number] | null {
 	const match = v.match(RE_SEMVER_FULL);
@@ -874,14 +787,7 @@ function isNewerVersion(current: string, next: string): boolean {
 	return n[2] > c[2];
 }
 
-// ── Tarball extraction ──────────────────────────────────────────
-
 async function extractTarball(data: ArrayBuffer): Promise<Map<string, Uint8Array>> {
-	// Decompress fully into memory first, then parse the tar.
-	// Passing a pipeThrough() stream directly to unpackTar causes a backpressure
-	// deadlock in workerd: the tar decoder's body-stream pull() needs more
-	// decompressed data, but the upstream pipe is stalled waiting for the
-	// decoder's writable side to drain — a circular dependency.
 	const decompressed = await collectStream(
 		new Response(data).body!.pipeThrough(createGzipDecoder()),
 		MAX_DECOMPRESSED_BYTES,
@@ -903,7 +809,6 @@ async function extractTarball(data: ArrayBuffer): Promise<Map<string, Uint8Array
 		},
 		map: (header) => ({
 			...header,
-			// Strip leading "./" or "package/" prefix common in npm tarballs
 			name: header.name.replace(RE_LEADING_DOT_SLASH, "").replace(RE_LEADING_PACKAGE, ""),
 		}),
 	});
@@ -916,8 +821,6 @@ async function extractTarball(data: ArrayBuffer): Promise<Map<string, Uint8Array
 	}
 	return files;
 }
-
-// ── Helpers ─────────────────────────────────────────────────────
 
 function safeJsonParse<T>(value: string | null, fallback: T): T {
 	if (!value) return fallback;

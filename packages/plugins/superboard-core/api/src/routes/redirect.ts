@@ -310,7 +310,6 @@ function renderQuickLink(c: RedirectContext, quickLink: QuickLinkRow | null) {
 	return c.html(generateQuickLinkPage(quickLink, `${requestOrigin(c)}/${quickLink.path}`));
 }
 
-// GET /:code — Resolve and redirect a short link.
 type LinkVisit = {
 	existingDeviceId: number | null;
 	ip: string;
@@ -321,10 +320,6 @@ type LinkVisit = {
 	recordView: boolean;
 };
 
-/**
- * Device, action and view-event writes never influence the redirect response,
- * so they run after it in `waitUntil` when an execution context exists.
- */
 async function recordLinkVisit(db: D1Database, visit: LinkVisit) {
 	const followUps = (deviceId: number) => {
 		const statements = [
@@ -452,12 +447,10 @@ redirect.get("/:code", async (c) => {
 		return c.redirect(dashboardUrl(c), 302);
 	}
 
-	// Detect platform
 	const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
 	const isAndroid = /Android/i.test(userAgent);
 	const platform = isIOS ? "ios" : isAndroid ? "android" : "web";
 
-	// Independent reads run concurrently; the visit writes are deferred below.
 	const [device, customRedirect, platformRedirect] = await Promise.all([
 		db
 			.prepare(`
@@ -469,7 +462,6 @@ redirect.get("/:code", async (c) => {
   `)
 			.bind(ip, userAgent)
 			.first<{ id: number }>(),
-		// Find platform-specific redirect URL
 		db
 			.prepare(
 				"SELECT url, open_app_if_installed FROM custom_redirects WHERE link_id = ? AND platform = ?",
@@ -511,13 +503,11 @@ redirect.get("/:code", async (c) => {
 			: "https://apps.apple.com";
 	}
 
-	// Show preview page for mobile if configured
 	const showPreview =
 		(isIOS && (link.show_preview_ios ?? link.config_show_preview_ios)) ||
 		(isAndroid && (link.show_preview_android ?? link.config_show_preview_android));
 
 	if (showPreview && !goToFallback && link.title) {
-		// Return HTML preview page with smart banner
 		const previewHtml = generatePreviewPage(link, targetUrl || "#", platform);
 		return c.html(previewHtml);
 	}
@@ -525,7 +515,6 @@ redirect.get("/:code", async (c) => {
 	if (goToFallback && targetUrl) return c.redirect(targetUrl, 302);
 
 	if (!targetUrl) {
-		// Fallback to App Store / Play Store if no URL configured
 		if (isIOS) targetUrl = "https://apps.apple.com";
 		else if (isAndroid) targetUrl = "https://play.google.com";
 		else targetUrl = dashboardUrl(c);

@@ -1,17 +1,6 @@
-/**
- * Preview Toolbar
- *
- * A floating pill injected by the preview middleware into HTML responses.
- * Shows preview status, snapshot age, reload button, and errors.
- * No dependencies — plain HTML string with inline styles and a <script> tag.
- */
-
 export interface PreviewToolbarConfig {
-	/** When the snapshot was generated (ISO string) */
 	generatedAt?: string;
-	/** Source site URL */
 	source?: string;
-	/** Error message if snapshot failed */
 	error?: string;
 }
 

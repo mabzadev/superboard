@@ -75,7 +75,6 @@ describe("applySeed", () => {
 
 			expect(result.settings.applied).toBe(2);
 
-			// Verify settings were saved
 			const row = await db
 				.selectFrom("options")
 				.selectAll()
@@ -143,7 +142,6 @@ describe("applySeed", () => {
 			expect(result.collections.created).toBe(1);
 			expect(result.fields.created).toBe(2);
 
-			// Verify collection exists
 			const registry = new SchemaRegistry(db);
 			const collection = await registry.getCollection("posts");
 			expect(collection).not.toBeNull();
@@ -258,7 +256,6 @@ describe("applySeed", () => {
 		});
 
 		it("should skip existing collections", async () => {
-			// Create collection first
 			const registry = new SchemaRegistry(db);
 			await registry.createCollection({
 				slug: "posts",
@@ -282,7 +279,6 @@ describe("applySeed", () => {
 			expect(result.collections.skipped).toBe(1);
 			expect(result.fields.skipped).toBe(1);
 
-			// Original label should be preserved
 			const collection = await registry.getCollection("posts");
 			expect(collection?.label).toBe("Existing Posts");
 		});
@@ -321,7 +317,6 @@ describe("applySeed", () => {
 
 			expect(result.taxonomies.created).toBe(1);
 
-			// Verify taxonomy exists
 			const row = await db
 				.selectFrom("_emdash_taxonomy_defs")
 				.selectAll()
@@ -405,7 +400,6 @@ describe("applySeed", () => {
 
 			expect(result.taxonomies.terms).toBe(4);
 
-			// Verify parent-child relationship
 			const termRepo = new TaxonomyRepository(db);
 			const webTerm = await termRepo.findBySlug("topics", "web");
 			const techTerm = await termRepo.findBySlug("topics", "tech");
@@ -414,7 +408,6 @@ describe("applySeed", () => {
 		});
 
 		it("should skip existing terms", async () => {
-			// Create taxonomy and term first
 			await db
 				.insertInto("_emdash_taxonomy_defs")
 				.values({
@@ -451,12 +444,9 @@ describe("applySeed", () => {
 
 			const result = await applySeed(db, seed, { includeContent: true });
 
-			// Definition already exists, so not created
 			expect(result.taxonomies.created).toBe(0);
-			// Only typescript is new
 			expect(result.taxonomies.terms).toBe(1);
 
-			// Original label should be preserved
 			const term = await termRepo.findBySlug("tags", "javascript");
 			expect(term?.label).toBe("Existing JS");
 		});
@@ -484,7 +474,6 @@ describe("applySeed", () => {
 			expect(result.menus.created).toBe(1);
 			expect(result.menus.items).toBe(3);
 
-			// Verify menu exists
 			const menu = await db
 				.selectFrom("_emdash_menus")
 				.selectAll()
@@ -537,9 +526,8 @@ describe("applySeed", () => {
 
 			const result = await applySeed(db, seed);
 
-			expect(result.menus.items).toBe(3); // 1 parent + 2 children
+			expect(result.menus.items).toBe(3);
 
-			// Verify parent-child relationship
 			const items = await db.selectFrom("_emdash_menu_items").selectAll().execute();
 
 			const parent = items.find((i) => i.label === "Products");
@@ -549,7 +537,6 @@ describe("applySeed", () => {
 		});
 
 		it("should replace items in existing menu", async () => {
-			// Create menu with items first
 			await db
 				.insertInto("_emdash_menus")
 				.values({
@@ -588,11 +575,9 @@ describe("applySeed", () => {
 
 			const result = await applySeed(db, seed);
 
-			// Menu not created (existed), but items are replaced
 			expect(result.menus.created).toBe(0);
 			expect(result.menus.items).toBe(1);
 
-			// Old item should be gone
 			const items = await db
 				.selectFrom("_emdash_menu_items")
 				.selectAll()
@@ -629,7 +614,6 @@ describe("applySeed", () => {
 			expect(result.widgetAreas.created).toBe(1);
 			expect(result.widgetAreas.widgets).toBe(1);
 
-			// Verify area exists
 			const area = await db
 				.selectFrom("_emdash_widget_areas")
 				.selectAll()
@@ -695,7 +679,6 @@ describe("applySeed", () => {
 		});
 
 		it("should replace widgets in existing area", async () => {
-			// Create area with widget first
 			await db
 				.insertInto("_emdash_widget_areas")
 				.values({
@@ -737,7 +720,6 @@ describe("applySeed", () => {
 			expect(result.widgetAreas.created).toBe(0);
 			expect(result.widgetAreas.widgets).toBe(1);
 
-			// Old widget should be gone
 			const widgets = await db
 				.selectFrom("_emdash_widgets")
 				.selectAll()
@@ -897,14 +879,12 @@ describe("applySeed", () => {
 			const result = await applySeed(db, seed, { includeContent: true });
 
 			expect(result.bylines.created).toBe(1);
-			// The avatar created a backing media row.
 			expect(result.media.created).toBe(1);
 
 			const bylineRepo = new BylineRepository(db);
 			const byline = await bylineRepo.findBySlug("ada-lovelace");
 			expect(byline?.avatarMediaId).toBeTruthy();
 
-			// The media row carries the supplied storage key (nothing downloaded).
 			const media = await db
 				.selectFrom("media")
 				.selectAll()
@@ -918,7 +898,6 @@ describe("applySeed", () => {
 		it("links a byline avatar on update (onConflict: update)", async () => {
 			const bylineRepo = new BylineRepository(db);
 
-			// First seed: no avatar.
 			await applySeed(
 				db,
 				{
@@ -930,7 +909,6 @@ describe("applySeed", () => {
 			const before = await bylineRepo.findBySlug("grace-hopper");
 			expect(before?.avatarMediaId).toBeNull();
 
-			// Re-seed the same slug with an avatar in update mode.
 			const result = await applySeed(
 				db,
 				{
@@ -952,8 +930,6 @@ describe("applySeed", () => {
 			const after = await bylineRepo.findBySlug("grace-hopper");
 			expect(after?.avatarMediaId).toBeTruthy();
 
-			// Idempotency: re-running the same update reuses the existing media
-			// row (by storage key) rather than creating a duplicate.
 			const rerun = await applySeed(
 				db,
 				{
@@ -988,8 +964,6 @@ describe("applySeed", () => {
 				}),
 			).rejects.toThrow("Invalid seed file");
 
-			// whitespace-only storage key, and an explicitly empty filename, are
-			// both rejected.
 			await expect(
 				applySeed(db, {
 					version: "1",
@@ -1137,7 +1111,6 @@ describe("applySeed", () => {
 			expect(result.content.created).toBe(1);
 			expect(result.content.skipped).toBe(1);
 
-			// Original should be preserved
 			const entry = await contentRepo.findBySlug("posts", "hello");
 			expect(entry?.data.title).toBe("Existing");
 		});
@@ -1178,7 +1151,6 @@ describe("applySeed", () => {
 			const first = await contentRepo.findBySlug("posts", "first");
 			const second = await contentRepo.findBySlug("posts", "second");
 
-			// The reference should be resolved to the real ID
 			expect(second?.data.related_post).toBe(first?.id);
 		});
 
@@ -1191,7 +1163,6 @@ describe("applySeed", () => {
 				type: "string",
 			});
 
-			// Create taxonomy
 			await db
 				.insertInto("_emdash_taxonomy_defs")
 				.values({
@@ -1225,7 +1196,6 @@ describe("applySeed", () => {
 
 			expect(result.content.created).toBe(1);
 
-			// Check taxonomy assignments
 			const contentRepo = new ContentRepository(db);
 			const entry = await contentRepo.findBySlug("posts", "hello");
 
@@ -1275,7 +1245,6 @@ describe("applySeed", () => {
 			expect(result.content.created).toBe(1);
 			expect(result.menus.items).toBe(1);
 
-			// Menu item should reference the content
 			const contentRepo = new ContentRepository(db);
 			const aboutPage = await contentRepo.findBySlug("pages", "about");
 
@@ -1311,7 +1280,6 @@ describe("applySeed", () => {
 			expect(result.sections.created).toBe(1);
 			expect(result.sections.skipped).toBe(0);
 
-			// Verify section exists
 			const section = await db
 				.selectFrom("_emdash_sections")
 				.selectAll()
@@ -1326,7 +1294,6 @@ describe("applySeed", () => {
 		});
 
 		it("should skip existing sections", async () => {
-			// Create section first
 			await db
 				.insertInto("_emdash_sections")
 				.values({
@@ -1365,7 +1332,6 @@ describe("applySeed", () => {
 			expect(result.sections.created).toBe(1);
 			expect(result.sections.skipped).toBe(1);
 
-			// Original title should be preserved
 			const section = await db
 				.selectFrom("_emdash_sections")
 				.selectAll()
@@ -1414,7 +1380,6 @@ describe("applySeed", () => {
 				redirects: [{ source: "/legacy-post", destination: "/posts/test" }],
 			};
 
-			// First application
 			const result1 = await applySeed(db, seed);
 			expect(result1.collections.created).toBe(1);
 			expect(result1.taxonomies.created).toBe(1);
@@ -1422,12 +1387,10 @@ describe("applySeed", () => {
 			expect(result1.widgetAreas.created).toBe(1);
 			expect(result1.redirects.created).toBe(1);
 
-			// Second application - should skip existing
 			const result2 = await applySeed(db, seed);
 			expect(result2.collections.created).toBe(0);
 			expect(result2.collections.skipped).toBe(1);
 			expect(result2.taxonomies.created).toBe(0);
-			// Menus and widgets replace items but don't duplicate
 			expect(result2.menus.created).toBe(0);
 			expect(result2.widgetAreas.created).toBe(0);
 			expect(result2.redirects.created).toBe(0);

@@ -4,9 +4,6 @@ export interface DeferredTaskTracker {
 	settle(): void;
 }
 
-// Test database teardown uses this process-local registry to drain tasks that
-// run without request middleware. Keep it on globalThis so duplicated SSR
-// chunks and their test helpers observe the same task set.
 const DEFERRED_TASKS_KEY = Symbol.for("emdash:deferred-tasks");
 
 const deferredTasks: Set<Promise<unknown>> =
@@ -57,8 +54,6 @@ export function createDeferredTaskTracker(onSettled: () => void): DeferredTaskTr
 		track<T>(promise: Promise<T>): Promise<T> {
 			pending++;
 			return promise.finally(() => {
-				// A task may register another after() call before it settles. The
-				// counter therefore reaches zero only after the full task chain ends.
 				pending--;
 				completeIfSettled();
 			});

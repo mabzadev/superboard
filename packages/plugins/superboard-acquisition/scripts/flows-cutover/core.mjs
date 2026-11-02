@@ -17,9 +17,6 @@ export const FLOWS_CUTOVER_TARGET = "mabza-development";
 export const FLOWS_CUTOVER_ENVIRONMENT = "development";
 export const FLOWS_CUTOVER_SOURCES = Object.freeze(["paywalls", "onboardings"]);
 
-// Runtime projections can be rebuilt from replayed events. Administrative graph
-// drafts, immutable versions and releases are deliberately *not* treated as
-// disposable: a post-cutover change there blocks automatic rollback.
 const DERIVED_REVERSE_ENTITIES = /\.(?:claims|mappings|users|states|assignments|audit)$/u;
 
 export function assertMabzaDevelopment(target, environment) {
@@ -503,9 +500,6 @@ export function validateApplySafety({
 		windowId: window.window_id,
 	});
 	validateBackupReceiptForPlan(backupReceipt, plan);
-	// The freeze necessarily precedes the final delta snapshot and therefore may
-	// reference a pre-freeze plan. Project id + window bind the freeze; the exact
-	// final plan is bound separately by the CUTOVER confirmation and checkpoint.
 	validateFreezeReceipt(freezeReceipt, {
 		projectRef: plan.project.project_ref,
 		projectId: plan.project.project_id,

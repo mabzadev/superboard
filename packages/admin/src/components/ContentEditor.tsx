@@ -55,9 +55,7 @@ import { RepeaterField } from "./RepeaterField.js";
 import { RouterLinkButton } from "./RouterLinkButton.js";
 import { SaveButton } from "./SaveButton.js";
 
-/** Autosave debounce delay in milliseconds */
 const AUTOSAVE_DELAY = 2000;
-// Mirrors Header.tsx's h-[58px]; the fixed mobile sheet offsets its body by it.
 const ADMIN_HEADER_HEIGHT_PX = 58;
 const EDITOR_SETTINGS_MIN_WIDTH_PX = 320;
 const EDITOR_SETTINGS_DEFAULT_WIDTH_PX = 368;
@@ -109,16 +107,11 @@ export interface FieldDescriptor {
 	label?: string;
 	required?: boolean;
 	readOnly?: boolean;
-	/**
-	 * For `select` / `multiSelect`: the list of enum choices.
-	 * For `json` fields driven by a plugin `widget`: arbitrary widget config.
-	 */
 	options?: Array<{ value: string; label: string }> | Record<string, unknown>;
 	widget?: string;
 	validation?: Record<string, unknown>;
 }
 
-/** Simplified user info for current user context */
 export interface CurrentUserInfo {
 	id: string;
 	role: number;
@@ -130,98 +123,56 @@ export interface ContentEditorProps {
 	item?: ContentItem | null;
 	fields: Record<string, FieldDescriptor>;
 	isNew?: boolean;
-	/**
-	 * Locale this entry is bound to. For existing entries this matches
-	 * `item.locale`; for new entries it's the URL `?locale=` (or default).
-	 * Threaded into the byline picker so the empty-state CTA links to the
-	 * right locale on the Bylines manager.
-	 */
 	entryLocale?: string | null;
-	/** Whether any content update is pending. Preserves main's operation gating. */
 	isSaving?: boolean;
-	/** Whether the current entry's editor save should drive visual feedback. */
 	isSaveFeedbackActive?: boolean;
 	onSave?: (payload: {
 		data: Record<string, unknown>;
 		slug?: string;
 		bylines?: BylineCreditInput[];
 	}) => void;
-	/** Callback for autosave (debounced, skips revision creation) */
 	onAutosave?: (payload: {
 		data: Record<string, unknown>;
 		slug?: string;
 		bylines?: BylineCreditInput[];
 	}) => void;
-	/** Whether autosave is in progress */
 	isAutosaving?: boolean;
-	/** Whether the current entry's autosave should drive visual feedback. */
 	isAutosaveFeedbackActive?: boolean;
-	/** Entry-scoped token advanced after a successful autosave. */
 	autosaveCompletionToken?: number;
 	onPublish?: () => void;
 	onUnpublish?: () => void;
-	/** Callback to discard draft changes (revert to published version) */
 	onDiscardDraft?: () => void;
-	/** Callback to schedule for future publishing */
 	onSchedule?: (scheduledAt: string) => void;
-	/** Callback to cancel scheduling (revert to draft) */
 	onUnschedule?: () => void;
-	/** Whether scheduling is in progress */
 	isScheduling?: boolean;
-	/** Callback to change the timestamp of published content */
 	onPublishedAtChange?: (publishedAt: string) => void;
-	/** Whether the publish timestamp is being updated */
 	isUpdatingPublishedAt?: boolean;
-	/** Whether this collection supports drafts */
 	supportsDrafts?: boolean;
-	/** Whether this collection supports revisions */
 	supportsRevisions?: boolean;
-	/** Whether this collection supports preview */
 	supportsPreview?: boolean;
-	/** Current user (for permission checks) */
 	currentUser?: CurrentUserInfo;
-	/** Available users for author selection (only shown to editors+) */
 	users?: UserListItem[];
-	/** Callback when author is changed */
 	onAuthorChange?: (authorId: string | null) => void;
-	/** Available byline profiles */
 	availableBylines?: BylineSummary[];
-	/** Whether the parent's byline picker query has resolved. Suppresses the empty-state flash before first fetch. */
 	availableBylinesLoaded?: boolean;
-	/** Selected byline credits (controlled for new entries) */
 	selectedBylines?: BylineCreditInput[];
-	/** Callback when byline credits are changed */
 	onBylinesChange?: (bylines: BylineCreditInput[]) => void;
-	/** Callback for creating a byline inline from the editor */
 	onQuickCreateByline?: (input: { slug: string; displayName: string }) => Promise<BylineSummary>;
-	/** Callback for updating a byline inline from the editor */
 	onQuickEditByline?: (
 		bylineId: string,
 		input: { slug: string; displayName: string },
 	) => Promise<BylineSummary>;
-	/** Callback when item is deleted (moved to trash) */
 	onDelete?: () => void;
-	/** Whether delete is in progress */
 	isDeleting?: boolean;
-	/** i18n config — present when multiple locales are configured */
 	i18n?: { defaultLocale: string; locales: string[] };
-	/** Existing translations for this content item */
 	translations?: TranslationSummary[];
-	/** Callback to create a translation for a locale */
 	onTranslate?: (locale: string) => void;
-	/** Plugin block types available for insertion in Portable Text fields */
 	pluginBlocks?: PluginBlockDef[];
-	/** Whether this collection has SEO fields enabled */
 	hasSeo?: boolean;
-	/** Callback when SEO fields change */
 	onSeoChange?: (seo: ContentSeoInput) => void;
-	/** Admin manifest for resolving plugin field widgets */
 	manifest?: import("../lib/api/client.js").AdminManifest | null;
 }
 
-/**
- * Content editor with dynamic field rendering
- */
 export function ContentEditor({
 	collection,
 	collectionLabel,
@@ -270,9 +221,7 @@ export function ContentEditor({
 	const { locale: uiLocale } = useLocale();
 	const itemLabel = collectionLabel;
 	const settingsPanelId = React.useId();
-	// Kumo Sidebar's `side` is physical, not logical.
 	const panelSide = getLocaleDir(uiLocale) === "rtl" ? "left" : "right";
-	// Mirrors the Sidebar's mobileBreakpoint; `contained` flips with it.
 	const [isBelowLg, setIsBelowLg] = React.useState(
 		() => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches,
 	);
@@ -290,19 +239,10 @@ export function ContentEditor({
 	const [internalBylines, setInternalBylines] = React.useState<BylineCreditInput[]>(
 		resolvedItemBylines.explicitCredits,
 	);
-	// Gates whether `bylines` is included in the save payload. Untouched
-	// edits must not ship `[]` — strict per-locale hydration can return
-	// empty for entries with credits at other locales, and sending `[]`
-	// would wipe them.
 	const [bylinesTouched, setBylinesTouched] = React.useState(false);
 
-	// Track portableText editor for document outline. Only the "content"
-	// field wires its editor into this slot (see onEditorReady below).
 	const [portableTextEditor, setPortableTextEditor] = React.useState<Editor | null>(null);
 
-	// Block sidebar state – when a block (e.g. image) requests sidebar space, this holds
-	// the panel data. When non-null the sidebar shows the block panel instead of the
-	// default content settings sections.
 	const [blockSidebarPanel, setBlockSidebarPanel] = React.useState<BlockSidebarPanel | null>(null);
 
 	const handleBlockSidebarOpen = React.useCallback((panel: BlockSidebarPanel) => {
@@ -328,7 +268,6 @@ export function ContentEditor({
 		[onSeoChange],
 	);
 
-	// Track the last saved state to determine if dirty
 	const [lastSavedData, setLastSavedData] = React.useState<string>(
 		serializeEditorState({
 			data: item?.data || {},
@@ -338,18 +277,6 @@ export function ContentEditor({
 	);
 	const pendingAutosaveStateRef = React.useRef<string | null>(null);
 
-	// Synchronously reset form state when the underlying item changes (e.g. a
-	// translation switch where TanStack Router keeps ContentEditor mounted but
-	// swaps `item` for a different id). The post-render useEffect below also
-	// syncs item -> formData, but it runs *after* the first render with the new
-	// item, leaving children (notably PortableTextEditor, which freezes its
-	// initial content on mount) one render behind. This is the React-recommended
-	// "store info from previous renders" idiom -- see
-	// https://react.dev/reference/react/useState#storing-information-from-previous-renders
-	//
-	// We also reset lastSavedData here (not just in the post-render effect) so
-	// that isDirty stays false through the switch -- otherwise SaveButton would
-	// briefly flip from "Saved" -> "Save" -> "Saved" within a single tick.
 	const [previousItemId, setPreviousItemId] = React.useState<string | null>(item?.id ?? null);
 	if (item && item.id !== previousItemId) {
 		setPreviousItemId(item.id);
@@ -370,8 +297,6 @@ export function ContentEditor({
 		setBylinesTouched(false);
 	}
 
-	// Update form and last saved state when item changes (e.g., after save or restore)
-	// Stringify the data for comparison since objects are compared by reference
 	const itemDataString = React.useMemo(() => (item ? JSON.stringify(item.data) : ""), [item?.data]);
 	const itemBylinesString = React.useMemo(
 		() => (item ? JSON.stringify(item.bylines ?? []) : ""),
@@ -428,7 +353,6 @@ export function ContentEditor({
 		[isNew, onBylinesChange],
 	);
 
-	// Check if form has unsaved changes
 	const currentData = React.useMemo(
 		() =>
 			serializeEditorState({
@@ -444,8 +368,6 @@ export function ContentEditor({
 	const isContentOperationPending = Boolean(isSaving);
 	const isContentSaveBlocked = isContentOperationPending || hasUnsupportedPortableTextMarks;
 
-	// Autosave with debounce
-	// Track pending autosave to cancel on manual save
 	const autosaveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 	const formDataRef = React.useRef(formData);
 	formDataRef.current = formData;
@@ -475,22 +397,18 @@ export function ContentEditor({
 	);
 
 	React.useEffect(() => {
-		// Don't autosave for new items (no ID yet) or if autosave isn't configured
 		if (isNew || !onAutosave || !item?.id || hasUnsupportedPortableTextMarks) {
 			return;
 		}
 
-		// Don't autosave if not dirty or already saving
 		if (!isDirty || isSaving || isAutosaving) {
 			return;
 		}
 
-		// Clear any pending autosave
 		if (autosaveTimeoutRef.current) {
 			clearTimeout(autosaveTimeoutRef.current);
 		}
 
-		// Schedule autosave
 		autosaveTimeoutRef.current = setTimeout(() => {
 			if (hasInvalidUrls(formDataRef.current)) return;
 			const payload: {
@@ -530,11 +448,9 @@ export function ContentEditor({
 		fields,
 	]);
 
-	// Cancel pending autosave on manual save
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		if (hasInvalidUrls(formData) || hasUnsupportedPortableTextMarks) return;
-		// Cancel pending autosave
 		if (autosaveTimeoutRef.current) {
 			clearTimeout(autosaveTimeoutRef.current);
 			autosaveTimeoutRef.current = null;
@@ -551,15 +467,11 @@ export function ContentEditor({
 		onSave?.(payload);
 	};
 
-	// Preview URL state
 	const [isLoadingPreview, setIsLoadingPreview] = React.useState(false);
 
 	const urlPattern = manifest?.collections[collection]?.urlPattern;
 	const routable = manifest?.collections[collection]?.routable !== false;
 
-	// When the collection configures a titleField, the editor header
-	// shows the entry's title for existing entries; otherwise it keeps the
-	// generic "Edit <label>".
 	const titleField = manifest?.collections[collection]?.titleField;
 	const entryTitle = item && titleField ? getEntryTitle(item, titleField) : "";
 
@@ -606,23 +518,18 @@ export function ContentEditor({
 
 	const isPublished = status === "published";
 
-	// Draft revision status (only meaningful when supportsDrafts is on)
 	const draftStatus = item ? getDraftStatus(item) : "unpublished";
 	const hasPendingChanges = draftStatus === "published_with_changes";
 	const isLive = draftStatus === "published" || draftStatus === "published_with_changes";
 	const liveViewUrl =
 		routable && isLive && item?.slug ? contentUrl(collection, item.slug, urlPattern) : null;
 
-	// Scheduling — keyed off scheduledAt rather than status, since published
-	// posts can now have a pending schedule without changing status.
 	const hasSchedule = Boolean(item?.scheduledAt);
 	const canSchedule =
 		!isNew && !hasSchedule && Boolean(onSchedule) && (!isPublished || hasPendingChanges);
 
-	// Distraction-free mode state
 	const [isDistractionFree, setIsDistractionFree] = React.useState(false);
 
-	// Escape exits distraction-free mode
 	React.useEffect(() => {
 		if (!isDistractionFree) return;
 
@@ -648,9 +555,6 @@ export function ContentEditor({
 					: "flex h-full bg-kumo-elevated",
 			)}
 		>
-			{/* Wraps the whole layout so the strip's Settings button and the
-			    block-panel sync can reach the sidebar context. Below lg Kumo
-			    renders the panel as an inline (not portaled) sheet. */}
 			<Sidebar.Provider
 				contained={!isBelowLg}
 				defaultOpen
@@ -671,7 +575,6 @@ export function ContentEditor({
 				}
 			>
 				<div className={cn(isDistractionFree ? "w-full" : "flex-1 min-w-0 overflow-y-auto p-6")}>
-					{/* In distraction-free mode the header is a hover-revealed overlay. */}
 					<div
 						className={cn(
 							"flex flex-wrap items-center justify-between gap-y-2",
@@ -706,7 +609,6 @@ export function ContentEditor({
 						</div>
 						<div className="flex items-center gap-2">
 							{!isDistractionFree ? (
-								// Below lg, actions move here from the (hidden) panel.
 								<>
 									{isBelowLg && (
 										<div className="flex flex-wrap items-center justify-end gap-2">
@@ -756,7 +658,6 @@ export function ContentEditor({
 									</Button>
 								</>
 							) : (
-								// Distraction-free: this overlay is the only save/exit surface.
 								<>
 									<SaveButton
 										type="submit"
@@ -824,12 +725,6 @@ export function ContentEditor({
 					>
 						<div className="space-y-6">
 							{Object.entries(fields).map(([name, field]) => {
-								// Key by item id so all field editors remount cleanly when the
-								// underlying content item changes (e.g. switching translations).
-								// PortableTextEditor in particular freezes its initial content on
-								// mount; without this key, navigating between translations leaves
-								// the previous locale's body in the editor and silently overwrites
-								// the new translation on the next edit.
 								const fieldKey = `${name}:${item?.id ?? "new"}`;
 								const fieldEl = (
 									<FieldRenderer
@@ -859,16 +754,11 @@ export function ContentEditor({
 					</div>
 				</div>
 
-				{/* Hidden (not unmounted) in distraction-free mode so panel-local
-			    state survives the round trip; `hidden` on the pane's own layout
-			    element leaves no gap. */}
 				<Sidebar
 					id={settingsPanelId}
 					aria-label={t`Settings`}
 					className={cn(isDistractionFree && "hidden")}
 				>
-					{/* The action bar absorbs the high-frequency props (isDirty,
-					    isSaving, isAutosaving) so they never reach the memoized panel. */}
 					{!isBelowLg && (
 						<SettingsActionBar
 							collectionLabel={collectionLabel}
@@ -944,9 +834,6 @@ export function ContentEditor({
 					{!isBelowLg && <ContentEditorSettingsResizeHandle panelId={settingsPanelId} />}
 				</Sidebar>
 
-				{/* Below lg, opening a block detail panel must open the sheet.
-				    Suspended in distraction-free mode: the nav is hidden there but
-				    Kumo's separate backdrop would still scrim the whole screen. */}
 				<MobileBlockSidebarSync active={!!blockSidebarPanel} suspended={isDistractionFree} />
 				<MobileSidebarPortalGuard />
 			</Sidebar.Provider>
@@ -996,11 +883,6 @@ function ContentEditorSettingsResizeHandle({ panelId }: { panelId: string }) {
 	);
 }
 
-/**
- * Opens the settings sheet when a portable-text block requests sidebar
- * space below the mobile breakpoint, and restores the sheet's prior
- * open/closed state when the block panel closes. Renders nothing.
- */
 function MobileBlockSidebarSync({ active, suspended }: { active: boolean; suspended?: boolean }) {
 	const { isMobile, openMobile, setOpenMobile } = useSidebar();
 	const prevActiveRef = React.useRef(active);
@@ -1023,8 +905,6 @@ function MobileBlockSidebarSync({ active, suspended }: { active: boolean; suspen
 			return;
 		}
 
-		// While suspended (distraction-free), keep the sheet closed: its nav is
-		// display:none but the backdrop sibling would still scrim the screen.
 		if (suspended) {
 			priorOpenRef.current = null;
 			if (openMobile) setOpenMobile(false);
@@ -1046,11 +926,6 @@ function MobileBlockSidebarSync({ active, suspended }: { active: boolean; suspen
 	return null;
 }
 
-/**
- * Kumo closes its mobile sheet whenever focus leaves the sheet DOM. Keep it
- * open when focus moves into a portaled control, and keep those overlays above
- * the sheet's z-50 layer.
- */
 function MobileSidebarPortalGuard() {
 	const { isMobile, openMobile, setOpenMobile } = useSidebar();
 
@@ -1074,10 +949,6 @@ function MobileSidebarPortalGuard() {
 			const destination = event.relatedTarget;
 			if (!(source instanceof Element)) return;
 
-			// dnd-kit briefly blurs and then restores the activator after a
-			// pointer drop. Kumo interprets the null relatedTarget as leaving the
-			// sheet and closes it before focus is restored. Keep this transient
-			// sortable-handle blur inside the mobile settings interaction.
 			if (source.closest("[data-sortable-handle]") && destination === null) {
 				event.stopPropagation();
 				keepSheetOpen();
@@ -1104,9 +975,6 @@ function MobileSidebarPortalGuard() {
 			const target = event.target;
 			if (!(target instanceof Element)) return;
 
-			// Escape cancels a keyboard drag, but Kumo also treats it as a request
-			// to dismiss the mobile sheet. Let dnd-kit receive the key while
-			// restoring the sheet after its dismissal handler runs.
 			if (target.closest('[data-sortable-handle][data-sorting="true"]')) {
 				reopenSheetAfterDismiss();
 				return;
@@ -1139,10 +1007,6 @@ function MobileSidebarPortalGuard() {
 	return null;
 }
 
-/**
- * "Settings" trigger for the mobile sheet. Lives in the editor strip,
- * which sits inside the Sidebar.Provider, so it can reach the context.
- */
 function MobileSettingsButton() {
 	const { t } = useLingui();
 	const { toggleSidebar } = useSidebar();
@@ -1173,18 +1037,11 @@ interface FieldRendererProps {
 	field: FieldDescriptor;
 	value: unknown;
 	onChange: (name: string, value: unknown) => void;
-	/** Callback when a portableText editor is ready.
-	 * Called with the editor on mount, and with `null` on unmount. */
 	onEditorReady?: (editor: Editor | null) => void;
-	/** Minimal chrome - hides toolbar, fades labels, removes borders (distraction-free mode) */
 	minimal?: boolean;
-	/** Plugin block types available for insertion in Portable Text fields */
 	pluginBlocks?: PluginBlockDef[];
-	/** Callback when a block node requests sidebar space */
 	onBlockSidebarOpen?: (panel: BlockSidebarPanel) => void;
-	/** Callback when a block node closes its sidebar */
 	onBlockSidebarClose?: () => void;
-	/** Admin manifest for resolving sandboxed field widget elements */
 	manifest?: import("../lib/api/client.js").AdminManifest | null;
 }
 
@@ -1192,9 +1049,6 @@ function editableFieldData(data: Record<string, unknown>, fields: Record<string,
 	return Object.fromEntries(Object.entries(data).filter(([name]) => !fields[name]?.readOnly));
 }
 
-/**
- * Render field based on type
- */
 function FieldRenderer({
 	name,
 	field,
@@ -1228,7 +1082,6 @@ function FieldRenderer({
 		);
 	}
 
-	// Check for plugin field widget override
 	if (field.widget) {
 		const sepIdx = field.widget.indexOf(":");
 		if (sepIdx <= 0) {
@@ -1239,7 +1092,6 @@ function FieldRenderer({
 		if (sepIdx > 0) {
 			const pluginId = field.widget.slice(0, sepIdx);
 			const widgetName = field.widget.slice(sepIdx + 1);
-			// Trusted plugin: React component
 			const PluginField = pluginAdmins[pluginId]?.fields?.[widgetName] as
 				| React.ComponentType<{
 						value: unknown;
@@ -1266,7 +1118,6 @@ function FieldRenderer({
 					</PluginFieldErrorBoundary>
 				);
 			}
-			// Sandboxed plugin: Block Kit elements from manifest
 			if (manifest) {
 				const pluginManifest = manifest.plugins[pluginId];
 				const widgetDef = pluginManifest?.fieldWidgets?.find((w) => w.name === widgetName);
@@ -1283,7 +1134,6 @@ function FieldRenderer({
 					);
 				}
 			}
-			// Widget declared but plugin not found/active -- fall through to default
 		}
 	}
 
@@ -1351,7 +1201,6 @@ function FieldRenderer({
 		}
 
 		case "richText":
-			// For richText (markdown), use InputArea
 			return (
 				<InputArea
 					label={label}
@@ -1428,7 +1277,6 @@ function FieldRenderer({
 			);
 
 		case "image": {
-			// value is either an ImageFieldValue object, a legacy string URL, or undefined
 			const imageValue =
 				value != null && typeof value === "object" ? (value as ImageFieldValue) : undefined;
 			return (
@@ -1455,10 +1303,6 @@ function FieldRenderer({
 		}
 
 		case "file": {
-			// value is either a FileFieldValue object or undefined.
-			// The file field type was unusable before this PR (rendered as a text input
-			// that produced raw strings nobody could meaningfully save), so there is no
-			// "legacy string" data to preserve here.
 			const fileValue =
 				value != null && typeof value === "object" ? (value as FileFieldValue) : undefined;
 			return (
@@ -1529,7 +1373,6 @@ function FieldRenderer({
 			);
 
 		default:
-			// Default to text input
 			return (
 				<Input
 					label={label}
@@ -1557,9 +1400,6 @@ function isValidUrl(val: string): boolean {
 	}
 }
 
-/**
- * URL field editor with validation on blur
- */
 function UrlFieldEditor({
 	label,
 	labelClass,
@@ -1613,9 +1453,6 @@ function UrlFieldEditor({
 	);
 }
 
-/**
- * JSON field editor with syntax validation
- */
 function JsonFieldEditor({
 	label,
 	id,
@@ -1633,7 +1470,6 @@ function JsonFieldEditor({
 	const [text, setText] = React.useState(value);
 	const [error, setError] = React.useState<string | null>(null);
 
-	// Sync from parent when value changes externally
 	React.useEffect(() => {
 		setText(value);
 		setError(null);
@@ -1678,25 +1514,14 @@ function JsonFieldEditor({
 	);
 }
 
-// ImageFieldRenderer (and its ImageFieldValue shape) moved to
-// ./ImageFieldRenderer so repeater sub-fields can reuse the picker.
-
-/**
- * File field value — matches the "file" shape validated by the Zod generator:
- * { id, provider?, url?, src?, filename?, mimeType?, size?, meta? }
- */
 interface FileFieldValue {
 	id: string;
-	/** Provider ID (e.g., "local", "s3") */
 	provider?: string;
-	/** Direct URL for non-local media */
 	src?: string;
-	/** Legacy cached URL */
 	url?: string;
 	filename?: string;
 	mimeType?: string;
 	size?: number;
-	/** Provider-specific metadata */
 	meta?: Record<string, unknown>;
 }
 
@@ -1710,12 +1535,6 @@ interface FileFieldRendererProps {
 	fieldId?: string;
 }
 
-/**
- * File field with media picker
- *
- * Like ImageFieldRenderer but for arbitrary file types. Shows a mime-type-appropriate
- * icon, filename, and size instead of an image preview.
- */
 function FileFieldRenderer({
 	id,
 	label,
@@ -1728,8 +1547,6 @@ function FileFieldRenderer({
 	const { t } = useLingui();
 	const [pickerOpen, setPickerOpen] = React.useState(false);
 
-	// Local snapshots may only reuse internal paths. External providers may link
-	// to HTTP(S) URLs, while unsafe schemes remain plain text.
 	const normalized = React.useMemo(() => {
 		if (!value) return null;
 		const isLocal = !value.provider || value.provider === "local";
@@ -1738,8 +1555,6 @@ function FileFieldRenderer({
 		const directUrl = value.src ?? value.url;
 		const localSrc =
 			typeof directUrl === "string" && directUrl.startsWith("/_emdash/") ? directUrl : undefined;
-		// Clients can write meta.storageKey, so encode it before interpolation to
-		// keep query or fragment delimiters from escaping the route path.
 		const localUrl = isLocal
 			? storageKey
 				? `/_emdash/api/media/file/${encodeURIComponent(storageKey)}`

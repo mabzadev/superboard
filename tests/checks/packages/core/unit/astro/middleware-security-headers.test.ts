@@ -1,14 +1,3 @@
-/**
- * Regression tests for issue #1393: `finalizeResponse()` unconditionally set
- * `X-Content-Type-Options`, `Referrer-Policy`, and `Permissions-Policy` on every
- * response. Because the middleware registers with `order: 'pre'` (#1282), on the
- * response path it runs *after* the host app's own middleware, so it overwrote
- * any of these headers the host had already set. CSP was handled defensively
- * (`if (!res.headers.has(...))`) but these three were not.
- *
- * The fix applies the baseline headers set-if-absent, matching the existing CSP
- * pattern, so a host that sets a stricter value on its own public routes wins.
- */
 import { beforeEach, describe, it, expect, vi } from "vitest";
 
 vi.mock("astro:middleware", () => ({
@@ -133,7 +122,6 @@ import { createRequestScopedDb } from "virtual:emdash/dialect";
 
 import onRequest from "../../../../../../packages/core/src/astro/middleware.js";
 
-/** Anonymous GET to a public frontend page (the `runAnon` response path). */
 function anonymousPublicPageContext() {
 	const cookies = {
 		get: vi.fn((name: string) => {

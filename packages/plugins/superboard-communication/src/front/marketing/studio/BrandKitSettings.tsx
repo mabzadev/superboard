@@ -22,7 +22,6 @@ const colorKeys = ["accent", "text", "background", "surface"] as const satisfies
 	keyof typeof colorLabels
 >;
 
-/** Project brand kit, applied to new emails and available in the Studio design panel. */
 export function BrandKitSettings({ project }: { project: string }) {
 	const { t } = useGrowthI18n();
 	const [brand, setBrand] = useState<BrandKit>();
@@ -200,14 +199,12 @@ export function BrandKitSettings({ project }: { project: string }) {
 
 const zones = (): string[] => {
 	try {
-		// Older engines lack the method; calling it throws and falls back to UTC.
 		return Intl.supportedValuesOf("timeZone");
 	} catch {
 		return ["UTC"];
 	}
 };
 
-/** Revenue attribution window and the time zone used for contacts without one. */
 export function GrowthPreferences({ project }: { project: string }) {
 	const { t } = useGrowthI18n();
 	const [settings, setSettings] = useState<GrowthSettings>();

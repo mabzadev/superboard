@@ -24,7 +24,6 @@ describe("formatCurrencyFromCents", () => {
 	});
 
 	it("strips country prefix from currency symbol", () => {
-		// US$ or USD should become just $
 		const result = formatCurrencyFromCents(100, "en-US", "USD");
 		expect(result).not.toMatch(/US\$/);
 		expect(result).toContain("$");

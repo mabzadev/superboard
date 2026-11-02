@@ -1,10 +1,3 @@
-/**
- * Single widget endpoints
- *
- * PUT    /_emdash/api/widget-areas/:name/widgets/:id - Update widget
- * DELETE /_emdash/api/widget-areas/:name/widgets/:id - Delete widget
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -29,7 +22,6 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 	}
 
 	try {
-		// Get the area
 		const area = await db
 			.selectFrom("_emdash_widget_areas")
 			.select("id")
@@ -40,7 +32,6 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 			return apiError("NOT_FOUND", `Widget area "${name}" not found`, 404);
 		}
 
-		// Check widget exists and belongs to this area
 		const existingWidget = await db
 			.selectFrom("_emdash_widgets")
 			.select("id")
@@ -55,7 +46,6 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 		const body = await parseBody(request, updateWidgetBody);
 		if (isParseError(body)) return body;
 
-		// Build update object (only update provided fields)
 		const updates: Record<string, unknown> = {};
 		if (body.title !== undefined) updates.title = body.title || null;
 		if (body.type !== undefined) updates.type = body.type;
@@ -98,7 +88,6 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 	}
 
 	try {
-		// Get the area
 		const area = await db
 			.selectFrom("_emdash_widget_areas")
 			.select("id")
@@ -109,7 +98,6 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 			return apiError("NOT_FOUND", `Widget area "${name}" not found`, 404);
 		}
 
-		// Check widget exists and belongs to this area
 		const existingWidget = await db
 			.selectFrom("_emdash_widgets")
 			.select("id")

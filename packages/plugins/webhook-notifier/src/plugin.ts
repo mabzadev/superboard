@@ -1,10 +1,3 @@
-/**
- * Sandbox Entry Point -- Webhook Notifier
- *
- * Canonical plugin implementation using the standard format.
- * Runs in both trusted (in-process) and sandboxed (isolate) modes.
- */
-
 import type { PluginContext, SandboxedPlugin } from "emdash/plugin";
 
 interface WebhookPayload {
@@ -16,8 +9,6 @@ interface WebhookPayload {
 	data?: Record<string, unknown>;
 	metadata?: Record<string, unknown>;
 }
-
-// ── SSRF protection ──
 
 const IPV6_BRACKET_PATTERN = /^\[|\]$/g;
 const BLOCKED_HOSTNAMES = new Set(["localhost", "metadata.google.internal", "[::1]"]);
@@ -73,8 +64,6 @@ function validateWebhookUrl(url: string): void {
 	}
 }
 
-// ── Webhook delivery ──
-
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 type LogFn = PluginContext["log"];
 
@@ -127,8 +116,6 @@ async function sendWebhook(
 	return { success: false, status: lastStatus, error: lastError };
 }
 
-// ── Helpers ──
-
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -154,8 +141,6 @@ function getFetchFn(ctx: PluginContext): FetchFn {
 	}
 	return ctx.http.fetch;
 }
-
-// ── Plugin definition ──
 
 export default {
 	hooks: {
@@ -355,8 +340,6 @@ export default {
 	},
 } satisfies SandboxedPlugin;
 
-// ── Block Kit admin helpers ──
-
 async function buildStatusWidget(ctx: PluginContext) {
 	try {
 		const url = await ctx.kv.get<string>("settings:webhookUrl");
@@ -371,9 +354,7 @@ async function buildStatusWidget(ctx: PluginContext) {
 			successful = await deliveries.count({ status: "success" });
 			failed = await deliveries.count({ status: "failed" });
 			pending = await deliveries.count({ status: "pending" });
-		} catch {
-			// Storage not available yet
-		}
+		} catch {}
 
 		const blocks: unknown[] = [
 			{

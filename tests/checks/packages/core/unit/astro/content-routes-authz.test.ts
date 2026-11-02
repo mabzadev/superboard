@@ -1,19 +1,3 @@
-/**
- * Content read endpoint authorization.
- *
- * content:read is granted to SUBSCRIBER so member-only published content can
- * be read via the admin API. Drafts, scheduled, trashed items, and editor
- * views (revisions, compare, preview-url) are gated on content:read_drafts
- * (CONTRIBUTOR+):
- *
- *   - GET /content/:c forces status=published for SUBSCRIBER, ignoring any
- *     caller-supplied status filter.
- *   - GET /content/:c/:id returns 404 to SUBSCRIBER for non-published items
- *     (404 to avoid leaking existence via status code).
- *   - /compare, /revisions, /trash, /preview-url require content:read_drafts.
- *   - /translations filters non-published locales out for SUBSCRIBER.
- */
-
 import { Role, type RoleLevel } from "@emdash-cms/auth";
 import type { APIContext } from "astro";
 import { describe, it, expect, vi } from "vitest";
@@ -27,10 +11,6 @@ import { GET as getRevisions } from "../../../../../../packages/core/src/astro/r
 import { GET as getTranslations } from "../../../../../../packages/core/src/astro/routes/api/content/[collection]/[id]/translations.js";
 import { GET as getList } from "../../../../../../packages/core/src/astro/routes/api/content/[collection]/index.js";
 import { GET as getTrash } from "../../../../../../packages/core/src/astro/routes/api/content/[collection]/trash.js";
-
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
 
 interface StubUser {
 	id: string;
@@ -143,8 +123,6 @@ function buildEmdash(
 	}));
 
 	return {
-		// Routes treat a missing db as "runtime not initialized" (500 before any
-		// permission check), so the mock carries one to exercise the authz path.
 		db: {},
 		handleContentList,
 		handleContentGet,
@@ -177,10 +155,6 @@ function ctx(opts: {
 	} as unknown as APIContext;
 }
 
-// ---------------------------------------------------------------------------
-// LIST endpoint
-// ---------------------------------------------------------------------------
-
 describe("GET /content/:collection — subscriber drafts leak", () => {
 	const items = [
 		makeItem({ id: "draft-1", status: "draft" }),
@@ -210,8 +184,6 @@ describe("GET /content/:collection — subscriber drafts leak", () => {
 			}),
 		);
 		expect(res.status).toBe(200);
-		// The route must not honour ?status=draft for SUBSCRIBER — should still
-		// be forced to published.
 		expect(emdash.handleContentList).toHaveBeenCalledWith(
 			"post",
 			expect.objectContaining({ status: "published" }),
@@ -224,7 +196,6 @@ describe("GET /content/:collection — subscriber drafts leak", () => {
 		const emdash = buildEmdash({ listItems: items });
 		const res = await getList(ctx({ user: contributor, emdash }));
 		expect(res.status).toBe(200);
-		// status param is undefined (caller-controlled), not forced
 		const call = emdash.handleContentList.mock.calls[0]?.[1];
 		expect(call?.status).toBeUndefined();
 	});
@@ -251,10 +222,6 @@ describe("GET /content/:collection — subscriber drafts leak", () => {
 		);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// GET single item
-// ---------------------------------------------------------------------------
 
 describe("GET /content/:collection/:id — subscriber drafts leak", () => {
 	it("returns 404 to SUBSCRIBER fetching a draft", async () => {
@@ -289,10 +256,6 @@ describe("GET /content/:collection/:id — subscriber drafts leak", () => {
 		expect(res.status).toBe(200);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Editor-only views — must require content:read_drafts
-// ---------------------------------------------------------------------------
 
 describe("editor-only content views require content:read_drafts", () => {
 	it("denies SUBSCRIBER on /compare", async () => {
@@ -355,10 +318,6 @@ describe("editor-only content views require content:read_drafts", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Translations endpoint — must status-filter for SUBSCRIBER
-// ---------------------------------------------------------------------------
-
 describe("GET /content/:collection/:id/translations", () => {
 	const translations = [
 		{
@@ -402,15 +361,6 @@ describe("GET /content/:collection/:id/translations", () => {
 		expect(body.data.translations).toHaveLength(3);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// DELETE /content/:collection/:id/permanent — must be ADMIN-only and gated on
-// the content domain. Permanent deletion is irreversible and bypasses the
-// trash safety net, so it sits at the same authorization tier as other
-// destructive system actions (schema:manage, comments:delete, users:manage).
-// Lower roles soft-delete via DELETE /:id (delete_own / delete_any); only
-// ADMIN can empty the trash.
-// ---------------------------------------------------------------------------
 
 describe("DELETE /content/:collection/:id/permanent", () => {
 	function permanentCtx(user: StubUser | null, emdash: ReturnType<typeof buildEmdash>) {
@@ -460,15 +410,7 @@ describe("DELETE /content/:collection/:id/permanent", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Uninitialized runtime (#2094)
-// ---------------------------------------------------------------------------
-
 describe("uninitialized runtime returns NOT_CONFIGURED, not UNAUTHORIZED", () => {
-	// When runtime init fails, the middleware never sets locals.emdash and the
-	// auth middleware never resolves a user — even for a valid token. The
-	// routes must report the server fault (500) instead of blaming the
-	// caller's credentials (401).
 	const uninitialized = undefined as unknown as ReturnType<typeof buildEmdash>;
 
 	it("GET /content/:collection → 500 NOT_CONFIGURED with no user", async () => {
@@ -497,8 +439,6 @@ describe("uninitialized runtime returns NOT_CONFIGURED, not UNAUTHORIZED", () =>
 		expect(res.status).toBe(500);
 	});
 
-	// A requireDb-gated route (references) — the guard style differs from the
-	// handler-presence checks above, so pin it separately.
 	it("GET …/references/:relation/parents → 500 NOT_CONFIGURED", async () => {
 		const url = "http://localhost/";
 		const res = await getParents(
@@ -515,8 +455,6 @@ describe("uninitialized runtime returns NOT_CONFIGURED, not UNAUTHORIZED", () =>
 		expect(body.error.code).toBe("NOT_CONFIGURED");
 	});
 
-	// A handler-presence WRITE route — deletes must also blame the server, not
-	// the caller's credentials, when the runtime never came up.
 	it("DELETE …/:id/permanent → 500 NOT_CONFIGURED", async () => {
 		const url = "http://localhost/";
 		const res = await deletePermanent(

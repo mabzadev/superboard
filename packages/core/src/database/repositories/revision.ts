@@ -22,18 +22,9 @@ export interface CreateRevisionInput {
 	authorId?: string;
 }
 
-/**
- * Revision repository for version history
- *
- * Each revision stores a JSON snapshot of the content at a point in time.
- * Used when collection has `supports: ["revisions"]` enabled.
- */
 export class RevisionRepository {
 	constructor(private db: Kysely<Database>) {}
 
-	/**
-	 * Create a new revision
-	 */
 	async create(input: CreateRevisionInput): Promise<Revision> {
 		const id = monotonic();
 
@@ -74,9 +65,6 @@ export class RevisionRepository {
 		return revision;
 	}
 
-	/**
-	 * Find revision by ID
-	 */
 	async findById(id: string): Promise<Revision | null> {
 		const row = await this.db
 			.selectFrom("revisions")
@@ -87,12 +75,6 @@ export class RevisionRepository {
 		return row ? this.rowToRevision(row) : null;
 	}
 
-	/**
-	 * Get all revisions for an entry (newest first)
-	 *
-	 * Orders by monotonic ULID (descending). The monotonic factory
-	 * guarantees strictly increasing IDs even within the same millisecond.
-	 */
 	async findByEntry(
 		collection: string,
 		entryId: string,
@@ -113,9 +95,6 @@ export class RevisionRepository {
 		return rows.map((row) => this.rowToRevision(row));
 	}
 
-	/**
-	 * Get the most recent revision for an entry
-	 */
 	async findLatest(collection: string, entryId: string): Promise<Revision | null> {
 		const row = await this.db
 			.selectFrom("revisions")
@@ -129,9 +108,6 @@ export class RevisionRepository {
 		return row ? this.rowToRevision(row) : null;
 	}
 
-	/**
-	 * Count revisions for an entry
-	 */
 	async countByEntry(collection: string, entryId: string): Promise<number> {
 		const result = await this.db
 			.selectFrom("revisions")
@@ -143,9 +119,6 @@ export class RevisionRepository {
 		return Number(result?.count || 0);
 	}
 
-	/**
-	 * Delete all revisions for an entry (use when entry is deleted)
-	 */
 	async deleteByEntry(collection: string, entryId: string): Promise<number> {
 		const result = await this.db
 			.deleteFrom("revisions")
@@ -169,9 +142,6 @@ export class RevisionRepository {
 		return Number(result.numDeletedRows ?? 0);
 	}
 
-	/**
-	 * Delete old revisions, keeping the most recent N
-	 */
 	async pruneOldRevisions(
 		collection: string,
 		entryId: string,
@@ -186,7 +156,7 @@ export class RevisionRepository {
 			.where("collection", "=", collection)
 			.where("entry_id", "=", entryId)
 			.orderBy("created_at", "desc")
-			.orderBy("id", "desc") // ULID tiebreaker
+			.orderBy("id", "desc")
 			.limit(keepCount);
 
 		if (throughRevisionId) {
@@ -253,9 +223,6 @@ export class RevisionRepository {
 		return (result.numAffectedRows ?? 0n) > 0n;
 	}
 
-	/**
-	 * Convert database row to Revision object
-	 */
 	private rowToRevision(row: {
 		id: string;
 		collection: string;

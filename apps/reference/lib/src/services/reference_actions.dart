@@ -36,11 +36,6 @@ abstract interface class ReferenceActions {
   });
 }
 
-/// Thin injectable bridge over the public SuperBoard FlutterFlow surface.
-///
-/// The live reference app invokes only these public actions. Tests replace the
-/// bridge with a recorder so every advertised journey proves its actual action
-/// dispatch without copying any SDK implementation into this repository.
 abstract interface class ReferenceSdkBridge {
   Future<Object?> invoke(String action, Map<String, dynamic> parameters);
 }

@@ -1,8 +1,3 @@
-/**
- * Standalone invite acceptance page (not wrapped in admin Shell).
- * Validates an invite token, then registers a passkey to complete signup.
- */
-
 import { Input, Loader } from "@cloudflare/kumo";
 import { Trans } from "@lingui/react/macro";
 import { useLingui } from "@lingui/react/macro";
@@ -88,7 +83,6 @@ function RegisterStep({ inviteData, token }: RegisterStepProps) {
 
 			{buttonProviders.length > 0 && (
 				<>
-					{/* Divider */}
 					<div className="relative">
 						<div className="absolute inset-0 flex items-center">
 							<span className="w-full border-t" />
@@ -98,9 +92,6 @@ function RegisterStep({ inviteData, token }: RegisterStepProps) {
 						</div>
 					</div>
 
-					{/* Accept the invite via an OAuth provider. The button carries the
-					    invite token; the callback only completes the invite when the
-					    provider-verified email matches the invited address. */}
 					<div
 						className={`grid gap-3 ${buttonProviders.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}
 					>

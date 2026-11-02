@@ -20,7 +20,6 @@ import { getSiteEnv } from "../lib/site-env.js";
 import "@superboard/front-ui/styles/kumo.css";
 import "../styles/dashboard-views.css";
 import "../styles/native-front.css";
-// Imported last on purpose: its :root font tokens must follow the Kumo/Tailwind layers.
 import "@superboard/front-ui/styles/fonts.css";
 
 interface Props {
@@ -31,9 +30,6 @@ const { model } = Astro.props;
 const locale = resolveUserFrontRequestLocale(Astro.request);
 Astro.response.headers.set("Content-Language", locale);
 let configuration;
-// The scope request only depends on the resolved renderers, so it runs alongside the
-// editorial view and menu reads instead of after them. On failure, the authenticated POST
-// bootstrap resolves absent core projections in the client.
 const projectScope =
 	model.operator && renderedContentRequiresProjectScope(model)
 		? resolveOperatorProjectScope(getSiteEnv(), model.operator).catch(() => undefined)
@@ -55,7 +51,6 @@ projection.operator = model.operator;
 const resolvedProjectScope = await projectScope;
 if (resolvedProjectScope) projection.project_scope = resolvedProjectScope;
 const i18n = createUserFrontI18n(locale);
-// Loaded without blocking render; "Geist Mono" (self-hosted) covers the swap period.
 const sourceCodeProStylesheet =
 	"https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,400;0,500;0,600;1,400&display=swap";
 const viewTitle = projection.content_mounts[0]?.view_title ?? model.page_title;
@@ -80,8 +75,6 @@ const title = viewTitle ? (Object.hasOwn(projection.messages, viewTitle) ? i18n.
 		/>
 		<noscript><link rel="stylesheet" href={sourceCodeProStylesheet} /></noscript>
 		<script is:inline define:vars={{ instanceId: model.instance_id }}>
-			// Mirrors the next-themes provider in FrontRuntimeProviders (same storage key,
-			// defaultTheme "system") so the first paint matches the hydrated theme.
 			(() => {
 				const storageKey = `superboard:${instanceId}:theme`;
 				let storedPreference = null;
@@ -100,7 +93,6 @@ const title = viewTitle ? (Object.hasOwn(projection.messages, viewTitle) ? i18n.
 						}
 					}
 				} catch {
-					// Storage can be unavailable in privacy-restricted contexts.
 				}
 				const preference =
 					storedPreference === "light" || storedPreference === "dark"

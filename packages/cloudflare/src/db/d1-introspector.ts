@@ -1,26 +1,12 @@
-/**
- * D1-compatible SQLite Introspector
- *
- * D1 doesn't allow the correlated cross-join pattern that Kysely's default
- * SqliteIntrospector uses: `FROM tl, pragma_table_info(tl.name)`
- *
- * This introspector queries tables individually instead.
- */
-
 import type { DatabaseIntrospector, SchemaMetadata, TableMetadata } from "kysely";
 import { sql } from "kysely";
 
-// Kysely's default migration table names
 const DEFAULT_MIGRATION_TABLE = "kysely_migration";
 const DEFAULT_MIGRATION_LOCK_TABLE = "kysely_migration_lock";
 
-// Kysely's DatabaseIntrospector.createIntrospector receives Kysely<any>.
-// We must use `any` here to match Kysely's own interface contract —
-// it needs untyped schema access to query sqlite_master dynamically.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyKysely = any;
 
-// Regex patterns for parsing CREATE TABLE statements
 const SPLIT_PARENS_PATTERN = /[(),]/;
 const WHITESPACE_PATTERN = /\s+/;
 const QUOTES_PATTERN = /["`]/g;
@@ -33,17 +19,15 @@ export class D1Introspector implements DatabaseIntrospector {
 	}
 
 	async getSchemas(): Promise<SchemaMetadata[]> {
-		// SQLite doesn't support schemas
 		return [];
 	}
 
 	async getTables(options: { withInternalKyselyTables?: boolean } = {}): Promise<TableMetadata[]> {
-		// Get table names from sqlite_master
 		let query = this.#db
 			.selectFrom("sqlite_master")
 			.where("type", "in", ["table", "view"])
 			.where("name", "not like", "sqlite_%")
-			.where("name", "not like", "_cf_%") // Skip Cloudflare internal tables
+			.where("name", "not like", "_cf_%")
 			.select(["name", "sql", "type"])
 			.orderBy("name");
 
@@ -55,7 +39,6 @@ export class D1Introspector implements DatabaseIntrospector {
 
 		const tables = await query.execute();
 
-		// Query each table's columns individually (avoiding the problematic cross-join)
 		const result: TableMetadata[] = [];
 
 		for (const table of tables) {
@@ -66,10 +49,6 @@ export class D1Introspector implements DatabaseIntrospector {
 			// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Kysely's DatabaseIntrospector returns untyped results
 			const tableSql = table.sql as string | null;
 
-			// Get columns for this specific table
-			// Use sql.raw() to insert table name directly into query string
-			// D1 doesn't allow parameterized table names in pragma_table_info()
-			// Note: tableName comes from sqlite_master so it's safe
 			const columns = await sql<{
 				cid: number;
 				name: string;
@@ -79,7 +58,6 @@ export class D1Introspector implements DatabaseIntrospector {
 				pk: number;
 			}>`SELECT * FROM pragma_table_info('${sql.raw(tableName)}')`.execute(this.#db);
 
-			// Try to find autoincrement column from CREATE TABLE statement
 			let autoIncrementCol = tableSql
 				?.split(SPLIT_PARENS_PATTERN)
 				?.find((it) => it.toLowerCase().includes("autoincrement"))
@@ -87,7 +65,6 @@ export class D1Introspector implements DatabaseIntrospector {
 				?.split(WHITESPACE_PATTERN)?.[0]
 				?.replace(QUOTES_PATTERN, "");
 
-			// Otherwise, check for INTEGER PRIMARY KEY (implicit autoincrement)
 			if (!autoIncrementCol) {
 				const pkCols = columns.rows.filter((r) => r.pk > 0);
 				if (pkCols.length === 1 && pkCols[0]!.type.toLowerCase() === "integer") {
@@ -98,7 +75,6 @@ export class D1Introspector implements DatabaseIntrospector {
 			result.push({
 				name: tableName,
 				isView: tableType === "view",
-				// D1/SQLite has no concept of foreign tables (FDW); always false.
 				isForeign: false,
 				columns: columns.rows.map((col) => ({
 					name: col.name,

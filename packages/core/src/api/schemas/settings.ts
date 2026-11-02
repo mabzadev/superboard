@@ -2,15 +2,6 @@ import { z } from "zod";
 
 import { httpUrl } from "./common.js";
 
-// ---------------------------------------------------------------------------
-// Settings: Input schemas
-//
-// Media references on write are just `{ mediaId, alt? }` -- the resolved
-// fields (`url`, `contentType`, `width`, `height`) are server-computed and
-// stripped from any submitted body via Zod's default strip mode. See
-// `packages/core/src/settings/types.ts` for the in-memory shape.
-// ---------------------------------------------------------------------------
-
 const mediaReferenceInput = z.object({
 	mediaId: z.string(),
 	alt: z.string().optional(),
@@ -48,26 +39,12 @@ export const settingsUpdateBody = z
 	})
 	.meta({ id: "SettingsUpdateBody" });
 
-// ---------------------------------------------------------------------------
-// Settings: Response schemas
-//
-// Responses carry the resolved fields populated by `resolveMediaReference`
-// in `settings/index.ts`. Generated OpenAPI clients need to see them so
-// they don't have to re-resolve the URL on the client. Fields stay
-// optional because the resolver returns the bare ref if the underlying
-// media row was deleted (orphaned reference).
-// ---------------------------------------------------------------------------
-
 const mediaReferenceResponse = z.object({
 	mediaId: z.string(),
 	alt: z.string().optional(),
-	/** Resolved media file URL; absent if the underlying row is missing. */
 	url: z.string().optional(),
-	/** Stored MIME type (e.g. `image/svg+xml`). Populated alongside `url`. */
 	contentType: z.string().optional(),
-	/** Pixel width if known. Populated alongside `url`. */
 	width: z.number().int().optional(),
-	/** Pixel height if known. Populated alongside `url`. */
 	height: z.number().int().optional(),
 });
 

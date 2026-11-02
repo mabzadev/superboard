@@ -1,9 +1,5 @@
 import type { UserFrontLocale } from "./user-front-catalogs.js";
 
-/**
- * Command palette strings. They live with the lazily loaded palette instead of the shell catalogs
- * so the shell bundle does not carry them.
- */
 export const FRONT_COMMAND_MESSAGES = {
 	en: {
 		title: "Command palette",

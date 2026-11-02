@@ -1,9 +1,3 @@
-/**
- * Section Picker Modal
- *
- * A modal for selecting and inserting sections into content.
- */
-
 import { Button, Dialog, Input } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { MagnifyingGlass, FolderOpen } from "@phosphor-icons/react";
@@ -37,7 +31,6 @@ export function SectionPickerModal({ open, onOpenChange, onSelect }: SectionPick
 	});
 	const sections = sectionsData?.items ?? [];
 
-	// Reset search when modal opens
 	React.useEffect(() => {
 		if (open) {
 			setSearchQuery("");
@@ -74,7 +67,6 @@ export function SectionPickerModal({ open, onOpenChange, onSelect }: SectionPick
 					/>
 				</div>
 
-				{/* Search */}
 				<div className="flex items-center gap-4 py-4 border-b">
 					<div className="relative flex-1">
 						<MagnifyingGlass className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-kumo-subtle" />
@@ -88,7 +80,6 @@ export function SectionPickerModal({ open, onOpenChange, onSelect }: SectionPick
 					</div>
 				</div>
 
-				{/* Section grid */}
 				<div className="flex-1 overflow-y-auto py-4">
 					{sectionsLoading ? (
 						<div className="flex items-center justify-center h-32">
@@ -125,7 +116,6 @@ export function SectionPickerModal({ open, onOpenChange, onSelect }: SectionPick
 					)}
 				</div>
 
-				{/* Footer */}
 				<div className="flex justify-end gap-2 pt-4 border-t">
 					<Button variant="outline" onClick={() => onOpenChange(false)}>
 						{t`Cancel`}
@@ -147,7 +137,6 @@ function SectionCard({ section, onSelect }: { section: Section; onSelect: () => 
 				"focus:outline-none focus:ring-2 focus:ring-kumo-ring focus:ring-offset-2",
 			)}
 		>
-			{/* Preview */}
 			<div className="aspect-video bg-kumo-tint flex items-center justify-center">
 				{section.previewUrl ? (
 					<img
@@ -160,7 +149,6 @@ function SectionCard({ section, onSelect }: { section: Section; onSelect: () => 
 				)}
 			</div>
 
-			{/* Content */}
 			<div className="p-3">
 				<h4 className="font-medium truncate">{section.title}</h4>
 				{section.description && (

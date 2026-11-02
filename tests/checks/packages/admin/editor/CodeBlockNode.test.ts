@@ -1,15 +1,3 @@
-/**
- * Tests for the custom CodeBlockExtension (language picker node view).
- *
- * Verifies that:
- *   - The extension keeps the canonical `codeBlock` schema name so existing
- *     code that calls `editor.isActive("codeBlock")` keeps working.
- *   - The `language` attribute is settable and round-trips through getJSON.
- *   - StarterKit's backtick input rule still fires when our extension is
- *     swapped in (since we extend the base extension rather than replace
- *     it).
- */
-
 import { Editor, type Content } from "@tiptap/core";
 import { closeHistory } from "@tiptap/pm/history";
 import StarterKit from "@tiptap/starter-kit";

@@ -149,8 +149,6 @@ describe("BylineRepository", () => {
 	});
 
 	it("hydrates avatar storage key and alt via the media join", async () => {
-		// A media row standing in for an uploaded avatar, including the LQIP
-		// placeholder columns (migration 024) so the hydration carries them.
 		await db
 			.insertInto("media")
 			.values({
@@ -185,26 +183,19 @@ describe("BylineRepository", () => {
 			{ bylineId: withoutAvatar.id },
 		]);
 
-		// Single-entry hydration path.
 		const credits = await bylineRepo.getContentBylines("post", content.id);
 		const avatared = credits.find((c) => c.byline.id === withAvatar.id)!;
 		const plain = credits.find((c) => c.byline.id === withoutAvatar.id)!;
 		expect(avatared.byline.avatarMediaId).toBe("media-avatar-1");
 		expect(avatared.byline.avatarStorageKey).toBe("media-avatar-1.png");
 		expect(avatared.byline.avatarAlt).toBe("Jane Doe headshot");
-		// The LQIP placeholder columns ride along the same media join so a
-		// renderer can paint a blurhash/dominant-colour placeholder while the
-		// full avatar loads.
 		expect(avatared.byline.avatarBlurhash).toBe("LEHV6nWB2yk8pyo0adR*.7kCMdnj");
 		expect(avatared.byline.avatarDominantColor).toBe("#aabbcc");
-		// No avatar -> storage key, alt, and LQIP columns are null, not undefined.
 		expect(plain.byline.avatarStorageKey).toBeNull();
 		expect(plain.byline.avatarAlt).toBeNull();
 		expect(plain.byline.avatarBlurhash).toBeNull();
 		expect(plain.byline.avatarDominantColor).toBeNull();
 
-		// Batch hydration path (the list-page case) resolves the same data
-		// without a per-byline media lookup.
 		const batch = await bylineRepo.getContentBylinesMany("post", [content.id]);
 		const batchCredit = batch.get(content.id)!.find((c) => c.byline.id === withAvatar.id)!;
 		expect(batchCredit.byline.avatarStorageKey).toBe("media-avatar-1.png");
@@ -237,8 +228,6 @@ describe("BylineRepository", () => {
 				email_verified: 1,
 			})
 			.execute();
-		// A byline linked to a CMS user (the author-fallback path resolves
-		// these via findByUserIds when an entry has no explicit credits).
 		const byline = await bylineRepo.create({
 			slug: "linked-user",
 			displayName: "Linked User",
@@ -272,8 +261,6 @@ describe("BylineRepository", () => {
 			avatarMediaId: "media-avatar-2",
 		});
 
-		// findById/findBySlug don't join media — the field is null there, and
-		// callers should rely on the content-credit hydration path for it.
 		const byId = await bylineRepo.findById(created.id);
 		expect(byId?.avatarMediaId).toBe("media-avatar-2");
 		expect(byId?.avatarStorageKey).toBeNull();
@@ -285,7 +272,6 @@ describe("BylineRepository", () => {
 			displayName: "Batch Author",
 		});
 
-		// Create a few real content entries with bylines
 		const realIds: string[] = [];
 		for (let i = 0; i < 3; i++) {
 			const content = await contentRepo.create({
@@ -297,19 +283,16 @@ describe("BylineRepository", () => {
 			realIds.push(content.id);
 		}
 
-		// Build an ID list larger than SQL_BATCH_SIZE with the real IDs spread across chunks
 		const ids: string[] = [];
 		for (let i = 0; i < SQL_BATCH_SIZE + 10; i++) {
 			ids.push(`fake-id-${i}`);
 		}
-		// Place real IDs so they span different chunks
 		ids[0] = realIds[0]!;
 		ids[SQL_BATCH_SIZE - 1] = realIds[1]!;
 		ids[SQL_BATCH_SIZE + 5] = realIds[2]!;
 
 		const result = await bylineRepo.getContentBylinesMany("post", ids);
 
-		// All 3 real entries should have their byline resolved
 		expect(result.get(realIds[0]!)).toHaveLength(1);
 		expect(result.get(realIds[1]!)).toHaveLength(1);
 		expect(result.get(realIds[2]!)).toHaveLength(1);
@@ -343,7 +326,6 @@ describe("BylineRepository", () => {
 	});
 
 	it("findByUserIds handles more IDs than SQL_BATCH_SIZE", async () => {
-		// Create a real user so the FK constraint is satisfied
 		const userId = "user-batch-test";
 		await db
 			.insertInto("users" as any)
@@ -356,7 +338,6 @@ describe("BylineRepository", () => {
 			userId,
 		});
 
-		// Build a user ID list larger than SQL_BATCH_SIZE
 		const userIds: string[] = [];
 		for (let i = 0; i < SQL_BATCH_SIZE + 10; i++) {
 			userIds.push(`user-fake-${i}`);
@@ -549,7 +530,6 @@ describe("BylineRepository", () => {
 				data: { title: "Credited" },
 			});
 
-			// Editor credits the fr row — server should normalise to the group.
 			await bylineRepo.setContentBylines("post", content.id, [{ bylineId: fr.id }]);
 
 			const rows = await db
@@ -630,12 +610,9 @@ describe("BylineRepository", () => {
 
 			await bylineRepo.setContentBylines("post", content.id, [{ bylineId: anchor.id }]);
 
-			// No fr row exists for this byline. Strict hydration returns nothing.
 			const frCredits = await bylineRepo.getContentBylines("post", content.id, { locale: "fr" });
 			expect(frCredits).toHaveLength(0);
 
-			// DB-level credit still exists — the junction wasn't dropped, it
-			// just resolves to no presentation at this locale.
 			const junction = await db
 				.selectFrom("_emdash_content_bylines")
 				.select(["byline_id"])
@@ -795,7 +772,6 @@ describe("BylineRepository", () => {
 
 			await bylineRepo.setContentBylines("post", content.id, [{ bylineId: anchor.id }]);
 
-			// Delete the FR sibling; junctions and the EN row must survive.
 			const deleted = await bylineRepo.delete(fr.id);
 			expect(deleted).toBe(true);
 
@@ -809,7 +785,6 @@ describe("BylineRepository", () => {
 			const refreshed = await contentRepo.findById("post", content.id);
 			expect(refreshed?.primaryBylineId).toBe(anchor.translationGroup);
 
-			// EN row still exists.
 			expect(await bylineRepo.findById(anchor.id)).not.toBeNull();
 		});
 
@@ -892,12 +867,9 @@ describe("BylineRepository", () => {
 
 			await bylineRepo.setContentBylines("post", credited.id, [{ bylineId: anchor.id }]);
 
-			// `credited` has explicit junction rows even though they don't
-			// resolve at `fr`. `uncredited` truly has no credits.
 			expect(await bylineRepo.hasContentBylines("post", credited.id)).toBe(true);
 			expect(await bylineRepo.hasContentBylines("post", uncredited.id)).toBe(false);
 
-			// And — strict-locale credit hydration at fr still returns [].
 			const frCredits = await bylineRepo.getContentBylines("post", credited.id, {
 				locale: "fr",
 			});
@@ -954,16 +926,11 @@ describe("BylineRepository", () => {
 				data: { title: "Dedup" },
 			});
 
-			// Both sibling row ids passed in — they normalise to the same
-			// translation_group. Without dedup-after-resolve, the second
-			// insert would violate UNIQUE(collection, content, byline_id).
 			const credits = await bylineRepo.setContentBylines("post", content.id, [
 				{ bylineId: anchor.id, roleLabel: "Writer" },
 				{ bylineId: fr.id, roleLabel: "Editor" },
 			]);
 
-			// Exactly one row landed, keyed by translation_group, with the
-			// first occurrence's role_label preserved.
 			const junction = await db
 				.selectFrom("_emdash_content_bylines")
 				.select(["byline_id", "role_label"])
@@ -973,11 +940,6 @@ describe("BylineRepository", () => {
 			expect(junction[0]?.byline_id).toBe(anchor.translationGroup);
 			expect(junction[0]?.role_label).toBe("Writer");
 
-			// `setContentBylines` returns from locale-agnostic
-			// `getContentBylines`, so the 1 junction row joins to every
-			// sibling in the translation_group (2 here: en + fr). The
-			// per-locale hydration in the content handler filters this
-			// down to one row at the entry's locale.
 			expect(credits).toHaveLength(2);
 			expect(credits.map((c) => c.byline.locale).toSorted()).toEqual(["en", "fr"]);
 		});
@@ -989,9 +951,6 @@ describe("BylineRepository", () => {
 				locale: "en",
 			});
 
-			// Same translation_group + same locale, different slug. The
-			// (slug, locale) UNIQUE doesn't catch this — the (group, locale)
-			// partial unique added in migration 040 does.
 			await expect(
 				bylineRepo.create({
 					slug: "jane-alt",
@@ -1007,9 +966,6 @@ describe("BylineRepository", () => {
 		let registry: BylineSchemaRegistry;
 
 		beforeEach(() => {
-			// Each test mutates the registry directly; the per-isolate
-			// field-defs cache must start fresh so version-counter reads
-			// see this test's mutations and not a leftover from a sibling.
 			resetBylineFieldDefsCacheForTests();
 			registry = new BylineSchemaRegistry(db);
 		});
@@ -1049,8 +1005,6 @@ describe("BylineRepository", () => {
 			});
 			const field = await registry.getField("job_title");
 
-			// Seed translatable values via raw INSERT — Phase 3's write
-			// path is exercised separately below.
 			await sql`
 				INSERT INTO _emdash_byline_field_values (byline_id, field_id, value)
 				VALUES (${enRow.id}, ${field?.id}, '"Editor"')
@@ -1237,11 +1191,6 @@ describe("BylineRepository", () => {
 		});
 
 		it("hydrates customFields per-row when the same byline appears multiple times in one batch", async () => {
-			// Regression for the Phase 3 review's "duplicate dedup" finding:
-			// withCustomFields used to collapse `summaries` into a Map keyed
-			// by byline.id, silently losing earlier duplicates' merge step.
-			// `getContentBylinesMany` on a list view with repeated authors
-			// hits this exact case — every duplicate must carry the values.
 			const byline = await bylineRepo.create({
 				slug: "jane",
 				displayName: "Jane",
@@ -1259,8 +1208,6 @@ describe("BylineRepository", () => {
 			`.execute(db);
 			resetBylineFieldDefsCacheForTests();
 
-			// Two posts crediting the same author. getContentBylinesMany
-			// will return rows for both posts referencing the same byline_id.
 			const post1 = await contentRepo.create({
 				type: "post",
 				slug: "post-1",
@@ -1278,25 +1225,11 @@ describe("BylineRepository", () => {
 			const post1Credits = credits.get(post1.id) ?? [];
 			const post2Credits = credits.get(post2.id) ?? [];
 
-			// Both posts must see the byline with its customFields populated
-			// — not just the last duplicate.
 			expect(post1Credits[0]?.byline.customFields?.job_title).toBe("Editor");
 			expect(post2Credits[0]?.byline.customFields?.job_title).toBe("Editor");
 		});
 
 		it("hydrateBylineCustomFields batches disjoint-group hydration in one pass", async () => {
-			// Regression for the Phase 3 review's "disjoint-groups still
-			// issue one query per locale bucket" finding. When sibling
-			// locales reference *different* translation_groups (the case
-			// where my earlier per-group cache fix degenerated to N
-			// queries), batched hydration via `hydrateBylineCustomFields`
-			// over the union of all bylines fires a SINGLE group-shared
-			// query — meeting the AC envelope of "+1 per hydration pass".
-			//
-			// We assert behaviourally: skipHydration returns bylines with
-			// customFields={}, hydrateBylineCustomFields populates them in
-			// one shared call, and per-group cache entries land for every
-			// disjoint group from the union.
 			const aEn = await bylineRepo.create({ slug: "a-en", displayName: "A", locale: "en" });
 			const bFr = await bylineRepo.create({ slug: "b-fr", displayName: "B", locale: "fr" });
 			await registry.createField({
@@ -1307,7 +1240,6 @@ describe("BylineRepository", () => {
 			});
 			const field = await registry.getField("twitter_handle");
 
-			// Two disjoint translation_groups, one per locale identity.
 			const aGroup = aEn.translationGroup ?? aEn.id;
 			const bGroup = bFr.translationGroup ?? bFr.id;
 			expect(aGroup).not.toBe(bGroup);
@@ -1335,7 +1267,6 @@ describe("BylineRepository", () => {
 			await bylineRepo.setContentBylines("post", frContent.id, [{ bylineId: bFr.id }]);
 
 			await runWithContext({ db: undefined, dbIsIsolated: false, metrics: undefined }, async () => {
-				// Per-bucket calls return un-hydrated bylines.
 				const enMap = await bylineRepo.getContentBylinesMany("post", [enContent.id], {
 					locale: "en",
 					skipHydration: true,
@@ -1351,15 +1282,11 @@ describe("BylineRepository", () => {
 					expect(b.customFields).toEqual({});
 				}
 
-				// Before hydration, the request cache should have NO
-				// group-value entries (skipHydration skips the fetch).
 				expect(peekRequestCache(`byline-field-group-values:${aGroup}`)).toBeUndefined();
 				expect(peekRequestCache(`byline-field-group-values:${bGroup}`)).toBeUndefined();
 
-				// One batched hydration call over the union.
 				await bylineRepo.hydrateBylineCustomFields([...enBylines, ...frBylines]);
 
-				// Values populated, cache primed for both disjoint groups.
 				expect(enBylines[0]?.customFields?.twitter_handle).toBe("@a");
 				expect(frBylines[0]?.customFields?.twitter_handle).toBe("@b");
 				expect(peekRequestCache(`byline-field-group-values:${aGroup}`)).toBeDefined();
@@ -1368,13 +1295,6 @@ describe("BylineRepository", () => {
 		});
 
 		it("dedupes group-shared queries across locale buckets within one request", async () => {
-			// Regression for the Phase 3 review's "group-shared value query
-			// per locale bucket" finding. PR plan AC #8: group-shared is
-			// "+1 batched query per hydration pass" — meaning per request,
-			// not per repository call. Mixed-locale list views share
-			// translation_groups across sibling locales, so the second
-			// bucket's hydration must reuse the first's group-shared fetch.
-
 			const en = await bylineRepo.create({
 				slug: "jane",
 				displayName: "Jane",
@@ -1401,16 +1321,10 @@ describe("BylineRepository", () => {
 			`.execute(db);
 			resetBylineFieldDefsCacheForTests();
 
-			// Two separate findById calls within the same request context.
-			// The request cache should ensure the group-shared values are
-			// fetched once and reused on the second call.
 			const results = await runWithContext(
 				{ db: undefined, dbIsIsolated: false, metrics: undefined },
 				async () => {
 					const enResult = await bylineRepo.findById(en.id);
-					// After the first call primed the cache, the second
-					// call's loadGroupValues should hit `peekRequestCache`
-					// for the same translation_group.
 					const cached = peekRequestCache(`byline-field-group-values:${group}`);
 					expect(cached).toBeDefined();
 					const frResult = await bylineRepo.findById(fr.id);
@@ -1435,42 +1349,26 @@ describe("BylineRepository", () => {
 				VALUES (${byline.id}, ${field?.id}, '"Editor"')
 			`.execute(db);
 
-			// Bypass the registry to leave the value row behind (the
-			// registry's app-level cascade would normally clean it up).
 			await sql`DELETE FROM _emdash_byline_fields WHERE id = ${field?.id}`.execute(db);
 			resetBylineFieldDefsCacheForTests();
 
 			const reloaded = await bylineRepo.findById(byline.id);
-			// Orphan row's slug is no longer in the registry → it doesn't
-			// surface in customFields. Hydration must not throw.
 			expect(reloaded?.customFields).toEqual({});
 		});
 	});
 
 	describe("field-defs cache + dbIsIsolated bypass (Phase 3, #1174)", () => {
-		// Regression for the Phase 3 review's "global cache ignores
-		// dbIsIsolated" finding. Playground/DO-preview requests set
-		// `dbIsIsolated = true`; schema-derived caches must not be shared
-		// with the singleton (loader.ts:74 precedent). We assert this by
-		// populating the global cache from a non-isolated request, then
-		// observing that an isolated request bypasses the cache and reads
-		// fresh from its own DB.
 		beforeEach(() => {
 			resetBylineFieldDefsCacheForTests();
 		});
 
 		it("an isolated request never consults the global holder (matched-version case)", async () => {
-			// Definitive test for the bypass: both DBs land at the same
-			// version counter with DIFFERENT defs. Without the bypass, the
-			// isolated request's version-keyed cache lookup would match
-			// the main DB's cached entry and return the WRONG defs.
 			const mainRegistry = new BylineSchemaRegistry(db);
 			await mainRegistry.createField({ slug: "main_only", label: "Main", type: "string" });
 
-			// Warm the global holder against the main DB.
 			const mainDefs = await getBylineFieldDefs(db);
 			expect(mainDefs.map((d) => d.slug)).toEqual(["main_only"]);
-			expect(await mainRegistry.getVersion()).toBe(2); // 1 create × 2 bumps
+			expect(await mainRegistry.getVersion()).toBe(2);
 
 			const isolatedDb = await setupTestDatabaseWithCollections();
 			try {
@@ -1480,8 +1378,6 @@ describe("BylineRepository", () => {
 					label: "Isolated",
 					type: "string",
 				});
-				// Both DBs are at version 2 — a version-keyed cache without
-				// the dbIsIsolated bypass would return `main_only` here.
 				expect(await isolatedRegistry.getVersion()).toBe(2);
 
 				const result = await runWithContext({ db: isolatedDb, dbIsIsolated: true }, async () =>
@@ -1513,9 +1409,6 @@ describe("BylineRepository", () => {
 				await teardownTestDatabase(isolatedDb);
 			}
 
-			// Main DB has nothing registered. The global holder should be
-			// empty — the isolated read above must not have written to it.
-			// We verify by reading from main and asserting nothing leaks.
 			const mainDefs = await getBylineFieldDefs(db);
 			expect(mainDefs).toEqual([]);
 			expect(mainDefs.map((d) => d.slug)).not.toContain("isolated_only");
@@ -1531,11 +1424,6 @@ describe("BylineRepository", () => {
 		});
 
 		it("removes group-shared values when the last sibling of an identity is deleted", async () => {
-			// Regression for the Phase 3 review's "_emdash_byline_field_group_values
-			// has no FK to bylines" finding. Deleting the last byline in a
-			// translation group must explicitly remove group-shared values —
-			// FK cascade can't reach them because the key column is just
-			// `translation_group TEXT`.
 			const byline = await bylineRepo.create({
 				slug: "jane",
 				displayName: "Jane",
@@ -1564,8 +1452,6 @@ describe("BylineRepository", () => {
 		});
 
 		it("preserves group-shared values when a non-last sibling is deleted", async () => {
-			// The shared metadata must outlive the deletion of one locale —
-			// only the *last* sibling's removal should drop the group values.
 			const en = await bylineRepo.create({
 				slug: "jane",
 				displayName: "Jane",
@@ -1596,17 +1482,10 @@ describe("BylineRepository", () => {
 				SELECT COUNT(*) AS count FROM _emdash_byline_field_group_values
 				WHERE translation_group = ${group}
 			`.execute(db);
-			// Still 1 — the French sibling lives, the group value lives.
 			expect(Number(remaining.rows[0]?.count ?? -1)).toBe(1);
 		});
 
 		it("clears per-row translatable values via app-level cleanup (works without FK pragma)", async () => {
-			// Regression for the Phase 3 review's "BylineRepository.delete
-			// still relies on FK cascade for _emdash_byline_field_values"
-			// finding. The byline domain has standardised on app-level
-			// cleanup so deletion doesn't depend on `PRAGMA foreign_keys`.
-			// Explicitly disable the pragma to prove the cleanup is
-			// app-level, not FK-mediated.
 			await sql`PRAGMA foreign_keys = OFF`.execute(db);
 
 			const byline = await bylineRepo.create({
@@ -1636,10 +1515,6 @@ describe("BylineRepository", () => {
 		});
 
 		it("FK ON DELETE CASCADE on _emdash_byline_field_values still serves as defense-in-depth", async () => {
-			// Companion to the test above: with FK ON, bypassing the
-			// repository and deleting the byline row directly should still
-			// trigger the FK cascade. Keeps both layers of cleanup
-			// asserted so neither rots.
 			await sql`PRAGMA foreign_keys = ON`.execute(db);
 
 			const byline = await bylineRepo.create({
@@ -1669,9 +1544,6 @@ describe("BylineRepository", () => {
 		});
 
 		it("cascades per-row translatable values via FK when any sibling is deleted", async () => {
-			// Translatable values are keyed by byline_id and have FK ON
-			// DELETE CASCADE (migration 041). Deleting a byline row drops
-			// its own values regardless of last-sibling status.
 			const en = await bylineRepo.create({
 				slug: "jane",
 				displayName: "Jane",
@@ -1698,7 +1570,6 @@ describe("BylineRepository", () => {
 
 			await bylineRepo.delete(en.id);
 
-			// en's value is gone (FK cascade). fr's value remains.
 			const remainingEn = await sql<{ count: number }>`
 				SELECT COUNT(*) AS count FROM _emdash_byline_field_values
 				WHERE byline_id = ${en.id}
@@ -1763,13 +1634,11 @@ describe("BylineRepository", () => {
 
 			await bylineRepo.update(en.id, { customFields: { twitter_handle: "@jane" } });
 
-			// Same value visible on every sibling.
 			const enRel = await bylineRepo.findById(en.id);
 			const frRel = await bylineRepo.findById(fr.id);
 			expect(enRel?.customFields?.twitter_handle).toBe("@jane");
 			expect(frRel?.customFields?.twitter_handle).toBe("@jane");
 
-			// Storage went to the group table, not the per-row table.
 			const tr = await sql<{ count: number }>`
 				SELECT COUNT(*) AS count FROM _emdash_byline_field_values
 			`.execute(db);
@@ -1837,8 +1706,6 @@ describe("BylineRepository", () => {
 			await bylineRepo.update(byline.id, { customFields: { job_title: null } });
 
 			const reloaded = await bylineRepo.findById(byline.id);
-			// Cleared field is absent from the map (not present as null) —
-			// the row is deleted, so hydration finds no entry.
 			expect(reloaded?.customFields?.job_title).toBeUndefined();
 			expect(reloaded?.customFields).toEqual({});
 		});
@@ -1861,8 +1728,6 @@ describe("BylineRepository", () => {
 				}),
 			).rejects.toBeInstanceOf(EmDashValidationError);
 
-			// Validation runs before any DB write, so the registered field
-			// also did not get written.
 			const rows = await sql<{ count: number }>`
 				SELECT COUNT(*) AS count FROM _emdash_byline_field_values
 			`.execute(db);
@@ -1899,7 +1764,6 @@ describe("BylineRepository", () => {
 				bylineRepo.update(byline.id, { customFields: { role: "owner" } }),
 			).rejects.toBeInstanceOf(EmDashValidationError);
 
-			// Accepted choices land.
 			const ok = await bylineRepo.update(byline.id, { customFields: { role: "editor" } });
 			expect(ok?.customFields?.role).toBe("editor");
 		});
@@ -1920,7 +1784,6 @@ describe("BylineRepository", () => {
 				bylineRepo.update(byline.id, { customFields: { portfolio: "not a url" } }),
 			).rejects.toBeInstanceOf(EmDashValidationError);
 
-			// Valid absolute URLs land.
 			const ok = await bylineRepo.update(byline.id, {
 				customFields: { portfolio: "https://example.com" },
 			});
@@ -1928,8 +1791,6 @@ describe("BylineRepository", () => {
 		});
 
 		it("rejects url values with non-http(s) schemes (javascript:, data:, mailto:, ftp:)", async () => {
-			// Mirrors `httpUrl` in `api/schemas/common.ts` — `new URL`
-			// alone accepts XSS-shaped schemes.
 			const byline = await bylineRepo.create({
 				slug: "jane",
 				displayName: "Jane",
@@ -1955,9 +1816,6 @@ describe("BylineRepository", () => {
 		});
 
 		it("hydration ignores rows written to the wrong owner table", async () => {
-			// Regression: applyCustomFieldsTo used to apply rows from both
-			// value tables regardless of `field.translatable`, so a stale
-			// row from a translatable flip could leak in.
 			const byline = await bylineRepo.create({
 				slug: "jane",
 				displayName: "Jane",
@@ -1979,7 +1837,6 @@ describe("BylineRepository", () => {
 			const job = await registry.getField("job_title");
 			const tw = await registry.getField("twitter_handle");
 
-			// "Right" rows — should hydrate.
 			await sql`
 				INSERT INTO _emdash_byline_field_values (byline_id, field_id, value)
 				VALUES (${byline.id}, ${job?.id}, '"Editor"')
@@ -1988,9 +1845,6 @@ describe("BylineRepository", () => {
 				INSERT INTO _emdash_byline_field_group_values (translation_group, field_id, value)
 				VALUES (${byline.translationGroup ?? byline.id}, ${tw?.id}, '"@jane"')
 			`.execute(db);
-			// "Wrong" rows — translatable field with a group-shared row,
-			// and group-shared field with a per-locale row. Both must
-			// be ignored by hydration.
 			await sql`
 				INSERT INTO _emdash_byline_field_group_values (translation_group, field_id, value)
 				VALUES (${byline.translationGroup ?? byline.id}, ${job?.id}, '"WRONG: group row for translatable field"')
@@ -2009,14 +1863,6 @@ describe("BylineRepository", () => {
 		});
 
 		it("invalidates the per-request group-shared cache after a non-translatable write", async () => {
-			// Regression for the Phase 3 review's finding that update()
-			// primes the group-shared request cache via its opening
-			// findById, then writes to _emdash_byline_field_group_values
-			// later in the same method. Without explicit invalidation,
-			// the closing findById (and any later reads in the same
-			// request) would return stale customFields. `update` calls
-			// `clearRequestCacheEntry` after group-shared writes so
-			// subsequent reads in the request see the fresh value.
 			const byline = await bylineRepo.create({
 				slug: "jane",
 				displayName: "Jane",
@@ -2032,21 +1878,14 @@ describe("BylineRepository", () => {
 			const result = await runWithContext(
 				{ db: undefined, dbIsIsolated: false, metrics: undefined },
 				async () => {
-					// Prime the cache by reading first — exactly what an API
-					// route does (load the resource before mutating it).
 					const before = await bylineRepo.findById(byline.id);
 					expect(before?.customFields).toEqual({});
 
-					// Write the group-shared value.
 					const after = await bylineRepo.update(byline.id, {
 						customFields: { twitter_handle: "@jane" },
 					});
-					// update's closing findById must reflect the write, not the
-					// stale cache from the opening findById.
 					expect(after?.customFields?.twitter_handle).toBe("@jane");
 
-					// A LATER findById in the same request must also see the
-					// new value — proves the cache is fully cleared.
 					const later = await bylineRepo.findById(byline.id);
 					return later?.customFields?.twitter_handle;
 				},
@@ -2068,8 +1907,6 @@ describe("BylineRepository", () => {
 			});
 			await bylineRepo.update(byline.id, { customFields: { job_title: "Editor" } });
 
-			// Plain update without customFields key must leave existing values
-			// alone (no implicit clear, no implicit re-write).
 			await bylineRepo.update(byline.id, { displayName: "Jane Doe" });
 
 			const reloaded = await bylineRepo.findById(byline.id);

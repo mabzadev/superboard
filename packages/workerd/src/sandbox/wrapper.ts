@@ -1,16 +1,3 @@
-/**
- * Plugin Wrapper Generator for workerd
- *
- * Generates the code that wraps a plugin to run in a workerd isolate.
- * Unlike the Cloudflare wrapper which uses RPC via service bindings,
- * this wrapper uses HTTP fetch to call the Node backing service.
- *
- * The wrapper:
- * - Imports plugin hooks and routes from "sandbox-plugin.js"
- * - Creates plugin context that proxies operations via HTTP to the backing service
- * - Exposes an HTTP fetch handler for hook/route invocation
- */
-
 import type { PluginManifest } from "emdash";
 
 const TRAILING_SLASH_RE = /\/$/;
@@ -24,15 +11,8 @@ export interface WrapperOptions {
 		locale: string;
 		trailingSlash?: "always" | "never" | "ignore";
 	};
-	/** URL of the Node backing service (e.g., http://127.0.0.1:18787) */
 	backingServiceUrl: string;
-	/** Auth token the plugin sends on outbound bridge calls to Node */
 	authToken: string;
-	/**
-	 * Auth token the Node runner must send on inbound hook/route invocations.
-	 * Prevents same-host attackers from invoking plugin hooks directly via
-	 * the per-plugin TCP listener (which is exposed on 127.0.0.1).
-	 */
 	invokeToken: string;
 }
 

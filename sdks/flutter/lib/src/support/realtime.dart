@@ -216,7 +216,6 @@ class SuperBoardSupportRealtime {
     try {
       await connection.close();
     } catch (_) {
-      // The socket is already unusable; reconnection owns recovery.
     }
   }
 
@@ -229,9 +228,6 @@ class SuperBoardSupportRealtime {
       );
       final type = normalized['type']?.toString();
       if (!_allowedEventTypes.contains(type)) throw const FormatException();
-      // `_open` owns the public connection lifecycle event. The server
-      // acknowledgement contains no additional public state and would
-      // otherwise produce a duplicate event for every connection/reconnect.
       if (type == 'connected') return;
       _emit({
         ...normalized,

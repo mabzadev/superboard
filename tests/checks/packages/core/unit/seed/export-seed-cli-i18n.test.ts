@@ -13,16 +13,6 @@ import {
 	teardownTestDatabase,
 } from "../../utils/test-db.js";
 
-/**
- * Regression for #1330: `emdash export-seed` runs in the CLI, which never calls
- * `setI18nConfig()`, so `isI18nEnabled()` is always false. Multi-locale projects
- * then export every locale variant with the locale suffix stripped, producing
- * byte-identical duplicate seed ids that `validateSeed` rejects.
- *
- * These tests run with i18n config UNSET (null) — exactly the CLI environment —
- * and assert that the export stays locale-aware by reading the per-row data.
- */
-
 async function insertTaxonomyDef(
 	db: Kysely<Database>,
 	args: { id: string; name: string; label: string; locale: string; group: string },
@@ -84,7 +74,6 @@ describe("exportSeed: CLI (no runtime i18n config) stays locale-aware (#1330)", 
 	let db: Kysely<Database>;
 
 	beforeEach(() => {
-		// Mirror the CLI: the i18n config is never initialized.
 		setI18nConfig(null);
 	});
 
@@ -137,23 +126,19 @@ describe("exportSeed: CLI (no runtime i18n config) stays locale-aware (#1330)", 
 		const cats = seed.taxonomies?.filter((t) => t.name === "genre") ?? [];
 		expect(cats).toHaveLength(2);
 
-		// Ids must be unique across locale variants.
 		const ids = cats.map((t) => t.id);
 		expect(new Set(ids).size).toBe(2);
 		expect(new Set(ids)).toEqual(new Set(["tax:genre:en", "tax:genre:ar"]));
 
-		// One def anchors the group, the other references it.
 		const anchor = cats.find((t) => !t.translationOf);
 		const translation = cats.find((t) => t.translationOf);
 		expect(anchor?.locale).toBeDefined();
 		expect(translation?.translationOf).toBe(anchor?.id);
 
-		// Term ids likewise carry the locale suffix and stay unique.
 		const termIds = cats.flatMap((t) => (t.terms ?? []).map((term) => term.id));
 		expect(termIds).toEqual(expect.arrayContaining(["term:genre:news:en", "term:genre:news:ar"]));
 		expect(new Set(termIds).size).toBe(termIds.length);
 
-		// The whole exported seed must validate (no duplicate-id rejection).
 		const result = validateSeed(seed);
 		expect(result.errors).toEqual([]);
 		expect(result.valid).toBe(true);
@@ -245,16 +230,12 @@ describe("exportSeed: CLI (no runtime i18n config) stays locale-aware (#1330)", 
 	});
 
 	it("does not crash when a collection row outlives its dropped ec_* table", async () => {
-		// On D1, deleteCollection is non-atomic, so a `_emdash_collections` row can
-		// survive without its `ec_*` table. The locale probe must skip the missing
-		// table rather than hard-crashing the export with "no such table".
 		db = await setupTestDatabaseWithCollections();
 
 		await sql`DROP TABLE ec_post`.execute(db);
 
 		const seed = await exportSeed(db);
 
-		// The collection metadata still exports; only the missing content table is skipped.
 		expect(seed.collections?.some((c) => c.slug === "post")).toBe(true);
 	});
 
@@ -279,9 +260,6 @@ describe("exportSeed: CLI (no runtime i18n config) stays locale-aware (#1330)", 
 	it("self-describes the default locale for a single-locale non-en project (#1421)", async () => {
 		db = await setupTestDatabase();
 
-		// Every locale-bearing row is `de` — a genuine single-locale project whose
-		// default is not `en`. Move the built-in defs to `de` so no stray `en` row
-		// makes the data look multi-locale.
 		await db.updateTable("_emdash_taxonomy_defs").set({ locale: "de" }).execute();
 		await insertTaxonomyDef(db, {
 			id: ulid(),
@@ -293,8 +271,6 @@ describe("exportSeed: CLI (no runtime i18n config) stays locale-aware (#1330)", 
 
 		const seed = await exportSeed(db);
 
-		// Bare ids (single-locale), but the seed carries the real default so apply
-		// — which runs outside the runtime — can backfill `de` instead of `en`.
 		expect(seed.defaultLocale).toBe("de");
 		const cat = seed.taxonomies?.find((t) => t.name === "genre");
 		expect(cat?.id).toBe("tax:genre");
@@ -310,8 +286,6 @@ describe("exportSeed: CLI (no runtime i18n config) stays locale-aware (#1330)", 
 
 		const seed = await exportSeed(db);
 
-		// Multiple locales → every row already emits its own `locale`, so there is
-		// no omitted-locale fallback to fill and no single "default" to infer.
 		expect(seed.defaultLocale).toBeUndefined();
 	});
 });

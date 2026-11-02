@@ -8,7 +8,6 @@ import 'package:superboard_flutter/superboard_flutter.dart';
 
 import 'experience_client.dart';
 
-/// Compatibility widget backed by the Paywalls aliases served by Flows.
 @Deprecated(
   'Use SuperBoardFlowsOverlay, SuperBoardFlowsSlot, or a commerce Flow.',
 )

@@ -254,11 +254,6 @@ class SuperBoardFlowBlock {
 
   bool get isFloating => !slottable || slotId == null || slotId!.isEmpty;
 
-  /// Component props exactly as rendered by the upstream SDKs.
-  ///
-  /// Static definition values live in [data], while typed action, state-memory,
-  /// and block-state values are supplied in [propertyMeta]. Native components
-  /// consume the merged view but the original wire fields remain unchanged.
   Map<String, dynamic> get resolvedData {
     final result = _copyObject(data);
     for (final property in propertyMeta) {

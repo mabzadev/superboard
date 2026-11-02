@@ -1,8 +1,3 @@
-import {
-	RouteInventoryStatus,
-	routeInventoryLabels,
-	routeDestinationText,
-} from "./route-inventory-status.js";
 import { parsePluginDiagnostic, parsePluginHealth } from "@superboard/contracts/plugin-diagnostic";
 import type {
 	PluginDependencyDiagnostic,
@@ -18,10 +13,15 @@ import {
 	pluginPackageOwner,
 } from "@superboard/contracts/plugin-packages";
 import { useMemo, useState } from "react";
-import { useLiveQuery } from "./live-query.js";
 import { toast } from "sonner";
 
 import { useOptionalFrontContext } from "./context.js";
+import { useLiveQuery } from "./live-query.js";
+import {
+	RouteInventoryStatus,
+	routeInventoryLabels,
+	routeDestinationText,
+} from "./route-inventory-status.js";
 import { Badge } from "./shared/components/ui/badge.js";
 import { Button } from "./shared/components/ui/button.js";
 import {
@@ -461,7 +461,6 @@ function PluginConfigurationContent({
 
 	return (
 		<div className={`space-y-6 ${className ?? ""}`}>
-			{/* Section 1: Plugin Lifecycle */}
 			<Card>
 				<CardHeader>
 					<CardTitle>{t.lifecycleTitle}</CardTitle>
@@ -525,7 +524,6 @@ function PluginConfigurationContent({
 				</CardContent>
 			</Card>
 
-			{/* Section 2: Declared Configuration */}
 			<Card>
 				<CardHeader>
 					<CardTitle>{t.configTitle}</CardTitle>
@@ -603,7 +601,6 @@ function PluginConfigurationContent({
 				</CardContent>
 			</Card>
 
-			{/* Section 3: Verified Health */}
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between space-y-0">
 					<div>
@@ -662,7 +659,6 @@ function PluginConfigurationContent({
 				</CardContent>
 			</Card>
 
-			{/* Section 4: Dependencies */}
 			<Card>
 				<CardHeader>
 					<CardTitle>{t.dependenciesTitle}</CardTitle>
@@ -705,7 +701,6 @@ function PluginConfigurationContent({
 				</CardContent>
 			</Card>
 
-			{/* Section 5: Associated Services & Workers */}
 			<Card>
 				<CardHeader>
 					<CardTitle>{t.workersTitle}</CardTitle>
@@ -774,7 +769,6 @@ function PluginConfigurationContent({
 				</CardContent>
 			</Card>
 
-			{/* Section 6: Routes (Views & API Routes) */}
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between space-y-0">
 					<CardTitle>{t.routesTitle}</CardTitle>

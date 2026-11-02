@@ -1,13 +1,3 @@
-/**
- * Plugin storage query/count with `where` filters, on both dialects (#920).
- *
- * The filtered paths wrapped the JSON-extraction predicate in `(...) = 1`.
- * SQLite coerces booleans to integers so that worked, but Postgres has a
- * strict boolean type and rejected every filtered list()/count() with
- * "operator does not exist: boolean = integer". This runs the filtered
- * paths end-to-end on both dialects to guard the predicate shape.
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 

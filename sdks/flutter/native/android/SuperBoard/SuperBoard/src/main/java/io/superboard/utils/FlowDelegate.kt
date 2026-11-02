@@ -5,12 +5,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty0
 
-/**
- * A little circuitous but the way this works is:
- * 1. [delegateRequested] set to true indicates that [delegate] should be filled.
- * 2. Upon [getValue], [delegate] is set.
- * 3. [KProperty0.delegate] returns the value previously set to [delegate]
- */
 internal object DelegateAccess {
     internal val delegate = ThreadLocal<Any?>()
     internal val delegateRequested = ThreadLocal<Boolean>().apply { set(false) }
@@ -28,17 +22,10 @@ internal val <T> KProperty0<T>.delegate: Any?
         }
     }
 
-/**
- * @return the flow associated with a [FlowObservable] property,
- * which can be collected upon to observe changes in the value.
- */
 @Suppress("UNCHECKED_CAST")
 val <T> KProperty0<T>.flow: StateFlow<T>
     get() = delegate as StateFlow<T>
 
-/**
- * Indicates that the target property changes can be observed with [flow].
- */
 @Target(AnnotationTarget.CLASS, AnnotationTarget.PROPERTY, AnnotationTarget.PROPERTY_GETTER)
 @Retention(AnnotationRetention.BINARY)
 @MustBeDocumented

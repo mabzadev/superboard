@@ -33,9 +33,6 @@ export interface UserDetailProps {
 	onSendRecovery?: () => void;
 }
 
-/**
- * User detail slide-over panel with inline editing
- */
 export function UserDetail({
 	user,
 	isLoading,
@@ -57,7 +54,6 @@ export function UserDetail({
 	const [email, setEmail] = React.useState(user?.email ?? "");
 	const [role, setRole] = React.useState(user?.role ?? 30);
 
-	// Reset form when viewing a different user
 	const userIdRef = React.useRef(user?.id);
 	if (user?.id !== userIdRef.current) {
 		userIdRef.current = user?.id;
@@ -111,7 +107,6 @@ export function UserDetail({
 						"data-ending-style:ltr:translate-x-full data-ending-style:rtl:-translate-x-full",
 					)}
 				>
-					{/* Header */}
 					<div className="flex items-center justify-between border-b px-6 py-4">
 						<Dialog.Title className="text-lg font-semibold">{t`User Details`}</Dialog.Title>
 						<Button
@@ -124,13 +119,11 @@ export function UserDetail({
 						</Button>
 					</div>
 
-					{/* Content */}
 					<div className="flex-1 overflow-y-auto p-6">
 						{isLoading ? (
 							<UserDetailSkeleton />
 						) : user ? (
 							<form id="user-edit-form" onSubmit={handleSubmit} className="space-y-6">
-								{/* Avatar + editable fields */}
 								<div className="flex items-start gap-4">
 									{user.avatarUrl ? (
 										<img
@@ -161,7 +154,6 @@ export function UserDetail({
 									</div>
 								</div>
 
-								{/* Role + status */}
 								<div className="flex items-end gap-3">
 									{isSelf ? (
 										<div className="flex-1">
@@ -209,9 +201,7 @@ export function UserDetail({
 									</div>
 								</div>
 
-								{/* Info cards */}
 								<div className="grid gap-4">
-									{/* Timestamps */}
 									<div className="rounded-lg border bg-kumo-base p-4">
 										<h4 className="text-sm font-medium text-kumo-subtle mb-3">{t`Account Info`}</h4>
 										<div className="space-y-2 text-sm">
@@ -238,7 +228,6 @@ export function UserDetail({
 										</div>
 									</div>
 
-									{/* Passkeys */}
 									<div className="rounded-lg border bg-kumo-base p-4">
 										<h4 className="text-sm font-medium text-kumo-subtle mb-3 flex items-center gap-2">
 											<Key className="h-4 w-4" aria-hidden="true" />
@@ -268,7 +257,6 @@ export function UserDetail({
 										)}
 									</div>
 
-									{/* OAuth accounts */}
 									{user.oauthAccounts.length > 0 && (
 										<div className="rounded-lg border bg-kumo-base p-4">
 											<h4 className="text-sm font-medium text-kumo-subtle mb-3 flex items-center gap-2">
@@ -297,7 +285,6 @@ export function UserDetail({
 						)}
 					</div>
 
-					{/* Footer actions */}
 					{user && (
 						<div className="border-t px-6 py-4 space-y-2">
 							<div className="flex gap-2">
@@ -349,11 +336,9 @@ export function UserDetail({
 	);
 }
 
-/** Loading skeleton for user detail */
 function UserDetailSkeleton() {
 	return (
 		<div className="space-y-6 animate-pulse">
-			{/* Profile skeleton */}
 			<div className="flex items-start gap-4">
 				<div className="h-16 w-16 rounded-full bg-kumo-tint" />
 				<div className="flex-1 space-y-2">
@@ -363,7 +348,6 @@ function UserDetailSkeleton() {
 				</div>
 			</div>
 
-			{/* Cards skeleton */}
 			{Array.from({ length: 2 }, (_, i) => (
 				<div key={i} className="rounded-lg border bg-kumo-base p-4 space-y-3">
 					<div className="h-4 w-24 bg-kumo-tint rounded" />

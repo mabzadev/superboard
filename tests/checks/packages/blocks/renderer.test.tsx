@@ -5,10 +5,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BlockRenderer } from "../../../../packages/blocks/src/renderer.js";
 import type { Block, BlockInteraction } from "../../../../packages/blocks/src/types.js";
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
-// Shared between the Collapsible.* mocks so DefaultTrigger / DefaultPanel can
-// react to open state set on Collapsible.Root.
 const CollapsibleContext = React.createContext<{
 	open?: boolean;
 	onOpenChange?: (next: boolean) => void;
@@ -167,7 +163,6 @@ vi.mock("@cloudflare/kumo", () => ({
 		),
 	},
 	Collapsible: Object.assign(
-		// `Collapsible` is also `Collapsible.Root` in Kumo 2.x.
 		({ children, open, onOpenChange, ...rest }: any) => (
 			<div data-testid="collapsible" data-open={open ? "true" : "false"} {...rest}>
 				<CollapsibleContext.Provider value={{ open, onOpenChange }}>
@@ -269,14 +264,10 @@ vi.mock("@phosphor-icons/react", () => ({
 
 afterEach(cleanup);
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 function renderBlocks(blocks: Block[], onAction?: (i: BlockInteraction) => void) {
 	const handler = onAction ?? vi.fn();
 	return { ...render(<BlockRenderer blocks={blocks} onAction={handler} />), onAction: handler };
 }
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("BlockRenderer", () => {
 	it("header block renders h2 with text", () => {
@@ -464,7 +455,6 @@ describe("BlockRenderer", () => {
 			onAction,
 		);
 
-		// Submit the form
 		const submitBtn = screen.getByText("Save");
 		fireEvent.click(submitBtn);
 
@@ -686,16 +676,13 @@ describe("BlockRenderer", () => {
 			onAction,
 		);
 
-		// Initially no dialog
 		expect(screen.queryByTestId("dialog-root")).toBeNull();
 
-		// Click button — dialog appears
 		fireEvent.click(screen.getByText("Delete"));
 		expect(screen.getByTestId("dialog-root")).toBeTruthy();
 		expect(screen.getByText("Delete item?")).toBeTruthy();
 		expect(screen.getByText("This cannot be undone.")).toBeTruthy();
 
-		// Click confirm — fires action
 		fireEvent.click(screen.getByText("Yes, delete"));
 		expect(onAction).toHaveBeenCalledWith({
 			type: "block_action",

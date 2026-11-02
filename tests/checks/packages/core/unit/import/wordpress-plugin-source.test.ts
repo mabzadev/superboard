@@ -1,21 +1,11 @@
-/**
- * Tests for WordPress plugin import source fetch behaviour:
- * - custom taxonomy assignments on normalized items
- * - full media pagination in analyze() (regression: only page 1 was fetched)
- * - ?rest_route= fallback for sites with plain permalinks
- */
-
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { wordpressPluginSource } from "../../../../../../packages/core/src/import/sources/wordpress-plugin.js";
 import { setDefaultDnsResolver } from "../../../../../../packages/core/src/import/ssrf.js";
 
-// ─── Mock fetch ──────────────────────────────────────────────────────────────
-
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-// Bypass DoH so the fetch mock only sees the calls these tests model.
 let previousResolver: ReturnType<typeof setDefaultDnsResolver> | undefined;
 beforeAll(() => {
 	previousResolver = setDefaultDnsResolver(async () => ["93.184.216.34"]);
@@ -31,8 +21,6 @@ beforeEach(() => {
 function toUrlString(input: RequestInfo | URL): string {
 	return typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 }
-
-// ─── Fixtures ────────────────────────────────────────────────────────────────
 
 function makePost(overrides: Record<string, unknown> = {}) {
 	return {
@@ -95,8 +83,6 @@ function mediaPage(page: number, pages: number, ids: number[]) {
 	);
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
-
 describe("WordPress Plugin Source — fetch behaviour", () => {
 	it("maps non-category/tag taxonomies to customTaxonomies", async () => {
 		mockFetch.mockResolvedValueOnce(
@@ -144,13 +130,10 @@ describe("WordPress Plugin Source — fetch behaviour", () => {
 						{ key: "event-start_date", count: 3, inferred_type: "datetime", sample: "2026-01-01" },
 						{ key: "Ticket Price", count: 3, inferred_type: "number", sample: "25.50" },
 						{ key: "venue", count: 2, inferred_type: "weird_type", sample: "Hall A" },
-						// Collides with a base field -- must not be duplicated
 						{ key: "title", count: 3, inferred_type: "string", sample: "x" },
-						// Plugin bookkeeping -- must not be suggested as content fields
 						{ key: "wpil_sync_report3", count: 3, inferred_type: "integer", sample: "1" },
 						{ key: "rank_math_seo_score", count: 3, inferred_type: "integer", sample: "80" },
 						{ key: "entity_same_as", count: 2, inferred_type: "string", sample: "https://x" },
-						// Hyphenated variant must be caught too
 						{ key: "ampforwp-amp-on-off", count: 3, inferred_type: "string", sample: "default" },
 					],
 					hierarchical: false,
@@ -169,11 +152,8 @@ describe("WordPress Plugin Source — fetch behaviour", () => {
 		const bySlug = new Map(fields.map((f) => [f.slug, f]));
 		expect(bySlug.get("event_start_date")).toMatchObject({ type: "datetime", required: false });
 		expect(bySlug.get("ticket_price")).toMatchObject({ type: "number", label: "Ticket Price" });
-		// Unknown inferred types fall back to string
 		expect(bySlug.get("venue")).toMatchObject({ type: "string" });
-		// Base fields are not duplicated
 		expect(fields.filter((f) => f.slug === "title")).toHaveLength(1);
-		// Plugin bookkeeping meta is filtered out
 		expect(bySlug.has("wpil_sync_report3")).toBe(false);
 		expect(bySlug.has("rank_math_seo_score")).toBe(false);
 		expect(bySlug.has("entity_same_as")).toBe(false);

@@ -76,7 +76,6 @@ describe("computeDecision", () => {
 			0,
 			false,
 		);
-		// Should not block or hold — falls through to autoApproveClean
 		expect(result.status).toBe("approved");
 	});
 

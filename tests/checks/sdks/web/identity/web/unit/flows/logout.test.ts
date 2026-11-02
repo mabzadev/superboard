@@ -5,13 +5,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { logout } from "../../../../../../../../sdks/web/identity/web/src/flows/logout";
 import { postLogout } from "../../../../../../../../sdks/web/identity/web/src/requests";
 
-// Mock the requests module
 vi.mock("../../../../../../../../sdks/web/identity/web/src/requests", () => ({
 	postLogout: vi.fn(),
 }));
 
 describe("logout", () => {
-	// Mock console.error to avoid noise in test output
 	const originalConsoleError = console.error;
 	const mockConsoleError = vi.fn();
 
@@ -38,7 +36,6 @@ describe("logout", () => {
 	};
 
 	beforeEach(() => {
-		// Setup window mock
 		// @ts-expect-error - Partial window mock
 		global.window = mockWindow;
 		console.error = mockConsoleError;
@@ -61,18 +58,15 @@ describe("logout", () => {
 			false,
 		);
 
-		// Verify remote logout was called
 		expect(postLogout).toHaveBeenCalledWith(mockProviderConfig, {
 			accessToken: "test-access-token",
 			refreshToken: "test-refresh-token",
 			postLogoutRedirectUri: "https://default.redirect",
 		});
 
-		// Verify storage items were removed
 		expect(mockWindow.localStorage.removeItem).toHaveBeenCalledWith(StorageKey.RefreshToken);
 		expect(mockWindow.localStorage.removeItem).toHaveBeenCalledWith(StorageKey.IdToken);
 
-		// Verify redirect
 		expect(mockWindow.location.href).toBe(mockLogoutUri);
 	});
 
@@ -90,7 +84,6 @@ describe("logout", () => {
 			false,
 		);
 
-		// Verify session storage was used
 		expect(mockWindow.sessionStorage.removeItem).toHaveBeenCalledWith(StorageKey.RefreshToken);
 		expect(mockWindow.sessionStorage.removeItem).toHaveBeenCalledWith(StorageKey.IdToken);
 		expect(mockWindow.localStorage.removeItem).not.toHaveBeenCalled();
@@ -105,24 +98,19 @@ describe("logout", () => {
 			true,
 		);
 
-		// Verify remote logout was not called
 		expect(postLogout).not.toHaveBeenCalled();
 
-		// Verify storage was still cleared
 		expect(mockWindow.localStorage.removeItem).toHaveBeenCalledWith(StorageKey.RefreshToken);
 		expect(mockWindow.localStorage.removeItem).toHaveBeenCalledWith(StorageKey.IdToken);
 
-		// Verify redirect to default URI
 		expect(mockWindow.location.href).toBe("https://default.redirect");
 	});
 
 	it("should handle missing refresh token", async () => {
 		await logout(mockProviderConfig, "test-access-token", null, "https://default.redirect", false);
 
-		// Verify remote logout was not called
 		expect(postLogout).not.toHaveBeenCalled();
 
-		// Verify storage was still cleared
 		expect(mockWindow.localStorage.removeItem).toHaveBeenCalledWith(StorageKey.RefreshToken);
 		expect(mockWindow.localStorage.removeItem).toHaveBeenCalledWith(StorageKey.IdToken);
 	});
@@ -138,16 +126,13 @@ describe("logout", () => {
 			false,
 		);
 
-		// Verify error was logged
 		expect(mockConsoleError).toHaveBeenCalledWith(
 			"Failed to logout remotely: Error: Logout failed",
 		);
 
-		// Verify storage was still cleared
 		expect(mockWindow.localStorage.removeItem).toHaveBeenCalledWith(StorageKey.RefreshToken);
 		expect(mockWindow.localStorage.removeItem).toHaveBeenCalledWith(StorageKey.IdToken);
 
-		// Verify fallback to default redirect
 		expect(mockWindow.location.href).toBe("https://default.redirect");
 	});
 	it("clears credentials when a storage adapter has no removeItem method", async () => {

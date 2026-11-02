@@ -8,8 +8,6 @@ import type {
 } from "@superboard/front-ui/types";
 import type { AxiosResponse } from "axios";
 
-// --- Response types ---
-
 interface GetTopLinksResponse {
 	links: DashboardLink[];
 }
@@ -21,8 +19,6 @@ interface GetLinksViewsResponse {
 interface GetMetricsOverviewResponse {
 	metrics: MetricsOverview;
 }
-
-// --- API calls ---
 
 export const getTopLinksAPICall = async (
 	projectId: string,

@@ -4,10 +4,6 @@ import { MAX_COLLECTION_LIST_COLUMNS } from "../../schema/types.js";
 import { compileUrlPattern } from "../../schema/url-pattern.js";
 import { slugPattern } from "./common.js";
 
-// ---------------------------------------------------------------------------
-// Schema (collections & fields): Input schemas
-// ---------------------------------------------------------------------------
-
 const collectionSupportValues = z.enum([
 	"drafts",
 	"revisions",
@@ -57,8 +53,6 @@ const fieldTypeValues = z.enum([
 
 const repeaterSubFieldSchema = z.object({
 	slug: z.string().min(1).max(63).regex(slugPattern, "Invalid slug format"),
-	// Keep in sync with REPEATER_SUB_FIELD_TYPES in schema/types.ts.
-	// ("url" was already a documented sub-field type but missing here.)
 	type: z.enum([
 		"string",
 		"text",
@@ -222,7 +216,6 @@ export const fieldReorderBody = z
 
 export const collectionReorderBody = z
 	.object({
-		/** Full desired sidebar order. Collections left out fall back to alphabetical. */
 		slugs: z.array(z.string().min(1)),
 	})
 	.meta({ id: "CollectionReorderBody" });
@@ -245,10 +238,6 @@ export const collectionGetQuery = z.object({
 		.transform((v) => v === "true")
 		.optional(),
 });
-
-// ---------------------------------------------------------------------------
-// Schema: Response schemas
-// ---------------------------------------------------------------------------
 
 export const collectionSchema = z
 	.object({

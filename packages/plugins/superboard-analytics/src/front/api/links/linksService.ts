@@ -4,8 +4,6 @@ import type { AxiosResponse } from "axios";
 
 import { DELETE, GET, PATCH, POST } from "../../transport.js";
 
-// --- Response types ---
-
 interface PaginationMeta {
 	total_pages: number;
 	total_entries: number;
@@ -35,8 +33,6 @@ interface AvailablePathResponse {
 interface RandomPathResponse {
 	valid_path: string;
 }
-
-// --- API calls ---
 
 export const createNewLinkAPICall = async (
 	instanceId: string,

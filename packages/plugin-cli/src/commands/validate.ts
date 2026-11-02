@@ -1,20 +1,3 @@
-/**
- * `emdash-plugin validate [path]`
- *
- * Validate an `emdash-plugin.jsonc` manifest against the v1 schema.
- *
- * Exit codes:
- *
- *   - 0: manifest is schema-valid.
- *   - 1: validation failed; details on stderr (human mode) or stdout (JSON mode).
- *   - 2: usage error (e.g. invalid `--json` combination).
- *
- * The CLI does not check publish-time invariants here (e.g. license required
- * on first publish vs ignored on subsequent). Those checks live in
- * `publishRelease` and require network access. `validate` is a fast, offline
- * sanity check that's safe to wire into `pre-commit` / CI.
- */
-
 import { dirname } from "node:path";
 
 import { defineCommand } from "citty";
@@ -46,9 +29,6 @@ export const validateCommand = defineCommand({
 		const path = args.path ?? ".";
 		try {
 			const { manifest, path: resolved } = await loadManifest(path);
-			// Resolve `{ file }` section refs offline: reads their content and
-			// enforces the per-section byte/grapheme caps and the path-escape
-			// guard, so a bad ref fails here instead of at publish time.
 			await resolveSections(manifest.sections, dirname(resolved));
 
 			if (args.json) {

@@ -14,7 +14,6 @@ import { useTabParam } from "./lib/useTabParam.js";
 export const environmentSettingsTabs = ["general", "team", "usage", "infrastructure"] as const;
 export type EnvironmentSettingsTab = (typeof environmentSettingsTabs)[number];
 
-/** Environment settings (`/core/settings`): one page, its sections kept in `?tab=`. */
 export default function EnvironmentSettings() {
 	const { locale, t } = useSettingsI18n();
 	const title = deploymentI18n(locale)("title");

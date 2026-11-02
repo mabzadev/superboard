@@ -16,9 +16,6 @@ const ALLOWED_EVENT_TYPES = new Set([
 	"error",
 ]);
 
-/**
- * Reconnecting browser realtime connection backed by one-use Support tickets.
- */
 export class SuperBoardSupportRealtime {
 	constructor(client, { retryDelaysMs = [1_000, 2_000, 5_000, 10_000, 30_000] } = {}) {
 		if (!client || typeof client._openRealtimeSocket !== "function") {
@@ -123,9 +120,7 @@ export class SuperBoardSupportRealtime {
 			this.attempt = 0;
 			this.#emit(this.#event("connected", conversationId));
 			socket.onmessage = (event) => this.#serverEvent(event?.data, conversationId);
-			socket.onerror = () => {
-				// The close handler owns reconnecting and reports one stable event.
-			};
+			socket.onerror = () => {};
 			socket.onclose = () => this.#ended(socket, generation, conversationId);
 		} catch (error) {
 			if (!this.#active(generation, conversationId)) return;
@@ -172,9 +167,6 @@ export class SuperBoardSupportRealtime {
 		try {
 			const value = typeof raw === "string" ? JSON.parse(raw) : raw;
 			if (!isRecord(value) || !ALLOWED_EVENT_TYPES.has(value.type)) throw new TypeError();
-			// Opening the socket already emitted the canonical lifecycle event. The
-			// server acknowledgement carries no additional public state, so do not
-			// surface a duplicate `connected` event to application listeners.
 			if (value.type === "connected") return;
 			this.#emit({
 				...value,
@@ -220,9 +212,7 @@ export class SuperBoardSupportRealtime {
 		for (const listener of listeners) {
 			try {
 				listener(event);
-			} catch {
-				// One consumer cannot break delivery to the others.
-			}
+			} catch {}
 		}
 	}
 

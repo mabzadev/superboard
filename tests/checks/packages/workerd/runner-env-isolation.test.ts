@@ -1,17 +1,3 @@
-/**
- * Regression tests for env isolation when spawning workerd.
- *
- * workerd is spawned with a curated minimal env (see `minimalWorkerdEnv`)
- * rather than the parent's full `process.env`. This is defense in depth
- * against host secrets (DATABASE_URL, API keys, etc.) leaking into plugin
- * code via workerd's `nodejs_compat` `process.env` polyfill.
- *
- * Empirical check (run at PR #426 review time, workerd 1.x) showed the
- * polyfill currently exposes an empty `process.env` to plugins regardless
- * of the child env. These tests pin the minimal-env behavior so a future
- * polyfill change can't silently leak secrets.
- */
-
 import { afterEach, describe, expect, it } from "vitest";
 
 import { minimalWorkerdEnv } from "../../../../packages/workerd/src/sandbox/runner.js";
@@ -28,8 +14,6 @@ describe("minimalWorkerdEnv", () => {
 		const env = minimalWorkerdEnv();
 
 		expect(env.EMDASH_TEST_SECRET).toBeUndefined();
-		// Sanity: it should not be empty — PATH is in the allowlist and
-		// is essentially always set in test environments.
 		if (process.env.PATH !== undefined) {
 			expect(env.PATH).toBe(process.env.PATH);
 		}

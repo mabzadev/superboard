@@ -138,7 +138,6 @@ export async function handleSupportQueue(batch: MessageBatch<unknown>, env: Env)
 					delaySeconds: Math.min(900, Math.max(5, 2 ** Math.min(message.attempts, 9))),
 				});
 			} else {
-				// Invalid jobs are acknowledged only after durable quarantine.
 				try {
 					await quarantineSupportDeadLetter(env.DB, batch.queue, message);
 					message.ack();
@@ -569,9 +568,7 @@ async function processProviderEvent(
 	let payload: Record<string, unknown> = {};
 	try {
 		payload = JSON.parse(event.payload_json) as Record<string, unknown>;
-	} catch {
-		/* validated on ingress */
-	}
+	} catch {}
 	const receipts = normalizeProviderDeliveryReceipts(job.provider, payload);
 	for (const receipt of receipts) await applyProviderDeliveryReceipt(env, job, receipt);
 	const normalized = normalizeInboundProviderEvent(job.provider, payload);
@@ -861,9 +858,7 @@ async function roomJson(
 	let payload: Record<string, unknown> = {};
 	try {
 		payload = asObject(JSON.parse(await readTextLimited(response, 64_000)));
-	} catch {
-		// Normalized below.
-	}
+	} catch {}
 	if (!response.ok) {
 		const error = asObject(payload.error);
 		throw failure(
@@ -931,9 +926,7 @@ async function exchangeProviderOAuth(
 	let settings: Record<string, unknown> = {};
 	try {
 		settings = JSON.parse(row.settings_json) as Record<string, unknown>;
-	} catch {
-		/* validated at persistence */
-	}
+	} catch {}
 	const adapter = oauthTokenAdapter(job.provider, settings, decrypted.payload);
 	const form = new URLSearchParams({
 		grant_type: "authorization_code",
@@ -966,9 +959,7 @@ async function exchangeProviderOAuth(
 	let token: Record<string, unknown> = {};
 	try {
 		token = JSON.parse(responseText) as Record<string, unknown>;
-	} catch {
-		/* handled below */
-	}
+	} catch {}
 	if (!response.ok || !String(token.access_token || "").trim()) {
 		await env.DB.prepare(`UPDATE support_provider_endpoints SET status = 'configuration_required',
       last_error_code = 'oauth_token_exchange_failed', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
@@ -1141,9 +1132,7 @@ async function sendProviderDelivery(
 	let payload: Record<string, unknown> = {};
 	try {
 		payload = JSON.parse(responseText) as Record<string, unknown>;
-	} catch {
-		/* provider-specific plain response */
-	}
+	} catch {}
 	const logicalFailure = providerResponseFailure(endpoint.provider, payload);
 	if (!response.ok) {
 		const retryable = response.status === 429 || response.status >= 500;
@@ -1579,9 +1568,7 @@ export async function refreshProviderCredentialsIfNeeded(
 	let token: Record<string, unknown> = {};
 	try {
 		token = JSON.parse(responseText) as Record<string, unknown>;
-	} catch {
-		/* normalized below */
-	}
+	} catch {}
 	const slackFailure = input.provider === "slack" && token.ok === false;
 	if (!response.ok || slackFailure || !String(token.access_token || "").trim()) {
 		if (response.status === 429 || response.status >= 500) {
@@ -2051,9 +2038,7 @@ async function runCaptainTask(
 		let toolResult: unknown = resultText;
 		try {
 			toolResult = JSON.parse(resultText);
-		} catch {
-			/* bounded text result */
-		}
+		} catch {}
 		await env.DB.prepare(`UPDATE support_assistant_tasks SET status = 'completed', result_json = ?,
       completed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND project_id = ?`)
@@ -2148,9 +2133,6 @@ async function runCaptainTask(
 			allowed_tools: tools.results.map((tool) => ({ id: tool.id, name: tool.name })),
 			response_mode: assistant?.response_mode || "suggestion",
 		};
-		// Cache the generated result before any downstream delivery. A retry then
-		// reuses byte-identical content and the room's client_message_id remains
-		// a true idempotency key even if generation is non-deterministic.
 		await env.DB.prepare(`
       UPDATE support_assistant_tasks SET result_json = ?, last_error = NULL,
         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')

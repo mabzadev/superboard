@@ -1,18 +1,8 @@
-/**
- * Server-safe exports for @emdash-cms/blocks.
- *
- * Use this entry point in plugin route handlers and other server-side code
- * that doesn't have React available. Provides builders, validation, and types
- * without importing any React components.
- */
-
 export { blocks, elements } from "./builders.js";
 export { validateBlocks } from "./validation.js";
 
 export type {
-	// Composition objects
 	ConfirmDialog,
-	// Elements
 	ButtonElement,
 	TextInputElement,
 	NumberInputElement,
@@ -20,13 +10,10 @@ export type {
 	ToggleElement,
 	SecretInputElement,
 	Element,
-	// Form
 	FieldCondition,
 	FormField,
-	// Block sub-types
 	TableColumn,
 	StatItem,
-	// Blocks
 	HeaderBlock,
 	SectionBlock,
 	DividerBlock,
@@ -39,11 +26,9 @@ export type {
 	ContextBlock,
 	ColumnsBlock,
 	Block,
-	// Interactions
 	BlockAction,
 	FormSubmit,
 	PageLoad,
 	BlockInteraction,
-	// Response
 	BlockResponse,
 } from "./types.js";

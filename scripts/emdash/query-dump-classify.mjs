@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-/**
- * Analyse the per-route query dumps and classify each query.
- */
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,7 +7,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function classify(sql, params) {
 	const s = sql.replace(/\s+/g, " ").trim();
-	// Migrations / system
 	if (/pragma_table_info/i.test(s)) return "pragma_table_info";
 	if (/sqlite_master/i.test(s)) return "sqlite_master";
 	if (/PRAGMA/i.test(s)) return "pragma";
@@ -31,11 +27,9 @@ function classify(sql, params) {
 	if (/insert into "_emdash_migrations"/i.test(s)) return "migrations_record";
 	if (/delete from "options"/i.test(s)) return "options_delete";
 	if (/SELECT name FROM sqlite_master/i.test(s)) return "fts_table_check";
-	// Auth
 	if (/from "_emdash_sessions"/i.test(s)) return "auth_session";
 	if (/from "_emdash_users"/i.test(s)) return "auth_user_lookup";
 	if (/from "_emdash_passkeys"/i.test(s)) return "auth_passkey";
-	// Settings/options
 	if (/from "options"/i.test(s) && /LIKE/i.test(s)) {
 		const p0 = params?.[0];
 		if (typeof p0 === "string") return `options_prefix:${p0}`;
@@ -50,7 +44,6 @@ function classify(sql, params) {
 		return "option:single";
 	}
 	if (/from "options"/i.test(s)) return "option:other";
-	// Menus / widgets
 	if (/from "_emdash_menus"/i.test(s)) return "menu_lookup";
 	if (/from "_emdash_menu_items"/i.test(s)) return "menu_items";
 	if (/from "_emdash_widget_areas"/i.test(s)) {
@@ -58,36 +51,26 @@ function classify(sql, params) {
 		return `widget_area:${p0 ?? ""}`;
 	}
 	if (/from "_emdash_widgets"/i.test(s)) return "widget";
-	// Bylines
 	if (/from "_emdash_content_bylines"/i.test(s)) return "byline_hydration";
 	if (/from "_emdash_bylines"/i.test(s)) return "byline_lookup";
-	// Taxonomies
 	if (/from "_emdash_taxonomy_defs"/i.test(s)) return "taxonomy_defs";
 	if (/from "content_taxonomies"/i.test(s) && /count\(/i.test(s)) return "taxonomy_counts";
 	if (/from "content_taxonomies"/i.test(s)) return "taxonomy_for_entries";
 	if (/from "taxonomies"/i.test(s)) return "taxonomy_terms";
-	// Author lookup (id, author_id)
 	if (/SELECT id, author_id FROM "ec_/i.test(s)) return "author_id_lookup";
-	// Content tables
 	const ecMatch = s.match(/from "ec_([a-z_]+)"/i) || s.match(/FROM "ec_([a-z_]+)"/);
 	if (ecMatch) {
 		const coll = ecMatch[1];
-		// detail vs list
 		if (/slug = \?/i.test(s) && /id = \?/i.test(s)) return `entry_by_slug:${coll}`;
 		if (/where "id" = \?/i.test(s)) return `entry_by_id:${coll}`;
 		if (/LIMIT \?/i.test(s)) return `collection_list:${coll}`;
 		if (/ORDER BY/i.test(s)) return `collection_list:${coll}`;
 		return `collection_other:${coll}`;
 	}
-	// Media
 	if (/from "_emdash_media"/i.test(s)) return "media_lookup";
-	// Plugins / pages dispatch
 	if (/from "_emdash_plugin/i.test(s)) return "plugin_lookup";
-	// SEO redirects
 	if (/from "_emdash_redirects"/i.test(s)) return "redirects";
-	// Comments
 	if (/from "_emdash_comments"/i.test(s)) return "comments";
-	// Default
 	return "other";
 }
 
@@ -95,10 +78,9 @@ const targetArg = process.argv[2] || "sqlite";
 const dir = resolve(__dirname, "../../infra/generated/query-dumps", targetArg);
 const files = readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "_all.json");
 
-// per-route classification table
-const tables = {}; // { routePhase: { className: count } }
-const allByClass = {}; // { className: count }
-const totalDuration = {}; // { className: ms }
+const tables = {};
+const allByClass = {};
+const totalDuration = {};
 
 const routeOrder = [
 	"root",
@@ -126,7 +108,6 @@ for (const f of files) {
 	}
 }
 
-// print table: rows = classes, cols = route.phase
 const headerRoutes = [];
 for (const r of routeOrder) for (const p of phases) headerRoutes.push(`${r}.${p}`);
 

@@ -1,16 +1,3 @@
-/**
- * Block Transform Tests
- *
- * Tests that block transformations work correctly:
- * - Transform paragraph to headings (H1, H2, H3)
- * - Transform to blockquote, code block
- * - Transform to bullet and ordered lists
- * - Duplicate block preserves content
- * - Delete block removes content
- *
- * These transformations are used by the BlockMenu component.
- */
-
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -245,20 +232,16 @@ describe("Block Duplicate", () => {
 	});
 
 	it("duplicates block and preserves content", () => {
-		// Position cursor in first paragraph
 		editor.commands.setTextSelection(1);
 
 		const { selection } = editor.state;
 		const { $from, $to } = selection;
 
-		// Get the block node at current position
 		const blockStart = $from.start($from.depth);
 		const blockEnd = $to.end($to.depth);
 
-		// Get the content to duplicate
 		const slice = editor.state.doc.slice(blockStart, blockEnd);
 
-		// Insert after current block
 		editor
 			.chain()
 			.focus()
@@ -269,9 +252,8 @@ describe("Block Duplicate", () => {
 			.run();
 
 		const json = editor.getJSON();
-		expect(json.content?.length).toBe(3); // Now 3 paragraphs
+		expect(json.content?.length).toBe(3);
 
-		// Check content
 		const texts =
 			json.content?.map((block) => {
 				if (block.type === "paragraph" && block.content?.[0]) {
@@ -281,7 +263,7 @@ describe("Block Duplicate", () => {
 			}) ?? [];
 
 		expect(texts[0]).toBe("First paragraph");
-		expect(texts[1]).toBe("First paragraph"); // Duplicated
+		expect(texts[1]).toBe("First paragraph");
 		expect(texts[2]).toBe("Second paragraph");
 	});
 });
@@ -305,15 +287,13 @@ describe("Block Delete", () => {
 	});
 
 	it("deletes block at cursor position", () => {
-		// Position cursor in first paragraph
 		editor.commands.setTextSelection(1);
 
 		editor.commands.deleteNode("paragraph");
 
 		const json = editor.getJSON();
-		expect(json.content?.length).toBe(1); // Now 1 paragraph
+		expect(json.content?.length).toBe(1);
 
-		// Check remaining content
 		const text =
 			json.content?.[0]?.type === "paragraph" && json.content[0].content?.[0]
 				? (json.content[0].content[0] as { text?: string }).text

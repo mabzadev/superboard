@@ -1,11 +1,3 @@
-/**
- * Integration tests for field widget manifest pipeline.
- *
- * Tests that field widgets declared on collections flow through
- * the manifest builder correctly, including the widget property
- * and select options for select/multiSelect fields.
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -104,7 +96,6 @@ describe("field widget on schema fields", () => {
 			type: "string",
 		});
 
-		// Update to add widget
 		await registry.updateField("posts", "color", {
 			widget: "color:picker",
 		});
@@ -161,7 +152,6 @@ describe("field widget content CRUD", () => {
 			widget: "color:picker",
 		});
 
-		// Insert content with the widget field value
 		const { ulid } = await import("ulidx");
 		const id = ulid();
 		await db
@@ -178,7 +168,6 @@ describe("field widget content CRUD", () => {
 			} as never)
 			.execute();
 
-		// Read it back
 		const row = await db
 			.selectFrom("ec_posts" as never)
 			.selectAll()

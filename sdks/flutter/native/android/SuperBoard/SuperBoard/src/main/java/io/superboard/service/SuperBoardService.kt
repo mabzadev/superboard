@@ -59,14 +59,12 @@ val nullOnEmptyConverterFactory = object : Converter.Factory() {
     }
 }
 
-// Custom Interceptor to add headers to every request
 class HeaderInterceptor(private val headers: ()->Map<String, String>) : Interceptor {
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest: Request = chain.request()
         val requestBuilder: Request.Builder = originalRequest.newBuilder()
 
-        // Add each custom header to the request
         for ((key, value) in headers.invoke()) {
             requestBuilder.addHeader(key, value)
         }
@@ -106,7 +104,6 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
             .registerTypeAdapterFactory(LSJsonDateTypeAdapterFactory())
             .create()
     }
-    // Bounded retries with exponential backoff; see SuperBoardRequestExecutor.
     private val requests = SuperBoardRequestExecutor(gson)
     private val accessKey: String
         get() {
@@ -156,10 +153,6 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
         }
     }
 
-    /// Authenticates the app.
-    ///
-    /// - Parameters:
-    ///   - appDetails: Details of the app.
     override fun authenticate(appDetails: AppDetails): Flow<GVRetryResult<AuthenticationResponse>> {
         DebugLogger.instance.log(LogLevel.INFO, "Authenticate")
 
@@ -248,11 +241,6 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
         }
     }
 
-    /// Adds an event.
-    ///
-    /// - Parameters:
-    ///   - event: The event to add.
-    ///   return: A closure indicating the success or failure of the operation.
     override suspend fun addEvent(event: Event): LSResult<Boolean> {
         try {
             DebugLogger.instance.log(LogLevel.INFO, "Add event - $event")
@@ -276,11 +264,6 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
         }
     }
 
-    /// Adds an event.
-    ///
-    /// - Parameters:
-    ///   - event: The payment event to add.
-    ///   return: A closure indicating the success or failure of the operation.
     override suspend fun addPaymentEvent(event: PaymentEvent): LSResult<Boolean> {
         try {
             DebugLogger.instance.log(LogLevel.INFO, "Add payment event - $event")
@@ -310,7 +293,6 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
         val request = UpdateAttributesRequest( sdkIdentifier = identifier,
             sdkAttributes = attributes,
             pushToken = pushToken)
-        // The endpoint answers with an empty body, so any 2xx is a success.
         return requests.request(
             label = "Set attributes",
             failureMessage = "Failed to set attributes.",
@@ -368,7 +350,6 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
         DebugLogger.instance.log(LogLevel.INFO, "Mark notification as read")
 
         val request = MarkNotificationAsReadRequest(notificationId = notificationId)
-        // The endpoint answers with an empty body, so any 2xx is a success.
         return requests.request(
             label = "Mark notification as read",
             failureMessage = "Failed to mark notification as read.",
@@ -430,7 +411,6 @@ class SuperBoardService(val context: Context, val apiKey: String, val superboard
         builder.addInterceptor(HeaderInterceptor { headers() })
 
         if (BuildConfig.NETWORK_LOGGING) {
-            /** add logging interceptor at last Interceptor*/
             builder.addInterceptor(httpLoggingInterceptor.apply {
                 httpLoggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
             })

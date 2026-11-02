@@ -3,10 +3,8 @@ import { Hono } from "hono";
 import { jwtVerify } from "jose";
 import { z } from "zod";
 
-/** Matches http(s) scheme at start of URL */
 const HTTP_SCHEME_RE = /^https?:\/\//i;
 
-/** Validates that a URL string uses http or https scheme. Rejects javascript:/data: URI XSS vectors. */
 const httpUrl = z
 	.string()
 	.url()
@@ -21,13 +19,9 @@ import {
 } from "../db/queries.js";
 import type { AuthorRow, ThemeSortOption } from "../db/types.js";
 
-// ─��� Types ───────────────────────────────────────────────────────
-
 type AuthEnv = { Bindings: Env; Variables: { author: AuthorRow } };
 
 export const themeRoutes = new Hono<AuthEnv>();
-
-// ── Auth middleware (shared pattern with author.ts) ─────────────
 
 // eslint-disable-next-line typescript-eslint(no-redundant-type-constituents) -- Hono middleware returns Response | void
 async function authMiddleware(c: Context<AuthEnv>, next: Next): Promise<Response | void> {
@@ -60,11 +54,8 @@ async function authMiddleware(c: Context<AuthEnv>, next: Next): Promise<Response
 	}
 }
 
-// Apply auth to state-changing methods on /themes/*
 themeRoutes.post("/themes/*", authMiddleware);
 themeRoutes.put("/themes/*", authMiddleware);
-
-// ── GET /themes — Search/list themes ────────────────────────────
 
 const VALID_THEME_SORTS = new Set<ThemeSortOption>(["name", "created", "updated"]);
 
@@ -113,8 +104,6 @@ themeRoutes.get("/themes", async (c) => {
 	}
 });
 
-// ── GET /themes/:id — Theme detail ──────────────────────────────
-
 themeRoutes.get("/themes/:id", async (c) => {
 	const id = c.req.param("id");
 	const baseUrl = new URL(c.req.url).origin;
@@ -158,8 +147,6 @@ themeRoutes.get("/themes/:id", async (c) => {
 		return c.json({ error: "Internal server error" }, 500);
 	}
 });
-
-// ── POST /themes — Register new theme ───────────────────────────
 
 const createThemeSchema = z.object({
 	id: z
@@ -220,8 +207,6 @@ themeRoutes.post("/themes", async (c) => {
 	}
 });
 
-// ── PUT /themes/:id — Update theme metadata ─────────────────────
-
 const updateThemeSchema = z.object({
 	name: z.string().min(1).max(100).optional(),
 	description: z.string().max(200).optional(),
@@ -273,13 +258,8 @@ themeRoutes.put("/themes/:id", async (c) => {
 	}
 });
 
-// ── PUT /themes/:id/images — Replace thumbnail + screenshots ────
-
-/** Max file size for thumbnails and screenshots (5 MB) */
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-/** Max number of screenshots per theme */
 const MAX_SCREENSHOTS = 10;
-/** Allowed image content types */
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 themeRoutes.put("/themes/:id/images", async (c) => {
@@ -295,7 +275,6 @@ themeRoutes.put("/themes/:id/images", async (c) => {
 
 		const formData = await c.req.formData();
 
-		// Handle thumbnail
 		const thumbnailFile = formData.get("thumbnail");
 		let hasThumbnail = theme.has_thumbnail === 1;
 		if (thumbnailFile instanceof File && thumbnailFile.size > 0) {
@@ -312,7 +291,6 @@ themeRoutes.put("/themes/:id/images", async (c) => {
 			hasThumbnail = true;
 		}
 
-		// Handle screenshots — numbered screenshot-0.png, screenshot-1.png, etc.
 		const screenshotFiles: File[] = [];
 		for (const entry of formData.getAll("screenshots")) {
 			if (entry instanceof File && entry.size > 0) {
@@ -341,11 +319,9 @@ themeRoutes.put("/themes/:id/images", async (c) => {
 
 		let screenshotCount = theme.screenshot_count;
 		if (screenshotFiles.length > 0) {
-			// Delete old screenshots
 			for (let i = 0; i < theme.screenshot_count; i++) {
 				await c.env.R2.delete(`themes/${themeId}/screenshots/screenshot-${i}.png`);
 			}
-			// Upload new
 			for (let i = 0; i < screenshotFiles.length; i++) {
 				const file = screenshotFiles[i]!;
 				const data = await file.arrayBuffer();
@@ -367,8 +343,6 @@ themeRoutes.put("/themes/:id/images", async (c) => {
 		return c.json({ error: "Internal server error" }, 500);
 	}
 });
-
-// ── Helpers ─────────────────────────────────────────────────────
 
 function safeJsonParse<T>(value: string | null, fallback: T): T {
 	if (!value) return fallback;

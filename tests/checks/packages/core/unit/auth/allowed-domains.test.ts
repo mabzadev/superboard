@@ -77,14 +77,12 @@ describe("Allowed Domains Management", () => {
 		it("should be case-insensitive for domain lookup (normalizes to lowercase)", async () => {
 			await adapter.createAllowedDomain("example.com", Role.AUTHOR);
 
-			// Lowercase should work
 			const lower = await adapter.getAllowedDomain("example.com");
 			expect(lower).not.toBeNull();
 
-			// Uppercase should also work (domains are normalized to lowercase)
 			const upper = await adapter.getAllowedDomain("EXAMPLE.COM");
 			expect(upper).not.toBeNull();
-			expect(upper?.domain).toBe("example.com"); // stored as lowercase
+			expect(upper?.domain).toBe("example.com");
 		});
 	});
 
@@ -132,12 +130,10 @@ describe("Allowed Domains Management", () => {
 		it("should toggle domain enabled status", async () => {
 			await adapter.createAllowedDomain("toggle.com", Role.AUTHOR);
 
-			// Disable
 			await adapter.updateAllowedDomain("toggle.com", false);
 			let domain = await adapter.getAllowedDomain("toggle.com");
 			expect(domain?.enabled).toBe(false);
 
-			// Re-enable
 			await adapter.updateAllowedDomain("toggle.com", true);
 			domain = await adapter.getAllowedDomain("toggle.com");
 			expect(domain?.enabled).toBe(true);
@@ -176,7 +172,6 @@ describe("Allowed Domains Management", () => {
 			const created = await adapter.createAllowedDomain("timestamp.com", Role.AUTHOR);
 			const originalCreatedAt = created.createdAt;
 
-			// Small delay
 			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			await adapter.updateAllowedDomain("timestamp.com", false, Role.EDITOR);
@@ -210,63 +205,50 @@ describe("Allowed Domains Management", () => {
 		});
 
 		it("should be idempotent (no error on non-existent)", async () => {
-			// Deleting non-existent domain should not throw
 			await expect(adapter.deleteAllowedDomain("nonexistent.com")).resolves.not.toThrow();
 		});
 	});
 
 	describe("Domain Management Flow", () => {
 		it("should support full CRUD flow", async () => {
-			// Create
 			const created = await adapter.createAllowedDomain("company.com", Role.AUTHOR);
 			expect(created.domain).toBe("company.com");
 			expect(created.enabled).toBe(true);
 
-			// Read
 			let domain = await adapter.getAllowedDomain("company.com");
 			expect(domain?.domain).toBe("company.com");
 
-			// Update - change role
 			await adapter.updateAllowedDomain("company.com", true, Role.EDITOR);
 			domain = await adapter.getAllowedDomain("company.com");
 			expect(domain?.defaultRole).toBe(Role.EDITOR);
 
-			// Update - disable
 			await adapter.updateAllowedDomain("company.com", false);
 			domain = await adapter.getAllowedDomain("company.com");
 			expect(domain?.enabled).toBe(false);
 
-			// List
 			const all = await adapter.getAllowedDomains();
 			expect(all).toHaveLength(1);
 
-			// Delete
 			await adapter.deleteAllowedDomain("company.com");
 			domain = await adapter.getAllowedDomain("company.com");
 			expect(domain).toBeNull();
 
-			// List after delete
 			const afterDelete = await adapter.getAllowedDomains();
 			expect(afterDelete).toHaveLength(0);
 		});
 
 		it("should handle multiple domains correctly", async () => {
-			// Create multiple domains
 			await adapter.createAllowedDomain("first.com", Role.SUBSCRIBER);
 			await adapter.createAllowedDomain("second.com", Role.CONTRIBUTOR);
 			await adapter.createAllowedDomain("third.com", Role.AUTHOR);
 
-			// Verify all exist
 			let domains = await adapter.getAllowedDomains();
 			expect(domains).toHaveLength(3);
 
-			// Disable one
 			await adapter.updateAllowedDomain("second.com", false);
 
-			// Delete another
 			await adapter.deleteAllowedDomain("first.com");
 
-			// Verify state
 			domains = await adapter.getAllowedDomains();
 			expect(domains).toHaveLength(2);
 
@@ -285,7 +267,6 @@ describe("Allowed Domains Management", () => {
 			const domain = await adapter.getAllowedDomain("sub.domain.com");
 			expect(domain).not.toBeNull();
 
-			// Parent domain should not match
 			const parent = await adapter.getAllowedDomain("domain.com");
 			expect(parent).toBeNull();
 		});

@@ -1,5 +1,3 @@
-// GitHub webhook signature verification and pull_request event gating.
-
 const encoder = new TextEncoder();
 const NON_HEX = /[^0-9a-fA-F]/;
 
@@ -7,10 +5,6 @@ export function getWebhookDeliveryId(header: string | undefined | null): string 
 	return header?.trim() || null;
 }
 
-/**
- * Verify the `X-Hub-Signature-256` header against the raw request body using
- * the shared webhook secret (HMAC-SHA256). Constant-time comparison.
- */
 export async function verifyWebhookSignature(
 	secret: string,
 	rawBody: string,
@@ -28,7 +22,6 @@ export async function verifyWebhookSignature(
 	if (!provided) return false;
 	const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(rawBody)));
 	if (provided.length !== mac.length) return false;
-	// Workers' built-in constant-time comparison over the raw MAC bytes.
 	return crypto.subtle.timingSafeEqual(provided, mac);
 }
 
@@ -53,11 +46,7 @@ export interface GatedPr {
 
 export type GateDecision = { review: true; pr: GatedPr } | { review: false; reason: string };
 
-// Actions that warrant an auto-review. Deliberately NOT `synchronize`: we don't
-// re-review on every pushed commit (noisy and costly). Re-review after changes
-// is an explicit action via the bot:review label below.
 const REVIEWABLE_ACTIONS = new Set(["opened", "reopened", "ready_for_review"]);
-// Manual trigger (re-review): applying this label to a PR.
 const MANUAL_LABEL = "bot:review";
 
 interface PullRequestEvent {
@@ -75,17 +64,10 @@ interface PullRequestEvent {
 	repository?: { name?: string; owner?: { login?: string } };
 }
 
-/**
- * Decide whether a `pull_request` webhook should trigger a review, and extract
- * the fields the workflow needs. Skips drafts, bot-authored PRs, and our own
- * account to avoid self-review loops.
- */
 export function gatePullRequestEvent(event: PullRequestEvent): GateDecision {
 	const pr = event.pull_request;
 	if (!pr) return { review: false, reason: "no pull_request in payload" };
 
-	// Bot-author guard applies to BOTH auto and manual triggers, so labeling a
-	// bot-authored PR (or emdashbot's own PR) can't kick off a self-review loop.
 	const author = pr.user?.login ?? "";
 	if (author.endsWith("[bot]")) {
 		return { review: false, reason: `author "${author}" is a bot` };

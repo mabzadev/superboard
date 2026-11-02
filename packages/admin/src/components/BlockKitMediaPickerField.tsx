@@ -16,15 +16,6 @@ export interface BlockKitMediaPickerFieldProps {
 	onChange: (actionId: string, value: unknown) => void;
 }
 
-/**
- * Shared media_picker BlockKit element renderer used by `BlockKitFieldWidget`
- * (sandboxed plugin field widgets) and the `BlockKitField` switch inside
- * `PortableTextEditor` (plugin block forms).
- *
- * The stored value is the asset URL string, so values are interchangeable
- * with `text_input`. Existing arbitrary URLs are tolerated but only previewed
- * when they pass scheme/path safety checks.
- */
 export function BlockKitMediaPickerField({
 	actionId,
 	label,
@@ -45,10 +36,6 @@ export function BlockKitMediaPickerField({
 	const canPreview = isSafePreviewUrl(url);
 
 	const handleSelect = (item: MediaItem) => {
-		// `MediaPickerModal` returns URL-inserted items with `id: ""` and no
-		// `provider`/`storageKey`, so we cannot infer "local" from absence of
-		// `provider` alone — that would rewrite the external URL to a broken
-		// `/_emdash/api/media/file/` path. Detect local explicitly.
 		const isLocalMedia = item.provider === "local" || !!item.storageKey;
 		const localKey = item.storageKey || item.id;
 		const nextUrl = isLocalMedia && localKey ? `/_emdash/api/media/file/${localKey}` : item.url;
@@ -145,14 +132,6 @@ export function BlockKitMediaPickerField({
 
 const HAS_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
 
-/**
- * Returns true when `url` is safe to preview via `<img src={url}>`:
- * - Same-origin relative path starting with `/` (but not `//`)
- * - External `http://` or `https://` URL
- *
- * Rejects `javascript:`, `data:`, protocol-relative `//host`, and other
- * schemes whose preview could leak credentials or trigger surprises.
- */
 function isSafePreviewUrl(url: string): boolean {
 	if (!url) return false;
 	if (HAS_SCHEME_RE.test(url)) {

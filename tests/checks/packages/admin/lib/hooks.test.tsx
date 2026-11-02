@@ -5,11 +5,6 @@ import { describe, it, expect, vi } from "vitest";
 import { useStableCallback } from "../../../../../packages/admin/src/lib/hooks";
 import { render } from "../utils/render.tsx";
 
-/**
- * Test component that attaches a keydown listener using useStableCallback.
- * Verifies that re-renders with new callback identities don't cause
- * listener churn, and the latest callback is always invoked.
- */
 function KeydownListener({ onEscape }: { onEscape: () => void }) {
 	const stableOnEscape = useStableCallback(onEscape);
 
@@ -32,17 +27,14 @@ describe("useStableCallback", () => {
 		const screen = await render(<KeydownListener onEscape={first} />);
 		await expect.element(screen.getByTestId("listener")).toBeInTheDocument();
 
-		// First callback should work
 		await userEvent.keyboard("{Escape}");
 		expect(first).toHaveBeenCalledTimes(1);
 
-		// Re-render with a new callback identity
 		await screen.rerender(<KeydownListener onEscape={second} />);
 
-		// Second callback should be called, not the first
 		await userEvent.keyboard("{Escape}");
 		expect(second).toHaveBeenCalledTimes(1);
-		expect(first).toHaveBeenCalledTimes(1); // still just the one from before
+		expect(first).toHaveBeenCalledTimes(1);
 	});
 
 	it("does not add/remove listeners on re-render", async () => {
@@ -57,7 +49,6 @@ describe("useStableCallback", () => {
 			([type]) => type === "keydown",
 		).length;
 
-		// Re-render 3 times with different callback identities
 		for (let i = 0; i < 3; i++) {
 			await screen.rerender(<KeydownListener onEscape={vi.fn()} />);
 		}
@@ -67,7 +58,6 @@ describe("useStableCallback", () => {
 			([type]) => type === "keydown",
 		).length;
 
-		// No new addEventListener/removeEventListener calls for keydown
 		expect(addCountAfterRerenders).toBe(addCountAfterMount);
 		expect(removeCountAfterRerenders).toBe(removeCountAfterMount);
 

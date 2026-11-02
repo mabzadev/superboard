@@ -87,7 +87,6 @@ export function EmailCampaigns({
 				getSubscriberLists(project),
 				getSubscriberSegments(project),
 				getStudioSenders(project),
-				// A/B summaries only decorate the list; campaigns stay usable without them.
 				getAbTests(project).catch(() => [] as AbSummary[]),
 			]),
 		[project],
@@ -105,7 +104,6 @@ export function EmailCampaigns({
 		},
 		[templateId],
 	);
-	/** Opens the editor with the campaign's A/B settings, or none for a new campaign. */
 	const openForm = (value: Partial<EmailCampaign>) => {
 		const test = value.id ? abTests[value.id] : undefined;
 		setAbEnabled(Boolean(test));

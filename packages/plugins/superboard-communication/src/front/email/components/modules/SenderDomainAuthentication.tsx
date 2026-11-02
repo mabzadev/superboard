@@ -28,10 +28,6 @@ const statusClass: Record<string, string> = {
 	unconfigured: "text-muted-foreground",
 };
 
-/**
- * Domain authentication wizard of one sender identity: generates the exact SPF,
- * DKIM, DMARC (and SES MAIL FROM) records, copies them, and verifies their values.
- */
 export function SenderDomainAuthentication({
 	project,
 	profileId,

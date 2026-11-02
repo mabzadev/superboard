@@ -47,11 +47,6 @@ type Release = {
 
 type ReleaseWithSnapshot = Release & { snapshot: FlowRuntimeSnapshot | null };
 
-// Published workflow versions are insert-only (random UUID id, never updated),
-// so their parsed graph can be reused across requests served by this isolate.
-// Draft graphs ("draft:<revision>") are never cached. Cached graphs are shared
-// and must be treated as read-only; callers derive copies via
-// applyTranslationsAndPersonalization or RPC serialization.
 const publishedGraphCacheLimit = 256;
 const publishedGraphCache = new Map<string, FlowGraph>();
 
@@ -75,9 +70,6 @@ function parsePublishedGraph(
 export async function sdkBlocks(request: Request, env: Env): Promise<Response> {
 	const input = parseSdkBlocksRequest(await readJsonObject(request));
 	const context = await sdkContext(request, env, input);
-	// flow_users is not read by release loading, snapshots or the runtime, so
-	// the profile upsert runs concurrently with release loading. It is still
-	// awaited (and its failure still aborts) before any runtime execution.
 	const [releases] = await Promise.all([
 		loadReleases(env, context, input.language),
 		upsertSdkUser(env, context, input.userProperties ?? {}, input.language),
@@ -88,8 +80,6 @@ export async function sdkBlocks(request: Request, env: Env): Promise<Response> {
 	await persistLaunchpadAssignments(env, context, eligible);
 	const blocks = [];
 	const snapshots: FlowRuntimeSnapshot[] = [];
-	// Sequential on purpose: each execute() may reconcile Launchpad capacity in
-	// the same per-user Durable Object, so concurrent executions could race.
 	for (const release of eligible) {
 		const snapshot = await executeRelease(runtime, context, release, {
 			eventId: crypto.randomUUID(),
@@ -485,10 +475,6 @@ async function loadReleases(
 		concurrency_limit: number | null;
 	};
 	type AssignmentRow = { workflow_id: string; group_id: string };
-	// The three reads are independent: one D1 round trip for all of them, in
-	// parallel with the translation lookup. D1 types every batch result with a
-	// single row type, so the intersection lets each result be read as its own
-	// row shape (the same unchecked row typing as `.all<Row>()`).
 	const [batchResults, translations] = await Promise.all([
 		env.DB.batch<ReleaseRow & AssociationRow & AssignmentRow>([
 			env.DB.prepare(
@@ -629,7 +615,6 @@ async function loadSnapshots(
 				if (snapshots[index]) return;
 				const row = byWorkflow.get(release.workflowId);
 				if (!row) return;
-				// version_graph_json only comes from flow_workflow_versions (published).
 				const graph = row.version_graph_json
 					? parsePublishedGraph(
 							{ workflow_version_id: row.workflow_version_id, graph_json: row.version_graph_json },
@@ -826,9 +811,6 @@ async function executeRelease(
 			frequency: release.frequency,
 			migrationStrategy: release.migrationStrategy,
 			userProperties: input.userProperties,
-			// HTTP owns the synchronous trigger traversal below. The Durable Object
-			// only self-orchestrates asynchronous wakes (Delay/Launchpad), otherwise
-			// a target that completes immediately would transition its parent twice.
 			resolveTriggers: false,
 		});
 	} catch (error) {

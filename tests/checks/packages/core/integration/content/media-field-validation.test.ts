@@ -21,7 +21,6 @@ describeEachDialect("save-side media-field MIME validation", (dialect) => {
 	beforeEach(async () => {
 		ctx = await setupForDialect(dialect);
 
-		// Create a posts collection with title and attachment fields
 		const registry = new SchemaRegistry(ctx.db);
 		await registry.createCollection({
 			slug: "posts",
@@ -34,14 +33,12 @@ describeEachDialect("save-side media-field MIME validation", (dialect) => {
 			type: "string",
 		});
 
-		// Look up the collection id
 		const collection = await ctx.db
 			.selectFrom("_emdash_collections")
 			.select("id")
 			.where("slug", "=", "posts")
 			.executeTakeFirstOrThrow();
 
-		// Add a `file` field to posts that allows only PDFs
 		await ctx.db
 			.insertInto("_emdash_fields")
 			.values({
@@ -61,10 +58,8 @@ describeEachDialect("save-side media-field MIME validation", (dialect) => {
 			})
 			.execute();
 
-		// Add the column to ec_posts
 		await ctx.db.schema.alterTable("ec_posts").addColumn("attachment", "text").execute();
 
-		// Seed two media items
 		pdfMediaId = ulid();
 		zipMediaId = ulid();
 		await ctx.db
@@ -219,7 +214,6 @@ describeEachDialect("save-side media-field MIME validation", (dialect) => {
 	});
 
 	it("file/image field without allowedMimeTypes is not validated", async () => {
-		// Insert a second file field with no MIME restrictions (backwards-compat assertion)
 		const collection = await ctx.db
 			.selectFrom("_emdash_collections")
 			.select("id")
@@ -247,9 +241,6 @@ describeEachDialect("save-side media-field MIME validation", (dialect) => {
 
 		await ctx.db.schema.alterTable("ec_posts").addColumn("unconstrained", "text").execute();
 
-		// Attaching a zip to the unconstrained field alongside a valid PDF in the
-		// constrained field — the save should succeed because unconstrained has no
-		// allowedMimeTypes.
 		const result = await handleContentCreate(ctx.db, "posts", {
 			slug: "p5",
 			data: {
@@ -262,7 +253,6 @@ describeEachDialect("save-side media-field MIME validation", (dialect) => {
 	});
 
 	it("local media ID not found in DB returns INVALID_MIME_FOR_FIELD", async () => {
-		// Reference a made-up ULID that doesn't exist in the media table
 		const missingId = ulid();
 		const result = await handleContentCreate(ctx.db, "posts", {
 			slug: "p6",

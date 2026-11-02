@@ -1,10 +1,3 @@
-/**
- * Email Settings API endpoint
- *
- * GET  /_emdash/api/settings/email      — current provider, available providers, middleware
- * POST /_emdash/api/settings/email/test — send a test email through the full pipeline
- */
-
 import { escapeHtml } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 import { z } from "zod";
@@ -20,15 +13,6 @@ const EMAIL_DELIVER_HOOK = "email:deliver";
 const EMAIL_BEFORE_SEND_HOOK = "email:beforeSend";
 const EMAIL_AFTER_SEND_HOOK = "email:afterSend";
 
-/**
- * GET /_emdash/api/settings/email
- *
- * Returns the email configuration state:
- * - Current provider selection
- * - Available providers (plugins with email:deliver)
- * - Active middleware (email:beforeSend / email:afterSend plugins)
- * - Whether email is available
- */
 export const GET: APIRoute = async ({ locals }) => {
 	const { emdash, user } = locals;
 
@@ -43,14 +27,11 @@ export const GET: APIRoute = async ({ locals }) => {
 		const pipeline = emdash.hooks;
 		const optionsRepo = new OptionsRepository(emdash.db);
 
-		// Get email:deliver providers and current selection
 		const providers = pipeline.getExclusiveHookProviders(EMAIL_DELIVER_HOOK);
 		const selectedProviderId = await optionsRepo.get<string>(
 			`emdash:exclusive_hook:${EMAIL_DELIVER_HOOK}`,
 		);
 
-		// Get middleware hooks (beforeSend / afterSend). These are non-exclusive —
-		// many plugins can subscribe — so we enumerate non-exclusive providers.
 		const beforeSendPlugins = pipeline
 			.getHookProviders(EMAIL_BEFORE_SEND_HOOK)
 			.map((p) => p.pluginId);
@@ -74,12 +55,6 @@ export const GET: APIRoute = async ({ locals }) => {
 	}
 };
 
-/**
- * POST /_emdash/api/settings/email/test
- *
- * Send a test email through the full pipeline.
- * Validates the pipeline is configured and the provider works.
- */
 const testEmailBody = z.object({
 	to: z.string().email(),
 });

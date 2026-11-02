@@ -1,50 +1,27 @@
-//
-//  superboardManager.swift
-//
-//  superboard
-//
-
 import Foundation
 import UIKit
 
-/// A closure used for completion handlers returning boolean values.
 public typealias SuperBoardBoolCompletion = (_ value: Bool) -> Void
 
-/// A manager class responsible for integrating the SuperBoard SDK into the application.
 class SuperBoardManager {
-
-    // MARK: - Constants
 
     private struct Constants {
         static let deviceIDKey = "linkdsquare_device_id"
         static let maxQueuedActions = 1000
     }
 
-    // MARK: - Thread Safety
-
-    /// Asserts that the current code is executing on the main thread.
-    /// SuperBoardManager is main-thread-only by design: all public entry points
-    /// are dispatched via `SuperBoard.onMain`, and all API/notification callbacks
-    /// are delivered on the main thread.
     private func assertMainThread(_ function: StaticString = #function) {
         assert(Thread.isMainThread, "SuperBoardManager.\(function) must be called on the main thread")
     }
 
-    // MARK: - Properties
-
-    /// The API service instance responsible for communication with the SuperBoard backend.
     private var apiService: APIService
 
-    /// The API key used for authenticating requests to the SuperBoard backend.
     private let apiKey: String
 
-    /// The bundle ID of the application.
     private let bundleID: String
 
-    /// A flag indicating whether the SuperBoard SDK is enabled.
     private var enabled = true
 
-    /// A flag indicating whether the user is authenticated with the SuperBoard backend.
     private var authenticated = false {
         didSet {
             authenticationChanged()
@@ -52,38 +29,28 @@ class SuperBoardManager {
         }
     }
 
-    /// The URL to handle, used when the user is not authenticated yet.
     private var urlToHandle: String?
 
-    /// The handler for various events related to SuperBoard events.
     private let eventsHandler: EventsHandler
 
-    /// Handler for payment events
     private let paymentEventsHandler: PaymentEventsHandler
 
-    /// Stores the payloads received since the startup
     private var receivedPayloads = [[String: Any]]()
 
-    /// Stores weather the app or scene delegates were called
     private var handledAppOrSceneDelegates = false {
         didSet {
             self.eventsHandler.handledAppOrSceneDelegates = handledAppOrSceneDelegates
         }
     }
 
-    /// Closures to be called for the last payload
     private var lastPayloadClosureArray = [SuperBoardPayloadClosure]()
 
-    /// Closures to be called for the payloads
     private var payloadsClosureArray = [SuperBoardPayloadsClosure]()
 
-    /// Stores if attributes needs to be updated after auth
     private var shouldUpdateAttributes = false
 
-    /// The delegate for the SuperBoardManager, allowing customization and handling of SuperBoard events.
     weak var delegate: SuperBoardDelegate?
 
-    /// The identifier for the current user, normally a userID. This will be visible in the SuperBoard dashboard.
     var identifier: String? {
         set {
             Context.identifier = newValue
@@ -94,7 +61,6 @@ class SuperBoardManager {
         }
     }
 
-    /// The attributes for the current user. This will be visible in the SuperBoard dashboard.
     var attributes: [String: Any]? {
         set {
             Context.attributes = newValue
@@ -105,9 +71,6 @@ class SuperBoardManager {
         }
     }
 
-    /// A property representing the push notification token.
-    ///
-    /// This token is used for identifying the device to receive push notifications.
     var pushToken: String? {
         set {
             Context.pushToken = newValue
@@ -124,14 +87,6 @@ class SuperBoardManager {
     private var actions = [SuperBoardAction]()
     private var handlingURL = false
 
-    // MARK: - Initialization
-
-    /// Initializes the SuperBoardManager with the provided API key and delegate.
-    ///
-    /// - Parameters:
-    ///   - apiKey: The API key for authentication with the SuperBoard backend.
-    ///   - useTestEnvironment: If the test environment should be used
-    ///   - delegate: The delegate for the SuperBoardManager.
     init(apiKey: String, useTestEnvironment: Bool, baseURL: String? = nil, delegate: SuperBoardDelegate?) {
         self.apiKey = apiKey
         self.bundleID = AppDetailsHelper.getBundleID()
@@ -147,36 +102,15 @@ class SuperBoardManager {
         NotificationCenter.default.removeObserver(self)
     }
 
-    // MARK: - Public Methods
-
-    /// Enables or disables the SuperBoard SDK.
-    ///
-    /// - Parameter enabled: A flag indicating whether the SDK should be enabled.
     func setEnabled(_ enabled: Bool) {
         assertMainThread()
         self.enabled = enabled
         DebugLogger.shared.log(.info, "SDK setEnabled to: \(enabled)")
     }
 
-    /// Starts the SuperBoardManager.
     func start() {
-        // Implementation for starting the SuperBoardManager, if needed.
     }
 
-    /// Generates a link with the provided parameters.
-    ///
-    /// - Parameters:
-    ///   - title: The title of the link.
-    ///   - subtitle: The subtitle of the link.
-    ///   - imageURL: The URL of the image associated with the link.
-    ///   - data: Additional data to include in the link.
-    ///   - tags: Tags for the link.
-    ///   - showPreviewiOS: Override the default app preview for a link for iOS.
-    ///   - showPreviewAndroid: Override the default app preview for a link for Android.
-    ///   - trackingCampaign: The campaign name for tracking purposes (e.g. `"BlackFriday2025"`).
-    ///   - trackingSource: The traffic source (e.g. `"instagram"`, `"newsletter"`).
-    ///   - trackingMedium: The medium used for the campaign (e.g. `"cpc"`, `"email"`, `"social"`).
-    ///   - completion: A closure to be called upon completion of link generation.
     func generateLink(title: String?,
                       subtitle: String?,
                       imageURL: String?,
@@ -247,11 +181,6 @@ class SuperBoardManager {
         completion(nil)
     }
 
-    /// Adds a closure to receive the last payload data.
-    ///
-    /// This method appends the provided closure to an array of closures that will be invoked when the last payload data is received. It then checks if payloads have been received and invokes the appropriate handler to process them.
-    ///
-    /// - Parameter completion: A closure that takes a dictionary representing the payload data as its parameter.
     func getLastPayload(completion: @escaping SuperBoardPayloadClosure) {
         assertMainThread()
         lastPayloadClosureArray.append(completion)
@@ -259,11 +188,6 @@ class SuperBoardManager {
         handlePayloadsReceivedIfNeeded()
     }
 
-    /// Adds a closure to receive all payloads received since startup.
-    ///
-    /// This method appends the provided closure to an array of closures that will be invoked when all payloads received since startup are available. It then checks if payloads have been received and invokes the appropriate handler to process them.
-    ///
-    /// - Parameter completion: A closure that takes an array of dictionaries, each representing a payload data, as its parameter.
     func getAllPayloadsSinceStartup(completion: @escaping SuperBoardPayloadsClosure) {
         assertMainThread()
         payloadsClosureArray.append(completion)
@@ -271,9 +195,6 @@ class SuperBoardManager {
         handlePayloadsReceivedIfNeeded()
     }
 
-    /// Authenticates the user with the SuperBoard backend.
-    ///
-    /// - Parameter completion: A closure called upon completion of authentication, providing a boolean value indicating success.
     func authenticate(completion: @escaping SuperBoardBoolCompletion) {
         assertMainThread()
         guard hasURISchemesConfigured() else {
@@ -282,9 +203,7 @@ class SuperBoardManager {
             return
         }
 
-        // Fetch the user agent
         handleUserAgent {
-            // Handle app details
             self.apiService.authenticate(appDetails: AppDetailsHelper.getAppDetails()) { success, linksquaredID, uriScheme, identifier, attributes in
                 guard let linksquaredID = linksquaredID, let uriScheme = uriScheme, success else {
                     self.authenticated = false
@@ -295,7 +214,6 @@ class SuperBoardManager {
 
                 Context.linksquaredID = linksquaredID
 
-                // Update context attributes if needed
                 if !self.shouldUpdateAttributes {
                     Context.identifier = identifier
                     Context.attributes = attributes
@@ -312,11 +230,6 @@ class SuperBoardManager {
             }
         }
     }
-    /// Retrieves notifications for a specified page.
-    ///
-    /// - Parameters:
-    ///   - page: The page number of notifications to retrieve. This allows for pagination of notifications.
-    ///   - completion: A closure that will be called with an array of notifications when the request completes.
     func getNotifications(page: Int, completion: @escaping SuperBoardNotificationsClosure) {
         guard authenticated else {
             let action = SuperBoardAction(mainBlock: {
@@ -329,12 +242,9 @@ class SuperBoardManager {
             return
         }
 
-        apiService.notifications(page: page, completion: completion) // Delegates the call to the API service.
+        apiService.notifications(page: page, completion: completion)
     }
 
-    /// Retrieves the number of unread notifications.
-    ///
-    /// - Parameter completion: A closure that will be called with the count of unread notifications, or `nil` if the request fails.
     func getNumberOfUnreadNotifications(completion: @escaping SuperBoardIntClosure) {
         guard authenticated else {
             let action = SuperBoardAction(mainBlock: {
@@ -347,13 +257,9 @@ class SuperBoardManager {
             return
         }
 
-        apiService.numberOfUnreadNotifications(completion: completion) // Delegates the call to the API service.
+        apiService.numberOfUnreadNotifications(completion: completion)
     }
 
-    /// Displays the messages view controller modally.
-    ///
-    /// - This method initializes a `UINavigationController` without a navigation bar,
-    ///   sets up a `MessagesViewController`, and presents it on top of the current view hierarchy.
     func displayMessagesViewController(completion: SuperBoardEmptyClosure?) {
         guard authenticated else {
             let action = SuperBoardAction(mainBlock: {
@@ -366,26 +272,21 @@ class SuperBoardManager {
             return
         }
 
-        let nav = UINavigationController() // Creates a new navigation controller.
-        nav.navigationBar.isHidden = true // Hides the navigation bar for the messages view.
+        let nav = UINavigationController()
+        nav.navigationBar.isHidden = true
 
-        if let vc = MessagesViewController.loadVCFromNib()  { // Initializes the messages view controller.
-            vc.manager = self // Assigns the manager to the view controller for handling notifications.
+        if let vc = MessagesViewController.loadVCFromNib()  {
+            vc.manager = self
             vc.dismissalDelegate = DismissalDelegate.shared
 
-            nav.viewControllers = [vc] // Sets the messages view controller as the root of the navigation controller.
+            nav.viewControllers = [vc]
             nav.presentationController?.delegate = DismissalDelegate.shared
             DismissalDelegate.shared.completion = completion
 
-            Presenter.presentOnTop(nav) // Presents the navigation controller on top of the current view.
+            Presenter.presentOnTop(nav)
         }
     }
 
-    /// Marks a specific notification as read.
-    ///
-    /// - Parameters:
-    ///   - notificationID: The unique identifier of the notification to mark as read.
-    ///   - completion: A closure that will be called with a boolean indicating the success or failure of the operation.
     func markNotificationAsRead(notificationID: Int, completion: @escaping SuperBoardBoolCompletion) {
         guard authenticated else {
             let action = SuperBoardAction(mainBlock: {
@@ -398,15 +299,9 @@ class SuperBoardManager {
             return
         }
 
-        apiService.markNotificationAsRead(notificationID: notificationID, completion: completion) // Delegates the call to the API service.
+        apiService.markNotificationAsRead(notificationID: notificationID, completion: completion)
     }
 
-    /// Fetches details for a SuperBoard link generated by the SDK in the current environment.
-    ///
-    /// - Parameter path:
-    ///   The path component of a link previously generated by the SDK (in the selected environment).
-    /// - Parameter completion:
-    ///   A closure that is called with a dictionary of link details on success, or `nil` if the request fails.
     func getLinkDetails(path: String, completion: @escaping SuperBoardLinkClosure) {
         guard authenticated else {
             let action = SuperBoardAction(mainBlock: {
@@ -423,30 +318,19 @@ class SuperBoardManager {
     }
 
 
-    // MARK: - App Lifecycle
-
-    /// Called when the application becomes active.
     @objc func applicationDidBecomeActive() {
         getDataForDevice()
     }
 
     @objc func applicationWillResignActive() {
-        // Implementation for handling application resigning active state, if needed.
     }
 
-    // MARK: - Internal Methods
-
-    /// Checks if URI schemes are configured in the Info.plist.
-    ///
-    /// - Returns: A Boolean value indicating whether URI schemes are configured.
     func hasURISchemesConfigured() -> Bool {
         guard let urlTypes = Bundle.main.infoDictionary?["CFBundleURLTypes"] as? [[String: Any]] else {
             return false
         }
         return !urlTypes.isEmpty
     }
-
-    // MARK: - Private Methods
 
     private func updateAttributesIfNeeded() {
         if !authenticated {
@@ -564,13 +448,11 @@ class SuperBoardManager {
     }
 
     private func automaticallyDisplayNotifications(notifications: [SuperBoardNotification]) {
-        // Process each notification one by one
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let self else { return }
             for notification in notifications {
                 self.notificationsDisplayDispatchGroup.enter()
 
-                // Display each notification sequentially
                 self.displayNotification(notification: notification) { [weak self] in
                     self?.notificationsDisplayDispatchGroup.leave()
                 }
@@ -581,7 +463,6 @@ class SuperBoardManager {
     }
 
     private func displayNotification(notification: SuperBoardNotification, completion: @escaping SuperBoardEmptyClosure) {
-        // Ensure that the presentation happens on the main thread
         DispatchQueue.main.async { [weak self] in
             guard let self else {
                 completion()
@@ -634,8 +515,6 @@ class SuperBoardManager {
     }
 }
 
-// MARK: - Scene Delegate Handler
-
 extension SuperBoardManager {
 
     @available(iOS 13.0, *)
@@ -669,8 +548,6 @@ extension SuperBoardManager {
     }
 }
 
-// MARK: - App Delegate Handler
-
 extension SuperBoardManager {
 
     func handleAppDelegate(continue userActivity: NSUserActivity,
@@ -696,42 +573,29 @@ extension SuperBoardManager {
     }
 }
 
-// MARK: - URI Schemes Configuration
-
 extension SuperBoardManager {
 
-    /// Checks if a specific URI scheme is properly configured in the app's Info.plist.
-    ///
-    /// - Parameter uriScheme: The URI scheme to check.
     func checkIfURISchemeProperlySet(uriScheme: String) {
-        // Retrieve the URL types from the Info.plist.
         guard let urlTypes = Bundle.main.infoDictionary?["CFBundleURLTypes"] as? [[String: Any]] else {
             return
         }
 
         let parsedSchema = uriScheme.replacingOccurrences(of: "://", with: "")
 
-        // Iterate through the URL types to find the specified URI scheme.
         for urlType in urlTypes {
             if let role = urlType["CFBundleTypeRole"] as? String, let schemes = urlType["CFBundleURLSchemes"] as? [String], role == "Editor" {
                 if schemes.contains(parsedSchema) {
-                    // If the URI scheme is found, log success and return.
                     DebugLogger.shared.log(.info, "URL Scheme properly configured.")
                     return
                 }
             }
         }
 
-        // Log an error if the URI scheme is not properly configured.
         DebugLogger.shared.log(.error, "There's a mismatch between the URL Scheme in the project and the one from the dashboard, deeplinking won't function properly!")
     }
 }
 
-// Purchase events
-
 extension SuperBoardManager {
-    /// Logs an event and sends it to the backend.
-    /// - Parameter event: The event to log
     func logInAppPurchase(transactionID: UInt64, completion: @escaping SuperBoardBoolCompletion) {
         guard authenticated else {
             let action = SuperBoardAction(mainBlock: {
@@ -747,15 +611,6 @@ extension SuperBoardManager {
         paymentEventsHandler.logInAppPurchase(transactionID: transactionID, completion: completion)
     }
 
-    /// Logs a custom purchase transaction and sends it to the backend.
-    ///
-    /// - Parameters:
-    ///   - type: The type of transaction (e.g., purchase, refund).
-    ///   - priceInCents: The price of the transaction in cents.
-    ///   - currency: The currency of the transaction (e.g., "USD").
-    ///   - productID: An product identifier (e.g. "com.acme.weather.consumable.coins.100").
-    ///   - startDate: An optional start date for the transaction. Defaults to the current date if not provided.
-    ///   - completion: A closure that gets called once the transaction is processed.
     func logCustomPurchase(type: TransactionType, priceInCents: Int, currency: String, productID: String, startDate: Date? = nil, completion: @escaping SuperBoardBoolCompletion) {
         guard authenticated else {
             let action = SuperBoardAction(mainBlock: {

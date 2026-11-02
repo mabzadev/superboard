@@ -276,9 +276,6 @@ describe("PortableText → ProseMirror: nested list level", () => {
 	});
 
 	it("does not flatten level=2 siblings into a top-level number list", () => {
-		// Regression for the outer-loop run grouping: a number block at level=2
-		// must be folded into its parent bullet's run, not start a new top-level
-		// orderedList.
 		const result = _portableTextToProsemirror([
 			pt("bullet", 1, "Parent"),
 			pt("number", 2, "Numbered child"),
@@ -314,11 +311,6 @@ describe("PortableText → ProseMirror: nested list level", () => {
 	});
 
 	it("keeps deeper nesting under its true parent for mixed-type 3-level trees", () => {
-		// Regression for convertPTListItem's nested grouping: it used to
-		// break the group on every `listItem` change regardless of depth,
-		// so a level-3 block ended up as a sibling sub-list under the
-		// level-1 item instead of nesting under the matching level-2 item
-		// — and the round-trip would degrade level-3 to level-2.
 		const original = [
 			pt("bullet", 1, "A"),
 			pt("number", 2, "B"),
@@ -342,7 +334,6 @@ describe("PortableText → ProseMirror: nested list level", () => {
 		expect(cInBullets?.type).toBe("bulletList");
 		expect(getParagraphText(cInBullets!.content[0]!)).toBe("C");
 
-		// Round-trip must keep C at level 3, not collapse it to level 2.
 		const roundTripped = _prosemirrorToPortableText(pm).filter(
 			(b): b is (typeof original)[number] =>
 				typeof b === "object" && b !== null && (b as { _type?: string })._type === "block",

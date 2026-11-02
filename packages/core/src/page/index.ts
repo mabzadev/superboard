@@ -1,10 +1,3 @@
-/**
- * emdash/page — Public page contribution API
- *
- * Template integration points for plugin-driven head metadata
- * and trusted body fragments.
- */
-
 import type {
 	PublicPageContext,
 	PageMetadataContribution,
@@ -27,19 +20,11 @@ export { resolveFragments, renderFragments } from "./fragments.js";
 export { generateBaseSeoContributions, generateSiteSeoContributions } from "./seo-contributions.js";
 export { cleanJsonLd, buildBlogPostingJsonLd, buildWebSiteJsonLd } from "./jsonld.js";
 
-/**
- * Shape of the EmDash runtime methods used by the render components.
- * Extracted here so all three components share a single type definition.
- */
 export interface EmDashPageRuntime {
 	collectPageMetadata: (page: PublicPageContext) => Promise<PageMetadataContribution[]>;
 	collectPageFragments: (page: PublicPageContext) => Promise<PageFragmentContribution[]>;
 }
 
-/**
- * Get the page runtime from Astro locals. Returns undefined when
- * EmDash is not initialized (components render nothing in that case).
- */
 export function getPageRuntime(locals: Record<string, unknown>): EmDashPageRuntime | undefined {
 	const emdash = locals.emdash;
 	if (
@@ -53,6 +38,3 @@ export function getPageRuntime(locals: Record<string, unknown>): EmDashPageRunti
 	}
 	return undefined;
 }
-
-// Astro render components are exported from "emdash/ui":
-//   import { EmDashHead, EmDashBodyStart, EmDashBodyEnd } from "emdash/ui";

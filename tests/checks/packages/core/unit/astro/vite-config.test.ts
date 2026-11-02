@@ -116,12 +116,6 @@ describe("createViteConfig use-sync-external-store shim aliasing", () => {
 		return alias.replacement;
 	}
 
-	// Regression: with pnpm + React 18+, @tiptap/react pulls in
-	// `use-sync-external-store/shim` (CJS). Vite can't pre-bundle from the
-	// virtual store, so browsers get raw CJS and InlinePortableTextEditor
-	// fails to hydrate. The aliases redirect the shim to ESM files that use
-	// React's built-in hook without loading the warning-only package main
-	// entry on React 18+.
 	for (const adapter of ["@astrojs/node", "@astrojs/cloudflare"] as const) {
 		it(`redirects use-sync-external-store/shim to React-backed ESM shim files on ${adapter}`, () => {
 			const config = buildConfig(adapter);

@@ -5,9 +5,6 @@ import * as React from "react";
 
 import { useTheme } from "./ThemeProvider";
 
-/**
- * Theme toggle button that cycles through: system -> light -> dark
- */
 export function ThemeToggle() {
 	const { t } = useLingui();
 	const { theme, setTheme, resolvedTheme } = useTheme();

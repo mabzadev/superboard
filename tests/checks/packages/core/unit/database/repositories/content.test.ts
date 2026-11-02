@@ -8,7 +8,6 @@ import type { Database } from "../../../../../../../packages/core/src/database/t
 import { createPostFixture, createPageFixture } from "../../../utils/fixtures.js";
 import { setupTestDatabaseWithCollections, teardownTestDatabase } from "../../../utils/test-db.js";
 
-// Regex patterns for ID validation
 const ULID_FORMAT_REGEX = /^[0-9A-Z]+$/i;
 
 describe("ContentRepository", () => {
@@ -41,9 +40,7 @@ describe("ContentRepository", () => {
 			const input = createPostFixture();
 			const result = await repo.create(input);
 
-			// ULID is 26 characters long
 			expect(result.id).toHaveLength(26);
-			// ULID starts with timestamp (base32) - should be alphanumeric
 			expect(result.id).toMatch(ULID_FORMAT_REGEX);
 		});
 
@@ -193,17 +190,14 @@ describe("ContentRepository", () => {
 		});
 
 		it("should support cursor pagination", async () => {
-			// Create multiple posts
 			for (let i = 1; i <= 5; i++) {
 				await repo.create(createPostFixture({ slug: `post-${i}` }));
 			}
 
-			// First page
 			const page1 = await repo.findMany("post", { limit: 2 });
 			expect(page1.items).toHaveLength(2);
 			expect(page1.nextCursor).toBeTruthy();
 
-			// Second page
 			const page2 = await repo.findMany("post", {
 				limit: 2,
 				cursor: page1.nextCursor,
@@ -211,26 +205,21 @@ describe("ContentRepository", () => {
 			expect(page2.items).toHaveLength(2);
 			expect(page2.nextCursor).toBeTruthy();
 
-			// Verify no overlap
 			const page1Ids = page1.items.map((i) => i.id);
 			const page2Ids = page2.items.map((i) => i.id);
 			expect(page1Ids).not.toContain(page2Ids[0]);
 		});
 
 		it("should support ordering", async () => {
-			// Create posts with specific dates
 			const post1 = await repo.create(createPostFixture({ slug: "old-post" }));
-			// Wait a bit to ensure different timestamps
 			await new Promise((resolve) => setTimeout(resolve, 10));
 			const post2 = await repo.create(createPostFixture({ slug: "new-post" }));
 
-			// Default order (desc by createdAt)
 			const resultDesc = await repo.findMany("post", {
 				orderBy: { field: "createdAt", direction: "desc" },
 			});
 			expect(resultDesc.items[0].id).toBe(post2.id);
 
-			// Ascending order
 			const resultAsc = await repo.findMany("post", {
 				orderBy: { field: "createdAt", direction: "asc" },
 			});
@@ -309,7 +298,6 @@ describe("ContentRepository", () => {
 			const input = createPostFixture();
 			const created = await repo.create(input);
 
-			// Wait a bit to ensure different timestamp
 			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			const updated = await repo.update("post", created.id, {
@@ -350,7 +338,6 @@ describe("ContentRepository", () => {
 
 			expect(result).toBe(true);
 
-			// Verify content is not returned by findById
 			const found = await repo.findById("post", created.id);
 			expect(found).toBeNull();
 		});
@@ -526,7 +513,6 @@ describe("ContentRepository", () => {
 	});
 
 	describe("publish() staged slug conflict (#2034)", () => {
-		/** Stage a slug edit the way the runtime does: as `_slug` in a draft revision. */
 		async function stageSlug(entryId: string, data: Record<string, unknown>, newSlug: string) {
 			const revisionRepo = new RevisionRepository(db);
 			const draft = await revisionRepo.create({
@@ -546,7 +532,6 @@ describe("ContentRepository", () => {
 
 			expect(error).toBeInstanceOf(EmDashValidationError);
 			expect((error as Error).message).toContain("taken");
-			// The live row must be untouched — no partial publish.
 			const after = await repo.findById("post", post.id);
 			expect(after?.slug).toBe("mine");
 			expect(after?.status).toBe("draft");
@@ -607,7 +592,6 @@ describe("ContentRepository", () => {
 	describe("findReadyToPublish()", () => {
 		it("should find scheduled drafts past their time", async () => {
 			const post = await repo.create(createPostFixture());
-			// Schedule in the past by directly updating (schedule() rejects past dates)
 			const past = new Date(Date.now() - 60_000).toISOString();
 			await repo.update("post", post.id, { status: "scheduled", scheduledAt: past });
 
@@ -620,7 +604,6 @@ describe("ContentRepository", () => {
 		it("should find published posts with past scheduled_at", async () => {
 			const post = await repo.create(createPostFixture());
 			await repo.publish("post", post.id);
-			// Set scheduled_at in the past directly
 			const past = new Date(Date.now() - 60_000).toISOString();
 			await repo.update("post", post.id, { scheduledAt: past });
 
@@ -643,18 +626,15 @@ describe("ContentRepository", () => {
 
 	describe("countScheduled()", () => {
 		it("should count both scheduled drafts and published posts with scheduled_at", async () => {
-			// Draft with schedule
 			const draft = await repo.create(createPostFixture({ slug: "draft-scheduled" }));
 			const future1 = new Date(Date.now() + 86_400_000).toISOString();
 			await repo.schedule("post", draft.id, future1);
 
-			// Published with schedule
 			const pub = await repo.create(createPostFixture({ slug: "pub-scheduled" }));
 			await repo.publish("post", pub.id);
 			const future2 = new Date(Date.now() + 172_800_000).toISOString();
 			await repo.schedule("post", pub.id, future2);
 
-			// Unscheduled draft (should not be counted)
 			await repo.create(createPostFixture({ slug: "plain-draft" }));
 
 			const count = await repo.countScheduled("post");

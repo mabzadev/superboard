@@ -1,9 +1,3 @@
-/**
- * Search rebuild endpoint - Rebuild FTS index
- *
- * POST /_emdash/api/search/rebuild
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -14,12 +8,6 @@ import { FTSManager } from "#search/index.js";
 
 export const prerender = false;
 
-/**
- * Rebuild the search index for a collection
- *
- * Body:
- * - collection: Collection slug to rebuild (required)
- */
 export const POST: APIRoute = async ({ request, locals }) => {
 	const { emdash, user } = locals;
 
@@ -36,7 +24,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	const ftsManager = new FTSManager(emdash.db);
 
 	try {
-		// Get search config for the collection
 		const config = await ftsManager.getSearchConfig(body.collection);
 		if (!config?.enabled) {
 			return apiError(
@@ -46,7 +33,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			);
 		}
 
-		// Get searchable fields
 		const searchableFields = await ftsManager.getSearchableFields(body.collection);
 		if (searchableFields.length === 0) {
 			return apiError(
@@ -56,7 +42,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			);
 		}
 
-		// Rebuild the index
 		await ftsManager.rebuildIndex(
 			body.collection,
 			searchableFields,
@@ -64,7 +49,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			config.tokenize,
 		);
 
-		// Get stats after rebuild
 		const stats = await ftsManager.getIndexStats(body.collection);
 
 		return apiSuccess({

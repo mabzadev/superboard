@@ -59,16 +59,14 @@ describe("image field", () => {
 		const required = image({ required: true });
 		const optional = image({ required: false });
 
-		// Required should reject undefined
 		expect(() => required.schema.parse(undefined)).toThrow();
 
-		// Optional should accept undefined
 		expect(() => optional.schema.parse(undefined)).not.toThrow();
 	});
 
 	it("should store options", () => {
 		const field = image({
-			maxSize: 5 * 1024 * 1024, // 5MB
+			maxSize: 5 * 1024 * 1024,
 			allowedTypes: ["image/jpeg", "image/png"],
 		});
 

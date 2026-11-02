@@ -19,7 +19,6 @@ import {
 
 const ASTRO_COOKIES_SYMBOL = Symbol.for("astro.cookies");
 
-/** Wrap inside an ALS frame carrying `metrics`, the way middleware does. */
 function wrapInContext(
 	response: Response,
 	metrics: RequestMetrics,
@@ -30,7 +29,6 @@ function wrapInContext(
 	);
 }
 
-/** Collect every console.log line that carries the stream-end prefix. */
 function captureStreamEndLines(): { lines: string[]; spy: ReturnType<typeof vi.spyOn> } {
 	const lines: string[] = [];
 	const spy = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
@@ -45,7 +43,6 @@ function parseSnapshot(line: string): Record<string, unknown> {
 	return JSON.parse(line.slice(STREAM_END_PREFIX.length + 1)) as Record<string, unknown>;
 }
 
-/** Collect every console.log line that carries the query-log prefix. */
 function captureQueryLogLines(): { lines: string[]; spy: ReturnType<typeof vi.spyOn> } {
 	const lines: string[] = [];
 	const spy = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
@@ -82,7 +79,6 @@ describe("wrapBodyForStreamMetrics", () => {
 
 	it("returns the response unchanged when no request metrics are attached", () => {
 		const response = new Response("hello");
-		// No ALS frame at all — e.g. a code path outside middleware.
 		const wrapped = wrapBodyForStreamMetrics(response);
 		expect(wrapped).toBe(response);
 	});
@@ -108,7 +104,6 @@ describe("wrapBodyForStreamMetrics", () => {
 	it("snapshots metrics at stream end, including queries recorded after headers", async () => {
 		const { lines } = captureStreamEndLines();
 		const metrics = createRequestMetrics(performance.now());
-		// State at "headers sent" time: one query.
 		metrics.dbCount = 1;
 		metrics.dbTotalMs = 3;
 		metrics.dbFirstOffset = 1;
@@ -116,15 +111,13 @@ describe("wrapBodyForStreamMetrics", () => {
 
 		const wrapped = wrapInContext(new Response("streamed page"), metrics);
 
-		// Simulate the Kysely log hook firing during body streaming: the
-		// metrics object is mutated in-place after the response was wrapped.
 		metrics.dbCount = 7;
 		metrics.dbTotalMs = 120.5;
 		metrics.dbLastOffset = 250;
 		metrics.cacheHits = 3;
 		metrics.cacheMisses = 2;
 
-		expect(lines).toHaveLength(0); // nothing emitted before the body drains
+		expect(lines).toHaveLength(0);
 		await wrapped.text();
 		expect(lines).toHaveLength(1);
 
@@ -161,26 +154,21 @@ describe("wrapBodyForStreamMetrics", () => {
 		const { lines } = captureQueryLogLines();
 		const metrics = createRequestMetrics(performance.now());
 		const recorder = createRecorder("/posts/example", "GET", "cold");
-		// One query before headers are sent (frontmatter phase).
 		recordEvent(recorder, "select 1", [], 1);
 
 		const wrapped = wrapInContext(new Response("streamed page"), metrics, {
 			queryRecorder: recorder,
 		});
 
-		// Wrapping claims the flush so the middleware fallback leaves it to us.
 		expect(recorder.deferredFlush).toBe(true);
 
-		// Two more queries issued by components while the body streams.
 		recordEvent(recorder, "select 2", [], 1);
 		recordEvent(recorder, "select 3", [], 1);
 
-		// Nothing emitted before the body drains.
 		expect(lines).toHaveLength(0);
 
 		await wrapped.text();
 
-		// All three queries are emitted, including the post-header ones.
 		expect(lines).toHaveLength(3);
 		expect(lines.some((l) => l.includes("select 2"))).toBe(true);
 		expect(lines.some((l) => l.includes("select 3"))).toBe(true);
@@ -196,7 +184,6 @@ describe("wrapBodyForStreamMetrics", () => {
 		await wrapped.text();
 		expect(lines).toHaveLength(1);
 
-		// A late fallback flush (e.g. the middleware finally) must no-op.
 		flushRecorder(recorder);
 		expect(lines).toHaveLength(1);
 	});

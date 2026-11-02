@@ -326,7 +326,6 @@ test("websocket disconnect closes the current socket and cancels a pending recon
 	t.mock.timers.tick(200_000);
 	assert.equal(sockets.length, 3, "a pending reconnect is cancelled by disconnect");
 
-	// Each connection owns its backoff: a fresh connection starts at the first delay.
 	websocket(props);
 	sockets[3].dispatchEvent(new Event("close"));
 	t.mock.timers.tick(1000);

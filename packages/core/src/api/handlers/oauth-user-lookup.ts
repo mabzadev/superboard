@@ -1,11 +1,3 @@
-/**
- * Shared user lookup for OAuth token operations.
- *
- * Extracts user role and disabled status from the database. Used by
- * handleTokenRefresh() to revalidate scopes against the user's current
- * role and reject disabled users.
- */
-
 import { toRoleLevel, type RoleLevel } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 
@@ -16,10 +8,6 @@ export interface UserRoleAndStatus {
 	disabled: boolean;
 }
 
-/**
- * Look up a user's current role and disabled status.
- * Returns null if the user doesn't exist.
- */
 export async function lookupUserRoleAndStatus(
 	db: Kysely<Database>,
 	userId: string,

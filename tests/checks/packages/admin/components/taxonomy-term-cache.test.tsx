@@ -39,7 +39,6 @@ function dataResponse(data: unknown) {
 	);
 }
 
-/** Mirrors the endpoint: counts unless the caller opts out. */
 function mockApiFetch() {
 	vi.mocked(apiFetch).mockImplementation((url: string | URL | Request, init?: RequestInit) => {
 		const urlString = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
@@ -62,8 +61,6 @@ function mockApiFetch() {
 }
 
 function makeWrapper() {
-	// staleTime mirrors App.tsx: inside that window a mounting consumer is served
-	// the cached list without refetching.
 	const queryClient = new QueryClient({
 		defaultOptions: {
 			queries: { retry: false, staleTime: 1000 * 60 },
@@ -79,8 +76,6 @@ function makeWrapper() {
 	};
 }
 
-/** The editor sidebar renders first; the settings page mounts afterwards, as it
- * would when the user navigates to it in the same SPA session. */
 function EditorThenSettings() {
 	const [settingsOpen, setSettingsOpen] = React.useState(false);
 	return (

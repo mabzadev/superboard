@@ -57,9 +57,9 @@ describe("useSetupProgress", () => {
 			expect(result.current.walkedSteps.size).toBe(2);
 		});
 
-		expect(result.current.walkedSteps.has(0)).toBe(true); // step_a -> index 0
-		expect(result.current.walkedSteps.has(1)).toBe(false); // step_b not completed
-		expect(result.current.walkedSteps.has(2)).toBe(true); // step_c -> index 2
+		expect(result.current.walkedSteps.has(0)).toBe(true);
+		expect(result.current.walkedSteps.has(1)).toBe(false);
+		expect(result.current.walkedSteps.has(2)).toBe(true);
 	});
 
 	it("passes instanceId and category to the API call", async () => {
@@ -88,7 +88,7 @@ describe("useSetupProgress", () => {
 			expect(result.current.walkedSteps.size).toBe(1);
 		});
 
-		expect(result.current.walkedSteps.has(1)).toBe(true); // step_b -> index 1
+		expect(result.current.walkedSteps.has(1)).toBe(true);
 	});
 
 	it("handles API error silently", async () => {
@@ -96,7 +96,6 @@ describe("useSetupProgress", () => {
 
 		const { result } = renderHook(() => useSetupProgress("inst-1", "ios", identifiers));
 
-		// Wait a tick for the async effect to settle
 		await waitFor(() => {
 			expect(mockedGetSetupProgress).toHaveBeenCalled();
 		});
@@ -170,9 +169,7 @@ describe("useSetupProgress", () => {
 				result.current.markStepComplete(0);
 			});
 
-			// Still adds to local state
 			expect(result.current.walkedSteps.has(0)).toBe(true);
-			// But does not call API
 			expect(mockedCompleteSetupStep).not.toHaveBeenCalled();
 		});
 
@@ -192,7 +189,6 @@ describe("useSetupProgress", () => {
 				result.current.markStepComplete(0);
 			});
 
-			// Local state is still updated even when API fails
 			expect(result.current.walkedSteps.has(0)).toBe(true);
 		});
 	});

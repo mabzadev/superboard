@@ -204,7 +204,6 @@ describe("Site Settings", () => {
 				db,
 			);
 
-			// When retrieved without storage, should return mediaId but no URL
 			const logo = await getSiteSettingWithDb("logo", db, null);
 			expect(logo?.mediaId).toBe("med_123");
 			expect(logo?.alt).toBe("Logo");
@@ -222,9 +221,6 @@ describe("Site Settings", () => {
 			expect(favicon?.mediaId).toBe("med_456");
 		});
 
-		// Regression: seo.defaultOgImage was defined in the data model and schemas
-		// but getSiteSettings*() never resolved the media reference, so the URL
-		// field was always absent and the documented MCP behavior was a lie.
 		it("resolves seo.defaultOgImage to a media file URL via getSiteSettings", async () => {
 			const mediaId = "med_og_default";
 			const now = new Date().toISOString();
@@ -289,7 +285,6 @@ describe("Site Settings", () => {
 
 			const seo = await getSiteSettingWithDb("seo", db);
 			expect(seo?.defaultOgImage?.url).toBe(`/_emdash/api/media/file/media/${mediaId}.png`);
-			// Sibling fields preserved through the resolve+spread.
 			expect(seo?.titleSeparator).toBe(" | ");
 		});
 
@@ -309,11 +304,6 @@ describe("Site Settings", () => {
 	});
 });
 
-/**
- * Build an in-memory db with a query counter wired into Kysely's `log`
- * hook. Lets the cache tests assert "no DB query was issued" without
- * mocking out the repository layer (real DB, real SQL, real round-trip).
- */
 async function setupCountingDb(): Promise<{
 	db: Kysely<Database>;
 	queries: string[];
@@ -454,26 +444,6 @@ describe("Site Settings caching", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Cross-mutation cache invalidation
-//
-// `seo.defaultOgImage` (and `logo`/`favicon`) bake the media row's resolved
-// URL, contentType, width, and height into a worker-scoped cache. Every code
-// path that mutates the media table must therefore invalidate the cache, or
-// readers will keep serving stale snapshots until the isolate dies.
-//
-// Invalidation lives in three places (any caller of any of these clears
-// the cache):
-//   - `EmDashRuntime.handleMediaUpdate` / `handleMediaDelete` — REST + MCP.
-//   - Plugin context `media.delete()` — the plugin-facing public API.
-//   - `local-runtime.delete()` — the provider DELETE route's local path.
-//
-// The tests below pin the runtime-level contract. The plugin-context and
-// local-runtime paths share `invalidateSiteSettingsCache()` directly, so
-// their wiring is verified by inspection plus the cache tests above that
-// prove `invalidateSiteSettingsCache()` itself drops the cache.
-// ---------------------------------------------------------------------------
-
 describe("Media mutations invalidate site settings cache", () => {
 	beforeEach(() => {
 		invalidateSiteSettingsCache();
@@ -486,8 +456,6 @@ describe("Media mutations invalidate site settings cache", () => {
 		const db = await setupTestDatabaseWithCollections();
 		const runtime = createTestRuntime(db);
 
-		// Seed a media row and reference it from settings so we can prove
-		// invalidation flushes the resolved snapshot.
 		const mediaId = "med_invalidation_delete";
 		const now = new Date().toISOString();
 		await db
@@ -511,8 +479,6 @@ describe("Media mutations invalidate site settings cache", () => {
 		const result = await runtime.handleMediaDelete(mediaId);
 		expect(result.success).toBe(true);
 
-		// After delete, the resolved snapshot must be re-fetched; with the
-		// media row gone, the URL field disappears.
 		await runWithContext({ editMode: false, db }, async () => {
 			const after = await getSiteSettings();
 			expect(after.seo?.defaultOgImage?.url).toBeUndefined();

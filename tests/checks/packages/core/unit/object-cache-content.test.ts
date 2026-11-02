@@ -91,8 +91,6 @@ describe("object cache: content read-through", () => {
 			draftRevisionId: "draft-1",
 			createdAt: new Date("2025-01-01T00:00:00.000Z"),
 		};
-		// The loader attaches raw date strings under a non-enumerable symbol;
-		// emulate it so we can assert the snapshot preserves it.
 		Object.defineProperty(data, CURSOR_RAW_VALUES, {
 			value: { created_at: "2025-01-01T00:00:00Z" },
 			enumerable: false,
@@ -116,10 +114,8 @@ describe("object cache: content read-through", () => {
 
 		expect(getLiveCollection).toHaveBeenCalledTimes(1);
 		expect(second.entries).toHaveLength(1);
-		// Date survives the cache round-trip.
 		const createdAt = (second.entries[0]!.data as { createdAt: unknown }).createdAt;
 		expect(createdAt).toBeInstanceOf(Date);
-		// The cursor-raw symbol is rebuilt on the cached entry.
 		expect(Reflect.get(second.entries[0]!.data as object, CURSOR_RAW_VALUES)).toEqual({
 			created_at: "2025-01-01T00:00:00Z",
 		});
@@ -462,7 +458,6 @@ describe("object cache: content read-through", () => {
 		await runWithContext({ editMode: false, db }, () => getEmDashCollection("post"));
 		expect(getLiveCollection).toHaveBeenCalledTimes(1);
 
-		// A dropped column would otherwise leave stale field values in cached snapshots.
 		const del = await handleSchemaFieldDelete(db, "post", "content");
 		expect(del.success).toBe(true);
 		await flush();

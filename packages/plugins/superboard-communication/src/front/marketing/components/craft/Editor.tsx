@@ -44,14 +44,12 @@ export default function EditorPage({
 }) {
 	return (
 		<div className="flex h-full overflow-hidden">
-			{/* Canvas */}
 			<div className="flex flex-1 flex-col w-full min-w-0 overflow-hidden bg-muted/30">
 				<div className="flex-1 overflow-auto p-4" data-craft-canvas>
 					<Frame data={JSON.stringify(initialEditorState)}></Frame>
 				</div>
 			</div>
 
-			{/* Right panel: Components + Customize */}
 			{!readOnlyMode && (
 				<div className="flex flex-col w-[260px] shrink-0 bg-sidebar text-sidebar-foreground border-l border-sidebar-border overflow-y-auto">
 					<Toolbox />

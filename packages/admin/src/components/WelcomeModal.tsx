@@ -1,9 +1,3 @@
-/**
- * Welcome Modal
- *
- * Shown to new users on their first login to welcome them to EmDash.
- */
-
 import { Badge, Button, Dialog } from "@cloudflare/kumo";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
@@ -75,7 +69,6 @@ export function WelcomeModal({ open, onClose, userName, userRole }: WelcomeModal
 	const dismissMutation = useMutation({
 		mutationFn: () => dismissWelcome(t`Failed to dismiss welcome`),
 		onSuccess: () => {
-			// Update the cached user data to reflect that they've seen the welcome
 			queryClient.setQueryData(["currentUser"], (old: unknown) => {
 				if (old && typeof old === "object") {
 					return { ...old, isFirstLogin: false };
@@ -85,7 +78,6 @@ export function WelcomeModal({ open, onClose, userName, userRole }: WelcomeModal
 			onClose();
 		},
 		onError: () => {
-			// Still close on error - don't block the user
 			onClose();
 		},
 	});

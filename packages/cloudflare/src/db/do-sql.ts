@@ -1,17 +1,3 @@
-/**
- * Durable Object SQL database — RUNTIME ENTRY
- *
- * Creates a Kysely dialect backed by an `EmDashDB` Durable Object and, when
- * read replication is enabled, a per-request Kysely that holds a single DO stub
- * for the whole request (anonymous reads route to the nearest replica; writes
- * proxy to the primary; authenticated requests get read-your-writes via a
- * bookmark cookie).
- *
- * This module imports directly from cloudflare:workers to access the DO
- * binding. Do NOT import it at config time — use { durableObjects } from
- * "@emdash-cms/cloudflare" instead.
- */
-
 import { env } from "cloudflare:workers";
 import type { CollectionDeletionGuardInput, CollectionDeletionGuardResult } from "emdash";
 import { kyselyLogOption, recordRpc } from "emdash/database/instrumentation";
@@ -25,12 +11,6 @@ import type { DurableObjectsConfig, EmDashDBStub } from "./do-sql-types.js";
 const DEFAULT_NAME = "emdash";
 const DEFAULT_BOOKMARK_COOKIE = "__em_do_bookmark";
 
-/**
- * Replication bookmarks are opaque. We don't validate their shape (a tighter
- * check risks rejecting a future encoding and silently degrading
- * read-your-writes), but we cap length and reject control characters so a
- * malicious or corrupt cookie can't smuggle anything into the RPC.
- */
 const MAX_BOOKMARK_LENGTH = 1024;
 
 function hasControlChars(value: string): boolean {
@@ -74,26 +54,6 @@ export async function executeCollectionDeletionGuard(
 	return stub.executeCollectionDeletionGuard(input);
 }
 
-/**
- * Bookmark sinks for the non-request-scoped dialects, keyed by DO identity.
- *
- * Read-after-write on the DO backend rides a bookmark: a write records the
- * current bookmark; a later read passes it so a replica blocks until it has
- * caught up. The singleton (migrations, scheduled tasks) and the cold-start
- * read connection both need to see each other's writes — a migration runs on
- * the singleton, then the runtime's cold-start reads must observe it — so they
- * share one sink per DO. Bookmarks are global to the database, so the sink is
- * valid across the fresh-per-query stubs each dialect resolves.
- *
- * Best-effort under concurrency: bookmarks are opaque, so out-of-order writes
- * can leave the sink pointing at an older bookmark and a later read served
- * slightly stale. It never loses or corrupts a write. Request traffic is
- * unaffected — it uses isolated per-request sinks in `createRequestScopedDb`.
- */
-// Stored on globalThis behind a Symbol key so Vite SSR chunk duplication can't
-// produce two maps — the singleton dialect and the cold-start coalescing dialect
-// must resolve the *same* BookmarkSink object to share read-your-writes state
-// (same pattern as core's request-cache.ts / settings/index.ts).
 const SINGLETON_BOOKMARK_SINKS_KEY = Symbol.for("emdash:do-singleton-bookmark-sinks");
 const g = globalThis as Record<symbol, unknown>;
 const singletonBookmarkSinks: Map<string, BookmarkSink> =
@@ -115,16 +75,6 @@ function getSingletonBookmarkSink(config: DurableObjectsConfig): BookmarkSink {
 	return sink;
 }
 
-/**
- * Create a DO SQL dialect from config. Used for the singleton Kysely instance
- * (runtime-init migrations, scheduled tasks, and any query outside a request
- * scope).
- *
- * This dialect is cached across requests on globalThis, so it must NOT hold a
- * stub: a DO stub is a per-request I/O object. We resolve a fresh stub on every
- * query instead. The hot read/write path uses `createRequestScopedDb`, which
- * reuses one stub for the whole request.
- */
 export function createDialect(config: DurableObjectsConfig): Dialect {
 	const ns = getNamespace(config);
 	if (!ns) throw bindingError(config.binding);
@@ -136,15 +86,6 @@ export function createDialect(config: DurableObjectsConfig): Dialect {
 	});
 }
 
-/**
- * Coalescing DO SQL dialect for the runtime's cold-start read phase, where the
- * core runtime batches its init reads into one `batchQuery` RPC. Shares the
- * singleton's bookmark sink so reads issued right after a migration (run on the
- * singleton) wait for the replica to catch up — read-your-writes across the two
- * connections. Resolves a fresh stub per query like {@link createDialect}. Each
- * call returns a fresh dialect; this must never back the long-lived singleton,
- * whose coalescing buffer would be shared across requests.
- */
 export function createCoalescingDialect(config: DurableObjectsConfig): Dialect {
 	const ns = getNamespace(config);
 	if (!ns) throw bindingError(config.binding);
@@ -156,15 +97,6 @@ export function createCoalescingDialect(config: DurableObjectsConfig): Dialect {
 	});
 }
 
-// =========================================================================
-// Read-replica request scoping
-//
-// createRequestScopedDb is called by the core middleware on each request.
-// Replica sessions get a per-request Kysely and authenticated bookmark cookie.
-// Mutation requests also get a scope when sessions are disabled so every
-// safety read is explicitly routed to the primary.
-// =========================================================================
-
 interface CookieJar {
 	get(name: string): { value: string } | undefined;
 	set(name: string, value: string, options: Record<string, unknown>): void;
@@ -173,18 +105,7 @@ interface CookieJar {
 export interface RequestScopedDbOpts {
 	config: DurableObjectsConfig;
 	isAuthenticated: boolean;
-	/**
-	 * Evaluated at commit() time: whether the request ended authenticated.
-	 * Login/signup/invite requests start unauthenticated and establish a
-	 * session mid-request; `isAuthenticated` captures only the request-start
-	 * state.
-	 */
 	endedAuthenticated?: () => boolean;
-	/**
-	 * Whether this request mutates. Mutation scopes route their reads through the
-	 * primary so destructive preconditions cannot be evaluated against a lagging
-	 * replica.
-	 */
 	isWrite: boolean;
 	cookies: CookieJar;
 	url: URL;
@@ -204,18 +125,12 @@ export function createRequestScopedDb(opts: RequestScopedDbOpts): RequestScopedD
 	const id = ns.idFromName(opts.config.name ?? DEFAULT_NAME);
 	const cookieName = opts.config.bookmarkCookie ?? DEFAULT_BOOKMARK_COOKIE;
 
-	// One stub for the entire request, resolved lazily inside the request's
-	// I/O context and reused across every query. This is the key latency win
-	// over a per-query stub.
 	let stub: EmDashDBStub | undefined;
 	const resolveStub = (): EmDashDBStub => {
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Rpc type limitation with unknown row types
 		return (stub ??= ns.get(id) as unknown as EmDashDBStub);
 	};
 
-	// Authenticated read-your-writes: pass the client's last bookmark on reads
-	// so a replica waits until it has caught up before serving. Anonymous
-	// readers can't resume across requests, so they always read nearest-replica.
 	let readBookmark: string | undefined;
 	if (sessionEnabled && opts.isAuthenticated) {
 		const bookmark = opts.cookies.get(cookieName)?.value;
@@ -229,10 +144,6 @@ export function createRequestScopedDb(opts: RequestScopedDbOpts): RequestScopedD
 		}
 	}
 
-	// The per-request path always coalesces: same-turn SELECTs become one
-	// batchQuery RPC instead of one round trip per read. (The singleton in
-	// createDialect uses the plain DOSqlDialect -- it must never coalesce, since
-	// concurrent requests would share a buffer.)
 	const bookmarkSink: BookmarkSink = {};
 	const dialectConfig = {
 		resolveStub,
@@ -251,28 +162,19 @@ export function createRequestScopedDb(opts: RequestScopedDbOpts): RequestScopedD
 	return {
 		db,
 		commit() {
-			// Only authenticated users benefit from resuming a bookmark. A
-			// request that became authenticated mid-flight (login, signup,
-			// invite) counts: its follow-up request reads authenticated and
-			// needs this bookmark to see the rows just written to the primary.
 			if (!sessionEnabled || (!opts.isAuthenticated && !opts.endedAuthenticated?.())) return;
 			const newBookmark = bookmarkSink.latest;
 			if (!newBookmark) return;
-			// Don't emit a cookie the browser will silently drop (~4 KB limit),
-			// which would break read-your-writes with no signal. Bookmarks are
-			// far smaller than this in practice; the guard is belt-and-braces.
 			if (newBookmark.length > MAX_BOOKMARK_LENGTH) return;
 			opts.cookies.set(cookieName, newBookmark, {
 				path: "/",
 				httpOnly: true,
 				sameSite: "lax",
 				secure: opts.url.protocol === "https:",
-				// Bound the lifetime so a stale bookmark can't linger indefinitely.
 				maxAge: 60 * 60 * 24,
 			});
 		},
 	};
 }
 
-// Re-export the DO class so consumers can register it in their worker entry.
 export { EmDashDB } from "./do-sql-class.js";

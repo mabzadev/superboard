@@ -1,21 +1,3 @@
-/**
- * Resolve, upload, and record a manifest's media artifacts.
- *
- * The manifest declares artifacts as file refs (`{ file: "./icon.png" }`)
- * relative to itself. At publish time the CLI:
- *
- *   1. resolves each ref under the manifest directory (rejecting paths that
- *      escape it),
- *   2. reads the bytes and measures content type + dimensions,
- *   3. PUTs the bytes to `<base>/<slug>/<version>/<slot>-<filename>`,
- *   4. records `{ url, checksum, contentType, width, height, lang? }`.
- *
- * The hosting contract: the publisher's `--artifact-base-url` target must
- * accept the PUT and serve the same bytes back, unchanged, with a stable
- * content type, at the URL we record. Consumers fetch through the EmDash
- * server's SSRF-defended proxy.
- */
-
 import { readFile } from "node:fs/promises";
 import { basename, isAbsolute, relative, resolve, sep } from "node:path";
 
@@ -23,43 +5,26 @@ import type { ManifestArtifacts, ManifestArtifactFile } from "../manifest/schema
 import type { ReleaseArtifactInput, ReleaseArtifactsInput } from "./api.js";
 import { ArtifactError, buildArtifactRecord } from "./artifacts.js";
 
-/** Hard cap on a single artifact file, so a runaway image can't OOM the CLI. */
 const MAX_ARTIFACT_BYTES = 2 * 1024 * 1024;
 
-/** Strip trailing slashes from the artifact base URL. */
 const TRAILING_SLASHES = /\/+$/;
 
 export interface ResolveArtifactsOptions {
-	/** Parsed `release.artifacts` block, or `undefined` when none declared. */
 	artifacts: ManifestArtifacts | undefined;
-	/** Absolute path to the directory containing the manifest. */
 	manifestDir: string;
-	/** Base URL the CLI PUTs artifact bytes to (no trailing slash required). */
 	baseUrl: string;
-	/** Plugin slug, used in the upload path. */
 	slug: string;
-	/** Release version, used in the upload path. */
 	version: string;
-	/** Optional progress reporter. */
 	logger?: { info?(m: string): void; success?(m: string): void };
-	/**
-	 * Injectable uploader. Defaults to an HTTP PUT. Tests pass a stub so the
-	 * resolve flow runs without a network.
-	 */
 	upload?: ArtifactUploader;
 }
 
-/**
- * Uploads `bytes` to `url` with the given content type and resolves once the
- * bytes are durably stored. Throws on any non-success.
- */
 export type ArtifactUploader = (input: {
 	url: string;
 	bytes: Uint8Array;
 	contentType: string;
 }) => Promise<void>;
 
-/** Thrown when artifact resolution or upload fails. */
 export class ArtifactUploadError extends Error {
 	override readonly name = "ArtifactUploadError";
 	readonly code: string;
@@ -70,10 +35,6 @@ export class ArtifactUploadError extends Error {
 	}
 }
 
-/**
- * Resolve every declared artifact to an embeddable record, uploading the bytes
- * along the way. Returns `undefined` when the manifest declared no artifacts.
- */
 export async function resolveReleaseArtifacts(
 	options: ResolveArtifactsOptions,
 ): Promise<ReleaseArtifactsInput | undefined> {
@@ -162,12 +123,6 @@ async function resolveOne(
 	return record;
 }
 
-/**
- * Resolve `file` under `manifestDir` and refuse paths that escape it (via
- * `..` or an absolute path). The manifest is publisher-authored, but a
- * traversal would let `publish` read arbitrary files off the machine running
- * the CLI and upload them, so the boundary is enforced.
- */
 function resolveWithinManifest(manifestDir: string, file: string, label: string): string {
 	const absolute = resolve(manifestDir, file);
 	const rel = relative(manifestDir, absolute);
@@ -180,13 +135,6 @@ function resolveWithinManifest(manifestDir: string, file: string, label: string)
 	return absolute;
 }
 
-/**
- * Build the public URL for an artifact:
- * `<base>/<slug>/<version>/<slot>-<filename>`. The basename of the manifest ref
- * keeps nested source paths out of the published URL; the `slot` prefix
- * (`icon`, `banner`, `screenshot-2`) keeps two refs with the same basename in
- * different directories from colliding on the same upload target.
- */
 function artifactUrl(
 	baseUrl: string,
 	slug: string,

@@ -9,7 +9,6 @@ import {
 } from "../../../../../../../../sdks/web/identity/web/src/generators";
 import { getAuthorize } from "../../../../../../../../sdks/web/identity/web/src/requests";
 
-// Mock dependencies
 vi.mock("../../../../../../../../sdks/web/identity/web/src/requests", () => ({
 	getAuthorize: vi.fn(),
 }));
@@ -36,11 +35,9 @@ describe("triggerLogin", () => {
 	};
 
 	beforeEach(() => {
-		// Setup window mock
 		// @ts-expect-error - Partial window mock
 		global.window = mockWindow;
 
-		// Setup default mock implementations
 		vi.mocked(genAuthorizeState).mockReturnValue("test-state");
 		vi.mocked(genCodeVerifierAndChallenge).mockResolvedValue({
 			codeVerifier: "test-verifier",
@@ -55,7 +52,6 @@ describe("triggerLogin", () => {
 	it("should handle undefined additionalProps", async () => {
 		await triggerLogin("redirect", mockProviderConfig);
 
-		// Verify authorize call
 		expect(getAuthorize).toHaveBeenCalledWith(mockProviderConfig, {
 			state: "test-state",
 			codeChallenge: "test-challenge",
@@ -70,13 +66,10 @@ describe("triggerLogin", () => {
 	it("should initiate login redirect with generated values", async () => {
 		await triggerLogin("redirect", mockProviderConfig, {});
 
-		// Verify state generation
 		expect(genAuthorizeState).toHaveBeenCalledWith(21);
 
-		// Verify code verifier/challenge generation
 		expect(genCodeVerifierAndChallenge).toHaveBeenCalled();
 
-		// Verify session storage
 		expect(mockWindow.sessionStorage.setItem).toHaveBeenCalledWith(
 			SessionStorageKey.State,
 			"test-state",
@@ -86,7 +79,6 @@ describe("triggerLogin", () => {
 			"test-verifier",
 		);
 
-		// Verify authorize call
 		expect(getAuthorize).toHaveBeenCalledWith(mockProviderConfig, {
 			state: "test-state",
 			codeChallenge: "test-challenge",
@@ -103,10 +95,8 @@ describe("triggerLogin", () => {
 
 		await triggerLogin("redirect", mockProviderConfig, { state: customState });
 
-		// Verify state was not generated
 		expect(genAuthorizeState).not.toHaveBeenCalled();
 
-		// Verify custom state was used
 		expect(mockWindow.sessionStorage.setItem).toHaveBeenCalledWith(
 			SessionStorageKey.State,
 			customState,

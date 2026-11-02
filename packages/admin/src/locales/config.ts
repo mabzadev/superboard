@@ -1,10 +1,3 @@
-/**
- * Locale configuration for the admin UI runtime.
- *
- * Locale definitions are in `./locales.ts` -- the single source of truth
- * shared by this file, lingui.config.ts and lunaria.config.ts.
- */
-
 import { ENABLED_LOCALES, LOCALES, SOURCE_LOCALE } from "./locales.js";
 
 export type { LocaleDefinition as SupportedLocale } from "./locales.js";
@@ -21,20 +14,13 @@ function isValidLocale(code: string): boolean {
 	}
 }
 
-// Injected by the EmDash Vite integration from process.env.EMDASH_PSEUDO_LOCALE.
-// Only true in dev when EMDASH_PSEUDO_LOCALE=1 is set.
 declare const __EMDASH_PSEUDO_LOCALE__: boolean;
 
-/**
- * The pseudo locale, injected into the supported list only when
- * EMDASH_PSEUDO_LOCALE=1 is set. Never available in production.
- */
 const PSEUDO_LOCALE =
 	typeof __EMDASH_PSEUDO_LOCALE__ !== "undefined" && __EMDASH_PSEUDO_LOCALE__
 		? LOCALES.find((l) => l.code === "pseudo")
 		: undefined;
 
-/** Available locales at runtime, validated against BCP 47. */
 export const SUPPORTED_LOCALES = [
 	...ENABLED_LOCALES.filter((l) => isValidLocale(l.code)),
 	...(PSEUDO_LOCALE ? [PSEUDO_LOCALE] : []),
@@ -44,14 +30,11 @@ export const SUPPORTED_LOCALE_CODES = new Set(SUPPORTED_LOCALES.map((l) => l.cod
 
 export const DEFAULT_LOCALE = SOURCE_LOCALE.code;
 
-/** Maps base language codes to supported locales (e.g. "pt" -> "pt-BR"). */
 const BASE_LANGUAGE_MAP = new Map<string, string>();
-/** Maps script codes to supported locales (e.g. "zh-Hant" -> "zh-TW", "zh-Hans" -> "zh-CN"). */
 const SCRIPT_LANGUAGE_MAP = new Map<string, string>();
 
 for (const l of SUPPORTED_LOCALES) {
 	const base = l.code.split("-")[0]!.toLowerCase();
-	// First match wins -- if we have both "pt" and "pt-BR", exact wins via direct lookup.
 	if (!BASE_LANGUAGE_MAP.has(base)) {
 		BASE_LANGUAGE_MAP.set(base, l.code);
 	}
@@ -65,12 +48,6 @@ for (const l of SUPPORTED_LOCALES) {
 	}
 }
 
-/**
- * Find the best matching supported locale for a BCP 47 tag.
- * Canonicalizes via Intl.Locale so case differences (e.g. "pt-br" vs "pt-BR")
- * don't prevent matching. Supports script codes (zh-Hant -> zh-TW, zh-Hans -> zh-CN)
- * and falls back to base language (pt-PT -> pt-BR).
- */
 function matchLocale(tag: string): string | undefined {
 	const trimmed = tag.trim();
 	if (!trimmed) return undefined;
@@ -81,10 +58,8 @@ function matchLocale(tag: string): string | undefined {
 		return undefined;
 	}
 
-	// Exact match (case-insensitive via Intl.Locale)
 	if (SUPPORTED_LOCALE_CODES.has(canonical)) return canonical;
 
-	// Try script-based matching (zh-Hant -> zh-TW, zh-Hans -> zh-CN)
 	const locale = new Intl.Locale(trimmed);
 	if (locale.script) {
 		const scriptKey = `${locale.language}-${locale.script}`.toLowerCase();
@@ -92,31 +67,24 @@ function matchLocale(tag: string): string | undefined {
 		if (scriptMatch) return scriptMatch;
 	}
 
-	// Fallback to base language (pt-PT -> pt-BR)
 	const base = canonical.split("-")[0]!.toLowerCase();
 	return BASE_LANGUAGE_MAP.get(base);
 }
 
 const LOCALE_LABELS = new Map(SUPPORTED_LOCALES.map((l) => [l.code, l.label]));
 
-/** Get a display label for a locale code, falling back to uppercase code. */
 export function getLocaleLabel(code: string): string {
 	return LOCALE_LABELS.get(code) ?? code.toUpperCase();
 }
 
 const LOCALE_DIRS = new Map(SUPPORTED_LOCALES.map((l) => [l.code, l.dir]));
 
-/** Get the text direction for a locale code. Defaults to "ltr" if not specified. */
 export function getLocaleDir(code: string): "ltr" | "rtl" {
 	return LOCALE_DIRS.get(code) ?? "ltr";
 }
 
 const LOCALE_COOKIE_RE = /(?:^|;\s*)emdash-locale=([^;]+)/;
 
-/**
- * Resolve the admin locale from a Request.
- * Priority: emdash-locale cookie -> Accept-Language -> DEFAULT_LOCALE.
- */
 export function resolveLocale(request: Request): string {
 	const cookieHeader = request.headers.get("cookie") ?? "";
 	const cookieMatch = cookieHeader.match(LOCALE_COOKIE_RE);

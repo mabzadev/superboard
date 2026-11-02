@@ -1,15 +1,3 @@
-/**
- * Unit tests for the URL helpers in `src/i18n/resolve.ts`.
- *
- * `localizePath` reads the resolved Astro i18n config from
- * `astro:config/server` at runtime. In this unit-test environment
- * the virtual module isn't resolvable, so these tests exercise the
- * fallback path that reads from EmDash's runtime `setI18nConfig`.
- * End-to-end coverage of the Astro virtual-module path lives in
- * `tests/integration/seo/sitemap-route.test.ts` plus manual demo
- * testing.
- */
-
 import { afterEach, describe, expect, it } from "vitest";
 
 import { setI18nConfig } from "../../../../../../packages/core/src/i18n/config.js";
@@ -97,7 +85,6 @@ describe("localizePath", () => {
 	});
 
 	it("returns path unchanged when only one locale is configured", async () => {
-		// isI18nEnabled() requires >1 locale.
 		setI18nConfig({ defaultLocale: "en", locales: ["en"] });
 		expect(await localizePath("/blog/hello", "en")).toBe("/blog/hello");
 	});
@@ -145,9 +132,6 @@ describe("localizePath", () => {
 			locales: ["en", "fr"],
 			prefixDefaultLocale: false,
 		});
-		// `de` isn't configured. The sitemap route would emit a link
-		// to `/de/blog/hello`, but the site has no route there -- the
-		// caller should drop the entry instead.
 		expect(await localizePath("/blog/hello", "de")).toBeNull();
 	});
 });

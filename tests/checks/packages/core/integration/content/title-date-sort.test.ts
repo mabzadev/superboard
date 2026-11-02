@@ -12,9 +12,6 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
-// A collection's configured `dateField` drives the admin list's default
-// sort, and its titleField/dateField are the only non-system fields allowed
-// as `orderBy`: a closed, server-resolved set (no column enumeration).
 describeEachDialect("content list custom-field sort", (dialect) => {
 	let ctx: DialectTestContext;
 
@@ -27,9 +24,6 @@ describeEachDialect("content list custom-field sort", (dialect) => {
 		await registry.createField("events", { slug: "location", label: "Location", type: "string" });
 		await registry.updateCollection("events", { titleField: "title", dateField: "event_date" });
 
-		// Each ordering (createdAt, event_date, title) is a distinct permutation
-		// of e1/e2/e3, so sorting by any one can't be confused with another:
-		//   createdAt desc: e1, e2, e3   event_date desc: e2, e3, e1   title asc: e3, e1, e2
 		const seed = [
 			{
 				slug: "e1",
@@ -74,7 +68,7 @@ describeEachDialect("content list custom-field sort", (dialect) => {
 			orderBy: "event_date",
 			order: "desc",
 		});
-		expect(slugsOf(desc)).toEqual(["e2", "e3", "e1"]); // 2022, 2021, 2020
+		expect(slugsOf(desc)).toEqual(["e2", "e3", "e1"]);
 
 		const asc = await handleContentList(ctx.db, "events", { orderBy: "event_date", order: "asc" });
 		expect(slugsOf(asc)).toEqual(["e1", "e3", "e2"]);
@@ -82,14 +76,13 @@ describeEachDialect("content list custom-field sort", (dialect) => {
 
 	it("sorts by the configured titleField, distinct from createdAt and dateField", async () => {
 		const asc = await handleContentList(ctx.db, "events", { orderBy: "title", order: "asc" });
-		expect(slugsOf(asc)).toEqual(["e3", "e1", "e2"]); // Alpha, Bravo, Charlie
+		expect(slugsOf(asc)).toEqual(["e3", "e1", "e2"]);
 
 		const desc = await handleContentList(ctx.db, "events", { orderBy: "title", order: "desc" });
 		expect(slugsOf(desc)).toEqual(["e2", "e1", "e3"]);
 	});
 
 	it("rejects ordering by a field that isn't titleField/dateField", async () => {
-		// `location` is a real field but not a configured sort field.
 		const result = await handleContentList(ctx.db, "events", { orderBy: "location" });
 		expect(result.success).toBe(false);
 	});

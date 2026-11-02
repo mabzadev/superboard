@@ -45,7 +45,6 @@ function oneOf<T extends string>(values: readonly T[], value: string | null | un
 	return values.find((item) => item === value);
 }
 
-/** Canonical workspace URL; the operator language is preserved across tabs. */
 export function dynamicLinksHref(tab: DynamicLinksTab, section?: DynamicLinksSettingsSection) {
 	const params = new URLSearchParams();
 	const lang = new URLSearchParams(globalThis.location?.search ?? "").get("lang");
@@ -56,10 +55,6 @@ export function dynamicLinksHref(tab: DynamicLinksTab, section?: DynamicLinksSet
 	return query ? `${DYNAMIC_LINKS_PATH}?${query}` : DYNAMIC_LINKS_PATH;
 }
 
-/**
- * Acquisition › Dynamic links. Every Dynamic links route renders this
- * workspace; legacy sub-routes only choose the initial tab.
- */
 export default function DynamicLinksWorkspace({
 	tab: routeTab = "links",
 	section: routeSection = "domain",
@@ -167,7 +162,6 @@ export default function DynamicLinksWorkspace({
 	);
 }
 
-/** Invites the operator to brand their links until a domain has been verified. */
 function DomainNotice({ onConfigure }: { onConfigure: () => void }) {
 	const { tr } = useFlowI18n();
 	const { selectedProject } = useProjectSelection();

@@ -19,7 +19,6 @@ type Service = "email" | "marketing";
 type Webhook = { id: string; provider: string; service: Service };
 const serviceKeys: Service[] = ["email", "marketing"];
 
-// Each service receives provider events on its own public endpoint.
 const services = {
 	email: {
 		label: "Transactional email",
@@ -37,7 +36,6 @@ const services = {
 	},
 } as const;
 
-/** One list of the provider webhook endpoints of both email services, each with its real URL. */
 export function ProviderWebhooks({ project }: { project: string }) {
 	const { t, locale } = useStudioI18n();
 	const { apiUrl = "" } = usePublicConfig();

@@ -1,17 +1,3 @@
-/**
- * Miniflare Isolation Tests
- *
- * Integration tests verifying that miniflare (wrapping workerd) provides
- * the isolation primitives needed for the MiniflareDevRunner:
- *
- * - Service bindings scope capabilities per plugin
- * - External service bindings route calls to Node handler functions
- * - Plugin code loads from strings (bundles from DB/R2)
- * - KV namespace bindings provide per-plugin isolated storage
- * - Plugins without bindings cannot access unavailable capabilities
- * - Worker reconfiguration supports plugin install/uninstall
- */
-
 import { Miniflare } from "miniflare";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -26,19 +12,9 @@ describe("miniflare plugin isolation", () => {
 	});
 
 	it("can create an isolated plugin worker with scoped service bindings", async () => {
-		// This test creates:
-		// 1. A "bridge" worker that simulates the backing service (content API)
-		// 2. A "plugin" worker that calls the bridge via service binding
-		// 3. Verifies the plugin can only access what the binding exposes
-		//
-		// dispatchFetch always hits the first worker in the array.
-		// To invoke a specific worker, we put the plugin first and use
-		// service bindings to connect it to the bridge.
-
 		mf = new Miniflare({
 			workers: [
 				{
-					// Plugin is first so dispatchFetch targets it
 					name: "plugin-test",
 					modules: true,
 					serviceBindings: {
@@ -89,7 +65,6 @@ describe("miniflare plugin isolation", () => {
 			],
 		});
 
-		// dispatchFetch hits the first worker (plugin-test)
 		const response = await mf.dispatchFetch("http://localhost/hook/afterSave");
 		const result = (await response.json()) as {
 			hookResult: string;
@@ -106,13 +81,6 @@ describe("miniflare plugin isolation", () => {
 	});
 
 	it("plugins are isolated from each other", async () => {
-		// Two plugins with different service bindings.
-		// Plugin A has BRIDGE binding (read:content).
-		// Plugin B has NO bridge binding (no capabilities).
-		// Use separate Miniflare instances to test isolation,
-		// since dispatchFetch always hits the first worker.
-
-		// Test Plugin A: has BRIDGE binding
 		mf = new Miniflare({
 			workers: [
 				{
@@ -141,13 +109,11 @@ describe("miniflare plugin isolation", () => {
 		expect(dataA.hasAccess).toBe(true);
 		await mf.dispose();
 
-		// Test Plugin B: NO bridge binding
 		mf = new Miniflare({
 			workers: [
 				{
 					name: "plugin-b",
 					modules: true,
-					// NO service bindings - this plugin has no capabilities
 					script: `
 						export default {
 							async fetch(request, env) {
@@ -166,10 +132,6 @@ describe("miniflare plugin isolation", () => {
 	});
 
 	it("can load plugin code dynamically from a string", async () => {
-		// Test that we can pass plugin code as a string (not a file path).
-		// This is critical for the runtime: plugin bundles come from the DB/R2,
-		// not from the filesystem.
-
 		const pluginCode = `
 			export default {
 				async fetch(request, env) {
@@ -199,7 +161,6 @@ describe("miniflare plugin isolation", () => {
 	});
 
 	it("can use KV namespace bindings per plugin", async () => {
-		// Plugin with KV namespace binding
 		mf = new Miniflare({
 			kvNamespaces: ["PLUGIN_KV"],
 			modules: true,
@@ -221,14 +182,12 @@ describe("miniflare plugin isolation", () => {
 			`,
 		});
 
-		// Set and get
 		await mf.dispatchFetch("http://localhost/set");
 		const getRes = await mf.dispatchFetch("http://localhost/get");
 		const getData = (await getRes.json()) as { value: string };
 		expect(getData.value).toBe("test-value");
 		await mf.dispose();
 
-		// Plugin without KV has no access
 		mf = new Miniflare({
 			modules: true,
 			script: `
@@ -247,10 +206,6 @@ describe("miniflare plugin isolation", () => {
 	});
 
 	it("can reconfigure workers without full restart (add/remove plugins)", async () => {
-		// Test that we can dispose and recreate miniflare with different workers.
-		// This simulates plugin install/uninstall.
-
-		// Start with one plugin
 		mf = new Miniflare({
 			modules: true,
 			script: `
@@ -264,7 +219,6 @@ describe("miniflare plugin isolation", () => {
 		const data1 = (await res1.json()) as { id: string };
 		expect(data1.id).toBe("original");
 
-		// Dispose and recreate with a different plugin
 		await mf.dispose();
 
 		mf = new Miniflare({
@@ -282,12 +236,6 @@ describe("miniflare plugin isolation", () => {
 	});
 
 	it("external service binding to Node HTTP server works", async () => {
-		// Critical test: can a plugin worker call an EXTERNAL HTTP service
-		// (simulating the Node backing service) via a service binding?
-		//
-		// Miniflare supports `serviceBindings` with custom handler functions.
-		// This maps to how the Node process would expose backing services.
-
 		mf = new Miniflare({
 			workers: [
 				{
@@ -295,8 +243,6 @@ describe("miniflare plugin isolation", () => {
 					modules: true,
 					serviceBindings: {
 						BRIDGE: async (request: Request) => {
-							// This function runs in Node, not in workerd.
-							// It simulates the backing service HTTP handler.
 							const url = new URL(request.url);
 							if (url.pathname === "/content/get") {
 								const body = (await request.json()) as { collection: string; id: string };

@@ -1,11 +1,3 @@
-/**
- * Backup settings page
- *
- * One-click full backup download, scheduled backups to the site's storage
- * bucket with retention, the list of stored archives, and a pointer to
- * D1 Time Travel for point-in-time restore on Cloudflare.
- */
-
 import {
 	Banner,
 	Button,

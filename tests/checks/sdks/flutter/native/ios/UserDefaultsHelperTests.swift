@@ -17,18 +17,11 @@ final class UserDefaultsHelperTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - Raw value stability
-    // If someone renames these raw values, all persisted user data silently breaks.
-
     func testRawValuesAreStable() {
         XCTAssertEqual(UserDefaultsKeys.superboardNumberOfOpens.rawValue, "superboardNumberOfOpens")
         XCTAssertEqual(UserDefaultsKeys.superboardResignTimestamp.rawValue, "superboardResignTimestamp")
         XCTAssertEqual(UserDefaultsKeys.superboardLastStartTimestamp.rawValue, "superboardLastStartTimestamp")
     }
-
-    // MARK: - Protocol conformance (instance delegates to static)
-    // UserDefaultsHelper conforms to UserDefaultsHelperProtocol via instance methods
-    // that call static methods. This is actual logic worth verifying.
 
     func testInstanceGetIntDelegatesToStatic() {
         UserDefaultsHelper.set(value: 77, key: .superboardNumberOfOpens)
@@ -43,8 +36,6 @@ final class UserDefaultsHelperTests: XCTestCase {
         let result = UserDefaultsHelper.getInt(key: .superboardNumberOfOpens)
         XCTAssertEqual(result, 88, "Static getInt should read the value written by instance setInt")
     }
-
-    // MARK: - containsItem vs remove interaction
 
     func testContainsItemReturnsFalseAfterRemove() {
         UserDefaultsHelper.set(value: 1, key: .superboardResignTimestamp)

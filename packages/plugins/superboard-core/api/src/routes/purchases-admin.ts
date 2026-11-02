@@ -28,7 +28,13 @@ import {
 import { authMiddleware } from "../middleware/auth";
 import { AppVariables, Env } from "../types";
 
-const admin = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {"service":"api","module":"routes.purchases-admin.admin","pluginId":"superboard-billing","surface":"internal","access":"operator"});
+const admin = registerRouter(new Hono<{ Bindings: Env; Variables: AppVariables }>(), {
+	service: "api",
+	module: "routes.purchases-admin.admin",
+	pluginId: "superboard-billing",
+	surface: "internal",
+	access: "operator",
+});
 admin.use("*", authMiddleware);
 
 async function body(c: any): Promise<Record<string, any>> {
@@ -47,8 +53,6 @@ async function projectFor(c: any) {
 		.first()) as { role: string } | null;
 	if (!access) throw new Error("Project not found");
 	const project = await getOrCreateProject(c.env.DB, parsed.instanceId, parsed.kind);
-	// Billing foreign keys use TEXT. Binding a D1 numeric value can serialize 11 as
-	// "11.0", so normalize once here for every admin query and write.
 	return { ...project, id: String(project.id), role: access.role };
 }
 

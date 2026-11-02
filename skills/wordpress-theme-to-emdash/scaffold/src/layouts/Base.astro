@@ -1,10 +1,4 @@
 ---
-/**
- * Base Layout
- *
- * Main layout with header, footer, and navigation from EmDash menus.
- */
-
 import { getMenu, getSiteSettings } from "emdash";
 import "../styles/global.css";
 
@@ -15,7 +9,6 @@ interface Props {
 
 const { title, description } = Astro.props;
 
-// These APIs automatically get the database from the Astro context
 const settings = await getSiteSettings();
 const primaryMenu = await getMenu("primary");
 const footerMenu = await getMenu("footer");

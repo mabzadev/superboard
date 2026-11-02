@@ -1,14 +1,3 @@
-/**
- * HookPipeline Tests
- *
- * Tests the v2 hook pipeline for:
- * - Hook registration and sorting
- * - Hook execution with timeout
- * - Content hooks (beforeSave, afterSave, beforeDelete, afterDelete)
- * - Lifecycle hooks (install, activate, deactivate, uninstall)
- * - Error handling and error policies
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -24,9 +13,6 @@ import type {
 	ContentHookEvent,
 } from "../../../../../../packages/core/src/plugins/types.js";
 
-/**
- * Create a minimal resolved plugin for testing
- */
 function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlugin {
 	return {
 		id: overrides.id ?? "test-plugin",
@@ -44,9 +30,6 @@ function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlug
 	};
 }
 
-/**
- * Create a resolved hook with defaults
- */
 function createTestHook<T>(
 	pluginId: string,
 	handler: T,
@@ -65,8 +48,6 @@ function createTestHook<T>(
 }
 
 describe("HookPipeline", () => {
-	// A real in-memory DB is needed for the context factory so hooks can
-	// actually execute (getContext throws without one).
 	let db: Kysely<DbSchema>;
 	let sqliteDb: Database.Database;
 
@@ -143,7 +124,6 @@ describe("HookPipeline", () => {
 					},
 				});
 
-			// Registered out of priority order on purpose.
 			const pipeline = new HookPipeline(
 				[make("plugin-200", 200), make("plugin-50", 50), make("plugin-100", 100)],
 				{ db },
@@ -191,7 +171,6 @@ describe("HookPipeline", () => {
 
 			await pipeline.runContentBeforeSave({ title: "hi" }, "posts", true);
 
-			// "dependency" must run first even though "dependent" has the lower priority.
 			expect(order).toEqual(["dependency", "dependent"]);
 		});
 	});
@@ -249,7 +228,6 @@ describe("HookPipeline", () => {
 
 			const { content } = await pipeline.runContentBeforeSave({ title: "x" }, "posts", true);
 
-			// Both transformations land, and handler2 received handler1's output.
 			expect(content).toEqual({ title: "x", step1: true, step2: true });
 			expect(handler2.mock.calls[0]?.[0]?.content).toEqual({ title: "x", step1: true });
 		});
@@ -370,10 +348,6 @@ describe("HookPipeline", () => {
 			expect(pipeline).toBeInstanceOf(HookPipeline);
 		});
 	});
-
-	// =========================================================================
-	// Capability enforcement for non-email hooks
-	// =========================================================================
 
 	describe("capability enforcement — content hooks", () => {
 		it("skips content:beforeSave without content:write capability", () => {

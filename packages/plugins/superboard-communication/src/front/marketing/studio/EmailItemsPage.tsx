@@ -47,7 +47,6 @@ function isEmailFilter(value: string | null): value is EmailFilter {
 	return value === "all" || (value !== null && Object.hasOwn(groups, value));
 }
 
-/** Campaign emails are broadcasts, automated ones are lifecycle journeys, the rest is essential mail. */
 export function emailGroup(item: EmailTemplate): EmailGroup {
 	if (item.template_type !== "campaign") return "transactional";
 	return item.studio_document?.purpose === "lifecycle" ? "automated" : "campaign";
@@ -139,7 +138,6 @@ function EmailItems({ project, defaultFilter }: { project: string; defaultFilter
 				}
 			},
 		);
-		// A missing sender only changes guidance; an unreachable Email service keeps the list usable.
 		void getStudioSenders(project).then(
 			(senders) => {
 				if (active) setHasSender(senders.length > 0);
@@ -403,7 +401,6 @@ function EmailItems({ project, defaultFilter }: { project: string; defaultFilter
 												];
 												if (translation) draft.locales[language] = translation;
 											}
-										// The project brand kit gives new emails their default look; a missing kit keeps Studio defaults.
 										const brand = await getBrandKit(project).catch(() => null);
 										const document = brand ? applyBrandKit(draft, brand) : draft;
 										const created = await createEmailTemplate(project, {
@@ -544,7 +541,6 @@ function EmailItems({ project, defaultFilter }: { project: string; defaultFilter
 	);
 }
 
-/** Sends one published transactional email to a single recipient, for checks and manual resends. */
 function TransactionalSend({ project, template }: { project: string; template: EmailTemplate }) {
 	const { t, locale } = useStudioI18n();
 	const [recipient, setRecipient] = useState("");

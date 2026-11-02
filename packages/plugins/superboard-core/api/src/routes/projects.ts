@@ -403,8 +403,6 @@ async function loadLinks(c: any, projectExternalId: string, limit = 50, offset =
 	);
 }
 
-// =================== LINKS ===================
-
 projects.get("/:id/links/random_path", async (c) => {
 	const path = generateShortCode();
 	return c.json({ valid_path: path, path });
@@ -615,8 +613,6 @@ projects.delete("/:id/links/:linkId", async (c) => {
 	return c.json({ message: "Link deleted" });
 });
 
-// =================== DOMAIN ===================
-
 projects.get("/:id/domain", async (c) => {
 	const project = await resolveProject(c.env.DB, c.req.param("id"));
 	let domain = await c.env.DB.prepare("SELECT * FROM domains WHERE project_id = ? LIMIT 1")
@@ -704,8 +700,6 @@ projects.put("/:id/domain/google_tracking_id", async (c) => {
 	return c.json({ message: "Google tracking id updated" });
 });
 
-// =================== REDIRECT CONFIG ===================
-
 async function redirectConfigResponse(c: any, projectExternalId: string) {
 	const project = await resolveProject(c.env.DB, projectExternalId);
 	const id = await getOrCreateRedirectConfig(c.env.DB, project.id);
@@ -790,8 +784,6 @@ projects.put("/:id/redirect_config/redirect", async (c) => {
 		.run();
 	return c.json(await redirectConfigResponse(c, c.req.param("id")));
 });
-
-// =================== DASHBOARD METRICS ===================
 
 projects.post("/:id/dashboard/top_links", async (c) => {
 	const project = await resolveProject(c.env.DB, c.req.param("id"));
@@ -927,8 +919,6 @@ projects.post("/:id/dashboard/metrics_overview", async (c) => {
 		},
 	});
 });
-
-// =================== CAMPAIGNS ===================
 
 function campaignRow(row: any) {
 	return {
@@ -1102,8 +1092,6 @@ projects.delete("/:id/campaigns/:campaignId", async (c) => {
 	return c.json({ message: "Campaign deleted" });
 });
 
-// =================== EVENTS / ANALYTICS ===================
-
 function eventRow(row: any) {
 	return {
 		id: String(row.id),
@@ -1233,8 +1221,6 @@ projects.post("/:id/events/overview", async (c) => {
 });
 projects.get("/:id/events/metric_values", async (c) => {
 	const project = await resolveProject(c.env.DB, c.req.param("id"));
-	// Three DISTINCT scans of idx_events_project_platform_version_build instead
-	// of loading every event row of the project.
 	const distinct = (column: "platform" | "app_version" | "build") =>
 		c.env.DB.prepare(
 			`SELECT DISTINCT ${column} AS value FROM events WHERE project_id = ? AND ${column} IS NOT NULL AND ${column} != ''`,
@@ -1284,8 +1270,6 @@ projects.post("/add_event", async (c) => {
 		.first<any>();
 	return c.json({ event: eventRow(result) }, 201);
 });
-
-// =================== VISITORS / PURCHASES / NOTIFICATIONS ===================
 
 projects.post("/:id/visitors/search", async (c) => {
 	const project = await resolveProject(c.env.DB, c.req.param("id"));
@@ -1886,7 +1870,6 @@ projects
 		const hasNewUsersFilter =
 			body.for_new_users !== undefined && body.for_new_users !== null && body.for_new_users !== "";
 		const newUsersFilter = toBool(body.for_new_users) ? 1 : 0;
-		// D1 caps LIKE patterns at 50 bytes, including the surrounding wildcards.
 		const literalSearch = new TextEncoder().encode(term).byteLength > 48;
 		const termClause = term
 			? literalSearch

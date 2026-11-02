@@ -1,11 +1,3 @@
-/**
- * Server-side submission validation.
- *
- * Validates submitted data against the form's field definitions.
- * These rules mirror what the client-side script checks, but server
- * validation is authoritative — never trust the client.
- */
-
 import type { FieldType, FormField } from "./types.js";
 
 export interface ValidationError {
@@ -16,7 +8,6 @@ export interface ValidationError {
 export interface ValidationResult {
 	valid: boolean;
 	errors: ValidationError[];
-	/** Sanitized/coerced values */
 	data: Record<string, unknown>;
 }
 
@@ -24,13 +15,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_RE = /^https?:\/\/.+/;
 const TEL_RE = /^[+\d][\d\s()-]*$/;
 
-/**
- * Validate submission data against form field definitions.
- *
- * Returns sanitized data with proper type coercion and all validation
- * errors. Conditionally hidden fields are excluded from validation
- * if their condition is not met.
- */
 export function validateSubmission(
 	fields: FormField[],
 	data: Record<string, unknown>,
@@ -39,7 +23,6 @@ export function validateSubmission(
 	const validated: Record<string, unknown> = {};
 
 	for (const field of fields) {
-		// Skip conditionally hidden fields
 		if (field.condition && !evaluateCondition(field.condition, data)) {
 			continue;
 		}
@@ -48,25 +31,21 @@ export function validateSubmission(
 		const value = typeof raw === "string" ? raw.trim() : raw;
 		const isEmpty = value === undefined || value === null || value === "";
 
-		// Required check
 		if (field.required && isEmpty) {
 			errors.push({ field: field.name, message: `${field.label} is required` });
 			continue;
 		}
 
-		// Skip further validation if empty and not required
 		if (isEmpty) {
 			continue;
 		}
 
-		// Type-specific validation
 		const typeError = validateFieldType(field, value);
 		if (typeError) {
 			errors.push({ field: field.name, message: typeError });
 			continue;
 		}
 
-		// Validation rules
 		const ruleErrors = validateFieldRules(field, value);
 		for (const msg of ruleErrors) {
 			errors.push({ field: field.name, message: msg });
@@ -158,9 +137,7 @@ function validateFieldRules(field: FormField, value: unknown): string[] {
 			if (!re.test(strValue)) {
 				errors.push(v.patternMessage || `${field.label} has an invalid format`);
 			}
-		} catch {
-			// Invalid regex in config — skip pattern check
-		}
+		} catch {}
 	}
 
 	return errors;

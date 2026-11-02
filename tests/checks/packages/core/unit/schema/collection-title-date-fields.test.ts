@@ -1,9 +1,3 @@
-/**
- * A collection's `titleField`/`dateField` override the admin list's
- * Title and Date columns. Update-only (fields must exist first), so
- * `updateCollection` validates: titleField = a real field, dateField = a
- * `datetime` field; `null`/`""` clears to default; unset stays undefined.
- */
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -86,7 +80,6 @@ describe("collection titleField/dateField", () => {
 	});
 
 	it("updateCollection rejects a titleField that isn't a text field", async () => {
-		// `pub_date` is a datetime field — a raw date reads poorly as a title.
 		await expect(
 			registry.updateCollection("employees", { titleField: "pub_date" }),
 		).rejects.toBeInstanceOf(SchemaError);
@@ -107,12 +100,10 @@ describe("collection titleField/dateField", () => {
 	it("clears titleField/dateField when the referenced field is deleted", async () => {
 		await registry.updateCollection("employees", { titleField: "name", dateField: "pub_date" });
 
-		// Deleting the field that powers dateField must clear the reference, so
-		// the content list doesn't later sort by a dropped column.
 		await registry.deleteField("employees", "pub_date");
 		const afterDate = await registry.getCollection("employees");
 		expect(afterDate?.dateField).toBeUndefined();
-		expect(afterDate?.titleField).toBe("name"); // unrelated reference untouched
+		expect(afterDate?.titleField).toBe("name");
 
 		await registry.deleteField("employees", "name");
 		const afterName = await registry.getCollection("employees");
@@ -121,8 +112,6 @@ describe("collection titleField/dateField", () => {
 
 	it("rejects changing a dateField's type away from datetime", async () => {
 		await registry.updateCollection("employees", { dateField: "pub_date" });
-		// datetime and string both map to a TEXT column, so the column-type guard
-		// alone wouldn't catch this — the titleField/dateField invariant must.
 		await expect(
 			registry.updateField("employees", "pub_date", { type: "string" }),
 		).rejects.toBeInstanceOf(SchemaError);

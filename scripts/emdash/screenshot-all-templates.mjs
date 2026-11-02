@@ -1,15 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * Screenshot all templates by starting each dev server, capturing screenshots, and stopping.
- *
- * Usage:
- *   node scripts/emdash/screenshot-all-templates.mjs [template...]
- *   node scripts/emdash/screenshot-all-templates.mjs           # all templates
- *   node scripts/emdash/screenshot-all-templates.mjs blog      # just blog
- *   node scripts/emdash/screenshot-all-templates.mjs blog marketing  # blog and marketing
- */
-
 import { spawn, execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -29,7 +19,6 @@ function loadConfig() {
 	return JSON.parse(readFileSync(configPath, "utf-8"));
 }
 
-/** Check if server is responding via HTTP */
 async function isServerReady(port) {
 	try {
 		const controller = new AbortController();
@@ -38,13 +27,12 @@ async function isServerReady(port) {
 			signal: controller.signal,
 		});
 		clearTimeout(timeout);
-		return response.ok || response.status === 404; // 404 is fine, server is up
+		return response.ok || response.status === 404;
 	} catch {
 		return false;
 	}
 }
 
-/** Wait for server to respond, with timeout */
 async function waitForServer(port, timeoutMs = 60000) {
 	const start = Date.now();
 	while (Date.now() - start < timeoutMs) {
@@ -56,7 +44,6 @@ async function waitForServer(port, timeoutMs = 60000) {
 	return false;
 }
 
-/** Check if port has processes (via lsof) */
 function hasProcessOnPort(port) {
 	try {
 		const result = execSync(`lsof -ti tcp:${port} 2>/dev/null || true`, { encoding: "utf-8" });
@@ -66,7 +53,6 @@ function hasProcessOnPort(port) {
 	}
 }
 
-/** Wait for port to be free */
 async function waitForPortFree(port, timeoutMs = 10000) {
 	const start = Date.now();
 	while (Date.now() - start < timeoutMs) {
@@ -78,10 +64,8 @@ async function waitForPortFree(port, timeoutMs = 10000) {
 	return false;
 }
 
-/** Kill all processes listening on a port (macOS/Linux) */
 function killProcessesOnPort(port) {
 	try {
-		// Get PIDs listening on this port
 		const result = execSync(`lsof -ti tcp:${port} 2>/dev/null || true`, { encoding: "utf-8" });
 		const pids = result
 			.trim()
@@ -91,31 +75,23 @@ function killProcessesOnPort(port) {
 		for (const pid of pids) {
 			try {
 				process.kill(Number(pid), "SIGTERM");
-			} catch {
-				// Process may already be dead
-			}
+			} catch {}
 		}
 
-		// If still running after 2s, force kill
 		if (pids.length > 0) {
 			setTimeout(() => {
 				for (const pid of pids) {
 					try {
 						process.kill(Number(pid), "SIGKILL");
-					} catch {
-						// Process may already be dead
-					}
+					} catch {}
 				}
 			}, 2000);
 		}
-	} catch {
-		// lsof may not be available or no processes found
-	}
+	} catch {}
 }
 
 function startDevServer(templateDir, port) {
 	return new Promise((resolve, reject) => {
-		// Run astro dev directly in the template directory
 		const proc = spawn("pnpm", ["exec", "astro", "dev", "--port", String(port)], {
 			cwd: join(ROOT, templateDir),
 			stdio: ["ignore", "pipe", "pipe"],
@@ -126,7 +102,7 @@ function startDevServer(templateDir, port) {
 
 		const onData = (data) => {
 			output += data.toString();
-			process.stdout.write(data); // Show output for debugging
+			process.stdout.write(data);
 		};
 
 		proc.stdout.on("data", onData);
@@ -137,17 +113,13 @@ function startDevServer(templateDir, port) {
 		});
 
 		proc.on("exit", (code) => {
-			// If process exits before we resolve, that's an error
 			reject(new Error(`Dev server exited with code ${code}`));
 		});
 
-		// Wait for server to respond via HTTP
 		waitForServer(port, 60000)
 			.then((ready) => {
 				if (ready) {
-					// Remove exit handler since we're resolving successfully
 					proc.removeAllListeners("exit");
-					// Re-add a silent exit handler
 					proc.on("exit", () => {});
 					resolve({ proc, port });
 				} else {
@@ -183,27 +155,20 @@ function runScreenshots(template, url) {
 }
 
 async function stopDevServer({ proc, port }) {
-	// Kill the process tree
 	try {
 		proc.kill("SIGTERM");
-	} catch {
-		// May already be dead
-	}
+	} catch {}
 
-	// Also kill anything on the port (catches child processes)
 	killProcessesOnPort(port);
 
-	// Wait for port to actually be free
 	const closed = await waitForPortFree(port, 10000);
 	if (!closed) {
 		console.warn(`Warning: Port ${port} still in use after stopping server`);
-		// Force kill anything still on the port
 		killProcessesOnPort(port);
 		await waitForPortFree(port, 5000);
 	}
 }
 
-/** Run bootstrap (reset db and seed) for a template */
 async function bootstrapTemplate(templateDir) {
 	return new Promise((resolve, reject) => {
 		console.log(`Bootstrapping ${templateDir}...`);
@@ -237,7 +202,6 @@ async function processTemplate(template) {
 		return false;
 	}
 
-	// Make sure port is free before starting
 	if (hasProcessOnPort(config.port)) {
 		console.log(`Port ${config.port} is in use, killing existing processes...`);
 		killProcessesOnPort(config.port);
@@ -250,7 +214,6 @@ async function processTemplate(template) {
 
 	let server;
 	try {
-		// Bootstrap first to ensure database has seed content
 		await bootstrapTemplate(config.dir);
 
 		console.log(`Starting dev server...`);
@@ -266,7 +229,6 @@ async function processTemplate(template) {
 		if (server) {
 			console.log(`Stopping ${template} dev server...`);
 			await stopDevServer(server);
-			// Extra pause to ensure cleanup
 			await new Promise((r) => setTimeout(r, 1000));
 		}
 	}
@@ -276,7 +238,6 @@ async function run() {
 	const args = process.argv.slice(2);
 	const templates = args.length > 0 ? args : Object.keys(TEMPLATES);
 
-	// Validate all templates first
 	for (const template of templates) {
 		if (!TEMPLATES[template]) {
 			console.error(`Unknown template: ${template}`);

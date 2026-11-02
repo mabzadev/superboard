@@ -38,7 +38,6 @@ class PaymentEvent(
 ) : Parcelable {
 
     companion object {
-        // Internal data class to parse the purchase JSON
         private data class PurchaseJson(
             val orderId: String? = null,
             val packageName: String? = null,
@@ -55,17 +54,6 @@ class PaymentEvent(
             val developerPayload: String? = null
         )
 
-        /**
-         * Creates PaymentEvent(s) from Android Billing Purchase's originalJson
-         * Returns a list to handle both single product and multi-product purchases gracefully
-         *
-         * @param originalJson The JSON string from purchase.originalJson
-         * @param gson Gson instance for parsing
-         * @param eventType The type of payment event
-         * @param priceCents Optional price in cents for single product (not included in originalJson)
-         * @param currency Optional currency code for single product (not included in originalJson)
-         * @param productPrices Optional map of productId to (priceCents, currency) for multi-product
-         */
         fun fromOriginalJson(
             originalJson: String,
             gson: Gson = Gson(),
@@ -77,29 +65,23 @@ class PaymentEvent(
             return try {
                 val purchaseJson = gson.fromJson(originalJson, PurchaseJson::class.java)
 
-                // Get all product IDs (handles both single and multiple products)
                 val productIds = when {
                     !purchaseJson.productIds.isNullOrEmpty() -> purchaseJson.productIds
                     !purchaseJson.productId.isNullOrEmpty() -> listOf(purchaseJson.productId)
                     else -> emptyList()
                 }
 
-                // If no products found, return empty list
                 if (productIds.isEmpty()) {
                     return emptyList()
                 }
 
-                // Convert purchase time to InstantCompat
                 val date = if (purchaseJson.purchaseTime > 0) {
                     InstantCompat.ofEpochMilli(purchaseJson.purchaseTime)
                 } else null
 
-                // Convert order ID to transaction ID
                 val transactionId = purchaseJson.orderId?.hashCode()
 
-                // Create a PaymentEvent for each product
                 productIds.map { productId ->
-                    // Try to get price from productPrices map, otherwise use single price params
                     val (productPrice, productCurrency) = productPrices?.get(productId)
                         ?: (priceCents to currency)
 
@@ -116,7 +98,6 @@ class PaymentEvent(
                     )
                 }
             } catch (e: Exception) {
-                // Return empty list on error
                 emptyList()
             }
         }

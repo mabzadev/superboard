@@ -1,18 +1,3 @@
-/**
- * Regression tests for the unbounded 404 logging DoS.
- *
- * `log404` was previously an unconditional INSERT for every 404 — an
- * unauthenticated attacker could fill the database by hitting unique URLs.
- *
- * The hardened version:
- *   - Dedups by path: existing rows are bumped (`hits++`, `last_seen_at` refreshed)
- *     instead of inserting new rows.
- *   - Caps the table at MAX_404_LOG_ROWS rows; oldest entries (by `last_seen_at`)
- *     are evicted to make room for new paths.
- *   - Truncates referrer / user_agent to bounded lengths so a malicious client
- *     can't blow up storage by sending huge headers.
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -25,12 +10,6 @@ import {
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
-/**
- * Seed `_emdash_404_log` directly to MAX_404_LOG_ROWS, batching to stay
- * under SQLite's per-statement bind-parameter limit (~32k by default).
- *
- * Rows are staggered in `last_seen_at` so `seed-000000` is the oldest.
- */
 async function seedToCapacity(db: Kysely<Database>): Promise<void> {
 	const now = Date.now();
 	const batchSize = 500;
@@ -101,7 +80,6 @@ describe("RedirectRepository.log404 — bounded logging", () => {
 
 		expect(row.referrer?.length).toBeLessThanOrEqual(REFERRER_MAX_LENGTH);
 		expect(row.user_agent?.length).toBeLessThanOrEqual(USER_AGENT_MAX_LENGTH);
-		// Confirm the truncation actually happened (sanity check on the constants).
 		expect(row.referrer!.length).toBe(REFERRER_MAX_LENGTH);
 		expect(row.user_agent!.length).toBe(USER_AGENT_MAX_LENGTH);
 	});
@@ -120,19 +98,14 @@ describe("RedirectRepository.log404 — bounded logging", () => {
 	});
 
 	it("evicts the oldest entry when the table is at capacity", async () => {
-		// Stuffing the table to MAX_404_LOG_ROWS via the public API would be
-		// slow, so seed it directly. Batch the inserts to stay under SQLite's
-		// per-statement parameter limit.
 		await seedToCapacity(db);
 
-		// Sanity: at capacity.
 		const before = await db
 			.selectFrom("_emdash_404_log")
 			.select((eb) => eb.fn.countAll<number>().as("c"))
 			.executeTakeFirstOrThrow();
 		expect(Number(before.c)).toBe(MAX_404_LOG_ROWS);
 
-		// New unique path triggers eviction.
 		await repo.log404({ path: "/brand-new" });
 
 		const after = await db
@@ -141,7 +114,6 @@ describe("RedirectRepository.log404 — bounded logging", () => {
 			.executeTakeFirstOrThrow();
 		expect(Number(after.c)).toBe(MAX_404_LOG_ROWS);
 
-		// The oldest seed row is gone.
 		const oldest = await db
 			.selectFrom("_emdash_404_log")
 			.select("id")
@@ -149,7 +121,6 @@ describe("RedirectRepository.log404 — bounded logging", () => {
 			.executeTakeFirst();
 		expect(oldest).toBeUndefined();
 
-		// The new path is present.
 		const fresh = await db
 			.selectFrom("_emdash_404_log")
 			.select("path")
@@ -161,7 +132,6 @@ describe("RedirectRepository.log404 — bounded logging", () => {
 	it("does not evict when an existing path is hit again, even at capacity", async () => {
 		await seedToCapacity(db);
 
-		// Hit an existing path — should bump hits, not evict.
 		await repo.log404({ path: "/seed-500" });
 
 		const oldest = await db
@@ -180,17 +150,6 @@ describe("RedirectRepository.log404 — bounded logging", () => {
 	});
 
 	it("handles concurrent inserts for the same new path atomically", async () => {
-		// Regression: `log404` used to be SELECT-then-INSERT/UPDATE, which
-		// races under concurrency — both callers could miss the SELECT and
-		// the second INSERT would fail with a uniqueness violation once a
-		// UNIQUE index on `path` was added. The fix uses a single atomic
-		// upsert (ON CONFLICT DO UPDATE).
-		//
-		// better-sqlite3 is synchronous, so Promise.all doesn't produce real
-		// parallelism; the test instead sends a batch of concurrent upserts
-		// and asserts the end state: exactly one row, with the full count
-		// reflected in `hits`. Any lost updates or uniqueness errors would
-		// cause this to fail.
 		const concurrency = 10;
 		const pending: Array<Promise<void>> = [];
 		for (let i = 0; i < concurrency; i++) {

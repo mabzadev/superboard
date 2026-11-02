@@ -1,11 +1,3 @@
-/**
- * Type declarations for optional AWS SDK dependencies
- *
- * The AWS SDK is only required when using S3-compatible storage.
- * This file provides minimal type declarations to satisfy TypeScript
- * without requiring the SDK to be installed.
- */
-
 declare module "@aws-sdk/client-s3" {
 	export interface S3ClientConfig {
 		endpoint: string;
@@ -53,7 +45,6 @@ declare module "@aws-sdk/client-s3" {
 		send(command: ListObjectsV2Command): Promise<ListObjectsV2Response>;
 		send(command: PutObjectCommand): Promise<void>;
 		send(command: DeleteObjectCommand): Promise<void>;
-		// Generic fallback
 		send(command: unknown): Promise<unknown>;
 	}
 

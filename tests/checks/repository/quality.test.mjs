@@ -196,7 +196,7 @@ const examples = [
 		"superboard/test-integrity",
 		"tests/checks/repository/example.test.mjs",
 		'test.skip("missing prerequisite",()=>{});',
-		'// Requires the unavailable device simulator.\ntest.skip("device test",()=>{});',
+		'test.skip(process.env.DEVICE !== "1","Requires the unavailable device simulator.");',
 	],
 	[
 		"superboard/documented-suppression",

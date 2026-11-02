@@ -1,13 +1,3 @@
-/**
- * Drag Handle Wrapper Component
- *
- * Wraps TipTap's official DragHandle React component with our BlockMenu.
- * This component provides:
- * - Drag handles that appear on block hover
- * - Actual drag-and-drop block reordering (handled by TipTap)
- * - Block menu integration for transforms, duplicate, delete
- */
-
 import { Button } from "@cloudflare/kumo";
 import { offset } from "@floating-ui/react";
 import { useLingui } from "@lingui/react/macro";
@@ -35,9 +25,6 @@ export function _getDragHandlePlacement(direction: "ltr" | "rtl") {
 	return direction === "rtl" ? ("right-start" as const) : ("left-start" as const);
 }
 
-/**
- * DragHandleWrapper - Official TipTap drag handle with BlockMenu integration
- */
 export function DragHandleWrapper({ editor, onInsertBlock }: DragHandleWrapperProps) {
 	const { i18n, t } = useLingui();
 	const direction = getLocaleDir(i18n.locale);
@@ -74,7 +61,6 @@ export function DragHandleWrapper({ editor, onInsertBlock }: DragHandleWrapperPr
 		};
 	}, [restoreDrag]);
 
-	// Handle click on drag handle to open menu
 	const handleClick = React.useCallback(
 		(e: React.MouseEvent) => {
 			e.preventDefault();
@@ -82,14 +68,11 @@ export function DragHandleWrapper({ editor, onInsertBlock }: DragHandleWrapperPr
 
 			if (!hoveredNode) return;
 
-			// Select the block in the editor
 			editor.chain().setNodeSelection(hoveredNode.pos).run();
 
-			// Open the menu
 			setMenuAnchor(handleRef.current);
 			setMenuOpen(true);
 
-			// Lock the drag handle so it stays visible while menu is open
 			editor.commands.setMeta("lockDragHandle", true);
 		},
 		[editor, hoveredNode],
@@ -106,7 +89,6 @@ export function DragHandleWrapper({ editor, onInsertBlock }: DragHandleWrapperPr
 		[hoveredNode, onInsertBlock],
 	);
 
-	// Close the menu
 	const handleCloseMenu = React.useCallback(() => {
 		setMenuOpen(false);
 	}, []);
@@ -116,7 +98,6 @@ export function DragHandleWrapper({ editor, onInsertBlock }: DragHandleWrapperPr
 		editor.commands.setMeta("lockDragHandle", false);
 	}, [editor]);
 
-	// Handle node change from drag handle
 	const handleNodeChange = React.useCallback(
 		(data: { node: PMNode | null; editor: Editor; pos: number }) => {
 			if (data.node) {
@@ -128,9 +109,6 @@ export function DragHandleWrapper({ editor, onInsertBlock }: DragHandleWrapperPr
 		[],
 	);
 
-	// Stable reference — DragHandle's useEffect depends on this by reference.
-	// An inline object causes plugin unregister/register every render, which
-	// tears down the Suggestion plugin view (calling onExit → setState → loop).
 	const computePositionConfig = React.useMemo(
 		() => ({
 			placement: _getDragHandlePlacement(direction),
@@ -194,7 +172,6 @@ export function DragHandleWrapper({ editor, onInsertBlock }: DragHandleWrapperPr
 				</div>
 			</DragHandle>
 
-			{/* Block menu */}
 			<BlockMenu
 				editor={editor}
 				anchorElement={menuAnchor}

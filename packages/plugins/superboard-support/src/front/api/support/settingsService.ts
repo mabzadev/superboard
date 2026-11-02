@@ -2,8 +2,6 @@ import { config } from "@superboard/front-ui/lib/config.js";
 
 import { DELETE, GET, PATCH, POST, PUT } from "../../transport.js";
 
-// Canonical Grow client for Support project settings.
-
 export type SupportFieldDefinition = {
 	key: string;
 	label: string;
@@ -117,7 +115,6 @@ export const revokeSupportWebhookSecret = async (projectId: string, entityId: st
 		})
 	).data;
 
-// Source-compatibility aliases for internal adapters.
 export type MessagingFieldDefinition = SupportFieldDefinition;
 export type MessagingEntityDefinition = SupportEntityDefinition;
 export type MessagingProjectSettings = SupportProjectSettings;

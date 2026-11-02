@@ -1,11 +1,3 @@
-/**
- * Gutenberg to Portable Text Converter
- *
- * Converts WordPress Gutenberg block content to Portable Text format.
- * Uses @wordpress/block-serialization-default-parser to parse the hybrid
- * HTML+JSON format that WordPress uses.
- */
-
 import { parse } from "@wordpress/block-serialization-default-parser";
 
 import { parseInlineContent } from "./inline.js";
@@ -17,7 +9,6 @@ import type {
 	TransformContext,
 } from "./types.js";
 
-// Regex patterns for HTML parsing and conversion
 const BLOCK_ELEMENT_PATTERN =
 	/<(p|h[1-6]|blockquote|pre|ul|ol|figure|div|hr)[^>]*>([\s\S]*?)<\/\1>|<(hr|br)\s*\/?>|<img\s+[^>]+\/?>/gu;
 const LINKED_IMAGE_PATTERN = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>\s*<img\s+([^>]+)\/?>\s*<\/a>/gu;
@@ -38,7 +29,6 @@ const NUMERIC_AMP_ENTITY_PATTERN = /&#0?38;/g;
 const HEX_AMP_ENTITY_PATTERN = /&#x26;/gi;
 const NBSP_ENTITY_PATTERN = /&nbsp;/g;
 
-// Re-export types
 export type {
 	GutenbergBlock,
 	PortableTextBlock,
@@ -62,12 +52,10 @@ export type {
 	TransformContext,
 } from "./types.js";
 
-// Re-export transformers for customization
 export { defaultTransformers, fallbackTransformer } from "./transformers/index.js";
 export * as coreTransformers from "./transformers/core.js";
 export * as embedTransformers from "./transformers/embed.js";
 
-// Re-export inline utilities
 export {
 	parseInlineContent,
 	extractText,
@@ -76,9 +64,6 @@ export {
 	extractSrc,
 } from "./inline.js";
 
-/**
- * Default key generator
- */
 function createKeyGenerator(): () => string {
 	let counter = 0;
 	return () => {
@@ -87,11 +72,6 @@ function createKeyGenerator(): () => string {
 	};
 }
 
-/**
- * Normalize parsed blocks from the WP parser into our GutenbergBlock type.
- * The WP parser returns `attrs: Record<string, any> | null`, so we normalize
- * null attrs to empty objects and recursively process innerBlocks.
- */
 function normalizeBlocks(blocks: ReturnType<typeof parse>): GutenbergBlock[] {
 	return blocks.map(
 		(block): GutenbergBlock => ({
@@ -104,56 +84,29 @@ function normalizeBlocks(blocks: ReturnType<typeof parse>): GutenbergBlock[] {
 	);
 }
 
-/**
- * Convert WordPress Gutenberg content to Portable Text
- *
- * @param content - WordPress post content (HTML with Gutenberg block comments)
- * @param options - Conversion options
- * @returns Array of Portable Text blocks
- *
- * @example
- * ```ts
- * const portableText = gutenbergToPortableText(`
- *   <!-- wp:paragraph -->
- *   <p>Hello <strong>world</strong>!</p>
- *   <!-- /wp:paragraph -->
- * `);
- * // → [{ _type: "block", style: "normal", children: [...] }]
- * ```
- */
 export function gutenbergToPortableText(
 	content: string,
 	options: ConvertOptions = {},
 ): PortableTextBlock[] {
-	// Handle empty content
 	if (!content || !content.trim()) {
 		return [];
 	}
 
-	// Check if content has Gutenberg blocks
 	const hasBlocks = content.includes("<!-- wp:");
 
 	if (!hasBlocks) {
-		// Classic editor content - treat as HTML
 		return htmlToPortableText(content, options);
 	}
 
-	// Parse Gutenberg blocks
 	const blocks = normalizeBlocks(parse(content));
 
-	// Create key generator
 	const generateKey = options.keyGenerator || createKeyGenerator();
 
-	// Create transform context
 	const context = createTransformContext(options, generateKey);
 
-	// Transform blocks
 	return blocks.flatMap((block) => transformBlock(block, options, context));
 }
 
-/**
- * Convert plain HTML (classic editor) to Portable Text
- */
 export function htmlToPortableText(
 	html: string,
 	options: ConvertOptions = {},
@@ -161,7 +114,6 @@ export function htmlToPortableText(
 	const generateKey = options.keyGenerator || createKeyGenerator();
 	const blocks: PortableTextBlock[] = [];
 
-	// Split on block-level elements (including standalone img tags)
 	let lastIndex = 0;
 	let match;
 
@@ -170,7 +122,6 @@ export function htmlToPortableText(
 		const tag = (match[1] || match[3] || "").toLowerCase();
 		const content = match[2] || "";
 
-		// Handle text between matches
 		const between = html.slice(lastIndex, match.index).trim();
 		if (between) {
 			const { children, markDefs } = parseInlineContent(between, generateKey);
@@ -186,7 +137,6 @@ export function htmlToPortableText(
 		}
 		lastIndex = match.index + match[0].length;
 
-		// Check for standalone <img> tag (not wrapped in figure/p)
 		if (fullMatch.toLowerCase().startsWith("<img")) {
 			const srcMatch = fullMatch.match(SRC_ATTR_PATTERN);
 			const altMatch = fullMatch.match(ALT_ATTR_PATTERN);
@@ -206,16 +156,11 @@ export function htmlToPortableText(
 			continue;
 		}
 
-		// Transform based on tag
 		switch (tag) {
 			case "p":
 			case "div": {
-				// Extract any images first (including those wrapped in <a> tags)
-				// Match: <a...><img...></a> or standalone <img...>
-				// Track positions of linked images so we don't double-process
 				const linkedImgPositions: Array<{ start: number; end: number }> = [];
 
-				// First extract linked images
 				let linkedMatch;
 				while ((linkedMatch = LINKED_IMAGE_PATTERN.exec(content)) !== null) {
 					const linkUrl = decodeUrlEntities(linkedMatch[1]!);
@@ -242,10 +187,8 @@ export function htmlToPortableText(
 					});
 				}
 
-				// Then extract standalone images (not inside <a> tags)
 				let imgMatch;
 				while ((imgMatch = STANDALONE_IMAGE_PATTERN.exec(content)) !== null) {
-					// Skip if this image is inside a linked image we already processed
 					const isLinked = linkedImgPositions.some(
 						(pos) => imgMatch!.index >= pos.start && imgMatch!.index < pos.end,
 					);
@@ -268,10 +211,9 @@ export function htmlToPortableText(
 					}
 				}
 
-				// Then handle the text content (with images and image links stripped)
 				let textContent = content
-					.replace(LINKED_IMAGE_PATTERN, "") // Remove linked images
-					.replace(STANDALONE_IMAGE_PATTERN, "") // Remove standalone images
+					.replace(LINKED_IMAGE_PATTERN, "")
+					.replace(STANDALONE_IMAGE_PATTERN, "")
 					.trim();
 				if (textContent) {
 					const { children, markDefs } = parseInlineContent(textContent, generateKey);
@@ -318,7 +260,6 @@ export function htmlToPortableText(
 			}
 
 			case "pre": {
-				// Extract code content
 				const codeMatch = content.match(CODE_TAG_PATTERN);
 				const code = codeMatch?.[1] || content;
 				blocks.push({
@@ -359,7 +300,6 @@ export function htmlToPortableText(
 			}
 
 			case "figure": {
-				// Check for image
 				const imgMatch = content.match(IMG_TAG_PATTERN);
 				if (imgMatch) {
 					const srcMatch = imgMatch[0].match(SRC_ATTR_PATTERN);
@@ -384,7 +324,6 @@ export function htmlToPortableText(
 		}
 	}
 
-	// Handle remaining text
 	const remaining = html.slice(lastIndex).trim();
 	if (remaining) {
 		const { children, markDefs } = parseInlineContent(remaining, generateKey);
@@ -402,9 +341,6 @@ export function htmlToPortableText(
 	return blocks;
 }
 
-/**
- * Create transform context for recursive block transformation
- */
 function createTransformContext(
 	options: ConvertOptions,
 	generateKey: () => string,
@@ -418,9 +354,6 @@ function createTransformContext(
 	return context;
 }
 
-/**
- * Transform a single block
- */
 function transformBlock(
 	block: GutenbergBlock,
 	options: ConvertOptions,
@@ -430,9 +363,6 @@ function transformBlock(
 	return transformer(block, options, context);
 }
 
-/**
- * Decode HTML entities
- */
 function decodeHtmlEntities(html: string): string {
 	return html
 		.replace(LESS_THAN_ENTITY_PATTERN, "<")
@@ -440,14 +370,11 @@ function decodeHtmlEntities(html: string): string {
 		.replace(AMP_ENTITY_PATTERN, "&")
 		.replace(QUOTE_ENTITY_PATTERN, '"')
 		.replace(APOS_ENTITY_PATTERN, "'")
-		.replace(NUMERIC_AMP_ENTITY_PATTERN, "&") // &#038; or &#38;
-		.replace(HEX_AMP_ENTITY_PATTERN, "&") // &#x26;
+		.replace(NUMERIC_AMP_ENTITY_PATTERN, "&")
+		.replace(HEX_AMP_ENTITY_PATTERN, "&")
 		.replace(NBSP_ENTITY_PATTERN, " ");
 }
 
-/**
- * Decode HTML entities in URLs (used for image src attributes)
- */
 function decodeUrlEntities(url: string): string {
 	return url
 		.replace(AMP_ENTITY_PATTERN, "&")
@@ -455,10 +382,6 @@ function decodeUrlEntities(url: string): string {
 		.replace(HEX_AMP_ENTITY_PATTERN, "&");
 }
 
-/**
- * Parse Gutenberg blocks without converting to Portable Text
- * Useful for inspection and debugging
- */
 export function parseGutenbergBlocks(content: string): GutenbergBlock[] {
 	if (!content || !content.trim()) {
 		return [];

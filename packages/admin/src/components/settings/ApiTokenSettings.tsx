@@ -1,9 +1,3 @@
-/**
- * API Tokens settings page
- *
- * Allows admins to list, create, and revoke Personal Access Tokens.
- */
-
 import { Banner, Button, Checkbox, Input, Loader, Select, Tooltip } from "@cloudflare/kumo";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
@@ -24,10 +18,6 @@ import { fetchPlugins } from "../../lib/api/plugins.js";
 import { parseTimestamp } from "../../lib/utils.js";
 import { ConfirmDialog } from "../ConfirmDialog.js";
 import { SettingRow, SettingsFrame, SettingsSection } from "./SettingsLayout.js";
-
-// =============================================================================
-// Expiry options
-// =============================================================================
 
 const EXPIRY_OPTIONS = [
 	{ value: "none", label: msg`No expiry` },
@@ -104,7 +94,6 @@ const API_TOKEN_SCOPE_VALUES: {
 	},
 ];
 
-/** Wire scopes shown on the create-token form (contract-tested vs `API_TOKEN_SCOPES` and `@emdash-cms/auth`). */
 export const API_TOKEN_SCOPE_FORM_SCOPES: readonly ApiTokenScopeValue[] =
 	API_TOKEN_SCOPE_VALUES.map((row) => row.scope);
 
@@ -116,10 +105,6 @@ function computeExpiryDate(option: string): string | undefined {
 	date.setDate(date.getDate() + days);
 	return date.toISOString();
 }
-
-// =============================================================================
-// Main component
-// =============================================================================
 
 export function ApiTokenSettings() {
 	const { t, i18n } = useLingui();
@@ -175,9 +160,7 @@ export function ApiTokenSettings() {
 			await navigator.clipboard.writeText(newToken.token);
 			setCopied(true);
 			copyTimeoutRef.current = setTimeout(setCopied, 2000, false);
-		} catch {
-			// Clipboard API can fail in insecure contexts or when denied
-		}
+		} catch {}
 	};
 
 	const expirySelectItems = React.useMemo(
@@ -422,10 +405,6 @@ export function ApiTokenSettings() {
 		</SettingsFrame>
 	);
 }
-
-// =============================================================================
-// Create token form
-// =============================================================================
 
 interface CreateTokenFormProps {
 	expirySelectItems: Record<string, string>;

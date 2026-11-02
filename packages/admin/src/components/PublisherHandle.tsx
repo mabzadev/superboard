@@ -1,11 +1,3 @@
-/**
- * Publisher identity for ordinary registry views.
- *
- * Mutable handles are outside the package-profile CID's moderation boundary,
- * so browse and detail pages render only an approved author name or a stable,
- * shortened DID. Routing likewise uses the full DID.
- */
-
 export interface PublisherIdentityProfile {
 	authors?: readonly { name?: unknown }[];
 }

@@ -1,44 +1,27 @@
-//
-//  superboardService.swift
-//
-//  superboard
-//
-
 import Foundation
 
-/// A typealias for a closure returning a URL.
 public typealias SuperBoardURLClosure = (_ url: URL?) -> Void
 
-/// A typealias for a closure returning a dictionary.
 public typealias SuperBoardPayloadClosure = (_ dictionary: [String: Any]?) -> Void
 
 public typealias SuperBoardDeviceDataClosureClosure = (_ dictionary: [String: Any]?, _ link: String?, _ tracking: [String: Any]?) -> Void
 
-/// A typealias for a closure returning a array of dictionaries.
 public typealias SuperBoardPayloadsClosure = (_ array: [[String: Any]]?) -> Void
 
-/// A typealias for a closure returning a string.
 typealias SuperBoardAuthenticationClosure = (_ success: Bool, _ linksquaredID: String?, _ URIScheme: String?, _ identifier: String?, _ attributes: [String: Any]?) -> Void
 
-/// A typealias for a closure that returns an array of notifications.
 typealias SuperBoardNotificationsClosure = (_ notifications: [SuperBoardNotification]?) -> Void
 
-/// A typealias for a closure returning an int.
 public typealias SuperBoardIntClosure = (_ value: Int?) -> Void
 
-/// A typealias for a clsure returning a dictionary
 public typealias SuperBoardLinkClosure = (_ dictionary: [String: Any]?) -> Void
 
-/// Protocol defining the API service methods used by handlers.
 protocol APIServiceProtocol: AnyObject {
     func addEvent(event: Event, completion: @escaping SuperBoardBoolCompletion)
     func addPaymentEvent(transactionData: TransactionData, completion: @escaping SuperBoardBoolCompletion)
 }
 
-/// A class responsible for handling API service calls.
 class APIService: BaseService, APIServiceProtocol {
-
-    // MARK: - Constants
 
     private struct Constants {
         struct URLs {
@@ -70,8 +53,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    // MARK: - Properties
-
     private let baseURL: URL
     private let apiKey: String
     private let bundleID: String
@@ -85,20 +66,11 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    /// Indicates if the test environment should be used
     private var useTestEnvironment = false
 
-    /// Fetch url data tasks
     private var fetchPayloadDetailsTask: URLSessionTask?
     private var fetchPayloadForURLDetailsTask: URLSessionTask?
 
-    // MARK: - Lifecycle
-
-    /// Initializes an `APIService` object with the provided API key and bundle ID.
-    ///
-    /// - Parameters:
-    ///   - apiKey: The API key for authentication.
-    ///   - bundleID: The bundle ID of the app.
     init(apiKey: String, bundleID: String, useTestEnvironment: Bool, baseURL: String? = nil) {
         guard let baseURL, !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             preconditionFailure("SuperBoard baseURL must be configured by the application")
@@ -114,14 +86,6 @@ class APIService: BaseService, APIServiceProtocol {
         self.useTestEnvironment = useTestEnvironment
     }
 
-    // MARK: - Public Methods
-
-    /// Retrieves payload for app details and a URL.
-    ///
-    /// - Parameters:
-    ///   - appDetails: Details of the app.
-    ///   - url: The URL to retrieve payload for.
-    ///   - completion: A closure returning the payload as a dictionary.
     func payloadFor(appDetails: AppDetails, url: String, completion: @escaping SuperBoardDeviceDataClosureClosure) {
         guard var request = urlRequestWithAuthHeaders(
             path: Constants.URLs.dataForDeviceAndURL) else {
@@ -155,11 +119,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    /// Retrieves payload for app details.
-    ///
-    /// - Parameters:
-    ///   - appDetails: Details of the app.
-    ///   - completion: A closure returning the payload as a dictionary.
     func payloadFor(appDetails: AppDetails, completion: @escaping SuperBoardDeviceDataClosureClosure) {
         guard var request = urlRequestWithAuthHeaders(
             path: Constants.URLs.dataForDevice) else {
@@ -187,21 +146,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    /// Generates a link.
-    ///
-    /// - Parameters:
-    ///   - title: The title for the link.
-    ///   - subtitle: The subtitle for the link.
-    ///   - imageURL: The image URL for the link.
-    ///   - data: Additional data for the link.
-    ///   - tags: Tags to associate with the link.
-    ///   - customRedirects: Override the default redirects for a link.
-    ///   - showPreviewiOS: Override the default app preview for a link for iOS.
-    ///   - showPreviewAndroid: Override the default app preview for a link for Android.
-    ///   - trackingCampaign: The campaign name for tracking purposes (e.g. `"BlackFriday2025"`).
-    ///   - trackingSource: The traffic source (e.g. `"instagram"`, `"newsletter"`).
-    ///   - trackingMedium: The medium used for the campaign (e.g. `"cpc"`, `"email"`, `"social"`).
-    ///   - completion: A closure returning the generated link as a URL.
     func generateLink(title: String?,
                       subtitle: String?,
                       imageURL: String?,
@@ -248,11 +192,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    /// Authenticates the app.
-    ///
-    /// - Parameters:
-    ///   - appDetails: Details of the app.
-    ///   - completion: A closure returning the Linksquared ID as a string.
     func authenticate(appDetails: AppDetails, completion: @escaping SuperBoardAuthenticationClosure) {
         guard var request = urlRequestWithAuthHeaders(
             path: Constants.URLs.authenticate) else {
@@ -281,11 +220,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    /// Adds an event.
-    ///
-    /// - Parameters:
-    ///   - event: The event to add.
-    ///   - completion: A closure indicating the success or failure of the operation.
     func addEvent(event: Event, completion: @escaping SuperBoardBoolCompletion) {
         guard var request = urlRequestWithAuthHeaders(path: Constants.URLs.event) else {
             completion(false)
@@ -306,10 +240,6 @@ class APIService: BaseService, APIServiceProtocol {
             completion(true)
         }
     }
-
-    /// Updates the attributes associated with the current session.
-    ///
-    /// - Parameter completion: A closure indicating the success or failure of the operation.
 
     func updateAttributes(completion: @escaping SuperBoardBoolCompletion) {
         guard var request = urlRequestWithAuthHeaders(path: Constants.URLs.attributes) else {
@@ -334,12 +264,6 @@ class APIService: BaseService, APIServiceProtocol {
             completion(true)
         }
     }
-
-    /// Retrieves notifications for a specified page.
-    ///
-    /// - Parameters:
-    ///   - page: The page number to fetch notifications for.
-    ///   - completion: A closure returning an array of notifications.
 
     func notifications(page: Int, completion: @escaping SuperBoardNotificationsClosure) {
         guard var request = urlRequestWithAuthHeaders(
@@ -371,9 +295,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    /// Gets the number of unread notifications.
-    ///
-    /// - Parameter completion: A closure returning the number of unread notifications.
     func numberOfUnreadNotifications(completion: @escaping SuperBoardIntClosure) {
         guard var request = urlRequestWithAuthHeaders(
             path: Constants.URLs.numberOfUnreadNotifications) else {
@@ -395,11 +316,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    // Marks a specified notification as read.
-    ///
-    /// - Parameters:
-    ///   - notificationID: The ID of the notification to mark as read.
-    ///   - completion: A closure indicating the success or failure of the operation.
     func markNotificationAsRead(notificationID: Int, completion: @escaping SuperBoardBoolCompletion) {
         guard var request = urlRequestWithAuthHeaders(
             path: Constants.URLs.markNotificationAsRead) else {
@@ -422,9 +338,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    // Retrieves notifications that should be displayed automatically.
-    ///
-    /// - Parameter completion: A closure returning an array of notifications that should be displayed automatically.
     func notificationsToDisplayAutomatically(completion: @escaping SuperBoardNotificationsClosure) {
         guard var request = urlRequestWithAuthHeaders(
             path: Constants.URLs.notificationsToDisplayAutomatically) else {
@@ -475,12 +388,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    /// Fetches details for a SuperBoard link generated by the SDK in the current environment.
-    ///
-    /// - Parameter path:
-    ///   The path component of a link previously generated by the SDK (in the selected environment).
-    /// - Parameter completion:
-    ///   A closure that is called with a dictionary of link details on success, or `nil` if the request fails.
     func linkDetails(path: String, completion: @escaping SuperBoardLinkClosure) {
         guard var request = urlRequestWithAuthHeaders(
             path: Constants.URLs.linkDetails) else {
@@ -503,8 +410,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    // MARK: - Private Methods
-
     private func jsonDataFromDictionary(_ dict: [String: Any]) -> Data? {
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: dict, options: [])
@@ -515,10 +420,6 @@ class APIService: BaseService, APIServiceProtocol {
         }
     }
 
-    /// Constructs a URLRequest with authentication headers.
-    ///
-    /// - Parameter path: The path to append to the base URL.
-    /// - Returns: A URLRequest object with authentication headers set, or nil if the URL is invalid.
     private func urlRequestWithAuthHeaders(path: String) -> URLRequest? {
         guard let url = URL(string: baseURL.absoluteString + path) else {
             DebugLogger.shared.log(.error, "Invalid API URL path: \(path)")

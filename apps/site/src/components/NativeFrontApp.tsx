@@ -42,8 +42,6 @@ import { PluginFrontView } from "./PluginFrontView.js";
 
 const HREF_SUFFIX_PATTERN = /[?#]/u;
 const APPLE_PLATFORM = /Mac|iPhone|iPad|iPod/u;
-// The command palette is fetched on first use (or when its button is hovered or focused) so the
-// shell bundle stays small. A failed fetch renders nothing instead of breaking the shell.
 const loadCommandPalette = () => import("./NativeFrontCommandPalette.js");
 const NativeFrontCommandPalette = lazy(
 	(): Promise<{ default: ComponentType<ComponentProps<typeof CommandPalette>> }> =>
@@ -70,7 +68,6 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const [paletteOpen, setPaletteOpen] = useState(false);
 	const [paletteRequested, setPaletteRequested] = useState(false);
-	// The server render has no platform: the shortcut hint appears once hydrated.
 	const paletteShortcut = useSyncExternalStore(
 		subscribeToNothing,
 		platformShortcut,
@@ -123,7 +120,6 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 					...group,
 					items: localizeNavigationItems(group.items, projection.locale),
 				})),
-				// The query tells apart entries sharing a page, e.g. Environment settings › API keys.
 				localizeFrontPath(
 					`${projection.path}${globalThis.location?.search ?? ""}`,
 					projection.locale,
@@ -251,8 +247,6 @@ function NativeFrontShell({ projection }: { projection: NativeFrontPresentationP
 			</div>
 		);
 	}
-	// The brand and the menu's Overview entry lead to the same page: the canonical home
-	// destination when the menu lists it, otherwise the always-available core home.
 	const homeHref =
 		navigation.groups
 			.flatMap(({ items }) => items)

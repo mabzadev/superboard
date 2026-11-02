@@ -1,13 +1,3 @@
-/**
- * withEmDashRuntime() error contract (#1887): throws when EmDash is not
- * configured (no `emdash()` Astro integration), unlike `runScheduledTasks`
- * which silently no-ops.
- *
- * Separate file from with-emdash-runtime.test.ts because the
- * `virtual:emdash/config` mock is module-level: this file mocks the
- * unconfigured state (`default: null`), the other one a valid config.
- */
-
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("astro:middleware", () => ({

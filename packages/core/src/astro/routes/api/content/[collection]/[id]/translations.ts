@@ -1,11 +1,3 @@
-/**
- * Content translations endpoint
- *
- * GET /_emdash/api/content/{collection}/{id}/translations
- *
- * Returns all locale variants linked to the same translation group.
- */
-
 import { hasPermission } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 
@@ -35,8 +27,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
 
 	const result = await emdash.handleContentTranslations(collection, id);
 
-	// Filter out non-published translations for users without read_drafts so a
-	// subscriber can't enumerate locales that aren't yet live.
 	if (result.success && !hasPermission(user, "content:read_drafts")) {
 		const data =
 			result.data && typeof result.data === "object"

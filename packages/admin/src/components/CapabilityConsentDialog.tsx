@@ -1,11 +1,3 @@
-/**
- * Capability Consent Dialog
- *
- * Shown before installing or updating a marketplace plugin.
- * Lists each requested capability with a human-readable explanation.
- * User must explicitly confirm before the action proceeds.
- */
-
 import { Button } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { ShieldCheck, ShieldWarning, Warning } from "@phosphor-icons/react";
@@ -17,29 +9,17 @@ import { cn } from "../lib/utils.js";
 import { DialogError } from "./DialogError.js";
 
 export interface CapabilityConsentDialogProps {
-	/** Dialog mode */
 	mode?: "install" | "update";
-	/** Plugin display name */
 	pluginName: string;
-	/** Capabilities the plugin requests */
 	capabilities: string[];
-	/** Allowed network hosts (for network:fetch capability) */
 	allowedHosts?: string[];
-	/** New capabilities added in an update (highlighted differently) */
 	newCapabilities?: string[];
-	/** Routes that change from private to public in an update. */
 	newlyPublicRoutes?: string[];
-	/** Plugin routes explicitly exposed as MCP tools. */
 	mcpTools?: PluginMcpConsentTool[];
-	/** Audit verdict badge */
 	auditVerdict?: "pass" | "warn" | "fail";
-	/** Whether the action is in progress */
 	isPending?: boolean;
-	/** Error message to display inline */
 	error?: string | null;
-	/** Called when user confirms */
 	onConfirm: () => void;
-	/** Called when user cancels */
 	onCancel: () => void;
 }
 
@@ -68,12 +48,9 @@ export function CapabilityConsentDialog({
 			aria-modal="true"
 			aria-label={t`Capability consent`}
 		>
-			{/* Backdrop */}
 			<div className="absolute inset-0 bg-black/50" onClick={() => !isPending && onCancel()} />
 
-			{/* Dialog */}
 			<div className="relative w-full max-w-md rounded-lg border bg-kumo-base shadow-lg">
-				{/* Header */}
 				<div className="border-b px-6 py-4">
 					<h2 className="text-lg font-semibold">
 						{isUpdate ? t`Review New Permissions` : t`Plugin Permissions`}
@@ -85,7 +62,6 @@ export function CapabilityConsentDialog({
 					</p>
 				</div>
 
-				{/* Capabilities list */}
 				<div className="px-6 py-4 space-y-3">
 					{capabilities.map((cap) => {
 						const isNew = newSet.has(cap);
@@ -159,7 +135,6 @@ export function CapabilityConsentDialog({
 						</div>
 					)}
 
-					{/* Audit verdict banner */}
 					{auditVerdict && auditVerdict !== "pass" && (
 						<div
 							className={cn(
@@ -183,10 +158,8 @@ export function CapabilityConsentDialog({
 					)}
 				</div>
 
-				{/* Error */}
 				<DialogError message={error} className="mx-6" />
 
-				{/* Actions */}
 				<div className="flex justify-end gap-3 border-t px-6 py-4">
 					<Button variant="ghost" onClick={onCancel} disabled={isPending}>
 						{t`Cancel`}

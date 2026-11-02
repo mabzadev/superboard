@@ -9,7 +9,6 @@ import { applySeed } from "../../../../../../packages/core/src/seed/apply.js";
 import type { SeedFile } from "../../../../../../packages/core/src/seed/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
-// Mock fetch globally -- should NOT be called when skipMediaDownload is true
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
@@ -20,7 +19,6 @@ describe("applySeed with skipMediaDownload", () => {
 		db = await setupTestDatabase();
 		mockFetch.mockReset();
 
-		// Set up a collection with an image field
 		const registry = new SchemaRegistry(db);
 		await registry.createCollection({ slug: "posts", label: "Posts" });
 		await registry.createField("posts", {
@@ -68,14 +66,11 @@ describe("applySeed with skipMediaDownload", () => {
 			skipMediaDownload: true,
 		});
 
-		// Media should be "created" (resolved) but not downloaded
 		expect(result.media.created).toBe(1);
 		expect(result.content.created).toBe(1);
 
-		// fetch should NOT have been called
 		expect(mockFetch).not.toHaveBeenCalled();
 
-		// Check the content has an external MediaValue
 		const contentRepo = new ContentRepository(db);
 		const entry = await contentRepo.findBySlug("posts", "hello");
 		expect(entry).toBeDefined();
@@ -86,7 +81,7 @@ describe("applySeed with skipMediaDownload", () => {
 		expect(image.src).toBe("https://images.unsplash.com/photo-abc123");
 		expect(image.alt).toBe("A test image");
 		expect(image.filename).toBe("test-image.jpg");
-		expect(image.id).toBeDefined(); // synthetic ULID
+		expect(image.id).toBeDefined();
 	});
 
 	it("should not require a storage adapter", async () => {
@@ -111,11 +106,9 @@ describe("applySeed with skipMediaDownload", () => {
 			},
 		};
 
-		// No storage adapter provided -- should work fine with skipMediaDownload
 		const result = await applySeed(db, seed, {
 			includeContent: true,
 			skipMediaDownload: true,
-			// Intentionally no storage
 		});
 
 		expect(result.media.created).toBe(1);
@@ -163,12 +156,10 @@ describe("applySeed with skipMediaDownload", () => {
 			skipMediaDownload: true,
 		});
 
-		// First occurrence created, second from cache (skipped)
 		expect(result.media.created).toBe(1);
 		expect(result.media.skipped).toBe(1);
 		expect(result.content.created).toBe(2);
 
-		// Second entry should use the cached alt override
 		const contentRepo = new ContentRepository(db);
 		const second = await contentRepo.findBySlug("posts", "second");
 		const image = second!.data.featured_image as MediaValue;

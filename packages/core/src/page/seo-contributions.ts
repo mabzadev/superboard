@@ -1,30 +1,7 @@
-/**
- * Generate base SEO metadata contributions from PublicPageContext.
- *
- * EmDashHead.astro composes the final contribution list as
- * `[...plugin, ...site, ...base]` and feeds it to `resolvePageMetadata()`,
- * which is first-wins. That ordering means plugin contributions override
- * site-level ones override base ones for any given key — base values are
- * the fallback, not the source of truth.
- *
- * This replaces the per-template SEO.astro components, eliminating
- * the class of XSS bugs where templates hand-rolled JSON-LD serialization.
- */
-
 import type { PageMetadataContribution, PublicPageContext } from "../plugins/types.js";
 import type { SeoSettings } from "../settings/types.js";
 import { buildBlogPostingJsonLd, buildWebSiteJsonLd } from "./jsonld.js";
 
-/**
- * Generate base metadata contributions from a page context's SEO data.
- *
- * @param page - Page context produced by the runtime for the current request.
- * @param defaultOgImage - Optional site-wide fallback OG image URL, used when
- *   the page has no own OG image (i.e., neither `seo.ogImage` nor `image`).
- *   Sourced from `SiteSettings.seo.defaultOgImage` by `EmDashHead`.
- *
- * Returns an empty array if no SEO-relevant data is present.
- */
 export function generateBaseSeoContributions(
 	page: PublicPageContext,
 	defaultOgImage?: string | null,
@@ -39,8 +16,6 @@ export function generateBaseSeoContributions(
 	const canonical = page.canonical;
 	const siteName = page.siteName;
 
-	// -- Meta tags --
-
 	if (description) {
 		contributions.push({ kind: "meta", name: "description", content: description });
 	}
@@ -49,13 +24,9 @@ export function generateBaseSeoContributions(
 		contributions.push({ kind: "meta", name: "robots", content: robots });
 	}
 
-	// -- Canonical link --
-
 	if (canonical) {
 		contributions.push({ kind: "link", rel: "canonical", href: canonical });
 	}
-
-	// -- Open Graph --
 
 	contributions.push({
 		kind: "property",
@@ -83,8 +54,6 @@ export function generateBaseSeoContributions(
 		contributions.push({ kind: "property", property: "og:site_name", content: siteName });
 	}
 
-	// -- Twitter Card --
-
 	contributions.push({
 		kind: "meta",
 		name: "twitter:card",
@@ -102,8 +71,6 @@ export function generateBaseSeoContributions(
 	if (ogImage) {
 		contributions.push({ kind: "meta", name: "twitter:image", content: ogImage });
 	}
-
-	// -- Article metadata --
 
 	if (page.pageType === "article" && page.articleMeta) {
 		const { publishedTime, modifiedTime, author } = page.articleMeta;
@@ -130,8 +97,6 @@ export function generateBaseSeoContributions(
 		}
 	}
 
-	// -- JSON-LD --
-
 	if (page.pageType === "article") {
 		const blogPosting = buildBlogPostingJsonLd(page, defaultOgImage ?? null);
 		if (blogPosting) {
@@ -147,13 +112,6 @@ export function generateBaseSeoContributions(
 	return contributions;
 }
 
-/**
- * Generate site-level SEO metadata contributions from SiteSettings.seo.
- *
- * These tags apply to every page (search engine ownership verification),
- * so they're sourced from site settings rather than per-page context.
- * Returns an empty array when no relevant settings are configured.
- */
 export function generateSiteSeoContributions(
 	seoSettings: SeoSettings | undefined,
 ): PageMetadataContribution[] {

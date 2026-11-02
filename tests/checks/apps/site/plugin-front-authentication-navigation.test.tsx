@@ -96,7 +96,6 @@ async function click(label: string) {
 
 test("settings tabs preserve unsaved fields and follow browser navigation", async () => {
 	await render();
-	// The settings form loads lazily; under a parallel suite run that takes over a second.
 	await vi.waitFor(
 		() => expect(container.querySelector("#setting-EMAIL_SENDER_NAME")).not.toBeNull(),
 		{ timeout: 5_000 },

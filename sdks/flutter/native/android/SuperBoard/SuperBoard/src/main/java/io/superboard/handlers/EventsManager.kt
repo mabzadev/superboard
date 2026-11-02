@@ -34,12 +34,10 @@ class EventsManager(
     val context: Context,
     val superboardContext: SuperBoardContext,
     apiKey: String,
-    // Dependencies for testing - if null, real implementations are used
     private val superboardService: ISuperBoardService = SuperBoardService(context = context, apiKey = apiKey, superboardContext = superboardContext),
     private val eventsStorage: IEventsStorage = EventsStorage(context = context),
     private val localCache: ILocalCache = LocalCache(context = context)
 ) : IEventsManager {
-    // Internal state - exposed for testing
     internal var linkForFutureActions: String? = null
     internal var allowedToSendToBackend = false
     internal var firstRequestTime: InstantCompat? = null
@@ -66,9 +64,6 @@ class EventsManager(
         localCache.resignTimestamp = InstantCompat.now()
         linkForFutureActions = null
 
-        // Keep a handle to the finalization. A foreground transition must not read or
-        // replace the open TIME_SPENT node before the preceding background transition
-        // has completed. Chaining also protects against duplicate lifecycle callbacks.
         val job = synchronized(backgroundTimeSpentLock) {
             val previousJob = pendingBackgroundTimeSpentJob
             timeSpentScope.launch(start = CoroutineStart.LAZY) {
@@ -96,8 +91,6 @@ class EventsManager(
         eventsStorage.markTimeSpentNode(startingNode = true, link = linkForFutureActions)
     }
 
-    /// Logs an event and sends it to the backend.
-    /// - Parameter event: The event to log
     override suspend fun log(event: Event) {
         val newEvent = event
         if (newEvent.link == null) {
@@ -108,8 +101,6 @@ class EventsManager(
         sendNormalEventsToBackend()
     }
 
-    /// Logs an in app payment event and sends it to the backend.
-    /// - Parameter event: The event to log
     override suspend fun logInAppPurchase(originalJson: String) {
         val events = PaymentEvent.fromOriginalJson(originalJson = originalJson)
 
@@ -122,8 +113,6 @@ class EventsManager(
         }
     }
 
-    /// Logs an in app payment event and sends it to the backend.
-    /// - Parameter event: The event to log
     override suspend fun logCustomPurchase(type: PaymentEventType, priceInCents: Int, currency: String, productId: String, startDate: InstantCompat?) {
         val applicationId = AppDetailsHelper(context).applicationId
         val event = PaymentEvent(eventType = type,
@@ -138,8 +127,6 @@ class EventsManager(
         logPurchase(event = event)
     }
 
-    /// Sets the link for future actions to associate with new events.
-    /// - Parameter link: The link to set
     override suspend fun setLinkToNewFutureActions(link: String?, delayEvents: Boolean) {
         linkForFutureActions = link
         allowedToSendToBackend = !delayEvents
@@ -152,8 +139,6 @@ class EventsManager(
         }
     }
 
-    /// Logs a payment event and sends it to the backend.
-    /// - Parameter event: The event to log
     private suspend fun logPurchase(event: PaymentEvent) {
         val newEvent = event
         if (newEvent.link == null) {
@@ -164,7 +149,6 @@ class EventsManager(
         sendPaymentEventsToBackend()
     }
 
-    /// Adds initial events such as install or reactivation events.
     private suspend fun addInitialEvents() {
         addInstallIfNeeded()
         addReactivationIfNeeded()
@@ -172,7 +156,6 @@ class EventsManager(
         localCache.numberOfOpens += 1
     }
 
-    /// Logs an install event if it's the first app launch.
     private suspend fun addInstallIfNeeded() {
         val numberOfOpens = localCache.numberOfOpens
         if (numberOfOpens == 0) {
@@ -186,7 +169,6 @@ class EventsManager(
         }
     }
 
-    /// Logs a reactivation event if the app was inactive for the specified number of days.
     private suspend fun addReactivationIfNeeded() {
         val lastResignTimestamp = localCache.lastStartTimestamp
         lastResignTimestamp?.let {
@@ -202,16 +184,12 @@ class EventsManager(
         localCache.lastStartTimestamp = InstantCompat.now()
     }
 
-    /// Logs an app open event.
     private suspend fun addOpenEvent() {
         val event = Event(event = EventType.APP_OPEN, createdAt = InstantCompat.now(), link = linkForFutureActions)
         eventsStorage.addEvent(event)
     }
 
-    /// Adds a link to all stored events that do not already have one.
-    /// - Parameter link: The link to add
     private suspend fun addLinkToEvents(link: String) {
-        // Add a link to the stored events
         changeStorageEvents { oldEvent ->
             val newEvent = oldEvent
             when (newEvent.event) {
@@ -229,10 +207,7 @@ class EventsManager(
         sendPaymentEventsToBackend()
     }
 
-    /// Changes stored events based on a closure and performs a completion handler.
-    /// - Parameter eventHandling: A lambda function that defines how to modify each event
     private suspend fun changeStorageEvents(eventHandling: (oldEvent: Event) -> Event) {
-        // Change stored events based on a closure and perform completion
         val events = eventsStorage.getEvents()
         var newEvents = mutableListOf<Event>()
 
@@ -244,7 +219,6 @@ class EventsManager(
         eventsStorage.addOrReplaceEvents(newEvents)
     }
 
-    /// Sends normal events (non-time-spent, non-payment) to the backend.
     private fun sendNormalEventsToBackend() = runBlocking {
         checkEventsSendingAllowed()
         if (!allowedToSendToBackend) {
@@ -271,7 +245,6 @@ class EventsManager(
         }
     }
 
-    /// Sends time-spent events to the backend.
     private fun sendTimeSpentEventsToBackend() = runBlocking {
         val events = eventsStorage.getEvents()
         DebugLogger.instance.log(LogLevel.INFO, "Sending time-spent logs to the backend")
@@ -294,7 +267,6 @@ class EventsManager(
         }
     }
 
-    /// Sends payment events to the backend.
     private fun sendPaymentEventsToBackend() = runBlocking {
         checkEventsSendingAllowed()
         if (!allowedToSendToBackend) {
@@ -331,7 +303,6 @@ class EventsManager(
         }
 
         if (!allowedToSendToBackend) {
-            // Check if delay was met
             val now = InstantCompat.now()
             val duration = DurationCompat.between(firstRequestTime ?: InstantCompat.now(), now)
             allowedToSendToBackend = duration.seconds > eventsDelaySeconds

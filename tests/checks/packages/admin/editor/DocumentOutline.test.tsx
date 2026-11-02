@@ -6,9 +6,6 @@ import {
 	type HeadingItem,
 } from "../../../../../packages/admin/src/components/editor/DocumentOutline";
 
-/**
- * Create a mock editor with a document containing the specified headings
- */
 function createMockEditor(headings: Array<{ level: number; text: string; pos: number }>) {
 	const mockDoc = {
 		descendants: (
@@ -150,11 +147,8 @@ describe("DocumentOutline", () => {
 
 			const result = extractHeadings(editor);
 
-			// H1 should be at root level
 			expect(result[0]?.level).toBe(1);
-			// H2 should be indented (level 2)
 			expect(result[1]?.level).toBe(2);
-			// H3 should be further indented (level 3)
 			expect(result[2]?.level).toBe(3);
 		});
 	});

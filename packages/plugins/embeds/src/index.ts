@@ -1,52 +1,9 @@
-/**
- * Embeds Plugin for EmDash CMS
- *
- * Provides Portable Text block types for embedding external content:
- * - YouTube videos
- * - Vimeo videos
- * - Twitter/X tweets
- * - Bluesky posts
- * - Mastodon posts
- * - Link previews (Open Graph)
- * - GitHub Gists
- *
- * Uses astro-embed components for high-performance, privacy-respecting embeds.
- *
- * @example
- * ```typescript
- * // live.config.ts
- * import { embedsPlugin } from "@emdash-cms/plugin-embeds";
- *
- * export default defineConfig({
- *   plugins: [embedsPlugin()],
- * });
- * ```
- *
- * Embed components are automatically registered with PortableText when
- * the plugin is enabled. No manual component wiring needed!
- *
- * If you need to customize rendering, you can still override specific types:
- *
- * @example
- * ```astro
- * <PortableText
- *   value={content}
- *   components={{
- *     types: {
- *       youtube: MyCustomYouTube, // Override just this one
- *     },
- *   }}
- * />
- * ```
- */
-
 import type { Element } from "@emdash-cms/blocks";
 import type { PluginDescriptor, ResolvedPlugin } from "emdash";
 import { definePlugin } from "emdash";
 
 import { EMBED_BLOCK_TYPES } from "./schemas.js";
 
-/** Rich metadata for each embed block type */
 const EMBED_BLOCK_META: Record<
 	string,
 	{
@@ -123,16 +80,9 @@ const EMBED_BLOCK_META: Record<
 };
 
 export interface EmbedsPluginOptions {
-	/**
-	 * Which embed types to enable.
-	 * Defaults to all types.
-	 */
 	types?: Array<(typeof EMBED_BLOCK_TYPES)[number]>;
 }
 
-/**
- * Create the embeds plugin descriptor
- */
 export function embedsPlugin(
 	options: EmbedsPluginOptions = {},
 ): PluginDescriptor<EmbedsPluginOptions> {
@@ -145,9 +95,6 @@ export function embedsPlugin(
 	};
 }
 
-/**
- * Create the embeds plugin
- */
 export function createPlugin(options: EmbedsPluginOptions = {}): ResolvedPlugin {
 	const _enabledTypes = options.types ?? [...EMBED_BLOCK_TYPES];
 
@@ -155,7 +102,6 @@ export function createPlugin(options: EmbedsPluginOptions = {}): ResolvedPlugin 
 		id: "embeds",
 		version: "0.0.1",
 
-		// This plugin only provides block types - no server-side capabilities needed
 		capabilities: [],
 
 		admin: {
@@ -174,10 +120,8 @@ export function createPlugin(options: EmbedsPluginOptions = {}): ResolvedPlugin 
 	});
 }
 
-// Re-export schemas for consumers who need them
 export * from "./schemas.js";
 
 export default createPlugin;
 
-// Re-export the enabled types for the plugin to use
 export { EMBED_BLOCK_TYPES };

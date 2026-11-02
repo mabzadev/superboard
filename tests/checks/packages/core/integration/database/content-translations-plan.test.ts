@@ -1,10 +1,3 @@
-/**
- * Query-plan coverage for translation-group reads on content tables.
- *
- * SQLite runs without ANALYZE/sqlite_stat1 here, matching D1's stats-blind
- * planner. Result parity for these reads is covered by the i18n suite.
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -99,11 +92,6 @@ it.each([
 	},
 );
 
-/**
- * Menu references resolve a translation group without a `deleted_at` filter, so
- * they need an index that leads with `translation_group`. `fr` has no `ec_post`
- * row, which exercises the any-locale fallback as well as the direct lookup.
- */
 it.each([
 	{ locale: "en", url: "/post/slug-10" },
 	{ locale: "fr", url: "/post/slug-9" },
@@ -194,7 +182,6 @@ function translationQuery(): CapturedQuery {
 	return queries[0]!;
 }
 
-/** better-sqlite3 only binds primitives; coerce values captured from Kysely. */
 function bindable(parameter: unknown): unknown {
 	if (typeof parameter === "boolean") return parameter ? 1 : 0;
 	if (parameter instanceof Date) return parameter.toISOString();

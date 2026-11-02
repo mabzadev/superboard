@@ -1,12 +1,3 @@
-/**
- * A reorder has to bust the cached term list.
- *
- * `getTaxonomyTerms` serves a sibling group from the object cache, so the order
- * a visitor sees is whatever was cached at the last read. Without an object
- * cache backend `cachedQuery` runs its loader every time and a missing
- * invalidation is invisible — these tests inject one so it isn't.
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -69,7 +60,6 @@ describe("reordering terms invalidates the cached term list", () => {
 		vi.restoreAllMocks();
 	});
 
-	/** Labels of `category`, read through the cached runtime helper. */
 	function readLabels(): Promise<string[]> {
 		return runWithContext({ editMode: false, db }, async () =>
 			(await getTaxonomyTerms("category", { includeCounts: false })).map((term) => term.label),
@@ -81,7 +71,6 @@ describe("reordering terms invalidates the cached term list", () => {
 		const apple = await repo.create({ name: "category", slug: "a", label: "Apple" });
 		await flush();
 
-		// Warm the cache with the creation order.
 		expect(await readLabels()).toEqual(["Zebra", "Apple"]);
 		await flush();
 
@@ -92,9 +81,6 @@ describe("reordering terms invalidates the cached term list", () => {
 		expect(await readLabels()).toEqual(["Apple", "Zebra"]);
 	});
 
-	// Guards the test above: if the backend were inert, the loader would run on
-	// every read and the reorder would look invalidated whether or not it was.
-	// The difference between the two tests is the invalidation itself.
 	it("serves a warm term list to a write that never invalidated", async () => {
 		const zebra = await repo.create({ name: "category", slug: "z", label: "Zebra" });
 		await repo.create({ name: "category", slug: "a", label: "Apple" });
@@ -103,7 +89,6 @@ describe("reordering terms invalidates the cached term list", () => {
 		expect(await readLabels()).toEqual(["Zebra", "Apple"]);
 		await flush();
 
-		// Reorder behind the cache's back, so nothing bumps the epoch.
 		await db.updateTable("taxonomies").set({ sort_order: 5 }).where("id", "=", zebra.id).execute();
 
 		expect(await readLabels()).toEqual(["Zebra", "Apple"]);

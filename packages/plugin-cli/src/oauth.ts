@@ -1,23 +1,3 @@
-/**
- * OAuth helpers for the registry CLI.
- *
- * Implements the interactive atproto OAuth dance:
- *
- *   1. The CLI binds a loopback HTTP server on a random ephemeral port.
- *   2. The CLI calls `OAuthClient.authorize(...)`, gets an authorization URL,
- *      and asks the user to open it in a browser (best-effort auto-open).
- *   3. The user completes the flow; their browser redirects to
- *      `http://127.0.0.1:<port>/callback?code=...&state=...`.
- *   4. The local server hands the query string to `OAuthClient.callback(...)`,
- *      which exchanges the code for a session, and the server closes.
- *   5. The CLI returns the resulting `OAuthSession` to the caller.
- *
- * The OAuth library handles DPoP, PAR, PKCE, and refresh under the hood. We
- * persist its `StoredSession` blobs to disk via a small filesystem-backed
- * `Store` so subsequent CLI invocations can resume the session without a
- * fresh login.
- */
-
 import { mkdir, open, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { dirname, join } from "node:path";
@@ -46,45 +26,13 @@ import { QUERY_NSIDS, RECORD_NSIDS } from "@emdash-cms/registry-lexicons";
 
 import { DEFAULT_OAUTH_DIR } from "./config.js";
 
-/**
- * Default OAuth scope for the registry CLI. Granular per the atproto OAuth
- * permission spec, derived from the lexicon set in `@emdash-cms/registry-lexicons`:
- *
- *   - `atproto`: base requirement (DID-bound DPoP session, identity).
- *   - `repo:<nsid>` for every record-shaped lexicon: write profile, release,
- *     publisher profile, and verification records via `applyWrites`. Repo
- *     reads of public records don't require a scope, and embedded objects
- *     (`releaseExtension`) ride inside their parent record.
- *   - `rpc:<nsid>?aud=*` for every query-shaped lexicon: cover the
- *     aggregator XRPC methods even though the publish CLI doesn't call them
- *     yet — granting them at login means future tooling that resumes the
- *     stored session can call the aggregator without forcing a re-login.
- *     `aud=*` because the aggregator's service DID isn't pinned today.
- *
- * `transition:generic` is intentionally not included. PDSes accept granular
- * scopes at PAR even when their `scopes_supported` metadata still lists only
- * the transitional shims, so requesting only what we need keeps the consent
- * screen honest.
- */
 const DEFAULT_CLI_SCOPE = [
 	"atproto",
 	...RECORD_NSIDS.map((nsid) => `repo:${nsid}`),
 	...QUERY_NSIDS.map((nsid) => `rpc:${nsid}?aud=*`),
 ].join(" ");
 
-/**
- * Legacy fallback scope used when the AS returns `invalid_scope` for the
- * granular request. `transition:generic` predates the granular permission
- * spec and every atproto OAuth server has supported it since OAuth shipped,
- * so it's the safe re-try shape. The publish flow doesn't get any narrower
- * permissions out of this path -- it's purely a compatibility shim for
- * publishers on un-upgraded PDSes.
- */
 const LEGACY_FALLBACK_SCOPE = "atproto transition:generic";
-
-// ──────────────────────────────────────────────────────────────────────────
-// Filesystem-backed Store<K, V>
-// ──────────────────────────────────────────────────────────────────────────
 
 interface FileStoreEnvelope<V> {
 	version: number;
@@ -93,15 +41,6 @@ interface FileStoreEnvelope<V> {
 
 const FILE_STORE_VERSION = 1;
 
-/**
- * Generic JSON-file-backed store. Keys are stringified for filenames; values
- * are JSON-serialised in a single envelope file with a version field for
- * forward compatibility.
- *
- * Atomic writes: a temp file is created with mode 0600 and renamed over the
- * target. POSIX rename is atomic, so a crash mid-write leaves the previous
- * file intact.
- */
 class FileStore<V> implements Store<string, V> {
 	readonly #path: string;
 	readonly #cache = new Map<string, V>();
@@ -146,20 +85,12 @@ class FileStore<V> implements Store<string, V> {
 				parsed.entries &&
 				typeof parsed.entries === "object"
 			) {
-				// `V` is opaque to the FileStore -- the OAuth library is the
-				// only writer and reader, and it round-trips its own typed
-				// values through us. We trust whatever's on disk to match the
-				// type the same OAuth client wrote. Re-validating here would
-				// require duplicating the OAuth library's StoredSession /
-				// StoredState schemas.
 				// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion
 				for (const [k, v] of Object.entries(parsed.entries) as Array<[string, V]>) {
 					this.#cache.set(k, v);
 				}
 			}
 		} catch (error) {
-			// Missing file is fine; anything else (corruption, permission) we let
-			// surface — the user's CLI will then exit non-zero with the error.
 			if (!isErrnoException(error) || error.code !== "ENOENT") {
 				throw error;
 			}
@@ -177,35 +108,16 @@ class FileStore<V> implements Store<string, V> {
 		const body = `${JSON.stringify(envelope, null, 2)}\n`;
 		const tmp = `${this.#path}.tmp`;
 		try {
-			// `flush: true` (Node 21.1+) fsyncs the file content before close, so
-			// a power loss between the rename and a crash can't surface an empty
-			// inode pointing at unwritten data. Atomic rename alone is torn-write
-			// safe but not durable.
 			await writeFile(tmp, body, { mode: 0o600, flush: true });
 			await rename(tmp, this.#path);
-			// On Linux, fsync the directory after the rename so the rename
-			// itself is durable across power loss (POSIX file fsync persists
-			// the inode but not the directory entry). On macOS the prior
-			// file fsync already covers this via the journal. On Windows
-			// `open(dir, "r")` rejects with EISDIR/EACCES; we swallow the
-			// error so the write still succeeds. Net effect: durable rename
-			// on Linux + journaled FS; benign no-op everywhere else.
 			await fsyncDir(dir).catch(() => {});
 		} catch (error) {
-			// Best-effort cleanup of the temp file if rename failed mid-write.
 			await unlink(tmp).catch(() => {});
 			throw error;
 		}
 	}
 }
 
-/**
- * fsync a directory so that a rename or unlink inside it is durable across
- * power loss. Node doesn't expose a `fs.fsyncDir` shortcut; the trick is to
- * `open` the directory (read-only) and call `fsync` on the FileHandle.
- * Throws on platforms that reject opening a directory; callers should
- * `.catch(() => {})` since durability is best-effort.
- */
 async function fsyncDir(path: string): Promise<void> {
 	const handle = await open(path, "r");
 	try {
@@ -223,36 +135,12 @@ function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
 	);
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// OAuth client construction
-// ──────────────────────────────────────────────────────────────────────────
-
 export interface OAuthClientFactoryOptions {
-	/**
-	 * Directory for filesystem-backed OAuth state (sessions, in-flight states).
-	 * Defaults to `~/.emdash/oauth/`.
-	 */
 	stateDir?: string;
-	/**
-	 * Loopback redirect URL the CLI will receive the callback on. The host
-	 * portion MUST be the IP literal `127.0.0.1` (RFC 8252 §8.3); `localhost`
-	 * is rejected by the atcute OAuth library.
-	 */
 	redirectUri: `http://127.0.0.1:${number}/callback`;
-	/**
-	 * Scopes to request. Defaults to {@link DEFAULT_CLI_SCOPE}: `atproto` plus
-	 * `repo:<nsid>` for every record-shaped lexicon in
-	 * `@emdash-cms/registry-lexicons` and `rpc:<nsid>?aud=*` for every
-	 * aggregator query.
-	 */
 	scope?: string;
 }
 
-/**
- * Build a `LocalActorResolver` for atproto identity lookups (handle <-> DID,
- * DID document, PDS endpoint). Shared by the OAuth client and post-login
- * profile resolution so they agree on handle/DID round-trip rules.
- */
 export function createActorResolver(): LocalActorResolver {
 	return new LocalActorResolver({
 		handleResolver: new CompositeHandleResolver({
@@ -272,14 +160,6 @@ export function createActorResolver(): LocalActorResolver {
 	});
 }
 
-/**
- * Build an `OAuthClient` configured as a loopback public client with PKCE.
- *
- * Per RFC 8252, loopback public clients don't need a published client metadata
- * document — the PDS derives metadata from the `client_id` URL parameters.
- * This keeps the CLI self-contained: no JWKS endpoint, no static metadata
- * file, no key management.
- */
 export function createCliOAuthClient(options: OAuthClientFactoryOptions): OAuthClient {
 	const stateDir = options.stateDir ?? DEFAULT_OAUTH_DIR;
 
@@ -288,11 +168,6 @@ export function createCliOAuthClient(options: OAuthClientFactoryOptions): OAuthC
 
 	const actorResolver = createActorResolver();
 
-	// Loopback public client per RFC 8252: no client_id, no JWKS, no
-	// confidential auth. The PDS derives metadata from the client_id URL
-	// parameters during the authorize flow. `redirect_uris` MUST use
-	// `127.0.0.1` (not `localhost`) per RFC 8252 §8.3 and the atcute
-	// loopbackRedirectUriSchema.
 	const metadata: LoopbackClientMetadata = {
 		redirect_uris: [options.redirectUri],
 		scope: options.scope ?? DEFAULT_CLI_SCOPE,
@@ -307,10 +182,6 @@ export function createCliOAuthClient(options: OAuthClientFactoryOptions): OAuthC
 		actorResolver,
 	});
 }
-
-// ──────────────────────────────────────────────────────────────────────────
-// Loopback callback server
-// ──────────────────────────────────────────────────────────────────────────
 
 function renderCallbackPage(title: string, message: string): string {
 	return `<!doctype html><meta charset="utf-8"><title>${escapeHtml(title)}</title>
@@ -328,52 +199,17 @@ function escapeHtml(input: string): string {
 		.replaceAll("/", "&#x2F;");
 }
 
-/**
- * Outcome the caller passes back into the loopback server to decide what to
- * render in the user's browser. Only after the caller (atcute) has accepted
- * the callback do we render success; if the callback didn't validate, we
- * render an error so the user knows the login failed.
- */
 export type CallbackOutcome =
 	| { ok: true; title?: string; message?: string }
 	| { ok: false; title?: string; message?: string };
 
 export interface BindLoopbackServerResult {
 	redirectUri: `http://127.0.0.1:${number}/callback`;
-	/**
-	 * Resolves with the OAuth callback URL search params once the AS redirects
-	 * the user's browser to `/callback`. Rejects on timeout.
-	 *
-	 * The HTTP response to the browser is held open until the caller invokes
-	 * `respond(...)` -- this lets the caller render success only after the
-	 * params have been validated by atcute, and an error message if they
-	 * haven't.
-	 */
 	awaitCallback(): Promise<URLSearchParams>;
-	/**
-	 * Send the rendered success / error page to the user's browser. Idempotent;
-	 * subsequent calls are no-ops. The CLI is expected to call this exactly
-	 * once per flow.
-	 */
 	respond(outcome: CallbackOutcome): void;
-	/** Stop the server. Idempotent. */
 	close(): Promise<void>;
 }
 
-/**
- * Bind a small HTTP server on `127.0.0.1` at an OS-chosen ephemeral port and
- * return a callback path the OAuth flow can redirect to.
- *
- * The server only responds to GET `/callback`. Any other request gets a 405
- * or 400.
- *
- * Importantly, the server holds the response open until the caller invokes
- * `respond(...)` -- so the user's browser shows "Login complete" only AFTER
- * atcute has validated the callback params, not before.
- *
- * @param timeoutMs How long to wait for the callback before rejecting.
- *   Defaults to 5 minutes, matching the typical AS code TTL.
- */
 export async function bindLoopbackServer(
 	timeoutMs = 5 * 60 * 1000,
 ): Promise<BindLoopbackServerResult> {
@@ -394,9 +230,6 @@ export async function bindLoopbackServer(
 		};
 	});
 
-	// Held open until `respond()` is called. The first /callback request
-	// captures `pendingResponse`; subsequent ones get a "you've already
-	// completed login" message so a refresh / stray tab can't silently re-fire.
 	let pendingResponse: ServerResponse | undefined;
 	let responded = false;
 
@@ -414,9 +247,6 @@ export async function bindLoopbackServer(
 			return;
 		}
 
-		// Reject /callback hits with no `state` param. atcute will reject these
-		// too, but a stray tab firing at the loopback shouldn't claim the
-		// pending promise -- so handle it in-band.
 		if (!url.searchParams.has("state")) {
 			res.statusCode = 400;
 			res.setHeader("content-type", "text/html; charset=utf-8");
@@ -429,8 +259,6 @@ export async function bindLoopbackServer(
 			return;
 		}
 
-		// Already-completed: a second /callback hit (browser refresh, stray
-		// tab) gets a generic "you're done" message and doesn't re-trigger.
 		if (settled) {
 			res.statusCode = 200;
 			res.setHeader("content-type", "text/html; charset=utf-8");
@@ -443,9 +271,6 @@ export async function bindLoopbackServer(
 			return;
 		}
 
-		// First valid callback: hold the response open until the CLI tells us
-		// what to render. The CLI does this once atcute has consumed the params
-		// and either accepted them (render success) or rejected (render error).
 		pendingResponse = res;
 		resolveCallback?.(url.searchParams);
 	});
@@ -488,15 +313,11 @@ export async function bindLoopbackServer(
 
 	const close = async (): Promise<void> => {
 		clearTimeout(timeout);
-		// If we never responded (timeout, error before respond), close the
-		// dangling response so the browser doesn't hang.
 		if (!responded && pendingResponse) {
 			responded = true;
 			try {
 				pendingResponse.end();
-			} catch {
-				// the socket may already be gone; safe to ignore
-			}
+			} catch {}
 		}
 		await new Promise<void>((resolve) => server.close(() => resolve()));
 	};
@@ -509,15 +330,6 @@ export async function bindLoopbackServer(
 	};
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Browser open (best-effort)
-// ──────────────────────────────────────────────────────────────────────────
-
-/**
- * Best-effort attempt to open `url` in the user's default browser. Failure is
- * non-fatal: the CLI prints the URL too, so a headless or sandboxed user can
- * complete the flow manually. We do NOT await the spawned process.
- */
 export function tryOpenBrowser(url: string): void {
 	void (async () => {
 		try {
@@ -529,21 +341,10 @@ export function tryOpenBrowser(url: string): void {
 			} else {
 				execFile("xdg-open", [url]);
 			}
-		} catch {
-			// swallowed by design
-		}
+		} catch {}
 	})();
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Top-level: run an interactive login
-// ──────────────────────────────────────────────────────────────────────────
-
-/**
- * Validate and narrow a user-supplied identifier (handle or DID) to the
- * `ActorIdentifier` type the OAuth library expects. Throws a CLI-shaped error
- * message if neither shape matches.
- */
 function parseActorIdentifier(input: string): ActorIdentifier {
 	const trimmed = input.trim();
 	if (isDid(trimmed) || isHandle(trimmed)) {
@@ -555,20 +356,10 @@ function parseActorIdentifier(input: string): ActorIdentifier {
 }
 
 export interface RunInteractiveLoginOptions {
-	/** Handle or DID the user wants to authenticate as. */
 	identifier: string;
-	/** OAuth state directory. Defaults to `~/.emdash/oauth/`. */
 	stateDir?: string;
-	/** Override the loopback callback timeout. */
 	timeoutMs?: number;
-	/** Hook for printing the verification URL when the browser-open fails. */
 	onUrl?: (url: URL) => void;
-	/**
-	 * Hook fired when the AS rejected the granular scope request and the
-	 * flow is retrying with the legacy `transition:generic` fallback. The
-	 * CLI uses this to print a notice so the user knows their PDS is
-	 * granting broader permissions than the spec-compliant path would.
-	 */
 	onLegacyScopeFallback?: () => void;
 }
 
@@ -577,17 +368,6 @@ export interface RunInteractiveLoginResult {
 	did: Did;
 }
 
-/**
- * Build an OAuth client, call `authorize`, and on `invalid_scope` retry once
- * with the legacy `transition:generic` shim. Returns whichever client actually
- * pushed an authorization request, so the caller hands the same client to
- * `callback()` (the second client owns the persisted state).
- *
- * `invalid_scope` is the well-defined RFC 6749 §5.2 error the AS returns when
- * a requested scope isn't supported. The retry path doesn't fire on any other
- * OAuth error -- a `bad_request`, `server_error`, etc. all bubble up so the
- * login command can render them via its `OAuthResponseError` handler.
- */
 async function authorizeWithLegacyFallback(input: {
 	stateDir: string | undefined;
 	redirectUri: `http://127.0.0.1:${number}/callback`;
@@ -620,15 +400,6 @@ async function authorizeWithLegacyFallback(input: {
 	}
 }
 
-/**
- * Run a full interactive OAuth login: build the client, bind the loopback
- * server, open the browser, await the callback, exchange the code, and return
- * the session.
- *
- * On success, the OAuth library has already persisted the session to the
- * filesystem store, so subsequent CLI invocations can call
- * `resumeSession(did)` and skip the interactive flow.
- */
 export async function runInteractiveLogin(
 	options: RunInteractiveLoginOptions,
 ): Promise<RunInteractiveLoginResult> {
@@ -648,15 +419,9 @@ export async function runInteractiveLogin(
 		const params = await server.awaitCallback();
 		try {
 			const result = await client.callback(params);
-			// Atcute has accepted the callback. Only NOW render the success
-			// page in the user's browser -- so a stray /callback hit with
-			// invalid state can't trick the user into thinking they're logged
-			// in when they aren't.
 			server.respond({ ok: true });
 			return { session: result.session, did: result.session.sub };
 		} catch (error) {
-			// atcute rejected the callback (state mismatch, expired code, etc).
-			// Render an error page in the browser before surfacing the failure.
 			const message = error instanceof Error ? error.message : "Login could not be validated.";
 			server.respond({ ok: false, message });
 			throw error;
@@ -666,14 +431,6 @@ export async function runInteractiveLogin(
 	}
 }
 
-/**
- * Resume a previously-stored session by DID, refreshing tokens if needed.
- * Throws if no session exists for the DID.
- *
- * The redirect URI is irrelevant for resume (it's only used during authorize),
- * but the OAuth client constructor requires one matching the stored metadata.
- * We pass a placeholder; the OAuth library never tries to bind it.
- */
 export async function resumeSession(
 	did: Did,
 	options: { stateDir?: string } = {},
@@ -685,11 +442,6 @@ export async function resumeSession(
 	return client.restore(did);
 }
 
-/**
- * Revoke a session and remove its stored state. Best-effort: a network failure
- * during revocation is logged but does not prevent local cleanup, since the
- * user's intent is "stop using this session on this machine".
- */
 export async function revokeSession(did: Did, options: { stateDir?: string } = {}): Promise<void> {
 	const client = createCliOAuthClient({
 		stateDir: options.stateDir,
@@ -698,8 +450,6 @@ export async function revokeSession(did: Did, options: { stateDir?: string } = {
 	try {
 		await client.revoke(did);
 	} catch {
-		// Local-cleanup-only fallback: drop the session entry directly so
-		// `restore` won't accidentally reuse a server-side-revoked session.
 		const sessions = new FileStore<StoredSession>(
 			join(options.stateDir ?? DEFAULT_OAUTH_DIR, "sessions.json"),
 		);

@@ -1,11 +1,5 @@
 import sanitizeHtml from "sanitize-html";
 
-/**
- * Sanitize HTML content to prevent XSS attacks.
- *
- * Allows standard formatting tags, images, iframes (from specific providers),
- * and basic attributes.
- */
 export function sanitizeContent(html: string): string {
 	return sanitizeHtml(html, {
 		allowedTags: [...sanitizeHtml.defaults.allowedTags, "img", "span", "iframe"],

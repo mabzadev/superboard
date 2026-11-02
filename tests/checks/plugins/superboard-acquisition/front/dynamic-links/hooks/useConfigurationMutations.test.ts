@@ -115,7 +115,6 @@ describe("useConfigurationMutations", () => {
 			expect(mockedTrackEvent).toHaveBeenCalledWith("redirect_rules_created", {
 				projectId: "proj-1",
 			});
-			// Invalidation is handled by the caller (handleSaveAll) to avoid race conditions
 			expect(invalidateSpy).not.toHaveBeenCalled();
 		});
 	});
@@ -166,7 +165,6 @@ describe("useConfigurationMutations", () => {
 				});
 			});
 
-			// Invalidation is handled by the caller (handleSaveAll) to avoid race conditions
 			expect(invalidateSpy).not.toHaveBeenCalled();
 		});
 	});

@@ -61,7 +61,6 @@ type VariantResult = {
 	click_rate: number;
 };
 
-/** Test-phase results per variant; rollout deliveries of the winner are excluded. */
 async function variantResults(
 	db: D1Database,
 	projectId: number,
@@ -94,7 +93,6 @@ async function variantResults(
 	}));
 }
 
-/** Picks the best variant; ties keep the earliest variant so the result is stable. */
 export function pickWinner(
 	variants: AbVariant[],
 	results: VariantResult[],
@@ -112,7 +110,6 @@ export function pickWinner(
 	return winner;
 }
 
-/** Variant content used by the delivery worker. */
 export async function campaignVariant(
 	db: D1Database,
 	projectId: number,
@@ -127,11 +124,6 @@ export async function campaignVariant(
 	);
 }
 
-/**
- * Creates the deliveries of an A/B tested campaign. The first dispatch sends
- * the test sample split across variants; once the winner is chosen the next
- * dispatch sends it to everyone else. Returns false when no test applies.
- */
 export async function insertAbTestDeliveries(
 	db: D1Database,
 	projectId: number,
@@ -204,7 +196,6 @@ export async function insertAbTestDeliveries(
 	return true;
 }
 
-/** While a test waits for its winner, the campaign must not be marked finished. */
 export async function abTestHoldsCampaign(db: D1Database, projectId: number, campaignId: string) {
 	return Boolean(
 		await db
@@ -216,7 +207,6 @@ export async function abTestHoldsCampaign(db: D1Database, projectId: number, cam
 	);
 }
 
-/** Chooses winners of tests whose duration elapsed, then sends them to the rest. */
 export async function selectDueAbWinners(env: Env, now = new Date()) {
 	const due = await env.DB.prepare(
 		`SELECT test.* FROM marketing_campaign_ab_tests test

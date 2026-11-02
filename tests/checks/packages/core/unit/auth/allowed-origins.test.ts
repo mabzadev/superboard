@@ -106,7 +106,6 @@ describe("validateOriginShape()", () => {
 	});
 
 	it("rejects hostnames with empty labels", () => {
-		// "foo..example.com" parses with hostname "foo..example.com"
 		expect(() => validateOriginShape([tag("https://foo..example.com")])).toThrow(/empty labels/);
 	});
 });
@@ -154,7 +153,6 @@ describe("validateAllowedOrigins() — Rule A and Rule B", () => {
 	});
 
 	it("rejects apex when siteHost is itself a subdomain", () => {
-		// rpId would be app.example.com — the browser refuses apex assertions for it
 		expect(() =>
 			validateAllowedOrigins("https://app.example.com", [tag("https://example.com")]),
 		).toThrow(/not a subdomain of siteUrl/);
@@ -167,8 +165,6 @@ describe("validateAllowedOrigins() — Rule A and Rule B", () => {
 	});
 
 	it("rejects IP-literal siteUrl (IPv4) when allowedOrigins is non-empty", () => {
-		// IP-literal check fires before Rule B in the validator, so the entry shape
-		// itself doesn't need to relate to the IP — any parseable origin triggers it.
 		expect(() =>
 			validateAllowedOrigins("http://127.0.0.1:4321", [tag("https://preview.example.com")]),
 		).toThrow(/IP-literal hostname/);

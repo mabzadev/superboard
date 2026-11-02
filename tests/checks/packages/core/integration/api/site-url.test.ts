@@ -1,11 +1,3 @@
-/**
- * getSiteBaseUrl precedence: configured origin → stored setup origin →
- * request URL. The configured origin is what `siteUrl` in the integration
- * options resolves to; the stored `emdash:site_url` option is written once
- * during setup; the request URL only fills in before setup completes and
- * must never override either of the other two (Host-spoofing lock).
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -31,9 +23,6 @@ describe("getSiteBaseUrl", () => {
 	});
 
 	it("configured siteUrl beats the stored setup origin", async () => {
-		// Setup ran on a throwaway origin; the operator has since configured
-		// the real one. Email links must follow the config, like every other
-		// origin-dependent feature does via getPublicOrigin.
 		await new OptionsRepository(db).set("emdash:site_url", SETUP_ORIGIN);
 		const config = { siteUrl: REAL_ORIGIN };
 		const request = new Request(REQUEST_URL, { method: "POST" });
@@ -50,7 +39,6 @@ describe("getSiteBaseUrl", () => {
 	});
 
 	it("stored origin is not overridden by the request host", async () => {
-		// The Host-spoofing lock: a stored value always beats the request.
 		await new OptionsRepository(db).set("emdash:site_url", SETUP_ORIGIN);
 		const spoofed = new Request("https://attacker.example/_emdash/api/auth/magic-link/send", {
 			method: "POST",

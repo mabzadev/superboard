@@ -709,604 +709,494 @@ const injectedRtkApi = api.enhanceEndpoints({ addTagTypes }).injectEndpoints({
 	overrideExisting: false,
 });
 export { injectedRtkApi as authApi };
-export type GetApiV1ScopesApiResponse = /** status 200 A list of scopes */ {
+export type GetApiV1ScopesApiResponse = {
 	scopes?: Scope[];
 };
 export type GetApiV1ScopesApiArg = void;
-export type PostApiV1ScopesApiResponse = /** status 201 undefined */ {
+export type PostApiV1ScopesApiResponse = {
 	scope?: ScopeDetail;
 };
 export type PostApiV1ScopesApiArg = {
 	postScopeReq: PostScopeReq;
 };
-export type GetApiV1ScopesByIdApiResponse = /** status 200 A single scope object */ {
+export type GetApiV1ScopesByIdApiResponse = {
 	scope?: ScopeDetail;
 };
 export type GetApiV1ScopesByIdApiArg = {
-	/** The unique ID of the scope */
 	id: number;
 };
-export type PutApiV1ScopesByIdApiResponse = /** status 200 undefined */ {
+export type PutApiV1ScopesByIdApiResponse = {
 	scope?: ScopeDetail;
 };
 export type PutApiV1ScopesByIdApiArg = {
-	/** The unique ID of the scope */
 	id: number;
 	putScopeReq: PutScopeReq;
 };
 export type DeleteApiV1ScopesByIdApiResponse = unknown;
 export type DeleteApiV1ScopesByIdApiArg = {
-	/** The unique ID of the scope */
 	id: number;
 };
-export type GetApiV1RolesApiResponse = /** status 200 A list of roles */ {
+export type GetApiV1RolesApiResponse = {
 	roles?: Role[];
 };
 export type GetApiV1RolesApiArg = void;
-export type PostApiV1RolesApiResponse = /** status 201 undefined */ {
+export type PostApiV1RolesApiResponse = {
 	role?: Role;
 };
 export type PostApiV1RolesApiArg = {
 	postRoleReq: PostRoleReq;
 };
-export type GetApiV1RolesByIdApiResponse = /** status 200 A single role object */ {
+export type GetApiV1RolesByIdApiResponse = {
 	role?: Role;
 };
 export type GetApiV1RolesByIdApiArg = {
-	/** The unique ID of the role */
 	id: number;
 };
-export type PutApiV1RolesByIdApiResponse = /** status 200 undefined */ {
+export type PutApiV1RolesByIdApiResponse = {
 	role?: Role;
 };
 export type PutApiV1RolesByIdApiArg = {
-	/** The unique ID of the role */
 	id: number;
 	putRoleReq: PutRoleReq;
 };
 export type DeleteApiV1RolesByIdApiResponse = unknown;
 export type DeleteApiV1RolesByIdApiArg = {
-	/** The unique ID of the role */
 	id: number;
 };
-export type GetApiV1RolesByIdUsersApiResponse = /** status 200 A list of users by roleId */ {
+export type GetApiV1RolesByIdUsersApiResponse = {
 	users?: User[];
 };
 export type GetApiV1RolesByIdUsersApiArg = {
-	/** The unique ID of the role */
 	id: number;
 };
-export type GetApiV1OrgsApiResponse = /** status 200 A list of orgs */ {
+export type GetApiV1OrgsApiResponse = {
 	orgs?: Org[];
 };
 export type GetApiV1OrgsApiArg = void;
-export type PostApiV1OrgsApiResponse = /** status 201 undefined */ {
+export type PostApiV1OrgsApiResponse = {
 	org?: Org;
 };
 export type PostApiV1OrgsApiArg = {
 	postOrgReq: PostOrgReq;
 };
-export type GetApiV1OrgsByIdApiResponse = /** status 200 A single org object */ {
+export type GetApiV1OrgsByIdApiResponse = {
 	org?: Org;
 };
 export type GetApiV1OrgsByIdApiArg = {
-	/** The unique ID of the org */
 	id: number;
 };
-export type PutApiV1OrgsByIdApiResponse = /** status 200 undefined */ {
+export type PutApiV1OrgsByIdApiResponse = {
 	org?: Org;
 };
 export type PutApiV1OrgsByIdApiArg = {
-	/** The unique ID of the org */
 	id: number;
 	putOrgReq: PutOrgReq;
 };
 export type DeleteApiV1OrgsByIdApiResponse = unknown;
 export type DeleteApiV1OrgsByIdApiArg = {
-	/** The unique ID of the org */
 	id: number;
 };
-export type GetApiV1OrgsByIdUsersApiResponse =
-	/** status 200 A list of active users in this org */ {
-		users?: User[];
-		/** Total number of users matching the query */
-		count?: number;
-	};
+export type GetApiV1OrgsByIdUsersApiResponse = {
+	users?: User[];
+	count?: number;
+};
 export type GetApiV1OrgsByIdUsersApiArg = {
-	/** The unique ID of the org */
 	id: number;
-	/** Number of users to return per page */
 	pageSize?: number;
-	/** Page number to return */
 	pageNumber?: number;
-	/** Search by name or email */
 	search?: string;
 };
-export type GetApiV1OrgsByIdAllUsersApiResponse =
-	/** status 200 A list of all users in this org */ {
-		users?: User[];
-		/** Total number of users matching the query */
-		count?: number;
-	};
+export type GetApiV1OrgsByIdAllUsersApiResponse = {
+	users?: User[];
+	count?: number;
+};
 export type GetApiV1OrgsByIdAllUsersApiArg = {
-	/** The unique ID of the org */
 	id: number;
-	/** Number of users to return per page */
 	pageSize?: number;
-	/** Page number to return */
 	pageNumber?: number;
 };
-export type GetApiV1OrgGroupsApiResponse = /** status 200 A list of org groups by orgId */ {
+export type GetApiV1OrgGroupsApiResponse = {
 	orgGroups?: OrgGroup[];
 };
 export type GetApiV1OrgGroupsApiArg = {
-	/** The unique ID of the org */
 	orgId?: number;
 };
-export type PostApiV1OrgGroupsApiResponse = /** status 201 undefined */ {
+export type PostApiV1OrgGroupsApiResponse = {
 	orgGroup?: OrgGroup;
 };
 export type PostApiV1OrgGroupsApiArg = {
 	postOrgGroupReq: PostOrgGroupReq;
 };
-export type GetApiV1OrgGroupsByIdUsersApiResponse =
-	/** status 200 A list of users by orgGroupId */ {
-		users?: User[];
-	};
+export type GetApiV1OrgGroupsByIdUsersApiResponse = {
+	users?: User[];
+};
 export type GetApiV1OrgGroupsByIdUsersApiArg = {
-	/** The unique ID of the org group */
 	id: number;
 };
-export type PutApiV1OrgGroupsByIdApiResponse = /** status 200 undefined */ {
+export type PutApiV1OrgGroupsByIdApiResponse = {
 	orgGroup?: OrgGroup;
 };
 export type PutApiV1OrgGroupsByIdApiArg = {
-	/** The unique ID of the org group */
 	id: number;
 	putOrgGroupReq: PutOrgGroupReq;
 };
 export type DeleteApiV1OrgGroupsByIdApiResponse = unknown;
 export type DeleteApiV1OrgGroupsByIdApiArg = {
-	/** The unique ID of the org group */
 	id: number;
 };
-export type GetApiV1AppsApiResponse = /** status 200 A list of apps */ {
+export type GetApiV1AppsApiResponse = {
 	apps?: App[];
 };
 export type GetApiV1AppsApiArg = void;
-export type PostApiV1AppsApiResponse = /** status 201 undefined */ {
+export type PostApiV1AppsApiResponse = {
 	app?: CreatedAppDetail;
 };
 export type PostApiV1AppsApiArg = {
 	postAppReq: PostAppReq;
 };
-export type GetApiV1AppsByIdApiResponse = /** status 200 A single app object */ {
+export type GetApiV1AppsByIdApiResponse = {
 	app?: AppDetail;
 };
 export type GetApiV1AppsByIdApiArg = {
-	/** The unique ID of the app */
 	id: number;
 };
-export type PutApiV1AppsByIdApiResponse = /** status 200 undefined */ {
+export type PutApiV1AppsByIdApiResponse = {
 	app?: AppDetail;
 };
 export type PutApiV1AppsByIdApiArg = {
-	/** The unique ID of the app */
 	id: number;
 	putAppReq: PutAppReq;
 };
 export type DeleteApiV1AppsByIdApiResponse = unknown;
 export type DeleteApiV1AppsByIdApiArg = {
-	/** The unique ID of the app */
 	id: number;
 };
-export type GetApiV1AppBannersApiResponse = /** status 200 A list of app banners */ {
+export type GetApiV1AppBannersApiResponse = {
 	appBanners?: AppBanner[];
 };
 export type GetApiV1AppBannersApiArg = void;
-export type PostApiV1AppBannersApiResponse = /** status 201 undefined */ {
+export type PostApiV1AppBannersApiResponse = {
 	appBanner?: AppBanner;
 };
 export type PostApiV1AppBannersApiArg = {
 	postAppBannerReq: PostAppBannerReq;
 };
-export type GetApiV1AppBannersByIdApiResponse = /** status 200 A single app banner object */ {
+export type GetApiV1AppBannersByIdApiResponse = {
 	appBanner?: AppBanner;
 };
 export type GetApiV1AppBannersByIdApiArg = {
-	/** The unique ID of the app banner */
 	id: number;
 };
-export type PutApiV1AppBannersByIdApiResponse = /** status 200 undefined */ {
+export type PutApiV1AppBannersByIdApiResponse = {
 	appBanner?: AppBanner;
 };
 export type PutApiV1AppBannersByIdApiArg = {
-	/** The unique ID of the app banner */
 	id: number;
 	putAppBannerReq: PutAppBannerReq;
 };
 export type DeleteApiV1AppBannersByIdApiResponse = unknown;
 export type DeleteApiV1AppBannersByIdApiArg = {
-	/** The unique ID of the app banner */
 	id: number;
 };
-export type GetApiV1UsersApiResponse = /** status 200 A list of users */ {
+export type GetApiV1UsersApiResponse = {
 	users?: User[];
-	/** Total number of users matching the query */
 	count?: number;
 };
 export type GetApiV1UsersApiArg = {
-	/** Number of users to return per page */
 	pageSize?: number;
-	/** Page number to return */
 	pageNumber?: number;
-	/** Search by name or email */
 	search?: string;
 };
-export type GetApiV1UsersByAuthIdApiResponse = /** status 200 A single user object */ {
+export type GetApiV1UsersByAuthIdApiResponse = {
 	user?: UserDetail;
 };
 export type GetApiV1UsersByAuthIdApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
-export type PutApiV1UsersByAuthIdApiResponse = /** status 200 undefined */ {
+export type PutApiV1UsersByAuthIdApiResponse = {
 	user?: UserDetail;
 };
 export type PutApiV1UsersByAuthIdApiArg = {
-	/** The authId of the user */
 	authId: string;
 	putUserReq: PutUserReq;
 };
 export type DeleteApiV1UsersByAuthIdApiResponse = unknown;
 export type DeleteApiV1UsersByAuthIdApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
-export type GetApiV1UsersByAuthIdLockedIpsApiResponse = /** status 200 A list of IPs */ {
-	/** The list of locked IP addresses for the user */
+export type GetApiV1UsersByAuthIdLockedIpsApiResponse = {
 	lockedIPs?: string[];
 };
 export type GetApiV1UsersByAuthIdLockedIpsApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
 export type DeleteApiV1UsersByAuthIdLockedIpsApiResponse = unknown;
 export type DeleteApiV1UsersByAuthIdLockedIpsApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
-export type PostApiV1UsersByAuthIdVerifyEmailApiResponse = /** status 200 undefined */ {
+export type PostApiV1UsersByAuthIdVerifyEmailApiResponse = {
 	success?: boolean;
 };
 export type PostApiV1UsersByAuthIdVerifyEmailApiArg = {
-	/** The authId of the user who will receive the verification email */
 	authId: string;
 };
-export type GetApiV1UsersByAuthIdConsentedAppsApiResponse =
-	/** status 200 A list of consented apps */ {
-		consentedApps?: UserConsentedApp[];
-	};
+export type GetApiV1UsersByAuthIdConsentedAppsApiResponse = {
+	consentedApps?: UserConsentedApp[];
+};
 export type GetApiV1UsersByAuthIdConsentedAppsApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
 export type DeleteApiV1UsersByAuthIdConsentedAppsAndAppIdApiResponse = unknown;
 export type DeleteApiV1UsersByAuthIdConsentedAppsAndAppIdApiArg = {
-	/** The authId of the user */
 	authId: string;
-	/** The id of the app */
 	appId: number;
 };
-export type GetApiV1UsersByAuthIdPasskeysApiResponse = /** status 200 A list of passkeys */ {
+export type GetApiV1UsersByAuthIdPasskeysApiResponse = {
 	passkeys?: UserPasskey[];
 };
 export type GetApiV1UsersByAuthIdPasskeysApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
-export type DeleteApiV1UsersByAuthIdPasskeysAndPasskeyIdApiResponse = /** status 200 undefined */ {
+export type DeleteApiV1UsersByAuthIdPasskeysAndPasskeyIdApiResponse = {
 	success?: boolean;
 };
 export type DeleteApiV1UsersByAuthIdPasskeysAndPasskeyIdApiArg = {
-	/** The authId of the user */
 	authId: string;
-	/** The id of the passkey */
 	passkeyId: number;
 };
 export type PostApiV1UsersByAuthIdEmailMfaApiResponse = unknown;
 export type PostApiV1UsersByAuthIdEmailMfaApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
 export type DeleteApiV1UsersByAuthIdEmailMfaApiResponse = unknown;
 export type DeleteApiV1UsersByAuthIdEmailMfaApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
 export type PostApiV1UsersByAuthIdOtpMfaApiResponse = unknown;
 export type PostApiV1UsersByAuthIdOtpMfaApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
 export type DeleteApiV1UsersByAuthIdOtpMfaApiResponse = unknown;
 export type DeleteApiV1UsersByAuthIdOtpMfaApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
 export type PostApiV1UsersByAuthIdSmsMfaApiResponse = unknown;
 export type PostApiV1UsersByAuthIdSmsMfaApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
 export type DeleteApiV1UsersByAuthIdSmsMfaApiResponse = unknown;
 export type DeleteApiV1UsersByAuthIdSmsMfaApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
-export type PostApiV1UsersByAuthIdAccountLinkingAndLinkingAuthIdApiResponse =
-	/** status 200 undefined */ {
-		success?: boolean;
-	};
+export type PostApiV1UsersByAuthIdAccountLinkingAndLinkingAuthIdApiResponse = {
+	success?: boolean;
+};
 export type PostApiV1UsersByAuthIdAccountLinkingAndLinkingAuthIdApiArg = {
-	/** The authId of the user */
 	authId: string;
-	/** The authId of the account to link with */
 	linkingAuthId: string;
 };
-export type DeleteApiV1UsersByAuthIdAccountLinkingApiResponse = /** status 200 undefined */ {
+export type DeleteApiV1UsersByAuthIdAccountLinkingApiResponse = {
 	success?: boolean;
 };
 export type DeleteApiV1UsersByAuthIdAccountLinkingApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
-export type PostApiV1UsersByAuthIdImpersonationAndAppIdApiResponse =
-	/** status 200 A refresh token for impersonation */ {
-		/** The refresh token for impersonation */
-		refresh_token?: string;
-		/** The expiration time of the refresh token */
-		refresh_token_expires_on?: number;
-		/** The remaining time of the refresh token in seconds */
-		refresh_token_expires_in?: number;
-	};
+export type PostApiV1UsersByAuthIdImpersonationAndAppIdApiResponse = {
+	refresh_token?: string;
+	refresh_token_expires_on?: number;
+	refresh_token_expires_in?: number;
+};
 export type PostApiV1UsersByAuthIdImpersonationAndAppIdApiArg = {
-	/** The authId of the user */
 	authId: string;
-	/** The id of the app */
 	appId: number;
 	body: {
-		/** The access token of the user impersonating, this user must be a super_admin */
 		impersonatorToken?: string;
 	};
 };
-export type GetApiV1UsersByAuthIdActiveSessionsApiResponse =
-	/** status 200 A list of active sessions */ {
-		activeSessions?: {
-			sessionId?: string;
-			expiredAt?: number;
-			authId?: string;
-			clientId?: string;
-			scope?: string;
-			roles?: string[];
-		}[];
-	};
+export type GetApiV1UsersByAuthIdActiveSessionsApiResponse = {
+	activeSessions?: {
+		sessionId?: string;
+		expiredAt?: number;
+		authId?: string;
+		clientId?: string;
+		scope?: string;
+		roles?: string[];
+	}[];
+};
 export type GetApiV1UsersByAuthIdActiveSessionsApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
 export type DeleteApiV1UsersByAuthIdActiveSessionsAndSessionIdApiResponse = unknown;
 export type DeleteApiV1UsersByAuthIdActiveSessionsAndSessionIdApiArg = {
-	/** The authId of the user */
 	authId: string;
-	/** The session token id to delete */
 	sessionId: string;
 };
-export type PostApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiResponse = /** status 200 undefined */ {
+export type PostApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiResponse = {
 	success?: boolean;
 };
 export type PostApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiArg = {
-	/** The authId of the user */
 	authId: string;
-	/** The id of the org group */
 	orgGroupId: number;
 };
-export type DeleteApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiResponse =
-	/** status 200 undefined */ {
-		success?: boolean;
-	};
+export type DeleteApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiResponse = {
+	success?: boolean;
+};
 export type DeleteApiV1UsersByAuthIdOrgGroupsAndOrgGroupIdApiArg = {
-	/** The authId of the user */
 	authId: string;
-	/** The id of the org group */
 	orgGroupId: number;
 };
-export type GetApiV1UsersByAuthIdOrgsApiResponse = /** status 200 A list of orgs */ {
+export type GetApiV1UsersByAuthIdOrgsApiResponse = {
 	orgs?: Org[];
 };
 export type GetApiV1UsersByAuthIdOrgsApiArg = {
-	/** The authId of the user */
 	authId: string;
 };
-export type PostApiV1UsersByAuthIdOrgsApiResponse = /** status 200 undefined */ {
+export type PostApiV1UsersByAuthIdOrgsApiResponse = {
 	success?: boolean;
 };
 export type PostApiV1UsersByAuthIdOrgsApiArg = {
-	/** The authId of the user */
 	authId: string;
 	body: {
-		/** The ids of the orgs */
 		orgs?: number[];
 	};
 };
-export type PostApiV1UsersInvitationsByAuthIdApiResponse = /** status 200 undefined */ {
+export type PostApiV1UsersInvitationsByAuthIdApiResponse = {
 	success?: boolean;
 };
 export type PostApiV1UsersInvitationsByAuthIdApiArg = {
-	/** The authId of the pending invited user */
 	authId: string;
 	body: {
-		/** Locale for the invitation email */
 		locale?: string;
-		/** URL to redirect the user to after accepting the invitation */
 		signinUrl?: string;
 	};
 };
 export type DeleteApiV1UsersInvitationsByAuthIdApiResponse = unknown;
 export type DeleteApiV1UsersInvitationsByAuthIdApiArg = {
-	/** The authId of the pending invited user */
 	authId: string;
 };
-export type PostApiV1UsersInvitationsApiResponse = /** status 200 undefined */ {
+export type PostApiV1UsersInvitationsApiResponse = {
 	user?: UserDetail;
 };
 export type PostApiV1UsersInvitationsApiArg = {
 	body: {
-		/** The email address to invite */
 		email: string;
-		/** Optional first name */
 		firstName?: string;
-		/** Optional last name */
 		lastName?: string;
-		/** Locale for the invitation email */
 		locale?: string;
-		/** Organization slug to assign the user to */
 		orgSlug?: string;
-		/** Roles to assign to the invited user */
 		roles?: string[];
-		/** URL to redirect the user to after accepting the invitation */
 		signinUrl?: string;
 	};
 };
-export type GetApiV1UserAttributesApiResponse = /** status 200 A list of user attributes */ {
+export type GetApiV1UserAttributesApiResponse = {
 	userAttributes?: UserAttribute[];
 };
 export type GetApiV1UserAttributesApiArg = void;
-export type PostApiV1UserAttributesApiResponse = /** status 200 A user attribute */ {
+export type PostApiV1UserAttributesApiResponse = {
 	userAttribute?: UserAttribute;
 };
 export type PostApiV1UserAttributesApiArg = {
 	postUserAttributeReq: PostUserAttributeReq;
 };
-export type GetApiV1UserAttributesByIdApiResponse = /** status 200 A user attribute */ {
+export type GetApiV1UserAttributesByIdApiResponse = {
 	userAttribute?: UserAttribute;
 };
 export type GetApiV1UserAttributesByIdApiArg = {
-	/** The unique ID of the user attribute */
 	id: number;
 };
-export type PutApiV1UserAttributesByIdApiResponse = /** status 200 A user attribute */ {
+export type PutApiV1UserAttributesByIdApiResponse = {
 	userAttribute?: UserAttribute;
 };
 export type PutApiV1UserAttributesByIdApiArg = {
-	/** The unique ID of the user attribute */
 	id: number;
 	putUserAttributeReq: PutUserAttributeReq;
 };
 export type DeleteApiV1UserAttributesByIdApiResponse = unknown;
 export type DeleteApiV1UserAttributesByIdApiArg = {
-	/** The unique ID of the user attribute */
 	id: number;
 };
-export type GetApiV1LogsEmailApiResponse = /** status 200 A list of email logs */ {
+export type GetApiV1LogsEmailApiResponse = {
 	logs?: EmailLog[];
-	/** Total number of logs matching the query */
 	count?: number;
 };
 export type GetApiV1LogsEmailApiArg = {
-	/** Number of logs to return per page */
 	pageSize?: number;
-	/** Page number to return */
 	pageNumber?: number;
 };
 export type DeleteApiV1LogsEmailApiResponse = unknown;
 export type DeleteApiV1LogsEmailApiArg = {
-	/** Delete all logs that are older than this date in utc format. */
 	before?: string;
 };
-export type GetApiV1LogsEmailByIdApiResponse = /** status 200 A single email log object */ {
+export type GetApiV1LogsEmailByIdApiResponse = {
 	log?: EmailLog;
 };
 export type GetApiV1LogsEmailByIdApiArg = {
-	/** The unique ID of the email log */
 	id: number;
 };
-export type GetApiV1LogsSmsApiResponse = /** status 200 A list of SMS logs */ {
+export type GetApiV1LogsSmsApiResponse = {
 	logs?: SmsLog[];
-	/** Total number of logs matching the query */
 	count?: number;
 };
 export type GetApiV1LogsSmsApiArg = {
-	/** Number of logs to return per page */
 	pageSize?: number;
-	/** Page number to return */
 	pageNumber?: number;
 };
 export type DeleteApiV1LogsSmsApiResponse = unknown;
 export type DeleteApiV1LogsSmsApiArg = {
-	/** Delete all logs that are older than this date in utc format. */
 	before?: string;
 };
-export type GetApiV1LogsSmsByIdApiResponse = /** status 200 A single SMS log object */ {
+export type GetApiV1LogsSmsByIdApiResponse = {
 	log?: SmsLog;
 };
 export type GetApiV1LogsSmsByIdApiArg = {
-	/** The unique ID of the SMS log */
 	id: number;
 };
-export type GetApiV1LogsSignInApiResponse = /** status 200 A list of Sign-in logs */ {
+export type GetApiV1LogsSignInApiResponse = {
 	logs?: SignInLog[];
-	/** Total number of logs matching the query */
 	count?: number;
 };
 export type GetApiV1LogsSignInApiArg = {
-	/** Number of logs to return per page */
 	pageSize?: number;
-	/** Page number to return */
 	pageNumber?: number;
 };
 export type DeleteApiV1LogsSignInApiResponse = unknown;
 export type DeleteApiV1LogsSignInApiArg = {
-	/** Delete all logs that are older than this date in utc format. */
 	before?: string;
 };
-export type GetApiV1LogsSignInByIdApiResponse = /** status 200 A single sign-in log object */ {
+export type GetApiV1LogsSignInByIdApiResponse = {
 	log?: SignInLog;
 };
 export type GetApiV1LogsSignInByIdApiArg = {
-	/** The unique ID of the sign-in log */
 	id: number;
 };
-export type GetApiV1SamlIdpsApiResponse = /** status 200 A list of SAML IDPs */ {
+export type GetApiV1SamlIdpsApiResponse = {
 	idps?: SamlIdp[];
 };
 export type GetApiV1SamlIdpsApiArg = void;
-export type PostApiV1SamlIdpsApiResponse = /** status 201 undefined */ {
+export type PostApiV1SamlIdpsApiResponse = {
 	idp?: SamlIdp;
 };
 export type PostApiV1SamlIdpsApiArg = {
 	postSamlIdpReq: PostSamlIdpReq;
 };
-export type GetApiV1SamlIdpsByIdApiResponse = /** status 200 A SAML IDP */ {
+export type GetApiV1SamlIdpsByIdApiResponse = {
 	idp?: SamlIdp;
 };
 export type GetApiV1SamlIdpsByIdApiArg = {
 	id: number;
 };
-export type PutApiV1SamlIdpsByIdApiResponse = /** status 200 undefined */ {
+export type PutApiV1SamlIdpsByIdApiResponse = {
 	idp?: SamlIdp;
 };
 export type PutApiV1SamlIdpsByIdApiArg = {
-	/** The unique ID of the SAML IDP */
 	id: number;
 	putSamlIdpReq: PutSamlIdpReq;
 };
 export type DeleteApiV1SamlIdpsByIdApiResponse = unknown;
 export type DeleteApiV1SamlIdpsByIdApiArg = {
-	/** The unique ID of the SAML IDP */
 	id: number;
 };
-export type GetInfoApiResponse = /** status 200 System configuration values */ {
+export type GetInfoApiResponse = {
 	configs?: {
 		[key: string]: unknown;
 	};

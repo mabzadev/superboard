@@ -1,9 +1,3 @@
-/**
- * Permanent delete content endpoint - injected by EmDash integration
- *
- * DELETE /_emdash/api/content/{collection}/{id}/permanent - Permanently delete (no undo)
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

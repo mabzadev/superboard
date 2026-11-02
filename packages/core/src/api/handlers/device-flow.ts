@@ -1,14 +1,3 @@
-/**
- * OAuth Device Flow handlers (RFC 8628).
- *
- * EmDash acts as an OAuth 2.0 authorization server. The CLI requests
- * a device code, displays a URL + user code, and polls for a token.
- * The user opens a browser, logs in, enters the code, and the CLI gets
- * an access + refresh token pair.
- *
- * Uses arctic for code generation and @emdash-cms/auth for token utilities.
- */
-
 import { clampScopes } from "@emdash-cms/auth";
 import type { RoleLevel } from "@emdash-cms/auth";
 import { generateCodeVerifier } from "arctic";
@@ -26,29 +15,18 @@ import type { ApiResult } from "../types.js";
 import { lookupOAuthClient } from "./oauth-clients.js";
 import { lookupUserRoleAndStatus } from "./oauth-user-lookup.js";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/** Device codes expire after 15 minutes */
 const DEVICE_CODE_TTL_SECONDS = 15 * 60;
 
-/** Default polling interval in seconds */
 const DEFAULT_INTERVAL = 5;
 
-/** RFC 8628 §3.5: interval increase on slow_down */
 const SLOW_DOWN_INCREMENT = 5;
 
-/** Maximum slow_down interval cap (seconds) */
 const MAX_SLOW_DOWN_INTERVAL = 60;
 
-/** Access token TTL: 1 hour */
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
 
-/** Refresh token TTL: 90 days */
 const REFRESH_TOKEN_TTL_SECONDS = 90 * 24 * 60 * 60;
 
-/** Default scopes for CLI login */
 const DEFAULT_SCOPES = [
 	"content:read",
 	"content:write",
@@ -57,15 +35,9 @@ const DEFAULT_SCOPES = [
 	"schema:read",
 ] as const;
 
-/** Pattern to normalize user codes (strip hyphens) */
 const HYPHEN_PATTERN = /-/g;
 
-/** Characters for user codes (uppercase, no ambiguous chars like 0/O, 1/I) */
 const USER_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export interface DeviceCodeResponse {
 	device_code: string;
@@ -83,18 +55,12 @@ export interface TokenResponse {
 	scope: string;
 }
 
-// RFC 8628 error codes
 export type DeviceFlowError =
 	| "authorization_pending"
 	| "slow_down"
 	| "expired_token"
 	| "access_denied";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Generate a short human-readable user code (XXXX-XXXX) */
 function generateUserCode(): string {
 	const bytes = new Uint8Array(8);
 	crypto.getRandomValues(bytes);
@@ -102,12 +68,10 @@ function generateUserCode(): string {
 	return `${chars.slice(0, 4)}-${chars.slice(4, 8)}`;
 }
 
-/** Get an ISO datetime string offset from now */
 function expiresAt(seconds: number): string {
 	return new Date(Date.now() + seconds * 1000).toISOString();
 }
 
-/** Validate and normalize scopes. Returns validated scope list. */
 function normalizeScopes(requested?: string[]): string[] {
 	if (!requested || requested.length === 0) {
 		return [...DEFAULT_SCOPES];
@@ -115,16 +79,6 @@ function normalizeScopes(requested?: string[]): string[] {
 	return requested.filter(isValidScope);
 }
 
-// ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-/**
- * POST /oauth/device/code
- *
- * Issue a device code + user code. The CLI displays the user code
- * and tells the user to open the verification URI.
- */
 export async function handleDeviceCodeRequest(
 	db: Kysely<Database>,
 	input: {
@@ -134,12 +88,6 @@ export async function handleDeviceCodeRequest(
 	verificationUri: string,
 ): Promise<ApiResult<DeviceCodeResponse>> {
 	try {
-		// Note: client_id is accepted but not validated against _emdash_oauth_clients
-		// because the CLI uses a well-known built-in client ID ("emdash-cli") that
-		// isn't stored in the DB. Full client_id validation + scope clamping for the
-		// device flow is tracked as a follow-up.
-
-		// Parse and validate scopes
 		const requestedScopes = input.scope ? input.scope.split(" ").filter(Boolean) : [];
 		const scopes = normalizeScopes(requestedScopes);
 
@@ -187,16 +135,6 @@ export async function handleDeviceCodeRequest(
 	}
 }
 
-/**
- * POST /oauth/device/token
- *
- * CLI polls this endpoint with the device_code. Returns:
- * - 200 with tokens if authorized
- * - 400 with error "authorization_pending" while waiting
- * - 400 with error "slow_down" if polling too fast
- * - 400 with error "expired_token" if the code expired
- * - 400 with error "access_denied" if the user denied
- */
 export async function handleDeviceTokenExchange(
 	db: Kysely<Database>,
 	input: {
@@ -207,7 +145,6 @@ export async function handleDeviceTokenExchange(
 	ApiResult<TokenResponse> & { deviceFlowError?: DeviceFlowError; deviceFlowInterval?: number }
 > {
 	try {
-		// Validate grant_type
 		if (input.grant_type !== "urn:ietf:params:oauth:grant-type:device_code") {
 			return {
 				success: false,
@@ -215,7 +152,6 @@ export async function handleDeviceTokenExchange(
 			};
 		}
 
-		// Look up the device code
 		const row = await db
 			.selectFrom("_emdash_device_codes")
 			.selectAll()
@@ -231,9 +167,7 @@ export async function handleDeviceTokenExchange(
 
 		const now = new Date();
 
-		// Check expiry
 		if (new Date(row.expires_at) < now) {
-			// Clean up expired code
 			await db
 				.deleteFrom("_emdash_device_codes")
 				.where("device_code", "=", input.device_code)
@@ -246,9 +180,7 @@ export async function handleDeviceTokenExchange(
 			};
 		}
 
-		// Check status
 		if (row.status === "denied") {
-			// Clean up denied code
 			await db
 				.deleteFrom("_emdash_device_codes")
 				.where("device_code", "=", input.device_code)
@@ -262,15 +194,11 @@ export async function handleDeviceTokenExchange(
 		}
 
 		if (row.status === "pending") {
-			// RFC 8628 §3.5: slow_down enforcement during polling phase.
-			// Only applies while waiting for authorization — once authorized,
-			// the final exchange proceeds without throttling.
 			if (row.last_polled_at) {
 				const lastPolled = new Date(row.last_polled_at);
 				const elapsedSeconds = (now.getTime() - lastPolled.getTime()) / 1000;
 
 				if (elapsedSeconds < row.interval) {
-					// Too fast — increase interval by 5s per RFC 8628 §3.5, capped at 60s
 					const newInterval = Math.min(row.interval + SLOW_DOWN_INCREMENT, MAX_SLOW_DOWN_INTERVAL);
 					await db
 						.updateTable("_emdash_device_codes")
@@ -290,7 +218,6 @@ export async function handleDeviceTokenExchange(
 				}
 			}
 
-			// Update last_polled_at for future slow_down checks
 			await db
 				.updateTable("_emdash_device_codes")
 				.set({ last_polled_at: now.toISOString() })
@@ -311,17 +238,11 @@ export async function handleDeviceTokenExchange(
 			};
 		}
 
-		// Generate tokens before consuming the device code so that if
-		// generation fails, the code is still available for retry.
 		const accessToken = generatePrefixedToken(TOKEN_PREFIXES.OAUTH_ACCESS);
 		const accessExpires = expiresAt(ACCESS_TOKEN_TTL_SECONDS);
 		const refreshToken = generatePrefixedToken(TOKEN_PREFIXES.OAUTH_REFRESH);
 		const refreshExpires = expiresAt(REFRESH_TOKEN_TTL_SECONDS);
 
-		// Atomically consume the device code and create tokens in a single
-		// transaction. DELETE...RETURNING prevents TOCTOU: two concurrent
-		// requests race on the DELETE, only one gets a row back. Wrapping
-		// in a transaction ensures the code isn't consumed if token storage fails.
 		const result = await withTransaction(db, async (trx) => {
 			const consumed = await trx
 				.deleteFrom("_emdash_device_codes")
@@ -393,16 +314,6 @@ export async function handleDeviceTokenExchange(
 	}
 }
 
-/**
- * POST /oauth/device/authorize
- *
- * The user submits the user_code after logging in via the browser.
- * This authorizes the device code, allowing the CLI to exchange it for tokens.
- *
- * Scopes are clamped to the user's role at this point. The stored scopes
- * are replaced with the intersection of requested scopes and the scopes
- * the user's role permits. This prevents scope escalation.
- */
 export async function handleDeviceAuthorize(
 	db: Kysely<Database>,
 	userId: string,
@@ -413,17 +324,14 @@ export async function handleDeviceAuthorize(
 	},
 ): Promise<ApiResult<{ authorized: boolean }>> {
 	try {
-		// Normalize user code (strip hyphens, uppercase)
 		const normalizedCode = input.user_code.replace(HYPHEN_PATTERN, "").toUpperCase();
 
-		// Look up the device code by user_code
 		const row = await db
 			.selectFrom("_emdash_device_codes")
 			.selectAll()
 			.where("status", "=", "pending")
 			.execute();
 
-		// Find the matching code (strip hyphens for comparison)
 		const match = row.find(
 			(r) => r.user_code.replace(HYPHEN_PATTERN, "").toUpperCase() === normalizedCode,
 		);
@@ -435,7 +343,6 @@ export async function handleDeviceAuthorize(
 			};
 		}
 
-		// Check expiry
 		if (new Date(match.expires_at) < new Date()) {
 			await db
 				.deleteFrom("_emdash_device_codes")
@@ -460,8 +367,6 @@ export async function handleDeviceAuthorize(
 			return { success: true, data: { authorized: false } };
 		}
 
-		// Clamp requested scopes to those the user's role permits.
-		// effective_scopes = requested_scopes ∩ scopesForRole(user.role)
 		const requestedScopes = JSON.parse(match.scopes) as string[];
 		const effectiveScopes = clampScopes(requestedScopes, userRole);
 
@@ -475,7 +380,6 @@ export async function handleDeviceAuthorize(
 			};
 		}
 
-		// Approve: set user_id, status, and clamped scopes
 		await db
 			.updateTable("_emdash_device_codes")
 			.set({
@@ -498,12 +402,6 @@ export async function handleDeviceAuthorize(
 	}
 }
 
-/**
- * POST /oauth/token/refresh
- *
- * Exchange a refresh token for a new access token.
- * The refresh token itself is not rotated (per spec: optional rotation).
- */
 export async function handleTokenRefresh(
 	db: Kysely<Database>,
 	input: {
@@ -542,9 +440,7 @@ export async function handleTokenRefresh(
 			};
 		}
 
-		// Check expiry
 		if (new Date(row.expires_at) < new Date()) {
-			// Clean up expired refresh token and its access tokens
 			await db.deleteFrom("_emdash_oauth_tokens").where("token_hash", "=", refreshHash).execute();
 			await db
 				.deleteFrom("_emdash_oauth_tokens")
@@ -557,11 +453,8 @@ export async function handleTokenRefresh(
 			};
 		}
 
-		// SEC-42: Revalidate user role before issuing new access token.
-		// SEC-43: Reject refresh if user is disabled or deleted.
 		const userInfo = await lookupUserRoleAndStatus(db, row.user_id);
 		if (!userInfo) {
-			// User no longer exists — revoke all their tokens
 			await db.deleteFrom("_emdash_oauth_tokens").where("user_id", "=", row.user_id).execute();
 			return {
 				success: false,
@@ -570,7 +463,6 @@ export async function handleTokenRefresh(
 		}
 
 		if (userInfo.disabled) {
-			// User is disabled — revoke all their tokens
 			await db.deleteFrom("_emdash_oauth_tokens").where("user_id", "=", row.user_id).execute();
 			return {
 				success: false,
@@ -578,15 +470,9 @@ export async function handleTokenRefresh(
 			};
 		}
 
-		// Revalidate stored scopes against the user's current role.
-		// A demoted user's refresh token may carry stale elevated scopes.
 		const storedScopes = JSON.parse(row.scopes) as string[];
 		let scopes = clampScopes(storedScopes, userInfo.role);
 
-		// SEC-41: Intersect with the client's registered scopes (if any).
-		// Same check as the approval path — a client registered with limited
-		// scopes should never receive elevated scopes on refresh, even if the
-		// user's role would allow them.
 		if (row.client_id) {
 			const client = await lookupOAuthClient(db, row.client_id);
 			if (client?.scopes?.length) {
@@ -595,7 +481,6 @@ export async function handleTokenRefresh(
 		}
 
 		if (scopes.length === 0) {
-			// User's role no longer supports any of the token's scopes — revoke
 			await db.deleteFrom("_emdash_oauth_tokens").where("token_hash", "=", refreshHash).execute();
 			await db
 				.deleteFrom("_emdash_oauth_tokens")
@@ -610,14 +495,12 @@ export async function handleTokenRefresh(
 			};
 		}
 
-		// Delete old access tokens for this refresh token
 		await db
 			.deleteFrom("_emdash_oauth_tokens")
 			.where("refresh_token_hash", "=", refreshHash)
 			.where("token_type", "=", "access")
 			.execute();
 
-		// Generate new access token
 		const accessToken = generatePrefixedToken(TOKEN_PREFIXES.OAUTH_ACCESS);
 		const accessExpires = expiresAt(ACCESS_TOKEN_TTL_SECONDS);
 
@@ -638,7 +521,7 @@ export async function handleTokenRefresh(
 			success: true,
 			data: {
 				access_token: accessToken.raw,
-				refresh_token: input.refresh_token, // Return same refresh token
+				refresh_token: input.refresh_token,
 				token_type: "Bearer",
 				expires_in: ACCESS_TOKEN_TTL_SECONDS,
 				scope: scopes.join(" "),
@@ -655,14 +538,6 @@ export async function handleTokenRefresh(
 	}
 }
 
-/**
- * POST /oauth/token/revoke
- *
- * Revoke an access or refresh token. If a refresh token is revoked,
- * also revoke all associated access tokens.
- *
- * Per RFC 7009, this endpoint always returns 200 (even for invalid tokens).
- */
 export async function handleTokenRevoke(
 	db: Kysely<Database>,
 	input: {
@@ -672,7 +547,6 @@ export async function handleTokenRevoke(
 	try {
 		const hash = hashApiToken(input.token);
 
-		// Look up the token
 		const row = await db
 			.selectFrom("_emdash_oauth_tokens")
 			.select(["token_hash", "token_type", "refresh_token_hash"])
@@ -680,16 +554,13 @@ export async function handleTokenRevoke(
 			.executeTakeFirst();
 
 		if (!row) {
-			// Per RFC 7009: always 200, even for invalid tokens
 			return { success: true, data: { revoked: true } };
 		}
 
 		if (row.token_type === "refresh") {
-			// Revoke refresh token and all its access tokens
 			await db.deleteFrom("_emdash_oauth_tokens").where("refresh_token_hash", "=", hash).execute();
 			await db.deleteFrom("_emdash_oauth_tokens").where("token_hash", "=", hash).execute();
 		} else {
-			// Revoke just the access token
 			await db.deleteFrom("_emdash_oauth_tokens").where("token_hash", "=", hash).execute();
 		}
 

@@ -1,9 +1,3 @@
-//
-//  Bundle+Extension.swift
-//
-//  superboard
-//
-
 import Foundation
 
 extension Bundle {

@@ -1,13 +1,3 @@
-/**
- * End-to-end tests for the per-collection sitemap route.
- *
- * Exercises the actual route handler (XML output, hreflang alternates,
- * urlset namespace) with EmDash i18n configured. The `astro:i18n`
- * virtual module isn't available in vitest, so `localizePath` falls
- * back to its manual prefix path -- which is also what most sites
- * with default routing will produce.
- */
-
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -134,7 +124,6 @@ describe("sitemap-[collection].xml route", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 
-		// Sitemap + image namespaces declared; no xhtml when i18n is off.
 		expect(xml).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
 		expect(xml).toContain('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"');
 		expect(xml).not.toContain("xmlns:xhtml");
@@ -152,7 +141,6 @@ describe("sitemap-[collection].xml route", () => {
 			data: { title: "Hello" },
 			status: "published",
 		});
-		// SEO panel stores seo_image as a root-relative media API path.
 		await db
 			.insertInto("_emdash_seo")
 			.values({
@@ -170,7 +158,6 @@ describe("sitemap-[collection].xml route", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 
-		// image namespace declared + absolute <image:loc> emitted.
 		expect(xml).toContain('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"');
 		expect(xml).toContain(
 			"<image:loc>http://localhost:4321/_emdash/api/media/file/01ABCDEF.webp</image:loc>",
@@ -221,16 +208,11 @@ describe("sitemap-[collection].xml route", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 
-		// xhtml namespace declared on urlset.
 		expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
 
-		// Default-locale row sits at /blog/hello (no prefix); French row
-		// has its own slug ("bonjour") and is prefixed with /fr.
 		expect(xml).toContain("<loc>http://localhost:4321/blog/hello</loc>");
 		expect(xml).toContain("<loc>http://localhost:4321/fr/blog/bonjour</loc>");
 
-		// Each <url> declares both siblings + x-default pointing at the
-		// default-locale variant.
 		const enUrlMatch = xml.match(
 			/<url>(?:(?!<\/url>)[\s\S])*<loc>http:\/\/localhost:4321\/blog\/hello<\/loc>[\s\S]*?<\/url>/,
 		);
@@ -289,7 +271,6 @@ describe("sitemap-[collection].xml route", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 
-		// Single-row translation_group still advertises its own locale and fallback.
 		expect(xml).toContain("<loc>http://localhost:4321/blog/solo</loc>");
 		expect(xml).toContain(
 			'<xhtml:link rel="alternate" hreflang="en" href="http://localhost:4321/blog/solo" />',
@@ -313,9 +294,6 @@ describe("sitemap-[collection].xml route", () => {
 			status: "published",
 			locale: "en",
 		});
-		// `de` isn't a configured locale -- the site has no /de/ route.
-		// Better to drop the entry than to publish a sitemap link that
-		// 404s.
 		await repo.create({
 			type: "post",
 			slug: "hallo",
@@ -341,8 +319,6 @@ describe("sitemap-[collection].xml route", () => {
 			prefixDefaultLocale: false,
 		});
 
-		// English source + French translation (routable) + German
-		// translation (locale not configured -- unroutable).
 		const en = await repo.create({
 			type: "post",
 			slug: "hello",
@@ -371,16 +347,13 @@ describe("sitemap-[collection].xml route", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 
-		// French + English routable rows present.
 		expect(xml).toContain("<loc>http://localhost:4321/blog/hello</loc>");
 		expect(xml).toContain("<loc>http://localhost:4321/fr/blog/bonjour</loc>");
 
-		// German row dropped, and no German hreflang on remaining rows.
 		expect(xml).not.toContain("/de/");
 		expect(xml).not.toContain('hreflang="de"');
 		expect(xml).not.toContain("hallo");
 
-		// English row still lists French as an alternate (and x-default).
 		expect(xml).toContain(
 			'<xhtml:link rel="alternate" hreflang="fr" href="http://localhost:4321/fr/blog/bonjour" />',
 		);

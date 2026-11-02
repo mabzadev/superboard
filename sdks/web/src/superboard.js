@@ -7,10 +7,6 @@ import {
 	SuperBoardSupportWidget,
 } from "./support/index.js";
 
-/**
- * Entry point for the SuperBoard SDK.
- * Provides methods to initialize and interact with the SDK.
- */
 class SuperBoard {
 	/**
 	 * Creates an instance of the SuperBoard SDK.
@@ -20,7 +16,6 @@ class SuperBoard {
 	 * @param {string} baseURL - Application-specific SDK origin, for example `https://sdk.example.com`.
 	 */
 	constructor(APIKey, testEnvironment, linkHandlingCallback, baseURL) {
-		// Initialize the SuperBoardManager with the provided API key and callback
 		this.manager = new SuperBoardManager(APIKey, testEnvironment, linkHandlingCallback, baseURL);
 	}
 
@@ -31,7 +26,6 @@ class SuperBoard {
 	 * @param {Function} [authenticationErrorCallback=null] - Callback to invoke when authentication fails.
 	 */
 	start(successfulAuthenticatedCallback = null, authenticationErrorCallback = null) {
-		// Start authentication process
 		this.manager.authenticate(successfulAuthenticatedCallback, authenticationErrorCallback);
 	}
 
@@ -45,7 +39,6 @@ class SuperBoard {
 	 * @param {Function} error - Error callback for creating the link.
 	 */
 	createLink(title, subtitle, imageURL, data, success, error) {
-		// Delegate link creation to the manager
 		this.manager.createLink(title, subtitle, imageURL, data, success, error);
 	}
 
@@ -54,7 +47,6 @@ class SuperBoard {
 	 * @returns {string|null} The user identifier, or null if not set.
 	 */
 	userIdentifier() {
-		// Get user identifier from the manager
 		return this.manager.userIdentifier();
 	}
 
@@ -63,7 +55,6 @@ class SuperBoard {
 	 * @returns {Object|null} The user attributes, or null if not set.
 	 */
 	userAttributes() {
-		// Get user attributes from the manager
 		return this.manager.userAttributes();
 	}
 
@@ -73,7 +64,6 @@ class SuperBoard {
 	 * @returns {void}
 	 */
 	setUserIdentifier(identifier) {
-		// Set user identifier through the manager
 		this.manager.setUserIdentifier(identifier);
 	}
 
@@ -83,7 +73,6 @@ class SuperBoard {
 	 * @returns {void}
 	 */
 	setUserAttributes(attributes) {
-		// Set user attributes through the manager
 		this.manager.setUserAttributes(attributes);
 	}
 
@@ -93,7 +82,6 @@ class SuperBoard {
 	 * @returns {boolean} - The authentication status of the manager.
 	 */
 	authenticated() {
-		// Return the authentication status from the manager
 		return this.manager.authenticated;
 	}
 
@@ -104,7 +92,6 @@ class SuperBoard {
 	 * @returns {void}
 	 */
 	showMessagesList(error) {
-		// Delegate message list display to the manager
 		this.manager.showMessagesList(error);
 	}
 
@@ -116,7 +103,6 @@ class SuperBoard {
 	 * @returns {void}
 	 */
 	getMessages(page, response, error) {
-		// Delegate message retrieval to the manager
 		this.manager.getMessages(page, response, error);
 	}
 
@@ -127,7 +113,6 @@ class SuperBoard {
 	 * @returns {void}
 	 */
 	getNumberOfUnreadMessages(response, error) {
-		// Delegate unread message count retrieval to the manager
 		this.manager.getNumberOfUnreadMessages(response, error);
 	}
 
@@ -136,7 +121,6 @@ class SuperBoard {
 	 * @returns {Array} Array of all received data objects.
 	 */
 	getAllReceivedData() {
-		// Return received data from the manager
 		return this.manager.getAllReceivedData();
 	}
 
@@ -148,15 +132,10 @@ class SuperBoard {
 	 * @returns {void}
 	 */
 	markMessageAsRead(message, response, error) {
-		// Delegate marking message as read to the manager
 		this.manager.markMessageAsRead(message, response, error);
 	}
 }
 
-// Keep the CommonJS/browser default callable while exposing the native Support
-// API as static properties on the historical default export. The class is
-// decorated in its own module so that dropping an unused import of this module
-// (package.json "sideEffects") can never leave a half-initialised export behind.
 Object.defineProperties(SuperBoard, {
 	SuperBoardClient: { value: SuperBoardClient, enumerable: true },
 	SuperBoardError: { value: SuperBoardError, enumerable: true },

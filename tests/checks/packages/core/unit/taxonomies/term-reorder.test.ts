@@ -1,11 +1,3 @@
-/**
- * Manual term ordering.
- *
- * Terms carry an explicit position within their sibling group, and that
- * position belongs to the translation_group rather than to a row — a term sits
- * in the same place in every locale it is translated into.
- */
-
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import {
@@ -25,7 +17,6 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
-// Mock loader.getDb so the runtime taxonomy functions read from our test db.
 vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 	getDb: vi.fn(),
 	resetTaxonomyNamesCache: vi.fn(),
@@ -56,21 +47,18 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		vi.restoreAllMocks();
 	});
 
-	/** Labels of the terms in `category`, in list order. */
 	async function listLabels(): Promise<string[]> {
 		const result = await handleTermList(ctx.db, "category", { includeCounts: false });
 		if (!result.success) throw new Error(result.error.message);
 		return result.data.terms.map((term) => term.label);
 	}
 
-	/** Labels of `category` in one locale, in list order. */
 	async function listLocaleLabels(locale: string): Promise<string[]> {
 		const result = await handleTermList(ctx.db, "category", { locale, includeCounts: false });
 		if (!result.success) throw new Error(result.error.message);
 		return result.data.terms.map((term) => term.label);
 	}
 
-	/** Labels of one parent's children, in list order. */
 	async function listChildLabels(parentLabel: string): Promise<string[]> {
 		const result = await handleTermList(ctx.db, "category", { includeCounts: false });
 		if (!result.success) throw new Error(result.error.message);
@@ -104,9 +92,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		expect(await listLabels()).toEqual(["Apple", "Mango", "Zebra"]);
 	});
 
-	// No object-cache backend is configured here, so `cachedQuery` runs its
-	// loader every time: this covers the runtime helper's own ordering, not cache
-	// invalidation. That is in term-list-object-cache.test.ts.
 	it("orders the public runtime helper by the stored position", async () => {
 		const [zebra, apple] = await createCategories(["Zebra", "Apple"]);
 
@@ -141,7 +126,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 			parentId: alpha!.id,
 		});
 
-		// Reordering the children leaves the roots alone...
 		await handleTermReorder(ctx.db, "category", {
 			parentId: alpha!.translationGroup,
 			ids: [childZ.id, childA.id],
@@ -149,7 +133,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		expect(await listLabels()).toEqual(["Alpha", "Beta"]);
 		expect(await listChildLabels("Alpha")).toEqual(["Child Z", "Child A"]);
 
-		// ...and reordering the roots leaves the children as they were.
 		await handleTermReorder(ctx.db, "category", { ids: [beta!.id, alpha!.id] });
 		expect(await listLabels()).toEqual(["Beta", "Alpha"]);
 		expect(await listChildLabels("Alpha")).toEqual(["Child Z", "Child A"]);
@@ -174,8 +157,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 			ids: [childZ.id, childA.id],
 		});
 
-		// Beta's position as a root says nothing about where it belongs among
-		// Alpha's children, so it joins them at the end.
 		await repo.update(beta!.id, { parentId: alpha!.translationGroup ?? alpha!.id });
 
 		expect(await listChildLabels("Alpha")).toEqual(["Child Z", "Child A", "Beta"]);
@@ -226,14 +207,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		expect(result.error.code).toBe("REORDER_MISMATCH");
 	});
 
-	// -----------------------------------------------------------------------
-	// A position belongs to the term, not to one of its locales
-	// -----------------------------------------------------------------------
-
-	/**
-	 * Translate `source` into `locale`, returning the new row's id. Carries the
-	 * source's parent through the way the translations route does.
-	 */
 	async function translate(
 		source: { id: string; slug: string; parentId: string | null },
 		locale: string,
@@ -265,7 +238,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		await translate(zebra!, "es", "Zebra ES");
 		await translate(apple!, "es", "Apple ES");
 
-		// Reordering names the EN rows; the ES rows move with them.
 		await handleTermReorder(ctx.db, "category", { ids: [apple!.id, zebra!.id] });
 
 		expect(await listLocaleLabels("en")).toEqual(["Apple", "Zebra"]);
@@ -296,7 +268,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 
 	it("permutes a partly visible group within the slots it occupies", async () => {
 		const [alpha, , gamma] = await createCategories(["Alpha", "Beta", "Gamma"]);
-		// Beta is never translated, so an admin working in ES cannot name it.
 		await translate(alpha!, "es", "Alpha ES");
 		await translate(gamma!, "es", "Gamma ES");
 
@@ -305,7 +276,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		});
 
 		expect(result.success).toBe(true);
-		// Gamma and Alpha swap the slots they held (0 and 2); Beta keeps slot 1.
 		expect(await listLocaleLabels("en")).toEqual(["Gamma", "Beta", "Alpha"]);
 		expect(await listLocaleLabels("es")).toEqual(["Gamma ES", "Alpha ES"]);
 	});
@@ -313,7 +283,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 	it("leaves a term out of the list alone rather than burying it", async () => {
 		const [alpha, beta] = await createCategories(["Alpha", "Beta", "Gamma"]);
 
-		// A stale client that never saw Gamma reorders the two it knows about.
 		const result = await handleTermReorder(ctx.db, "category", {
 			ids: [beta!.id, alpha!.id],
 		});
@@ -338,8 +307,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		if (!esRoot.success) throw new Error(esRoot.error.message);
 		const esChild = await translate(child, "es", "Child A ES");
 
-		// Alpha has no ES row, so the term list shows the child at the ES top
-		// level — but it belongs to Alpha's group, not to the roots.
 		expect(await listLocaleLabels("es")).toEqual(["Child A ES", "Uno"]);
 
 		const result = await handleTermReorder(ctx.db, "category", {
@@ -351,21 +318,14 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		expect(result.error.code).toBe("REORDER_MISMATCH");
 	});
 
-	// -----------------------------------------------------------------------
-	// A parent belongs to the term, not to one of its locales
-	// -----------------------------------------------------------------------
-
 	it("moves every locale of a term reparented from one of them", async () => {
 		const [alpha, beta] = await createCategories(["Alpha", "Beta"]);
-		// "Uno" translates Alpha, "Dos" translates Beta.
 		await translate(alpha!, "es", "Uno");
 		await translate(beta!, "es", "Dos");
 		expect(await listLocaleLabels("es")).toEqual(["Uno", "Dos"]);
 
-		// Move Beta under Alpha, naming only the EN row.
 		await repo.update(beta!.id, { parentId: alpha!.translationGroup ?? alpha!.id });
 
-		// Beta is now Alpha's child in every locale, so the ES roots are just Uno.
 		expect(await listLocaleLabels("es")).toEqual(["Uno"]);
 	});
 
@@ -377,7 +337,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 
 		await repo.update(beta!.id, { parentId: alpha!.translationGroup ?? alpha!.id });
 
-		// An ES editor swaps the two roots they can see.
 		const result = await handleTermReorder(ctx.db, "category", {
 			ids: [gamma!.translationGroup!, alpha!.translationGroup!],
 		});
@@ -401,7 +360,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 			parentId: alpha!.id,
 		});
 
-		// Translate Beta (a root at position 1) straight into Alpha's children.
 		const created = await handleTermCreate(ctx.db, "category", {
 			slug: "beta-es",
 			label: "Beta ES",
@@ -411,7 +369,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		});
 		if (!created.success) throw new Error(created.error.message);
 
-		// It joins the group it landed in at the end, not at Beta's root position.
 		const children = await repo.findChildren(alpha!.translationGroup ?? alpha!.id);
 		const positions = new Map(children.map((term) => [term.label, term.sortOrder]));
 		expect(positions.get("K0")).toBe(0);
@@ -423,8 +380,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 
 	it("renumbers a group whose stored positions tie", async () => {
 		const [alpha, beta] = await createCategories(["Alpha", "Beta"]);
-		// Positions that tie have no distinct order to permute into. Only a
-		// half-applied migration or direct SQL can produce them.
 		await ctx.db
 			.updateTable("taxonomies")
 			.set({ sort_order: 0 })
@@ -438,7 +393,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 
 		expect(result.success).toBe(true);
 		expect(await listLabels()).toEqual(["Beta", "Alpha"]);
-		// And the tie is gone, so the group can be reordered again.
 		const again = await handleTermReorder(ctx.db, "category", {
 			ids: [alpha!.id, beta!.id],
 		});
@@ -455,7 +409,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 			.execute();
 		invalidateTermCache();
 
-		// Gamma is never named, so it holds the last of the three places.
 		const result = await handleTermReorder(ctx.db, "category", {
 			ids: [beta!.id, alpha!.id],
 		});
@@ -463,10 +416,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		expect(result.success).toBe(true);
 		expect(await listLabels()).toEqual(["Beta", "Alpha", "Gamma"]);
 	});
-
-	// -----------------------------------------------------------------------
-	// Migration 056
-	// -----------------------------------------------------------------------
 
 	it("mints positions that preserve the alphabetical order terms had before", async () => {
 		const [alpha] = await createCategories(["Zebra", "Apple", "Mango"]);
@@ -487,7 +436,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 		await mintSortOrder(ctx.db);
 		invalidateTermCache();
 
-		// `alpha` here is Zebra — the first label passed to createCategories.
 		expect(await listLabels()).toEqual(["Apple", "Mango", "Zebra"]);
 		expect(await listChildLabels("Zebra")).toEqual(["Child A", "Child Z"]);
 	});
@@ -501,8 +449,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 			parentId: alpha!.id,
 		});
 
-		// A run that added the column and then died: the column is present, most
-		// groups are still 0, and the migration was never recorded so it retries.
 		await dropSortOrder(ctx.db);
 		await ctx.db.schema
 			.alterTable("taxonomies")
@@ -523,8 +469,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 	it("gives a group one parent before numbering it", async () => {
 		const [alpha, beta] = await createCategories(["Alpha", "Beta"]);
 		await translate(beta!, "es", "Beta ES");
-		// The shape a one-row reparent used to leave behind: nested in EN, a root
-		// in ES.
 		await ctx.db
 			.updateTable("taxonomies")
 			.set({ parent_id: alpha!.translationGroup })
@@ -537,13 +481,11 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 
 		const rows = await repo.findTranslations(beta!.translationGroup!);
 		expect(new Set(rows.map((row) => row.parentId))).toEqual(new Set([alpha!.translationGroup]));
-		// And it is numbered as one of Alpha's children, not against the roots.
 		expect(new Set(rows.map((row) => row.sortOrder))).toEqual(new Set([0]));
 		expect(await listChildLabels("Alpha")).toEqual(["Beta"]);
 	});
 
 	it("numbers a group larger than one batch", async () => {
-		// More groups than GROUPS_PER_UPDATE, so the backfill spans statements.
 		const labels = Array.from({ length: 40 }, (_, i) => `T${String(i).padStart(2, "0")}`);
 		await createCategories(labels.toReversed());
 
@@ -573,8 +515,6 @@ describeEachDialect("taxonomy term reorder", (dialect) => {
 
 	it("seeds a translation_group the term never got, so it can be reordered", async () => {
 		const [zebra, apple] = await createCategories(["Zebra", "Apple"]);
-		// A row that escaped migration 036's backfill. Sibling groups are keyed on
-		// the column directly, so a null leaves the term addressable by nothing.
 		await ctx.db
 			.updateTable("taxonomies")
 			.set({ translation_group: null })

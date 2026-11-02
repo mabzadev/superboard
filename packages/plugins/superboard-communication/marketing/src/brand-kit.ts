@@ -35,7 +35,6 @@ type GrowthSettings = {
 	default_time_zone: string;
 };
 
-/** Studio defaults, so an untouched brand kit renders exactly like before. */
 const DEFAULT_BRAND_KIT: BrandKit = {
 	company_name: null,
 	logo_url: null,
@@ -78,10 +77,6 @@ async function settingsRow(db: D1Database, projectId: number) {
 		.first<SettingsRow>();
 }
 
-/**
- * Reads the project brand kit, filled with Studio defaults. Exported for the
- * preference center and any public page that should look like the sender.
- */
 export async function readBrandKit(db: D1Database, projectId: number): Promise<BrandKit> {
 	const row = await settingsRow(db, projectId);
 	return normalizeStoredBrandKit(parseStoredJson<Record<string, unknown>>(row?.brand_kit_json, {}));

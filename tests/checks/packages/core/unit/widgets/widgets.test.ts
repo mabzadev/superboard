@@ -8,7 +8,6 @@ import type { Database } from "../../../../../../packages/core/src/database/type
 import { getWidgetComponents } from "../../../../../../packages/core/src/widgets/components.js";
 import type { WidgetType } from "../../../../../../packages/core/src/widgets/types.js";
 
-// Regex patterns for widget validation
 const WIDGET_ID_FORMAT_REGEX = /^[a-z]+:[a-z-]+$/;
 
 describe("Widget System", () => {
@@ -84,7 +83,6 @@ describe("Widget System", () => {
 			const areaId = ulid();
 			const widgetId = ulid();
 
-			// Create area
 			await db
 				.insertInto("_emdash_widget_areas")
 				.values({
@@ -95,7 +93,6 @@ describe("Widget System", () => {
 				})
 				.execute();
 
-			// Create widget
 			await db
 				.insertInto("_emdash_widgets")
 				.values({
@@ -111,10 +108,8 @@ describe("Widget System", () => {
 				})
 				.execute();
 
-			// Delete area
 			await db.deleteFrom("_emdash_widget_areas").where("id", "=", areaId).execute();
 
-			// Verify widget was deleted
 			const widgets = await db
 				.selectFrom("_emdash_widgets")
 				.where("area_id", "=", areaId)
@@ -402,7 +397,6 @@ describe("Widget System", () => {
 					])
 					.execute();
 
-				// Reorder: C (was 2) -> 0, A (was 0) -> 1, B (was 1) -> 2
 				const newOrder = [ids[2], ids[0], ids[1]];
 				for (let i = 0; i < newOrder.length; i++) {
 					await db

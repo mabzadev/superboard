@@ -1,19 +1,9 @@
-/**
- * Serve uploaded media files
- *
- * GET /_emdash/api/media/file/:key - Serve file from storage
- */
-
 import type { APIRoute } from "astro";
 
 import { apiError, handleError } from "#api/error.js";
 
 export const prerender = false;
 
-/**
- * Content types that are safe to display inline (simple raster/vector images, video, audio).
- * Everything else gets Content-Disposition: attachment to prevent script execution.
- */
 const SAFE_INLINE_TYPES = new Set([
 	"image/jpeg",
 	"image/png",
@@ -36,10 +26,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
 		return apiError("NOT_FOUND", "File not found", 404);
 	}
 
-	// Backup archives share the storage bucket but hold the site's full
-	// content export — they must never be reachable through the public,
-	// unauthenticated media route. Admins download them via the
-	// authenticated backups API.
 	if (key.startsWith("backups/")) {
 		return apiError("NOT_FOUND", "File not found", 404);
 	}
@@ -55,8 +41,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
 			"Content-Type": result.contentType,
 			"Cache-Control": "public, max-age=31536000, immutable",
 			"X-Content-Type-Options": "nosniff",
-			// Sandbox CSP on all user-uploaded content — prevents script execution
-			// even for SVGs navigated to directly or content types that support scripting.
 			"Content-Security-Policy":
 				"sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
 		};
@@ -65,8 +49,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
 			headers["Content-Length"] = String(result.size);
 		}
 
-		// Safe image/media types can render inline; everything else (SVG, PDF,
-		// HTML, JS, etc.) must be downloaded to prevent stored XSS.
 		if (SAFE_INLINE_TYPES.has(result.contentType)) {
 			headers["Content-Disposition"] = "inline";
 		} else {
@@ -75,7 +57,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
 
 		return new Response(result.body, { status: 200, headers });
 	} catch (error) {
-		// Check if it's a "not found" error
 		if (
 			error instanceof Error &&
 			(error.message.includes("not found") || error.message.includes("NOT_FOUND"))

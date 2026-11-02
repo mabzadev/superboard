@@ -1,12 +1,3 @@
-/**
- * PluginBridge WorkerEntrypoint
- *
- * Provides controlled access to database operations for sandboxed plugins.
- * The sandbox gets a SERVICE BINDING to this entrypoint, not direct DB access.
- * All operations are validated and scoped to the plugin.
- *
- */
-
 import type { D1Database } from "@cloudflare/workers-types";
 import { WorkerEntrypoint } from "cloudflare:workers";
 import type { ContentCreateOptions, Database, I18nConfig, SandboxEmailSendCallback } from "emdash";
@@ -23,14 +14,11 @@ import { D1Dialect } from "kysely-d1";
 
 import { sandboxHttpFetch } from "./bridge-http.js";
 
-/** Regex to validate collection names (prevent SQL injection) */
 const COLLECTION_NAME_REGEX = /^[a-z][a-z0-9_]*$/;
 const MISSING_MEDIA_USAGE_ACTIVATION_TABLE_REGEX = /no such table.*_emdash_media_usage_activation/i;
 
-/** Regex to validate file extensions (simple alphanumeric, 1-10 chars) */
 const FILE_EXT_REGEX = /^\.[a-z0-9]{1,10}$/i;
 
-/** System columns that plugins cannot directly write to */
 const SYSTEM_COLUMNS = new Set([
 	"id",
 	"slug",
@@ -48,30 +36,12 @@ const SYSTEM_COLUMNS = new Set([
 	"translation_group",
 ]);
 
-/**
- * Module-level email send callback.
- *
- * The bridge runs in the host process (same worker), so we can use a
- * module-level callback that the runner sets before creating bridge bindings.
- * This avoids the need to pass non-serializable functions through props.
- *
- * @see runner.ts setEmailSendCallback()
- */
 let emailSendCallback: SandboxEmailSendCallback | null = null;
 
-/**
- * Set the email send callback for all bridge instances.
- * Called by the runner when the EmailPipeline is available.
- */
 export function setEmailSendCallback(callback: SandboxEmailSendCallback | null): void {
 	emailSendCallback = callback;
 }
 
-/**
- * Serialize a value for D1 storage.
- * Mirrors core's serializeValue: objects/arrays → JSON strings,
- * booleans → 0/1, null/undefined → null, everything else passthrough.
- */
 function serializeValue(value: unknown): unknown {
 	if (value === null || value === undefined) return null;
 	if (typeof value === "boolean") return value ? 1 : 0;
@@ -79,11 +49,6 @@ function serializeValue(value: unknown): unknown {
 	return value;
 }
 
-/**
- * Deserialize a row from D1 into a ContentItem matching core's plugin API.
- * Extracts system columns, deserializes JSON fields, and returns the
- * canonical shape: { id, type, data, createdAt, updatedAt, locale }.
- */
 function rowToContentItem(
 	collection: string,
 	row: Record<string, unknown>,
@@ -98,7 +63,6 @@ function rowToContentItem(
 	const data: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(row)) {
 		if (!SYSTEM_COLUMNS.has(key)) {
-			// Attempt to parse JSON strings back to objects
 			if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
 				try {
 					data[key] = JSON.parse(value);
@@ -121,17 +85,14 @@ function rowToContentItem(
 	};
 }
 
-/** Narrow an unknown D1 column value to a string ("" when it isn't one). */
 function columnString(value: unknown): string {
 	return typeof value === "string" ? value : "";
 }
 
-/** Narrow an unknown, nullable D1 column value to `string | null`. */
 function columnNullableString(value: unknown): string | null {
 	return typeof value === "string" ? value : null;
 }
 
-/** Parse a JSON string column into a string array (`[]` on anything else). */
 function columnStringArray(value: unknown): string[] {
 	if (typeof value !== "string" || !value) return [];
 	try {
@@ -144,12 +105,10 @@ function columnStringArray(value: unknown): string[] {
 	}
 }
 
-/** Type guard for plain JSON objects. */
 function isJsonObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Parse a JSON string column into an object (`null` on anything else). */
 function columnJsonObject(value: unknown): Record<string, unknown> | null {
 	if (typeof value !== "string" || !value) return null;
 	try {
@@ -160,10 +119,6 @@ function columnJsonObject(value: unknown): Record<string, unknown> | null {
 	}
 }
 
-/**
- * Convert a `taxonomies` row to the term shape exposed over the bridge.
- * Matches core's TaxonomyTermInfo from plugins/types.ts.
- */
 function rowToTaxonomyTerm(row: Record<string, unknown>): {
 	id: string;
 	taxonomy: string;
@@ -186,17 +141,11 @@ function rowToTaxonomyTerm(row: Record<string, unknown>): {
 	};
 }
 
-/**
- * Environment bindings required by PluginBridge
- */
 export interface PluginBridgeEnv {
 	DB: D1Database;
 	MEDIA?: R2Bucket;
 }
 
-/**
- * Props passed to the bridge via ctx.props when creating the loopback binding
- */
 export interface PluginBridgeProps {
 	pluginId: string;
 	pluginVersion: string;
@@ -204,24 +153,12 @@ export interface PluginBridgeProps {
 	allowedHosts: string[];
 	storageCollections: string[];
 	i18nConfig?: I18nConfig | null;
-	/** Per-collection storage config (matches manifest.storage entries) */
 	storageConfig?: Record<
 		string,
 		{ indexes?: Array<string | string[]>; uniqueIndexes?: Array<string | string[]> }
 	>;
 }
 
-/**
- * PluginBridge WorkerEntrypoint
- *
- * Provides the context API to sandboxed plugins via RPC.
- * All methods validate capabilities and scope operations to the plugin.
- *
- * Usage:
- * 1. Export this class from your worker entrypoint
- * 2. Sandboxed plugins get a binding to it via ctx.exports.PluginBridge({...})
- * 3. Plugins call bridge methods which validate and proxy to the database
- */
 export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridgeProps> {
 	private async assertMediaUsageActivationWriteAllowed(): Promise<void> {
 		try {
@@ -242,16 +179,9 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		}
 	}
 
-	/**
-	 * Construct a PluginStorageRepository for the requested collection.
-	 * Uses the indexes from the plugin's storage config (if provided) so
-	 * query/count operations support WHERE/ORDER BY/cursor pagination
-	 * matching in-process and workerd sandbox plugins.
-	 */
 	private getStorageRepo(collection: string): PluginStorageRepository {
 		const { pluginId, storageConfig } = this.ctx.props;
 		const config = storageConfig?.[collection];
-		// Merge unique indexes into the indexes list since both are queryable
 		const allIndexes: Array<string | string[]> = [
 			...(config?.indexes ?? []),
 			...(config?.uniqueIndexes ?? []),
@@ -263,14 +193,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		return new PluginStorageRepository(db as never, pluginId, collection, allIndexes);
 	}
 
-	// =========================================================================
-	// KV Operations - scoped to plugin namespace
-	// =========================================================================
-
-	/**
-	 * KV operations use _plugin_storage with a special "__kv" collection.
-	 * This provides consistent storage across sandboxed and non-sandboxed modes.
-	 */
 	async kvGet(key: string): Promise<unknown> {
 		const { pluginId } = this.ctx.props;
 		const result = await this.env.DB.prepare(
@@ -318,10 +240,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			value: JSON.parse(row.data),
 		}));
 	}
-
-	// =========================================================================
-	// Storage Operations - scoped to plugin + collection validation
-	// =========================================================================
 
 	async storageGet(collection: string, id: string): Promise<unknown> {
 		const { pluginId, storageCollections } = this.ctx.props;
@@ -379,7 +297,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!storageCollections.includes(collection)) {
 			throw new Error(`Storage collection not declared: ${collection}`);
 		}
-		// Delegate to PluginStorageRepository for proper WHERE/ORDER BY/cursor support
 		const repo = this.getStorageRepo(collection);
 		const result = await repo.query({
 			// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- WhereClause is structurally Record<string, unknown>
@@ -436,8 +353,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		}
 		if (items.length === 0) return;
 
-		// D1 doesn't support batch in prepare, so we do individual inserts
-		// In future, we could use batch API
 		for (const item of items) {
 			await this.env.DB.prepare(
 				"INSERT OR REPLACE INTO _plugin_storage (plugin_id, collection, id, data, updated_at) VALUES (?, ?, ?, ?, datetime('now'))",
@@ -466,10 +381,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		return deleted;
 	}
 
-	// =========================================================================
-	// Content Operations - capability-gated
-	// =========================================================================
-
 	async contentGet(
 		collection: string,
 		id: string,
@@ -485,13 +396,10 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!capabilities.includes("content:read")) {
 			throw new Error("Missing capability: content:read");
 		}
-		// Validate collection name to prevent SQL injection
 		if (!COLLECTION_NAME_REGEX.test(collection)) {
 			throw new Error(`Invalid collection name: ${collection}`);
 		}
 		try {
-			// Content tables use ec_${collection} naming (no leading underscore)
-			// Exclude soft-deleted items
 			const result = await this.env.DB.prepare(
 				`SELECT * FROM ec_${collection} WHERE id = ? AND deleted_at IS NULL`,
 			)
@@ -523,15 +431,11 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!capabilities.includes("content:read")) {
 			throw new Error("Missing capability: content:read");
 		}
-		// Validate collection name to prevent SQL injection
 		if (!COLLECTION_NAME_REGEX.test(collection)) {
 			throw new Error(`Invalid collection name: ${collection}`);
 		}
 		const limit = Math.min(opts.limit ?? 50, 100);
 		try {
-			// Content tables use ec_${collection} naming (no leading underscore)
-			// Exclude soft-deleted items. Ordered by ULID (id DESC) for deterministic
-			// cursor pagination. ULIDs are time-sortable so this approximates created_at DESC.
 			let sql = `SELECT * FROM ec_${collection} WHERE deleted_at IS NULL`;
 			const params: unknown[] = [];
 
@@ -587,7 +491,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		const id = ulid();
 		const now = new Date().toISOString();
 
-		// Build columns and values arrays — quote identifiers to avoid SQL keyword collisions
 		const columns: string[] = [
 			'"id"',
 			'"slug"',
@@ -611,7 +514,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			id,
 		];
 
-		// Append user data fields (skip system columns, quote identifiers)
 		for (const [key, value] of Object.entries(data)) {
 			if (!SYSTEM_COLUMNS.has(key) && COLLECTION_NAME_REGEX.test(key)) {
 				columns.push(`"${key}"`);
@@ -628,7 +530,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			.bind(...values)
 			.run();
 
-		// Re-read the created row
 		const created = await this.env.DB.prepare(
 			`SELECT * FROM ec_${collection} WHERE id = ? AND deleted_at IS NULL`,
 		)
@@ -689,7 +590,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		}
 		await this.assertMediaUsageActivationWriteAllowed();
 
-		// Soft-delete: set deleted_at timestamp
 		const now = new Date().toISOString();
 		const result = await this.env.DB.prepare(
 			`UPDATE ec_${collection} SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL`,
@@ -698,10 +598,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			.run();
 		return (result.meta?.changes ?? 0) > 0;
 	}
-
-	// =========================================================================
-	// Taxonomy Operations (read-only) - gated on taxonomies:read
-	// =========================================================================
 
 	async taxonomyList(opts: { locale?: string } = {}): Promise<
 		Array<{
@@ -762,8 +658,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			sql += " AND locale = ?";
 			params.push(opts.locale);
 		}
-		// Manual order first, then label with `id ASC` as a stable tiebreaker for
-		// terms sharing both — matching core's TaxonomyRepository.findByName.
 		sql += " ORDER BY sort_order ASC, label ASC, id ASC";
 		const results = await this.env.DB.prepare(sql)
 			.bind(...params)
@@ -791,8 +685,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		if (!capabilities.includes("taxonomies:read")) {
 			throw new Error("Missing capability: taxonomies:read");
 		}
-		// The pivot stores the term's translation_group in taxonomy_id, so the
-		// join resolves an assignment into each locale's term row.
 		let sql =
 			"SELECT taxonomies.* FROM content_taxonomies " +
 			"JOIN taxonomies ON taxonomies.translation_group = content_taxonomies.taxonomy_id " +
@@ -812,10 +704,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			.all();
 		return (results.results ?? []).map(rowToTaxonomyTerm);
 	}
-
-	// =========================================================================
-	// Media Operations - capability-gated
-	// =========================================================================
 
 	async mediaGet(id: string): Promise<{
 		id: string;
@@ -865,7 +753,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			throw new Error("Missing capability: media:read");
 		}
 		const limit = Math.min(opts.limit ?? 50, 100);
-		// Only return ready items (matching core's MediaRepository.findMany default)
 		let sql = "SELECT * FROM media WHERE status = 'ready'";
 		const params: unknown[] = [];
 
@@ -912,16 +799,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		};
 	}
 
-	/**
-	 * Create a pending media record and write bytes directly to R2.
-	 *
-	 * Unlike the admin UI flow (presigned URL → client PUT → confirm), sandboxed
-	 * plugins are network-isolated and can't make external requests. The bridge
-	 * accepts the file bytes directly and writes them to storage.
-	 *
-	 * Returns the media ID, storage key, and confirm URL. The plugin should
-	 * call the confirm endpoint after this to finalize the record.
-	 */
 	async mediaUpload(
 		filename: string,
 		contentType: string,
@@ -936,7 +813,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			throw new Error("Media storage (R2) not configured. Add MEDIA binding to wrangler config.");
 		}
 
-		// Validate MIME type — only allow image, video, audio, and PDF
 		const ALLOWED_MIME_PREFIXES = ["image/", "video/", "audio/", "application/pdf"];
 		if (!ALLOWED_MIME_PREFIXES.some((prefix) => contentType.startsWith(prefix))) {
 			throw new Error(
@@ -945,35 +821,28 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		}
 
 		const mediaId = ulid();
-		// Derive extension from basename only, validate it's a simple extension
 		const basename = filename.includes("/")
 			? filename.slice(filename.lastIndexOf("/") + 1)
 			: filename;
 		const rawExt = basename.includes(".") ? basename.slice(basename.lastIndexOf(".")) : "";
 		const ext = FILE_EXT_REGEX.test(rawExt) ? rawExt : "";
-		// Flat storage key matching core convention: ${ulid}${ext}
 		const storageKey = `${mediaId}${ext}`;
 		const now = new Date().toISOString();
 
-		// Write bytes to R2 first, then create DB record.
-		// If DB insert fails, clean up the R2 object to prevent orphans.
 		await this.env.MEDIA.put(storageKey, bytes, {
 			httpMetadata: { contentType },
 		});
 
 		try {
-			// Create confirmed media record with ISO timestamp (matching core)
 			await this.env.DB.prepare(
 				"INSERT INTO media (id, filename, mime_type, size, storage_key, status, created_at) VALUES (?, ?, ?, ?, ?, 'ready', ?)",
 			)
 				.bind(mediaId, filename, contentType, bytes.byteLength, storageKey, now)
 				.run();
 		} catch (error) {
-			// Clean up R2 object on DB failure to prevent orphans
 			try {
 				await this.env.MEDIA.delete(storageKey);
 			} catch {
-				// Best-effort cleanup — log and continue
 				console.warn(`[plugin-bridge] Failed to clean up orphaned R2 object: ${storageKey}`);
 			}
 			throw error;
@@ -992,32 +861,24 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 			throw new Error("Missing capability: media:write");
 		}
 
-		// Look up the storage key before deleting
 		const media = await this.env.DB.prepare("SELECT storage_key FROM media WHERE id = ?")
 			.bind(id)
 			.first<{ storage_key: string }>();
 
 		if (!media) return false;
 
-		// Delete the DB row
 		const result = await this.env.DB.prepare("DELETE FROM media WHERE id = ?").bind(id).run();
 
-		// Delete from R2 if the binding is available
 		if (this.env.MEDIA && media.storage_key) {
 			try {
 				await this.env.MEDIA.delete(media.storage_key);
 			} catch {
-				// Log but don't fail - the DB row is already deleted
 				console.warn(`[plugin-bridge] Failed to delete R2 object: ${media.storage_key}`);
 			}
 		}
 
 		return (result.meta?.changes ?? 0) > 0;
 	}
-
-	// =========================================================================
-	// Network Operations - capability-gated + host validation
-	// =========================================================================
 
 	async httpFetch(
 		url: string,
@@ -1030,10 +891,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		const { capabilities, allowedHosts } = this.ctx.props;
 		return sandboxHttpFetch(url, init, { capabilities, allowedHosts });
 	}
-
-	// =========================================================================
-	// User Operations - capability-gated (users:read)
-	// =========================================================================
 
 	async userGet(id: string): Promise<{
 		id: string;
@@ -1162,10 +1019,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		};
 	}
 
-	// =========================================================================
-	// Email Operations - capability-gated
-	// =========================================================================
-
 	async emailSend(message: {
 		to: string;
 		subject: string;
@@ -1181,10 +1034,6 @@ export class PluginBridge extends WorkerEntrypoint<PluginBridgeEnv, PluginBridge
 		}
 		await emailSendCallback(message, pluginId);
 	}
-
-	// =========================================================================
-	// Logging
-	// =========================================================================
 
 	log(level: "debug" | "info" | "warn" | "error", msg: string, data?: unknown): void {
 		const { pluginId } = this.ctx.props;

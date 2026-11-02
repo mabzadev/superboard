@@ -1,7 +1,3 @@
-/**
- * Tests for inline HTML parsing
- */
-
 import { describe, it, expect } from "vitest";
 
 import {
@@ -50,7 +46,6 @@ describe("parseInlineContent", () => {
 		it("preserves newlines in text", () => {
 			const result = parseInlineContent("line1\nline2", generateKey);
 
-			// Should have one span with newline appended, then another span
 			expect(result.children.length).toBeGreaterThanOrEqual(1);
 			const fullText = result.children.map((c) => c.text).join("");
 			expect(fullText).toContain("line1");
@@ -179,7 +174,6 @@ describe("parseInlineContent", () => {
 			);
 
 			expect(result.children.length).toBeGreaterThanOrEqual(4);
-			// Find the bold-italic span
 			const boldItalic = result.children.find(
 				(c) => c.marks?.includes("strong") && c.marks?.includes("em"),
 			);
@@ -251,7 +245,7 @@ describe("parseInlineContent", () => {
 
 			const span = result.children.find((c) => c.text === "bold link");
 			expect(span?.marks).toContain("strong");
-			expect(span?.marks?.length).toBe(2); // strong + link key
+			expect(span?.marks?.length).toBe(2);
 		});
 
 		it("handles links with empty href", () => {

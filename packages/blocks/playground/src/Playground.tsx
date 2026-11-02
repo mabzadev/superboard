@@ -7,15 +7,11 @@ import { blockCatalog } from "./block-defaults";
 import { templates } from "./templates";
 import { useResizable } from "./useResizable";
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
 interface ActionLogEntry {
 	id: number;
 	timestamp: Date;
 	interaction: BlockInteraction;
 }
-
-// ── Hash sharing ─────────────────────────────────────────────────────────────
 
 function encodeToHash(blocks: Block[]): string {
 	try {
@@ -39,8 +35,6 @@ function decodeFromHash(hash: string): Block[] | null {
 	}
 }
 
-// ── Drag handle ──────────────────────────────────────────────────────────────
-
 function DragHandle({
 	onMouseDown,
 	isDragging,
@@ -53,13 +47,10 @@ function DragHandle({
 			className={`group relative w-[5px] shrink-0 cursor-col-resize ${isDragging ? "bg-kumo-info/40" : ""}`}
 			onMouseDown={onMouseDown}
 		>
-			{/* Visible border line */}
 			<div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-kumo-line group-hover:bg-kumo-info/50" />
 		</div>
 	);
 }
-
-// ── Component ────────────────────────────────────────────────────────────────
 
 export function Playground() {
 	const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -72,7 +63,6 @@ export function Playground() {
 		return "light";
 	});
 
-	// Load initial blocks from hash or first template
 	const [blocks, setBlocks] = useState<Block[]>(() => {
 		if (typeof window !== "undefined" && window.location.hash.length > 1) {
 			const decoded = decodeFromHash(window.location.hash.slice(1));
@@ -91,16 +81,13 @@ export function Playground() {
 	const nextId = useRef(0);
 	const templateMenuRef = useRef<HTMLDivElement>(null);
 
-	// Resizable panels
 	const catalog = useResizable({ initial: 220, min: 160, max: 320 });
 	const editor = useResizable({ initial: 480, min: 300, max: 800 });
 
-	// Apply theme
 	useEffect(() => {
 		document.documentElement.setAttribute("data-theme", theme);
 	}, [theme]);
 
-	// Close template menu on outside click
 	useEffect(() => {
 		function handleClick(e: MouseEvent) {
 			if (templateMenuRef.current && !templateMenuRef.current.contains(e.target as Node)) {
@@ -113,12 +100,10 @@ export function Playground() {
 		}
 	}, [templateMenuOpen]);
 
-	// Auto-scroll log
 	useEffect(() => {
 		logEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [actionLog]);
 
-	// Parse editor text into blocks
 	const updateFromText = useCallback((text: string) => {
 		setEditorText(text);
 		try {
@@ -132,7 +117,6 @@ export function Playground() {
 			const validated = parsed as Block[];
 			if (!result.valid) {
 				setValidationErrors(result.errors.map((e) => `${e.path}: ${e.message}`));
-				// Still render what we can
 				setBlocks(validated);
 			} else {
 				setValidationErrors([]);
@@ -143,12 +127,10 @@ export function Playground() {
 		}
 	}, []);
 
-	// Handle block interactions
 	const handleAction = useCallback((interaction: BlockInteraction) => {
 		setActionLog((prev) => [...prev, { id: nextId.current++, timestamp: new Date(), interaction }]);
 	}, []);
 
-	// Load a template
 	const loadTemplate = useCallback((index: number) => {
 		const template = templates[index];
 		if (!template) return;
@@ -160,7 +142,6 @@ export function Playground() {
 		setTemplateMenuOpen(false);
 	}, []);
 
-	// Insert a block from the catalog
 	const insertBlock = useCallback(
 		(catalogIndex: number) => {
 			const entry = blockCatalog[catalogIndex];
@@ -176,7 +157,6 @@ export function Playground() {
 		[blocks],
 	);
 
-	// Share URL
 	const shareUrl = useCallback(async () => {
 		const hash = encodeToHash(blocks);
 		const url = `${window.location.origin}${window.location.pathname}#${hash}`;
@@ -185,12 +165,9 @@ export function Playground() {
 			await navigator.clipboard.writeText(url);
 			setCopied(true);
 			setTimeout(setCopied, 2000, false);
-		} catch {
-			// Fallback: just update the URL
-		}
+		} catch {}
 	}, [blocks]);
 
-	// Error count for status bar
 	const errorCount = useMemo(() => {
 		let count = 0;
 		if (parseError) count++;
@@ -200,12 +177,10 @@ export function Playground() {
 
 	return (
 		<div className="flex h-screen flex-col" style={{ colorScheme: theme }}>
-			{/* ── Toolbar ─────────────────────────────────────── */}
 			<header className="flex h-11 shrink-0 items-center gap-2 border-b border-kumo-line bg-kumo-bg px-3">
 				<span className="text-sm font-semibold text-kumo-text">Block Kit Playground</span>
 
 				<div className="ms-auto flex items-center gap-1.5">
-					{/* Template picker */}
 					<div className="relative" ref={templateMenuRef}>
 						<button
 							type="button"
@@ -235,7 +210,6 @@ export function Playground() {
 						)}
 					</div>
 
-					{/* Share */}
 					<button
 						type="button"
 						onClick={shareUrl}
@@ -245,7 +219,6 @@ export function Playground() {
 						{copied ? "Copied!" : "Share"}
 					</button>
 
-					{/* Theme toggle */}
 					<button
 						type="button"
 						onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
@@ -257,9 +230,7 @@ export function Playground() {
 				</div>
 			</header>
 
-			{/* ── Three-column layout ─────────────────────────── */}
 			<div className="flex min-h-0 flex-1">
-				{/* ── Left: Block catalog ──────────────────────── */}
 				<div className="flex shrink-0 flex-col" style={{ width: catalog.width }}>
 					<div className="flex h-8 items-center border-b border-kumo-line bg-kumo-tint/50 px-3">
 						<span className="text-[11px] font-medium uppercase tracking-wide text-kumo-text-secondary">
@@ -292,7 +263,6 @@ export function Playground() {
 
 				<DragHandle onMouseDown={catalog.handleMouseDown} isDragging={catalog.isDragging} />
 
-				{/* ── Center: JSON editor ──────────────────────── */}
 				<div className="flex shrink-0 flex-col" style={{ width: editor.width }}>
 					<div className="flex h-8 items-center border-b border-kumo-line bg-kumo-tint/50 px-3">
 						<span className="text-[11px] font-medium uppercase tracking-wide text-kumo-text-secondary">
@@ -313,7 +283,6 @@ export function Playground() {
 						autoCapitalize="off"
 						autoCorrect="off"
 					/>
-					{/* Error display */}
 					{(parseError ?? validationErrors.length > 0) && (
 						<div className="max-h-32 shrink-0 overflow-auto border-t border-kumo-line bg-kumo-danger/5 p-2">
 							{parseError && <p className="text-xs text-kumo-danger">{parseError}</p>}
@@ -328,9 +297,7 @@ export function Playground() {
 
 				<DragHandle onMouseDown={editor.handleMouseDown} isDragging={editor.isDragging} />
 
-				{/* ── Right: Preview + Action log ──────────────── */}
 				<div className="flex min-w-0 flex-1 flex-col">
-					{/* Preview */}
 					<div className="flex h-8 items-center border-b border-kumo-line bg-kumo-tint/50 px-3">
 						<span className="text-[11px] font-medium uppercase tracking-wide text-kumo-text-secondary">
 							Preview
@@ -352,7 +319,6 @@ export function Playground() {
 						</div>
 					</div>
 
-					{/* Action log */}
 					<div className="flex h-48 shrink-0 flex-col border-t border-kumo-line">
 						<div className="flex h-8 items-center border-b border-kumo-line bg-kumo-tint/50 px-3">
 							<span className="text-[11px] font-medium uppercase tracking-wide text-kumo-text-secondary">

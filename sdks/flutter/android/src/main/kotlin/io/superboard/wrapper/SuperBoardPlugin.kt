@@ -32,7 +32,6 @@ import io.superboard.model.events.PaymentEventType
 import java.io.Serializable
 import java.lang.ref.WeakReference
 
-/** Flutter wrapper for the internal SuperBoard native implementation. */
 class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var channel: MethodChannel
     private lateinit var eventChannel: EventChannel
@@ -124,7 +123,6 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     return
                 }
                 
-                // Parse customRedirects
                 val customRedirects = customRedirectsMap?.let { redirectsMap ->
                     val ios = (redirectsMap["ios"] as? Map<*, *>)?.let { iosMap ->
                         CustomLinkRedirect(
@@ -147,7 +145,6 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     CustomRedirects(ios = ios, android = android, desktop = desktop)
                 }
                 
-                // Parse tracking params
                 val tracking = trackingMap?.let { trackingParams ->
                     TrackingParams(
                         utmCampaign = trackingParams["utm_campaign"] as? String,
@@ -156,7 +153,6 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     )
                 }
                 
-                // Convert data map to Serializable map
                 val serializableData = data?.mapValues { entry ->
                     when (val value = entry.value) {
                         is Serializable -> value
@@ -267,7 +263,6 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 }
                 
                 try {
-                    // Convert the public value to the internal native debug level.
                     when (level.lowercase()) {
                         "info" -> SuperBoard.setDebug(LogLevel.INFO)
                         "error" -> SuperBoard.setDebug(LogLevel.ERROR)
@@ -338,12 +333,10 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activityBinding = binding
-        // Set up deeplink listener when activity is available
         if (eventSink != null) {
             setupDeeplinkListener()
         }
 
-        // Add listener for new intents
         binding.addOnNewIntentListener { intent ->
             SuperBoard.onNewIntent(intent, binding.activity)
             false
@@ -356,11 +349,9 @@ class SuperBoardPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         activityBinding = binding
-        // Re-setup deeplink listener when activity is reattached
         if (eventSink != null) {
             setupDeeplinkListener()
         }
-        // Add listener for new intents
         binding.addOnNewIntentListener { intent ->
             SuperBoard.onNewIntent(intent, binding.activity)
             false

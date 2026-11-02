@@ -1,7 +1,3 @@
-/**
- * PasskeyItem - Individual passkey display with rename and delete actions
- */
-
 import { Button, Input } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { Pencil, Trash, Check, X, DeviceMobile, Cloud } from "@phosphor-icons/react";
@@ -66,9 +62,7 @@ export function PasskeyItem({
 		try {
 			await onRename(passkey.id, editName.trim());
 			setIsEditing(false);
-		} catch {
-			// Error handled by parent
-		}
+		} catch {}
 	};
 
 	const handleCancel = () => {
@@ -100,7 +94,6 @@ export function PasskeyItem({
 	return (
 		<li className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
 			<div className="flex min-w-0 items-start gap-3">
-				{/* Icon */}
 				<div className="mt-0.5 p-2 rounded-md bg-kumo-tint">
 					{passkey.deviceType === "multiDevice" ? (
 						<Cloud className="h-4 w-4 text-kumo-subtle" />
@@ -109,7 +102,6 @@ export function PasskeyItem({
 					)}
 				</div>
 
-				{/* Info */}
 				<div className="min-w-0 flex-1">
 					{isEditing ? (
 						<div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
@@ -156,7 +148,6 @@ export function PasskeyItem({
 				</div>
 			</div>
 
-			{/* Actions */}
 			{!isEditing && (
 				<div className="flex self-end items-center gap-1 sm:self-center">
 					<Button
@@ -186,7 +177,6 @@ export function PasskeyItem({
 				</div>
 			)}
 
-			{/* Delete confirmation dialog */}
 			<ConfirmDialog
 				open={showDeleteDialog}
 				onClose={() => {

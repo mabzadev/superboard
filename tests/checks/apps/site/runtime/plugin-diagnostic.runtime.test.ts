@@ -135,7 +135,6 @@ test("diagnostic returns authoritative data for the requested plugin", async () 
 	expect(data.workers).toBeInstanceOf(Array);
 	expect(data.workers.some((w: any) => w.service === "identity")).toBe(true);
 
-	// Verifies returned routes belong to the requested plugin
 	expect(data.routes).toBeDefined();
 	expect(data.routes.views).toBeInstanceOf(Array);
 	expect(data.routes.views.length).toBeGreaterThan(0);
@@ -163,12 +162,10 @@ test("diagnostic handles multiple services sharing a Worker and multiple Workers
 	expect(data.pluginId).toBe("superboard-monetization");
 	expect(data.label).toBe("Monetization");
 
-	// Monetization has multiple services: billing and products
 	const serviceNames = data.workers.map((w: any) => w.service);
 	expect(serviceNames).toContain("billing");
 	expect(serviceNames).toContain("products");
 
-	// products is in the API deployment group, which is shared
 	const productsWorker = data.workers.find((w: any) => w.service === "products");
 	expect(productsWorker).toBeDefined();
 	expect(productsWorker.isShared).toBe(true);

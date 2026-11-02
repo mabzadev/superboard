@@ -18,9 +18,7 @@ class DebugLogger {
             return
         }
 
-        // Use Throwable to get the current stack trace
         val stackTrace = Throwable().stackTrace
-        // stackTrace[1] is the calling method (current method's caller)
         val element = stackTrace[1]
         val fileName = element.fileName
         val functionName = element.methodName
@@ -32,7 +30,6 @@ class DebugLogger {
             logMessage = "\n\n\n$logMessage\n\n\n"
         }
 
-        // Log the message using Android's Log class
         when (level) {
             LogLevel.INFO -> Log.d("Logger", logMessage)
             LogLevel.ERROR -> Log.e("Logger", logMessage)

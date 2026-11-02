@@ -20,7 +20,6 @@ export interface ProjectContext {
 	projectRef: string;
 	instanceId: number;
 	environment: ProjectEnvironment;
-	/** Legacy numeric actor ID, or 0 for SDK and EmDash operators. */
 	actorId: number;
 	operatorId?: string;
 	role: string;

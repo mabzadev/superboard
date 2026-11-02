@@ -7,9 +7,6 @@ import SuperBoardUIHelper from "./superboard_ui_helper.js";
 const AUTHENTICATION_REQUIRED_MESSAGE =
 	"The SuperBoard SDK is not authenticated. Call start() and wait for its success callback before using this method.";
 
-/**
- * Manages interactions with the SuperBoard API and event handling.
- */
 class SuperBoardManager {
 	/**
 	 * Creates an instance of SuperBoardManager.
@@ -28,31 +25,19 @@ class SuperBoardManager {
 		if (!/^https?:$/.test(parsedBaseURL.protocol) || !parsedBaseURL.hostname) {
 			throw new TypeError("baseURL must be an absolute HTTP(S) URL");
 		}
-		// Set API key and environment in the context
 		SuperBoardContext.API_KEY = APIKey;
 		SuperBoardContext.testEnvironment = testEnvironment;
 		SuperBoardContext.API_BASE_URL = `${parsedBaseURL.origin}/v1`;
 
-		// Initialize callback for handling links
 		this.linkHandlingCallback = linkHandlingCallback;
-		// Initialize API service for making requests
 		this.service = new SuperBoardAPIService();
-		// Initialize event manager for handling events
 		this.eventsManager = new SuperBoardEventsManager();
-		// Authentication status
 		this.authenticated = false;
-		// Monotonically identifies authentication attempts so a late response from
-		// an older attempt cannot reopen the SDK after a newer attempt failed.
 		this.authenticationAttempt = 0;
-		// Flag to determine if identifiers need updating
 		this.shouldUpdateIdentifiers = false;
-		// Initialize UI helper for UI interactions
 		this.uiHelper = new SuperBoardUIHelper();
-		// Array to store received data
 		this.receivedData = [];
 	}
-
-	// MARK: Methods
 
 	/**
 	 * Authenticates with the SuperBoard API.
@@ -63,10 +48,9 @@ class SuperBoardManager {
 		const authenticationAttempt = ++this.authenticationAttempt;
 		this.authenticated = false;
 
-		// Get the current device details
 		const details = SuperBoardDeviceDetails.currentDetails();
 
-		const self = this; // Preserve context for callbacks
+		const self = this;
 		this.service.authenticateDevice(
 			details,
 			/**
@@ -78,29 +62,23 @@ class SuperBoardManager {
 					return;
 				}
 
-				// Extract relevant data from response
 				const linksquaredID = response.linksquared;
 				const identifier = response.sdk_identifier;
 				const attributes = response.sdk_attributes;
 
-				// Set SuperBoard ID cookie for future use
 				SuperBoardContext.setLinksquaredIDCookie(linksquaredID);
 
-				// Update context attributes only if identifiers are not being updated
 				if (!self.shouldUpdateIdentifiers) {
 					SuperBoardContext.USER_IDENTIFIER = identifier;
 					SuperBoardContext.USER_ATTRIBUTES = attributes;
 				}
 
-				// Mark as authenticated
 				self.authenticated = true;
 
-				// Call the success callback if provided
 				if (successfulAuthenticatedCallback) {
 					successfulAuthenticatedCallback();
 				}
 
-				// Handle data fetching and event flushing
 				self.#handleFetchData();
 				self.#updateUserAttributesIfNeeded();
 				self.eventsManager.flushEvents();
@@ -134,7 +112,6 @@ class SuperBoardManager {
 	setUserIdentifier(identifier) {
 		SuperBoardContext.USER_IDENTIFIER = identifier;
 
-		// Mark for identifier update if not authenticated
 		if (!this.authenticated) {
 			this.shouldUpdateIdentifiers = true;
 		}
@@ -149,7 +126,6 @@ class SuperBoardManager {
 	setUserAttributes(attributes) {
 		SuperBoardContext.USER_ATTRIBUTES = attributes;
 
-		// Mark for identifier update if not authenticated
 		if (!this.authenticated) {
 			this.shouldUpdateIdentifiers = true;
 		}
@@ -202,10 +178,9 @@ class SuperBoardManager {
 					return;
 				}
 
-				// Error handling for link creation
 				error("You must configure the redirect rules in the Web interface first");
 			},
-			error, // Error callback for the service
+			error,
 		);
 	}
 
@@ -266,8 +241,6 @@ class SuperBoardManager {
 		this.service.markMessageAsViewed(message, response, error);
 	}
 
-	// MARK: Private
-
 	/**
 	 * Prevents every authenticated public operation from reaching the network
 	 * while authentication is pending or after it failed.
@@ -292,13 +265,7 @@ class SuperBoardManager {
 	 */
 	#displayAutomaticMessages() {
 		this.service.messagesForAutomaticDisplay(
-			(_response) => {
-				// Disabled for now
-				// const notifications = response.notifications;
-				// notifications.forEach((item) => {
-				//   this.uiHelper.openPage(item);
-				// });
-			},
+			(_response) => {},
 			(_error) => {
 				console.log("SuperBoard -- could not get automatic notifications!");
 			},
@@ -313,14 +280,12 @@ class SuperBoardManager {
 	#handleFetchData() {
 		const SuperBoardValue = SuperBoardDeviceDetails.getSuperBoardPath();
 		console.log("SuperBoard - value extracted from the link", SuperBoardValue);
-		// Check if a specific path is set
 		if (SuperBoardValue) {
 			this.#handleSuperBoardValue(SuperBoardValue);
 		} else {
 			this.#handleDataForDevice();
 		}
 
-		// Fetch automatic messages
 		this.#displayAutomaticMessages();
 	}
 
@@ -357,7 +322,7 @@ class SuperBoardManager {
 	 */
 	#handleDataForDevice() {
 		const details = SuperBoardDeviceDetails.currentDetails();
-		const self = this; // Preserve context for callbacks
+		const self = this;
 
 		this.service.payloadForDevice(
 			details,
@@ -385,7 +350,6 @@ class SuperBoardManager {
 	 */
 	#handleDataReceived(data) {
 		if (data) {
-			// Store received data and invoke callback
 			this.receivedData.push(data);
 			this.linkHandlingCallback(data);
 		}
@@ -397,13 +361,13 @@ class SuperBoardManager {
 	 */
 	#updateUserAttributesIfNeeded() {
 		if (!this.authenticated) {
-			return; // Do nothing if not authenticated
+			return;
 		}
 
-		const self = this; // Preserve context for callbacks
+		const self = this;
 		this.service.setUserAttributes(
 			(_response) => {
-				self.shouldUpdateIdentifiers = false; // Reset update flag
+				self.shouldUpdateIdentifiers = false;
 			},
 			/**
 			 * Error callback for updating user attributes.

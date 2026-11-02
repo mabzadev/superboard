@@ -3012,7 +3012,6 @@ class SuperBoardCustomerCenter extends StatelessWidget {
       description: 'Restores purchases and entitlements.',
     );
 
-  // Keep handles referenced so their declaration intent remains explicit.
   initializeAuthenticated;
   initializeApplication;
   initializeAuthenticatedFromApplicationSession;

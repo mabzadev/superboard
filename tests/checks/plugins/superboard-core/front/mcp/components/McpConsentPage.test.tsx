@@ -13,8 +13,6 @@ import {
 	waitFor,
 } from "../../../../../packages/supbrd-front-ui/render.js";
 
-// --- Mocks must be declared before imports ---
-
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
 const mockSearchParams = new URLSearchParams();
@@ -68,7 +66,6 @@ const mockedGetUser = vi.mocked(currentUserAPICall);
 const mockedApproveConsent = vi.mocked(approveConsentAPICall);
 
 function setSearchParams(params: Record<string, string>) {
-	// Clear existing params
 	Array.from(mockSearchParams.keys()).forEach((key) => mockSearchParams.delete(key));
 	Object.entries(params).forEach(([key, value]) => mockSearchParams.set(key, value));
 }
@@ -88,7 +85,6 @@ describe("McpAuthorizePage (consent)", () => {
 		vi.clearAllMocks();
 		setSearchParams(VALID_PARAMS);
 
-		// Default: user is authenticated
 		registration.GET.mockImplementation(async (path: string) => {
 			const requested = new URL(path, "https://site.test");
 			if (requested.searchParams.get("redirect_uri") !== VALID_PARAMS.redirect_uri)
@@ -106,7 +102,6 @@ describe("McpAuthorizePage (consent)", () => {
 			data: { user: { id: 1, email: "user@example.com" } },
 		} as never);
 
-		// Mock window.location
 		Object.defineProperty(window, "location", {
 			writable: true,
 			value: {
@@ -116,8 +111,6 @@ describe("McpAuthorizePage (consent)", () => {
 			},
 		});
 	});
-
-	// --- Auth check ---
 
 	it("uses the server operator without consulting a browser token", async () => {
 		localStorage.removeItem("access_token");
@@ -134,14 +127,11 @@ describe("McpAuthorizePage (consent)", () => {
 		expect(screen.getByRole("button", { name: "Authorize" })).toBeDisabled();
 	});
 
-	// --- Rendering ---
-
 	it("displays the client name returned by the registry instead of its raw ID", async () => {
 		render(<McpAuthorizePage />);
 		await waitFor(() => {
 			expect(screen.getByText("Claude Desktop")).toBeInTheDocument();
 		});
-		// Should NOT show the raw UUID
 		expect(screen.queryByText("abc-123-uuid")).not.toBeInTheDocument();
 	});
 
@@ -173,7 +163,6 @@ describe("McpAuthorizePage (consent)", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Authorize Connection")).toBeInTheDocument();
 		});
-		// Should not show any "Redirecting to" text
 		expect(screen.queryByText(/Redirecting to/)).not.toBeInTheDocument();
 	});
 
@@ -194,8 +183,6 @@ describe("McpAuthorizePage (consent)", () => {
 		expect(screen.getByText("View analytics data")).toBeInTheDocument();
 		expect(screen.getByText("Configure redirects and SDK settings")).toBeInTheDocument();
 	});
-
-	// --- Approve flow ---
 
 	it("calls approveConsentAPICall with correct params on Authorize click", async () => {
 		mockedApproveConsent.mockResolvedValueOnce({
@@ -249,7 +236,6 @@ describe("McpAuthorizePage (consent)", () => {
 	});
 
 	it("shows button loading state during submission", async () => {
-		// Never resolve — keep it pending
 		mockedApproveConsent.mockReturnValue(new Promise(() => {}));
 
 		render(<McpAuthorizePage />);
@@ -298,8 +284,6 @@ describe("McpAuthorizePage (consent)", () => {
 		});
 	});
 
-	// --- Deny flow ---
-
 	it("redirects to callback with error=access_denied on Deny", async () => {
 		render(<McpAuthorizePage />);
 		await waitFor(() => {
@@ -320,7 +304,6 @@ describe("McpAuthorizePage (consent)", () => {
 			expect(screen.getByRole("button", { name: /Deny/ })).toBeInTheDocument();
 		});
 
-		// Should not throw — should show error
 		fireEvent.click(screen.getByRole("button", { name: /Deny/ }));
 
 		await waitFor(() => {

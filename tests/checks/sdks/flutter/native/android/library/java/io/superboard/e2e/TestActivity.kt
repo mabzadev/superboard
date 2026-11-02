@@ -5,16 +5,9 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import io.superboard.SuperBoard
 
-/**
- * Test activity for E2E tests.
- * Integrates with SuperBoard SDK for lifecycle and deeplink handling.
- * Extends AppCompatActivity to implement LifecycleOwner, which is required
- * for the SDK's deeplink handling.
- */
 class TestActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Set AppCompat theme before calling super.onCreate to avoid theme issues in Robolectric tests
         setTheme(androidx.appcompat.R.style.Theme_AppCompat_Light_NoActionBar)
         super.onCreate(savedInstanceState)
     }

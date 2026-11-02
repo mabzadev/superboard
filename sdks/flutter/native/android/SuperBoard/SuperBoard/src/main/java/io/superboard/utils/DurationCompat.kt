@@ -14,7 +14,6 @@ class DurationCompat private constructor(private val millis: Long) {
         fun ofDays(days: Long): DurationCompat = DurationCompat(days * 24 * 60 * 60 * 1_000)
     }
 
-    // Duration components
     val seconds: Long get() = millis / 1_000
     fun toMillis(): Long = millis
     fun toSeconds(): Long = seconds
@@ -22,7 +21,6 @@ class DurationCompat private constructor(private val millis: Long) {
     fun toHours(): Long = millis / (60 * 60 * 1_000)
     fun toDays(): Long = millis / (24 * 60 * 60 * 1_000)
 
-    // Math
     operator fun plus(other: DurationCompat): DurationCompat = DurationCompat(this.millis + other.millis)
     operator fun minus(other: DurationCompat): DurationCompat = DurationCompat(this.millis - other.millis)
     operator fun compareTo(other: DurationCompat): Int = this.millis.compareTo(other.millis)

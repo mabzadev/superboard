@@ -18,9 +18,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
-/**
- * E2E tests for user attributes functionality (identifier, pushToken, attributes).
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class UserAttributesE2ETest {
@@ -46,12 +43,9 @@ class UserAttributesE2ETest {
         E2ETestUtils.cleanupMockWebServer(mockWebServer)
     }
 
-    // ==================== User Attributes Tests ====================
-
     @Test
     fun `Setting identifier after configuration works`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -60,11 +54,9 @@ class UserAttributesE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Act
             SuperBoard.identifier = "test-user-123"
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            // Assert
             assertEquals("Identifier should be set", "test-user-123", SuperBoard.identifier)
         }
     }
@@ -72,7 +64,6 @@ class UserAttributesE2ETest {
     @Test
     fun `Setting push token after configuration works`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -81,11 +72,9 @@ class UserAttributesE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Act
             SuperBoard.pushToken = "fcm-token-abc123"
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            // Assert
             assertEquals("Push token should be set", "fcm-token-abc123", SuperBoard.pushToken)
         }
     }
@@ -93,7 +82,6 @@ class UserAttributesE2ETest {
     @Test
     fun `Setting attributes after configuration works`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -102,11 +90,9 @@ class UserAttributesE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Act
             SuperBoard.attributes = mapOf("name" to "Test User", "level" to 5)
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            // Assert
             assertNotNull("Attributes should be set", SuperBoard.attributes)
             assertEquals("Test User", SuperBoard.attributes?.get("name"))
         }
@@ -115,7 +101,6 @@ class UserAttributesE2ETest {
     @Test
     fun `Null identifier clears value`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -130,11 +115,9 @@ class UserAttributesE2ETest {
 
             assertEquals("Identifier should be set", "temp-user", SuperBoard.identifier)
 
-            // Act
             SuperBoard.identifier = null
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            // Assert
             assertNull("Identifier should be cleared", SuperBoard.identifier)
         }
     }
@@ -142,7 +125,6 @@ class UserAttributesE2ETest {
     @Test
     fun `Attributes support various value types`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -151,7 +133,6 @@ class UserAttributesE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Act
             val mixedAttributes = mapOf(
                 "name" to "Test User",
                 "age" to 25,
@@ -161,7 +142,6 @@ class UserAttributesE2ETest {
             SuperBoard.attributes = mixedAttributes
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            // Assert
             assertNotNull("Attributes should be set", SuperBoard.attributes)
             assertEquals("String attribute should match", "Test User", SuperBoard.attributes?.get("name"))
             assertEquals("Int attribute should match", 25, SuperBoard.attributes?.get("age"))
@@ -172,7 +152,6 @@ class UserAttributesE2ETest {
     @Test
     fun `Null attributes clears values`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -187,11 +166,9 @@ class UserAttributesE2ETest {
 
             assertNotNull("Attributes should be set", SuperBoard.attributes)
 
-            // Act
             SuperBoard.attributes = null
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            // Assert
             assertNull("Attributes should be cleared", SuperBoard.attributes)
         }
     }
@@ -199,21 +176,18 @@ class UserAttributesE2ETest {
     @Test
     fun `Set identifier triggers updateAttributes API call`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueVisitorAttributesResponse(mockWebServer)
 
-            // Act
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
             SuperBoard.identifier = "user-123"
 
             delay(500)
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            // Assert - verify SDK state and network request if completed
             assertEquals("SuperBoard.identifier should be set", "user-123", SuperBoard.identifier)
             val requests = E2ETestUtils.collectAllRequests(mockWebServer)
             val visitorRequests = requests.filter { it.first.contains("visitor_attributes") }
@@ -223,7 +197,6 @@ class UserAttributesE2ETest {
                     visitorRequests.any { it.second.contains("sdk_identifier") && it.second.contains("user-123") }
                 )
             } else {
-                // Async API call may not complete within test timeframe
                 E2ETestUtils.assertAuthenticationCompleted()
             }
         }
@@ -232,21 +205,18 @@ class UserAttributesE2ETest {
     @Test
     fun `Set pushToken triggers updateAttributes API call`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueVisitorAttributesResponse(mockWebServer)
 
-            // Act
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
             SuperBoard.pushToken = "fcm-token-xyz-123"
 
             delay(500)
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            // Assert - verify SDK state and network request if completed
             assertEquals("SuperBoard.pushToken should be set", "fcm-token-xyz-123", SuperBoard.pushToken)
             val requests = E2ETestUtils.collectAllRequests(mockWebServer)
             val visitorRequests = requests.filter { it.first.contains("visitor_attributes") }
@@ -264,21 +234,18 @@ class UserAttributesE2ETest {
     @Test
     fun `Set attributes triggers updateAttributes API call`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueVisitorAttributesResponse(mockWebServer)
 
-            // Act
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
             SuperBoard.attributes = mapOf("plan" to "premium", "age" to 25)
 
             delay(500)
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            // Assert - verify SDK state and network request if completed
             assertNotNull("SuperBoard.attributes should be set", SuperBoard.attributes)
             assertEquals("SuperBoard.attributes should contain plan", "premium", SuperBoard.attributes?.get("plan"))
             assertEquals("SuperBoard.attributes should contain age", 25, SuperBoard.attributes?.get("age"))
@@ -298,21 +265,18 @@ class UserAttributesE2ETest {
     @Test
     fun `Attributes update handles server error gracefully`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueErrorResponse(mockWebServer, 500, "Internal Server Error")
 
-            // Act
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
             SuperBoard.identifier = "user-error-test"
             delay(500)
             Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-            // Assert
             E2ETestUtils.assertSdkFunctionalAfterError()
         }
     }

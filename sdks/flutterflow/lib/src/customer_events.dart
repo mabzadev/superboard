@@ -4,7 +4,6 @@ import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
-/// A customer analytics event accepted by the SuperBoard App module.
 class SuperBoardCustomerEvent {
   SuperBoardCustomerEvent({
     required String type,
@@ -147,7 +146,6 @@ class SuperBoardCustomerEventsException implements Exception {
   String toString() => message;
 }
 
-/// Access-Key authenticated client for App customer analytics.
 class SuperBoardCustomerEventsClient {
   SuperBoardCustomerEventsClient({
     required this.projectKey,
@@ -183,17 +181,11 @@ class SuperBoardCustomerEventsClient {
   final LinkedHashSet<String> _completedIdempotencyKeys = LinkedHashSet();
   final Map<String, Future<int>> _pendingBatches = {};
 
-  /// Records one event. A repeated successful event is suppressed locally.
   Future<bool> record(SuperBoardCustomerEvent event) async {
     final accepted = await recordBatch([event], idempotencyKey: event.id);
     return accepted > 0;
   }
 
-  /// Records 1 to 100 events and returns the server's accepted count.
-  ///
-  /// Callers that persist batches should persist and pass [idempotencyKey]. If
-  /// omitted, a deterministic key derived from the ordered event identifiers
-  /// is used, so an immediate retry sends the exact same key and payload.
   Future<int> recordBatch(
     List<SuperBoardCustomerEvent> events, {
     String? idempotencyKey,
@@ -307,7 +299,6 @@ class SuperBoardCustomerEventsClient {
   }
 }
 
-/// Process-wide client configured by [SuperBoardBootstrap].
 abstract final class SuperBoardCustomerEventsSdk {
   static SuperBoardCustomerEventsClient? _client;
 
@@ -333,7 +324,6 @@ abstract final class SuperBoardCustomerEventsSdk {
   }
 }
 
-/// FlutterFlow action for one typed customer analytics event.
 Future<bool> superboardRecordCustomerEvent({
   required String type,
   String eventId = '',
@@ -363,7 +353,6 @@ Future<bool> superboardRecordCustomerEvent({
   );
 }
 
-/// FlutterFlow action for an offline/outbox batch represented as a JSON list.
 Future<int> superboardRecordCustomerEventsJson({
   required String eventsJson,
   String idempotencyKey = '',

@@ -1,11 +1,6 @@
 ---
 import { sanitizeHref } from "../../utils/url.js";
 
-/**
- * Portable Text Link mark component
- *
- * Receives node with markDef containing link details from astro-portabletext
- */
 export interface Props {
 	node: {
 		markDef: {
@@ -19,9 +14,6 @@ export interface Props {
 
 const { node } = Astro.props;
 const href = sanitizeHref(node?.markDef?.href);
-// Same-page anchor links (`#section`) are on-page jumps — opening them in a
-// new tab is never desirable, so force same-tab regardless of the mark's
-// `blank` flag.
 const isSamePageAnchor = href.startsWith("#");
 const blank = !isSamePageAnchor && node?.markDef?.blank;
 ---

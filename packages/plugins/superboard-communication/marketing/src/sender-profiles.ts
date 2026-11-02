@@ -16,12 +16,6 @@ type SenderAuthoritySnapshot = {
 	service: { ok: true; body: Record<string, unknown> } | { ok: false; status: number } | null;
 };
 
-/**
- * Per-queue-batch memo of the sender authority row and the Email Worker sender
- * listing, keyed by project. Only these quota-free inputs are cached: the D1
- * SMTP profile fallback query (which enforces hourly/daily quotas) always runs
- * fresh. Failed lookups are evicted so later messages retry independently.
- */
 export type DeliverySendersCache = Map<number, Promise<SenderAuthoritySnapshot>>;
 
 export function createDeliverySendersCache(): DeliverySendersCache {

@@ -2,11 +2,6 @@ import { z } from "zod";
 
 import { localeCode } from "./common.js";
 
-// ---------------------------------------------------------------------------
-// Taxonomy definitions: Input schemas
-// ---------------------------------------------------------------------------
-
-/** Collection slug format: lowercase alphanumeric + underscores, starts with letter */
 const collectionSlugPattern = /^[a-z][a-z0-9_]*$/;
 
 const collectionSlug = z
@@ -31,11 +26,6 @@ export const createTaxonomyDefBody = z
 	})
 	.meta({ id: "CreateTaxonomyDefBody" });
 
-/**
- * `name` and `locale` are absent on purpose: both identify the definition row
- * being written, and `.strict()` turns an attempt to change either into a 400
- * rather than a silently ignored field.
- */
 export const updateTaxonomyDefBody = z
 	.object({
 		label: z.string().min(1).max(200).optional(),
@@ -45,10 +35,6 @@ export const updateTaxonomyDefBody = z
 	})
 	.strict()
 	.meta({ id: "UpdateTaxonomyDefBody" });
-
-// ---------------------------------------------------------------------------
-// Taxonomy terms: Input schemas
-// ---------------------------------------------------------------------------
 
 export const createTermBody = z
 	.object({
@@ -111,10 +97,6 @@ export const termListQuery = z
 			}),
 	})
 	.meta({ id: "TermListQuery" });
-
-// ---------------------------------------------------------------------------
-// Taxonomies: Response schemas
-// ---------------------------------------------------------------------------
 
 export const taxonomyDefSchema = z
 	.object({

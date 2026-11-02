@@ -1,18 +1,3 @@
-/**
- * Byline field reorder.
- *
- * POST /_emdash/api/admin/byline-fields/reorder
- *
- * Body: `{ slugs: string[] }` — the exact set of currently registered
- * slugs in the desired order. The registry rejects any drift
- * (`REORDER_MISMATCH` → 400). Empty `[]` against an empty registered
- * set is a no-op by registry contract; the zod schema permits it.
- *
- * Thin wrapper around `handleBylineFieldReorder`.
- *
- * Phase 4 of Discussion #1174.
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

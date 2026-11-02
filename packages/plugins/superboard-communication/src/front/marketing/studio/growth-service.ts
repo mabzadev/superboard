@@ -141,7 +141,6 @@ export async function scheduleInRecipientTimeZones(
 }
 
 let triggerCatalog: { project: string; request: Promise<NativeTrigger[]> } | null = null;
-/** Native automation triggers; read once per project and shared by every picker. */
 export function getNativeTriggers(project: string) {
 	if (triggerCatalog?.project !== project) {
 		const request = GET(path(project, "/journey-triggers")).then(

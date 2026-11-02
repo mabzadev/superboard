@@ -422,7 +422,6 @@ function AudienceSegments({ project }: { project: string }) {
 	}>({ tags: [], lists: [], campaigns: [], fieldKeys: [] });
 	useEffect(() => {
 		let active = true;
-		// Each source is optional: the editor keeps working with whatever loads.
 		void Promise.allSettled([
 			getAudienceTags(project),
 			getSubscriberLists(project),

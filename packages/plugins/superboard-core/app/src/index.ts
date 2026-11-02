@@ -1,12 +1,13 @@
-import { withRouteManifest } from "@superboard/contracts/route-manifest";
-import { registerRouter } from "@superboard/contracts/route-registry";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import {
 	verifyInternalProjectContextRequest,
 	type InternalProjectContext,
 } from "@superboard/contracts/project-context";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { configuredSecrets, matchesAnySecret } from "@superboard/contracts/secret";
 import { Hono, type Context, type Next } from "hono";
+
 import { collectCustomerProjection } from "./core-collection.js";
 
 type Variables = { projectId: string; projectContext: InternalProjectContext };
@@ -24,7 +25,13 @@ class AppError extends Error {
 	}
 }
 
-const app = registerRouter(new Hono<{ Bindings: Env; Variables: Variables }>(), {"service":"app","module":"index.app","pluginId":"superboard-user","surface":"internal","access":"internal"});
+const app = registerRouter(new Hono<{ Bindings: Env; Variables: Variables }>(), {
+	service: "app",
+	module: "index.app",
+	pluginId: "superboard-user",
+	surface: "internal",
+	access: "internal",
+});
 
 app.onError((cause, c) => {
 	const error =
@@ -88,62 +95,66 @@ app.get("/internal/v1/health", async (c) => {
 	}
 });
 
-app.defineRoute({ pluginId: "supbrd-core" }).post("/internal/v1/sdk-credentials/resolve", async (c) => {
-	if (
-		!(await matchesAnySecret(
-			c.req.header("X-Internal-Token") ?? "",
-			configuredSecrets(c.env.INTERNAL_API_TOKEN, c.env.INTERNAL_API_TOKEN_PREVIOUS),
-		))
-	)
-		throw new AppError("internal_auth_invalid", "Internal authentication required", 401);
-	const body = await bodyObject(c.req.raw);
-	const key = text(body.key, "key", 128);
-	const platform = platformParam(text(body.platform, "platform", 16));
-	const identifier = text(body.identifier, "identifier", 2048);
-	if (!/^og_app_[a-f0-9]{64}$/.test(key))
-		throw new AppError("sdk_credentials_invalid", "Invalid SDK credentials", 403);
-	const record = await c.env.DB.prepare(
-		`SELECT k.id, k.project_id, s.configuration_json FROM access_keys k
+app
+	.defineRoute({ pluginId: "supbrd-core" })
+	.post("/internal/v1/sdk-credentials/resolve", async (c) => {
+		if (
+			!(await matchesAnySecret(
+				c.req.header("X-Internal-Token") ?? "",
+				configuredSecrets(c.env.INTERNAL_API_TOKEN, c.env.INTERNAL_API_TOKEN_PREVIOUS),
+			))
+		)
+			throw new AppError("internal_auth_invalid", "Internal authentication required", 401);
+		const body = await bodyObject(c.req.raw);
+		const key = text(body.key, "key", 128);
+		const platform = platformParam(text(body.platform, "platform", 16));
+		const identifier = text(body.identifier, "identifier", 2048);
+		if (!/^og_app_[a-f0-9]{64}$/.test(key))
+			throw new AppError("sdk_credentials_invalid", "Invalid SDK credentials", 403);
+		const record = await c.env.DB.prepare(
+			`SELECT k.id, k.project_id, s.configuration_json FROM access_keys k
 		JOIN sdk_configurations s ON s.project_id = k.project_id AND s.platform = ?
 		WHERE k.key_hash = ? AND k.revoked_at IS NULL AND s.status IN ('configured', 'verified') LIMIT 1`,
-	)
-		.bind(platform, await sha256(key))
-		.first<{ id: string; project_id: string; configuration_json: string }>();
-	const configuration: unknown = record ? JSON.parse(record.configuration_json) : null;
-	if (
-		!record ||
-		!configuration ||
-		typeof configuration !== "object" ||
-		Array.isArray(configuration)
-	)
-		throw new AppError("sdk_credentials_invalid", "Invalid SDK credentials", 403);
-	const values = configuration as Record<string, unknown>;
-	const configured =
-		platform === "ios"
-			? values.bundle_id
-			: platform === "android"
-				? values.package_name
-				: values.domain;
-	const matches =
-		platform === "web"
-			? sdkWebIdentifier(configured) !== null &&
-				sdkWebIdentifier(configured) === sdkWebIdentifier(identifier)
-			: typeof configured === "string" && configured === identifier;
-	if (!matches)
-		throw new AppError(
-			"sdk_application_forbidden",
-			"SDK application is not configured for this project",
-			403,
-		);
-	const updated = await c.env.DB.prepare(
-		"UPDATE access_keys SET last_used_at = datetime('now') WHERE id = ? AND revoked_at IS NULL",
-	)
-		.bind(record.id)
-		.run();
-	if (updated.meta.changes !== 1)
-		throw new AppError("sdk_credentials_invalid", "Invalid SDK credentials", 403);
-	return c.json({ data: { project_id: record.project_id } }, 200, { "Cache-Control": "no-store" });
-});
+		)
+			.bind(platform, await sha256(key))
+			.first<{ id: string; project_id: string; configuration_json: string }>();
+		const configuration: unknown = record ? JSON.parse(record.configuration_json) : null;
+		if (
+			!record ||
+			!configuration ||
+			typeof configuration !== "object" ||
+			Array.isArray(configuration)
+		)
+			throw new AppError("sdk_credentials_invalid", "Invalid SDK credentials", 403);
+		const values = configuration as Record<string, unknown>;
+		const configured =
+			platform === "ios"
+				? values.bundle_id
+				: platform === "android"
+					? values.package_name
+					: values.domain;
+		const matches =
+			platform === "web"
+				? sdkWebIdentifier(configured) !== null &&
+					sdkWebIdentifier(configured) === sdkWebIdentifier(identifier)
+				: typeof configured === "string" && configured === identifier;
+		if (!matches)
+			throw new AppError(
+				"sdk_application_forbidden",
+				"SDK application is not configured for this project",
+				403,
+			);
+		const updated = await c.env.DB.prepare(
+			"UPDATE access_keys SET last_used_at = datetime('now') WHERE id = ? AND revoked_at IS NULL",
+		)
+			.bind(record.id)
+			.run();
+		if (updated.meta.changes !== 1)
+			throw new AppError("sdk_credentials_invalid", "Invalid SDK credentials", 403);
+		return c.json({ data: { project_id: record.project_id } }, 200, {
+			"Cache-Control": "no-store",
+		});
+	});
 
 function sdkWebIdentifier(value: unknown): string | null {
 	if (typeof value !== "string" || !value.trim()) return null;
@@ -306,11 +317,6 @@ app.delete("/internal/v1/customers/:id", async (c) =>
 	}),
 );
 
-// Application identities are opaque subjects owned by the Identity Worker.
-// This endpoint is intentionally idempotent because the account-erasure
-// coordinator may replay a completed step after a timeout or Worker restart.
-// Customer analytics and referral edges are removed by the project-scoped
-// foreign-key cascade; the audit only records aggregate deletion counts.
 app.delete("/internal/v1/application/users/:userId", async (c) =>
 	runMutation(c, "application_user.erase", async () => {
 		const userId = applicationUserId(c.req.param("userId"));
@@ -399,129 +405,146 @@ app.defineRoute({ pluginId: "superboard-settings" }).get("/internal/v1/access-ke
 	return c.json({ data: key || null });
 });
 
-app.defineRoute({ pluginId: "superboard-settings" }).post("/internal/v1/access-key/rotate", async (c) =>
-	runMutation(c, "access_key.rotate", async () => {
-		const secret = randomToken("og_app_", 32);
-		const id = crypto.randomUUID();
-		await c.env.DB.batch([
-			c.env.DB.prepare(
-				"UPDATE access_keys SET revoked_at=CURRENT_TIMESTAMP WHERE project_id=? AND revoked_at IS NULL",
-			).bind(c.get("projectId")),
-			c.env.DB.prepare(
-				"INSERT INTO access_keys (id, project_id, key_hash, prefix, created_by) VALUES (?, ?, ?, ?, ?)",
-			).bind(
-				id,
-				c.get("projectId"),
-				await sha256(secret),
-				secret.slice(0, 15),
-				c.get("projectContext").operatorId ?? String(c.get("projectContext").actorId),
-			),
-		]);
-		return { id, prefix: secret.slice(0, 15), secret };
-	}),
-);
-
-app.defineRoute({ pluginId: "superboard-settings" }).get("/internal/v1/setup/:platform", async (c) => {
-	const platform = platformParam(c.req.param("platform"));
-	const row = await c.env.DB.prepare(
-		"SELECT platform, status, configuration_json, verified_at, created_at, updated_at FROM sdk_configurations WHERE project_id=? AND platform=?",
-	)
-		.bind(c.get("projectId"), platform)
-		.first<ConfigurationRow>();
-	return c.json({ data: row ? configurationJson(row) : null });
-});
-
-app.defineRoute({ pluginId: "superboard-settings" }).post("/internal/v1/runtime-policy/resolve", async (c) => {
-	const body = await bodyObject(c.req.raw);
-	const platform = platformParam(String(c.req.header("PLATFORM") || body.platform || ""));
-	const appVersion = semanticVersion(body.app_version, "app_version", true)!;
-	const build = optionalText(body.build, 64);
-	const row = await c.env.DB.prepare(
-		"SELECT configuration_json FROM sdk_configurations WHERE project_id=? AND platform=? LIMIT 1",
-	)
-		.bind(c.get("projectId"), platform)
-		.first<{ configuration_json: string }>();
-	const configuration = row ? (JSON.parse(row.configuration_json) as Record<string, unknown>) : {};
-	const minimumVersion = semanticVersion(configuration.minimum_version, "minimum_version");
-	const recommendedVersion = semanticVersion(
-		configuration.recommended_version,
-		"recommended_version",
+app
+	.defineRoute({ pluginId: "superboard-settings" })
+	.post("/internal/v1/access-key/rotate", async (c) =>
+		runMutation(c, "access_key.rotate", async () => {
+			const secret = randomToken("og_app_", 32);
+			const id = crypto.randomUUID();
+			await c.env.DB.batch([
+				c.env.DB.prepare(
+					"UPDATE access_keys SET revoked_at=CURRENT_TIMESTAMP WHERE project_id=? AND revoked_at IS NULL",
+				).bind(c.get("projectId")),
+				c.env.DB.prepare(
+					"INSERT INTO access_keys (id, project_id, key_hash, prefix, created_by) VALUES (?, ?, ?, ?, ?)",
+				).bind(
+					id,
+					c.get("projectId"),
+					await sha256(secret),
+					secret.slice(0, 15),
+					c.get("projectContext").operatorId ?? String(c.get("projectContext").actorId),
+				),
+			]);
+			return { id, prefix: secret.slice(0, 15), secret };
+		}),
 	);
-	const maintenanceEnabled = configuration.maintenance_enabled === true;
-	const updateRequired = Boolean(minimumVersion && compareVersions(appVersion, minimumVersion) < 0);
-	const updateAvailable = Boolean(
-		recommendedVersion && compareVersions(appVersion, recommendedVersion) < 0,
-	);
-	return c.json({
-		data: {
-			platform,
-			app_version: appVersion,
-			build,
-			status: maintenanceEnabled
-				? "maintenance"
-				: updateRequired
-					? "update_required"
-					: updateAvailable
-						? "update_available"
-						: "operational",
-			maintenance: {
-				enabled: maintenanceEnabled,
-				message: optionalText(configuration.maintenance_message, 500),
-			},
-			update: {
-				required: updateRequired,
-				available: updateAvailable,
-				minimum_version: minimumVersion,
-				recommended_version: recommendedVersion,
-				store_url: safeHttpsUrl(configuration.store_url, "store_url"),
-			},
-		},
-	});
-});
 
-app.defineRoute({ pluginId: "superboard-settings" }).put("/internal/v1/setup/:platform", async (c) =>
-	runMutation(c, "sdk_configuration.save", async () => {
-		const platform = platformParam(c.req.param("platform"));
-		const body = await bodyObject(c.req.raw);
-		validateConfiguration(platform, body);
-		await c.env.DB.prepare(
-			"INSERT INTO sdk_configurations (id, project_id, platform, status, configuration_json, updated_at) VALUES (?, ?, ?, 'configured', ?, CURRENT_TIMESTAMP) ON CONFLICT(project_id, platform) DO UPDATE SET status='configured', configuration_json=excluded.configuration_json, verified_at=NULL, updated_at=CURRENT_TIMESTAMP",
-		)
-			.bind(crypto.randomUUID(), c.get("projectId"), platform, JSON.stringify(body))
-			.run();
-		return { platform, status: "configured", configuration: body };
-	}),
-);
-
-app.defineRoute({ pluginId: "superboard-settings" }).post("/internal/v1/setup/:platform/test", async (c) =>
-	runMutation(c, "sdk_configuration.verify", async () => {
+app
+	.defineRoute({ pluginId: "superboard-settings" })
+	.get("/internal/v1/setup/:platform", async (c) => {
 		const platform = platformParam(c.req.param("platform"));
 		const row = await c.env.DB.prepare(
-			"SELECT configuration_json FROM sdk_configurations WHERE project_id=? AND platform=?",
+			"SELECT platform, status, configuration_json, verified_at, created_at, updated_at FROM sdk_configurations WHERE project_id=? AND platform=?",
+		)
+			.bind(c.get("projectId"), platform)
+			.first<ConfigurationRow>();
+		return c.json({ data: row ? configurationJson(row) : null });
+	});
+
+app
+	.defineRoute({ pluginId: "superboard-settings" })
+	.post("/internal/v1/runtime-policy/resolve", async (c) => {
+		const body = await bodyObject(c.req.raw);
+		const platform = platformParam(String(c.req.header("PLATFORM") || body.platform || ""));
+		const appVersion = semanticVersion(body.app_version, "app_version", true)!;
+		const build = optionalText(body.build, 64);
+		const row = await c.env.DB.prepare(
+			"SELECT configuration_json FROM sdk_configurations WHERE project_id=? AND platform=? LIMIT 1",
 		)
 			.bind(c.get("projectId"), platform)
 			.first<{ configuration_json: string }>();
-		if (!row) throw new AppError("configuration_not_found", "SDK configuration was not found", 404);
-		validateConfiguration(platform, JSON.parse(row.configuration_json));
-		const verifiedAt = new Date().toISOString();
-		await c.env.DB.prepare(
-			"UPDATE sdk_configurations SET status='verified', verified_at=?, updated_at=? WHERE project_id=? AND platform=?",
-		)
-			.bind(verifiedAt, verifiedAt, c.get("projectId"), platform)
-			.run();
-		return { ok: true, platform, verified_at: verifiedAt };
-	}),
-);
+		const configuration = row
+			? (JSON.parse(row.configuration_json) as Record<string, unknown>)
+			: {};
+		const minimumVersion = semanticVersion(configuration.minimum_version, "minimum_version");
+		const recommendedVersion = semanticVersion(
+			configuration.recommended_version,
+			"recommended_version",
+		);
+		const maintenanceEnabled = configuration.maintenance_enabled === true;
+		const updateRequired = Boolean(
+			minimumVersion && compareVersions(appVersion, minimumVersion) < 0,
+		);
+		const updateAvailable = Boolean(
+			recommendedVersion && compareVersions(appVersion, recommendedVersion) < 0,
+		);
+		return c.json({
+			data: {
+				platform,
+				app_version: appVersion,
+				build,
+				status: maintenanceEnabled
+					? "maintenance"
+					: updateRequired
+						? "update_required"
+						: updateAvailable
+							? "update_available"
+							: "operational",
+				maintenance: {
+					enabled: maintenanceEnabled,
+					message: optionalText(configuration.maintenance_message, 500),
+				},
+				update: {
+					required: updateRequired,
+					available: updateAvailable,
+					minimum_version: minimumVersion,
+					recommended_version: recommendedVersion,
+					store_url: safeHttpsUrl(configuration.store_url, "store_url"),
+				},
+			},
+		});
+	});
 
-app.defineRoute({ pluginId: "superboard-settings" }).delete("/internal/v1/setup/:platform", async (c) =>
-	runMutation(c, "sdk_configuration.delete", async () => {
-		const platform = platformParam(c.req.param("platform"));
-		await c.env.DB.prepare("DELETE FROM sdk_configurations WHERE project_id=? AND platform=?")
-			.bind(c.get("projectId"), platform)
-			.run();
-		return { deleted: true, platform };
-	}),
-);
+app
+	.defineRoute({ pluginId: "superboard-settings" })
+	.put("/internal/v1/setup/:platform", async (c) =>
+		runMutation(c, "sdk_configuration.save", async () => {
+			const platform = platformParam(c.req.param("platform"));
+			const body = await bodyObject(c.req.raw);
+			validateConfiguration(platform, body);
+			await c.env.DB.prepare(
+				"INSERT INTO sdk_configurations (id, project_id, platform, status, configuration_json, updated_at) VALUES (?, ?, ?, 'configured', ?, CURRENT_TIMESTAMP) ON CONFLICT(project_id, platform) DO UPDATE SET status='configured', configuration_json=excluded.configuration_json, verified_at=NULL, updated_at=CURRENT_TIMESTAMP",
+			)
+				.bind(crypto.randomUUID(), c.get("projectId"), platform, JSON.stringify(body))
+				.run();
+			return { platform, status: "configured", configuration: body };
+		}),
+	);
+
+app
+	.defineRoute({ pluginId: "superboard-settings" })
+	.post("/internal/v1/setup/:platform/test", async (c) =>
+		runMutation(c, "sdk_configuration.verify", async () => {
+			const platform = platformParam(c.req.param("platform"));
+			const row = await c.env.DB.prepare(
+				"SELECT configuration_json FROM sdk_configurations WHERE project_id=? AND platform=?",
+			)
+				.bind(c.get("projectId"), platform)
+				.first<{ configuration_json: string }>();
+			if (!row)
+				throw new AppError("configuration_not_found", "SDK configuration was not found", 404);
+			validateConfiguration(platform, JSON.parse(row.configuration_json));
+			const verifiedAt = new Date().toISOString();
+			await c.env.DB.prepare(
+				"UPDATE sdk_configurations SET status='verified', verified_at=?, updated_at=? WHERE project_id=? AND platform=?",
+			)
+				.bind(verifiedAt, verifiedAt, c.get("projectId"), platform)
+				.run();
+			return { ok: true, platform, verified_at: verifiedAt };
+		}),
+	);
+
+app
+	.defineRoute({ pluginId: "superboard-settings" })
+	.delete("/internal/v1/setup/:platform", async (c) =>
+		runMutation(c, "sdk_configuration.delete", async () => {
+			const platform = platformParam(c.req.param("platform"));
+			await c.env.DB.prepare("DELETE FROM sdk_configurations WHERE project_id=? AND platform=?")
+				.bind(c.get("projectId"), platform)
+				.run();
+			return { deleted: true, platform };
+		}),
+	);
 
 app.post("/internal/v1/customer-events", async (c) =>
 	runMutation(c, "customer_events.record", async () => {
@@ -1026,8 +1049,12 @@ async function sha256(value: string) {
 	return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export default withRouteManifest((Object.assign(app, {
-	scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-		ctx.waitUntil(collectCustomerProjection(env));
-	},
-})), [app], {"service":"app","pluginId":"superboard-user"});
+export default withRouteManifest(
+	Object.assign(app, {
+		scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+			ctx.waitUntil(collectCustomerProjection(env));
+		},
+	}),
+	[app],
+	{ service: "app", pluginId: "superboard-user" },
+);

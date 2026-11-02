@@ -24,7 +24,6 @@ describe("generateSnapshot", () => {
 		expect(snapshot.generatedAt).toBeTruthy();
 		expect(typeof snapshot.generatedAt).toBe("string");
 
-		// Schema should include ec_post and ec_page (even with no rows)
 		expect(snapshot.schema).toHaveProperty("ec_post");
 		expect(snapshot.schema).toHaveProperty("ec_page");
 		expect(snapshot.schema.ec_post.columns).toContain("id");
@@ -32,22 +31,18 @@ describe("generateSnapshot", () => {
 		expect(snapshot.schema.ec_post.columns).toContain("slug");
 		expect(snapshot.schema.ec_post.columns).toContain("status");
 
-		// System tables with data should appear
 		expect(snapshot.schema).toHaveProperty("_emdash_collections");
 		expect(snapshot.schema).toHaveProperty("_emdash_fields");
 
-		// _emdash_collections should have 2 rows (post + page)
 		expect(snapshot.tables._emdash_collections).toHaveLength(2);
 	});
 
 	it("includes published content and excludes drafts by default", async () => {
-		// Insert a published post
 		await sql`
 			INSERT INTO ec_post (id, slug, status, title, content, created_at, updated_at, version)
 			VALUES ('pub1', 'hello-world', 'published', 'Hello World', 'Content here', datetime('now'), datetime('now'), 1)
 		`.execute(db);
 
-		// Insert a draft post
 		await sql`
 			INSERT INTO ec_post (id, slug, status, title, content, created_at, updated_at, version)
 			VALUES ('draft1', 'draft-post', 'draft', 'Draft Post', 'Draft content', datetime('now'), datetime('now'), 1)
@@ -55,19 +50,16 @@ describe("generateSnapshot", () => {
 
 		const snapshot = await generateSnapshot(db);
 
-		// Only published content should appear
 		expect(snapshot.tables.ec_post).toHaveLength(1);
 		expect(snapshot.tables.ec_post[0].slug).toBe("hello-world");
 	});
 
 	it("includes drafts when includeDrafts is true", async () => {
-		// Insert a published post
 		await sql`
 			INSERT INTO ec_post (id, slug, status, title, content, created_at, updated_at, version)
 			VALUES ('pub1', 'hello-world', 'published', 'Hello World', 'Content', datetime('now'), datetime('now'), 1)
 		`.execute(db);
 
-		// Insert a draft post
 		await sql`
 			INSERT INTO ec_post (id, slug, status, title, content, created_at, updated_at, version)
 			VALUES ('draft1', 'draft-post', 'draft', 'Draft Post', 'Draft', datetime('now'), datetime('now'), 1)
@@ -75,7 +67,6 @@ describe("generateSnapshot", () => {
 
 		const snapshot = await generateSnapshot(db, { includeDrafts: true });
 
-		// Both should appear
 		expect(snapshot.tables.ec_post).toHaveLength(2);
 	});
 
@@ -93,13 +84,11 @@ describe("generateSnapshot", () => {
 	});
 
 	it("excludes soft-deleted content", async () => {
-		// Insert a published post
 		await sql`
 			INSERT INTO ec_post (id, slug, status, title, content, created_at, updated_at, version)
 			VALUES ('pub1', 'live-post', 'published', 'Live', 'Content', datetime('now'), datetime('now'), 1)
 		`.execute(db);
 
-		// Insert a soft-deleted post
 		await sql`
 			INSERT INTO ec_post (id, slug, status, title, content, created_at, updated_at, deleted_at, version)
 			VALUES ('del1', 'deleted-post', 'published', 'Deleted', 'Gone', datetime('now'), datetime('now'), datetime('now'), 1)
@@ -114,7 +103,6 @@ describe("generateSnapshot", () => {
 	it("excludes auth and security tables", async () => {
 		const snapshot = await generateSnapshot(db);
 
-		// These should not appear in schema or tables
 		expect(snapshot.schema).not.toHaveProperty("users");
 		expect(snapshot.schema).not.toHaveProperty("sessions");
 		expect(snapshot.schema).not.toHaveProperty("credentials");
@@ -126,7 +114,6 @@ describe("generateSnapshot", () => {
 	it("includes system tables needed for rendering", async () => {
 		const snapshot = await generateSnapshot(db);
 
-		// These system tables should have schema entries
 		expect(snapshot.schema).toHaveProperty("_emdash_collections");
 		expect(snapshot.schema).toHaveProperty("_emdash_fields");
 		expect(snapshot.schema).toHaveProperty("_emdash_migrations");
@@ -139,8 +126,6 @@ describe("generateSnapshot", () => {
 		const postSchema = snapshot.schema.ec_post;
 		expect(postSchema).toBeDefined();
 		expect(postSchema.types).toBeDefined();
-		// PRAGMA table_info returns types as declared (case-sensitive)
-		// Kysely creates tables with lowercase types
 		expect(postSchema.types!.id.toLowerCase()).toBe("text");
 		expect(postSchema.types!.version.toLowerCase()).toBe("integer");
 	});
@@ -153,13 +138,11 @@ describe("generateSnapshot", () => {
 
 		const snapshot: Snapshot = await generateSnapshot(db);
 
-		// Verify shape matches what EmDashPreviewDB.applySnapshot expects
 		expect(snapshot).toHaveProperty("tables");
 		expect(snapshot).toHaveProperty("schema");
 		expect(snapshot).toHaveProperty("generatedAt");
 		expect(typeof snapshot.generatedAt).toBe("string");
 
-		// Tables are Record<string, Record<string, unknown>[]>
 		for (const [tableName, rows] of Object.entries(snapshot.tables)) {
 			expect(typeof tableName).toBe("string");
 			expect(Array.isArray(rows)).toBe(true);
@@ -168,7 +151,6 @@ describe("generateSnapshot", () => {
 			}
 		}
 
-		// Schema has columns and types
 		for (const [tableName, info] of Object.entries(snapshot.schema)) {
 			expect(typeof tableName).toBe("string");
 			expect(Array.isArray(info.columns)).toBe(true);
@@ -179,11 +161,9 @@ describe("generateSnapshot", () => {
 	});
 
 	it("filters options table to safe rendering prefixes only", async () => {
-		// Insert site settings (safe — should be included)
 		await sql`INSERT INTO options (name, value) VALUES ('site:title', '"My Site"')`.execute(db);
 		await sql`INSERT INTO options (name, value) VALUES ('site:tagline', '"Welcome"')`.execute(db);
 
-		// Insert plugin secrets (unsafe — should be excluded)
 		await sql`INSERT INTO options (name, value) VALUES ('plugin:smtp:api_key', '"sk-secret-123"')`.execute(
 			db,
 		);
@@ -191,7 +171,6 @@ describe("generateSnapshot", () => {
 			db,
 		);
 
-		// Insert setup/auth data (unsafe — should be excluded)
 		await sql`INSERT INTO options (name, value) VALUES ('emdash:setup_complete', 'true')`.execute(
 			db,
 		);
@@ -215,13 +194,11 @@ describe("generateSnapshot", () => {
 	});
 
 	it("discovers content tables dynamically", async () => {
-		// The test setup creates ec_post and ec_page
 		const snapshot = await generateSnapshot(db);
 
 		expect(snapshot.schema).toHaveProperty("ec_post");
 		expect(snapshot.schema).toHaveProperty("ec_page");
 
-		// Verify column discovery matches what we created
 		expect(snapshot.schema.ec_post.columns).toContain("title");
 		expect(snapshot.schema.ec_post.columns).toContain("content");
 		expect(snapshot.schema.ec_page.columns).toContain("title");

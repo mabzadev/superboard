@@ -266,9 +266,6 @@ describe("normalizeMediaValue", () => {
 
 		const result = await normalizeMediaValue(value, getProvider({ "cloudflare-images": cfImages }));
 
-		// blurhash/dominantColor are missing → provider is consulted to backfill
-		// them (e.g. records saved before LQIP, or rows that gained a blurhash
-		// later). Provider.get returns null here, so the value is unchanged.
 		expect(cfImages.get).toHaveBeenCalledWith("cf-abc123");
 		expect(result).toEqual(value);
 	});
@@ -286,8 +283,6 @@ describe("normalizeMediaValue", () => {
 		};
 		const local = mockProvider(providerItem);
 
-		// Fully populated article row except for LQIP — gain from finding #3:
-		// the provider is now consulted so the blurhash backfill runs.
 		const result = await normalizeMediaValue(
 			{
 				provider: "local",
@@ -385,7 +380,6 @@ describe("normalizeMediaValue", () => {
 		const local: MediaProvider = {
 			list: vi.fn().mockResolvedValue({ items: [] }),
 			getEmbed: vi.fn().mockReturnValue({ type: "image", src: "/test" }),
-			// no get method
 		};
 
 		const value = {
@@ -448,7 +442,6 @@ describe("normalizeMediaValue", () => {
 			getProvider({ local }),
 		);
 
-		// src should be removed for local media - it's derived at display time
 		expect(result!.src).toBeUndefined();
 	});
 
@@ -482,7 +475,6 @@ describe("normalizeMediaValue", () => {
 		};
 		const local = mockProvider(providerItem);
 
-		// Missing filename/mimeType triggers the provider lookup.
 		const result = await normalizeMediaValue(
 			{
 				provider: "local",

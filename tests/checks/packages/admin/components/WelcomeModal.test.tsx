@@ -5,10 +5,6 @@ import { describe, it, expect, vi } from "vitest";
 import { WelcomeModal } from "../../../../../packages/admin/src/components/WelcomeModal";
 import { render } from "../utils/render";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const WELCOME_MESSAGE_REGEX = /Welcome to EmDash, Alice!/;
 const ADMIN_TEXT_REGEX = /As an administrator, you can invite other users/;
 
@@ -98,7 +94,6 @@ describe("WelcomeModal", () => {
 		);
 		const button = screen.getByText("Get Started").element().closest("button")!;
 		button.click();
-		// The mutation resolves and calls onClose
 		await vi.waitFor(() => {
 			expect(onClose).toHaveBeenCalled();
 		});
@@ -119,7 +114,6 @@ describe("WelcomeModal", () => {
 				<WelcomeModal open={true} onClose={noop} userRole={40} />
 			</QueryWrapper>,
 		);
-		// Check that the admin invite text is NOT present
 		expect(screen.container.textContent).not.toContain(
 			"As an administrator, you can invite other users",
 		);

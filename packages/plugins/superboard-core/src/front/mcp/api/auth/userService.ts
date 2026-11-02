@@ -5,8 +5,6 @@ import axios from "axios";
 
 import { DELETE, GET, PATCH, POST, PUT } from "../../transport.js";
 
-// --- Response interfaces ---
-
 export interface AuthTokenResponse {
 	access_token: string;
 	refresh_token: string;

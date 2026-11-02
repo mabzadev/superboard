@@ -1,13 +1,3 @@
-/**
- * Tests for bundle utility functions.
- *
- * Focuses on the functions where bugs would be non-obvious:
- * - Tarball round-trip (custom tar implementation)
- * - Manifest extraction (shape transformation, function stripping)
- * - Source entry resolution (path mapping logic)
- * - Node.js built-in detection (regex against bundled output)
- */
-
 import { execSync } from "node:child_process";
 import { mkdtemp, rm, writeFile, mkdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -66,8 +56,6 @@ describe("extractManifest", () => {
 		});
 
 		const manifest = extractManifest(plugin);
-		// content:beforeSave has all defaults → plain string
-		// media:afterUpload has non-default priority → structured entry
 		expect(manifest.hooks).toEqual([
 			"content:beforeSave",
 			{ name: "media:afterUpload", priority: 50 },
@@ -202,7 +190,6 @@ describe("createTarball", () => {
 	it("handles binary content without corruption", async () => {
 		const srcDir = join(tempDir, "src");
 		await mkdir(srcDir);
-		// Write bytes that would break text-mode handling
 		const binary = Buffer.from([0x00, 0xff, 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 		await writeFile(join(srcDir, "icon.png"), binary);
 

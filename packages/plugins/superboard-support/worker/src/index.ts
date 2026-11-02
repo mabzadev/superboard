@@ -1,8 +1,8 @@
-import { withRouteManifest } from "@superboard/contracts/route-manifest";
-import { registerRouter } from "@superboard/contracts/route-registry";
 import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import { withPluginTaskLifecycle } from "@superboard/contracts/plugin-task";
 import { readTextLimited } from "@superboard/contracts/request-body";
+import { withRouteManifest } from "@superboard/contracts/route-manifest";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
@@ -315,8 +315,6 @@ app.get("/public/v1/help-center/:portalSlug/search", async (c) => {
 			});
 		}
 	} catch (error) {
-		// Lexical search remains available while AI or the semantic index is
-		// temporarily degraded. The public response never exposes model details.
 		console.error(
 			JSON.stringify({
 				event: "support_knowledge_query_degraded",
@@ -2334,9 +2332,7 @@ function publicContactShape(contact: Record<string, unknown>) {
 		if (decoded && typeof decoded === "object" && !Array.isArray(decoded)) {
 			customAttributes = decoded as Record<string, unknown>;
 		}
-	} catch {
-		// An invalid historical value is normalized to an empty object.
-	}
+	} catch {}
 	return {
 		id: contact.id,
 		external_id: contact.external_user_id,
@@ -2534,9 +2530,7 @@ async function dyteRequest(
 			parsed && typeof parsed === "object" && !Array.isArray(parsed)
 				? (parsed as Record<string, unknown>)
 				: {};
-	} catch {
-		// Provider response details are intentionally not exposed publicly.
-	}
+	} catch {}
 	if (!response.ok || payload.success === false) {
 		const status = response.status === 429 || response.status >= 500 ? 503 : 422;
 		const code = status === 422 ? "configuration_required" : "support_meeting_unavailable";
@@ -2627,8 +2621,6 @@ async function publicPortal(db: D1Database, slug: string) {
 		)
 		.bind(slug)
 		.all<{ id: string; project_id: number; slug: string; locale: string }>();
-	// Fail closed if historical data predating the global public-slug index is
-	// ambiguous. Never choose an arbitrary project with LIMIT 1.
 	if (portals.results.length !== 1) {
 		throw failure("help_center_portal_not_found", "Help Center portal not found", 404);
 	}
@@ -2976,10 +2968,6 @@ const lifecycleWorker = {
 
 export async function claimScheduledSupportJobs(env: Env) {
 	const notificationDeliveries = await claimSupportNotificationDeliveries(env);
-	// A cron invocation can die after claiming a row or after queueing it. Reclaim
-	// stale rows instead of leaving the business operation permanently blocked.
-	// Queue handlers are required to be idempotent, so a conservative requeue is
-	// safer than a lost SLA, campaign, indexation, or report job.
 	await env.DB.batch([
 		env.DB.prepare(
 			`UPDATE support_scheduled_jobs SET status = 'failed', claim_token = NULL,
@@ -3140,9 +3128,7 @@ function scheduledQueueBody(job: {
 		let payload: Record<string, unknown> = {};
 		try {
 			payload = JSON.parse(job.payload_json) as Record<string, unknown>;
-		} catch {
-			/* bounded database value */
-		}
+		} catch {}
 		return {
 			type: "support.knowledge.index.v1",
 			projectId: job.project_id,
@@ -3163,9 +3149,7 @@ function scheduledQueueBody(job: {
 		let payload: Record<string, unknown> = {};
 		try {
 			payload = JSON.parse(job.payload_json) as Record<string, unknown>;
-		} catch {
-			/* bounded database value */
-		}
+		} catch {}
 		return {
 			type: "support.workflow.action.v1",
 			projectId: job.project_id,

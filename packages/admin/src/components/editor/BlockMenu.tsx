@@ -1,15 +1,3 @@
-/**
- * Block Menu Component
- *
- * Floating menu that appears when a block is selected via drag handle click.
- * Provides block actions:
- * - Turn into (transform to different block type)
- * - Duplicate
- * - Delete
- *
- * Uses Kumo's menu primitive, anchored to the selected block's drag handle.
- */
-
 import { Button, DropdownMenu } from "@cloudflare/kumo";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
@@ -39,9 +27,6 @@ import { cn } from "../../lib/utils";
 import { getLocaleDir } from "../../locales/config.js";
 import { CaretNext, CaretPrev } from "../ArrowIcons.js";
 
-/**
- * Block transform options
- */
 interface BlockTransform {
 	id: string;
 	label: MessageDescriptor;
@@ -144,19 +129,12 @@ const POPOVER_TRANSITION_MS = 150;
 
 interface BlockMenuProps {
 	editor: Editor;
-	/** The DOM element of the selected block (for positioning) */
 	anchorElement: HTMLElement | null;
-	/** Whether the menu is open */
 	isOpen: boolean;
-	/** Callback to close the menu */
 	onClose: () => void;
-	/** Callback after the menu's exit transition completes */
 	onCloseComplete?: () => void;
 }
 
-/**
- * Block Menu - floating menu for block-level actions
- */
 export function BlockMenu({
 	editor,
 	anchorElement,
@@ -324,12 +302,6 @@ export function BlockMenu({
 	);
 }
 
-/**
- * Block Drag Handle Component
- *
- * Shown in the left gutter of each block. Clicking opens the block menu,
- * dragging reorders blocks.
- */
 interface BlockHandleProps {
 	onClick: (e: React.MouseEvent) => void;
 	onDragStart?: (e: React.DragEvent) => void;

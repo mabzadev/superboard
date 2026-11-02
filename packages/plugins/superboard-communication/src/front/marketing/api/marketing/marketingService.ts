@@ -157,7 +157,6 @@ export type JourneyCondition = {
 export type JourneyTrigger = {
 	event_name: string;
 	conditions: JourneyCondition[];
-	/** Date-based trigger settings, used with `native:date_attribute`. */
 	date?: { attribute: string; anniversary: boolean; offset_days: number; hour: number };
 };
 export type JourneyNode = {
@@ -169,13 +168,11 @@ export type JourneyNode = {
 	delay_seconds?: number;
 	condition?: JourneyCondition;
 	attributes?: Record<string, unknown>;
-	/** Wait-until-event step: the awaited event and how long to wait. */
 	event_name?: string;
 	timeout_seconds?: number;
 };
 export type JourneyDefinition = {
 	start_node_id: string;
-	/** Contacts who reach the goal event leave the journey as converted. */
 	goal?: { event_name: string };
 	nodes: JourneyNode[];
 	edges: Array<{
@@ -625,7 +622,6 @@ export async function createEmailSuppression(projectRef: string, email: string) 
 export async function deleteEmailSuppression(projectRef: string, id: string) {
 	return data<unknown>(await DELETE(path(projectRef, `/suppressions/${encodeURIComponent(id)}`)));
 }
-/** Moves legacy Marketing sender profiles to the Email Worker, one page per call. */
 export async function migrateMarketingSenders(projectRef: string, cursor = "") {
 	return data<{ complete: boolean; imported: number; next_cursor?: string }>(
 		await POST(path(projectRef, "/settings/smtp/migrate-to-email"), { cursor }),

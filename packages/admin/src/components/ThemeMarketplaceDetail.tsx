@@ -1,13 +1,3 @@
-/**
- * Theme Marketplace Detail
- *
- * Full detail view for a marketplace theme:
- * - Screenshot gallery
- * - Description, author, license
- * - "Try with my data" button
- * - Demo + repository links
- */
-
 import { Badge, Button, LinkButton } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import {
@@ -26,7 +16,6 @@ import * as React from "react";
 import { fetchTheme, generatePreviewUrl } from "../lib/api/theme-marketplace.js";
 import { ArrowPrev, CaretNext, CaretPrev } from "./ArrowIcons.js";
 
-/** Only allow safe URL protocols for external links */
 function isSafeUrl(url: string): boolean {
 	try {
 		const parsed = new URL(url);
@@ -60,7 +49,6 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 		},
 	});
 
-	// Loading
 	if (isLoading) {
 		return (
 			<div className="space-y-6 animate-pulse">
@@ -74,7 +62,6 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 		);
 	}
 
-	// Error
 	if (error || !theme) {
 		return (
 			<div className="space-y-4">
@@ -101,7 +88,6 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 
 	return (
 		<div className="space-y-6">
-			{/* Back link */}
 			<Link
 				to={"/themes/marketplace"}
 				className="inline-flex items-center gap-1 text-sm text-kumo-subtle hover:text-kumo-default"
@@ -110,7 +96,6 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 				{t`Back to Themes`}
 			</Link>
 
-			{/* Header */}
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div className="flex items-start gap-4">
 					{thumbnailUrl ? (
@@ -132,7 +117,6 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 					</div>
 				</div>
 
-				{/* Actions */}
 				<div className="flex gap-2 shrink-0">
 					<Button
 						variant="primary"
@@ -158,7 +142,6 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 				</div>
 			)}
 
-			{/* Screenshot gallery */}
 			{theme.screenshotCount > 0 && (
 				<div>
 					<h2 className="text-lg font-semibold mb-3">{t`Screenshots`}</h2>
@@ -181,9 +164,7 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 				</div>
 			)}
 
-			{/* Details */}
 			<div className="grid gap-6 sm:grid-cols-2">
-				{/* Keywords */}
 				{theme.keywords.length > 0 && (
 					<div>
 						<h3 className="text-sm font-medium text-kumo-subtle mb-2">{t`Keywords`}</h3>
@@ -197,7 +178,6 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 					</div>
 				)}
 
-				{/* License */}
 				{theme.license && (
 					<div>
 						<h3 className="text-sm font-medium text-kumo-subtle mb-2">{t`License`}</h3>
@@ -205,7 +185,6 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 					</div>
 				)}
 
-				{/* Links */}
 				<div>
 					<h3 className="text-sm font-medium text-kumo-subtle mb-2">{t`Links`}</h3>
 					<div className="flex flex-col gap-1.5">
@@ -235,7 +214,6 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 				</div>
 			</div>
 
-			{/* Lightbox */}
 			{lightboxIndex !== null && (
 				<Lightbox
 					urls={theme.screenshotUrls}
@@ -252,10 +230,6 @@ export function ThemeMarketplaceDetail({ themeId }: ThemeMarketplaceDetailProps)
 		</div>
 	);
 }
-
-// ---------------------------------------------------------------------------
-// Lightbox
-// ---------------------------------------------------------------------------
 
 function Lightbox({
 	urls,

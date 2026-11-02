@@ -1,16 +1,3 @@
-/**
- * Tests for WordPress import slug sanitization
- *
- * Regression test for emdash-cms/emdash#79: WordPress import crashes on
- * collections with hyphens in slug (e.g. Elementor `elementor-hf`).
- *
- * WordPress post type slugs commonly use hyphens (e.g. `elementor-hf`,
- * `my-custom-type`), but EmDash collection slugs require `[a-z][a-z0-9_]*`.
- * The fix sanitizes all unknown post type slugs so they conform to the
- * collection slug format, rather than trying to enumerate every plugin's
- * internal post types.
- */
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -50,7 +37,6 @@ describe("sanitizeSlug", () => {
 	});
 
 	it("multiple degenerate slugs produce the same fallback (deduplicated during analysis)", () => {
-		// These all collapse to "imported" — analyzeWxr appends _1, _2, etc.
 		expect(sanitizeSlug("123")).toBe("imported");
 		expect(sanitizeSlug("456")).toBe("imported");
 		expect(sanitizeSlug("---")).toBe("imported");
@@ -94,9 +80,7 @@ describe("mapPostTypeToCollection", () => {
 	});
 
 	it("sanitizes post types from other common plugins", () => {
-		// WooCommerce
 		expect(mapPostTypeToCollection("shop-order")).toBe("shop_order");
-		// ACF
 		expect(mapPostTypeToCollection("acf-field-group")).toBe("acf_field_group");
 	});
 
@@ -106,7 +90,6 @@ describe("mapPostTypeToCollection", () => {
 	});
 
 	it("prefixes reserved slugs that fall through to sanitize", () => {
-		// "content" is not in the known mapping, so it hits sanitizeSlug
 		expect(mapPostTypeToCollection("content")).toBe("wp_content");
 		expect(mapPostTypeToCollection("users")).toBe("wp_users");
 	});

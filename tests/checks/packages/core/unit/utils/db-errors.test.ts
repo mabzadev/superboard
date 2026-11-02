@@ -35,7 +35,7 @@ describe("isMissingTableError", () => {
 	it("rejects unrelated errors", () => {
 		expect(isMissingTableError(new Error("column missing"))).toBe(false);
 		expect(isMissingTableError(new Error("permission denied"))).toBe(false);
-		expect(isMissingTableError(new Error("does not exist"))).toBe(false); // no table/relation word
+		expect(isMissingTableError(new Error("does not exist"))).toBe(false);
 		expect(isMissingTableError(new Error("syntax error"))).toBe(false);
 	});
 

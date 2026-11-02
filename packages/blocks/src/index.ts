@@ -3,15 +3,11 @@ export type { BlockRendererProps } from "./renderer.js";
 export { renderElement } from "./render-element.js";
 export { cn, formatRelativeTime } from "./utils.js";
 
-// Builders and validation
 export { blocks, elements } from "./builders.js";
 export { validateBlocks } from "./validation.js";
 
-// Re-export all types
 export type {
-	// Composition objects
 	ConfirmDialog,
-	// Elements
 	ButtonElement,
 	TextInputElement,
 	NumberInputElement,
@@ -26,10 +22,8 @@ export type {
 	RepeaterSubField,
 	MediaPickerElement,
 	Element,
-	// Form
 	FieldCondition,
 	FormField,
-	// Block sub-types
 	TableColumn,
 	StatItem,
 	ChartSeries,
@@ -37,7 +31,6 @@ export type {
 	TimeseriesChartConfig,
 	CustomChartConfig,
 	TabPanel,
-	// Blocks
 	HeaderBlock,
 	SectionBlock,
 	DividerBlock,
@@ -57,11 +50,9 @@ export type {
 	EmptyBlock,
 	AccordionBlock,
 	Block,
-	// Interactions
 	BlockAction,
 	FormSubmit,
 	PageLoad,
 	BlockInteraction,
-	// Response
 	BlockResponse,
 } from "./types.js";

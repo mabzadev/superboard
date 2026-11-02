@@ -48,13 +48,6 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 		websiteUrl: body.websiteUrl ?? null,
 		userId: body.userId ?? null,
 		isGuest: body.isGuest,
-		// Forward `customFields` only when present so the repo treats an
-		// omitted key as "leave existing values untouched". An empty
-		// object also no-ops by repo convention — see
-		// `BylineRepository.update`. Validation (unknown slug, type
-		// mismatch, select-choice) happens inside the repo and surfaces
-		// as `EmDashValidationError`, which the handler maps to a 400
-		// `VALIDATION_ERROR` for `unwrapResult` / `mapErrorStatus`.
 		customFields: body.customFields,
 	});
 

@@ -1,48 +1,14 @@
-/**
- * EmDash Portable Text Components
- *
- * Pre-built components for rendering Portable Text content from WordPress imports.
- *
- * Usage:
- * ```astro
- * ---
- * import { PortableText } from "emdash/ui";
- * ---
- * <PortableText value={post.data.content} />
- * ```
- *
- * The PortableText component uses EmDash's built-in renderers by default.
- * Pass custom components to override specific types:
- *
- * ```astro
- * <PortableText value={content} components={{ type: { image: MyImage } }} />
- * ```
- */
-
-// Wrapper component with EmDash defaults
 export { default as PortableText } from "./PortableText.astro";
 
-/**
- * @deprecated Import from `emdash/ui/comments` instead. Barrel re-exports pull
- * comment CSS into every page that imports `emdash/ui` (#2039). Will be removed in 1.0.
- */
 export { default as Comments } from "./Comments.astro";
-/**
- * @deprecated Import from `emdash/ui/comments` instead. Barrel re-exports pull
- * comment CSS into every page that imports `emdash/ui` (#2039). Will be removed in 1.0.
- */
 export { default as CommentForm } from "./CommentForm.astro";
 
-// Widget components
 export { default as WidgetArea } from "./WidgetArea.astro";
 
-// Main Image component for EmDash media
 export { default as EmDashImage } from "./EmDashImage.astro";
 
-// Unified Media component (supports all providers)
 export { default as EmDashMedia } from "./EmDashMedia.astro";
 
-// Portable Text block type components
 export { default as Block } from "./Block.astro";
 export { default as Image } from "./Image.astro";
 export { default as Code } from "./Code.astro";
@@ -58,7 +24,6 @@ export { default as Cover } from "./Cover.astro";
 export { default as File } from "./File.astro";
 export { default as Pullquote } from "./Pullquote.astro";
 
-// Mark components
 export { default as Superscript } from "./marks/Superscript.astro";
 export { default as Subscript } from "./marks/Subscript.astro";
 export { default as Underline } from "./marks/Underline.astro";
@@ -77,23 +42,12 @@ import EmbedComponent from "./Embed.astro";
 import FileComponent from "./File.astro";
 import GalleryComponent from "./Gallery.astro";
 import HtmlBlockComponent from "./HtmlBlock.astro";
-// Pre-configured components object for PortableText
 import ImageComponent from "./Image.astro";
 import { emdashMarkComponents } from "./marks.js";
 import OrderedListComponent from "./OrderedList.astro";
 import PullquoteComponent from "./Pullquote.astro";
 import TableComponent from "./Table.astro";
 
-/**
- * Pre-configured components for EmDash Portable Text content
- *
- * Includes renderers for:
- * - Block styles: paragraph, h1..h6, blockquote — with `textAlign` honoured
- *   as a WordPress-style `has-text-align-{value}` class (#1201)
- * - Block types: image, code, embed, gallery, columns, break, htmlBlock, table,
- *   button, buttons, cover, file, pullquote
- * - Marks: superscript, subscript, underline, strike-through, link
- */
 export const emdashComponents = {
 	block: BlockComponent,
 	list: {
@@ -118,7 +72,6 @@ export const emdashComponents = {
 	mark: emdashMarkComponents,
 };
 
-// Public page contribution components
 export { default as EmDashHead } from "./EmDashHead.astro";
 export { default as EmDashBodyStart } from "./EmDashBodyStart.astro";
 export { default as EmDashBodyEnd } from "./EmDashBodyEnd.astro";

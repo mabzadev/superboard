@@ -256,14 +256,12 @@ export async function runPluginTask<T>(
 	const finish = async () => {
 		await sendPluginTaskCommand(env, { ...command, action: "finish" });
 	};
-	// A successful claim already proves a running lease, so work starts without an extra check.
 	try {
 		return {
 			ran: true,
 			value: await taskContext.run({ checkpoint, signal }, () => work(checkpoint, signal)),
 		};
 	} finally {
-		// Completion is reported only after work settles; a deadline is not proof that execution stopped.
 		await (options.release ? options.release(finish) : finish());
 	}
 }
@@ -290,7 +288,6 @@ export function withPluginTaskLifecycle<TEnv extends PluginTaskBindings, TBody>(
 							if (!managed || path === "/health" || path === "/internal/v1/health")
 								return await fetchHandler(request, env, context);
 							const tracked = trackWaitUntil(context);
-							// Background work keeps the lease until it settles without delaying the response.
 							const result = await runPluginTask(
 								env,
 								pluginId,
@@ -375,7 +372,6 @@ export function withPluginTaskLifecycle<TEnv extends PluginTaskBindings, TBody>(
 							});
 							message.retry({ delaySeconds: 60 });
 						};
-						// One lease covers the batch; each message keeps its own ack and retry outcome.
 						try {
 							const result = await runPluginTask(
 								env,

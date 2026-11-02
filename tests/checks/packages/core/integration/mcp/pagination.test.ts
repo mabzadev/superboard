@@ -1,19 +1,3 @@
-/**
- * MCP pagination / cursor tests.
- *
- * Malformed cursors must produce a structured `INVALID_CURSOR` error
- * instead of silently returning the first page (the latter would let UI
- * pagination bugs re-fetch the whole table without any signal).
- *
- * `decodeCursor()` throws `InvalidCursorError` on invalid input; handler
- * catches translate that to `INVALID_CURSOR`. The MCP boundary also
- * applies `z.string().min(1).max(2048)` to reject obvious DoS attempts
- * before they reach the decoder.
- *
- * Tests cover the MCP-visible list surface: content_list,
- * content_list_trashed, media_list, revision_list, taxonomy_list_terms.
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -70,8 +54,6 @@ describe("MCP cursor pagination — content_list (bug #12)", () => {
 			arguments: { collection: "post", cursor: "obviously-malformed-cursor" },
 		});
 
-		// Currently: returns the full first page.
-		// After fix: returns isError with INVALID_CURSOR-style message.
 		expect(result.isError).toBe(true);
 		expect(extractText(result)).toMatch(INVALID_CURSOR);
 	});
@@ -84,15 +66,12 @@ describe("MCP cursor pagination — content_list (bug #12)", () => {
 			arguments: { collection: "post", cursor: "" },
 		});
 
-		// An empty cursor is unambiguously invalid — should error rather
-		// than silently treating it as "no cursor".
 		expect(result.isError).toBe(true);
 	});
 
 	it("rejects base64-decodable but structurally-wrong cursor", async () => {
 		await seedPosts(db, 5);
 
-		// Valid base64 but doesn't match the expected `{orderValue, id}` shape.
 		const bogus = Buffer.from(JSON.stringify({ wrong: "shape" })).toString("base64");
 
 		const result = await harness.client.callTool({
@@ -139,7 +118,6 @@ describe("MCP cursor pagination — content_list (bug #12)", () => {
 			items: Array<{ id: string }>;
 		}>(second);
 		expect(secondData.items).toHaveLength(2);
-		// Different ids than the first page
 		const firstIds = firstData.items.map((i) => i.id);
 		const secondIds = secondData.items.map((i) => i.id);
 		for (const id of secondIds) {
@@ -150,11 +128,6 @@ describe("MCP cursor pagination — content_list (bug #12)", () => {
 	it("rejects oversized cursor without attempting to decode it (DoS guard)", async () => {
 		await seedPosts(db, 3);
 
-		// Cursors we issue are well under 200 chars. A multi-KB cursor is
-		// almost certainly an attacker probing the base64 decoder. The
-		// MCP input schema caps cursors at 2048 chars; this test forces a
-		// rejection at the schema boundary rather than letting the
-		// decoder allocate against a giant string.
 		const huge = "A".repeat(10_000);
 
 		const result = await harness.client.callTool({
@@ -174,7 +147,6 @@ describe("MCP cursor pagination — content_list (bug #12)", () => {
 		});
 		const firstData = extractJson<{ items: Array<{ id: string }>; nextCursor?: string }>(first);
 
-		// Tamper with the cursor — change one character
 		const tampered = firstData.nextCursor ? firstData.nextCursor.slice(0, -1) + "X" : "garbage";
 
 		const result = await harness.client.callTool({
@@ -182,8 +154,6 @@ describe("MCP cursor pagination — content_list (bug #12)", () => {
 			arguments: { collection: "post", limit: 2, cursor: tampered },
 		});
 
-		// Bug today: returns first page again (callers re-process duplicates).
-		// After fix: errors so callers can detect the bug.
 		expect(result.isError).toBe(true);
 	});
 });
@@ -214,11 +184,6 @@ describe("MCP cursor pagination — other list tools (bug #12 propagation)", () 
 		expect(result.isError).toBe(true);
 	});
 
-	// (revision_list cursor test deleted: the tool's input schema doesn't
-	// declare a cursor parameter, and Zod's default behavior is to drop
-	// unknown keys silently — so the previous "expect(result).toBeDefined()"
-	// was meaningless. Forcing schema strict-mode is out of scope.)
-
 	it("media_list rejects malformed cursor", async () => {
 		const result = await harness.client.callTool({
 			name: "media_list",
@@ -245,16 +210,11 @@ describe("MCP cursor pagination — limit clamping (regression guard)", () => {
 	it("limit beyond max is clamped, not rejected", async () => {
 		await seedPosts(db, 3);
 
-		// Per AGENTS.md: max limit is 100. Higher should be clamped, not error.
 		const result = await harness.client.callTool({
 			name: "content_list",
 			arguments: { collection: "post", limit: 1000 },
 		});
-		// Either Zod rejects via inputSchema (also fine) or the handler clamps.
-		// Both are valid; what's NOT valid is silently honoring 1000 against
-		// a real backend.
 		if (result.isError) {
-			// Rejection branch: must be a validation error, not a generic 500.
 			expect(extractText(result)).toMatch(/limit|max|exceed|invalid/i);
 		} else {
 			const data = extractJson<{ items: unknown[] }>(result);

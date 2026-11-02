@@ -44,7 +44,6 @@ growthRoutes.route("/", brandKitRoutes);
 growthRoutes.route("/", abTestRoutes);
 growthRoutes.route("/", sendTimeRoutes);
 
-/** Engagement, deliverability rates, per-link clicks and attributed revenue for one scope. */
 growthRoutes.get("/insights/email", async (c) => {
 	const projectId = c.get("project").projectId;
 	const scope = insightScope(new URL(c.req.url).searchParams);
@@ -77,7 +76,6 @@ growthRoutes.get("/insights/revenue", async (c) => {
 	});
 });
 
-/** Native triggers available to automations, and business moments not emitted yet. */
 growthRoutes.get("/journey-triggers", (c) =>
 	c.json({
 		data: {
@@ -93,10 +91,6 @@ growthRoutes.get("/journey-triggers", (c) =>
 	}),
 );
 
-/**
- * Delivery planning hook for campaign dispatch: A/B tests and recipient
- * time-zone sending create their own deliveries. Returns false otherwise.
- */
 export async function insertPlannedDeliveries(
 	db: D1Database,
 	projectId: number,
@@ -109,7 +103,6 @@ export async function insertPlannedDeliveries(
 	);
 }
 
-/** A campaign waiting for its A/B winner or for later time zones stays running. */
 export async function campaignCompletionHeld(
 	db: D1Database,
 	projectId: number,
@@ -134,7 +127,6 @@ function systemProject(projectId: number, requestId: string): ProjectContext {
 	};
 }
 
-/** Turns audience changes (contact created, list joined, tag added) into journey signals. */
 export async function processNativeEventOutbox(env: Env, limit = 200) {
 	const rows = await env.DB.prepare(
 		"SELECT id, project_id, subscriber_id, event_name, properties_json, created_at FROM marketing_native_event_outbox ORDER BY id LIMIT ?",
@@ -178,10 +170,6 @@ function addDays(date: string, days: number) {
 	return value.toISOString().slice(0, 10);
 }
 
-/**
- * Date-based triggers: once per local day and journey, enrolls contacts whose
- * date field matches today (plus the offset), yearly when `anniversary` is set.
- */
 export async function runDateTriggers(env: Env, now = new Date()) {
 	const journeys = await env.DB.prepare(
 		"SELECT * FROM marketing_journeys WHERE status = 'active' AND trigger_event_name = ? ORDER BY id LIMIT 100",
@@ -202,7 +190,6 @@ export async function runDateTriggers(env: Env, now = new Date()) {
 			.bind(journey.project_id, journey.id, local.date)
 			.first();
 		if (!claimed) continue;
-		// "3 days before the date" means the date is three days from today.
 		const target = addDays(local.date, settings.offset_days);
 		const path = `$."${settings.attribute}"`;
 		const match = settings.anniversary
@@ -272,7 +259,6 @@ async function guarded(event: string, task: () => Promise<unknown>) {
 	}
 }
 
-/** Minute cron work for A/B winners, local-time sends and native triggers. */
 export async function runGrowthSchedules(env: Env) {
 	await guarded("marketing_ab_winner_failed", () => selectDueAbWinners(env));
 	await guarded("marketing_local_send_failed", () => dispatchOpenSendWindows(env));

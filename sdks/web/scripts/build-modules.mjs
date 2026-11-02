@@ -22,9 +22,6 @@ run([
 	"-r",
 	"build",
 ]);
-// The package exports map only exposes ESM, declarations and stylesheets for
-// Flows, so the CommonJS (`.js`) and IIFE (`.global.js`) builds tsup also emits
-// are unreachable for consumers and are not published.
 const exported = (path) => /\.(?:mjs|d\.m?ts|css)$/u.test(path);
 const modules = [
 	["identity/web/dist", "identity"],

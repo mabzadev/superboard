@@ -57,11 +57,6 @@ export function expandExtensionShorthand(entry: string): string | null {
 	return null;
 }
 
-/**
- * Extract the `allowedMimeTypes` list from a `_emdash_fields.validation` row
- * (raw JSON string). Returns null when the value is missing, malformed, or the
- * list is empty — callers treat that as "no field-specific constraint".
- */
 export function parseAllowedMimeTypes(rawValidation: string | null | undefined): string[] | null {
 	if (!rawValidation) return null;
 	try {

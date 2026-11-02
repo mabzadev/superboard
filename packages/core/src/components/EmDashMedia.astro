@@ -1,42 +1,19 @@
 ---
-/**
- * EmDash Media component
- *
- * Unified component for rendering media from any provider (local, Cloudflare Images, etc.)
- * Calls the provider's getEmbed() method at render time for proper URL generation.
- *
- * Usage:
- * ```astro
- * ---
- * import { Media } from "emdash/ui";
- * ---
- * <Media value={post.data.featured_image} />
- *
- * <!-- With size hints for optimization -->
- * <Media value={post.data.hero} width={1200} height={630} />
- * ```
- */
 import type { MediaValue } from "../fields/types.js";
 import type { EmbedResult, EmbedOptions } from "../media/types.js";
 import type { HTMLAttributes } from "astro/types";
 import { getMediaProvider } from "../media/provider-loader.js";
 
 interface Props extends Omit<HTMLAttributes<"img" | "video" | "audio">, "src" | "width" | "height"> {
-	/** Media value from content field */
 	value: MediaValue | string | undefined | null;
-	/** Override alt text */
 	alt?: string;
-	/** Desired width (for optimization) */
 	width?: number;
-	/** Desired height (for optimization) */
 	height?: number;
-	/** Image format preference */
 	format?: "webp" | "avif" | "jpeg" | "png" | "auto";
 }
 
 const { value, alt, width, height, format, ...attrs } = Astro.props;
 
-// Normalize string URLs to MediaValue
 function normalizeValue(val: MediaValue | string | undefined | null): MediaValue | null {
 	if (!val) return null;
 	if (typeof val === "string") {
@@ -51,21 +28,17 @@ let embed: EmbedResult | null = null;
 if (media) {
 	const providerId = media.provider ?? "local";
 	
-	// Get provider using lazy-loaded getMediaProvider (loads from virtual module)
 	const provider = await getMediaProvider(providerId);
 	
 	if (provider) {
-		// Call provider's getEmbed to get render instructions
 		const embedOptions: EmbedOptions = { width, height, format };
 		try {
 			const result = provider.getEmbed(media, embedOptions);
-			// Handle both sync and async getEmbed
 			embed = result instanceof Promise ? await result : result;
 		} catch (error) {
 			console.warn(`Failed to get embed for media ${media.id}:`, error);
 		}
 	} else if (media.src) {
-		// Fallback for direct URLs or missing provider
 		embed = {
 			type: "image",
 			src: media.src,
@@ -74,7 +47,6 @@ if (media) {
 			alt: media.alt,
 		};
 	} else if (providerId === "local") {
-		// Fallback for local provider without runtime
 		const storageKey = (media.meta?.storageKey as string) || media.id;
 		if (storageKey) {
 			const mimeType = media.mimeType || "";
@@ -107,7 +79,6 @@ if (media) {
 	}
 }
 
-// Compute final values
 const finalAlt = alt ?? (embed?.type === "image" ? embed.alt : undefined) ?? media?.alt ?? "";
 ---
 
@@ -158,7 +129,6 @@ const finalAlt = alt ?? (embed?.type === "image" ? embed.alt : undefined) ?? med
 	</audio>
 )}
 
-{/* Custom component embeds (Mux player, etc.) require dynamic import. Placeholder until that lands. */}
 {embed?.type === "component" && (
 	<div class="emdash-media-component" data-package={embed.package} data-export={embed.export}>
 		<p>Custom media component: {embed.package}</p>

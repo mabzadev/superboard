@@ -1,10 +1,3 @@
-/**
- * x402 Payment Enforcer
- *
- * Creates the x402 enforcement interface. Uses the @x402/core SDK
- * to handle the payment protocol negotiation.
- */
-
 import {
 	decodePaymentSignatureHeader,
 	encodePaymentRequiredHeader,
@@ -23,29 +16,8 @@ const DEFAULT_SCHEME = "exact";
 const DEFAULT_MAX_TIMEOUT_SECONDS = 60;
 const DEFAULT_BOT_SCORE_THRESHOLD = 30;
 
-/**
- * Cached, fully-initialized resource server instance.
- * Built once per isolate/process, reused across requests.
- *
- * Deliberately caches only the *ready* server, never an in-flight
- * initialization promise: on Cloudflare Workers (workerd), a request
- * cancelled mid-`initialize()` leaves a shared promise forever pending, and
- * every later request awaiting it hangs until the isolate is evicted
- * (observed as 524s at the 100s wall). Caching the ready instance instead
- * means a cancelled initializer simply leaves the cache empty so the next
- * request rebuilds.
- */
 let _resourceServer: x402ResourceServer | null = null;
 
-/**
- * Get or create the x402ResourceServer singleton.
- *
- * No cross-request promise sharing (see `_resourceServer`'s note). The cost
- * is that concurrent cold-start requests may each build a throwaway server
- * before one wins the assignment — harmless, since construction is cheap and
- * idempotent with no shared mutable state, and it only happens during the
- * brief cold-start window.
- */
 async function getResourceServer(config: X402Config): Promise<x402ResourceServer> {
 	const existing = _resourceServer;
 	if (existing) return existing;
@@ -54,43 +26,29 @@ async function getResourceServer(config: X402Config): Promise<x402ResourceServer
 	const facilitator = new HTTPFacilitatorClient({ url: facilitatorUrl });
 	const server = new x402ResourceServer(facilitator);
 
-	// Register EVM scheme (default)
 	if (config.evm !== false) {
 		try {
 			const evmMod = await import("@x402/evm/exact/server");
 			const evmScheme = new evmMod.ExactEvmScheme();
 			server.register("eip155:*", evmScheme);
-		} catch {
-			// @x402/evm not installed -- skip EVM support
-		}
+		} catch {}
 	}
 
-	// Register SVM scheme (opt-in)
 	if (config.svm) {
 		try {
 			const svmMod = await import("@x402/svm/exact/server");
 			const svmScheme = new svmMod.ExactSvmScheme();
 			server.register("solana:*", svmScheme);
-		} catch {
-			// @x402/svm not installed -- skip Solana support
-		}
+		} catch {}
 	}
 
 	await server.initialize();
 
-	// Publish only once fully initialized.
 	_resourceServer = server;
 	return server;
 }
 
-/**
- * Check if a request is from a bot using Cloudflare Bot Management.
- * Returns true if the request is likely from a bot, false otherwise.
- * When bot management data is unavailable (local dev, non-CF deployment),
- * returns false (treat as human).
- */
 function isBot(request: Request, threshold: number): boolean {
-	// Cloudflare Workers expose cf properties on the request
 	const cf: unknown = Reflect.get(request, "cf");
 	if (cf == null || typeof cf !== "object") return false;
 	const bm: unknown = Reflect.get(cf, "botManagement");
@@ -100,16 +58,11 @@ function isBot(request: Request, threshold: number): boolean {
 	return score < threshold;
 }
 
-/**
- * Create an X402Enforcer for the given configuration.
- * Called once by the middleware, reused across requests.
- */
 export function createEnforcer(config: X402Config): X402Enforcer {
 	const botScoreThreshold = config.botScoreThreshold ?? DEFAULT_BOT_SCORE_THRESHOLD;
 
 	return {
 		async enforce(request: Request, options?: EnforceOptions): Promise<Response | EnforceResult> {
-			// In botOnly mode, skip enforcement for humans
 			if (config.botOnly && !isBot(request, botScoreThreshold)) {
 				return { paid: false, skipped: true, responseHeaders: {} };
 			}
@@ -143,7 +96,6 @@ export function createEnforcer(config: X402Config): X402Enforcer {
 				mimeType: options?.mimeType,
 			};
 
-			// Check for payment signature header
 			const paymentHeader =
 				request.headers.get(PAYMENT_SIGNATURE_HEADER) || request.headers.get("PAYMENT-SIGNATURE");
 
@@ -151,7 +103,6 @@ export function createEnforcer(config: X402Config): X402Enforcer {
 				return make402(server, resourceConfig, resourceInfo, "Payment required");
 			}
 
-			// Payment present -- decode and verify
 			const paymentPayload = decodePaymentSignatureHeader(paymentHeader);
 			const requirements = await server.buildPaymentRequirements(resourceConfig);
 			const matchingReqs = server.findMatchingRequirements(requirements, paymentPayload);
@@ -165,7 +116,6 @@ export function createEnforcer(config: X402Config): X402Enforcer {
 				);
 			}
 
-			// Verify with facilitator
 			const verifyResult = await server.verifyPayment(paymentPayload, matchingReqs);
 
 			if (!verifyResult.isValid) {
@@ -177,7 +127,6 @@ export function createEnforcer(config: X402Config): X402Enforcer {
 				);
 			}
 
-			// Settle
 			const settleResult = await server.settlePayment(paymentPayload, matchingReqs);
 
 			const responseHeaders: Record<string, string> = {};
@@ -208,7 +157,6 @@ export function createEnforcer(config: X402Config): X402Enforcer {
 	};
 }
 
-/** Build and return a 402 Response */
 async function make402(
 	server: x402ResourceServer,
 	resourceConfig: ResourceConfig,
@@ -231,9 +179,6 @@ async function make402(
 	});
 }
 
-/**
- * Normalize a user-friendly price into the format expected by x402 SDK.
- */
 function normalizePrice(
 	price: string | number | { amount: string; asset: string; extra?: Record<string, unknown> },
 ): string | number | { amount: string; asset: string; extra?: Record<string, unknown> } {

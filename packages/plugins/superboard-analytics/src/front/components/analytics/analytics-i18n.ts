@@ -457,7 +457,6 @@ const french: Record<string, string> = {
 	Unknown: "Inconnu",
 	Anonymous: "Anonyme",
 	Never: "Jamais",
-	// Overview (/analytics/home)
 	Overview: "Vue d’ensemble",
 	"Quick start, key metrics and link performance for the selected project.":
 		"Démarrage rapide, indicateurs clés et performances des liens du projet sélectionné.",

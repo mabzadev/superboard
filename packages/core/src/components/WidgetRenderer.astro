@@ -15,7 +15,6 @@ interface Props {
 
 const { widget } = Astro.props;
 
-// Component map for core widgets
 const componentMap = {
 	"core:recent-posts": RecentPosts,
 	"core:categories": Categories,
@@ -24,13 +23,11 @@ const componentMap = {
 	"core:archives": Archives,
 };
 
-// For menu widgets, get menu data
 let menuData = null;
 if (widget.type === "menu" && widget.menuName) {
 	menuData = await getMenu(widget.menuName);
 }
 
-// For component widgets, get the component
 let WidgetComponent = null;
 if (widget.type === "component" && widget.componentId) {
 	WidgetComponent = componentMap[widget.componentId as keyof typeof componentMap];

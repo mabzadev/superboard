@@ -169,9 +169,7 @@ async function resolveFrontPageFromRelease(
 						permissions,
 						dependency_health: dependencyHealth,
 					});
-			} catch {
-				// An activation receipt does not establish the current availability of its Worker.
-			}
+			} catch {}
 		}
 	}
 	if (release && !denied) {

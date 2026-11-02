@@ -1,7 +1,3 @@
-/**
- * Schema/collection/field management APIs (Content Type Builder)
- */
-
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -36,12 +32,9 @@ export interface SchemaCollection {
 	supports: string[];
 	source?: string;
 	urlPattern?: string;
-	/** Published entries require a slug unless this is false. */
 	routable?: boolean;
 	hasSeo: boolean;
-	/** Sidebar entry omitted in the admin; the collection stays reachable by URL */
 	hidden: boolean;
-	/** Explicit sidebar position; absent means the alphabetical fallback */
 	sortOrder?: number;
 	commentsEnabled: boolean;
 	commentsModeration: "all" | "first_time" | "none";
@@ -162,9 +155,6 @@ export interface UpdateFieldInput {
 	sortOrder?: number;
 }
 
-/**
- * Fetch all collections
- */
 export async function fetchCollections(): Promise<SchemaCollection[]> {
 	const response = await apiFetch(`${API_BASE}/schema/collections`);
 	const data = await parseApiResponse<{ items: SchemaCollection[] }>(
@@ -174,9 +164,6 @@ export async function fetchCollections(): Promise<SchemaCollection[]> {
 	return data.items;
 }
 
-/**
- * Fetch a single collection with fields
- */
 export async function fetchCollection(
 	slug: string,
 	includeFields = true,
@@ -198,9 +185,6 @@ export async function fetchCollection(
 	return data.item;
 }
 
-/**
- * Create a collection
- */
 export async function createCollection(input: CreateCollectionInput): Promise<SchemaCollection> {
 	const response = await apiFetch(`${API_BASE}/schema/collections`, {
 		method: "POST",
@@ -214,9 +198,6 @@ export async function createCollection(input: CreateCollectionInput): Promise<Sc
 	return data.item;
 }
 
-/**
- * Update a collection
- */
 export async function updateCollection(
 	slug: string,
 	input: UpdateCollectionInput,
@@ -233,9 +214,6 @@ export async function updateCollection(
 	return data.item;
 }
 
-/**
- * Delete a collection
- */
 export async function deleteCollection(slug: string, force = false): Promise<void> {
 	const url = force
 		? `${API_BASE}/schema/collections/${slug}?force=true`
@@ -244,18 +222,12 @@ export async function deleteCollection(slug: string, force = false): Promise<voi
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete collection`));
 }
 
-/**
- * Fetch fields for a collection
- */
 export async function fetchFields(collectionSlug: string): Promise<SchemaField[]> {
 	const response = await apiFetch(`${API_BASE}/schema/collections/${collectionSlug}/fields`);
 	const data = await parseApiResponse<{ items: SchemaField[] }>(response, "Failed to fetch fields");
 	return data.items;
 }
 
-/**
- * Create a field
- */
 export async function createField(
 	collectionSlug: string,
 	input: CreateFieldInput,
@@ -269,9 +241,6 @@ export async function createField(
 	return data.item;
 }
 
-/**
- * Update a field
- */
 export async function updateField(
 	collectionSlug: string,
 	fieldSlug: string,
@@ -289,9 +258,6 @@ export async function updateField(
 	return data.item;
 }
 
-/**
- * Delete a field
- */
 export async function deleteField(collectionSlug: string, fieldSlug: string): Promise<void> {
 	const response = await apiFetch(
 		`${API_BASE}/schema/collections/${collectionSlug}/fields/${fieldSlug}`,
@@ -300,9 +266,6 @@ export async function deleteField(collectionSlug: string, fieldSlug: string): Pr
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete field`));
 }
 
-/**
- * Reorder fields
- */
 export async function reorderFields(collectionSlug: string, fieldSlugs: string[]): Promise<void> {
 	const response = await apiFetch(
 		`${API_BASE}/schema/collections/${collectionSlug}/fields/reorder`,
@@ -315,13 +278,6 @@ export async function reorderFields(collectionSlug: string, fieldSlugs: string[]
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to reorder fields`));
 }
 
-/**
- * Reorder collections in the admin sidebar.
- *
- * `slugs` is the full desired order — collections left out lose their
- * explicit position and fall back to alphabetical order after the ordered
- * ones.
- */
 export async function reorderCollections(slugs: string[]): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/schema/collections/reorder`, {
 		method: "POST",
@@ -332,19 +288,12 @@ export async function reorderCollections(slugs: string[]): Promise<void> {
 		await throwResponseError(response, i18n._(msg`Failed to reorder content types`));
 }
 
-// ============================================
-// Orphaned Tables
-// ============================================
-
 export interface OrphanedTable {
 	slug: string;
 	tableName: string;
 	rowCount: number;
 }
 
-/**
- * Fetch orphaned content tables
- */
 export async function fetchOrphanedTables(): Promise<OrphanedTable[]> {
 	const response = await apiFetch(`${API_BASE}/schema/orphans`);
 	const data = await parseApiResponse<{ items: OrphanedTable[] }>(
@@ -354,9 +303,6 @@ export async function fetchOrphanedTables(): Promise<OrphanedTable[]> {
 	return data.items;
 }
 
-/**
- * Register an orphaned table as a collection
- */
 export async function registerOrphanedTable(
 	slug: string,
 	options?: {

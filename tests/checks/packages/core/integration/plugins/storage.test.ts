@@ -36,7 +36,6 @@ describe("Plugin Storage Integration", () => {
 				"timestamp",
 			]);
 
-			// Create
 			const event: AnalyticsEvent = {
 				eventType: "pageview",
 				userId: "user123",
@@ -45,11 +44,9 @@ describe("Plugin Storage Integration", () => {
 			};
 			await repo.put("event1", event);
 
-			// Read
 			const fetched = await repo.get("event1");
 			expect(fetched).toEqual(event);
 
-			// Update
 			const updatedEvent = {
 				...event,
 				metadata: { ...event.metadata, duration: 5000 },
@@ -58,7 +55,6 @@ describe("Plugin Storage Integration", () => {
 			const refetched = await repo.get("event1");
 			expect(refetched?.metadata).toHaveProperty("duration", 5000);
 
-			// Delete
 			const deleted = await repo.delete("event1");
 			expect(deleted).toBe(true);
 			expect(await repo.get("event1")).toBeNull();
@@ -71,7 +67,6 @@ describe("Plugin Storage Integration", () => {
 				"timestamp",
 			]);
 
-			// Create events
 			await repo.putMany([
 				{
 					id: "e1",
@@ -102,15 +97,12 @@ describe("Plugin Storage Integration", () => {
 				},
 			]);
 
-			// Query by eventType
 			const pageviews = await repo.query({ where: { eventType: "pageview" } });
 			expect(pageviews.items).toHaveLength(2);
 
-			// Query by userId
 			const user1Events = await repo.query({ where: { userId: "user1" } });
 			expect(user1Events.items).toHaveLength(2);
 
-			// Combined query
 			const user1Pageviews = await repo.query({
 				where: { eventType: "pageview", userId: "user1" },
 			});
@@ -131,7 +123,6 @@ describe("Plugin Storage Integration", () => {
 				},
 				{
 					id: "e2",
-					// Would match "sale:50%" under an unescaped `%` wildcard
 					data: { eventType: "sale:50x", userId: "u1", timestamp: "2024-01-01", metadata: {} },
 				},
 				{
@@ -140,7 +131,6 @@ describe("Plugin Storage Integration", () => {
 				},
 				{
 					id: "e4",
-					// Would match "a_b" under an unescaped `_` wildcard
 					data: { eventType: "axb", userId: "u1", timestamp: "2024-01-01", metadata: {} },
 				},
 			]);
@@ -151,7 +141,6 @@ describe("Plugin Storage Integration", () => {
 			const underscore = await repo.query({ where: { eventType: { startsWith: "a_" } } });
 			expect(underscore.items.map((i) => i.id)).toEqual(["e3"]);
 
-			// Plain prefixes still match as before
 			const plain = await repo.query({ where: { eventType: { startsWith: "sale:" } } });
 			expect(plain.items).toHaveLength(2);
 		});
@@ -167,7 +156,6 @@ describe("Plugin Storage Integration", () => {
 			expect(accessor).toHaveProperty("events");
 			expect(accessor).toHaveProperty("cache");
 
-			// Use events collection
 			await accessor.events.put("e1", {
 				eventType: "test",
 				timestamp: new Date().toISOString(),
@@ -175,7 +163,6 @@ describe("Plugin Storage Integration", () => {
 			const event = await accessor.events.get("e1");
 			expect(event).toBeDefined();
 
-			// Use cache collection
 			await accessor.cache.put("c1", {
 				key: "test-key",
 				value: "test-value",
@@ -194,11 +181,9 @@ describe("Plugin Storage Integration", () => {
 			await accessor.events.put("item1", { eventType: "test" });
 			await accessor.cache.put("item1", { key: "test" });
 
-			// Both should exist independently
 			expect(await accessor.events.get("item1")).toEqual({ eventType: "test" });
 			expect(await accessor.cache.get("item1")).toEqual({ key: "test" });
 
-			// Count should be separate
 			expect(
 				await (accessor.events as PluginStorageRepository<any>).count({
 					eventType: "test",
@@ -219,16 +204,13 @@ describe("Plugin Storage Integration", () => {
 				cache: { indexes: ["key"] },
 			});
 
-			// Add data
 			await accessor.events.put("e1", { eventType: "test" });
 			await accessor.events.put("e2", { eventType: "test2" });
 			await accessor.cache.put("c1", { key: "test" });
 
-			// Delete all
 			const deleted = await deleteAllPluginStorage(db, "cleanup-plugin");
 			expect(deleted).toBe(3);
 
-			// Verify empty
 			expect(await accessor.events.get("e1")).toBeNull();
 			expect(await accessor.events.get("e2")).toBeNull();
 			expect(await accessor.cache.get("c1")).toBeNull();
@@ -278,14 +260,12 @@ describe("Plugin Storage Integration", () => {
 				[],
 			);
 
-			// Create 25 items
 			const items = Array.from({ length: 25 }, (_, i) => ({
 				id: `item-${String(i).padStart(3, "0")}`,
 				data: { index: i },
 			}));
 			await repo.putMany(items);
 
-			// Paginate with limit of 10
 			const pages: Array<Array<{ id: string; data: { index: number } }>> = [];
 			let cursor: string | undefined;
 
@@ -300,7 +280,6 @@ describe("Plugin Storage Integration", () => {
 			expect(pages[1]).toHaveLength(10);
 			expect(pages[2]).toHaveLength(5);
 
-			// Verify all items were retrieved
 			const allItems = pages.flat();
 			expect(allItems).toHaveLength(25);
 			expect(new Set(allItems.map((i) => i.id)).size).toBe(25);
@@ -316,7 +295,6 @@ describe("Plugin Storage Integration", () => {
 				[],
 			);
 
-			// Concurrent puts
 			await Promise.all([
 				repo.put("item1", { value: 1 }),
 				repo.put("item2", { value: 2 }),

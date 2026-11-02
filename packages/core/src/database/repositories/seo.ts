@@ -5,7 +5,6 @@ import { chunks, SQL_BATCH_SIZE } from "../../utils/chunks.js";
 import type { Database } from "../types.js";
 import type { ContentSeo, ContentSeoInput } from "./types.js";
 
-/** Default SEO values for content without an explicit SEO row */
 const SEO_DEFAULTS: ContentSeo = {
 	title: null,
 	description: null,
@@ -14,10 +13,6 @@ const SEO_DEFAULTS: ContentSeo = {
 	noIndex: false,
 };
 
-/**
- * Returns true if the input has at least one explicitly-set SEO field.
- * Used to skip no-op upserts when callers pass `{ seo: {} }`.
- */
 function hasAnyField(input: ContentSeoInput): boolean {
 	return (
 		input.title !== undefined ||
@@ -28,20 +23,9 @@ function hasAnyField(input: ContentSeoInput): boolean {
 	);
 }
 
-/**
- * Repository for SEO metadata stored in `_emdash_seo`.
- *
- * SEO data lives in a separate table keyed by (collection, content_id).
- * Only collections with `has_seo = 1` should use this — callers are
- * responsible for checking the flag before reading/writing.
- */
 export class SeoRepository {
 	constructor(private db: Kysely<Database>) {}
 
-	/**
-	 * Check whether a collection has SEO enabled (`has_seo = 1`).
-	 * Returns `false` if the collection does not exist.
-	 */
 	async isEnabled(collection: string): Promise<boolean> {
 		const row = await this.db
 			.selectFrom("_emdash_collections")
@@ -51,9 +35,6 @@ export class SeoRepository {
 		return row?.has_seo === 1;
 	}
 
-	/**
-	 * Get SEO data for a content item. Returns null defaults if no row exists.
-	 */
 	async get(collection: string, contentId: string): Promise<ContentSeo> {
 		const row = await this.db
 			.selectFrom("_emdash_seo")
@@ -75,20 +56,11 @@ export class SeoRepository {
 		};
 	}
 
-	/**
-	 * Get SEO data for multiple content items.
-	 * Returns a Map keyed by content_id. Items without SEO rows get defaults.
-	 *
-	 * Chunks the `content_id IN (…)` clause so the total bound-parameter count
-	 * per statement (ids + the `collection = ?` filter) stays within Cloudflare
-	 * D1's 100-variable limit regardless of how many content items are passed.
-	 */
 	async getMany(collection: string, contentIds: string[]): Promise<Map<string, ContentSeo>> {
 		const result = new Map<string, ContentSeo>();
 
 		if (contentIds.length === 0) return result;
 
-		// Pre-fill with defaults so every input id has an entry even if no row exists.
 		for (const id of contentIds) {
 			result.set(id, { ...SEO_DEFAULTS });
 		}
@@ -116,23 +88,13 @@ export class SeoRepository {
 		return result;
 	}
 
-	/**
-	 * Upsert SEO data for a content item using INSERT ON CONFLICT DO UPDATE
-	 * for atomicity. Skips no-op writes when input has no fields set.
-	 */
 	async upsert(collection: string, contentId: string, input: ContentSeoInput): Promise<ContentSeo> {
-		// Skip no-op: empty input (e.g., `{ seo: {} }` from form libs)
 		if (!hasAnyField(input)) {
 			return this.get(collection, contentId);
 		}
 
 		const now = new Date().toISOString();
 
-		// Use INSERT ON CONFLICT for atomic upsert — avoids TOCTOU race
-		// where two concurrent requests both see "no row" and both try INSERT.
-		//
-		// On conflict, we use COALESCE(excluded.col, current.col) so that
-		// only explicitly-provided fields overwrite existing values.
 		await sql`
 			INSERT INTO _emdash_seo (
 				collection, content_id,
@@ -158,9 +120,6 @@ export class SeoRepository {
 		return this.get(collection, contentId);
 	}
 
-	/**
-	 * Delete SEO data for a content item.
-	 */
 	async delete(collection: string, contentId: string): Promise<void> {
 		await this.db
 			.deleteFrom("_emdash_seo")
@@ -170,14 +129,9 @@ export class SeoRepository {
 		invalidateCollectionCache(collection);
 	}
 
-	/**
-	 * Copy SEO data from one content item to another.
-	 * Used by duplicate. Clears canonical (it pointed to the original).
-	 */
 	async copyForDuplicate(collection: string, sourceId: string, targetId: string): Promise<void> {
 		const source = await this.get(collection, sourceId);
 
-		// Only write if there's actual SEO data worth copying
 		if (
 			source.title !== null ||
 			source.description !== null ||
@@ -188,7 +142,7 @@ export class SeoRepository {
 				title: source.title,
 				description: source.description,
 				image: source.image,
-				canonical: null, // Don't copy canonical — it pointed to the original
+				canonical: null,
 				noIndex: source.noIndex,
 			});
 		}

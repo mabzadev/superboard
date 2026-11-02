@@ -1,18 +1,3 @@
-/**
- * Menu repository
- *
- * Owns every SQL touch for `_emdash_menus` and `_emdash_menu_items`, plus the
- * row→entity mapping. Matches the architecture used by every other resource
- * (content, taxonomies, redirects, comments, media): handlers stay thin and
- * orchestrate; the repository is the single place where snake_case DB columns
- * become camelCase entities (and vice versa).
- *
- * i18n: menus are per-locale. `(name, locale)` is unique. Translations of the
- * same menu share a `translation_group` ULID. Menu item `reference_id` stores
- * the referenced content's translation_group (not a specific row id) so a
- * single menu item survives content translations.
- */
-
 import type { Kysely, Selectable } from "kysely";
 import { ulid } from "ulidx";
 
@@ -20,23 +5,12 @@ import { invalidateMenuObjectCache } from "../../object-cache/index.js";
 import { withTransaction } from "../transaction.js";
 import type { Database, MenuItemTable, MenuTable } from "../types.js";
 
-/**
- * Thrown from inside a repository transaction when the menu the caller
- * resolved earlier has since been deleted. Handlers translate this to a
- * `NOT_FOUND` API response. Necessary because D1 disables FK enforcement
- * (so `ON DELETE CASCADE` won't fire), and an unchecked `setItems` would
- * happily insert items whose `menu_id` no longer exists, leaving orphans.
- */
 export class MenuGoneError extends Error {
 	constructor(public readonly menuId: string) {
 		super(`Menu ${menuId} was deleted while being modified`);
 		this.name = "MenuGoneError";
 	}
 }
-
-// ---------------------------------------------------------------------------
-// Entity shapes (camelCase — what the API returns)
-// ---------------------------------------------------------------------------
 
 export interface Menu {
 	id: string;
@@ -82,19 +56,10 @@ export interface MenuTranslation {
 	updatedAt: string;
 }
 
-// ---------------------------------------------------------------------------
-// Input shapes
-// ---------------------------------------------------------------------------
-
 export interface CreateMenuInput {
 	name: string;
 	label: string;
 	locale?: string;
-	/**
-	 * When set, the new menu joins the source menu's translation_group and
-	 * inherits its items (cloned, with new ULIDs but the same translation_group
-	 * per item so nav entries stay logically identified across translations).
-	 */
 	translationOf?: string;
 }
 
@@ -125,13 +90,6 @@ export interface UpdateMenuItemInput {
 	sortOrder?: number;
 }
 
-/**
- * Item shape used by `setItems()`. Items are placed by array order. Children
- * point at parents via `parentIndex` (must reference an earlier index, so the
- * insert can resolve parents before children). The validation of that ordering
- * lives at the API boundary (`handleMenuSetItems`) so REST/MCP callers receive
- * the same error shape.
- */
 export interface SetMenuItem {
 	label: string;
 	type: "custom" | "page" | "post" | "taxonomy" | "collection";
@@ -149,10 +107,6 @@ export interface ReorderItem {
 	parentId: string | null;
 	sortOrder: number;
 }
-
-// ---------------------------------------------------------------------------
-// Row → entity mappers
-// ---------------------------------------------------------------------------
 
 function rowToMenu(row: Selectable<MenuTable>): Menu {
 	return {
@@ -186,22 +140,10 @@ function rowToMenuItem(row: Selectable<MenuItemTable>): MenuItem {
 	};
 }
 
-// ---------------------------------------------------------------------------
-// Repository
-// ---------------------------------------------------------------------------
-
 export class MenuRepository {
 	constructor(private db: Kysely<Database>) {}
 
-	// --- Menus -------------------------------------------------------------
-
-	/**
-	 * List menus with their item counts. When `locale` is omitted, returns
-	 * every locale variant as its own row (consistent with the admin listing
-	 * model: each translation is its own menu for editing purposes).
-	 */
 	async findMany(options: { locale?: string } = {}): Promise<MenuListItem[]> {
-		// Single LEFT JOIN + GROUP BY for the per-menu count. Avoids N+1.
 		let query = this.db
 			.selectFrom("_emdash_menus as m")
 			.leftJoin("_emdash_menu_items as i", "i.menu_id", "m.id")
@@ -229,7 +171,6 @@ export class MenuRepository {
 		const rows = await query.execute();
 
 		return rows.map((row) => ({
-			// Postgres returns count() as `string`; SQLite as `number`. Normalize.
 			itemCount: typeof row.itemCount === "string" ? Number(row.itemCount) : row.itemCount,
 			...rowToMenu({
 				id: row.id,
@@ -243,11 +184,6 @@ export class MenuRepository {
 		}));
 	}
 
-	/**
-	 * Find every menu row matching `name` (one per locale on multi-locale
-	 * installs). Callers use this both to look up a single menu (when locale
-	 * is supplied) and to detect AMBIGUOUS_LOCALE situations (`length > 1`).
-	 */
 	async findByName(name: string, options: { locale?: string } = {}): Promise<Menu[]> {
 		let query = this.db
 			.selectFrom("_emdash_menus")
@@ -268,7 +204,6 @@ export class MenuRepository {
 		return row ? rowToMenu(row) : null;
 	}
 
-	/** Fetch a menu plus its items, ordered by `sort_order`. */
 	async findWithItems(menuId: string): Promise<MenuWithItems | null> {
 		const menu = await this.findById(menuId);
 		if (!menu) return null;
@@ -286,10 +221,6 @@ export class MenuRepository {
 		return rows.map(rowToMenuItem);
 	}
 
-	/**
-	 * Returns true when a menu already exists for the given `(name, locale)`.
-	 * Used by the handler to surface a CONFLICT before attempting the insert.
-	 */
 	async existsByNameAndLocale(name: string, locale: string): Promise<boolean> {
 		const row = await this.db
 			.selectFrom("_emdash_menus")
@@ -300,15 +231,6 @@ export class MenuRepository {
 		return row !== undefined;
 	}
 
-	/**
-	 * Create a menu. When `translationOf` is supplied the new menu joins the
-	 * source menu's translation_group and clones its items (each clone gets a
-	 * fresh ULID, but inherits the source item's `translation_group` so a
-	 * given nav entry resolves to "the same item" across menu translations).
-	 *
-	 * If the source menu is missing this throws — callers should validate
-	 * existence via `findById` first to return a clean NOT_FOUND.
-	 */
 	async create(input: CreateMenuInput): Promise<Menu> {
 		const id = ulid();
 
@@ -341,7 +263,6 @@ export class MenuRepository {
 					.orderBy("sort_order", "asc")
 					.execute();
 				if (sourceItems.length > 0) {
-					// old-id → new-id map so parent pointers land on the clones.
 					const idMap = new Map<string, string>();
 					for (const item of sourceItems) idMap.set(item.id, ulid());
 
@@ -392,14 +313,6 @@ export class MenuRepository {
 		return (await this.findById(id))!;
 	}
 
-	/**
-	 * Delete a menu. Items are deleted explicitly to avoid relying on the
-	 * `ON DELETE CASCADE` FK declared in migration 005, which migration 036
-	 * removed: that FK is what made #1021 destructive on D1 (the cascade
-	 * fired when the i18n migration dropped `_emdash_menus`), so dropping
-	 * the FK was the fix. The explicit delete keeps the runtime working
-	 * the same way before and after the migration.
-	 */
 	async delete(id: string): Promise<boolean> {
 		const existing = await this.findById(id);
 		if (!existing) return false;
@@ -412,12 +325,6 @@ export class MenuRepository {
 		return true;
 	}
 
-	/**
-	 * List every translation of a menu (by id or translation_group).
-	 *
-	 * Returns `null` when neither the id nor the group resolves to a menu,
-	 * mapped to NOT_FOUND by the handler.
-	 */
 	async listTranslations(
 		idOrGroup: string,
 	): Promise<{ translationGroup: string | null; translations: MenuTranslation[] } | null> {
@@ -448,17 +355,6 @@ export class MenuRepository {
 		};
 	}
 
-	// --- Items -------------------------------------------------------------
-
-	/**
-	 * Insert a menu item. `locale` is propagated from the parent menu so
-	 * `_emdash_menu_items.locale` mirrors the menu's locale (queries can scope
-	 * by locale without a join).
-	 *
-	 * When `sortOrder` is omitted, the next position within the same parent
-	 * scope is used (max + 1). The fresh `translation_group` defaults to the
-	 * item's own id, matching the migration 036 backfill.
-	 */
 	async createItem(menuId: string, locale: string, input: CreateMenuItemInput): Promise<MenuItem> {
 		let sortOrder = input.sortOrder ?? 0;
 		if (input.sortOrder === undefined) {
@@ -503,11 +399,6 @@ export class MenuRepository {
 		return rowToMenuItem(row);
 	}
 
-	/**
-	 * Update a menu item. Caller must ensure the item belongs to the menu —
-	 * the `where("menu_id", "=", menuId)` guard prevents cross-menu writes.
-	 * Returns `null` if the item is not found within the menu.
-	 */
 	async updateItem(
 		menuId: string,
 		itemId: string,
@@ -547,7 +438,6 @@ export class MenuRepository {
 		return rowToMenuItem(row);
 	}
 
-	/** Delete an item scoped to its menu. Returns false if nothing was deleted. */
 	async deleteItem(menuId: string, itemId: string): Promise<boolean> {
 		const result = await this.db
 			.deleteFrom("_emdash_menu_items")
@@ -559,27 +449,12 @@ export class MenuRepository {
 		return deleted;
 	}
 
-	/**
-	 * Atomic replace: delete every existing item and re-insert in order.
-	 * `parentIndex` (validated by the caller) is resolved against the live
-	 * insert order so children always reference real parent ids.
-	 *
-	 * Returns the count of inserted items (matches the existing handler API).
-	 */
 	async setItems(
 		menuId: string,
 		locale: string,
 		items: SetMenuItem[],
 	): Promise<{ itemCount: number }> {
 		await withTransaction(this.db, async (trx) => {
-			// Re-check menu existence INSIDE the transaction. The handler
-			// resolved by (name, locale) before this call; if a concurrent
-			// menu_delete landed in between, inserting new items would
-			// silently orphan them. The FK from migration 005 was removed
-			// by migration 036 (#1021) and not restored, so nothing at the
-			// schema level stops the orphans. Throw a MenuGoneError so the
-			// rollback fires and the handler returns NOT_FOUND with the
-			// original menu name in the message.
 			const stillThere = await trx
 				.selectFrom("_emdash_menus")
 				.select("id")
@@ -628,10 +503,6 @@ export class MenuRepository {
 		return { itemCount: items.length };
 	}
 
-	/**
-	 * Batch reorder items. Each entry is applied scoped to the menu so a
-	 * malicious payload cannot move foreign items into this menu's siblings.
-	 */
 	async reorderItems(menuId: string, items: ReorderItem[]): Promise<MenuItem[]> {
 		invalidateMenuObjectCache();
 		return withTransaction(this.db, async (trx) => {

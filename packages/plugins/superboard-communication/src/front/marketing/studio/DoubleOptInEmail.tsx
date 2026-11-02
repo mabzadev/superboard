@@ -17,7 +17,6 @@ const copyFields: Array<[keyof DoubleOptInCopy, string]> = [
 	["button_label", "Button label"],
 ];
 
-/** Collapsed by default: most projects keep the built-in confirmation email. */
 export function DoubleOptInEmail({ project }: { project: string }) {
 	const { t, locale } = useStudioI18n();
 	const [settings, setSettings] = useState<DoubleOptInSettings | null>(null);

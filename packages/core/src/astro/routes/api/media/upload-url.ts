@@ -1,12 +1,3 @@
-/**
- * Media upload URL endpoint
- *
- * POST /_emdash/api/media/upload-url
- *
- * Returns a signed URL for direct upload to storage.
- * Creates a pending media record that must be confirmed after upload.
- */
-
 import * as path from "node:path";
 
 import type { APIRoute } from "astro";
@@ -31,7 +22,6 @@ interface UploadUrlResponse {
 	expiresAt: string;
 }
 
-/** Response when content already exists (deduplication) */
 interface ExistingMediaResponse {
 	existing: true;
 	mediaId: string;
@@ -43,9 +33,6 @@ function isUnsupportedSignedUpload(error: unknown): boolean {
 	return error instanceof Error && "code" in error && error.code === "NOT_SUPPORTED";
 }
 
-/**
- * Get a signed upload URL for direct-to-storage upload
- */
 export const POST: APIRoute = async ({ request, locals }) => {
 	const { emdash, user } = locals;
 
@@ -77,7 +64,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		if (isParseError(body)) return body;
 		const normalizedContentType = normalizeMime(body.contentType);
 
-		// Validate content type (field-aware widening)
 		const fieldAllowlist = body.fieldId
 			? await resolveFieldAllowlist(emdash.db, body.fieldId)
 			: null;
@@ -89,7 +75,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 		const repo = new MediaRepository(emdash.db);
 
-		// Check for existing content with same hash (deduplication)
 		if (body.contentHash && body.size > 0) {
 			const existing = await repo.findByContentHash(body.contentHash);
 			if (existing && existing.mimeType === normalizedContentType && existing.size === body.size) {
@@ -103,7 +88,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			}
 		}
 
-		// Generate unique storage key
 		const id = ulid();
 		const ext = path.extname(body.filename) || "";
 		const storageKey = `${id}${ext}`;

@@ -1,9 +1,3 @@
-/**
- * Search suggestions endpoint - Autocomplete
- *
- * GET /_emdash/api/search/suggest?q=hel&limit=5
- */
-
 import type { APIRoute } from "astro";
 
 import { apiError, apiSuccess, handleError } from "#api/error.js";
@@ -13,14 +7,6 @@ import { getSuggestions } from "#search/index.js";
 
 export const prerender = false;
 
-/**
- * Get search suggestions for autocomplete
- *
- * Query parameters:
- * - q: Partial search query (required)
- * - collections: Comma-separated list of collection slugs (optional)
- * - limit: Maximum suggestions (optional, defaults to 5)
- */
 export const GET: APIRoute = async ({ url, locals }) => {
 	const { emdash } = locals;
 
@@ -36,7 +22,6 @@ export const GET: APIRoute = async ({ url, locals }) => {
 		: undefined;
 
 	try {
-		// Verify FTS indexes are healthy on first use. See search/index.ts.
 		await emdash.ensureSearchHealthy?.();
 
 		const suggestions = await getSuggestions(emdash.db, query.q, {

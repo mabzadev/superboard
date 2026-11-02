@@ -1,9 +1,6 @@
-// Import the SuperBoardDeviceDetails module
 import SuperBoardDeviceDetails from "./superboard_device_details.js";
 
-// Define the SuperBoardContext class
 class SuperBoardContext {
-	// Static properties to store API key and SuperBoard ID
 	/**
 	 * The API key used for authentication.
 	 * @type {string|null}
@@ -47,5 +44,4 @@ class SuperBoardContext {
 	static USER_ATTRIBUTES = null;
 }
 
-// Export the SuperBoardContext class
 export default SuperBoardContext;

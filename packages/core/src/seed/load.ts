@@ -1,11 +1,3 @@
-/**
- * Seed file loading
- *
- * Imports seed data from the virtual module, which embeds the user's seed file
- * (or the default seed) at Vite build time. This avoids runtime filesystem access,
- * which doesn't work in workerd/miniflare where process.cwd() returns "/".
- */
-
 import type { SeedFile } from "./types.js";
 
 interface SeedModule {
@@ -18,17 +10,11 @@ async function getSeedModule(): Promise<SeedModule> {
 	return import("virtual:emdash/seed") as Promise<SeedModule>;
 }
 
-/**
- * Load the seed file (user seed or default).
- */
 export async function loadSeed(): Promise<SeedFile> {
 	const { seed } = await getSeedModule();
 	return seed;
 }
 
-/**
- * Load the user's seed file, or null if none exists.
- */
 export async function loadUserSeed(): Promise<SeedFile | null> {
 	const { userSeed } = await getSeedModule();
 	return userSeed ?? null;

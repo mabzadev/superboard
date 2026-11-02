@@ -1,16 +1,3 @@
-/**
- * Marketplace Test Plugin for EmDash CMS — sandbox entry.
- *
- * Self-contained plugin for end-to-end testing of the registry publish
- * → audit → install pipeline. Exercises the three primitives a real
- * sandboxed plugin uses: a hook (`content:beforeSave`), routes
- * (`ping`, `events`), and a storage collection (`events`).
- *
- * Identity (id, version), the trust contract (capabilities,
- * allowedHosts, storage), and the rest of the metadata live in
- * `emdash-plugin.jsonc`. This file holds runtime behaviour only.
- */
-
 import type { SandboxedPlugin } from "emdash/plugin";
 
 export default {
@@ -22,8 +9,6 @@ export default {
 					isNew: event.isNew,
 				});
 
-				// Record execution in storage so the registry's install
-				// audit can verify the hook actually ran post-install.
 				await ctx.storage.events.put(`hook-${Date.now()}`, {
 					timestamp: new Date().toISOString(),
 					type: "content:beforeSave",

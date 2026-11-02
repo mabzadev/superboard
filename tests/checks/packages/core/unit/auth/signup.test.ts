@@ -15,7 +15,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
-// Regex patterns for token validation
 const TOKEN_PARAM_REGEX = /token=/;
 const TOKEN_EXTRACT_REGEX = /token=([a-zA-Z0-9_-]+)/;
 
@@ -39,7 +38,6 @@ describe("Self-Signup", () => {
 		});
 
 		it("should return null for email with disabled domain", async () => {
-			// Create a disabled domain
 			await adapter.createAllowedDomain("disabled.com", Role.AUTHOR);
 			await adapter.updateAllowedDomain("disabled.com", false);
 
@@ -134,7 +132,6 @@ describe("Self-Signup", () => {
 		it("should fail silently if user already exists (no email sent)", async () => {
 			await adapter.createAllowedDomain("allowed.com", Role.AUTHOR);
 
-			// Create existing user
 			await adapter.createUser({
 				email: "existing@allowed.com",
 				name: "Existing User",
@@ -166,7 +163,6 @@ describe("Self-Signup", () => {
 				"newuser@allowed.com",
 			);
 
-			// The email should contain a verification link with a token
 			expect(sentEmails[0]!.text).toMatch(TOKEN_PARAM_REGEX);
 		});
 	});
@@ -178,7 +174,6 @@ describe("Self-Signup", () => {
 		beforeEach(() => {
 			capturedToken = null;
 			mockEmailSend = vi.fn(async (email: EmailMessage) => {
-				// Extract token from email text
 				const match = email.text.match(TOKEN_EXTRACT_REGEX);
 				capturedToken = match ? (match[1] ?? null) : null;
 			});
@@ -206,8 +201,7 @@ describe("Self-Signup", () => {
 		});
 
 		it("should throw invalid_token for non-existent token", async () => {
-			// Use a properly formatted but non-existent token (base64url encoded)
-			const fakeToken = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo"; // base64url of "abcdefghijklmnopqrstuvwxyz"
+			const fakeToken = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo";
 
 			try {
 				await validateSignupToken(adapter, fakeToken);
@@ -233,17 +227,8 @@ describe("Self-Signup", () => {
 
 			expect(capturedToken).not.toBeNull();
 
-			// Manually expire the token by updating it in the database
-			// We need to find the token hash and update its expiry
-			// Since we can't easily do this, we'll test the error path differently
-			// by creating a token directly with an expired date
-
-			// First, validate and get the hash
 			const result = await validateSignupToken(adapter, capturedToken!);
 			expect(result.email).toBe("newuser@allowed.com");
-
-			// For expiry testing, we'd need direct DB access to set expiry in the past
-			// This is tested implicitly by the token creation with short expiry
 		});
 	});
 
@@ -295,13 +280,11 @@ describe("Self-Signup", () => {
 				"newuser@allowed.com",
 			);
 
-			// Simulate race condition - create user before completing signup
 			await adapter.createUser({
 				email: "newuser@allowed.com",
 				name: "Created During Race",
 			});
 
-			// Try to complete signup - should fail with user_exists
 			try {
 				await completeSignup(adapter, capturedToken!, { name: "New User" });
 				expect.fail("Should have thrown");
@@ -312,8 +295,7 @@ describe("Self-Signup", () => {
 		});
 
 		it("should throw invalid_token for non-existent token", async () => {
-			// Use a properly formatted but non-existent token (base64url encoded)
-			const fakeToken = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo"; // base64url of "abcdefghijklmnopqrstuvwxyz"
+			const fakeToken = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo";
 
 			try {
 				await completeSignup(adapter, fakeToken, { name: "User" });
@@ -337,10 +319,8 @@ describe("Self-Signup", () => {
 				"newuser@allowed.com",
 			);
 
-			// First completion should succeed
 			await completeSignup(adapter, capturedToken!, { name: "New User" });
 
-			// Second attempt should fail - token is deleted
 			await expect(
 				completeSignup(adapter, capturedToken!, { name: "Another User" }),
 			).rejects.toThrow(SignupError);
@@ -399,15 +379,12 @@ describe("Self-Signup", () => {
 		});
 
 		it("should complete full signup flow for allowed domain", async () => {
-			// 1. Admin adds allowed domain
 			await adapter.createAllowedDomain("company.com", Role.EDITOR);
 
-			// 2. Check if signup is allowed
 			const check = await canSignup(adapter, "employee@company.com");
 			expect(check?.allowed).toBe(true);
 			expect(check?.role).toBe(Role.EDITOR);
 
-			// 3. Request signup
 			await requestSignup(
 				{
 					baseUrl: "https://example.com",
@@ -419,12 +396,10 @@ describe("Self-Signup", () => {
 			);
 			expect(capturedToken).not.toBeNull();
 
-			// 4. Validate token (simulating email link click)
 			const validation = await validateSignupToken(adapter, capturedToken!);
 			expect(validation.email).toBe("employee@company.com");
 			expect(validation.role).toBe(Role.EDITOR);
 
-			// 5. Complete signup
 			const user = await completeSignup(adapter, capturedToken!, {
 				name: "New Employee",
 			});
@@ -434,22 +409,18 @@ describe("Self-Signup", () => {
 			expect(user.role).toBe(Role.EDITOR);
 			expect(user.emailVerified).toBe(true);
 
-			// 6. Verify user exists in database
 			const fetchedUser = await adapter.getUserByEmail("employee@company.com");
 			expect(fetchedUser).not.toBeNull();
 			expect(fetchedUser?.id).toBe(user.id);
 		});
 
 		it("should prevent signup for disabled domain", async () => {
-			// Add domain then disable it
 			await adapter.createAllowedDomain("company.com", Role.AUTHOR);
 			await adapter.updateAllowedDomain("company.com", false);
 
-			// Check - should not be allowed
 			const check = await canSignup(adapter, "user@company.com");
 			expect(check).toBeNull();
 
-			// Request signup - should fail silently (no email)
 			await requestSignup(
 				{
 					baseUrl: "https://example.com",

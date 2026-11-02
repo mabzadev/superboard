@@ -1,10 +1,3 @@
-/**
- * Content-entry reference children endpoint (parent side)
- *
- * GET  /_emdash/api/content/:collection/:id/references/:relation/children
- * POST /_emdash/api/content/:collection/:id/references/:relation/children
- */
-
 import { hasPermission } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 
@@ -58,14 +51,9 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 
 	const dbErr = requireDb(emdash?.db);
 	if (dbErr) return dbErr;
-	// Gate on the base edit capability BEFORE the existence lookup. Resolving the
-	// entry first would let a user with no edit permission distinguish real ids
-	// (403) from missing ids (404) — an existence oracle. Mirrors the taxonomy
-	// edge POST, which checks `content:edit_own` before fetching the entry.
 	const denied = requirePerm(user, "content:edit_own");
 	if (denied) return denied;
 
-	// Resolve the parent entry to gate on its author (ownership-aware write).
 	const parent = await new ContentRepository(emdash.db).findByIdOrSlug(collection, id);
 	if (!parent) return apiError("NOT_FOUND", "Content not found", 404);
 

@@ -1,25 +1,3 @@
-/**
- * Preview middleware for Durable Object-backed preview databases.
- *
- * This middleware intercepts requests to a preview service, validates
- * signed preview URLs, creates/resolves DO sessions, populates snapshots,
- * and overrides the request-context DB so all queries route to the
- * isolated DO database.
- *
- * Designed to be registered as Astro middleware in a preview Worker.
- *
- * @example
- * ```ts
- * // src/middleware.ts (in the preview Worker)
- * import { createPreviewMiddleware } from "@emdash-cms/cloudflare/db/do";
- *
- * export const onRequest = createPreviewMiddleware({
- *   binding: "PREVIEW_DB",
- *   secret: import.meta.env.PREVIEW_SECRET,
- * });
- * ```
- */
-
 import type { MiddlewareHandler } from "astro";
 import { env } from "cloudflare:workers";
 import { runWithContext } from "emdash/request-context";
@@ -33,22 +11,13 @@ import { isBlockedInPreview } from "./do-preview-routes.js";
 import { verifyPreviewSignature } from "./do-preview-sign.js";
 import { renderPreviewToolbar } from "./preview-toolbar.js";
 
-/** Configuration for the preview middleware */
 export interface PreviewMiddlewareConfig {
-	/** Durable Object binding name (from wrangler.jsonc) */
 	binding: string;
-	/** HMAC secret for validating signed preview URLs */
 	secret: string;
-	/** TTL for preview data in seconds (default: 3600 = 1 hour) */
 	ttl?: number;
-	/** Cookie name for session token (default: "emdash_preview") */
 	cookieName?: string;
 }
 
-/**
- * Simple loading interstitial HTML.
- * Auto-reloads after a short delay to check if the snapshot is ready.
- */
 function loadingPage(): string {
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -71,21 +40,12 @@ body { font-family: system-ui, sans-serif; display: flex; align-items: center; j
 </html>`;
 }
 
-/**
- * Create an Astro-compatible preview middleware.
- *
- * Returns a middleware function that can be used in `defineMiddleware()`
- * or composed via `sequence()`.
- */
 export function createPreviewMiddleware(config: PreviewMiddlewareConfig): MiddlewareHandler {
 	const { binding, secret, ttl = 3600, cookieName = "emdash_preview" } = config;
 
 	return async function previewMiddleware(context, next) {
 		const { url, cookies } = context;
 
-		// --- 0a. Reload endpoint ---
-		// The toolbar POSTs here to clear the httpOnly session cookie and
-		// redirect back with the original signed params for a fresh snapshot.
 		if (url.pathname === "/_preview/reload") {
 			cookies.delete(cookieName, { path: "/" });
 			let redirectTo = "/";
@@ -103,9 +63,6 @@ export function createPreviewMiddleware(config: PreviewMiddlewareConfig): Middle
 			return context.redirect(redirectTo);
 		}
 
-		// --- 0b. Route gating ---
-		// Block admin UI, auth, and setup routes. These depend on state
-		// (users, sessions, credentials) that doesn't exist in preview snapshots.
 		if (isBlockedInPreview(url.pathname)) {
 			return Response.json(
 				{ error: { code: "PREVIEW_MODE", message: "Not available in preview mode" } },
@@ -113,13 +70,11 @@ export function createPreviewMiddleware(config: PreviewMiddlewareConfig): Middle
 			);
 		}
 
-		// --- 1. Resolve session token ---
 		let sessionToken: string | undefined = cookies.get(cookieName)?.value;
 		let sourceUrl: string | null = null;
 		let snapshotSignature: string | null = null;
 
 		if (!sessionToken) {
-			// No cookie — must have a signed URL
 			const source = url.searchParams.get("source");
 			const exp = url.searchParams.get("exp");
 			const sig = url.searchParams.get("sig");
@@ -138,10 +93,8 @@ export function createPreviewMiddleware(config: PreviewMiddlewareConfig): Middle
 				return new Response("Invalid preview signature", { status: 403 });
 			}
 
-			// Generate session
 			sessionToken = ulid();
 			sourceUrl = source;
-			// Build the signature header value for snapshot fetch: "source:exp:sig"
 			snapshotSignature = `${source}:${exp}:${sig}`;
 
 			cookies.set(cookieName, sessionToken, {
@@ -150,8 +103,6 @@ export function createPreviewMiddleware(config: PreviewMiddlewareConfig): Middle
 				path: "/",
 				maxAge: ttl,
 			});
-			// Store the signed params so the toolbar can trigger a reload.
-			// Not httpOnly — the toolbar script needs to read them.
 			cookies.set(`${cookieName}_params`, `${source}\n${exp}\n${sig}`, {
 				sameSite: "lax",
 				path: "/",
@@ -159,7 +110,6 @@ export function createPreviewMiddleware(config: PreviewMiddlewareConfig): Middle
 			});
 		}
 
-		// --- 2. Get DO stub ---
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Worker binding from untyped env
 		const ns = (env as Record<string, unknown>)[binding];
 		if (!ns) {
@@ -171,29 +121,21 @@ export function createPreviewMiddleware(config: PreviewMiddlewareConfig): Middle
 		const doId = namespace.idFromName(sessionToken);
 		const stub = namespace.get(doId);
 
-		// --- 3. Populate from snapshot if needed ---
 		let snapshotGeneratedAt: string | undefined;
 		let snapshotError: string | undefined;
 
 		if (!sourceUrl) {
-			// Returning session — get metadata from the DO
 			try {
 				const meta = await stub.getSnapshotMeta();
 				snapshotGeneratedAt = meta?.generatedAt;
-			} catch {
-				// DO may have expired or been cleaned up
-			}
+			} catch {}
 		}
 
 		if (sourceUrl && snapshotSignature) {
 			try {
-				// Pass the full signature header value (source:exp:sig) so the DO
-				// can send it as X-Preview-Signature when fetching the snapshot.
 				const result = await stub.populateFromSnapshot(sourceUrl, snapshotSignature, { ttl });
 				snapshotGeneratedAt = result.generatedAt;
 
-				// Snapshot loaded — redirect to strip signed params from the URL.
-				// Astro's cookie buffer flushes on context.redirect().
 				const cleanUrl = new URL(url);
 				cleanUrl.searchParams.delete("source");
 				cleanUrl.searchParams.delete("exp");
@@ -204,8 +146,6 @@ export function createPreviewMiddleware(config: PreviewMiddlewareConfig): Middle
 				console.error("Failed to populate preview snapshot:", message);
 				snapshotError = message;
 
-				// If this is the initial load (no session yet), show a loading page.
-				// If we already have a session, continue with stale data and show the error in the toolbar.
 				if (!cookies.get(cookieName)?.value) {
 					return new Response(loadingPage(), {
 						status: 503,
@@ -218,13 +158,11 @@ export function createPreviewMiddleware(config: PreviewMiddlewareConfig): Middle
 			}
 		}
 
-		// --- 4. Create Kysely dialect pointing at the DO ---
 		const getStub = (): PreviewDBStub => {
 			return stub;
 		};
 		const dialect = new PreviewDODialect({ getStub });
 
-		// --- 5. Create Kysely instance and override request-context DB ---
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const previewDb = new Kysely<any>({ dialect });
 
@@ -245,10 +183,6 @@ export function createPreviewMiddleware(config: PreviewMiddlewareConfig): Middle
 	};
 }
 
-/**
- * Inject preview toolbar HTML into an HTML response.
- * Returns the original response unchanged for non-HTML responses.
- */
 async function injectPreviewToolbar(
 	response: Response,
 	config: { generatedAt?: string; source?: string; error?: string },

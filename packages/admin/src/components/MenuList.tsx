@@ -1,9 +1,3 @@
-/**
- * Menu List component
- *
- * Displays all menus with ability to create, edit, and delete.
- */
-
 import { Button, Dialog, Input, Toast } from "@cloudflare/kumo";
 import { plural } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";

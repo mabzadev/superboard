@@ -1,18 +1,3 @@
-/**
- * Login Page - Standalone login page for the admin
- *
- * This component is NOT wrapped in the admin Shell.
- * It's a standalone page for authentication.
- *
- * Supports:
- * - Passkey authentication (always available)
- * - Pluggable auth providers (AT Protocol, GitHub, Google, etc.) when configured
- * - Magic link (email) when configured
- *
- * When external auth (e.g., Cloudflare Access) is configured, this page
- * redirects to the admin dashboard since authentication is handled externally.
- */
-
 import { Button, Input, Loader, Select } from "@cloudflare/kumo";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
@@ -28,20 +13,11 @@ import { useLocale } from "../locales/useLocale.js";
 import { PasskeyLogin } from "./auth/PasskeyLogin";
 import { BrandLogo } from "./Logo.js";
 
-// ============================================================================
-// Types
-// ============================================================================
-
 interface LoginPageProps {
-	/** URL to redirect to after successful login */
 	redirectUrl?: string;
 }
 
 type LoginMethod = "passkey" | "magic-link";
-
-// ============================================================================
-// Components
-// ============================================================================
 
 interface MagicLinkFormProps {
 	onBack: () => void;
@@ -157,12 +133,7 @@ function MagicLinkForm({ onBack }: MagicLinkFormProps) {
 	);
 }
 
-// ============================================================================
-// Main Component
-// ============================================================================
-
 export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
-	// Defense-in-depth: sanitize even if the caller already validated
 	const safeRedirectUrl = sanitizeRedirectUrl(redirectUrl);
 	const { t } = useLingui();
 	const { locale, setLocale } = useLocale();
@@ -171,23 +142,19 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 	const [urlError, setUrlError] = React.useState<string | null>(null);
 	const [activeProvider, setActiveProvider] = React.useState<string | null>(null);
 
-	// Auth provider components from virtual module (via context)
 	const authProviderList = useAuthProviderList();
 
-	// Fetch auth mode from public endpoint (works without authentication)
 	const { data: authInfo, isLoading: authModeLoading } = useQuery({
 		queryKey: ["authMode"],
 		queryFn: fetchAuthMode,
 	});
 
-	// Redirect to admin when using external auth (authentication is handled externally)
 	React.useEffect(() => {
 		if (authInfo?.authMode && authInfo.authMode !== "passkey") {
 			window.location.href = safeRedirectUrl;
 		}
 	}, [authInfo, safeRedirectUrl]);
 
-	// Check for error in URL (from OAuth/provider redirect)
 	React.useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
 		const error = params.get("error");
@@ -195,20 +162,16 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 
 		if (error) {
 			setUrlError(message || t`Authentication error: ${error}`);
-			// Clean up URL
 			window.history.replaceState({}, "", window.location.pathname);
 		}
 	}, []);
 
 	const handleSuccess = () => {
-		// Redirect after successful login
 		window.location.href = safeRedirectUrl;
 	};
 
-	// All providers with a LoginButton show in the button grid
 	const buttonProviders = authProviderList.filter((p) => p.LoginButton);
 
-	// Show loading state while checking auth mode
 	if (authModeLoading || (authInfo?.authMode && authInfo.authMode !== "passkey")) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-kumo-base p-4">
@@ -223,7 +186,6 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-kumo-base p-4">
 			<div className="w-full max-w-md">
-				{/* Header */}
 				<div className="text-center mb-8">
 					<BrandLogo logoUrl={brandLogo} siteName={brandSiteName} className="h-10 mx-auto mb-2" />
 					<h1 className="text-2xl font-semibold text-kumo-default">
@@ -235,18 +197,15 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 					</h1>
 				</div>
 
-				{/* Error from URL (provider failure) */}
 				{urlError && (
 					<div className="mb-6 rounded-lg bg-kumo-danger/10 border border-kumo-danger/20 p-4 text-sm text-kumo-danger">
 						{urlError}
 					</div>
 				)}
 
-				{/* Login Card */}
 				<div className="bg-kumo-base border rounded-lg shadow-sm p-6">
 					{method === "passkey" && !activeProvider && (
 						<div className="space-y-6">
-							{/* Passkey Login */}
 							<PasskeyLogin
 								optionsEndpoint="/_emdash/api/auth/passkey/options"
 								verifyEndpoint="/_emdash/api/auth/passkey/verify"
@@ -254,7 +213,6 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 								buttonText={t`Sign in with Passkey`}
 							/>
 
-							{/* Divider */}
 							<div className="relative">
 								<div className="absolute inset-0 flex items-center">
 									<span className="w-full border-t" />
@@ -264,7 +222,6 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 								</div>
 							</div>
 
-							{/* Auth provider buttons */}
 							{buttonProviders.length > 0 && (
 								<div
 									className={`grid gap-3 ${buttonProviders.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}
@@ -282,7 +239,6 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 								</div>
 							)}
 
-							{/* Magic Link Option */}
 							<Button
 								variant="ghost"
 								className="w-full justify-center"
@@ -294,7 +250,6 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 						</div>
 					)}
 
-					{/* Provider form (full card replacement, like magic link) */}
 					{method === "passkey" &&
 						activeProvider &&
 						(() => {
@@ -319,7 +274,6 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 					{method === "magic-link" && <MagicLinkForm onBack={() => setMethod("passkey")} />}
 				</div>
 
-				{/* Help text */}
 				<p className="text-center mt-6 text-sm text-kumo-subtle">
 					{method === "magic-link"
 						? t`We'll send you a link to sign in without a password.`
@@ -328,7 +282,6 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 							: t`Use your registered passkey to sign in securely.`}
 				</p>
 
-				{/* Signup link — only shown when self-signup is enabled */}
 				{authInfo?.signupEnabled && (
 					<p className="text-center mt-4 text-sm text-kumo-subtle">
 						<Trans>
@@ -340,7 +293,6 @@ export function LoginPage({ redirectUrl = "/_emdash/admin" }: LoginPageProps) {
 					</p>
 				)}
 
-				{/* Language selector — only shown when multiple locales are available */}
 				{SUPPORTED_LOCALES.length > 1 && (
 					<div className="mt-6 flex justify-center">
 						<Select

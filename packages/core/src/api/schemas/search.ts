@@ -3,10 +3,6 @@ import { z } from "zod";
 import { SEARCH_TOKENIZERS } from "../../search/types.js";
 import { localeCode } from "./common.js";
 
-// ---------------------------------------------------------------------------
-// Search: Input schemas
-// ---------------------------------------------------------------------------
-
 export const searchQuery = z
 	.object({
 		q: z.string().min(1),
@@ -41,10 +37,6 @@ export const searchEnableBody = z
 		tokenize: z.enum(SEARCH_TOKENIZERS).optional(),
 	})
 	.meta({ id: "SearchEnableBody" });
-
-// ---------------------------------------------------------------------------
-// Search: Response schemas
-// ---------------------------------------------------------------------------
 
 export const searchResultSchema = z
 	.object({

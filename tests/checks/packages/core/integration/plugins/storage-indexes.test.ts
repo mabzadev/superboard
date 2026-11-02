@@ -70,9 +70,6 @@ describe("Plugin Storage Indexes Integration", () => {
 		});
 
 		it("accepts collection names that are not SQL identifiers", async () => {
-			// The manifest schema allows arbitrary collection keys and the
-			// repository stores collection as opaque text — kebab-case names
-			// like "form-submissions" must index too.
 			const result = await createStorageIndexes(db, "forms", "form-submissions", ["slug"]);
 
 			expect(result.errors).toHaveLength(0);
@@ -90,10 +87,8 @@ describe("Plugin Storage Indexes Integration", () => {
 			await createStorageIndexes(db, "my-plugin", "events", ["eventType"]);
 			const result = await createStorageIndexes(db, "my-plugin", "events", ["eventType"]);
 
-			// Should still succeed
 			expect(result.errors).toHaveLength(0);
 
-			// Should not duplicate tracking records
 			const indexes = await db
 				.selectFrom("_plugin_indexes")
 				.selectAll()
@@ -105,10 +100,8 @@ describe("Plugin Storage Indexes Integration", () => {
 
 	describe("removeOrphanedIndexes", () => {
 		it("should remove indexes no longer in declaration", async () => {
-			// Create initial indexes
 			await createStorageIndexes(db, "my-plugin", "events", ["eventType", "userId", "status"]);
 
-			// Remove one
 			const result = await removeOrphanedIndexes(db, "my-plugin", "events", [
 				"eventType",
 				"userId",
@@ -146,10 +139,8 @@ describe("Plugin Storage Indexes Integration", () => {
 
 	describe("syncStorageIndexes", () => {
 		it("should create new and remove old indexes in one call", async () => {
-			// Initial state
 			await createStorageIndexes(db, "my-plugin", "events", ["eventType", "oldField"]);
 
-			// Sync to new state
 			const result = await syncStorageIndexes(db, "my-plugin", "events", ["eventType", "newField"]);
 
 			expect(result.created).toContain("idx_plugin_my-plugin_events_newField");
@@ -235,22 +226,18 @@ describe("Plugin Storage Indexes Integration", () => {
 			const pluginId = "perf-test";
 			const collection = "events";
 
-			// Create index first
 			await createStorageIndexes(db, pluginId, collection, ["eventType"]);
 
-			// Create repository with the indexed field
 			const repo = new PluginStorageRepository<{ eventType: string }>(db, pluginId, collection, [
 				"eventType",
 			]);
 
-			// Insert test data
 			const items = Array.from({ length: 100 }, (_, i) => ({
 				id: `event-${i}`,
 				data: { eventType: i % 2 === 0 ? "pageview" : "click" },
 			}));
 			await repo.putMany(items);
 
-			// Query should work and use the index
 			const result = await repo.query({
 				where: { eventType: "pageview" },
 			});
@@ -264,7 +251,6 @@ describe("Plugin Storage Indexes Integration", () => {
 		it("should create actual SQLite index", async () => {
 			await createStorageIndexes(db, "my-plugin", "events", ["eventType"]);
 
-			// Query SQLite's index list
 			const indexes = await sql<{ name: string }>`
 				SELECT name FROM sqlite_master 
 				WHERE type = 'index' 
@@ -297,7 +283,6 @@ describe("Plugin Storage Indexes Integration", () => {
 			expect(result.created).toContain("uidx_plugin_my-plugin_forms_slug");
 			expect(result.errors).toHaveLength(0);
 
-			// Verify it's actually a UNIQUE index in SQLite
 			const indexSql = await sql<{ sql: string }>`
 				SELECT sql FROM sqlite_master
 				WHERE type = 'index'
@@ -322,7 +307,6 @@ describe("Plugin Storage Indexes Integration", () => {
 
 			await repo.put("form-1", { slug: "contact", name: "Contact" });
 
-			// Second insert with a different ID but same slug should fail
 			await expect(repo.put("form-2", { slug: "contact", name: "Contact Copy" })).rejects.toThrow(
 				UNIQUE_CONSTRAINT_PATTERN,
 			);
@@ -341,7 +325,6 @@ describe("Plugin Storage Indexes Integration", () => {
 			);
 
 			await repo.put("form-1", { slug: "contact", name: "Contact" });
-			// Updating the same ID should succeed (upsert)
 			await repo.put("form-1", { slug: "contact", name: "Contact Updated" });
 
 			const result = await repo.get("form-1");
@@ -366,7 +349,6 @@ describe("Plugin Storage Indexes Integration", () => {
 				["slug"],
 			);
 
-			// Same slug in different collections should work (partial index scoped by collection)
 			await formsRepo.put("form-1", { slug: "contact" });
 			await templatesRepo.put("tmpl-1", { slug: "contact" });
 
@@ -389,7 +371,6 @@ describe("Plugin Storage Indexes Integration", () => {
 			await repo.put("form-1", { slug: "contact", status: "active" });
 			await repo.put("form-2", { slug: "feedback", status: "active" });
 
-			// Query by unique field should work
 			const result = await repo.query({ where: { slug: "contact" } });
 			expect(result.items).toHaveLength(1);
 			expect(result.items[0].data.slug).toBe("contact");
@@ -429,10 +410,6 @@ describe("Plugin Storage Indexes Integration", () => {
 				await repo.put(`key-${i}`, { timestamp: `2026-07-0${i}T00:00:00.000Z` });
 			}
 
-			// Mirror the repository's compiled query() shape: bound parameters for
-			// plugin_id/collection (the production reality — D1 never runs ANALYZE,
-			// and SQLite won't pick a partial index under bound parameters without
-			// statistics).
 			const plan = await sql<{ detail: string }>`
 				EXPLAIN QUERY PLAN
 				SELECT id, data, created_at FROM _plugin_storage

@@ -5,11 +5,6 @@ import {
 	completeSetupStepAPICall,
 } from "../api/instances/instanceService.js";
 
-/**
- * Manages persisted setup wizard step progress.
- * Loads walked steps from the backend on mount/instance switch,
- * and provides a fire-and-forget persist function for marking steps complete.
- */
 export function useSetupProgress(
 	instanceId: string | undefined,
 	category: string,
@@ -19,7 +14,6 @@ export function useSetupProgress(
 	const identifiersRef = useRef(identifiers);
 	identifiersRef.current = identifiers;
 
-	// Load from backend on instance switch
 	useEffect(() => {
 		if (!instanceId) return;
 
@@ -40,9 +34,7 @@ export function useSetupProgress(
 					});
 					setWalkedSteps((prev) => new Set([...prev, ...indices]));
 				}
-			} catch {
-				// silently handle
-			}
+			} catch {}
 		};
 		fetchProgress();
 
@@ -59,7 +51,6 @@ export function useSetupProgress(
 			setWalkedSteps((prev) => new Set([...prev, stepIndex]));
 
 			if (instanceId) {
-				// Fire-and-forget: step progress is non-critical UI state
 				completeSetupStepAPICall(instanceId, category, ids[stepIndex]!).catch(() => {});
 			}
 		},

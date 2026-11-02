@@ -29,14 +29,6 @@ function truncateByGrapheme(value: string, maxLength: number): string {
 	return result.replace(TRAILING_HYPHENS_PATTERN, "");
 }
 
-/**
- * Convert text to a browser-safe Unicode URL slug.
- *
- * Text is NFKC-normalized and lowercased; whitespace and underscores become
- * hyphens while Unicode letters, numbers, and combining marks are preserved.
- * The length limit counts grapheme clusters. Inputs without usable characters
- * receive a stable `untitled-*` fallback.
- */
 export function slugify(text: string, maxLength = 80): string {
 	const normalized = text.normalize("NFKC").toLowerCase();
 	const slug = normalized

@@ -1,9 +1,3 @@
-/**
- * Plugin management single plugin endpoint
- *
- * GET /_emdash/api/admin/plugins/:id - Get plugin details
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

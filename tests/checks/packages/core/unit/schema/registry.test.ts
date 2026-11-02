@@ -15,16 +15,13 @@ describe("SchemaRegistry", () => {
 	let registry: SchemaRegistry;
 
 	beforeEach(async () => {
-		// Create in-memory database
 		const sqlite = new Database(":memory:");
 		db = new Kysely<EmDashDatabase>({
 			dialect: new SqliteDialect({ database: sqlite }),
 		});
 
-		// Run migrations
 		await runMigrations(db);
 
-		// Create registry
 		registry = new SchemaRegistry(db);
 	});
 
@@ -53,7 +50,6 @@ describe("SchemaRegistry", () => {
 			const collection = await registry.createCollection({
 				slug: "default_supports",
 				label: "Default Supports",
-				// supports omitted entirely
 			});
 
 			expect(collection.supports.toSorted()).toEqual(["drafts", "revisions"].toSorted());
@@ -88,7 +84,6 @@ describe("SchemaRegistry", () => {
 				label: "Articles",
 			});
 
-			// Verify table exists by inserting a row
 			const result = await db
 				.insertInto("ec_articles" as any)
 				.values({
@@ -108,7 +103,7 @@ describe("SchemaRegistry", () => {
 			const collections = await registry.listCollections();
 
 			expect(collections).toHaveLength(2);
-			expect(collections.map((c) => c.slug)).toEqual(["pages", "posts"]); // sorted
+			expect(collections.map((c) => c.slug)).toEqual(["pages", "posts"]);
 		});
 
 		describe("sidebar sort order", () => {
@@ -119,9 +114,6 @@ describe("SchemaRegistry", () => {
 			});
 
 			it("lists explicitly ordered collections first, then the rest alphabetically", async () => {
-				// `projects` sorts last alphabetically but is pinned first;
-				// `education`/`certifications` have no position and keep the
-				// alphabetical fallback behind it.
 				await registry.createCollection({ slug: "education", label: "Education" });
 				await registry.createCollection({ slug: "projects", label: "Projects", sortOrder: 0 });
 				await registry.createCollection({ slug: "certifications", label: "Certifications" });
@@ -164,8 +156,6 @@ describe("SchemaRegistry", () => {
 
 				await registry.reorderCollections(["pages"]);
 
-				// `posts` loses its pin and falls back to the alphabetical tail,
-				// so it must sort *after* the still-ordered `pages`.
 				const collections = await registry.listCollections();
 				expect(collections.map((c) => c.slug)).toEqual(["pages", "posts"]);
 				expect(await registry.getCollection("posts").then((c) => c?.sortOrder)).toBeUndefined();
@@ -263,9 +253,6 @@ describe("SchemaRegistry", () => {
 			});
 
 			expect(collection.hidden).toBe(true);
-			// A hidden collection is only hidden from the sidebar — it must still
-			// be listed by the registry so its routes, editor, API, and MCP tools
-			// keep resolving.
 			const listed = await registry.listCollections();
 			expect(listed.map((c) => c.slug)).toContain("contact_submissions");
 			expect(await registry.getCollection("contact_submissions")).not.toBeNull();
@@ -531,7 +518,6 @@ describe("SchemaRegistry", () => {
 				type: "string",
 			});
 
-			// Verify column exists by inserting a row with the field
 			await db
 				.insertInto("ec_posts" as any)
 				.values({
@@ -607,13 +593,11 @@ describe("SchemaRegistry", () => {
 				type: "string",
 			});
 
-			// string and slug both map to a TEXT column, so the type change is safe.
 			const updated = await registry.updateField("posts", "ref", { type: "slug" });
 
 			expect(updated.type).toBe("slug");
 			expect(updated.columnType).toBe("TEXT");
 
-			// Persisted, not just reflected on the returned object.
 			const reread = await registry.getField("posts", "ref");
 			expect(reread?.type).toBe("slug");
 			expect(reread?.columnType).toBe("TEXT");
@@ -626,14 +610,10 @@ describe("SchemaRegistry", () => {
 				type: "text",
 			});
 
-			// text (TEXT) -> portableText (JSON) would change the physical column,
-			// which has no in-place migration. Reject rather than silently rewriting
-			// only the metadata and desyncing column_type from the real column.
 			await expect(registry.updateField("posts", "body", { type: "portableText" })).rejects.toThrow(
 				SchemaError,
 			);
 
-			// The stored type/column_type are untouched.
 			const field = await registry.getField("posts", "body");
 			expect(field?.type).toBe("text");
 			expect(field?.columnType).toBe("TEXT");
@@ -755,7 +735,6 @@ describe("SchemaRegistry", () => {
 
 			await registry.deleteCollection("temp");
 
-			// Fields should be gone (cascade delete)
 			const field = await registry.getField("temp", "field1");
 			expect(field).toBeNull();
 		});

@@ -1,9 +1,3 @@
-//
-//  TransactionData.swift
-//
-//  superboard
-//
-
 import Foundation
 
 public enum TransactionType: String, Codable {

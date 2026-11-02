@@ -1,17 +1,3 @@
-/**
- * Portable Text <-> Markdown conversion layer.
- *
- * Three tiers of block handling:
- *   Tier 1: Standard PT blocks <-> standard Markdown (headings, paragraphs, lists, etc.)
- *   Tier 2: EmDash custom blocks <-> Markdown directives (future)
- *   Tier 3: Unknown blocks <-> opaque HTML comment fences (preserved, not editable)
- */
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-/** Minimal Portable Text block shape */
 export interface PortableTextBlock {
 	_type: string;
 	_key?: string;
@@ -43,14 +29,6 @@ interface ParsedInline {
 	markDefs: MarkDef[];
 }
 
-// ---------------------------------------------------------------------------
-// PT -> Markdown
-// ---------------------------------------------------------------------------
-
-/**
- * Convert Portable Text blocks to Markdown.
- * Unknown block types are serialized as opaque fences.
- */
 export function portableTextToMarkdown(blocks: PortableTextBlock[]): string {
 	const lines: string[] = [];
 	let prevWasList = false;
@@ -61,7 +39,6 @@ export function portableTextToMarkdown(blocks: PortableTextBlock[]): string {
 		if (block._type === "block") {
 			const isList = !!block.listItem;
 
-			// Blank line between non-contiguous block types
 			if (i > 0 && (!isList || !prevWasList)) {
 				lines.push("");
 			}
@@ -83,7 +60,6 @@ export function portableTextToMarkdown(blocks: PortableTextBlock[]): string {
 			lines.push(`![${alt}](${url})`);
 			prevWasList = false;
 		} else {
-			// Tier 3: Unknown block -> opaque fence
 			if (i > 0) lines.push("");
 			lines.push(`<!--ec:block ${JSON.stringify(block)} -->`);
 			prevWasList = false;
@@ -96,14 +72,12 @@ export function portableTextToMarkdown(blocks: PortableTextBlock[]): string {
 function renderStandardBlock(block: PortableTextBlock): string {
 	const text = renderSpans(block.children ?? [], block.markDefs ?? []);
 
-	// List items
 	if (block.listItem) {
 		const indent = "  ".repeat(Math.max(0, (block.level ?? 1) - 1));
 		const marker = block.listItem === "number" ? "1." : "-";
 		return `${indent}${marker} ${text}`;
 	}
 
-	// Headings
 	if (block.style && block.style.startsWith("h")) {
 		const level = parseInt(block.style.substring(1), 10);
 		if (level >= 1 && level <= 6) {
@@ -111,7 +85,6 @@ function renderStandardBlock(block: PortableTextBlock): string {
 		}
 	}
 
-	// Blockquote
 	if (block.style === "blockquote") {
 		return `> ${text}`;
 	}
@@ -159,11 +132,6 @@ function renderSpans(spans: PortableTextSpan[], markDefs: MarkDef[]): string {
 	return result;
 }
 
-// ---------------------------------------------------------------------------
-// Markdown -> PT
-// ---------------------------------------------------------------------------
-
-// Regex patterns for markdown parsing
 const OPAQUE_FENCE_PATTERN = /^<!--ec:block (.+) -->$/;
 const HEADING_PATTERN = /^(#{1,6})\s+(.+)$/;
 const UNORDERED_LIST_PATTERN = /^(\s*)[-*+]\s+(.+)$/;
@@ -172,10 +140,6 @@ const IMAGE_PATTERN = /^!\[([^\]]*)\]\(([^)]+)\)$/;
 const INLINE_MARKDOWN_PATTERN =
 	/(\*\*(.+?)\*\*)|(_(.+?)_)|(`(.+?)`)|(\[(.+?)\]\((.+?)\))|(~~(.+?)~~)/g;
 
-/**
- * Convert Markdown to Portable Text blocks.
- * Opaque fences (<!--ec:block ... -->) are deserialized and spliced back in.
- */
 export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 	const blocks: PortableTextBlock[] = [];
 	const lines = markdown.split("\n");
@@ -184,7 +148,6 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 	while (i < lines.length) {
 		const line = lines[i];
 
-		// Opaque fence
 		const opaqueMatch = line.match(OPAQUE_FENCE_PATTERN);
 		if (opaqueMatch) {
 			try {
@@ -196,7 +159,6 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 			continue;
 		}
 
-		// Code fence
 		if (line.startsWith("```")) {
 			const lang = line.slice(3).trim();
 			const codeLines: string[] = [];
@@ -211,17 +173,15 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 				language: lang || undefined,
 				code: codeLines.join("\n"),
 			});
-			i++; // skip closing ```
+			i++;
 			continue;
 		}
 
-		// Blank line
 		if (line.trim() === "") {
 			i++;
 			continue;
 		}
 
-		// Heading
 		const headingMatch = line.match(HEADING_PATTERN);
 		if (headingMatch) {
 			blocks.push(makeBlock(headingMatch[2], `h${headingMatch[1].length}`));
@@ -229,14 +189,12 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 			continue;
 		}
 
-		// Blockquote
 		if (line.startsWith("> ")) {
 			blocks.push(makeBlock(line.slice(2), "blockquote"));
 			i++;
 			continue;
 		}
 
-		// Unordered list
 		const ulMatch = line.match(UNORDERED_LIST_PATTERN);
 		if (ulMatch) {
 			const level = Math.floor(ulMatch[1].length / 2) + 1;
@@ -245,7 +203,6 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 			continue;
 		}
 
-		// Ordered list
 		const olMatch = line.match(ORDERED_LIST_PATTERN);
 		if (olMatch) {
 			const level = Math.floor(olMatch[1].length / 2) + 1;
@@ -254,7 +211,6 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 			continue;
 		}
 
-		// Image
 		const imgMatch = line.match(IMAGE_PATTERN);
 		if (imgMatch) {
 			blocks.push({
@@ -267,17 +223,12 @@ export function markdownToPortableText(markdown: string): PortableTextBlock[] {
 			continue;
 		}
 
-		// Paragraph
 		blocks.push(makeBlock(line));
 		i++;
 	}
 
 	return blocks;
 }
-
-// ---------------------------------------------------------------------------
-// Block builders
-// ---------------------------------------------------------------------------
 
 function makeBlock(text: string, style: string = "normal"): PortableTextBlock {
 	const { spans, markDefs } = parseInline(text);
@@ -297,9 +248,6 @@ function makeListBlock(text: string, listItem: string, level: number): PortableT
 	};
 }
 
-/**
- * Parse inline markdown (bold, italic, code, links, strikethrough) into PT spans + markDefs.
- */
 function parseInline(text: string): ParsedInline {
 	const spans: PortableTextSpan[] = [];
 	const markDefs: MarkDef[] = [];
@@ -351,34 +299,21 @@ function parseInline(text: string): ParsedInline {
 	return { spans, markDefs };
 }
 
-// ---------------------------------------------------------------------------
-// Key generation
-// ---------------------------------------------------------------------------
-
 let keyCounter = 0;
 
 function generateKey(): string {
 	return `k${(keyCounter++).toString(36)}`;
 }
 
-/** Reset key counter (useful for testing) */
 export function resetKeyCounter(): void {
 	keyCounter = 0;
 }
-
-// ---------------------------------------------------------------------------
-// Schema-aware conversion helpers
-// ---------------------------------------------------------------------------
 
 export interface FieldSchema {
 	slug: string;
 	type: string;
 }
 
-/**
- * Convert content data for reading: PT fields -> markdown strings.
- * Only converts fields with type "portableText" that contain arrays.
- */
 export function convertDataForRead(
 	data: Record<string, unknown>,
 	fields: FieldSchema[],
@@ -395,10 +330,6 @@ export function convertDataForRead(
 	return result;
 }
 
-/**
- * Convert content data for writing: markdown strings -> PT arrays.
- * Only converts fields with type "portableText" that contain strings.
- */
 export function convertDataForWrite(
 	data: Record<string, unknown>,
 	fields: FieldSchema[],

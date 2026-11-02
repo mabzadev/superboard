@@ -5,10 +5,6 @@ import '../../superboard_purchases.dart';
 import 'client.dart';
 import 'models.dart';
 
-/// Narrow Products boundary used by the Flows commerce component.
-///
-/// Implementations must return purchases already verified by Products. Flows
-/// only selects the matching workflow exit and never reports revenue itself.
 abstract interface class SuperBoardFlowCommerceGateway {
   Future<SuperBoardOfferings> getOfferings({required String placement});
 
@@ -17,7 +13,6 @@ abstract interface class SuperBoardFlowCommerceGateway {
   Future<SuperBoardCustomerInfo> restorePurchases();
 }
 
-/// Default bridge to the native SuperBoard Products SDK.
 final class SuperBoardProductsFlowCommerceGateway
     implements SuperBoardFlowCommerceGateway {
   SuperBoardProductsFlowCommerceGateway({SuperBoardPurchases? purchases})
@@ -38,12 +33,6 @@ final class SuperBoardProductsFlowCommerceGateway
       _purchases.restorePurchases();
 }
 
-/// Native renderer for the `superboard-commerce` Flow component.
-///
-/// Store checkout and receipt validation remain owned by
-/// [SuperBoardPurchases]. The only events emitted through Flows are workflow
-/// transitions, without prices or revenue, so purchase accounting cannot be
-/// duplicated by Analytics or Flows.
 class SuperBoardFlowCommerce extends StatefulWidget {
   const SuperBoardFlowCommerce({
     super.key,
@@ -417,7 +406,6 @@ class _CommercePackageTile extends StatelessWidget {
           children: [
             Radio<bool>(
               value: true,
-              // Kept for the package's Flutter >=3.3 compatibility floor.
               // ignore: deprecated_member_use
               groupValue: selected,
               // ignore: deprecated_member_use

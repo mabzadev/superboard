@@ -1,14 +1,3 @@
-/**
- * Slash command menu tests.
- *
- * Tests the "/" trigger, command filtering, keyboard navigation,
- * command execution, and menu dismissal via Escape.
- *
- * The slash menu is internal to PortableTextEditor and driven by
- * TipTap's Suggestion plugin. We test it through the full editor
- * since there's no standalone export.
- */
-
 import type { Editor } from "@tiptap/react";
 import { SuggestionPluginKey } from "@tiptap/suggestion";
 import { userEvent } from "@vitest/browser/context";
@@ -17,10 +6,6 @@ import { describe, it, expect, vi } from "vitest";
 import type { PortableTextEditorProps } from "../../../../../packages/admin/src/components/PortableTextEditor";
 import { PortableTextEditor } from "../../../../../packages/admin/src/components/PortableTextEditor";
 import { render } from "../utils/render";
-
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
 
 vi.mock("../../../../../packages/admin/src/components/MediaPickerModal", () => ({
 	MediaPickerModal: () => null,
@@ -138,17 +123,8 @@ vi.mock("../../../../../packages/admin/src/components/editor/PluginBlockNode", a
 	};
 });
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const WHITESPACE_SPLIT_REGEX = /\s+/;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Render the editor, wait for TipTap, return editor instance + ProseMirror element */
 async function renderEditor(props: Partial<PortableTextEditorProps> = {}) {
 	let editorInstance: Editor | null = null;
 
@@ -173,18 +149,15 @@ async function renderEditor(props: Partial<PortableTextEditorProps> = {}) {
 	return { screen, editor: editorInstance!, pm };
 }
 
-/** Focus the editor */
 async function focusEditor(pm: HTMLElement) {
 	pm.focus();
 	await vi.waitFor(() => expect(document.activeElement).toBe(pm), { timeout: 1000 });
 }
 
-/** Get the slash menu portal element from document.body */
 function getSlashMenu(): HTMLElement | null {
 	return document.querySelector<HTMLElement>("[data-slash-command-menu]");
 }
 
-/** Wait for the slash menu to appear */
 async function waitForSlashMenu(): Promise<HTMLElement> {
 	let menu: HTMLElement | null = null;
 	await vi.waitFor(
@@ -197,7 +170,6 @@ async function waitForSlashMenu(): Promise<HTMLElement> {
 	return menu!;
 }
 
-/** Wait for the slash menu to disappear */
 async function waitForSlashMenuClosed() {
 	await vi.waitFor(
 		() => {
@@ -207,15 +179,10 @@ async function waitForSlashMenuClosed() {
 	);
 }
 
-/** Get visible items in the slash menu */
 function getSlashMenuItems(menu: HTMLElement): HTMLButtonElement[] {
 	return [...menu.querySelectorAll("button[data-index]")];
 }
 
-/**
- * Check if an item is the selected/highlighted item.
- * Selected items use the semantic interaction surface.
- */
 function isItemSelected(el: HTMLElement): boolean {
 	return el.className.split(WHITESPACE_SPLIT_REGEX).includes("bg-kumo-interact");
 }
@@ -225,10 +192,6 @@ function isSlashSuggestionActive(editor: Editor): boolean {
 		(SuggestionPluginKey.getState(editor.state) as { active?: boolean } | undefined)?.active,
 	);
 }
-
-// =============================================================================
-// Slash Command Menu
-// =============================================================================
 
 describe("Slash Command Menu", () => {
 	it("keeps focus in the editor when the menu opens", async () => {
@@ -455,7 +418,6 @@ describe("Slash Command Menu", () => {
 		const menu = await waitForSlashMenu();
 		const items = getSlashMenuItems(menu);
 
-		// Default commands: heading1-6, bullet/numbered list, quote, code block, divider, image, section
 		expect(items.length).toBeGreaterThanOrEqual(8);
 	});
 
@@ -504,7 +466,6 @@ describe("Slash Command Menu", () => {
 		editor.commands.insertContent("/");
 		await waitForSlashMenu();
 
-		// Type filter text — Suggestion plugin watches text after "/"
 		await userEvent.keyboard("head");
 
 		await vi.waitFor(
@@ -594,7 +555,6 @@ describe("Slash Command Menu", () => {
 		editor.commands.insertContent("/");
 		await waitForSlashMenu();
 
-		// Move down, then back up
 		await userEvent.keyboard("{ArrowDown}");
 		await vi.waitFor(() => {
 			const items = getSlashMenuItems(getSlashMenu()!);
@@ -630,7 +590,6 @@ describe("Slash Command Menu", () => {
 		editor.commands.insertContent("/");
 		await waitForSlashMenu();
 
-		// First item is "Heading 1"
 		await userEvent.keyboard("{Enter}");
 
 		await waitForSlashMenuClosed();
@@ -650,7 +609,6 @@ describe("Slash Command Menu", () => {
 
 		await waitForSlashMenuClosed();
 
-		// Should still be a paragraph
 		expect(pm.querySelector("h1")).toBeNull();
 		expect(isSlashSuggestionActive(editor)).toBe(false);
 	});
@@ -784,13 +742,6 @@ describe("Slash Command Menu", () => {
 		const menu = await waitForSlashMenu();
 		const items = getSlashMenuItems(menu);
 
-		// The menu gates mouseenter on a "has the user actually moved the
-		// pointer since the menu opened?" flag, to avoid jumping selection
-		// when the menu renders under a stationary pointer (which happens
-		// in CI because pointer position persists across tests). Dispatch a
-		// real pointermove on the menu first so the gate is open before we
-		// hover an item. userEvent.hover by itself only teleports the
-		// cursor to the target and fires pointerenter -- no pointermove.
 		menu.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" }));
 
 		await userEvent.hover(items[2]!);
@@ -841,7 +792,6 @@ describe("Slash Command Menu", () => {
 		editor.commands.insertContent("/");
 		await waitForSlashMenu();
 
-		// "sec" matches "Section" by title and headings by description ("section heading")
 		await userEvent.keyboard("sec");
 
 		await vi.waitFor(
@@ -878,10 +828,6 @@ describe("Slash Command Menu", () => {
 	});
 
 	it("renders plugin block commands with a custom category override", async () => {
-		// A plugin block that opts into the "Sections" category instead of the
-		// default "Embeds". The category itself isn't currently surfaced in the
-		// rendered DOM (the slash menu doesn't group by category), but providing
-		// it must not break rendering and the block must still be selectable.
 		const { editor, pm } = await renderEditor({
 			pluginBlocks: [
 				{
@@ -903,16 +849,12 @@ describe("Slash Command Menu", () => {
 	});
 
 	it("renders plugin block commands without a category (default Embeds)", async () => {
-		// Existing plugins that omit `category` must continue to render under
-		// the default category. This guards against regressions in the type
-		// widening / fallback behaviour.
 		const { editor, pm } = await renderEditor({
 			pluginBlocks: [
 				{
 					pluginId: "test-plugin",
 					type: "vimeo",
 					label: "Vimeo",
-					// no category provided
 				},
 			],
 		});

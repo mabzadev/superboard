@@ -1,45 +1,25 @@
-//
-//  superboard.swift
-//
-//  superboard
-//
-
 import UIKit
 
-/// A protocol for receiving payload from SuperBoard SDK.
-///
-/// All delegate methods are called on the **main thread**.
 public protocol SuperBoardDelegate: AnyObject {
-    /// Called when the app is opened from a deeplink.
-    ///
-    /// - Note: Always called on the **main thread**.
     func superboardReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tracking: [String: Any]?)
 }
 
-/// A class representing SuperBoard SDK.
 public class SuperBoard {
 
-    // MARK: - Thread-safe state
-
-    /// Lock protecting access to `_manager` and `_APIKey`.
     private static let stateLock = NSLock()
     private static var _manager: SuperBoardManager?
     private static var _APIKey: String?
 
-    /// Thread-safe access to the manager instance.
     private static var manager: SuperBoardManager? {
         get { stateLock.lock(); defer { stateLock.unlock() }; return _manager }
         set { stateLock.lock(); defer { stateLock.unlock() }; _manager = newValue }
     }
 
-    /// Thread-safe access to the API key.
     private static var APIKey: String? {
         get { stateLock.lock(); defer { stateLock.unlock() }; return _APIKey }
         set { stateLock.lock(); defer { stateLock.unlock() }; _APIKey = newValue }
     }
 
-    /// Dispatches a block to the main thread. Runs synchronously if already on main,
-    /// otherwise dispatches async.
     private static func onMain(_ block: @escaping () -> Void) {
         if Thread.isMainThread {
             block()
@@ -48,9 +28,6 @@ public class SuperBoard {
         }
     }
 
-    /// The delegate to receive callbacks from the SDK.
-    ///
-    /// - Important: Must be accessed on the **main thread**.
     public static var delegate: SuperBoardDelegate? {
         set {
             let value = newValue
@@ -65,16 +42,6 @@ public class SuperBoard {
         }
     }
 
-    // MARK: Public methods
-
-    /// Configures the SuperBoard SDK with the provided API key.
-    ///
-    /// - Parameters:
-    ///   - APIKey: The API key obtained from the web console at https://github.com/mabzadev/superboard.
-    ///   - useTestEnvironment: If this is enabled the test environment will be used.
-    ///   - baseURL: Required application API domain. The SDK appends the API path automatically.
-    ///   - delegate: The delegate to receive payload from the SDK.
-    ///   - completion: Optional callback indicating whether SDK authentication succeeded or failed. Called on the **main thread**.
     public static func configure(APIKey: String, useTestEnvironment: Bool, baseURL: String? = nil, delegate: SuperBoardDelegate?, completion: SuperBoardBoolCompletion? = nil) {
         onMain {
             self.APIKey = APIKey
@@ -88,9 +55,6 @@ public class SuperBoard {
         }
     }
 
-    /// Disables the SuperBoard SDK.
-    /// - Parameter enabled: The log level to set.
-    /// Default is true.
     public static func setSDK(enabled: Bool) {
         onMain {
             guard let manager else {
@@ -102,10 +66,6 @@ public class SuperBoard {
         }
     }
 
-    /// The identifier for the user.
-    ///
-    /// - This property allows getting and setting the user identifier.
-    /// - If set to a new value, it updates the `manager`'s identifier.
     public static var userIdentifier: String? {
         set {
             let value = newValue
@@ -123,10 +83,6 @@ public class SuperBoard {
         }
     }
 
-    /// The attributes associated with the user.
-    ///
-    /// - This property allows getting and setting user attributes as a dictionary.
-    /// - If set to a new value, it updates the `manager`'s attributes.
     public static var userAttributes: [String: Any]? {
         set {
             let value = newValue
@@ -144,10 +100,6 @@ public class SuperBoard {
         }
     }
 
-    /// The push token for the user.
-    ///
-    /// - This property allows getting and setting the push notification token.
-    /// - If set to a new value, it updates the `manager`'s push token.
     public static var pushToken: String? {
         set {
             let value = newValue
@@ -165,27 +117,10 @@ public class SuperBoard {
         }
     }
 
-    /// Sets the debug level for the SDK log messages.
-    /// - Parameter level: The log level to set.
-    /// Default is error.
     public static func setDebug(level: LogLevel) {
         DebugLogger.shared.logLevel = level
     }
 
-    /// Generates a link.
-    ///
-    /// - Parameters:
-    ///   - title: The title of the link.
-    ///   - subtitle: The subtitle of the link.
-    ///   - imageURL: The URL of the image associated with the link.
-    ///   - data: Additional data for the link.
-    ///   - tags: Tags for the link.
-    ///   - showPreviewiOS: Override the default app preview for a link for iOS.
-    ///   - showPreviewAndroid: Override the default app preview for a link for Android.
-    ///   - trackingCampaign: The campaign name for tracking purposes (e.g. `"BlackFriday2025"`).
-    ///   - trackingSource: The traffic source (e.g. `"instagram"`, `"newsletter"`).
-    ///   - trackingMedium: The medium used for the campaign (e.g. `"cpc"`, `"email"`, `"social"`).
-    ///   - completion: A closure called with the generated URL, or `nil` on failure. Called on the **main thread**.
     public static func generateLink(title: String? = nil,
                                     subtitle: String? = nil,
                                     imageURL: String? = nil,
@@ -220,9 +155,6 @@ public class SuperBoard {
         }
     }
 
-    /// Retrieves the last received payload data.
-    ///
-    /// - Parameter completion: A closure that takes a dictionary representing the payload data as its parameter. Called on the **main thread**.
     public static func lastReceivedPayload(completion: @escaping SuperBoardPayloadClosure) {
         onMain {
             guard let manager else {
@@ -235,9 +167,6 @@ public class SuperBoard {
         }
     }
 
-    /// Retrieves all payloads received since startup.
-    ///
-    /// - Parameter completion: A closure that takes an array of dictionaries, each representing a payload data, as its parameter. Called on the **main thread**.
     public static func allReceivedPayloadsSinceStartup(completion: @escaping SuperBoardPayloadsClosure) {
         onMain {
             guard let manager else {
@@ -250,12 +179,6 @@ public class SuperBoard {
         }
     }
 
-    /// Fetches details for a SuperBoard link generated by the SDK in the current environment.
-    ///
-    /// - Parameter path:
-    ///   The path component of a link previously generated by the SDK (in the selected environment).
-    /// - Parameter completion:
-    ///   A closure that is called with a dictionary of link details on success, or `nil` if the request fails. Called on the **main thread**.
     public static func linkDetails(path: String, completion: @escaping SuperBoardLinkClosure) {
         onMain {
             guard let manager else {
@@ -268,9 +191,6 @@ public class SuperBoard {
         }
     }
 
-    // MARK: Private methods
-
-    /// Checks the configuration validity.
     private static func checkConfiguration(completion: SuperBoardBoolCompletion? = nil) {
         guard let APIKey = APIKey, APIKey.count > 0 else {
             DebugLogger.shared.log(.error, "API Key is invalid. Use the value issued by the configured SuperBoard dashboard.")
@@ -290,13 +210,7 @@ public class SuperBoard {
     }
 }
 
-// MARK: Public scene delegate forward -- This should be called if you're using a scene delegate
-
 extension SuperBoard {
-    /// Handles open URL contexts for scene delegate.
-    ///
-    /// - Parameter URLContexts: The set of open URL contexts.
-    /// - Note: Can be called from any thread; work is dispatched to the main thread internally.
     @available(iOS 13.0, *)
     public static func handleSceneDelegate(openURLContexts URLContexts: Set<UIOpenURLContext>) {
         onMain {
@@ -304,20 +218,12 @@ extension SuperBoard {
         }
     }
 
-    /// Handles continue user activity for scene delegate.
-    ///
-    /// - Parameter userActivity: The user activity.
-    /// - Note: Can be called from any thread; work is dispatched to the main thread internally.
     public static func handleSceneDelegate(continue userActivity: NSUserActivity) {
         onMain {
             manager?.handleSceneDelegate(continue: userActivity)
         }
     }
 
-    /// Handles options for scene delegate.
-    ///
-    /// - Parameter connectionOptions: The connection options.
-    /// - Note: Can be called from any thread; work is dispatched to the main thread internally.
     @available(iOS 13.0, *)
     public static func handleSceneDelegate(options connectionOptions: UIScene.ConnectionOptions) {
         onMain {
@@ -327,30 +233,14 @@ extension SuperBoard {
 }
 
 
-// MARK: Public scene delegate forward -- This should be called if you're using a the app delegate WITHOUT Scene Delegate
-
 extension SuperBoard {
 
-    /// Handles universal link continuation for iOS 13 and later.
-    ///
-    /// - Important: Must be called on the **main thread**.
-    /// - Parameters:
-    ///   - userActivity: The user activity to continue.
-    ///   - restorationHandler: A block to execute if the app is launched into the background to handle the user activity.
-    /// - Returns: A Boolean value indicating whether the universal link continuation was handled successfully.
     public static func handleAppDelegate(continue userActivity: NSUserActivity,
                                          restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         assert(Thread.isMainThread, "handleAppDelegate(continue:) must be called on the main thread")
         return manager?.handleAppDelegate(continue: userActivity, restorationHandler: restorationHandler) ?? false
     }
 
-    /// Handles URI opening.
-    ///
-    /// - Important: Must be called on the **main thread**.
-    /// - Parameters:
-    ///   - url: The URL to open.
-    ///   - options: A dictionary of URL handling options.
-    /// - Returns: A Boolean value indicating whether the URI opening was handled successfully.
     public static func handleAppDelegate(open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
         assert(Thread.isMainThread, "handleAppDelegate(open:) must be called on the main thread")
         return manager?.handleAppDelegate(open: url, options: options) ?? false
@@ -358,14 +248,7 @@ extension SuperBoard {
 }
 
 
-// MARK: Public messages
-
 extension SuperBoard {
-    /// Displays the messages view controller modally.
-    ///
-    /// - This method initializes a `UINavigationController` without a navigation bar,
-    ///   sets up a `MessagesViewController`, and presents it on top of the current view hierarchy.
-    /// - Note: Completion is called on the **main thread**.
     public static func displayMessagesViewController(completion: SuperBoardEmptyClosure?) {
         onMain {
             guard let manager else {
@@ -378,9 +261,6 @@ extension SuperBoard {
         }
     }
 
-    /// Retrieves the number of unread messages asynchronously.
-    ///
-    /// - Parameter completion: A closure that is called with the number of unread notifications. Called on the **main thread**.
     public static func numberOfUnreadMessages(completion: @escaping SuperBoardIntClosure) {
         onMain {
             guard let manager else {
@@ -395,11 +275,6 @@ extension SuperBoard {
 }
 
 extension SuperBoard {
-    /// Logs an IAP event and sends it to the backend. This is useful for purchases made via Apple's IAP.
-    ///
-    /// - Parameters:
-    ///   - transactionID: The StoreKit transaction identifier.
-    ///   - completion: A closure called with `true` on success, `false` on failure. Called on the **main thread**.
     public static func logInAppPurchase(transactionID: UInt64, completion: @escaping SuperBoardBoolCompletion) {
         onMain {
             guard let manager else {
@@ -412,15 +287,6 @@ extension SuperBoard {
         }
     }
 
-    /// Logs a custom purchase transaction and sends it to the backend. This is useful for transactions that are not handled by Apple IAP.
-    ///
-    /// - Parameters:
-    ///   - type: The type of transaction (e.g., buy, cancel).
-    ///   - priceInCents: The price of the transaction in cents.
-    ///   - currency: The currency of the transaction (e.g., "USD").
-    ///   - productID: A product identifier (e.g. "com.acme.weather.consumable.coins.100").
-    ///   - startDate: An optional start date for the transaction. Defaults to the current date if not provided.
-    ///   - completion: A closure called with `true` on success, `false` on failure. Called on the **main thread**.
     public static func logCustomPurchase(type: TransactionType,
                                          priceInCents: Int,
                                          currency: String,

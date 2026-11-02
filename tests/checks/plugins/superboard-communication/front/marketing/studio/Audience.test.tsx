@@ -15,7 +15,6 @@ globalThis.ResizeObserver ??= class {
 	disconnect() {}
 };
 
-// Base UI checkboxes dispatch pointer events, which jsdom does not implement.
 globalThis.PointerEvent ??= class extends MouseEvent {} as typeof PointerEvent;
 
 const projectSelection = vi.hoisted(() => ({ project: { id: "10-test", name: "Test" } }));
@@ -241,7 +240,6 @@ describe("Audience", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Import CSV" }));
 		const csv = "E-mail;Nom;Plan\nlin@example.test;Lin;Free\nnope;Bad;Pro";
 		const file = new File([csv], "contacts.csv", { type: "text/csv" });
-		// jsdom's File has no text() reader.
 		Object.defineProperty(file, "text", { value: async () => csv });
 		fireEvent.change(await screen.findByLabelText("CSV file"), { target: { files: [file] } });
 		const importButton = await screen.findByRole("button", { name: "Import 2 contacts" });

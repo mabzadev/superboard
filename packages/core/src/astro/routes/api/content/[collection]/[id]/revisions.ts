@@ -1,9 +1,3 @@
-/**
- * Revisions API endpoint - injected by EmDash integration
- *
- * GET /_emdash/api/content/{collection}/{id}/revisions - List revisions
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

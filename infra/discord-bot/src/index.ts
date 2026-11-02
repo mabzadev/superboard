@@ -37,8 +37,6 @@ export default {
 	},
 } satisfies ExportedHandler<Env>;
 
-// ─── Discord Interaction Handler ─────────────────────────────────
-
 async function handleInteraction(request: Request, env: Env): Promise<Response> {
 	if (request.method !== "POST") {
 		return new Response("Method not allowed", { status: 405 });
@@ -51,12 +49,10 @@ async function handleInteraction(request: Request, env: Env): Promise<Response> 
 
 	const interaction: DiscordInteraction = await request.json();
 
-	// Discord PING verification
 	if (interaction.type === 1) {
 		return Response.json({ type: 1 });
 	}
 
-	// Slash command
 	if (interaction.type === 2 && interaction.data?.name === "link") {
 		return handleLinkCommand(interaction, env);
 	}
@@ -70,7 +66,6 @@ async function handleLinkCommand(interaction: DiscordInteraction, env: Env): Pro
 		return interactionResponse("This command can only be used in a server.", true);
 	}
 
-	// Generate state token and store it
 	const state = crypto.randomUUID();
 	await storeOAuthState(env.KV, state, {
 		discord_id: user.id,
@@ -97,8 +92,6 @@ async function handleLinkCommand(interaction: DiscordInteraction, env: Env): Pro
 	);
 }
 
-// ─── GitHub OAuth Callback ───────────────────────────────────────
-
 async function handleGitHubCallback(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
 	const code = url.searchParams.get("code");
@@ -108,19 +101,16 @@ async function handleGitHubCallback(request: Request, env: Env): Promise<Respons
 		return htmlResponse("Missing code or state parameter.", 400);
 	}
 
-	// Validate and consume the state token
 	const oauthState = await consumeOAuthState(env.KV, state);
 	if (!oauthState) {
 		return htmlResponse("Invalid or expired link. Please run /link in Discord again.", 400);
 	}
 
-	// Exchange code for GitHub identity
 	const githubUser = await exchangeGitHubCode(env, code);
 	if (!githubUser) {
 		return htmlResponse("Failed to verify your GitHub account. Please try again.", 500);
 	}
 
-	// Store the bidirectional link
 	const link = {
 		github_id: githubUser.id,
 		github_login: githubUser.login,
@@ -130,7 +120,6 @@ async function handleGitHubCallback(request: Request, env: Env): Promise<Respons
 	};
 	await storeLink(env.KV, link);
 
-	// If this GitHub user has had PRs merged, grant the contributor role now
 	const contributed = await hasContributed(env.KV, githubUser.id);
 	const alreadyHasRole = contributed
 		? await hasRole(env, oauthState.discord_id, env.DISCORD_CONTRIBUTOR_ROLE_ID)
@@ -172,8 +161,6 @@ async function handleGitHubCallback(request: Request, env: Env): Promise<Respons
 	return htmlResponse(statusMessage, 200);
 }
 
-// ─── GitHub Webhook Handler ──────────────────────────────────────
-
 async function handleGitHubWebhook(request: Request, env: Env): Promise<Response> {
 	if (request.method !== "POST") {
 		return new Response("Method not allowed", { status: 405 });
@@ -192,7 +179,6 @@ async function handleGitHubWebhook(request: Request, env: Env): Promise<Response
 		return new Response("Invalid signature", { status: 401 });
 	}
 
-	// Deduplicate retries
 	const deliveryId = request.headers.get("X-GitHub-Delivery");
 	if (deliveryId && (await isDeliveryProcessed(env.KV, deliveryId))) {
 		return new Response("Already processed", { status: 200 });
@@ -200,12 +186,10 @@ async function handleGitHubWebhook(request: Request, env: Env): Promise<Response
 
 	const payload: GitHubPRPayload = JSON.parse(body);
 
-	// Verify this is from the expected repository
 	if (payload.repository.full_name !== env.GITHUB_REPO) {
 		return new Response("Wrong repository", { status: 200 });
 	}
 
-	// Only care about merged PRs
 	if (payload.action !== "closed" || !payload.pull_request.merged) {
 		return new Response("Not a merge", { status: 200 });
 	}
@@ -216,7 +200,6 @@ async function handleGitHubWebhook(request: Request, env: Env): Promise<Response
 	const prTitle = payload.pull_request.title;
 	const prUrl = payload.pull_request.html_url;
 
-	// Skip bots and the repo owner
 	if (
 		payload.pull_request.user.login === env.GITHUB_OWNER_LOGIN ||
 		payload.pull_request.user.login.endsWith("[bot]")
@@ -224,10 +207,8 @@ async function handleGitHubWebhook(request: Request, env: Env): Promise<Response
 		return new Response("Skipped owner/bot", { status: 200 });
 	}
 
-	// Record this contributor (for retroactive role grant at /link time)
 	await recordContributor(env.KV, githubId, githubLogin);
 
-	// Check if user has a linked Discord account
 	const link = await findByGitHubId(env.KV, githubId);
 
 	const prLink = `[#${prNumber} ${prTitle}](<${prUrl}>)`;
@@ -251,7 +232,6 @@ async function handleGitHubWebhook(request: Request, env: Env): Promise<Response
 		);
 	}
 
-	// Mark delivery processed after all side effects succeed
 	if (deliveryId) {
 		await markDeliveryProcessed(env.KV, deliveryId);
 	}
@@ -259,13 +239,10 @@ async function handleGitHubWebhook(request: Request, env: Env): Promise<Response
 	return new Response("OK", { status: 200 });
 }
 
-// ─── Message Templates ───────────────────────────────────────────
-
 type Vars = Record<string, string>;
 
 const PLACEHOLDER_RE = /\{(\w+)\}/g;
 
-/** Pick a random template and substitute {key} placeholders. */
 function pick(templates: string[], vars: Vars): string {
 	const template = templates[Math.floor(Math.random() * templates.length)]!;
 	return template.replace(PLACEHOLDER_RE, (_, key: string) => vars[key] ?? `{${key}}`);
@@ -292,8 +269,6 @@ const welcomeMessages = [
 	"{user} just linked their GitHub (**{login}**) and they're already a contributor! Welcome to the team!",
 	"Say hello to {user}! They linked as **{login}** on GitHub, and they've already got merged PRs. Contributor role well earned!",
 ];
-
-// ─── Helpers ─────────────────────────────────────────────────────
 
 function htmlResponse(body: string, status: number): Response {
 	return new Response(

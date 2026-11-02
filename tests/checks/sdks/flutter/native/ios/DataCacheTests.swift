@@ -14,15 +14,12 @@ final class DataCacheTests: XCTestCase {
 
     override func tearDown() {
         cache.cleanAll()
-        // Wait for async disk cleanup to complete
         let exp = expectation(description: "disk cleanup")
         cache.cleanExpiredDiskCache { exp.fulfill() }
         wait(for: [exp], timeout: 5)
         cache = nil
         super.tearDown()
     }
-
-    // MARK: - Data round-trip
 
     func testWriteAndReadDataRoundTrip() {
         let original = "hello world".data(using: .utf8)!
@@ -31,8 +28,6 @@ final class DataCacheTests: XCTestCase {
         let readBack = cache.readData(forKey: "data-key")
         XCTAssertEqual(readBack, original, "Data read back should equal data written")
     }
-
-    // MARK: - NSCoding round-trip
 
     func testWriteAndReadObjectNSCodingRoundTrip() {
         let original: NSString = "NSCoding string value"
@@ -43,8 +38,6 @@ final class DataCacheTests: XCTestCase {
         let readBack = cache.readObject(forKey: "nscoding-key") as? NSString
         XCTAssertEqual(readBack, original, "NSCoding object should survive write/read cycle")
     }
-
-    // MARK: - Codable round-trip
 
     func testWriteAndReadCodableRoundTrip() throws {
         struct Item: Codable, Equatable {
@@ -61,14 +54,10 @@ final class DataCacheTests: XCTestCase {
         XCTAssertEqual(readBack, original, "Codable object should survive write/read cycle")
     }
 
-    // MARK: - Missing key
-
     func testReadNonexistentKeyReturnsNil() {
         let data = cache.readData(forKey: "nonexistent-key-\(UUID().uuidString)")
         XCTAssertNil(data, "Reading a nonexistent key should return nil")
     }
-
-    // MARK: - Clean by key
 
     func testCleanByKeyRemovesOnlyThatKey() {
         let data1 = "one".data(using: .utf8)!
@@ -86,20 +75,13 @@ final class DataCacheTests: XCTestCase {
                       "Other key should survive clean")
     }
 
-    // MARK: - hasData
-
-    // MARK: - Crash Recovery
-
     func testReadCorruptedDataFromDiskReturnsNil() {
         let key = "corrupted"
-        // Write garbage bytes directly to the cache file path
         let filePath = cache.cachePath(forKey: key)
-        // Ensure cache directory exists by writing real data first
         cache.writeSync(data: "valid".data(using: .utf8)!, forKey: "setup")
 
         let garbage = Data([0xFF, 0xFE, 0x00, 0xAB, 0xCD])
         FileManager.default.createFile(atPath: filePath, contents: garbage, attributes: nil)
-        // Clear mem cache so it reads from disk
         cache.cleanMemCache()
 
         let obj = cache.readObject(forKey: key)
@@ -111,7 +93,6 @@ final class DataCacheTests: XCTestCase {
         let original: NSString = "a valid NSCoding string"
         let validData = try NSKeyedArchiver.archivedData(withRootObject: original, requiringSecureCoding: false)
 
-        // Write only the first half
         let truncated = validData.prefix(validData.count / 2)
         cache.writeSync(data: truncated, forKey: key)
         cache.cleanMemCache()
@@ -129,16 +110,13 @@ final class DataCacheTests: XCTestCase {
         cache.cleanMemCache()
 
         let data = cache.readData(forKey: key)
-        // Empty file returns empty Data (not nil), which is fine — just verify no crash
         XCTAssertTrue(data == nil || data?.isEmpty == true,
                       "Empty file should return nil or empty data")
     }
 
     func testCacheDirectoryDeletedRecreatesOnWrite() {
-        // Delete the cache directory
         try? FileManager.default.removeItem(atPath: cache.cachePath)
 
-        // Write should succeed because ensureCacheDirectory recreates it
         let data = "after-delete".data(using: .utf8)!
         cache.writeSync(data: data, forKey: "recreated")
 
@@ -146,12 +124,7 @@ final class DataCacheTests: XCTestCase {
         XCTAssertEqual(readBack, data, "Write after directory deletion should succeed")
     }
 
-    // MARK: - hasData
-
-    // MARK: - Concurrency
-
     func testConcurrentWritesDoNotCrashOrCorrupt() {
-        // Hammer the cache from multiple threads simultaneously
         let group = DispatchGroup()
         let iterations = 50
 
@@ -166,7 +139,6 @@ final class DataCacheTests: XCTestCase {
 
         group.wait()
 
-        // Verify all writes landed
         for i in 0..<iterations {
             let data = cache.readData(forKey: "concurrent-\(i)")
             XCTAssertNotNil(data, "Entry \(i) should exist after concurrent write")
@@ -175,14 +147,12 @@ final class DataCacheTests: XCTestCase {
     }
 
     func testConcurrentReadWriteDoesNotCrash() {
-        // Pre-populate
         for i in 0..<20 {
             cache.writeSync(data: "seed-\(i)".data(using: .utf8)!, forKey: "rw-\(i)")
         }
 
         let group = DispatchGroup()
 
-        // Readers and writers running simultaneously
         for i in 0..<20 {
             group.enter()
             DispatchQueue.global().async {
@@ -197,7 +167,6 @@ final class DataCacheTests: XCTestCase {
         }
 
         group.wait()
-        // No crash = thread safety holds
     }
 
     func testHasDataReturnsTrueAfterWriteAndFalseAfterClean() {

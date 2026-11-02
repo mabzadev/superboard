@@ -23,14 +23,6 @@ const BAD_FIXTURE = fileURLToPath(
 	new URL("../../../fixtures/plugin-cli/bad-plugin", import.meta.url),
 );
 
-/**
- * End-to-end bundling: invoke `bundlePlugin` against a real plugin source
- * directory, assert the resulting tarball + manifest match expectations.
- *
- * Each test runs the bundler at a different `outDir` under a fresh tempdir so
- * concurrent runs don't collide, and so `--out-dir` resolution works as
- * advertised (it can be either absolute or relative to `dir`).
- */
 describe("bundlePlugin", () => {
 	let outDir: string;
 
@@ -59,9 +51,7 @@ describe("bundlePlugin", () => {
 		const result = await bundlePlugin({ dir: FIXTURE, outDir });
 		const manifest = result.manifest;
 
-		// Plain hook name (defaults).
 		expect(manifest.hooks).toContain("content:beforeSave");
-		// Routes are extracted from src/plugin.ts's default export.
 		expect(manifest.routes).toContain("admin");
 	});
 
@@ -145,17 +135,11 @@ describe("bundlePlugin", () => {
 			},
 		});
 
-		// Spot-check: bundle starts with "Bundling plugin..." and ends with a
-		// "Created ..." success line. Don't pin every intermediate step --
-		// they're implementation detail.
 		expect(messages[0]).toMatchObject({ kind: "start", msg: /Bundling/ });
 		expect(messages.some((m) => m.kind === "success" && /Created/.test(m.msg))).toBe(true);
 	});
 
 	it("validateOnly bundles never write the tarball even if outDir exists", async () => {
-		// validateOnly skips tarball creation but still produces the
-		// build artifacts in dist/. Tarball-specific checks (`.tar.gz`
-		// presence) are what we're asserting here, not "dist is empty".
 		const result = await bundlePlugin({
 			dir: FIXTURE,
 			outDir,
@@ -167,16 +151,10 @@ describe("bundlePlugin", () => {
 
 		const fs = await import("node:fs/promises");
 		const contents = await fs.readdir(outDir);
-		// Dist artifacts ARE expected (build runs unconditionally), but no
-		// tarball.
 		expect(contents.some((f) => f.endsWith(".tar.gz"))).toBe(false);
 	});
 
 	it("hard-fails when the plugin has a manifest but no src/plugin.ts", async () => {
-		// The bad-plugin fixture has a valid emdash-plugin.jsonc but no
-		// src/plugin.ts. Without the guard, the bundler would happily
-		// produce a tarball with no backend.js, leaving the runtime with
-		// nothing to load.
 		await expect(bundlePlugin({ dir: BAD_FIXTURE, outDir })).rejects.toMatchObject({
 			name: "BundleError",
 			code: "MISSING_PLUGIN_ENTRY",
@@ -184,8 +162,6 @@ describe("bundlePlugin", () => {
 	});
 
 	it("does not collide between concurrent bundle runs", async () => {
-		// Each bundle invocation gets its own mkdtemp dir; running two in
-		// parallel must not corrupt each other.
 		const [a, b] = await Promise.all([
 			bundlePlugin({ dir: FIXTURE, outDir, validateOnly: true }),
 			bundlePlugin({ dir: FIXTURE, outDir, validateOnly: true }),

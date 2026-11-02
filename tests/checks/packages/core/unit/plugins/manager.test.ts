@@ -1,13 +1,3 @@
-/**
- * PluginManager Tests
- *
- * Tests the central plugin orchestrator for:
- * - Plugin registration
- * - Lifecycle management (install, activate, deactivate, uninstall)
- * - Query methods
- * - Hook and route delegation
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -20,15 +10,11 @@ import {
 } from "../../../../../../packages/core/src/plugins/manager.js";
 import type { PluginDefinition } from "../../../../../../packages/core/src/plugins/types.js";
 
-// Test error message regex patterns
 const ALREADY_REGISTERED_REGEX = /already registered/;
 const DEACTIVATE_FIRST_REGEX = /Deactivate it first/;
 const NOT_FOUND_REGEX = /not found/;
 const ALREADY_INSTALLED_REGEX = /already installed/;
 
-/**
- * Create a minimal plugin definition for testing
- */
 function createTestDefinition(overrides: Partial<PluginDefinition> = {}): PluginDefinition {
 	return {
 		id: overrides.id ?? "test-plugin",
@@ -44,7 +30,6 @@ describe("PluginManager", () => {
 	let manager: PluginManager;
 
 	beforeEach(async () => {
-		// Create in-memory SQLite database
 		sqliteDb = new Database(":memory:");
 
 		db = new Kysely<DbSchema>({
@@ -53,7 +38,6 @@ describe("PluginManager", () => {
 			}),
 		});
 
-		// Run migrations
 		await runMigrations(db);
 
 		manager = new PluginManager({ db });
@@ -80,7 +64,6 @@ describe("PluginManager", () => {
 				}),
 			);
 
-			// content:write should add content:read
 			expect(resolved.capabilities).toContain("content:write");
 			expect(resolved.capabilities).toContain("content:read");
 		});
@@ -170,8 +153,6 @@ describe("PluginManager", () => {
 
 			await manager.install("my-plugin");
 
-			// Hook should be registered but not called without context factory
-			// In real usage, the hook would be called
 			expect(manager.getPluginState("my-plugin")).toBe("installed");
 		});
 	});
@@ -397,7 +378,6 @@ describe("PluginManager", () => {
 			manager.register(createTestDefinition({ id: "my-plugin" }));
 			await manager.activate("my-plugin");
 
-			// Should not throw
 			manager.reinitialize();
 
 			expect(manager.isActive("my-plugin")).toBe(true);

@@ -74,8 +74,6 @@ const buildMailer = (context: Context<typeConfig.Context>): IMailer => {
 			return new PostmarkMailer({ context });
 	}
 
-	// Keep legacy way below for backward compatibility
-
 	if (context.env.EMAIL_SERVICE && context.env.EMAIL_INTERNAL_TOKEN) {
 		return new SuperboardMailer({ context });
 	}
@@ -96,7 +94,6 @@ const buildMailer = (context: Context<typeConfig.Context>): IMailer => {
 		return new ResendMailer({ context });
 	}
 
-	// checkEmailSetup should have been called before this
 	return new PostmarkMailer({ context });
 };
 

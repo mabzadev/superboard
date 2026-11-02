@@ -1,14 +1,3 @@
-/**
- * Folded hydration in the live loader.
- *
- * `loadEntry` / `loadCollection` fold byline and taxonomy hydration into the
- * content query as correlated JSON-array subqueries, so a fetch is one round
- * trip instead of three. The aggregation SQL is dialect-specific (SQLite
- * `json_group_array`/`json_object` returns a string; Postgres
- * `json_agg`/`json_build_object` returns parsed JSON), so this runs on both
- * dialects to guard the fold end-to-end.
- */
-
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { resetBylineFieldDefsCacheForTests } from "../../../../../packages/core/src/bylines/field-defs-cache.js";
@@ -67,13 +56,11 @@ describeEachDialect("loader hydration fold", (dialect) => {
 			data: { title: "Fold me" },
 			locale: "en",
 		});
-		// loadCollection filters status=published by default.
 		await db
 			.updateTable("ec_post")
 			.set({ status: "published" })
 			.where("id", "=", post.id)
 			.execute();
-		// Media row backing the avatar (byline.avatar_media_id has an FK to it).
 		await db
 			.insertInto("media")
 			.values({
@@ -124,8 +111,6 @@ describeEachDialect("loader hydration fold", (dialect) => {
 		const ada = credits.find((credit) => credit.byline.slug === "ada");
 		expect(ada?.roleLabel).toBe("Author");
 		expect(ada?.byline.displayName).toBe("Ada Lovelace");
-		// avatarMediaId is a required BylineSummary field templates read to render
-		// author avatars; the fold must carry it (regression guard).
 		expect(ada?.byline.avatarMediaId).toBe("media_ada_avatar");
 
 		const publicCredits = data.bylines as ContentBylineCredit[];

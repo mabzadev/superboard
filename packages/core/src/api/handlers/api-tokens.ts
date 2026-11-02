@@ -1,21 +1,9 @@
-/**
- * API token management handlers.
- *
- * Creates, lists, and revokes Personal Access Tokens (PATs).
- * Token format: ec_pat_<base64url>
- * Only the SHA-256 hash is stored — raw token shown once at creation.
- */
-
 import type { Kysely } from "kysely";
 import { ulid } from "ulidx";
 
 import { hashApiToken, generatePrefixedToken } from "../../auth/api-tokens.js";
 import type { Database } from "../../database/types.js";
 import type { ApiResult } from "../types.js";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export interface ApiTokenInfo {
 	id: string;
@@ -29,19 +17,10 @@ export interface ApiTokenInfo {
 }
 
 export interface ApiTokenCreateResult {
-	/** The raw token — shown once, never stored */
 	token: string;
-	/** Token metadata */
 	info: ApiTokenInfo;
 }
 
-// ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-/**
- * Create a new API token for a user.
- */
 export async function handleApiTokenCreate(
 	db: Kysely<Database>,
 	userId: string,
@@ -91,9 +70,6 @@ export async function handleApiTokenCreate(
 	}
 }
 
-/**
- * List all API tokens for a user (never returns the raw token or hash).
- */
 export async function handleApiTokenList(
 	db: Kysely<Database>,
 	userId: string,
@@ -138,9 +114,6 @@ export async function handleApiTokenList(
 	}
 }
 
-/**
- * Revoke (delete) an API token.
- */
 export async function handleApiTokenRevoke(
 	db: Kysely<Database>,
 	tokenId: string,
@@ -172,12 +145,6 @@ export async function handleApiTokenRevoke(
 	}
 }
 
-/**
- * Delete every token with the given name for a user, returning how many were
- * removed. Token names aren't unique, so this is a bulk delete — used by the
- * dev-bypass flow to keep a single `dev-bypass-token` instead of minting a new
- * one on every reset.
- */
 export async function deleteApiTokensByName(
 	db: Kysely<Database>,
 	userId: string,
@@ -191,11 +158,6 @@ export async function deleteApiTokensByName(
 	return Number(result.numDeletedRows ?? 0n);
 }
 
-/**
- * Resolve a raw API token (ec_pat_...) to a user ID and scopes.
- * Updates last_used_at on successful lookup.
- * Returns null if the token is invalid or expired.
- */
 export async function resolveApiToken(
 	db: Kysely<Database>,
 	rawToken: string,
@@ -210,17 +172,15 @@ export async function resolveApiToken(
 
 	if (!row) return null;
 
-	// Check expiry
 	if (row.expires_at && new Date(row.expires_at) < new Date()) {
 		return null;
 	}
 
-	// Update last_used_at (fire-and-forget, don't block the request)
 	db.updateTable("_emdash_api_tokens")
 		.set({ last_used_at: new Date().toISOString() })
 		.where("id", "=", row.id)
 		.execute()
-		.catch(() => {}); // Non-critical, swallow errors
+		.catch(() => {});
 
 	return {
 		userId: row.user_id,
@@ -228,10 +188,6 @@ export async function resolveApiToken(
 	};
 }
 
-/**
- * Resolve an OAuth access token (ec_oat_...) to a user ID and scopes.
- * Returns null if the token is invalid or expired.
- */
 export async function resolveOAuthToken(
 	db: Kysely<Database>,
 	rawToken: string,
@@ -247,7 +203,6 @@ export async function resolveOAuthToken(
 
 	if (!row) return null;
 
-	// Check expiry
 	if (new Date(row.expires_at) < new Date()) {
 		return null;
 	}

@@ -1,14 +1,3 @@
-/**
- * Exclusive Hooks Tests
- *
- * Tests the exclusive hook system:
- * - HookPipeline: registration/tracking, selection, invokeExclusiveHook
- * - PluginManager.resolveExclusiveHooks(): single provider auto-select,
- *   multi-provider no auto-select, stale selection clearing, preferred hints,
- *   admin override beats preferred
- * - Lifecycle: activate → auto-select, deactivate → clears stale selection
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import type { KyselyPlugin } from "kysely";
@@ -33,10 +22,6 @@ import type {
 } from "../../../../../../packages/core/src/plugins/types.js";
 import { describeEachDialect, setupForDialect, teardownForDialect } from "../../utils/test-db.js";
 import type { DialectTestContext } from "../../utils/test-db.js";
-
-// ---------------------------------------------------------------------------
-// Helpers — ResolvedPlugin (for HookPipeline tests)
-// ---------------------------------------------------------------------------
 
 function createTestPlugin(overrides: Partial<ResolvedPlugin> = {}): ResolvedPlugin {
 	return {
@@ -72,10 +57,6 @@ function createTestHook<T>(
 	};
 }
 
-// ---------------------------------------------------------------------------
-// Helpers — PluginDefinition (for PluginManager tests)
-// ---------------------------------------------------------------------------
-
 function createTestDefinition(overrides: Partial<PluginDefinition> = {}): PluginDefinition {
 	return {
 		id: overrides.id ?? "test-plugin",
@@ -84,10 +65,6 @@ function createTestDefinition(overrides: Partial<PluginDefinition> = {}): Plugin
 		...overrides,
 	};
 }
-
-// ---------------------------------------------------------------------------
-// HookPipeline — exclusive behaviour
-// ---------------------------------------------------------------------------
 
 describe("HookPipeline — exclusive hooks", () => {
 	it("tracks exclusive hook names during registration", () => {
@@ -198,7 +175,6 @@ describe("HookPipeline — exclusive hooks", () => {
 			},
 		});
 
-		// Context factory needs a db for PluginContextFactory
 		const sqlite = new Database(":memory:");
 		const db = new Kysely<DbSchema>({
 			dialect: new SqliteDialect({ database: sqlite }),
@@ -243,7 +219,6 @@ describe("HookPipeline — exclusive hooks", () => {
 		const pipeline = new HookPipeline([plugin], { db });
 		pipeline.setExclusiveSelection("content:afterSave", "broken-provider");
 
-		// Should NOT throw — error is isolated
 		const result = await pipeline.invokeExclusiveHook("content:afterSave", {});
 
 		expect(result).not.toBeNull();
@@ -321,14 +296,11 @@ describe("HookPipeline — exclusive hooks", () => {
 
 		const pipeline = new HookPipeline([exclusivePlugin, normalPlugin], { db });
 
-		// Set a selection — this means the exclusive hook should NOT run in the regular pipeline
 		pipeline.setExclusiveSelection("content:afterSave", "exclusive-plugin");
 
 		await pipeline.runContentAfterSave({ title: "test" }, "posts", true);
 
-		// Normal hook should run
 		expect(normalHandler).toHaveBeenCalledTimes(1);
-		// Exclusive hook should NOT have run in the regular pipeline
 		expect(exclusiveHandler).not.toHaveBeenCalled();
 
 		await db.destroy();
@@ -354,7 +326,6 @@ describe("HookPipeline — exclusive hooks", () => {
 
 		const pipeline = new HookPipeline([plugin], { db });
 
-		// No selection set — exclusive hooks should still run in regular pipeline
 		await pipeline.runContentAfterSave({ title: "test" }, "posts", true);
 
 		expect(exclusiveHandler).toHaveBeenCalledTimes(1);
@@ -363,10 +334,6 @@ describe("HookPipeline — exclusive hooks", () => {
 		sqlite.close();
 	});
 });
-
-// ---------------------------------------------------------------------------
-// HookPipeline — non-exclusive provider enumeration
-// ---------------------------------------------------------------------------
 
 describe("HookPipeline — getHookProviders", () => {
 	it("returns non-exclusive providers registered for a hook", () => {
@@ -424,10 +391,6 @@ describe("HookPipeline — getHookProviders", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// normalizeManifestHook
-// ---------------------------------------------------------------------------
-
 describe("normalizeManifestHook", () => {
 	it("converts a plain string to an object", () => {
 		const result = normalizeManifestHook("content:beforeSave");
@@ -445,10 +408,6 @@ describe("normalizeManifestHook", () => {
 		expect(result).toEqual({ name: "media:afterUpload" });
 	});
 });
-
-// ---------------------------------------------------------------------------
-// extractManifest — exclusive hook metadata
-// ---------------------------------------------------------------------------
 
 describe("extractManifest — exclusive hooks", () => {
 	it("emits plain hook names for non-exclusive hooks with default settings", () => {
@@ -504,17 +463,12 @@ describe("extractManifest — exclusive hooks", () => {
 		const manifest = extractManifest(plugin);
 		expect(manifest.hooks).toHaveLength(2);
 
-		// One should be structured (exclusive), one should be a plain string
 		const structured = manifest.hooks.filter((h) => typeof h === "object");
 		const plain = manifest.hooks.filter((h) => typeof h === "string");
 		expect(structured).toHaveLength(1);
 		expect(plain).toHaveLength(1);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// resolveExclusiveHooks (shared function)
-// ---------------------------------------------------------------------------
 
 describe("resolveExclusiveHooks — shared function", () => {
 	it("auto-selects single active provider", async () => {
@@ -572,7 +526,6 @@ describe("resolveExclusiveHooks — shared function", () => {
 			},
 		});
 
-		// Only active-provider is active, so it should be auto-selected
 		expect(pipeline.getExclusiveSelection("content:beforeSave")).toBe("active-provider");
 	});
 
@@ -591,14 +544,13 @@ describe("resolveExclusiveHooks — shared function", () => {
 		});
 		const pipeline = new HookPipeline([pluginA, pluginB]);
 
-		// Simulate existing selection for provider-a which is now inactive
 		const store = new Map<string, string>([
 			["emdash:exclusive_hook:content:beforeSave", "provider-a"],
 		]);
 
 		await resolveExclusiveHooks({
 			pipeline,
-			isActive: (id) => id === "provider-b", // provider-a is inactive
+			isActive: (id) => id === "provider-b",
 			getOption: async (key) => store.get(key) ?? null,
 			setOption: async (key, value) => {
 				store.set(key, value);
@@ -608,14 +560,9 @@ describe("resolveExclusiveHooks — shared function", () => {
 			},
 		});
 
-		// provider-a was stale, cleared. provider-b is the only active one → auto-selected
 		expect(pipeline.getExclusiveSelection("content:beforeSave")).toBe("provider-b");
 	});
 });
-
-// ---------------------------------------------------------------------------
-// PluginManager — resolveExclusiveHooks
-// ---------------------------------------------------------------------------
 
 describe("PluginManager — resolveExclusiveHooks", () => {
 	let db: Kysely<DbSchema>;
@@ -670,18 +617,14 @@ describe("PluginManager — resolveExclusiveHooks", () => {
 			}),
 		);
 
-		// provider-a is the only one — gets auto-selected
 		await manager.activate("provider-a");
 		expect(await manager.getExclusiveHookSelection("content:beforeSave")).toBe("provider-a");
 
-		// provider-b activates — existing valid selection is preserved
 		await manager.activate("provider-b");
 		expect(await manager.getExclusiveHookSelection("content:beforeSave")).toBe("provider-a");
 	});
 
 	it("leaves unselected when multiple providers activate simultaneously", async () => {
-		// If no one was auto-selected before the second provider, there's no
-		// selection to keep. Test this by registering both before activating.
 		const handlerA = vi.fn() as unknown as ContentBeforeSaveHandler;
 		const handlerB = vi.fn() as unknown as ContentBeforeSaveHandler;
 
@@ -699,12 +642,9 @@ describe("PluginManager — resolveExclusiveHooks", () => {
 			}),
 		);
 
-		// Activate provider-a (auto-selects as sole provider)
 		await manager.activate("provider-a");
-		// Clear the auto-selection to simulate "no prior selection"
 		await manager.setExclusiveHookSelection("content:beforeSave", null);
 
-		// Now activate provider-b — both active, no existing selection
 		await manager.activate("provider-b");
 		const selection = await manager.getExclusiveHookSelection("content:beforeSave");
 		expect(selection).toBeNull();
@@ -731,14 +671,11 @@ describe("PluginManager — resolveExclusiveHooks", () => {
 		await manager.activate("provider-a");
 		await manager.activate("provider-b");
 
-		// Manually set a selection
 		await manager.setExclusiveHookSelection("content:beforeSave", "provider-a");
 		expect(await manager.getExclusiveHookSelection("content:beforeSave")).toBe("provider-a");
 
-		// Deactivate the selected plugin
 		await manager.deactivate("provider-a");
 
-		// After deactivation, provider-b is the only one left → auto-selects
 		const selection = await manager.getExclusiveHookSelection("content:beforeSave");
 		expect(selection).toBe("provider-b");
 	});
@@ -764,11 +701,9 @@ describe("PluginManager — resolveExclusiveHooks", () => {
 		await manager.activate("provider-a");
 		await manager.activate("provider-b");
 
-		// Clear any auto-selection from the first activate
 		await manager.setExclusiveHookSelection("content:beforeSave", null);
 		expect(await manager.getExclusiveHookSelection("content:beforeSave")).toBeNull();
 
-		// Resolve with preferred hint
 		const hints = new Map([["provider-b", ["content:beforeSave"]]]);
 		await manager.resolveExclusiveHooks(hints);
 
@@ -796,10 +731,8 @@ describe("PluginManager — resolveExclusiveHooks", () => {
 		await manager.activate("provider-a");
 		await manager.activate("provider-b");
 
-		// Admin explicitly sets provider-a
 		await manager.setExclusiveHookSelection("content:beforeSave", "provider-a");
 
-		// Resolve with preferred hint for provider-b — admin choice should win
 		const hints = new Map([["provider-b", ["content:beforeSave"]]]);
 		await manager.resolveExclusiveHooks(hints);
 
@@ -827,17 +760,7 @@ describe("PluginManager — resolveExclusiveHooks", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// resolveExclusiveHooks — batched option reads
-// ---------------------------------------------------------------------------
-
 describe("resolveExclusiveHooks — batched option reads", () => {
-	/**
-	 * Three plugins / three exclusive hooks covering every resolution branch:
-	 * - content:beforeSave: providers a+b active, valid stored selection (kept)
-	 * - content:afterSave: provider c stale (inactive), a remains (auto-select)
-	 * - content:beforeDelete: providers a+b active, no selection (unselected)
-	 */
 	function createScenarioPipeline(): HookPipeline {
 		const pluginA = createTestPlugin({
 			id: "provider-a",
@@ -911,7 +834,6 @@ describe("resolveExclusiveHooks — batched option reads", () => {
 	});
 
 	it("resolves identically to the per-key path", async () => {
-		// Batched path
 		const batchedPipeline = createScenarioPipeline();
 		const batchedStore = createScenarioStore();
 		await resolveExclusiveHooks({
@@ -920,7 +842,6 @@ describe("resolveExclusiveHooks — batched option reads", () => {
 			...createStoreCallbacks(batchedStore),
 		});
 
-		// Per-key path (no getOptions)
 		const perKeyPipeline = createScenarioPipeline();
 		const perKeyStore = createScenarioStore();
 		const { getOptions: _unused, ...perKeyCallbacks } = createStoreCallbacks(perKeyStore);
@@ -937,7 +858,6 @@ describe("resolveExclusiveHooks — batched option reads", () => {
 		}
 		expect(batchedStore).toEqual(perKeyStore);
 
-		// Sanity-check the actual outcomes, not just parity
 		expect(batchedPipeline.getExclusiveSelection("content:beforeSave")).toBe("provider-a");
 		expect(batchedPipeline.getExclusiveSelection("content:afterSave")).toBe("provider-a");
 		expect(batchedPipeline.getExclusiveSelection("content:beforeDelete")).toBeUndefined();
@@ -952,7 +872,6 @@ describe("resolveExclusiveHooks — batched option reads", () => {
 			resolveExclusiveHooks({ pipeline, isActive, ...callbacks }),
 		).resolves.toBeUndefined();
 
-		// Matches the per-key tolerance: nothing written, nothing selected
 		expect(callbacks.setOption).not.toHaveBeenCalled();
 		expect(callbacks.deleteOption).not.toHaveBeenCalled();
 		expect(pipeline.getExclusiveSelection("content:beforeSave")).toBeUndefined();
@@ -961,15 +880,6 @@ describe("resolveExclusiveHooks — batched option reads", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// PluginManager — batched resolution against a real database
-// ---------------------------------------------------------------------------
-
-/**
- * Kysely plugin that counts compiled SELECT statements — one per executed
- * select round trip. Used to assert the batched resolution issues a single
- * options read regardless of how many exclusive hooks are registered.
- */
 function createSelectCountingPlugin(): { plugin: KyselyPlugin; counter: { count: number } } {
 	const counter = { count: 0 };
 	const plugin: KyselyPlugin = {
@@ -1037,8 +947,6 @@ describeEachDialect("PluginManager — batched exclusive hook resolution", (dial
 		await manager.activate("provider-after");
 		await manager.activate("provider-delete");
 
-		// All three sole providers were auto-selected during activation;
-		// a fresh resolution keeps them with exactly one batched read.
 		counter.count = 0;
 		await manager.resolveExclusiveHooks();
 		expect(counter.count).toBe(1);

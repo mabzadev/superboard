@@ -1,14 +1,3 @@
-/**
- * Coverage for the init scaffolder's environment probe.
- *
- * The probe reads three external sources: git config, git remote, and
- * package.json. Tests focus on the parts we control directly — repo
- * URL normalisation and package.json field extraction. The git-config
- * and git-remote subprocess calls are tested indirectly via `init`
- * integration tests; mocking child_process gets brittle fast and the
- * subprocess wrapper is a thin layer that doesn't have much to fail.
- */
-
 import { execFileSync } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -33,9 +22,7 @@ describe("probeEnvironment — package.json extraction", () => {
 		const env = await probeEnvironment(dir);
 		expect(env.license).toBeUndefined();
 		expect(env.description).toBeUndefined();
-		// Note: authorName / authorEmail may be set from the user's
 		// global git config; we don't assert on them here. The package
-		// extraction is the focus.
 	});
 
 	it("reads license, description, and repository from package.json", async () => {
@@ -64,10 +51,6 @@ describe("probeEnvironment — package.json extraction", () => {
 			}),
 			"utf8",
 		);
-		// SSH URL with the `ssh://` scheme prefix isn't the shape our
-		// normaliser handles — the user-facing common case is
-		// `git@host:path`, not `ssh://git@host/path`. The probe
-		// returns undefined; the prompt's fallback chain handles it.
 		const env = await probeEnvironment(dir);
 		expect(env.repo).toBeUndefined();
 	});
@@ -94,7 +77,6 @@ describe("probeEnvironment — package.json extraction", () => {
 	});
 
 	it("treats a non-object package.json as missing", async () => {
-		// Valid JSON but not an object — pathological but possible.
 		await writeFile(join(dir, "package.json"), "[]", "utf8");
 		const env = await probeEnvironment(dir);
 		expect(env.license).toBeUndefined();
@@ -102,8 +84,6 @@ describe("probeEnvironment — package.json extraction", () => {
 	});
 
 	it("ignores oversized package.json (defence against weird files)", async () => {
-		// Build a 100 KiB file. The cap is 64 KiB; the probe should
-		// skip rather than buffer the whole thing.
 		const fluff = " ".repeat(100 * 1024);
 		await writeFile(
 			join(dir, "package.json"),
@@ -149,7 +129,7 @@ describe("probeEnvironment — package.json extraction", () => {
 	it("returns undefined for unrecognised repository shapes", async () => {
 		await writeFile(
 			join(dir, "package.json"),
-			JSON.stringify({ name: "test", repository: { type: "git" /* no url */ } }),
+			JSON.stringify({ name: "test", repository: { type: "git" } }),
 			"utf8",
 		);
 		const env = await probeEnvironment(dir);

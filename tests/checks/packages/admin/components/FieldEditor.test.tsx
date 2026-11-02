@@ -5,10 +5,6 @@ import { FieldEditor } from "../../../../../packages/admin/src/components/FieldE
 import type { SchemaField } from "../../../../../packages/admin/src/lib/api";
 import { render } from "../utils/render.tsx";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const FIELD_TYPE_REGEXES = [
 	/Short Text/,
 	/Long Text/,
@@ -49,15 +45,6 @@ function makeField(overrides: Partial<SchemaField> = {}): SchemaField {
 	};
 }
 
-// The kumo Dialog renders a `data-base-ui-inert` overlay that blocks pointer
-// events inside the dialog in Playwright's actionability checks. Assertions
-// (toBeInTheDocument, toHaveValue, etc.) work fine; only click() is blocked.
-//
-// Strategy:
-// - Type selection step: assert type buttons exist (no clicking needed)
-// - Config step: use edit mode (pass field prop) to go directly to config
-// - onSave/callbacks: use edit mode fields to test form submission
-
 describe("FieldEditor", () => {
 	const defaultProps = {
 		open: true,
@@ -87,7 +74,6 @@ describe("FieldEditor", () => {
 
 		it("shows all 14 field types as buttons", async () => {
 			const screen = await render(<FieldEditor {...defaultProps} />);
-			// Each type renders as a button with label and description
 			for (const name of FIELD_TYPE_REGEXES) {
 				await expect.element(screen.getByRole("button", { name })).toBeInTheDocument();
 			}
@@ -95,14 +81,12 @@ describe("FieldEditor", () => {
 
 		it("does not show config form on initial render", async () => {
 			const screen = await render(<FieldEditor {...defaultProps} />);
-			// Label and Slug inputs should NOT be present in type selection step
 			expect(screen.getByLabelText("Label").query()).toBeNull();
 			expect(screen.getByLabelText("Slug").query()).toBeNull();
 		});
 	});
 
 	describe("config step (string field)", () => {
-		// Use a minimal string field to go directly to config step
 		const stringField = makeField({
 			slug: "",
 			label: "",
@@ -221,7 +205,6 @@ describe("FieldEditor", () => {
 		it("shows options textarea for select type", async () => {
 			const screen = await render(<FieldEditor {...defaultProps} field={selectField} />);
 			await expect.element(screen.getByText("Options (one per line)")).toBeInTheDocument();
-			// Textarea should have the placeholder
 			await expect.element(screen.getByPlaceholder("Option 1")).toBeInTheDocument();
 		});
 	});
@@ -290,14 +273,12 @@ describe("FieldEditor", () => {
 
 		it("pre-populates required checkbox", async () => {
 			const screen = await render(<FieldEditor {...defaultProps} field={existingField} />);
-			// The Required checkbox text should be present (the field has required: true)
 			await expect.element(screen.getByText("Required")).toBeInTheDocument();
 		});
 
 		it("does not auto-generate slug when editing label in edit mode", async () => {
 			const screen = await render(<FieldEditor {...defaultProps} field={existingField} />);
 			await screen.getByLabelText("Label").fill("New Label");
-			// Slug should remain "title", not change to "new_label"
 			await expect.element(screen.getByLabelText("Slug")).toHaveValue("title");
 		});
 

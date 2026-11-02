@@ -18,7 +18,6 @@ describe("Image dimension round-trip", () => {
 	};
 
 	it("preserves displayWidth and displayHeight through PT → PM → PT", () => {
-		// PT → PM
 		const pm = portableTextToProsemirror([imageBlock]);
 		const imageNode = pm.content[0];
 
@@ -28,7 +27,6 @@ describe("Image dimension round-trip", () => {
 		expect(imageNode.attrs?.width).toBe(1920);
 		expect(imageNode.attrs?.height).toBe(1080);
 
-		// PM → PT
 		const pt = prosemirrorToPortableText(pm);
 		const restored = pt[0] as PortableTextImageBlock;
 

@@ -34,7 +34,6 @@ export type EmailMessageDetail = EmailMessageSummary & {
 		attempt_count: number;
 		last_error: string | null;
 	}>;
-	/** "api" for messages sent through POST /v1/email/send. */
 	source?: "api" | "admin";
 	scheduled_at?: string | null;
 	tags?: string[];
@@ -97,7 +96,6 @@ export type ProviderWebhook = {
 	created_at?: string;
 };
 
-/** Email Worker messages exposed by the delivery outbox endpoint. */
 export type DeliveryOutboxItem = {
 	id: string;
 	subject?: string | null;
@@ -229,7 +227,6 @@ export type EmailApiKey = {
 	scopes: string[];
 	created_at: string;
 	last_used_at: string | null;
-	/** Present only in the creation response. */
 	secret?: string | null;
 };
 
@@ -264,7 +261,6 @@ export type EmailEventWebhook = {
 	secret_prefix: string;
 	last_status?: string | null;
 	last_delivery_at?: string | null;
-	/** Present only in the creation response. */
 	secret?: string | null;
 };
 export type EmailEventWebhookDelivery = {

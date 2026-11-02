@@ -79,7 +79,6 @@ function McpAuthorizeContent() {
 
 			const { code, state: returnedState } = response.data;
 
-			// Build the MCP client's callback URL with the auth code
 			const callbackUrl = new URL(verifiedClient.redirect_uri);
 			callbackUrl.searchParams.set("code", code);
 			if (returnedState) {
@@ -87,14 +86,8 @@ function McpAuthorizeContent() {
 			}
 			const callbackUrlStr = callbackUrl.toString();
 
-			// Render the success view first so the user always sees a clear confirmation,
-			// even if the browser intercepts navigation as a universal link and stays on
-			// this page instead of actually navigating away.
 			setApprovedCallbackUrl(callbackUrlStr);
 			setIsSubmitting(false);
-			// Trigger the redirect on the next tick so React has a chance to render
-			// the success view before navigation (which may be preempted by an OS-level
-			// universal link handler).
 			window.setTimeout(() => {
 				window.location.href = callbackUrlStr;
 			}, 50);

@@ -513,7 +513,6 @@ describe("media usage summary handler and routes", () => {
 			success: false,
 			error: { code: "MEDIA_USAGE_READ_ERROR", message: "Failed to read media usage" },
 		});
-		// Kysely's query logger records the successful media lookup but not the failed statement.
 		expect(queries).toHaveLength(1);
 		expect(errorSpy).toHaveBeenCalledOnce();
 	});

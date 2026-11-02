@@ -290,7 +290,6 @@ app.all("/public/v1/opt-in/:token", async (c) => {
 			crypto.randomUUID(),
 			JSON.stringify({ subscriber_id: confirmed.id }),
 		),
-		// Confirming again is the contact's own consent: lift only their unsubscribe.
 		c.env.DB.prepare(
 			"DELETE FROM suppressions WHERE project_id = ? AND email = ? AND reason = 'unsubscribe'",
 		).bind(confirmed.project_id, confirmed.email),
@@ -621,8 +620,6 @@ app.delete("/internal/v1/application/users/:userId", async (c) => {
 		return c.json({ data: { erased: true, subscribers_redacted: 0 } });
 	}
 
-	// Keep the minimum suppression record required to prevent accidental future
-	// marketing. Every campaign/delivery profile field is otherwise redacted.
 	const erasedAddress = `erased+${(await sha256(`${projectId}:${identity.userId}`)).slice(0, 32)}@invalid.superboard`;
 	const now = new Date().toISOString();
 	const results = await c.env.DB.batch([
@@ -714,7 +711,6 @@ app.post("/internal/v1/email/subscribers", async (c) => {
 	const address = email(body.email);
 	const now = new Date().toISOString();
 	const requestedListIds = stringArray(body.list_ids, "list_ids");
-	// Lists configured for double opt-in always ask new contacts to confirm.
 	const doubleOptIn =
 		booleanValue(body.double_opt_in, false) ||
 		(await doubleOptInListIds(c.env.DB, project.projectId, requestedListIds)).length > 0;
@@ -1060,9 +1056,6 @@ app.get("/internal/v1/suppressions", async (c) => {
 	return c.json({ data: rows.results });
 });
 
-// Operators can only add or lift manual suppressions. Unsubscribes, bounces,
-// complaints and privacy deletions stay authoritative so consent is never
-// restored on someone's behalf.
 app.post("/internal/v1/suppressions", async (c) => {
 	const project = c.get("project");
 	const address = email((await readJsonObject(c.req.raw)).email);
@@ -1198,7 +1191,6 @@ app.put("/internal/v1/lists/:listId/subscribers/:subscriberId", async (c) => {
 	)
 		.bind(projectId, c.req.param("subscriberId"), c.req.param("listId"))
 		.run();
-	// A double opt-in list re-sends the confirmation to contacts who have not confirmed yet.
 	const confirmationRequired =
 		listRow.optin_mode === "double" &&
 		subscriberRow.status === "enabled" &&

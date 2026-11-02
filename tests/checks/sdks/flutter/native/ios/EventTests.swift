@@ -3,8 +3,6 @@ import XCTest
 
 final class EventTests: XCTestCase {
 
-    // MARK: - Initialization
-
     func testInitWithAllProperties() {
         let date = Date()
         let event = Event(type: .timeSpent, createdAt: date, link: "https://test.com", engagementTime: 60)
@@ -14,8 +12,6 @@ final class EventTests: XCTestCase {
         XCTAssertEqual(event.link, "https://test.com")
         XCTAssertEqual(event.engagementTime, 60)
     }
-
-    // MARK: - NSCoding Round-Trip
 
     func testNSCodingRoundTripPreservesAllFields() throws {
         let event = Event(type: .timeSpent, createdAt: Date(), link: "https://test.com", engagementTime: 120)
@@ -45,18 +41,14 @@ final class EventTests: XCTestCase {
         let event = Event(type: .appOpen, createdAt: Date(), link: "https://old.com")
         let originalID = event.id
 
-        // First round-trip
         let data1 = try NSKeyedArchiver.archivedData(withRootObject: event, requiringSecureCoding: false)
         let decoded1 = try XCTUnwrap(NSKeyedUnarchiver.unarchiveObject(with: data1) as? Event)
         XCTAssertEqual(decoded1.id, originalID)
 
-        // Second round-trip from decoded event
         let data2 = try NSKeyedArchiver.archivedData(withRootObject: decoded1, requiringSecureCoding: false)
         let decoded2 = try XCTUnwrap(NSKeyedUnarchiver.unarchiveObject(with: data2) as? Event)
         XCTAssertEqual(decoded2.id, originalID)
     }
-
-    // MARK: - toBackend
 
     func testToBackendContainsAllFields() {
         let date = Date()
@@ -85,11 +77,7 @@ final class EventTests: XCTestCase {
         XCTAssertNotNil(dict["created_at"])
     }
 
-    // MARK: - NSCoding Backward Compatibility
-
     func testDecodingEventWithoutUUIDGeneratesNewID() throws {
-        // Create an archive that has type and createdAt but no "id" key.
-        // We do this by archiving with a custom helper that skips the "id" key.
         let archiver = NSKeyedArchiver(requiringSecureCoding: false)
         archiver.encode("app_open", forKey: "type")
         archiver.encode(Date(), forKey: "createdAt")
@@ -120,7 +108,6 @@ final class EventTests: XCTestCase {
     func testDecodingEventWithMissingCreatedAtReturnsNil() throws {
         let archiver = NSKeyedArchiver(requiringSecureCoding: false)
         archiver.encode("view", forKey: "type")
-        // Deliberately omit "createdAt"
         archiver.finishEncoding()
 
         let unarchiver = try NSKeyedUnarchiver(forReadingFrom: archiver.encodedData)

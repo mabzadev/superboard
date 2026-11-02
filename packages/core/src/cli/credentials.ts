@@ -1,24 +1,12 @@
-/**
- * Credential storage for CLI auth tokens.
- *
- * Stores OAuth tokens in ~/.config/emdash/auth.json.
- * Remote URLs are keyed by origin, local dev by project path.
- */
-
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export interface StoredCredential {
 	accessToken: string;
 	refreshToken: string;
 	expiresAt: string;
-	url?: string; // For local dev: the localhost URL
-	/** Custom headers to send with every request (e.g. CF Access service token) */
+	url?: string;
 	customHeaders?: Record<string, string>;
 	user?: {
 		email: string;
@@ -26,7 +14,6 @@ export interface StoredCredential {
 	};
 }
 
-/** Credential for marketplace auth (GitHub OAuth JWT, no refresh token) */
 export interface MarketplaceCredential {
 	token: string;
 	expiresAt: string;
@@ -38,12 +25,7 @@ export interface MarketplaceCredential {
 
 type CredentialStore = Record<string, StoredCredential | MarketplaceCredential>;
 
-// ---------------------------------------------------------------------------
-// Paths
-// ---------------------------------------------------------------------------
-
 function getConfigDir(): string {
-	// XDG_CONFIG_HOME or ~/.config
 	const xdg = process.env["XDG_CONFIG_HOME"];
 	if (xdg) return join(xdg, "emdash");
 	return join(homedir(), ".config", "emdash");
@@ -53,16 +35,6 @@ function getCredentialPath(): string {
 	return join(getConfigDir(), "auth.json");
 }
 
-// ---------------------------------------------------------------------------
-// Key resolution
-// ---------------------------------------------------------------------------
-
-/**
- * Resolve the credential key for a given URL.
- *
- * Remote URLs are keyed by origin (e.g. "https://my-site.pages.dev").
- * Local dev instances are keyed by project path (e.g. "path:/Users/matt/sites/blog").
- */
 export function resolveCredentialKey(baseUrl: string): string {
 	try {
 		const url = new URL(baseUrl);
@@ -70,12 +42,10 @@ export function resolveCredentialKey(baseUrl: string): string {
 			url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]";
 
 		if (isLocal) {
-			// For local dev, key by project path
 			const projectPath = findProjectRoot(process.cwd());
 			if (projectPath) {
 				return `path:${projectPath}`;
 			}
-			// Fallback to URL if no project root found
 			return url.origin;
 		}
 
@@ -85,9 +55,6 @@ export function resolveCredentialKey(baseUrl: string): string {
 	}
 }
 
-/**
- * Walk up from cwd to find the project root (directory containing astro.config.*).
- */
 function findProjectRoot(from: string): string | null {
 	let dir = resolve(from);
 	const root = resolve("/");
@@ -111,10 +78,6 @@ function findProjectRoot(from: string): string | null {
 	return null;
 }
 
-// ---------------------------------------------------------------------------
-// Read/write
-// ---------------------------------------------------------------------------
-
 function readStore(): CredentialStore {
 	const path = getCredentialPath();
 	try {
@@ -122,9 +85,7 @@ function readStore(): CredentialStore {
 			const content = readFileSync(path, "utf-8");
 			return JSON.parse(content) as CredentialStore;
 		}
-	} catch {
-		// Corrupt file — start fresh
-	}
+	} catch {}
 	return {};
 }
 
@@ -135,17 +96,10 @@ function writeStore(store: CredentialStore): void {
 	const path = getCredentialPath();
 	writeFileSync(path, JSON.stringify(store, null, "\t"), {
 		encoding: "utf-8",
-		mode: 0o600, // Owner read/write only
+		mode: 0o600,
 	});
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * Get stored credentials for a URL.
- */
 export function getCredentials(baseUrl: string): StoredCredential | null {
 	const key = resolveCredentialKey(baseUrl);
 	const store = readStore();
@@ -154,9 +108,6 @@ export function getCredentials(baseUrl: string): StoredCredential | null {
 	return cred;
 }
 
-/**
- * Save credentials for a URL.
- */
 export function saveCredentials(baseUrl: string, cred: StoredCredential): void {
 	const key = resolveCredentialKey(baseUrl);
 	const store = readStore();
@@ -164,9 +115,6 @@ export function saveCredentials(baseUrl: string, cred: StoredCredential): void {
 	writeStore(store);
 }
 
-/**
- * Remove credentials for a URL.
- */
 export function removeCredentials(baseUrl: string): boolean {
 	const key = resolveCredentialKey(baseUrl);
 	const store = readStore();
@@ -178,17 +126,10 @@ export function removeCredentials(baseUrl: string): boolean {
 	return false;
 }
 
-/**
- * List all stored credential keys.
- */
 export function listCredentialKeys(): string[] {
 	const store = readStore();
 	return Object.keys(store);
 }
-
-// ---------------------------------------------------------------------------
-// Marketplace credentials
-// ---------------------------------------------------------------------------
 
 function marketplaceKey(registryUrl: string): string {
 	try {
@@ -198,22 +139,15 @@ function marketplaceKey(registryUrl: string): string {
 	}
 }
 
-/**
- * Get stored marketplace credential for a registry URL.
- */
 export function getMarketplaceCredential(registryUrl: string): MarketplaceCredential | null {
 	const key = marketplaceKey(registryUrl);
 	const store = readStore();
 	const cred = store[key];
 	if (!cred || !("token" in cred)) return null;
-	// Check expiry
 	if (new Date(cred.expiresAt) < new Date()) return null;
 	return cred;
 }
 
-/**
- * Save marketplace credential for a registry URL.
- */
 export function saveMarketplaceCredential(registryUrl: string, cred: MarketplaceCredential): void {
 	const key = marketplaceKey(registryUrl);
 	const store = readStore();
@@ -221,9 +155,6 @@ export function saveMarketplaceCredential(registryUrl: string, cred: Marketplace
 	writeStore(store);
 }
 
-/**
- * Remove marketplace credential for a registry URL.
- */
 export function removeMarketplaceCredential(registryUrl: string): boolean {
 	const key = marketplaceKey(registryUrl);
 	const store = readStore();

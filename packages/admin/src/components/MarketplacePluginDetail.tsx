@@ -1,15 +1,3 @@
-/**
- * Marketplace Plugin Detail
- *
- * Full detail view for a marketplace plugin:
- * - README rendered as markdown
- * - Screenshot gallery
- * - Capability list
- * - Audit summary
- * - Version history
- * - Install button (with capability consent)
- */
-
 import { Badge, Button } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { DownloadSimple, GithubLogo, Globe, ShieldCheck, Warning, X } from "@phosphor-icons/react";
@@ -35,7 +23,6 @@ import { UninstallConfirmDialog } from "./PluginManager.js";
 
 export interface MarketplacePluginDetailProps {
 	pluginId: string;
-	/** IDs of plugins already installed on this site */
 	installedPluginIds?: Set<string>;
 }
 
@@ -141,10 +128,8 @@ export function MarketplacePluginDetail({
 		<div className="space-y-6">
 			<BackLink />
 
-			{/* Header */}
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div className="flex items-start gap-4">
-					{/* Icon */}
 					{iconSrc ? (
 						<img
 							src={iconSrc}
@@ -176,7 +161,6 @@ export function MarketplacePluginDetail({
 					</div>
 				</div>
 
-				{/* Action button */}
 				<div className="flex items-center gap-3">
 					{isInstalled ? (
 						<>
@@ -206,7 +190,6 @@ export function MarketplacePluginDetail({
 				</div>
 			</div>
 
-			{/* Stats bar */}
 			<div className="flex flex-wrap items-center gap-4 rounded-lg border bg-kumo-tint/30 p-3 text-sm">
 				<div className="flex items-center gap-1.5">
 					<DownloadSimple className="h-4 w-4 text-kumo-subtle" />
@@ -238,7 +221,6 @@ export function MarketplacePluginDetail({
 				)}
 			</div>
 
-			{/* Screenshots */}
 			{screenshots.length > 0 && (
 				<div>
 					<h2 className="mb-3 text-lg font-semibold">{t`Screenshots`}</h2>
@@ -262,9 +244,7 @@ export function MarketplacePluginDetail({
 				</div>
 			)}
 
-			{/* Two-column layout: README + sidebar */}
 			<div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-				{/* README */}
 				<div>
 					{latest?.readme ? (
 						<div className="prose prose-sm max-w-none rounded-lg border bg-kumo-base p-6">
@@ -277,9 +257,7 @@ export function MarketplacePluginDetail({
 					)}
 				</div>
 
-				{/* Sidebar */}
 				<div className="space-y-4">
-					{/* Capabilities */}
 					<div className="rounded-lg border bg-kumo-base p-4">
 						<h3 className="text-sm font-semibold mb-2">{t`Permissions`}</h3>
 						{plugin.capabilities.length === 0 ? (
@@ -298,7 +276,6 @@ export function MarketplacePluginDetail({
 						)}
 					</div>
 
-					{/* Keywords */}
 					{plugin.keywords && plugin.keywords.length > 0 && (
 						<div className="rounded-lg border bg-kumo-base p-4">
 							<h3 className="text-sm font-semibold mb-2">{t`Keywords`}</h3>
@@ -312,7 +289,6 @@ export function MarketplacePluginDetail({
 						</div>
 					)}
 
-					{/* Audit summary */}
 					{latest?.audit && (
 						<div className="rounded-lg border bg-kumo-base p-4">
 							<h3 className="text-sm font-semibold mb-2">{t`Security Audit`}</h3>
@@ -325,7 +301,6 @@ export function MarketplacePluginDetail({
 						</div>
 					)}
 
-					{/* Version info */}
 					{latest && (
 						<div className="rounded-lg border bg-kumo-base p-4">
 							<h3 className="text-sm font-semibold mb-2">{t`Version`}</h3>
@@ -342,7 +317,6 @@ export function MarketplacePluginDetail({
 				</div>
 			</div>
 
-			{/* Capability consent dialog */}
 			{showConsent && (
 				<CapabilityConsentDialog
 					mode="install"
@@ -361,7 +335,6 @@ export function MarketplacePluginDetail({
 				/>
 			)}
 
-			{/* Uninstall confirmation */}
 			{showUninstallConfirm && (
 				<UninstallConfirmDialog
 					pluginName={plugin.name}
@@ -375,7 +348,6 @@ export function MarketplacePluginDetail({
 				/>
 			)}
 
-			{/* Screenshot lightbox */}
 			{lightboxIndex !== null && lightboxIndex < screenshots.length && (
 				<ScreenshotLightbox
 					screenshots={screenshots}
@@ -388,10 +360,6 @@ export function MarketplacePluginDetail({
 		</div>
 	);
 }
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
 
 function BackLink() {
 	const { t } = useLingui();
@@ -479,17 +447,12 @@ function ScreenshotLightbox({
 				</button>
 			)}
 
-			{/* Counter */}
 			<div className="absolute bottom-4 start-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-sm text-white">
 				{index + 1} / {screenshots.length}
 			</div>
 		</div>
 	);
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function formatBytes(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`;

@@ -14,11 +14,7 @@ import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 
-/// Retry policy shared by the SuperBoard Android requests, aligned with the iOS SDK:
-/// a bounded number of retries with exponential backoff and jitter, and only for failures
-/// that can succeed later (network errors, 408, 429 and 5xx).
 internal object SuperBoardRetryPolicy {
-    /** Maximum number of retries after the first attempt. */
     const val MAX_RETRY_ATTEMPTS = 5
     const val BASE_DELAY_MILLIS = 2_000L
     const val MAX_DELAY_MILLIS = 60_000L
@@ -35,7 +31,6 @@ internal object SuperBoardRetryPolicy {
             code == HTTP_TOO_MANY_REQUESTS ||
             code in HTTP_SERVER_ERROR_MIN..HTTP_SERVER_ERROR_MAX
 
-    /** 2s, 4s, 8s... capped at 60s, plus up to 1s of jitter so clients do not retry in lockstep. */
     fun delayMillis(retryCount: Int, random: Random = Random.Default): Long {
         val shift = retryCount.coerceIn(0, MAX_BACKOFF_SHIFT)
         val base = (BASE_DELAY_MILLIS shl shift).coerceAtMost(MAX_DELAY_MILLIS)
@@ -43,10 +38,6 @@ internal object SuperBoardRetryPolicy {
     }
 }
 
-/// Executes Retrofit calls with [SuperBoardRetryPolicy] and maps them to the SDK result types.
-///
-/// `onSuccess` receives the 2xx body and returns the result value, or null when a required body
-/// is missing; an empty 2xx body is then reported as a final error instead of being retried.
 internal class SuperBoardRequestExecutor(private val gson: Gson) {
     private sealed class Outcome<out T : Any> {
         class Success<out T : Any>(val value: T) : Outcome<T>()
@@ -73,7 +64,6 @@ internal class SuperBoardRequestExecutor(private val gson: Gson) {
         }
     }
 
-    /// Same policy as [request], reporting each scheduled retry as [GVRetryResult.Retrying].
     fun <B : Any, T : Any> retryingFlow(
         label: String,
         failureMessage: String,
@@ -127,8 +117,6 @@ internal class SuperBoardRequestExecutor(private val gson: Gson) {
         }
     }
 
-    /// Network failures are retryable; anything else (e.g. an unparsable body) is final.
-    /// Cancellation and JVM errors are never swallowed.
     private fun classifyException(label: String, cause: Throwable): Outcome<Nothing> {
         if (cause is CancellationException || cause !is Exception) throw cause
         DebugLogger.instance.log(LogLevel.INFO, "$label - Failed. Exception: ${cause.message}")
@@ -140,7 +128,6 @@ internal class SuperBoardRequestExecutor(private val gson: Gson) {
         return Outcome.Failure(IOException("$failureMessage $reason"), retryable)
     }
 
-    /// Server-provided error message, falling back to the HTTP status for non-JSON bodies.
     private fun errorReason(response: Response<*>): String {
         val message = runCatching {
             response.errorBody()?.string()?.let { gson.fromJson(it, ErrorMessage::class.java)?.error }

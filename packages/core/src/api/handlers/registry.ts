@@ -1,42 +1,3 @@
-/**
- * Registry plugin install handler.
- *
- * Installs a plugin published to the experimental decentralized plugin
- * registry described in RFC 0001. The install flow:
- *
- *   1. Resolve `(handle, slug)` to a publisher DID via the configured
- *      aggregator's `resolvePackage` XRPC.
- *   2. Look up the requested release (or the policy-filtered latest one)
- *      via `getLatestRelease` / `listReleases`.
- *   3. Require the aggregator's approved listing projection, then apply the
- *      independent release-age and environment policies.
- *   4. Fetch the bundle artifact, walking aggregator mirrors first and
- *      falling back to the publisher-declared URL.
- *   5. Verify the artifact's multibase checksum against the signed
- *      release record's `artifacts.package.checksum`.
- *   6. Extract `manifest.json` + `backend.js` + optional `admin.js` from
- *      the gzipped tar bundle.
- *   7. Store the extracted files in site-local R2 under the
- *      `registry/<plugin-id>/<version>/` prefix.
- *   8. Write a `plugin_states` row with `source = "registry"` and the
- *      `(publisher_did, slug)` pair so updates can be resolved later.
- *   9. Sync the runtime so the plugin becomes active immediately.
- *
- * Known gaps (tracked separately):
- *
- *   - The aggregator-supplied records are not yet cryptographically
- *     verified against the publisher's MST signature. The signed bytes
- *     and CIDs are passed through verbatim per the lexicon, but full
- *     PDS-direct verification with proof traversal is follow-up work.
- *     The artifact checksum is verified end-to-end against the value
- *     in the (aggregator-relayed) release record, which is the actual
- *     trust boundary for the bytes that end up in the sandbox.
- *   - Listing approval controls whether metadata is eligible for discovery.
- *     It is never treated as approval of plugin code: checksum, bundle,
- *     manifest, access, consent, sandbox, and environment gates remain
- *     independent below.
- */
-
 import { ClientResponseError, ClientValidationError } from "@atcute/client";
 import type { Did } from "@atcute/lexicons";
 import { checkEnvCompatibility, findSkippedEnvConstraints } from "@emdash-cms/registry-client/env";
@@ -80,15 +41,6 @@ export { assertSafeArtifactUrl } from "../../registry/artifact-fetch.js";
 
 const RELEASE_EXTENSION_NSID = "com.emdashcms.experimental.package.releaseExtension";
 
-/**
- * Whether two `declaredAccess` blocks grant exactly the same enforced access --
- * the same capabilities AND the same host allow-list. Both are lowered through
- * the canonical converter so that constraint content (`allowedHosts`), not just
- * the capability set, is part of the comparison. The capability-set consent
- * gate is blind to host scope; this is what keeps a bundle from being installed
- * with a wider (or simply different) host allow-list than its published record
- * advertised and the user consented to.
- */
 export function enforcedAccessEqual(a: DeclaredAccess, b: DeclaredAccess): boolean {
 	const aa = declaredAccessToCapabilities(a);
 	const bb = declaredAccessToCapabilities(b);
@@ -98,57 +50,24 @@ export function enforcedAccessEqual(a: DeclaredAccess, b: DeclaredAccess): boole
 	);
 }
 
-// ── Types ──────────────────────────────────────────────────────────
-
 export interface RegistryInstallInput {
-	/**
-	 * Publisher DID. Required. The browser is expected to resolve
-	 * `(handle, slug) → (did, slug)` via the aggregator's
-	 * `resolvePackage` XRPC before posting -- the server then skips that
-	 * round-trip and looks up the package directly.
-	 *
-	 * Passing DID rather than handle here means installs work for
-	 * publishers whose handle the aggregator couldn't resolve at view
-	 * time (handle is "best-effort" per the lexicon -- absent for any
-	 * publisher whose DID document didn't resolve cleanly at ingest).
-	 */
 	did: string;
-	/** Package slug (rkey of the publisher's profile record). */
 	slug: string;
-	/** Optional explicit version. When omitted, the aggregator's latest. */
 	version?: string;
-	/**
-	 * Capabilities the admin acknowledged in the consent dialog, lifted
-	 * from the release record's `declaredAccess` block. Compared against
-	 * the bundle's `manifest.declaredAccess` to detect drift between
-	 * what the admin agreed to and what the bundle actually requests.
-	 *
-	 * When omitted, drift detection is skipped -- callers that don't
-	 * surface a consent UI before posting (e.g. CI scripts) opt out.
-	 */
 	acknowledgedDeclaredAccess?: unknown;
 	acknowledgedMcpTools?: unknown;
 }
 
 export interface RegistryInstallResult {
-	/** Hashed, opaque plugin id used everywhere in the runtime. */
 	pluginId: string;
-	/** Publisher DID resolved from the handle. */
 	publisherDid: string;
-	/** Publisher slug (== the registry slug). */
 	slug: string;
-	/** Installed version. */
 	version: string;
-	/** Capabilities surfaced from the bundle's manifest. */
 	capabilities: string[];
 }
 
-// ── Helpers ────────────────────────────────────────────────────────
-
-/** Matches a bare 64-character lowercase/uppercase hex SHA-256 digest. */
 const SHA256_HEX_PATTERN = /^[a-f0-9]{64}$/i;
 
-/** Compute the SHA-256 of `bytes` as a lowercase hex string. */
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Uint8Array is a valid BufferSource at runtime
 	const buf = await crypto.subtle.digest("SHA-256", bytes as unknown as BufferSource);
@@ -156,22 +75,9 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 	return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** multihash code for sha2-256 (single-byte varint). */
 const MULTIHASH_SHA256_CODE = 0x12;
-/** sha2-256 digest length in bytes (single-byte varint). */
 const MULTIHASH_SHA256_LENGTH = 0x20;
 
-/**
- * Compute the multibase-multihash sha2-256 checksum of `bytes`, in the
- * same `b<base32>` shape the registry CLI publishes
- * (`packages/plugin-cli/src/multihash.ts`). Returns a 56-character
- * string starting with `b`.
- *
- * The trust contract is: if both sides produce the same string for
- * the same bytes, the bytes are unchanged. We don't decode the
- * publisher-supplied checksum -- we just re-encode our own and compare,
- * which is equivalent and avoids needing a base32 decoder.
- */
 async function sha256MultibaseMultihash(bytes: Uint8Array): Promise<string> {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Uint8Array is a valid BufferSource at runtime
 	const digestBuf = await crypto.subtle.digest("SHA-256", bytes as unknown as BufferSource);
@@ -184,107 +90,34 @@ async function sha256MultibaseMultihash(bytes: Uint8Array): Promise<string> {
 	return `b${toBase32(multihash)}`;
 }
 
-/**
- * Verify that a checksum string from a release record's
- * `artifact.checksum` field corresponds to the SHA-256 of the given
- * bytes.
- *
- * Accepts two formats:
- *
- *   - Bare lowercase/uppercase hex SHA-256 (64 chars). Convenience for
- *     publishers / tools that emit hex rather than multibase.
- *   - Multibase-multihash with the `b` (base32) prefix and sha2-256.
- *     This is the format RFC 0001 mandates and the registry CLI emits
- *     (see `packages/plugin-cli/src/multihash.ts`).
- *
- * Hash functions other than sha2-256 are out of scope for this
- * initial release; the install fails closed.
- */
 export async function verifyChecksum(bytes: Uint8Array, checksum: string): Promise<boolean> {
 	if (SHA256_HEX_PATTERN.test(checksum)) {
 		const actual = await sha256Hex(bytes);
 		return checksum.toLowerCase() === actual;
 	}
 
-	// Multibase-base32 multihash with sha2-256. We re-encode our own
-	// digest in the same shape and compare strings -- equivalent to
-	// decoding and comparing bytes, but doesn't need a base32 decoder.
-	// 56 chars = 'b' + base32(34 bytes) = 'b' + 55 chars.
 	if (checksum.length === 56 && checksum.startsWith("b")) {
 		const actual = await sha256MultibaseMultihash(bytes);
-		// Case-insensitive: multibase 'b' is lowercase by convention but
-		// some emitters use uppercase. RFC 4648 base32 alphabets are
-		// case-insensitive.
 		return actual.toLowerCase() === checksum.toLowerCase();
 	}
 
 	return false;
 }
 
-/**
- * Bytes-per-artifact cap on the gzipped tarball we'll download before
- * decompression. RFC 0001 caps a sandboxed plugin bundle at 256 KiB
- * decompressed (see `MAX_BUNDLE_SIZE` in cli/commands/bundle-utils.ts);
- * gzip on a mix of JSON manifest + JS code typically gives 0.3-0.6
- * ratio, so compressed bundles are well under 200 KiB in practice.
- * 512 KiB leaves margin for unusual file mixes that compress poorly
- * while still rejecting anything that's obviously not a legitimate
- * plugin bundle.
- */
 const MAX_ARTIFACT_BYTES = 512 * 1024;
 
-/**
- * Maximum number of HTTP redirects followed during artifact download.
- * Each hop is independently URL-validated, so a malicious server cannot
- * redirect through a series of allowed-looking origins to reach a
- * forbidden one.
- */
 const MAX_REDIRECTS = 5;
 
-/**
- * Wall-clock cap on any single artifact fetch attempt (per URL).
- * Defends against slow-loris mirrors that accept the connection but
- * never finish sending headers or body.
- */
 const ARTIFACT_FETCH_TIMEOUT_MS = 15_000;
 
-/**
- * Total wall-clock budget for the artifact-download phase across all
- * mirrors and the declared URL. Even with the per-URL timeout, a
- * malicious mirror list could otherwise tie up the install request for
- * minutes; this caps total time at a budget interactive admins can
- * tolerate. Tuned so a fast happy path takes <1s of budget per
- * attempt and a worst case still completes in under a minute.
- */
 const ARTIFACT_TOTAL_BUDGET_MS = 45_000;
 
-/**
- * Cap on the number of mirror URLs we try before falling back to the
- * publisher-declared URL. Matches the aggregator lexicon's
- * `mirrors` array length cap (16) but enforced here independently so
- * a misbehaving aggregator can't slow-loris us through hundreds of
- * URLs.
- */
 const MAX_MIRRORS = 16;
 
-/**
- * Per-request timeout applied to every aggregator XRPC call
- * (`resolvePackage`, `getLatestRelease`, `listReleases`). Matches the
- * per-URL artifact-fetch cap. Without this, a slow-loris aggregator
- * can stall the install before the artifact phase even starts.
- */
 const AGGREGATOR_REQUEST_TIMEOUT_MS = 15_000;
 
-/**
- * Total wall-clock budget for the aggregator-discovery phase
- * (resolve + selected-release lookup). Mirrors the artifact-download
- * budget. Worst case with the pinned-version path's 20-page cap is
- * 20 + 1 calls; capping the total ensures any one stalled call
- * still bounds the whole phase.
- */
 const AGGREGATOR_TOTAL_BUDGET_MS = 30_000;
 
-/** Build a fetch function that enforces a per-request and per-budget timeout. */
 function timedFetch(totalDeadline: number): typeof fetch {
 	return (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
 		const now = Date.now();
@@ -306,14 +139,6 @@ function timedFetch(totalDeadline: number): typeof fetch {
 	};
 }
 
-/**
- * Fetch one URL with manual redirect handling so every hop is
- * URL-validated, a hard byte cap so a malicious response body cannot
- * exhaust memory before the checksum check rejects it, and a wall-clock
- * timeout that covers connect, headers, and body together. The timeout
- * is the minimum of the per-URL cap and the remaining total budget so
- * a late-arriving mirror still respects the install's global budget.
- */
 async function fetchWithLimits(initialUrl: string, totalDeadline: number): Promise<Uint8Array> {
 	const now = Date.now();
 	const remaining = Math.max(0, totalDeadline - now);
@@ -345,8 +170,6 @@ async function fetchWithLimits(initialUrl: string, totalDeadline: number): Promi
 			throw new Error(`HTTP ${finalResponse.status}`);
 		}
 
-		// Check Content-Length up front when present. Untrusted servers can
-		// lie or omit it; the streaming cap below is the real defense.
 		const lengthHeader = finalResponse.headers.get("content-length");
 		if (lengthHeader) {
 			const declared = Number(lengthHeader);
@@ -359,7 +182,6 @@ async function fetchWithLimits(initialUrl: string, totalDeadline: number): Promi
 
 		const body = finalResponse.body;
 		if (!body) {
-			// Workers can't return a null body for a normal GET; defensive fallback.
 			const buf = new Uint8Array(await finalResponse.arrayBuffer());
 			if (buf.byteLength > MAX_ARTIFACT_BYTES) {
 				throw new Error(`Artifact too large (limit ${MAX_ARTIFACT_BYTES} bytes)`);
@@ -378,9 +200,7 @@ async function fetchWithLimits(initialUrl: string, totalDeadline: number): Promi
 			if (total > MAX_ARTIFACT_BYTES) {
 				try {
 					await reader.cancel();
-				} catch {
-					// nothing to do
-				}
+				} catch {}
 				throw new Error(`Artifact too large (limit ${MAX_ARTIFACT_BYTES} bytes)`);
 			}
 			chunks.push(value);
@@ -398,17 +218,6 @@ async function fetchWithLimits(initialUrl: string, totalDeadline: number): Promi
 	}
 }
 
-/**
- * Strip query string and fragment from a URL for use in
- * client-visible error messages. Registry artifacts are often hosted
- * on storage backends that include presigned tokens in the query
- * string; surfacing the raw URL on a failed install leaks those
- * tokens into the admin's HTTP response and any log drain that
- * captures the error chain. Origin + pathname is enough to identify
- * the host and resource without exposing credentials.
- *
- * Falls back to a generic placeholder when the URL is malformed.
- */
 function redactUrlForError(raw: string): string {
 	try {
 		const u = new URL(raw);
@@ -418,16 +227,9 @@ function redactUrlForError(raw: string): string {
 	}
 }
 
-/** Walk artifact source URLs in priority order and return the first that fetches successfully. */
 async function fetchArtifact(mirrors: string[], declaredUrl: string): Promise<Uint8Array> {
-	// Clamp mirrors regardless of what the lexicon type says -- a buggy
-	// or malicious aggregator could return more than the spec'd limit
-	// and slow-loris each one. The declared URL is always tried last.
 	const clampedMirrors = mirrors.slice(0, MAX_MIRRORS);
 	const urls = [...clampedMirrors, declaredUrl];
-	// Client-visible errors carry redacted URLs (origin + path only).
-	// The full URL with any query-string token is logged server-side
-	// so operators can still debug delivery failures.
 	const clientErrors: string[] = [];
 
 	const totalDeadline = Date.now() + ARTIFACT_TOTAL_BUDGET_MS;
@@ -451,33 +253,16 @@ async function fetchArtifact(mirrors: string[], declaredUrl: string): Promise<Ui
 	);
 }
 
-/**
- * The shape of a single env-compatibility failure returned to the admin in
- * the `ENV_INCOMPATIBLE` error's `details`.
- */
 interface EnvIncompatibleError {
 	code: "ENV_INCOMPATIBLE";
 	message: string;
 	details: { requires: Record<string, string>; host: HostEnv };
 }
 
-/**
- * Gate a release's `requires` constraints against the running host
- * environment. `requires` is the lexicon-`unknown` value off the signed
- * release record — never trust its shape; `checkEnvCompatibility` guards it.
- *
- * Returns `null` when every advertised constraint is satisfied (or there are
- * none), or a structured `ENV_INCOMPATIBLE` error naming the unsatisfied
- * constraints and the host versions. The error carries the guarded `requires`
- * and `host` maps so the admin can render the same mismatch the UI gate shows.
- */
 export function assertEnvCompatible(
 	requires: unknown,
 	hostEnv: HostEnv,
 ): EnvIncompatibleError | null {
-	// A constraint the host can't evaluate (unknown or unparseable host
-	// version) downgrades the gate to a no-op for that env. Log it so a
-	// silent bypass is observable rather than invisible.
 	for (const skipped of findSkippedEnvConstraints(requires, hostEnv)) {
 		console.warn(
 			`[registry] env compatibility constraint skipped: ${skipped.key} requires ${skipped.required} but host version is ${skipped.reason}`,
@@ -497,8 +282,6 @@ export function assertEnvCompatible(
 	};
 }
 
-// ── Install ────────────────────────────────────────────────────────
-
 export async function handleRegistryInstall(
 	db: Kysely<Database>,
 	storage: Storage | null,
@@ -507,8 +290,6 @@ export async function handleRegistryInstall(
 	input: RegistryInstallInput,
 	opts?: { configuredPluginIds?: Set<string>; hostEnv?: HostEnv },
 ): Promise<ApiResult<RegistryInstallResult>> {
-	// Accept either the bare-string shorthand or the full
-	// `RegistryConfig` object (see `RegistryConfigInput`).
 	const registryConfig = coerceRegistryConfig(registryConfigInput);
 	if (!registryConfig) {
 		return {
@@ -540,10 +321,6 @@ export async function handleRegistryInstall(
 		};
 	}
 
-	// Defense in depth: validate the aggregator URL even though the same
-	// check runs at config-normalize time. Keeps every entrypoint into
-	// `handleRegistryInstall` safe regardless of how the caller obtained
-	// the config.
 	try {
 		validateAggregatorUrl(registryConfig.aggregatorUrl);
 	} catch (err) {
@@ -558,15 +335,9 @@ export async function handleRegistryInstall(
 
 	const { did, slug, version: requestedVersion } = input;
 
-	// Lazy-load the discovery client. Avoids pulling @atcute/client into
-	// every code path that imports core/api/handlers.
 	const { DiscoveryClient, registryLabelerPolicy } =
 		await import("@emdash-cms/registry-client/discovery");
 
-	// Every aggregator XRPC call passes through `timedFetch`, which
-	// enforces a per-request timeout and shares a single total-budget
-	// deadline. Defends against a slow-loris aggregator stalling the
-	// install before the artifact phase begins.
 	const aggregatorDeadline = Date.now() + AGGREGATOR_TOTAL_BUDGET_MS;
 	const discovery = new DiscoveryClient({
 		aggregatorUrl: registryConfig.aggregatorUrl,
@@ -575,11 +346,6 @@ export async function handleRegistryInstall(
 		fetch: timedFetch(aggregatorDeadline),
 	});
 
-	// Basic shape check on the DID. The browser is expected to send a
-	// DID resolved via the aggregator's `resolvePackage`; reject obvious
-	// malformations here rather than letting the XRPC call fail
-	// opaquely. The lexicon's `did:${string}:${string}` template is the
-	// authoritative check.
 	if (!did.startsWith("did:") || did.split(":").length < 3) {
 		return {
 			success: false,
@@ -591,9 +357,6 @@ export async function handleRegistryInstall(
 	}
 
 	try {
-		// Step 1: look up the package by DID + slug. The browser already
-		// resolved any handle to a DID via `resolvePackage`; we skip that
-		// round-trip and go straight to `getPackage`.
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated above
 		const publisherDid = did as Did;
 		const packageView = await discovery.getPackage({
@@ -601,19 +364,7 @@ export async function handleRegistryInstall(
 			slug,
 		});
 
-		// Step 2: select the target release.
-		// For an explicit version, page through listReleases until we find
-		// the matching record; the aggregator returns releases ordered by
-		// semver descending. For "latest", use the dedicated convenience
-		// endpoint which applies the aggregator's policy filter (yanked
-		// exclusion etc.) server-side.
-		//
-		// Pagination is bounded both by total pages and by repeated-cursor
-		// detection: a buggy or compromised aggregator could otherwise
-		// return endless distinct cursors that never include the
-		// requested version, hanging the install for the platform's
-		// request-time budget.
-		const MAX_LIST_PAGES = 20; // 20 * 50 limit = 1000 releases worth
+		const MAX_LIST_PAGES = 20;
 		const latestRelease = await (async () => {
 			if (!requestedVersion) {
 				return discovery.getLatestRelease({
@@ -656,18 +407,6 @@ export async function handleRegistryInstall(
 			};
 		}
 
-		// Identity cross-check on every field the aggregator denormalises
-		// onto the package and release views. A buggy or compromised
-		// aggregator could otherwise return a release view for a
-		// different `(did, slug, version)` than we asked for; the
-		// handler would then fetch + checksum-verify + install bytes
-		// under the requested package's pluginId but for a different
-		// publisher's record. Checksum verification only proves the bytes
-		// match the *returned* record, not that the record belongs to
-		// the package we requested.
-		// `releaseView.release` is validated against the release lexicon by
-		// DiscoveryClient (or `null` if it didn't conform). A `null` here makes
-		// the identity checks below fail closed, which is the desired outcome.
 		const signedRelease = releaseView.release;
 		if (packageView.did !== publisherDid || packageView.slug !== slug) {
 			return {
@@ -706,38 +445,11 @@ export async function handleRegistryInstall(
 			};
 		}
 
-		// Environment compatibility remains an install-safety gate. Listing
-		// approval says only that displayed metadata passed moderation. A release
-		// may carry a `requires` block (`env:emdash`, `env:astro`, ...). Refuse
-		// the install if the running host doesn't satisfy a constraint, so a
-		// stale browser tab or non-UI caller can't bypass the admin's
-		// disabled Install button. `requires` is lexicon-`unknown`; the
-		// helper guards its shape.
 		if (opts?.hostEnv) {
 			const envError = assertEnvCompatible(releaseView.release?.requires, opts.hostEnv);
 			if (envError) return { success: false, error: envError };
 		}
 
-		// Step 3a: enforce the configured minimum release age. The browser
-		// applies the same check up front for UX, but the gate lives here
-		// -- a stale browser tab, a deep link, or a non-admin-UI caller
-		// must still hit the holdback. The `minimumReleaseAgeExclude`
-		// allowlist short-circuits the check for trusted publisher DIDs.
-		//
-		// Caveat: `releaseView.indexedAt` is aggregator-supplied envelope
-		// data, not a signed timestamp. A compromised aggregator can
-		// claim an arbitrary indexed-at date and bypass the holdback;
-		// closing this gap requires fetching the release record's
-		// signed createdAt from the publisher's PDS (deferred to the
-		// follow-up that adds full MST verification). If the timestamp
-		// is missing or malformed, we fail closed and reject the install.
-		// `registryConfig` is the user-supplied integration option, not
-		// the normalized manifest shape, so the duration parse runs once
-		// per install. Catch a malformed value here -- normally caught at
-		// `normalizeRegistryConfig` time, but a future config-mutation
-		// path could re-enter with a bad value -- and surface it as a
-		// structured error rather than letting it bubble out as a generic
-		// 500.
 		const minimumReleaseAge = registryConfig.policy?.minimumReleaseAge;
 		let minimumReleaseAgeSeconds = 0;
 		if (minimumReleaseAge !== undefined) {
@@ -789,13 +501,8 @@ export async function handleRegistryInstall(
 			}
 		}
 
-		// Derive the normalized opaque plugin id we'll use as the
-		// runtime-wide identifier from here on. The publisher_did + slug
-		// stay in the state row for update resolution and admin display.
 		const pluginId = await makeRegistryPluginId(publisherDid, slug);
 
-		// Block installation if a configured (trusted) plugin shares this
-		// id. Mirrors the marketplace install's PLUGIN_ID_CONFLICT check.
 		if (opts?.configuredPluginIds?.has(pluginId)) {
 			return {
 				success: false,
@@ -806,12 +513,6 @@ export async function handleRegistryInstall(
 			};
 		}
 
-		// Check for an existing install (any source) under the derived id.
-		// We reject all pre-existing rows -- if the row is from a registry
-		// install of this same package, the caller should go through the
-		// (future) update flow; if it's from any other source, the
-		// pluginId collision means installing would silently mutate an
-		// unrelated plugin's lifecycle row.
 		const stateRepo = new PluginStateRepository(db);
 		const existing = await stateRepo.get(pluginId);
 		if (existing) {
@@ -835,11 +536,6 @@ export async function handleRegistryInstall(
 			};
 		}
 
-		// Step 4: fetch the artifact bytes.
-		// `releaseView.release` is lexicon-validated by DiscoveryClient (or
-		// `null`); a missing url/checksum (incl. the `null` case) fails closed
-		// below. Mirrors come from the envelope (aggregator operational data,
-		// not part of the signed record).
 		const release = releaseView.release;
 		const declaredUrl = release?.artifacts?.package?.url;
 		const declaredChecksum = release?.artifacts?.package?.checksum;
@@ -857,7 +553,6 @@ export async function handleRegistryInstall(
 		const mirrors = releaseView.mirrors ?? [];
 		const artifactBytes = await fetchArtifact(mirrors, declaredUrl);
 
-		// Step 5: verify the bytes against the signed record's checksum.
 		const checksumOk = await verifyChecksum(artifactBytes, declaredChecksum);
 		if (!checksumOk) {
 			return {
@@ -870,7 +565,6 @@ export async function handleRegistryInstall(
 			};
 		}
 
-		// Step 6: extract the bundle.
 		let bundle: PluginBundle;
 		try {
 			bundle = await extractBundle(artifactBytes);
@@ -884,7 +578,6 @@ export async function handleRegistryInstall(
 			};
 		}
 
-		// Manifest sanity: declared version must match the release's version.
 		if (bundle.manifest.version !== version) {
 			return {
 				success: false,
@@ -895,13 +588,6 @@ export async function handleRegistryInstall(
 			};
 		}
 
-		// Manifest identity: the bundle's `manifest.id` is the publisher's
-		// natural plugin id (their slug). It MUST equal the slug the
-		// install was requested for; otherwise a malicious registry bundle
-		// could declare `manifest.id: "audit-log"` and confuse the sandbox
-		// bridge, which uses `manifest.id` as the trust key for
-		// per-plugin storage, cron schedules, and bridge-scoped
-		// operations.
 		if (bundle.manifest.id !== slug) {
 			return {
 				success: false,
@@ -912,22 +598,8 @@ export async function handleRegistryInstall(
 			};
 		}
 
-		// Rewrite the manifest's id to the derived opaque pluginId before
-		// it reaches R2 storage or the sandbox loader. The sandbox uses
-		// `manifest.id` as its identity for per-plugin storage and bridge
-		// calls; addressing it by the same pluginId we use in the runtime
-		// cache, R2 prefix, and `_plugin_state` row keeps every layer
-		// in sync and prevents registry installs from colliding with
-		// marketplace plugins that happen to share the publisher's slug.
 		bundle.manifest = { ...bundle.manifest, id: pluginId };
 
-		// Integrity: the bundle that will run MUST declare exactly the access
-		// the signed release record advertises. The consent dialog is driven
-		// from the record's `declaredAccess`, so a bundle enforcing something
-		// different -- a wider host allow-list, an extra capability -- would run
-		// outside what the user reviewed. The capability-set consent gate below
-		// is blind to constraint content (host scope), so compare the full
-		// enforced access of record vs bundle here and refuse on any difference.
 		const recordExt =
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- extensions is the lexicon's open `unknown` map; narrow to read our own extension
 			(release?.extensions as Record<string, { declaredAccess?: DeclaredAccess }> | undefined)?.[
@@ -946,30 +618,6 @@ export async function handleRegistryInstall(
 			};
 		}
 
-		// Capability consent gate: the admin MUST acknowledge the
-		// capabilities the bundle's manifest actually declares before we
-		// install it. The bundle manifest is the only source of truth
-		// the runtime sandbox enforces -- the release record's
-		// `declaredAccess` extension is an aggregator-supplied
-		// assertion that the publisher may or may not have included,
-		// and trusting it would let a malicious publisher (or a
-		// compromised aggregator) ship a bundle whose manifest
-		// requests `content:*` etc. behind an empty consent dialog.
-		//
-		// Two outcomes after normalization (filter to strings, dedupe,
-		// sort):
-		//
-		//   1. The bundle declares no capabilities: install is allowed
-		//      without any acknowledgement (nothing to consent to).
-		//   2. The bundle declares capabilities: install requires the
-		//      caller to send `acknowledgedDeclaredAccess`, and the
-		//      sorted lists must match exactly.
-		//
-		// We compare against the bundle's *capabilities* (the legacy
-		// shape) for v1 because EmDash's existing sandbox enforces
-		// capabilities, not the RFC's structured `declaredAccess`. Once
-		// the runtime starts enforcing `declaredAccess` natively, this
-		// comparison switches to that shape.
 		const actualCapabilities = canonicalCapabilitiesForDriftCheck(bundle.manifest.capabilities);
 		if (actualCapabilities.length > 0) {
 			if (input.acknowledgedDeclaredAccess === undefined) {
@@ -1014,39 +662,8 @@ export async function handleRegistryInstall(
 			}
 		}
 
-		// Step 7: store in R2 under the registry prefix.
 		await storeBundleInR2(storage, pluginId, version, bundle, "registry");
 
-		// Step 8: write plugin state.
-		// Display name and description come from the *package profile*
-		// (the signed record from the publisher's repo), not from the
-		// bundle manifest -- the manifest carries the trust contract,
-		// the profile carries the marketing copy.
-		//
-		// On failure, we may need to clean up the R2 bundle we just
-		// wrote. But two parallel installs of the same (did, slug,
-		// version) both pass the earlier `existing` check at line 822
-		// (the read is not transactional with the insert), both upload
-		// to the same deterministic R2 prefix (overwrites are
-		// content-identical because R2 keys include the version and
-		// the bundle is checksum-verified upstream), and then one wins
-		// the insert while the other fails with a PK constraint
-		// violation.
-		//
-		// If we blindly clean up R2 on every state-write failure, the
-		// loser of that race would delete the winner's bundle and the
-		// runtime would fail to load the plugin on the next sync.
-		//
-		// Instead: on state-write failure, re-query the state row. If
-		// a row now exists for this pluginId, we lost the race -- the
-		// winner owns the R2 bundle and we must not touch it. If the
-		// row doesn't exist, the failure was a real DB error and the
-		// R2 bytes are orphans; clean them up.
-		//
-		// Cleanup is best-effort; if it also fails, the row failure
-		// still surfaces to the caller and the orphan R2 bundle costs
-		// only the storage of a single checksum-verified zip.
-		// `packageView.profile` is lexicon-validated by DiscoveryClient (or null).
 		const profile = packageView.profile;
 		try {
 			await stateRepo.upsert(pluginId, version, "active", {
@@ -1140,25 +757,11 @@ export async function handleRegistryInstall(
 	}
 }
 
-// ── Uninstall ──────────────────────────────────────────────────────
-
 export interface RegistryUninstallResult {
 	pluginId: string;
-	/** True when `_plugin_storage` rows were also deleted (opts.deleteData). */
 	dataDeleted: boolean;
 }
 
-/**
- * Uninstall a registry-source plugin. Deletes the R2 bundle under
- * `registry/<pluginId>/<version>/`, optionally drops the plugin's
- * `_plugin_storage` rows, and removes the `_plugin_state` row. The
- * sandbox runtime is reconciled by the route's `syncRegistryPlugins`
- * call after this returns.
- *
- * Refuses to uninstall plugins whose `source` is not `"registry"` to
- * avoid trashing a marketplace/config plugin that happens to share the
- * pluginId namespace.
- */
 export async function handleRegistryUninstall(
 	db: Kysely<Database>,
 	storage: Storage | null,
@@ -1178,16 +781,8 @@ export async function handleRegistryUninstall(
 			};
 		}
 
-		// `_plugin_state.version` carries the installed version directly for
-		// registry-source rows (there's no shadow column like marketplace's
-		// `marketplaceVersion`). Use it verbatim for the R2 prefix.
 		const version = existing.version;
 
-		// Order: optional storage cleanup → bundle delete → state row delete.
-		// The most failure-prone step runs first so a transient DB error
-		// (deadlock, contention) cascades to the outer catch with the state
-		// row and bundle intact — admin retries safely. Bundle delete is
-		// idempotent on misses.
 		let dataDeleted = false;
 		if (opts?.deleteData) {
 			await db.deleteFrom("_plugin_storage").where("plugin_id", "=", pluginId).execute();
@@ -1200,9 +795,7 @@ export async function handleRegistryUninstall(
 
 		try {
 			await removeAllPluginIndexes(db, pluginId);
-		} catch {
-			// Nothing to drop, or tracking table predates the feature
-		}
+		} catch {}
 
 		await stateRepo.delete(pluginId);
 
@@ -1219,28 +812,14 @@ export async function handleRegistryUninstall(
 	}
 }
 
-// ── Update ─────────────────────────────────────────────────────────
-
 export interface RegistryUpdateResult {
 	pluginId: string;
 	oldVersion: string;
 	newVersion: string;
 	capabilityChanges: { added: string[]; removed: string[] };
-	/** Set only when `newlyPublic` is non-empty, mirroring marketplace. */
 	routeVisibilityChanges?: { newlyPublic: string[] };
 }
 
-/**
- * Update a registry-source plugin to a newer release. Mirrors
- * `handleMarketplaceUpdate`: resolves the target version via the aggregator,
- * re-runs the artifact fetch / checksum / extract pipeline, diffs capabilities
- * and route visibility against the currently installed bundle, and gates
- * escalations behind `confirmCapabilityChanges` / `confirmRouteVisibilityChanges`
- * so the admin re-consents to widened permissions.
- *
- * Refuses non-registry sources. Refuses when the stored state row is missing
- * the `(publisherDid, slug)` it needs to resolve against the aggregator.
- */
 export async function handleRegistryUpdate(
 	db: Kysely<Database>,
 	storage: Storage | null,
@@ -1322,8 +901,6 @@ export async function handleRegistryUpdate(
 			fetch: timedFetch(aggregatorDeadline),
 		});
 
-		// Resolve target release. Explicit version → paginate listReleases;
-		// otherwise getLatestRelease (aggregator applies its own filters).
 		const MAX_LIST_PAGES = 20;
 		const releaseView = await (async () => {
 			if (!opts?.version) {
@@ -1363,9 +940,6 @@ export async function handleRegistryUpdate(
 			};
 		}
 
-		// Identity cross-check. A buggy/compromised aggregator must not
-		// trick us into installing a record signed for a different
-		// (did, slug, version) under this plugin's pluginId.
 		const signedRelease = releaseView.release;
 		if (
 			releaseView.did !== publisherDid ||
@@ -1401,10 +975,6 @@ export async function handleRegistryUpdate(
 			};
 		}
 
-		// Environment compatibility remains independent from listing approval.
-		// An ungated update could otherwise
-		// land a version whose `requires` the host doesn't satisfy. Same
-		// guard as install; `requires` is lexicon-`unknown`.
 		if (opts?.hostEnv) {
 			const envError = assertEnvCompatible(signedRelease.requires, opts.hostEnv);
 			if (envError) return { success: false, error: envError };
@@ -1422,7 +992,6 @@ export async function handleRegistryUpdate(
 			};
 		}
 
-		// SSRF check on declared URL + each mirror.
 		await assertSafeArtifactUrl(declaredUrl);
 		const rawMirrors = releaseView.mirrors ?? [];
 		const mirrors = rawMirrors.slice(0, MAX_MIRRORS);
@@ -1430,7 +999,6 @@ export async function handleRegistryUpdate(
 			await assertSafeArtifactUrl(mirror);
 		}
 
-		// `fetchArtifact` derives its own per-call deadline internally.
 		const artifactBytes = await fetchArtifact(mirrors, declaredUrl);
 		if (!(await verifyChecksum(artifactBytes, declaredChecksum))) {
 			return {
@@ -1463,15 +1031,8 @@ export async function handleRegistryUpdate(
 			};
 		}
 
-		// Rewrite manifest.id to the opaque pluginId so the sandbox loader
-		// and R2 layout stay in sync across install and update.
 		bundle.manifest = { ...bundle.manifest, id: pluginId };
 
-		// Integrity: same gate as install. The new bundle must declare exactly
-		// the access its signed release record advertises. Without it, an update
-		// that changes only the host scope (e.g. api.good.com -> evil.com) keeps
-		// the capability set identical, sails through the escalation diff below,
-		// and installs a bundle enforcing a scope the record never showed.
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- extensions is the lexicon's open `unknown` map; narrow to read our own extension
 		const updateRecordExtensions = signedRelease?.extensions as
 			| Record<string, { declaredAccess?: DeclaredAccess }>
@@ -1490,10 +1051,6 @@ export async function handleRegistryUpdate(
 			};
 		}
 
-		// Diff capabilities + route visibility against the currently
-		// installed bundle. Loading from R2 keeps us honest: the diff is
-		// against the bytes the sandbox is actually running, not whatever
-		// the state row claims.
 		const oldBundle = await loadBundleFromR2(storage, pluginId, oldVersion, "registry");
 		const oldCaps = oldBundle?.manifest.capabilities ?? [];
 		const capabilityChanges = diffCapabilities(oldCaps, bundle.manifest.capabilities);
@@ -1541,15 +1098,8 @@ export async function handleRegistryUpdate(
 			};
 		}
 
-		// Store new bundle. R2 prefix is deterministic per (pluginId, version),
-		// so a retry of the same update is idempotent.
 		await storeBundleInR2(storage, pluginId, newVersion, bundle, "registry");
 
-		// Update state. Preserve publisher/slug; refresh displayName /
-		// description from the install handler's seeded values (we don't
-		// re-fetch the profile here — that's a separate `getPackage` round
-		// trip and the install-time values are still authoritative for
-		// the same package identity).
 		await stateRepo.upsert(pluginId, newVersion, "active", {
 			source: "registry",
 			registryPublisherDid: publisherDid,
@@ -1562,9 +1112,6 @@ export async function handleRegistryUpdate(
 
 		await syncDeclaredStorageIndexes(db, [bundle.manifest]);
 
-		// Best-effort cleanup of the old bundle. Failures here don't roll
-		// back the upgrade (the new bundle is already stored and committed
-		// in the state row); the orphan is just storage we'll pay for.
 		deleteBundleFromR2(storage, pluginId, oldVersion, "registry").catch(() => {});
 
 		return {
@@ -1625,32 +1172,15 @@ export async function handleRegistryUpdate(
 	}
 }
 
-// ── Update check ───────────────────────────────────────────────────
-
 export interface RegistryUpdateCheck {
 	pluginId: string;
 	installed: string;
 	latest: string;
 	hasUpdate: boolean;
-	/**
-	 * Both diff fields are `false` here by design: computing them at
-	 * update-check time would require downloading both bundles (or
-	 * extracting from the signed release extension and the installed
-	 * R2 bundle), which is too expensive for a bulk preview. The actual
-	 * escalation gate runs at update time in `handleRegistryUpdate`.
-	 * Mirrors marketplace's `hasRouteVisibilityChanges: false`.
-	 */
 	hasCapabilityChanges: boolean;
 	hasRouteVisibilityChanges: boolean;
 }
 
-/**
- * Bulk update check across every installed registry plugin. Queries the
- * aggregator for each plugin's latest release and reports `hasUpdate`
- * based on the version comparison. Plugins whose aggregator lookup fails
- * (unreachable, delisted, malformed) are skipped silently — one bad
- * publisher must not blank the whole admin Updates list.
- */
 export async function handleRegistryUpdateCheck(
 	db: Kysely<Database>,
 	registryConfigInput: RegistryConfigInput | undefined,
@@ -1704,8 +1234,6 @@ export async function handleRegistryUpdateCheck(
 					hasRouteVisibilityChanges: false,
 				});
 			} catch (err) {
-				// Skip plugins that can't be checked. Don't fail the whole
-				// list because one aggregator query went wrong.
 				console.warn(`[registry-update-check] Skipped ${plugin.pluginId}:`, err);
 			}
 		}

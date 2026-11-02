@@ -12,10 +12,6 @@ const SDK_APPS_PATH = "/core/libraries";
 export const sdkAppsTabs = ["libraries", "web", "ios", "android"] as const;
 export type SdkAppsTab = (typeof sdkAppsTabs)[number];
 
-/**
- * Environment settings › SDK & apps (`/core/libraries`). The legacy setup
- * routes render this workspace too; they only choose the initial tab.
- */
 export default function SdkAppsWorkspace({ tab: routeTab = "libraries" }: { tab?: SdkAppsTab }) {
 	const { t } = useSettingsI18n();
 	const [tab, selectTab] = useTabParam(sdkAppsTabs, { initialTab: routeTab, path: SDK_APPS_PATH });

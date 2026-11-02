@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { runBulkAction } from "../../../../../packages/admin/src/lib/bulk";
 
-/** A deferred promise whose resolution the test controls. */
 function deferred() {
 	let resolve!: () => void;
 	const promise = new Promise<void>((res) => {
@@ -50,9 +49,7 @@ describe("runBulkAction", () => {
 			limit,
 		);
 
-		// Release the gates one at a time so the queue has to refill.
 		for (const id of ids) {
-			// Let the queue start whatever it can before releasing the next gate.
 			await new Promise((resolve) => setTimeout(resolve, 0));
 			gates.get(id)!.resolve();
 		}

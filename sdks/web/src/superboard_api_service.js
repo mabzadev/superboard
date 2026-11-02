@@ -1,10 +1,7 @@
-// Import the helper class for making API requests
 import SuperBoardAPIServiceHelper from "./superboard_api_service_helper.js";
 import SuperBoardContext from "./superboard_context.js";
 
-// Define the SuperBoard API service class
 class SuperBoardAPIService {
-	// Define endpoint paths as static properties
 	static ENDPOINTS = {
 		AUTHENTICATE: "/data/authenticate",
 		PAYLOAD: "/acquisition/data_for_device",
@@ -18,22 +15,18 @@ class SuperBoardAPIService {
 		NUMBER_OF_UNREAD_MESSAGES: "/communication/number_of_unread_notifications",
 	};
 
-	// Constructor to initialize the API service helper
 	constructor() {
 		this.apiService = new SuperBoardAPIServiceHelper();
 	}
 
-	// Method to authenticate a device
 	authenticateDevice(details, response, error) {
 		this.apiService.POST(SuperBoardAPIService.ENDPOINTS.AUTHENTICATE, details, response, error);
 	}
 
-	// Method to fetch payload for a device
 	payloadForDevice(details, response, error) {
 		this.apiService.POST(SuperBoardAPIService.ENDPOINTS.PAYLOAD, details, response, error);
 	}
 
-	// Method to fetch payload for a device and path
 	payloadForDeviceAndPath(details, path, response, error) {
 		const dataToSend = { ...details, path };
 		this.apiService.POST(
@@ -44,7 +37,6 @@ class SuperBoardAPIService {
 		);
 	}
 
-	// Method to create an event
 	createEvent(event, createdAt, path, engagementTime, response, error) {
 		const data = { event };
 		if (path) data.path = path;
@@ -56,7 +48,6 @@ class SuperBoardAPIService {
 		this.apiService.POST(SuperBoardAPIService.ENDPOINTS.CREATE_EVENT, data, response, error);
 	}
 
-	// Method to create a link
 	createLink(title, subtitle, imageUrl, data, response, error) {
 		const dataToSend = {};
 		if (title) dataToSend.title = title;
@@ -67,7 +58,6 @@ class SuperBoardAPIService {
 		this.apiService.POST(SuperBoardAPIService.ENDPOINTS.CREATE_LINK, dataToSend, response, error);
 	}
 
-	// Method to set attributes
 	setUserAttributes(response, error) {
 		const dataToSend = {};
 		dataToSend.sdk_identifier = SuperBoardContext.USER_IDENTIFIER;
@@ -117,5 +107,4 @@ class SuperBoardAPIService {
 	}
 }
 
-// Export the SuperBoardAPIService class
 export default SuperBoardAPIService;

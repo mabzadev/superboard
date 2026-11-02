@@ -4,8 +4,6 @@ import Foundation
 class MockEventsStorage: EventsStorageProtocol {
     var events: [Event] = []
 
-    /// Optional queue for dispatching completions asynchronously.
-    /// When nil (default), completions fire synchronously.
     var completionQueue: DispatchQueue?
 
     var addEventCallCount = 0
@@ -14,8 +12,6 @@ class MockEventsStorage: EventsStorageProtocol {
     var getEventsCallCount = 0
     var transformEventsCallCount = 0
 
-    /// Shared dedup implementation — delegates to the real EventsStorage so the mock
-    /// never drifts from production behavior.
     private let realStorage = EventsStorage()
 
     func addEvent(event: Event, completion: @escaping SuperBoardEmptyClosure) {
@@ -27,7 +23,6 @@ class MockEventsStorage: EventsStorageProtocol {
 
     func addOrReplaceEvents(events: [Event], completion: @escaping SuperBoardEmptyClosure) {
         addOrReplaceCallCount += 1
-        // Match real EventsStorage: dedup existing, then upsert, matching production order
         var existing = removeDuplicateEventsIfNeeded(events: self.events)
         for event in events {
             if let index = existing.firstIndex(where: { $0.id == event.id }) {
@@ -58,7 +53,6 @@ class MockEventsStorage: EventsStorageProtocol {
         dispatch { completion() }
     }
 
-    /// Delegates to the real EventsStorage's stateless dedup method.
     func removeDuplicateEventsIfNeeded(events: [Event]) -> [Event] {
         return realStorage.removeDuplicateEventsIfNeeded(events: events)
     }
@@ -71,8 +65,6 @@ class MockEventsStorage: EventsStorageProtocol {
         getEventsCallCount = 0
         transformEventsCallCount = 0
     }
-
-    // MARK: - Private
 
     private func dispatch(_ block: @escaping () -> Void) {
         if let queue = completionQueue {

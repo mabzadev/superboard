@@ -6,7 +6,6 @@ import { userEvent } from "vitest/browser";
 import type { AdminManifest } from "../../../../../packages/admin/src/lib/api";
 import { render } from "../utils/render.tsx";
 
-// Mock router
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual("@tanstack/react-router");
 	return {
@@ -43,7 +42,6 @@ vi.mock("../../../../../packages/admin/src/lib/api/current-user.js", () => ({
 	}),
 }));
 
-// Import after mocks
 const { Settings } = await import("../../../../../packages/admin/src/components/Settings");
 
 const defaultManifest: AdminManifest = {
@@ -186,7 +184,6 @@ describe("Settings", () => {
 				<Settings />
 			</Wrapper>,
 		);
-		// Wait for the page to render by checking a link that's always visible
 		await expect.element(screen.getByText("General")).toBeInTheDocument();
 		expect(screen.getByText("Security").query()).toBeNull();
 		expect(screen.getByText("Self-Signup Domains").query()).toBeNull();

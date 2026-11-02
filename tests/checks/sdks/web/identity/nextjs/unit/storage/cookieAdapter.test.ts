@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { CookieStorage } from "../../../../../../../../sdks/web/identity/nextjs/src/storage/cookieAdapter";
 
-// Mock cookies-next
 vi.mock("cookies-next", () => ({
 	getCookie: vi.fn(),
 	setCookie: vi.fn(),
@@ -78,7 +77,7 @@ describe("CookieStorage", () => {
 				"test-value",
 				expect.objectContaining({
 					httpOnly: true,
-					secure: false, // NODE_ENV is 'test'
+					secure: false,
 					sameSite: "lax",
 					path: "/",
 				}),
@@ -150,7 +149,6 @@ describe("CookieStorage", () => {
 		it("should properly wrap shared storage methods", () => {
 			const storage = new CookieStorage();
 
-			// Test that all methods are available
 			expect(typeof storage.getItem).toBe("function");
 			expect(typeof storage.setItem).toBe("function");
 			expect(typeof storage.removeItem).toBe("function");

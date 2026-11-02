@@ -42,7 +42,6 @@ describe("request context", () => {
 				results.push(getRequestContext()!.editMode);
 			}),
 		]);
-		// Second resolves first (5ms < 10ms), so false appears before true
 		expect(results).toContain(true);
 		expect(results).toContain(false);
 		expect(results).toHaveLength(2);

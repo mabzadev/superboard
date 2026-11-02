@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import type { ImageInput } from "../../../../packages/marketplace/src/audit/image-types.js";
 import { createWorkersAIImageAuditor } from "../../../../packages/marketplace/src/audit/image-workers-ai.js";
 
-// Minimal 1x1 transparent PNG
 const PIXEL_PNG = new Uint8Array([
 	137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0,
 	0, 31, 21, 196, 137, 0, 0, 0, 10, 73, 68, 65, 84, 8, 215, 99, 0, 0, 0, 2, 0, 1, 226, 33, 188, 51,
@@ -72,7 +71,7 @@ describe("workers AI image auditor response parsing", () => {
 		const auditor = createWorkersAIImageAuditor(ai);
 		const result = await auditor.auditImages([img("icon.png"), img("screenshot.png")]);
 
-		expect(result.verdict).toBe("fail"); // worst of pass + fail
+		expect(result.verdict).toBe("fail");
 		expect(result.images).toHaveLength(2);
 	});
 

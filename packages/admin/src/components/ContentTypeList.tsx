@@ -35,10 +35,6 @@ import { cn } from "../lib/utils";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { RouterLinkButton } from "./RouterLinkButton.js";
 
-/**
- * Apply a drag-and-drop move to the collection order. Returns the input array
- * unchanged when the move is a no-op.
- */
 export function moveCollection(slugs: string[], activeSlug: string, overSlug: string): string[] {
 	const from = slugs.indexOf(activeSlug);
 	const to = slugs.indexOf(overSlug);
@@ -55,13 +51,9 @@ export interface ContentTypeListProps {
 	isLoading?: boolean;
 	onDelete?: (slug: string) => void;
 	onRegisterOrphan?: (slug: string) => void;
-	/** Persist a new sidebar order. Omit to render the list without reordering. */
 	onReorder?: (slugs: string[]) => void;
 }
 
-/**
- * Content Type list view - shows all collections in the schema registry
- */
 export function ContentTypeList({
 	collections,
 	orphanedTables,
@@ -74,8 +66,6 @@ export function ContentTypeList({
 	const [deleteTarget, setDeleteTarget] = React.useState<SchemaCollection | null>(null);
 	const hasOrphans = orphanedTables && orphanedTables.length > 0;
 
-	// Optimistic order: the drop lands immediately, the server order takes
-	// over once the mutation invalidates the query.
 	const [order, setOrder] = React.useState<string[] | null>(null);
 	const serverOrder = React.useMemo(() => collections.map((c) => c.slug), [collections]);
 	const orderedSlugs = order ?? serverOrder;
@@ -110,7 +100,6 @@ export function ContentTypeList({
 
 	return (
 		<div className="space-y-4">
-			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-2xl font-semibold leading-tight">{t`Content Types`}</h1>
@@ -123,7 +112,6 @@ export function ContentTypeList({
 				</RouterLinkButton>
 			</div>
 
-			{/* Orphaned Tables Warning */}
 			{hasOrphans && (
 				<div className="rounded-md border border-kumo-warning/50 bg-kumo-warning-tint p-4">
 					<div className="flex items-start gap-3">
@@ -163,7 +151,6 @@ export function ContentTypeList({
 				</div>
 			)}
 
-			{/* Table */}
 			<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
 				<div className="rounded-md border bg-kumo-base overflow-x-auto">
 					<table className="w-full">

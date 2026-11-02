@@ -28,31 +28,19 @@ final class EventsHandlerTests: XCTestCase {
         return EventsHandler(apiService: mockService, storage: mockStorage, userDefaults: mockDefaults, keychain: mockKeychain)
     }
 
-    /// Creates a handler and resets mock call counts and event results so tests start clean
-    /// after init side effects. The handler's init writes to defaults (numberOfOpens,
-    /// lastStartTimestamp) and adds events to storage — this method clears that residue.
-    ///
-    /// **Important:** This resets `addEventResult` back to `true` and call counts to 0.
-    /// If your test needs `addEventResult = false` or a specific `completionQueue`,
-    /// set them **after** calling this method, not before.
     private func makeCleanHandler() -> EventsHandler {
         let handler = makeHandler()
-        // Clear events created by init (install/appOpen/reactivation)
         mockStorage.events.removeAll()
         mockStorage.addEventCallCount = 0
         mockStorage.addOrReplaceCallCount = 0
         mockStorage.removeEventCallCount = 0
         mockStorage.getEventsCallCount = 0
-        // Reset service call history and results
         mockService.reset()
-        // Reset only call counts — keep store values that the handler wrote during init
         mockDefaults.getIntCallCount = 0
         mockDefaults.setIntCallCount = 0
         mockKeychain.getValueCallCount = 0
         return handler
     }
-
-    // MARK: - log(event:)
 
     func testLogEventStoresEventInStorage() {
         let handler = makeHandler()
@@ -95,12 +83,9 @@ final class EventsHandlerTests: XCTestCase {
                        "Should not overwrite an event's existing link")
     }
 
-    // MARK: - setLinkToNewFutureActions
-
     func testSetLinkPatchesStoredEventsNilLinks() {
         let handler = makeHandler()
 
-        // Init adds events (appOpen, possibly install). Clear all links so we can test patching.
         for event in mockStorage.events {
             event.link = nil
         }
@@ -120,7 +105,6 @@ final class EventsHandlerTests: XCTestCase {
     func testSetLinkDoesNotPatchEventsWithExistingLink() {
         let handler = makeHandler()
 
-        // Give all init events a link
         for event in mockStorage.events {
             event.link = "https://existing.com"
         }
@@ -154,8 +138,6 @@ final class EventsHandlerTests: XCTestCase {
         XCTAssertEqual(mockService.allAddedEvents.first?.id, event.id,
                        "The sent event should be the one in storage")
     }
-
-    // MARK: - Event sending (via handleEventsIfNeeded directly)
 
     func testHandleEventsIfNeededSendsWhenConditionsMet() {
         let handler = makeCleanHandler()
@@ -245,7 +227,6 @@ final class EventsHandlerTests: XCTestCase {
     func testHandleEventsIfNeededDoesNotSendWithoutPayloadLink() {
         let handler = makeCleanHandler()
         handler.handledAppOrSceneDelegates = true
-        // hasFetchedPayloadLink is false by default
 
         mockStorage.events.append(Event(type: .view, createdAt: Date(), link: "https://l.com"))
 
@@ -262,7 +243,6 @@ final class EventsHandlerTests: XCTestCase {
     func testHandleEventsIfNeededDoesNotSendWithoutDelegatesOrLeeway() {
         let handler = makeCleanHandler()
         handler.hasFetchedPayloadLink = true
-        // handledAppOrSceneDelegates = false (default), leeway not passed
 
         mockStorage.events.append(Event(type: .view, createdAt: Date(), link: "https://l.com"))
 
@@ -276,8 +256,6 @@ final class EventsHandlerTests: XCTestCase {
                        "Should not send when handledAppOrSceneDelegates is false and leeway not passed")
     }
 
-    // MARK: - handledAppOrSceneDelegates didSet
-
     func testSettingHandledAppOrSceneDelegatesTriggersSendWhenReady() {
         let handler = makeCleanHandler()
         handler.hasFetchedPayloadLink = true
@@ -285,17 +263,13 @@ final class EventsHandlerTests: XCTestCase {
         let event = Event(type: .view, createdAt: Date(), link: "https://l.com")
         mockStorage.events.append(event)
 
-        // Events not sent yet (handledAppOrSceneDelegates is false, leeway not passed)
         XCTAssertEqual(mockService.addEventCallCount, 0)
 
-        // Now set handledAppOrSceneDelegates — should trigger send
         handler.handledAppOrSceneDelegates = true
 
         XCTAssertEqual(mockService.addEventCallCount, 1,
                        "Setting handledAppOrSceneDelegates should trigger pending event send")
     }
-
-    // MARK: - applicationDidBecomeActive
 
     func testApplicationDidBecomeActiveAddsTimeSpentEvent() {
         let handler = makeHandler()
@@ -325,8 +299,6 @@ final class EventsHandlerTests: XCTestCase {
                        "timeSpent event should carry the current linkForFutureActions")
     }
 
-    // MARK: - applicationWillResignActive
-
     func testApplicationWillResignActiveSavesTimestamp() {
         let handler = makeHandler()
 
@@ -337,8 +309,6 @@ final class EventsHandlerTests: XCTestCase {
                              "Should save a non-zero resign timestamp to mock defaults")
     }
 
-    // MARK: - isLeewayPassed
-
     func testIsLeewayPassedReturnsFalseImmediatelyAfterInit() {
         let handler = makeHandler()
         XCTAssertFalse(handler.isLeewayPassed(),
@@ -346,7 +316,6 @@ final class EventsHandlerTests: XCTestCase {
     }
 
     func testApplicationDidBecomeActiveWithResignTimestampHandlesOldEvents() {
-        // Set a resign timestamp to trigger handleOldEngagementEvents path
         mockDefaults.store[.superboardResignTimestamp] = Date().toSeconds()
 
         let handler = makeHandler()
@@ -354,21 +323,16 @@ final class EventsHandlerTests: XCTestCase {
 
         handler.applicationDidBecomeActive()
 
-        // handleOldEngagementEvents uses DispatchQueue.main.async internally,
-        // so we need to let the main run loop drain
         let exp = expectation(description: "main queue drained")
         DispatchQueue.main.async { exp.fulfill() }
         wait(for: [exp], timeout: 5)
 
-        // Should add a timeSpent event (via the handleOldEngagementEvents path)
         let timeSpentEvents = mockStorage.events.filter { $0.type == .timeSpent }
         XCTAssertGreaterThanOrEqual(timeSpentEvents.count, 1,
                                     "Should add timeSpent event even with resign timestamp")
         XCTAssertGreaterThan(mockStorage.events.count, countBefore,
                              "Should have added events")
     }
-
-    // MARK: - Init side effects
 
     func testInitAddsAppOpenEvent() {
         _ = makeHandler()
@@ -379,7 +343,6 @@ final class EventsHandlerTests: XCTestCase {
     }
 
     func testInitAddsInstallEventOnFirstOpenWithNoKeychainID() {
-        // No linksquaredID in keychain → install event
         _ = makeHandler()
 
         let installEvents = mockStorage.events.filter { $0.type == .install }
@@ -391,7 +354,6 @@ final class EventsHandlerTests: XCTestCase {
     }
 
     func testInitAddsReinstallEventOnFirstOpenWithKeychainID() {
-        // linksquaredID exists in keychain → reinstall event
         mockKeychain.store[.linksquaredID] = "some-id"
 
         _ = makeHandler()
@@ -431,10 +393,7 @@ final class EventsHandlerTests: XCTestCase {
                              "Init should save lastStartTimestamp")
     }
 
-    // MARK: - Reactivation
-
     func testInitAddsReactivationEventAtExactly7Days() {
-        // daysBetween uses Calendar.startOfDay, so 7 days back from start-of-today is the boundary
         let calendar = Calendar.current
         let startOfToday = calendar.startOfDay(for: Date())
         let exactly7DaysAgo = calendar.date(byAdding: .day, value: -7, to: startOfToday)!
@@ -449,7 +408,6 @@ final class EventsHandlerTests: XCTestCase {
     }
 
     func testInitDoesNotAddReactivationEventAt6CalendarDays() {
-        // daysBetween uses startOfDay, so 6 calendar days back should return 6 (< 7)
         let calendar = Calendar.current
         let startOfToday = calendar.startOfDay(for: Date())
         let sixDaysAgo = calendar.date(byAdding: .day, value: -6, to: startOfToday)!
@@ -476,7 +434,6 @@ final class EventsHandlerTests: XCTestCase {
     }
 
     func testInitDoesNotAddReactivationEventOnFirstOpen() {
-        // lastStartTimestamp is 0 (default) — no previous session
         _ = makeHandler()
 
         let reactivations = mockStorage.events.filter { $0.type == .reactivation }
@@ -484,19 +441,14 @@ final class EventsHandlerTests: XCTestCase {
                        "Should not add reactivation event on first open")
     }
 
-    // MARK: - handleOldEngagementEvents (time-spent flow)
-
     func testHandleOldEngagementEventsCalculatesEngagementTime() {
         let handler = makeCleanHandler()
-        // Prevent sendTimeSpentEventsToBackend from removing events
         mockService.addEventResult = false
 
-        // Add a timeSpent event created 30 seconds ago
         let createdAt = Date(timeIntervalSinceNow: -30)
         let event = Event(type: .timeSpent, createdAt: createdAt)
         mockStorage.events.append(event)
 
-        // Set resign timestamp to 10 seconds ago (so engagement = 20 seconds)
         let resignDate = Date(timeIntervalSinceNow: -10)
         mockDefaults.store[.superboardResignTimestamp] = resignDate.toSeconds()
 
@@ -506,7 +458,6 @@ final class EventsHandlerTests: XCTestCase {
         DispatchQueue.main.async { exp.fulfill() }
         wait(for: [exp], timeout: 5)
 
-        // The event was sent to the API — check engagementTime on the sent copy
         let sentEvent = mockService.allAddedEvents.first(where: { $0.id == event.id })
         XCTAssertNotNil(sentEvent?.engagementTime,
                         "engagementTime should be set on timeSpent events")
@@ -518,10 +469,8 @@ final class EventsHandlerTests: XCTestCase {
 
     func testHandleOldEngagementEventsDoesNotOverwriteExistingEngagementTime() {
         let handler = makeCleanHandler()
-        // Prevent sendTimeSpentEventsToBackend from removing events
         mockService.addEventResult = false
 
-        // Add a timeSpent event that already has engagementTime set
         let event = Event(type: .timeSpent, createdAt: Date(timeIntervalSinceNow: -60), engagementTime: 42)
         mockStorage.events.append(event)
 
@@ -534,7 +483,6 @@ final class EventsHandlerTests: XCTestCase {
         DispatchQueue.main.async { exp.fulfill() }
         wait(for: [exp], timeout: 5)
 
-        // Check the sent event — engagementTime should remain 42
         let sentEvent = mockService.allAddedEvents.first(where: { $0.id == event.id })
         XCTAssertEqual(sentEvent?.engagementTime, 42,
                        "Existing engagementTime should not be overwritten")
@@ -543,7 +491,6 @@ final class EventsHandlerTests: XCTestCase {
     func testHandleOldEngagementEventsIgnoresNonTimeSpentEvents() {
         let handler = makeCleanHandler()
 
-        // Add a view event — should not get engagementTime
         let event = Event(type: .view, createdAt: Date(timeIntervalSinceNow: -30))
         mockStorage.events.append(event)
 
@@ -564,7 +511,6 @@ final class EventsHandlerTests: XCTestCase {
     func testHandleOldEngagementEventsSkipsNegativeDuration() {
         let handler = makeCleanHandler()
 
-        // Event created AFTER the resign timestamp → negative duration
         let event = Event(type: .timeSpent, createdAt: Date(timeIntervalSinceNow: 10))
         mockStorage.events.append(event)
 
@@ -603,11 +549,7 @@ final class EventsHandlerTests: XCTestCase {
                              "Total event count should increase")
     }
 
-    // MARK: - Deduplication through handler
-
     func testInitDedupsPreventsMultipleInstallEvents() {
-        // Handler init adds an install event via addOrReplaceEvents.
-        // Adding another install via addEvent should be deduped (mock delegates to real dedup).
         _ = makeHandler()
 
         let extraInstall = Event(type: .install, createdAt: Date())
@@ -617,8 +559,6 @@ final class EventsHandlerTests: XCTestCase {
         XCTAssertEqual(installs.count, 1,
                        "Dedup should keep only one install event after adding a second")
     }
-
-    // MARK: - Async dispatch mode
 
     func testHandleEventsIfNeededWorksWithAsyncMockDispatch() {
         mockService.completionQueue = .global()
@@ -641,12 +581,8 @@ final class EventsHandlerTests: XCTestCase {
                        "Should still send events when mocks dispatch asynchronously")
     }
 
-    // MARK: - Concurrency & Recovery
-
     func testBackToBackHandleEventsDrainsStorageOnFirstCall() {
         let handler = makeCleanHandler()
-        // Set handledAppOrSceneDelegates first (while hasFetchedPayloadLink is false)
-        // to avoid the didSet triggering an actual send.
         handler.handledAppOrSceneDelegates = true
         handler.hasFetchedPayloadLink = true
 
@@ -657,9 +593,6 @@ final class EventsHandlerTests: XCTestCase {
         let exp1 = expectation(description: "first call")
         let exp2 = expectation(description: "second call")
 
-        // With synchronous mocks the first call completes entirely (sends both
-        // events and removes them from storage) before the second call starts.
-        // The second call finds an empty storage and sends nothing.
         handler.handleEventsIfNeeded { exp1.fulfill() }
         handler.handleEventsIfNeeded { exp2.fulfill() }
 
@@ -680,7 +613,6 @@ final class EventsHandlerTests: XCTestCase {
         mockStorage.events.append(event)
         mockService.addEventResult = false
 
-        // First attempt — fails, event stays
         let exp1 = expectation(description: "first attempt")
         handler.handleEventsIfNeeded { exp1.fulfill() }
         wait(for: [exp1], timeout: 5)
@@ -688,7 +620,6 @@ final class EventsHandlerTests: XCTestCase {
         XCTAssertTrue(mockStorage.events.contains(where: { $0.id == event.id }),
                       "Event should remain after failed send")
 
-        // Retry — succeeds
         mockService.addEventResult = true
         let exp2 = expectation(description: "retry")
         handler.handleEventsIfNeeded { exp2.fulfill() }
@@ -708,7 +639,6 @@ final class EventsHandlerTests: XCTestCase {
         let event3 = Event(type: .view, createdAt: Date(), link: "https://l.com")
         mockStorage.events.append(contentsOf: [event1, event2, event3])
 
-        // Fail only event2
         mockService.addEventHandler = { event in
             return event.id != event2.id
         }
@@ -726,7 +656,6 @@ final class EventsHandlerTests: XCTestCase {
     }
 
     func testMultiThreadedHandleEventsDoesNotDuplicateSends() {
-        // Use async mocks to widen the race window.
         mockService.completionQueue = .global()
         mockStorage.completionQueue = .global()
 
@@ -737,7 +666,6 @@ final class EventsHandlerTests: XCTestCase {
         let event = Event(type: .view, createdAt: Date(), link: "https://l.com")
         mockStorage.events.append(event)
 
-        // Fire handleEventsIfNeeded from multiple threads simultaneously.
         let iterations = 10
         let allDone = expectation(description: "all iterations done")
         allDone.expectedFulfillmentCount = iterations
@@ -752,13 +680,9 @@ final class EventsHandlerTests: XCTestCase {
 
         wait(for: [allDone], timeout: 10)
 
-        // The sendingQueue guard ensures only one batch is sent at a time.
-        // The event should be sent exactly once (subsequent calls see sendingEvents = true).
         XCTAssertEqual(mockService.addEventCallCount, 1,
                        "Only one thread should win the sendingEvents guard and send the event")
     }
-
-    // MARK: - End-to-end batching
 
     func testEventsAreBatchedAndAllSentOnFlush() {
         let handler = makeCleanHandler()
@@ -789,29 +713,21 @@ final class EventsHandlerTests: XCTestCase {
     func testEventCreatedBeforeAuthIsSentAfterLinkSet() {
         let handler = makeCleanHandler()
         handler.handledAppOrSceneDelegates = true
-        // hasFetchedPayloadLink is false — events won't send yet
 
         let event = Event(type: .view, createdAt: Date())
         mockStorage.events.append(event)
 
-        // Verify events are NOT sent yet
         XCTAssertEqual(mockService.addEventCallCount, 0)
 
-        // Simulate link fetch completion (like post-auth)
         let exp = expectation(description: "link set triggers send")
         handler.setLinkToNewFutureActions(link: "https://auth.com") {
             exp.fulfill()
         }
         wait(for: [exp], timeout: 5)
 
-        // After link is set and handledAppOrSceneDelegates is true,
-        // events should be sent (hasFetchedPayloadLink becomes true via setLink(nil))
-        // The event should now have the link attached
         XCTAssertEqual(event.link, "https://auth.com",
                        "Event created before auth should get the link assigned")
     }
-
-    // MARK: - Async dispatch mode (failure)
 
     func testHandleEventsIfNeededKeepsEventsOnFailureWithAsyncDispatch() {
         mockService.completionQueue = .global()

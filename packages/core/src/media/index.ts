@@ -1,10 +1,3 @@
-/**
- * Media Provider Exports
- *
- * Public API for media providers.
- */
-
-// Types
 export type {
 	MediaProviderDescriptor,
 	MediaProviderCapabilities,
@@ -29,5 +22,4 @@ export { normalizeMediaValue } from "./normalize.js";
 export { generatePlaceholder, type PlaceholderData } from "./placeholder.js";
 export { enrichImageMetadata, type EnrichedImageMetadata } from "./enrich.js";
 
-// Built-in providers
 export { localMedia, type LocalMediaConfig } from "./local.js";

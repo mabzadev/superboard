@@ -13,13 +13,6 @@ const MAX_MESSAGE_BYTES = 64 * 1024;
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const TRANSIENT_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
 
-/**
- * Client for the native SuperBoard Support widget API.
- *
- * The configured URL may be either an HTTP(S) origin or the complete
- * `/v1/communication/support/widget` URL. The public Support prefix is applied exactly
- * once.
- */
 export class SuperBoardSupportClient {
 	constructor({
 		baseUrl,
@@ -687,9 +680,7 @@ async function parseResponsePayload(response) {
 	try {
 		const payload = JSON.parse(text);
 		if (isRecord(payload)) return payload;
-	} catch {
-		// A stable SDK error is emitted below.
-	}
+	} catch {}
 	throw new SuperBoardSupportException("response_invalid", "Support returned an invalid response", {
 		retryable: response.status >= 500,
 		statusCode: response.status,
@@ -779,10 +770,7 @@ function resolveWidgetVisitorId({ visitorId, widgetKey, projectId, baseUrl }) {
 	const generated = createVisitorId();
 	try {
 		storage?.setItem(storageKey, generated);
-	} catch {
-		// Privacy modes may disable storage; the generated identity remains stable
-		// for this client instance without weakening request authentication.
-	}
+	} catch {}
 	return generated;
 }
 

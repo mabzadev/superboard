@@ -21,8 +21,6 @@ export const PluginFrontView = memo(function PluginFrontView({
 	const { projectScope: scope } = useFrontContext();
 	const { scopeError, requiresScope } = useFrontRuntimeState();
 	const { ready, selectedProject } = useProjectSelection();
-	// The import starts on the first render, in parallel with the operator scope request,
-	// instead of waiting for the scope before the lazy view first renders.
 	const View = useMemo(() => {
 		if (!locked) return null;
 		const view = preloadPluginClientView(pluginId, routeId);

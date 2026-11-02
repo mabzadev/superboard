@@ -1,9 +1,3 @@
-/**
- * Search endpoint - Full-text search across collections
- *
- * GET /_emdash/api/search?q=query&collections=posts,pages&limit=20
- */
-
 import { hasPermission } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 
@@ -14,15 +8,6 @@ import { searchWithDb } from "#search/index.js";
 
 export const prerender = false;
 
-/**
- * Search content
- *
- * Query parameters:
- * - q: Search query (required)
- * - collections: Comma-separated list of collection slugs (optional, defaults to all)
- * - status: Filter by status (optional, defaults to 'published')
- * - limit: Maximum results (optional, defaults to 20)
- */
 export const GET: APIRoute = async ({ url, locals }) => {
 	const { emdash, user } = locals;
 
@@ -37,17 +22,12 @@ export const GET: APIRoute = async ({ url, locals }) => {
 		? query.collections.split(",").map((c: string) => c.trim())
 		: undefined;
 
-	// Only users with content:read_drafts may search non-published statuses.
-	// Anonymous and subscriber requests are forced to "published".
 	const status =
 		query.status && query.status !== "published" && hasPermission(user, "content:read_drafts")
 			? query.status
 			: "published";
 
 	try {
-		// Verify FTS indexes are healthy on first use. At most once per worker
-		// lifetime; no-op after that. Moved off the cold-start hot path to
-		// keep anonymous public reads fast.
 		await emdash.ensureSearchHealthy?.();
 
 		const result = await searchWithDb(emdash.db, query.q, {
@@ -60,7 +40,6 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
 		return apiSuccess(result);
 	} catch (error) {
-		// handleError maps a malformed pagination cursor to a 400 INVALID_CURSOR.
 		return handleError(error, "Search failed", "SEARCH_ERROR");
 	}
 };

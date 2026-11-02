@@ -624,8 +624,6 @@ export async function expectedGeneratedFiles() {
 	]);
 }
 
-// The upstream EmDash revision is integrated as a pinned copy, not as Git ancestry,
-// so its commit is fetched from the recorded remote when the checkout lacks it.
 async function ensureUpstreamCommit(config) {
 	const present = runGit(["cat-file", "-e", `${config.upstream.commit}^{commit}`], repositoryRoot, {
 		allowFailure: true,

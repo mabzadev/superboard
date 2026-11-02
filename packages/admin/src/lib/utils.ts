@@ -3,22 +3,13 @@ import { twMerge } from "tailwind-merge";
 
 export { slugify } from "../slugify.js";
 
-// Regex patterns for parseTimestamp
 const NAIVE_DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/;
 const TIMEZONE_DESIGNATOR_PATTERN = /(?:[zZ]|[+-]\d\d(?::?\d\d)?)$/;
 
-/**
- * Merge class names with Tailwind CSS support
- */
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-/**
- * Parse a timestamp string into a Date, treating values without a timezone as UTC.
- *
- * SQLite `datetime('now')` returns `YYYY-MM-DD HH:MM:SS` with no designator, which JavaScript would otherwise read as local time.
- */
 export function parseTimestamp(value: string): Date {
 	const hasTime = NAIVE_DATETIME_PATTERN.test(value);
 	const hasZone = TIMEZONE_DESIGNATOR_PATTERN.test(value);

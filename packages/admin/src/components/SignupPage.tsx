@@ -1,15 +1,3 @@
-/**
- * Signup Page - Self-signup for allowed domains
- *
- * This component is NOT wrapped in the admin Shell.
- * It's a standalone public page for self-signup.
- *
- * Flow:
- * 1. Email input form
- * 2. "Check your email" confirmation
- * 3. After clicking email link: Passkey registration
- */
-
 import { Button, Input, Loader } from "@cloudflare/kumo";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { Link } from "@tanstack/react-router";
@@ -38,15 +26,7 @@ export function SignupRoleMessage({ roleName }: { roleName: string }) {
 	);
 }
 
-// ============================================================================
-// Types
-// ============================================================================
-
 type SignupStep = "email" | "check-email" | "verify" | "complete" | "error";
-
-// ============================================================================
-// Step Components
-// ============================================================================
 
 interface EmailStepProps {
 	onSubmit: (email: string) => void;
@@ -182,7 +162,6 @@ interface VerifyStepProps {
 }
 
 function handleSignupSuccess() {
-	// Redirect to admin dashboard after successful signup
 	window.location.href = "/_emdash/admin";
 }
 
@@ -209,10 +188,8 @@ function VerifyStep({ verifyResult, token, onBack: _onBack }: VerifyStepProps) {
 				</p>
 			</div>
 
-			{/* Email display (read-only) */}
 			<Input label={t`Email`} value={verifyResult.email} disabled className="bg-kumo-tint" />
 
-			{/* Name input (optional) */}
 			<Input
 				label={t`Your name (optional)`}
 				type="text"
@@ -222,7 +199,6 @@ function VerifyStep({ verifyResult, token, onBack: _onBack }: VerifyStepProps) {
 				autoComplete="name"
 			/>
 
-			{/* Passkey registration */}
 			<div className="pt-4 border-t">
 				<h3 className="text-sm font-medium mb-3">{t`Create your passkey`}</h3>
 				<p className="text-sm text-kumo-subtle mb-4">
@@ -300,10 +276,6 @@ function ErrorStep({ message, code, onRetry }: ErrorStepProps) {
 	);
 }
 
-// ============================================================================
-// Main Component
-// ============================================================================
-
 export function SignupPage() {
 	const { logo: brandLogo, siteName: brandSiteName } = useAdminBranding();
 	const [step, setStep] = React.useState<SignupStep>("email");
@@ -315,7 +287,6 @@ export function SignupPage() {
 	const [token, setToken] = React.useState<string | null>(null);
 	const [resendCooldown, setResendCooldown] = React.useState(0);
 
-	// Check for token in URL on mount
 	React.useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
 		const urlToken = params.get("token");
@@ -326,7 +297,6 @@ export function SignupPage() {
 		}
 	}, []);
 
-	// Resend cooldown timer
 	React.useEffect(() => {
 		if (resendCooldown > 0) {
 			const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
@@ -375,9 +345,8 @@ export function SignupPage() {
 		setIsLoading(true);
 		try {
 			await requestSignup(email);
-			setResendCooldown(60); // 60 second cooldown
+			setResendCooldown(60);
 		} catch {
-			// Silently fail - don't reveal if email exists
 		} finally {
 			setIsLoading(false);
 		}
@@ -388,13 +357,11 @@ export function SignupPage() {
 		setError(undefined);
 		setErrorCode(undefined);
 		setToken(null);
-		// Clear token from URL
 		window.history.replaceState({}, "", window.location.pathname);
 	};
 
 	const { t } = useLingui();
 
-	// Loading state for token verification
 	if (isLoading && token) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-kumo-base">
@@ -409,7 +376,6 @@ export function SignupPage() {
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-kumo-base p-4">
 			<div className="w-full max-w-md">
-				{/* Header */}
 				<div className="text-center mb-8">
 					<BrandLogo logoUrl={brandLogo} siteName={brandSiteName} className="h-10 mx-auto mb-2" />
 					<h1 className="text-2xl font-semibold text-kumo-default">
@@ -420,7 +386,6 @@ export function SignupPage() {
 					</h1>
 				</div>
 
-				{/* Form Card */}
 				<div className="bg-kumo-base border rounded-lg shadow-sm p-6">
 					{step === "email" && (
 						<EmailStep onSubmit={handleEmailSubmit} isLoading={isLoading} error={error} />
@@ -448,7 +413,6 @@ export function SignupPage() {
 					)}
 				</div>
 
-				{/* Login link */}
 				{step === "email" && (
 					<p className="text-center mt-6 text-sm text-kumo-subtle">
 						{t`Already have an account?`}{" "}

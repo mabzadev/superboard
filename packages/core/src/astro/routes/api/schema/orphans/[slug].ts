@@ -1,9 +1,3 @@
-/**
- * Register orphaned table endpoint
- *
- * POST /_emdash/api/schema/orphans/:slug - Register an orphaned table as a collection
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

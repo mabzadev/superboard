@@ -35,11 +35,9 @@ describe("Loader revision preview", () => {
 	it("should return Date objects for system date fields in revision preview", async () => {
 		const post = await createPublishedPost("Test Post");
 
-		// Publish the post to set published_at
 		const contentRepo = new ContentRepository(db);
 		await contentRepo.publish("post", post.id);
 
-		// Create a revision (simulating a draft edit)
 		const revision = await revisionRepo.create({
 			collection: "post",
 			entryId: post.id,
@@ -56,14 +54,12 @@ describe("Loader revision preview", () => {
 		expect(result).not.toHaveProperty("error");
 		const data = (result as { data: Record<string, unknown> }).data;
 
-		// These must be Date objects, not ISO strings
 		expect(data.createdAt).toBeInstanceOf(Date);
 		expect(data.updatedAt).toBeInstanceOf(Date);
 		expect(data.publishedAt).toBeInstanceOf(Date);
 	});
 
 	it("should return null for unpopulated date fields in revision preview", async () => {
-		// Create a draft post (no publishedAt)
 		const createResult = await handleContentCreate(db, "post", {
 			data: { title: "Draft Post" },
 			status: "draft",
@@ -87,9 +83,7 @@ describe("Loader revision preview", () => {
 		expect(entry).not.toHaveProperty("error");
 		const data = (entry as { data: Record<string, unknown> }).data;
 
-		// Draft posts have no publishedAt
 		expect(data.publishedAt).toBeNull();
-		// But createdAt and updatedAt should still be Date objects
 		expect(data.createdAt).toBeInstanceOf(Date);
 		expect(data.updatedAt).toBeInstanceOf(Date);
 	});
@@ -113,9 +107,7 @@ describe("Loader revision preview", () => {
 		expect(entry).not.toHaveProperty("error");
 		const data = (entry as { data: Record<string, unknown> }).data;
 
-		// Content from revision
 		expect(data.title).toBe("Revised Title");
-		// System dates from content table, as Date objects
 		expect(data.createdAt).toBeInstanceOf(Date);
 		expect(data.updatedAt).toBeInstanceOf(Date);
 	});

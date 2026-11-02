@@ -1,13 +1,5 @@
-//
-//  CustomLinkRedirect.swift
-//  SuperBoardSDK
-//
-//  Created by Razvan Chelemen on 01.05.2025.
-//
-
 import UIKit
 
-/// A structure representing a redirect on a set of devices.
 public struct CustomLinkRedirect: Codable {
     public let link: String
     public var openAppIfInstalled: Bool = true
@@ -17,9 +9,6 @@ public struct CustomLinkRedirect: Codable {
         self.openAppIfInstalled = openAppIfInstalled
     }
     
-    /// Converts the custom link redirect to a backend-compatible dictionary.
-    ///
-    /// - Returns: A dictionary containing the custom link redirect.
     func toBackend() -> [String: Any] {
         return [
             "url": link,

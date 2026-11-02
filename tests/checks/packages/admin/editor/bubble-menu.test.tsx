@@ -1,14 +1,3 @@
-/**
- * Bubble menu tests.
- *
- * Tests the inline formatting bubble menu that appears when text is selected.
- * Covers formatting buttons (bold, italic, underline, strikethrough, code),
- * link insertion/editing, and menu visibility.
- *
- * The bubble menu uses TipTap's BubbleMenu component and only appears
- * when there's a text selection in the editor.
- */
-
 import { CellSelection } from "@tiptap/pm/tables";
 import type { Editor } from "@tiptap/react";
 import { userEvent } from "@vitest/browser/context";
@@ -17,10 +6,6 @@ import { describe, it, expect, vi } from "vitest";
 import type { PortableTextEditorProps } from "../../../../../packages/admin/src/components/PortableTextEditor";
 import { PortableTextEditor } from "../../../../../packages/admin/src/components/PortableTextEditor";
 import { render } from "../utils/render.tsx";
-
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
 
 vi.mock("../../../../../packages/admin/src/components/MediaPickerModal", () => ({
 	MediaPickerModal: () => null,
@@ -91,10 +76,6 @@ vi.mock("../../../../../packages/admin/src/components/editor/PluginBlockNode", a
 		resolveIcon: () => () => null,
 	};
 });
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 const defaultValue = [
 	{
@@ -182,7 +163,6 @@ async function renderEditor(props: Partial<PortableTextEditorProps> = {}, scroll
 	return { screen, editor: editorInstance!, pm };
 }
 
-/** Focus the editor and select all text using TipTap commands */
 async function focusAndSelectAll(editor: Editor, pm: HTMLElement) {
 	pm.focus();
 	await vi.waitFor(() => expect(document.activeElement).toBe(pm), { timeout: 1000 });
@@ -220,16 +200,10 @@ async function waitForTableToolbar(): Promise<HTMLElement> {
 	return toolbar!;
 }
 
-/**
- * Find the bubble menu element.
- * The dedicated data attribute avoids coupling the test to surface styles,
- * which are also shared by the editor canvas and other floating controls.
- */
 function getBubbleMenu(): HTMLElement | null {
 	return document.querySelector<HTMLElement>("[data-emdash-inline-bubble-menu]");
 }
 
-/** Wait for bubble menu to appear */
 async function waitForBubbleMenu(): Promise<HTMLElement> {
 	let menu: HTMLElement | null = null;
 	await vi.waitFor(
@@ -256,8 +230,6 @@ function hasNonZeroRadius(element: HTMLElement): boolean {
 	const computedValues = computedRadius.match(/\d*\.?\d+/g)?.map(Number) ?? [];
 	if (computedValues.some((value) => value > 0)) return true;
 
-	// The component harness does not resolve admin-only Tailwind variables, so
-	// fall back to validating a semantic inline declaration when necessary.
 	const declaredRadius = element.style.borderRadius.trim();
 	if (!declaredRadius || !CSS.supports("border-radius", declaredRadius)) return false;
 	if (declaredRadius.includes("var(")) return true;
@@ -271,14 +243,9 @@ function expectRoundedFloatingWrapper(menu: HTMLElement) {
 	expect(hasNonZeroRadius(wrapper!)).toBe(true);
 }
 
-/** Get a bubble menu button by aria-label */
 function getBubbleButton(menu: HTMLElement, label: string): HTMLButtonElement | null {
 	return menu.querySelector(`[aria-label="${label}"]`);
 }
-
-// =============================================================================
-// Bubble Menu
-// =============================================================================
 
 describe("Bubble Menu", () => {
 	it("registers stable, independent plugins for both bubble menus", async () => {
@@ -523,7 +490,6 @@ describe("Bubble Menu", () => {
 			expect(boldBtn.getAttribute("aria-pressed")).toBe("true");
 		});
 
-		// Verify the text is wrapped in <strong>
 		expect(pm.querySelector("strong")).toBeTruthy();
 	});
 
@@ -600,13 +566,11 @@ describe("Bubble Menu", () => {
 
 		linkBtn.click();
 
-		// The bubble menu should now show the link input
 		await vi.waitFor(() => {
 			const applyBtn = getBubbleButton(menu, "Apply link");
 			expect(applyBtn).toBeTruthy();
 		});
 
-		// Should have a URL input with placeholder
 		const input = menu.querySelector('input[type="url"]');
 		expect(input).toBeTruthy();
 		expect(input?.getAttribute("aria-label")).toBe("URL");
@@ -624,10 +588,8 @@ describe("Bubble Menu", () => {
 			expect(menu.querySelector('input[type="url"]')).toBeTruthy();
 		});
 
-		// Type a URL into the input
 		const input = menu.querySelector('input[type="url"]') as HTMLInputElement;
 		input.focus();
-		// Use native value setter + input event for React controlled input
 		const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
 			HTMLInputElement.prototype,
 			"value",
@@ -636,11 +598,9 @@ describe("Bubble Menu", () => {
 		input.dispatchEvent(new Event("input", { bubbles: true }));
 		input.dispatchEvent(new Event("change", { bubbles: true }));
 
-		// Click Apply
 		const applyBtn = getBubbleButton(menu, "Apply link")!;
 		applyBtn.click();
 
-		// The editor should now have a link
 		await vi.waitFor(() => {
 			const link = pm.querySelector("a");
 			expect(link).toBeTruthy();
@@ -669,7 +629,6 @@ describe("Bubble Menu", () => {
 		input.dispatchEvent(new Event("input", { bubbles: true }));
 		input.dispatchEvent(new Event("change", { bubbles: true }));
 
-		// Press Enter
 		await userEvent.keyboard("{Enter}");
 
 		await vi.waitFor(() => {
@@ -702,10 +661,8 @@ describe("Bubble Menu", () => {
 
 		const menu = await waitForBubbleMenu();
 
-		// Should show "Edit link" instead of "Add link"
 		expect(getBubbleButton(menu, "Edit link")).toBeTruthy();
 
-		// Click Edit link to show input
 		getBubbleButton(menu, "Edit link")!.click();
 
 		await vi.waitFor(() => {
@@ -736,14 +693,12 @@ describe("Bubble Menu", () => {
 
 		const menu = await waitForBubbleMenu();
 
-		// Click Edit link to open link input mode
 		getBubbleButton(menu, "Edit link")!.click();
 
 		await vi.waitFor(() => {
 			expect(getBubbleButton(menu, "Remove link")).toBeTruthy();
 		});
 
-		// Click Remove link
 		getBubbleButton(menu, "Remove link")!.click();
 
 		await vi.waitFor(() => {
@@ -765,10 +720,8 @@ describe("Bubble Menu", () => {
 		const input = menu.querySelector('input[type="url"]') as HTMLInputElement;
 		input.focus();
 
-		// Press Escape
 		await userEvent.keyboard("{Escape}");
 
-		// Should return to the formatting buttons view
 		await vi.waitFor(() => {
 			expect(getBubbleButton(menu, "Bold")).toBeTruthy();
 		});
@@ -802,7 +755,6 @@ describe("Bubble Menu", () => {
 			expect(menu.querySelector('input[type="url"]')).toBeTruthy();
 		});
 
-		// Clear the input
 		const input = menu.querySelector('input[type="url"]') as HTMLInputElement;
 		input.focus();
 		const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
@@ -813,10 +765,8 @@ describe("Bubble Menu", () => {
 		input.dispatchEvent(new Event("input", { bubbles: true }));
 		input.dispatchEvent(new Event("change", { bubbles: true }));
 
-		// Click Apply
 		getBubbleButton(menu, "Apply link")!.click();
 
-		// Link should be removed
 		await vi.waitFor(() => {
 			expect(pm.querySelector("a")).toBeNull();
 		});
@@ -828,7 +778,6 @@ describe("Bubble Menu", () => {
 
 		const menu = await waitForBubbleMenu();
 
-		// Apply bold + italic
 		getBubbleButton(menu, "Bold")!.click();
 		getBubbleButton(menu, "Italic")!.click();
 
@@ -848,14 +797,11 @@ describe("Bubble Menu", () => {
 		const menu = await waitForBubbleMenu();
 		const boldBtn = getBubbleButton(menu, "Bold")!;
 
-		// Apply bold
 		boldBtn.click();
 		await vi.waitFor(() => expect(editor.isActive("bold")).toBe(true));
 
-		// Re-select (bold toggle may deselect)
 		editor.commands.selectAll();
 
-		// Remove bold
 		boldBtn.click();
 		await vi.waitFor(() => expect(editor.isActive("bold")).toBe(false));
 

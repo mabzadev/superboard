@@ -39,7 +39,6 @@ for (const failure of [0, 42])
 		else {
 			assert.ok(calls.includes("exec lint-staged"));
 			assert.ok(calls.includes("run lint:quick"));
-			// Slow suites run in CI instead of the commit hook.
 			for (const slow of ["run typecheck", "run test", "run test:plugins:regression"])
 				assert.ok(!calls.includes(slow), `${slow} must not run in the commit hook`);
 		}

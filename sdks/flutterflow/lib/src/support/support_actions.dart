@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'actions.dart';
 
-/// Canonical Support event stream for FlutterFlow applications.
 Stream<String> get superboardSupportEventJsonStream =>
     superboardMessagingEventJsonStream;
 

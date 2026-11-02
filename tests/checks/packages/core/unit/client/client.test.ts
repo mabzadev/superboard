@@ -6,12 +6,7 @@ import { EmDashClient, EmDashApiError } from "../../../../../../packages/core/sr
 import type { Interceptor } from "../../../../../../packages/core/src/client/transport.js";
 import { setupTestDatabaseWithCollections, teardownTestDatabase } from "../../utils/test-db.js";
 
-// Regex patterns for route matching
 const CONTENT_POSTS_ABC_REGEX = /\/content\/posts\/abc/;
-
-// ---------------------------------------------------------------------------
-// Mock backend
-// ---------------------------------------------------------------------------
 
 interface MockRoute {
 	method: string;
@@ -19,10 +14,6 @@ interface MockRoute {
 	handler: (req: Request) => Response | Promise<Response>;
 }
 
-/**
- * Creates a mock HTTP backend as an interceptor.
- * Routes are matched in order. Unmatched requests return 404.
- */
 function createMockBackend(routes: MockRoute[]): Interceptor {
 	return async (req) => {
 		const url = new URL(req.url);
@@ -45,13 +36,7 @@ function createMockBackend(routes: MockRoute[]): Interceptor {
 	};
 }
 
-/**
- * Mirrors the API response envelope: `{ success: true, data }` on 2xx and
- * `{ success: false, error }` on 4xx/5xx.
- */
 function jsonResponse(body: unknown, status: number = 200): Response {
-	// Error callers already pass `{ error: ... }`; add the discriminant so the
-	// fixture matches what `apiError()` actually sends.
 	const payload =
 		status >= 400
 			? { success: false, ...(typeof body === "object" && body !== null ? body : {}) }
@@ -94,10 +79,6 @@ function mediaUsageRepairResponse(
 	};
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe("EmDashClient", () => {
 	describe("_rev token flow", () => {
 		it("blind update (no _rev) succeeds", async () => {
@@ -119,7 +100,6 @@ describe("EmDashClient", () => {
 					path: CONTENT_POSTS_ABC_REGEX,
 					handler: async (req) => {
 						const body = (await req.json()) as Record<string, unknown>;
-						// No _rev should be sent
 						expect(body._rev).toBeUndefined();
 						return jsonResponse({
 							item: { id: "abc", data: { title: "Blind" } },
@@ -1555,10 +1535,6 @@ describe("EmDashClient", () => {
 			expect(Array.isArray(capturedData!.body)).toBe(true);
 		});
 	});
-
-	// -----------------------------------------------------------------------
-	// Taxonomy & menu envelope bugs
-	// -----------------------------------------------------------------------
 
 	describe("taxonomies()", () => {
 		it("returns taxonomy array from { taxonomies } envelope", async () => {

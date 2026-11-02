@@ -1,13 +1,3 @@
-/**
- * Cloudflare D1 runtime adapter - RUNTIME ENTRY
- *
- * Creates a Kysely dialect for D1 and, when read replication is enabled,
- * a per-request Kysely bound to a D1 Sessions-API session.
- *
- * This module imports directly from cloudflare:workers to access the D1 binding.
- * Do NOT import this at config time - use { d1 } from "@emdash-cms/cloudflare" instead.
- */
-
 import { env } from "cloudflare:workers";
 import type { CollectionDeletionGuardInput, CollectionDeletionGuardResult } from "emdash";
 import { kyselyLogOption } from "emdash/database/instrumentation";
@@ -17,9 +7,6 @@ import { CoalescingD1Dialect } from "./coalescing-d1.js";
 import { EmDashD1Dialect, RawBindingD1Dialect } from "./d1-dialect.js";
 import { createD1SessionGuard, type D1SessionGuard } from "./d1-session-guard.js";
 
-/**
- * D1 configuration (runtime type — matches the config-time type in index.ts)
- */
 interface D1Config {
 	binding: string;
 	session?: "disabled" | "auto" | "primary-first";
@@ -32,28 +19,8 @@ const COLLECTION_SLUG_PATTERN = /^[a-z][a-z0-9_]*$/;
 const STALE_DELETION_GUARD_PATTERN =
 	/not null constraint failed:\s*_emdash_media_usage_collection_deletions\.collection_id/i;
 
-/**
- * One-shot guard so the "coalesce opted in but the binding can't do sessions
- * at runtime" warning fires once per worker, not on every request.
- */
 let warnedCoalesceNoRuntimeSession = false;
 
-/**
- * Isolate-wide hang guard for the D1 Sessions API. In environments where
- * session queries silently never settle (e.g. the
- * `global_fetch_strictly_public` compatibility flag blocking the Sessions
- * API's internal routing request — see
- * https://github.com/emdash-cms/emdash/issues/1273), this detects the hang
- * on the first session query, falls back to the direct binding for that
- * request, and disables sessions for the rest of the isolate's life instead
- * of letting every request hang until the Worker is killed.
- *
- * Lives on globalThis behind a Symbol.for key (not module scope) because
- * Vite can duplicate this module across SSR chunks — every duplicate must
- * resolve the SAME guard, or one copy could keep racing broken sessions
- * after another has latched (same pattern as the DO bookmark sinks in
- * do-sql.ts and core's request-cache.ts).
- */
 const SESSION_GUARD_KEY = Symbol.for("emdash:d1-session-guard");
 
 function getSessionGuard(): D1SessionGuard {
@@ -67,15 +34,6 @@ function getSessionGuard(): D1SessionGuard {
 	return guard;
 }
 
-/**
- * D1 bookmarks are opaque, minted by Cloudflare. We don't validate the shape
- * (a tighter regex risks rejecting a format change and silently degrading
- * read-your-writes), but we do cap length and reject control characters so a
- * malicious or corrupt cookie can't smuggle anything weird into `withSession`.
- */
-// D1 bookmarks observed in the wild are ~60 chars, but the format is opaque
-// and future encodings (e.g. signed envelopes) could be longer. Err on the
-// generous side — cookie values max out at ~4 KB anyway.
 const MAX_BOOKMARK_LENGTH = 1024;
 
 function hasControlChars(value: string): boolean {
@@ -86,10 +44,6 @@ function hasControlChars(value: string): boolean {
 	return false;
 }
 
-/**
- * Create a D1 dialect from config. Used for the singleton Kysely instance
- * (no session — queries go through the raw binding).
- */
 export function createDialect(config: D1Config): Dialect {
 	const db = getBinding(config);
 	if (!db) {
@@ -111,28 +65,14 @@ export function createDialect(config: D1Config): Dialect {
 				`Check your wrangler.jsonc configuration:\n\n${example}`,
 		);
 	}
-	// Coalescing only applies to the per-request session db; without
-	// sessions it silently does nothing, which would be a confusing no-op.
 	if (config.coalesce && !isSessionEnabled(config)) {
 		console.warn(
 			'[emdash] d1({ coalesce: true }) has no effect without sessions — set session: "auto" (or "primary-first") to enable query coalescing.',
 		);
 	}
-	// The raw-binding singleton skips the ConnectionMutex: on Workers a
-	// canceled request would otherwise never release the lock, deadlocking the
-	// isolate (#2040). The session-backed dialects below keep their
-	// serialization (see RawBindingD1Dialect for why).
 	return new RawBindingD1Dialect({ database: db });
 }
 
-/**
- * Coalescing D1 dialect for the runtime's cold-start read phase, where the
- * core runtime batches its init reads into one `batch()` round trip. Carries
- * no Sessions-API bookmark — cold-start reads need no read-your-writes
- * guarantee — so plain coalescing over the raw binding suffices. Each call
- * returns a fresh dialect; this must never back the long-lived singleton,
- * whose coalescing buffer would be shared across requests.
- */
 export function createCoalescingDialect(config: D1Config): Dialect {
 	const db = getBinding(config);
 	if (!db) {
@@ -141,19 +81,6 @@ export function createCoalescingDialect(config: D1Config): Dialect {
 	return new CoalescingD1Dialect({ database: db });
 }
 
-// =========================================================================
-// D1 Read Replica Session Support
-//
-// createRequestScopedDb is called by the core middleware on each request.
-// When sessions are enabled it returns a per-request Kysely bound to a
-// D1 Sessions API session, plus a `commit()` callback that persists the
-// resulting bookmark as a cookie for authenticated users.
-// =========================================================================
-
-/**
- * A cookie interface minimally compatible with Astro's AstroCookies. Declared
- * here (not imported from astro) so this module stays free of astro types.
- */
 interface CookieJar {
 	get(name: string): { value: string } | undefined;
 	set(name: string, value: string, options: Record<string, unknown>): void;
@@ -162,12 +89,6 @@ interface CookieJar {
 export interface RequestScopedDbOpts {
 	config: D1Config;
 	isAuthenticated: boolean;
-	/**
-	 * Evaluated at commit() time: whether the request ended authenticated.
-	 * Login/signup/invite requests start unauthenticated and establish a
-	 * session mid-request; `isAuthenticated` captures only the request-start
-	 * state.
-	 */
 	endedAuthenticated?: () => boolean;
 	isWrite: boolean;
 	cookies: CookieJar;
@@ -175,12 +96,7 @@ export interface RequestScopedDbOpts {
 }
 
 export interface RequestScopedDb {
-	/** Per-request Kysely instance backed by a D1 Sessions API session. */
 	db: Kysely<any>;
-	/**
-	 * Persist any per-request session state (e.g. the resulting D1 bookmark)
-	 * as a cookie. Idempotent; safe to call once after next() returns.
-	 */
 	commit: () => void;
 }
 
@@ -362,26 +278,12 @@ function deepErrorMessage(error: unknown): string {
 	return String(error);
 }
 
-/**
- * Create a per-request session-backed Kysely, or null when D1 sessions are
- * disabled or the binding is missing. Core middleware calls this once per
- * request, stashes `db` in ALS for the duration of next(), then invokes
- * `commit()` on the response path.
- */
 export function createRequestScopedDb(opts: RequestScopedDbOpts): RequestScopedDb | null {
 	if (!isSessionEnabled(opts.config)) return null;
-	// A session query hung earlier in this isolate's life (see the guard).
-	// Sessions are considered broken here; route everything through the
-	// singleton (direct binding) instead of hanging every request.
 	const sessionGuard = getSessionGuard();
 	if (sessionGuard.isBroken()) return null;
 	const binding = getBinding(opts.config);
 	if (!binding || typeof binding.withSession !== "function") {
-		// Sessions are enabled in config, so createDialect's config-time warning
-		// didn't fire — but the live binding can't actually do sessions (older
-		// D1 binding / missing withSession). Coalescing silently falls back to
-		// the singleton, so surface that once rather than leaving the opt-in a
-		// mystery no-op.
 		if (opts.config.coalesce && binding && !warnedCoalesceNoRuntimeSession) {
 			warnedCoalesceNoRuntimeSession = true;
 			console.warn(
@@ -395,12 +297,6 @@ export function createRequestScopedDb(opts: RequestScopedDbOpts): RequestScopedD
 	const configConstraint =
 		opts.config.session === "primary-first" ? "first-primary" : "first-unconstrained";
 
-	// Any write — authenticated or not (e.g. an anonymous comment POST) — must
-	// hit primary; we don't want a write plus a follow-up read racing across
-	// replicas. Authenticated reads resume from a prior bookmark when the client
-	// sent a valid one. Everything else (anonymous reads — the whole point of
-	// read replicas) uses the config default, typically "first-unconstrained"
-	// for nearest-replica routing.
 	let constraint: string = configConstraint;
 	if (opts.isWrite) {
 		constraint = "first-primary";
@@ -417,36 +313,19 @@ export function createRequestScopedDb(opts: RequestScopedDbOpts): RequestScopedD
 	}
 
 	const session = binding.withSession(constraint);
-	// kysely-d1 only touches .prepare() and .batch() on the database argument,
-	// both of which D1DatabaseSession implements. Hang-guarded: until the
-	// first session query settles in this isolate, queries are raced against
-	// a timeout and fall back to the direct binding if the Sessions API never
-	// responds (issue #1273).
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- session is structurally compatible with the subset D1Dialect uses
 	const sessionAsDatabase = sessionGuard.wrap(session as unknown as D1Database, binding);
-	// Coalescing is per-request only by construction: this Kysely (and its
-	// driver buffer) lives for a single request, so there is no cross-request
-	// buffering. The shared singleton from createDialect must never coalesce.
 	const dialect = opts.config.coalesce
 		? new CoalescingD1Dialect({ database: sessionAsDatabase })
 		: new EmDashD1Dialect({ database: sessionAsDatabase });
 	const db = new Kysely<any>({
 		dialect,
-		// Kysely measures around the driver call, so per-query metrics still
-		// count each query. With coalescing, durations reflect the shared batch
-		// window rather than per-statement time — acceptable.
 		log: kyselyLogOption(),
 	});
 
 	return {
 		db,
 		commit() {
-			// Anonymous sessions can't resume across requests, so there's no
-			// value in persisting a bookmark for them. A request that became
-			// authenticated mid-flight (login, signup, invite) must persist:
-			// its writes landed on the primary, and the follow-up request reads
-			// authenticated — without this bookmark it can hit a replica that
-			// doesn't have the new user/session rows yet.
 			if (!opts.isAuthenticated && !opts.endedAuthenticated?.()) return;
 			const newBookmark = session.getBookmark?.();
 			if (!newBookmark) return;

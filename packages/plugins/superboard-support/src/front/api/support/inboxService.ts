@@ -3,8 +3,6 @@ import { config } from "@superboard/front-ui/lib/config.js";
 import { GET, PATCH, POST } from "../../transport.js";
 import { getSupportAction, listSupportResource } from "./nativeClient.js";
 
-// Canonical Grow client for the native SuperBoard Support inbox.
-
 export type InboxConversation = {
 	id: string;
 	project_id: number;

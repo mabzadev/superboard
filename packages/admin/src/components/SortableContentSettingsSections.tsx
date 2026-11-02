@@ -40,10 +40,8 @@ const restrictToVerticalAxis: Modifier = ({ transform }) => ({
 export interface SortableContentSettingsSectionProps {
 	id: ContentSettingsSectionId;
 	label: string;
-	/** Leaves room for an existing disclosure chevron at the inline end. */
 	disclosure?: boolean;
 	children: React.ReactNode;
-	/** Internal state supplied by the sortable group while any section is moving. */
 	isSorting?: boolean;
 }
 
@@ -67,9 +65,7 @@ function writeStoredLayout(storageKey: string | null, layout: ContentSettingsLay
 	if (!storageKey || typeof window === "undefined") return;
 	try {
 		window.localStorage.setItem(storageKey, JSON.stringify(layout));
-	} catch {
-		// Browser storage is optional; the reordered in-memory layout still works.
-	}
+	} catch {}
 }
 
 export function SortableContentSettingsSections({
@@ -81,8 +77,6 @@ export function SortableContentSettingsSections({
 	const storageKey = userId
 		? `${STORAGE_PREFIX}:${encodeURIComponent(userId)}:${encodeURIComponent(collection)}`
 		: null;
-	// Keep the server and first client render identical. Browser preferences
-	// are restored after hydration so a saved order cannot cause a mismatch.
 	const [storedLayout, setStoredLayout] = React.useState<ContentSettingsLayout | null>(null);
 	const [activeId, setActiveId] = React.useState<ContentSettingsSectionId | null>(null);
 

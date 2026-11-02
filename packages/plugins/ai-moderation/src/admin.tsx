@@ -1,9 +1,3 @@
-/**
- * AI Moderation Plugin — Admin Components
- *
- * Exports widgets and pages for the admin UI.
- */
-
 import { Switch } from "@cloudflare/kumo";
 import {
 	ShieldCheck,
@@ -25,10 +19,6 @@ import type { Category } from "./categories.js";
 
 const API_BASE = "/_emdash/api/plugins/ai-moderation";
 
-// =============================================================================
-// Dashboard Widget
-// =============================================================================
-
 interface PluginStatus {
 	enabled: boolean;
 	categoryCount: number;
@@ -47,7 +37,6 @@ function StatusWidget() {
 				const data = await parseApiResponse<PluginStatus>(response);
 				setStatus(data);
 			} catch {
-				// Widget is non-critical
 			} finally {
 				setIsLoading(false);
 			}
@@ -95,10 +84,6 @@ function StatusWidget() {
 		</div>
 	);
 }
-
-// =============================================================================
-// Category Edit Dialog
-// =============================================================================
 
 interface CategoryDialogProps {
 	category: Category | null;
@@ -210,10 +195,6 @@ function CategoryDialog({ category, onSave, onClose }: CategoryDialogProps) {
 	);
 }
 
-// =============================================================================
-// Settings Page
-// =============================================================================
-
 function SettingsPage() {
 	const [categories, setCategories] = React.useState<Category[]>([]);
 	const [autoApproveClean, setAutoApproveClean] = React.useState(true);
@@ -222,12 +203,10 @@ function SettingsPage() {
 	const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
 	const [editingCategory, setEditingCategory] = React.useState<Category | null | "new">(null);
 
-	// Test panel state
 	const [testText, setTestText] = React.useState("");
 	const [testResult, setTestResult] = React.useState<Record<string, unknown> | null>(null);
 	const [isTesting, setIsTesting] = React.useState(false);
 
-	// Load settings on mount
 	React.useEffect(() => {
 		async function loadSettings() {
 			try {
@@ -243,7 +222,6 @@ function SettingsPage() {
 					}
 				}
 			} catch {
-				// Use defaults
 			} finally {
 				setIsLoading(false);
 			}
@@ -323,7 +301,6 @@ function SettingsPage() {
 
 	return (
 		<div className="space-y-6">
-			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-3xl font-bold">AI Moderation</h1>
@@ -347,7 +324,6 @@ function SettingsPage() {
 			</div>
 
 			<div className="grid gap-6 lg:grid-cols-2">
-				{/* Categories */}
 				<div className="border rounded-lg p-6 space-y-4 lg:col-span-2">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-2">
@@ -409,7 +385,6 @@ function SettingsPage() {
 					</div>
 				</div>
 
-				{/* Behavior */}
 				<div className="border rounded-lg p-6 space-y-4">
 					<h2 className="text-lg font-semibold">Behavior</h2>
 
@@ -422,7 +397,6 @@ function SettingsPage() {
 					/>
 				</div>
 
-				{/* Test Panel */}
 				<div className="border rounded-lg p-6 space-y-4 lg:col-span-2">
 					<div className="flex items-center gap-2">
 						<TestTube className="h-5 w-5 text-muted-foreground" />
@@ -484,7 +458,6 @@ function SettingsPage() {
 				</div>
 			</div>
 
-			{/* Category Dialog */}
 			{editingCategory !== null && (
 				<CategoryDialog
 					category={editingCategory === "new" ? null : editingCategory}
@@ -495,10 +468,6 @@ function SettingsPage() {
 		</div>
 	);
 }
-
-// =============================================================================
-// Exports
-// =============================================================================
 
 export const widgets: PluginAdminExports["widgets"] = {
 	status: StatusWidget,

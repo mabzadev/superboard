@@ -29,8 +29,6 @@ describe("generateConfigModule", () => {
 			trustedProxyHeaders: ["x-real-ip", "fly-client-ip"],
 			maxUploadSize: 52_428_800,
 		});
-		// The virtual module is `export default <JSON>` — eval by stripping
-		// the prefix and parsing.
 		const prefix = "export default ";
 		expect(source.startsWith(prefix)).toBe(true);
 		const json = source.slice(prefix.length).replace(/;$/, "");
@@ -106,8 +104,6 @@ describe("generateSchedulerModule", () => {
 	});
 
 	it("keeps the Node timer in local dev even under the Cloudflare adapter", () => {
-		// No Cron Trigger fires in `astro dev`, so scheduled publishing/cron
-		// must still run via the in-process timer.
 		const out = generateSchedulerModule("@astrojs/cloudflare", "serve");
 		expect(out).toContain('import { NodeCronScheduler } from "emdash"');
 		expect(out).toContain("export function createScheduler(executor)");
@@ -147,7 +143,6 @@ describe("generateEnvModule", () => {
 });
 
 describe("createVirtualModulesPlugin scheduler wiring", () => {
-	// Invoke a Vite plugin hook that may be a function or { handler } object.
 	function callHook<T>(hook: unknown, ...args: unknown[]): T {
 		const fn = typeof hook === "function" ? hook : (hook as { handler: unknown }).handler;
 		return (fn as (...a: unknown[]) => T)(...args);
@@ -172,10 +167,6 @@ describe("createVirtualModulesPlugin scheduler wiring", () => {
 	}
 
 	it("keeps the Node timer under the Cloudflare adapter during `astro dev` even when Vite reports command 'build'", () => {
-		// The Cloudflare adapter produces the worker bundle via a nested Vite
-		// *build* pass during `astro dev`, so Vite's config.command resolves to
-		// "build". The scheduler decision must use Astro's command ("dev")
-		// instead, otherwise plugin cron silently no-ops in local dev (#1635).
 		const plugin = buildPlugin("@astrojs/cloudflare", "dev");
 		callHook(plugin.configResolved, { command: "build" });
 
@@ -248,8 +239,6 @@ describe("createVirtualModulesPlugin scheduler wiring", () => {
 
 			expect(source).toContain("export default { hooks: {} };");
 			expect(addWatchFile).toHaveBeenCalledOnce();
-			// Module resolution canonicalizes macOS' /var -> /private/var symlink.
-			// Compare the physical path so this contract is portable across hosts.
 			expect(addWatchFile).toHaveBeenCalledWith(realpathSync(entryPath));
 		} finally {
 			rmSync(projectRoot, { recursive: true, force: true });

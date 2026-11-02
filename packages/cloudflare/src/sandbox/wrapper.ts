@@ -1,32 +1,10 @@
-/**
- * Plugin Wrapper Generator
- *
- * Generates the code that wraps a plugin to run in a Worker Loader isolate.
- * The wrapper:
- * - Imports plugin hooks and routes from a separate module ("sandbox-plugin.js")
- * - Creates plugin context that proxies to BRIDGE service binding
- * - Exposes hooks and routes via RPC through WorkerEntrypoint
- *
- * Plugin code runs in its own module scope, isolated from the wrapper template.
- *
- */
-
 import { normalizeCapabilities, type PluginManifest } from "emdash";
 
 const TRAILING_SLASH_RE = /\/$/;
 const NEWLINE_RE = /[\n\r]/g;
 const COMMENT_CLOSE_RE = /\*\//g;
 
-/**
- * Options for wrapper generation
- *
- * **Known limitation:** `site` info is baked into the generated wrapper code
- * at load time. If site settings change (e.g., admin updates site name/URL),
- * sandboxed plugins will see stale values until the worker restarts.
- * Trusted-mode plugins always read fresh values from the database.
- */
 export interface WrapperOptions {
-	/** Site info to inject into the context (no RPC needed) */
 	site?: {
 		name: string;
 		url: string;
@@ -38,8 +16,6 @@ export interface WrapperOptions {
 export function generatePluginWrapper(manifest: PluginManifest, options?: WrapperOptions): string {
 	const storageCollections = Object.keys(manifest.storage || {});
 	const site = options?.site ?? { name: "", url: "", locale: "en" };
-	// Normalize so manifests that still declare legacy names (`read:users`)
-	// expose the same APIs as canonical names (`users:read`).
 	const capabilities = normalizeCapabilities(manifest.capabilities ?? []);
 	const hasReadUsers = capabilities.includes("users:read");
 	const hasEmailSend = capabilities.includes("email:send");
@@ -282,11 +258,6 @@ export default class PluginEntrypoint extends WorkerEntrypoint {
 `;
 }
 
-/**
- * Sanitize a string for inclusion in a JavaScript comment.
- * Prevents comment injection via manifest.id or manifest.version containing
- * newlines or comment-closing sequences.
- */
 function sanitizeComment(s: string): string {
 	return s.replace(NEWLINE_RE, " ").replace(COMMENT_CLOSE_RE, "* /");
 }

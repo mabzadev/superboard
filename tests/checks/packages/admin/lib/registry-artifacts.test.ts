@@ -124,10 +124,7 @@ describe("extractMediaArtifacts", () => {
 			icon: { width: 10 },
 			screenshots: [{ url: 123 }, s2, { url: "" }, s3],
 		});
-		// `icon` has no usable url -> dropped entirely.
 		expect(result.icon).toBeUndefined();
-		// Survivors keep their original array indices (1 and 3), so the proxy
-		// resolves the same entry the publisher declared.
 		expect(result.screenshots.map((s) => s.index)).toEqual([1, 3]);
 	});
 });

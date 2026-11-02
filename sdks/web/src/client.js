@@ -7,7 +7,6 @@ export class SuperBoardError extends Error {
 	}
 }
 
-// Purchases signing keys are immutable per kid; re-import them at most once per TTL.
 const VERIFICATION_KEY_TTL_MS = 10 * 60 * 1000;
 
 export class SuperBoardClient {
@@ -152,7 +151,6 @@ export class SuperBoardClient {
 	async getApplicationAccessToken() {
 		if (this.#applicationToken && this.#applicationToken.expiresAt > Date.now() + 10000)
 			return this.#applicationToken.value;
-		// Concurrent callers share one exchange; a session change discards it (see setSession).
 		if (this.#applicationTokenRequest) return this.#applicationTokenRequest;
 		const generation = this.#generation;
 		const operation = this.request("/v1/auth/superboard-token", { method: "POST", body: {} })
@@ -293,7 +291,6 @@ export class SuperBoardClient {
 		const authenticated = options.authenticated !== false;
 		const headers = new Headers({ ...this.#headers, Accept: "application/json" });
 		if (options.body !== undefined) headers.set("Content-Type", "application/json");
-		// The same key is reused if the request is retried after a token refresh.
 		if (!["GET", "HEAD"].includes(method))
 			headers.set("Idempotency-Key", options.idempotencyKey ?? crypto.randomUUID());
 		const send = async () => {
@@ -321,17 +318,13 @@ export class SuperBoardClient {
 		};
 		let { response, token } = await send();
 		if (response.status === 401 && authenticated && this.#session && !options.signal?.aborted) {
-			// One refresh-and-retry: drop a rejected application token, or refresh the
-			// session when its access token is still the one the server rejected.
 			try {
 				if (options.applicationToken) {
 					if (this.#applicationToken?.value === token) this.#applicationToken = null;
 				} else if (this.#session?.access_token === token) {
 					await this.refreshSession();
 				}
-			} catch {
-				// Report the original 401 below when the refresh itself fails.
-			}
+			} catch {}
 			if (this.#session) ({ response, token } = await send());
 		}
 		let payload = null;

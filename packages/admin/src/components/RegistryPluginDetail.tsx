@@ -1,18 +1,3 @@
-/**
- * Registry Plugin Detail
- *
- * Detail view for a plugin from the experimental decentralized plugin
- * registry. Resolves `(handle, slug)` directly against the configured
- * aggregator; install routes through the EmDash server's
- * `/_emdash/api/admin/plugins/registry/install` endpoint, which
- * re-resolves and re-verifies before writing the install.
- *
- * Identified in the URL by a `pluginId` that is `${handle}/${slug}`.
- * The router wraps this component when `manifest.registry` is set on
- * the same route the marketplace detail uses, so existing bookmarks /
- * sidebar entries stay stable.
- */
-
 import { Badge, Button, LinkButton, Select, Tabs } from "@cloudflare/kumo";
 import type { TabsItem } from "@cloudflare/kumo";
 import { declaredAccessToCapabilities, type DeclaredAccess } from "@emdash-cms/plugin-types";
@@ -57,9 +42,7 @@ import { getMutationError } from "./DialogError.js";
 import { PublisherIdentity } from "./PublisherHandle.js";
 
 export interface RegistryPluginDetailProps {
-	/** `${handle}/${slug}` -- the pluginId param from the route. */
 	pluginId: string;
-	/** Resolved manifest.registry block. Caller is responsible for the null check. */
 	config: RegistryClientConfig;
 }
 
@@ -69,10 +52,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 	const [showConsent, setShowConsent] = React.useState(false);
 	const [mcpConsentTools, setMcpConsentTools] = React.useState<PluginMcpConsentTool[]>([]);
 
-	// Plugins list — used to compute whether this package is already
-	// installed. Same query key as elsewhere so the install mutation's
-	// invalidate hook updates the install button without a manual
-	// refresh.
 	const { data: installedPlugins } = useQuery({
 		queryKey: ["plugins"],
 		queryFn: async () => {
@@ -81,30 +60,17 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 		},
 	});
 
-	// Host environment versions (`env:emdash`, `env:astro`) — used to evaluate
-	// the selected release's `requires` constraints before offering install.
-	// Derived from the admin manifest the shell already fetches under the same
-	// query key, so this view adds no extra round-trip.
 	const { data: manifest } = useQuery({
 		queryKey: ["manifest"],
 		queryFn: fetchManifest,
 	});
 	const hostEnv = React.useMemo(() => hostEnvFromManifest(manifest), [manifest]);
 
-	// Parse `<publisher>/<slug>` out of the route param. The publisher
-	// segment is either a handle (`example.dev`) or a DID
-	// (`did:plc:abc...`). Slugs are `[A-Za-z][A-Za-z0-9_-]*` (no `/`),
-	// so the *last* `/` is the split (a handle could contain a `/`
-	// historically, though atproto handles don't; the DID form
-	// definitely doesn't).
 	const slashIdx = pluginId.lastIndexOf("/");
 	const publisher = slashIdx > 0 ? pluginId.slice(0, slashIdx) : "";
 	const slug = slashIdx > 0 ? pluginId.slice(slashIdx + 1) : "";
 	const isDid = publisher.startsWith("did:");
 
-	// When linked by handle, resolve via `resolvePackage(handle, slug)`.
-	// When linked by DID, go straight to `getPackage(did, slug)`. Either
-	// way we end up with the same `RegistryPackageView` shape.
 	const packageQueryEnabled = Boolean(publisher && slug);
 	const {
 		data: cachedPackageStatus,
@@ -135,14 +101,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 	const pkg = packageStatus?.status === "passed" ? packageStatus.value : undefined;
 	const listingUnavailable = packageStatus?.status === "unavailable";
 
-	// `listReleases` returns releases in descending semver order. The aggregator
-	// contains only the aggregator's approved projection. Lexicon-invalid records
-	// (`release === null`) are filtered because they carry
-	// no actionable metadata and can't be installed.
-	// `limit: 100` is the lexicon ceiling; one page covers the long tail of
-	// real packages without needing cursor follow-up. Packages with more than
-	// 100 releases would still lose access to the oldest, but that's far past
-	// what a single plugin would ever ship in the experimental phase.
 	const releasesQueryEnabled = Boolean(pkg?.did && slug);
 	const {
 		data: cachedReleasesData,
@@ -179,11 +137,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 	);
 	const hasFilteredAllReleases = (releasesData?.releases.length ?? 0) > 0 && releases.length === 0;
 
-	// Default to the highest semver that passes the policy holdback. When every
-	// release is still inside the holdback window, fall back to the highest
-	// listed version — installation stays disabled (with the holdback banner)
-	// but the picker has something selected and the per-release metadata stays
-	// visible.
 	const defaultVersion = React.useMemo(() => {
 		if (!pkg || releases.length === 0) return undefined;
 		const passes = releases.find((r) =>
@@ -193,20 +146,11 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 	}, [pkg, releases, slug, config.policy]);
 
 	const [selectedVersion, setSelectedVersion] = React.useState<string | undefined>(undefined);
-	// Reset during render (not after commit) when navigating between packages —
-	// the component instance survives route changes, and an `effect` reset would
-	// let a stale selection from package A briefly resolve against package B's
-	// release list before the effect fires. Enables an "install the wrong version
-	// on a fast click after a route change" race.
 	const [prevPluginId, setPrevPluginId] = React.useState(pluginId);
 	if (prevPluginId !== pluginId) {
 		setPrevPluginId(pluginId);
 		setSelectedVersion(undefined);
 	}
-	// Reconcile when the release list changes underneath an explicit selection
-	// (the selected version got yanked between visits, the labeller config
-	// changed, etc.). Dropping back to the default avoids the Select trigger
-	// rendering a value with no matching option.
 	if (
 		selectedVersion !== undefined &&
 		releases.length > 0 &&
@@ -222,26 +166,7 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 	);
 	const isPreRelease = release ? isPreReleaseVersion(release.version) : false;
 
-	// `release.extensions[com.emdashcms.experimental.package.releaseExtension]`
-	// carries the structured `declaredAccess` -- the trust contract. The sandbox
-	// enforces the legacy `capabilities: string[]` shape, so we derive that list
-	// from declaredAccess using the SAME total converter the bundler and runtime
-	// use (`@emdash-cms/plugin-types`). Deriving via the shared converter -- not
-	// a component-local reimplementation -- is what keeps the consent list equal
-	// to what the install handler enforces; an earlier divergent local flattener
-	// dropped hook-registration capabilities and broke every such install.
-	//
-	// `canonicalCapabilitiesForDriftCheck` filters non-strings, dedupes, and
-	// sorts so an aggregator-supplied array with unstable order can't trigger a
-	// spurious server-side drift rejection later.
-	//
-	// NSID is exact-matched, not prefix-matched. RFC 0001 fixes the NSID for
-	// this extension; accepting variants like `…releaseExtensionV2` would let a
-	// publisher render a different permissions list than another would for the
-	// same RFC-0001 fields.
 	const RELEASE_EXTENSION_NSID = "com.emdashcms.experimental.package.releaseExtension";
-	// `release` is lexicon-validated at the boundary; `extensions` is the
-	// lexicon's open `unknown` map, so its inner shape still needs narrowing.
 	const extensions = release?.release?.extensions as
 		| Record<string, { declaredAccess?: DeclaredAccess }>
 		| undefined;
@@ -253,12 +178,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 			)
 		: [];
 
-	// `profile` / `release` are validated against their lexicons at the
-	// DiscoveryClient boundary, so the shape here is trustworthy (or `null`).
-	// URLs still need a scheme allow-list: the lexicon's `uri` format permits
-	// non-HTTP schemes (incl. `javascript:`), so an author/repo `url` going
-	// straight into an `href` would be stored XSS in the authenticated admin
-	// origin. `safeExternalHref` / `safeEmail` are that gate, not shape-parsing.
 	const pkgProfile = pkg?.profile ?? null;
 	const displayName = pkgProfile?.name;
 	const description = pkgProfile?.description;
@@ -274,18 +193,10 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 		const email = safeEmail(c.email);
 		return url || email ? [{ url, email }] : [];
 	});
-	// `repo` is a release-level field (`release.repo`), not a profile field.
 	const repoHref = safeExternalHref(release?.release?.repo);
 
-	// Long-form profile sections (description / installation / faq / changelog /
-	// security). Empty / whitespace-only entries are dropped by `presentSections`;
-	// each surviving value goes through the shared sanitizing `renderMarkdown`.
 	const sections = presentSections(pkgProfile);
 
-	// Active section tab. Defaults to the first present section (description-first
-	// by `SECTION_ORDER`). `activeSection` falls back to the default when the
-	// selected section isn't present (e.g. after navigating to a different
-	// package), so the Tabs trigger never renders a value with no matching pane.
 	const [selectedSection, setSelectedSection] = React.useState<SectionKey | undefined>(undefined);
 	const defaultSection = sections[0]?.key;
 	const activeSection =
@@ -294,23 +205,11 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 			: defaultSection;
 	const activePane = sections.find((s) => s.key === activeSection);
 
-	// SBOM reference on the signed release record. The download link points
-	// directly at the publisher's URL (the browser fetches it client-side on
-	// click), so the URL is gated through `sbomDownloadHref` before it reaches an
-	// `href` — same scheme allow-list as every other publisher URL.
 	const sbom = extractSbom(release?.release?.sbom);
 	const sbomHref = sbom ? sbomDownloadHref(sbom.url) : null;
 
-	// `lastUpdated` is the publisher-asserted update time on the profile;
-	// `release.indexedAt` is when the aggregator indexed the release. They answer
-	// different questions, so both are labelled distinctly below.
 	const lastUpdated = typeof pkgProfile?.lastUpdated === "string" ? pkgProfile.lastUpdated : null;
 
-	// Media artifacts (icon / screenshot / banner) live on the release record's
-	// `artifacts` map. The publisher-supplied URLs never reach the client — we
-	// address each image by its `(did, slug, version, kind, index)` coordinates,
-	// and the server resolves the declared URL from the release record before
-	// fetching it through its SSRF-defended, content-type-allowlisted proxy.
 	const mediaArtifacts = extractMediaArtifacts(release?.release?.artifacts);
 	const artifactDid = pkg?.did;
 	const artifactVersion = release?.version;
@@ -353,21 +252,12 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 	const policyOk =
 		release && pkg ? releasePassesPolicy(release, { did: pkg.did, slug }, config.policy) : true;
 
-	// Environment compatibility: compare the selected release's `requires`
-	// constraints against the running host. `requires` is the lexicon's open
-	// `unknown` value; `checkEnvCompatibility` guards its shape. Mirrors the
-	// server-side install gate so the admin can't offer an install the server
-	// would reject. While the manifest is still loading `hostEnv` is empty, so
-	// every constraint is skipped (fail-open until the data arrives; the server
-	// gate is the authority either way).
 	const envMismatches = React.useMemo(() => {
 		if (!release) return [];
 		return checkEnvCompatibility(release.release?.requires, hostEnv);
 	}, [release, hostEnv]);
 	const envOk = envMismatches.length === 0;
 
-	// Is this package already installed? Match on (publisher DID,
-	// slug) -- the same key the install handler writes to plugin_states.
 	const installedEntry = React.useMemo(() => {
 		if (!pkg || !installedPlugins) return undefined;
 		return installedPlugins.find(
@@ -384,23 +274,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				did: pkg.did,
 				slug,
 				version: release?.version,
-				// Always send the acknowledgement, even when the dialog
-				// showed no permissions. The server compares this list
-				// against the bundle's actual `manifest.capabilities`
-				// after download:
-				//
-				//   - If the bundle has capabilities, the server
-				//     requires us to send a matching list (the consent
-				//     dialog is the only place the admin sees what
-				//     they're agreeing to).
-				//   - If the bundle has no capabilities, no consent is
-				//     required and the server ignores this field.
-				//
-				// Sending the empty list when the release extension was
-				// missing means a publisher who ships a bundle with
-				// permissions but no extension block can't sneak the
-				// permissions past an empty consent dialog -- the
-				// server will refuse with `DECLARED_ACCESS_REQUIRED`.
 				acknowledgedDeclaredAccess: capabilities,
 				acknowledgedMcpTools: mcpConsentTools,
 			});
@@ -477,7 +350,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 		<div className="space-y-6">
 			<BackLink />
 
-			{/* Banner */}
 			{bannerSrc ? (
 				<img
 					src={bannerSrc}
@@ -487,7 +359,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				/>
 			) : null}
 
-			{/* Header */}
 			<div className="flex flex-wrap items-start gap-4">
 				<div className="overflow-hidden rounded-xl bg-kumo-subtle text-kumo-subtle">
 					{iconSrc ? (
@@ -594,7 +465,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				</div>
 			</div>
 
-			{/* The aggregator returned records but none passed lexicon validation. */}
 			{hasFilteredAllReleases ? (
 				<div
 					className="flex items-start gap-3 rounded-md border border-kumo-warning bg-kumo-warning/10 p-4 text-kumo-warning"
@@ -610,7 +480,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				</div>
 			) : null}
 
-			{/* Policy holdback notice */}
 			{release && !policyOk ? (
 				<div
 					className="flex items-start gap-3 rounded-md border border-kumo-warning bg-kumo-warning/10 p-4 text-kumo-warning"
@@ -626,10 +495,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				</div>
 			) : null}
 
-			{/* Environment compatibility notice. Mirrors the server install gate
-			    (ENV_INCOMPATIBLE): the selected release declares `requires`
-			    constraints the running host doesn't satisfy. Install is
-			    disabled until the host is upgraded. */}
 			{release && !envOk ? (
 				<div
 					className="flex items-start gap-3 rounded-md border border-kumo-warning bg-kumo-warning/10 p-4 text-kumo-warning"
@@ -652,10 +517,8 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				</div>
 			) : null}
 
-			{/* Description */}
 			{description ? <p className="text-base text-kumo-default">{description}</p> : null}
 
-			{/* Screenshot gallery */}
 			{screenshots.length > 0 ? (
 				<section aria-label={t`Screenshots`}>
 					<ul className="flex snap-x gap-3 overflow-x-auto pb-2">
@@ -675,7 +538,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				</section>
 			) : null}
 
-			{/* License / keywords / repository */}
 			{licenseText || repoHref || keywordList.length > 0 ? (
 				<section className="flex flex-wrap items-center gap-2">
 					{licenseText ? <LicenseBadge license={licenseText} /> : null}
@@ -690,7 +552,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				</section>
 			) : null}
 
-			{/* Authors */}
 			{authorList.length > 0 ? (
 				<section>
 					<h2 className="text-sm font-semibold text-kumo-subtle">{t`Authors`}</h2>
@@ -723,7 +584,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				</section>
 			) : null}
 
-			{/* Security contacts */}
 			{securityList.length > 0 ? (
 				<section>
 					<h2 className="text-sm font-semibold text-kumo-subtle">{t`Security contacts`}</h2>
@@ -755,7 +615,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				</section>
 			) : null}
 
-			{/* Capabilities preview */}
 			{capabilities.length > 0 ? (
 				<section>
 					<h2 className="text-sm font-semibold text-kumo-subtle">{t`Declared permissions`}</h2>
@@ -767,8 +626,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				</section>
 			) : null}
 
-			{/* Long-form sections (description / installation / faq / changelog /
-			    security). One pane per non-empty section; sanitized Markdown. */}
 			{sections.length > 0 && activePane ? (
 				<section aria-label={t`Plugin details`}>
 					{sections.length > 1 ? (
@@ -791,7 +648,6 @@ export function RegistryPluginDetail({ pluginId, config }: RegistryPluginDetailP
 				</section>
 			) : null}
 
-			{/* Consent dialog */}
 			{showConsent && release ? (
 				<CapabilityConsentDialog
 					mode="install"
@@ -835,21 +691,10 @@ function BackLink() {
 
 const PRE_RELEASE_VERSION_RE = /^\d+\.\d+\.\d+-/;
 
-/**
- * Detects semver pre-release identifiers (`1.0.0-alpha.1`, `2.0.0-rc.2`). The
- * release lexicon does not enforce semver shape, so a permissive `includes("-")`
- * check would light up the badge for malformed values like `-1.0.0` or
- * `abc-def`. Require a `MAJOR.MINOR.PATCH-` prefix instead.
- */
 function isPreReleaseVersion(version: string): boolean {
 	return PRE_RELEASE_VERSION_RE.test(version);
 }
 
-/**
- * Human-readable name for a `requires` env key. The known EmDash environments
- * get their proper product names; anything else falls back to the key with the
- * `env:` prefix stripped (product names, not localised strings).
- */
 function envLabel(key: string): string {
 	if (key === "env:emdash") return "EmDash";
 	if (key === "env:astro") return "Astro";
@@ -864,19 +709,6 @@ function formatDate(iso: string): string {
 	}
 }
 
-/**
- * SPDX page URL for a license, or `null` when the value isn't a single
- * SPDX identifier (compound expressions like "MIT OR Apache-2.0" and the
- * literal "proprietary" have no canonical spdx.org page).
- */
-/**
- * Validate an untrusted aggregator-supplied URL for use in an `href`.
- * Returns the normalised URL only when it is an absolute `http(s)` URL;
- * everything else (relative, `javascript:`, `data:`, garbage, non-string)
- * returns `null`. The profile/release records are pass-throughs from a
- * remote service, so an unsanitised `href` is stored XSS in the
- * authenticated admin origin.
- */
 function safeExternalHref(value: unknown): string | null {
 	if (typeof value !== "string" || value.length === 0) return null;
 	let parsed: URL;
@@ -889,10 +721,6 @@ function safeExternalHref(value: unknown): string | null {
 	return parsed.href;
 }
 
-// Conservative email shape: forbids whitespace (so no CRLF), the
-// characters that could break out of a `mailto:` href, and the
-// `mailto:` query delimiters (`? & = % /`) so a value like
-// `victim@x.com?bcc=attacker@evil` can't smuggle cc/bcc/subject/body.
 const EMAIL_RE = /^[^\s@<>()[\]\\,;:"?&=%/]+@[^\s@<>()[\]\\,;:"?&=%/]+\.[^\s@<>()[\]\\,;:"?&=%/]+$/;
 
 function safeEmail(value: unknown): string | null {

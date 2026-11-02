@@ -1029,7 +1029,6 @@ class _SuperBoardFlowSurveyViewState extends State<SuperBoardFlowSurveyView> {
         for (final option in _options(question))
           RadioListTile<String>(
             value: option.id,
-            // Kept for the package's Flutter >=3.3 compatibility floor.
             // ignore: deprecated_member_use
             groupValue: selected,
             title: Text(option.label),

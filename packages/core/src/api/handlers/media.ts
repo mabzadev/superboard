@@ -1,7 +1,3 @@
-/**
- * Media CRUD handlers
- */
-
 import type { Kysely } from "kysely";
 
 import { MediaRepository, type MediaItem } from "../../database/repositories/media.js";
@@ -22,9 +18,6 @@ export interface MediaResponse {
 	item: MediaItem;
 }
 
-/**
- * List media items
- */
 export async function handleMediaList(
 	db: Kysely<Database>,
 	params: {
@@ -96,9 +89,6 @@ export async function handleMediaList(
 	}
 }
 
-/**
- * Get single media item
- */
 export async function handleMediaGet(
 	db: Kysely<Database>,
 	id: string,
@@ -132,9 +122,6 @@ export async function handleMediaGet(
 	}
 }
 
-/**
- * Create media item (after file upload)
- */
 export async function handleMediaCreate(
 	db: Kysely<Database>,
 	input: {
@@ -170,9 +157,6 @@ export async function handleMediaCreate(
 	}
 }
 
-/**
- * Update media metadata
- */
 export async function handleMediaUpdate(
 	db: Kysely<Database>,
 	id: string,
@@ -239,9 +223,6 @@ function isForeignKeyViolation(error: unknown): boolean {
 	);
 }
 
-/**
- * Delete media item
- */
 export async function handleMediaDelete(
 	db: Kysely<Database>,
 	id: string,

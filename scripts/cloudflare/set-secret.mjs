@@ -12,11 +12,6 @@ import {
 } from "./services.mjs";
 import { environmentFromArgs, loadTarget, parseArgs, targetNameFromArgs } from "./target.mjs";
 
-/**
- * Resolve a legacy service/name pair to the one logical contract that owns it.
- * No value is accepted here: single-binding writes cannot preserve shared-secret
- * invariants and `wrangler secret put` would deploy immediately.
- */
 export function buildLegacySecretReplacement({
 	target,
 	targetName,

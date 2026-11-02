@@ -287,8 +287,22 @@ export default {
 						);
 						if (properties.includes("only") || focusedOption)
 							context.report({ node, messageId: "focused" });
+						const isFunction = (argument) =>
+							argument.type === "ArrowFunctionExpression" || argument.type === "FunctionExpression";
+						const statedReason =
+							!node.arguments.some(isFunction) &&
+							node.arguments.some(
+								(argument) =>
+									(argument.type === "Literal" &&
+										typeof argument.value === "string" &&
+										argument.value.trim().length >= 12) ||
+									(argument.type === "TemplateLiteral" &&
+										argument.expressions.length === 0 &&
+										argument.quasis[0].value.cooked.trim().length >= 12),
+							);
 						if (
 							properties.includes("skip") &&
+							!statedReason &&
 							!context.sourceCode
 								.getCommentsBefore(node.parent)
 								.some((comment) => comment.value.trim().length >= 12)

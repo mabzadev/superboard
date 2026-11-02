@@ -1,9 +1,3 @@
-/**
- * Regression tests for issue #808: redirect middleware silently no-oped for
- * unauthenticated public visitors because `locals.emdash.db` is intentionally
- * absent on the public-visitor branch of runtime init. The fix routes the
- * lookup through `getDb()` (ALS-aware, falls back to singleton).
- */
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -114,7 +108,6 @@ describe("redirect middleware — issue #808", () => {
 		const next = vi.fn(async () => new Response("not found", { status: 404 }));
 		const response = await runMiddleware(context, next);
 
-		// When locals.emdash.db is provided, getDb() must not be called.
 		expect(getDbMock).not.toHaveBeenCalled();
 		expect(redirect).toHaveBeenCalledWith("/new", 301);
 		expect(response.status).toBe(301);
@@ -135,21 +128,18 @@ describe("redirect middleware — issue #808", () => {
 	it("warms the redirect cache from one query and reuses it across requests", async () => {
 		const findAllEnabled = vi.spyOn(RedirectRepository.prototype, "findAllEnabled");
 
-		// First request: cache cold, should issue exactly one query.
 		const first = buildContext({ pathname: "/old" });
 		const next1 = vi.fn(async () => new Response("not found", { status: 404 }));
 		const r1 = await runMiddleware(first.context, next1);
 		expect(r1.status).toBe(301);
 		expect(findAllEnabled).toHaveBeenCalledTimes(1);
 
-		// Second request (exact match): cache warm, no further queries.
 		const second = buildContext({ pathname: "/old" });
 		const next2 = vi.fn(async () => new Response("not found", { status: 404 }));
 		const r2 = await runMiddleware(second.context, next2);
 		expect(r2.status).toBe(301);
 		expect(findAllEnabled).toHaveBeenCalledTimes(1);
 
-		// Third request (pattern match): still warm, no further queries.
 		const third = buildContext({ pathname: "/legacy/hello" });
 		const next3 = vi.fn(async () => new Response("not found", { status: 404 }));
 		const r3 = await runMiddleware(third.context, next3);
@@ -157,7 +147,6 @@ describe("redirect middleware — issue #808", () => {
 		expect(third.redirect).toHaveBeenCalledWith("/posts/hello", 301);
 		expect(findAllEnabled).toHaveBeenCalledTimes(1);
 
-		// Fourth request (no match): still warm, but next() runs and a 404 is logged.
 		const fourth = buildContext({ pathname: "/nope" });
 		const next4 = vi.fn(async () => new Response("not found", { status: 404 }));
 		await runMiddleware(fourth.context, next4);
@@ -366,7 +355,6 @@ describe("redirect middleware — 404 logging attributes misses to the requested
 
 		expect(log404).toHaveBeenCalledTimes(1);
 		expect(log404).toHaveBeenCalledWith(expect.objectContaining({ path: "/no-such-page" }));
-		// Await the fire-and-forget write before reading the table.
 		await log404.mock.results[0]!.value;
 		const rows = await db.selectFrom("_emdash_404_log").select("path").execute();
 		expect(rows.map((r) => r.path)).toEqual(["/no-such-page"]);
@@ -374,9 +362,6 @@ describe("redirect middleware — 404 logging attributes misses to the requested
 	});
 
 	it("logs a content miss under its real path across the redirect-to-/404 flow", async () => {
-		// The documented template pattern answers a content miss with
-		// Astro.redirect("/404"): the first request is a 302, the browser then
-		// requests /404, which renders with status 404.
 		const log404 = vi.spyOn(RedirectRepository.prototype, "log404");
 
 		const miss = buildContext({ pathname: "/posts/deleted-post" });

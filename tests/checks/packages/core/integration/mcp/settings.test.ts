@@ -1,13 +1,3 @@
-/**
- * MCP settings tools — integration tests.
- *
- * Covers:
- *   - settings_get
- *   - settings_update
- *
- * Plus regression for bug #16 (no MCP tool for site settings).
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { ulid } from "ulidx";
@@ -56,10 +46,6 @@ async function seedMedia(db: Kysely<Database>, opts?: { id?: string }): Promise<
 	return id;
 }
 
-// ---------------------------------------------------------------------------
-// Tool registration — bug #16 regression.
-// ---------------------------------------------------------------------------
-
 describe("settings tools registered (bug #16)", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -81,10 +67,6 @@ describe("settings tools registered (bug #16)", () => {
 		expect(names.has("settings_update")).toBe(true);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// settings_get
-// ---------------------------------------------------------------------------
 
 describe("settings_get", () => {
 	let db: Kysely<Database>;
@@ -144,7 +126,6 @@ describe("settings_get", () => {
 		const data = extractJson<SiteSettingsResponse>(result);
 		expect(data.logo?.mediaId).toBe(mediaId);
 		expect(data.logo?.alt).toBe("Site logo");
-		// URL is resolved to the media file route
 		expect(data.logo?.url).toMatch(/^\/_emdash\/api\/media\/file\//);
 	});
 
@@ -213,10 +194,6 @@ describe("settings_get", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// settings_update
-// ---------------------------------------------------------------------------
-
 describe("settings_update", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -249,7 +226,6 @@ describe("settings_update", () => {
 			arguments: { title: "First", tagline: "Original tagline" },
 		});
 
-		// Update only tagline; title should be preserved
 		const result = await harness.client.callTool({
 			name: "settings_update",
 			arguments: { tagline: "Updated tagline" },

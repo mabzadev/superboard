@@ -1,14 +1,3 @@
-/**
- * FTS triggers only re-tokenize when an indexed value actually changed.
- *
- * The update trigger fires on ANY row UPDATE. Without a WHEN guard it
- * rewrites the document's index entry even when no searchable column
- * changed — metadata-only saves (status flips, scheduling, version bumps)
- * re-tokenize the full document, dominating save CPU and WAL volume. The
- * FTS `_data` shadow table holds the index segments, so a byte-identical
- * dump across a metadata-only update proves no re-tokenization happened.
- */
-
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -74,7 +63,6 @@ describe("FTS write amplification", () => {
 		await teardownTestDatabase(db);
 	});
 
-	/** Byte-level dump of the FTS index segments. */
 	async function indexSegments(): Promise<string[]> {
 		const rows = await sql<{ id: number; block: string }>`
 			SELECT id, quote(block) as block FROM "_emdash_fts_pages_data" ORDER BY id
@@ -96,9 +84,6 @@ describe("FTS write amplification", () => {
 	it("does not re-tokenize when publish rewrites identical data values", async () => {
 		const before = await indexSegments();
 
-		// publish() SETs every data column from the revision even when the
-		// values are unchanged; only value comparison suppresses those
-		// re-tokenizations.
 		await repo.publish("pages", entryId);
 
 		expect(await indexSegments()).toEqual(before);

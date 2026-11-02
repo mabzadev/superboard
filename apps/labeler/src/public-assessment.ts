@@ -140,10 +140,6 @@ type PublicAssessmentEnv = Record<PublicAssessmentConfigKey, string> & {
 	DB: PublicAssessmentDatabase;
 };
 
-/**
- * Handles the four experimental public assessment XRPC queries. A null result
- * means the request path belongs to another part of the Worker.
- */
 export async function handlePublicAssessmentXrpc(
 	request: Request,
 	env: PublicAssessmentEnv,
@@ -639,9 +635,7 @@ function publicReasonCodes(row: AssessmentRow): string[] {
 					}
 				}
 			}
-		} catch {
-			// An invalid internal summary contributes no public data.
-		}
+		} catch {}
 	}
 	if (row.error_code !== null) codes.push(publicOperationalReason(row.error_code));
 	return [...new Set(codes)].slice(0, MAX_FINDINGS);

@@ -1,23 +1,3 @@
-/**
- * Forms Plugin for EmDash CMS
- *
- * Build forms in the admin, embed them in content via Portable Text,
- * accept submissions from anonymous visitors, send notifications, export data.
- *
- * This is a trusted plugin shipped as an npm package. It uses the standard
- * plugin APIs — nothing privileged.
- *
- * @example
- * ```typescript
- * // live.config.ts
- * import { formsPlugin } from "@emdash-cms/plugin-forms";
- *
- * export default defineConfig({
- *   plugins: [formsPlugin()],
- * });
- * ```
- */
-
 import type { PluginDescriptor, ResolvedPlugin } from "emdash";
 import { definePlugin } from "emdash";
 
@@ -53,14 +33,9 @@ import {
 } from "./schemas.js";
 import { FORMS_STORAGE_CONFIG } from "./storage.js";
 
-// ─── Plugin Options ──────────────────────────────────────────────
-
 export interface FormsPluginOptions {
-	/** Default spam protection for new forms */
 	defaultSpamProtection?: "none" | "honeypot" | "turnstile";
 }
-
-// ─── Plugin Descriptor (for live.config.ts) ──────────────────────
 
 export function formsPlugin(
 	options: FormsPluginOptions = {},
@@ -79,15 +54,12 @@ export function formsPlugin(
 			{ path: "/submissions", label: "Submissions", icon: "inbox" },
 		],
 		adminWidgets: [{ id: "recent-submissions", title: "Recent Submissions", size: "half" }],
-		// Descriptor uses flat indexes only; composite indexes are in definePlugin
 		storage: {
 			forms: { indexes: ["status", "createdAt"], uniqueIndexes: ["slug"] },
 			submissions: { indexes: ["formId", "status", "starred", "createdAt"] },
 		},
 	};
 }
-
-// ─── Plugin Implementation ───────────────────────────────────────
 
 export function createPlugin(_options: FormsPluginOptions = {}): ResolvedPlugin {
 	return definePlugin({
@@ -101,7 +73,6 @@ export function createPlugin(_options: FormsPluginOptions = {}): ResolvedPlugin 
 		hooks: {
 			"plugin:activate": {
 				handler: async (_event, ctx) => {
-					// Schedule weekly cleanup for expired submissions
 					if (ctx.cron) {
 						await ctx.cron.schedule("cleanup", { schedule: "@weekly" });
 					}
@@ -120,12 +91,7 @@ export function createPlugin(_options: FormsPluginOptions = {}): ResolvedPlugin 
 			},
 		},
 
-		// Route handlers are typed with specific input schemas but the route record
-		// erases the generic to `unknown`. The cast is safe because the input schema
-		// guarantees the runtime shape matches the handler's expected type.
 		routes: {
-			// --- Public routes ---
-
 			submit: {
 				public: true,
 				input: submitSchema,
@@ -137,8 +103,6 @@ export function createPlugin(_options: FormsPluginOptions = {}): ResolvedPlugin 
 				input: definitionSchema,
 				handler: definitionHandler as never,
 			},
-
-			// --- Admin routes (require auth) ---
 
 			"forms/list": {
 				handler: formsListHandler,
@@ -226,6 +190,5 @@ export function createPlugin(_options: FormsPluginOptions = {}): ResolvedPlugin 
 
 export default createPlugin;
 
-// Re-export types for consumers
 export type * from "./types.js";
 export type { FormsStorage } from "./storage.js";

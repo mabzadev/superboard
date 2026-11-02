@@ -21,10 +21,6 @@ describe("CommentRepository", () => {
 		await teardownTestDatabase(db);
 	});
 
-	// -------------------------------------------------------------------------
-	// Helpers
-	// -------------------------------------------------------------------------
-
 	function makeInput(overrides: Partial<Parameters<CommentRepository["create"]>[0]> = {}) {
 		return {
 			collection: "post",
@@ -35,10 +31,6 @@ describe("CommentRepository", () => {
 			...overrides,
 		};
 	}
-
-	// -------------------------------------------------------------------------
-	// CRUD
-	// -------------------------------------------------------------------------
 
 	describe("CRUD", () => {
 		it("creates a comment and returns it with id and timestamps", async () => {
@@ -92,10 +84,6 @@ describe("CommentRepository", () => {
 		});
 	});
 
-	// -------------------------------------------------------------------------
-	// Status transitions
-	// -------------------------------------------------------------------------
-
 	describe("Status transitions", () => {
 		it("updateStatus changes status", async () => {
 			const created = await repo.create(makeInput());
@@ -124,10 +112,6 @@ describe("CommentRepository", () => {
 			expect(count).toBe(0);
 		});
 	});
-
-	// -------------------------------------------------------------------------
-	// Deletion
-	// -------------------------------------------------------------------------
 
 	describe("Deletion", () => {
 		it("delete hard-deletes and returns true", async () => {
@@ -182,10 +166,6 @@ describe("CommentRepository", () => {
 		});
 	});
 
-	// -------------------------------------------------------------------------
-	// Counting
-	// -------------------------------------------------------------------------
-
 	describe("Counting", () => {
 		it("countByContent with and without status filter", async () => {
 			await repo.create(makeInput({ status: "approved" }));
@@ -225,13 +205,8 @@ describe("CommentRepository", () => {
 		});
 	});
 
-	// -------------------------------------------------------------------------
-	// Cursor pagination
-	// -------------------------------------------------------------------------
-
 	describe("Cursor pagination", () => {
 		it("findByContent paginates with cursor", async () => {
-			// Create 5 comments
 			for (let i = 0; i < 5; i++) {
 				await repo.create(makeInput({ body: `Comment ${i}` }));
 			}
@@ -254,7 +229,6 @@ describe("CommentRepository", () => {
 			expect(page3.items).toHaveLength(1);
 			expect(page3.nextCursor).toBeUndefined();
 
-			// Ensure no duplicates across pages
 			const allIds = [...page1.items, ...page2.items, ...page3.items].map((c) => c.id);
 			expect(new Set(allIds).size).toBe(5);
 		});
@@ -276,10 +250,6 @@ describe("CommentRepository", () => {
 			expect(page2.nextCursor).toBeUndefined();
 		});
 	});
-
-	// -------------------------------------------------------------------------
-	// Threading
-	// -------------------------------------------------------------------------
 
 	describe("Threading", () => {
 		it("assembleThreads produces 1-level nesting", () => {
@@ -338,7 +308,6 @@ describe("CommentRepository", () => {
 			expect(pub.body).toBe("Great!");
 			expect(pub.createdAt).toBe("2026-01-01T00:00:00.000Z");
 
-			// Private fields should not be present
 			expect("authorEmail" in pub).toBe(false);
 			expect("ipHash" in pub).toBe(false);
 			expect("userAgent" in pub).toBe(false);
@@ -346,10 +315,6 @@ describe("CommentRepository", () => {
 			expect("status" in pub).toBe(false);
 		});
 	});
-
-	// -------------------------------------------------------------------------
-	// Edge cases
-	// -------------------------------------------------------------------------
 
 	describe("Edge cases", () => {
 		it("returns empty results for non-existent content", async () => {

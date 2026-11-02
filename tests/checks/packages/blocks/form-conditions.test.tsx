@@ -5,8 +5,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BlockRenderer } from "../../../../packages/blocks/src/renderer.js";
 import type { BlockInteraction, FormBlock } from "../../../../packages/blocks/src/types.js";
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 vi.mock("@cloudflare/kumo", () => ({
 	Button: ({ children, onClick, variant, type }: any) => (
 		<button onClick={onClick} data-variant={variant} type={type || "button"}>
@@ -195,8 +193,6 @@ vi.mock("@phosphor-icons/react", () => ({
 
 afterEach(cleanup);
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 function renderForm(form: FormBlock, onAction?: (i: BlockInteraction) => void) {
 	const handler = onAction ?? vi.fn();
 	return {
@@ -204,8 +200,6 @@ function renderForm(form: FormBlock, onAction?: (i: BlockInteraction) => void) {
 		onAction: handler,
 	};
 }
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("form conditional fields", () => {
 	it("condition eq: field shown when condition met", () => {
@@ -228,7 +222,6 @@ describe("form conditional fields", () => {
 			submit: { label: "Save", action_id: "save" },
 		});
 
-		// Toggle is true → Name field should be visible
 		expect(screen.getByText("Name")).toBeTruthy();
 	});
 
@@ -252,7 +245,6 @@ describe("form conditional fields", () => {
 			submit: { label: "Save", action_id: "save" },
 		});
 
-		// Toggle is false → Name field should not be rendered
 		expect(screen.queryByText("Name")).toBeNull();
 	});
 
@@ -280,7 +272,6 @@ describe("form conditional fields", () => {
 			submit: { label: "Save", action_id: "save" },
 		});
 
-		// Status is "active" which is != "disabled" → Reason field visible
 		expect(screen.getByText("Reason")).toBeTruthy();
 	});
 
@@ -304,14 +295,11 @@ describe("form conditional fields", () => {
 			submit: { label: "Save", action_id: "save" },
 		});
 
-		// Initially hidden
 		expect(screen.queryByText("Extra field")).toBeNull();
 
-		// Click toggle to enable
 		const toggle = screen.getByRole("checkbox");
 		fireEvent.click(toggle);
 
-		// Now visible
 		expect(screen.getByText("Extra field")).toBeTruthy();
 	});
 
@@ -340,14 +328,11 @@ describe("form conditional fields", () => {
 			onAction,
 		);
 
-		// Field is visible, then hide it by toggling off
 		const toggle = screen.getByRole("checkbox");
 		fireEvent.click(toggle);
 
-		// Name field is now hidden
 		expect(screen.queryByText("Name")).toBeNull();
 
-		// Submit — hidden field's last known value should still be in payload
 		fireEvent.click(screen.getByText("Save"));
 
 		expect(onAction).toHaveBeenCalledWith(
@@ -394,10 +379,8 @@ describe("form conditional fields", () => {
 			submit: { label: "Save", action_id: "save" },
 		});
 
-		// Toggle A is true → Field A visible
 		expect(screen.getByText("Field A")).toBeTruthy();
 
-		// Toggle B is false → Field B hidden
 		expect(screen.queryByText("Field B")).toBeNull();
 	});
 });

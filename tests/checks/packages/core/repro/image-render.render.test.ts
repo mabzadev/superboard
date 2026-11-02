@@ -1,9 +1,4 @@
 import { PortableText } from "astro-portabletext";
-/**
- * Renders WordPress-migrated image nodes through astro-portabletext using
- * the SAME dispatch production uses (type.image -> Image.astro), then pins
- * the local, provider, placeholder, and public Image component edge cases.
- */
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import { describe, expect, test } from "vitest";
 
@@ -82,7 +77,6 @@ describe("faithful render of migrated image node", () => {
 			locals,
 		});
 		expect(imgSrc(html)).not.toBe("(no <img>)");
-		// #1404 fix: alignment now rendered as a figure class
 		expect(html).toContain("emdash-image--align-right");
 	});
 

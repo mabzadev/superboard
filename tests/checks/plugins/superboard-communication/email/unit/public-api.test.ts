@@ -357,7 +357,6 @@ describe("Public transactional send", () => {
 		expect(options.delaySeconds).toBeGreaterThan(3_500);
 		expect(options.delaySeconds).toBeLessThanOrEqual(3_600);
 
-		// A premature queue delivery re-delays instead of sending.
 		await worker.queue(
 			{ queue: "email-delivery", messages: [queueMessage(job)] } as never,
 			h.env,
@@ -721,7 +720,6 @@ const emailMigrations = fileURLToPath(
 	),
 );
 
-/** In-memory SQLite database with every Email Worker migration applied, exposed as a D1 binding. */
 function emailDatabase() {
 	const sqlite = new DatabaseSync(":memory:");
 	for (const file of readdirSync(emailMigrations)

@@ -1,9 +1,3 @@
-// Size budget for the staged PR diff. The review agent starts by reading the
-// whole diff file, so an oversized diff (generated types, lockfiles, large
-// catalogs) lands in the model context verbatim and kills the model call.
-// Oversized per-file sections are elided down to their headers with a note;
-// the agent reads those files from the checkout instead.
-
 const DEFAULT_PER_FILE_BYTES = 48 * 1024;
 const DEFAULT_TOTAL_BYTES = 384 * 1024;
 
@@ -26,8 +20,6 @@ export function elideLargeDiffSections(diff: string, budget: DiffBudget = {}): s
 	for (const section of sections) {
 		if (!section.elided && section.text.length > perFileBytes) elide(section);
 	}
-	// Still over the total budget: elide the largest remaining sections until
-	// under it (or nothing left to elide).
 	let total = sections.reduce((n, s) => n + s.text.length, 0);
 	while (total > totalBytes) {
 		const next = sections
@@ -56,12 +48,8 @@ function splitSections(diff: string): Section[] {
 }
 
 function elide(section: Section): void {
-	// Mark unconditionally: a section this function cannot reduce must still
-	// leave the total-budget loop's candidate pool, or the loop never shrinks.
 	section.elided = true;
 	const lines = section.text.split("\n");
-	// Keep the file header: everything up to and including the `+++` line (or
-	// the whole header for binary/rename-only sections with no hunks).
 	let headerEnd = lines.findIndex((line) => line.startsWith("+++ "));
 	if (headerEnd === -1) headerEnd = lines.findIndex((line) => line.startsWith("@@ ")) - 1;
 	if (headerEnd < 0) return;

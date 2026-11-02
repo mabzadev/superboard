@@ -65,8 +65,6 @@ export async function identityHashCandidates(
 	return Promise.all(secrets.map((secret) => hmacHex(secret, `${projectId}:${kind}:${raw}`)));
 }
 
-// Imported HMAC keys are reused across requests in the same isolate. Only the
-// active and previous secrets are expected, so the cache stays tiny.
 const HMAC_KEY_CACHE_LIMIT = 8;
 const hmacKeys = new Map<string, Promise<CryptoKey>>();
 

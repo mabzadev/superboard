@@ -10,8 +10,6 @@ const installSchema = z.object({
 	version: z.string().min(1).max(64),
 });
 
-// ── POST /plugins/:id/installs — Record install ─────────────────
-
 statsRoutes.post("/plugins/:id/installs", async (c) => {
 	const pluginId = c.req.param("id");
 
@@ -27,8 +25,6 @@ statsRoutes.post("/plugins/:id/installs", async (c) => {
 	}
 
 	try {
-		// Fire-and-forget semantics: we don't block the response on write
-		// but we do await to ensure D1 processes the upsert
 		await upsertInstall(c.env.DB, {
 			pluginId,
 			siteHash: body.siteHash,
@@ -37,7 +33,6 @@ statsRoutes.post("/plugins/:id/installs", async (c) => {
 
 		return c.json({ ok: true });
 	} catch (err) {
-		// Don't fail the request for stats — log and return success
 		console.error("Failed to record install:", err);
 		return c.json({ ok: true });
 	}

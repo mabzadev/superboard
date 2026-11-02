@@ -22,7 +22,6 @@ import io.superboard.model.DebugLogger
 import io.superboard.model.DeeplinkDetails
 import io.superboard.model.GenerateLinkResponse
 import io.superboard.model.LogLevel
-// PURCHASE_EVENT_DISABLED: import io.superboard.model.events.PaymentEventType
 import io.superboard.model.exceptions.SuperBoardErrorCode
 import io.superboard.model.exceptions.SuperBoardException
 import io.superboard.utils.LSResult
@@ -42,9 +41,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
-/**
- * Core unit tests for SuperBoard singleton class.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [28])
@@ -74,8 +70,6 @@ class SuperBoardSingletonTest {
         clearAllMocks()
         E2ETestUtils.resetSuperBoardSingleton()
     }
-
-    // ==================== Configuration Tests ====================
 
     @Test
     fun `SuperBoard configure initializes superboardManager when given valid API key`() {
@@ -126,8 +120,6 @@ class SuperBoardSingletonTest {
         )
     }
 
-    // ==================== SDK Enable/Disable Tests ====================
-
     @Test
     fun `SuperBoard setSDK enables SDK when enabled parameter is true`() {
         SuperBoard.configure(application, "test-api-key", useTestEnvironment = false, baseURL = baseURL)
@@ -161,8 +153,6 @@ class SuperBoardSingletonTest {
             "after setSDK(enabled=false)"
         )
     }
-
-    // ==================== Properties Tests ====================
 
     @Test
     fun `SuperBoard identifier property can be set after configuration`() {
@@ -207,14 +197,10 @@ class SuperBoardSingletonTest {
         )
     }
 
-    // ==================== Lifecycle Tests ====================
-
     @Test
     fun `SuperBoard lifecycle methods are safe to call before SDK configuration`() {
-        // Arrange - SDK is not configured
         val intent = Intent()
 
-        // Act & Assert - these should not throw
         try {
             SuperBoard.onStart(null)
         } catch (e: Exception) {
@@ -227,7 +213,6 @@ class SuperBoardSingletonTest {
             fail("onNewIntent should not throw when SDK not configured: ${e.javaClass.simpleName}: ${e.message}")
         }
 
-        // Verify SDK state is still valid (not corrupted)
         val superboardInstance = getSuperBoardInstance()
         val superboardManagerField = SuperBoard::class.java.getDeclaredField("superboardManager")
         superboardManagerField.isAccessible = true
@@ -237,8 +222,6 @@ class SuperBoardSingletonTest {
             "after calling lifecycle methods before configure - SDK state should remain uncorrupted"
         )
     }
-
-    // ==================== Deeplink Listener Tests ====================
 
     @Test
     fun `SuperBoard setOnDeeplinkReceivedListener stores listener in singleton`() {
@@ -258,8 +241,6 @@ class SuperBoardSingletonTest {
             "after setOnDeeplinkReceivedListener() with non-null listener"
         )
     }
-
-    // ==================== Link Generation Tests ====================
 
     @Test
     fun `SuperBoard generateLink returns LINK_GENERATION_ERROR when SDK not configured`() {
@@ -341,29 +322,6 @@ class SuperBoardSingletonTest {
         )
     }
 
-    // ==================== Purchase Tests ====================
-
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `SuperBoard logInAppPurchase does not throw when SDK not configured`() {
-    // PURCHASE_EVENT_DISABLED:     val originalJson = """{"productId":"premium","purchaseToken":"abc123"}"""
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     // Should complete without exception
-    // PURCHASE_EVENT_DISABLED:     SuperBoard.logInAppPurchase(originalJson)
-    // PURCHASE_EVENT_DISABLED: }
-
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `SuperBoard logCustomPurchase does not throw when SDK not configured`() {
-    // PURCHASE_EVENT_DISABLED:     // Should complete without exception
-    // PURCHASE_EVENT_DISABLED:     SuperBoard.logCustomPurchase(
-    // PURCHASE_EVENT_DISABLED:         type = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:         priceInCents = 999,
-    // PURCHASE_EVENT_DISABLED:         currency = "USD",
-    // PURCHASE_EVENT_DISABLED:         productId = "premium"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED: }
-
-    // ==================== Helper Methods ====================
-
     private fun getSuperBoardInstance(): SuperBoard {
         val instanceField = SuperBoard::class.java.getDeclaredField("instance")
         instanceField.isAccessible = true
@@ -380,7 +338,6 @@ class SuperBoardSingletonTest {
             superboardManagerField.isAccessible = true
             superboardManagerField.set(superboardInstance, mockManager)
 
-            // Also cancel and clear the authentication job so generateLink doesn't wait for it
             val authJobField = SuperBoard::class.java.getDeclaredField("authenticationJob")
             authJobField.isAccessible = true
             val currentJob = authJobField.get(superboardInstance) as? kotlinx.coroutines.Job
@@ -391,20 +348,14 @@ class SuperBoardSingletonTest {
         }
     }
 
-    /**
-     * Injects a mock SuperBoardManager directly without calling configure().
-     * This avoids starting the real authentication job that can cause test issues.
-     */
     private fun injectMockSuperBoardManagerDirectly(mockManager: SuperBoardManager) {
         try {
             val superboardInstance = getSuperBoardInstance()
 
-            // Set superboardManager
             val superboardManagerField = SuperBoard::class.java.getDeclaredField("superboardManager")
             superboardManagerField.isAccessible = true
             superboardManagerField.set(superboardInstance, mockManager)
 
-            // Ensure authenticationJob is null (no pending job to wait for)
             val authJobField = SuperBoard::class.java.getDeclaredField("authenticationJob")
             authJobField.isAccessible = true
             authJobField.set(superboardInstance, null)

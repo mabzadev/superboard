@@ -1,13 +1,3 @@
-/**
- * Regression test for #747: WordPress importer must clear the URL pattern
- * cache after creating new collections so that public routing immediately
- * resolves the new patterns. The original symptom of #747 (the execute
- * step reading a stale DB-persisted manifest) is no longer possible —
- * the manifest is built fresh per admin request and never cached — but
- * the URL pattern cache is still per-isolate, and prepare->execute
- * happens in two separate requests that may or may not share an isolate.
- */
-
 import { describe, expect, it, vi } from "vitest";
 
 import { POST } from "../../../../../../packages/core/src/astro/routes/api/import/wordpress/prepare.js";
@@ -60,7 +50,6 @@ describe("POST /api/import/wordpress/prepare", () => {
 
 	it("does not invalidate the URL pattern cache when prepareImport makes no schema changes", async () => {
 		const db = await setupTestDatabase();
-		// Pre-create the collection so prepare finds nothing new to do.
 		const { SchemaRegistry } =
 			await import("../../../../../../packages/core/src/schema/registry.js");
 		const registry = new SchemaRegistry(db);

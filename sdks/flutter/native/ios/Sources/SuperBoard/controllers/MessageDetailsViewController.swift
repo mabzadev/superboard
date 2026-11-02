@@ -1,13 +1,6 @@
-//
-//  MessageDetailsViewController.swift
-//
-//  superboard
-//
-
 import UIKit
 import WebKit
 
-/// A view controller that displays the details of a message using a web view.
 class MessageDetailsViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
 
     static func loadVCFromNib() -> MessageDetailsViewController? {
@@ -22,21 +15,18 @@ class MessageDetailsViewController: UIViewController, WKNavigationDelegate, WKUI
         return vc
     }
 
-    @IBOutlet weak var activityIndicator: UIActivityIndicatorView! // Activity indicator to show loading state.
-    @IBOutlet weak var webView: WKWebView!                        // Web view for displaying the message content.
-    @IBOutlet weak var backButton: UIButton!                      // Back button for navigation.
-    @IBOutlet weak var closeButton: UIButton!                     // Close button for dismissing the view.
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
+    @IBOutlet weak var webView: WKWebView!
+    @IBOutlet weak var backButton: UIButton!
+    @IBOutlet weak var closeButton: UIButton!
 
-    var notification: SuperBoardNotification?  // The notification to display.
-    weak var manager: SuperBoardManager? // The manager responsible for marking the notification as read.
+    var notification: SuperBoardNotification?
+    weak var manager: SuperBoardManager?
     var dismissalDelegate: DismissalDelegate?
-
-    // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Configure activity indicator color.
         activityIndicator.tintColor = UIColor.systemGray
         configureAccessibility()
     }
@@ -44,7 +34,6 @@ class MessageDetailsViewController: UIViewController, WKNavigationDelegate, WKUI
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        // Show or hide the back and close buttons based on navigation controller presence.
         if navigationController != nil {
             backButton.isHidden = false
             closeButton.isHidden = true
@@ -57,7 +46,6 @@ class MessageDetailsViewController: UIViewController, WKNavigationDelegate, WKUI
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        // Load the notification's URL in the web view.
         guard var urlString = notification?.accessURL?.absoluteString else {
             exitScreen()
             return
@@ -77,35 +65,27 @@ class MessageDetailsViewController: UIViewController, WKNavigationDelegate, WKUI
         webView.navigationDelegate = self
         webView.uiDelegate = self
 
-        markNotificationAsRead() // Mark the notification as read when the view appears.
+        markNotificationAsRead()
     }
 
     override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         super.dismiss(animated: flag, completion: completion)
 
-        // Notify the delegate when the view is dismissed
         dismissalDelegate?.viewControllerDidDismiss()
     }
 
-    // MARK: - WKNavigationDelegate Methods
-
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-        // Called when the web view begins loading content.
         startLoading()
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        // Called when the web view finishes loading content.
         stopLoading()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        // Called when the web view fails to load content.
         stopLoading()
         DebugLogger.shared.log(.error, "Failed to load page: \(error.localizedDescription)")
     }
-
-    // MARK: - Navigation UI delegate
 
     func webView(_ webView: WKWebView,
                  createWebViewWith configuration: WKWebViewConfiguration,
@@ -118,8 +98,6 @@ class MessageDetailsViewController: UIViewController, WKNavigationDelegate, WKUI
         return nil
     }
 
-    // MARK: - Accessibility
-
     private func configureAccessibility() {
         backButton.accessibilityLabel = "Back"
         backButton.accessibilityTraits = .button
@@ -129,21 +107,14 @@ class MessageDetailsViewController: UIViewController, WKNavigationDelegate, WKUI
         webView.accessibilityIdentifier = "MessageContentWebView"
     }
 
-    // MARK: - Actions
-
-    /// Handles the back button tap to exit the screen.
     @IBAction func back(_ sender: Any) {
         exitScreen()
     }
 
-    /// Handles the close button tap to exit the screen.
     @IBAction func dismissVC(_ sender: Any) {
         exitScreen()
     }
 
-    // MARK: - Private Methods
-
-    /// Exits the screen by popping or dismissing the view controller.
     private func exitScreen() {
         if let navigationController {
             navigationController.popViewController(animated: true)
@@ -152,7 +123,6 @@ class MessageDetailsViewController: UIViewController, WKNavigationDelegate, WKUI
         }
     }
 
-    /// Marks the notification as read using the manager.
     private func markNotificationAsRead() {
         guard let notification else { return }
 
@@ -161,15 +131,13 @@ class MessageDetailsViewController: UIViewController, WKNavigationDelegate, WKUI
         })
     }
 
-    /// Starts the activity indicator animation.
     private func startLoading() {
-        activityIndicator.startAnimating()  // Start animating the indicator.
-        activityIndicator.isHidden = false  // Make sure the indicator is visible.
+        activityIndicator.startAnimating()
+        activityIndicator.isHidden = false
     }
 
-    /// Stops the activity indicator animation.
     private func stopLoading() {
-        activityIndicator.stopAnimating()   // Stop animating the indicator.
-        activityIndicator.isHidden = true   // Hide the indicator.
+        activityIndicator.stopAnimating()
+        activityIndicator.isHidden = true
     }
 }

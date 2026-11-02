@@ -1,9 +1,3 @@
-/**
- * PATCH/DELETE /_emdash/api/auth/passkey/[id]
- *
- * Rename or delete a passkey
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -23,9 +17,6 @@ interface PasskeyResponse {
 	lastUsedAt: string;
 }
 
-/**
- * PATCH - Rename a passkey
- */
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { id } = params;
@@ -34,7 +25,6 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
 
-	// Require authentication
 	if (!user) {
 		return apiError("NOT_AUTHENTICATED", "Not authenticated", 401);
 	}
@@ -46,22 +36,18 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 	try {
 		const adapter = createKyselyAdapter(emdash.db);
 
-		// Get the credential and verify ownership
 		const credential = await adapter.getCredentialById(id);
 
 		if (!credential || credential.userId !== user.id) {
 			return apiError("NOT_FOUND", "Passkey not found", 404);
 		}
 
-		// Parse request body
 		const body = await parseBody(request, passkeyRenameBody);
 		if (isParseError(body)) return body;
 
-		// Update the name
 		const trimmedName = body.name.trim() || null;
 		await adapter.updateCredentialName(id, trimmedName);
 
-		// Return updated passkey info
 		const passkey: PasskeyResponse = {
 			id: credential.id,
 			name: trimmedName,
@@ -77,9 +63,6 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 	}
 };
 
-/**
- * DELETE - Remove a passkey
- */
 export const DELETE: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 	const { id } = params;
@@ -88,7 +71,6 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
 
-	// Require authentication
 	if (!user) {
 		return apiError("NOT_AUTHENTICATED", "Not authenticated", 401);
 	}
@@ -100,21 +82,18 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 	try {
 		const adapter = createKyselyAdapter(emdash.db);
 
-		// Get the credential and verify ownership
 		const credential = await adapter.getCredentialById(id);
 
 		if (!credential || credential.userId !== user.id) {
 			return apiError("NOT_FOUND", "Passkey not found", 404);
 		}
 
-		// Check that this isn't the last passkey
 		const count = await adapter.countCredentialsByUserId(user.id);
 
 		if (count <= 1) {
 			return apiError("LAST_PASSKEY", "Cannot remove your last passkey", 400);
 		}
 
-		// Delete the passkey
 		await adapter.deleteCredential(id);
 
 		return apiSuccess({ success: true });

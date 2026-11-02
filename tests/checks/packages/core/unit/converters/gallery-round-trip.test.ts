@@ -109,9 +109,6 @@ describe("gallery block round-trip (core converters)", () => {
 	});
 
 	it("round-trips a WordPress-imported gallery without loss", () => {
-		// Exact shape emitted by @emdash-cms/gutenberg-to-portable-text `gallery`
-		// transformer after the import media pass (asset._type "reference",
-		// rewritten _ref/url, per-image caption, no width/height, columns attr).
 		const imported = {
 			_type: "gallery",
 			_key: "wpgal1",

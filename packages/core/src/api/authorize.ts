@@ -1,10 +1,3 @@
-/**
- * Authorization helpers for API routes
- *
- * Thin wrappers around @emdash-cms/auth RBAC that return HTTP responses.
- * Auth middleware handles authentication; these handle authorization.
- */
-
 import type { Permission, RoleLevel } from "@emdash-cms/auth";
 import { hasPermission, canActOnOwn, hasScope } from "@emdash-cms/auth";
 
@@ -24,15 +17,6 @@ export function canReadMediaUsageCount(
 	);
 }
 
-/**
- * Check if user has a permission. Returns a 401/403 Response if not, or null if authorized.
- *
- * Usage:
- * ```ts
- * const denied = requirePerm(user, "schema:manage");
- * if (denied) return denied;
- * ```
- */
 export function requirePerm(
 	user: UserLike | null | undefined,
 	permission: Permission,
@@ -46,16 +30,6 @@ export function requirePerm(
 	return null;
 }
 
-/**
- * Check if user can act on a resource, considering ownership.
- * Returns a 401/403 Response if not, or null if authorized.
- *
- * Usage:
- * ```ts
- * const denied = requireOwnerPerm(user, item.authorId, "content:edit_own", "content:edit_any");
- * if (denied) return denied;
- * ```
- */
 export function requireOwnerPerm(
 	user: UserLike | null | undefined,
 	ownerId: string,

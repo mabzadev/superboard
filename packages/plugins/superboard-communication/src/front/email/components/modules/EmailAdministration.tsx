@@ -77,7 +77,6 @@ export function EmailAdministration({
 			setProfiles(rows);
 			setDeliveryProvider(smtpResult.provider || "smtp");
 			setAwsRegion(smtpResult.aws_region || null);
-			// Only messages that still wait or failed need an operator here; the full history is in the message log.
 			setOutbox(outboxRows.filter((item) => ["queued", "failed"].includes(item.status)));
 			setDeadLetters(deadLetterRows);
 			setEventCount(eventRows.length);

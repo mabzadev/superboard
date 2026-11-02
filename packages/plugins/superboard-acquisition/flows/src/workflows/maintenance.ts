@@ -68,12 +68,6 @@ export class FlowMaintenanceExecution extends WorkflowEntrypoint<Env, FlowMainte
 		}
 	}
 
-	/**
-	 * Applies a release policy to already projected users immediately. The
-	 * Durable Object remains authoritative and repeats the same policy on the
-	 * next SDK command, so a temporarily delayed D1 projection cannot cause a
-	 * missed migration.
-	 */
 	private async migrateRelease(
 		payload: Readonly<FlowMaintenancePayload>,
 		step: WorkflowStep,
@@ -105,8 +99,6 @@ export class FlowMaintenanceExecution extends WorkflowEntrypoint<Env, FlowMainte
 				.bind(payload.projectId, payload.environmentId, payload.workflowId)
 				.first<ReleaseMigration>();
 		});
-		// A newer activation superseded this job. It must not mutate users for the
-		// new release using an obsolete graph or migration policy.
 		if (!release || release.workflow_version_id !== payload.workflowVersionId) {
 			return { migrated_users: 0, superseded: true };
 		}

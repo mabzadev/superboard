@@ -18,7 +18,6 @@ import io.superboard.model.DeeplinkDetails
 import io.superboard.model.GenerateLinkResponse
 import io.superboard.model.LinkDetailsResponse
 import io.superboard.model.LogLevel
-// PURCHASE_EVENT_DISABLED: import io.superboard.model.events.PaymentEventType
 import io.superboard.service.ISuperBoardService
 import io.superboard.utils.IAppDetailsHelper
 import io.superboard.utils.LSResult
@@ -34,9 +33,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.Serializable
 
-/**
- * Core unit tests for SuperBoardManager.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [28])
 class SuperBoardManagerTest {
@@ -107,8 +103,6 @@ class SuperBoardManagerTest {
         unmockkAll()
     }
 
-    // ==================== Authentication State Tests ====================
-
     @Test
     fun `SuperBoardManager authenticationState is UNAUTHENTICATED when newly constructed`() {
         assertUnauthenticated(
@@ -116,8 +110,6 @@ class SuperBoardManagerTest {
             context = "after construction with default settings"
         )
     }
-
-    // ==================== Properties Tests ====================
 
     @Test
     fun `SuperBoardManager identifier property updates superboardContext when set`() {
@@ -157,8 +149,6 @@ class SuperBoardManagerTest {
         )
     }
 
-    // ==================== Lifecycle Tests ====================
-
     @Test
     fun `SuperBoardManager onAppForegrounded delegates to eventsManager`() = runTest {
         superboardManager.onAppForegrounded()
@@ -172,8 +162,6 @@ class SuperBoardManagerTest {
 
         verify { mockEventsManager.onAppBackgrounded() }
     }
-
-    // ==================== Generate Link Tests ====================
 
     @Test
     fun `SuperBoardManager generateLink returns LSResult Error when SDK is disabled`() = runTest {
@@ -280,8 +268,6 @@ class SuperBoardManagerTest {
         }
     }
 
-    // ==================== Link Details Tests ====================
-
     @Test
     fun `SuperBoardManager linkDetails returns LSResult Error when SDK is disabled`() = runTest {
         superboardContext.settings.sdkEnabled = false
@@ -319,8 +305,6 @@ class SuperBoardManagerTest {
 
         coVerify { mockSuperBoardService.linkDetails("/path") }
     }
-
-    // ==================== Handle Intent Tests ====================
 
     @Test
     fun `SuperBoardManager handleIntent returns null when not authenticated`() = runTest {
@@ -455,45 +439,6 @@ class SuperBoardManagerTest {
 
         coVerify { mockEventsManager.setLinkToNewFutureActions("https://test.superboard.io/resolved-link", delayEvents = false) }
     }
-
-    // ==================== Payment Events Tests ====================
-
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `SuperBoardManager logInAppPurchase delegates to eventsManager`() = runTest {
-    // PURCHASE_EVENT_DISABLED:     val originalJson = """{"orderId": "test123", "productId": "premium"}"""
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     coEvery { mockEventsManager.logInAppPurchase(any()) } just Runs
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     superboardManager.logInAppPurchase(originalJson)
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     coVerify { mockEventsManager.logInAppPurchase(originalJson) }
-    // PURCHASE_EVENT_DISABLED: }
-
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `SuperBoardManager logCustomPurchase delegates to eventsManager with correct parameters`() = runTest {
-    // PURCHASE_EVENT_DISABLED:     coEvery {
-    // PURCHASE_EVENT_DISABLED:         mockEventsManager.logCustomPurchase(any(), any(), any(), any(), any())
-    // PURCHASE_EVENT_DISABLED:     } just Runs
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     superboardManager.logCustomPurchase(
-    // PURCHASE_EVENT_DISABLED:         type = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:         priceInCents = 999,
-    // PURCHASE_EVENT_DISABLED:         currency = "USD",
-    // PURCHASE_EVENT_DISABLED:         productId = "premium_feature"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     coVerify {
-    // PURCHASE_EVENT_DISABLED:         mockEventsManager.logCustomPurchase(
-    // PURCHASE_EVENT_DISABLED:             type = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:             priceInCents = 999,
-    // PURCHASE_EVENT_DISABLED:             currency = "USD",
-    // PURCHASE_EVENT_DISABLED:             productId = "premium_feature",
-    // PURCHASE_EVENT_DISABLED:             startDate = any()
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:     }
-    // PURCHASE_EVENT_DISABLED: }
-
-    // ==================== Edge Cases Tests ====================
 
     @Test
     fun `SuperBoardManager identifier property can be set to null after being set`() {

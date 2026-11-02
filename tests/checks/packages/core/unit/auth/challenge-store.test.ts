@@ -24,7 +24,7 @@ describe("ChallengeStore", () => {
 	describe("set()", () => {
 		it("stores challenge with expiry", async () => {
 			const challenge = "test-challenge-123";
-			const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+			const expiresAt = Date.now() + 5 * 60 * 1000;
 
 			await store.set(challenge, {
 				type: "registration",
@@ -106,20 +106,18 @@ describe("ChallengeStore", () => {
 			vi.useFakeTimers();
 
 			const challenge = "expired-test";
-			const expiresAt = Date.now() + 60 * 1000; // 1 minute
+			const expiresAt = Date.now() + 60 * 1000;
 
 			await store.set(challenge, {
 				type: "registration",
 				expiresAt,
 			});
 
-			// Advance time past expiry
 			vi.advanceTimersByTime(61 * 1000);
 
 			const result = await store.get(challenge);
 			expect(result).toBeNull();
 
-			// Verify it was deleted
 			vi.useRealTimers();
 			const afterDelete = await db
 				.selectFrom("auth_challenges")
@@ -140,14 +138,11 @@ describe("ChallengeStore", () => {
 				expiresAt,
 			});
 
-			// Verify it exists
 			const before = await store.get(challenge);
 			expect(before).not.toBeNull();
 
-			// Delete it
 			await store.delete(challenge);
 
-			// Verify it's gone
 			const after = await store.get(challenge);
 			expect(after).toBeNull();
 		});
@@ -163,31 +158,28 @@ describe("ChallengeStore", () => {
 
 			const now = Date.now();
 
-			// Create some challenges with different expiry times
 			await store.set("expired-1", {
 				type: "registration",
-				expiresAt: now + 30 * 1000, // expires in 30s
+				expiresAt: now + 30 * 1000,
 			});
 			await store.set("expired-2", {
 				type: "authentication",
-				expiresAt: now + 60 * 1000, // expires in 60s
+				expiresAt: now + 60 * 1000,
 			});
 			await store.set("valid-1", {
 				type: "registration",
-				expiresAt: now + 5 * 60 * 1000, // expires in 5 minutes
+				expiresAt: now + 5 * 60 * 1000,
 			});
 			await store.set("valid-2", {
 				type: "authentication",
-				expiresAt: now + 10 * 60 * 1000, // expires in 10 minutes
+				expiresAt: now + 10 * 60 * 1000,
 			});
 
-			// Advance time by 90 seconds (past first two, but not last two)
 			vi.advanceTimersByTime(90 * 1000);
 
 			const deleted = await cleanupExpiredChallenges(db);
 			expect(deleted).toBe(2);
 
-			// Verify only valid ones remain
 			vi.useRealTimers();
 			const remaining = await db.selectFrom("auth_challenges").select("challenge").execute();
 

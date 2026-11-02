@@ -33,31 +33,6 @@ class NotificationsManager(val context: Context, val superboardContext: SuperBoa
                 is LSResult.Error -> {}
             }
         }
-
-//        val activity = activityProvider.requireActivity() as? FragmentActivity
-//        activity?.lifecycleScope?.launch {
-//            val notification = Notification(
-//                123,
-//                "Test not",
-//                Instant.now(),
-//                "Test sub",
-//                autoDisplay = true,
-//                "https:google.ro",
-//                read = false
-//            )
-//            displayAutomaticNotificationFor(notification)
-//
-//            val notification2 = Notification(
-//                1234,
-//                "Test not",
-//                Instant.now(),
-//                "Test sub",
-//                autoDisplay = true,
-//                "https:google.ro",
-//                read = false
-//            )
-//            displayAutomaticNotificationFor(notification2)
-//        }
     }
 
     fun displayNotificationsViewController(onDismissed: (()->Unit)?): Boolean {

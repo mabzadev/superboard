@@ -1,8 +1,6 @@
 import Foundation
 import XCTest
 
-/// A URLProtocol subclass that intercepts network requests for testing.
-/// Register it on a URLSessionConfiguration before creating your URLSession.
 class MockURLProtocol: URLProtocol {
 
     private static let stateLock = NSLock()
@@ -11,7 +9,6 @@ class MockURLProtocol: URLProtocol {
     private static var storedRequestedPaths: [String] = []
     private static var storedPathExpectations: [String: XCTestExpectation] = [:]
 
-    /// Map of URL path → handler closure. The handler receives the request and returns (response, data).
     static var requestHandlers: [String: (URLRequest) throws -> (HTTPURLResponse, Data?)] {
         get {
             stateLock.lock()
@@ -25,14 +22,12 @@ class MockURLProtocol: URLProtocol {
         }
     }
 
-    /// Tracks all URL paths that were requested, in order.
     static var requestedPaths: [String] {
         stateLock.lock()
         defer { stateLock.unlock() }
         return storedRequestedPaths
     }
 
-    /// Path → expectation map. When a matching path is requested, the expectation is fulfilled.
     static var pathExpectations: [String: XCTestExpectation] {
         get {
             stateLock.lock()
@@ -70,7 +65,7 @@ class MockURLProtocol: URLProtocol {
     }
 
     override class func canInit(with request: URLRequest) -> Bool {
-        return true // intercept everything
+        return true
     }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest {
@@ -78,7 +73,6 @@ class MockURLProtocol: URLProtocol {
     }
 
     override func startLoading() {
-        // Reconstruct httpBody from httpBodyStream since URLProtocol strips httpBody
         var capturedRequest = request
         if capturedRequest.httpBody == nil, let stream = capturedRequest.httpBodyStream {
             stream.open()

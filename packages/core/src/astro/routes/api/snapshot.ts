@@ -1,12 +1,3 @@
-/**
- * Snapshot endpoint — exports a portable database snapshot for preview mode.
- *
- * Security:
- * - Authenticated users: requires content:read + schema:read permissions
- * - Preview services: requires valid X-Preview-Signature header (HMAC-SHA256)
- * - Excludes auth/user/session/token tables
- */
-
 import type { User } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 
@@ -26,9 +17,6 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals, url, session }) => {
 	const { emdash } = locals;
-	// This route is in PUBLIC_API_EXACT (for preview-signature callers with no session),
-	// so auth middleware skips user resolution. Manually resolve the session user here
-	// to support session-authenticated admin users alongside preview-signature auth.
 	let user: User | undefined = (locals as { user?: User }).user;
 	if (!user && session && emdash?.db) {
 		try {
@@ -41,25 +29,17 @@ export const GET: APIRoute = async ({ request, locals, url, session }) => {
 					user = resolved;
 				}
 			}
-		} catch {
-			// Session resolution failed, continue to preview-signature check
-		}
+		} catch {}
 	}
 
 	if (!emdash?.db) {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
 
-	// Check for preview signature auth (used by DO preview services)
 	const previewSig = request.headers.get("X-Preview-Signature");
 	let authorized = false;
 
 	if (previewSig) {
-		// Resolves env override or DB-stored value. Always non-empty after
-		// resolution, so the signature path is never silently disabled.
-		// Note: a signing process without access to this database (e.g. a
-		// remote preview Worker) must set the same `EMDASH_PREVIEW_SECRET`
-		// env var on both sides.
 		const { previewSecret: secret, previewSecretSource } = await resolveSecretsCached(emdash.db);
 		const parsed = parsePreviewSignatureHeader(previewSig);
 		if (!parsed) {
@@ -83,7 +63,6 @@ export const GET: APIRoute = async ({ request, locals, url, session }) => {
 	}
 
 	if (!authorized) {
-		// Fall back to standard user auth
 		const contentDenied = requirePerm(user, "content:read");
 		if (contentDenied) return contentDenied;
 		const schemaDenied = requirePerm(user, "schema:read");

@@ -2,18 +2,6 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 
 import { GET as startOAuth } from "../../../../../../packages/core/src/astro/routes/api/auth/oauth/[provider].js";
 
-/**
- * Regression for #1736: the route used to read
- * `locals.runtime?.env` for Cloudflare bindings. Astro 6+ makes
- * `locals.runtime.env` a getter that *throws* rather than returning
- * undefined, so `?.` optional-chaining didn't protect the fallback --
- * the throw propagated into the route's outer try/catch and surfaced as
- * a generic "oauth_error", masking `provider_not_configured` even when
- * running on Node (where `locals.runtime` never exists at all in
- * practice, but a throwing getter is exactly what real Cloudflare
- * deployments hit). The route no longer touches `locals.runtime` --
- * it reads through the `virtual:emdash/env` module instead.
- */
 function makeThrowingRuntimeLocals() {
 	return {
 		emdash: { db: {} as never, config: {} },
@@ -45,9 +33,6 @@ describe("OAuth start route (#1736)", () => {
 			redirect: (url: string) => new Response(null, { status: 302, headers: { Location: url } }),
 		} as unknown as Parameters<typeof startOAuth>[0]);
 
-		// No credentials configured in this test env -- the route should
-		// reach the provider-configured check (not crash into the generic
-		// oauth_error path the old code hit when locals.runtime.env threw).
 		const location = response.headers.get("Location") ?? "";
 		expect(location).toContain("error=provider_not_configured");
 		expect(location).not.toContain("error=oauth_error");
@@ -76,10 +61,6 @@ describe("OAuth start route (#1736)", () => {
 			redirect: (url: string) => new Response(null, { status: 302, headers: { Location: url } }),
 		} as unknown as Parameters<typeof startOAuth>[0]);
 
-		// Credentials found -- the route proceeds past the provider-configured
-		// check into building the real authorization URL (which then fails on
-		// the unmocked DB, but NOT with provider_not_configured or oauth_error
-		// from the env-reading step itself).
 		const location = response.headers.get("Location") ?? "";
 		expect(location).not.toContain("error=provider_not_configured");
 

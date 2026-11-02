@@ -1,16 +1,3 @@
-/**
- * MCP content lifecycle tests.
- *
- * Covers two contracts that callers rely on:
- *
- * - `content_unpublish` clears `published_at` so a missing/null timestamp
- *   unambiguously means the item is not currently live. Re-publishing
- *   assigns a fresh timestamp.
- * - `schema_create_collection` applies its documented default of
- *   `['drafts', 'revisions']` for `supports` when the caller omits it.
- *   Explicit `[]` is preserved as an opt-out.
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -29,10 +16,6 @@ import {
 } from "../../utils/test-db.js";
 
 const ADMIN_ID = "user_admin";
-
-// ---------------------------------------------------------------------------
-// Bug #10: unpublish publishedAt
-// ---------------------------------------------------------------------------
 
 describe("MCP content_unpublish — publishedAt clearing (bug #10)", () => {
 	let db: Kysely<Database>;
@@ -55,7 +38,6 @@ describe("MCP content_unpublish — publishedAt clearing (bug #10)", () => {
 		});
 		const id = extractJson<{ item: { id: string } }>(created).item.id;
 
-		// Publish — populates publishedAt
 		const published = await harness.client.callTool({
 			name: "content_publish",
 			arguments: { collection: "post", id },
@@ -63,7 +45,6 @@ describe("MCP content_unpublish — publishedAt clearing (bug #10)", () => {
 		const publishedItem = extractJson<{ item: { publishedAt: string | null } }>(published);
 		expect(publishedItem.item.publishedAt).toBeTruthy();
 
-		// Unpublish — should clear publishedAt
 		const unpublished = await harness.client.callTool({
 			name: "content_unpublish",
 			arguments: { collection: "post", id },
@@ -73,7 +54,6 @@ describe("MCP content_unpublish — publishedAt clearing (bug #10)", () => {
 		}>(unpublished);
 
 		expect(unpubItem.item.status).toBe("draft");
-		// Bug #10: today, publishedAt is still the old timestamp.
 		expect(unpubItem.item.publishedAt).toBeNull();
 	});
 
@@ -122,7 +102,6 @@ describe("MCP content_unpublish — publishedAt clearing (bug #10)", () => {
 			arguments: { collection: "post", id },
 		});
 
-		// Wait briefly so the new timestamp is distinguishable
 		await new Promise((r) => setTimeout(r, 5));
 
 		const secondPub = await harness.client.callTool({
@@ -131,14 +110,9 @@ describe("MCP content_unpublish — publishedAt clearing (bug #10)", () => {
 		});
 		const secondTs = extractJson<{ item: { publishedAt: string } }>(secondPub).item.publishedAt;
 		expect(secondTs).toBeTruthy();
-		// Should be a new timestamp, not the old one.
 		expect(secondTs).not.toBe(firstTs);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Bug #11: schema_create_collection supports default
-// ---------------------------------------------------------------------------
 
 describe("MCP schema_create_collection — supports default (bug #11)", () => {
 	let db: Kysely<Database>;
@@ -162,7 +136,6 @@ describe("MCP schema_create_collection — supports default (bug #11)", () => {
 		expect(result.isError, extractText(result)).toBeFalsy();
 		const created = extractJson<{ supports: string[] }>(result);
 
-		// Bug #11: today this is [] or null. After fix: ['drafts', 'revisions'].
 		expect(created.supports).toEqual(expect.arrayContaining(["drafts", "revisions"]));
 	});
 
@@ -191,8 +164,6 @@ describe("MCP schema_create_collection — supports default (bug #11)", () => {
 	});
 
 	it("default-supports collection accepts publish/unpublish/revision flows immediately", async () => {
-		// Default supports should include drafts + revisions, so the standard
-		// publish/unpublish lifecycle should work without further config.
 		await harness.client.callTool({
 			name: "schema_create_collection",
 			arguments: { slug: "story", label: "Stories" },
@@ -209,7 +180,6 @@ describe("MCP schema_create_collection — supports default (bug #11)", () => {
 		expect(created.isError, extractText(created)).toBeFalsy();
 		const id = extractJson<{ item: { id: string } }>(created).item.id;
 
-		// Update should create a draft revision (only meaningful if 'revisions' is in supports)
 		await harness.client.callTool({
 			name: "content_update",
 			arguments: { collection: "story", id, data: { title: "Updated" } },
@@ -219,8 +189,6 @@ describe("MCP schema_create_collection — supports default (bug #11)", () => {
 			name: "revision_list",
 			arguments: { collection: "story", id },
 		});
-		// If supports doesn't include 'revisions', revision_list returns empty
-		// or fails. After fix: revisions exist.
 		expect(revs.isError, extractText(revs)).toBeFalsy();
 		const items = extractJson<{ items: unknown[] }>(revs).items;
 		expect(items.length).toBeGreaterThan(0);

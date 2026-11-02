@@ -1,22 +1,7 @@
-/**
- * Media-artifact resolution for the publish flow.
- *
- * Given the bytes of an image file and the public URL it's hosted at, build
- * the `#artifact` record the release embeds: the multibase-multihash checksum,
- * the MIME content type, and the pixel dimensions. Dimensions come from
- * `image-size`, which reads only the header bytes (no decode), so it's cheap
- * and works for PNG / JPEG / WebP / GIF / AVIF.
- *
- * Kept filesystem- and network-free so it tests against raw byte fixtures.
- * The CLI command reads files and uploads them; this module turns bytes +
- * URL into a record.
- */
-
 import { imageSize } from "image-size";
 
 import { sha256Multihash } from "../multihash.js";
 
-/** An artifact record ready to embed in a release. Mirrors `release.json#artifact`. */
 export interface ArtifactRecord {
 	url: string;
 	checksum: string;
@@ -26,12 +11,6 @@ export interface ArtifactRecord {
 	lang?: string;
 }
 
-/**
- * Image formats `image-size` reports that we accept as plugin artifacts, mapped
- * to their canonical MIME type. The `type` field is the format name from the
- * header sniff; we don't trust a file extension for the content type.
- */
-/** Per-dimension pixel ceiling, matching `release.json#artifact.width/height`. */
 const MAX_ARTIFACT_DIMENSION = 8192;
 
 const TYPE_TO_CONTENT_TYPE: Record<string, string> = {
@@ -42,7 +21,6 @@ const TYPE_TO_CONTENT_TYPE: Record<string, string> = {
 	avif: "image/avif",
 };
 
-/** Thrown when an artifact file isn't a supported image. */
 export class ArtifactError extends Error {
 	override readonly name = "ArtifactError";
 	readonly code: "ARTIFACT_UNSUPPORTED" | "ARTIFACT_UNREADABLE";
@@ -53,11 +31,6 @@ export class ArtifactError extends Error {
 	}
 }
 
-/**
- * Sniff `bytes` as an image and return its content type and dimensions. Throws
- * `ArtifactError` when the bytes aren't a supported image or carry no usable
- * dimensions.
- */
 export function measureImage(bytes: Uint8Array): {
 	contentType: string;
 	width: number;
@@ -86,8 +59,6 @@ export function measureImage(bytes: Uint8Array): {
 			"Artifact image has no readable pixel dimensions.",
 		);
 	}
-	// The lexicon caps artifact dimensions at 8192px; a larger image would be
-	// rejected at publish-time lexicon validation with an opaque error.
 	if (width > MAX_ARTIFACT_DIMENSION || height > MAX_ARTIFACT_DIMENSION) {
 		throw new ArtifactError(
 			"ARTIFACT_UNSUPPORTED",
@@ -97,12 +68,6 @@ export function measureImage(bytes: Uint8Array): {
 	return { contentType: TYPE_TO_CONTENT_TYPE[type]!, width, height };
 }
 
-/**
- * Build the `#artifact` record for an image hosted at `url`. Computes the
- * checksum from the same bytes the consumer will fetch, and reads the
- * dimensions and content type from the header. `lang` is carried through when
- * the manifest set it.
- */
 export function buildArtifactRecord(input: {
 	bytes: Uint8Array;
 	url: string;

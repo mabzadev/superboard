@@ -415,8 +415,6 @@ function domainService(binding, resourceKey, options = {}) {
 		vars: Object.freeze(options.vars ?? []),
 		staticVars: Object.freeze({ ...options.staticVars }),
 		r2: Object.freeze(options.r2 ?? []),
-		// `queue` remains as a compatibility alias while callers migrate to the
-		// complete `queues` collection.
 		queue: queues[0] ? Object.freeze({ ...queues[0] }) : null,
 		queues: Object.freeze(queues.map((queue) => Object.freeze({ ...queue }))),
 		ai: options.ai ? Object.freeze({ ...options.ai }) : null,

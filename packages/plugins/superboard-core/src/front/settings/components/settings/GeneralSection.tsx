@@ -18,7 +18,6 @@ import DangerZoneSection from "./DangerZoneSection.js";
 
 const SDK_APPS_PATH = "/core/libraries";
 
-/** Environment settings › General: project identity, environments and danger zone. */
 export default function GeneralSection() {
 	const { t } = useSettingsI18n();
 	const front = useOptionalFrontContext();
@@ -36,7 +35,6 @@ export default function GeneralSection() {
 		try {
 			await deleteInstanceMutation.mutateAsync(selectedInstance.id);
 			showSuccessNotification(t("danger.deleted"));
-			// Instances query auto-invalidated by mutation; pick the last one after refetch
 			const result = await instancesQuery.refetch();
 			const lastInstance = result.data?.at(-1);
 			if (lastInstance) setSelectedInstance(lastInstance);

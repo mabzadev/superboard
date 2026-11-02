@@ -1,15 +1,5 @@
-/**
- * Tests for the PluginBridge taxonomy methods (taxonomyList, taxonomyTerms,
- * taxonomyEntryTerms): capability enforcement, SQL/parameter wiring for the
- * locale/taxonomy filters, and D1 row mapping (JSON parsing, int→bool,
- * nullable columns).
- */
-
 import { describe, expect, it, vi } from "vitest";
 
-// PluginBridge extends WorkerEntrypoint from cloudflare:workers, which is
-// not importable under plain vitest. Substitute a minimal base class that
-// stores ctx/env the way the runtime does.
 vi.mock("cloudflare:workers", () => ({
 	WorkerEntrypoint: class {
 		ctx: unknown;
@@ -30,7 +20,6 @@ interface RecordedQuery {
 	params: unknown[];
 }
 
-/** Minimal fake D1Database: records SQL + bound params, returns canned rows. */
 function fakeD1(rows: Row[], recorded: RecordedQuery[]) {
 	return {
 		prepare(sql: string) {
@@ -88,7 +77,6 @@ const TERM_ROW: Row = {
 
 describe("PluginBridge taxonomy methods — capability enforcement", () => {
 	it("rejects all three methods without taxonomies:read", async () => {
-		// content:read must not grant taxonomy access.
 		const { bridge } = makeBridge(["content:read"]);
 		await expect(bridge.taxonomyList()).rejects.toThrow(/taxonomies:read/);
 		await expect(bridge.taxonomyTerms("category")).rejects.toThrow(/taxonomies:read/);
@@ -188,9 +176,6 @@ describe("taxonomyTerms", () => {
 		expect(recorded[1]?.params).toEqual(["category", "fr"]);
 	});
 
-	// Terms carry a manual order, so a plugin reading through the bridge has to
-	// get the same order core's TaxonomyRepository.findByName returns. The clause
-	// is a raw string here, so assert it rather than trusting it.
 	it("orders by the manual position ahead of the label", async () => {
 		const { bridge, recorded } = makeBridge(["taxonomies:read"]);
 		await bridge.taxonomyTerms("category");

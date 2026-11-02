@@ -8,17 +8,6 @@ import { FTSManager } from "../../../../../../packages/core/src/search/fts-manag
 import { getSuggestions, searchWithDb } from "../../../../../../packages/core/src/search/query.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
-/**
- * Regression test for #1178.
- *
- * `title` is an optional user-defined field, not a system column on `ec_*`
- * tables. Searching across all collections (no `collections` filter) walked
- * every search-enabled collection, and the search SQL referenced `c.title`
- * unconditionally. Any collection without a `title` field made the query throw
- * `D1_ERROR: no such column: c.title`, which propagated and failed the whole
- * call. Scoping the search to collections that happen to have a title masked
- * the bug -- only the "search everything" path tripped it.
- */
 describe("search: collection without a title field (#1178)", () => {
 	let db: Kysely<Database>;
 	let repo: ContentRepository;
@@ -30,7 +19,6 @@ describe("search: collection without a title field (#1178)", () => {
 		const registry = new SchemaRegistry(db);
 		const fts = new FTSManager(db);
 
-		// Collection WITH a title field (the typical case).
 		await registry.createCollection({ slug: "post", label: "Posts", supports: ["search"] });
 		await registry.createField("post", {
 			slug: "title",
@@ -46,7 +34,6 @@ describe("search: collection without a title field (#1178)", () => {
 		});
 		await fts.enableSearch("post");
 
-		// Collection WITHOUT a title field -- only a searchable "body".
 		await registry.createCollection({ slug: "note", label: "Notes", supports: ["search"] });
 		await registry.createField("note", {
 			slug: "body",
@@ -81,8 +68,6 @@ describe("search: collection without a title field (#1178)", () => {
 		expect(collections).toContain("post");
 		expect(collections).toContain("note");
 
-		// The title-less collection still returns a result; its title is simply
-		// absent (SearchResult.title is optional), and the slug is preserved.
 		const note = res.items.find((i) => i.collection === "note");
 		expect(note?.title).toBeUndefined();
 		expect(note?.slug).toBe("n1");
@@ -91,10 +76,7 @@ describe("search: collection without a title field (#1178)", () => {
 	it("returns suggestions across all collections, skipping ones without a title", async () => {
 		const suggestions = await getSuggestions(db, "widget");
 
-		// The collection with a title is suggested...
 		expect(suggestions.some((s) => s.collection === "post")).toBe(true);
-		// ...and the title-less collection is silently skipped rather than
-		// throwing (a suggestion requires a title, which it cannot provide).
 		expect(suggestions.every((s) => s.collection !== "note")).toBe(true);
 	});
 

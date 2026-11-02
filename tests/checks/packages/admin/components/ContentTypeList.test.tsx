@@ -8,10 +8,6 @@ import {
 import type { SchemaCollection, OrphanedTable } from "../../../../../packages/admin/src/lib/api";
 import { render } from "../utils/render.tsx";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const NO_CONTENT_TYPES_REGEX = /No content types yet/;
 
 vi.mock("@tanstack/react-router", async () => {
@@ -130,9 +126,7 @@ describe("ContentTypeList", () => {
 				}),
 			];
 			const screen = await render(<ContentTypeList collections={collections} />);
-			// Code-sourced should have no delete button
 			expect(screen.getByRole("button", { name: "Delete From Code" }).query()).toBeNull();
-			// Dashboard-sourced should have delete button
 			await expect
 				.element(screen.getByRole("button", { name: "Delete From Dashboard" }))
 				.toBeInTheDocument();
@@ -149,10 +143,8 @@ describe("ContentTypeList", () => {
 
 			await screen.getByRole("button", { name: "Delete Posts" }).click();
 
-			// ConfirmDialog should appear
 			await expect.element(screen.getByText("Delete Content Type?")).toBeInTheDocument();
 
-			// Direct DOM click to bypass Base UI inert overlay
 			screen.getByRole("button", { name: "Delete" }).element().click();
 
 			expect(onDelete).toHaveBeenCalledWith("posts");
@@ -169,10 +161,8 @@ describe("ContentTypeList", () => {
 
 			await screen.getByRole("button", { name: "Delete Posts" }).click();
 
-			// ConfirmDialog should appear
 			await expect.element(screen.getByText("Delete Content Type?")).toBeInTheDocument();
 
-			// Direct DOM click to bypass Base UI inert overlay
 			screen.getByRole("button", { name: "Cancel" }).element().click();
 
 			expect(onDelete).not.toHaveBeenCalled();
@@ -240,8 +230,6 @@ describe("ContentTypeList", () => {
 				<ContentTypeList collections={twoCollections} onReorder={vi.fn()} />,
 			);
 
-			// The accessible name carries the collection, so screen-reader users
-			// know which row the handle moves.
 			await expect
 				.element(screen.getByRole("button", { name: "Reorder Posts" }))
 				.toBeInTheDocument();
@@ -265,7 +253,6 @@ describe("ContentTypeList", () => {
 		});
 
 		it("renders collections in the order given, not alphabetically", async () => {
-			// The server already returns them ordered; the list must not re-sort.
 			const screen = await render(
 				<ContentTypeList collections={twoCollections} onReorder={vi.fn()} />,
 			);
@@ -286,8 +273,6 @@ describe("ContentTypeList", () => {
 
 		it("returns the same reference when the move is a no-op", () => {
 			const slugs = ["a", "b", "c"];
-			// Same identity lets the caller skip both the state update and the
-			// network request on a drop that changes nothing.
 			expect(moveCollection(slugs, "b", "b")).toBe(slugs);
 			expect(moveCollection(slugs, "b", "missing")).toBe(slugs);
 			expect(moveCollection(slugs, "missing", "b")).toBe(slugs);

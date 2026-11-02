@@ -23,7 +23,6 @@ interface Props {
 	publishedTime?: string | null;
 	modifiedTime?: string | null;
 	author?: string | null;
-	/** Pass content reference for plugin page contributions on content pages */
 	content?: { collection: string; id: string; slug?: string | null };
 }
 
@@ -41,17 +40,12 @@ const {
 	content,
 } = Astro.props;
 const { siteTitle, siteTagline, siteLogo } = resolveBlogSiteIdentity(await getSiteSettings());
-// If title already includes site title (from getSeoMeta), use as-is
 const fullTitle = title.includes(siteTitle) ? title : `${title} — ${siteTitle}`;
 
-// Fetch primary menu defined in seed
 const menu = await getMenu("primary");
 
-// Fetch pages for footer
 const { entries: pages } = await getEmDashCollection("pages");
 
-// Build public page context for plugin contributions
-// SEO data is passed here and rendered securely by EmDashHead
 const pageCtx = createPublicPageContext({
 	Astro,
 	kind: content ? "content" : "custom",
@@ -67,7 +61,6 @@ const pageCtx = createPublicPageContext({
 	siteName: siteTitle,
 });
 
-// Check if user is logged in (for showing admin link)
 const isLoggedIn = !!Astro.locals.user;
 ---
 
@@ -81,7 +74,6 @@ const isLoggedIn = !!Astro.locals.user;
 		<title>{fullTitle}</title>
 		<EmDashHead page={pageCtx} />
 		<script is:inline>
-			// Apply theme immediately to prevent flash
 			(function () {
 				var c = document.cookie;
 				var i = c.indexOf("theme=");
@@ -276,7 +268,6 @@ const isLoggedIn = !!Astro.locals.user;
 		</footer>
 
 		<script>
-			// Theme switcher
 			const THEME_REGEX = /theme=([^;]+)/;
 			const themeBtns =
 				document.querySelectorAll<HTMLButtonElement>(".theme-btn");
@@ -321,7 +312,6 @@ const isLoggedIn = !!Astro.locals.user;
 				return match ? match[1] : "system";
 			}
 
-			// Initialize
 			const storedTheme = getStoredTheme();
 			setTheme(storedTheme);
 
@@ -331,7 +321,6 @@ const isLoggedIn = !!Astro.locals.user;
 				});
 			});
 
-			// Listen for system preference changes
 			window
 				.matchMedia("(prefers-color-scheme: dark)")
 				.addEventListener("change", (e) => {
@@ -342,11 +331,6 @@ const isLoggedIn = !!Astro.locals.user;
 		</script>
 
 		<style is:global>
-			/*
-			 * Establish layer order: "base" has lower priority than unlayered
-			 * styles, so theme.css overrides always win regardless of source
-			 * order in the bundled CSS.
-			 */
 			@layer base;
 
 			@layer base {
@@ -379,7 +363,6 @@ const isLoggedIn = !!Astro.locals.user;
 				}
 
 				:root {
-					/* Colors - Light mode (default) */
 					--color-bg: #ffffff;
 					--color-bg-subtle: #fafafa;
 					--color-text: #1a1a1a;
@@ -397,7 +380,6 @@ const isLoggedIn = !!Astro.locals.user;
 						transparent
 					);
 
-					/* EmDash search theming */
 					--emdash-search-bg: var(--color-bg);
 					--emdash-search-text: var(--color-text);
 					--emdash-search-muted: var(--color-muted);
@@ -405,7 +387,6 @@ const isLoggedIn = !!Astro.locals.user;
 					--emdash-search-hover: var(--color-surface);
 					--emdash-search-highlight: var(--color-text);
 
-					/* Type scale - more refined */
 					--font-size-xs: 0.8125rem;
 					--font-size-sm: 0.875rem;
 					--font-size-base: 1rem;
@@ -416,13 +397,11 @@ const isLoggedIn = !!Astro.locals.user;
 					--font-size-4xl: 2.5rem;
 					--font-size-5xl: 3.5rem;
 
-					/* Line heights */
 					--leading-tight: 1.15;
 					--leading-snug: 1.3;
 					--leading-normal: 1.5;
 					--leading-relaxed: 1.7;
 
-					/* Spacing - more generous */
 					--spacing-1: 0.25rem;
 					--spacing-2: 0.5rem;
 					--spacing-3: 0.75rem;
@@ -436,7 +415,6 @@ const isLoggedIn = !!Astro.locals.user;
 					--spacing-20: 5rem;
 					--spacing-24: 6rem;
 
-					/* Legacy spacing aliases */
 					--spacing-xs: var(--spacing-1);
 					--spacing-sm: var(--spacing-2);
 					--spacing-md: var(--spacing-4);
@@ -445,7 +423,6 @@ const isLoggedIn = !!Astro.locals.user;
 					--spacing-2xl: var(--spacing-12);
 					--spacing-3xl: var(--spacing-16);
 
-					/* Layout - wider for three-column */
 					--content-width: 680px;
 					--wide-width: 1200px;
 					--max-width: var(--content-width);
@@ -453,40 +430,31 @@ const isLoggedIn = !!Astro.locals.user;
 					--radius: 4px;
 					--radius-lg: 8px;
 
-					/* Transitions */
 					--transition-fast: 120ms ease;
 					--transition-base: 180ms ease;
 
-					/* Nav */
 					--nav-height: 64px;
 
-					/* Search */
 					--search-input-width: 180px;
 
-					/* Article layout */
 					--meta-col-width: 180px;
 
-					/* Avatar sizes */
 					--avatar-size-xs: 18px;
 					--avatar-size-sm: 20px;
 					--avatar-size-md: 24px;
 					--avatar-size-lg: 32px;
 
-					/* Letter spacing */
 					--tracking-tight: -0.03em;
 					--tracking-snug: -0.02em;
 					--tracking-wide: 0.06em;
 					--tracking-wider: 0.08em;
 
-					/* Tag pill */
 					--tag-padding-y: 2px;
 
-					/* Shadows */
 					--shadow-dropdown: 0 8px 30px rgba(0, 0, 0, 0.12);
 					--shadow-btn-active: 0 1px 2px rgba(0, 0, 0, 0.05);
 				}
 
-				/* Dark mode via system preference (when no explicit class) */
 				@media (prefers-color-scheme: dark) {
 					:root:not(.light) {
 						--color-bg: #0d0d0d;
@@ -502,7 +470,6 @@ const isLoggedIn = !!Astro.locals.user;
 					}
 				}
 
-				/* Explicit dark mode */
 				:root.dark {
 					--color-bg: #0d0d0d;
 					--color-bg-subtle: #141414;
@@ -645,7 +612,6 @@ const isLoggedIn = !!Astro.locals.user;
 				opacity: 1;
 			}
 
-			/* Search styling */
 			.site-search {
 				position: relative;
 				width: var(--search-input-width);
@@ -752,7 +718,6 @@ const isLoggedIn = !!Astro.locals.user;
 				min-height: calc(100vh - var(--nav-height) - 300px);
 			}
 
-			/* Footer */
 			.site-footer {
 				background: var(--color-bg-subtle);
 				border-top: 1px solid var(--color-border-subtle);
@@ -867,7 +832,6 @@ const isLoggedIn = !!Astro.locals.user;
 				color: var(--color-text-secondary);
 			}
 
-			/* Theme switcher */
 			.theme-switcher {
 				display: flex;
 				gap: var(--spacing-1);
@@ -992,7 +956,6 @@ const isLoggedIn = !!Astro.locals.user;
 		</style>
 
 		<script>
-			// ⌘K / Ctrl+K to focus search
 			document.addEventListener("keydown", (e) => {
 				if ((e.metaKey || e.ctrlKey) && e.key === "k") {
 					e.preventDefault();

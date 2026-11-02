@@ -18,7 +18,6 @@ export const workspaceSections = {
 
 export type WorkspaceSection = keyof typeof workspaceSections;
 
-// Section names and the former Settings tabs keep their bookmarked destinations.
 const aliases: Record<string, string> = {
 	audience: "contacts",
 	activity: "messages",
@@ -29,7 +28,6 @@ const aliases: Record<string, string> = {
 	languages: "preferences",
 	webhooks: "preferences",
 	"email-webhooks": "preferences",
-	// Plugin health and lifecycle moved to the Plugins page.
 	configuration: "senders",
 };
 
@@ -48,7 +46,6 @@ export function resolveWorkspaceTab(requested: string | null, fallback: string) 
 	return { section: "emails" as WorkspaceSection, tab: "emails" };
 }
 
-/** Reads and changes the workspace tab kept in `?tab=` on the current route. */
 export function useWorkspaceTab(fallback = "emails") {
 	const params = useSearchParams();
 	const router = useRouter();

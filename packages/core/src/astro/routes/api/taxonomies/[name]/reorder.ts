@@ -1,13 +1,3 @@
-/**
- * Taxonomy term reorder endpoint
- *
- * POST /_emdash/api/taxonomies/:name/reorder
- *   body: { parentId?, ids }
- *
- * Sets the manual order of one sibling group. There is no `locale`: a term
- * holds one position across every locale it is translated into.
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

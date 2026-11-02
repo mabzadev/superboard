@@ -1,18 +1,3 @@
-/**
- * Regression tests for issue #1368: a `datetime` field could not round-trip
- * through its own admin editor. The validator was
- * `z.string().datetime().or(z.string().date())`, which only accepts ISO with a
- * `Z` suffix or a bare `YYYY-MM-DD` date. But `<input type="datetime-local">`
- * (and many seeds) produce a *naive* datetime (`YYYY-MM-DDTHH:mm[:ss]`, no
- * offset). Since the admin re-sends every loaded field on autosave, a stored
- * naive datetime failed validation and the entry became unsavable. Same class
- * of autosave-round-trip bug as #867.
- *
- * The fix validates with `z.iso.datetime({ offset: true, local: true })` (which
- * accepts `Z`, timezone offsets, and naive datetimes) unioned with
- * `z.iso.date()` for date-only values — while still rejecting garbage and
- * impossible dates.
- */
 import { describe, it, expect, beforeEach } from "vitest";
 
 import type { Field } from "../../../../../../packages/core/src/schema/types.js";

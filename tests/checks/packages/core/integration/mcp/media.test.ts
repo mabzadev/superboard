@@ -1,18 +1,3 @@
-/**
- * MCP media tools — comprehensive integration tests.
- *
- * Covers:
- *   - media_list (incl. mimeType filter, pagination)
- *   - media_get
- *   - media_update (incl. ownership)
- *   - media_delete (incl. ownership)
- *
- * Plus regression for bug #14 (no media_upload tool gap) and bug #1
- * variants for media (the MCP code already handles null authorId
- * correctly for media — `media_update`/`media_delete` use `... || ""`,
- * unlike content extraction).
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -52,10 +37,6 @@ async function seedMedia(
 	});
 	return item.id;
 }
-
-// ---------------------------------------------------------------------------
-// media_list
-// ---------------------------------------------------------------------------
 
 describe("media_list", () => {
 	let db: Kysely<Database>;
@@ -146,10 +127,6 @@ describe("media_list", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// media_get
-// ---------------------------------------------------------------------------
-
 describe("media_get", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -206,10 +183,6 @@ describe("media_get", () => {
 		expect(result.isError, extractText(result)).toBeFalsy();
 	});
 });
-
-// ---------------------------------------------------------------------------
-// media_update
-// ---------------------------------------------------------------------------
 
 describe("media_update", () => {
 	let db: Kysely<Database>;
@@ -288,8 +261,6 @@ describe("media_update", () => {
 			name: "media_update",
 			arguments: { id, alt: "No author" },
 		});
-		// Already works correctly for media — confirms the fix path for
-		// content (use `... || ""` instead of throwing).
 		expect(result.isError, extractText(result)).toBeFalsy();
 	});
 
@@ -315,10 +286,6 @@ describe("media_update", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// media_delete
-// ---------------------------------------------------------------------------
-
 describe("media_delete", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -342,7 +309,6 @@ describe("media_delete", () => {
 		});
 		expect(result.isError, extractText(result)).toBeFalsy();
 
-		// Verify it's gone
 		const got = await harness.client.callTool({
 			name: "media_get",
 			arguments: { id },
@@ -395,11 +361,6 @@ describe("media_delete", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Bug #14 — gap: media_create tool is now available
-// F1: media_create persists authorId so ownership checks subsequently succeed
-// ---------------------------------------------------------------------------
-
 describe("media_create (bug #14 / F1)", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -421,7 +382,6 @@ describe("media_create (bug #14 / F1)", () => {
 	});
 
 	it("AUTHOR creates media; subsequent media_get returns it; same author can update; different author cannot", async () => {
-		// AUTHOR creates the media item via media_create.
 		harness = await connectMcpHarness({ db, userId: AUTHOR_ID, userRole: Role.AUTHOR });
 		const create = await harness.client.callTool({
 			name: "media_create",
@@ -436,7 +396,6 @@ describe("media_create (bug #14 / F1)", () => {
 		const created = extractJson<{ item: { id: string; filename: string } }>(create);
 		expect(created.item.filename).toBe("logo.png");
 
-		// media_get returns the same id.
 		const got = await harness.client.callTool({
 			name: "media_get",
 			arguments: { id: created.item.id },
@@ -445,7 +404,6 @@ describe("media_create (bug #14 / F1)", () => {
 		const fetched = extractJson<{ item: { id: string } }>(got);
 		expect(fetched.item.id).toBe(created.item.id);
 
-		// Same AUTHOR can update — proves authorId was persisted.
 		const ownUpdate = await harness.client.callTool({
 			name: "media_update",
 			arguments: { id: created.item.id, alt: "company logo" },
@@ -453,7 +411,6 @@ describe("media_create (bug #14 / F1)", () => {
 		expect(ownUpdate.isError, extractText(ownUpdate)).toBeFalsy();
 		await harness.cleanup();
 
-		// A different AUTHOR is denied.
 		harness = await connectMcpHarness({
 			db,
 			userId: OTHER_AUTHOR_ID,

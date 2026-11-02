@@ -1,16 +1,3 @@
-/**
- * Comment Service
- *
- * Orchestrates comment creation through the hook pipeline:
- *   1. Run comment:beforeCreate pipeline (transform/reject)
- *   2. Query priorApprovedCount for first-time moderation
- *   3. Invoke comment:moderate exclusive hook (or built-in fallback)
- *   4. Save comment with determined status
- *   5. Fire comment:afterCreate (fire-and-forget)
- *
- * Also handles admin moderation (status changes) with afterModerate hooks.
- */
-
 import type { Kysely } from "kysely";
 
 import { CommentRepository } from "../database/repositories/comment.js";
@@ -25,10 +12,6 @@ import type {
 	ModerationDecision,
 	StoredComment,
 } from "../plugins/types.js";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export interface CommentCreateInput {
 	collection: string;
@@ -47,33 +30,16 @@ export interface CommentCreateResult {
 	decision: ModerationDecision;
 }
 
-/**
- * Hook runner interface — injected from the runtime so the service
- * doesn't need to know about the hook pipeline internals.
- */
 export interface CommentHookRunner {
-	/** Run comment:beforeCreate pipeline. Returns modified event or false. */
 	runBeforeCreate(event: CommentBeforeCreateEvent): Promise<CommentBeforeCreateEvent | false>;
 
-	/** Run comment:moderate exclusive hook. Returns moderation decision. */
 	runModerate(event: CommentModerateEvent): Promise<ModerationDecision>;
 
-	/** Fire comment:afterCreate (fire-and-forget). */
 	fireAfterCreate(event: CommentAfterCreateEvent): void;
 
-	/** Fire comment:afterModerate (fire-and-forget). */
 	fireAfterModerate(event: CommentAfterModerateEvent): void;
 }
 
-// ---------------------------------------------------------------------------
-// Service
-// ---------------------------------------------------------------------------
-
-/**
- * Create a comment through the full hook pipeline.
- *
- * Returns null if the comment was rejected by a beforeCreate handler.
- */
 export async function createComment(
 	db: Kysely<Database>,
 	input: CommentCreateInput,
@@ -89,7 +55,6 @@ export async function createComment(
 ): Promise<CommentCreateResult | null> {
 	const repo = new CommentRepository(db);
 
-	// 1. Build the beforeCreate event
 	const beforeCreateEvent: CommentBeforeCreateEvent = {
 		comment: {
 			collection: input.collection,
@@ -105,18 +70,15 @@ export async function createComment(
 		metadata: {},
 	};
 
-	// 2. Run comment:beforeCreate pipeline
 	const result = await hooks.runBeforeCreate(beforeCreateEvent);
 	if (result === false) {
-		return null; // Rejected
+		return null;
 	}
 
 	const event = result;
 
-	// 3. Query prior approved count for first-time moderation
 	const priorApprovedCount = await repo.countApprovedByEmail(event.comment.authorEmail);
 
-	// 4. Run comment:moderate exclusive hook
 	const moderateEvent: CommentModerateEvent = {
 		comment: event.comment,
 		metadata: event.metadata,
@@ -126,7 +88,6 @@ export async function createComment(
 
 	const decision = await hooks.runModerate(moderateEvent);
 
-	// 5. Save comment with determined status
 	const comment = await repo.create({
 		collection: event.comment.collection,
 		contentId: event.comment.contentId,
@@ -141,7 +102,6 @@ export async function createComment(
 		moderationMetadata: Object.keys(event.metadata).length > 0 ? event.metadata : null,
 	});
 
-	// 6. Fire comment:afterCreate (fire-and-forget)
 	if (contentInfo) {
 		const afterEvent: CommentAfterCreateEvent = {
 			comment: commentToStored(comment),
@@ -160,10 +120,6 @@ export async function createComment(
 	return { comment, decision };
 }
 
-/**
- * Admin moderation — change a comment's status.
- * Fires comment:afterModerate hook.
- */
 export async function moderateComment(
 	db: Kysely<Database>,
 	id: string,
@@ -179,7 +135,6 @@ export async function moderateComment(
 	const updated = await repo.updateStatus(id, newStatus);
 	if (!updated) return null;
 
-	// Fire comment:afterModerate (fire-and-forget)
 	const afterEvent: CommentAfterModerateEvent = {
 		comment: commentToStored(updated),
 		previousStatus,
@@ -190,10 +145,6 @@ export async function moderateComment(
 
 	return updated;
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function commentToStored(comment: Comment): StoredComment {
 	return {

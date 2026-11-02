@@ -6,14 +6,8 @@ import io.superboard.model.DeeplinkDetails
 import io.superboard.model.Event
 import io.superboard.model.EventType
 import io.superboard.model.GenerateLinkRequest
-// PURCHASE_EVENT_DISABLED: import io.superboard.model.events.PaymentEvent
-// PURCHASE_EVENT_DISABLED: import io.superboard.model.events.PaymentEventType
 import io.superboard.utils.InstantCompat
 
-/**
- * Shared test fixtures for creating common test objects.
- * Consolidates factory methods that were previously duplicated across test files.
- */
 object TestFixtures {
 
     const val TEST_API_KEY = "test-api-key-123"
@@ -23,10 +17,6 @@ object TestFixtures {
     const val TEST_URI_SCHEME = "testscheme"
     const val TEST_LINK = "https://test.link/abc123"
 
-    /**
-     * Creates a test AppDetails with sensible defaults.
-     * All parameters can be overridden as needed.
-     */
     fun createAppDetails(
         version: String = "1.0.0",
         build: String = "1",
@@ -55,9 +45,6 @@ object TestFixtures {
         webglRenderer = webglRenderer
     )
 
-    /**
-     * Creates a test GenerateLinkRequest with minimal required fields.
-     */
     fun createGenerateLinkRequest(
         title: String? = "Test Title",
         subtitle: String? = null,
@@ -88,9 +75,6 @@ object TestFixtures {
         trackingSource = trackingSource
     )
 
-    /**
-     * Creates a test Event.
-     */
     fun createEvent(
         event: EventType = EventType.VIEW,
         createdAt: InstantCompat = InstantCompat.now(),
@@ -103,26 +87,6 @@ object TestFixtures {
         engagementTime = engagementTime
     )
 
-    // PURCHASE_EVENT_DISABLED: /**
-    // PURCHASE_EVENT_DISABLED:  * Creates a test PaymentEvent.
-    // PURCHASE_EVENT_DISABLED:  */
-    // PURCHASE_EVENT_DISABLED: fun createPaymentEvent(
-    // PURCHASE_EVENT_DISABLED:     eventType: PaymentEventType = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:     priceCents: Long? = 999L,
-    // PURCHASE_EVENT_DISABLED:     currency: String? = "USD",
-    // PURCHASE_EVENT_DISABLED:     productId: String? = "test_product",
-    // PURCHASE_EVENT_DISABLED:     date: InstantCompat? = InstantCompat.now()
-    // PURCHASE_EVENT_DISABLED: ) = PaymentEvent(
-    // PURCHASE_EVENT_DISABLED:     eventType = eventType,
-    // PURCHASE_EVENT_DISABLED:     priceCents = priceCents,
-    // PURCHASE_EVENT_DISABLED:     currency = currency,
-    // PURCHASE_EVENT_DISABLED:     productId = productId,
-    // PURCHASE_EVENT_DISABLED:     date = date
-    // PURCHASE_EVENT_DISABLED: )
-
-    /**
-     * Creates a test DeeplinkDetails.
-     */
     fun createDeeplinkDetails(
         link: String? = TEST_LINK,
         data: Map<String, Object>? = null,

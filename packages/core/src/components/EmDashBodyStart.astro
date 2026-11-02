@@ -1,15 +1,4 @@
 ---
-/**
- * Renders trusted plugin fragments at the start of <body>.
- *
- * Usage:
- * ```astro
- * <body>
- *   <EmDashBodyStart page={page} />
- *   <slot />
- * </body>
- * ```
- */
 import type { PublicPageContext } from "../plugins/types.js";
 import { renderFragments } from "../page/fragments.js";
 import { getPageRuntime } from "../page/index.js";

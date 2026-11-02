@@ -1,15 +1,3 @@
-/**
- * Backfill contributor:{github_id} KV keys from merged PR history.
- *
- * Usage:
- *   node --env-file=.env scripts/backfill-contributors.mjs
- *
- * Requires: GITHUB_OWNER_LOGIN, and a GITHUB_TOKEN with repo read access
- * (or no token for public repos, but you'll hit rate limits fast).
- *
- * Uses wrangler kv:key put under the hood, so wrangler must be available.
- */
-
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
@@ -18,12 +6,11 @@ const repo = "emdash";
 const ownerLogin = process.env.GITHUB_OWNER_LOGIN || "ascorbic";
 const token = process.env.GITHUB_TOKEN;
 
-// Read namespace ID from wrangler.jsonc to avoid hardcoding
 const wranglerConfig = JSON.parse(
 	readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf-8")
-		.replace(/\/\/.*$/gm, "") // strip line comments
-		.replace(/\/\*[\s\S]*?\*\//g, "") // strip block comments
-		.replace(/,\s*([}\]])/g, "$1"), // strip trailing commas
+		.replace(/\/\/.*$/gm, "")
+		.replace(/\/\*[\s\S]*?\*\//g, "")
+		.replace(/,\s*([}\]])/g, "$1"),
 );
 const namespaceId = wranglerConfig.kv_namespaces?.[0]?.id;
 if (!namespaceId) {
@@ -40,7 +27,7 @@ if (token) {
 	headers.Authorization = `Bearer ${token}`;
 }
 
-const contributors = new Map(); // github_id -> github_login
+const contributors = new Map();
 let page = 1;
 let hasMore = true;
 
@@ -67,7 +54,6 @@ while (hasMore) {
 		const login = pr.user.login;
 		const id = pr.user.id;
 
-		// Skip owner and bots
 		if (login === ownerLogin || login.endsWith("[bot]")) continue;
 
 		if (!contributors.has(id)) {
@@ -78,7 +64,6 @@ while (hasMore) {
 	console.log(`  Page ${page}: ${prs.length} PRs, ${contributors.size} unique contributors so far`);
 	page++;
 
-	// Respect rate limits
 	const remaining = res.headers.get("x-ratelimit-remaining");
 	if (remaining === "0") {
 		const reset = Number(res.headers.get("x-ratelimit-reset")) * 1000;
@@ -90,7 +75,6 @@ while (hasMore) {
 
 console.log(`\nFound ${contributors.size} unique contributors. Writing to KV...\n`);
 
-// Validate inputs before passing to execFileSync (defense in depth)
 const idPattern = /^[0-9]+$/;
 const loginPattern = /^[a-zA-Z0-9_-]+$/;
 

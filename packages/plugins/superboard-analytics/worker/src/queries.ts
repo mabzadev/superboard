@@ -158,7 +158,6 @@ export async function listAnalyticsEvents(
 	db: D1Database,
 	projectId: string,
 	url: URL,
-	// Pseudonymized `user_id` candidates (active and previous hash keys) to narrow the stream to one user.
 	filters: { userIdHashes?: readonly string[] } = {},
 ) {
 	const query = analyticsQueryFromUrl(url);
@@ -402,9 +401,7 @@ function decodeCursor(value: string | null): { occurredAt: string; eventId: stri
 				eventId: parsed[1],
 			};
 		}
-	} catch {
-		// Invalid cursors are rejected below.
-	}
+	} catch {}
 	throw httpError("analytics_cursor_invalid", "cursor is invalid", 400);
 }
 

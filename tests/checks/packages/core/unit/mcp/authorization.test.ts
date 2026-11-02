@@ -1,13 +1,3 @@
-/**
- * MCP Authorization Tests
- *
- * Verifies that MCP tools enforce ownership checks and role requirements,
- * mirroring the REST API's authorization patterns.
- *
- * Tests use the MCP Client/Server SDK with InMemoryTransport, injecting
- * authInfo to simulate different users and roles.
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { RoleLevel } from "@emdash-cms/auth";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -22,10 +12,6 @@ import {
 } from "../../../../../../packages/core/src/mcp/server.js";
 import type { RouteCallerInput } from "../../../../../../packages/core/src/plugins/routes.js";
 
-// ---------------------------------------------------------------------------
-// Test constants
-// ---------------------------------------------------------------------------
-
 const INSUFFICIENT_PERMISSIONS_RE = /Insufficient permissions/i;
 const INSUFFICIENT_SCOPE_RE = /Insufficient scope/i;
 
@@ -37,11 +23,6 @@ const CONTENT_SLUG = "test-post";
 const REVISION_ID = "01REVISION";
 const MEDIA_ID = "01MEDIA";
 
-// ---------------------------------------------------------------------------
-// Mock EmDashHandlers
-// ---------------------------------------------------------------------------
-
-/** Create a minimal mock EmDashHandlers that returns content owned by `ownerId`. */
 function createMockHandlers(ownerId: string = AUTHOR_USER_ID): EmDashHandlers {
 	const contentItem = {
 		id: CONTENT_ID,
@@ -167,14 +148,6 @@ function createMockHandlers(ownerId: string = AUTHOR_USER_ID): EmDashHandlers {
 	} as unknown as EmDashHandlers;
 }
 
-// ---------------------------------------------------------------------------
-// Transport helper
-//
-// InMemoryTransport supports passing authInfo on send(). We create a
-// subclass that automatically injects authInfo on every message sent from
-// the client side, simulating the HTTP transport's auth injection.
-// ---------------------------------------------------------------------------
-
 class AuthInjectingTransport extends InMemoryTransport {
 	constructor(private authInfo: Record<string, unknown>) {
 		super();
@@ -204,9 +177,6 @@ class AuthInjectingTransport extends InMemoryTransport {
 	}
 }
 
-/**
- * Create a linked transport pair where the client side injects authInfo.
- */
 function createAuthenticatedPair(authInfo: {
 	emdash: EmDashHandlers;
 	userId: string;
@@ -216,15 +186,10 @@ function createAuthenticatedPair(authInfo: {
 }): [AuthInjectingTransport, InMemoryTransport] {
 	const clientTransport = new AuthInjectingTransport(authInfo);
 	const serverTransport = new InMemoryTransport();
-	// Link them (accessing private field)
 	(clientTransport as unknown as Record<string, unknown>)._otherTransport = serverTransport;
 	(serverTransport as unknown as Record<string, unknown>)._otherTransport = clientTransport;
 	return [clientTransport, serverTransport];
 }
-
-// ---------------------------------------------------------------------------
-// Test setup
-// ---------------------------------------------------------------------------
 
 async function setupMcpPair(opts: {
 	userId: string;
@@ -266,10 +231,6 @@ async function setupMcpPair(opts: {
 		},
 	};
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe("MCP Authorization", () => {
 	let client: Client;
@@ -384,13 +345,8 @@ describe("MCP Authorization", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// Ownership checks: CONTRIBUTOR cannot modify others' content
-	// -----------------------------------------------------------------------
-
 	describe("content ownership enforcement", () => {
 		it("CONTRIBUTOR cannot update another user's content", async () => {
-			// Content owned by AUTHOR_USER_ID, caller is OTHER_USER_ID with CONTRIBUTOR role
 			const handlers = createMockHandlers(AUTHOR_USER_ID);
 			({ client, cleanup } = await setupMcpPair({
 				userId: OTHER_USER_ID,
@@ -407,7 +363,6 @@ describe("MCP Authorization", () => {
 				},
 			});
 
-			// CONTRIBUTOR role is below AUTHOR minimum
 			expect(result.isError).toBe(true);
 			const text = (result.content as Array<{ text: string }>)[0]?.text ?? "";
 			expect(text).toMatch(INSUFFICIENT_PERMISSIONS_RE);
@@ -477,10 +432,6 @@ describe("MCP Authorization", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// content_delete ownership
-	// -----------------------------------------------------------------------
-
 	describe("content_delete ownership", () => {
 		it("AUTHOR can delete their own content", async () => {
 			const handlers = createMockHandlers(AUTHOR_USER_ID);
@@ -516,10 +467,6 @@ describe("MCP Authorization", () => {
 			expect(handlers.handleContentDelete).not.toHaveBeenCalled();
 		});
 	});
-
-	// -----------------------------------------------------------------------
-	// content_permanent_delete: ADMIN only
-	// -----------------------------------------------------------------------
 
 	describe("content_permanent_delete requires ADMIN", () => {
 		it("EDITOR cannot permanently delete content", async () => {
@@ -557,10 +504,6 @@ describe("MCP Authorization", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// content_publish ownership
-	// -----------------------------------------------------------------------
-
 	describe("content_publish ownership", () => {
 		it("AUTHOR can publish their own content", async () => {
 			const handlers = createMockHandlers(AUTHOR_USER_ID);
@@ -596,10 +539,6 @@ describe("MCP Authorization", () => {
 			expect(handlers.handleContentPublish).not.toHaveBeenCalled();
 		});
 	});
-
-	// -----------------------------------------------------------------------
-	// content_restore ownership
-	// -----------------------------------------------------------------------
 
 	describe("content_restore ownership", () => {
 		it("AUTHOR cannot restore another user's trashed content", async () => {
@@ -637,10 +576,6 @@ describe("MCP Authorization", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// revision_restore ownership
-	// -----------------------------------------------------------------------
-
 	describe("revision_restore ownership", () => {
 		it("AUTHOR cannot restore revision on another user's content", async () => {
 			const handlers = createMockHandlers(AUTHOR_USER_ID);
@@ -676,10 +611,6 @@ describe("MCP Authorization", () => {
 			expect(handlers.handleRevisionRestore).toHaveBeenCalled();
 		});
 	});
-
-	// -----------------------------------------------------------------------
-	// Media ownership
-	// -----------------------------------------------------------------------
 
 	describe("media ownership enforcement", () => {
 		it("AUTHOR can update their own media", async () => {
@@ -751,10 +682,6 @@ describe("MCP Authorization", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// media_upload guards
-	// -----------------------------------------------------------------------
-
 	describe("media_upload guards", () => {
 		const uploadArgs = {
 			filename: "x.png",
@@ -794,7 +721,6 @@ describe("MCP Authorization", () => {
 		});
 
 		it("returns NO_STORAGE when storage is not configured", async () => {
-			// createMockHandlers has no storage adapter attached
 			const handlers = createMockHandlers(AUTHOR_USER_ID);
 			({ client, cleanup } = await setupMcpPair({
 				userId: AUTHOR_USER_ID,
@@ -809,10 +735,6 @@ describe("MCP Authorization", () => {
 			expect(text).toContain("NO_STORAGE");
 		});
 	});
-
-	// -----------------------------------------------------------------------
-	// Token scope enforcement
-	// -----------------------------------------------------------------------
 
 	describe("token scope enforcement", () => {
 		it("rejects content_update without content:write scope", async () => {
@@ -865,7 +787,6 @@ describe("MCP Authorization", () => {
 				userId: AUTHOR_USER_ID,
 				userRole: Role.AUTHOR,
 				handlers,
-				// No tokenScopes = session auth
 			}));
 
 			const result = await client.callTool({
@@ -880,10 +801,6 @@ describe("MCP Authorization", () => {
 			expect(result.isError).toBeFalsy();
 		});
 	});
-
-	// -----------------------------------------------------------------------
-	// content_schedule ownership
-	// -----------------------------------------------------------------------
 
 	describe("content_schedule ownership", () => {
 		it("AUTHOR cannot schedule another user's content", async () => {
@@ -908,10 +825,6 @@ describe("MCP Authorization", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// content_unpublish ownership
-	// -----------------------------------------------------------------------
-
 	describe("content_unpublish ownership", () => {
 		it("AUTHOR cannot unpublish another user's content", async () => {
 			const handlers = createMockHandlers(AUTHOR_USER_ID);
@@ -931,10 +844,6 @@ describe("MCP Authorization", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// resolvedId: slug -> ULID resolution before handler calls
-	// -----------------------------------------------------------------------
-
 	describe("resolvedId passthrough", () => {
 		it("content_restore passes resolvedId (not slug) to handler", async () => {
 			const handlers = createMockHandlers(AUTHOR_USER_ID);
@@ -950,8 +859,6 @@ describe("MCP Authorization", () => {
 			});
 
 			expect(result.isError).toBeFalsy();
-			// The mock returns item.id = CONTENT_ID. The tool should resolve
-			// the slug to CONTENT_ID via extractContentId and pass that to the handler.
 			expect(handlers.handleContentRestore).toHaveBeenCalledWith("post", CONTENT_ID);
 		});
 
@@ -998,14 +905,7 @@ describe("MCP Authorization", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// extractContentAuthorId: missing authorId
-	// -----------------------------------------------------------------------
-
 	describe("missing authorId handling", () => {
-		// Content with null/missing authorId (e.g. seed-imported rows) must be
-		// editable by anyone with `*:edit_any` and rejected for actors with only
-		// `*:edit_own` — without leaking internal "authorId" wording.
 		const contentWithoutAuthor = {
 			id: CONTENT_ID,
 			slug: "imported-post",
@@ -1013,7 +913,6 @@ describe("MCP Authorization", () => {
 			title: "Imported",
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
-			// no authorId
 		};
 
 		it("ADMIN succeeds on content with null authorId", async () => {
@@ -1070,10 +969,6 @@ describe("MCP Authorization", () => {
 		});
 	});
 
-	// -----------------------------------------------------------------------
-	// Draft visibility — SUBSCRIBER must not see non-published content
-	// -----------------------------------------------------------------------
-
 	describe("draft visibility", () => {
 		it("forces status=published on content_list for SUBSCRIBER", async () => {
 			const handlers = createMockHandlers();
@@ -1107,7 +1002,6 @@ describe("MCP Authorization", () => {
 				arguments: { collection: "post", status: "draft" },
 			});
 
-			// Even though caller asked for "draft", route forces "published"
 			expect(handlers.handleContentList).toHaveBeenCalledWith(
 				"post",
 				expect.objectContaining({ status: "published" }),
@@ -1134,7 +1028,6 @@ describe("MCP Authorization", () => {
 		});
 
 		it("hides draft items from SUBSCRIBER on content_get", async () => {
-			// Default mock returns status: "draft"
 			const handlers = createMockHandlers();
 			({ client, cleanup } = await setupMcpPair({
 				userId: OTHER_USER_ID,
@@ -1154,7 +1047,6 @@ describe("MCP Authorization", () => {
 
 		it("allows SUBSCRIBER to read published items via content_get", async () => {
 			const handlers = createMockHandlers();
-			// Override to return published content
 			handlers.handleContentGet = vi.fn().mockResolvedValue({
 				success: true,
 				data: {

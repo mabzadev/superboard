@@ -232,9 +232,7 @@ async function loadContentMediaUsageCollectionRecordsSafely(
 ): Promise<ContentMediaUsageCollectionRecord[]> {
 	try {
 		return await loadContentMediaUsageCollectionRecords(db);
-	} catch {
-		// Retry once before failing; returning unpruned results can over-report deleted collections.
-	}
+	} catch {}
 
 	try {
 		return await loadContentMediaUsageCollectionRecords(db);
@@ -478,7 +476,6 @@ async function repairContentSource(
 		}
 		counts.lastErrorCode = snapshotsResult.error;
 		if (snapshotsResult.snapshots) {
-			// Partial snapshot failures keep absent variants in place; the attempted source is marked below.
 			await repairSnapshotSources(repo, snapshotsResult.snapshots, observedSources, counts);
 		}
 		if (snapshotsResult.source) {

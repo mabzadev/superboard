@@ -12,7 +12,6 @@ describe("HTML block round-trip (core converters)", () => {
 			html: '<div class="callout"><p>Hello <strong>world</strong></p></div>',
 		};
 
-		// PT → PM
 		const pm = portableTextToProsemirror([htmlBlock]);
 		const node = pm.content[0];
 
@@ -20,7 +19,6 @@ describe("HTML block round-trip (core converters)", () => {
 		expect(node.type).toBe("htmlBlock");
 		expect(node.attrs?.html).toBe(htmlBlock.html);
 
-		// PM → PT
 		const pt = prosemirrorToPortableText(pm);
 		const restored = pt[0] as PortableTextHtmlBlock;
 

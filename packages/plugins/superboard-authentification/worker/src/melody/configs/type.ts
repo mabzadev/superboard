@@ -118,10 +118,10 @@ export type Context = {
 export type App = Hono<Context, BlankSchema, "/">;
 
 export interface AuthCodeBodyMfaConfig {
-	e: boolean; // requireEmailMfa
-	o: boolean; // requireOtpMfa
-	s: boolean; // requireSmsMfa
-	b: boolean; // allowEmailMfaAsBackup
+	e: boolean;
+	o: boolean;
+	s: boolean;
+	b: boolean;
 }
 
 export interface AuthCodeBody {

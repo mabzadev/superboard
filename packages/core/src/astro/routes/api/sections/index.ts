@@ -1,10 +1,3 @@
-/**
- * Sections list and create endpoints
- *
- * GET  /_emdash/api/sections - List all sections (with filters)
- * POST /_emdash/api/sections - Create section
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

@@ -160,7 +160,6 @@ try {
 				assert.equal(removed.status(), 200, await removed.text());
 			}
 
-			// Plugin health and lifecycle are owned by the central Plugins page.
 			await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 			await expect(
 				page.getByRole("link", {
@@ -179,7 +178,6 @@ try {
 			assert.ok(
 				inventory.workers.some((worker) => worker.service === "analytics" && worker.physicalName),
 			);
-			// Legacy configuration links fall back to the default Applications tab.
 			await page.goto(new URL(`/analytics/settings?lang=${locale}&tab=configuration`, origin).href);
 			await hydrate();
 			await expect(page.getByRole("tab", { name: "Applications", exact: true })).toHaveAttribute(

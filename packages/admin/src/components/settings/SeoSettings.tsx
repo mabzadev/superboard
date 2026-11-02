@@ -1,9 +1,3 @@
-/**
- * SEO Settings sub-page
- *
- * Title separator, search engine verification codes, and robots.txt.
- */
-
 import {
 	Banner,
 	Button,
@@ -172,7 +166,6 @@ export function SeoSettings() {
 							label={t`Default Social Image`}
 							description={t`Used as the fallback Open Graph image when a page has none. Recommended size: 1200×630.`}
 						>
-							{/* A missing URL can represent an orphaned media reference, so mediaId remains the configured-state signal. */}
 							{formData.seo?.defaultOgImage?.mediaId ? (
 								<div className="grid gap-3">
 									{formData.seo.defaultOgImage.url ? (
@@ -274,7 +267,6 @@ export function SeoSettings() {
 				</div>
 			</form>
 
-			{/* Local raster images produce resolvable stored references suitable for social-card scrapers. */}
 			<MediaPickerModal
 				open={ogImagePickerOpen}
 				onOpenChange={setOgImagePickerOpen}

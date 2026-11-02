@@ -1,10 +1,3 @@
-/**
- * Single comment admin endpoints
- *
- * GET    /_emdash/api/admin/comments/:id - Get comment detail
- * DELETE /_emdash/api/admin/comments/:id - Hard delete (ADMIN only)
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -13,9 +6,6 @@ import { handleCommentGet, handleCommentDelete } from "#api/handlers/comments.js
 
 export const prerender = false;
 
-/**
- * Get single comment detail (includes moderation_metadata)
- */
 export const GET: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 	const { id } = params;
@@ -38,9 +28,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	}
 };
 
-/**
- * Hard delete a comment (ADMIN only)
- */
 export const DELETE: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 	const { id } = params;

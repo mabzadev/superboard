@@ -26,10 +26,6 @@ import type { FieldType, CreateFieldInput, SchemaField } from "../lib/api";
 import { cn } from "../lib/utils";
 import { AllowedTypesEditor } from "./AllowedTypesEditor";
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const SLUG_INVALID_CHARS_REGEX = /[^a-z0-9]+/g;
 const SLUG_LEADING_TRAILING_REGEX = /^_|_$/g;
 const SEARCHABLE_FIELD_TYPES = new Set<FieldType>([
@@ -58,10 +54,6 @@ function isSearchableFieldType(type: FieldType | null): type is FieldType {
 function isIndexableFieldType(type: FieldType | null): type is FieldType {
 	return type !== null && INDEXABLE_FIELD_TYPES.has(type);
 }
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export interface FieldEditorProps {
 	open: boolean;
@@ -153,14 +145,10 @@ function getInitialFormState(field?: SchemaField): FieldFormState {
 	};
 }
 
-/**
- * Field editor dialog for creating/editing fields
- */
 export function FieldEditor({ open, onOpenChange, field, onSave, isSaving }: FieldEditorProps) {
 	const { t } = useLingui();
 	const [formState, setFormState] = React.useState(() => getInitialFormState(field));
 
-	// Reset state when dialog opens
 	React.useEffect(() => {
 		if (open) {
 			setFormState(getInitialFormState(field));
@@ -172,7 +160,6 @@ export function FieldEditor({ open, onOpenChange, field, onSave, isSaving }: Fie
 	const setField = <K extends keyof FieldFormState>(key: K, value: FieldFormState[K]) =>
 		setFormState((prev) => ({ ...prev, [key]: value }));
 
-	// Build field types inside the component so t`` works
 	const FIELD_TYPES: FieldTypeConfig[] = [
 		{
 			type: "string",
@@ -272,11 +259,9 @@ export function FieldEditor({ open, onOpenChange, field, onSave, isSaving }: Fie
 		},
 	];
 
-	// Auto-generate slug from label
 	const handleLabelChange = (value: string) => {
 		setField("label", value);
 		if (!field) {
-			// Only auto-generate for new fields
 			setField(
 				"slug",
 				value
@@ -296,7 +281,6 @@ export function FieldEditor({ open, onOpenChange, field, onSave, isSaving }: Fie
 
 		const validation: CreateFieldInput["validation"] = {};
 
-		// Build validation based on field type
 		if (selectedType === "string" || selectedType === "text" || selectedType === "slug") {
 			if (minLength) validation.minLength = parseInt(minLength, 10);
 			if (maxLength) validation.maxLength = parseInt(maxLength, 10);
@@ -340,7 +324,6 @@ export function FieldEditor({ open, onOpenChange, field, onSave, isSaving }: Fie
 			validation.allowedMimeTypes = formState.allowedMimeTypes;
 		}
 
-		// Only include searchable for text-based fields
 		const isSearchableType = isSearchableFieldType(selectedType);
 		const isIndexableType = isIndexableFieldType(selectedType);
 
@@ -410,7 +393,6 @@ export function FieldEditor({ open, onOpenChange, field, onSave, isSaving }: Fie
 					</div>
 				) : (
 					<div className="space-y-6">
-						{/* Type indicator */}
 						{typeConfig && (
 							<div className="flex items-center space-x-3 p-3 bg-kumo-tint/50 rounded-lg">
 								<typeConfig.icon className="h-5 w-5" />
@@ -431,7 +413,6 @@ export function FieldEditor({ open, onOpenChange, field, onSave, isSaving }: Fie
 							</div>
 						)}
 
-						{/* Basic info */}
 						<div className="grid grid-cols-2 gap-4">
 							<Input
 								label={t`Label`}
@@ -455,7 +436,6 @@ export function FieldEditor({ open, onOpenChange, field, onSave, isSaving }: Fie
 							</div>
 						</div>
 
-						{/* Toggles */}
 						<div className="flex items-center space-x-6">
 							<Switch
 								checked={required}
@@ -483,7 +463,6 @@ export function FieldEditor({ open, onOpenChange, field, onSave, isSaving }: Fie
 							)}
 						</div>
 
-						{/* Type-specific validation */}
 						{(selectedType === "string" || selectedType === "text" || selectedType === "slug") && (
 							<div className="space-y-4">
 								<h4 className="font-medium text-sm">{t`Validation`}</h4>

@@ -16,9 +16,6 @@ function handleResponse(xhr, success, error) {
 	}
 }
 
-/**
- * Helper class for making API requests to SuperBoard service.
- */
 class SuperBoardAPIServiceHelper {
 	/**
 	 * Constructor for SuperBoardAPIServiceHelper.
@@ -42,7 +39,6 @@ class SuperBoardAPIServiceHelper {
 		const xhr = new XMLHttpRequest();
 		xhr.open("POST", endpoint, true);
 
-		// Set request headers
 		for (const key in headers) {
 			xhr.setRequestHeader(key, headers[key]);
 		}
@@ -64,7 +60,6 @@ class SuperBoardAPIServiceHelper {
 		const xhr = new XMLHttpRequest();
 		xhr.open("GET", endpoint, true);
 
-		// Set request headers
 		for (const key in headers) {
 			xhr.setRequestHeader(key, headers[key]);
 		}
@@ -76,8 +71,6 @@ class SuperBoardAPIServiceHelper {
 		};
 		xhr.onerror = () => error("SuperBoard network request failed");
 
-		// Sending no argument is required for GET: some runtimes reject or drop a
-		// GET request whose XMLHttpRequest body is non-null.
 		xhr.send();
 	}
 
@@ -97,8 +90,6 @@ class SuperBoardAPIServiceHelper {
 		headers["Content-Type"] = "application/json";
 		headers["PLATFORM"] = "web";
 
-		// Get identifier
-		// Add domain identifier header
 		if (typeof window !== "undefined" && window.location) {
 			const { protocol, hostname, port } = window.location;
 			const portPart = port ? `:${port}` : "";
@@ -106,12 +97,10 @@ class SuperBoardAPIServiceHelper {
 			headers["IDENTIFIER"] = fullURL;
 		}
 
-		// Add SuperBoard ID header
 		if (SuperBoardContext.linksquaredID) {
 			headers["linksquared"] = SuperBoardContext.linksquaredID;
 		}
 
-		// Add API key header
 		if (SuperBoardContext.API_KEY) {
 			if (SuperBoardContext.testEnvironment) {
 				headers["PROJECT_KEY"] = "test_" + SuperBoardContext.API_KEY;

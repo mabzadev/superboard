@@ -1,10 +1,3 @@
-/**
- * Single menu item endpoint
- *
- * PUT    /_emdash/api/menus/:name/items/:id[?locale=xx]
- * DELETE /_emdash/api/menus/:name/items/:id[?locale=xx]
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

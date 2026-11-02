@@ -1,19 +1,3 @@
-/**
- * Backing Service HTTP Handler
- *
- * Runs in the Node process for production workerd deployments.
- * Receives HTTP requests from plugin workers running in workerd isolates.
- * Each request is authenticated via a per-plugin auth token.
- *
- * This is a thin wrapper around createBridgeHandler that adds:
- * - Auth token validation (extracting claims from the HMAC token)
- * - Node http.IncomingMessage -> Request conversion
- * - Response -> http.ServerResponse conversion
- *
- * The actual bridge logic (dispatch, capability enforcement, DB queries)
- * lives in bridge-handler.ts and is shared with the dev runner.
- */
-
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { getI18nConfig } from "emdash";
@@ -26,7 +10,6 @@ export interface BackingServiceHandler {
 	removePlugin: (pluginId: string) => void;
 }
 
-/** Error carrying an HTTP status code, used to surface request-level failures. */
 class HttpError extends Error {
 	constructor(
 		message: string,
@@ -36,16 +19,11 @@ class HttpError extends Error {
 	}
 }
 
-/**
- * Create an HTTP request handler for the backing service.
- */
 export function createBackingServiceHandler(runner: WorkerdSandboxRunner): BackingServiceHandler {
-	// Cache bridge handlers per pluginId to avoid re-creation
 	const handlerCache = new Map<string, (request: Request) => Promise<Response>>();
 
 	const handler = async (req: IncomingMessage, res: ServerResponse) => {
 		try {
-			// Parse auth token from Authorization header
 			const authHeader = req.headers.authorization;
 			if (!authHeader?.startsWith("Bearer ")) {
 				res.writeHead(401, { "Content-Type": "application/json" });
@@ -61,7 +39,6 @@ export function createBackingServiceHandler(runner: WorkerdSandboxRunner): Backi
 				return;
 			}
 
-			// Get or create bridge handler for this plugin
 			const cacheKey = claims.pluginId;
 			let bridgeHandler = handlerCache.get(cacheKey);
 			if (!bridgeHandler) {
@@ -81,7 +58,6 @@ export function createBackingServiceHandler(runner: WorkerdSandboxRunner): Backi
 				handlerCache.set(cacheKey, bridgeHandler);
 			}
 
-			// Convert Node request to web Request
 			const body = await readBody(req);
 			const url = `http://bridge${req.url || "/"}`;
 			const webRequest = new Request(url, {
@@ -90,7 +66,6 @@ export function createBackingServiceHandler(runner: WorkerdSandboxRunner): Backi
 				body: JSON.stringify(body),
 			});
 
-			// Dispatch through the shared bridge handler
 			const webResponse = await bridgeHandler(webRequest);
 			const responseBody = await webResponse.text();
 
@@ -119,9 +94,6 @@ function isJsonObject(value: unknown): value is Record<string, unknown> {
 }
 
 async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
-	// IncomingMessage is a Node Readable; async-iteration yields chunks typed
-	// as `any`. Validate each chunk is a Buffer (the runtime guarantee for
-	// non-object-mode streams) so we can compose them safely.
 	const chunks: Buffer[] = [];
 	let totalBytes = 0;
 	for await (const chunk of req) {

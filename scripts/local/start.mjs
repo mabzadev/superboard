@@ -336,7 +336,6 @@ async function start() {
 }
 
 export function localRuntimeConfiguration(configuration) {
-	// Local registry delivery warnings can otherwise become new tail events during startup.
 	const local = { ...configuration };
 	delete local.tail_consumers;
 	return local;

@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import io.superboard.SuperBoard
-// PURCHASE_EVENT_DISABLED: import io.superboard.model.events.PaymentEventType
 import io.superboard.utils.InstantCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -29,9 +28,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-/**
- * E2E tests for event tracking functionality (INSTALL, APP_OPEN, REINSTALL events).
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class EventTrackingE2ETest {
@@ -62,10 +58,6 @@ class EventTrackingE2ETest {
         E2ETestUtils.cleanupMockWebServer(mockWebServer)
     }
 
-    /**
-     * Install a URL-based dispatcher that captures event request bodies and returns
-     * standard auth/device responses. Optionally customize the lastSeen value.
-     */
     private fun installEventCapturingDispatcher(
         lastSeen: String? = null,
         authResponseCode: Int = 200,
@@ -138,7 +130,6 @@ class EventTrackingE2ETest {
     }
 
     private fun assertEventHasLink(eventName: String, expectedLink: String) {
-        // Use last matching event since addLinkToEvents re-sends events with the link attributed
         val body = synchronized(capturedEventBodies) {
             capturedEventBodies.last { it.contains("\"event\":\"$eventName\"") }
         }
@@ -160,10 +151,6 @@ class EventTrackingE2ETest {
         )
     }
 
-    /**
-     * Install a dispatcher that captures event bodies and also serves deeplink resolution
-     * responses via data_for_device endpoint.
-     */
     private fun installDeeplinkEventCapturingDispatcher(
         lastSeen: String? = null,
         resolvedLink: String,
@@ -237,14 +224,10 @@ class EventTrackingE2ETest {
         }
     }
 
-    // ==================== Event Tracking Tests ====================
-
     @Test
     fun `test SDK sends INSTALL event on first app open`() {
-        // Arrange - lastSeen=null means brand new device → INSTALL event
         installEventCapturingDispatcher(lastSeen = null)
 
-        // Act
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
         E2ETestUtils.enableImmediateEventSending()
 
@@ -253,7 +236,6 @@ class EventTrackingE2ETest {
 
         waitForEvent("install")
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
         assertEventSent("install")
 
@@ -262,10 +244,8 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test SDK sends APP_OPEN event on app open`() {
-        // Arrange
         installEventCapturingDispatcher(lastSeen = null)
 
-        // Act
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
         E2ETestUtils.enableImmediateEventSending()
 
@@ -274,7 +254,6 @@ class EventTrackingE2ETest {
 
         waitForEvent("app_open")
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
         assertEventSent("app_open")
 
@@ -283,10 +262,8 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test first app open sends both INSTALL and APP_OPEN events`() {
-        // Arrange - first launch should produce both install and app_open
         installEventCapturingDispatcher(lastSeen = null)
 
-        // Act
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
         E2ETestUtils.enableImmediateEventSending()
 
@@ -296,7 +273,6 @@ class EventTrackingE2ETest {
         waitForEvent("install")
         waitForEvent("app_open")
 
-        // Assert - both events sent with correct parameters
         E2ETestUtils.assertAuthenticationCompleted()
         assertEventSent("install")
         assertEventSent("app_open")
@@ -306,10 +282,8 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test SDK sends REINSTALL event when lastSeen is set`() {
-        // Arrange - lastSeen is set means device was seen before → REINSTALL (not INSTALL)
         installEventCapturingDispatcher(lastSeen = "2026-01-20T10:00:00.000Z")
 
-        // Act
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
         E2ETestUtils.enableImmediateEventSending()
 
@@ -318,7 +292,6 @@ class EventTrackingE2ETest {
 
         waitForEvent("reinstall")
 
-        // Assert - should send reinstall, not install
         E2ETestUtils.assertAuthenticationCompleted()
         assertEventSent("reinstall")
         assertEquals(
@@ -331,7 +304,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test background to foreground cycle sends pending events`() {
-        // Arrange
         installEventCapturingDispatcher(lastSeen = null)
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
@@ -340,25 +312,20 @@ class EventTrackingE2ETest {
         val activityController = Robolectric.buildActivity(TestActivity::class.java)
         activityController.create().start().resume()
 
-        // Wait for initial events from first foreground
         waitForEvent("app_open")
 
-        // Act - go to background then come back to foreground
         activityController.pause().stop()
 
-        // Clear captured events to isolate foreground events
         synchronized(capturedEventBodies) {
             capturedEventBodies.clear()
         }
 
         activityController.start().resume()
 
-        // Give time for the serialDispatcher to process onAppForegrounded
         Thread.sleep(1000)
         E2ETestUtils.enableImmediateEventSending()
         Thread.sleep(1000)
 
-        // Assert - SDK should remain functional after background/foreground cycle
         E2ETestUtils.assertAuthenticationCompleted()
 
         activityController.pause().stop().destroy()
@@ -366,7 +333,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test no INSTALL event on second app open`() {
-        // Arrange - first launch
         installEventCapturingDispatcher(lastSeen = null)
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
@@ -381,16 +347,13 @@ class EventTrackingE2ETest {
         val installCountAfterFirstOpen = eventCount("install")
         assertEquals("First open should produce exactly 1 install", 1, installCountAfterFirstOpen)
 
-        // Act - simulate background → foreground (second "open")
         activityController.pause().stop()
 
         activityController.start().resume()
 
-        // Give time for any additional events
         E2ETestUtils.enableImmediateEventSending()
         Thread.sleep(1000)
 
-        // Assert - install should still be exactly 1 (no second install)
         assertEquals(
             "Second foreground cycle should NOT send another install event",
             1, eventCount("install")
@@ -401,10 +364,8 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test REINSTALL event includes created_at but no install event`() {
-        // Arrange - returning device
         installEventCapturingDispatcher(lastSeen = "2026-01-15T08:30:00.000Z")
 
-        // Act
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
         E2ETestUtils.enableImmediateEventSending()
 
@@ -414,7 +375,6 @@ class EventTrackingE2ETest {
         waitForEvent("reinstall")
         waitForEvent("app_open")
 
-        // Assert
         E2ETestUtils.assertAuthenticationCompleted()
         assertEventSent("reinstall")
         assertEventSent("app_open")
@@ -425,7 +385,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test events not sent before authentication completes`() {
-        // Arrange - delay authentication response so events queue before auth
         mockWebServer.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 val path = request.path ?: ""
@@ -455,10 +414,8 @@ class EventTrackingE2ETest {
             }
         }
 
-        // Act - configure but don't wait for auth
         SuperBoard.configure(application, "test-api-key", useTestEnvironment = true, baseURL = mockWebServer.url("/").toString())
 
-        // Check immediately - no events should be sent yet since auth is delayed
         val eventsBeforeAuth = synchronized(capturedEventBodies) {
             capturedEventBodies.toList()
         }
@@ -467,34 +424,27 @@ class EventTrackingE2ETest {
             0, eventsBeforeAuth.size
         )
 
-        // Now wait for auth to complete
         runBlocking {
             val authJob = E2ETestUtils.getAuthenticationJob()
             withTimeoutOrNull(10_000) { authJob?.join() }
         }
 
-        // Start activity to trigger event sending
         E2ETestUtils.enableImmediateEventSending()
         val activityController = Robolectric.buildActivity(TestActivity::class.java)
         activityController.create().start()
 
         waitForEvent("install")
 
-        // Assert - events arrive after auth
         E2ETestUtils.assertAuthenticationCompleted()
         assertEventSent("install")
 
         activityController.stop().destroy()
     }
 
-    // ==================== Link Attribution Tests ====================
-
     @Test
     fun `test events without deeplink have no link attribution`() {
-        // Arrange - no deeplink, data_for_device returns null link
         installEventCapturingDispatcher(lastSeen = null)
 
-        // Act
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
         E2ETestUtils.enableImmediateEventSending()
 
@@ -504,7 +454,6 @@ class EventTrackingE2ETest {
         waitForEvent("install")
         waitForEvent("app_open")
 
-        // Assert - events should have null link since no deeplink was opened
         assertEventHasNoLink("install")
         assertEventHasNoLink("app_open")
 
@@ -513,7 +462,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test cold start deeplink attributes link to install event`() {
-        // Arrange - cold start with deeplink, server resolves to a known link
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             installDeeplinkEventCapturingDispatcher(
@@ -522,10 +470,7 @@ class EventTrackingE2ETest {
             )
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
-            // Do NOT enable immediate event sending yet — let the SDK's delay hold events
-            // in storage so addLinkToEvents can retroactively patch the resolved link
 
-            // Act - cold start with deeplink intent
             val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
                 data = Uri.parse("testapp://open?link=campaign123")
             }
@@ -535,17 +480,13 @@ class EventTrackingE2ETest {
             SuperBoard.setOnDeeplinkReceivedListener(activityController.get()) { _ -> }
             activityController.start()
 
-            // Wait for deeplink resolution to complete (events get patched in storage)
             Thread.sleep(2000)
 
-            // Now enable immediate sending so patched events flush to backend
             E2ETestUtils.enableImmediateEventSending()
 
-            // Trigger event flush via foreground cycle
             activityController.pause().stop()
             activityController.start().resume()
 
-            // Wait for install event with resolved link
             E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "install event with link attribution") {
                 E2ETestUtils.enableImmediateEventSending()
                 synchronized(capturedEventBodies) {
@@ -555,7 +496,6 @@ class EventTrackingE2ETest {
                 }
             }
 
-            // Assert
             assertEventHasLink("install", "https://test.superboard.io/campaign123")
 
             activityController.stop().destroy()
@@ -566,7 +506,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test cold start deeplink attributes link to app_open event`() {
-        // Arrange
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             installDeeplinkEventCapturingDispatcher(
@@ -576,7 +515,6 @@ class EventTrackingE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Act - cold start with deeplink
             val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
                 data = Uri.parse("testapp://open?link=promo")
             }
@@ -586,15 +524,12 @@ class EventTrackingE2ETest {
             SuperBoard.setOnDeeplinkReceivedListener(activityController.get()) { _ -> }
             activityController.start()
 
-            // Wait for deeplink resolution
             Thread.sleep(2000)
 
-            // Enable immediate sending and trigger flush
             E2ETestUtils.enableImmediateEventSending()
             activityController.pause().stop()
             activityController.start().resume()
 
-            // Wait for app_open event with link
             E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "app_open event with link attribution") {
                 E2ETestUtils.enableImmediateEventSending()
                 synchronized(capturedEventBodies) {
@@ -604,7 +539,6 @@ class EventTrackingE2ETest {
                 }
             }
 
-            // Assert
             assertEventHasLink("app_open", "https://test.superboard.io/promo")
 
             activityController.stop().destroy()
@@ -615,7 +549,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test deeplink attributes link to reinstall event`() {
-        // Arrange - returning device with deeplink
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             installDeeplinkEventCapturingDispatcher(
@@ -625,7 +558,6 @@ class EventTrackingE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Act - cold start with deeplink on returning device
             val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
                 data = Uri.parse("testapp://open?link=welcome-back")
             }
@@ -635,15 +567,12 @@ class EventTrackingE2ETest {
             SuperBoard.setOnDeeplinkReceivedListener(activityController.get()) { _ -> }
             activityController.start()
 
-            // Wait for deeplink resolution
             Thread.sleep(2000)
 
-            // Enable immediate sending and trigger flush
             E2ETestUtils.enableImmediateEventSending()
             activityController.pause().stop()
             activityController.start().resume()
 
-            // Wait for reinstall event with link attribution
             E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "reinstall event with link attribution") {
                 E2ETestUtils.enableImmediateEventSending()
                 synchronized(capturedEventBodies) {
@@ -653,7 +582,6 @@ class EventTrackingE2ETest {
                 }
             }
 
-            // Assert
             assertEventHasLink("reinstall", "https://test.superboard.io/welcome-back")
             assertEquals("Should not send install for returning device", 0, eventCount("install"))
 
@@ -665,7 +593,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test cold start deeplink attributes link to both install and app_open`() {
-        // Arrange - verify both events get the resolved link on cold start
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             installDeeplinkEventCapturingDispatcher(
@@ -675,7 +602,6 @@ class EventTrackingE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Act - cold start with deeplink
             val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
                 data = Uri.parse("testapp://open?link=both-events")
             }
@@ -685,15 +611,12 @@ class EventTrackingE2ETest {
             SuperBoard.setOnDeeplinkReceivedListener(activityController.get()) { _ -> }
             activityController.start()
 
-            // Wait for deeplink resolution to patch events in storage
             Thread.sleep(2000)
 
-            // Enable immediate sending and trigger flush
             E2ETestUtils.enableImmediateEventSending()
             activityController.pause().stop()
             activityController.start().resume()
 
-            // Wait for both events with the resolved link
             E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "install event with link") {
                 E2ETestUtils.enableImmediateEventSending()
                 synchronized(capturedEventBodies) {
@@ -711,7 +634,6 @@ class EventTrackingE2ETest {
                 }
             }
 
-            // Assert - both events should carry the resolved deeplink
             assertEventHasLink("install", "https://test.superboard.io/both-events")
             assertEventHasLink("app_open", "https://test.superboard.io/both-events")
 
@@ -721,84 +643,26 @@ class EventTrackingE2ETest {
         }
     }
 
-    // ==================== Edge Case Tests ====================
-
     @Test
     fun `test SDK handles event endpoint server error without crashing`() {
-        // Arrange - event endpoint returns 500 errors
         installEventCapturingDispatcher(lastSeen = null, eventResponseCode = 500)
 
-        // Act
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
         E2ETestUtils.enableImmediateEventSending()
 
         val activityController = Robolectric.buildActivity(TestActivity::class.java)
         activityController.create().start()
 
-        // Give SDK time to attempt event sending (will get 500 errors)
         Thread.sleep(2000)
 
-        // Assert - SDK should still be authenticated and functional despite event errors
         E2ETestUtils.assertAuthenticationCompleted()
         E2ETestUtils.assertSdkFunctionalAfterError()
 
         activityController.stop().destroy()
     }
 
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `test custom purchase event is sent to backend`() {
-    // PURCHASE_EVENT_DISABLED:     // Arrange
-    // PURCHASE_EVENT_DISABLED:     installEventCapturingDispatcher(lastSeen = null)
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     // Act - configure, authenticate, then log a custom purchase
-    // PURCHASE_EVENT_DISABLED:     E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
-    // PURCHASE_EVENT_DISABLED:     E2ETestUtils.enableImmediateEventSending()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     val activityController = Robolectric.buildActivity(TestActivity::class.java)
-    // PURCHASE_EVENT_DISABLED:     activityController.create().start()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     // Wait for initial events first
-    // PURCHASE_EVENT_DISABLED:     waitForEvent("install")
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     // Log a custom purchase
-    // PURCHASE_EVENT_DISABLED:     SuperBoard.logCustomPurchase(
-    // PURCHASE_EVENT_DISABLED:         type = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:         priceInCents = 999,
-    // PURCHASE_EVENT_DISABLED:         currency = "USD",
-    // PURCHASE_EVENT_DISABLED:         productId = "premium_monthly"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     // Wait for the payment event to be captured
-    // PURCHASE_EVENT_DISABLED:     E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "payment event sent to backend") {
-    // PURCHASE_EVENT_DISABLED:         E2ETestUtils.enableImmediateEventSending()
-    // PURCHASE_EVENT_DISABLED:         synchronized(capturedPaymentBodies) {
-    // PURCHASE_EVENT_DISABLED:             capturedPaymentBodies.any { it.contains("\"product_id\":\"premium_monthly\"") }
-    // PURCHASE_EVENT_DISABLED:         }
-    // PURCHASE_EVENT_DISABLED:     }
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     // Assert - verify the payment event body contains expected values
-    // PURCHASE_EVENT_DISABLED:     val paymentBody = synchronized(capturedPaymentBodies) {
-    // PURCHASE_EVENT_DISABLED:         capturedPaymentBodies.first { it.contains("\"product_id\":\"premium_monthly\"") }
-    // PURCHASE_EVENT_DISABLED:     }
-    // PURCHASE_EVENT_DISABLED:     assertTrue(
-    // PURCHASE_EVENT_DISABLED:         "Payment event should contain price_cents 999, got: ${paymentBody.take(300)}",
-    // PURCHASE_EVENT_DISABLED:         paymentBody.contains("\"price_cents\":999")
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:     assertTrue(
-    // PURCHASE_EVENT_DISABLED:         "Payment event should contain currency USD, got: ${paymentBody.take(300)}",
-    // PURCHASE_EVENT_DISABLED:         paymentBody.contains("\"currency\":\"USD\"")
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:     assertTrue(
-    // PURCHASE_EVENT_DISABLED:         "Payment event should contain event_type buy, got: ${paymentBody.take(300)}",
-    // PURCHASE_EVENT_DISABLED:         paymentBody.contains("\"event_type\":\"buy\"")
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     activityController.stop().destroy()
-    // PURCHASE_EVENT_DISABLED: }
-
     @Test
     fun `test SDK remains functional after multiple background foreground cycles`() {
-        // Arrange - verify SDK handles repeated lifecycle transitions without errors
         installEventCapturingDispatcher(lastSeen = null)
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
@@ -807,18 +671,12 @@ class EventTrackingE2ETest {
         val activityController = Robolectric.buildActivity(TestActivity::class.java)
         activityController.create().start().resume()
 
-        // Wait for initial events
         waitForEvent("install")
         waitForEvent("app_open")
 
         val installCountAfterLaunch = eventCount("install")
         val appOpenCountAfterLaunch = eventCount("app_open")
 
-        // Act - cycle through background/foreground 3 times.
-        // Use pause/stop + start/resume with numStarted correction because
-        // Robolectric double-dispatches onActivityStarted when restarting a
-        // stopped AppCompatActivity, inflating numStarted. Without the reset,
-        // onAppBackgrounded never fires since numStarted never reaches 0.
         repeat(3) {
             activityController.pause().stop()
             Thread.sleep(1000)
@@ -829,11 +687,9 @@ class EventTrackingE2ETest {
             Thread.sleep(1000)
         }
 
-        // Assert - SDK should still be authenticated and functional
         E2ETestUtils.assertAuthenticationCompleted()
         E2ETestUtils.assertSdkFunctionalAfterError()
 
-        // install is only sent on first launch, never duplicated by foreground cycles
         assertEquals(
             "Install event should be sent exactly once despite 3 foreground cycles",
             1, eventCount("install")
@@ -843,20 +699,16 @@ class EventTrackingE2ETest {
             installCountAfterLaunch, eventCount("install")
         )
 
-        // app_open is only sent once via logAppLaunchEvents during authentication,
-        // foreground cycles (onAppForegrounded) only flush pending events, not add new ones
         assertEquals(
             "app_open event should be sent exactly once (only on initial launch)",
             appOpenCountAfterLaunch, eventCount("app_open")
         )
 
-        // No reinstall event since lastSeen=null (new device)
         assertEquals(
             "No reinstall event should be sent for a new device",
             0, eventCount("reinstall")
         )
 
-        // Backend received requests (auth + device + events)
         assertTrue(
             "MockWebServer should have received multiple requests, got: ${mockWebServer.requestCount}",
             mockWebServer.requestCount >= 3
@@ -867,10 +719,8 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test reinstall also sends app_open event`() {
-        // Arrange - returning device should get both reinstall AND app_open
         installEventCapturingDispatcher(lastSeen = "2026-01-10T12:00:00.000Z")
 
-        // Act
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
         E2ETestUtils.enableImmediateEventSending()
 
@@ -880,7 +730,6 @@ class EventTrackingE2ETest {
         waitForEvent("reinstall")
         waitForEvent("app_open")
 
-        // Assert - returning device gets reinstall + app_open but NOT install
         assertEventSent("reinstall")
         assertEventSent("app_open")
         assertEquals("Should not send install for returning device", 0, eventCount("install"))
@@ -890,79 +739,6 @@ class EventTrackingE2ETest {
         activityController.stop().destroy()
     }
 
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `test payment event includes link attribution from deeplink`() {
-    // PURCHASE_EVENT_DISABLED:     // Arrange - cold start with deeplink, then log a purchase
-    // PURCHASE_EVENT_DISABLED:     Dispatchers.setMain(UnconfinedTestDispatcher())
-    // PURCHASE_EVENT_DISABLED:     try {
-    // PURCHASE_EVENT_DISABLED:         installDeeplinkEventCapturingDispatcher(
-    // PURCHASE_EVENT_DISABLED:             lastSeen = null,
-    // PURCHASE_EVENT_DISABLED:             resolvedLink = "https://test.superboard.io/purchase-campaign"
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         // Cold start with deeplink
-    // PURCHASE_EVENT_DISABLED:         val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
-    // PURCHASE_EVENT_DISABLED:             data = Uri.parse("testapp://open?link=purchase-campaign")
-    // PURCHASE_EVENT_DISABLED:         }
-    // PURCHASE_EVENT_DISABLED:         val activityController = Robolectric.buildActivity(TestActivity::class.java, deeplinkIntent)
-    // PURCHASE_EVENT_DISABLED:         activityController.create()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         SuperBoard.setOnDeeplinkReceivedListener(activityController.get()) { _ -> }
-    // PURCHASE_EVENT_DISABLED:         activityController.start()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         // Wait for deeplink resolution so linkForFutureActions gets set
-    // PURCHASE_EVENT_DISABLED:         Thread.sleep(2000)
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         // Now log a custom purchase - it should pick up linkForFutureActions
-    // PURCHASE_EVENT_DISABLED:         E2ETestUtils.enableImmediateEventSending()
-    // PURCHASE_EVENT_DISABLED:         SuperBoard.logCustomPurchase(
-    // PURCHASE_EVENT_DISABLED:             type = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:             priceInCents = 1999,
-    // PURCHASE_EVENT_DISABLED:             currency = "EUR",
-    // PURCHASE_EVENT_DISABLED:             productId = "annual_plan"
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         // Wait for payment event
-    // PURCHASE_EVENT_DISABLED:         E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "payment event with link") {
-    // PURCHASE_EVENT_DISABLED:             E2ETestUtils.enableImmediateEventSending()
-    // PURCHASE_EVENT_DISABLED:             synchronized(capturedPaymentBodies) {
-    // PURCHASE_EVENT_DISABLED:                 capturedPaymentBodies.any { it.contains("\"product_id\":\"annual_plan\"") }
-    // PURCHASE_EVENT_DISABLED:             }
-    // PURCHASE_EVENT_DISABLED:         }
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         // Assert - payment event should carry the deeplink
-    // PURCHASE_EVENT_DISABLED:         val paymentBody = synchronized(capturedPaymentBodies) {
-    // PURCHASE_EVENT_DISABLED:             capturedPaymentBodies.first { it.contains("\"product_id\":\"annual_plan\"") }
-    // PURCHASE_EVENT_DISABLED:         }
-    // PURCHASE_EVENT_DISABLED:         assertTrue(
-    // PURCHASE_EVENT_DISABLED:             "Payment event should have link from deeplink, got: ${paymentBody.take(400)}",
-    // PURCHASE_EVENT_DISABLED:             paymentBody.contains("\"link\":\"https://test.superboard.io/purchase-campaign\"")
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:         assertTrue(
-    // PURCHASE_EVENT_DISABLED:             "Payment event should contain price_cents 1999",
-    // PURCHASE_EVENT_DISABLED:             paymentBody.contains("\"price_cents\":1999")
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:         assertTrue(
-    // PURCHASE_EVENT_DISABLED:             "Payment event should contain currency EUR",
-    // PURCHASE_EVENT_DISABLED:             paymentBody.contains("\"currency\":\"EUR\"")
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         activityController.stop().destroy()
-    // PURCHASE_EVENT_DISABLED:     } finally {
-    // PURCHASE_EVENT_DISABLED:         Dispatchers.resetMain()
-    // PURCHASE_EVENT_DISABLED:     }
-    // PURCHASE_EVENT_DISABLED: }
-
-    // ==================== Events Before Deeplink Resolution Tests ====================
-
-    /**
-     * Helper to pre-populate SharedPreferences so the SDK thinks this is a returning user
-     * who last opened the app [daysAgo] days ago and has opened the app [opens] times.
-     * This must be called BEFORE SuperBoard.configure() since EventsManager reads from
-     * SharedPreferences during logAppLaunchEvents().
-     */
     private fun seedLocalCache(daysAgo: Int, opens: Int) {
         val prefs = application.getSharedPreferences("SuperBoardStorage", Context.MODE_PRIVATE)
         prefs.edit()
@@ -971,20 +747,13 @@ class EventTrackingE2ETest {
                 "superboard_last_start_timestamp",
                 InstantCompat(System.currentTimeMillis() - daysAgo.toLong() * 24 * 60 * 60 * 1000).toString()
             )
-            // Authentication runs on the SDK serial dispatcher immediately after
-            // configure(). Persist synchronously so it cannot observe stale values.
             .commit()
     }
 
     @Test
     fun `test reactivation event with deeplink gets resolved link`() {
-        // Arrange - simulate a returning user who hasn't opened the app in 8 days
-        // and opens it via a deeplink. The reactivation event is retroactively patched
-        // by addLinkToEvents() so it should get the resolved link.
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
-            // numberOfOpens > 0 so addInstallIfNeeded() is skipped (no install/reinstall)
-            // lastStartTimestamp = 8 days ago so addReactivationIfNeeded() fires
             seedLocalCache(daysAgo = 8, opens = 5)
 
             installDeeplinkEventCapturingDispatcher(
@@ -993,9 +762,7 @@ class EventTrackingE2ETest {
             )
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
-            // Do NOT enable immediate sending — let deeplink resolution patch events first
 
-            // Cold start with deeplink
             val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
                 data = Uri.parse("testapp://open?link=reactivation-campaign")
             }
@@ -1005,15 +772,12 @@ class EventTrackingE2ETest {
             SuperBoard.setOnDeeplinkReceivedListener(activityController.get()) { _ -> }
             activityController.start()
 
-            // Wait for deeplink resolution to patch events in storage
             Thread.sleep(2000)
 
-            // Enable sending and flush
             E2ETestUtils.enableImmediateEventSending()
             activityController.pause().stop()
             activityController.start().resume()
 
-            // Both events are sent sequentially; wait for the complete launch batch.
             E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "reactivation launch events with link") {
                 E2ETestUtils.enableImmediateEventSending()
                 synchronized(capturedEventBodies) {
@@ -1029,13 +793,9 @@ class EventTrackingE2ETest {
                 }
             }
 
-            // Assert - reactivation event should have the resolved link (not the raw URI)
             assertEventHasLink("reactivation", "https://test.superboard.io/reactivation-campaign")
-            // app_open should also have the resolved link
             assertEventHasLink("app_open", "https://test.superboard.io/reactivation-campaign")
-            // No install event since numberOfOpens > 0
             assertEquals("No install event for a returning user with opens > 0", 0, eventCount("install"))
-            // No reinstall event since numberOfOpens > 0
             assertEquals("No reinstall event for a returning user with opens > 0", 0, eventCount("reinstall"))
 
             activityController.stop().destroy()
@@ -1044,193 +804,6 @@ class EventTrackingE2ETest {
         }
     }
 
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `test payment event logged before deeplink resolution gets raw link`() {
-    // PURCHASE_EVENT_DISABLED:     // Arrange - cold start with deeplink, log a purchase DURING resolution (before
-    // PURCHASE_EVENT_DISABLED:     // Call #2 in getDataForDevice). Payment events are NOT retroactively patched by
-    // PURCHASE_EVENT_DISABLED:     // addLinkToEvents(), so the payment should get whatever linkForFutureActions is
-    // PURCHASE_EVENT_DISABLED:     // at the time of logging — the raw URI from Call #1.
-    // PURCHASE_EVENT_DISABLED:     Dispatchers.setMain(UnconfinedTestDispatcher())
-    // PURCHASE_EVENT_DISABLED:     try {
-    // PURCHASE_EVENT_DISABLED:         // Use a slow data_for_device response to widen the resolution window
-    // PURCHASE_EVENT_DISABLED:         val lastSeenJson = "null"
-    // PURCHASE_EVENT_DISABLED:         mockWebServer.dispatcher = object : Dispatcher() {
-    // PURCHASE_EVENT_DISABLED:             override fun dispatch(request: RecordedRequest): MockResponse {
-    // PURCHASE_EVENT_DISABLED:                 val path = request.path ?: ""
-    // PURCHASE_EVENT_DISABLED:                 val body = request.body.clone().readUtf8()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:                 if (path.contains("add_payment_event")) {
-    // PURCHASE_EVENT_DISABLED:                     synchronized(capturedPaymentBodies) {
-    // PURCHASE_EVENT_DISABLED:                         capturedPaymentBodies.add(body)
-    // PURCHASE_EVENT_DISABLED:                     }
-    // PURCHASE_EVENT_DISABLED:                 } else if (path.contains("event")) {
-    // PURCHASE_EVENT_DISABLED:                     synchronized(capturedEventBodies) {
-    // PURCHASE_EVENT_DISABLED:                         capturedEventBodies.add(body)
-    // PURCHASE_EVENT_DISABLED:                     }
-    // PURCHASE_EVENT_DISABLED:                 }
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:                 return when {
-    // PURCHASE_EVENT_DISABLED:                     path.contains("authenticate") -> MockResponse()
-    // PURCHASE_EVENT_DISABLED:                         .setResponseCode(200)
-    // PURCHASE_EVENT_DISABLED:                         .setHeader("Content-Type", "application/json")
-    // PURCHASE_EVENT_DISABLED:                         .setBody("""{"linksquared":"test-superboard-id-123","uri_scheme":"testapp"}""")
-    // PURCHASE_EVENT_DISABLED:                     path.contains("device_for_vendor_id") -> MockResponse()
-    // PURCHASE_EVENT_DISABLED:                         .setResponseCode(200)
-    // PURCHASE_EVENT_DISABLED:                         .setHeader("Content-Type", "application/json")
-    // PURCHASE_EVENT_DISABLED:                         .setBody("""{"last_seen":$lastSeenJson}""")
-    // PURCHASE_EVENT_DISABLED:                     path.contains("data_for_device") -> MockResponse()
-    // PURCHASE_EVENT_DISABLED:                         .setResponseCode(200)
-    // PURCHASE_EVENT_DISABLED:                         .setHeader("Content-Type", "application/json")
-    // PURCHASE_EVENT_DISABLED:                         .setBody("""{"link":"https://test.superboard.io/resolved-purchase","data":null}""")
-    // PURCHASE_EVENT_DISABLED:                         .setBodyDelay(3, java.util.concurrent.TimeUnit.SECONDS) // slow resolution
-    // PURCHASE_EVENT_DISABLED:                     path.contains("add_payment_event") -> MockResponse()
-    // PURCHASE_EVENT_DISABLED:                         .setResponseCode(200)
-    // PURCHASE_EVENT_DISABLED:                         .setHeader("Content-Type", "application/json")
-    // PURCHASE_EVENT_DISABLED:                         .setBody("{}")
-    // PURCHASE_EVENT_DISABLED:                     else -> MockResponse()
-    // PURCHASE_EVENT_DISABLED:                         .setResponseCode(200)
-    // PURCHASE_EVENT_DISABLED:                         .setHeader("Content-Type", "application/json")
-    // PURCHASE_EVENT_DISABLED:                         .setBody("{}")
-    // PURCHASE_EVENT_DISABLED:                 }
-    // PURCHASE_EVENT_DISABLED:             }
-    // PURCHASE_EVENT_DISABLED:         }
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         // Cold start with deeplink
-    // PURCHASE_EVENT_DISABLED:         val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
-    // PURCHASE_EVENT_DISABLED:             data = Uri.parse("testapp://open?link=purchase-timing")
-    // PURCHASE_EVENT_DISABLED:         }
-    // PURCHASE_EVENT_DISABLED:         val activityController = Robolectric.buildActivity(TestActivity::class.java, deeplinkIntent)
-    // PURCHASE_EVENT_DISABLED:         activityController.create()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         SuperBoard.setOnDeeplinkReceivedListener(activityController.get()) { _ -> }
-    // PURCHASE_EVENT_DISABLED:         activityController.start()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         // Log a purchase IMMEDIATELY — before the 3s delayed data_for_device resolves.
-    // PURCHASE_EVENT_DISABLED:         // At this point linkForFutureActions has been set to the raw URI by Call #1
-    // PURCHASE_EVENT_DISABLED:         // in getDataForDevice(), but Call #2 (with resolved link) hasn't happened yet.
-    // PURCHASE_EVENT_DISABLED:         E2ETestUtils.enableImmediateEventSending()
-    // PURCHASE_EVENT_DISABLED:         SuperBoard.logCustomPurchase(
-    // PURCHASE_EVENT_DISABLED:             type = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:             priceInCents = 499,
-    // PURCHASE_EVENT_DISABLED:             currency = "USD",
-    // PURCHASE_EVENT_DISABLED:             productId = "early_purchase"
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         // Wait for payment event to be captured
-    // PURCHASE_EVENT_DISABLED:         E2ETestUtils.waitForCondition(timeoutMs = 15_000, description = "payment event sent") {
-    // PURCHASE_EVENT_DISABLED:             E2ETestUtils.enableImmediateEventSending()
-    // PURCHASE_EVENT_DISABLED:             synchronized(capturedPaymentBodies) {
-    // PURCHASE_EVENT_DISABLED:                 capturedPaymentBodies.any { it.contains("\"product_id\":\"early_purchase\"") }
-    // PURCHASE_EVENT_DISABLED:             }
-    // PURCHASE_EVENT_DISABLED:         }
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         // Assert - payment event should NOT have the resolved link because:
-    // PURCHASE_EVENT_DISABLED:         // 1. Payment events are not retroactively patched by addLinkToEvents()
-    // PURCHASE_EVENT_DISABLED:         // 2. At the time of logPurchase, linkForFutureActions was set to the raw URI
-    // PURCHASE_EVENT_DISABLED:         //    by Call #1 (setLinkToNewFutureActions with the raw intent data)
-    // PURCHASE_EVENT_DISABLED:         // The payment event gets whatever linkForFutureActions holds at creation time.
-    // PURCHASE_EVENT_DISABLED:         val paymentBody = synchronized(capturedPaymentBodies) {
-    // PURCHASE_EVENT_DISABLED:             capturedPaymentBodies.first { it.contains("\"product_id\":\"early_purchase\"") }
-    // PURCHASE_EVENT_DISABLED:         }
-    // PURCHASE_EVENT_DISABLED:         assertTrue(
-    // PURCHASE_EVENT_DISABLED:             "Payment event should contain price_cents 499, got: ${paymentBody.take(400)}",
-    // PURCHASE_EVENT_DISABLED:             paymentBody.contains("\"price_cents\":499")
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:         assertTrue(
-    // PURCHASE_EVENT_DISABLED:             "Payment event should contain currency USD",
-    // PURCHASE_EVENT_DISABLED:             paymentBody.contains("\"currency\":\"USD\"")
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:         assertTrue(
-    // PURCHASE_EVENT_DISABLED:             "Payment event should contain event_type buy",
-    // PURCHASE_EVENT_DISABLED:             paymentBody.contains("\"event_type\":\"buy\"")
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:         // Payment gets a link (either raw URI or resolved depending on timing),
-    // PURCHASE_EVENT_DISABLED:         // but it should NOT be null since linkForFutureActions was set by Call #1
-    // PURCHASE_EVENT_DISABLED:         assertTrue(
-    // PURCHASE_EVENT_DISABLED:             "Payment event should have a link value (raw or resolved), got: ${paymentBody.take(400)}",
-    // PURCHASE_EVENT_DISABLED:             paymentBody.contains("\"link\":")
-    // PURCHASE_EVENT_DISABLED:         )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:         activityController.stop().destroy()
-    // PURCHASE_EVENT_DISABLED:     } finally {
-    // PURCHASE_EVENT_DISABLED:         Dispatchers.resetMain()
-    // PURCHASE_EVENT_DISABLED:     }
-    // PURCHASE_EVENT_DISABLED: }
-
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `test payment event without deeplink has no link attribution`() {
-    // PURCHASE_EVENT_DISABLED:     // Arrange - no deeplink, so linkForFutureActions stays null.
-    // PURCHASE_EVENT_DISABLED:     // Payment logged after auth should have null link.
-    // PURCHASE_EVENT_DISABLED:     installEventCapturingDispatcher(lastSeen = null)
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
-    // PURCHASE_EVENT_DISABLED:     E2ETestUtils.enableImmediateEventSending()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     val activityController = Robolectric.buildActivity(TestActivity::class.java)
-    // PURCHASE_EVENT_DISABLED:     activityController.create().start()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     // Wait for initial events
-    // PURCHASE_EVENT_DISABLED:     waitForEvent("install")
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     // Log a custom purchase — no deeplink was opened, so no link
-    // PURCHASE_EVENT_DISABLED:     SuperBoard.logCustomPurchase(
-    // PURCHASE_EVENT_DISABLED:         type = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:         priceInCents = 299,
-    // PURCHASE_EVENT_DISABLED:         currency = "GBP",
-    // PURCHASE_EVENT_DISABLED:         productId = "no_link_purchase"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     // Wait for payment event
-    // PURCHASE_EVENT_DISABLED:     E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "payment event without link") {
-    // PURCHASE_EVENT_DISABLED:         E2ETestUtils.enableImmediateEventSending()
-    // PURCHASE_EVENT_DISABLED:         synchronized(capturedPaymentBodies) {
-    // PURCHASE_EVENT_DISABLED:             capturedPaymentBodies.any { it.contains("\"product_id\":\"no_link_purchase\"") }
-    // PURCHASE_EVENT_DISABLED:         }
-    // PURCHASE_EVENT_DISABLED:     }
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     // Assert - payment event should have null link since no deeplink was opened
-    // PURCHASE_EVENT_DISABLED:     val paymentBody = synchronized(capturedPaymentBodies) {
-    // PURCHASE_EVENT_DISABLED:         capturedPaymentBodies.first { it.contains("\"product_id\":\"no_link_purchase\"") }
-    // PURCHASE_EVENT_DISABLED:     }
-    // PURCHASE_EVENT_DISABLED:     assertTrue(
-    // PURCHASE_EVENT_DISABLED:         "Payment event should contain price_cents 299, got: ${paymentBody.take(400)}",
-    // PURCHASE_EVENT_DISABLED:         paymentBody.contains("\"price_cents\":299")
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:     assertTrue(
-    // PURCHASE_EVENT_DISABLED:         "Payment event should contain currency GBP",
-    // PURCHASE_EVENT_DISABLED:         paymentBody.contains("\"currency\":\"GBP\"")
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:     assertTrue(
-    // PURCHASE_EVENT_DISABLED:         "Payment event should contain event_type buy",
-    // PURCHASE_EVENT_DISABLED:         paymentBody.contains("\"event_type\":\"buy\"")
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:     // Without a deeplink, link should be null or absent
-    // PURCHASE_EVENT_DISABLED:     val hasNullLink = paymentBody.contains("\"link\":null")
-    // PURCHASE_EVENT_DISABLED:     val hasNoLink = !paymentBody.contains("\"link\":")
-    // PURCHASE_EVENT_DISABLED:     assertTrue(
-    // PURCHASE_EVENT_DISABLED:         "Payment event should have null or no link when no deeplink opened, got: ${paymentBody.take(400)}",
-    // PURCHASE_EVENT_DISABLED:         hasNullLink || hasNoLink
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     activityController.stop().destroy()
-    // PURCHASE_EVENT_DISABLED: }
-
-    // ==================== Deferred Attribution (Install Referrer) Tests ====================
-    //
-    // These tests simulate the deferred attribution path: no deeplink intent, install
-    // referrer returns null (Robolectric), so the SDK calls data_for_device with null
-    // link. The backend's data_for_device response is DELAYED (3s) to ensure events
-    // (INSTALL, REINSTALL, APP_OPEN) are logged locally BEFORE the attribution link
-    // arrives. When the response returns a resolved link, addLinkToEvents()
-    // retroactively patches the stored events. We verify that the final events sent to
-    // the backend carry the resolved link — proving retroactive patching works.
-
-    /**
-     * Install a dispatcher that delays the data_for_device response to simulate slow
-     * deferred attribution. Events are captured. All other endpoints respond immediately.
-     */
     private fun installDeferredAttributionDispatcher(
         lastSeen: String? = null,
         resolvedLink: String,
@@ -1278,9 +851,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test install event gets resolved link via deferred attribution`() {
-        // No deeplink intent. data_for_device is delayed 3s to ensure the INSTALL event
-        // is logged locally before the attribution link arrives. When the response comes
-        // back, addLinkToEvents() retroactively patches the stored event.
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             installDeferredAttributionDispatcher(
@@ -1289,20 +859,11 @@ class EventTrackingE2ETest {
             )
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
-            // Do NOT enable immediate sending — delayEvents=true keeps events in storage
-            // so addLinkToEvents can patch them when the deferred link arrives
 
-            // Plain activity start (no deeplink) → onStart → handleIntent →
-            // getDataForDevice(null, delayEvents=true):
-            //   Call #1: setLinkToNewFutureActions(null) → events logged with null link
-            //   Network: data_for_device POST (delayed 3s)
-            //   Call #2: setLinkToNewFutureActions(resolvedLink) → addLinkToEvents patches INSTALL
             val activityController = Robolectric.buildActivity(TestActivity::class.java)
             activityController.create()
             activityController.start()
 
-            // Verify no events sent yet — data_for_device is still pending (3s delay),
-            // and delayEvents=true blocks sending
             val eventsSentDuringDelay = synchronized(capturedEventBodies) {
                 capturedEventBodies.filter { it.contains("\"event\":\"install\"") }
             }
@@ -1311,15 +872,12 @@ class EventTrackingE2ETest {
                 eventsSentDuringDelay.isEmpty()
             )
 
-            // Wait for data_for_device response (3s delay) + addLinkToEvents patching
             Thread.sleep(4000)
 
-            // Enable sending and trigger flush
             E2ETestUtils.enableImmediateEventSending()
             activityController.pause().stop()
             activityController.start().resume()
 
-            // Wait for install event with the deferred attribution link
             E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "install event with deferred attribution link") {
                 E2ETestUtils.enableImmediateEventSending()
                 synchronized(capturedEventBodies) {
@@ -1329,8 +887,6 @@ class EventTrackingE2ETest {
                 }
             }
 
-            // Assert — the install event arrives at the backend with the resolved link,
-            // proving it was retroactively patched after being logged locally without one
             assertEventHasLink("install", "https://test.superboard.io/deferred-install")
 
             activityController.stop().destroy()
@@ -1341,8 +897,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test reinstall event gets resolved link via deferred attribution`() {
-        // Returning device (lastSeen set), no deeplink. data_for_device delayed 3s.
-        // REINSTALL event logged locally first, then retroactively patched with link.
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             installDeferredAttributionDispatcher(
@@ -1352,12 +906,10 @@ class EventTrackingE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Plain activity start (no deeplink)
             val activityController = Robolectric.buildActivity(TestActivity::class.java)
             activityController.create()
             activityController.start()
 
-            // Verify no events sent yet during the delay window
             val eventsSentDuringDelay = synchronized(capturedEventBodies) {
                 capturedEventBodies.filter { it.contains("\"event\":\"reinstall\"") }
             }
@@ -1366,15 +918,12 @@ class EventTrackingE2ETest {
                 eventsSentDuringDelay.isEmpty()
             )
 
-            // Wait for deferred attribution resolution (3s delay + margin)
             Thread.sleep(4000)
 
-            // Enable sending and trigger flush
             E2ETestUtils.enableImmediateEventSending()
             activityController.pause().stop()
             activityController.start().resume()
 
-            // Wait for reinstall event with the deferred attribution link
             E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "reinstall event with deferred attribution link") {
                 E2ETestUtils.enableImmediateEventSending()
                 synchronized(capturedEventBodies) {
@@ -1384,7 +933,6 @@ class EventTrackingE2ETest {
                 }
             }
 
-            // Assert — reinstall event retroactively patched with deferred link
             assertEventHasLink("reinstall", "https://test.superboard.io/deferred-reinstall")
             assertEquals("Should not send install for returning device", 0, eventCount("install"))
 
@@ -1396,8 +944,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test app_open event gets resolved link via deferred attribution`() {
-        // No deeplink. data_for_device delayed 3s. APP_OPEN event logged locally
-        // before the link arrives, then retroactively patched with the resolved link.
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             installDeferredAttributionDispatcher(
@@ -1407,12 +953,10 @@ class EventTrackingE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Plain activity start (no deeplink)
             val activityController = Robolectric.buildActivity(TestActivity::class.java)
             activityController.create()
             activityController.start()
 
-            // Verify no events sent yet during the delay window
             val eventsSentDuringDelay = synchronized(capturedEventBodies) {
                 capturedEventBodies.filter { it.contains("\"event\":\"app_open\"") }
             }
@@ -1421,15 +965,12 @@ class EventTrackingE2ETest {
                 eventsSentDuringDelay.isEmpty()
             )
 
-            // Wait for deferred attribution resolution (3s delay + margin)
             Thread.sleep(4000)
 
-            // Enable sending and trigger flush
             E2ETestUtils.enableImmediateEventSending()
             activityController.pause().stop()
             activityController.start().resume()
 
-            // Wait for app_open event with the deferred attribution link
             E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "app_open event with deferred attribution link") {
                 E2ETestUtils.enableImmediateEventSending()
                 synchronized(capturedEventBodies) {
@@ -1439,7 +980,6 @@ class EventTrackingE2ETest {
                 }
             }
 
-            // Assert — app_open event retroactively patched with deferred link
             assertEventHasLink("app_open", "https://test.superboard.io/deferred-appopen")
 
             activityController.stop().destroy()
@@ -1447,19 +987,6 @@ class EventTrackingE2ETest {
             Dispatchers.resetMain()
         }
     }
-
-    // ==================== Time Spent Event Tests ====================
-    //
-    // TIME_SPENT events track user engagement duration. They are:
-    // - Created (with engagementTime=null) on app launch and each foreground transition
-    // - Finalized (engagementTime calculated) when the app goes to background or a new link is set
-    // - Sent to the backend on the next foreground transition via sendTimeSpentEventsToBackend()
-    // - NOT retroactively patched by addLinkToEvents() — link is set at node creation time
-    //
-    // The SDK's onAppForegrounded() runs on serialDispatcher (IO.limitedParallelism(1)),
-    // serialized behind handleIntent from onStart. onAppBackgrounded() finalizes
-    // TIME_SPENT on a tracked job. The next foreground awaits that job before reading
-    // storage, so lifecycle ordering does not depend on dispatcher timing.
 
     private fun assertTimeSpentEventSent() {
         val body = synchronized(capturedEventBodies) {
@@ -1511,33 +1038,19 @@ class EventTrackingE2ETest {
         )
     }
 
-    /**
-     * Perform a full background→foreground cycle. The production lifecycle contract
-     * guarantees that foreground sending awaits the preceding background finalization.
-     */
     private fun performBackgroundForegroundCycle(
         activityController: org.robolectric.android.controller.ActivityController<TestActivity>
     ) {
-        // Use the full lifecycle sequence (pause→stop, start→resume) because
-        // Robolectric skips onActivityStopped if the activity hasn't been resumed.
-        // However, Robolectric also double-dispatches onActivityStarted during
-        // start→resume on a restarted AppCompatActivity, inflating numStarted.
-        // Reset numStarted after resume to ensure the next stop() correctly
-        // decrements to 0 and fires onAppBackgrounded.
         activityController.pause().stop()
 
         activityController.start().resume()
-        E2ETestUtils.setNumStarted(1) // correct for Robolectric double-dispatch
+        E2ETestUtils.setNumStarted(1)
         E2ETestUtils.enableImmediateEventSending()
-        // Give serialDispatcher time to run handleIntent + onAppForegrounded (which sends TIME_SPENT)
         Thread.sleep(3000)
     }
 
     @Test
     fun `test TIME_SPENT event is sent after background foreground cycle`() {
-        // A TIME_SPENT node is created on app launch. When the app goes to background,
-        // the node is finalized (engagement_time calculated). On the next foreground,
-        // sendTimeSpentEventsToBackend() sends the completed event.
         installEventCapturingDispatcher(lastSeen = null)
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
@@ -1546,14 +1059,11 @@ class EventTrackingE2ETest {
         val activityController = Robolectric.buildActivity(TestActivity::class.java)
         activityController.create().start().resume()
 
-        // Wait for initial events + let serialDispatcher complete handleIntent + onAppForegrounded
         waitForEvent("install")
         Thread.sleep(2000)
 
-        // Background→foreground cycle to finalize and send TIME_SPENT
         performBackgroundForegroundCycle(activityController)
 
-        // Wait for TIME_SPENT event
         E2ETestUtils.waitForCondition(timeoutMs = 15_000, description = "time_spent event sent to backend") {
             E2ETestUtils.enableImmediateEventSending()
             synchronized(capturedEventBodies) {
@@ -1561,7 +1071,6 @@ class EventTrackingE2ETest {
             }
         }
 
-        // Assert
         assertTimeSpentEventSent()
         assertTimeSpentHasEngagementTime()
 
@@ -1570,8 +1079,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test TIME_SPENT event without deeplink has no link attribution`() {
-        // When no deeplink is active, the TIME_SPENT node is created with
-        // linkForFutureActions=null, so the event should have no link.
         installEventCapturingDispatcher(lastSeen = null)
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
@@ -1583,7 +1090,6 @@ class EventTrackingE2ETest {
         waitForEvent("install")
         Thread.sleep(2000)
 
-        // Background→foreground cycle to flush TIME_SPENT
         performBackgroundForegroundCycle(activityController)
 
         E2ETestUtils.waitForCondition(timeoutMs = 15_000, description = "time_spent event without link") {
@@ -1593,7 +1099,6 @@ class EventTrackingE2ETest {
             }
         }
 
-        // Assert — no deeplink was opened, so TIME_SPENT should have null link
         assertTimeSpentEventSent()
         assertTimeSpentHasNoLink()
 
@@ -1602,11 +1107,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test TIME_SPENT event carries deeplink link when set before backgrounding`() {
-        // When a deeplink is resolved, setLinkToNewFutureActions() calls
-        // markTimeSpentNode(startingNode=false, link=link), which finalizes the old
-        // TIME_SPENT node and creates a new one with the resolved link. The new node
-        // carries the link from that point onward. When the app goes to background,
-        // the node is finalized; on the next foreground it's sent with the link.
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             installDeeplinkEventCapturingDispatcher(
@@ -1616,7 +1116,6 @@ class EventTrackingE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Cold start with deeplink
             val deeplinkIntent = Intent(Intent.ACTION_VIEW).apply {
                 data = Uri.parse("testapp://open?link=time-spent-link")
             }
@@ -1626,14 +1125,10 @@ class EventTrackingE2ETest {
             SuperBoard.setOnDeeplinkReceivedListener(activityController.get()) { _ -> }
             activityController.start()
 
-            // Wait for deeplink resolution + handleIntent + onAppForegrounded to complete
-            // on serialDispatcher. setLinkToNewFutureActions creates a new TIME_SPENT
-            // node with the resolved link.
             Thread.sleep(3000)
 
             activityController.resume()
 
-            // Background→foreground to finalize and send the TIME_SPENT
             performBackgroundForegroundCycle(activityController)
 
             E2ETestUtils.waitForCondition(timeoutMs = 15_000, description = "time_spent event with deeplink") {
@@ -1646,7 +1141,6 @@ class EventTrackingE2ETest {
                 }
             }
 
-            // Assert — TIME_SPENT event should carry the resolved deeplink
             assertTimeSpentHasLink("https://test.superboard.io/time-spent-link")
             assertTimeSpentHasEngagementTime()
 
@@ -1658,15 +1152,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test TIME_SPENT event is not retroactively patched by deeplink resolution`() {
-        // addLinkToEvents() explicitly skips TIME_SPENT events. If a TIME_SPENT node
-        // was created BEFORE a deeplink resolves (with null link), it should keep its
-        // null link — only the NEW node created by setLinkToNewFutureActions gets the link.
-        //
-        // Flow:
-        // 1. App launches → TIME_SPENT node created with null link
-        // 2. Deferred attribution resolves → addLinkToEvents patches INSTALL/APP_OPEN
-        //    but NOT TIME_SPENT → old TIME_SPENT finalized, new one created with link
-        // 3. We check that the first TIME_SPENT sent (the old one) has null link
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             installDeferredAttributionDispatcher(
@@ -1676,15 +1161,11 @@ class EventTrackingE2ETest {
 
             E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
 
-            // Plain activity start → TIME_SPENT node created with null link
-            // (linkForFutureActions is null, data_for_device delayed 3s)
             val activityController = Robolectric.buildActivity(TestActivity::class.java)
             activityController.create().start().resume()
 
-            // Wait for data_for_device to resolve (3s delay) + serial dispatcher chain
             Thread.sleep(5000)
 
-            // Background→foreground to finalize + send TIME_SPENT events
             performBackgroundForegroundCycle(activityController)
 
             E2ETestUtils.waitForCondition(timeoutMs = 15_000, description = "time_spent events sent") {
@@ -1694,9 +1175,6 @@ class EventTrackingE2ETest {
                 }
             }
 
-            // Assert — the first TIME_SPENT event (created before deferred attribution
-            // resolved) should have null/no link, because addLinkToEvents does not patch
-            // TIME_SPENT events.
             val timeSpentEvents = synchronized(capturedEventBodies) {
                 capturedEventBodies.filter { it.contains("\"event\":\"time_spent\"") }
             }
@@ -1710,8 +1188,6 @@ class EventTrackingE2ETest {
                 firstHasNullLink || firstHasNoLink
             )
 
-            // If there's a second TIME_SPENT (the one created after link resolution),
-            // it should carry the resolved link
             if (timeSpentEvents.size >= 2) {
                 val secondTimeSpent = timeSpentEvents[1]
                 assertTrue(
@@ -1728,9 +1204,6 @@ class EventTrackingE2ETest {
 
     @Test
     fun `test multiple background foreground cycles produce multiple TIME_SPENT events`() {
-        // Each background→foreground cycle should finalize one TIME_SPENT event and
-        // create a new node. After 3 cycles we expect multiple completed TIME_SPENT
-        // events sent to the backend.
         installEventCapturingDispatcher(lastSeen = null)
 
         E2ETestUtils.configureAndWaitForAuthOnly(application, baseURL = mockWebServer.url("/").toString())
@@ -1738,17 +1211,15 @@ class EventTrackingE2ETest {
 
         val activityController = Robolectric.buildActivity(TestActivity::class.java)
         activityController.create().start().resume()
-        E2ETestUtils.setNumStarted(1) // correct for Robolectric double-dispatch
+        E2ETestUtils.setNumStarted(1)
 
         waitForEvent("install")
         Thread.sleep(2000)
 
-        // Perform 3 background→foreground cycles
         repeat(3) {
             performBackgroundForegroundCycle(activityController)
         }
 
-        // Wait for at least one TIME_SPENT event
         E2ETestUtils.waitForCondition(timeoutMs = 15_000, description = "time_spent events from multiple cycles") {
             E2ETestUtils.enableImmediateEventSending()
             synchronized(capturedEventBodies) {
@@ -1756,7 +1227,6 @@ class EventTrackingE2ETest {
             }
         }
 
-        // Assert — should have multiple TIME_SPENT events
         val timeSpentCount = synchronized(capturedEventBodies) {
             capturedEventBodies.count { it.contains("\"event\":\"time_spent\"") }
         }
@@ -1765,7 +1235,6 @@ class EventTrackingE2ETest {
             timeSpentCount >= 2
         )
 
-        // All TIME_SPENT events should have engagement_time set
         val timeSpentEvents = synchronized(capturedEventBodies) {
             capturedEventBodies.filter { it.contains("\"event\":\"time_spent\"") }
         }

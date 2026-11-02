@@ -4,7 +4,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AdminBrandingProvider } from "../../../../../packages/admin/src/lib/admin-branding-context";
 import { render } from "../utils/render.tsx";
 
-// Mock router
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual("@tanstack/react-router");
 	return {
@@ -18,7 +17,6 @@ vi.mock("@tanstack/react-router", async () => {
 	};
 });
 
-// Mock API
 const mockRequestSignup = vi.fn().mockResolvedValue({ success: true });
 const mockVerifySignupToken = vi
 	.fn()
@@ -34,18 +32,12 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 	};
 });
 
-// Mock WebAuthn so PasskeyRegistration doesn't bail out
 Object.defineProperty(window, "PublicKeyCredential", {
 	value: function PublicKeyCredential() {},
 	writable: true,
 });
 
-// Import after mocks
 const { SignupPage } = await import("../../../../../packages/admin/src/components/SignupPage");
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 
 const RESEND_COOLDOWN_REGEX = /Resend in \d+s/;
 
@@ -53,7 +45,6 @@ describe("SignupPage", () => {
 	beforeEach(() => {
 		mockRequestSignup.mockClear();
 		mockVerifySignupToken.mockClear();
-		// Clean URL params
 		window.history.replaceState({}, "", window.location.pathname);
 	});
 
@@ -116,7 +107,6 @@ describe("SignupPage", () => {
 	it("submit invalid email (no dot) shows validation error", async () => {
 		const screen = await render(<SignupPage />);
 		const input = screen.getByPlaceholder("you@company.com");
-		// Use an email with @ but no dot - passes browser validation but fails component validation
 		await input.fill("test@nodot");
 		await screen.getByText("Continue").click();
 		await expect
@@ -129,7 +119,6 @@ describe("SignupPage", () => {
 		const input = screen.getByPlaceholder("you@company.com");
 		await input.fill("test@example.com");
 		await screen.getByText("Continue").click();
-		// Should advance to check-email: the h1 heading and the card copy.
 		await expect
 			.element(screen.getByRole("heading", { level: 1, name: "Check your email" }))
 			.toBeInTheDocument();
@@ -148,11 +137,8 @@ describe("SignupPage", () => {
 		const screen = await render(<SignupPage />);
 		await screen.getByPlaceholder("you@company.com").fill("test@example.com");
 		await screen.getByText("Continue").click();
-		// Should see resend button
 		await expect.element(screen.getByText("Resend email")).toBeInTheDocument();
-		// Click resend
 		await screen.getByText("Resend email").click();
-		// Should show cooldown text
 		await expect.element(screen.getByText(RESEND_COOLDOWN_REGEX)).toBeInTheDocument();
 	});
 
@@ -160,7 +146,6 @@ describe("SignupPage", () => {
 		mockVerifySignupToken.mockRejectedValue(
 			Object.assign(new Error("This link has expired"), { code: "token_expired" }),
 		);
-		// Navigate with token in URL
 		window.history.replaceState({}, "", "?token=expired-token");
 		const screen = await render(<SignupPage />);
 		await expect.element(screen.getByText("Link expired")).toBeInTheDocument();
@@ -184,9 +169,6 @@ describe("SignupPage", () => {
 		await expect.element(screen.getByText("Account exists")).toBeInTheDocument();
 	});
 
-	// Regression test for #639 / PR #705: the signup page must reflect the
-	// configured admin.logo/siteName (white-label branding), not the stock
-	// hardcoded EmDash mark — same as LoginPage.
 	it("renders the configured admin logo/site name instead of the stock mark", async () => {
 		const screen = await render(
 			<AdminBrandingProvider

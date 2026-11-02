@@ -1,10 +1,3 @@
-/**
- * Menus list and create endpoints
- *
- * GET  /_emdash/api/menus[?locale=xx] - List menus (optionally filtered by locale)
- * POST /_emdash/api/menus              - Create menu (body may include locale & translationOf)
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

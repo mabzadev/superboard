@@ -1,13 +1,4 @@
-/**
- * standard.site record builders
- *
- * Builds site.standard.publication and site.standard.document records
- * from EmDash content.
- */
-
 import { buildContentPath, getContentData, getContentString, getString } from "./content.js";
-
-// ── Types ───────────────────────────────────────────────────────
 
 export interface StandardPublication {
 	$type: "site.standard.publication";
@@ -18,18 +9,15 @@ export interface StandardPublication {
 
 export interface StandardDocument {
 	$type: "site.standard.document";
-	/** AT-URI of the publication record, or HTTPS URL for loose documents */
 	site: string;
 	title: string;
 	publishedAt: string;
-	/** Path component -- combined with publication URL to form canonical URL */
 	path?: string;
 	description?: string;
 	textContent?: string;
 	tags?: string[];
 	updatedAt?: string;
 	coverImage?: BlobRefLike;
-	/** Strong reference to a Bluesky post for off-platform comments */
 	bskyPostRef?: { uri: string; cid: string };
 }
 
@@ -40,11 +28,6 @@ interface BlobRefLike {
 	size: number;
 }
 
-// ── Builders ────────────────────────────────────────────────────
-
-/**
- * Build a site.standard.publication record.
- */
 export function buildPublication(
 	siteUrl: string,
 	siteName: string,
@@ -58,9 +41,6 @@ export function buildPublication(
 	};
 }
 
-/**
- * Build a site.standard.document record from EmDash content.
- */
 export function buildDocument(opts: {
 	publicationUri: string;
 	collection?: string;
@@ -118,13 +98,10 @@ export function buildDocument(opts: {
 	return doc;
 }
 
-// ── Helpers ─────────────────────────────────────────────────────
-
 function stripTrailingSlash(url: string): string {
 	return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
-// Pre-compiled regexes
 const HTML_TAG_RE = /<[^>]+>/g;
 const NBSP_RE = /&nbsp;/g;
 const AMP_RE = /&amp;/g;
@@ -136,10 +113,6 @@ const WHITESPACE_RE = /\s+/g;
 const HASH_PREFIX_RE = /^#/;
 const MAX_TEXT_CONTENT_LENGTH = 10_000;
 
-/**
- * Extract tags from content. Handles both string arrays and
- * tag objects with a name property.
- */
 function extractTags(content: Record<string, unknown>): string[] {
 	const raw = content.tags || getContentData(content).tags;
 	if (!Array.isArray(raw)) return [];
@@ -160,12 +133,7 @@ function extractTags(content: Record<string, unknown>): string[] {
 	return tags;
 }
 
-/**
- * Extract plain text from content for the textContent field.
- * Strips HTML tags and collapses whitespace.
- */
 export function extractPlainText(content: Record<string, unknown>): string | undefined {
-	// Try common content field names
 	const body =
 		getContentString(content, "body") ||
 		getContentString(content, "content") ||
@@ -173,8 +141,6 @@ export function extractPlainText(content: Record<string, unknown>): string | und
 
 	if (!body) return undefined;
 
-	// Strip HTML tags (simple -- not a full parser, but sufficient for plain text extraction).
-	// Decode &amp; last to avoid double-decoding (e.g. &amp;lt; -> &lt; -> <).
 	let text = body
 		.replace(HTML_TAG_RE, " ")
 		.replace(NBSP_RE, " ")
@@ -188,7 +154,6 @@ export function extractPlainText(content: Record<string, unknown>): string | und
 
 	if (!text) return undefined;
 
-	// Truncate to 10,000 chars to avoid exceeding PDS record size limits (~100KB)
 	if (text.length > MAX_TEXT_CONTENT_LENGTH) {
 		text = text.slice(0, MAX_TEXT_CONTENT_LENGTH - 1) + "\u2026";
 	}

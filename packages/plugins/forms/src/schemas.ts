@@ -1,19 +1,11 @@
-/**
- * Zod schemas for route input validation.
- */
-
 import { z } from "astro/zod";
 
-/** Matches http(s) scheme at start of URL */
 const HTTP_SCHEME_RE = /^https?:\/\//i;
 
-/** Validates that a URL string uses http or https scheme. Rejects javascript:/data: URI XSS vectors. */
 const httpUrl = z
 	.string()
 	.url()
 	.refine((url) => HTTP_SCHEME_RE.test(url), "URL must use http or https");
-
-// ─── Field Schemas ───────────────────────────────────────────────
 
 const fieldOptionSchema = z.object({
 	label: z.string().min(1),
@@ -80,8 +72,6 @@ const formPageSchema = z.object({
 	fields: z.array(formFieldSchema).min(1, "Each page must have at least one field"),
 });
 
-// ─── Settings Schema ─────────────────────────────────────────────
-
 const autoresponderSchema = z
 	.object({
 		subject: z.string().min(1),
@@ -103,8 +93,6 @@ const formSettingsSchema = z.object({
 	nextLabel: z.string().optional(),
 	prevLabel: z.string().optional(),
 });
-
-// ─── Form CRUD Schemas ──────────────────────────────────────────
 
 export const formCreateSchema = z.object({
 	name: z.string().min(1).max(200),
@@ -153,8 +141,6 @@ export const definitionSchema = z.object({
 
 export type DefinitionInput = z.infer<typeof definitionSchema>;
 
-// ─── Submission Schemas ──────────────────────────────────────────
-
 export const submitSchema = z.object({
 	formId: z.string().min(1),
 	data: z.record(z.string(), z.unknown()),
@@ -200,8 +186,6 @@ export const exportSchema = z.object({
 	from: z.string().datetime().optional(),
 	to: z.string().datetime().optional(),
 });
-
-// ─── Type Exports ────────────────────────────────────────────────
 
 export type FormCreateInput = z.infer<typeof formCreateSchema>;
 export type FormUpdateInput = z.infer<typeof formUpdateSchema>;

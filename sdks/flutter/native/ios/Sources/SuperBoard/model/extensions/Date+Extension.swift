@@ -1,14 +1,6 @@
-//
-//  Date+Extension.swift
-//
-//  superboard
-//
-
 import Foundation
 
 extension Date {
-
-    // MARK: - Cached formatters
 
     private static let _backendDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -24,26 +16,14 @@ extension Date {
         return formatter
     }()
 
-    // MARK: - Epoch helpers
-
-    /// Converts a `Date` object to seconds since the Unix epoch.
-    ///
-    /// - Returns: The number of seconds since the Unix epoch (January 1, 1970, 00:00:00 UTC).
     func toSeconds() -> Int {
         return Int(self.timeIntervalSince1970)
     }
 
-    /// Creates a `Date` object from a given number of seconds since the Unix epoch.
-    ///
-    /// - Parameter seconds: The number of seconds since the Unix epoch.
-    /// - Returns: A `Date` object representing the specified number of seconds since the Unix epoch.
     static func fromSeconds(_ seconds: Int) -> Date {
         return Date(timeIntervalSince1970: TimeInterval(seconds))
     }
 
-    /// Returns the number of days between the instance date and the provided date.
-    /// - Parameter date: The date to compare with.
-    /// - Returns: The difference in days between the two dates.
     func daysBetween(_ date: Date) -> Int? {
         let calendar = Calendar.current
         let startOfSelf = calendar.startOfDay(for: self)
@@ -52,24 +32,14 @@ extension Date {
         return components.day
     }
 
-    /// Parses a string representing a date in the format "yyyy-MM-dd" and returns the corresponding `Date` object.
-    ///
-    /// - Parameter string: The string representing the date.
-    /// - Returns: A `Date` object representing the date parsed from the string, or nil if parsing fails.
     static func dateOnlyFromBackend(string: String) -> Date? {
         return _dateOnlyFormatter.date(from: string)
     }
 
-    /// Returns a string representation of the date formatted for backend communication.
-    ///
-    /// - Returns: A string representation of the date formatted for backend communication.
     func backendDateString() -> String {
         return Date._backendDateFormatter.string(from: self)
     }
 
-    /// Returns a date formatter configured for backend communication.
-    ///
-    /// - Returns: A `DateFormatter` instance configured with the appropriate date format for backend communication.
     static func backendDateFormatter() -> DateFormatter {
         return _backendDateFormatter
     }

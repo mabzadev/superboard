@@ -1,7 +1,3 @@
-/**
- * Tests for WXR parser
- */
-
 import { Readable } from "node:stream";
 
 import { describe, it, expect } from "vitest";
@@ -375,19 +371,15 @@ describe("parseWxr", () => {
 
 		const result = await parseWxr(createStream(wxr));
 
-		// Check terms array includes nav_menu term
 		expect(result.terms.some((t) => t.taxonomy === "nav_menu")).toBe(true);
 
-		// Check nav_menu_item posts are in posts array
 		expect(result.posts.filter((p) => p.postType === "nav_menu_item")).toHaveLength(2);
 
-		// Check structured navMenus
 		expect(result.navMenus).toHaveLength(1);
 		expect(result.navMenus[0]?.name).toBe("main-menu");
 		expect(result.navMenus[0]?.id).toBe(5);
 		expect(result.navMenus[0]?.items).toHaveLength(2);
 
-		// Check menu items are sorted by menu_order
 		expect(result.navMenus[0]?.items[0]?.title).toBe("Home");
 		expect(result.navMenus[0]?.items[0]?.type).toBe("custom");
 		expect(result.navMenus[0]?.items[0]?.url).toBe("https://example.com/");
@@ -467,8 +459,6 @@ describe("parseWxr", () => {
 			expect(result.posts).toHaveLength(2);
 			expect(result.posts[0]?.locale).toBe("en");
 			expect(result.posts[1]?.locale).toBe("ar");
-			// Both translations share the same group key. Prefix is opaque
-			// but stable so the execute route can group on it.
 			expect(result.posts[0]?.translationGroup).toBe(result.posts[1]?.translationGroup);
 			expect(result.posts[0]?.translationGroup).toContain("42");
 		});
@@ -520,10 +510,6 @@ describe("parseWxr", () => {
 		});
 
 		it("derives a stable Polylang translationGroup from _translations meta", async () => {
-			// Polylang stores `_translations` as a serialized PHP map. We
-			// hash the post IDs into a stable key shared by every member of
-			// the group. The exact format isn't part of the contract -- the
-			// only guarantee is "same map -> same key".
 			const wxr = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
   xmlns:wp="http://wordpress.org/export/1.2/">
@@ -603,16 +589,6 @@ describe("parseWxr", () => {
 		});
 
 		it("handles Polylang _translations payloads with multibyte string keys", async () => {
-			// PHP `s:LEN:"..."` counts BYTES of the payload, not chars. A
-			// payload like `é` (2 bytes UTF-8) would shift JS UTF-16
-			// position by 1, but the byte length is 2. The parser must
-			// advance by bytes or it will misalign and drop subsequent
-			// integer tokens.
-			//
-			// Real-world trigger: any non-ASCII locale code or label string
-			// in `_translations`. We don't expect Polylang to produce such
-			// keys, but the parser must not corrupt the group when it
-			// does.
 			const wxr = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
   xmlns:wp="http://wordpress.org/export/1.2/">
@@ -641,17 +617,11 @@ describe("parseWxr", () => {
 			const result = await parseWxr(createStream(wxr));
 
 			expect(result.posts).toHaveLength(2);
-			// Both ids extracted; group key has BOTH 1 and 2, not just 2.
 			expect(result.posts[0]?.translationGroup).toBe("pll:1,2");
 			expect(result.posts[1]?.translationGroup).toBe("pll:1,2");
 		});
 
 		it("ignores `i:N;` literals embedded inside Polylang `_translations` string values", async () => {
-			// String values can contain `i:N;` text that the naive regex
-			// would erroneously match. The length-aware parser walks
-			// `s:LEN:"..."` blocks and skips their payloads exactly.
-			// The real translation IDs are `i:1;` and `i:7;`; the embedded
-			// `i:99;` inside a string value must NOT contribute.
 			const wxr = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
   xmlns:wp="http://wordpress.org/export/1.2/">
@@ -685,16 +655,10 @@ describe("parseWxr", () => {
 			const groupA = result.posts[0]?.translationGroup;
 			const groupB = result.posts[1]?.translationGroup;
 			expect(groupA).toBe(groupB);
-			// Group key derives from the integer post IDs, not the
-			// embedded `99` -- post-id list is `[1, 7]`.
 			expect(groupA).toBe("pll:1,7");
 		});
 
 		it("falls back to _icl_translation_id when trid is absent", async () => {
-			// `trid` is preferred (it's the shared translation group id),
-			// but legacy / partial exports may only have
-			// `_icl_translation_id`. Accept it as a fallback so single-
-			// translation exports still get a group key.
 			const wxr = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
   xmlns:wp="http://wordpress.org/export/1.2/">
@@ -739,8 +703,6 @@ describe("parseWxr", () => {
 			const result = await parseWxr(createStream(wxr));
 			const post = result.posts[0];
 			expect(post?.taxonomyLabels).toBeDefined();
-			// Keys are `${normalisedTaxonomy}\u0000${slug}`. `post_tag`
-			// normalises to `tag`.
 			expect(post?.taxonomyLabels?.get("category\u0000breaking-news")).toBe("Breaking News");
 			expect(post?.taxonomyLabels?.get("tag\u0000featured")).toBe("Featured");
 			expect(post?.taxonomyLabels?.get("genre\u0000sci-fi")).toBe("Science Fiction");

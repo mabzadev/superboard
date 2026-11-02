@@ -55,7 +55,6 @@ public class SuperBoard: ActivityProvider {
     companion object {
         private val instance = SuperBoard()
 
-        /// Indicates if the test environment should be used
         private var useTestEnvironment: Boolean
             get() = instance.superboardContext.settings.useTestEnvironment
             set(value) {
@@ -65,64 +64,41 @@ public class SuperBoard: ActivityProvider {
                 }
             }
 
-        /// Flow to listen for link and data from which the app was opened from.
-        /// The value of this param is null if the app was not opened from a link.
-        /// The data provided is same as the one from setOnDeeplinkReceivedListener. This is just for convenience when using kotlin coroutines api.
         @FlowObservable
         @get:FlowObservable
         val openedLinkDetails: DeeplinkDetails?
             get() = instance.openedLinkDetails
 
-        /// The identifier for the current user, normally a userID. This will be visible in the superboard dashboard.
         var identifier: String?
             get() = instance.identifier
             set(value) {
                 instance.identifier = value
             }
 
-        /// The push token for the user. This property allows getting and setting the push notification token.
         var pushToken: String?
             get() = instance.pushToken
             set(value) {
                 instance.pushToken = value
             }
 
-        /// The attributes for the current user. This will be visible in the superboard dashboard.
         var attributes: Map<String, Any>?
             get() = instance.attributes
             set(value) {
                 instance.attributes = value
             }
 
-        /// Configures SuperBoard with the API key from the web console
         fun configure(application: Application, apiKey: String, useTestEnvironment: Boolean, baseURL: String? = null) {
             instance.configure(application, apiKey, useTestEnvironment = useTestEnvironment, baseURL = baseURL)
         }
 
-        /// Disables the SuperBoard SDK.
-        /// - Parameter enabled: The log level to set.
-        /// Default is true.
         fun setSDK(enabled: Boolean) {
             instance.setSDK(enabled)
         }
 
-        /// Sets the debug level for the SDK log messages.
         fun setDebug(level: LogLevel) {
             instance.setDebug(level)
         }
 
-        /// Generates a link using kotlin coroutine style.
-        ///
-        /// - Parameters:
-        ///   - title: The title of the link.
-        ///   - subtitle: The subtitle of the link.
-        ///   - imageURL: The URL of the image associated with the link.
-        ///   - data: Additional data for the link.
-        ///   - tags: Tags for the link.
-        ///   - customRedirects: Override the default redirects for a link.
-        ///   - showPreviewIos: Show the link preview before redirecting on iOS platform.
-        ///   - showPreviewAndroid: Show the link preview before redirecting on Android platform.
-        ///   - tracking: Provide utm tracking parameters for your link.
         suspend fun generateLink(title: String? = null,
                                  subtitle: String? = null,
                                  imageURL: String? = null,
@@ -143,20 +119,6 @@ public class SuperBoard: ActivityProvider {
                 tracking = tracking)
         }
 
-        /// Generates a link.
-        ///
-        /// - Parameters:
-        ///   - title: The title of the link.
-        ///   - subtitle: The subtitle of the link.
-        ///   - imageURL: The URL of the image associated with the link.
-        ///   - data: Additional data for the link.
-        ///   - tags: Tags for the link.
-        ///   - customRedirects: Override the default redirects for a link.
-        ///   - showPreviewIos: Show the link preview before redirecting on iOS platform.
-        ///   - showPreviewAndroid: Show the link preview before redirecting on Android platform.
-        ///   - tracking: Provide utm tracking parameters for your link.
-        ///   - lifecycleOwner: An optional LifecycleOwner to use when calling the listener, by default global one will be used.
-        ///   - listener: A closure to be executed after generating the link.
         fun generateLink(title: String? = null,
                          subtitle: String? = null,
                          imageURL: String? = null,
@@ -172,20 +134,10 @@ public class SuperBoard: ActivityProvider {
             instance.generateLink(title, subtitle, imageURL, data, tags, customRedirects, showPreviewIos, showPreviewAndroid, tracking, lifecycleOwner, listener)
         }
 
-        /// Get link details using kotlin coroutine style.
-        ///
-        /// - Parameters:
-        ///   - path: The last part of a superboard link.
         suspend fun linkDetails(path: String): Map<String, Any> {
             return instance.linkDetails(path = path)
         }
 
-        /// Get link details.
-        ///
-        /// - Parameters:
-        ///   - path: The last part of a superboard link.
-        ///   - lifecycleOwner: An optional LifecycleOwner to use when calling the listener, by default global one will be used.
-        ///   - listener: A closure to be executed with the link details after they are fetched.
         fun linkDetails(path: String,
                          lifecycleOwner: LifecycleOwner? = null,
                          listener: SuperBoardLinkDetailsListener
@@ -193,41 +145,22 @@ public class SuperBoard: ActivityProvider {
             instance.linkDetails(path = path, lifecycleOwner = lifecycleOwner, listener = listener)
         }
 
-        /// This needs to be called on the launcher activity onStart() to allow the SDK to handle incoming links
         fun onStart(launcherActivity: Activity? = null) {
             instance.onStart(launcherActivity = launcherActivity)
         }
 
-        /// This needs to be called on the launcher activity onNewIntent() to allow the SDK to handle incoming links
         fun onNewIntent(intent: Intent?, launcherActivity: Activity? = null) {
             instance.onNewIntent(intent, launcherActivity = launcherActivity)
         }
 
-        /// Register a listener to receive the link and data from which the app was opened.
-        ///
-        /// - Parameters:
-        ///   - launcherActivity: The launcher activity.
-        ///   - listener: A listener to receive the link and data from which the app was opened.
         fun setOnDeeplinkReceivedListener(launcherActivity: Activity?, listener: SuperBoardDeeplinkListener) {
             instance.setOnDeeplinkReceivedListener(launcherActivity, listener)
         }
 
-        /// Log a purchase that happened using the google play billing library (in app purchase).
-        ///
-        /// - Parameters:
-        ///   - originalJson: The original json of the purchase (purchase.originalJson).
         fun logInAppPurchase(originalJson: String) {
             instance.logInAppPurchase(originalJson = originalJson)
         }
 
-        /// Log a custom purchase for your project. If you are making purchases outside of google play, you can use this method to log them in superboard.
-        ///
-        /// - Parameters:
-        ///   - type: The type of the purchase event, a buy or a cancelled event.
-        ///   - priceInCents: The purchase price in cents.
-        ///   - currency: The currency of the purchase.
-        ///   - productId:
-        ///   - startDate:
         fun logCustomPurchase(type: PaymentEventType, priceInCents: Int, currency: String, productId: String, startDate: InstantCompat? = InstantCompat.now()) {
             instance.logCustomPurchase(type = type,
                 priceInCents = priceInCents,
@@ -236,33 +169,22 @@ public class SuperBoard: ActivityProvider {
                 startDate = startDate)
         }
 
-        /// Register a listener for receiving automatic notifications events.
-        ///
-        /// - Parameters:
-        ///   - listener: A listener to receive events about automatic notifications.
         fun setOnAutomaticNotificationsListener(listener: SuperBoardNotificationsListener) {
             instance.setOnAutomaticNotificationsListener(listener = listener)
         }
 
-        /// Show the notifications screen.
-        ///
-        /// - Parameters:
-        ///   - listener: A lambda function to be called when the screen is dismissed.
         fun displayMessagesFragment(onDismissed: (()->Unit)?): Boolean {
             return instance.displayMessagesFragment(onDismissed)
         }
 
-        /// Get the number of unread notifications this device currently has.
         suspend fun numberOfUnreadMessages(): Int? {
             return instance.numberOfUnreadMessages()
         }
 
-        /// Get the number of unread notifications this device currently has.
         fun numberOfUnreadMessages(lifecycleOwner: LifecycleOwner? = null, onResult: ((Int?)->Unit)?) {
             return instance.numberOfUnreadMessages(lifecycleOwner = lifecycleOwner, onResult = onResult)
         }
 
-        /// Checks the configuration validity.
         private fun checkConfiguration() {
             instance.checkConfiguration()
         }
@@ -271,21 +193,18 @@ public class SuperBoard: ActivityProvider {
 
     var openedLinkDetails: DeeplinkDetails? by flowDelegate(null)
 
-    /// The identifier for the current user, normally a userID. This will be visible in the superboard dashboard.
     private var identifier: String?
         get() = superboardManager?.identifier
         set(value) {
             superboardManager?.identifier = value
         }
 
-    /// The push token for the user. This property allows getting and setting the push notification token.
     var pushToken: String?
         get() = superboardManager?.pushToken
         set(value) {
             superboardManager?.pushToken = value
         }
 
-    /// The attributes for the current user. This will be visible in the superboard dashboard.
     private var attributes: Map<String, Any>?
         get() = superboardManager?.attributes
         set(value) {
@@ -295,7 +214,6 @@ public class SuperBoard: ActivityProvider {
     private var superboardManager: SuperBoardManager? = null
     private var notificationsManager: NotificationsManager? = null
 
-    // This is used for linking the SDK to your account
     private var apiKey: String? = null
 
     private var application: Application? = null
@@ -333,7 +251,6 @@ public class SuperBoard: ActivityProvider {
             currentActivityReference = WeakReference(activity)
 
             if (numStarted == 0) {
-                // App is in foreground
                 onAppForegrounded()
             }
             numStarted++
@@ -349,7 +266,6 @@ public class SuperBoard: ActivityProvider {
 
             numStarted--
             if (numStarted == 0) {
-                // App is in background
                 onAppBackgrounded()
             }
         }
@@ -359,7 +275,6 @@ public class SuperBoard: ActivityProvider {
         }
 
         private fun onAppForegrounded() {
-            // App moved to the foreground
             DebugLogger.instance.log(LogLevel.INFO, "App is in the foreground")
 
             GlobalScope.launch(superboardContext.serialDispatcher) {
@@ -369,7 +284,6 @@ public class SuperBoard: ActivityProvider {
         }
 
         private fun onAppBackgrounded() {
-            // App moved to the background
             DebugLogger.instance.log(LogLevel.INFO, "App is in the background")
             superboardManager?.onAppBackgrounded()
         }

@@ -8,8 +8,6 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
-// #1221: the media library lacked filename search. The repository now accepts
-// a case-insensitive `q` substring filter against the filename.
 describeEachDialect("MediaRepository.findMany filename search (#1221)", (dialect) => {
 	let ctx: DialectTestContext;
 
@@ -58,7 +56,6 @@ describeEachDialect("MediaRepository.findMany filename search (#1221)", (dialect
 
 	it("treats LIKE wildcards in the query literally", async () => {
 		const repo = new MediaRepository(ctx.db);
-		// "100%" must match only the literal "100%_complete.png", not every row.
 		const result = await repo.findMany({ q: "100%" });
 		expect(result.items.map((i) => i.filename)).toEqual(["100%_complete.png"]);
 	});

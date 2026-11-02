@@ -1,14 +1,3 @@
-/**
- * MarketplaceClient + tar parser tests
- *
- * Tests:
- * - createMarketplaceClient factory
- * - MarketplaceClient.search/getPlugin/getVersions
- * - Bundle download and extraction (tar + gzip)
- * - Error handling (unavailable, HTTP errors)
- * - reportInstall (fire-and-forget)
- */
-
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import {
@@ -23,12 +12,6 @@ import {
 const HEX_64_PATTERN = /^[a-f0-9]{64}$/;
 const HEX_16_PATTERN = /^[a-f0-9]{16}$/;
 
-// ── Helpers ───────────���────────────────────────────────────────────
-
-/**
- * Create a minimal tar archive from a map of filename → content.
- * Returns an uncompressed tar buffer.
- */
 function createTar(files: Record<string, string>): Uint8Array {
 	const blocks: Uint8Array[] = [];
 	const encoder = new TextEncoder();
@@ -37,36 +20,25 @@ function createTar(files: Record<string, string>): Uint8Array {
 		const contentBytes = encoder.encode(content);
 		const size = contentBytes.length;
 
-		// Create 512-byte header
 		const header = new Uint8Array(512);
-		// Name (bytes 0-99)
 		const nameBytes = encoder.encode(name);
 		header.set(nameBytes.subarray(0, 100), 0);
 
-		// File mode (bytes 100-107): "0000644\0"
 		header.set(encoder.encode("0000644\0"), 100);
 
-		// UID (bytes 108-115): "0000000\0"
 		header.set(encoder.encode("0000000\0"), 108);
 
-		// GID (bytes 116-123): "0000000\0"
 		header.set(encoder.encode("0000000\0"), 116);
 
-		// Size in octal (bytes 124-135)
 		const sizeOctal = size.toString(8).padStart(11, "0") + "\0";
 		header.set(encoder.encode(sizeOctal), 124);
 
-		// Mtime (bytes 136-147): "00000000000\0"
 		header.set(encoder.encode("00000000000\0"), 136);
 
-		// Type flag (byte 156): '0' for regular file
 		header[156] = 0x30;
 
-		// Checksum (bytes 148-155): compute after setting spaces
-		// Initially fill with spaces
 		header.set(encoder.encode("        "), 148);
 
-		// Compute checksum (sum of all unsigned bytes in header)
 		let checksum = 0;
 		for (let i = 0; i < 512; i++) {
 			checksum += header[i]!;
@@ -76,17 +48,14 @@ function createTar(files: Record<string, string>): Uint8Array {
 
 		blocks.push(header);
 
-		// File data (padded to 512-byte boundary)
 		const paddedSize = Math.ceil(size / 512) * 512;
 		const dataBlock = new Uint8Array(paddedSize);
 		dataBlock.set(contentBytes, 0);
 		blocks.push(dataBlock);
 	}
 
-	// Two 512-byte zero blocks = end of archive
 	blocks.push(new Uint8Array(1024));
 
-	// Concatenate all blocks
 	const totalSize = blocks.reduce((sum, b) => sum + b.length, 0);
 	const tar = new Uint8Array(totalSize);
 	let offset = 0;
@@ -98,9 +67,6 @@ function createTar(files: Record<string, string>): Uint8Array {
 	return tar;
 }
 
-/**
- * Gzip compress data using CompressionStream
- */
 async function gzip(data: Uint8Array): Promise<Uint8Array> {
 	const cs = new CompressionStream("gzip");
 	const writer = cs.writable.getWriter();
@@ -415,7 +381,6 @@ describe("MarketplaceClient", () => {
 		it("sends install stat without throwing", async () => {
 			fetchSpy.mockResolvedValueOnce(new Response("OK", { status: 200 }));
 
-			// Should not throw even if we await it
 			await client.reportInstall("test-seo", "1.0.0");
 
 			expect(fetchSpy).toHaveBeenCalledWith(
@@ -430,7 +395,6 @@ describe("MarketplaceClient", () => {
 		it("does not throw on network failure", async () => {
 			fetchSpy.mockRejectedValueOnce(new Error("Network error"));
 
-			// Should not throw
 			await client.reportInstall("test-seo", "1.0.0");
 		});
 
@@ -448,7 +412,6 @@ describe("MarketplaceClient", () => {
 			const body1 = JSON.parse(calls[0]![1]!.body as string);
 			const body2 = JSON.parse(calls[1]![1]!.body as string);
 
-			// Same origin produces the same hash every time
 			expect(body1.siteHash).toBe(body2.siteHash);
 			expect(body1.siteHash).toMatch(HEX_16_PATTERN);
 		});
@@ -485,7 +448,6 @@ describe("MarketplaceClient", () => {
 
 describe("tar parser", () => {
 	it("handles files with ./ prefix in paths", async () => {
-		// Create tar with ./ prefixed paths (common from tar tools)
 		const manifest = {
 			id: "test",
 			version: "1.0.0",
@@ -514,7 +476,6 @@ describe("tar parser", () => {
 	});
 
 	it("handles empty tar archive gracefully", async () => {
-		// Just two zero blocks (empty archive)
 		const emptyTar = new Uint8Array(1024);
 		const gzipped = await gzip(emptyTar);
 

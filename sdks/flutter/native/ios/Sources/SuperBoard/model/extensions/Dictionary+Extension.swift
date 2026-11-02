@@ -1,16 +1,7 @@
-//
-//  Dictionary+Extension.swift
-//
-//  superboard
-//
-
 import Foundation
 
 extension Dictionary {
 
-    /// Converts the dictionary to JSON data.
-    ///
-    /// - Returns: The JSON data representation of the dictionary.
     func dictToData() -> Data? {
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: self, options: .prettyPrinted)
@@ -23,9 +14,6 @@ extension Dictionary {
         return nil
     }
 
-    /// Converts the dictionary to a string representation.
-    ///
-    /// - Returns: A string representation of the dictionary.
     func toString() -> String {
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: self, options: .prettyPrinted)

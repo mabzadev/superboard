@@ -1,6 +1,3 @@
-/**
- * A stable, serializable error raised by the SuperBoard Support SDK.
- */
 export class SuperBoardSupportException extends Error {
 	constructor(
 		code,

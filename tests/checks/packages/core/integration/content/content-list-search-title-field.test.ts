@@ -12,10 +12,6 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
-// The server-side content-list `q` filter must match against a
-// configured `titleField`, not just the conventional `title`/`name` fields.
-// Otherwise searching a collection whose title comes from e.g. `full_name`
-// can't find an entry by the title the admin actually renders.
 describeEachDialect("content list search honours a custom titleField", (dialect) => {
 	let ctx: DialectTestContext;
 
@@ -34,8 +30,6 @@ describeEachDialect("content list search honours a custom titleField", (dialect)
 		});
 		await registry.updateCollection("employees", { titleField: "full_name" });
 
-		// Seed enough rows that the needle sits past the first page, so a match
-		// can only come from the server-side filter, not client-side paging.
 		for (let i = 0; i < 60; i++) {
 			const created = await handleContentCreate(ctx.db, "employees", {
 				slug: `employee-${String(i).padStart(3, "0")}`,

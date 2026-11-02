@@ -1,18 +1,3 @@
-/**
- * emdash plugin init
- *
- * Scaffold a new EmDash plugin. Generates the sandboxed-format boilerplate:
- *   src/index.ts         -- descriptor factory
- *   src/sandbox-entry.ts -- definePlugin({ hooks, routes })
- *   package.json
- *   tsconfig.json
- *
- * Use --format=native (or --native) to generate native-format boilerplate
- * instead (createPlugin + React admin). When neither is passed and stdout
- * is a TTY, the user is prompted to choose.
- *
- */
-
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve, join, basename } from "node:path";
 
@@ -63,13 +48,11 @@ export const pluginInitCommand = defineCommand({
 		}
 		const isNative = format === "native";
 
-		// Derive plugin name from --name or directory name
 		let pluginName = args.name || basename(targetDir);
 		if (!pluginName || pluginName === ".") {
 			pluginName = basename(resolve("."));
 		}
 
-		// Strip scope for the slug
 		const slug = pluginName.replace(SCOPE_RE, "");
 		if (!SLUG_RE.test(slug)) {
 			consola.error(
@@ -79,7 +62,6 @@ export const pluginInitCommand = defineCommand({
 			process.exit(1);
 		}
 
-		// Check if directory already has files
 		const srcDir = join(targetDir, "src");
 		const pkgPath = join(targetDir, "package.json");
 		if (await fileExists(pkgPath)) {
@@ -190,8 +172,6 @@ const TSCONFIG = {
 
 const TSDOWN_VERSION = "^0.20.0";
 const TYPESCRIPT_VERSION = "^5.9.0";
-
-// ── Sandboxed format scaffolding ─────────────────────────────────
 
 async function scaffoldStandard(
 	targetDir: string,
@@ -307,8 +287,6 @@ export default definePlugin({
 `,
 	);
 }
-
-// ── Native format scaffolding ────────────────────────────────────
 
 async function scaffoldNative(
 	targetDir: string,

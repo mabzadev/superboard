@@ -8,7 +8,6 @@ import {
 	waitFor,
 } from "../../../../../packages/supbrd-front-ui/render.js";
 
-// Radix switches measure themselves; jsdom has no ResizeObserver.
 globalThis.ResizeObserver ??= class {
 	observe() {}
 	unobserve() {}
@@ -169,7 +168,6 @@ describe("Communication workspace", () => {
 	});
 
 	it("switches sections in place from the workspace navigation", async () => {
-		// Plugin diagnostics moved to the Plugins page; old configuration links land on Senders.
 		window.history.replaceState(null, "", "/communication/settings?tab=configuration");
 		render(<CommunicationWorkspace initialTab="senders" />);
 		expect(await screen.findByRole("tab", { name: "Senders & domains" })).toHaveAttribute(
@@ -356,7 +354,6 @@ describe("Campaign sends", () => {
 		fireEvent.change(await screen.findByLabelText("Send a test to"), {
 			target: { value: "qa@example.test" },
 		});
-		// Saving re-enables the review actions only once the campaign list has reloaded.
 		const sendTest = screen.getByRole("button", { name: "Send test" });
 		await waitFor(() => expect(sendTest).toBeEnabled());
 		fireEvent.click(sendTest);

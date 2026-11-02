@@ -1,10 +1,3 @@
-/**
- * Content list and create endpoints - injected by EmDash integration
- *
- * GET  /_emdash/api/content/{collection} - List content
- * POST /_emdash/api/content/{collection} - Create content
- */
-
 import { hasPermission } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 
@@ -26,9 +19,6 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
 	const query = parseQuery(url, contentListQuery);
 	if (isParseError(query)) return query;
 
-	// Subscribers must only see published content; force the status filter
-	// regardless of caller-supplied value. Any user with content:read_drafts
-	// (CONTRIBUTOR+) keeps the requested filter.
 	const params_ = hasPermission(user, "content:read_drafts")
 		? query
 		: { ...query, status: "published" };
@@ -49,7 +39,6 @@ export const POST: APIRoute = async ({ params, request, locals, cache }) => {
 	const body = await parseBody(request, contentCreateBody);
 	if (isParseError(body)) return body;
 
-	// Creating a translation requires edit permission on the source item
 	if (body.translationOf) {
 		const source = await emdash.handleContentGet(collection, body.translationOf);
 		if (!source.success) {
@@ -69,7 +58,6 @@ export const POST: APIRoute = async ({ params, request, locals, cache }) => {
 		if (translationDenied) return translationDenied;
 	}
 
-	// Only EDITOR+ can write publishedAt / createdAt directly — incl. clearing to null.
 	const hasDateOverride = body.publishedAt !== undefined || body.createdAt !== undefined;
 	if (hasDateOverride && !hasPermission(user, "content:publish_any")) {
 		return apiError(
@@ -79,7 +67,6 @@ export const POST: APIRoute = async ({ params, request, locals, cache }) => {
 		);
 	}
 
-	// Auto-set authorId to current user when creating content
 	const result = await emdash.handleContentCreate(collection, {
 		...body,
 		authorId: user?.id,

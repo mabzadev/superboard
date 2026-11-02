@@ -33,8 +33,6 @@ describe("mediaItemToValue", () => {
 });
 
 describe("local provider getEmbed", () => {
-	// getEmbed never touches the database, so a stub db is enough to construct
-	// the provider.
 	const provider = createMediaProvider({ db: {} as never });
 
 	it("surfaces top-level blurhash and dominantColor on the image embed", () => {

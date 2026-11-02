@@ -1,10 +1,3 @@
-/**
- * API token management endpoints
- *
- * GET  /_emdash/api/admin/api-tokens — List tokens for current user
- * POST /_emdash/api/admin/api-tokens — Create a new token
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 import { z } from "zod";
@@ -22,10 +15,6 @@ const createTokenSchema = z.object({
 	expiresAt: z.string().datetime().optional(),
 });
 
-/**
- * List API tokens for the current user.
- * Admins can list all tokens (future: add ?userId= filter).
- */
 export const GET: APIRoute = async ({ locals }) => {
 	const { emdash, user } = locals;
 
@@ -41,10 +30,6 @@ export const GET: APIRoute = async ({ locals }) => {
 	return unwrapResult(result);
 };
 
-/**
- * Create a new API token.
- * Returns the raw token once — it cannot be retrieved again.
- */
 export const POST: APIRoute = async ({ request, locals }) => {
 	const { emdash, user } = locals;
 

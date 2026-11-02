@@ -19,10 +19,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.util.concurrent.TimeUnit
 
-/**
- * E2E tests for custom baseURL parameter in SuperBoard.configure().
- * Verifies that the SDK sends requests to the custom base URL when provided.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class BaseURLE2ETest {
@@ -51,7 +47,6 @@ class BaseURLE2ETest {
     @Test
     fun `SDK sends requests to custom baseURL when provided`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer, lastSeen = null)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -61,14 +56,12 @@ class BaseURLE2ETest {
 
             val customBaseURL = mockWebServer.url("/").toString()
 
-            // Act
             val activityController = E2ETestUtils.configureAndWaitForAuth(
                 application,
                 apiKey = "test-api-key",
                 baseURL = customBaseURL
             )
 
-            // Assert - SDK should have sent requests to the mock server
             val requestCount = mockWebServer.requestCount
             assertTrueWithContext(
                 requestCount > 0,
@@ -76,7 +69,6 @@ class BaseURLE2ETest {
                 "after configure with baseURL=$customBaseURL"
             )
 
-            // Verify the first request path includes /v1/
             val firstRequest = mockWebServer.takeRequest(1, TimeUnit.SECONDS)
             assertNotNullWithContext(
                 firstRequest,
@@ -97,7 +89,6 @@ class BaseURLE2ETest {
     @Test
     fun `SDK sends requests to custom baseURL with trailing slash stripped`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer, lastSeen = null)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -105,17 +96,14 @@ class BaseURLE2ETest {
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
 
-            // Pass URL with trailing slash
             val customBaseURL = mockWebServer.url("/").toString().trimEnd('/') + "/"
 
-            // Act
             val activityController = E2ETestUtils.configureAndWaitForAuth(
                 application,
                 apiKey = "test-api-key",
                 baseURL = customBaseURL
             )
 
-            // Assert - requests should still go to /v1/ (no double slash)
             val firstRequest = mockWebServer.takeRequest(1, TimeUnit.SECONDS)
             assertNotNullWithContext(
                 firstRequest,
@@ -146,7 +134,6 @@ class BaseURLE2ETest {
     @Test
     fun `SDK authenticates successfully with custom baseURL`() {
         runBlocking {
-            // Arrange
             val testSuperBoardId = "custom-base-url-superboard-id-456"
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer, superboardId = testSuperBoardId)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer, lastSeen = null)
@@ -155,14 +142,12 @@ class BaseURLE2ETest {
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
 
-            // Act
             val activityController = E2ETestUtils.configureAndWaitForAuth(
                 application,
                 apiKey = "test-api-key",
                 baseURL = mockWebServer.url("/").toString()
             )
 
-            // Assert - SDK should be authenticated with the correct superboardId
             E2ETestUtils.assertAuthenticationCompleted()
 
             val storedSuperBoardId = E2ETestUtils.getSuperBoardId()

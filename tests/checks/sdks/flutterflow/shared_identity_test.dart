@@ -97,8 +97,6 @@ void main() {
         );
         expect(exchanges, ['Bearer application-1']);
 
-        // The application session rotates; the Support provider must follow
-        // it instead of reusing the access token captured at initialization.
         await superboardApplicationSetAccessToken('application-2');
         expect(
           jsonDecode(await superboardMessagingGetConfigurationJson()),

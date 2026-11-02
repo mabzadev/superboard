@@ -1,9 +1,3 @@
-/**
- * POST /_emdash/api/auth/passkey/register/options
- *
- * Get WebAuthn registration options for adding a new passkey (authenticated user)
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -28,7 +22,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
 
-	// Require authentication
 	if (!user) {
 		return apiError("NOT_AUTHENTICATED", "Not authenticated", 401);
 	}
@@ -36,27 +29,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	try {
 		const adapter = createKyselyAdapter(emdash.db);
 
-		// Check passkey limit
 		const count = await adapter.countCredentialsByUserId(user.id);
 		if (count >= MAX_PASSKEYS) {
 			return apiError("PASSKEY_LIMIT", `Maximum of ${MAX_PASSKEYS} passkeys allowed`, 400);
 		}
 
-		// Parse optional name from request
 		const body = await parseOptionalBody(request, passkeyRegisterOptionsBody, {});
 		if (isParseError(body)) return body;
 
-		// Get existing credentials for excludeCredentials
 		const existingCredentials = await adapter.getCredentialsByUserId(user.id);
 
-		// Get passkey config
 		const url = new URL(request.url);
 		const optionsRepo = new OptionsRepository(emdash.db);
 		const siteName = (await optionsRepo.get<string>("emdash:site_title")) ?? undefined;
 		const siteUrl = getPublicOrigin(url, emdash?.config);
 		const passkeyConfig = getPasskeyConfig(url, siteName, siteUrl);
 
-		// Generate registration options
 		const challengeStore = createChallengeStore(emdash.db);
 		const registrationOptions = await generateRegistrationOptions(
 			passkeyConfig,
@@ -65,11 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			challengeStore,
 		);
 
-		// Store the passkey name in the challenge metadata if provided
-		// We'll retrieve it during verification
 		if (body.name) {
-			// Store name with challenge for later retrieval
-			// The challenge store will need this when verifying
 			await optionsRepo.set(`emdash:passkey_pending:${user.id}`, {
 				name: body.name,
 			});

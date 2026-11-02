@@ -1,14 +1,3 @@
-/**
- * Auth for the plugin API catch-all (`/_emdash/api/plugins/{id}/*`).
- *
- * Regression coverage for #1853: because plugin routes dispatch by name only
- * (the HTTP method never selects a different handler), a route reached via GET
- * or HEAD runs the same code as one reached via POST. The route must not tier
- * permission or CSRF by method — every private invocation needs
- * the route's declared permission (defaulting to `plugins:manage`) and the
- * CSRF header, so a caller cannot change authorization by choosing the method.
- */
-
 import type { RoleLevel } from "@emdash-cms/auth";
 import { Role } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
@@ -45,7 +34,6 @@ function invoke(
 		method,
 		headers,
 	});
-	// The catch-all reads params.pluginId / params.path and locals.
 	return handler({
 		params: { pluginId: "demo", path: "updateHomeConfig" },
 		request,
@@ -126,8 +114,6 @@ describe("plugin API catch-all caller forwarding", () => {
 	});
 
 	it("does not forward a caller on public routes, even with an ambient session", async () => {
-		// Public routes skip auth entirely — a logged-in user browsing the site
-		// must not be bound as the caller of a public plugin route.
 		const { locals, handlePluginApiRoute } = createLocals(Role.ADMIN, true);
 		const res = await invoke(GET, "GET", locals, { csrf: false });
 		expect(res.status).toBe(200);

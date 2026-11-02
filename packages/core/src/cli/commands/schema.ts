@@ -1,9 +1,3 @@
-/**
- * emdash schema
- *
- * Manage collections and fields via the remote API
- */
-
 import { defineCommand } from "citty";
 import { consola } from "consola";
 

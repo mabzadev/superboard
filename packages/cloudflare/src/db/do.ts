@@ -1,13 +1,3 @@
-/**
- * Durable Object preview database — RUNTIME ENTRY
- *
- * Creates a Kysely dialect backed by a preview Durable Object.
- * Loaded at runtime via virtual module when preview database queries are needed.
- *
- * This module imports directly from cloudflare:workers to access the DO binding.
- * Do NOT import this at config time.
- */
-
 import { env } from "cloudflare:workers";
 import type { Dialect } from "kysely";
 
@@ -16,12 +6,6 @@ import { PreviewDODialect } from "./do-dialect.js";
 import type { PreviewDBStub } from "./do-dialect.js";
 import type { PreviewDOConfig } from "./do-types.js";
 
-/**
- * Create a preview DO dialect from config.
- *
- * The caller is responsible for resolving the DO name (session token).
- * This is passed as `config.name` by the preview middleware.
- */
 export function createDialect(config: PreviewDOConfig & { name: string }): Dialect {
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- Worker binding accessed from untyped env object
 	const ns = (env as Record<string, unknown>)[config.binding];
@@ -44,7 +28,6 @@ export function createDialect(config: PreviewDOConfig & { name: string }): Diale
 	const namespace = ns as DurableObjectNamespace<EmDashPreviewDB>;
 	const id = namespace.idFromName(config.name);
 
-	// Return a factory that creates a fresh stub per connection.
 	const getStub = (): PreviewDBStub => {
 		const stub = namespace.get(id);
 		return stub;
@@ -53,7 +36,6 @@ export function createDialect(config: PreviewDOConfig & { name: string }): Diale
 	return new PreviewDODialect({ getStub });
 }
 
-// Re-export the DO class and preview middleware for user convenience
 export { EmDashPreviewDB } from "./do-class.js";
 export { createPreviewMiddleware } from "./do-preview.js";
 export type { PreviewMiddlewareConfig } from "./do-preview.js";

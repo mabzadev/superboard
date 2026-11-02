@@ -19,11 +19,6 @@ function currencyOf(properties: Record<string, unknown>) {
 	return typeof value === "string" && /^[A-Za-z]{3}$/u.test(value) ? value.toUpperCase() : null;
 }
 
-/**
- * Revenue carried by an incoming signal, in cents. SDK customer events report
- * `reported_revenue_cents`; verified store purchases report `amount_micros`.
- * Refunds, chargebacks and cancellations never count as attributed revenue.
- */
 export function signalRevenue(
 	signal: Pick<MarketingSignalV1, "event_name" | "properties">,
 ): { cents: number; currency: string | null } | null {
@@ -41,7 +36,6 @@ export function signalRevenue(
 	return cents ? { cents, currency: currencyOf(properties) } : null;
 }
 
-/** Attributes a purchase to the contact's last email click inside the attribution window. */
 export async function attributeSignalRevenue(
 	db: D1Database,
 	projectId: number,

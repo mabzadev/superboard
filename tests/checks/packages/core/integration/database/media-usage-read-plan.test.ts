@@ -1,10 +1,3 @@
-/**
- * Query-plan and statement-count coverage for media usage reads.
- *
- * SQLite runs without ANALYZE/sqlite_stat1 here, matching D1's stats-blind
- * planner. Dialect result parity is covered by media-usage-read-repository.
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -170,7 +163,6 @@ it("keeps a high-cardinality grouped read to one indexed statement", async () =>
 	expect(plan).not.toContain("SCAN u");
 });
 
-/** better-sqlite3 only binds primitives; coerce values captured from Kysely. */
 function bindable(parameter: unknown): unknown {
 	if (typeof parameter === "boolean") return parameter ? 1 : 0;
 	if (parameter instanceof Date) return parameter.toISOString();

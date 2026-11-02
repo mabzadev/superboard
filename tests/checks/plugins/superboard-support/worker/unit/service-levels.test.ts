@@ -17,7 +17,6 @@ const weekdaySchedule = {
 
 describe("Support service-level calendar", () => {
 	it("carries business minutes over a weekend and a DST transition", () => {
-		// 15:30 Friday in Zurich (UTC+2), followed by the UTC+1 Monday.
 		const result = addBusinessMinutes(
 			new Date("2026-10-23T13:30:00.000Z"),
 			120,

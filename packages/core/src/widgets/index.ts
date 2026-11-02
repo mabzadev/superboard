@@ -15,13 +15,6 @@ export type {
 	ReorderWidgetsInput,
 } from "./types.js";
 
-/**
- * Get a widget area by name, with all its widgets.
- *
- * Single query with a left join rather than area-then-widgets so the
- * common case costs one round-trip. An area with no widgets yields one
- * row with null widget columns, which we skip when mapping.
- */
 export async function getWidgetArea(name: string): Promise<WidgetArea | null> {
 	return requestCached(`widget-area:${name}`, async () => {
 		const db = await getDb();
@@ -52,11 +45,7 @@ export async function getWidgetArea(name: string): Promise<WidgetArea | null> {
 		if (!first) return null;
 		const widgets: Widget[] = [];
 		for (const row of rows) {
-			if (row.w_id === null) continue; // area has no widgets (left-join null row)
-			// Left-join makes every w_* column nullable in the type; at runtime
-			// they're all non-null once w_id is (we match on widgets.area_id, so
-			// a widget row always has the not-null columns filled). Cast is the
-			// price of that structural fact.
+			if (row.w_id === null) continue;
 			// eslint-disable-next-line typescript/no-unsafe-type-assertion -- left-join row is non-null when w_id is set; see above
 			const widgetRow = {
 				id: row.w_id,
@@ -83,15 +72,10 @@ export async function getWidgetArea(name: string): Promise<WidgetArea | null> {
 	});
 }
 
-/**
- * Get all widget areas with their widgets
- */
 export async function getWidgetAreas(): Promise<WidgetArea[]> {
 	const db = await getDb();
-	// Get all areas
 	const areaRows = await db.selectFrom("_emdash_widget_areas").selectAll().execute();
 
-	// Get all widgets
 	const widgetRows = await db
 		.selectFrom("_emdash_widgets")
 		.selectAll()
@@ -99,7 +83,6 @@ export async function getWidgetAreas(): Promise<WidgetArea[]> {
 		.orderBy("sort_order", "asc")
 		.execute();
 
-	// Group widgets by area
 	const widgetsByArea = new Map<string, Widget[]>();
 	for (const row of widgetRows) {
 		if (!widgetsByArea.has(row.area_id)) {
@@ -108,7 +91,6 @@ export async function getWidgetAreas(): Promise<WidgetArea[]> {
 		widgetsByArea.get(row.area_id)!.push(rowToWidget(row));
 	}
 
-	// Combine
 	return areaRows.map((areaRow) => ({
 		id: areaRow.id,
 		name: areaRow.name,
@@ -118,16 +100,10 @@ export async function getWidgetAreas(): Promise<WidgetArea[]> {
 	}));
 }
 
-/**
- * Get available widget components (for admin UI)
- */
 export function getWidgetComponents(): WidgetComponentDef[] {
 	return getComponentRegistry();
 }
 
-/**
- * Convert a widget row to the API type
- */
 export function rowToWidget(row: WidgetRow): Widget {
 	const widget: Widget = {
 		id: row.id,
@@ -135,13 +111,10 @@ export function rowToWidget(row: WidgetRow): Widget {
 		title: row.title ?? undefined,
 	};
 
-	// Type-specific fields
 	if (row.type === "content" && row.content) {
 		try {
 			widget.content = JSON.parse(row.content);
-		} catch {
-			// Invalid JSON, ignore
-		}
+		} catch {}
 	}
 
 	if (row.type === "menu" && row.menu_name) {
@@ -153,9 +126,7 @@ export function rowToWidget(row: WidgetRow): Widget {
 		if (row.component_props) {
 			try {
 				widget.componentProps = JSON.parse(row.component_props);
-			} catch {
-				// Invalid JSON, ignore
-			}
+			} catch {}
 		}
 	}
 

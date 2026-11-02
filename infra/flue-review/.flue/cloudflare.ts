@@ -214,8 +214,6 @@ export class ReviewWatchdog extends DurableObject<Env> {
 		}
 
 		try {
-			// Flue needs a fetch-style context to durably admit the replacement run.
-			// DurableObjectState supplies the waitUntil primitive used by this path.
 			const executionCtx = {
 				waitUntil: (promise: Promise<unknown>) => this.ctx.waitUntil(promise),
 				passThroughOnException: () => undefined,

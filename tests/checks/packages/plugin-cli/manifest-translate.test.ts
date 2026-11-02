@@ -1,7 +1,3 @@
-/**
- * Coverage for the manifest -> publish translation layer.
- */
-
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -26,7 +22,6 @@ describe("normaliseManifest", () => {
 			security: { email: "s@example.com" },
 		});
 		expect(normalised.authors).toEqual([{ name: "Jane" }]);
-		// Single security contact normalised to array.
 		expect(normalised.securityContacts).toEqual([{ email: "s@example.com" }]);
 	});
 
@@ -216,7 +211,6 @@ describe("manifestToProfileInput", () => {
 		expect(input.name).toBe("Test");
 		expect(input.description).toBe("desc");
 		expect(input.keywords).toEqual(["k1", "k2"]);
-		// requires is release-level, never folded into the profile input.
 		expect("requires" in input).toBe(false);
 	});
 

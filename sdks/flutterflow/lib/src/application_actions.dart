@@ -31,16 +31,6 @@ SuperBoardApplicationSessionManager get _sessionManager {
   return value;
 }
 
-/// Shares the application client's cached, single-flight SuperBoard identity
-/// token with the Purchases and Support no-code actions.
-///
-/// The source only binds when the application client is initialized against
-/// the same authentication gateway and currently holds the access token the
-/// action received, so a host passing a token from another session keeps its
-/// previous behaviour. Once bound, the token tracks session rotations instead
-/// of the access token captured at initialization time.
-///
-/// Internal: hidden from the public `superboard_flutterflow` library.
 class SuperBoardSharedIdentityTokenSource {
   SuperBoardSharedIdentityTokenSource({
     required String authGatewayBaseUrl,
@@ -52,8 +42,6 @@ class SuperBoardSharedIdentityTokenSource {
 
   bool get isBound => _client != null;
 
-  /// Returns `null` when no compatible application session is available and
-  /// the caller should use its own gateway exchange.
   Future<String?> token() async {
     final client = _client;
     if (client == null ||
@@ -62,8 +50,6 @@ class SuperBoardSharedIdentityTokenSource {
       return null;
     }
     var token = await client.customIdentityToken();
-    // The caller only asks again when its current token is expiring or was
-    // rejected, so never hand the same token back twice.
     if (token == _lastIssued) {
       token = await client.customIdentityToken(rejectedToken: token);
     }
@@ -131,8 +117,6 @@ Future<bool> superboardApplicationInitialize({
     client: client,
     storage: _applicationSessionStorage,
     storageKey: storageKey,
-    // The legacy key is only mirrored while its format differs from the
-    // current one; identical keys would double every secure-storage write.
     legacyStorageKeys: [if (legacyStorageKey != storageKey) legacyStorageKey],
   );
   if (restoreSession && applicationAccessToken.trim().isEmpty) {

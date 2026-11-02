@@ -794,7 +794,6 @@ async function executeNode(
 	} else if (node.type === "wait_event") {
 		const wait = await evaluateWaitStep(env.DB, enrollment, node);
 		if (wait.waiting) {
-			// The step is re-claimed when the event arrives or the timeout expires.
 			await env.DB.batch([
 				env.DB.prepare("DELETE FROM marketing_journey_step_executions WHERE id = ?").bind(
 					executionId,

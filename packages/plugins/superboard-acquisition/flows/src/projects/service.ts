@@ -15,11 +15,6 @@ export type FlowProjectProvision = {
 	};
 };
 
-/**
- * Provision the project-owned Flows resources. SuperBoard's signed project
- * context is the sole tenant and access authority; Flows deliberately adds no
- * parallel tenant or access model of its own.
- */
 export async function ensureFlowProject(context: FlowContext): Promise<FlowProjectProvision> {
 	const project = context.get("project");
 	const now = isoNow();

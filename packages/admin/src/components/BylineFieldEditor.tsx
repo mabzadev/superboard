@@ -1,24 +1,3 @@
-/**
- * BylineFieldEditor (Phase 5 of Discussion #1174).
- *
- * Purpose-built create/edit dialog for byline custom-field definitions.
- * Constrains the type select to the five v1 types declared by the
- * `BylineFieldType` union — narrower than the content-field universe —
- * and exposes the `translatable` toggle (the storage-split flag) that
- * the content `FieldEditor` doesn't have.
- *
- * Single-step form (not the type-picker → config flow used by
- * `FieldEditor`): with only five types a `<Select>` is faster than a
- * grid of cards and the dialog stays under ~200 LOC.
- *
- * The `translatable` toggle is locked when editing a field that already
- * has stored values — the server returns `TRANSLATABLE_LOCKED` (409) for
- * the flip, but disabling the input + showing a help message saves a
- * round-trip and is friendlier than a toast. Usage is passed in by the
- * parent (which fetches `getBylineFieldUsage` on edit-open) so this
- * component stays a pure controlled form.
- */
-
 import { Button, Dialog, Input, InputArea, Select, Switch } from "@cloudflare/kumo";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
@@ -35,19 +14,9 @@ import type {
 } from "../lib/api/byline-fields.js";
 import { DialogError, getMutationError } from "./DialogError.js";
 
-// Slug auto-generation: lowercase + replace non-alphanumeric with `_` +
-// trim leading/trailing `_`. Mirrors `FieldEditor`'s rule so editors who
-// switch between content fields and byline fields see consistent behaviour.
 const SLUG_INVALID_CHARS_REGEX = /[^a-z0-9]+/g;
 const SLUG_LEADING_TRAILING_REGEX = /^_|_$/g;
 
-/**
- * The five v1 byline field types. Kept in lock-step with the server-side
- * `BYLINE_FIELD_TYPES` constant (`packages/core/src/schema/types.ts`).
- *
- * `MessageDescriptor`s are resolved with `t(descriptor)` inside the
- * component so the strings extract correctly to the Lingui catalog.
- */
 const TYPE_OPTIONS: { value: BylineFieldType; label: MessageDescriptor }[] = [
 	{ value: "string", label: msg`Short text` },
 	{ value: "text", label: msg`Long text` },
@@ -59,21 +28,10 @@ const TYPE_OPTIONS: { value: BylineFieldType; label: MessageDescriptor }[] = [
 export interface BylineFieldEditorProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	/**
-	 * Existing field to edit. When absent, the dialog opens in create mode.
-	 * `slug` and `type` are immutable in edit mode (the inputs render
-	 * disabled) — see the registry's create-only invariant.
-	 */
 	field?: BylineFieldDefinition | null;
-	/**
-	 * Total stored values referencing this field. When > 0 the
-	 * `translatable` toggle is locked because the server rejects the
-	 * flip with `TRANSLATABLE_LOCKED`. Pass `0` (or omit) in create mode.
-	 */
 	usageTotal?: number;
 	onSave: (input: CreateBylineFieldInput | UpdateBylineFieldInput) => void;
 	isSaving?: boolean;
-	/** Mutation error to render inline. Pass the mutation's `error` directly. */
 	error?: unknown;
 }
 
@@ -83,7 +41,6 @@ interface FormState {
 	type: BylineFieldType;
 	required: boolean;
 	translatable: boolean;
-	/** Newline-separated options for `select`-type fields. */
 	options: string;
 }
 
@@ -121,9 +78,6 @@ export function BylineFieldEditor({
 	const isEdit = !!field;
 	const [state, setState] = React.useState<FormState>(() => initialFormState(field));
 
-	// Reset state when the dialog opens or the target field changes.
-	// Without this, re-opening the dialog on a different field would show
-	// the previous field's form values.
 	React.useEffect(() => {
 		if (open) setState(initialFormState(field));
 	}, [open, field]);
@@ -133,9 +87,6 @@ export function BylineFieldEditor({
 
 	const handleLabelChange = (value: string) => {
 		setField("label", value);
-		// Auto-fill slug from label, but only in create mode. Editing the
-		// slug post-create is rejected by the registry; preserving the
-		// stored slug on edit avoids confusing the editor.
 		if (!isEdit) {
 			setField(
 				"slug",
@@ -147,8 +98,6 @@ export function BylineFieldEditor({
 		}
 	};
 
-	// Parsed once so `handleSave` and `canSave` agree on what counts as
-	// a valid select option set (no empty lines, trimmed).
 	const parsedSelectOptions =
 		state.type === "select"
 			? state.options
@@ -158,10 +107,6 @@ export function BylineFieldEditor({
 			: [];
 
 	const handleSave = () => {
-		// Validate locally before round-tripping. The server validates
-		// again at the zod + registry layers; this is purely UX so the
-		// save button can stay enabled-but-with-feedback rather than
-		// fire-and-fail.
 		if (!state.label.trim()) return;
 		if (!isEdit && !state.slug.trim()) return;
 		if (state.type === "select" && parsedSelectOptions.length === 0) return;
@@ -173,10 +118,6 @@ export function BylineFieldEditor({
 			const updateInput: UpdateBylineFieldInput = {
 				label: state.label,
 				required: state.required,
-				// Only send `translatable` when it actually changed. Sending
-				// the existing value triggers the server's locked-flip check
-				// unnecessarily; sending `undefined` makes it a no-op for
-				// that key.
 				translatable:
 					field && state.translatable !== field.translatable ? state.translatable : undefined,
 				validation,
@@ -226,7 +167,6 @@ export function BylineFieldEditor({
 				</div>
 
 				<div className="space-y-5">
-					{/* Label + slug */}
 					<div className="grid grid-cols-2 gap-4">
 						<Input
 							label={t`Label`}
@@ -239,10 +179,6 @@ export function BylineFieldEditor({
 								label={t`Slug`}
 								value={state.slug}
 								onChange={(e) => setField("slug", e.target.value)}
-								// The literal slug is an example identifier, not natural-language
-								// copy — translators will typically leave it as-is, but the
-								// AGENTS.md "every user-facing string via Lingui" rule applies
-								// uniformly, so the catalog extractor sees it.
 								placeholder={t`job_title`}
 								disabled={isEdit}
 							/>
@@ -254,7 +190,6 @@ export function BylineFieldEditor({
 						</div>
 					</div>
 
-					{/* Type — disabled on edit because the storage column depends on it */}
 					<div>
 						<Select
 							label={t`Type`}
@@ -270,10 +205,7 @@ export function BylineFieldEditor({
 						)}
 					</div>
 
-					{/* Toggles */}
 					<div className="flex flex-wrap items-start gap-6">
-						{/* TODO: enforce `required` on the write path — currently
-						 * descriptive only, see `BylineRepository.coerceFieldValue`. */}
 						<Switch
 							checked={state.required}
 							onCheckedChange={(checked) => setField("required", checked)}
@@ -296,7 +228,6 @@ export function BylineFieldEditor({
 						</div>
 					</div>
 
-					{/* Select-type validation: options list */}
 					{state.type === "select" && (
 						<InputArea
 							label={t`Options (one per line)`}

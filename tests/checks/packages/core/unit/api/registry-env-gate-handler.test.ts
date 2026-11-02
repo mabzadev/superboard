@@ -1,13 +1,3 @@
-/**
- * Environment-compatibility gate wired through the real handler.
- *
- * `registry-env-compat.test.ts` exercises the gate's decision helper in
- * isolation. This file drives `handleRegistryUpdate` end-to-end with a mocked
- * `DiscoveryClient` so the wiring is covered: that `assertEnvCompatible` runs
- * after release selection, that `opts.hostEnv` reaches it, and that an
- * `ENV_INCOMPATIBLE` result aborts *before* any artifact fetch.
- */
-
 import BetterSqlite3 from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,7 +8,6 @@ import type { SandboxRunner } from "../../../../../../packages/core/src/plugins/
 import { PluginStateRepository } from "../../../../../../packages/core/src/plugins/state.js";
 import type { Storage } from "../../../../../../packages/core/src/storage/types.js";
 
-/** A storage stub: present so the null-storage guard passes, never exercised. */
 const stubStorage = {
 	async download() {
 		throw new Error("not implemented");
@@ -45,11 +34,6 @@ vi.mock("@emdash-cms/registry-client/discovery", () => ({
 const PUBLISHER = "did:plc:abc";
 const SLUG = "gallery";
 
-/**
- * A release view shaped enough to pass the update handler's identity
- * cross-check and reach the env gate, carrying a `requires` block.
- */
-
 function releaseViewWithRequires(
 	version: string,
 	requires: Record<string, string>,
@@ -69,8 +53,6 @@ function releaseViewWithRequires(
 			package: SLUG,
 			version,
 			requires,
-			// A real declared artifact URL: if the gate failed to abort, the
-			// handler would proceed to fetch this, tripping the `fetch` spy.
 			artifacts: {
 				package: {
 					url: "https://artifacts.test/gallery-2.0.0.tar.gz",
@@ -150,8 +132,6 @@ describe("handleRegistryUpdate env gate", () => {
 			{ hostEnv: { "env:emdash": "1.2.0", "env:astro": "4.16.0" } },
 		);
 
-		// The gate passes; the update proceeds past it. With null storage the
-		// handler then fails downstream — but never with ENV_INCOMPATIBLE.
 		expect(result.error?.code).not.toBe("ENV_INCOMPATIBLE");
 	});
 

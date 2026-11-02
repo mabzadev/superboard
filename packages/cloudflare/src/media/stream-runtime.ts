@@ -1,10 +1,3 @@
-/**
- * Cloudflare Stream Runtime Module
- *
- * This module is imported at runtime by the media provider system.
- * It contains the actual provider implementation that interacts with the Cloudflare API.
- */
-
 import { env } from "cloudflare:workers";
 import type {
 	MediaProvider,
@@ -17,19 +10,14 @@ import type {
 
 import type { CloudflareStreamConfig } from "./stream.js";
 
-/** Safely extract a string from an unknown value */
 function toString(value: unknown): string | undefined {
 	return typeof value === "string" ? value : undefined;
 }
 
-/** Type guard: check if value is a record-like object */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
-/**
- * Resolve a config value, checking env var if direct value not provided
- */
 function resolveEnvValue(
 	directValue: string | undefined,
 	envVarName: string | undefined,
@@ -48,13 +36,9 @@ function resolveEnvValue(
 	return value;
 }
 
-/**
- * Runtime implementation for Cloudflare Stream provider
- */
 export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> = (config) => {
 	const { customerSubdomain, controls = true, autoplay = false, loop = false, muted } = config;
 
-	// Resolve credentials from config or env vars
 	const accountId = resolveEnvValue(
 		config.accountId,
 		config.accountIdEnvVar,
@@ -71,22 +55,18 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 	const apiBase = `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream`;
 	const headers = { Authorization: `Bearer ${apiToken}` };
 
-	// Muted defaults to true if autoplay is enabled (browser requirement)
 	const isMuted = muted ?? autoplay;
 
 	const provider: MediaProvider = {
 		async list(options: MediaListOptions) {
 			const params = new URLSearchParams();
 
-			// Stream uses "after" for cursor-based pagination
 			if (options.cursor) {
 				params.set("after", options.cursor);
 			}
 
-			// Stream uses "asc" boolean, default is newest first
 			params.set("asc", "false");
 
-			// Search by name if query provided
 			if (options.query) {
 				params.set("search", options.query);
 			}
@@ -106,7 +86,6 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 				);
 			}
 
-			// Get the last video's UID for cursor-based pagination
 			const lastVideo = data.result.at(-1);
 			const nextCursor = lastVideo?.uid;
 
@@ -166,11 +145,6 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 		},
 
 		async upload(input) {
-			// Stream supports tus protocol for resumable uploads
-			// For simplicity, we'll use direct creator upload which creates an upload URL
-			// For large files, this would need to be enhanced with tus
-
-			// First, create a direct upload URL
 			const createResponse = await fetch(`${apiBase}/direct_upload`, {
 				method: "POST",
 				headers: {
@@ -178,7 +152,7 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
-					maxDurationSeconds: 3600, // 1 hour max
+					maxDurationSeconds: 3600,
 					meta: {
 						name: input.filename,
 					},
@@ -198,7 +172,6 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 				);
 			}
 
-			// Upload the file to the provided URL
 			const uploadUrl = createData.result.uploadURL;
 			const formData = new FormData();
 			formData.append("file", input.file, input.filename);
@@ -213,11 +186,8 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 				throw new Error(`Upload failed: ${error}`);
 			}
 
-			// The upload response contains the video details
-			// Wait a moment for the video to be processed
 			const videoId = createData.result.uid;
 
-			// Poll for the video to be ready (simple implementation)
 			let video: CloudflareStreamVideo | null = null;
 			for (let i = 0; i < 10; i++) {
 				await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -233,7 +203,6 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 			}
 
 			if (!video) {
-				// Return with pending status - thumbnail might not be ready yet
 				return {
 					id: videoId,
 					filename: input.filename,
@@ -278,8 +247,6 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 			const hlsSrc = toString(playback?.hls);
 			const dashSrc = toString(playback?.dash);
 
-			// Build the Stream player iframe URL or use HLS/DASH directly
-			// For video embeds, we can use the HLS stream URL
 			if (hlsSrc) {
 				return {
 					type: "video",
@@ -287,8 +254,6 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 						{ src: hlsSrc, type: "application/x-mpegURL" },
 						...(dashSrc ? [{ src: dashSrc, type: "application/dash+xml" }] : []),
 					],
-					// The Stream thumbnail arrives as `previewUrl`; `meta.thumbnail` is a
-					// legacy fallback.
 					poster: value.previewUrl ?? toString(value.meta?.thumbnail),
 					width: options?.width ?? value.width,
 					height: options?.height ?? value.height,
@@ -301,7 +266,6 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 				};
 			}
 
-			// Fallback: use the Stream embed player URL
 			const baseUrl = customerSubdomain
 				? `https://${customerSubdomain}`
 				: `https://customer-${accountId.slice(0, 8)}.cloudflarestream.com`;
@@ -322,12 +286,10 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 		},
 
 		getThumbnailUrl(id: string, _mimeType?: string, options?: { width?: number; height?: number }) {
-			// For videos, return a thumbnail/poster image
 			const baseUrl = customerSubdomain
 				? `https://${customerSubdomain}`
 				: `https://customer-${accountId.slice(0, 8)}.cloudflarestream.com`;
 
-			// Stream supports thumbnail customization via URL params
 			const width = options?.width || 400;
 			const height = options?.height;
 			let url = `${baseUrl}/${id}/thumbnails/thumbnail.jpg?width=${width}`;
@@ -339,7 +301,6 @@ export const createMediaProvider: CreateMediaProviderFn<CloudflareStreamConfig> 
 	return provider;
 };
 
-// Cloudflare Stream API response types
 interface CloudflareStreamListResponse {
 	success: boolean;
 	errors?: Array<{ message: string }>;

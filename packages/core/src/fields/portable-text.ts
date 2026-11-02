@@ -2,9 +2,6 @@ import { z } from "astro/zod";
 
 import type { FieldDefinition, PortableTextBlock } from "./types.js";
 
-/**
- * Portable Text block schema
- */
 const portableTextBlockSchema: z.ZodType<PortableTextBlock> = z
 	.object({
 		_type: z.string(),
@@ -12,10 +9,6 @@ const portableTextBlockSchema: z.ZodType<PortableTextBlock> = z
 	})
 	.passthrough();
 
-/**
- * Portable Text field
- * Stores structured content in Portable Text format
- */
 export function portableText(options?: {
 	required?: boolean;
 }): FieldDefinition<PortableTextBlock[] | undefined> {

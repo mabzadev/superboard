@@ -1,21 +1,11 @@
-/**
- * Tests for WPML/Polylang auto-detection in WordPress plugin import source.
- *
- * Verifies that the probe() and analyze() methods correctly extract and
- * surface i18n detection from the EmDash Exporter plugin's API responses.
- */
-
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { wordpressPluginSource } from "../../../../../../packages/core/src/import/sources/wordpress-plugin.js";
 import { setDefaultDnsResolver } from "../../../../../../packages/core/src/import/ssrf.js";
 
-// ─── Mock fetch ──────────────────────────────────────────────────────────────
-
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-// Bypass DoH so the fetch mock only sees the calls these tests model.
 let previousResolver: ReturnType<typeof setDefaultDnsResolver> | undefined;
 beforeAll(() => {
 	previousResolver = setDefaultDnsResolver(async () => ["93.184.216.34"]);
@@ -28,9 +18,6 @@ beforeEach(() => {
 	mockFetch.mockReset();
 });
 
-// ─── Fixtures ────────────────────────────────────────────────────────────────
-
-/** Minimal valid probe response without i18n */
 function makeProbeResponse(overrides: Record<string, unknown> = {}) {
 	return {
 		emdash_exporter: "1.0.0",
@@ -63,7 +50,6 @@ function makeProbeResponse(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-/** Minimal valid analyze response without i18n */
 function makeAnalyzeResponse(overrides: Record<string, unknown> = {}) {
 	return {
 		site: { title: "Test Site", url: "https://example.com" },
@@ -104,8 +90,6 @@ function makeAnalyzeResponse(overrides: Record<string, unknown> = {}) {
 		...overrides,
 	};
 }
-
-// ─── Probe tests ─────────────────────────────────────────────────────────────
 
 describe("WordPress Plugin Source — i18n detection", () => {
 	describe("probe()", () => {
@@ -199,8 +183,6 @@ describe("WordPress Plugin Source — i18n detection", () => {
 		});
 	});
 
-	// ─── Analyze tests ───────────────────────────────────────────────────────
-
 	describe("analyze()", () => {
 		it("returns i18n when WPML is detected", async () => {
 			mockFetch.mockImplementation(async (url: string) => {
@@ -218,7 +200,6 @@ describe("WordPress Plugin Source — i18n detection", () => {
 						{ status: 200 },
 					);
 				}
-				// Media endpoint — return empty
 				return new Response(
 					JSON.stringify({ items: [], total: 0, pages: 0, page: 1, per_page: 100 }),
 					{ status: 200 },
@@ -290,8 +271,6 @@ describe("WordPress Plugin Source — i18n detection", () => {
 			expect(analysis.i18n).toBeUndefined();
 		});
 	});
-
-	// ─── Content fetch — locale/translationGroup passthrough ─────────────────
 
 	describe("fetchContent()", () => {
 		it("passes through locale and translationGroup from plugin posts", async () => {

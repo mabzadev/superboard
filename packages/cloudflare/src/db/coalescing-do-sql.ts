@@ -1,21 +1,3 @@
-/**
- * Coalescing dialect for the Durable Object SQL backend.
- *
- * Buffers SELECTs issued in the same event-loop turn and executes them as a
- * single `batchQuery` RPC instead of one round trip per query. A page that
- * issues ~17 reads collapses to one round trip -- a large win when reads cross
- * a region to the primary, and still meaningful on a local replica (one RPC
- * instead of N).
- *
- * This is the default dialect for the per-request session db (see
- * `createRequestScopedDb` in do-sql.ts). The shared singleton must NEVER
- * coalesce: concurrent requests would share one buffer and one request's reads
- * could be batched into another's RPC (and its bookmark). The singleton uses
- * the plain `DOSqlDialect`.
- *
- * Mirrors the design of `coalescing-d1.ts`.
- */
-
 import {
 	type CompiledQuery,
 	type DatabaseConnection,
@@ -33,12 +15,6 @@ import type { DOSqlDialectConfig } from "./do-sql-dialect.js";
 import type { DOQueryOptions, EmDashDBStub } from "./do-sql-types.js";
 import { isReadStatement } from "./do-sql-types.js";
 
-/**
- * Statements safe to coalesce: plain SELECTs. Deliberately conservative --
- * `WITH` is excluded because SQLite allows CTEs on writes
- * (`WITH ... INSERT/UPDATE/DELETE`), and everything else (insert, update,
- * delete, pragma, explain, ...) takes the direct single-`query` path.
- */
 const SELECT_PATTERN = /^select\b/i;
 
 interface PendingQuery {
@@ -53,24 +29,8 @@ class CoalescingDOSqlConnection implements DatabaseConnection {
 	readonly #config: DOSqlDialectConfig;
 	#buffer: PendingQuery[] = [];
 	#flushScheduled = false;
-	/**
-	 * Time by which the currently-scheduled flush must have run; if it hasn't
-	 * (its timer was dropped by a cancelled owner), the next caller reclaims
-	 * the flag and reschedules. A DO connection is long-lived and its buffer
-	 * can be shared across requests, so a stranded flush would wedge every
-	 * later query — this makes it reclaimable (#1927).
-	 */
 	#flushDeadline = 0;
-	/**
-	 * How long a scheduled flush may go unfired before a later caller treats
-	 * it as stranded. Generous — a live setTimeout(0) fires within a turn.
-	 */
 	static readonly #FLUSH_RECLAIM_MS = 1_000;
-	/**
-	 * Tail of a promise chain that serializes every physical RPC against the
-	 * DO (direct-path statements and batch flushes alike), so a write and a
-	 * read batch never overlap and the bookmark advances in execution order.
-	 */
 	#opChain: Promise<unknown> = Promise.resolve();
 
 	constructor(stub: EmDashDBStub, config: DOSqlDialectConfig) {
@@ -78,7 +38,6 @@ class CoalescingDOSqlConnection implements DatabaseConnection {
 		this.#config = config;
 	}
 
-	/** The freshest write bookmark seen this request, else the cookie floor. */
 	#effectiveBookmark(): string | undefined {
 		return this.#config.bookmarkSink?.latest ?? this.#config.readBookmark;
 	}
@@ -92,13 +51,6 @@ class CoalescingDOSqlConnection implements DatabaseConnection {
 		};
 	}
 
-	/**
-	 * Run `op` after all previously-enqueued RPCs settle, so only one physical
-	 * RPC is ever in flight. We report `supportsMultipleConnections: true` to
-	 * lift Kysely's per-connection mutex (so same-turn SELECTs can reach the
-	 * buffer together); this chain restores the single-in-flight invariant for
-	 * physical calls. A failed op must not break the chain.
-	 */
 	#enqueue<T>(op: () => Promise<T>): Promise<T> {
 		const run = this.#opChain.then(op, op);
 		this.#opChain = run.then(
@@ -108,7 +60,6 @@ class CoalescingDOSqlConnection implements DatabaseConnection {
 		return run;
 	}
 
-	/** Single-statement path: full `query()` semantics (bookmark, sink, writes). */
 	async #single<R>(sql: string, params: unknown[]): Promise<QueryResult<R>> {
 		const opts = isReadStatement(sql) ? this.#readOptions() : undefined;
 		this.#config.onRpc?.();
@@ -128,8 +79,6 @@ class CoalescingDOSqlConnection implements DatabaseConnection {
 		const params = compiledQuery.parameters as unknown[];
 
 		if (!SELECT_PATTERN.test(compiledQuery.sql.trimStart())) {
-			// Writes and non-SELECT reads: direct path, serialized on the op chain
-			// so they can't overlap an in-flight read batch or another write.
 			return this.#enqueue(() => this.#single<R>(compiledQuery.sql, params));
 		}
 
@@ -139,17 +88,6 @@ class CoalescingDOSqlConnection implements DatabaseConnection {
 		});
 	}
 
-	/**
-	 * setTimeout(0) (macrotask), not queueMicrotask: Kysely awaits internally
-	 * between acquiring the connection and executing each query, so a microtask
-	 * window would close before sibling queries issued in the same turn reach
-	 * the buffer.
-	 *
-	 * Cancellation-safe on workerd (#1927): the flush flag is reclaimable. Each
-	 * schedule stamps a deadline; if it lapses with the flag still set (the
-	 * timer was dropped by a cancelled owner), the next caller clears the stale
-	 * flag and reschedules rather than queueing behind a flush that never runs.
-	 */
 	#scheduleFlush(): void {
 		if (this.#flushScheduled) {
 			this.#reclaimStrandedFlush();
@@ -162,11 +100,6 @@ class CoalescingDOSqlConnection implements DatabaseConnection {
 		}, 0);
 	}
 
-	/**
-	 * If the pending flush is older than its deadline, its timer was dropped
-	 * by a cancelled owner — clear the flag so this caller reschedules rather
-	 * than queueing behind a flush that will never run.
-	 */
 	#reclaimStrandedFlush(): void {
 		if (this.#flushScheduled && Date.now() > this.#flushDeadline) {
 			this.#flushScheduled = false;
@@ -181,8 +114,6 @@ class CoalescingDOSqlConnection implements DatabaseConnection {
 		await this.#enqueue(async () => {
 			const first = pending[0];
 			if (pending.length === 1 && first) {
-				// A lone query gains nothing from a batch RPC; run it directly so
-				// it keeps full query() semantics.
 				try {
 					first.resolve(await this.#single(first.sql, first.params));
 				} catch (error) {
@@ -191,8 +122,6 @@ class CoalescingDOSqlConnection implements DatabaseConnection {
 				return;
 			}
 
-			// Compute the bookmark inside the enqueued op so it reflects any write
-			// that ran just before this flush.
 			const opts = this.#readOptions();
 			let results;
 			try {
@@ -202,11 +131,6 @@ class CoalescingDOSqlConnection implements DatabaseConnection {
 					opts,
 				);
 			} catch {
-				// The batch RPC failed as a unit. Fall back to running each buffered
-				// statement individually (all SELECTs, safe to re-run) so innocent
-				// queries still resolve and only a genuinely failing one rejects with
-				// its own error. Sequential, in issue order: determinism over latency
-				// on the error path.
 				for (const p of pending) {
 					try {
 						p.resolve(await this.#single(p.sql, p.params));
@@ -253,10 +177,6 @@ class CoalescingDOSqlDriver implements Driver {
 	async init(): Promise<void> {}
 
 	async acquireConnection(): Promise<DatabaseConnection> {
-		// One shared connection (and one stub) for the whole request: the point
-		// is for concurrent queries to land in the same buffer. Resolved lazily
-		// inside the request's I/O context. Safe because this dialect is only
-		// ever used per-request, never for the cross-request singleton.
 		this.#connection ??= new CoalescingDOSqlConnection(this.#config.resolveStub(), this.#config);
 		return this.#connection;
 	}
@@ -278,13 +198,6 @@ class CoalescingDOSqlDriver implements Driver {
 	async destroy(): Promise<void> {}
 }
 
-/**
- * SqliteAdapter reports `supportsMultipleConnections: false`, which makes
- * Kysely serialize every query behind a connection mutex -- nothing would ever
- * coalesce. Our shared connection is explicitly safe for concurrent
- * `executeQuery` calls (that is the point), so report `true`. Transactions are
- * rejected by the driver regardless.
- */
 class CoalescingDOSqlAdapter extends SqliteAdapter {
 	override get supportsMultipleConnections(): boolean {
 		return true;

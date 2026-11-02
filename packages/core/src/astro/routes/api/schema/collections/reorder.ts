@@ -1,9 +1,3 @@
-/**
- * Collection reorder endpoint
- *
- * POST /_emdash/api/schema/collections/reorder - Set the admin sidebar order
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

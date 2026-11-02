@@ -82,7 +82,6 @@ const platformLabels: Record<string, string> = {
 	[UNKNOWN_PLATFORM]: "Unknown platform",
 };
 const countColumns = ["views", "opens", "installs", "appOpens", "referrals"] as const;
-/** The links endpoint returns at most 100 rows; the most viewed links are requested. */
 const LINK_LIMIT = 100;
 
 const isoDate = (value?: Date) => value?.toISOString().slice(0, 10);

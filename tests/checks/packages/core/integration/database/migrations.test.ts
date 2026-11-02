@@ -38,20 +38,16 @@ describe("Database Migrations (Integration)", () => {
 	let db: Kysely<Database>;
 
 	beforeEach(() => {
-		// Create fresh in-memory database for each test
 		db = createDatabase({ url: ":memory:" });
 	});
 
 	afterEach(async () => {
-		// Close the database connection
 		await db.destroy();
 	});
 
 	it("should create all tables from migrations", async () => {
 		await runMigrations(db);
 
-		// Verify all tables exist by querying them
-		// Note: No generic "content" table - collections create ec_* tables dynamically
 		const tables = [
 			"revisions",
 			"taxonomies",
@@ -82,7 +78,6 @@ describe("Database Migrations (Integration)", () => {
 		];
 
 		for (const table of tables) {
-			// Query table to verify it exists
 			const result = await db
 				.selectFrom(table as keyof Database)
 				.selectAll()
@@ -137,7 +132,6 @@ describe("Database Migrations (Integration)", () => {
 
 		const migrations = await db.selectFrom("_emdash_migrations").selectAll().execute();
 
-		// Should still only have the same number of migration records
 		expect(migrations).toHaveLength(MIGRATION_COUNT);
 	});
 
@@ -145,7 +139,6 @@ describe("Database Migrations (Integration)", () => {
 		await db.destroy();
 		db = await setupTestDatabaseWithCollections();
 
-		// Kysely only re-runs trailing entries; include the latest migrations.
 		const trailing = [
 			"034_published_at_index",
 			"035_bounded_404_log",
@@ -294,7 +287,6 @@ describe("Database Migrations (Integration)", () => {
 	it("should create schema registry tables", async () => {
 		await runMigrations(db);
 
-		// Test collections table
 		const testId = "test-collection";
 		await db
 			.insertInto("_emdash_collections")
@@ -332,7 +324,6 @@ describe("Database Migrations (Integration)", () => {
 			})
 			.execute();
 
-		// Attempting to insert duplicate slug should fail
 		await expect(
 			db
 				.insertInto("_emdash_collections")
@@ -349,7 +340,6 @@ describe("Database Migrations (Integration)", () => {
 	it("should create fields table with foreign key to collections", async () => {
 		await runMigrations(db);
 
-		// Create collection first
 		const collectionId = "collection-1";
 		await db
 			.insertInto("_emdash_collections")
@@ -361,7 +351,6 @@ describe("Database Migrations (Integration)", () => {
 			})
 			.execute();
 
-		// Create field
 		await db
 			.insertInto("_emdash_fields")
 			.values({
@@ -390,7 +379,6 @@ describe("Database Migrations (Integration)", () => {
 	it("should create revisions table with collection+entry_id", async () => {
 		await runMigrations(db);
 
-		// Create revision for a content entry
 		await db
 			.insertInto("revisions")
 			.values({
@@ -421,19 +409,18 @@ describe("Database Migrations (Integration)", () => {
 				id: "user-1",
 				email: "test@example.com",
 				name: "Test User",
-				role: 50, // ADMIN
+				role: 50,
 				email_verified: 1,
 			})
 			.execute();
 
-		// Duplicate email should fail
 		await expect(
 			db
 				.insertInto("users")
 				.values({
 					id: "user-2",
 					email: "test@example.com",
-					role: 10, // SUBSCRIBER
+					role: 10,
 					email_verified: 1,
 				})
 				.execute(),
@@ -443,7 +430,6 @@ describe("Database Migrations (Integration)", () => {
 	it("should create taxonomies table with hierarchical support", async () => {
 		await runMigrations(db);
 
-		// Create parent category
 		const parentId = "cat-parent";
 		await db
 			.insertInto("taxonomies")
@@ -455,7 +441,6 @@ describe("Database Migrations (Integration)", () => {
 			})
 			.execute();
 
-		// Create child category
 		await db
 			.insertInto("taxonomies")
 			.values({
@@ -506,19 +491,13 @@ describe("Database Migrations (Integration)", () => {
 		`.execute(db);
 		const names = new Set(indexes.rows.map((r) => r.name));
 
-		// The composite (name, locale) index is added...
 		expect(names).toContain("idx_taxonomies_name_locale");
-		// ...and it supersedes the single-column name index (leftmost prefix
-		// covers every name-only lookup), so the redundant one is dropped.
 		expect(names).not.toContain("idx_taxonomies_name");
 	});
 
 	it("plans findByName(name, locale) through the composite index instead of scanning the locale (regression for #1723)", async () => {
 		await runMigrations(db);
 
-		// One taxonomy dominates the locale; a small facet shares it. Without the
-		// composite index the planner picks idx_taxonomies_locale and reads every
-		// term in the locale to filter `name` in memory — per facet fetched.
 		for (let i = 0; i < 40; i++) {
 			await db
 				.insertInto("taxonomies")
@@ -544,7 +523,6 @@ describe("Database Migrations (Integration)", () => {
 				.execute();
 		}
 
-		// Exact query shape emitted by TaxonomyRepository.findByName(name, { locale }).
 		const plan = await sql<{ detail: string }>`
 			EXPLAIN QUERY PLAN
 			SELECT * FROM "taxonomies"
@@ -562,7 +540,6 @@ describe("Database Migrations (Integration)", () => {
 
 		const taxonomyId = "tax-1";
 
-		// Create taxonomy
 		await db
 			.insertInto("taxonomies")
 			.values({
@@ -573,7 +550,6 @@ describe("Database Migrations (Integration)", () => {
 			})
 			.execute();
 
-		// Assign taxonomy to content entry (collection + entry_id)
 		await db
 			.insertInto("content_taxonomies")
 			.values({

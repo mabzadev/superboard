@@ -1,21 +1,3 @@
-/* Supabase Design System - Authentic Tokens & Styles */
-
-/*
- * Radix/scale/brand --color-* CSS variables, with per-theme values inlined.
- *
- * Hand-edited. Source palette: @radix-ui/colors (light/dark hue scales) plus a
- * curated brand scale. The Supabase `scale` namespace maps to slate in light
- * and gray in dark (scale-1100 dark is the hard-coded #bbbbbb override that
- * predates the migration).
- *
- * Brand steps 200..600 stay as hsl(var(--brand-{step})) because those tokens
- * are semantic — light/dark values live in the theme files (light.css /
- * dark.css), not here.
- *
- * theme.css references these vars from its @theme inline block so Tailwind v4
- * generates the bg-/text-/border-/ring- utilities.
- */
-
 :root {
 	--color-amber-100: hsl(39, 70%, 99%);
 	--color-amber-200: hsl(40, 100%, 96.5%);
@@ -143,54 +125,19 @@
 	--color-brand-600: hsl(var(--brand-600));
 }
 
-/*
- * Core semantic color system.
- *
- * Themes override the small set of inputs below; every semantic color is then
- * derived from them in OKLCH. The stepped numeric scales (brand / warning /
- * destructive / secondary) are NOT derived here — they live as per-theme values
- * in the theme files and are mapped to utilities in packages/config/css/theme.css.
- */
-
 :root {
-	/*
-   * Hue inputs. A single --hue used to drive both the neutral surface/text ramp
-   * and the brand, so the two could never drift apart. They are now split so a
-   * theme can run, say, a cool-gray surface against the green brand:
-   *   --surface-hue  tints backgrounds, text and borders (the neutral ramp)
-   *   --primary-hue  is the brand hue that --primary is built from
-   * Both default to --hue (Supabase green ≈159° in OKLCH), so a theme that only
-   * sets --hue keeps surfaces and brand locked together as before; override
-   * either one to let them diverge. */
 	--hue: 159;
 	--surface-hue: var(--hue);
 	--primary-hue: var(--hue);
-	/* Root defaults mirror the dark theme (the app's default appearance). */
 	--chroma: 0.016;
 	--surface: 0.17;
 
 	--foreground-lightness: 0.95;
-	/* How far muted/tertiary text sits from --surface toward --foreground-lightness
-     (0 = surface, 1 = full foreground) at --contrast 0.5; themes override. */
 	--muted-foreground-level: 0.8;
 	--tertiary-foreground-level: 0.65;
 
-	/*
-   * Global contrast knob, 0 to 1. Default 0.5 is the comfortable baseline; 0 keeps
-   * borders and accent barely visible over muted surfaces; 1 pushes them to full
-   * strength. Foreground hits --foreground-lightness at 0.5; below that it eases
-   * toward the surface down to --contrast-text-floor at 0. Muted and tertiary
-   * foreground lightness sits at the theme base level (a surface→foreground mix) at
-   * 0.5 and eases up toward foreground or down toward half that base as contrast moves.
-   *
-   * --contrast-delta is -1 at 0, 0 at 0.5, +1 at 1 — shared offset from baseline;
-   * --contrast-up / --contrast-down are its positive / negative halves.
-   * --contrast-border ramps [floor, 1] over --contrast and squares it so most of
-   * the range lives toward full strength. ((delta + 1) / 2 simplifies to contrast.)
-   */
 	--contrast: 0.5;
 	--contrast-delta: calc((var(--contrast) - 0.5) / 0.5);
-	/* positive and negative halves of the delta, reused below */
 	--contrast-up: max(0, var(--contrast-delta));
 	--contrast-down: max(0, calc(var(--contrast-delta) * -1));
 	--contrast-text-floor: 0.9;
@@ -201,32 +148,11 @@
 	);
 	--contrast-border: calc(var(--contrast-border-linear) * var(--contrast-border-linear));
 
-	/*
-   * Surface elevation. Each surface steps its lightness away from --background
-   * by `--elevation-step * ratio`, where the ratios are shared across themes and
-   * the step is signed: positive brightens as surfaces rise, negative darkens.
-   *
-   * The default step reproduces the historical behavior (≈3% per level mixed
-   * toward the foreground): dark themes brighten and the light baseline darkens.
-   * The light theme overrides --elevation-step (and lowers --surface for
-   * headroom) so its higher surfaces brighten toward white instead — giving a
-   * single "higher = lighter" model in both modes. 0 = flat (no elevation).
-   */
 	--elevation-1: 1;
 	--elevation-2: 1.5;
 	--elevation-3: 2;
-	/* Signed span surface→foreground (+ in dark, − in light). */
 	--tone-span: calc(var(--foreground-lightness) - var(--surface));
 	--elevation-step: calc(var(--tone-span) * 0.04);
-	/*
-   * Foreground overlays for muted / accent / tertiary. Alpha is tuned so each level
-   * matches the lightness delta of the same elevation ratio on --background; a
-   * translucent --foreground layer then composites with whatever surface sits
-   * beneath (lightens in dark, darkens in light). Steps: muted (e1) → accent
-   * (e2) → tertiary (e3).
-   */
-	/* max(span, -span) is equivalent to abs(span), but works across the browser
-     versions supported by Tailwind v4. */
 	--surface-overlay-unit: calc(
 		var(--elevation-step) / max(var(--tone-span), calc(var(--tone-span) * -1))
 	);
@@ -234,20 +160,6 @@
 	--accent-alpha: calc(var(--surface-overlay-unit) * var(--elevation-2));
 	--tertiary-alpha: calc(var(--surface-overlay-unit) * var(--elevation-3));
 
-	/*
-   * Status hues stay anchored to amber / red but pull a fraction of the way
-   * toward the brand --primary-hue for harmony, then clamp to their perceptual
-   * category so "warning" always reads amber and "destructive" always reads red
-   * no matter what --primary-hue is. --status-hue-pull: 0 = fixed amber/red,
-   * 1 = fully brand-relative. At the default --primary-hue the pull term is 0, so
-   * these resolve to their bases (warning 75 / destructive 25 / info 288).
-   * --brand-hue-reference is the --primary-hue at which pull is zero; keep it
-   * equal to the default brand hue.
-   * Warning sits at 75 (amber), not higher toward yellow — yellow can't darken
-   * without going olive, so it loses contrast on light surfaces. Info is a violet
-   * (matching the "no additional charge" badge); like the others it pulls a touch
-   * with the brand --primary-hue but clamps so it always reads violet.
-   */
 	--brand-hue-reference: 159;
 	--status-hue-pull: 0.15;
 	--warning-hue: clamp(
@@ -265,36 +177,17 @@
 		calc(288 + (var(--primary-hue) - var(--brand-hue-reference)) * var(--status-hue-pull)),
 		302
 	);
-	/*
-   * Expressive (status) colors are deliberately NOT derived from the neutral
-   * surface→foreground span the way text and surfaces are. An expressive color
-   * has its own identity; tying its lightness to the theme's text ramp is what
-   * left warning under-saturated in light mode and too dark in dark mode.
-   *
-   * Instead each is anchored to a fixed target lightness near its hue's chroma
-   * peak and a single shared --expressive-chroma. That chroma is a flat constant,
-   * deliberately NOT derived from the neutral --chroma knob: status colors must
-   * stay legible even when the brand is dialed toward grayscale. It sits inside
-   * sRGB at these lightnesses, so no gamut mapping is required.
-   *
-   * The dark-mode lightness anchors live here; light mode runs darker (set in
-   * light.css) so the fills hold contrast against the near-white surface.
-   */
 	--expressive-chroma: 0.14;
 	--warning-lightness: 0.8;
 	--destructive-lightness: 0.75;
 	--info-lightness: 0.7;
 
-	/* shadcn semantic pairs */
 	--background: oklch(var(--surface) calc(var(--chroma) * 0.5) var(--surface-hue));
 	--foreground-chroma: calc(var(--chroma) * 0.55);
 	--foreground: oklch(
 		calc(var(--surface) + var(--tone-span) * var(--contrast-text)) var(--foreground-chroma)
 			var(--surface-hue)
 	);
-	/* Inverse of --foreground: canvas-coloured text for use on inverted fills
-     (bg-foreground, bg-black / dark:bg-white, etc). Not the same as
-     --primary-foreground, which stays dark for the vivid primary fill. */
 	--foreground-contrast: oklch(var(--surface) calc(var(--chroma) * 0.55) var(--surface-hue));
 
 	--card: oklch(from var(--background) calc(l + var(--elevation-step) * var(--elevation-1)) c h);
@@ -302,12 +195,6 @@
 	--popover: oklch(from var(--background) calc(l + var(--elevation-step) * var(--elevation-2)) c h);
 	--popover-foreground: var(--foreground);
 
-	/* Primary is the brand-derived accent: a fixed, vivid Supabase green on
-     --primary-hue, mode-invariant and decoupled from the --chroma knob so it
-     holds its identity even as neutrals desaturate. NOTE: the `brand` utility
-     (--color-brand in theme.css) is deliberately NOT this — it maps to the
-     per-theme --brand-default scale (master behavior) while we resolve how
-     `brand` is used across the interface. */
 	--primary: oklch(0.76 0.15 var(--primary-hue));
 	--primary-foreground: oklch(
 		min(var(--surface), var(--foreground-lightness)) calc(var(--chroma) * 0.45) var(--primary-hue)
@@ -338,27 +225,6 @@
 	--accent: oklch(from var(--foreground) l c h / var(--accent-alpha));
 	--accent-foreground: var(--foreground);
 
-	/*
-   * Control surface roles (design sync: sunk fields + raised choosers):
-   *   --field          sunk text entry (Input, Textarea, filled MultiSelect)
-   *   --control-raised raised chooser plate (Select, empty MultiSelect)
-   *   --control        alias of --control-raised
-   *
-   * Alpha overlays relative to the local plate (page, sheet, card) — not solids
-   * from --background. Page-relative solids sit between canvas (e0) and Sheet
-   * (popover e2) and vanish on light near the white ceiling.
-   *
-   * Field soft always-sink via black. --field-alpha is a theme input (stronger in
-   * dark.css) because the same absolute opacity is obvious on light plates and
-   * near-invisible on dark ones. Default is softer than the old foreground/[.026]
-   * wash. Raised is a soft white lift so selects read button-like without stark
-   * wells. Borders carry most hover chrome (--border-control-hover). Light raises
-   * still have little headroom on sheets; sheets matching app background would
-   * widen that later.
-   *
-   * Default Button stays opaque card/popover for occluding chrome (DEPR-636).
-   * Floating clusters can wrap in a solid Popover as a follow-up.
-   */
 	--field-alpha: 0.015;
 	--field: oklch(0 0 0 / var(--field-alpha));
 	--control-raised: oklch(1 0 0 / calc(var(--muted-alpha) * 0.65));
@@ -368,14 +234,6 @@
 	--destructive: oklch(
 		var(--destructive-lightness) var(--expressive-chroma) var(--destructive-hue)
 	);
-	/*
-   * Text that sits on the solid fill: dark ink on light fills (amber), white on
-   * dark fills (red). The clamp turns the fill's own lightness into a hard flip
-   * around L≈0.62 — (0.62 − l) is negative for light fills (→ floor 0.12) and
-   * positive for dark fills (→ ceil 0.99) — so on-colors stay legible and keep
-   * flipping correctly if the anchors are retuned. A trace of hue chroma keeps
-   * the ink from reading as flat gray.
-   */
 	--warning-foreground: oklch(
 		from var(--warning) clamp(0.12, calc((0.62 - l) * 100), 0.99) calc(c * 0.08) h
 	);
@@ -387,7 +245,6 @@
 		from var(--info) clamp(0.12, calc((0.62 - l) * 100), 0.99) calc(c * 0.08) h
 	);
 
-	/* Status border tokens for subtle / tinted surfaces */
 	--border-destructive: oklch(from var(--destructive) l c h / 30%);
 	--border-warning: oklch(from var(--warning) l c h / 30%);
 	--border-info: oklch(from var(--info) l c h / 30%);
@@ -399,11 +256,6 @@
 	--input: oklch(
 		from var(--foreground) l calc(c * 0.5) h / calc(3% + 38% * var(--contrast-border))
 	);
-	/*
-   * Shared interactive border for control chrome (inputs, selects, default /
-   * dashed Button, radio cards). Pairs with rest --border-control / --border-strong.
-   * Stronger than --border-stronger; softer than a full muted-foreground stroke.
-   */
 	--border-control-hover: oklch(
 		from var(--foreground) l calc(c * 0.5) h / calc(12% + 58% * var(--contrast-border))
 	);
@@ -421,10 +273,8 @@
 	--foreground-lightness: 0.95;
 	--muted-foreground-level: 0.8;
 	--tertiary-foreground-level: 0.65;
-	/* Light default --field-alpha (0.015) disappears on dark plates; dig harder. */
 	--field-alpha: 0.12;
 
-	/* Stepped numeric scales (per-theme literals; mapped in theme.css) */
 	--brand-link: 155deg 100% 38.6%;
 	--brand-default: 153.1deg 60.2% 52.7%;
 	--brand-600: 154.9deg 59.5% 70%;
@@ -454,7 +304,6 @@
 	--muted-foreground-level: 0.72;
 	--tertiary-foreground-level: 0.52;
 
-	/* Stepped numeric scales (per-theme literals; mapped in theme.css) */
 	--brand-link: 153.1deg 60.2% 52.7%;
 	--brand-default: 153.1deg 60.2% 52.7%;
 	--brand-600: 153deg 59.5% 70%;
@@ -485,30 +334,18 @@
 	--hue: 159;
 	--surface-hue: 34;
 	--chroma: 0;
-	/*
-   * Soft-gray canvas (not pure white) so elevated surfaces have headroom to
-   * brighten toward white. --elevation-step is positive here: higher surfaces
-   * get lighter, matching dark mode's direction. Tuned literal (previously
-   * derived from 1 - surface); retune alongside --surface.
-   */
 	--surface: 0.995;
 	--elevation-step: 0.024;
 	--contrast: 0.53;
 	--foreground-lightness: 0.1;
 	--muted-foreground-level: 0.65;
 	--tertiary-foreground-level: 0.5;
-	/*
-   * Expressive fills run darker than the dark-theme anchors so they hold contrast
-   * against the near-white surface (a light amber on white disappears). Lightness
-   * is mode-aware; chroma is the shared --expressive-chroma from semantic.css.
-   */
 	--warning-lightness: 0.68;
 	--destructive-lightness: 0.52;
 	--info-lightness: 0.54;
 
 	--code-token-string: #c46a0a;
 
-	/* Stepped numeric scales (per-theme literals; mapped in theme.css) */
 	--brand-link: 153.4deg 86.5% 27.8%;
 	--brand-default: 152.9deg 60% 52.9%;
 	--brand-600: 156.5deg 86.5% 26.1%;
@@ -516,7 +353,6 @@
 	--brand-400: 151.3deg 66.9% 66.9%;
 	--brand-300: 147.5deg 72% 80.4%;
 	--brand-200: 147.6deg 72.5% 90%;
-	/* --warning-default: 30.3deg 80.3% 47.8%; */
 	--warning-600: 30.3deg 80.3% 47.8%;
 	--warning-500: 36.3deg 85.7% 67.1%;
 	--warning-400: 41.9deg 100% 81.8%;
@@ -529,28 +365,11 @@
 	--destructive-200: 0deg 100% 99.4%;
 }
 
-/*
- * Backwards-compatibility aliases.
- *
- * These map the old token names onto the semantic system in semantic.css so
- * components can migrate gradually. Nothing new should reference them — they
- * exist only so un-migrated call sites keep resolving. Delete entries as their
- * consumers move to the semantic tokens; the file goes away once it is empty.
- *
- * Kept separate from semantic.css so the core model reads as just inputs →
- * derivations. Must be imported after semantic.css (see tailwind.config.css).
- */
-
 :root {
-	/* Legacy foreground aliases */
 	--foreground-light: var(--muted-foreground);
 	--foreground-lighter: var(--tertiary-foreground);
 	--foreground-muted: var(--tertiary-foreground);
-	/* --foreground-contrast lives in semantic.css — do not remap to --primary-foreground */
 
-	/* Legacy background aliases */
-
-	/* Legacy border aliases */
 	--border-muted: var(--border);
 	--border-overlay: oklch(
 		from var(--foreground) l calc(c * 0.5) h / calc(4% + 34% * var(--contrast-border))
@@ -562,17 +381,6 @@
 	);
 }
 
-/*
- * Tailwind v4 animation tokens + the @keyframes they reference.
- *
- * Each --animate-* token in @theme generates an `animate-{name}` utility.
- * Keyframes live outside @theme since they're @-rules, not design tokens.
- *
- * Migrated from packages/config/ui.config.js (theme.extend.keyframes /
- * theme.extend.animation) and packages/config/tailwind.config.js
- * (theme.extend.keyframes / theme.extend.animation).
- */
-
 @theme {
 	--ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
 	--ease-move: cubic-bezier(0.87, 0, 0.13, 1);
@@ -580,17 +388,13 @@
 	--animate-fade-in: fadeIn 300ms both;
 	--animate-fade-out: fadeOut 300ms both;
 
-	/* may be unused — verify before pruning */
 	--animate-dropdown-content-show: overlayContentShow 100ms var(--ease-enter);
-	/* may be unused — verify before pruning */
 	--animate-dropdown-content-hide: overlayContentHide 100ms var(--ease-enter);
 
 	--animate-overlay-show: overlayContentShow 300ms var(--ease-enter);
 	--animate-overlay-hide: overlayContentHide 300ms var(--ease-enter);
 
-	/* may be unused — verify before pruning */
 	--animate-fade-in-overlay-bg: fadeInOverlayBg 300ms;
-	/* may be unused — verify before pruning */
 	--animate-fade-out-overlay-bg: fadeOutOverlayBg 300ms;
 
 	--animate-slide-down: slideDown 300ms var(--ease-move);
@@ -599,21 +403,15 @@
 	--animate-slide-down-normal: slideDownNormal 300ms var(--ease-move);
 	--animate-slide-up-normal: slideUpNormal 300ms var(--ease-move);
 
-	/* may be unused — verify before pruning */
 	--animate-panel-slide-left-out: panelSlideLeftOut 200ms var(--ease-move);
-	/* may be unused — verify before pruning */
 	--animate-panel-slide-left-in: panelSlideLeftIn 250ms var(--ease-move);
-	/* may be unused — verify before pruning */
 	--animate-panel-slide-right-out: panelSlideRightOut 200ms var(--ease-move);
-	/* may be unused — verify before pruning */
 	--animate-panel-slide-right-in: panelSlideRightIn 250ms var(--ease-move);
 
 	--animate-line-loading: lineLoading 1.8s infinite;
 	--animate-line-loading-slower: lineLoading 2.3s infinite;
 
-	/* may be unused — verify before pruning */
 	--animate-dropdownFadeIn: dropdownFadeIn 0.1s ease-out;
-	/* may be unused — verify before pruning */
 	--animate-dropdownFadeOut: dropdownFadeOut 0.1s ease-out;
 
 	--animate-flash-code: flash-code 1s forwards;
@@ -873,24 +671,10 @@
 	}
 }
 
-/*
- * Custom Tailwind v4 utilities migrated from packages/config/ui.config.js
- * (addUtilities + matchUtilities) and packages/config/tailwind.config.js
- * (the .bg legacy shim).
- */
-
-/*
- * The `bg` class worked in Tailwind v3 but stopped working in v4. Restored as
- * an alias for `bg-default` to avoid a wide rename across the codebase.
- * Should be deprecated in favor of `bg-default`.
- */
 @utility bg {
 	background-color: var(--background);
 }
 
-/*
- * Soft shimmer gradient used by LoadingLine.
- */
 @utility line-loading-bg {
 	background: rgb(0, 0, 0);
 	background: linear-gradient(
@@ -910,50 +694,34 @@
 	);
 }
 
-/* may be unused — verify before pruning */
 @utility mask-fadeout-right {
 	-webkit-mask-image: linear-gradient(to right, white 98%, transparent 100%);
 	mask-image: linear-gradient(to right, white 98%, transparent 100%);
 }
-/* may be unused — verify before pruning */
 @utility mask-fadeout-left {
 	-webkit-mask-image: linear-gradient(to left, white 98%, transparent 100%);
 	mask-image: linear-gradient(to left, white 98%, transparent 100%);
 }
 
-/*
- * Functional color utilities. The `--value(--color-*)` token accepts any
- * registered --color-* design token (e.g. highlight-foreground-light).
- */
-/* may be unused — verify before pruning */
 @utility highlight-* {
 	box-shadow: inset 0 1px 0 0 --value(--color-*);
 }
-/* may be unused — verify before pruning */
 @utility subhighlight-* {
 	box-shadow: inset 0 -1px 0 0 --value(--color-*);
 }
 
-/*
- * Inline-SVG grid background. Used by ProjectLinker as bg-grid-black/5 and
- * bg-grid-white/5 for the integrations onboarding visuals.
- */
 @utility bg-grid-* {
 	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='--value(--color-*)'><path d='M0 .5H31.5V32'/></svg>");
 }
 
 @utility no-scrollbar {
-	-ms-overflow-style: none; /* IE and Edge */
-	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none;
+	scrollbar-width: none;
 	&::-webkit-scrollbar {
-		display: none; /* Chrome, Safari, Opera */
+		display: none;
 	}
 }
 
-/*
- * Text shimmer (shadcn shimmer utility, inlined so we don't pull in the full
- * shadcn CSS package). Apply `shimmer` to text to draw attention.
- */
 @property --shimmer-angle {
 	syntax: "<angle>";
 	inherits: true;
@@ -993,7 +761,6 @@
 	animation: tw-shimmer var(--shimmer-duration, 2s) linear infinite;
 	transition: -webkit-text-fill-color 0.5s ease;
 
-	/* Fade to solid text on dismiss — keep the gradient until fill is opaque */
 	&[data-shimmer-fading] {
 		-webkit-text-fill-color: currentColor;
 		animation-play-state: paused;
@@ -1056,27 +823,13 @@
 	}
 }
 
-/*
- * Canonical keyboard focus rings. Prefer these over inventing local ring/outline
- * stacks.
- *
- * - focus-ring: default offset ring (buttons, inputs, most controls).
- *   `outline-hidden` stays always-on so mouse click does not show the browser
- *   default; the ring is `:focus-visible` only.
- * - focus-inset: dense/flush surfaces such as interactive <tr>s. Must use
- *   outline (not ring/box-shadow) — box-shadow on table-row is unreliable,
- *   especially in Safari. Do NOT pair with outline-hidden: that sets
- *   outline-style: none and suppresses the focus outline.
- */
 @utility focus-ring {
 	@apply outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
 }
 
 @utility focus-inset {
-	/* Reserve outline geometry up front so focus never flashes the browser default. */
 	outline: 2px solid transparent;
 	outline-offset: -2px;
-	/* Call sites often add `transition`/`transition-all`; keep outline instant. */
 	transition-property:
 		color, background-color, border-color, text-decoration-color, fill, stroke, opacity, transform,
 		filter, backdrop-filter, box-shadow;

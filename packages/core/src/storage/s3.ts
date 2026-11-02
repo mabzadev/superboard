@@ -1,10 +1,3 @@
-/**
- * S3-Compatible Storage Implementation
- *
- * Uses the AWS SDK v3 for S3 operations.
- * Works with AWS S3, Cloudflare R2, Minio, and other S3-compatible services.
- */
-
 import {
 	S3Client,
 	type S3ClientConfig,
@@ -56,12 +49,6 @@ function isConfigKey(key: unknown): key is keyof S3StorageConfig {
 	return typeof key === "string" && key in ENV_KEYS;
 }
 
-/**
- * Build the merged config: for each field, use the explicit value if present,
- * otherwise fall back to the corresponding S3_* env var.  Validate once on the
- * final merged result so a malformed env var never breaks the build when the
- * caller provides that field explicitly.
- */
 export function resolveS3Config(partial: Record<string, unknown>): S3StorageConfig {
 	const raw: Record<string, unknown> = {};
 	for (const [field, envKey] of Object.entries(ENV_KEYS)) {
@@ -113,14 +100,10 @@ export function resolveS3Config(partial: Record<string, unknown>): S3StorageConf
 
 const TRAILING_SLASH_PATTERN = /\/$/;
 
-/** Type guard for AWS SDK errors (have a `name` property) */
 function hasErrorName(error: unknown): error is Error & { name: string } {
 	return error instanceof Error && typeof error.name === "string";
 }
 
-/**
- * S3-compatible storage implementation
- */
 export class S3Storage implements Storage {
 	private client: S3Client;
 	private bucket: string;
@@ -132,13 +115,10 @@ export class S3Storage implements Storage {
 		this.publicUrl = config.publicUrl;
 		this.endpoint = config.endpoint;
 
-		// S3ClientConfig types `credentials` as required, but the SDK accepts
-		// omitted credentials at runtime (falls back to the provider chain).
 		/* eslint-disable typescript/no-unsafe-type-assertion -- upstream @aws-sdk/client-s3 overstates required fields */
 		const clientConfig = {
 			endpoint: config.endpoint,
 			region: config.region || "auto",
-			// Required for R2 and some S3-compatible services
 			forcePathStyle: true,
 			...(config.accessKeyId && config.secretAccessKey
 				? {
@@ -159,7 +139,6 @@ export class S3Storage implements Storage {
 		contentType: string;
 	}): Promise<UploadResult> {
 		try {
-			// Convert ReadableStream to Buffer if needed
 			let body: Buffer | Uint8Array;
 			if (options.body instanceof ReadableStream) {
 				const chunks: Uint8Array[] = [];
@@ -206,7 +185,6 @@ export class S3Storage implements Storage {
 				throw new EmDashStorageError(`File not found: ${key}`, "NOT_FOUND");
 			}
 
-			// Convert SDK stream to web ReadableStream
 			const body = response.Body.transformToWebStream();
 
 			return {
@@ -234,7 +212,6 @@ export class S3Storage implements Storage {
 				}),
 			);
 		} catch (error) {
-			// S3 delete is idempotent, so we ignore "not found" errors
 			if (!hasErrorName(error) || error.name !== "NoSuchKey") {
 				throw new EmDashStorageError(`Failed to delete file: ${key}`, "DELETE_FAILED", error);
 			}
@@ -288,7 +265,7 @@ export class S3Storage implements Storage {
 
 	async getSignedUploadUrl(options: SignedUploadOptions): Promise<SignedUploadUrl> {
 		try {
-			const expiresIn = options.expiresIn || 3600; // 1 hour default
+			const expiresIn = options.expiresIn || 3600;
 
 			const command = new PutObjectCommand({
 				Bucket: this.bucket,
@@ -323,16 +300,10 @@ export class S3Storage implements Storage {
 		if (this.publicUrl) {
 			return `${this.publicUrl.replace(TRAILING_SLASH_PATTERN, "")}/${key}`;
 		}
-		// No public URL configured; defer to the /_emdash/api/media/file route.
 		return `/_emdash/api/media/file/${key}`;
 	}
 }
 
-/**
- * Create S3 storage adapter
- * This is the factory function called at runtime.
- * Config fields are merged with S3_* env vars; env vars fill in any missing fields.
- */
 export function createStorage(config: Record<string, unknown>): Storage {
 	return new S3Storage(resolveS3Config(config));
 }

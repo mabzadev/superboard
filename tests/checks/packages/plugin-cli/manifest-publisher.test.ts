@@ -1,17 +1,3 @@
-/**
- * Coverage for the manifest publisher field and its check/write-back.
- *
- * Two subjects:
- *   - The Zod schema's PublisherSchema (accepts DID or handle; rejects
- *     anything else).
- *   - `checkPublisher` and `writePublisherBack` in `manifest/publisher.ts`.
- *
- * The handle-resolution path is covered indirectly: we stub the resolver
- * by passing values that look like a DID directly, which bypasses
- * `@atcute/identity-resolver`. Real handle resolution requires DNS, which
- * we don't exercise in unit tests.
- */
-
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -56,7 +42,6 @@ describe("PublisherSchema", () => {
 	});
 
 	it("rejects a malformed did", () => {
-		// `did:` without method+id is not a valid DID.
 		const result = PublisherSchema.safeParse("did:");
 		expect(result.success).toBe(false);
 	});
@@ -88,9 +73,6 @@ describe("ManifestSchema with publisher", () => {
 	});
 
 	it("rejects a manifest without a publisher", () => {
-		// publisher is required for the runtime to compute the plugin's
-		// AT URI. The author must fill it in before any local-dev or
-		// publish run.
 		const result = ManifestSchema.safeParse(minimal);
 		expect(result.success).toBe(false);
 	});
@@ -135,11 +117,6 @@ describe("checkPublisher", () => {
 			expect(result.pinnedDisplay).toBe(OTHER_DID);
 		}
 	});
-
-	// Handle resolution requires DNS / .well-known reachability. We test
-	// the DID code path directly; the handle path is exercised in
-	// integration tests separately (and against a mock resolver in
-	// publisher-handle.test.ts when we add one later).
 });
 
 describe("writePublisherBack", () => {
@@ -167,13 +144,9 @@ describe("writePublisherBack", () => {
 		await writeFile(path, source, "utf8");
 		await writePublisherBack({ manifestPath: path, sessionDid: SESSION_DID });
 		const updated = await readFile(path, "utf8");
-		// The new key is present, the comment survives, and the DID is
-		// written verbatim.
 		expect(updated).toContain(`"publisher": "${SESSION_DID}"`);
 		expect(updated).toContain("// Top-level comment");
 		expect(updated).toContain('"license": "MIT"');
-		// The publisher must land AFTER license. We test ordering by
-		// finding the byte offset of each key.
 		const licenseIdx = updated.indexOf('"license"');
 		const publisherIdx = updated.indexOf('"publisher"');
 		const authorIdx = updated.indexOf('"author"');
@@ -198,23 +171,13 @@ describe("writePublisherBack", () => {
 			sessionHandle: "jane.bsky.social",
 		});
 		const updated = await readFile(path, "utf8");
-		// The comment lives on the same line as the DID; the comma (if
-		// any) is between the DID and the comment per JSONC convention.
 		expect(updated).toMatch(/"publisher": "did:plc:abc123def456",? \/\/ jane\.bsky\.social/);
-		// And the round-trip still parses cleanly (the comment doesn't
-		// break JSONC).
 		const { loadManifest } = await import("../../../../packages/plugin-cli/src/manifest/load.js");
 		const { manifest } = await loadManifest(path);
 		expect(manifest.publisher).toBe(SESSION_DID);
 	});
 
 	it("anchors the comment to the publisher property even when the DID appears in another field", async () => {
-		// Regression: a previous implementation searched for the DID
-		// string anywhere in the document, which would attach the
-		// `// <handle>` comment to whichever field happened to contain
-		// the DID-shaped substring first. Real plugins that document a
-		// "previous publisher was did:plc:..." in the description (e.g.
-		// after a maintainer transfer) would have triggered this.
 		const path = join(dir, "emdash-plugin.jsonc");
 		const source = `{
 	"slug": "my-plugin",
@@ -232,8 +195,6 @@ describe("writePublisherBack", () => {
 			sessionHandle: "jane.bsky.social",
 		});
 		const updated = await readFile(path, "utf8");
-		// The handle comment lives on the publisher line, NOT on the
-		// description line — confirm by inspecting each.
 		const lines = updated.split("\n");
 		const descriptionLine = lines.find((l) => l.includes('"description"'))!;
 		const publisherLine = lines.find((l) => l.includes('"publisher"'))!;
@@ -256,17 +217,12 @@ describe("writePublisherBack", () => {
 		await writeFile(path, source, "utf8");
 		await writePublisherBack({ manifestPath: path, sessionDid: SESSION_DID });
 		const updated = await readFile(path, "utf8");
-		// The DID line has no trailing `//` comment.
 		const publisherLine = updated.split("\n").find((l) => l.includes('"publisher"'));
 		expect(publisherLine).toBeDefined();
 		expect(publisherLine).not.toContain("//");
 	});
 
 	it("preserves the source's indentation (2-space)", async () => {
-		// Regression: an earlier version hard-coded tab indentation in
-		// the modify() formattingOptions, which silently reformatted
-		// any 2-space-indented manifest to tabs on first publish. The
-		// detector sniffs the source's existing indent and matches it.
 		const path = join(dir, "emdash-plugin.jsonc");
 		const source = [
 			"{",
@@ -281,10 +237,7 @@ describe("writePublisherBack", () => {
 		await writeFile(path, source, "utf8");
 		await writePublisherBack({ manifestPath: path, sessionDid: SESSION_DID });
 		const updated = await readFile(path, "utf8");
-		// Pre-existing 2-space lines should still be 2-space, no tab
-		// characters should have appeared anywhere.
 		expect(updated).not.toContain("\t");
-		// The new publisher line should also use 2 spaces.
 		const publisherLine = updated.split("\n").find((l) => l.includes('"publisher"'))!;
 		expect(publisherLine.startsWith("  ")).toBe(true);
 		expect(publisherLine.startsWith("\t")).toBe(false);
@@ -311,7 +264,6 @@ describe("writePublisherBack", () => {
 			onWarn: () => warnings++,
 		});
 		const updated = await readFile(path, "utf8");
-		// File unchanged: the existing publisher wins.
 		expect(updated).toContain('"publisher": "did:plc:user-pinned-already"');
 		expect(updated).not.toContain(SESSION_DID);
 		expect(infos).toBe(1);
@@ -326,14 +278,11 @@ describe("writePublisherBack", () => {
 			sessionDid: SESSION_DID,
 			onWarn: () => warnings++,
 		});
-		// The publish has already succeeded by the time write-back runs;
-		// a missing file at this point is surprising but never fatal.
 		expect(warnings).toBe(1);
 	});
 
 	it("does not fail when the file no longer parses (warns only)", async () => {
 		const path = join(dir, "broken.jsonc");
-		// User broke the file while we were publishing.
 		await writeFile(path, '{ "license": "MIT", broken syntax', "utf8");
 		let warnings = 0;
 		await writePublisherBack({
@@ -357,8 +306,6 @@ describe("writePublisherBack", () => {
 		await writeFile(path, source, "utf8");
 		await writePublisherBack({ manifestPath: path, sessionDid: SESSION_DID });
 
-		// Re-load through the actual loader. If write-back produced
-		// malformed JSONC or a value the schema rejects, this throws.
 		const { loadManifest } = await import("../../../../packages/plugin-cli/src/manifest/load.js");
 		const { manifest } = await loadManifest(path);
 		expect(manifest.publisher).toBe(SESSION_DID);

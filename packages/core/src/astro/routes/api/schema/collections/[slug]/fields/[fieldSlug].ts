@@ -1,11 +1,3 @@
-/**
- * Schema field CRUD endpoints
- *
- * GET    /_emdash/api/schema/collections/{slug}/fields/{fieldSlug} - Get field
- * PUT    /_emdash/api/schema/collections/{slug}/fields/{fieldSlug} - Update field
- * DELETE /_emdash/api/schema/collections/{slug}/fields/{fieldSlug} - Delete field
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

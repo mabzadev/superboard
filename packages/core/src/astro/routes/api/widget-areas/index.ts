@@ -1,10 +1,3 @@
-/**
- * Widget areas list and create endpoints
- *
- * GET  /_emdash/api/widget-areas - List all widget areas
- * POST /_emdash/api/widget-areas - Create widget area
- */
-
 import type { APIRoute } from "astro";
 import { ulid } from "ulidx";
 
@@ -31,7 +24,6 @@ export const GET: APIRoute = async ({ locals }) => {
 			.orderBy("name", "asc")
 			.execute();
 
-		// Get widgets for each area (needed for drag-and-drop reordering in admin UI)
 		const areasWithWidgets = await Promise.all(
 			areas.map(async (area) => {
 				const widgets = await db
@@ -67,7 +59,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const body = await parseBody(request, createWidgetAreaBody);
 		if (isParseError(body)) return body;
 
-		// Check if area name already exists
 		const existing = await db
 			.selectFrom("_emdash_widget_areas")
 			.select("id")

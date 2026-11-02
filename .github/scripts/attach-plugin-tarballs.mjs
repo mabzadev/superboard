@@ -1,20 +1,3 @@
-// Attach sandboxed-plugin tarballs to the GitHub releases that
-// `changesets/action` creates during a release run.
-//
-// The decentralized plugin registry (RFC 0001) stores only a *link* to the
-// plugin bytes, not the bytes themselves. By bundling each published
-// sandboxed plugin and uploading the tarball as a release asset, every
-// version automatically gets a stable public URL that an `emdash-plugin
-// publish --url ...` step (or a human) can point a registry record at.
-//
-// Input: the `publishedPackages` output from changesets/action, passed via
-// the PUBLISHED_PACKAGES env var as a JSON array of `{ name, version }`.
-// Only packages under `packages/plugins/*` that expose a `./sandbox` export
-// and are not private are processed; everything else (native plugins, test
-// fixtures) is skipped.
-//
-// Set DRY_RUN=1 to bundle and resolve tarballs without calling `gh`.
-
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -33,8 +16,6 @@ if (!dryRun && !repo) {
 	process.exit(1);
 }
 
-// `?? "[]"` only catches undefined/null. An unset Actions output arrives as
-// an empty string, which would make JSON.parse throw, so coalesce that too.
 const raw = process.env.PUBLISHED_PACKAGES?.trim() || "[]";
 let published;
 try {
@@ -49,10 +30,8 @@ if (!Array.isArray(published) || published.length === 0) {
 	process.exit(0);
 }
 
-// name -> version for the packages that were just published.
 const publishedVersions = new Map(published.map((p) => [p.name, p.version]));
 
-/** Slugify a manifest id the same way the bundler names its tarball. */
 const slugify = (id) => id.replace(SLASH_RE, "-").replace(LEADING_AT_RE, "");
 
 const failures = [];
@@ -65,8 +44,6 @@ for (const entry of readdirSync(PLUGINS_DIR, { withFileTypes: true })) {
 	const pkgPath = join(dir, "package.json");
 	if (!existsSync(pkgPath)) continue;
 
-	// We read every plugin dir, so a single malformed package.json must not
-	// abort the whole step. Treat an unreadable manifest as a skip.
 	let pkg;
 	try {
 		pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
@@ -75,7 +52,6 @@ for (const entry of readdirSync(PLUGINS_DIR, { withFileTypes: true })) {
 		continue;
 	}
 
-	// Only published, public, sandboxed plugins.
 	if (!publishedVersions.has(pkg.name)) continue;
 	if (pkg.private === true) continue;
 	if (!pkg.exports?.["./sandbox"]) {
@@ -88,9 +64,6 @@ for (const entry of readdirSync(PLUGINS_DIR, { withFileTypes: true })) {
 	console.log(`\n=== ${pkg.name}@${version} ===`);
 
 	try {
-		// Bundle. This rebuilds from source and writes dist/<slug>-<version>.tar.gz
-		// plus dist/manifest.json, so we can read the exact id/version back out
-		// rather than guessing the filename (stale tarballs may linger in dist/).
 		execFileSync("node", [BUNDLER, "bundle", "--dir", dir], { stdio: "inherit" });
 
 		const manifest = JSON.parse(readFileSync(join(dir, "dist", "manifest.json"), "utf-8"));
@@ -102,7 +75,6 @@ for (const entry of readdirSync(PLUGINS_DIR, { withFileTypes: true })) {
 		if (dryRun) {
 			console.log(`[dry-run] would upload ${tarball} to release ${tag}`);
 		} else {
-			// --clobber so re-runs replace the asset instead of failing.
 			execFileSync("gh", ["release", "upload", tag, tarball, "--clobber", "--repo", repo], {
 				stdio: "inherit",
 			});

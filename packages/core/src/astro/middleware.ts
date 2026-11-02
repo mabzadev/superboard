@@ -1,14 +1,6 @@
-/**
- * EmDash middleware
- *
- * Thin wrapper that initializes EmDashRuntime and attaches it to locals.
- * All heavy lifting happens in EmDashRuntime.
- */
-
 import type { APIContext } from "astro";
 import { defineMiddleware } from "astro:middleware";
 import type { Kysely } from "kysely";
-// Import from virtual modules (populated by integration at build time)
 // @ts-ignore - virtual module
 import { buildTime as virtualBuildTime } from "virtual:emdash/build";
 // @ts-ignore - virtual module
@@ -82,44 +74,13 @@ import { createPublicPluginApiRouteHandler } from "./public-plugin-api-routes.js
 import { resolveSessionUser } from "./session-user.js";
 import type { EmDashHandlers } from "./types.js";
 
-// Public type for withEmDashRuntime() consumers (queue/scheduled handlers).
 export type { EmDashRuntime } from "../emdash-runtime.js";
 
-/**
- * Runtime init lock reclaim deadline. Must be strictly larger than the db
- * init deadline: this lock wraps EmDashRuntime.create() → getDatabase() →
- * the db init lock, and equal deadlines would let this outer lock reclaim
- * (spawning a second cron scheduler and sandbox runner) while the inner db
- * init is legitimately still working through a contended migration.
- */
 const RUNTIME_INIT_DEADLINE_MS = DB_INIT_DEADLINE_MS + 15_000;
 
-/**
- * Throttle for the anonymous-path runtime-init failure log. While a site is
- * stuck (e.g. a failing migration in its backoff window, #1744) every
- * anonymous request lands in that catch; one line per interval per isolate
- * keeps the failure visible without flooding logs on a busy site. Plain
- * module state (not globalThis): a duplicated SSR chunk just means an extra
- * log line, which is harmless.
- */
 const RUNTIME_INIT_ERROR_LOG_INTERVAL_MS = 30_000;
 let lastRuntimeInitErrorLogAt = 0;
 
-/**
- * Whether we've verified the database has been set up.
- * On a fresh deployment the first request may hit a public page, bypassing
- * runtime init. Without this check, template helpers like getSiteSettings()
- * would query an empty database and crash. Once verified (or once the runtime
- * has initialized via an admin/API request), this stays true for the worker's
- * lifetime.
- *
- * Stored on globalThis behind a Symbol key so the flag is a true singleton
- * even when the bundler duplicates this module across SSR chunks (same
- * pattern as request-cache.ts). A plain module-scoped `let` becomes multiple
- * independent variables, which would make the setup probe re-run far more
- * often than intended — and every re-run is another chance for a transient
- * DB error to be misread as "fresh install" and bounce visitors to setup.
- */
 const SETUP_VERIFIED_KEY = Symbol.for("emdash:setup-verified");
 const setupFlagStore = globalThis as Record<symbol, unknown>;
 
@@ -131,13 +92,6 @@ function markSetupVerified(): void {
 	setupFlagStore[SETUP_VERIFIED_KEY] = true;
 }
 
-/**
- * The runtime singleton and its init lock live on globalThis behind a
- * Symbol — same reasoning as SETUP_VERIFIED_KEY above: the bundler can
- * duplicate this module across SSR chunks, and a duplicated instance/lock
- * would mean multiple runtimes (each with its own cron scheduler) per
- * isolate, initializing and reclaiming independently.
- */
 const RUNTIME_HOLDER_KEY = Symbol.for("emdash:runtime-holder");
 interface RuntimeHolder {
 	instance: EmDashRuntime | null;
@@ -154,15 +108,10 @@ function getRuntimeHolder(): RuntimeHolder {
 	return holder;
 }
 
-/** Whether i18n config has been initialized from the virtual module */
 let i18nInitialized = false;
 
-/**
- * Get EmDash configuration from virtual module
- */
 function getConfig(): EmDashConfig | null {
 	if (virtualConfig && typeof virtualConfig === "object") {
-		// Initialize i18n config on first access (once per worker lifetime)
 		if (!i18nInitialized) {
 			i18nInitialized = true;
 			// eslint-disable-next-line typescript/no-unsafe-type-assertion -- virtual module checked as object above
@@ -186,17 +135,11 @@ function getConfig(): EmDashConfig | null {
 	return null;
 }
 
-/**
- * Get plugins from virtual module
- */
 function getPlugins(): ResolvedPlugin[] {
 	// eslint-disable-next-line typescript/no-unsafe-type-assertion -- virtual module import is untyped (@ts-ignore above)
 	return (virtualPlugins as ResolvedPlugin[]) || [];
 }
 
-/**
- * Build runtime dependencies from virtual modules
- */
 function buildDependencies(
 	config: EmDashConfig,
 	migrationMode: RuntimeMigrationMode,
@@ -213,7 +156,6 @@ function buildDependencies(
 		migrationMode,
 		plugins: getPlugins(),
 		createDialect: virtualCreateDialect as (config: Record<string, unknown>) => unknown,
-		// Optional: only batching backends (D1, DO) export this; undefined otherwise.
 		createCoalescingDialect: virtualCreateCoalescingDialect as
 			| ((config: Record<string, unknown>) => unknown)
 			| undefined,
@@ -228,26 +170,11 @@ function buildDependencies(
 	/* eslint-enable typescript-eslint/no-unsafe-type-assertion */
 }
 
-/**
- * Get or create the runtime instance.
- *
- * When `initTimings` is provided, any timing samples recorded during a
- * genuine cold init are appended. Subsequent warm calls (hitting the
- * cached instance) push nothing — callers should treat an empty array
- * as "warm, nothing to report".
- */
 async function getRuntime(
 	config: EmDashConfig,
 	migrationMode: RuntimeMigrationMode,
 	initTimings?: Array<{ name: string; dur: number; desc?: string }>,
 ): Promise<EmDashRuntime> {
-	// Waiters poll rather than awaiting the initializing request's promise —
-	// workerd flags cross-request promise resolution (warnings + potential
-	// hangs). If the initializing request is cancelled mid-create (client
-	// disconnect tears down its continuation, skipping any `finally`), the
-	// anchored init keeps running under waitUntil and populates the cache;
-	// failing that, the stale lock is reclaimed after a deadline instead of
-	// hanging every subsequent request in the isolate until eviction.
 	const holder = getRuntimeHolder();
 	return initWithLock(
 		holder.lock,
@@ -258,12 +185,6 @@ async function getRuntime(
 			if (isCurrentClaim()) {
 				holder.instance = runtime;
 			} else {
-				// This init was reclaimed mid-flight (it ran past the deadline
-				// and a waiter started its own). Don't overwrite the
-				// reclaimer's published runtime, and stop this one's cron
-				// scheduler so it doesn't keep firing unreferenced. The
-				// runtime is still returned — it's fully functional for the
-				// request that built it.
 				runtime.stopCron().catch((error: unknown) => {
 					console.error("[emdash] failed to stop superseded runtime's cron:", error);
 				});
@@ -277,20 +198,6 @@ async function getRuntime(
 	);
 }
 
-/**
- * Run scheduled maintenance (cron tasks, scheduled publishing, system cleanup)
- * outside any request. Resolves the runtime from the build-time virtual config
- * and the cached singleton — the same instance request handlers use.
- *
- * Wired into a platform heartbeat that is not a request: the Cloudflare Worker's
- * `scheduled()` handler (Cron Trigger) calls this. On Node the runtime's own
- * timer-based scheduler already drives the same work, so this isn't needed there.
- *
- * Returns the content promoted by the publishing sweep so the caller can purge
- * edge-cache tags for it. `onPublished` (optional) is awaited after each
- * collection's batch so the caller can invalidate edge-cache tags incrementally
- * rather than only after the whole sweep.
- */
 export async function runScheduledTasks(
 	options: { onPublished?: (refs: PublishedRef[]) => Promise<void> } = {},
 ): Promise<{ published: PublishedRef[] }> {
@@ -299,41 +206,6 @@ export async function runScheduledTasks(
 	return runOutsideRequest(config, (runtime) => runtime.runScheduledTasks(options));
 }
 
-/**
- * Run a callback against the EmDash runtime outside any HTTP request — from a
- * Cloudflare Queue consumer, a `scheduled()` handler, or any other
- * platform-event handler that has no request and therefore no `locals.emdash`.
- *
- * Resolves the same cached runtime singleton request handlers use, so hooks,
- * plugin state, and storage all behave exactly as they do during a request.
- * A typical queue consumer finishes a job by calling back into a plugin route:
- *
- * ```ts
- * import { withEmDashRuntime } from "emdash/middleware";
- *
- * async function queue(batch: MessageBatch) {
- * 	await withEmDashRuntime(async (runtime) => {
- * 		for (const message of batch.messages) {
- * 			await runtime.handlePluginApiRoute(
- * 				"my-plugin",
- * 				"POST",
- * 				"/finishJob",
- * 				new Request("https://internal/", {
- * 					method: "POST",
- * 					body: JSON.stringify(message.body),
- * 				}),
- * 			);
- * 		}
- * 	});
- * }
- * ```
- *
- * Server-only and fully trusted: the callback gets the raw runtime with no
- * auth or CSRF checks, same trust level as plugin cron. Never expose it to
- * user input without validating that input yourself.
- *
- * Throws when EmDash is not configured (no `emdash()` Astro integration).
- */
 export async function withEmDashRuntime<T>(
 	run: (runtime: EmDashRuntime) => T | Promise<T>,
 ): Promise<T> {
@@ -346,20 +218,6 @@ export async function withEmDashRuntime<T>(
 	return runOutsideRequest(config, async (runtime) => run(runtime));
 }
 
-/**
- * Shared plumbing for request-free entry points (`runScheduledTasks`,
- * `withEmDashRuntime`): resolve the runtime singleton, then run the callback
- * under an event-scoped db when the adapter needs one.
- *
- * Connection-backed adapters (e.g. Postgres over Hyperdrive) cannot reuse
- * the per-isolate singleton from a platform event: its socket belongs to the
- * request that opened it, and workerd rejects cross-event I/O. Open an
- * event-scoped connection and run the callback under it in ALS — the
- * runtime's db getter, the cron executor, and plugin contexts all resolve
- * the connection from ALS — then close it when required. Stateless adapters
- * that need primary routing can return a close-less scope; adapters with no
- * event scoping return null and keep using the singleton.
- */
 async function runOutsideRequest<T>(
 	config: EmDashConfig,
 	fn: (runtime: EmDashRuntime) => Promise<T>,
@@ -397,15 +255,12 @@ async function runOutsideRequestWithRuntime<T>(
 	const scoped = createRequestScopedDb({
 		config: config.database?.config,
 		isAuthenticated: false,
-		// Event handlers publish, clean up, or run jobs — a write workload —
-		// so a connection-backed adapter routes them to the primary.
 		isWrite: true,
 		canUseCachedBinding: false,
 		cookies: NOOP_COOKIE_JAR,
 		url: CRON_EVENT_URL,
 	});
 	if (!scoped) {
-		// This adapter needs no event-specific routing or connection.
 		return fn(runtime);
 	}
 	const { closed, deferredTasks, lifecycle } = coordinateScopedDbLifecycle(scoped);
@@ -422,8 +277,6 @@ async function runOutsideRequestWithRuntime<T>(
 	try {
 		return await runWithContext(ctx, () => fn(runtime));
 	} finally {
-		// Guard both so a throw in teardown can't mask the callback result or
-		// skip lifecycle settlement and leak the connection.
 		try {
 			lifecycle.commit();
 		} catch (error) {
@@ -438,23 +291,11 @@ async function runOutsideRequestWithRuntime<T>(
 	}
 }
 
-/**
- * A cookie jar that reads nothing and writes nothing, for request-scoped db
- * adapters invoked outside an HTTP request (the Cron Trigger sweep). Connection
- * adapters like Hyperdrive ignore cookies entirely; the D1 session adapter
- * reads/writes a bookmark cookie, but cron never reaches that path (it has no
- * `close()`), so the no-ops are never observed.
- */
 const NOOP_COOKIE_JAR = {
 	get: () => undefined,
 	set: () => {},
 };
 
-/**
- * Synthetic URL for the cron sweep's request-scoped db opts. Only the D1
- * session adapter inspects `url` (for cookie `secure`), and cron doesn't take
- * that path, so the value is never used — it exists to satisfy the contract.
- */
 const CRON_EVENT_URL = new URL("https://cron.emdash.internal/");
 
 function resolveConfiguredMigrationMode(config: EmDashConfig): RuntimeMigrationMode {
@@ -482,10 +323,6 @@ function migrationRequiredResponse(): Response {
 	);
 }
 
-/**
- * Baseline security headers applied to all responses.
- * Admin routes get additional headers (strict CSP) from auth middleware.
- */
 function finalizeResponse(
 	response: Response,
 	serverTimings?: Array<{ name: string; dur: number; desc?: string }>,
@@ -495,10 +332,6 @@ function finalizeResponse(
 	if (astroCookies !== undefined) {
 		Reflect.set(res, ASTRO_COOKIES_SYMBOL, astroCookies);
 	}
-	// Set-if-absent so a host app that sets stricter values on its own routes
-	// wins. The middleware registers `order: 'pre'` (#1282), so on the response
-	// path it runs *after* host middleware; unconditional `set()` would clobber
-	// the host's headers on every public route (#1393). Mirrors the CSP guard.
 	if (!res.headers.has("X-Content-Type-Options")) {
 		res.headers.set("X-Content-Type-Options", "nosniff");
 	}
@@ -525,13 +358,6 @@ function finalizeResponse(
 	return res;
 }
 
-/**
- * Append always-on counters (db.*, cache.*) to the Server-Timing list.
- *
- * dur values for `count`, `hit`, `miss` are integer counts — Server-Timing
- * spec only models milliseconds, but browsers show whatever number is given,
- * which is the convention most projects use for non-time samples.
- */
 function pushMetricsTimings(
 	timings: Array<{ name: string; dur: number; desc?: string }>,
 	metrics: RequestMetrics,
@@ -555,16 +381,9 @@ function pushMetricsTimings(
 	}
 }
 
-/** Public routes that require the runtime (sitemap, robots.txt, etc.) */
 const PUBLIC_RUNTIME_ROUTES = new Set(["/sitemap.xml", "/robots.txt"]);
 const SITEMAP_COLLECTION_RE = /^\/sitemap-[a-z][a-z0-9_]*\.xml$/;
 
-/**
- * Ask the configured database adapter for a per-request scoped Kysely. The
- * adapter encapsulates any per-request semantics (D1 sessions, read-replica
- * routing, bookmark cookies, etc.); core just forwards the cookie jar and
- * request flags and wraps next() in ALS if a scope was returned.
- */
 function createRequestScopedDb(
 	opts: RequestScopedDbOpts,
 ): { db: Kysely<Database>; commit: () => void; close?: () => void } | null {
@@ -578,27 +397,6 @@ function createRequestScopedDb(
 
 const buildDate = virtualBuildTime ? new Date(virtualBuildTime) : null;
 
-/**
- * Fold the build timestamp into the route cache validator.
- *
- * `CacheHint.lastModified` describes the content, but the response also depends
- * on the build: `/_astro/*` names are content-hashed, and a deployment only
- * serves its own. Without the build dimension a code-only deploy answers a
- * returning visitor's conditional request with 304, leaving them on HTML whose
- * assets 404.
- *
- * Prerendered pages are served by the host's static layer, which manages its
- * own validators — only on-demand responses need the build dimension.
- *
- * Only forward moves are covered. `Last-Modified` expresses newer, not
- * different, so after a rollback the earlier build still answers a conditional
- * request with 304 and the browser stays on the newer build's HTML.
- *
- * Must run before next(): Astro keeps the later of two dates, so a route's own
- * hint still wins when content is newer, and a route that opts out with
- * `Astro.cache.set(false)` stays opted out — calling set() afterwards would
- * clear that opt-out.
- */
 function applyBuildValidator(context: APIContext): void {
 	if (context.isPrerendered || !buildDate || !context.cache?.enabled) return;
 	context.cache.set({ lastModified: buildDate });
@@ -608,10 +406,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	const { request, locals, cookies } = context;
 	const url = context.url;
 
-	// Fast path: routes outside /_emdash/ that plugins inject (e.g.,
-	// /.well-known/atproto-client-metadata.json) skip the entire runtime
-	// init + middleware chain. External servers fetch these with tight
-	// timeouts (~1-2s) so they must respond quickly even on cold starts.
 	if (!url.pathname.startsWith("/_emdash") && virtualConfig?.authProviders) {
 		const isPluginFastRoute = virtualConfig.authProviders.some(
 			(p: { routes?: { pattern?: string }[] }) =>
@@ -633,43 +427,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	const run = async (): Promise<Response> => {
 		const config = getConfig();
 		const migrationMode = config ? resolveConfiguredMigrationMode(config) : "auto";
-		// Process /_emdash routes and public routes with an active session
-		// (logged-in editors need the runtime for toolbar/visual editing on public pages)
 		const isEmDashRoute = url.pathname.startsWith("/_emdash");
 		const isPublicRuntimeRoute =
 			PUBLIC_RUNTIME_ROUTES.has(url.pathname) || SITEMAP_COLLECTION_RE.test(url.pathname);
 
-		// Check for edit mode cookie - editors viewing public pages need the runtime
-		// so auth middleware can verify their session for visual editing
 		const hasEditCookie = cookies.get("emdash-edit-mode")?.value === "true";
 		const hasPreviewToken = url.searchParams.has("_preview");
 
-		// Playground mode: the playground middleware stashes the per-session DO database
-		// on locals.__playgroundDb. When present, use runWithContext() to make it
-		// available to getDb() and the runtime's db getter via the correct ALS instance.
 		const playgroundDb = locals.__playgroundDb;
 
-		// Read the Astro session user once up-front. Both the anonymous fast path
-		// and the full doInit path need this, and the session store is network-backed
-		// (KV / Durable Object) so we want to avoid re-fetching on the hot path.
-		// Skipped entirely for:
-		//   - prerendered requests (no session at build time)
-		//   - requests without an `astro-session` cookie (no session to look up)
-		// The cookie check matters on Cloudflare Workers, where Astro's session
-		// backend is KV: calling session.get() on every anonymous public request
-		// turns normal traffic into a flood of KV read misses. See #733.
 		const hasSessionCookie = cookies.get("astro-session") !== undefined;
 		const sessionUser =
 			context.isPrerendered || !hasSessionCookie ? null : await resolveSessionUser(context.session);
 
-		// Credentialed API requests (API tokens `ec_pat_*`, OAuth tokens
-		// `ec_oat_*`, and other Bearer credentials) carry no `astro-session`
-		// cookie, so `sessionUser` is null for them -- yet they still expect
-		// read-your-writes. The auth middleware that resolves the token runs
-		// *after* this one, so `locals.user` isn't populated here; detect the
-		// credential directly on the request. Request-scoped adapters use this to
-		// keep such requests on the primary/uncached connection (not a lagging
-		// read replica or the Hyperdrive query cache).
 		const hasBearerAuth = (request.headers.get("authorization") ?? "")
 			.toLowerCase()
 			.startsWith("bearer ");
@@ -689,18 +459,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 				const timings: Array<{ name: string; dur: number; desc?: string }> = [];
 				const mwStart = performance.now();
 
-				// On a fresh deployment the database may be completely empty.
-				// Public pages call getSiteSettings() / getMenu() via getDb(), which
-				// bypasses runtime init and would crash with "no such table: options".
-				// Do a one-time lightweight probe using the same getDb() instance the
-				// page will use: if the migrations table doesn't exist, no migrations
-				// have ever run -- redirect to the setup wizard.
-				// Skip the probe when prerendering: a prerendered route is built to
-				// static HTML, so returning context.redirect("/_emdash/admin/setup")
-				// below would bake that redirect into the page and ship it to
-				// production. The build database is legitimately empty in CI and there
-				// is no live visitor to send to the wizard at build time (session reads
-				// are already skipped for prerender above for the same reason).
 				if (migrationMode === "auto" && !isSetupVerified() && !context.isPrerendered) {
 					const t0 = performance.now();
 					try {
@@ -709,28 +467,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
 						await db.selectFrom("_emdash_migrations").selectAll().limit(1).execute();
 						markSetupVerified();
 					} catch (error) {
-						// Only a genuinely-missing migrations table means a fresh,
-						// un-set-up database — redirect to the setup wizard.
 						if (isMissingTableError(error)) {
 							return context.redirect("/_emdash/admin/setup");
 						}
-						// Any other failure (transient D1/replica error, timeout, cold-start
-						// race, locked SQLite) must NOT be read as "fresh install" — doing so
-						// bounces real visitors on a set-up site to /_emdash/admin/setup.
-						// Leave the flag unset so a later request can re-verify, and fall
-						// through to render the page normally.
 						console.error("Setup probe failed (non-fatal):", error);
 					}
 					timings.push({ name: "setup", dur: performance.now() - t0, desc: "Setup probe" });
 				}
 
-				// Initialize the runtime for page:metadata and page:fragments hooks.
-				// The runtime is a cached singleton — after the first request,
-				// getRuntime() is just a null-check. This enables SEO plugins to
-				// contribute meta tags for all visitors, not just logged-in editors.
 				if (config) {
-					// Sub-phase timings are populated only on the cold init. Warm
-					// requests hit the cached runtime and leave this empty.
 					const initSubTimings: Array<{ name: string; dur: number; desc?: string }> = [];
 					const t0 = performance.now();
 					try {
@@ -743,9 +488,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 							collectPageMetadata: runtime.collectPageMetadata.bind(runtime),
 							collectPageFragments: runtime.collectPageFragments.bind(runtime),
 							getPublicMediaUrl: createPublicMediaUrlResolver(runtime.storage),
-							// Exposed so the wrapped image endpoint (`/_image`) can read media
-							// bytes from storage on the anonymous fast path -- public `<img>`
-							// requests carry no session.
 							storage: runtime.storage,
 						} as EmDashHandlers;
 					} catch (error) {
@@ -759,25 +501,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
 							);
 							return migrationRequiredResponse();
 						}
-						// Non-fatal — EmDashHead falls back to base SEO contributions —
-						// but log it (throttled): a persistently failing init (e.g. a
-						// failing migration, #1744) is otherwise invisible on the
-						// anonymous path, silently degrading every public page.
 						if (Date.now() - lastRuntimeInitErrorLogAt >= RUNTIME_INIT_ERROR_LOG_INTERVAL_MS) {
 							lastRuntimeInitErrorLogAt = Date.now();
 							console.error("[emdash] runtime init failed (page renders without CMS data):", error);
 						}
 					}
 					timings.push({ name: "rt", dur: performance.now() - t0, desc: "Runtime init" });
-					// Append cold-only sub-phase timings so the breakdown is visible
-					// in Server-Timing (rt.db, rt.fts, rt.plugins, rt.site,
-					// rt.sandbox, rt.market, rt.hooks, rt.cron).
 					for (const sub of initSubTimings) timings.push(sub);
 				}
 
-				// Even on the anonymous fast path we ask the adapter for a per-request
-				// scoped db. For D1 with read replication this routes anonymous reads
-				// to the nearest replica; for other adapters it's a no-op.
 				const lastContentWriteAt =
 					canUseCachedBinding && config?.database?.needsLastContentWriteAt
 						? await getLastContentWriteAt()
@@ -798,9 +530,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 					timings.push({ name: "render", dur: performance.now() - t0, desc: "Page render" });
 					timings.push({ name: "mw", dur: performance.now() - mwStart, desc: "Total middleware" });
 					pushMetricsTimings(timings, metrics);
-					// Server-Timing only sees pre-stream queries; the stream-end
-					// wrapper (instrumentation-gated, no-op otherwise) emits the
-					// final counters once the body finishes streaming.
 					return wrapBodyForStreamMetrics(finalizeResponse(response, timings));
 				};
 				if (anonScoped) {
@@ -809,29 +538,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
 					const ctx = parent
 						? { ...parent, db: anonScoped.db, deferredTasks }
 						: { editMode: false, db: anonScoped.db, metrics, deferredTasks };
-					// Eagerly warm site-global layout data (menus, widget areas,
-					// taxonomy terms, settings) concurrently so the layout's
-					// per-component reads overlap into ~one wall-clock round trip and
-					// hit a warm cache instead of serializing. Three guards:
-					//  - request-scoped (remote) backend only -- this branch implies it;
-					//    pointless on synchronous local SQLite.
-					//  - HTML navigations only -- feeds/sitemaps/JSON don't render the
-					//    layout, so prefetching their chrome is pure waste.
-					//  - the work starts immediately, then after() keeps both it and the
-					//    request-scoped connection alive until the response also finishes.
-					// Gate on the CLIENT'S PREFERRED type (leading media range), not a
-					// substring -- browser navigations lead with `text/html`, while feed
-					// readers lead with `application/rss+xml` etc. and only list
-					// `text/html;q=0.8` later, so a substring match would leak onto feeds.
 					const acceptsHtml = (request.headers.get("accept") ?? "")
 						.split(",", 1)[0]!
 						.trim()
 						.startsWith("text/html");
 					return runWithContext(ctx, async () => {
 						if (acceptsHtml) after(() => prefetchLayoutData());
-						// commit() persists per-request state (e.g. the D1 bookmark cookie)
-						// before the response is returned, even if render throws; close()
-						// waits for stream-end and request-owned deferred work. See finishScoped.
 						return finishScoped(lifecycle, runAnon);
 					});
 				}
@@ -844,39 +556,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
 			return finalizeResponse(await next());
 		}
 
-		// In playground mode, wrap the entire runtime init + request handling in
-		// runWithContext so that getDatabase() and all init queries use the real
-		// DO database via the same AsyncLocalStorage instance as the loader.
 		const doInit = async () => {
 			const timings: Array<{ name: string; dur: number; desc?: string }> = [];
 			const mwStart = performance.now();
 
 			try {
-				// Get or create runtime. Sub-phase timings (rt.db, rt.fts, rt.plugins,
-				// rt.site, rt.sandbox, rt.market, rt.hooks, rt.cron) are populated
-				// only on the cold init — subsequent warm calls find the cached
-				// instance and `initSubTimings` stays empty.
 				const initSubTimings: Array<{ name: string; dur: number; desc?: string }> = [];
 				let t0 = performance.now();
 				const runtime = await getRuntime(config, migrationMode, initSubTimings);
 				timings.push({ name: "rt", dur: performance.now() - t0, desc: "Runtime init" });
-				// Forward any sub-phase samples so cold-start breakdown is visible
-				// in Server-Timing. Each phase appears prefixed "rt." to distinguish
-				// from the aggregate "rt" timing above.
 				for (const sub of initSubTimings) timings.push(sub);
 
-				// Runtime initialization has satisfied the effective migration policy.
 				markSetupVerified();
 
-				// The manifest is no longer pre-loaded here. It's admin-only
-				// content that public/anonymous requests never read, and
-				// loading it on every request put logged-out hot paths on
-				// the same staleness budget as admin operations. Admin
-				// routes call `emdash.getManifest()` directly.
-
-				// Attach to locals for route handlers
 				locals.emdash = {
-					// Content handlers
 					handleContentList: runtime.handleContentList.bind(runtime),
 					handleContentGet: runtime.handleContentGet.bind(runtime),
 					handleContentAuthors: runtime.handleContentAuthors.bind(runtime),
@@ -884,17 +577,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
 					handleContentUpdate: runtime.handleContentUpdate.bind(runtime),
 					handleContentDelete: runtime.handleContentDelete.bind(runtime),
 
-					// Trash handlers
 					handleContentListTrashed: runtime.handleContentListTrashed.bind(runtime),
 					handleContentRestore: runtime.handleContentRestore.bind(runtime),
 					handleContentPermanentDelete: runtime.handleContentPermanentDelete.bind(runtime),
 					handleContentCountTrashed: runtime.handleContentCountTrashed.bind(runtime),
 					handleContentGetIncludingTrashed: runtime.handleContentGetIncludingTrashed.bind(runtime),
 
-					// Duplicate handler
 					handleContentDuplicate: runtime.handleContentDuplicate.bind(runtime),
 
-					// Publishing & Scheduling handlers
 					handleContentPublish: runtime.handleContentPublish.bind(runtime),
 					handleContentUnpublish: runtime.handleContentUnpublish.bind(runtime),
 					handleContentSchedule: runtime.handleContentSchedule.bind(runtime),
@@ -904,19 +594,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
 					handleContentCompare: runtime.handleContentCompare.bind(runtime),
 					handleContentTranslations: runtime.handleContentTranslations.bind(runtime),
 
-					// Media handlers
 					handleMediaList: runtime.handleMediaList.bind(runtime),
 					handleMediaGet: runtime.handleMediaGet.bind(runtime),
 					handleMediaCreate: runtime.handleMediaCreate.bind(runtime),
 					handleMediaUpdate: runtime.handleMediaUpdate.bind(runtime),
 					handleMediaDelete: runtime.handleMediaDelete.bind(runtime),
 
-					// Revision handlers
 					handleRevisionList: runtime.handleRevisionList.bind(runtime),
 					handleRevisionGet: runtime.handleRevisionGet.bind(runtime),
 					handleRevisionRestore: runtime.handleRevisionRestore.bind(runtime),
 
-					// Plugin routes
 					inspectPluginHealth: runtime.inspectPluginHealth.bind(runtime),
 					handlePluginApiRoute: runtime.handlePluginApiRoute.bind(runtime),
 					handlePublicPluginApiRoute: createPublicPluginApiRouteHandler(runtime),
@@ -927,29 +614,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
 					handlePluginMcpTool: runtime.handlePluginMcpTool.bind(runtime),
 					handlePluginMcpDenied: runtime.handlePluginMcpDenied.bind(runtime),
 
-					// Media provider methods
 					getMediaProvider: runtime.getMediaProvider.bind(runtime),
 					getMediaProviderList: runtime.getMediaProviderList.bind(runtime),
 
-					// Page contribution methods (for EmDashHead/EmDashBodyStart/EmDashBodyEnd)
 					collectPageMetadata: runtime.collectPageMetadata.bind(runtime),
 					collectPageFragments: runtime.collectPageFragments.bind(runtime),
 
-					// Lazy search index health check — search endpoints call this
-					// before querying so a crash-corrupted index gets repaired on
-					// first use rather than stalling every cold start.
 					ensureSearchHealthy: runtime.ensureSearchHealthy.bind(runtime),
 
-					// Direct access (for advanced use cases)
 					storage: runtime.storage,
-					// Lazy getter, not an eager snapshot: `locals.emdash` is built
-					// before the per-request scoped db is installed in ALS, so reading
-					// `runtime.db` here would capture the per-isolate singleton. Routes
-					// access `emdash.db` later, during the request, when the scoped db
-					// is active. For a stateless binding (D1) the two are equivalent,
-					// but for a request-bound connection (pg/Hyperdrive) the singleton
-					// belongs to the cold-start request and reusing it from a warm
-					// request hangs on workerd's cross-request I/O guard.
 					get db() {
 						return runtime.db;
 					},
@@ -959,29 +632,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
 					configuredPlugins: runtime.configuredPlugins,
 					sandboxedPluginEntries: runtime.sandboxedPluginEntries,
 
-					// Configuration (for checking database type, auth mode, etc.)
 					config,
 
-					// Lazy manifest accessor — admin-only consumers call this on
-					// demand. `requestCached` inside `getManifest` dedupes within
-					// a single request.
 					getManifest: runtime.getManifest.bind(runtime),
 
-					// Clear the URL pattern cache after schema mutations that
-					// affect collection URL patterns.
 					invalidateUrlPatternCache,
 
-					// Sandbox runner (for marketplace plugin install/update)
 					getSandboxRunner: runtime.getSandboxRunner.bind(runtime),
 					isSandboxBypassed: runtime.isSandboxBypassed.bind(runtime),
 
-					// Sync marketplace plugin states (after install/update/uninstall)
 					syncMarketplacePlugins: runtime.syncMarketplacePlugins.bind(runtime),
 
-					// Sync registry plugin states (after install/update/uninstall)
 					syncRegistryPlugins: runtime.syncRegistryPlugins.bind(runtime),
 
-					// Update plugin enabled/disabled status and rebuild hook pipeline
 					setPluginStatus: runtime.setPluginStatus.bind(runtime),
 				};
 			} catch (error) {
@@ -995,10 +658,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 				console.error("EmDash middleware error:", error);
 			}
 
-			// Ask the adapter for a request-scoped db. When it returns one, we stash
-			// it in ALS so the runtime's db getter and loader's getDb() pick it up,
-			// then call commit() after next() so the adapter can persist any
-			// per-request state (e.g. a D1 bookmark cookie for read-your-writes).
 			const lastContentWriteAt =
 				canUseCachedBinding && config?.database?.needsLastContentWriteAt
 					? await getLastContentWriteAt()
@@ -1020,9 +679,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 				timings.push({ name: "render", dur: performance.now() - t0, desc: "Page render" });
 				timings.push({ name: "mw", dur: performance.now() - mwStart, desc: "Total middleware" });
 				pushMetricsTimings(timings, metrics);
-				// Server-Timing only sees pre-stream queries; the stream-end
-				// wrapper (instrumentation-gated, no-op otherwise) emits the
-				// final counters once the body finishes streaming.
 				return wrapBodyForStreamMetrics(finalizeResponse(response, timings));
 			};
 
@@ -1032,24 +688,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
 				const ctx = parent
 					? { ...parent, db: scoped.db, deferredTasks }
 					: { editMode: false, db: scoped.db, metrics, deferredTasks };
-				return runWithContext(ctx, () =>
-					// commit() persists per-request state (e.g. the D1 bookmark cookie)
-					// before the response returns, even if render throws; close()
-					// waits for stream-end and request-owned deferred work. See finishScoped.
-					finishScoped(lifecycle, renderAndFinalize),
-				);
+				return runWithContext(ctx, () => finishScoped(lifecycle, renderAndFinalize));
 			}
 
 			return renderAndFinalize();
-		}; // end doInit
+		};
 
 		if (playgroundDb) {
-			// Read the edit-mode cookie to determine if visual editing is active.
-			// Default to false -- editing is opt-in via the playground toolbar toggle.
 			const editMode = context.cookies.get("emdash-edit-mode")?.value === "true";
-			// Playground DBs are per-session isolated instances whose schema is
-			// independent of the configured one — flag as isolated so schema-
-			// derived caches (manifest, taxonomy defs) rebuild against it.
 			const parent = getRequestContext();
 			const ctx = parent
 				? { ...parent, editMode, db: playgroundDb, dbIsIsolated: true }
@@ -1062,11 +708,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	try {
 		return await runWithContext({ editMode: false, queryRecorder, metrics }, run);
 	} finally {
-		// Streamed responses defer the flush to stream end (see
-		// wrapBodyForStreamMetrics) so the log captures queries issued while
-		// the body renders. Only flush here for responses that were not
-		// wrapped (no body: redirects, 304s, bodyless errors), where all
-		// queries have already run by the time middleware returns.
 		if (queryRecorder && !queryRecorder.deferredFlush) flushRecorder(queryRecorder);
 	}
 });

@@ -1,10 +1,3 @@
-/**
- * End-to-end passkey registration with a CDP virtual authenticator (no human).
- * Runs against the default fixture URL (http://localhost:4444).
- *
- * If this fails, the passkey stack (options → create → verify) is broken on localhost.
- */
-
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -63,7 +56,6 @@ test.describe("Setup wizard passkey with virtual authenticator (localhost)", () 
 			await expect(page.locator("text=Choose how to sign in")).toBeVisible();
 			await page.getByRole("button", { name: "Create Passkey" }).click();
 
-			// admin-verify creates the user but does not set a session; wizard sends user to /_emdash/admin and auth redirects to login.
 			await expect(page).toHaveURL(ADMIN_AFTER_SETUP_URL, { timeout: 60_000 });
 			await expect(page.locator("text=Choose how to sign in")).toHaveCount(0);
 			await expect(page.locator("text=Registration was cancelled or timed out")).toHaveCount(0);

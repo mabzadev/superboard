@@ -1,9 +1,3 @@
-/**
- * Plugin disable endpoint
- *
- * POST /_emdash/api/admin/plugins/:id/disable - Disable a plugin
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

@@ -1,12 +1,3 @@
-/**
- * Admin editor image LQIP round-trip.
- *
- * blurhash/dominantColor must survive Portable Text ↔ ProseMirror conversion so
- * author-inserted images keep their placeholders. LQIP is persisted as
- * first-class block fields (matching the image-field path); `asset.meta` is
- * only a read fallback for legacy snapshots.
- */
-
 import { describe, it, expect } from "vitest";
 
 import {
@@ -47,7 +38,6 @@ describe("admin editor image LQIP round-trip", () => {
 		const pt = prosemirrorToPortableText({ type: "doc", content: pm.content });
 		const restored = pt[0] as ImagePTBlock;
 		expect(restored._type).toBe("image");
-		// Promoted to first-class fields; asset.meta no longer carries them.
 		expect(restored.blurhash).toBe("LEHV6nWB2yk8pyo0adR*.7kCMdnj");
 		expect(restored.dominantColor).toBe("#aabbcc");
 		expect(restored.asset?.meta?.blurhash).toBeUndefined();

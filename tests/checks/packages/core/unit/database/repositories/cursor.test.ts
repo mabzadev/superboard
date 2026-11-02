@@ -37,11 +37,6 @@ describe("decodeCursor", () => {
 	});
 
 	it("rejects oversized cursors before attempting to decode (DoS guard)", () => {
-		// MAX_CURSOR_LENGTH is 4096 inside the decoder. The MCP/REST schemas
-		// cap earlier (2048), but the decoder is the last line of defense
-		// for any caller that bypasses the schemas. A pre-decode rejection
-		// avoids allocating O(N) bytes for `decodeBase64` on a hostile
-		// input.
 		const huge = "A".repeat(5000);
 		expect(() => decodeCursor(huge)).toThrow(InvalidCursorError);
 	});
@@ -53,7 +48,6 @@ describe("decodeCursor", () => {
 			expect.fail("expected throw");
 		} catch (error) {
 			expect(error).toBeInstanceOf(InvalidCursorError);
-			// The truncation cap is 50; the message itself stays short.
 			expect((error as Error).message.length).toBeLessThan(120);
 		}
 	});

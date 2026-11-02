@@ -1,4 +1,3 @@
-// Database (only types and utilities - internal functions not exported)
 export {
 	EmDashDatabaseError,
 	getMigrationStatus,
@@ -14,7 +13,6 @@ export type {
 	MediaTable,
 } from "./database/index.js";
 
-// Repositories
 export {
 	ContentRepository,
 	MediaRepository,
@@ -43,7 +41,6 @@ export type {
 export type { MediaItem, CreateMediaInput } from "./database/repositories/media.js";
 export type { CompoundSelectLimitedAdapter } from "./database/dialect-helpers.js";
 
-// Fields
 export { portableText, image, file, reference } from "./fields/index.js";
 export { normalizeMediaValue } from "./media/normalize.js";
 export { generatePlaceholder } from "./media/placeholder.js";
@@ -57,7 +54,6 @@ export type {
 	FileValue,
 } from "./fields/index.js";
 
-// API handlers
 export {
 	handleContentList,
 	handleContentAuthors,
@@ -102,7 +98,6 @@ export type {
 	ApiContext,
 } from "./api/index.js";
 
-// Content converters (Portable Text <-> ProseMirror)
 export { prosemirrorToPortableText, portableTextToProsemirror } from "./content/index.js";
 export type {
 	PortableTextSpan,
@@ -118,13 +113,11 @@ export type {
 	ProseMirrorDocument,
 } from "./content/index.js";
 
-// Utilities
 export { ulid } from "ulidx";
 export { computeContentHash, hashString } from "./utils/hash.js";
 export { sanitizeHref, isSafeHref } from "./utils/url.js";
 export { decodeSlug, slugify } from "./utils/slugify.js";
 
-// Live Collections query functions (loader is in emdash/runtime)
 export {
 	getEmDashCollection,
 	getEmDashEntry,
@@ -148,15 +141,12 @@ export type {
 	WhereValue,
 } from "./query.js";
 
-// Request context (ALS-based ambient state for query functions)
 export { getRequestContext, runWithContext } from "./request-context.js";
 export type { EmDashRequestContext } from "./request-context.js";
 
-// Defer work past the response (waitUntil on workerd, fire-and-forget on Node)
 export { after } from "./after.js";
 export type { WaitUntilFn } from "./after.js";
 
-// i18n configuration (from Astro config)
 export {
 	getI18nConfig,
 	isI18nEnabled,
@@ -165,7 +155,6 @@ export {
 } from "./i18n/config.js";
 export type { I18nConfig } from "./i18n/config.js";
 
-// Visual editing
 export {
 	createEditable,
 	createNoop,
@@ -174,14 +163,12 @@ export {
 	type FieldAnnotation,
 } from "./visual-editing/editable.js";
 
-// Re-export loader types (but not the loader itself - use emdash/runtime)
 export type {
 	EntryData,
 	EntryFilter,
 	CollectionFilter as LoaderCollectionFilter,
 } from "./loader.js";
 
-// WordPress import
 export { parseWxr, parseWxrString } from "./cli/wxr/parser.js";
 export type {
 	WxrData,
@@ -194,7 +181,6 @@ export type {
 	WxrAuthor,
 } from "./cli/wxr/parser.js";
 
-// Storage types
 export type {
 	Storage,
 	SignedUploadUrl,
@@ -211,7 +197,6 @@ export type {
 } from "./storage/types.js";
 export { EmDashStorageError } from "./storage/types.js";
 
-// Object cache (distributed read-through query cache)
 export {
 	cachedQuery,
 	invalidateObjectCache,
@@ -233,7 +218,6 @@ export type {
 	CreateObjectCacheBackendFn,
 } from "./object-cache/types.js";
 
-// Plugin system
 export {
 	definePlugin,
 	adaptSandboxEntry,
@@ -243,9 +227,7 @@ export {
 	PluginManager,
 	createPluginManager,
 	PluginRouteError,
-	// Scheduler (Node timer heartbeat — used by virtual:emdash/scheduler)
 	NodeCronScheduler,
-	// Sandbox
 	NoopSandboxRunner,
 	SandboxNotAvailableError,
 	SandboxUnavailableError,
@@ -254,7 +236,6 @@ export {
 	getSandboxRouteErrorDetails,
 	getSandboxRouteErrorEnvelope,
 	createNoopSandboxRunner,
-	// HTTP access for plugins (shared between in-process, Cloudflare, and workerd runners)
 	createHttpAccess,
 	createUnrestrictedHttpAccess,
 } from "./plugins/index.js";
@@ -296,7 +277,6 @@ export type {
 	FieldWidgetConfig,
 	PortableTextBlockConfig,
 	PortableTextBlockField,
-	// Comment types
 	CommentBeforeCreateEvent,
 	CommentModerateEvent,
 	CommentAfterCreateEvent,
@@ -308,12 +288,8 @@ export type {
 	ModerationDecision,
 	CollectionCommentSettings,
 	StoredComment,
-
-	// Scheduler types
 	CronScheduler,
 	SystemCleanupFn,
-
-	// Sandbox runtime types
 	SandboxRunner,
 	SandboxedPluginInstance,
 	SandboxRunnerFactory,
@@ -328,7 +304,6 @@ export type {
 	SandboxRouteErrorEnvelope,
 } from "./plugins/index.js";
 
-// Capability normalization (legacy → canonical alias layer)
 export {
 	CAPABILITY_RENAMES,
 	isDeprecatedCapability,
@@ -337,10 +312,8 @@ export {
 } from "./plugins/index.js";
 export type { CurrentPluginCapability, DeprecatedPluginCapability } from "./plugins/index.js";
 
-// Plugin descriptor (for astro.config.mjs)
 export type { PluginDescriptor } from "./astro/integration/runtime.js";
 
-// Schema registry
 export { SchemaRegistry, SchemaError, getCollectionInfo } from "./schema/index.js";
 export type {
 	FieldType,
@@ -363,7 +336,6 @@ export {
 	RESERVED_COLLECTION_SLUGS,
 } from "./schema/index.js";
 
-// Import sources system
 export {
 	registerSource,
 	getSource,
@@ -402,7 +374,6 @@ export type {
 	PostTypeMapping,
 } from "./import/index.js";
 
-// Preview system
 export {
 	generatePreviewToken,
 	verifyPreviewToken,
@@ -419,7 +390,6 @@ export type {
 	VerifyPreviewTokenOptions,
 	GetPreviewUrlOptions,
 } from "./preview/index.js";
-// Site Settings
 export {
 	getPluginSetting,
 	getPluginSettings,
@@ -434,11 +404,9 @@ export type {
 	SeoSettings,
 } from "./settings/types.js";
 
-// SEO
 export { getSeoMeta, getContentSeo, getHreflangAlternates } from "./seo/index.js";
 export type { SeoMeta, SeoMetaOptions, HreflangAlternate, HreflangOptions } from "./seo/index.js";
 
-// Public page contribution types
 export type {
 	PagePlacement,
 	PublicPageContext,
@@ -451,11 +419,9 @@ export type {
 	PageFragmentHandler,
 } from "./plugins/types.js";
 
-// Comments
 export { getComments, getCommentCount } from "./comments/query.js";
 export type { GetCommentsOptions, GetCommentsResult } from "./comments/query.js";
 
-// Menus
 export { getMenu, getMenus } from "./menus/index.js";
 export type {
 	Menu,
@@ -468,11 +434,9 @@ export type {
 	ReorderMenuItemsInput,
 } from "./menus/types.js";
 
-// Bylines
 export { getByline, getBylineBySlug, getEntriesByByline } from "./bylines/index.js";
 export type { BylineSummary, ContentBylineCredit } from "./database/repositories/types.js";
 
-// Taxonomies
 export {
 	getTaxonomyDefs,
 	getTaxonomyDef,
@@ -492,7 +456,6 @@ export type {
 	UpdateTermInput,
 } from "./taxonomies/types.js";
 
-// Widgets
 export { getWidgetArea, getWidgetAreas, getWidgetComponents } from "./widgets/index.js";
 export type {
 	Widget,
@@ -506,7 +469,6 @@ export type {
 	ReorderWidgetsInput,
 } from "./widgets/index.js";
 
-// Sections
 export { getSection, getSections } from "./sections/index.js";
 export type {
 	Section,
@@ -516,7 +478,6 @@ export type {
 	GetSectionsOptions,
 } from "./sections/index.js";
 
-// Seeding
 export { applySeed, validateSeed } from "./seed/index.js";
 export type {
 	SeedFile,
@@ -534,7 +495,6 @@ export type {
 	ValidationResult,
 } from "./seed/index.js";
 
-// Search
 export {
 	SEARCH_TOKENIZERS,
 	FTSManager,
@@ -558,7 +518,6 @@ export type {
 	SearchStats,
 } from "./search/index.js";
 
-// Auth types (for platform-specific auth providers and pluggable login methods)
 export type {
 	AuthDescriptor,
 	AuthProviderDescriptor,
@@ -569,7 +528,6 @@ export type {
 	ExternalAuthConfig,
 } from "./auth/types.js";
 
-// Database descriptor (for platform-specific database adapters)
 export type {
 	DatabaseDescriptor,
 	DatabaseDialectType,

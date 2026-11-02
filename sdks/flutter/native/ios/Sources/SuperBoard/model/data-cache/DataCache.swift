@@ -1,11 +1,3 @@
-//
-//  Cache.swift
-//  CacheDemo
-//
-//  Created by Nguyen Cong Huy on 7/4/16.
-//  Copyright © 2016 Nguyen Cong Huy. All rights reserved.
-//
-
 #if os(iOS)
     import UIKit
 #elseif os(OSX)
@@ -19,7 +11,7 @@ public enum ImageFormat {
 open class DataCache {
     static let cacheDirectoryPrefix = "com.superboard.cache."
     static let ioQueuePrefix = "com.superboard.queue."
-    static let defaultMaxCachePeriodInSecond: TimeInterval = 60 * 60 * 24 * 7         // a week
+    static let defaultMaxCachePeriodInSecond: TimeInterval = 60 * 60 * 24 * 7
 
     public static let instance = DataCache(name: "default")
 
@@ -29,16 +21,12 @@ open class DataCache {
     let ioQueue: DispatchQueue
     let fileManager: FileManager
 
-    /// Name of cache
     open var name: String = ""
 
-    /// Life time of disk cache, in second. Default is a week
     open var maxCachePeriodInSecond = DataCache.defaultMaxCachePeriodInSecond
 
-    /// Size is allocated for disk cache, in byte. 0 mean no limit. Default is 0
     open var maxDiskCacheSize: UInt = 0
 
-    /// Specify distinc name param, it represents folder name for disk cache
     public init(name: String, path: String? = nil) {
         self.name = name
 
@@ -61,17 +49,13 @@ open class DataCache {
     }
 }
 
-// MARK: - Store data
-
 extension DataCache {
 
-    /// Write data for key. This is an async operation.
     public func write(data: Data, forKey key: String) {
         memCache.setObject(data as AnyObject, forKey: key as AnyObject)
         writeDataToDisk(data: data, key: key)
     }
 
-    /// Write data for key synchronously. Blocks until disk write completes.
     public func writeSync(data: Data, forKey key: String) {
         memCache.setObject(data as AnyObject, forKey: key as AnyObject)
         ioQueue.sync {
@@ -97,7 +81,6 @@ extension DataCache {
         }
     }
 
-    /// Read data for key
     public func readData(forKey key:String) -> Data? {
         var data = memCache.object(forKey: key as AnyObject) as? Data
 
@@ -111,12 +94,10 @@ extension DataCache {
         return data
     }
 
-    /// Read data from disk for key
     public func readDataFromDisk(forKey key: String) -> Data? {
         return self.fileManager.contents(atPath: cachePath(forKey: key))
     }
 
-    // MARK: - Read & write Codable types
     public func write<T: Encodable>(codable: T, forKey key: String) throws {
         let data = try JSONEncoder().encode(codable)
         write(data: data, forKey: key)
@@ -127,12 +108,7 @@ extension DataCache {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
-    // MARK: - Read & write primitive types
 
-
-    /// Write an object for key. This object must inherit from `NSObject` and implement `NSCoding` protocol. `String`, `Array`, `Dictionary` conform to this method.
-    ///
-    /// NOTE: Can't write `UIImage` with this method. Please use `writeImage(_:forKey:)` to write an image
     public func write(object: NSCoding, forKey key: String) {
         do {
             let data = try NSKeyedArchiver.archivedData(withRootObject: object, requiringSecureCoding: false)
@@ -142,22 +118,18 @@ extension DataCache {
         }
     }
 
-    /// Write a string for key
     public func write(string: String, forKey key: String) {
         write(object: string as NSCoding, forKey: key)
     }
 
-    /// Write a dictionary for key
     public func write(dictionary: Dictionary<AnyHashable, Any>, forKey key: String) {
         write(object: dictionary as NSCoding, forKey: key)
     }
 
-    /// Write an array for key
     public func write(array: Array<Any>, forKey key: String) {
         write(object: array as NSCoding, forKey: key)
     }
 
-    /// Write an array for key synchronously. Blocks until disk write completes.
     public func writeSync(array: Array<Any>, forKey key: String) {
         do {
             let data = try NSKeyedArchiver.archivedData(withRootObject: array, requiringSecureCoding: false)
@@ -167,7 +139,6 @@ extension DataCache {
         }
     }
 
-    /// Read an object for key. This object must inherit from `NSObject` and implement NSCoding protocol. `String`, `Array`, `Dictionary` conform to this method
     public func readObject(forKey key: String) -> NSObject? {
         guard let data = readData(forKey: key) else {
             return nil
@@ -183,24 +154,18 @@ extension DataCache {
         }
     }
 
-    /// Read a string for key
     public func readString(forKey key: String) -> String? {
         return readObject(forKey: key) as? String
     }
 
-    /// Read an array for key
     public func readArray(forKey key: String) -> Array<Any>? {
         return readObject(forKey: key) as? Array<Any>
     }
 
-    /// Read a dictionary for key
     public func readDictionary(forKey key: String) -> Dictionary<AnyHashable, Any>? {
         return readObject(forKey: key) as? Dictionary<AnyHashable, Any>
     }
 
-    // MARK: - Read & write image
-
-    /// Write image for key. Please use this method to write an image instead of `writeObject(_:forKey:)`
     #if os(iOS)
     public func write(image: UIImage, forKey key: String, format: ImageFormat? = nil) {
         var data: Data? = nil
@@ -217,7 +182,6 @@ extension DataCache {
         }
     }
 
-    /// Read image for key. Please use this method to write an image instead of `readObject(forKey:)`
     public func readImage(forKey key: String) -> UIImage? {
         let data = readData(forKey: key)
         if let data = data {
@@ -247,7 +211,6 @@ extension DataCache {
         }
     }
 
-    /// Read image for key. Please use this method to write an image instead of `readObject(forKey:)`
     public func readImage(forKey key: String) -> NSImage? {
         let data = readData(forKey: key)
         if let data = data {
@@ -264,36 +227,27 @@ extension DataCache {
     #endif
 }
 
-// MARK: - Utils
-
 extension DataCache {
-    /// Check if has data for key
     public func hasData(forKey key: String) -> Bool {
         return hasDataOnDisk(forKey: key) || hasDataOnMem(forKey: key)
     }
 
-    /// Check if has data on disk
     public func hasDataOnDisk(forKey key: String) -> Bool {
         return self.fileManager.fileExists(atPath: self.cachePath(forKey: key))
     }
 
-    /// Check if has data on mem
     public func hasDataOnMem(forKey key: String) -> Bool {
         return (memCache.object(forKey: key as AnyObject) != nil)
     }
 }
 
-// MARK: - Clean
-
 extension DataCache {
 
-    /// Clean all mem cache and disk cache. This is an async operation.
     public func cleanAll() {
         cleanMemCache()
         cleanDiskCache()
     }
 
-    /// Clean cache by key. This is an async operation.
     public func clean(byKey key: String) {
         memCache.removeObject(forKey: key as AnyObject)
 
@@ -320,20 +274,12 @@ extension DataCache {
         }
     }
 
-    /// Clean expired disk cache. This is an async operation.
     @objc public func cleanExpiredDiskCache() {
         cleanExpiredDiskCache(completion: nil)
     }
 
-    // This method is from Kingfisher
-    /**
-     Clean expired disk cache. This is an async operation.
-
-     - parameter completionHandler: Called after the operation completes.
-     */
     open func cleanExpiredDiskCache(completion handler: (()->())? = nil) {
 
-        // Do things in cocurrent io queue
         ioQueue.async {
 
             var (URLsToDelete, diskCacheSize, cachedFiles) = self.travelCachedFiles(onlyForCacheSize: false)
@@ -349,7 +295,6 @@ extension DataCache {
             if self.maxDiskCacheSize > 0 && diskCacheSize > self.maxDiskCacheSize {
                 let targetSize = self.maxDiskCacheSize / 2
 
-                // Sort files by last modify date. We want to clean from the oldest files.
                 let sortedFiles = cachedFiles.keysSortedByValue {
                     resourceValue1, resourceValue2 -> Bool in
 
@@ -359,7 +304,6 @@ extension DataCache {
                         return date1.compare(date2) == .orderedAscending
                     }
 
-                    // Not valid date information. This should not happen. Just in case.
                     return true
                 }
 
@@ -390,11 +334,8 @@ extension DataCache {
     }
 }
 
-// MARK: - Helpers
-
 extension DataCache {
 
-    // This method is from Kingfisher
     fileprivate func travelCachedFiles(onlyForCacheSize: Bool) -> (urlsToDelete: [URL], diskCacheSize: UInt, cachedFiles: [URL: URLResourceValues]) {
 
         let diskCacheURL = URL(fileURLWithPath: cachePath)
@@ -409,12 +350,10 @@ extension DataCache {
 
             do {
                 let resourceValues = try fileUrl.resourceValues(forKeys: resourceKeys)
-                // If it is a Directory. Continue to next file URL.
                 if resourceValues.isDirectory == true {
                     continue
                 }
 
-                // If this file is expired, add it to URLsToDelete
                 if !onlyForCacheSize,
                     let expiredDate = expiredDate,
                     let lastAccessData = resourceValues.contentAccessDate,

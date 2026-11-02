@@ -3,10 +3,6 @@ import { z } from "zod";
 import { isTerminalStatus, REDIRECT_RULE_STATUSES } from "../../redirects/status.js";
 import { cursorPaginationQuery } from "./common.js";
 
-// ---------------------------------------------------------------------------
-// Redirects: Input schemas
-// ---------------------------------------------------------------------------
-
 const redirectType = z.coerce
 	.number()
 	.int()
@@ -14,10 +10,8 @@ const redirectType = z.coerce
 		message: "Redirect type must be 301, 302, 307, 308, 410, or 451",
 	});
 
-/** Matches CR or LF characters */
 const CRLF = /[\r\n]/;
 
-/** Path must start with / and not be protocol-relative, contain no CRLF, and no path traversal */
 const urlPath = z
 	.string()
 	.min(1)
@@ -41,8 +35,6 @@ const urlPath = z
 export const createRedirectBody = z
 	.object({
 		source: urlPath,
-		// Optional: terminal statuses (410/451) have no destination. Redirect
-		// statuses require one — enforced by the refine below.
 		destination: z.union([urlPath, z.literal("")]).optional(),
 		type: redirectType.optional().default(301),
 		enabled: z.boolean().optional().default(true),
@@ -82,10 +74,6 @@ export const redirectsListQuery = cursorPaginationQuery
 	})
 	.meta({ id: "RedirectsListQuery" });
 
-// ---------------------------------------------------------------------------
-// 404 Log: Input schemas
-// ---------------------------------------------------------------------------
-
 export const notFoundListQuery = cursorPaginationQuery
 	.extend({
 		search: z.string().optional(),
@@ -101,10 +89,6 @@ export const notFoundPruneBody = z
 		olderThan: z.string().datetime({ message: "olderThan must be an ISO 8601 datetime" }),
 	})
 	.meta({ id: "NotFoundPruneBody" });
-
-// ---------------------------------------------------------------------------
-// Redirects: Response schemas
-// ---------------------------------------------------------------------------
 
 export const redirectSchema = z
 	.object({

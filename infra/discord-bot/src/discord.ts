@@ -1,8 +1,5 @@
 const DISCORD_API = "https://discord.com/api/v10";
 
-/**
- * Verify Discord interaction signature using Ed25519.
- */
 export async function verifyDiscordSignature(
 	request: Request,
 	publicKey: string,
@@ -30,9 +27,6 @@ export async function verifyDiscordSignature(
 	);
 }
 
-/**
- * Add a role to a guild member.
- */
 export async function addRole(env: Env, userId: string, roleId: string): Promise<boolean> {
 	const res = await fetch(
 		`${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}/members/${userId}/roles/${roleId}`,
@@ -44,9 +38,6 @@ export async function addRole(env: Env, userId: string, roleId: string): Promise
 	return res.ok;
 }
 
-/**
- * Check if a guild member has a specific role.
- */
 export async function hasRole(env: Env, userId: string, roleId: string): Promise<boolean> {
 	const res = await fetch(`${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}/members/${userId}`, {
 		headers: { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}` },
@@ -56,10 +47,6 @@ export async function hasRole(env: Env, userId: string, roleId: string): Promise
 	return member.roles.includes(roleId);
 }
 
-/**
- * Post a message to a channel. Only explicit user mentions are allowed;
- * @everyone, @here, and role mentions in content are suppressed.
- */
 export async function postMessage(
 	env: Env,
 	channelId: string,
@@ -75,17 +62,14 @@ export async function postMessage(
 		body: JSON.stringify({
 			content,
 			allowed_mentions: {
-				parse: [], // disable @everyone, @here, role mentions
-				users: mentionUserIds ?? [], // only mention these user IDs
+				parse: [],
+				users: mentionUserIds ?? [],
 			},
 		}),
 	});
 	return res.ok;
 }
 
-/**
- * Reply to an interaction (type 4 = channel message with source).
- */
 export function interactionResponse(content: string, ephemeral = false): Response {
 	return Response.json({
 		type: 4,
@@ -96,9 +80,6 @@ export function interactionResponse(content: string, ephemeral = false): Respons
 	});
 }
 
-/**
- * Reply with a button component.
- */
 export function interactionResponseWithButton(
 	content: string,
 	buttonLabel: string,
@@ -108,14 +89,14 @@ export function interactionResponseWithButton(
 		type: 4,
 		data: {
 			content,
-			flags: 64, // ephemeral
+			flags: 64,
 			components: [
 				{
-					type: 1, // action row
+					type: 1,
 					components: [
 						{
-							type: 2, // button
-							style: 5, // link
+							type: 2,
+							style: 5,
 							label: buttonLabel,
 							url,
 						},

@@ -1,9 +1,3 @@
-/**
- * Integration tests for OAuth Device Flow handlers.
- *
- * Tests the full device flow lifecycle against a real in-memory SQLite database.
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { RoleLevel } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
@@ -30,7 +24,6 @@ let db: Kysely<Database>;
 beforeEach(async () => {
 	db = await setupTestDatabase();
 
-	// Create a test user
 	await db
 		.insertInto("users")
 		.values({
@@ -61,7 +54,7 @@ describe("Device Code Request", () => {
 		expect(result.data.device_code).toBeTruthy();
 		expect(result.data.user_code).toMatch(USER_CODE_FORMAT_REGEX);
 		expect(result.data.verification_uri).toBe("https://example.com/_emdash/device");
-		expect(result.data.expires_in).toBe(900); // 15 minutes
+		expect(result.data.expires_in).toBe(900);
 		expect(result.data.interval).toBe(5);
 	});
 
@@ -75,7 +68,6 @@ describe("Device Code Request", () => {
 		expect(result.success).toBe(true);
 		if (!result.success) return;
 
-		// Verify scopes were stored
 		const row = await db
 			.selectFrom("_emdash_device_codes")
 			.selectAll()
@@ -101,7 +93,6 @@ describe("Device Code Request", () => {
 
 describe("Device Flow: Full Lifecycle", () => {
 	it("should complete the full device flow: code → authorize → exchange", async () => {
-		// Step 1: Request device code
 		const codeResult = await handleDeviceCodeRequest(
 			db,
 			{ client_id: "emdash-cli" },
@@ -112,7 +103,6 @@ describe("Device Flow: Full Lifecycle", () => {
 
 		const { device_code, user_code } = codeResult.data;
 
-		// Step 2: Poll before authorization → pending
 		const pendingResult = await handleDeviceTokenExchange(db, {
 			device_code,
 			grant_type: "urn:ietf:params:oauth:grant-type:device_code",
@@ -120,7 +110,6 @@ describe("Device Flow: Full Lifecycle", () => {
 		expect(pendingResult.success).toBe(false);
 		expect(pendingResult.deviceFlowError).toBe("authorization_pending");
 
-		// Step 3: User authorizes (admin role = 50)
 		const authResult = await handleDeviceAuthorize(db, "user-1", Role.ADMIN, {
 			user_code,
 		});
@@ -128,7 +117,6 @@ describe("Device Flow: Full Lifecycle", () => {
 		if (!authResult.success) return;
 		expect(authResult.data.authorized).toBe(true);
 
-		// Step 4: Exchange for tokens
 		const tokenResult = await handleDeviceTokenExchange(db, {
 			device_code,
 			grant_type: "urn:ietf:params:oauth:grant-type:device_code",
@@ -142,7 +130,6 @@ describe("Device Flow: Full Lifecycle", () => {
 		expect(tokenResult.data.expires_in).toBe(3600);
 		expect(tokenResult.data.scope).toBeTruthy();
 
-		// Step 5: Device code should be consumed
 		const row = await db
 			.selectFrom("_emdash_device_codes")
 			.selectAll()
@@ -150,7 +137,6 @@ describe("Device Flow: Full Lifecycle", () => {
 			.executeTakeFirst();
 		expect(row).toBeUndefined();
 
-		// Step 6: Tokens should be stored
 		const accessHash = hashApiToken(tokenResult.data.access_token);
 		const accessRow = await db
 			.selectFrom("_emdash_oauth_tokens")
@@ -176,7 +162,6 @@ describe("Device Flow: Full Lifecycle", () => {
 		expect(codeResult.success).toBe(true);
 		if (!codeResult.success) return;
 
-		// User denies
 		const authResult = await handleDeviceAuthorize(db, "user-1", Role.ADMIN, {
 			user_code: codeResult.data.user_code,
 			action: "deny",
@@ -185,7 +170,6 @@ describe("Device Flow: Full Lifecycle", () => {
 		if (!authResult.success) return;
 		expect(authResult.data.authorized).toBe(false);
 
-		// Exchange should return access_denied
 		const tokenResult = await handleDeviceTokenExchange(db, {
 			device_code: codeResult.data.device_code,
 			grant_type: "urn:ietf:params:oauth:grant-type:device_code",
@@ -199,7 +183,6 @@ describe("Device Flow: Full Lifecycle", () => {
 		expect(codeResult.success).toBe(true);
 		if (!codeResult.success) return;
 
-		// Submit lowercase without hyphen
 		const code = codeResult.data.user_code.replace(HYPHEN_REGEX, "").toLowerCase();
 		const authResult = await handleDeviceAuthorize(db, "user-1", Role.ADMIN, {
 			user_code: code,
@@ -242,14 +225,12 @@ describe("Device Token Exchange: Error Cases", () => {
 			user_code: codeResult.data.user_code,
 		});
 
-		// First exchange succeeds
 		const first = await handleDeviceTokenExchange(db, {
 			device_code: codeResult.data.device_code,
 			grant_type: "urn:ietf:params:oauth:grant-type:device_code",
 		});
 		expect(first.success).toBe(true);
 
-		// Second exchange fails — device code was consumed atomically
 		const second = await handleDeviceTokenExchange(db, {
 			device_code: codeResult.data.device_code,
 			grant_type: "urn:ietf:params:oauth:grant-type:device_code",
@@ -260,7 +241,6 @@ describe("Device Token Exchange: Error Cases", () => {
 	});
 
 	it("should report expired device codes", async () => {
-		// Create a device code that's already expired
 		await db
 			.insertInto("_emdash_device_codes")
 			.values({
@@ -284,7 +264,6 @@ describe("Device Token Exchange: Error Cases", () => {
 
 describe("Token Refresh", () => {
 	it("should exchange a refresh token for a new access token", async () => {
-		// Complete a device flow first to get tokens
 		const codeResult = await handleDeviceCodeRequest(db, {}, "https://example.com/_emdash/device");
 		expect(codeResult.success).toBe(true);
 		if (!codeResult.success) return;
@@ -300,7 +279,6 @@ describe("Token Refresh", () => {
 		expect(tokenResult.success).toBe(true);
 		if (!tokenResult.success) return;
 
-		// Refresh
 		const refreshResult = await handleTokenRefresh(db, {
 			refresh_token: tokenResult.data.refresh_token,
 			grant_type: "refresh_token",
@@ -347,7 +325,6 @@ describe("Token Refresh", () => {
 
 describe("Token Revoke", () => {
 	it("should revoke an access token", async () => {
-		// Get tokens via device flow
 		const codeResult = await handleDeviceCodeRequest(db, {}, "https://example.com/_emdash/device");
 		expect(codeResult.success).toBe(true);
 		if (!codeResult.success) return;
@@ -363,13 +340,11 @@ describe("Token Revoke", () => {
 		expect(tokenResult.success).toBe(true);
 		if (!tokenResult.success) return;
 
-		// Revoke the access token
 		const revokeResult = await handleTokenRevoke(db, {
 			token: tokenResult.data.access_token,
 		});
 		expect(revokeResult.success).toBe(true);
 
-		// Access token should be gone
 		const accessHash = hashApiToken(tokenResult.data.access_token);
 		const row = await db
 			.selectFrom("_emdash_oauth_tokens")
@@ -380,7 +355,6 @@ describe("Token Revoke", () => {
 	});
 
 	it("should revoke a refresh token and its access tokens", async () => {
-		// Get tokens via device flow
 		const codeResult = await handleDeviceCodeRequest(db, {}, "https://example.com/_emdash/device");
 		expect(codeResult.success).toBe(true);
 		if (!codeResult.success) return;
@@ -396,13 +370,11 @@ describe("Token Revoke", () => {
 		expect(tokenResult.success).toBe(true);
 		if (!tokenResult.success) return;
 
-		// Revoke the refresh token
 		const revokeResult = await handleTokenRevoke(db, {
 			token: tokenResult.data.refresh_token,
 		});
 		expect(revokeResult.success).toBe(true);
 
-		// Both tokens should be gone
 		const tokenCount = await db
 			.selectFrom("_emdash_oauth_tokens")
 			.select(db.fn.count("token_hash").as("count"))
@@ -450,12 +422,7 @@ describe("Device Authorize: Error Cases", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Scope escalation prevention (SEC: CWE-269)
-// ---------------------------------------------------------------------------
-
 describe("Scope Clamping: Role-based scope restriction", () => {
-	/** Helper: run a full device flow with given requested scopes and user role */
 	async function completeDeviceFlow(
 		requestedScopes: string,
 		userRole: RoleLevel,
@@ -482,7 +449,6 @@ describe("Scope Clamping: Role-based scope restriction", () => {
 	}
 
 	it("should strip admin scope from non-admin user tokens", async () => {
-		// CONTRIBUTOR requests admin scope — this is the core attack scenario
 		const result = await completeDeviceFlow("content:read content:write admin", Role.CONTRIBUTOR);
 		expect(result.success).toBe(true);
 
@@ -493,7 +459,6 @@ describe("Scope Clamping: Role-based scope restriction", () => {
 	});
 
 	it("should strip schema:write from non-admin user tokens", async () => {
-		// EDITOR requests schema:write — only ADMIN gets schema:write
 		const result = await completeDeviceFlow("content:read schema:read schema:write", Role.EDITOR);
 		expect(result.success).toBe(true);
 
@@ -504,7 +469,6 @@ describe("Scope Clamping: Role-based scope restriction", () => {
 	});
 
 	it("should strip schema:read from contributor tokens", async () => {
-		// CONTRIBUTOR requests schema:read — only EDITOR+ gets schema:read
 		const result = await completeDeviceFlow("content:read schema:read", Role.CONTRIBUTOR);
 		expect(result.success).toBe(true);
 
@@ -527,7 +491,6 @@ describe("Scope Clamping: Role-based scope restriction", () => {
 	});
 
 	it("should return INSUFFICIENT_ROLE when no scopes survive clamping", async () => {
-		// SUBSCRIBER requests only admin scope — nothing survives
 		const codeResult = await handleDeviceCodeRequest(
 			db,
 			{ scope: "admin schema:write" },
@@ -545,7 +508,6 @@ describe("Scope Clamping: Role-based scope restriction", () => {
 	});
 
 	it("should clamp scopes in stored device code at authorize time", async () => {
-		// Verify that the stored scopes are clamped, not just the response
 		const codeResult = await handleDeviceCodeRequest(
 			db,
 			{ scope: "content:read content:write schema:write admin" },
@@ -554,7 +516,6 @@ describe("Scope Clamping: Role-based scope restriction", () => {
 		expect(codeResult.success).toBe(true);
 		if (!codeResult.success) return;
 
-		// Before authorize: scopes include admin and schema:write
 		const beforeRow = await db
 			.selectFrom("_emdash_device_codes")
 			.selectAll()
@@ -563,12 +524,10 @@ describe("Scope Clamping: Role-based scope restriction", () => {
 		expect(JSON.parse(beforeRow!.scopes)).toContain("admin");
 		expect(JSON.parse(beforeRow!.scopes)).toContain("schema:write");
 
-		// Authorize as CONTRIBUTOR — admin and schema:write must be stripped
 		await handleDeviceAuthorize(db, "user-1", Role.CONTRIBUTOR, {
 			user_code: codeResult.data.user_code,
 		});
 
-		// After authorize: scopes should be clamped in DB
 		const afterRow = await db
 			.selectFrom("_emdash_device_codes")
 			.selectAll()

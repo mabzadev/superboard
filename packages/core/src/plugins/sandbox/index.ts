@@ -1,8 +1,3 @@
-/**
- * Plugin Sandbox Exports
- *
- */
-
 export { NoopSandboxRunner, SandboxNotAvailableError, createNoopSandboxRunner } from "./noop.js";
 export {
 	SandboxUnavailableError,

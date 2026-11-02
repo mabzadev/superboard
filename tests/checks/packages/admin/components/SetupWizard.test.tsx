@@ -4,7 +4,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { render } from "../utils/render.tsx";
 
-// Mock API
 let mockSeedInfo: any = null;
 
 vi.mock("../../../../../packages/admin/src/lib/api/client", async () => {
@@ -43,13 +42,11 @@ vi.mock("../../../../../packages/admin/src/lib/api/client", async () => {
 	};
 });
 
-// Mock WebAuthn so PasskeyRegistration doesn't bail out
 Object.defineProperty(window, "PublicKeyCredential", {
 	value: function PublicKeyCredential() {},
 	writable: true,
 });
 
-// Import after mocks
 const { SetupWizard } = await import("../../../../../packages/admin/src/components/SetupWizard");
 
 function QueryWrapper({ children }: { children: React.ReactNode }) {
@@ -81,12 +78,9 @@ describe("SetupWizard", () => {
 				<SetupWizard />
 			</QueryWrapper>,
 		);
-		// Wait for setup status to load
 		await expect.element(screen.getByText("Set up your site")).toBeInTheDocument();
-		// Click Continue without filling title
 		await screen.getByText("Continue →").click();
 		await expect.element(screen.getByText("Site title is required")).toBeInTheDocument();
-		// Should still be on site step
 		await expect.element(screen.getByText("Set up your site")).toBeInTheDocument();
 	});
 
@@ -97,11 +91,8 @@ describe("SetupWizard", () => {
 			</QueryWrapper>,
 		);
 		await expect.element(screen.getByText("Set up your site")).toBeInTheDocument();
-		// Fill in the title
 		await screen.getByPlaceholder("My Awesome Blog").fill("Test Site");
-		// Click continue
 		await screen.getByText("Continue →").click();
-		// Should advance to admin step
 		await expect.element(screen.getByText("Create your account")).toBeInTheDocument();
 	});
 
@@ -122,10 +113,8 @@ describe("SetupWizard", () => {
 			</QueryWrapper>,
 		);
 		await expect.element(screen.getByText("Set up your site")).toBeInTheDocument();
-		// Fill title and advance
 		await screen.getByPlaceholder("My Awesome Blog").fill("Test Site");
 		await screen.getByText("Continue →").click();
-		// Should see email input on admin step
 		await expect.element(screen.getByText("Create your account")).toBeInTheDocument();
 		await expect.element(screen.getByPlaceholder("you@example.com")).toBeInTheDocument();
 	});
@@ -137,13 +126,10 @@ describe("SetupWizard", () => {
 			</QueryWrapper>,
 		);
 		await expect.element(screen.getByText("Set up your site")).toBeInTheDocument();
-		// Fill title and advance
 		await screen.getByPlaceholder("My Awesome Blog").fill("Test Site");
 		await screen.getByText("Continue →").click();
 		await expect.element(screen.getByText("Create your account")).toBeInTheDocument();
-		// Click Continue without filling email
 		await screen.getByText("Continue →").click();
-		// Should show validation error
 		await expect.element(screen.getByText("Email is required")).toBeInTheDocument();
 	});
 
@@ -154,7 +140,6 @@ describe("SetupWizard", () => {
 			</QueryWrapper>,
 		);
 		await expect.element(screen.getByText("Set up your site")).toBeInTheDocument();
-		// Step indicator labels - use exact matching via role
 		await expect.element(screen.getByText("Account")).toBeInTheDocument();
 		await expect.element(screen.getByText("Sign In")).toBeInTheDocument();
 	});
@@ -194,7 +179,6 @@ describe("SetupWizard", () => {
 			description: "A blank template",
 			collections: 0,
 			hasContent: false,
-			// title and tagline not provided
 		};
 
 		const screen = await render(
@@ -239,7 +223,6 @@ describe("SetupWizard", () => {
 			expect((titleInput.element() as HTMLInputElement).value).toBe("My Awesome Blog");
 		});
 
-		// Edit the title
 		await titleInput.fill("My Custom Blog");
 		await vi.waitFor(() => {
 			expect((screen.getByPlaceholder("My Awesome Blog").element() as HTMLInputElement).value).toBe(
@@ -247,7 +230,6 @@ describe("SetupWizard", () => {
 			);
 		});
 
-		// Should be able to advance with the edited value
 		await screen.getByText("Continue →").click();
 		await expect.element(screen.getByText("Create your account")).toBeInTheDocument();
 	});

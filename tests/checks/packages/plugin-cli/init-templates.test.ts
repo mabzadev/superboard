@@ -1,13 +1,3 @@
-/**
- * Coverage for the init scaffolder's pure template functions.
- *
- * Tests focus on the manifest renderer because that's the file users
- * see first and the one whose shape has to satisfy the schema. The
- * other templates (package.json, tsconfig, README) get smoke checks
- * that they produce valid JSON / non-empty content; their exact
- * wording is verified by the integration test in init-scaffold.test.ts.
- */
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -47,11 +37,6 @@ const MINIMAL_INPUTS: ScaffoldInputs = {
 describe("renderManifest (fully-populated)", () => {
 	it("produces a manifest that passes the schema", () => {
 		const source = renderManifest(FULL_INPUTS);
-		// JSONC parser strips comments and trailing commas before
-		// validation. We parse via the same loader path the CLI uses
-		// elsewhere, but for the test a quick `parse` from jsonc-parser
-		// is enough — we only need to confirm the rendered bytes
-		// validate.
 		const parsed = parseJsonc(source);
 		const result = ManifestSchema.safeParse(parsed);
 		expect(result.success).toBe(true);
@@ -60,15 +45,10 @@ describe("renderManifest (fully-populated)", () => {
 	it("renders identity, license, author, security, description, repo", () => {
 		const source = renderManifest(FULL_INPUTS);
 		expect(source).toContain('"slug": "gallery"');
-		// `version` deliberately omitted from the manifest scaffold —
-		// package.json#version is the source of truth.
 		expect(source).not.toContain('"version":');
 		expect(source).toContain('"publisher": "did:plc:abc123def456"');
 		expect(source).toContain('"license": "MIT"');
 		expect(source).toContain('"name": "Jane Doe"');
-		// author's url. The publisher comment also contains "example.com",
-		// so we anchor on the author block by looking for the
-		// url-key shape rather than the bare hostname.
 		expect(source).toContain('"url": "https://example.com"');
 		expect(source).toContain('"email": "jane@example.com"');
 		expect(source).toContain('"email": "security@example.com"');
@@ -98,7 +78,6 @@ describe("renderManifest (fully-populated)", () => {
 	});
 
 	it("emits empty default arrays for the trust contract", () => {
-		// init starts with no declared capabilities. The author opts in.
 		const source = renderManifest(FULL_INPUTS);
 		expect(source).toContain('"capabilities": []');
 		expect(source).toContain('"allowedHosts": []');
@@ -109,21 +88,14 @@ describe("renderManifest (fully-populated)", () => {
 describe("renderManifest (minimal — no flags, no prompts)", () => {
 	it("produces a manifest with TODO placeholders", () => {
 		const source = renderManifest(MINIMAL_INPUTS);
-		// Three TODOs: publisher, author, security. License has a
-		// default (MIT) so it never carries a TODO.
 		const todoLines = source.split("\n").filter((line) => line.includes("TODO"));
 		expect(todoLines.length).toBeGreaterThanOrEqual(3);
-		// At least one TODO mentions atproto (publisher), one mentions
-		// the author name, one mentions security.
 		expect(todoLines.some((l) => /atproto handle|DID/i.test(l))).toBe(true);
 		expect(todoLines.some((l) => /name|author/i.test(l))).toBe(true);
 		expect(todoLines.some((l) => /security/i.test(l))).toBe(true);
 	});
 
 	it("emits an empty publisher value the schema will reject", () => {
-		// The TODO is visible to the user; the empty string is what
-		// schema validation hits. This is intentional: the manifest is
-		// "valid JSONC, schema-invalid until publisher is filled in".
 		const source = renderManifest(MINIMAL_INPUTS);
 		expect(source).toContain('"publisher": ""');
 	});
@@ -134,8 +106,6 @@ describe("renderManifest (minimal — no flags, no prompts)", () => {
 	});
 
 	it("renders to the smallest plausible manifest", () => {
-		// description and repo are truly-optional fields. They must
-		// not appear when unset (no empty-string keys lying around).
 		const source = renderManifest(MINIMAL_INPUTS);
 		expect(source).not.toMatch(/"description":/);
 		expect(source).not.toMatch(/"repo":/);
@@ -146,7 +116,7 @@ describe("renderManifest (partial author/security)", () => {
 	it("emits author.url and author.email only when provided", () => {
 		const source = renderManifest({
 			...FULL_INPUTS,
-			author: { name: "Jane Doe" }, // no url, no email
+			author: { name: "Jane Doe" },
 		});
 		expect(source).toContain('"name": "Jane Doe"');
 		expect(source).not.toContain('"url":');
@@ -197,8 +167,6 @@ describe("renderTsconfig", () => {
 	it("produces a strict standalone tsconfig", () => {
 		const parsed = JSON.parse(renderTsconfig());
 		expect(parsed.compilerOptions.strict).toBe(true);
-		// No outDir / declaration — source is the artefact, bundle
-		// transpiles at publish time.
 		expect(parsed.compilerOptions.outDir).toBeUndefined();
 		expect(parsed.compilerOptions.declaration).toBeUndefined();
 	});
@@ -214,8 +182,6 @@ describe("renderPluginEntry", () => {
 	it("type-only-imports SandboxedPlugin from emdash/plugin", () => {
 		const source = renderPluginEntry();
 		expect(source).toContain('import type { SandboxedPlugin } from "emdash/plugin"');
-		// No runtime emdash imports — sandboxed plugins must not pull
-		// the emdash runtime into their bundle.
 		expect(source).not.toContain('import { definePlugin } from "emdash"');
 	});
 
@@ -225,8 +191,6 @@ describe("renderPluginEntry", () => {
 		expect(source).toContain("satisfies SandboxedPlugin");
 		expect(source).toContain("hello:");
 		expect(source).toContain("greeting:");
-		// definePlugin must not appear in the scaffold — it's
-		// native-only now and would throw at runtime if used here.
 		expect(source).not.toContain("definePlugin");
 	});
 });
@@ -270,24 +234,12 @@ describe("renderReadme", () => {
 
 	it("camel-cases the import binding so hyphenated slugs produce valid JS", () => {
 		const source = renderReadme({ ...FULL_INPUTS, slug: "my-plugin" });
-		// The import specifier is the slug as-is; the binding must be a
-		// legal JS identifier (`myPlugin`, not `my-plugin`).
 		expect(source).toContain('import myPlugin from "my-plugin"');
 		expect(source).toContain("sandboxed: [myPlugin]");
 		expect(source).not.toContain("import my-plugin");
 	});
 });
 
-// ──────────────────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────────────────
-
-/**
- * Parse JSONC for testing the rendered manifest. We use the
- * jsonc-parser dep directly here rather than going through the full
- * loader because the loader requires a file path and we want to
- * keep these tests in-memory.
- */
 function parseJsonc(source: string): unknown {
 	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const { parse } = require("jsonc-parser") as typeof import("jsonc-parser");

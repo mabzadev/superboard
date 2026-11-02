@@ -1,77 +1,44 @@
-//
-//  BaseService.swift
-//
-//  superboard
-//
-
 import Foundation
 
-/// Closure typealias for JSON response handling
 public typealias JSONClosure = (_ success: Bool, _ json: [String: Any]?) -> Void
 
-/// Base service class for making network requests
 open class BaseService: NSObject {
 
-    /// Injectable foreground transport used by unit tests. Keeping the retry
-    /// policy above the URL loading system avoids asking CFNetwork to interpret
-    /// synthetic connectivity failures before the policy can observe them.
     typealias ForegroundRequestExecutor = (
         _ request: URLRequest,
         _ completion: @escaping (Data?, URLResponse?, Error?) -> Void
     ) -> URLSessionTask?
 
-    /// Injectable retry scheduler used by unit tests to execute retries without
-    /// wall-clock sleeps while production retains exponential backoff.
     typealias RetryScheduler = (
         _ delay: TimeInterval,
         _ operation: @escaping () -> Void
     ) -> Void
 
-    // MARK: - Properties
-
-    /// URLProtocol classes to prepend to the session configuration (used for testing).
     static var urlProtocolClasses: [AnyClass] = []
 
-    /// Configuration for background URLSession.
-    /// Uses a stable identifier derived from the bundle ID so the system can
-    /// reconnect to the session after an app kill and deliver pending events.
     private let backgroundConfig = URLSessionConfiguration.background(
         withIdentifier: "io.superboard.sdk.background.\(Bundle.main.bundleIdentifier ?? "default")"
     )
 
-    /// Default URLSession configuration
     private let config = URLSessionConfiguration.default
 
-    /// Operation queue for delegate callbacks
     private let delegateQueue = OperationQueue()
 
-    /// URLSession instance for regular requests
     private var session: URLSession!
 
-    /// URLSession instance for background requests
     private var backgroundSession: URLSession!
 
-    /// Cached completion handlers for background requests, keyed by task identifier
     private var cachedCompletions: [Int: JSONClosure] = [:]
 
-    /// Serial queue protecting cachedCompletions from concurrent access
     private let completionsQueue = DispatchQueue(label: "com.superboard.completionsQueue")
 
-    /// Dedicated scheduler for retries. Network recovery is user-visible work, so
-    /// avoid utility QoS: it can be deferred for tens of seconds while the process
-    /// is busy and make a short exponential backoff miss its intended window.
     private let retryQueue = DispatchQueue(label: "io.superboard.sdk.retry", qos: .userInitiated)
 
-    /// Optional transport and scheduler seams. Production uses URLSession and
-    /// the dedicated retry queue; tests inject deterministic implementations.
     private var foregroundRequestExecutor: ForegroundRequestExecutor?
     private var retryScheduler: RetryScheduler?
 
-    /// Maximum number of retries per request before giving up
     private static let maxRetryCount = 5
 
-
-    // MARK: - Initialization
 
     override init() {
         foregroundRequestExecutor = nil
@@ -83,8 +50,6 @@ open class BaseService: NSObject {
         let bgConfig: URLSessionConfiguration
         if !BaseService.urlProtocolClasses.isEmpty {
             config.protocolClasses = BaseService.urlProtocolClasses + (config.protocolClasses ?? [])
-            // Background sessions ignore custom URLProtocol classes, so use
-            // a default config with the mock protocols for in-process testing.
             let testBgConfig = URLSessionConfiguration.default
             testBgConfig.protocolClasses = BaseService.urlProtocolClasses + (testBgConfig.protocolClasses ?? [])
             bgConfig = testBgConfig
@@ -108,22 +73,11 @@ open class BaseService: NSObject {
         self.retryScheduler = retryScheduler
     }
 
-    // MARK: - Request Methods
-
-    /// Makes a network request with the given URLRequest.
-    ///
-    /// - Parameters:
-    ///   - background: Indicates if the request should be made in the background.
-    ///   - URLRequest: The URLRequest to be executed.
-    ///   - completion: Completion handler to be called when the request finishes.
-
     @discardableResult
     func makeRequest(background: Bool = false, URLRequest: URLRequest, completion: @escaping JSONClosure) -> URLSessionTask? {
         return makeRequest(background: background, URLRequest: URLRequest, retryCount: 0, completion: completion)
     }
 
-    /// Per-request exponential backoff with jitter: base delay 2, 4, 8, 16, 32s (capped at 60)
-    /// plus random jitter of 0–1s to prevent thundering herd on network recovery.
     private func retryDelay(for retryCount: Int) -> Double {
         let base = min(2.0 * pow(2.0, Double(retryCount)), 60.0)
         let jitter = Double.random(in: 0...1.0)
@@ -185,7 +139,6 @@ open class BaseService: NSObject {
                     return
                 }
 
-                // Respect 429 Too Many Requests — back off using Retry-After or exponential delay
                 if http.statusCode == 429 {
                     guard retryCount < Self.maxRetryCount else {
                         DispatchQueue.main.async { completion(false, nil) }
@@ -236,8 +189,6 @@ open class BaseService: NSObject {
 
 }
 
-// MARK: - URLSessionDownloadDelegate
-
 extension BaseService: URLSessionDownloadDelegate {
 
     public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
@@ -253,7 +204,6 @@ extension BaseService: URLSessionDownloadDelegate {
             let data = try Data(contentsOf: location)
             if let json = try JSONSerialization.jsonObject(with: data, options: .mutableContainers) as? [String: Any] {
 
-                // Success
                 completion?(true, json)
                 return
             }

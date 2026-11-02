@@ -353,7 +353,6 @@ export async function getAnalyticsEvents(
 	projectRef: string,
 	filters: AnalyticsRange & {
 		event_name?: string;
-		/** Application user id; the Analytics Worker matches it against pseudonymized events. */
 		user_id?: string;
 		cursor?: string;
 		limit?: string;

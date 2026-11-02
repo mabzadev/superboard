@@ -57,7 +57,6 @@ describe("BylineSchemaRegistry", () => {
 			expect(field.required).toBe(true);
 			expect(field.translatable).toBe(false);
 
-			// Round-trip via getField to confirm storage.
 			const reloaded = await registry.getField("twitter_handle");
 			expect(reloaded?.required).toBe(true);
 			expect(reloaded?.translatable).toBe(false);
@@ -103,9 +102,6 @@ describe("BylineSchemaRegistry", () => {
 		});
 
 		it("rejects unsupported field types with INVALID_TYPE", async () => {
-			// `portableText` is a valid content-field type but not a byline
-			// field type — the registry must reject it at the typed-error
-			// layer, not at the SQL layer.
 			await expect(
 				registry.createField({
 					slug: "rich",
@@ -178,7 +174,6 @@ describe("BylineSchemaRegistry", () => {
 			const a = await registry.createField({ slug: "a", label: "A", type: "string" });
 			const b = await registry.createField({ slug: "b", label: "B", type: "string" });
 
-			// Manually reorder by sort_order to verify ordering.
 			await registry.reorderFields(["b", "a"]);
 			const list = await registry.listFields();
 			expect(list.map((f) => f.slug)).toEqual(["b", "a"]);
@@ -212,8 +207,6 @@ describe("BylineSchemaRegistry", () => {
 		});
 
 		it("no-op updates return the field and force-advance the clean marker", async () => {
-			// No-op updates call markVersionClean (always-advance) so the
-			// same path doubles as false-clean recovery.
 			await registry.createField({ slug: "job_title", label: "Job title", type: "string" });
 			const v = await registry.getVersion();
 
@@ -247,7 +240,6 @@ describe("BylineSchemaRegistry", () => {
 			await registry.createField({ slug: "job_title", label: "Job title", type: "string" });
 			const field = await registry.getField("job_title");
 
-			// Seed a byline + a per-locale value.
 			await sql`
 				INSERT INTO _emdash_bylines (id, slug, display_name, locale, translation_group)
 				VALUES ('b1', 'jane', 'Jane', 'en', 'b1')
@@ -297,10 +289,6 @@ describe("BylineSchemaRegistry", () => {
 			await registry.createField({ slug: "job_title", label: "Job title", type: "string" });
 			const field = await registry.getField("job_title");
 
-			// Explicitly leave FK enforcement OFF (better-sqlite3 default in
-			// the test connection) to prove the cleanup is app-level, not
-			// FK-dependent. Production (`connection.ts:60`) and D1 keep FK
-			// ON; this test verifies the registry doesn't *rely* on that.
 			await sql`PRAGMA foreign_keys = OFF`.execute(db);
 			await sql`
 				INSERT INTO _emdash_bylines (id, slug, display_name, locale, translation_group)
@@ -328,10 +316,6 @@ describe("BylineSchemaRegistry", () => {
 		});
 
 		it("FK ON DELETE CASCADE still serves as defense-in-depth", async () => {
-			// Companion test to the app-level cascade above: with FK ON,
-			// even if a future regression removed the app-level DELETEs the
-			// schema constraint would catch it. Useful contract to keep
-			// asserted so neither layer rots.
 			await registry.createField({ slug: "job_title", label: "Job title", type: "string" });
 			const field = await registry.getField("job_title");
 
@@ -345,8 +329,6 @@ describe("BylineSchemaRegistry", () => {
 				VALUES ('b1', ${field?.id}, '"Editor"')
 			`.execute(db);
 
-			// Bypass the registry — DELETE the definition row directly,
-			// simulating the layered FK fallback. Values should still be gone.
 			await sql`DELETE FROM _emdash_byline_fields WHERE id = ${field?.id}`.execute(db);
 
 			const tr = await sql<{ count: number }>`
@@ -403,9 +385,6 @@ describe("BylineSchemaRegistry", () => {
 		it("empty registered set + empty input is a no-op (does not throw)", async () => {
 			const v = await registry.getVersion();
 			await expect(registry.reorderFields([])).resolves.toBeUndefined();
-			// No fields, no version bump warranted — but consistent behaviour
-			// matters: the version IS bumped because the operation completes.
-			// Document the observed behaviour rather than over-specifying.
 			expect(await registry.getVersion()).toBeGreaterThanOrEqual(v);
 		});
 	});
@@ -416,12 +395,6 @@ describe("BylineSchemaRegistry", () => {
 		});
 
 		it("monotonically increases across mutations (bump-twice = +2 per op)", async () => {
-			// Each mutation bumps the version twice — once before the
-			// schema change, once after. The first bump invalidates
-			// existing caches (crash safety); the second invalidates
-			// caches that captured the in-flight mid-transition state
-			// (race safety for cross-isolate readers). See the registry
-			// class JSDoc for the full rationale.
 			const v0 = await registry.getVersion();
 			await registry.createField({ slug: "a", label: "A", type: "string" });
 			const v1 = await registry.getVersion();
@@ -449,36 +422,17 @@ describe("BylineSchemaRegistry", () => {
 	});
 
 	describe("bump-twice ordering", () => {
-		// These tests pin the observable behaviour that the registry bumps
-		// the version counter twice per mutation — once before the schema
-		// change (crash safety: caches refresh on the higher version) and
-		// once after (race safety: caches that captured the mid-transition
-		// state get invalidated on the second bump). The rationale lives
-		// in BylineSchemaRegistry's class JSDoc.
-		//
-		// "Observable behaviour" here means: a successful mutation bumps
-		// the counter by exactly 2, and a mutation rejected at validation
-		// (before any DB write) does not bump at all.
-
 		it("createField bumps the version by 2 on success; pre-DB validation errors do NOT bump", async () => {
 			const v0 = await registry.getVersion();
 
-			// Pre-DB validation: an invalid slug throws before any version
-			// write — no recovery hook fires either, so the counter is
-			// untouched.
 			await expect(
 				registry.createField({ slug: "JobTitle", label: "Job title", type: "string" }),
 			).rejects.toMatchObject({ code: "INVALID_SLUG" });
 			expect(await registry.getVersion()).toBe(v0);
 
-			// Successful path: markDirty + markClean = +2.
 			await registry.createField({ slug: "job_title", label: "Job title", type: "string" });
 			expect(await registry.getVersion()).toBe(v0 + 2);
 
-			// Duplicate-slug check now calls `markVersionClean` (the
-			// always-advance contract — see registry class JSDoc). This
-			// covers recovery from a concurrent-collapse false-clean, so
-			// the counter moves by +2 (even → next even) on this path.
 			await expect(
 				registry.createField({ slug: "job_title", label: "Other", type: "string" }),
 			).rejects.toMatchObject({ code: "FIELD_EXISTS" });
@@ -489,9 +443,6 @@ describe("BylineSchemaRegistry", () => {
 
 		it("deleteField bumps the version by 2 on success; FIELD_NOT_FOUND advances via recovery", async () => {
 			const v0 = await registry.getVersion();
-			// FIELD_NOT_FOUND fires markVersionClean unconditionally — the
-			// recovery hook also doubles as the concurrent-collapse defense.
-			// Counter advances by +2 (even → next even).
 			await expect(registry.deleteField("missing")).rejects.toMatchObject({
 				code: "FIELD_NOT_FOUND",
 			});
@@ -519,14 +470,11 @@ describe("BylineSchemaRegistry", () => {
 			`.execute(db);
 
 			const v0 = await registry.getVersion();
-			// Pre-bump validation catches TRANSLATABLE_LOCKED — version must
-			// not advance on a rejected flip.
 			await expect(
 				registry.updateField("job_title", { translatable: false }),
 			).rejects.toMatchObject({ code: "TRANSLATABLE_LOCKED" });
 			expect(await registry.getVersion()).toBe(v0);
 
-			// Successful update bumps before + after.
 			await registry.updateField("job_title", { label: "Job Title" });
 			expect(await registry.getVersion()).toBe(v0 + 2);
 		});
@@ -547,9 +495,6 @@ describe("BylineSchemaRegistry", () => {
 	});
 
 	describe("dirty-version recovery (#1174 BUG 1)", () => {
-		// Simulates a crash between `markVersionDirty` and `markVersionClean`
-		// by setting the version row to an odd value directly.
-
 		async function setVersionDirty(value: number): Promise<void> {
 			if (value % 2 === 0) throw new Error("test setup: value must be odd");
 			await sql`
@@ -595,17 +540,12 @@ describe("BylineSchemaRegistry", () => {
 			await registry.createField({ slug: "job_title", label: "Job title", type: "string" });
 			await setVersionDirty(9);
 
-			// Empty input is the "explicit no-op" idempotent exit. Returns
-			// the current field shape; must restore parity if dirty.
 			const result = await registry.updateField("job_title", {});
 			expect(result.slug).toBe("job_title");
 			expect((await registry.getVersion()) % 2).toBe(0);
 		});
 
 		it("recovery exits force-advance the version even when starting from clean", async () => {
-			// Always-advance contract: a retry that hits FIELD_EXISTS on
-			// a clean counter could be recovering from a concurrent-collapse
-			// false-clean, so the exit must still produce a counter change.
 			await registry.createField({ slug: "job_title", label: "Job title", type: "string" });
 			const v = await registry.getVersion();
 			expect(v % 2).toBe(0);
@@ -620,9 +560,6 @@ describe("BylineSchemaRegistry", () => {
 		});
 
 		it("a successful mutation starting from dirty ends at even", async () => {
-			// Without parity-aware helpers, a successful mutation starting
-			// from dirty would take odd → even → odd (cache bypass
-			// forever). The helpers guarantee odd → odd → even.
 			await registry.createField({ slug: "existing", label: "Existing", type: "string" });
 			await setVersionDirty(11);
 
@@ -633,10 +570,6 @@ describe("BylineSchemaRegistry", () => {
 		});
 
 		it("missing version row: markVersionDirty initialises odd, markVersionClean advances even", async () => {
-			// Each helper is asserted independently — `createField` runs
-			// both back-to-back, so `markVersionClean`'s upsert (always
-			// landing at 2) would mask a broken `markVersionDirty` that
-			// no-ops on a missing row.
 			await sql`DELETE FROM options WHERE name = 'byline_fields_version'`.execute(db);
 			expect(await registry.getVersion()).toBe(0);
 

@@ -151,7 +151,6 @@ describe("exportSeed: SeedMenuItem i18n", () => {
 				expect(enItemIds.has(item.translationOf!)).toBe(true);
 			}
 
-			// Pairing: Inicio links to Home, Acerca links to About.
 			const enHome = enItems.find((i) => i.label === "Home");
 			const enAbout = enItems.find((i) => i.label === "About");
 			const esHome = esItems.find((i) => i.label === "Inicio");

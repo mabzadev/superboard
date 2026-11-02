@@ -7,7 +7,6 @@ import { runMigrations } from "../../../../../../packages/core/src/database/migr
 import type { Database as DatabaseSchema } from "../../../../../../packages/core/src/database/types.js";
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 
-// Mock loader.getDb so the runtime menu functions read from our test db.
 vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 	getDb: vi.fn(),
 }));
@@ -17,7 +16,6 @@ import { getDb } from "../../../../../../packages/core/src/loader.js";
 import { getMenu } from "../../../../../../packages/core/src/menus/index.js";
 import { runWithContext } from "../../../../../../packages/core/src/request-context.js";
 
-/** SQL of every query executed against the test database. */
 let queries: string[] = [];
 
 function collectionPatternQueries(): string[] {
@@ -37,8 +35,6 @@ describe("getMenu collection-pattern request cache", () => {
 		});
 		await runMigrations(db);
 
-		// A "post" collection with a url_pattern, plus one published entry
-		// that menu items can reference.
 		const registry = new SchemaRegistry(db);
 		await registry.createCollection({
 			slug: "post",
@@ -63,7 +59,6 @@ describe("getMenu collection-pattern request cache", () => {
 			} as never)
 			.execute();
 
-		// Two menus that both reference the same collection.
 		for (const name of ["primary", "footer"]) {
 			const menuId = ulid();
 			await db.insertInto("_emdash_menus").values({ id: menuId, name, label: name }).execute();
@@ -122,11 +117,8 @@ describe("getMenu collection-pattern request cache", () => {
 
 	it("prefetchLayoutData warms menus so layout getMenu calls hit the cache", async () => {
 		await runWithContext({ editMode: false }, async () => {
-			// Eager prefetch discovers every menu name and warms them up front.
 			await prefetchLayoutData();
 
-			// Anything the layout reads afterwards must be served from the
-			// request cache the prefetch populated -- zero further queries.
 			queries = [];
 			const primary = await getMenu("primary");
 			const footer = await getMenu("footer");

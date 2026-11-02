@@ -3,8 +3,6 @@ import { afterEach, beforeEach, test } from "node:test";
 
 import SuperBoardUIHelper from "../../../../sdks/web/src/superboard_ui_helper.js";
 
-// Minimal DOM stand-in: it records markup and text separately so the test can
-// prove server text is never interpreted as HTML.
 class FakeElement {
 	constructor(tagName) {
 		this.tagName = tagName;
@@ -89,7 +87,6 @@ test("infinite scroll stops after an empty page and ignores non-scrollable lists
 
 test("only http(s) message pages are framed", () => {
 	const helper = new SuperBoardUIHelper();
-	// Built at runtime so the fixture itself is not a script URL literal.
 	helper.openPage({ access_url: ["javascript", "alert(1)"].join(":") });
 	assert.equal(document.body.children.length, 0);
 	helper.openPage({ access_url: "https://app.example.test/message" });

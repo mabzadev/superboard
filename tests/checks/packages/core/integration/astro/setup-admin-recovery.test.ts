@@ -1,18 +1,3 @@
-/**
- * `emdash:setup_complete` with an EMPTY users table is a recoverable
- * half-state: it appears when a completed instance's users are wiped or
- * a sanitised DB copy is shipped to a new environment (the documented
- * promote-a-QA'd-DB flow). GET /api/setup/status deliberately resumes
- * the wizard at the "admin" step for this state — but the admin-step
- * routes used to reject it on the stale flag alone (SETUP_COMPLETE,
- * 400), leaving the instance with NO UI path to an admin account.
- *
- * These tests pin the recovery path end to end: with the flag set and
- * zero users, POST /setup/admin must proceed (and /setup/admin/verify
- * must get past the same guard), while the normal fully-set-up state
- * keeps rejecting exactly as before.
- */
-
 import type { APIContext, AstroCookies } from "astro";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -28,7 +13,6 @@ interface CookieRecord {
 	options: Record<string, unknown>;
 }
 
-/** Minimal in-memory AstroCookies stub (same shape as the nonce tests). */
 function createCookieJar(initial: Record<string, string> = {}): {
 	jar: Map<string, CookieRecord>;
 	cookies: AstroCookies;
@@ -119,8 +103,6 @@ describe("POST /setup/admin — recovery when setup_complete but no users exist"
 			buildContext(db, buildRequest("/_emdash/api/setup/admin", adminBody), cookies),
 		);
 
-		// Pre-fix this returned 400 SETUP_COMPLETE — the state
-		// /api/setup/status resumes at "admin" was unreachable.
 		expect(res.status).toBe(200);
 	});
 
@@ -140,16 +122,12 @@ describe("POST /setup/admin — recovery when setup_complete but no users exist"
 		const options = new OptionsRepository(db);
 		await options.set("emdash:setup_complete", true);
 
-		// Start the admin step for real so state + nonce cookie exist.
 		const { cookies } = createCookieJar();
 		const adminRes = await postAdmin(
 			buildContext(db, buildRequest("/_emdash/api/setup/admin", adminBody), cookies),
 		);
 		expect(adminRes.status).toBe(200);
 
-		// A bogus credential: verification fails at the WebAuthn step,
-		// but only AFTER the setup-complete/users gate. Assert the gate,
-		// not the passkey result (same technique as the nonce tests).
 		const verifyRes = await postAdminVerify(
 			buildContext(
 				db,

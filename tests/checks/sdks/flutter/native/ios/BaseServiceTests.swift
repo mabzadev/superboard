@@ -15,8 +15,6 @@ final class BaseServiceTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - Single background request
-
     func testSingleBackgroundRequestCallsCompletion() {
         let service = BaseService()
         let url = URL(string: "https://example.com/bg1")!
@@ -37,8 +35,6 @@ final class BaseServiceTests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - Concurrent background requests
 
     func testConcurrentBackgroundRequestsBothComplete() {
         let service = BaseService()
@@ -81,8 +77,6 @@ final class BaseServiceTests: XCTestCase {
         wait(for: [exp1, exp2], timeout: 5)
     }
 
-    // MARK: - Background request error
-
     func testBackgroundRequestErrorCallsCompletionWithFalse() {
         let service = BaseService()
         let url = URL(string: "https://example.com/fail")!
@@ -101,8 +95,6 @@ final class BaseServiceTests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - Foreground request tests
 
     func testForegroundRequestSuccessReturnsJSON() {
         let service = BaseService()
@@ -191,8 +183,6 @@ final class BaseServiceTests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - Retry tests
 
     func testNetworkConnectionLostQueuesAndRetriesOnFlush() {
         assertRetryableTransportError(.networkConnectionLost)

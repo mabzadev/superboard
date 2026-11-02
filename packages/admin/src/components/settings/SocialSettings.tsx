@@ -1,9 +1,3 @@
-/**
- * Social Settings sub-page
- *
- * Social media profile links (Twitter, GitHub, Facebook, Instagram, LinkedIn, YouTube).
- */
-
 import { Banner, Input, Loader, useKumoToastManager } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

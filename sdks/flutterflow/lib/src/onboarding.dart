@@ -19,7 +19,6 @@ typedef SuperBoardMarketingConsentUpdater =
       String listIdsJson,
     });
 
-/// Compatibility widget backed by the Onboardings aliases served by Flows.
 @Deprecated('Use SuperBoardFlowsOverlay, SuperBoardFlowsSlot, or a tour Flow.')
 class SuperBoardOnboarding extends StatefulWidget {
   const SuperBoardOnboarding({

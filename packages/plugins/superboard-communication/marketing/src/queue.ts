@@ -44,12 +44,6 @@ type Campaign = {
 	status: string;
 };
 
-/**
- * Lookups shared by every message of one queue batch. Campaign rows, studio
- * contexts and sender authority are stable while a campaign is being sent, so
- * each is read at most once per batch; campaign completion is evaluated once
- * per touched campaign after the batch instead of after every delivery.
- */
 type QueueBatchCache = {
 	campaigns: Map<string, Promise<Campaign | null>>;
 	studioContexts: Map<string, Promise<{ context_json: string } | null>>;
@@ -375,7 +369,6 @@ export async function dispatchCampaign(
 		return { dispatched: false, reason: `status:${String(campaign.status)}` };
 	const listIds = parseStoredJson<string[]>(campaign.list_ids_json, []);
 	const segmentIds = parseStoredJson<string[]>(campaign.segment_ids_json, []);
-	// Segments are dynamic: recompute them once when the send starts.
 	if (segmentIds.length && !campaign.started_at)
 		await refreshSegmentsByIds(env.DB, job.projectId, segmentIds);
 	const targetClauses: string[] = [];
@@ -400,7 +393,6 @@ export async function dispatchCampaign(
       ${targetClauses.length ? `AND (${targetClauses.join(" OR ")})` : ""}`,
 		bindings,
 	};
-	// A/B tests and recipient time-zone sends create their own deliveries.
 	if (!(await insertPlannedDeliveries(env.DB, job.projectId, job.campaignId, audience)))
 		await env.DB.prepare(
 			`
@@ -553,7 +545,6 @@ async function deliverEmail(
 				.bind(job.projectId, campaign.id)
 				.first<{ context_json: string }>(),
 	);
-	// Parsed per delivery so no message can observe another one's mutations.
 	const context = studioContext
 		? (JSON.parse(studioContext.context_json) as EmailRenderContext)
 		: {};
@@ -786,7 +777,6 @@ async function finishCampaignIfComplete(env: Env, projectId: number, campaignId:
 		.run();
 }
 
-/** Marketing HTML always carries a link to the hosted preference center. */
 function withPreferenceFooter(
 	html: string | null,
 	preferences: string | null,

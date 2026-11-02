@@ -1,12 +1,3 @@
-/**
- * Exclusive hooks list endpoint
- *
- * GET /_emdash/api/admin/hooks/exclusive
- *
- * Lists all exclusive hooks with their providers and current selections.
- * Requires admin role.
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

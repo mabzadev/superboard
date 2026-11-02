@@ -45,17 +45,8 @@ const BUTTON_STYLES = new Set(["primary", "danger", "secondary"]);
 const TREND_VALUES = new Set(["up", "down", "neutral"]);
 const BANNER_VARIANTS = new Set(["default", "alert", "error"]);
 
-/**
- * RFC 6838-style image MIME type or image-prefix.
- * Accepts 'image/', 'image/png', 'image/svg+xml'. Rejects 'image/*'
- * (wildcards) and non-image types like 'video/' or 'application/pdf'.
- */
 const MEDIA_PICKER_MIME_FILTER_RE = /^image\/(?:[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,126})?$/;
 
-/**
- * Validate option uniqueness and that initial_value references a valid option.
- * Used by select, radio, combobox, and checkbox element validation.
- */
 function validateOptionValues(
 	options: unknown[],
 	path: string,
@@ -644,7 +635,7 @@ function validateChartSeries(value: unknown, path: string, errors: ValidationErr
 					path: `${path}.data[${i}]`,
 					message: "Each data point must be a [number, number] tuple",
 				});
-				break; // One error is enough for malformed data arrays
+				break;
 			}
 		}
 	}
@@ -788,7 +779,6 @@ function validateBlock(value: unknown, path: string, errors: ValidationError[]):
 			break;
 		}
 		case "divider": {
-			// No required fields
 			break;
 		}
 		case "fields": {

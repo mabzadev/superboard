@@ -1,12 +1,3 @@
-/**
- * Repeater sub-field type validation (issue #1424).
- *
- * The Zod enum guarding `validation.subFields[].type` must stay in sync with
- * `REPEATER_SUB_FIELD_TYPES` (schema/types.ts). It was missing "url" (a
- * documented sub-field type the schema-builder UI offers) and gained "image"
- * together with media-picker support in repeater rows.
- */
-
 import { describe, it, expect } from "vitest";
 
 import { createFieldBody } from "../../../../../../packages/core/src/api/schemas/schema.js";

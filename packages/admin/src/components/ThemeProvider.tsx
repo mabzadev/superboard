@@ -5,7 +5,6 @@ type Theme = "light" | "dark" | "system";
 interface ThemeContextValue {
 	theme: Theme;
 	setTheme: (theme: Theme) => void;
-	/** The resolved theme (always "light" or "dark") */
 	resolvedTheme: "light" | "dark";
 }
 
@@ -29,7 +28,6 @@ function getStoredTheme(): Theme {
 
 export interface ThemeProviderProps {
 	children: React.ReactNode;
-	/** Default theme if none stored. Defaults to "system" */
 	defaultTheme?: Theme;
 }
 
@@ -44,7 +42,6 @@ export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProvid
 		return theme;
 	});
 
-	// Resolve the effective theme whenever the user preference changes
 	React.useEffect(() => {
 		if (theme === "system") {
 			setResolvedTheme(getSystemTheme());
@@ -53,7 +50,6 @@ export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProvid
 		}
 	}, [theme]);
 
-	// Listen for OS preference changes when in system mode
 	React.useEffect(() => {
 		if (theme !== "system") return;
 
@@ -66,11 +62,6 @@ export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProvid
 		return () => mediaQuery.removeEventListener("change", handler);
 	}, [theme]);
 
-	// Sync DOM attributes with the resolved theme.
-	// data-mode drives Tailwind dark: utilities via @custom-variant.
-	// data-theme is reserved for visual identity overrides (e.g. "classic").
-	// Always set data-mode explicitly — relying on its absence + color-scheme
-	// does not activate Tailwind dark: utilities which require [data-mode="dark"].
 	React.useEffect(() => {
 		const root = document.documentElement;
 		root.setAttribute("data-theme", "classic");

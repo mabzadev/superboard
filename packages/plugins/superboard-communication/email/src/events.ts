@@ -1,6 +1,5 @@
 import { decryptJson, encryptJson } from "./admin-secrets.js";
 
-/** Event types customers can subscribe to on an outbound webhook endpoint. */
 export const EMAIL_WEBHOOK_EVENT_TYPES = [
 	"sent",
 	"delivered",
@@ -16,20 +15,16 @@ export type EmailWorkerJob =
 	| { type: "email.deliver"; messageId: string }
 	| { type: "email.webhook"; deliveryId: string };
 
-/** Retry delays (seconds) after each failed webhook attempt; 7 attempts over ~20 hours. */
 const WEBHOOK_RETRY_DELAYS = [60, 300, 1_800, 7_200, 21_600, 43_200] as const;
 const WEBHOOK_TIMEOUT_MS = 10_000;
 const WEBHOOK_SIGNATURE_HEADER = "X-SuperBoard-Signature";
 const WEBHOOK_TIMESTAMP_HEADER = "X-SuperBoard-Timestamp";
 const MAX_WEBHOOKS_PER_EVENT = 10;
-/** Cloudflare Queues accepts at most 12 hours of delivery delay per message. */
 export const QUEUE_MAX_DELAY_SECONDS = 43_200;
 
 type EventEnv = Pick<Env, "DB" | "EMAIL_QUEUE"> & { EMAIL_SMTP_ENCRYPTION_KEY?: string };
 
 export function emailQueue(env: Pick<Env, "EMAIL_QUEUE">): Queue<EmailWorkerJob> {
-	// The generated binding type only declares the delivery job; the consumer
-	// accepts both job shapes (see the queue handler).
 	const queue: Queue<unknown> = env.EMAIL_QUEUE;
 	return queue;
 }
@@ -38,20 +33,13 @@ type EmailTimelineEvent = {
 	messageId: string;
 	projectId: number | null;
 	recipient?: string | null;
-	/** Timeline label: accepted, scheduled, released, canceled, sending, sent, deferred, failed, delivered, … */
 	type: string;
-	/** Outbound webhook type, when the timeline event is customer-visible. */
 	webhook?: EmailWebhookEventType | null;
 	occurredAt?: string;
 	detail?: Record<string, unknown>;
-	/** Stable id for deduplication of at-least-once sources (provider events). */
 	eventId?: string;
 };
 
-/**
- * Appends a message timeline event and fans it out to subscribed webhook
- * endpoints. Never throws: observability must not break delivery.
- */
 export async function recordEmailEvent(env: EventEnv, event: EmailTimelineEvent): Promise<void> {
 	try {
 		const id = event.eventId ?? crypto.randomUUID();
@@ -170,10 +158,6 @@ type WebhookDeliveryRow = {
 	enabled: number;
 };
 
-/**
- * Sends one webhook delivery attempt. Retries are scheduled as delayed queue
- * messages so the delivery queue's own retry budget is never consumed.
- */
 export async function deliverWebhook(
 	env: EventEnv,
 	deliveryId: string,
@@ -284,7 +268,6 @@ async function finishDelivery(
 		.run();
 }
 
-/** `hex(HMAC-SHA256(secret, "<timestamp>.<raw body>"))`, the value after `v1=`. */
 export async function signWebhookPayload(
 	secret: string,
 	timestamp: string,
@@ -313,10 +296,6 @@ export async function encryptWebhookSecret(env: EventEnv, secret: string): Promi
 	return encryptJson(encryptionKey(env), { secret });
 }
 
-/**
- * Accepts only public HTTPS endpoints: no credentials, IP literals, custom
- * ports or internal hostnames (prevents SSRF into private infrastructure).
- */
 export function normalizeWebhookUrl(value: unknown): string {
 	let url: URL;
 	try {
@@ -357,7 +336,6 @@ export function parseEvents(value: string): string[] {
 	return safeArray(value).filter((item): item is string => typeof item === "string");
 }
 
-/** Maps provider event types to the customer-facing webhook taxonomy. */
 export function webhookTypeForProviderEvent(eventType: string): EmailWebhookEventType | null {
 	if (eventType === "delivered") return "delivered";
 	if (eventType === "hard_bounce" || eventType === "soft_bounce") return "bounced";

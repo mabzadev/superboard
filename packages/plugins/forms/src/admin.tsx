@@ -1,10 +1,3 @@
-/**
- * Forms Plugin - Admin UI
- *
- * React components for the forms admin pages and dashboard widget.
- * Communicates with the plugin's API routes via fetch.
- */
-
 import { Badge, Button, Checkbox, Input, Loader, Select } from "@cloudflare/kumo";
 import {
 	Plus,
@@ -24,10 +17,6 @@ import type { PluginAdminExports } from "emdash";
 import { apiFetch as baseFetch, getErrorMessage, parseApiResponse } from "emdash/plugin-utils";
 import * as React from "react";
 
-// =============================================================================
-// Constants
-// =============================================================================
-
 const API = "/_emdash/api/plugins/emdash-forms";
 
 const NON_ALNUM_PATTERN = /[^a-z0-9]+/g;
@@ -35,11 +24,6 @@ const LEADING_TRAILING_SEP = /^-|-$/g;
 const LEADING_UNDERSCORE_TRIM = /^_|_$/g;
 const LEADING_DIGIT = /^(\d)/;
 
-// =============================================================================
-// API Helpers
-// =============================================================================
-
-/** POST to a forms plugin API route with CSRF header. */
 function apiFetch(route: string, body?: unknown): Promise<Response> {
 	return baseFetch(`${API}/${route}`, {
 		method: "POST",
@@ -47,10 +31,6 @@ function apiFetch(route: string, body?: unknown): Promise<Response> {
 		body: JSON.stringify(body ?? {}),
 	});
 }
-
-// =============================================================================
-// Types (mirrors plugin types, kept minimal for admin use)
-// =============================================================================
 
 interface FormItem {
 	id: string;
@@ -110,10 +90,6 @@ interface SubmissionItem {
 	};
 }
 
-// =============================================================================
-// Shared Helpers
-// =============================================================================
-
 function EmptyState({
 	icon: Icon,
 	title,
@@ -171,10 +147,6 @@ function stringifyValue(value: unknown): string {
 	if (typeof value === "number" || typeof value === "boolean") return String(value);
 	return JSON.stringify(value);
 }
-
-// =============================================================================
-// Forms List Page
-// =============================================================================
 
 function FormsListPage() {
 	const [forms, setForms] = React.useState<FormItem[]>([]);
@@ -360,10 +332,6 @@ function FormsListPage() {
 	);
 }
 
-// =============================================================================
-// Form Editor (used for both create and edit)
-// =============================================================================
-
 const FIELD_TYPES = [
 	"text",
 	"email",
@@ -423,9 +391,7 @@ function FormEditor({
 				if (res.ok) {
 					setTurnstileStatus(await parseApiResponse(res));
 				}
-			} catch {
-				// ignore — warning just won't show
-			}
+			} catch {}
 		})();
 	}, [spamProtection]);
 
@@ -546,7 +512,6 @@ function FormEditor({
 				</div>
 			)}
 
-			{/* Name & Slug */}
 			<div className="grid grid-cols-2 gap-4">
 				<Input
 					label="Name"
@@ -562,7 +527,6 @@ function FormEditor({
 				/>
 			</div>
 
-			{/* Fields */}
 			<div>
 				<div className="flex items-center justify-between mb-3">
 					<h2 className="text-lg font-semibold">Fields</h2>
@@ -592,7 +556,6 @@ function FormEditor({
 				)}
 			</div>
 
-			{/* Settings */}
 			<div>
 				<h2 className="text-lg font-semibold mb-3">Settings</h2>
 				<div className="grid grid-cols-2 gap-4">
@@ -661,7 +624,6 @@ function FormEditor({
 				</div>
 			</div>
 
-			{/* Actions */}
 			<div className="flex items-center gap-3 pt-4 border-t">
 				<Button onClick={() => void handleSave()} disabled={saving}>
 					{saving && <Loader />}
@@ -674,10 +636,6 @@ function FormEditor({
 		</div>
 	);
 }
-
-// =============================================================================
-// Field Row (inline field editor within FormEditor)
-// =============================================================================
 
 function FieldRow({
 	field,
@@ -844,10 +802,6 @@ function OptionsEditor({
 	);
 }
 
-// =============================================================================
-// Submissions Page
-// =============================================================================
-
 function SubmissionsPage() {
 	const [forms, setForms] = React.useState<FormItem[]>([]);
 	const [selectedFormId, setSelectedFormId] = React.useState<string>("");
@@ -1006,7 +960,6 @@ function SubmissionsPage() {
 				</div>
 			</div>
 
-			{/* Filters */}
 			<div className="flex items-center gap-3">
 				<div className="w-56">
 					<Select
@@ -1032,7 +985,6 @@ function SubmissionsPage() {
 			</div>
 
 			<div className="flex gap-6">
-				{/* Submissions table */}
 				<div className="flex-1 min-w-0">
 					{subsLoading ? (
 						<div className="flex items-center justify-center py-8">
@@ -1149,7 +1101,6 @@ function SubmissionsPage() {
 					)}
 				</div>
 
-				{/* Detail panel */}
 				{selectedSub && (
 					<div className="w-80 shrink-0 border rounded-lg p-4 space-y-4 self-start sticky top-4">
 						<div className="flex items-center justify-between">
@@ -1193,10 +1144,6 @@ function SubmissionsPage() {
 		</div>
 	);
 }
-
-// =============================================================================
-// Dashboard Widget
-// =============================================================================
 
 function RecentSubmissionsWidget() {
 	const [forms, setForms] = React.useState<FormItem[]>([]);
@@ -1273,10 +1220,6 @@ function RecentSubmissionsWidget() {
 		</div>
 	);
 }
-
-// =============================================================================
-// Exports
-// =============================================================================
 
 export const pages: PluginAdminExports["pages"] = {
 	"/": FormsListPage,

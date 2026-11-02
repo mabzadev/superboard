@@ -1,16 +1,5 @@
 ---
-/**
- * Admin shell route - injected by EmDash integration
- *
- * This page serves the EmDash admin React SPA.
- * AdminWrapper imports plugin admin modules and passes them to AdminApp.
- */
-// `?url` keeps the admin stylesheet out of the page's CSS module graph so
-// Astro's dev SSR doesn't inject it into every public route's <head>. We emit
-// it as a route-scoped <link> below instead. See #1281.
 import adminStylesUrl from "@emdash-cms/admin/styles.css?url";
-// Use package-qualified import so Astro generates a proper module URL
-// (relative imports resolve to absolute paths which break client hydration)
 import AdminWrapper from "emdash/routes/PluginRegistry";
 import { Font } from "astro:assets";
 
@@ -26,20 +15,8 @@ const messages = await loadMessages(resolvedLocale);
 const adminConfig = Astro.locals.emdash?.config?.admin;
 const pageTitle = adminConfig?.siteName ? `${adminConfig.siteName} Admin` : "EmDash Admin";
 
-// The admin shell must never be stored by a shared cache. Without an explicit
-// Cache-Control, caches fall back to RFC 9111 heuristic freshness — e.g.
-// Cloudflare's Workers Cache stores header-less 200s for 2 hours — so an
-// authenticated editor's 200 could be replayed to anonymous visitors instead
-// of the login redirect. The shell is also personalized per request (locale
-// via cookie/Accept-Language). API routes already send `private, no-store`
-// (API_CACHE_HEADERS); this closes the same gap for the admin HTML.
 Astro.response.headers.set("Cache-Control", "private, no-store");
 
-// Favicon precedence: an explicit build-time `admin.favicon` is admin-specific
-// and always wins — in that case the settings read is skipped entirely.
-// Otherwise fall back to the Site Icon configured in Settings → General, so
-// the admin shell is branded like the public site (WordPress-style Site Icon,
-// which also brands wp-admin), and finally the bundled EmDash mark below.
 const emdash = Astro.locals.emdash;
 let siteFavicon: string | undefined;
 let siteFaviconType: string | undefined;
@@ -49,13 +26,9 @@ if (!adminConfig?.favicon && emdash?.db) {
 		siteFavicon = settings.favicon?.url ?? undefined;
 		siteFaviconType = settings.favicon?.contentType ?? undefined;
 	} catch {
-		// Settings unavailable (e.g. pre-setup) — fall back to the config/default.
 	}
 }
 const favicon = adminConfig?.favicon ?? siteFavicon;
-// The media-file URL has no extension, so browsers need the MIME type —
-// Chromium ignores SVG favicons without type="image/svg+xml". Only set for
-// Site Icons; build-time `admin.favicon` strings keep their current behavior.
 const faviconType = adminConfig?.favicon ? undefined : siteFaviconType;
 ---
 
@@ -74,7 +47,6 @@ const faviconType = adminConfig?.favicon ? undefined : siteFaviconType;
 						preference = storedPreference;
 					}
 				} catch {
-					// Storage can be unavailable in privacy-restricted contexts. Use the system theme.
 				}
 
 				const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;

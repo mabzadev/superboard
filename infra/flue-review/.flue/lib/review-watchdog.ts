@@ -62,7 +62,6 @@ interface ReviewWatchdogRpc {
 }
 
 export function getReviewWatchdog(env: Env, attemptId: string): ReviewWatchdogRpc {
-	// Wrangler cannot infer RPC methods through Flue's generated Worker entrypoint.
 	const watchdog: unknown = env.REVIEW_WATCHDOG.getByName(attemptId);
 	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 	return watchdog as ReviewWatchdogRpc;

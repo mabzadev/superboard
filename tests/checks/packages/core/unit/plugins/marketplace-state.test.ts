@@ -1,12 +1,3 @@
-/**
- * Marketplace plugin state tests
- *
- * Tests the PluginStateRepository marketplace extensions:
- * - source/marketplaceVersion fields in upsert
- * - getMarketplacePlugins filter
- * - Migration 022 columns
- */
-
 import BetterSqlite3 from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";

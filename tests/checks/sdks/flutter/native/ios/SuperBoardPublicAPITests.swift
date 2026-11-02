@@ -19,20 +19,16 @@ final class SuperBoardPublicAPITests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - Unconfigured SDK (no configure() called)
-
     func testDelegateIsNilBeforeConfigure() {
         XCTAssertNil(SuperBoard.delegate)
     }
 
     func testSetUserIdentifierDoesNotCrashBeforeConfigure() {
         SuperBoard.userIdentifier = "test-id"
-        // No crash = pass; value is discarded since there's no manager
         XCTAssertNil(SuperBoard.userIdentifier)
     }
 
     func testGenerateLinkReturnsNilBeforeConfigure() {
-        // Reset manager by configuring with empty key (sets manager to nil)
         let setupExp = expectation(description: "setup")
         SuperBoard.configure(APIKey: "", useTestEnvironment: true, baseURL: baseURL, delegate: nil) { _ in
             setupExp.fulfill()
@@ -47,8 +43,6 @@ final class SuperBoardPublicAPITests: XCTestCase {
         wait(for: [exp], timeout: 5)
     }
 
-    // MARK: - configure
-
     func testConfigureWithEmptyKeyCallsCompletionFalse() {
         let exp = expectation(description: "completion")
         SuperBoard.configure(APIKey: "", useTestEnvironment: true, baseURL: baseURL, delegate: nil) { success in
@@ -59,8 +53,6 @@ final class SuperBoardPublicAPITests: XCTestCase {
     }
 
     func testConfigureWithValidKeyTriggersAuthentication() {
-        // In the test runner, hasURISchemesConfigured() returns false so authenticate fails.
-        // This validates the full configure → checkConfiguration → authenticate chain.
         let exp = expectation(description: "completion")
         SuperBoard.configure(APIKey: "test-key", useTestEnvironment: true, baseURL: baseURL, delegate: nil) { success in
             XCTAssertFalse(success, "Auth should fail without URI schemes in test bundle")
@@ -69,10 +61,7 @@ final class SuperBoardPublicAPITests: XCTestCase {
         wait(for: [exp], timeout: 5)
     }
 
-    // MARK: - Pre-configure guard behavior
-
     func testAllReceivedPayloadsBeforeConfigureReturnsNil() {
-        // Reset manager by configuring with empty key
         let setupExp = expectation(description: "setup")
         SuperBoard.configure(APIKey: "", useTestEnvironment: true, baseURL: baseURL, delegate: nil) { _ in
             setupExp.fulfill()
@@ -116,8 +105,6 @@ final class SuperBoardPublicAPITests: XCTestCase {
         }
         wait(for: [exp], timeout: 5)
     }
-
-    // MARK: - Debug level
 
     func testSetDebugLevelChangesLogLevel() {
         let original = DebugLogger.shared.logLevel

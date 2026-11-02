@@ -120,7 +120,6 @@ describeEachDialect("media usage index migration", (dialect) => {
 		expect(indexNames.has("idx__emdash_media_usage_media_id")).toBe(true);
 		expect(indexNames.has("idx__emdash_media_usage_media_source_generation")).toBe(false);
 
-		// Simulate interruption after the first up statement, before the old index drops.
 		await ctx.db.schema
 			.createIndex("idx__emdash_media_usage_media_source_generation")
 			.ifNotExists()
@@ -134,7 +133,6 @@ describeEachDialect("media usage index migration", (dialect) => {
 		expect(indexNames.has("idx__emdash_media_usage_media_id")).toBe(false);
 		expect(indexNames.has("idx__emdash_media_usage_media_source_generation")).toBe(true);
 
-		// Simulate interruption after the first down statement, before the new index drops.
 		await ctx.db.schema
 			.createIndex("idx__emdash_media_usage_media_id")
 			.ifNotExists()

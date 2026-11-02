@@ -1,7 +1,3 @@
-/**
- * Copy compiled locale catalogs (.mjs) from src/locales to dist/locales.
- * Run after `lingui compile` to include catalogs in the published package.
- */
 import { readdirSync, mkdirSync, copyFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

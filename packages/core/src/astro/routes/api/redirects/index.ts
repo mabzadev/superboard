@@ -1,10 +1,3 @@
-/**
- * Redirects list and create endpoints
- *
- * GET  /_emdash/api/redirects - List redirects (with filters)
- * POST /_emdash/api/redirects - Create redirect
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

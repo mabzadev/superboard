@@ -1,17 +1,3 @@
-/**
- * Coverage for the `emdash-plugin.jsonc` Zod schema.
- *
- * The schema is the authoring contract with plugin publishers. A regression
- * here means user-visible behaviour change in the field names, validation
- * rules, or error messages that publishers rely on. Tests are organised by
- * field so a future field add lands cleanly alongside its own test block.
- *
- * Where applicable, tests assert on the EXACT Zod issue path / message
- * because those strings surface in `emdash-plugin validate` output --
- * users see them, and silently changing them breaks anyone who built
- * tooling around the strings.
- */
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -102,7 +88,6 @@ describe("SecurityContactSchema", () => {
 		const result = SecurityContactSchema.safeParse({});
 		expect(result.success).toBe(false);
 		if (!result.success) {
-			// The exact message users see at validate-time; pin it.
 			expect(result.error.issues[0]?.message).toContain("at least one of `url` or `email`");
 		}
 	});
@@ -258,9 +243,6 @@ describe("SectionsSchema", () => {
 	});
 
 	it("rejects an inline section over the 20000-byte cap while under the grapheme cap", () => {
-		// A 25-byte family emoji (one grapheme via ZWJ). 1000 of them = 25000
-		// bytes (over the byte cap) but only 1000 graphemes (under the
-		// grapheme cap), so the byte check is the one that fires.
 		const result = SectionsSchema.safeParse({ description: "👨‍👩‍👧‍👦".repeat(1000) });
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -269,9 +251,6 @@ describe("SectionsSchema", () => {
 	});
 
 	it("rejects an inline section over the 2000-grapheme cap while under the byte cap", () => {
-		// 2001 emoji. Each emoji is one grapheme but several UTF-8 bytes, so
-		// this trips the grapheme cap without reaching 20000 bytes (2001 * 4
-		// = 8004 bytes).
 		const result = SectionsSchema.safeParse({ faq: "😀".repeat(2001) });
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -280,8 +259,6 @@ describe("SectionsSchema", () => {
 	});
 
 	it("accepts an inline section exactly at the grapheme cap", () => {
-		// 2000 ASCII chars: 2000 graphemes (at the cap) and 2000 bytes (under
-		// the byte cap). Both limits satisfied.
 		const result = SectionsSchema.safeParse({ changelog: "a".repeat(2000) });
 		expect(result.success).toBe(true);
 	});
@@ -417,7 +394,7 @@ describe("ManifestSchema (full document)", () => {
 	it("rejects unknown top-level keys (strict mode catches typos)", () => {
 		const result = ManifestSchema.safeParse({
 			...minimal,
-			licens: "MIT", // typo
+			licens: "MIT",
 		});
 		expect(result.success).toBe(false);
 	});

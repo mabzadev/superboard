@@ -1,27 +1,12 @@
-/**
- * Plugin System Exports
- *
- * Unified plugin API with:
- * - Single context shape for all hooks and routes
- * - Paginated queries (no async iterators)
- * - Capability-gated APIs
- *
- */
-
-// definePlugin
 export { definePlugin } from "./define-plugin.js";
 
-// Standard plugin adapter
 export { adaptSandboxEntry } from "./adapt-sandbox-entry.js";
 
-// Manifest validation
 export { pluginManifestSchema, PLUGIN_CAPABILITIES, HOOK_NAMES } from "./manifest-schema.js";
 export type { ValidatedPluginManifest } from "./manifest-schema.js";
 
-// Request metadata
 export { extractRequestMeta, sanitizeHeadersForSandbox } from "./request-meta.js";
 
-// Context factory
 export {
 	PluginContextFactory,
 	createPluginContext,
@@ -41,16 +26,13 @@ export {
 } from "./context.js";
 export type { PluginContextFactoryOptions } from "./context.js";
 
-// Hooks
 export { HookPipeline, createHookPipeline } from "./hooks.js";
 export type { HookResult } from "./hooks.js";
 
-// Email pipeline
 export { EmailPipeline, EmailNotConfiguredError, EmailRecursionError } from "./email.js";
 export { DEV_CONSOLE_EMAIL_PLUGIN_ID, getDevEmails, clearDevEmails } from "./email-console.js";
 export type { StoredEmail } from "./email-console.js";
 
-// Routes
 export {
 	PluginRouteHandler,
 	PluginRouteRegistry,
@@ -59,16 +41,12 @@ export {
 } from "./routes.js";
 export type { RouteResult, InvokeRouteOptions } from "./routes.js";
 
-// Manager
 export { PluginManager, createPluginManager } from "./manager.js";
 export type { PluginManagerOptions, PluginState } from "./manager.js";
 
-// Scheduler (Node timer-based heartbeat; consumed by the generated
-// virtual:emdash/scheduler module on non-serverless adapters)
 export { NodeCronScheduler } from "./scheduler/node.js";
 export type { CronScheduler, SystemCleanupFn } from "./scheduler/types.js";
 
-// Sandbox
 export {
 	NoopSandboxRunner,
 	SandboxNotAvailableError,
@@ -94,9 +72,7 @@ export type {
 	SandboxRouteErrorEnvelope,
 } from "./sandbox/index.js";
 
-// Types
 export type {
-	// Core types
 	PluginCapability,
 	PluginStorageConfig,
 	StorageCollectionConfig,
@@ -107,8 +83,6 @@ export type {
 	RangeFilter,
 	InFilter,
 	StartsWithFilter,
-
-	// Context APIs
 	PluginContext,
 	StorageCollection,
 	KVAccess,
@@ -131,8 +105,6 @@ export type {
 	TaxonomyDefInfo,
 	TaxonomyTermInfo,
 	TaxonomyReadOptions,
-
-	// Hook types
 	PluginHooks,
 	HookConfig,
 	HookName,
@@ -148,8 +120,6 @@ export type {
 	MediaAfterUploadEvent,
 	LifecycleEvent,
 	UninstallEvent,
-
-	// Email types
 	EmailAccess,
 	EmailMessage,
 	EmailBeforeSendEvent,
@@ -158,8 +128,6 @@ export type {
 	EmailBeforeSendHandler,
 	EmailDeliverHandler,
 	EmailAfterSendHandler,
-
-	// Handler types
 	ContentBeforeSaveHandler,
 	ContentAfterSaveHandler,
 	ContentBeforeDeleteHandler,
@@ -171,8 +139,6 @@ export type {
 	MediaAfterUploadHandler,
 	LifecycleHandler,
 	UninstallHandler,
-
-	// Comment types
 	CommentBeforeCreateEvent,
 	CommentModerateEvent,
 	CommentAfterCreateEvent,
@@ -184,16 +150,10 @@ export type {
 	ModerationDecision,
 	CollectionCommentSettings,
 	StoredComment,
-
-	// Request metadata types
 	RequestMeta,
 	GeoInfo,
-
-	// Route types
 	PluginRoute,
 	RouteContext,
-
-	// Admin types
 	PluginAdminConfig,
 	PluginAdminPage,
 	PluginDashboardWidget,
@@ -203,14 +163,11 @@ export type {
 	PortableTextBlockField,
 	SettingField,
 	SettingFieldType,
-
-	// Plugin definition
 	PluginDefinition,
 	ResolvedPlugin,
 	PluginManifest,
 } from "./types.js";
 
-// Capability normalization (legacy → canonical alias layer)
 export {
 	CAPABILITY_RENAMES,
 	isDeprecatedCapability,

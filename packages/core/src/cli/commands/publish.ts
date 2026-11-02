@@ -1,17 +1,3 @@
-/**
- * emdash plugin publish
- *
- * Publishes a plugin tarball to the EmDash Marketplace.
- *
- * Flow:
- * 1. Resolve tarball (from --tarball path, or build via `emdash plugin bundle`)
- * 2. Read manifest.json from tarball to show summary
- * 3. Authenticate (stored credential or GitHub device flow)
- * 4. Pre-publish validation (check plugin exists, version not published)
- * 5. Upload via multipart POST
- * 6. Display audit results
- */
-
 import { readFile, stat } from "node:fs/promises";
 import { resolve, basename } from "node:path";
 
@@ -29,8 +15,6 @@ import {
 } from "../credentials.js";
 
 const DEFAULT_REGISTRY = "https://marketplace.emdashcms.com";
-
-// ── GitHub Device Flow ──────────────────────────────────────────
 
 interface DeviceCodeResponse {
 	device_code: string;
@@ -68,12 +52,7 @@ interface AuthDiscovery {
 	};
 }
 
-/**
- * Authenticate with the marketplace via GitHub Device Flow.
- * Returns the marketplace JWT and author info.
- */
 async function authenticateViaDeviceFlow(registryUrl: string): Promise<MarketplaceAuthResponse> {
-	// Step 1: Fetch auth discovery to get GitHub client_id
 	consola.start("Fetching auth configuration...");
 	const discoveryRes = await fetch(new URL("/api/v1/auth/discovery", registryUrl));
 	if (!discoveryRes.ok) {
@@ -81,7 +60,6 @@ async function authenticateViaDeviceFlow(registryUrl: string): Promise<Marketpla
 	}
 	const discovery = (await discoveryRes.json()) as AuthDiscovery;
 
-	// Step 2: Request device code from GitHub
 	const deviceRes = await fetch(discovery.github.deviceAuthorizationEndpoint, {
 		method: "POST",
 		headers: {
@@ -100,7 +78,6 @@ async function authenticateViaDeviceFlow(registryUrl: string): Promise<Marketpla
 
 	const deviceCode = (await deviceRes.json()) as DeviceCodeResponse;
 
-	// Step 3: Display instructions
 	console.log();
 	consola.info("Open your browser to:");
 	console.log(`  ${pc.cyan(pc.bold(deviceCode.verification_uri))}`);
@@ -108,7 +85,6 @@ async function authenticateViaDeviceFlow(registryUrl: string): Promise<Marketpla
 	consola.info(`Enter code: ${pc.yellow(pc.bold(deviceCode.user_code))}`);
 	console.log();
 
-	// Try to open browser
 	try {
 		const { execFile } = await import("node:child_process");
 		if (process.platform === "darwin") {
@@ -118,11 +94,8 @@ async function authenticateViaDeviceFlow(registryUrl: string): Promise<Marketpla
 		} else {
 			execFile("xdg-open", [deviceCode.verification_uri]);
 		}
-	} catch {
-		// User can open manually
-	}
+	} catch {}
 
-	// Step 4: Poll GitHub for access token
 	consola.start("Waiting for authorization...");
 	const githubToken = await pollGitHubDeviceFlow(
 		discovery.github.tokenEndpoint,
@@ -132,7 +105,6 @@ async function authenticateViaDeviceFlow(registryUrl: string): Promise<Marketpla
 		deviceCode.expires_in,
 	);
 
-	// Step 5: Exchange GitHub token for marketplace JWT
 	consola.start("Authenticating with marketplace...");
 	const deviceTokenUrl = new URL(discovery.marketplace.deviceTokenEndpoint, registryUrl);
 	const authRes = await fetch(deviceTokenUrl, {
@@ -199,8 +171,6 @@ async function pollGitHubDeviceFlow(
 	throw new Error("Device code expired (timeout). Please try again.");
 }
 
-// ── Tarball reading ─────────────────────────────────────────────
-
 const manifestSummarySchema = pluginManifestSchema.pick({
 	id: true,
 	version: true,
@@ -210,9 +180,6 @@ const manifestSummarySchema = pluginManifestSchema.pick({
 
 type ManifestSummary = typeof manifestSummarySchema._zod.output;
 
-/**
- * Read manifest.json from a tarball without fully extracting it.
- */
 async function readManifestFromTarball(tarballPath: string): Promise<ManifestSummary> {
 	const data = await readFile(tarballPath);
 	const stream = new ReadableStream<Uint8Array>({
@@ -240,10 +207,8 @@ async function readManifestFromTarball(tarballPath: string): Promise<ManifestSum
 	return result.data;
 }
 
-// ── Audit polling helpers ───────────────────────────────────────
-
 const POLL_INTERVAL_MS = 3000;
-const POLL_TIMEOUT_MS = 120_000; // 2 minutes
+const POLL_TIMEOUT_MS = 120_000;
 
 interface VersionStatusResponse {
 	version: string;
@@ -253,10 +218,6 @@ interface VersionStatusResponse {
 	image_audit_verdict?: string | null;
 }
 
-/**
- * Poll the version endpoint until status leaves "pending" or timeout.
- * Returns the final version data, or null on timeout.
- */
 async function pollVersionStatus(
 	versionUrl: string,
 	token: string,
@@ -277,9 +238,7 @@ async function pollVersionStatus(
 			if (data.status !== "pending") {
 				return data;
 			}
-		} catch {
-			// Network error — retry
-		}
+		} catch {}
 	}
 
 	return null;
@@ -337,8 +296,6 @@ function displayInlineAuditResults(
 	}
 }
 
-// ── Publish command ─────────────────────────────────────────────
-
 export const publishCommand = defineCommand({
 	meta: {
 		name: "publish",
@@ -373,14 +330,11 @@ export const publishCommand = defineCommand({
 	async run({ args }) {
 		const registryUrl = args.registry;
 
-		// ── Step 1: Resolve tarball ──
-
 		let tarballPath: string;
 
 		if (args.tarball) {
 			tarballPath = resolve(args.tarball);
 		} else if (args.build) {
-			// Build first, then find the output tarball
 			consola.start("Building plugin...");
 			const pluginDir = resolve(args.dir);
 			try {
@@ -394,7 +348,6 @@ export const publishCommand = defineCommand({
 				process.exit(1);
 			}
 
-			// Find the tarball in dist/
 			const { readdir } = await import("node:fs/promises");
 			const distDir = resolve(pluginDir, "dist");
 			const files = await readdir(distDir);
@@ -405,7 +358,6 @@ export const publishCommand = defineCommand({
 			}
 			tarballPath = resolve(distDir, tarball);
 		} else {
-			// Look for an existing tarball in dist/
 			const pluginDir = resolve(args.dir);
 			const { readdir } = await import("node:fs/promises");
 			try {
@@ -428,8 +380,6 @@ export const publishCommand = defineCommand({
 		const sizeKB = (tarballStat.size / 1024).toFixed(1);
 		consola.info(`Tarball: ${pc.dim(tarballPath)} (${sizeKB}KB)`);
 
-		// ── Step 2: Read manifest from tarball ──
-
 		const manifest = await readManifestFromTarball(tarballPath);
 		console.log();
 		consola.info(`Plugin: ${pc.bold(`${manifest.id}@${manifest.version}`)}`);
@@ -441,14 +391,6 @@ export const publishCommand = defineCommand({
 		}
 		console.log();
 
-		// ── Step 2.5: Hard-fail on deprecated capability names ──
-		//
-		// Refusing to publish manifests that use deprecated capability names
-		// keeps the marketplace clean while the deprecation window is open.
-		// The fix is mechanical and entirely in the author's hands — they
-		// rename, re-bundle, and republish. Better to refuse 5 publishes
-		// than ship 500 deprecated manifests. We check before authentication
-		// so authors don't burn a device-flow login on a doomed publish.
 		const deprecatedCaps = manifest.capabilities.filter(isDeprecatedCapability);
 		if (deprecatedCaps.length > 0) {
 			consola.error(
@@ -463,11 +405,6 @@ export const publishCommand = defineCommand({
 			);
 			process.exit(1);
 		}
-
-		// ── Step 3: Authenticate ──
-		//
-		// Priority: EMDASH_MARKETPLACE_TOKEN env var > stored credential > interactive device flow.
-		// The env var enables CI pipelines (including seed token auth) without interactive login.
 
 		let token: string;
 		const envToken = process.env.EMDASH_MARKETPLACE_TOKEN;
@@ -484,26 +421,20 @@ export const publishCommand = defineCommand({
 			const result = await authenticateViaDeviceFlow(registryUrl);
 			token = result.token;
 
-			// Save for next time
 			saveMarketplaceCredential(registryUrl, {
 				token: result.token,
-				expiresAt: new Date(Date.now() + 30 * 86400 * 1000).toISOString(), // 30 days
+				expiresAt: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
 				author: { id: result.author.id, name: result.author.name },
 			});
 
 			consola.success(`Authenticated as ${pc.bold(result.author.name)}`);
 		}
 
-		// ── Step 4: Pre-publish validation ──
-
 		consola.start("Checking marketplace...");
 
-		// Check if plugin exists
 		const pluginRes = await fetch(new URL(`/api/v1/plugins/${manifest.id}`, registryUrl));
 
 		if (pluginRes.status === 404 && !envToken) {
-			// Plugin doesn't exist — register it first.
-			// When using env token (seed), the server auto-registers on publish.
 			consola.info(`Plugin ${pc.bold(manifest.id)} not found in marketplace. Registering...`);
 
 			const createRes = await fetch(new URL("/api/v1/plugins", registryUrl), {
@@ -514,7 +445,7 @@ export const publishCommand = defineCommand({
 				},
 				body: JSON.stringify({
 					id: manifest.id,
-					name: manifest.id, // Use ID as name initially
+					name: manifest.id,
 					capabilities: manifest.capabilities,
 				}),
 			});
@@ -522,7 +453,6 @@ export const publishCommand = defineCommand({
 			if (!createRes.ok) {
 				const body = (await createRes.json().catch(() => ({}))) as { error?: string };
 				if (createRes.status === 401) {
-					// Token expired — clear and retry
 					removeMarketplaceCredential(registryUrl);
 					consola.error(
 						"Authentication expired. Please run `emdash plugin publish` again to re-authenticate.",
@@ -535,14 +465,11 @@ export const publishCommand = defineCommand({
 
 			consola.success(`Registered ${pc.bold(manifest.id)}`);
 		} else if (pluginRes.status === 404 && envToken) {
-			// Using env token — server handles auto-registration on publish
 			consola.info(`Plugin ${pc.bold(manifest.id)} will be auto-registered on publish`);
 		} else if (!pluginRes.ok) {
 			consola.error(`Marketplace error: ${pluginRes.status}`);
 			process.exit(1);
 		}
-
-		// ── Step 5: Upload ──
 
 		consola.start(`Publishing ${manifest.id}@${manifest.version}...`);
 
@@ -590,7 +517,6 @@ export const publishCommand = defineCommand({
 			}
 
 			if (uploadRes.status === 422 && body.audit) {
-				// Failed security audit
 				consola.error("Plugin failed security audit:");
 				consola.error(`  Verdict: ${pc.red(body.audit.verdict)}`);
 				consola.error(`  Summary: ${body.audit.summary}`);
@@ -600,8 +526,6 @@ export const publishCommand = defineCommand({
 			consola.error(`Publish failed: ${body.error ?? uploadRes.statusText}`);
 			process.exit(1);
 		}
-
-		// ── Step 6: Handle response ──
 
 		const result = (await uploadRes.json()) as {
 			version: string;
@@ -626,7 +550,6 @@ export const publishCommand = defineCommand({
 		consola.info(`  Checksum: ${pc.dim(result.checksum)}`);
 		consola.info(`  Size: ${(result.bundleSize / 1024).toFixed(1)}KB`);
 
-		// Async audit flow (202 Accepted)
 		if (uploadRes.status === 202) {
 			consola.info(`  Status: ${pc.yellow("pending")} (audit running in background)`);
 
@@ -636,7 +559,6 @@ export const publishCommand = defineCommand({
 				return;
 			}
 
-			// Poll version endpoint for audit completion
 			consola.start("Waiting for security audit to complete...");
 			const versionUrl = new URL(
 				`/api/v1/plugins/${manifest.id}/versions/${manifest.version}`,
@@ -651,7 +573,6 @@ export const publishCommand = defineCommand({
 				consola.info(`  ${pc.dim(`curl ${versionUrl.toString()}`)}`);
 			}
 		} else {
-			// Synchronous response (201 or legacy)
 			if (result.audit) {
 				displayInlineAuditResults(result.audit, result.imageAudit ?? null);
 			}
@@ -661,8 +582,6 @@ export const publishCommand = defineCommand({
 		console.log();
 	},
 });
-
-// ── Marketplace auth subcommands ────────────────────────────────
 
 export const marketplaceLoginCommand = defineCommand({
 	meta: {

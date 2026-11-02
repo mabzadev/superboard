@@ -9,10 +9,6 @@ import {
 import Base from "../../layouts/Base.astro";
 import ProjectCard from "../../components/ProjectCard.astro";
 
-// Get filter from query param. When set, push the filter down to the
-// database via `where` instead of loading every project and filtering
-// in JS — that pattern scales O(projects × terms-per-project) and
-// blows up the moment you have more than a couple of dozen entries.
 const activeTag = Astro.url.searchParams.get("tag");
 
 const [{ entries: sortedProjects, cacheHint }, tags] = await Promise.all([
@@ -20,14 +16,11 @@ const [{ entries: sortedProjects, cacheHint }, tags] = await Promise.all([
 		orderBy: { published_at: "desc" },
 		...(activeTag ? { where: { tag: activeTag } } : {}),
 	}),
-	// The filter pills show labels only, so skip the visible-entry counts.
 	getTaxonomyTerms("tag", { includeCounts: false }),
 ]);
 
 if (Astro.cache?.enabled) Astro.cache.set(cacheHint);
 
-// Single batched JOIN for the tag pills shown on each card, instead of
-// one getEntryTerms() round-trip per card.
 const tagsByEntry = await getTermsForEntries(
 	"projects",
 	sortedProjects.map((p) => p.data.id),

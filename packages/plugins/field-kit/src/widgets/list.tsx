@@ -6,33 +6,7 @@ import { SubField } from "../shared/sub-field";
 import type { FieldWidgetProps, SubFieldDef } from "../shared/types";
 import { normalizeArray, normalizeObject, renderSummary } from "../shared/utils";
 
-/**
- * List widget — ordered array editor with add/remove/reorder for json fields.
- *
- * Seed usage:
- *   {
- *     "slug": "ingredients",
- *     "type": "json",
- *     "widget": "field-kit:list",
- *     "options": {
- *       "itemLabel": "Ingredient",
- *       "min": 1,
- *       "max": 50,
- *       "sortable": true,
- *       "summary": "{{name}} — {{amount}}",
- *       "fields": [
- *         { "key": "name", "label": "Name", "type": "text" },
- *         { "key": "amount", "label": "Amount", "type": "text" },
- *         { "key": "optional", "label": "Optional", "type": "boolean" }
- *       ]
- *     }
- *   }
- *
- * Stored value: [{ "name": "Flour", "amount": "500g", "optional": false }, ...]
- */
 function makeItemId(): string {
-	// `crypto.randomUUID` is available in all modern browsers and in Node ≥ 14.17.
-	// This id is a React-key concern only and never persisted to the stored JSON.
 	if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
 		return crypto.randomUUID();
 	}
@@ -40,7 +14,8 @@ function makeItemId(): string {
 }
 
 export function List({ value, onChange, label, id, required, options, minimal }: FieldWidgetProps) {
-	const fields = (options?.fields as SubFieldDef[] | undefined) ?? [];
+	const rawFields = options?.fields as SubFieldDef[] | undefined;
+	const fields = React.useMemo(() => rawFields ?? [], [rawFields]);
 	const itemLabel = (options?.itemLabel as string | undefined) ?? "Item";
 	const min = options?.min as number | undefined;
 	const max = options?.max as number | undefined;
@@ -52,10 +27,6 @@ export function List({ value, onChange, label, id, required, options, minimal }:
 	const itemsRef = React.useRef(items);
 	itemsRef.current = items;
 
-	// Parallel stable-key array, kept in lockstep with `items`. Regenerated
-	// only when the externally-supplied value length changes unexpectedly
-	// (e.g. reset from outside); local add/remove/reorder splice this array
-	// alongside items so each row keeps the same key across moves.
 	const [itemIds, setItemIds] = React.useState<string[]>(() => items.map(() => makeItemId()));
 	const itemIdsRef = React.useRef(itemIds);
 	itemIdsRef.current = itemIds;

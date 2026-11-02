@@ -19,7 +19,7 @@ object ScreenUtils {
         cachedResolution?.let { return it }
 
         synchronized(this) {
-            cachedResolution?.let { return it } // double-checked locking
+            cachedResolution?.let { return it }
 
             val resolution = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 val wm = context.getSystemService(WindowManager::class.java)

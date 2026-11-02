@@ -14,9 +14,7 @@ import type { Env, EventReceipt, OutboxRow } from "./types";
 
 const OUTBOX_RETRY_SECONDS = 60;
 
-// D1 rejects statements with more than 100 bound parameters.
 const D1_MAX_BOUND_PARAMETERS = 100;
-// Cloudflare Queues accept at most 100 messages per sendBatch call.
 const QUEUE_SEND_BATCH_LIMIT = 100;
 
 type PendingIngest = {
@@ -55,7 +53,6 @@ export async function ingestAnalyticsEvents(
 	const results: Array<AnalyticsIngestResultV1 | null> = [];
 	const pending: PendingIngest[] = [];
 	const pendingIndexes: number[] = [];
-	// Mirrors the receipt check for repeated event_ids inside one batch.
 	const claimed = new Map<string, string>();
 	for (const [index, event] of events.entries()) {
 		const payloadHash = payloadHashes[index];
@@ -116,7 +113,6 @@ export async function ingestAnalyticsEvents(
 		if (result.status === "accepted") accepted.push(entry.outbox);
 	}
 	await dispatchOutboxRows(env, accepted);
-	// Every placeholder was filled above; the guard only narrows the type.
 	return results.map((result) => {
 		if (result === null) throw new Error("analytics_insert_result_missing");
 		return result;
@@ -202,8 +198,6 @@ async function insertPending(
 		await db.batch(pending.flatMap((entry) => insertStatements(db, entry)));
 		return pending.map(accepted);
 	} catch (error) {
-		// The batch is atomic, so a concurrent writer claiming one event_id rolls
-		// back the whole batch. Retry per event to keep per-event replay results.
 		const [only] = pending;
 		if (pending.length === 1 && only) {
 			return [await resolveInsertConflict(db, only, error)];
@@ -338,7 +332,6 @@ async function dispatchOutboxChunk(env: Env, rows: OutboxRow[]): Promise<void> {
 			.run();
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		// Two extra bound parameters leave room for 98 ids per retry statement.
 		for (const retryIds of chunks(ids, D1_MAX_BOUND_PARAMETERS - 2)) {
 			await env.DB.prepare(
 				`UPDATE analytics_ingest_outbox

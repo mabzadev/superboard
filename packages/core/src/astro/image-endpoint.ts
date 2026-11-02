@@ -1,13 +1,3 @@
-/**
- * Node image endpoint -- the `image.endpoint` EmDash installs on non-Cloudflare
- * platforms whose image service is local (sharp).
- *
- * It wraps Astro's generic endpoint: for an EmDash media URL it loads the source
- * bytes straight from the storage adapter (no HTTP, so it works behind any auth
- * gate) and runs the configured image service's `transform`; every other image
- * is delegated to the stock endpoint unchanged.
- */
-
 import type { APIRoute } from "astro";
 // @ts-ignore - astro/assets internal endpoint, resolved by the consumer's Astro build
 import { GET as genericGET } from "astro/assets/endpoint/generic";
@@ -47,8 +37,6 @@ export const GET: APIRoute = async (ctx) => {
 	const key = matchInternalMediaKey(url.searchParams.get("href"));
 	const storage = ctx.locals.emdash?.storage;
 
-	// Not EmDash media, or storage unavailable: let the stock endpoint handle it
-	// (bundled assets, allowed remote, `publicUrl` media).
 	if (!key || !storage) return genericGET(ctx);
 
 	const service = await getConfiguredImageService();
@@ -57,7 +45,6 @@ export const GET: APIRoute = async (ctx) => {
 	try {
 		const source = await storage.download(key);
 
-		// Only raster images are transformable; serve anything else unchanged.
 		if (!source.contentType.startsWith("image/")) {
 			return streamOriginal(source.body, source.contentType);
 		}

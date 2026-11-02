@@ -125,8 +125,6 @@ describe("contentUpdateBody schema", () => {
 });
 
 describe("localeCode validator", () => {
-	// The site config, stored locale columns, and public query path keep raw
-	// BCP-47 casing, so the schema must preserve it instead of normalizing it.
 	it("preserves region/script subtag casing", () => {
 		expect(localeCode.parse("zh-TW")).toBe("zh-TW");
 		expect(localeCode.parse("pt-BR")).toBe("pt-BR");
@@ -372,7 +370,6 @@ describe("mediaUploadUrlBody schema factory", () => {
 	});
 
 	it("error message does not overstate the limit in MB", () => {
-		// 75_000_000 bytes / 1024 / 1024 ≈ 71.5 MB; floor gives 71, round gives 72
 		const schema = mediaUploadUrlBody(75_000_000);
 		let errorMessage = "";
 		try {

@@ -1,11 +1,3 @@
-/**
- * Tests for comment import from the WordPress plugin API:
- * - preserves author, date, and status
- * - threads replies (deep WP threads flatten onto the root comment)
- * - skips comments whose post was not imported
- * - idempotent re-import
- */
-
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -73,7 +65,6 @@ describe("importCommentsFromPlugin", () => {
 			[
 				comment({ id: 1 }),
 				comment({ id: 2, parent_id: 1, date_gmt: "2020-05-02T12:00:00Z" }),
-				// Reply to the reply -- deeper than EmDash's 1-level threading
 				comment({ id: 3, parent_id: 2, date_gmt: "2020-05-03T12:00:00Z" }),
 			],
 			db,
@@ -88,7 +79,6 @@ describe("importCommentsFromPlugin", () => {
 			.execute();
 		const root = rows[0]!;
 		expect(root.parent_id).toBeNull();
-		// Both the reply and the reply-to-reply hang off the root
 		expect(rows[1]!.parent_id).toBe(root.id);
 		expect(rows[2]!.parent_id).toBe(root.id);
 	});

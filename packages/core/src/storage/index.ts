@@ -1,11 +1,3 @@
-/**
- * Storage Layer
- *
- * S3-compatible storage abstraction for media uploads.
- * Supports R2, AWS S3, Minio, and local filesystem.
- */
-
-// Types
 export type {
 	Storage,
 	StorageDescriptor,
@@ -23,6 +15,5 @@ export type {
 
 export { EmDashStorageError } from "./types.js";
 
-// Implementations (for direct import if needed)
 export { S3Storage } from "./s3.js";
 export { LocalStorage } from "./local.js";

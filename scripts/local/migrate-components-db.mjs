@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+
 import { compileFrontRelease } from "../../packages/supbrd-core/dist/index.js";
 import parity from "../config/superboard-parity-release.json" with { type: "json" };
 
@@ -83,7 +84,6 @@ async function main() {
 		["sign"],
 	);
 
-	// Prepare release input from parity release
 	const payload = parity.release.payload;
 	const input = {};
 	for (const k of FRONT_RELEASE_INPUT_KEYS) {
@@ -108,7 +108,7 @@ async function main() {
 	const now = new Date().toISOString();
 	const expiresFarFuture = "2027-01-01T00:00:00.000Z";
 
-	const allPlugins = parity.active_plugin_ids; // all 18 superboard-* plugins
+	const allPlugins = parity.active_plugin_ids;
 	const checksums = parity.manifest_artifact_checksums;
 
 	for (const dbPath of dbPaths) {
@@ -116,7 +116,6 @@ async function main() {
 		console.log(`\nMigrating database: ${dbPath}`);
 		const db = new DatabaseSync(dbPath);
 
-		// 1. Update superboard_front_release_candidates
 		console.log("Updating superboard_front_release_candidates...");
 		db.prepare(
 			`UPDATE superboard_front_release_candidates
@@ -128,7 +127,6 @@ async function main() {
 			 WHERE release_id = '04F4BCE6255094A8D9EC4168EC'`,
 		).run(compiledJson, compiled.content_checksum, compiled.validation_set_checksum);
 
-		// 2. Insert into superboard_plugin_manifest_artifacts
 		console.log("Updating superboard_plugin_manifest_artifacts...");
 		const insertArtifact = db.prepare(
 			`INSERT OR REPLACE INTO superboard_plugin_manifest_artifacts
@@ -176,9 +174,10 @@ async function main() {
 			insertArtifact.run(checksum, pluginId, JSON.stringify(manifestObj), now);
 		}
 
-		// 3. Update superboard_dependency_health
 		console.log("Updating superboard_dependency_health...");
-		db.prepare("DELETE FROM superboard_dependency_health WHERE instance_id = 'mabza-development'").run();
+		db.prepare(
+			"DELETE FROM superboard_dependency_health WHERE instance_id = 'mabza-development'",
+		).run();
 		const insertHealth = db.prepare(
 			`INSERT INTO superboard_dependency_health
 			 (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
@@ -190,9 +189,10 @@ async function main() {
 			insertHealth.run(depId, checksum, now, expiresFarFuture);
 		}
 
-		// 4. Update superboard_plugin_lifecycle
 		console.log("Updating superboard_plugin_lifecycle...");
-		db.prepare("DELETE FROM superboard_plugin_lifecycle WHERE instance_id = 'mabza-development' AND target = 'local'").run();
+		db.prepare(
+			"DELETE FROM superboard_plugin_lifecycle WHERE instance_id = 'mabza-development' AND target = 'local'",
+		).run();
 		const insertLifecycle = db.prepare(
 			`INSERT INTO superboard_plugin_lifecycle
 			 (instance_id, target, plugin_id, artifact_checksum, state, plan_id, activated_release_id, state_changed_at, reason)
@@ -203,7 +203,6 @@ async function main() {
 			insertLifecycle.run(pluginId, checksum, now);
 		}
 
-		// 5. Update superboard_active_plugin_manifests
 		console.log("Updating superboard_active_plugin_manifests...");
 		db.prepare("DELETE FROM superboard_active_plugin_manifests").run();
 		const insertActiveManifest = db.prepare(
@@ -214,7 +213,6 @@ async function main() {
 			insertActiveManifest.run(pluginId, checksum, now);
 		}
 
-		// 6. Update ec_views
 		console.log("Updating ec_views...");
 		for (const [oldId, newId] of Object.entries(COMPONENT_MAP)) {
 			db.prepare("UPDATE ec_views SET plugin_id = ? WHERE plugin_id = ?").run(newId, oldId);
@@ -229,11 +227,12 @@ async function main() {
 		console.log(`Database ${dbPath} migrated successfully.`);
 	}
 
-	// 7. Clear KV cache
 	if (existsSync(kvDbPath)) {
 		console.log(`\nClearing KV cache: ${kvDbPath}`);
 		const kvDb = new DatabaseSync(kvDbPath);
-		kvDb.prepare("DELETE FROM _mf_entries WHERE key = 'last_verified_release:mabza-development'").run();
+		kvDb
+			.prepare("DELETE FROM _mf_entries WHERE key = 'last_verified_release:mabza-development'")
+			.run();
 		console.log("KV cache entry cleared.");
 	}
 

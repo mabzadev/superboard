@@ -95,7 +95,6 @@ export const ButtonComponent = ({
 				<ComponentToolbar label="Button" nodeId={id} dragConnector={drag} />
 			)}
 
-			{/* Main button wrapper (connect) */}
 			<div
 				style={{
 					boxSizing: "border-box",

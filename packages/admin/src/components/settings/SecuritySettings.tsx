@@ -1,10 +1,3 @@
-/**
- * Security Settings page - Passkey management
- *
- * Only available when using passkey auth. When external auth (e.g., Cloudflare Access)
- * is configured, this page shows an informational message instead.
- */
-
 import { Banner, Button, Loader, useKumoToastManager } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { Plus } from "@phosphor-icons/react";

@@ -1,9 +1,3 @@
-/**
- * POST /_emdash/api/setup
- *
- * Executes the setup wizard - applies seed file and marks setup complete
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -26,9 +20,6 @@ export const POST: APIRoute = async ({ request, url, locals }) => {
 	}
 
 	try {
-		// Guard: reject if setup has already been completed.
-		// The options table may not exist on first-ever setup (pre-migration),
-		// so a query failure means setup hasn't run yet — allow it to proceed.
 		try {
 			const options = new OptionsRepository(emdash.db);
 			const setupComplete = await options.get("emdash:setup_complete");
@@ -36,25 +27,19 @@ export const POST: APIRoute = async ({ request, url, locals }) => {
 			if (setupComplete === true || setupComplete === "true") {
 				return apiError("ALREADY_CONFIGURED", "Setup has already been completed", 409);
 			}
-		} catch {
-			// Options table doesn't exist yet — first-ever setup, allow it
-		}
+		} catch {}
 
-		// Parse request body
 		const body = await parseBody(request, setupBody);
 		if (isParseError(body)) return body;
 
-		// Load seed file (user seed or built-in default)
 		const seed = await loadSeed();
 
-		// Override seed settings with form values
 		seed.settings = {
 			...seed.settings,
 			title: body.title,
 			tagline: body.tagline,
 		};
 
-		// Apply seed
 		const validation = validateSeed(seed);
 		if (!validation.valid) {
 			return apiError("INVALID_SEED", `Invalid seed file: ${validation.errors.join(", ")}`, 400);
@@ -71,33 +56,22 @@ export const POST: APIRoute = async ({ request, url, locals }) => {
 			return handleError(error, "Failed to apply seed", "SEED_ERROR");
 		}
 
-		// Store setup state
-		// In external auth mode, mark setup complete immediately (first user to login becomes admin)
-		// Otherwise, setup_complete is set after admin user is created (passkey or auth provider)
 		const authMode = getAuthMode(emdash.config);
 		const useExternalAuth = authMode.type === "external";
 
 		try {
 			const options = new OptionsRepository(emdash.db);
 
-			// Store the canonical site URL from the setup request.
-			// Write-once at the DB level so concurrent setup POSTs can't both
-			// observe an empty value and race to write. A spoofed Host header
-			// on a later call during the wizard window must not be able to
-			// replace the first value.
 			const siteUrl = getPublicOrigin(url, emdash.config);
 			await options.setIfAbsent("emdash:site_url", siteUrl);
 
 			if (useExternalAuth) {
-				// External auth mode: mark setup complete now
-				// First user to log in via external provider will become admin
 				await options.set("emdash:setup_complete", true);
 				await options.set("emdash:site_title", body.title);
 				if (body.tagline) {
 					await options.set("emdash:site_tagline", body.tagline);
 				}
 			} else {
-				// Passkey/provider mode: store state for next step (admin creation)
 				await options.set("emdash:setup_state", {
 					step: "site_complete",
 					title: body.title,
@@ -106,13 +80,10 @@ export const POST: APIRoute = async ({ request, url, locals }) => {
 			}
 		} catch (error) {
 			console.error("Failed to save setup state:", error);
-			// Non-fatal - continue anyway
 		}
 
-		// Return success with result
 		return apiSuccess({
 			success: true,
-			// In external auth mode, setup is complete - redirect to admin
 			setupComplete: useExternalAuth,
 			result,
 		});

@@ -23,9 +23,7 @@ export type BreakdownRow = {
 
 export type DailyTraffic = { date: string; value: number };
 
-/** Direct links have no UTM source; they are grouped under this key. */
 export const DIRECT_SOURCE = "direct";
-/** Events recorded without a platform are grouped under this key. */
 export const UNKNOWN_PLATFORM = "unknown";
 
 const METRICS = [
@@ -74,7 +72,6 @@ export function hasActivity(totals: MetricTotals) {
 	return Object.values(totals).some((value) => value > 0);
 }
 
-/** Views and clicks per day, matching the Overview link-views chart. */
 export function dailyTraffic(statistics: LinkStatistics): DailyTraffic[] {
 	const days = new Map<string, number>();
 	for (const point of statistics.series) {

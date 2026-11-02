@@ -214,7 +214,6 @@ export async function applyD1Convergence({
 		});
 	}
 
-	// Back up every selected production database before the first schema write.
 	const backupReceipts = [];
 	if (environment === "production" || backupDirectory) {
 		for (const descriptor of descriptors) {

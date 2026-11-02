@@ -1,26 +1,3 @@
-/**
- * Marketing blocks plugin (inline, template-local).
- *
- * Registers the five marketing block types so editors can insert and edit them
- * in the admin's Portable Text editor. Block Kit `fields` describe the form
- * shown when inserting or editing a block.
- *
- * Constraints worth knowing:
- *
- * - Block Kit has no "object group" element, so nested object shapes (e.g. a
- *   CTA's { label, url }) are flattened to sibling fields like ctaLabel and
- *   ctaUrl. The site-side renderer reads the flat keys.
- * - Repeater sub-fields are scalar only: text_input, number_input, select,
- *   toggle. Nested repeaters are not allowed -- list-of-strings becomes a
- *   single multiline text field, split on newline at render time (see
- *   Pricing.astro for the pattern).
- * - There is no media picker element in the editor's plugin-block modal yet,
- *   so image fields (avatars, hero images) are URL strings entered by hand.
- *
- * Site-side rendering still goes through MarketingBlocks.astro --
- * componentsEntry auto-wiring is a separate cleanup.
- */
-
 import { definePlugin } from "emdash";
 import type { PluginDefinition } from "emdash";
 

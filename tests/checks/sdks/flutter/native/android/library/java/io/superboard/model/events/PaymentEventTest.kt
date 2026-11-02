@@ -11,8 +11,6 @@ import org.robolectric.annotation.Config
 @Config(manifest = Config.NONE, sdk = [28])
 class PaymentEventTest {
 
-    // ==================== Sample JSON fixtures ====================
-
     private val singleProductJson = """
         {
           "orderId": "GPA.3375-2069-1505-17920",
@@ -52,8 +50,6 @@ class PaymentEventTest {
           "autoRenewing": true
         }
     """.trimIndent()
-
-    // ==================== Parsing Tests ====================
 
     @Test
     fun `parses single product purchase with v4 productId field`() {

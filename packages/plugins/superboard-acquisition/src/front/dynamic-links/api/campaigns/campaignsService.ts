@@ -5,8 +5,6 @@ import type { CreateCampaignPayload, UpdateCampaignPayload } from "@superboard/f
 import type { GetCampaignsParams, DateRangeQuery } from "@superboard/front-ui/types";
 import type { AxiosResponse } from "axios";
 
-// --- Response types ---
-
 interface CreateCampaignResponse {
 	campaign: Campaign;
 }
@@ -20,8 +18,6 @@ interface GetCampaignsResponse {
 interface CampaignMetricsResponse {
 	metrics: Record<string, unknown>;
 }
-
-// --- API calls ---
 
 export const createNewCampaignAPICall = async (
 	projectId: string,

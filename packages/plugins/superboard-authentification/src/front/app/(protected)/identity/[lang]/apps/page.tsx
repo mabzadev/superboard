@@ -102,7 +102,6 @@ const Page = () => {
 
 export default Page;
 
-/** App banners shown on the hosted sign-in pages, managed from Appearance. */
 export function AppBanners() {
 	const t = useTranslations();
 	const configs = useSignalValue(configSignal);

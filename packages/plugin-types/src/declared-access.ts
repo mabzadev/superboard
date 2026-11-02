@@ -194,10 +194,6 @@ function normalizeDeclaredAccess(value: DeclaredAccess): CanonicalObject {
 	return Object.freeze(output);
 }
 
-/**
- * Returns an immutable, implication-closed declared-access value with recursively
- * sorted keys and canonical host sets. Non-JSON runtime values throw TypeError.
- */
 export function canonicalizeDeclaredAccess(value: DeclaredAccess): CanonicalDeclaredAccess {
 	return normalizeDeclaredAccess(value);
 }
@@ -389,10 +385,6 @@ export function isDeclaredAccessEscalation(
 	return diffDeclaredAccess(previous, next).escalation;
 }
 
-/**
- * Returns the canonical JSON preimage for a declared-access digest. The format
- * is domain-separated and versioned; callers choose and apply the hash.
- */
 export function declaredAccessDigestInput(value: DeclaredAccess): string {
 	return `{"declaredAccess":${canonicalString(value)},"domain":${JSON.stringify(DIGEST_DOMAIN)},"version":${DIGEST_VERSION}}`;
 }

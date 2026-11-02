@@ -1,10 +1,3 @@
-/**
- * Content-taxonomy association endpoint
- *
- * GET /_emdash/api/content/:collection/:id/terms/:taxonomy - Get terms for an entry
- * POST /_emdash/api/content/:collection/:id/terms/:taxonomy - Set terms for an entry
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm, requireOwnerPerm } from "#api/authorize.js";
@@ -54,9 +47,6 @@ function assignmentResponse(assignments: TaxonomyAssignmentResolution[], entryLo
 	};
 }
 
-/**
- * Get terms assigned to an entry
- */
 export const GET: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 	const { collection, id, taxonomy } = params;
@@ -71,9 +61,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	}
 
 	try {
-		// Assignments store content and term translation groups. Resolve the
-		// entry's locale server-side so the response includes only that locale's
-		// term variant.
 		const entry = await new ContentRepository(emdash.db).findByIdOrSlug(collection, id);
 		if (!entry) return apiError("NOT_FOUND", "Content not found", 404);
 		const locale = entry.locale || getI18nConfig()?.defaultLocale || "en";
@@ -94,9 +81,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	}
 };
 
-/**
- * Set terms for an entry (replaces existing)
- */
 export const POST: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { collection, id, taxonomy } = params;
@@ -114,7 +98,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		return apiError("NOT_CONFIGURED", "EmDash is not initialized", 500);
 	}
 
-	// Verify the content exists before modifying its terms
 	const existing = await emdash.handleContentGet(collection, id);
 	if (!existing.success) {
 		return apiError(
@@ -124,13 +107,11 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		);
 	}
 
-	// Check ownership for edit permission
 	const existingData =
 		existing.data && typeof existing.data === "object"
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- handler returns unknown data; narrowed by typeof check above
 				(existing.data as Record<string, unknown>)
 			: undefined;
-	// Handler returns { item, _rev } — extract the item for ownership check
 	const existingItem =
 		existingData?.item && typeof existingData.item === "object"
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed by typeof check above
@@ -140,11 +121,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 	const editDenied = requireOwnerPerm(user, authorId, "content:edit_own", "content:edit_any");
 	if (editDenied) return editDenied;
 
-	// Resolve the canonical content ID from the handler result.
-	// The URL `id` param may be a slug; we must use the real ID for term storage.
 	const canonicalId = typeof existingItem?.id === "string" ? existingItem.id : id;
-	// The assignment spans the content translation group, while the response
-	// includes only the term variant matching this entry's locale.
 	const entryLocale =
 		typeof existingItem?.locale === "string"
 			? existingItem.locale
@@ -157,7 +134,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 
 		const repo = new TaxonomyRepository(emdash.db);
 
-		// Verify all term IDs exist and belong to the correct taxonomy
 		for (const termId of termIds) {
 			const term = await repo.findById(termId);
 			if (!term) {
@@ -172,14 +148,10 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			}
 		}
 
-		// Set the terms (replaces existing) using the canonical ID
 		await repo.setTermsForEntry(collection, canonicalId, taxonomy, termIds);
 
-		// Term assignments changed — invalidate the hasAnyTermAssignments cache
-		// so hydration on subsequent reads issues a fresh query.
 		invalidateTermCache();
 
-		// Get the updated terms using the canonical ID, scoped to the entry locale
 		const assignments = await repo.getTermAssignmentsForEntry(
 			collection,
 			canonicalId,

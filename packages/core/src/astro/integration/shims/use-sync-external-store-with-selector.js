@@ -70,7 +70,4 @@ export function useSyncExternalStoreWithSelector(
 	return value;
 }
 
-// Zustand's ESM build imports the CJS shim as a default namespace and then
-// reads `.useSyncExternalStoreWithSelector`. Keep that interoperable shape in
-// addition to the named export used by TipTap and other ESM consumers.
 export default { useSyncExternalStoreWithSelector };

@@ -38,7 +38,6 @@ import { FieldEditor } from "./FieldEditor";
 import { RouterLinkButton } from "./RouterLinkButton.js";
 import { SaveButton } from "./SaveButton";
 
-// Regex patterns for slug generation
 const SLUG_INVALID_CHARS_PATTERN = /[^a-z0-9]+/g;
 const SLUG_LEADING_TRAILING_PATTERN = /^_|_$/g;
 
@@ -88,10 +87,6 @@ const SUPPORT_OPTIONS: SupportOptionDef[] = [
 	},
 ];
 
-/**
- * System fields that exist on every collection
- * These are created automatically and cannot be modified
- */
 interface SystemFieldDef {
 	slug: string;
 	label: MessageDescriptor;
@@ -138,9 +133,6 @@ const SYSTEM_FIELDS: SystemFieldDef[] = [
 	},
 ];
 
-/**
- * Content Type editor for creating/editing collections
- */
 export function ContentTypeEditor({
 	collection,
 	isNew,
@@ -154,23 +146,18 @@ export function ContentTypeEditor({
 	const { t } = useLingui();
 	const _navigate = useNavigate();
 
-	// Form state
 	const [slug, setSlug] = React.useState(collection?.slug ?? "");
 	const [label, setLabel] = React.useState(collection?.label ?? "");
 	const [labelSingular, setLabelSingular] = React.useState(collection?.labelSingular ?? "");
 	const [description, setDescription] = React.useState(collection?.description ?? "");
 	const [urlPattern, setUrlPattern] = React.useState(collection?.urlPattern ?? "");
 	const [routable, setRoutable] = React.useState(collection?.routable ?? true);
-	// SEO is managed via the separate `hasSeo` field; strip any legacy "seo" entry
-	// so it isn't sent back on save (the API enum rejects it).
 	const [supports, setSupports] = React.useState<string[]>(
 		(collection?.supports ?? ["drafts", "revisions"]).filter((s) => s !== "seo"),
 	);
 
-	// SEO state
 	const [hasSeo, setHasSeo] = React.useState(collection?.hasSeo ?? false);
 
-	// Comment settings state
 	const [commentsEnabled, setCommentsEnabled] = React.useState(
 		collection?.commentsEnabled ?? false,
 	);
@@ -184,7 +171,6 @@ export function ContentTypeEditor({
 		collection?.commentsAutoApproveUsers ?? true,
 	);
 
-	// Field editor state
 	const [fieldEditorOpen, setFieldEditorOpen] = React.useState(false);
 	const [editingField, setEditingField] = React.useState<SchemaField | undefined>();
 	const [fieldSaving, setFieldSaving] = React.useState(false);
@@ -192,7 +178,6 @@ export function ContentTypeEditor({
 
 	const urlPatternValid = !urlPattern || urlPattern.includes("{slug}");
 
-	// Track whether form has unsaved changes
 	const hasChanges = React.useMemo(() => {
 		if (isNew) return slug && label;
 		if (!collection) return false;
@@ -227,7 +212,6 @@ export function ContentTypeEditor({
 		commentsAutoApproveUsers,
 	]);
 
-	// Auto-generate slug from plural label
 	const handleLabelChange = (value: string) => {
 		setLabel(value);
 		if (isNew) {
@@ -240,7 +224,6 @@ export function ContentTypeEditor({
 		}
 	};
 
-	// Auto-generate plural label (and slug) from singular label
 	const handleSingularLabelChange = (value: string) => {
 		setLabelSingular(value);
 		if (isNew) {
@@ -375,7 +358,6 @@ export function ContentTypeEditor({
 			)}
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Settings form */}
 				<div className="lg:col-span-1">
 					<form id="content-type-editor-form" onSubmit={handleSubmit} className="space-y-4">
 						<div className="rounded-lg border bg-kumo-base p-4 space-y-4">
@@ -476,7 +458,6 @@ export function ContentTypeEditor({
 								))}
 							</div>
 
-							{/* SEO toggle */}
 							<div className="pt-2 border-t">
 								<Switch
 									checked={hasSeo}
@@ -494,7 +475,6 @@ export function ContentTypeEditor({
 							</div>
 						</div>
 
-						{/* Comments settings — only for existing collections */}
 						{!isNew && (
 							<div className="rounded-lg border bg-kumo-base p-4 space-y-4">
 								<h2 className="font-semibold">{t`Comments`}</h2>
@@ -587,7 +567,6 @@ export function ContentTypeEditor({
 					</form>
 				</div>
 
-				{/* Fields section - only show for existing collections */}
 				{!isNew && (
 					<div className="lg:col-span-2">
 						<div className="rounded-lg border bg-kumo-base">
@@ -608,7 +587,6 @@ export function ContentTypeEditor({
 								)}
 							</div>
 
-							{/* System fields - always shown */}
 							<div>
 								<div className="px-4 py-2 text-xs font-medium text-kumo-subtle uppercase tracking-wider bg-kumo-tint/50 border-b">
 									{t`System Fields`}
@@ -620,7 +598,6 @@ export function ContentTypeEditor({
 								</div>
 							</div>
 
-							{/* Custom fields */}
 							{fields.length === 0 ? (
 								<div className="p-8 text-center text-kumo-subtle">
 									<Database className="mx-auto h-12 w-12 mb-4 opacity-50" />
@@ -666,7 +643,6 @@ export function ContentTypeEditor({
 				)}
 			</div>
 
-			{/* Field editor dialog */}
 			<FieldEditor
 				open={fieldEditorOpen}
 				onOpenChange={setFieldEditorOpen}
@@ -782,7 +758,7 @@ function SystemFieldRow({ field }: { field: SystemFieldInfo }) {
 	const { t } = useLingui();
 	return (
 		<div className="flex items-center px-4 py-2 opacity-75">
-			<div className="w-8" /> {/* Spacer for alignment with draggable fields */}
+			<div className="w-8" />
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center space-x-2">
 					<span className="font-medium text-sm">{t(field.label)}</span>

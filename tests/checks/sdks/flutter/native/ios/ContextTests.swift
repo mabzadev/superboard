@@ -13,8 +13,6 @@ final class ContextTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - Basic get/set
-
     func testIdentifierStartsNil() {
         XCTAssertNil(Context.identifier)
     }
@@ -41,8 +39,6 @@ final class ContextTests: XCTestCase {
         XCTAssertEqual(Context.pushToken, "abc-token")
     }
 
-    // MARK: - Reset
-
     func testResetClearsAllProperties() {
         Context.identifier = "user-123"
         Context.attributes = ["key": "value"]
@@ -56,8 +52,6 @@ final class ContextTests: XCTestCase {
         XCTAssertNil(Context.userAgent)
         XCTAssertNil(Context.pushToken)
     }
-
-    // MARK: - Concurrent access
 
     func testConcurrentReadWriteDoesNotCrash() {
         let iterations = 1000

@@ -1,41 +1,3 @@
-/**
- * Mock atproto PDS for tests.
- *
- * Implements just enough of `com.atproto.repo.{getRecord,putRecord,listRecords,applyWrites}`
- * to drive `PublishingClient`-shaped tests without booting a real PDS or
- * going through OAuth.
- *
- * State is held in-memory keyed by AT URI (`at://<did>/<collection>/<rkey>`).
- * Test helpers expose the underlying record map so individual tests can seed
- * existing records, assert what was written, or verify call counts.
- *
- * Returns realistic atproto error payloads (`RecordNotFound`,
- * `InvalidRequest`, `RepoMismatch`) so the publish flow's error handling --
- * which keys off `ClientResponseError.error === "RecordNotFound"` -- runs
- * the same paths a real PDS would trigger.
- *
- * What this mock does NOT model:
- *
- *   - Atproto MST signing or repo commit chain.
- *   - DPoP or OAuth token validation.
- *   - Lexicon-level record validation. (We don't run `mainSchema.safeParse`
- *     against `validate: true` requests; tests that need that should hit a
- *     real PDS.)
- *
- * What it DOES enforce:
- *
- *   - The `repo` field on every write must match the mock's DID. A real PDS
- *     ties auth to repo; ours has no auth, so we cross-check that callers
- *     are writing where they think they are.
- *   - rkey must match atproto's record-key alphabet (`[a-zA-Z0-9_~.:-]+`).
- *     Used to verify that the registry CLI never sends rkeys that a real
- *     PDS would reject.
- *   - CIDs are derived from the record bytes so an overwrite with identical
- *     bytes returns an identical CID (matching real PDS behaviour). Tests
- *     that want to detect "did this actually rewrite the record?" should
- *     compare bytes, not CIDs.
- */
-
 import { createHash } from "node:crypto";
 
 import type { FetchHandlerObject } from "@atcute/client";
@@ -53,19 +15,11 @@ interface MockPdsCall {
 }
 
 export interface MockPdsOptions {
-	/**
-	 * The DID this mock pretends to host. Defaults to a fixed test DID; tests
-	 * that need a different one can override.
-	 */
 	did?: `did:${string}:${string}`;
 }
 
 const RKEY_RE = /^[a-zA-Z0-9._~:-]+$/;
 
-/**
- * In-memory mock PDS implementing the `FetchHandlerObject` contract that
- * `PublishingClient.fromHandler` accepts.
- */
 export class MockPds implements FetchHandlerObject {
 	readonly did: `did:${string}:${string}`;
 	readonly records = new Map<string, StoredRecord>();
@@ -99,7 +53,6 @@ export class MockPds implements FetchHandlerObject {
 		}
 	}
 
-	/** Pre-seed a record under this DID. Helper for tests. */
 	seedRecord(collection: string, rkey: string, value: unknown): StoredRecord {
 		const uri = `at://${this.did}/${collection}/${rkey}`;
 		const stored: StoredRecord = {
@@ -111,10 +64,6 @@ export class MockPds implements FetchHandlerObject {
 		return stored;
 	}
 
-	/**
-	 * Returns calls matching the given XRPC method name, in order. Useful for
-	 * asserting that the publish flow made the expected XRPC sequence.
-	 */
 	callsTo(nsid: string): MockPdsCall[] {
 		return this.calls.filter((c) => c.pathname.startsWith(`/xrpc/${nsid}`));
 	}
@@ -164,8 +113,6 @@ export class MockPds implements FetchHandlerObject {
 		const guard = this.#validateWriteTarget(input.repo, input.collection, input.rkey);
 		if (guard) return guard;
 		const uri = `at://${input.repo}/${input.collection}/${input.rkey}`;
-		// swapRecord is atproto's CID-based CAS precondition. Enforce it so
-		// tests can exercise the stale-write race a real PDS would catch.
 		if (input.swapRecord !== undefined) {
 			const current = this.records.get(uri);
 			const currentCid = current?.cid ?? "";
@@ -225,23 +172,6 @@ export class MockPds implements FetchHandlerObject {
 			});
 		}
 
-		// Validate every operation up front; either all-or-nothing, like a real
-		// applyWrites would be (atomic commit). Validation includes:
-		//   - rkey present
-		//   - rkey shape and repo match
-		//   - create ops must not collide with an existing record
-		//   - update ops must target an existing record
-		//
-		// CAVEAT: this mock evaluates create/update existence against the
-		// pre-batch state. Whether a real PDS allows within-batch
-		// dependencies (e.g. `create A; update A` in one applyWrites) is
-		// not crisply documented in the atproto spec, and behaviour may
-		// vary between PDS implementations. The publish flow doesn't
-		// depend on within-batch dependencies (profile and release have
-		// different rkeys), so the divergence (if any) doesn't affect
-		// coverage today. If you change the publish flow to issue a
-		// dependent batch, validate the assumption against an actual PDS
-		// before relying on it.
 		for (const op of input.writes ?? []) {
 			if (!op.rkey) {
 				return jsonResponse(400, {
@@ -266,7 +196,6 @@ export class MockPds implements FetchHandlerObject {
 			}
 		}
 
-		// Apply atomically: collect results, then commit.
 		const results: Array<Record<string, unknown>> = [];
 		for (const op of input.writes ?? []) {
 			const uri = `at://${input.repo}/${op.collection}/${op.rkey}`;
@@ -304,12 +233,6 @@ export class MockPds implements FetchHandlerObject {
 		return jsonResponse(200, { results });
 	}
 
-	/**
-	 * Cross-check that every write targets this mock's repo and that the rkey
-	 * matches atproto's record-key alphabet. Real PDSes enforce both; without
-	 * these guards a test could write malformed records that a real PDS would
-	 * have rejected.
-	 */
 	#validateWriteTarget(repo: string, collection: string, rkey: string): Response | null {
 		if (repo !== this.did) {
 			return jsonResponse(400, {
@@ -340,12 +263,6 @@ function jsonResponse(status: number, body: unknown): Response {
 	});
 }
 
-/**
- * Mock CID derivation: sha256 of the JSON-stringified value, prefixed with `b`
- * (base32 multibase) and shaped to look like a CIDv1. Crucially, identical
- * record values produce identical CIDs -- matching real PDS behaviour where
- * the CID is content-addressed.
- */
 function cidOf(value: unknown): string {
 	const hash = createHash("sha256")
 		.update(JSON.stringify(value ?? null))
@@ -372,6 +289,5 @@ async function readJsonBody(body: BodyInit | null | undefined): Promise<unknown>
 			return text;
 		}
 	}
-	// Streams, FormData, Blob, etc. -- not used in our tests.
 	return undefined;
 }

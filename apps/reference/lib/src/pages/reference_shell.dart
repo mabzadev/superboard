@@ -418,8 +418,6 @@ class _ReferenceFeaturePageState extends State<ReferenceFeaturePage> {
               SizedBox(
                 height: 640,
                 child: widget.feature.id == ReferenceFeatureId.paywall
-                    // The reference keeps this released widget covered until
-                    // its coordinated Flow replacement is published.
                     // ignore: deprecated_member_use
                     ? SuperBoardPaywall(
                         key: ValueKey(

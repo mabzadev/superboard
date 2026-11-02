@@ -7,9 +7,6 @@ import {
 	registryLabelerPolicyKey,
 } from "../../../../packages/registry-client/src/discovery/index.js";
 
-/**
- * Builds a fetch stub that records every call and returns canned responses.
- */
 function buildFetchStub(responses: Record<string, { status: number; body: unknown }>): {
 	fetch: typeof fetch;
 	calls: Array<{ url: string; init: RequestInit | undefined }>;
@@ -36,9 +33,6 @@ function buildFetchStub(responses: Record<string, { status: number; body: unknow
 
 describe("DiscoveryClient", () => {
 	const aggregator = "https://aggregator.test";
-	// atcute validates the response envelope; `cid` must be a real DASL CID
-	// (`/^baf[ky]rei[a-z2-7]{52}$/`, 59 chars). Content is irrelevant to these
-	// tests — only the shape is.
 	const CID = `bafyrei${"a".repeat(52)}`;
 
 	it("hits the searchPackages XRPC endpoint with the right query string", async () => {
@@ -313,11 +307,6 @@ describe("DiscoveryClient", () => {
 			expect(result.profile).not.toBeNull();
 			expect(result.profile?.name).toBe("Gallery");
 			expect(result.profile?.authors?.[0]?.name).toBe("Alice");
-			// Contract: atcute validation is non-stripping (the lexicon objects
-			// are open). Unrecognised keys are NOT removed — they pass through
-			// inert because consumers only read the typed lexicon fields. This
-			// asserts the boundary's actual behaviour so a future change to it
-			// is a deliberate, visible decision.
 			expect(result.profile).toHaveProperty("somethingTheAggregatorMadeUp");
 		});
 
@@ -331,7 +320,6 @@ describe("DiscoveryClient", () => {
 						did: "did:plc:abc",
 						slug: "x",
 						indexedAt: "2026-04-01T00:00:00Z",
-						// Missing every required field (id/type/license/authors/security).
 						profile: { name: "Looks fine but isn't" },
 					},
 				},
@@ -342,10 +330,6 @@ describe("DiscoveryClient", () => {
 		});
 
 		it("returns null for a non-conforming release record (fail closed)", async () => {
-			// The envelope is valid and `release` is an object (lexicon
-			// `unknown` ≈ open object — a non-object is rejected earlier by
-			// envelope validation), but the record itself is missing every
-			// required package-release field, so `validateRelease` → null.
 			const { fetch } = buildFetchStub({
 				"/xrpc/com.emdashcms.experimental.aggregator.getLatestRelease": {
 					status: 200,
@@ -366,9 +350,6 @@ describe("DiscoveryClient", () => {
 		});
 
 		it("does NOT sanitise URL schemes — a javascript: author url passes lexicon validation", async () => {
-			// Documents the boundary's contract: it validates *structure*, not
-			// URL safety (atproto's `uri` format permits any scheme). Consumers
-			// rendering these URLs MUST apply their own scheme allow-list.
 			const { fetch } = buildFetchStub({
 				"/xrpc/com.emdashcms.experimental.aggregator.getPackage": {
 					status: 200,

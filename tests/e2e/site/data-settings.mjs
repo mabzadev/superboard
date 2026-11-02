@@ -103,7 +103,6 @@ try {
 				for (const [key, value] of Object.entries(updates))
 					await expect(page.locator(`#setting-${key}`)).toHaveValue(String(value));
 			}
-			// Plugin health and lifecycle are owned by the central Plugins page.
 			await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 			await expect(
 				page.getByRole("link", {

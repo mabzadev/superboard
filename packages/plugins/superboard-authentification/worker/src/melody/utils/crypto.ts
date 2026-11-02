@@ -103,8 +103,6 @@ export const verifyTotp = async (secret: string, otp: string): Promise<number | 
 	return null;
 };
 
-// Async bcryptjs variants yield between rounds instead of blocking the isolate
-// for the whole cost-12 computation. Cost and algorithm stay unchanged.
 export const bcryptText = async (text: string): Promise<string> => {
 	return bcrypt.hash(text, 12);
 };

@@ -1,14 +1,3 @@
-/**
- * Single taxonomy definition endpoint
- *
- * GET    /_emdash/api/taxonomies/:name[?locale=xx]
- * PUT    /_emdash/api/taxonomies/:name[?locale=xx]
- * DELETE /_emdash/api/taxonomies/:name
- *
- * GET and PUT address one locale's definition. DELETE takes no locale — it
- * removes the taxonomy outright, terms and assignments included.
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -23,9 +12,6 @@ import { localeFilterQuery, updateTaxonomyDefBody } from "#api/schemas.js";
 
 export const prerender = false;
 
-/**
- * Get a single taxonomy definition
- */
 export const GET: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { name } = params;
@@ -48,9 +34,6 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
 	}
 };
 
-/**
- * Update a taxonomy definition
- */
 export const PUT: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { name } = params;
@@ -79,9 +62,6 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 	}
 };
 
-/**
- * Delete a taxonomy, its terms, and their content assignments
- */
 export const DELETE: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 	const { name } = params;

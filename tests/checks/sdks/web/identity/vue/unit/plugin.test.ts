@@ -20,7 +20,6 @@ import { AuthProvider } from "../../../../../../../sdks/web/identity/vue/src/plu
 import * as utils from "../../../../../../../sdks/web/identity/vue/src/utils";
 import { identityClaims } from "../../../../../../fixtures/identity/claims.js";
 
-// Mock the external modules
 vi.mock("@melody-auth/web", () => ({
 	loadCodeAndStateFromUrl: vi.fn().mockReturnValue({
 		code: "",
@@ -34,7 +33,6 @@ vi.mock("../../../../../../../sdks/web/identity/vue/src/utils", () => ({
 	loadRefreshTokenStorageFromParams: vi.fn().mockReturnValue(null),
 }));
 
-// Provide default return values for mocked functions
 vi.mock("@melody-auth/shared", () => ({
 	checkStorage: vi.fn().mockReturnValue({
 		storedRefreshToken: null,
@@ -60,13 +58,10 @@ describe("AuthProvider Plugin", () => {
 	};
 
 	beforeEach(() => {
-		// Create a fresh Vue app for each test
 		app = createApp({ template: "<div>Test App</div>" });
 
-		// Reset mocks
 		vi.clearAllMocks();
 
-		// Reset default mock return values
 		shared.checkStorage.mockReturnValue({
 			storedRefreshToken: null,
 			storedAccount: null,
@@ -80,10 +75,8 @@ describe("AuthProvider Plugin", () => {
 		});
 		shared.loadRefreshTokenStorageFromParams.mockReturnValue(null);
 
-		// Mock window object if needed
 		global.window = Object.create(window);
 
-		// Capture the mounted hook when mixin is called
 		capturedMountedHook = null;
 		app.mixin = vi.fn().mockImplementation((mixin) => {
 			if (mixin && typeof mixin.mounted === "function") {
@@ -99,20 +92,16 @@ describe("AuthProvider Plugin", () => {
 	});
 
 	it("should install the plugin and provide the auth state", () => {
-		// Create a variable to capture the provided state
 		let capturedState = null;
 
-		// Override app.provide to capture the state
 		app.provide = (key, value) => {
 			if (key === melodyAuthInjectionKey) {
 				capturedState = value;
 			}
 		};
 
-		// Install the plugin
 		app.use(AuthProvider, mockConfig);
 
-		// Verify the state was provided
 		expect(capturedState).not.toBeNull();
 		expect(capturedState?.config).toEqual(mockConfig);
 		expect(capturedState?.isAuthenticating).toBe(true);
@@ -123,7 +112,7 @@ describe("AuthProvider Plugin", () => {
 		const mockRefreshToken = JSON.stringify({
 			refreshToken: "test-refresh-token",
 			expiresIn: 3600,
-			expiresOn: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+			expiresOn: Math.floor(Date.now() / 1000) + 3600,
 		});
 
 		const mockedIdToken = JSON.stringify({
@@ -142,23 +131,18 @@ describe("AuthProvider Plugin", () => {
 			hasValidAccessToken: false,
 		});
 
-		// Create a variable to capture the provided state
 		let capturedState = null;
 
-		// Override app.provide to capture the state
 		app.provide = (key, value) => {
 			if (key === melodyAuthInjectionKey) {
 				capturedState = value;
 			}
 		};
 
-		// Install the plugin
 		app.use(AuthProvider, mockConfig);
 
-		// Check that storage was checked
 		expect(shared.checkStorage).toHaveBeenCalledWith(mockConfig.storage);
 
-		// Check that the state was initialized correctly
 		expect(capturedState).not.toBeNull();
 		expect(capturedState?.refreshTokenStorage).toEqual(JSON.parse(mockRefreshToken));
 		expect(capturedState?.account).toStrictEqual(
@@ -171,7 +155,7 @@ describe("AuthProvider Plugin", () => {
 		const mockRefreshToken = JSON.stringify({
 			refreshToken: "test-refresh-token",
 			expiresIn: 3600,
-			expiresOn: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago (expired)
+			expiresOn: Math.floor(Date.now() / 1000) - 3600,
 		});
 
 		shared.checkStorage.mockReturnValue({
@@ -185,23 +169,18 @@ describe("AuthProvider Plugin", () => {
 			hasValidAccessToken: false,
 		});
 
-		// Create a variable to capture the provided state
 		let capturedState = null;
 
-		// Override app.provide to capture the state
 		app.provide = (key, value) => {
 			if (key === melodyAuthInjectionKey) {
 				capturedState = value;
 			}
 		};
 
-		// Install the plugin
 		app.use(AuthProvider, mockConfig);
 
-		// Check that storage was checked
 		expect(shared.checkStorage).toHaveBeenCalledWith(mockConfig.storage);
 
-		// Check that the state was initialized correctly
 		expect(capturedState).not.toBeNull();
 		expect(capturedState?.refreshTokenStorage).toBeNull();
 		expect(capturedState?.account).toBeNull();
@@ -209,19 +188,15 @@ describe("AuthProvider Plugin", () => {
 	});
 
 	it("should add a mixin with mounted hook", () => {
-		// Install the plugin
 		app.use(AuthProvider, mockConfig);
 
-		// Check that the plugin called mixin
 		expect(app.mixin).toHaveBeenCalled();
 		expect(capturedMountedHook).toBeInstanceOf(Function);
 	});
 
 	it("should acquire token if refresh token exists but no access token", async () => {
-		// Create a variable to capture the provided state
 		let capturedState = null;
 
-		// Override app.provide to capture the state
 		app.provide = (key, value) => {
 			if (key === melodyAuthInjectionKey) {
 				capturedState = value;
@@ -229,42 +204,32 @@ describe("AuthProvider Plugin", () => {
 			return app;
 		};
 
-		// Install the plugin
 		app.use(AuthProvider, mockConfig);
 
-		// Ensure we have a state and mounted hook
 		expect(capturedState).not.toBeNull();
 		expect(capturedMountedHook).toBeInstanceOf(Function);
 
-		// Modify the state to simulate having a refresh token but no access token
 		if (capturedState) {
 			capturedState.refreshTokenStorage = { refreshToken: "test-refresh-token" };
 			capturedState.accessTokenStorage = null;
 			capturedState.checkedStorage = true;
 		}
 
-		// Mock getParams to return empty object (no code)
 		shared.getParams.mockReturnValue({});
 
-		// Create a component instance that can access the state
 		const componentInstance = {
 			$options: {},
-			// In Vue 3, inject is typically accessed through the component instance
 			_: { inject: () => capturedState },
 		};
 
-		// Call the mounted hook manually
 		capturedMountedHook.call(componentInstance);
 
-		// Check that acquireToken was called with our state
 		expect(utils.acquireToken).toHaveBeenCalledWith(capturedState);
 	});
 
 	it("should handle token exchange if code is present in URL", async () => {
-		// Create a variable to capture the provided state
 		let capturedState = null;
 
-		// Override app.provide to capture the state
 		app.provide = (key, value) => {
 			if (key === melodyAuthInjectionKey) {
 				capturedState = value;
@@ -272,42 +237,33 @@ describe("AuthProvider Plugin", () => {
 			return app;
 		};
 
-		// Install the plugin
 		app.use(AuthProvider, mockConfig);
 
-		// Ensure we have a state and mounted hook
 		expect(capturedState).not.toBeNull();
 		expect(capturedMountedHook).toBeInstanceOf(Function);
 
-		// Modify the state to simulate having checked storage but no access token
 		if (capturedState) {
 			capturedState.checkedStorage = true;
 			capturedState.accessTokenStorage = null;
 		}
 
-		// Mock getParams to return code
 		shared.getParams.mockReturnValue({
 			code: "test-auth-code",
 			locale: "en-US",
 		});
 
-		// Mock loadCodeAndStateFromUrl
 		webModule.loadCodeAndStateFromUrl.mockReturnValue({
 			code: "test-auth-code",
 			state: "test-request-state",
 		});
 
-		// Create a component instance that can access the state
 		const componentInstance = {
 			$options: {},
-			// In Vue 3, inject is typically accessed through the component instance
 			_: { inject: () => capturedState },
 		};
 
-		// Call the mounted hook manually
 		capturedMountedHook.call(componentInstance);
 
-		// Check that handleTokenExchangeByAuthCode was called with the correct parameters
 		expect(utils.handleTokenExchangeByAuthCode).toHaveBeenCalledWith(
 			"test-auth-code",
 			"test-request-state",
@@ -317,10 +273,8 @@ describe("AuthProvider Plugin", () => {
 	});
 
 	it("should not do anything if access token already exists", async () => {
-		// Create a variable to capture the provided state
 		let capturedState = null;
 
-		// Override app.provide to capture the state
 		app.provide = (key, value) => {
 			if (key === melodyAuthInjectionKey) {
 				capturedState = value;
@@ -328,41 +282,31 @@ describe("AuthProvider Plugin", () => {
 			return app;
 		};
 
-		// Install the plugin
 		app.use(AuthProvider, mockConfig);
 
-		// Ensure we have a state and mounted hook
 		expect(capturedState).not.toBeNull();
 		expect(capturedMountedHook).toBeInstanceOf(Function);
 
-		// Modify the state to simulate having an access token
 		if (capturedState) {
 			capturedState.accessTokenStorage = { accessToken: "test-access-token" };
 		}
 
-		// Create a component instance that can access the state
 		const componentInstance = {
 			$options: {},
-			// In Vue 3, inject is typically accessed through the component instance
 			_: { inject: () => capturedState },
 		};
 
-		// Call the mounted hook manually
 		capturedMountedHook.call(componentInstance);
 
-		// Check that neither acquireToken nor handleTokenExchangeByAuthCode were called
 		expect(utils.acquireToken).not.toHaveBeenCalled();
 		expect(utils.handleTokenExchangeByAuthCode).not.toHaveBeenCalled();
 	});
 
 	it("should handle the case when window is undefined (SSR)", () => {
-		// Mock window as undefined to simulate SSR
 		global.window = undefined as any;
 
-		// Install the plugin
 		app.use(AuthProvider, mockConfig);
 
-		// Check that the plugin doesn't crash
 		expect(shared.checkStorage).not.toHaveBeenCalled();
 	});
 });

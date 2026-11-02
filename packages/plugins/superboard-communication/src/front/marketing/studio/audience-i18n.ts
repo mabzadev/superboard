@@ -1,4 +1,3 @@
-/** French copy for Audience tags, fields, imports, segments, forms and opt-in screens. */
 const fr: Record<string, string> = {
 	"A selected list uses double opt-in: new contacts will receive a confirmation email.":
 		"Une liste choisie utilise le double opt-in : les nouveaux contacts recevront un e-mail de confirmation.",

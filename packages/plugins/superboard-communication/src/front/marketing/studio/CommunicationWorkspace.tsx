@@ -8,10 +8,6 @@ import EmailItemsPage, { type EmailFilter } from "./EmailItemsPage.js";
 import InAppItemsPage from "./InAppItemsPage.js";
 import { useWorkspaceTab, WorkspaceNavigation } from "./workspace-navigation.js";
 
-/**
- * One Communication workspace behind every existing route. Each route only
- * chooses the tab that opens first; `?tab=` switches sections in place.
- */
 export default function CommunicationWorkspace({
 	initialTab = "emails",
 	emailFilter = "all",

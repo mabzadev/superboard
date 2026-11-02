@@ -1,16 +1,3 @@
-/**
- * BlockMenu component tests.
- *
- * Tests the floating block-level context menu that appears when clicking
- * a drag handle. Covers the main menu (Turn into, Duplicate, Delete),
- * the "Turn into" submenu with block transforms, Escape to close,
- * and click-outside dismissal.
- *
- * BlockMenu is a standalone component that takes an editor instance,
- * an anchor element, and open/close callbacks. It renders through
- * Kumo's dropdown primitive, anchored to the selected block.
- */
-
 import type { Editor } from "@tiptap/react";
 import { userEvent } from "@vitest/browser/context";
 import * as React from "react";
@@ -19,10 +6,6 @@ import { describe, it, expect, vi } from "vitest";
 import { BlockMenu } from "../../../../../packages/admin/src/components/editor/BlockMenu";
 import { PortableTextEditor } from "../../../../../packages/admin/src/components/PortableTextEditor";
 import { render } from "../utils/render";
-
-// ---------------------------------------------------------------------------
-// Mocks — same as other editor tests
-// ---------------------------------------------------------------------------
 
 vi.mock("../../../../../packages/admin/src/components/MediaPickerModal", () => ({
 	MediaPickerModal: () => null,
@@ -94,10 +77,6 @@ vi.mock("../../../../../packages/admin/src/components/editor/PluginBlockNode", a
 	};
 });
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 const defaultValue = [
 	{
 		_type: "block" as const,
@@ -113,7 +92,6 @@ const defaultValue = [
 	},
 ];
 
-/** Render the full editor to get a real TipTap Editor instance */
 async function getEditor() {
 	let editorInstance: Editor | null = null;
 
@@ -138,10 +116,6 @@ async function getEditor() {
 	return { editor: editorInstance!, pm };
 }
 
-/**
- * Wrapper component that renders BlockMenu with an anchor element.
- * This is needed because BlockMenu uses useFloating which needs a real DOM element.
- */
 function BlockMenuTestWrapper({
 	editor,
 	isOpen,
@@ -193,11 +167,9 @@ function ClosingBlockMenuTestWrapper({
 	);
 }
 
-/** Get the block menu portal element */
 function getBlockMenu(): HTMLElement | null {
 	const portals = document.querySelectorAll("body > div");
 	for (const el of portals) {
-		// The block menu has "Turn into", "Duplicate", "Delete" buttons
 		if (el.textContent?.includes("Turn into") || el.textContent?.includes("Back")) {
 			return el as HTMLElement;
 		}
@@ -205,20 +177,14 @@ function getBlockMenu(): HTMLElement | null {
 	return null;
 }
 
-/** Get all actionable items in the menu */
 function getMenuItems(menu: HTMLElement): HTMLElement[] {
 	return [...menu.querySelectorAll<HTMLElement>('[role="menuitem"]')];
 }
 
-/** Find a menu item by its text content */
 function findButtonByText(menu: HTMLElement, text: string): HTMLElement | null {
 	const items = getMenuItems(menu);
 	return items.find((item) => item.textContent?.includes(text)) ?? null;
 }
-
-// =============================================================================
-// BlockMenu — Main Menu
-// =============================================================================
 
 describe("BlockMenu", () => {
 	it("renders nothing when isOpen is false", async () => {
@@ -276,7 +242,6 @@ describe("BlockMenu", () => {
 		const menu = getBlockMenu()!;
 		findButtonByText(menu, "Turn into")!.click();
 
-		// Should show transform options
 		await vi.waitFor(() => {
 			const updatedMenu = getBlockMenu()!;
 			expect(findButtonByText(updatedMenu, "Back")).toBeTruthy();
@@ -324,7 +289,6 @@ describe("BlockMenu", () => {
 		const { editor, pm } = await getEditor();
 		const onClose = vi.fn();
 
-		// Focus editor on first paragraph
 		editor.commands.focus("start");
 
 		await render(<BlockMenuTestWrapper editor={editor} isOpen={true} onClose={onClose} />);
@@ -333,7 +297,6 @@ describe("BlockMenu", () => {
 			expect(getBlockMenu()).toBeTruthy();
 		});
 
-		// Open transforms
 		findButtonByText(getBlockMenu()!, "Turn into")!.click();
 
 		await vi.waitFor(() => {
@@ -342,7 +305,6 @@ describe("BlockMenu", () => {
 
 		findButtonByText(getBlockMenu()!, "Heading 1")!.click();
 
-		// Should close menu and transform block
 		expect(onClose).toHaveBeenCalled();
 
 		await vi.waitFor(() => {
@@ -435,10 +397,8 @@ describe("BlockMenu", () => {
 		const { editor, pm } = await getEditor();
 		const onClose = vi.fn();
 
-		// Select the first block as the drag handle does before opening the menu
 		editor.commands.setNodeSelection(0);
 
-		// Count initial paragraphs
 		const initialParagraphs = pm.querySelectorAll("p").length;
 
 		await render(<BlockMenuTestWrapper editor={editor} isOpen={true} onClose={onClose} />);
@@ -451,7 +411,6 @@ describe("BlockMenu", () => {
 
 		expect(onClose).toHaveBeenCalled();
 
-		// Should have one fewer paragraph
 		await vi.waitFor(() => {
 			const newParagraphs = pm.querySelectorAll("p").length;
 			expect(newParagraphs).toBeLessThan(initialParagraphs);
@@ -492,7 +451,6 @@ describe("BlockMenu", () => {
 		const { editor, pm } = await getEditor();
 		const onClose = vi.fn();
 
-		// Select the first block as the drag handle does before opening the menu
 		editor.commands.setNodeSelection(0);
 
 		const initialParagraphs = pm.querySelectorAll("p").length;
@@ -588,21 +546,16 @@ describe("BlockMenu", () => {
 			expect(getBlockMenu()).toBeTruthy();
 		});
 
-		// Open transforms
 		findButtonByText(getBlockMenu()!, "Turn into")!.click();
 
 		await vi.waitFor(() => {
 			expect(findButtonByText(getBlockMenu()!, "Back")).toBeTruthy();
 		});
 
-		// Escape should close submenu, not the whole menu
 		await userEvent.keyboard("{Escape}");
 
-		// onClose should NOT have been called — submenu should just close
-		// (The component resets showTransforms on Escape in submenu)
 		await vi.waitFor(() => {
 			const menu = getBlockMenu()!;
-			// Should be back to main menu
 			expect(findButtonByText(menu, "Turn into")).toBeTruthy();
 		});
 	});

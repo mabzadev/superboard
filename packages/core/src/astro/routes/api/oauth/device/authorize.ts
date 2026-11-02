@@ -1,10 +1,3 @@
-/**
- * POST /_emdash/api/oauth/device/authorize
- *
- * User submits the user code after logging in via the browser.
- * This endpoint requires authentication (the user must be logged in).
- */
-
 /// <reference types="emdash/locals" />
 
 import type { APIRoute } from "astro";

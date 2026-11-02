@@ -1,10 +1,3 @@
-/**
- * Public comment endpoints
- *
- * GET  /_emdash/api/comments/:collection/:contentId - List approved comments
- * POST /_emdash/api/comments/:collection/:contentId - Submit a comment
- */
-
 import type { APIRoute } from "astro";
 
 import { apiError, apiSuccess, handleError, requireDb, unwrapResult } from "#api/error.js";
@@ -23,9 +16,6 @@ import type { CollectionCommentSettings, ModerationDecision } from "#plugins/typ
 
 export const prerender = false;
 
-/**
- * List approved comments for a content item (public, no auth required)
- */
 export const GET: APIRoute = async ({ params, url, locals }) => {
 	const { emdash } = locals;
 	const { collection, contentId } = params;
@@ -42,7 +32,6 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
 		const cursor = url.searchParams.get("cursor") ?? undefined;
 		const threaded = url.searchParams.get("threaded") === "true";
 
-		// Check collection exists and has comments enabled
 		const collectionRow = await emdash.db
 			.selectFrom("_emdash_collections")
 			.select(["comments_enabled"])
@@ -69,9 +58,6 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
 	}
 };
 
-/**
- * Submit a comment (public, gated by anti-spam checks)
- */
 export const POST: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 	const { collection, contentId } = params;
@@ -84,11 +70,9 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 	if (dbErr) return dbErr;
 
 	try {
-		// Parse and validate input
 		const body = await parseBody(request, createCommentBody);
 		if (isParseError(body)) return body;
 
-		// Check collection exists and has comments enabled
 		const collectionRow = await emdash.db
 			.selectFrom("_emdash_collections")
 			.select([
@@ -108,7 +92,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			return apiError("COMMENTS_DISABLED", "Comments are not enabled for this collection", 403);
 		}
 
-		// Verify the content item exists, is published, and not soft-deleted
 		validateIdentifier(collection, "collection");
 		const contentRow = await emdash.db
 			.selectFrom(`ec_${collection}` as never)
@@ -122,7 +105,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			return apiError("NOT_FOUND", "Content not found", 404);
 		}
 
-		// Check if comments are closed (published_at + closed_after_days)
 		if (collectionRow.comments_closed_after_days > 0) {
 			const publishedAt = (contentRow as { published_at: string | null }).published_at;
 			if (publishedAt) {
@@ -134,28 +116,16 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			}
 		}
 
-		// Anti-spam: Honeypot — hidden field filled only by bots
 		if (body.website_url) {
-			// Silently accept — don't reveal the honeypot to bots
 			return apiSuccess({ status: "pending", message: "Comment submitted for review" });
 		}
 
-		// Anti-spam: Rate limiting
 		const meta = extractRequestMeta(request, emdash.config);
 		const { ipSalt } = await resolveSecretsCached(emdash.db);
 		let ipHash: string;
 		if (meta.ip) {
 			ipHash = await hashIp(meta.ip, ipSalt);
 		} else {
-			// No trusted IP — fail closed by bucketing all unidentifiable
-			// requests together. A larger limit reflects the shared bucket.
-			//
-			// Self-hosted operators behind a reverse proxy should set
-			// `trustedProxyHeaders` in the EmDash config (or the
-			// EMDASH_TRUSTED_PROXY_HEADERS env var) so this path isn't hit
-			// for legitimate traffic. UA-hashing was previously used here
-			// but was trivially rotatable — the shared bucket is stricter
-			// and forces operators toward a real fix.
 			ipHash = "unknown";
 		}
 		const unknownBucketLimit = ipHash === "unknown" ? 20 : undefined;
@@ -164,10 +134,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			return apiError("RATE_LIMITED", "Too many comments. Please try again later.", 429);
 		}
 
-		// Anti-spam: Turnstile — enforced only when the operator configured a
-		// secret key. Runs after the free checks (honeypot, rate limit) so
-		// obvious spam never triggers a siteverify subrequest. Fails closed:
-		// missing token, failed verification, and siteverify errors all reject.
 		const turnstileSecretKey = getTurnstileSecretKey();
 		if (turnstileSecretKey) {
 			const verified = await verifyTurnstileToken(body.turnstileToken, turnstileSecretKey, meta.ip);
@@ -176,7 +142,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			}
 		}
 
-		// Build collection settings
 		const collectionSettings: CollectionCommentSettings = {
 			commentsEnabled: collectionRow.comments_enabled === 1,
 			commentsModeration:
@@ -185,7 +150,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			commentsAutoApproveUsers: collectionRow.comments_auto_approve_users === 1,
 		};
 
-		// Determine author fields — authenticated user overrides form input
 		let authorName = body.authorName;
 		let authorEmail = body.authorEmail;
 		let authorUserId: string | null = null;
@@ -196,8 +160,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			authorUserId = user.id;
 		}
 
-		// Validate parent exists and belongs to the same content.
-		// Enforce 1-level nesting: if the parent is itself a reply, attach to its root.
 		let resolvedParentId = body.parentId ?? null;
 		if (body.parentId) {
 			const repo = new CommentRepository(emdash.db);
@@ -208,11 +170,9 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			if (parent.collection !== collection || parent.contentId !== contentId) {
 				return apiError("VALIDATION_ERROR", "Parent comment belongs to different content", 400);
 			}
-			// Flatten: if parent is a reply, use its parent (the root) instead
 			resolvedParentId = parent.parentId ?? parent.id;
 		}
 
-		// Wire the comment service to the real hook pipeline
 		const hookRunner: CommentHookRunner = {
 			async runBeforeCreate(event) {
 				return emdash.hooks.runCommentBeforeCreate(event);
@@ -248,7 +208,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			},
 		};
 
-		// Build content info for afterCreate hooks (e.g. email notifications)
 		const typedContent = contentRow as {
 			id: string;
 			slug: string;
@@ -297,9 +256,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			return apiError("COMMENT_REJECTED", "Comment was rejected", 403);
 		}
 
-		// Send notification to content author (awaited so it completes before
-		// the response is sent — required for Cloudflare Workers where the
-		// isolate terminates after the response).
 		if (result.comment.status === "approved" && emdash.email && contentAuthor) {
 			try {
 				const adminBaseUrl = await getSiteBaseUrl(emdash.db, request, emdash.config);

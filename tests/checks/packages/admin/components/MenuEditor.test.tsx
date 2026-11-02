@@ -111,7 +111,6 @@ describe("MenuEditor", () => {
 	it("displays menu items in order", async () => {
 		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
 
-		// Use exact: true to avoid matching "/about" which contains "About"
 		await expect.element(screen.getByText("Home")).toBeInTheDocument();
 		await expect.element(screen.getByText("About", { exact: true })).toBeInTheDocument();
 	});
@@ -144,11 +143,9 @@ describe("MenuEditor", () => {
 
 		await expect.element(screen.getByText("Home")).toBeInTheDocument();
 
-		// Delete buttons have aria-label="Delete"
 		const deleteBtn = screen.getByRole("button", { name: "Delete" });
 		await deleteBtn.first().click();
 
-		// No confirmation dialog should appear
 		expect(screen.getByText("Are you sure").query()).toBeNull();
 		expect(screen.getByText("Confirm").query()).toBeNull();
 	});
@@ -159,7 +156,6 @@ describe("MenuEditor", () => {
 		await expect.element(screen.getByText("Home")).toBeInTheDocument();
 
 		const disabledButtons = document.querySelectorAll("button[disabled]");
-		// At least 2: first item's up + last item's down
 		expect(disabledButtons.length).toBeGreaterThanOrEqual(2);
 	});
 
@@ -198,7 +194,6 @@ describe("MenuEditor", () => {
 		const urlInput = screen.getByLabelText("URL");
 		await urlInput.fill("/about");
 
-		// The input should accept the value without browser validation errors
 		const inputEl = urlInput.element() as HTMLInputElement;
 		expect(inputEl.validity.valid).toBe(true);
 	});
@@ -236,11 +231,6 @@ describe("MenuEditor", () => {
 		await expect
 			.element(screen.getByRole("heading", { name: "Edit Menu Item" }))
 			.toBeInTheDocument();
-		// Use a native DOM click rather than a Playwright locator click: this
-		// env doesn't load Tailwind CSS, so the Dialog's `fixed` positioning
-		// class has no effect and Base UI's outside-click-capture layer (styled
-		// via inline `position: fixed`) stacks on top per normal paint order,
-		// failing Playwright's pointer-event hit test on the trigger.
 		screen.getByRole("combobox", { name: "Parent" }).element().click();
 
 		await expect.element(screen.getByRole("option", { name: "About" })).toBeInTheDocument();
@@ -275,8 +265,6 @@ describe("MenuEditor", () => {
 		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
 
 		await expect.element(screen.getByText("Home")).toBeInTheDocument();
-		// Home is the first row; editing it must exclude its own child (Services)
-		// from the Parent options, not just itself.
 		await screen.getByRole("button", { name: "Edit" }).first().click();
 
 		await expect
@@ -352,8 +340,6 @@ describe("MenuEditor", () => {
 		const screen = await render(<MenuEditor />, { wrapper: Wrapper });
 
 		await expect.element(screen.getByText("Services", { exact: true })).toBeInTheDocument();
-		// "Services" is Home's only child, so both its up and down buttons are
-		// disabled even though it isn't the first/last item in the flat list.
 		const servicesRow = screen
 			.getByText("Services", { exact: true })
 			.element()

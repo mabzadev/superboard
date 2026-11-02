@@ -1,13 +1,3 @@
-/**
- * MCP menu tools — comprehensive integration tests.
- *
- * Covers:
- *   - menu_list
- *   - menu_get
- *
- * Plus regression for bug #15 (no menu mutation tools — gap).
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { ulid } from "ulidx";
@@ -71,10 +61,6 @@ async function seedMenu(
 	return menuId;
 }
 
-// ---------------------------------------------------------------------------
-// menu_list
-// ---------------------------------------------------------------------------
-
 describe("menu_list", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -114,10 +100,6 @@ describe("menu_list", () => {
 	});
 
 	it("itemCount reflects per-menu item count (LEFT JOIN correctness)", async () => {
-		// handleMenuList uses a single LEFT JOIN + GROUP BY for the count.
-		// A regression to INNER JOIN would drop empty menus; a regression
-		// in the count column or join key would silently report wrong
-		// numbers per menu. Seed three menus with known, distinct counts.
 		await seedMenu(db, "empty", "Empty");
 		await seedMenu(db, "single", "Single", [{ label: "Home", url: "/" }]);
 		await seedMenu(db, "triple", "Triple", [
@@ -136,8 +118,6 @@ describe("menu_list", () => {
 		expect(empty?.itemCount).toBe(0);
 		expect(single?.itemCount).toBe(1);
 		expect(triple?.itemCount).toBe(3);
-		// Empty menu must still be present — guards against an INNER JOIN
-		// regression where it would disappear.
 		expect(data.map((m) => m.name)).toContain("empty");
 	});
 
@@ -151,10 +131,6 @@ describe("menu_list", () => {
 		expect(result.isError, extractText(result)).toBeFalsy();
 	});
 });
-
-// ---------------------------------------------------------------------------
-// menu_get
-// ---------------------------------------------------------------------------
 
 describe("menu_get", () => {
 	let db: Kysely<Database>;
@@ -224,10 +200,6 @@ describe("menu_get", () => {
 		expect(result.isError, extractText(result)).toBeFalsy();
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Bug #15 / F6 / F12 — happy paths for menu mutation tools.
-// ---------------------------------------------------------------------------
 
 describe("menu mutations (bug #15 / F6 / F12)", () => {
 	let db: Kysely<Database>;
@@ -526,9 +498,7 @@ describe("menu mutations (bug #15 / F6 / F12)", () => {
 			name: "menu_set_items",
 			arguments: {
 				name: "main",
-				items: [
-					{ label: "A", type: "custom", customUrl: "/a", parentIndex: 0 }, // self-ref
-				],
+				items: [{ label: "A", type: "custom", customUrl: "/a", parentIndex: 0 }],
 			},
 		});
 		expect(result.isError).toBe(true);
@@ -552,7 +522,6 @@ describe("menu mutations (bug #15 / F6 / F12)", () => {
 			},
 		});
 
-		// Sanity: menu_get sees 3 items.
 		const before = await harness.client.callTool({
 			name: "menu_get",
 			arguments: { name: "main" },
@@ -563,14 +532,12 @@ describe("menu mutations (bug #15 / F6 / F12)", () => {
 		}>(before);
 		expect(menuBefore.items).toHaveLength(3);
 
-		// Delete.
 		const del = await harness.client.callTool({
 			name: "menu_delete",
 			arguments: { name: "main" },
 		});
 		expect(del.isError, extractText(del)).toBeFalsy();
 
-		// Items table is empty for that menu_id.
 		const orphans = await db
 			.selectFrom("_emdash_menu_items" as never)
 			.select(["id" as never])
@@ -578,7 +545,6 @@ describe("menu mutations (bug #15 / F6 / F12)", () => {
 			.execute();
 		expect(orphans).toEqual([]);
 
-		// menu_get returns NOT_FOUND.
 		const after = await harness.client.callTool({
 			name: "menu_get",
 			arguments: { name: "main" },
@@ -618,14 +584,6 @@ describe("menu mutations (bug #15 / F6 / F12)", () => {
 		expect(extractText(frMenu)).toMatch(/NOT_FOUND/);
 	});
 
-	// -------------------------------------------------------------------
-	// Multi-locale ambiguity (fail loud)
-	// -------------------------------------------------------------------
-	// Background: prior to the AMBIGUOUS_LOCALE fix, calling menu_update /
-	// menu_delete / menu_set_items on a multi-locale install without a
-	// `locale` arg silently picked an arbitrary translation. Now the
-	// handler returns a structured error and the caller has to disambiguate.
-
 	it("menu_update without locale on a multi-locale install returns AMBIGUOUS_LOCALE", async () => {
 		const translationGroup = ulid();
 		await seedMenu(db, "main", "Main", [], { locale: "en", translationGroup });
@@ -642,7 +600,6 @@ describe("menu mutations (bug #15 / F6 / F12)", () => {
 		expect(text).toMatch(/en/);
 		expect(text).toMatch(/fr-fr/);
 
-		// Both labels untouched — the ambiguous call must not have written.
 		const en = await harness.client.callTool({
 			name: "menu_get",
 			arguments: { name: "main", locale: "en" },
@@ -667,7 +624,6 @@ describe("menu mutations (bug #15 / F6 / F12)", () => {
 		expect(result.isError).toBe(true);
 		expect(extractText(result)).toMatch(/AMBIGUOUS_LOCALE/);
 
-		// Both translations must still exist.
 		const en = await harness.client.callTool({
 			name: "menu_get",
 			arguments: { name: "main", locale: "en" },
@@ -701,7 +657,6 @@ describe("menu mutations (bug #15 / F6 / F12)", () => {
 		expect(result.isError).toBe(true);
 		expect(extractText(result)).toMatch(/AMBIGUOUS_LOCALE/);
 
-		// Neither translation's items were touched — transaction rolled back.
 		const en = await harness.client.callTool({
 			name: "menu_get",
 			arguments: { name: "main", locale: "en" },

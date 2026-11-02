@@ -1,17 +1,3 @@
-/**
- * Groups consecutive Portable Text blocks with style "blockquote" into a
- * single synthetic `blockquoteGroup` node so they render as ONE
- * `<blockquote>` with a paragraph per block.
- *
- * Portable Text is flat: a multi-paragraph quote (e.g. from a WordPress
- * `core/quote` import) is stored as consecutive blocks with
- * `style: "blockquote"`. Rendering each of those as its own `<blockquote>`
- * visually splits the quote (#1884).
- *
- * Runs of a single block are left untouched, so existing single-paragraph
- * quotes render byte-for-byte as before.
- */
-
 interface TextBlockLike {
 	_type: string;
 	_key?: string;
@@ -28,7 +14,6 @@ export interface BlockquoteGroupNode {
 function isBlockquoteBlock(block: unknown): block is TextBlockLike {
 	if (typeof block !== "object" || block === null) return false;
 	const b: Partial<TextBlockLike> = block;
-	// Quote-styled list items belong to their list, not to a quote run.
 	return b._type === "block" && b.style === "blockquote" && b.listItem === undefined;
 }
 

@@ -72,8 +72,6 @@ export async function configuredGoogleProductType(
 	return product.product_type as GoogleProductType;
 }
 
-// The Apple library currently loads jsrsasign, which seeds its PRNG during
-// module initialization. Cloudflare Workers forbids random generation in the
 // global scope, so load the library lazily from inside request/queue handlers.
 function loadAppleLibrary() {
 	return import("@apple/app-store-server-library");
@@ -158,10 +156,6 @@ async function appleVerifier(
 		throw new Error("Apple App ID is required for production verification");
 	return new SignedDataVerifier(
 		appleRoots(env),
-		// The official Node package performs online certificate checks through
-		// node-fetch, which is not callable in Cloudflare Workers. Signature and
-		// certificate-chain checks remain enabled; transaction state is then
-		// confirmed against Apple's Server API below using the native fetch API.
 		false,
 		appleEnvironment,
 		app.identifier,
@@ -929,8 +923,6 @@ async function syncGoogleCatalog(
 			return {
 				applicationId: app.applicationId,
 				storeProductId,
-				// Google does not distinguish consumable from non-consumable in its catalog.
-				// The upsert preserves an existing consumable classification when present.
 				productType: "non_consumable",
 				displayName: listing.title || storeProductId,
 				description: listing.description || null,
@@ -987,8 +979,6 @@ export async function verifyGooglePurchase(
 		detectEnvironment?: boolean;
 	},
 ) {
-	// The client value is only a compatibility hint. The server catalog owns
-	// the provider contract and therefore decides which Google API is called.
 	const productType = await configuredGoogleProductType(env.DB, {
 		projectId: params.projectId,
 		environment: params.environment,

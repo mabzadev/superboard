@@ -1,17 +1,3 @@
-/**
- * MCP tool input schema tests.
- *
- * The MCP SDK validates `arguments` against each tool's `inputSchema`
- * (Zod) before the handler runs. These tests pin down what happens at
- * that boundary: missing required fields, wrong types, invalid enum
- * values, out-of-range numeric inputs, etc.
- *
- * The expected behavior is consistent: invalid arguments produce a
- * structured error response (`isError: true`) with a message that names
- * the offending field. We assert specifically that errors at this layer
- * remain user-friendly across the omnibus fix.
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -154,9 +140,6 @@ describe("MCP input schema validation", () => {
 			arguments: { slug: "Has-Caps", label: "Bad" },
 		});
 		expect(result.isError).toBe(true);
-		// Ideally the error names the field "slug" or shows the regex /
-		// pattern violation. Today the SDK error usually does — pin that
-		// behavior so it doesn't regress.
 		expect(extractText(result)).toMatch(/slug|pattern|regex|invalid/i);
 	});
 });

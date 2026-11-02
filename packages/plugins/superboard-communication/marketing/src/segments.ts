@@ -53,7 +53,6 @@ type SegmentRules = {
 const EMPTY_RULES: SegmentRules = { mode: "all", conditions: [] };
 const PAGE_SIZE = 500;
 const MEMBERSHIP_ROWS_PER_STATEMENT = 30;
-/** Cached snapshots older than this are refreshed by the scheduled job. */
 const STALE_AFTER_MINUTES = 60;
 
 function isActivityField(field: string): field is ActivityField {
@@ -79,10 +78,6 @@ function isActivityCondition(
 	return isActivityField(condition.field);
 }
 
-/**
- * Segment routes stay registered on the main Marketing router so their route
- * ids (`marketing:index.app:…`) keep matching the published adapter catalog.
- */
 export function mountSegmentRoutes(segmentRoutes: Hono<AudienceBindings>, prefix = "/internal/v1") {
 	segmentRoutes.get(`${prefix}/segments`, async (c) => {
 		const rows = await c.env.DB.prepare(
@@ -165,7 +160,6 @@ export function mountSegmentRoutes(segmentRoutes: Hono<AudienceBindings>, prefix
 		return c.json({ data: { deleted: true } });
 	});
 
-	/** Counts matching contacts for unsaved rules so the editor can show a live estimate. */
 	segmentRoutes.post(`${prefix}/audience/segments/preview`, async (c) => {
 		const projectId = c.get("project").projectId;
 		const body = await readJsonObject(c.req.raw);
@@ -298,7 +292,6 @@ function activityKey(condition: Extract<SegmentCondition, { field: ActivityField
 	return `${condition.field}:${condition.value}:${condition.campaign_id ?? ""}`;
 }
 
-/** Loads relations for subscribers whose id is in (low, high]; each query is index-backed. */
 async function loadContext(
 	db: D1Database,
 	projectId: number,
@@ -346,7 +339,6 @@ async function loadContext(
 	for (const [key, condition] of activity) {
 		const types = ACTIVITY_FIELDS[condition.field];
 		const cutoff = new Date(Date.now() - condition.value * 86_400_000).toISOString();
-		// occurred_at holds both SQLite and ISO timestamps, so compare as julian days.
 		const rows = await db
 			.prepare(
 				`SELECT DISTINCT subscriber_id FROM email_events
@@ -389,7 +381,6 @@ function profileValue(row: Record<string, unknown>, field: string) {
 	return current;
 }
 
-/** Text used to compare segment values, as String() renders them, with missing values empty. */
 function comparableText(value: unknown): string {
 	if (Array.isArray(value)) return value.map((item: unknown) => comparableText(item)).join(",");
 	if (typeof value === "object" && value !== null) return Object.prototype.toString.call(value);
@@ -452,7 +443,6 @@ function conditionMatches(
 	}
 }
 
-/** Streams matching subscriber ids page by page, keeping every query within D1 limits. */
 async function evaluateSegment(
 	db: D1Database,
 	projectId: number,
@@ -486,10 +476,6 @@ async function evaluateSegment(
 	}
 }
 
-/**
- * Recomputes the cached snapshot. Matches are upserted with a fresh stamp and
- * stale rows removed afterwards, so readers never observe an empty segment.
- */
 async function refreshSegment(
 	db: D1Database,
 	projectId: number,
@@ -526,7 +512,6 @@ async function refreshSegment(
 	return matched;
 }
 
-/** Recomputes the given segments right before a send or a preflight. */
 export async function refreshSegmentsByIds(
 	db: D1Database,
 	projectId: number,
@@ -541,7 +526,6 @@ export async function refreshSegmentsByIds(
 	}
 }
 
-/** Keeps cached counts and journey entry checks reasonably fresh between sends. */
 export async function refreshStaleSegments(db: D1Database, limit = 3) {
 	const cutoff = new Date(Date.now() - STALE_AFTER_MINUTES * 60_000).toISOString();
 	const rows = await db

@@ -1,9 +1,3 @@
-/**
- * TanStack Router configuration for EmDash Admin
- *
- * Defines all admin routes and their components.
- */
-
 import { Button, Loader, Toast, useKumoToastManager } from "@cloudflare/kumo";
 import { plural } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
@@ -148,7 +142,6 @@ import { BylineSchemaPage } from "./routes/byline-schema";
 import { BylinesPage } from "./routes/bylines";
 import { UsersPage } from "./routes/users";
 
-// Router context type
 interface RouterContext {
 	queryClient: QueryClient;
 }
@@ -213,26 +206,19 @@ function patchAutosaveQueries(
 		});
 	}
 
-	// Match by (collection, id) prefix rather than an exact locale-scoped key: the
-	// editor reads `{ locale: activeLocale }`, undefined when i18n is off, while the
-	// saved item carries the DB default "en". An exact key would write to an entry
-	// nobody observes, leaving the editor on stale revision pointers.
 	queryClient.setQueriesData<ContentItem>({ queryKey: ["content", collection, id] }, savedItem);
 }
 
-// Create a base root route without Shell for setup
 const baseRootRoute = createRootRouteWithContext<RouterContext>()({
 	component: () => <Outlet />,
 });
 
-// Setup route (standalone, no Shell)
 const setupRoute = createRoute({
 	getParentRoute: () => baseRootRoute,
 	path: "/setup",
 	component: SetupWizard,
 });
 
-// Login route (standalone, no Shell)
 const loginRoute = createRoute({
 	getParentRoute: () => baseRootRoute,
 	path: "/login",
@@ -240,20 +226,17 @@ const loginRoute = createRoute({
 });
 
 function LoginPageWrapper() {
-	// Extract redirect URL from query params, sanitized to prevent open redirect / XSS
 	const searchParams = new URLSearchParams(window.location.search);
 	const redirect = sanitizeRedirectUrl(searchParams.get("redirect") || "/_emdash/admin");
 	return <LoginPage redirectUrl={redirect} />;
 }
 
-// Signup route (standalone, no Shell)
 const signupRoute = createRoute({
 	getParentRoute: () => baseRootRoute,
 	path: "/signup",
 	component: SignupPage,
 });
 
-// Invite accept route (standalone, no Shell)
 const inviteAcceptRoute = createRoute({
 	getParentRoute: () => baseRootRoute,
 	path: "/invite/accept",
@@ -263,21 +246,18 @@ const inviteAcceptRoute = createRoute({
 	}),
 });
 
-// Device authorization route (standalone, no Shell)
 const deviceRoute = createRoute({
 	getParentRoute: () => baseRootRoute,
 	path: "/device",
 	component: DeviceAuthorizePage,
 });
 
-// Layout route with Shell wrapper for admin pages (pathless - matches all admin routes)
 const adminLayoutRoute = createRoute({
 	getParentRoute: () => baseRootRoute,
 	id: "_admin",
 	component: RootComponent,
 });
 
-// Isomorphic requestIdleCallback polyfill
 if (typeof window !== "undefined" && typeof window.requestIdleCallback === "undefined") {
 	window.requestIdleCallback = (cb) => setTimeout(cb, 50);
 	window.cancelIdleCallback = (id) => clearTimeout(id);
@@ -302,7 +282,6 @@ function RootComponent() {
 		return <ErrorScreen error={error?.message ?? t`Failed to load admin`} />;
 	}
 
-	// Plugin admin components are passed via props and available through PluginAdminContext
 	return (
 		<Shell manifest={manifest}>
 			<Outlet />
@@ -310,7 +289,6 @@ function RootComponent() {
 	);
 }
 
-// Dashboard route - matches the index path "/"
 const dashboardRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/",
@@ -328,7 +306,6 @@ function DashboardPage() {
 	return <Dashboard manifest={manifest} />;
 }
 
-// Content list route
 const contentListRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/content/$collection",
@@ -354,14 +331,8 @@ function ContentListPage() {
 
 	const i18n = manifest?.i18n;
 
-	// Default to defaultLocale when i18n is enabled and no locale specified
 	const activeLocale = i18n ? (localeParam ?? i18n.defaultLocale) : undefined;
 
-	// Controlled sort state — passed to the list, and included in the query
-	// key so changing direction invalidates the current cursor chain.
-	// Default sorts by the collection's dateField, else last-updated.
-	// `sortOverride` is the user's explicit choice (null until they click a
-	// column), keeping the default reactive as the manifest loads and per-collection.
 	const [sortOverride, setSortOverride] = React.useState<ContentListSort | null>(null);
 	const sort: ContentListSort = sortOverride ?? {
 		field: manifest?.collections[collection]?.dateField ?? "updatedAt",
@@ -369,19 +340,13 @@ function ContentListPage() {
 	};
 	React.useEffect(() => setSortOverride(null), [collection]);
 
-	// Server-side search term (debounced inside ContentList). Part of the query
-	// key so a new term restarts the cursor chain from a filtered first page.
 	const [searchTerm, setSearchTerm] = React.useState("");
 
-	// Filter state. All are part of the query key so changing any of
-	// them restarts the cursor chain from a filtered first page.
 	const [statusFilter, setStatusFilter] = React.useState<ContentStatusFilter>("all");
 	const [authorFilter, setAuthorFilter] = React.useState("");
 	const [dateFilter, setDateFilter] = React.useState<ContentDateFilter>(EMPTY_DATE_FILTER);
 	const [bylineFilter, setBylineFilter] = React.useState<BylineFilterState>(EMPTY_BYLINE_FILTER);
 
-	// Only the parts that change the result set belong in the query key —
-	// `includeInferred` alone, with nothing selected, filters nothing.
 	const bylineApiParams = React.useMemo(() => {
 		if (!bylineFilter.none && bylineFilter.bylineIds.length === 0) return undefined;
 		return {
@@ -391,8 +356,6 @@ function ContentListPage() {
 		};
 	}, [bylineFilter]);
 
-	// The date inputs yield calendar dates; widen them to UTC day boundaries so
-	// the inclusive `dateTo` covers the whole day (timestamps are stored in UTC).
 	const dateApiParams = React.useMemo(() => {
 		const hasRange = !!dateFilter.from || !!dateFilter.to;
 		if (!hasRange) return undefined;
@@ -403,9 +366,6 @@ function ContentListPage() {
 		};
 	}, [dateFilter]);
 
-	// Authors are collection-wide (the endpoint doesn't scope by locale), so the
-	// query key omits locale to avoid refetching/cache-fragmenting on locale
-	// switches, and the selection stays valid across locales.
 	const { data: authors } = useQuery({
 		queryKey: ["content", collection, "authors"],
 		queryFn: () => fetchContentAuthors(collection),
@@ -445,7 +405,6 @@ function ContentListPage() {
 			enabled: !!manifest,
 		});
 
-	// Fetch trashed items
 	const { data: trashedData, isLoading: isTrashedLoading } = useQuery({
 		queryKey: ["content", collection, "trash"],
 		queryFn: () => fetchTrashedContent(collection),
@@ -509,12 +468,6 @@ function ContentListPage() {
 		},
 	});
 
-	// Bulk actions run the existing per-entry endpoints through a
-	// concurrency-limited queue (runBulkAction) — selection persists across
-	// pagination, so an unbounded fan-out could fire hundreds of parallel
-	// requests. Per-id failures are collected (not thrown) and returned to
-	// ContentList, which keeps the failed rows selected for a retry; the
-	// toasts surface the failure count and the list is refetched either way.
 	const bulkPublishMutation = useMutation({
 		mutationFn: async (ids: string[]) => {
 			const { failedIds } = await runBulkAction(ids, (id) =>
@@ -587,14 +540,8 @@ function ContentListPage() {
 		return data?.pages.flatMap((page) => page.items) || [];
 	}, [data]);
 
-	// Server returns `total` on every page; the first page is authoritative
-	// because filters don't change within a fetch cycle. Fall back to the
-	// loaded count so old servers (pre-total) still render a denominator.
 	const total = data?.pages[0]?.total ?? items.length;
 
-	// Keep every hook above the early returns below — a render that takes a
-	// guard (e.g. `error`) must run the same number of hooks as a full render,
-	// or React throws #300 "Rendered fewer hooks than expected" (#1415).
 	const handleLoadMore = React.useCallback(() => void fetchNextPage(), [fetchNextPage]);
 
 	if (!manifest) {
@@ -625,7 +572,6 @@ function ContentListPage() {
 	});
 
 	const handleLocaleChange = (locale: string) => {
-		// Update URL search params without full navigation
 		void navigate({
 			to: "/content/$collection",
 			params: { collection },
@@ -678,7 +624,6 @@ function ContentListPage() {
 	);
 }
 
-// Content new route
 const contentNewRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/content/$collection/new",
@@ -703,14 +648,8 @@ function ContentNewPage() {
 		queryFn: fetchManifest,
 	});
 
-	// Locale the picker should scope to. URL `?locale=` wins; otherwise
-	// fall back to the configured defaultLocale. Single-locale installs
-	// resolve to `defaultLocale` too — the server treats that as "use the
-	// configured default" so behaviour matches pre-i18n in that case.
 	const pickerLocale = locale ?? manifest?.i18n?.defaultLocale;
 
-	// Send the resolved picker locale so the new entry's locale matches
-	// the locale the byline picker was scoped to.
 	const createMutation = useMutation({
 		mutationFn: (data: {
 			data: Record<string, unknown>;
@@ -736,11 +675,6 @@ function ContentNewPage() {
 
 	const pluginBlocks = React.useMemo(() => (manifest ? getPluginBlocks(manifest) : []), [manifest]);
 
-	// The picker is locale-pinned to the entry being created so editors
-	// only see bylines that will actually hydrate at this locale (per the
-	// strict per-locale model from migration 040). Locale is part of the
-	// query key so switching locales fetches a fresh slice rather than
-	// reusing a stale cache.
 	const { data: bylinesData, isSuccess: bylinesLoaded } = useQuery({
 		queryKey: ["bylines", "picker", pickerLocale ?? null],
 		queryFn: () => fetchBylines({ locale: pickerLocale, limit: 100 }),
@@ -766,9 +700,6 @@ function ContentNewPage() {
 		},
 	});
 
-	// Stable handler identities: these flow into the memoized
-	// ContentSettingsPanel, so fresh arrows on every mutation-state flip
-	// would defeat the memo. mutate/mutateAsync are referentially stable.
 	const handleSave = React.useCallback(
 		(payload: { data: Record<string, unknown>; slug?: string; bylines?: BylineCreditInput[] }) => {
 			createMutation.mutate(payload);
@@ -819,7 +750,6 @@ function ContentNewPage() {
 	);
 }
 
-// Content edit route
 const contentEditRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/content/$collection/$id",
@@ -831,7 +761,6 @@ const contentEditRoute = createRoute({
 	}),
 });
 
-// Role levels from @emdash-cms/auth
 const ROLE_AUTHOR = 30;
 const ROLE_EDITOR = 40;
 
@@ -876,36 +805,27 @@ function ContentEditPage() {
 		return () => cancelIdleCallback(timeoutId);
 	}, [searchParams, isLoading, navigate]);
 
-	// Fetch translations when i18n is enabled
 	const { data: translationsData } = useQuery({
 		queryKey: ["translations", collection, id],
 		queryFn: () => fetchTranslations(collection, id),
 		enabled: !!i18n && !!rawItem,
 	});
 
-	// When a draft revision exists, fetch its data for the editor form.
-	// The content table holds published data; the draft revision holds
-	// the editor's working copy.
 	const { data: draftRevision } = useQuery({
 		queryKey: ["revision", rawItem?.draftRevisionId],
 		queryFn: () => fetchRevision(rawItem!.draftRevisionId!),
 		enabled: !!rawItem?.draftRevisionId,
 	});
 
-	// Merge draft revision data into the item for the editor.
-	// The item's metadata (id, status, slug, etc.) comes from the content table;
-	// the data fields come from the draft revision if available.
 	const item = React.useMemo(() => {
 		if (!rawItem) return undefined;
 		if (!draftRevision?.data) return rawItem;
-		// Strip revision metadata keys (prefixed with _)
 		const draftData: Record<string, unknown> = {};
 		for (const [key, value] of Object.entries(draftRevision.data)) {
 			if (!key.startsWith("_")) {
 				draftData[key] = value;
 			}
 		}
-		// Draft slug override
 		const draftSlug =
 			typeof draftRevision.data._slug === "string" ? draftRevision.data._slug : rawItem.slug;
 		return {
@@ -915,7 +835,6 @@ function ContentEditPage() {
 		};
 	}, [rawItem, draftRevision]);
 
-	// Fetch current user for permission checks
 	const { data: currentUser } = useQuery({
 		queryKey: ["currentUser"],
 		queryFn: async (): Promise<{ id: string; role: number }> => {
@@ -925,7 +844,6 @@ function ContentEditPage() {
 		staleTime: 5 * 60 * 1000,
 	});
 
-	// Fetch users list for author selector (only if user is editor+)
 	const { data: usersData } = useQuery({
 		queryKey: ["users"],
 		queryFn: () => fetchUsers({ limit: 100 }),
@@ -933,13 +851,6 @@ function ContentEditPage() {
 		staleTime: 5 * 60 * 1000,
 	});
 
-	// Picker is locale-pinned to the entry being edited. The credit
-	// hydration server-side is strict per locale (migration 040), so the
-	// picker must show only bylines that will actually render at this
-	// locale — otherwise the editor adds a credit that silently vanishes
-	// after autosave. Query disabled until `rawItem.locale` resolves so a
-	// transient `undefined` doesn't populate the cache with default-locale
-	// data.
 	const itemLocale = rawItem?.locale ?? undefined;
 	const autosaveCompletionSequenceRef = React.useRef(0);
 	const [autosaveCompletion, setAutosaveCompletion] = React.useState({ entryId: "", token: 0 });
@@ -986,19 +897,12 @@ function ContentEditPage() {
 
 	const handleContentUpdateSuccess = React.useCallback(
 		(targetId: string) => {
-			// Invalidate by (collection, id) prefix without the locale object: the
-			// editor's read query is keyed `{ locale: activeLocale }` (undefined when
-			// i18n is off) while `rawItem.locale` is the DB default "en", so a
-			// locale-scoped invalidation key would not match and the item would never
-			// refetch — leaving the publish/save buttons stale until a hard refresh.
 			void queryClient.invalidateQueries({
 				queryKey: ["content", collection, targetId],
 			});
-			// Also invalidate revisions since a new one was created
 			void queryClient.invalidateQueries({
 				queryKey: ["revisions", collection, targetId],
 			});
-			// Invalidate the cached draft revision so stale data doesn't overwrite the form
 			if (rawItem?.draftRevisionId) {
 				void queryClient.invalidateQueries({
 					queryKey: ["revision", rawItem.draftRevisionId],
@@ -1045,7 +949,6 @@ function ContentEditPage() {
 		onError: handleContentUpdateError,
 	});
 
-	// Autosave mutation - skips revision creation
 	const autosaveMutation = useMutation({
 		mutationFn: ({ targetId, targetLocale, changes }: AutosaveMutationInput) =>
 			updateContent(
@@ -1065,8 +968,6 @@ function ContentEditPage() {
 					slug: variables.changes.slug,
 				},
 			});
-			// Keep the cache fresh without refetching older server state back into the form
-			// while the user is still typing.
 		},
 		onError: (err) => {
 			toastManager.add({
@@ -1176,7 +1077,6 @@ function ContentEditPage() {
 		},
 	});
 
-	// Create translation mutation
 	const translateMutation = useMutation({
 		mutationFn: (locale: string) =>
 			createContent(collection, {
@@ -1229,10 +1129,6 @@ function ContentEditPage() {
 
 	const pluginBlocks = React.useMemo(() => (manifest ? getPluginBlocks(manifest) : []), [manifest]);
 
-	// Stable handler identities: these flow into the memoized
-	// ContentSettingsPanel, so fresh arrows on every mutation-state flip
-	// (twice per autosave cycle) would defeat the memo. mutate/mutateAsync
-	// are referentially stable.
 	const handleSave = React.useCallback(
 		(payload: { data: Record<string, unknown>; slug?: string; bylines?: BylineCreditInput[] }) => {
 			updateMutation.mutate({
@@ -1377,7 +1273,6 @@ function ContentEditPage() {
 	);
 }
 
-// Media library route
 const mediaRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/media",
@@ -1674,14 +1569,12 @@ function MediaPage() {
 	);
 }
 
-// Comments moderation inbox route
 const commentsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/comments",
 	component: CommentsPage,
 });
 
-// Admin role level from @emdash-cms/auth
 const ROLE_ADMIN = 50;
 
 function CommentsPage() {
@@ -1694,7 +1587,6 @@ function CommentsPage() {
 		queryFn: fetchManifest,
 	});
 
-	// Current user for ADMIN check (hard delete)
 	const { data: currentUser } = useQuery({
 		queryKey: ["currentUser"],
 		queryFn: async (): Promise<{ id: string; role: number }> => {
@@ -1704,19 +1596,16 @@ function CommentsPage() {
 		staleTime: 5 * 60 * 1000,
 	});
 
-	// Filter state
 	const [activeStatus, setActiveStatus] = React.useState<CommentStatus>("pending");
 	const [collectionFilter, setCollectionFilter] = React.useState("");
 	const [searchQuery, setSearchQuery] = React.useState("");
 	const [debouncedSearch, setDebouncedSearch] = React.useState("");
 
-	// Debounce search
 	React.useEffect(() => {
 		const timer = setTimeout(setDebouncedSearch, 300, searchQuery);
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
-	// Fetch comments
 	const {
 		data: commentsData,
 		isLoading,
@@ -1736,13 +1625,11 @@ function CommentsPage() {
 		getNextPageParam: (lastPage) => lastPage.nextCursor,
 	});
 
-	// Fetch counts
 	const { data: counts } = useQuery({
 		queryKey: ["commentCounts"],
 		queryFn: fetchCommentCounts,
 	});
 
-	// Status change mutation
 	const statusMutation = useMutation({
 		mutationFn: ({ id, status }: { id: string; status: CommentStatus }) =>
 			updateCommentStatus(id, status),
@@ -1759,7 +1646,6 @@ function CommentsPage() {
 		},
 	});
 
-	// Delete mutation
 	const deleteMutation = useMutation({
 		mutationFn: (id: string) => deleteComment(id),
 		onSuccess: () => {
@@ -1775,7 +1661,6 @@ function CommentsPage() {
 		},
 	});
 
-	// Bulk action mutation
 	const bulkMutation = useMutation({
 		mutationFn: ({
 			ids,
@@ -1803,7 +1688,6 @@ function CommentsPage() {
 	const allComments = commentsData?.pages.flatMap((p) => p.items) ?? [];
 	const lastPage = commentsData?.pages[commentsData.pages.length - 1];
 
-	// Require EDITOR role for comment moderation
 	if (currentUser && currentUser.role < ROLE_EDITOR) {
 		return (
 			<div className="flex items-center justify-center min-h-[50vh]">
@@ -1846,7 +1730,6 @@ function CommentsPage() {
 	);
 }
 
-// Settings route
 const settingsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/settings",
@@ -1859,63 +1742,54 @@ const mediaUsageSettingsRoute = createRoute({
 	component: MediaUsageSettings,
 });
 
-// Security settings route
 const securitySettingsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/settings/security",
 	component: SecuritySettings,
 });
 
-// Allowed domains settings route
 const allowedDomainsSettingsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/settings/allowed-domains",
 	component: AllowedDomainsSettings,
 });
 
-// API tokens settings route
 const apiTokenSettingsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/settings/api-tokens",
 	component: ApiTokenSettings,
 });
 
-// Email settings route
 const emailSettingsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/settings/email",
 	component: EmailSettings,
 });
 
-// Backup settings route
 const backupSettingsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/settings/backups",
 	component: BackupSettings,
 });
 
-// General settings route
 const generalSettingsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/settings/general",
 	component: GeneralSettings,
 });
 
-// Social settings route
 const socialSettingsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/settings/social",
 	component: SocialSettings,
 });
 
-// SEO settings route
 const seoSettingsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/settings/seo",
 	component: SeoSettings,
 });
 
-// Plugin manager route
 const pluginManagerRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/plugins-manager",
@@ -1930,7 +1804,6 @@ function PluginManagerPage() {
 	return <PluginManager manifest={manifest} />;
 }
 
-// Marketplace browse route
 const marketplaceBrowseRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/plugins/marketplace",
@@ -1956,13 +1829,7 @@ function MarketplaceBrowsePage() {
 		return new Set(plugins.map((p) => p.id));
 	}, [plugins]);
 
-	// When `experimental.registry` is configured, the registry browse
-	// replaces the centralized marketplace browse on this route. Existing
-	// sidebar / deep links stay valid; users see the registry without any
-	// path change.
 	if (manifest?.registry) {
-		// Map installed registry plugins to their AT URIs for the
-		// "Installed" badge on browse cards.
 		const installedRegistryUris = new Set<string>(
 			(plugins ?? [])
 				.filter((p) => p.source === "registry" && p.registryPublisherDid && p.registrySlug)
@@ -1979,7 +1846,6 @@ function MarketplaceBrowsePage() {
 	return <MarketplaceBrowse installedPluginIds={installedIds} />;
 }
 
-// Marketplace plugin detail route
 const marketplaceDetailRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/plugins/marketplace/$pluginId",
@@ -2007,12 +1873,6 @@ function MarketplaceDetailPage() {
 		return new Set(plugins.map((p) => p.id));
 	}, [plugins]);
 
-	// Discriminate by param shape, not by the manifest flag. A registry
-	// pluginId is always `${handle}/${slug}` and contains exactly one `/`;
-	// a marketplace pluginId is a single segment with no `/`. This keeps
-	// deep links to marketplace-installed plugins working on sites that
-	// later opt into the registry, instead of unconditionally routing
-	// every visit to RegistryPluginDetail.
 	const looksLikeRegistryId = pluginId.includes("/");
 	if (manifest?.registry && looksLikeRegistryId) {
 		return <RegistryPluginDetail pluginId={pluginId} config={manifest.registry} />;
@@ -2021,14 +1881,12 @@ function MarketplaceDetailPage() {
 	return <MarketplacePluginDetail pluginId={pluginId} installedPluginIds={installedIds} />;
 }
 
-// Theme marketplace browse route
 const themeMarketplaceBrowseRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/themes/marketplace",
 	component: ThemeMarketplaceBrowse,
 });
 
-// Theme marketplace detail route
 const themeMarketplaceDetailRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/themes/marketplace/$themeId",
@@ -2040,14 +1898,12 @@ function ThemeDetailPage() {
 	return <ThemeMarketplaceDetail themeId={themeId} />;
 }
 
-// WordPress import route
 const wordpressImportRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/import/wordpress",
 	component: WordPressImport,
 });
 
-// Menu routes
 const menuListRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/menus",
@@ -2065,7 +1921,6 @@ const menuEditorRoute = createRoute({
 	},
 });
 
-// Taxonomy manager route
 const taxonomyRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/taxonomies/$taxonomy",
@@ -2077,14 +1932,12 @@ function TaxonomyPage() {
 	return <TaxonomyManager taxonomyName={taxonomy} />;
 }
 
-// Widgets route
 const widgetsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/widgets",
 	component: Widgets,
 });
 
-// Sections routes
 const redirectsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/redirects",
@@ -2103,19 +1956,12 @@ const sectionEditRoute = createRoute({
 	component: SectionEditor,
 });
 
-// Users route
 const usersRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/users",
 	component: UsersPage,
 });
 
-// Bylines route
-//
-// `validateSearch` rejects empty-string locale (`?locale=`) — left as `""`
-// it would land in component state and silently drop the locale filter
-// from `fetchBylines`, fetching every locale's rows while the UI thinks
-// it's scoped to one.
 export function parseBylinesLocaleSearch(search: Record<string, unknown>): {
 	locale: string | undefined;
 } {
@@ -2132,16 +1978,12 @@ const bylinesRoute = createRoute({
 	validateSearch: parseBylinesLocaleSearch,
 });
 
-// Byline schema management route (Discussion #1174, Phase 5).
-// `minRole: ROLE_ADMIN` is enforced both in the sidebar (entry hidden
-// for non-admins) and inside `BylineSchemaPage` (URL-direct navigation).
 const bylineSchemaRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/byline-schema",
 	component: BylineSchemaPage,
 });
 
-// Content Types routes
 const contentTypesListRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/content-types",
@@ -2188,8 +2030,6 @@ function ContentTypesListPage() {
 
 	const reorderMutation = useMutation({
 		mutationFn: (slugs: string[]) => reorderCollections(slugs),
-		// The manifest drives the sidebar order, so it has to be refetched
-		// alongside the collection list for the move to show up in the nav.
 		onSettled: () => {
 			void queryClient.invalidateQueries({ queryKey: ["schema", "collections"] });
 			void queryClient.invalidateQueries({ queryKey: ["manifest"] });
@@ -2269,21 +2109,17 @@ function ContentTypesEditPage() {
 
 	const updateMutation = useMutation({
 		mutationFn: async (input: UpdateCollectionInput) => {
-			// Check if search support is being toggled
 			const oldSupports = collection?.supports ?? [];
 			const newSupports = input.supports ?? oldSupports;
 			const hadSearch = oldSupports.includes("search");
 			const hasSearch = newSupports.includes("search");
 
-			// Update the collection first
 			const result = await updateCollection(slug, input);
 
-			// If search support changed, enable/disable search
 			if (hadSearch !== hasSearch) {
 				try {
 					await setSearchEnabled(slug, hasSearch);
 				} catch (err) {
-					// Log but don't fail the mutation - search can be enabled manually
 					console.error("Failed to toggle search:", err);
 				}
 			}
@@ -2368,9 +2204,6 @@ function ContentTypesEditPage() {
 	);
 }
 
-// Auto-generated plugin settings route (from admin.settingsSchema).
-// Lives under /plugins-manager so it can never shadow a plugin's own
-// admin pages (which own the /plugins/$pluginId/* namespace).
 const pluginSettingsRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/plugins-manager/$pluginId/settings",
@@ -2393,7 +2226,6 @@ function PluginConfigurationPage() {
 	return <PluginConfiguration key={pluginId} pluginId={pluginId} />;
 }
 
-// Plugin page route
 const pluginRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "/plugins/$pluginId/$",
@@ -2405,25 +2237,21 @@ function PluginPage() {
 	const { _splat } = useParams({ from: "/_admin/plugins/$pluginId/$" });
 	const pagePath = "/" + (_splat || "");
 
-	// Get plugin page component from context (trusted plugins with React)
 	const PluginComponent = usePluginPage(pluginId, pagePath);
 
 	if (PluginComponent) {
 		return <PluginComponent />;
 	}
 
-	// No React component — fall back to Block Kit rendering
 	return <SandboxedPluginPage pluginId={pluginId} page={pagePath} />;
 }
 
-// Catch-all 404 route
 const notFoundRoute = createRoute({
 	getParentRoute: () => adminLayoutRoute,
 	path: "*",
 	component: () => <NotFoundPage />,
 });
 
-// Create route tree with admin routes under layout and setup route separate
 const adminRoutes = adminLayoutRoute.addChildren([
 	dashboardRoute,
 	contentListRoute,
@@ -2475,7 +2303,6 @@ const routeTree = baseRootRoute.addChildren([
 	adminRoutes,
 ]);
 
-// Create router
 export function createAdminRouter(queryClient: QueryClient) {
 	return createRouter({
 		routeTree,
@@ -2485,14 +2312,11 @@ export function createAdminRouter(queryClient: QueryClient) {
 	});
 }
 
-// Declare router type
 declare module "@tanstack/react-router" {
 	interface Register {
 		router: ReturnType<typeof createAdminRouter>;
 	}
 }
-
-// Shared components
 
 export function ConfigurationLoadingScreen() {
 	const { t } = useLingui();

@@ -1,9 +1,3 @@
-/**
- * Form CRUD route handlers.
- *
- * Admin-only routes for managing form definitions.
- */
-
 import type { RouteContext, StorageCollection } from "emdash";
 import { PluginRouteError } from "emdash";
 import { ulid } from "ulidx";
@@ -16,7 +10,6 @@ import type {
 } from "../schemas.js";
 import type { FormDefinition } from "../types.js";
 
-/** Typed access to plugin storage collections */
 function forms(ctx: RouteContext): StorageCollection<FormDefinition> {
 	return ctx.storage.forms as StorageCollection<FormDefinition>;
 }
@@ -24,8 +17,6 @@ function forms(ctx: RouteContext): StorageCollection<FormDefinition> {
 function submissions(ctx: RouteContext): StorageCollection {
 	return ctx.storage.submissions as StorageCollection;
 }
-
-// ─── List Forms ──────────────────────────────────────────────────
 
 export async function formsListHandler(ctx: RouteContext) {
 	const result = await forms(ctx).query({
@@ -40,12 +31,9 @@ export async function formsListHandler(ctx: RouteContext) {
 	};
 }
 
-// ─── Create Form ─────────────────────────────────────────────────
-
 export async function formsCreateHandler(ctx: RouteContext<FormCreateInput>) {
 	const input = ctx.input;
 
-	// Check slug uniqueness
 	const existing = await forms(ctx).query({
 		where: { slug: input.slug },
 		limit: 1,
@@ -54,7 +42,6 @@ export async function formsCreateHandler(ctx: RouteContext<FormCreateInput>) {
 		throw PluginRouteError.conflict(`A form with slug "${input.slug}" already exists`);
 	}
 
-	// Validate field names are unique across all pages
 	validateFieldNames(input.pages);
 
 	const now = new Date().toISOString();
@@ -86,7 +73,6 @@ export async function formsCreateHandler(ctx: RouteContext<FormCreateInput>) {
 
 	await forms(ctx).put(id, form);
 
-	// Schedule digest cron if enabled
 	if (form.settings.digestEnabled && ctx.cron) {
 		await ctx.cron.schedule(`digest:${id}`, {
 			schedule: `0 ${form.settings.digestHour} * * *`,
@@ -96,8 +82,6 @@ export async function formsCreateHandler(ctx: RouteContext<FormCreateInput>) {
 	return { id, ...form };
 }
 
-// ─── Update Form ─────────────────────────────────────────────────
-
 export async function formsUpdateHandler(ctx: RouteContext<FormUpdateInput>) {
 	const input = ctx.input;
 
@@ -106,7 +90,6 @@ export async function formsUpdateHandler(ctx: RouteContext<FormUpdateInput>) {
 		throw PluginRouteError.notFound("Form not found");
 	}
 
-	// Check slug uniqueness if changing
 	if (input.slug && input.slug !== existing.slug) {
 		const slugCheck = await forms(ctx).query({
 			where: { slug: input.slug },
@@ -131,13 +114,11 @@ export async function formsUpdateHandler(ctx: RouteContext<FormUpdateInput>) {
 		updatedAt: new Date().toISOString(),
 	};
 
-	// Clean up empty strings
 	if (updated.settings.redirectUrl === "") updated.settings.redirectUrl = undefined;
 	if (updated.settings.webhookUrl === "") updated.settings.webhookUrl = undefined;
 
 	await forms(ctx).put(input.id, updated);
 
-	// Update digest cron if settings changed
 	if (ctx.cron) {
 		if (updated.settings.digestEnabled && !existing.settings.digestEnabled) {
 			await ctx.cron.schedule(`digest:${input.id}`, {
@@ -158,8 +139,6 @@ export async function formsUpdateHandler(ctx: RouteContext<FormUpdateInput>) {
 	return { id: input.id, ...updated };
 }
 
-// ─── Delete Form ─────────────────────────────────────────────────
-
 export async function formsDeleteHandler(ctx: RouteContext<FormDeleteInput>) {
 	const input = ctx.input;
 
@@ -168,12 +147,10 @@ export async function formsDeleteHandler(ctx: RouteContext<FormDeleteInput>) {
 		throw PluginRouteError.notFound("Form not found");
 	}
 
-	// Delete associated submissions if requested
 	if (input.deleteSubmissions) {
 		await deleteFormSubmissions(input.id, ctx);
 	}
 
-	// Cancel digest cron
 	if (ctx.cron) {
 		await ctx.cron.cancel(`digest:${input.id}`).catch(() => {});
 	}
@@ -182,8 +159,6 @@ export async function formsDeleteHandler(ctx: RouteContext<FormDeleteInput>) {
 
 	return { deleted: true };
 }
-
-// ─── Duplicate Form ──────────────────────────────────────────────
 
 export async function formsDuplicateHandler(ctx: RouteContext<FormDuplicateInput>) {
 	const input = ctx.input;
@@ -196,7 +171,6 @@ export async function formsDuplicateHandler(ctx: RouteContext<FormDuplicateInput
 	const newSlug = input.slug ?? `${existing.slug}-copy`;
 	const newName = input.name ?? `${existing.name} (Copy)`;
 
-	// Check slug uniqueness
 	const slugCheck = await forms(ctx).query({
 		where: { slug: newSlug },
 		limit: 1,
@@ -222,8 +196,6 @@ export async function formsDuplicateHandler(ctx: RouteContext<FormDuplicateInput
 	return { id, ...duplicate };
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────
-
 function validateFieldNames(pages: Array<{ fields: Array<{ name: string }> }>) {
 	const names = new Set<string>();
 	for (const page of pages) {
@@ -236,7 +208,6 @@ function validateFieldNames(pages: Array<{ fields: Array<{ name: string }> }>) {
 	}
 }
 
-/** Delete all submissions for a form, including media files */
 async function deleteFormSubmissions(formId: string, ctx: RouteContext) {
 	let cursor: string | undefined;
 	do {
@@ -246,7 +217,6 @@ async function deleteFormSubmissions(formId: string, ctx: RouteContext) {
 			cursor,
 		});
 
-		// Delete associated media files
 		if (ctx.media && "delete" in ctx.media) {
 			const mediaWithDelete = ctx.media as { delete(id: string): Promise<boolean> };
 			for (const item of batch.items) {

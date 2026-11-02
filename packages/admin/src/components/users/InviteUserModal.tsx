@@ -9,15 +9,11 @@ export interface InviteUserModalProps {
 	open: boolean;
 	isSending?: boolean;
 	error?: string | null;
-	/** When set, shows a copy-link view instead of the form (no email provider) */
 	inviteUrl?: string | null;
 	onOpenChange: (open: boolean) => void;
 	onInvite: (email: string, role: number) => void;
 }
 
-/**
- * Invite user modal — sends invite email or shows copy-link fallback
- */
 export function InviteUserModal({
 	open,
 	isSending,
@@ -29,13 +25,12 @@ export function InviteUserModal({
 	const { t } = useLingui();
 	const { roles, roleLabels } = useRolesConfig();
 	const [email, setEmail] = React.useState("");
-	const [role, setRole] = React.useState(30); // Default to Author
+	const [role, setRole] = React.useState(30);
 	const [copied, setCopied] = React.useState(false);
 	const [copyError, setCopyError] = React.useState(false);
 
 	const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-	// Reset form when modal opens
 	React.useEffect(() => {
 		if (open) {
 			setEmail("");
@@ -45,7 +40,6 @@ export function InviteUserModal({
 		}
 	}, [open]);
 
-	// Clean up timeout on unmount
 	React.useEffect(() => {
 		return () => {
 			if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
@@ -65,7 +59,6 @@ export function InviteUserModal({
 			setCopyError(false);
 			copyTimeoutRef.current = setTimeout(setCopied, 2000, false);
 		} catch {
-			// Clipboard API can fail in insecure contexts
 			setCopyError(true);
 		}
 	};
@@ -102,7 +95,6 @@ export function InviteUserModal({
 				</div>
 
 				{inviteUrl ? (
-					/* Copy-link view — shown when no email provider is configured */
 					<div className="py-4 space-y-4">
 						<div className="rounded-lg border border-kumo-warning/50 bg-kumo-warning-tint p-4">
 							<p className="text-sm text-kumo-warning font-medium">
@@ -144,10 +136,8 @@ export function InviteUserModal({
 						</div>
 					</div>
 				) : (
-					/* Standard invite form */
 					<form onSubmit={handleSubmit}>
 						<div className="grid gap-4 py-4">
-							{/* Email */}
 							<Input
 								label={t`Email address`}
 								type="email"
@@ -158,7 +148,6 @@ export function InviteUserModal({
 								autoComplete="off"
 							/>
 
-							{/* Role */}
 							<div className="grid gap-2">
 								<Select
 									label={t`Role`}
@@ -180,7 +169,6 @@ export function InviteUserModal({
 								</p>
 							</div>
 
-							{/* Error message */}
 							{error && (
 								<div className="rounded-md bg-kumo-danger/10 p-3 text-sm text-kumo-danger">
 									{error}

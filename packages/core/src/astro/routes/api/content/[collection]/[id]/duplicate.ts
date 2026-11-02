@@ -1,9 +1,3 @@
-/**
- * Duplicate content endpoint - injected by EmDash integration
- *
- * POST /_emdash/api/content/{collection}/{id}/duplicate - Create a copy
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm, requireOwnerPerm } from "#api/authorize.js";
@@ -22,7 +16,6 @@ export const POST: APIRoute = async ({ params, locals, cache }) => {
 	const denied = requirePerm(user, "content:create");
 	if (denied) return denied;
 
-	// Fetch item to check ownership — duplicating requires read access to the source
 	const existing = await emdash.handleContentGet(collection, id);
 	if (!existing.success) {
 		return apiError(
@@ -37,15 +30,12 @@ export const POST: APIRoute = async ({ params, locals, cache }) => {
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- handler returns unknown data; narrowed by typeof check above
 				(existing.data as Record<string, unknown>)
 			: undefined;
-	// Handler returns { item, _rev } — extract the item for ownership check
 	const existingItem =
 		existingData?.item && typeof existingData.item === "object"
 			? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed by typeof check above
 				(existingData.item as Record<string, unknown>)
 			: existingData;
 	const authorId = typeof existingItem?.authorId === "string" ? existingItem.authorId : "";
-	// Duplicating requires read access to the source — check ownership-based edit permissions
-	// since content:read is flat (no own/any split). This ensures authors can only duplicate their own.
 	const readDenied = requireOwnerPerm(user, authorId, "content:edit_own", "content:edit_any");
 	if (readDenied) return readDenied;
 

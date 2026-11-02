@@ -9,13 +9,6 @@ import { fetchBylines, type BylineSummary } from "../lib/api";
 import { useDebouncedValue } from "../lib/hooks.js";
 import { FieldHelpLabel } from "./FieldHelpLabel.js";
 
-/**
- * Byline filter state for the content list.
- *
- * `bylineIds` are translation groups, so a selection matches a byline across
- * every locale it exists in. `none` is exclusive: it matches entries with no
- * byline rather than a particular one.
- */
 export interface BylineFilterState {
 	bylineIds: string[];
 	none: boolean;
@@ -32,23 +25,16 @@ export function isBylineFilterActive(filter: BylineFilterState): boolean {
 	return filter.none || filter.bylineIds.length > 0;
 }
 
-/** Server-side cap on how many bylines one filter may name. */
 const MAX_SELECTED = 25;
 
-/** The junction stores translation groups, so a filter matches every locale. */
 const groupOf = (byline: BylineSummary) => byline.translationGroup ?? byline.id;
 
 interface BylineFilterProps {
 	value: BylineFilterState;
 	onChange: (value: BylineFilterState) => void;
-	/** Locale the list is showing, so the picker offers matching byline rows. */
 	locale?: string;
 }
 
-/**
- * Multi-select byline filter. Selecting several bylines matches entries
- * credited to any of them; "No byline" matches entries with no credit at all.
- */
 export function BylineFilter({ value, onChange, locale }: BylineFilterProps) {
 	const { t } = useLingui();
 	const [open, setOpen] = React.useState(false);
@@ -64,10 +50,9 @@ export function BylineFilter({ value, onChange, locale }: BylineFilterProps) {
 		placeholderData: keepPreviousData,
 	});
 
-	const options = data?.items ?? [];
+	const items = data?.items;
+	const options = React.useMemo(() => items ?? [], [items]);
 
-	// Selected bylines are remembered by group so their names keep rendering
-	// once the search moves on and the rows are no longer in `options`.
 	const [labels, setLabels] = React.useState<Record<string, string>>({});
 	React.useEffect(() => {
 		if (options.length === 0) return;
@@ -83,8 +68,6 @@ export function BylineFilter({ value, onChange, locale }: BylineFilterProps) {
 		if (!selected && value.bylineIds.length >= MAX_SELECTED) return;
 		onChange({
 			...value,
-			// Picking a byline leaves the "no byline" mode; the two are
-			// mutually exclusive.
 			none: false,
 			bylineIds: selected
 				? value.bylineIds.filter((id) => id !== group)

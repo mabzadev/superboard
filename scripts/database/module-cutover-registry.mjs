@@ -1,8 +1,5 @@
 import { createHash } from "node:crypto";
 
-// The registry is deliberately declarative: ordering captures foreign-key dependencies,
-// SQL aliases produce the exact target row shape, and the engine owns execution.
-
 const j = (...columns) => columns;
 
 function entity(definition) {

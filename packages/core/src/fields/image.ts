@@ -19,8 +19,8 @@ const imageSchema = z.object({
 
 export interface ImageOptions {
 	required?: boolean;
-	maxSize?: number; // in bytes
-	allowedTypes?: string[]; // MIME types — exact or prefix
+	maxSize?: number;
+	allowedTypes?: string[];
 }
 
 export function image(options: ImageOptions = {}): FieldDefinition<ImageValue | undefined> {

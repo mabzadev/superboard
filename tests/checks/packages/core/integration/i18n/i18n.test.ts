@@ -26,8 +26,6 @@ describe("i18n (Integration)", () => {
 		await teardownTestDatabase(db);
 	});
 
-	// ─── 1. Migration — i18n columns exist ──────────────────────────
-
 	describe("Migration — i18n columns", () => {
 		it("should have locale and translation_group columns on content tables", async () => {
 			const result = await sql<{ name: string }>`
@@ -59,7 +57,6 @@ describe("i18n (Integration)", () => {
 		});
 
 		it("should have compound unique constraint on slug+locale", async () => {
-			// Insert same slug, different locale — should succeed
 			await sql`
 				INSERT INTO ec_post (id, slug, locale, translation_group, status, version, created_at, updated_at)
 				VALUES ('id1', 'hello', 'en', 'id1', 'draft', 1, datetime('now'), datetime('now'))
@@ -70,7 +67,6 @@ describe("i18n (Integration)", () => {
 				VALUES ('id2', 'hello', 'fr', 'id1', 'draft', 1, datetime('now'), datetime('now'))
 			`.execute(db);
 
-			// Same slug, same locale — should fail
 			await expect(
 				sql`
 					INSERT INTO ec_post (id, slug, locale, translation_group, status, version, created_at, updated_at)
@@ -90,8 +86,6 @@ describe("i18n (Integration)", () => {
 			expect(indexNames).toContain("idx_ec_post_del_tg_locale");
 		});
 	});
-
-	// ─── 2. ContentRepository — locale-aware CRUD ───────────────────
 
 	describe("ContentRepository — locale-aware CRUD", () => {
 		it("create() without locale defaults to 'en'", async () => {
@@ -116,9 +110,7 @@ describe("i18n (Integration)", () => {
 				}),
 			);
 
-			// Both should share the same translation_group
 			expect(frPost.translationGroup).toBe(enPost.translationGroup);
-			// The group should be the original item's id (since it was first)
 			expect(enPost.translationGroup).toBe(enPost.id);
 		});
 
@@ -134,7 +126,6 @@ describe("i18n (Integration)", () => {
 				}),
 			);
 
-			// Create a third translation linked to the French version
 			const dePost = await repo.create(
 				createPostFixture({
 					slug: "hallo",
@@ -144,7 +135,6 @@ describe("i18n (Integration)", () => {
 				}),
 			);
 
-			// All three should share the same translation_group
 			expect(dePost.translationGroup).toBe(enPost.id);
 			expect(frPost.translationGroup).toBe(enPost.id);
 		});
@@ -189,8 +179,6 @@ describe("i18n (Integration)", () => {
 				),
 			).rejects.toThrow();
 		});
-
-		// ── duplicate ─────────────────────────────────────────────────
 
 		it("duplicate() preserves the source item's locale", async () => {
 			const original = await repo.create(
@@ -237,8 +225,6 @@ describe("i18n (Integration)", () => {
 			expect(copy.slug).toBe("hola-mundo-copy");
 		});
 
-		// ── findBySlug ────────────────────────────────────────────────
-
 		it("findBySlug() without locale returns any match", async () => {
 			await repo.create(createPostFixture({ slug: "shared-slug", locale: "en" }));
 			await repo.create(
@@ -276,12 +262,9 @@ describe("i18n (Integration)", () => {
 			expect(de).toBeNull();
 		});
 
-		// ── findByIdOrSlug ────────────────────────────────────────────
-
 		it("findByIdOrSlug() — ID lookup ignores locale param", async () => {
 			const post = await repo.create(createPostFixture({ slug: "test-post", locale: "en" }));
 
-			// ID lookup should find it regardless of locale param
 			const found = await repo.findByIdOrSlug("post", post.id, "fr");
 			expect(found).not.toBeNull();
 			expect(found!.id).toBe(post.id);
@@ -306,8 +289,6 @@ describe("i18n (Integration)", () => {
 			expect(foundFr).not.toBeNull();
 			expect(foundFr!.id).toBe(frPost.id);
 		});
-
-		// ── findMany ──────────────────────────────────────────────────
 
 		it("findMany() without locale returns all locales", async () => {
 			await repo.create(createPostFixture({ slug: "en-post", locale: "en" }));
@@ -354,8 +335,6 @@ describe("i18n (Integration)", () => {
 			expect(frResult.items[0]!.locale).toBe("fr");
 		});
 
-		// ── count ─────────────────────────────────────────────────────
-
 		it("count() without locale counts all", async () => {
 			await repo.create(createPostFixture({ slug: "post-en", locale: "en" }));
 			await repo.create(
@@ -386,8 +365,6 @@ describe("i18n (Integration)", () => {
 			const deCount = await repo.count("post", { locale: "de" });
 			expect(deCount).toBe(0);
 		});
-
-		// ── findTranslations ──────────────────────────────────────────
 
 		it("findTranslations() returns all locales for a translation group", async () => {
 			const enPost = await repo.create(createPostFixture({ slug: "hello", locale: "en" }));
@@ -432,7 +409,6 @@ describe("i18n (Integration)", () => {
 				}),
 			);
 
-			// Soft-delete the French translation
 			await repo.delete("post", frPost.id);
 
 			const translations = await repo.findTranslations("post", enPost.translationGroup!);
@@ -442,8 +418,6 @@ describe("i18n (Integration)", () => {
 		});
 	});
 
-	// ─── 3. FTS — locale-aware search ───────────────────────────────
-
 	describe("FTS — locale-aware search", () => {
 		let registry: SchemaRegistry;
 		let ftsManager: FTSManager;
@@ -452,13 +426,11 @@ describe("i18n (Integration)", () => {
 			registry = new SchemaRegistry(db);
 			ftsManager = new FTSManager(db);
 
-			// Mark title as searchable and enable FTS
 			await registry.updateField("post", "title", { searchable: true });
 			await ftsManager.enableSearch("post");
 		});
 
 		it("search with locale filter returns only that locale's results", async () => {
-			// Create published posts in different locales
 			const enPost = await repo.create(
 				createPostFixture({
 					slug: "hello-world",
@@ -477,7 +449,6 @@ describe("i18n (Integration)", () => {
 				}),
 			);
 
-			// Search for "world" — English only
 			const enResults = await searchWithDb(db, "Hello", {
 				collections: ["post"],
 				locale: "en",
@@ -488,7 +459,6 @@ describe("i18n (Integration)", () => {
 			expect(enResults.items.every((r) => r.locale === "en")).toBe(true);
 			expect(enResults.items.some((r) => r.id === enPost.id)).toBe(true);
 
-			// Search for "Bonjour" — French only
 			const frResults = await searchWithDb(db, "Bonjour", {
 				collections: ["post"],
 				locale: "fr",
@@ -530,11 +500,9 @@ describe("i18n (Integration)", () => {
 		});
 
 		it("FTS index includes locale column", async () => {
-			// Verify the FTS table has the locale column by checking structure
 			const exists = await ftsManager.ftsTableExists("post");
 			expect(exists).toBe(true);
 
-			// Create a post and verify it appears in FTS results with locale
 			await repo.create(
 				createPostFixture({
 					slug: "fts-test",
@@ -555,7 +523,6 @@ describe("i18n (Integration)", () => {
 		});
 
 		it("rebuilt index preserves locale-aware search", async () => {
-			// Create content before rebuild
 			await repo.create(
 				createPostFixture({
 					slug: "pre-rebuild-en",
@@ -574,10 +541,8 @@ describe("i18n (Integration)", () => {
 				}),
 			);
 
-			// Rebuild the index
 			await ftsManager.rebuildIndex("post", ["title"]);
 
-			// Verify locale-aware search still works
 			const enResults = await searchWithDb(db, "Rebuild", {
 				collections: ["post"],
 				locale: "en",
@@ -588,8 +553,6 @@ describe("i18n (Integration)", () => {
 			expect(enResults.items[0]!.locale).toBe("en");
 		});
 	});
-
-	// ─── 4. Seed — locale-aware content ─────────────────────────────
 
 	describe("Seed — locale-aware content", () => {
 		it("applySeed() creates content with locale and translationOf", async () => {
@@ -629,7 +592,6 @@ describe("i18n (Integration)", () => {
 			expect(result.content.created).toBe(3);
 			expect(result.content.skipped).toBe(0);
 
-			// Verify the entries exist with correct locales
 			const seedRepo = new ContentRepository(db);
 			const enPost = await seedRepo.findBySlug("post", "welcome", "en");
 			const frPost = await seedRepo.findBySlug("post", "bienvenue", "fr");
@@ -643,7 +605,6 @@ describe("i18n (Integration)", () => {
 			expect(frPost!.locale).toBe("fr");
 			expect(dePost!.locale).toBe("de");
 
-			// All should share the same translation_group
 			expect(frPost!.translationGroup).toBe(enPost!.translationGroup);
 			expect(dePost!.translationGroup).toBe(enPost!.translationGroup);
 		});
@@ -668,12 +629,11 @@ describe("i18n (Integration)", () => {
 			const plainRepo = new ContentRepository(db);
 			const post = await plainRepo.findBySlug("post", "plain-post");
 			expect(post).not.toBeNull();
-			expect(post!.locale).toBe("en"); // default
-			expect(post!.translationGroup).toBe(post!.id); // self-reference
+			expect(post!.locale).toBe("en");
+			expect(post!.translationGroup).toBe(post!.id);
 		});
 
 		it("applySeed() skips existing entries with locale-aware lookup", async () => {
-			// Pre-create an entry
 			const skipRepo = new ContentRepository(db);
 			await skipRepo.create(createPostFixture({ slug: "existing", locale: "fr" }));
 
@@ -712,14 +672,11 @@ describe("i18n (Integration)", () => {
 				},
 			};
 
-			// Validation catches the bad reference before applySeed runs
 			await expect(applySeed(db, seed, { includeContent: true })).rejects.toThrow(
 				'references "nonexistent" which is not in this collection',
 			);
 		});
 	});
-
-	// ─── 5. Seed validation — i18n fields ───────────────────────────
 
 	describe("Seed validation — i18n fields", () => {
 		it("validates translationOf requires locale", () => {
@@ -791,8 +748,6 @@ describe("i18n (Integration)", () => {
 		});
 	});
 
-	// ─── 6. Non-i18n regression ─────────────────────────────────────
-
 	describe("Non-i18n regression", () => {
 		it("content created without locale has locale 'en'", async () => {
 			const post = await repo.create({
@@ -823,12 +778,10 @@ describe("i18n (Integration)", () => {
 		it("findByIdOrSlug works without locale param", async () => {
 			const created = await repo.create(createPostFixture({ slug: "lookup-test" }));
 
-			// By slug
 			const bySlug = await repo.findByIdOrSlug("post", "lookup-test");
 			expect(bySlug).not.toBeNull();
 			expect(bySlug!.id).toBe(created.id);
 
-			// By ID
 			const byId = await repo.findByIdOrSlug("post", created.id);
 			expect(byId).not.toBeNull();
 			expect(byId!.id).toBe(created.id);
@@ -837,7 +790,6 @@ describe("i18n (Integration)", () => {
 		it("slug uniqueness is still enforced within the same locale", async () => {
 			await repo.create(createPostFixture({ slug: "dupe-test" }));
 
-			// Same slug, same default locale — should fail
 			await expect(repo.create(createPostFixture({ slug: "dupe-test" }))).rejects.toThrow();
 		});
 
@@ -856,26 +808,21 @@ describe("i18n (Integration)", () => {
 		});
 
 		it("existing CRUD operations are unaffected by i18n columns", async () => {
-			// Create
 			const post = await repo.create(createPostFixture({ slug: "crud-test", status: "draft" }));
 			expect(post.status).toBe("draft");
 
-			// Update
 			const updated = await repo.update("post", post.id, {
 				data: { title: "Updated Title" },
 			});
 			expect(updated.data.title).toBe("Updated Title");
-			expect(updated.locale).toBe("en"); // locale unchanged
+			expect(updated.locale).toBe("en");
 
-			// Delete (soft)
 			const deleted = await repo.delete("post", post.id);
 			expect(deleted).toBe(true);
 
-			// Should not be found
 			const notFound = await repo.findById("post", post.id);
 			expect(notFound).toBeNull();
 
-			// Restore
 			const restored = await repo.restore("post", post.id);
 			expect(restored).toEqual(expect.objectContaining({ id: post.id, locale: "en" }));
 

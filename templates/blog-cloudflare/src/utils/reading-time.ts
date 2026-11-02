@@ -28,9 +28,6 @@ function countCjkCharacters(text: string): number {
 	return text.match(CJK_CHARACTER_REGEX)?.length ?? 0;
 }
 
-/**
- * Extract plain text from Portable Text blocks
- */
 export function extractText(blocks: PortableTextBlock[] | undefined): string {
 	if (!blocks || !Array.isArray(blocks)) return "";
 
@@ -45,9 +42,6 @@ export function extractText(blocks: PortableTextBlock[] | undefined): string {
 		.join(" ");
 }
 
-/**
- * Calculate reading time in minutes from Portable Text content
- */
 export function getReadingTime(content: PortableTextBlock[] | undefined): number {
 	const text = extractText(content);
 	const cjkCharacterCount = countCjkCharacters(text);
@@ -58,9 +52,6 @@ export function getReadingTime(content: PortableTextBlock[] | undefined): number
 	return Math.max(1, minutes);
 }
 
-/**
- * Format reading time for display
- */
 export function formatReadingTime(minutes: number): string {
 	return `${minutes} min read`;
 }

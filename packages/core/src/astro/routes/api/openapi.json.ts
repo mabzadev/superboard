@@ -1,12 +1,3 @@
-/**
- * OpenAPI spec endpoint
- *
- * GET /_emdash/api/openapi.json
- *
- * Returns the generated OpenAPI 3.1 document. The spec is generated once
- * and cached for the lifetime of the process.
- */
-
 import type { APIRoute } from "astro";
 
 import { handleError } from "../../../api/error.js";
@@ -14,7 +5,6 @@ import { generateOpenApiDocument } from "../../../api/openapi/index.js";
 
 export const prerender = false;
 
-// Use globalThis with Symbol.for to survive Vite's SSR module duplication
 const OPENAPI_CACHE_KEY = Symbol.for("emdash.openapi.cachedSpec");
 
 function getCachedSpec(): string | null {

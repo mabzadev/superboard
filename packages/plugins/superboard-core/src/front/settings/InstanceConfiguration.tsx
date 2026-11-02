@@ -22,7 +22,6 @@ import {
 } from "@superboard/front-ui/ui/table.js";
 import { useState } from "react";
 
-/** Environment settings › Infrastructure: deployment, Workers and routes inventory. */
 export default function InstanceConfiguration() {
 	const context = useFrontContext();
 	const t = deploymentI18n(context.locale ?? "en");

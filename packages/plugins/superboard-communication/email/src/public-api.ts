@@ -17,11 +17,9 @@ import { sha256 } from "./admin-secrets.js";
 import { QUEUE_MAX_DELAY_SECONDS, emailQueue, randomHex, recordEmailEvent } from "./events.js";
 import { EmailValidationError, normalizeEmail } from "./validation.js";
 
-/** Server API keys start with this prefix; only their SHA-256 digest is stored. */
 const EMAIL_API_KEY_PREFIX = "sb_email_";
 const EMAIL_API_KEY_HEADER = "x-superboard-email-key";
 export const EMAIL_SEND_SCOPE = "email:send";
-/** Request body limit: 10 MB of attachments grow by a third when base64 encoded. */
 const PUBLIC_SEND_BODY_LIMIT = 15 * 1024 * 1024;
 const API_RATE_LIMIT_PER_MINUTE = 300;
 const SCHEDULE_MAX_SECONDS = 7 * 24 * 3_600;
@@ -211,7 +209,6 @@ async function authenticateApiKey(
 	return { id: row.id, projectId: Number(row.project_id) };
 }
 
-/** Fixed one-minute window per project; returns a 429 response once exceeded. */
 export async function consumeRateLimit(
 	env: Pick<Env, "DB">,
 	projectId: number,
@@ -448,7 +445,6 @@ async function replayReceipt(
 			"This Idempotency-Key was already used with another request",
 		);
 	if (existing.status === "queued" && existing.state !== "canceled") {
-		// The queue command is idempotent: delivery acquisition is conditional.
 		const delaySeconds =
 			existing.state === "scheduled" && existing.scheduled_at
 				? delayUntil(existing.scheduled_at)
@@ -568,10 +564,6 @@ async function cancelPublicMessage(
 	);
 }
 
-/**
- * Safety net for lost delayed queue messages: scheduled messages overdue by more
- * than five minutes are enqueued again (delivery acquisition is idempotent).
- */
 export async function releaseOverdueScheduledMessages(
 	env: Pick<Env, "DB" | "EMAIL_QUEUE">,
 ): Promise<number> {
@@ -760,7 +752,6 @@ function customHeaders(value: unknown): Record<string, string> {
 	);
 }
 
-/** Line breaks and NUL bytes would allow SMTP header injection. */
 function unsafeHeaderText(value: string): boolean {
 	return /[\r\n]/.test(value) || value.includes(String.fromCharCode(0));
 }
@@ -958,7 +949,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Text of a scalar JSON value; objects and arrays are rejected with `code`. */
 function optionalScalar(value: unknown, code: string): string | null {
 	if (value == null || value === "") return null;
 	if (typeof value === "string") return value;
@@ -966,7 +956,6 @@ function optionalScalar(value: unknown, code: string): string | null {
 	return invalid(code);
 }
 
-/** Stored sender configuration with its display fields checked; other keys are kept. */
 function senderPublicConfig(json: string) {
 	const {
 		from_email: fromEmail,
@@ -982,7 +971,6 @@ function senderPublicConfig(json: string) {
 	};
 }
 
-/** Errors raised with `problem()` carry a client status, code and message. */
 function knownProblem(
 	error: unknown,
 ): { status: number; code: string; message: string; details: unknown } | null {

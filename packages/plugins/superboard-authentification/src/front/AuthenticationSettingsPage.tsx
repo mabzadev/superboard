@@ -64,7 +64,6 @@ export default function AuthenticationSettingsPage({
 	embedded,
 	onInvalidField,
 }: {
-	/** Shows only the settings this predicate accepts, grouped by section, without page chrome. */
 	embedded?(key: string): boolean;
 	onInvalidField?(key: string): void;
 } = {}) {

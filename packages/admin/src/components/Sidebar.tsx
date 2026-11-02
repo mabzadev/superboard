@@ -21,39 +21,18 @@ import {
 } from "./admin-navigation-icons.js";
 import { BrandIcon } from "./Logo.js";
 
-// Re-export for Shell.tsx and Header.tsx
 export { KumoSidebar as Sidebar, useSidebar };
 export { resolveNavIcon, toPhosphorIconName };
 
-// Role levels (matching @emdash-cms/auth)
 const ROLE_ADMIN = 50;
 const ROLE_EDITOR = 40;
 
-/**
- * Static invariants for nav entries that have AC-level visibility
- * requirements (Phase 5 of Discussion #1174: "Admin sees the 'Byline
- * Schema' entry; Editor does not").
- *
- * Exported as plain data so a unit test can assert the route + role
- * pairing without mounting Kumo's Sidebar primitive — which portals
- * its rendered content to `document.body` and applies collapse-state
- * CSS (`display:none` on labels at narrow viewports), making
- * full-DOM tests of role filtering brittle. The runtime `adminItems`
- * array below references these constants directly so the test
- * effectively guards the production list.
- */
 export const BYLINE_SCHEMA_NAV_ITEM = {
 	to: "/byline-schema" as const,
 	minRole: ROLE_ADMIN,
 	icon: ADMIN_NAV_ICONS.bylineSchema,
 } as const;
 
-/**
- * Filter a nav-items list by user role. Pure function — exported so
- * tests can verify the role gate without rendering the sidebar. An
- * item passes when it has no `minRole` (public) or the user is at
- * least the required level.
- */
 export function filterNavItemsByRole<T extends { minRole?: number }>(
 	items: T[],
 	userRole: number,
@@ -61,15 +40,6 @@ export function filterNavItemsByRole<T extends { minRole?: number }>(
 	return items.filter((item) => !item.minRole || userRole >= item.minRole);
 }
 
-/**
- * Manifest collections that get an auto-generated sidebar entry, in manifest
- * order. Pure function — exported so tests can pin the `hidden` contract
- * without rendering the sidebar.
- *
- * A hidden collection is still shipped in the manifest and stays fully
- * routable at `/content/:collection`; it only loses its nav link, so a plugin
- * that owns the collection end to end can steer editors to its own admin UI.
- */
 export function visibleCollectionEntries<T extends { hidden?: boolean }>(
 	collections: Record<string, T>,
 ): Array<[string, T]> {
@@ -116,7 +86,6 @@ export interface SidebarNavProps {
 	};
 }
 
-/** Locale-normalized taxonomy rows used by the global Manage navigation. */
 export function getSidebarTaxonomies<T extends LocalizedTaxonomyDefinition>(
 	taxonomies: readonly T[],
 	activeLocale?: string,
@@ -131,16 +100,10 @@ interface NavItem {
 	icon: React.ElementType;
 	params?: Record<string, string>;
 	search?: Record<string, string>;
-	/** Minimum role level required to see this item */
 	minRole?: number;
-	/** Optional badge count (e.g., pending comments) */
 	badge?: number;
 }
 
-/**
- * Navigation item rendered with Kumo's native Sidebar.MenuButton. Kumo's
- * LinkProvider maps the href to TanStack Router for client-side navigation.
- */
 function NavMenuLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
 	const { state } = useSidebar();
 	const Icon = item.icon;
@@ -171,17 +134,6 @@ function NavIcon({ icon: Icon, className }: { icon: React.ElementType; className
 	);
 }
 
-/**
- * Resolve the display label for a plugin admin page (sidebar + command
- * palette). Declared labels are run through the shared Lingui instance:
- * plugins that load their own catalog — with the English label as msgid —
- * get localized nav items. The catalog is shared with the admin, so common
- * labels like "Settings" pick up the admin's own translations even without
- * a plugin catalog (deliberate: a localized admin shouldn't show stray
- * English nav items). Labels with no catalog entry anywhere fall back to
- * the literal string. Pages without a label prettify the plugin id
- * ("my-shop" → "My Shop").
- */
 export function resolvePluginPageLabel(
 	label: string | undefined,
 	pluginId: string,
@@ -194,7 +146,6 @@ export function resolvePluginPageLabel(
 		.join(" ");
 }
 
-/** Resolves a nav item's route path by substituting $param placeholders. */
 export function resolveItemPath(item: NavItem): string {
 	let path = item.to;
 	if (item.params) {
@@ -208,7 +159,6 @@ export function resolveItemPath(item: NavItem): string {
 	return path;
 }
 
-/** Checks if a nav item is active based on the current router path. */
 export function isItemActive(itemPath: string, currentPath: string): boolean {
 	const queryIndex = itemPath.indexOf("?");
 	const path = queryIndex === -1 ? itemPath : itemPath.slice(0, queryIndex);
@@ -217,9 +167,6 @@ export function isItemActive(itemPath: string, currentPath: string): boolean {
 		: currentPath === path || currentPath.startsWith(`${path}/`);
 }
 
-/**
- * Admin sidebar navigation using kumo's Sidebar compound component.
- */
 export function SidebarNav({ manifest }: SidebarNavProps) {
 	const { t, i18n } = useLingui();
 	const location = useLocation();
@@ -231,7 +178,6 @@ export function SidebarNav({ manifest }: SidebarNavProps) {
 	const { data: user } = useCurrentUser();
 	const userRole = user?.role ?? 0;
 
-	// Fetch pending comment count for badge
 	const { data: commentCounts } = useQuery({
 		queryKey: ["commentCounts"],
 		queryFn: fetchCommentCounts,
@@ -239,8 +185,6 @@ export function SidebarNav({ manifest }: SidebarNavProps) {
 		retry: false,
 		enabled: userRole >= ROLE_EDITOR,
 	});
-
-	// --- Build nav item groups ---
 
 	const contentItems: NavItem[] = [
 		{ to: "/", label: t`Dashboard`, icon: ADMIN_NAV_ICONS.dashboard },
@@ -392,7 +336,6 @@ export function SidebarNav({ manifest }: SidebarNavProps) {
 			</KumoSidebar.Header>
 
 			<KumoSidebar.Content>
-				{/* Dashboard — standalone */}
 				<KumoSidebar.Group className="mt-2 md:mt-1.5">
 					<KumoSidebar.Menu>
 						<NavMenuLink
@@ -402,7 +345,6 @@ export function SidebarNav({ manifest }: SidebarNavProps) {
 					</KumoSidebar.Menu>
 				</KumoSidebar.Group>
 
-				{/* Content — collections + media */}
 				{visibleContent.length > 1 && (
 					<KumoSidebar.Group>
 						<KumoSidebar.GroupLabel>{t`Content`}</KumoSidebar.GroupLabel>
@@ -412,7 +354,6 @@ export function SidebarNav({ manifest }: SidebarNavProps) {
 					</KumoSidebar.Group>
 				)}
 
-				{/* Manage — comments, menus, taxonomies, etc. */}
 				{visibleManage.length > 0 && (
 					<KumoSidebar.Group>
 						<KumoSidebar.GroupLabel>{t`Manage`}</KumoSidebar.GroupLabel>
@@ -420,7 +361,6 @@ export function SidebarNav({ manifest }: SidebarNavProps) {
 					</KumoSidebar.Group>
 				)}
 
-				{/* Admin — content types, users, plugins, import */}
 				{visibleAdmin.length > 0 && (
 					<KumoSidebar.Group>
 						<KumoSidebar.GroupLabel>{t`Admin`}</KumoSidebar.GroupLabel>
@@ -428,7 +368,6 @@ export function SidebarNav({ manifest }: SidebarNavProps) {
 					</KumoSidebar.Group>
 				)}
 
-				{/* Plugin pages */}
 				{visiblePlugins.length > 0 && (
 					<KumoSidebar.Group>
 						<KumoSidebar.GroupLabel>{t`Plugins`}</KumoSidebar.GroupLabel>

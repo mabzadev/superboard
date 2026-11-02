@@ -74,7 +74,6 @@ import {
 import { useAnalyticsI18n } from "../analytics/analytics-i18n.js";
 import { SectionCards, type DashBoardCardType } from "../layout/section-cards.js";
 
-/** Canonical destinations; legacy /app, /dynamic-links and /products routes are not used. */
 const hrefs = {
 	apiKeys: "/auth/settings?tab=security&section=keys",
 	libraries: "/core/libraries",
@@ -164,7 +163,6 @@ export default function DashboardPageContent() {
 		const to = dateRange?.to ?? new Date();
 		const from = dateRange?.from ?? new Date(to.getTime() - 29 * 86_400_000);
 		const skip = Promise.resolve(undefined);
-		// Analytics' own overview always loads; optional providers are only called when enabled.
 		const results = await Promise.allSettled([
 			getAnalyticsOverview(project, { from: from.toISOString(), to: to.toISOString() }),
 			userEnabled ? getAppOverview(project) : skip,

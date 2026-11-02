@@ -24,7 +24,6 @@ export function EmailItemTriggers({
 }: {
 	project: string;
 	template: EmailTemplate;
-	/** Every email the canvas may use, so one trigger can chain several messages. */
 	templates?: EmailTemplate[];
 }) {
 	const { t } = useStudioI18n();
@@ -74,7 +73,6 @@ export function EmailItemTriggers({
 				}
 			},
 		);
-		// Channel steps (SMS, push, WhatsApp, Slack, webhook) need the configured connectors.
 		void getMarketingChannelConnectors(project).then(
 			(values) => {
 				if (active) setConnectors(values.filter((connector) => connector.enabled));

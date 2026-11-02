@@ -156,8 +156,6 @@ describe("ObjectForm widget", () => {
 		fireEvent.change(screen.getByDisplayValue("a"), {
 			target: { value: "b" },
 		});
-		// onChange should pass along keys not managed by this widget so stored
-		// JSON round-trips cleanly when the schema evolves.
 		const payload = onChange.mock.calls[0]?.[0] as Record<string, unknown>;
 		expect(payload).toEqual({ name: "b", stray: "unexpected" });
 	});

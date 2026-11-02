@@ -1,26 +1,15 @@
-//
-//  EventsHandler.swift
-//
-//  superboard
-//
-
 import UIKit
 
-// Closure type definitions for event handling
 typealias SuperBoardChangeEventClosure = (_ oldEvent: Event) -> Event
 public typealias SuperBoardEmptyClosure = () -> Void
 
-/// Manages event handling and dispatching for the application.
 class EventsHandler {
 
-    // Constants used internally
     private struct Constants {
-        static let firstBatchEventsSendingLeeway: Double = 5.0 // Seconds
+        static let firstBatchEventsSendingLeeway: Double = 5.0
         static let numberOfDaysForReactivation: Int = 7
         static let maxEventAgeDays: Int = 7
     }
-
-    // MARK: Properties
 
     private let service: APIServiceProtocol
     private let storage: EventsStorageProtocol
@@ -39,10 +28,6 @@ class EventsHandler {
         }
     }
 
-    // MARK: Initialization
-
-    /// Initializes the `EventsHandler` with the provided API service.
-    /// - Parameter apiService: The service used for API calls
     init(apiService: APIServiceProtocol,
          storage: EventsStorageProtocol = EventsStorage(),
          userDefaults: UserDefaultsHelperProtocol = UserDefaultsHelper(),
@@ -52,7 +37,6 @@ class EventsHandler {
         self.userDefaults = userDefaults
         self.keychain = keychain
 
-        // Set up observers and initial events
         startupTime = Date()
         Timer.scheduledTimer(withTimeInterval: Constants.firstBatchEventsSendingLeeway, repeats: false) { [weak self] _  in
             self?.handleEventsIfNeeded(completion: nil)
@@ -67,10 +51,6 @@ class EventsHandler {
         NotificationCenter.default.removeObserver(self)
     }
 
-    // MARK: Public Methods
-
-    /// Logs an event and sends it to the backend.
-    /// - Parameter event: The event to log
     func log(event: Event) {
         let newEvent = event
         if newEvent.link == nil {
@@ -82,8 +62,6 @@ class EventsHandler {
         }
     }
 
-    /// Sets the link for future actions to associate with new events.
-    /// - Parameter link: The link to set
     func setLinkToNewFutureActions(link: String?, completion: SuperBoardEmptyClosure?) {
         if let link {
             self.linkForFutureActions = link
@@ -94,53 +72,39 @@ class EventsHandler {
         }
     }
 
-    // MARK: Notifications
-
-    /// Called when the application becomes active.
     @objc func applicationDidBecomeActive() {
         let lastResignTimestamp = userDefaults.getInt(key: .superboardResignTimestamp)
         if lastResignTimestamp != 0 {
             handleOldEngagementEvents(timestamp: Date.fromSeconds(lastResignTimestamp))
         } else {
-            // Add a time-spent event if there is no last resign timestamp
             let event = Event(type: .timeSpent, createdAt: Date(), link: linkForFutureActions)
             storage.addEvent(event: event) {
-                // Do nothing
             }
         }
     }
 
-    /// Called when the application will resign active.
     @objc func applicationWillResignActive() {
         userDefaults.setInt(value: Date().toSeconds(), key: .superboardResignTimestamp)
     }
 
-    // MARK: Private Methods
-
-    /// Adds initial events such as install or reactivation events.
     private func addInitialEvents() {
         addInstallIfNeeded()
         addReactivationIfNeeded()
 
-        // Increment the number of opens in UserDefaults
         userDefaults.setInt(value: userDefaults.getInt(key: .superboardNumberOfOpens) + 1, key: .superboardNumberOfOpens)
     }
 
-    /// Logs an install event if it's the first app launch.
     private func addInstallIfNeeded() {
         let numberOfOpens = userDefaults.getInt(key: .superboardNumberOfOpens)
         let linksquaredID = keychain.getValue(forKey: .linksquaredID)
 
         if numberOfOpens == 0 {
-            // Log an install event if it's the first open
             let event = linksquaredID != nil ? Event(type: .reinstall, createdAt: Date(), link: linkForFutureActions) : Event(type: .install, createdAt: Date(), link: linkForFutureActions)
             storage.addOrReplaceEvents(events: [event]) {
-                // Do nothing
             }
         }
     }
 
-    /// Logs a reactivation event if the app was inactive for the specified number of days.
     private func addReactivationIfNeeded() {
         let lastResignTimestamp = userDefaults.getInt(key: .superboardLastStartTimestamp)
         if lastResignTimestamp != 0 {
@@ -150,7 +114,6 @@ class EventsHandler {
 
                 let event = Event(type: .reactivation, createdAt: Date(), link: linkForFutureActions)
                 storage.addEvent(event: event) {
-                    // Do nothing
                 }
             }
         }
@@ -158,18 +121,13 @@ class EventsHandler {
         userDefaults.setInt(value: Date().toSeconds(), key: .superboardLastStartTimestamp)
     }
 
-    /// Logs an app open event.
     private func addOpenEvent() {
-        // Log an app open event
         let event = Event(type: .appOpen, createdAt: Date(), link: linkForFutureActions)
         storage.addEvent(event: event) {
-            // Do nothing
         }
     }
 
-    /// Sets up observers for application lifecycle notifications.
     private func addObservers() {
-        // Add observers for application lifecycle notifications
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(applicationDidBecomeActive),
                                                name: UIApplication.didBecomeActiveNotification,
@@ -181,13 +139,9 @@ class EventsHandler {
                                                object: nil)
     }
 
-    /// Handles old events that occurred before the app resigned active.
-    /// - Parameter timestamp: The timestamp of when the app last resigned active
     private func handleOldEngagementEvents(timestamp: Date) {
-        // Handle events that occurred before the app resigned active
         let event = Event(type: .timeSpent, createdAt: Date(), link: linkForFutureActions)
 
-        // Store the correct duration of events
         changeStorageEvents { oldEvent in
             let newEvent = oldEvent
             if oldEvent.engagementTime == nil && oldEvent.type == .timeSpent {
@@ -198,18 +152,13 @@ class EventsHandler {
             }
             return newEvent
         } completion: {
-            // Send the time-spent events to the backend and add the new event
             self.sendTimeSpentEventsToBackend()
             self.storage.addEvent(event: event) {
-                // Do nothing
             }
         }
     }
 
-    /// Adds a link to all stored events that do not already have one.
-    /// - Parameter link: The link to add
     private func addLinkToEvents(link: String, completion: SuperBoardEmptyClosure?) {
-        // Add a link to the stored events
         changeStorageEvents { oldEvent in
             let newEvent = oldEvent
             if newEvent.link == nil && newEvent.createdAt >= self.startupTime {
@@ -217,16 +166,11 @@ class EventsHandler {
             }
             return newEvent
         } completion: {
-            // Send the updated events to the backend
             self.hasFetchedPayloadLink = true
             self.handleEventsIfNeeded(completion: completion)
         }
     }
 
-    /// Changes stored events based on a closure and performs a completion handler.
-    /// Uses an atomic read-modify-write so concurrent removes cannot resurrect events.
-    /// - Parameter eventHandling: A closure that defines how to modify each event
-    /// - Parameter completion: A completion handler to call after processing events
     private func changeStorageEvents(eventHandling: @escaping SuperBoardChangeEventClosure, completion: SuperBoardEmptyClosure?) {
         storage.transformEvents(eventHandling) {
             DispatchQueue.main.async {
@@ -235,7 +179,6 @@ class EventsHandler {
         }
     }
 
-    /// Sends normal events (non-time-spent) to the backend.
     private func sendNormalEventsToBackend(completion: SuperBoardEmptyClosure?) {
         let alreadySending = sendingQueue.sync { () -> Bool in
             if sendingEvents { return true }
@@ -248,7 +191,6 @@ class EventsHandler {
             return
         }
 
-        // Send normal events to the backend
         storage.getEvents { events in
             guard let events = events else {
                 self.sendingQueue.sync { self.sendingEvents = false }
@@ -261,7 +203,6 @@ class EventsHandler {
             let group = DispatchGroup()
             for event in events {
                 if event.type != .timeSpent {
-                    // Discard events older than the max age
                     if let days = event.createdAt.daysBetween(Date()), days >= Constants.maxEventAgeDays {
                         DebugLogger.shared.log(.error, "Discarding stale event (\(event.type.rawValue)) aged \(days) days")
                         self.storage.removeEvent(event: event) {}
@@ -289,7 +230,6 @@ class EventsHandler {
         }
     }
 
-    /// Sends time-spent events to the backend.
     private func sendTimeSpentEventsToBackend() {
         let alreadySending = sendingQueue.sync { () -> Bool in
             if sendingTimeSpentEvents { return true }
@@ -299,7 +239,6 @@ class EventsHandler {
 
         if alreadySending { return }
 
-        // Send time-spent events to the backend
         storage.getEvents { events in
             guard let events = events else {
                 self.sendingQueue.sync { self.sendingTimeSpentEvents = false }
@@ -311,7 +250,6 @@ class EventsHandler {
             let group = DispatchGroup()
             for event in events {
                 if event.type == .timeSpent {
-                    // Discard events older than the max age
                     if let days = event.createdAt.daysBetween(Date()), days >= Constants.maxEventAgeDays {
                         DebugLogger.shared.log(.error, "Discarding stale time-spent event aged \(days) days")
                         self.storage.removeEvent(event: event) {}
@@ -337,7 +275,6 @@ class EventsHandler {
         }
     }
 
-    /// Send events to backend if needed
     func handleEventsIfNeeded(completion: SuperBoardEmptyClosure?) {
         if (handledAppOrSceneDelegates || isLeewayPassed()) && hasFetchedPayloadLink {
             sendNormalEventsToBackend(completion: completion)
@@ -346,12 +283,8 @@ class EventsHandler {
         }
     }
 
-    /// Checks if the current time is greater than startupTime + leeway
-    ///
-    /// - Returns: `true` if the current time has exceeded the leeway period, else `false`
     func isLeewayPassed() -> Bool {
         guard let startupTime = self.startupTime else {
-            // Handle the case where startupTime is not set
             return false
         }
 

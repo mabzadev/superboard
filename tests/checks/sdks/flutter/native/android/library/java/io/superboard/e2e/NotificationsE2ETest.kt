@@ -21,9 +21,6 @@ import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import java.util.concurrent.CountDownLatch
 
-/**
- * E2E tests for notifications functionality.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class NotificationsE2ETest {
@@ -53,12 +50,9 @@ class NotificationsE2ETest {
         E2ETestUtils.configureAndWaitForAuth(application, baseURL = mockWebServer.url("/").toString())
     }
 
-    // ==================== Notifications Tests ====================
-
     @Test
     fun `Set automatic notifications listener does not crash`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -69,12 +63,9 @@ class NotificationsE2ETest {
             val authJob = E2ETestUtils.getAuthenticationJob()
             withTimeoutOrNull(10_000) { authJob?.join() }
 
-            // Act - set listener (test verifies this doesn't crash)
             SuperBoard.setOnAutomaticNotificationsListener { isLast ->
-                // Listener set successfully - callback would be invoked when notifications arrive
             }
 
-            // Assert
             E2ETestUtils.assertAuthenticationCompleted()
             val requests = E2ETestUtils.collectAllRequests(mockWebServer)
             E2ETestUtils.assertRequestMade(requests, "authenticate", "SDK should call authenticate endpoint")
@@ -89,7 +80,6 @@ class NotificationsE2ETest {
     @Test
     fun `Display messages fragment does not crash without activity`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -100,13 +90,11 @@ class NotificationsE2ETest {
             val authJob = E2ETestUtils.getAuthenticationJob()
             withTimeoutOrNull(10_000) { authJob?.join() }
 
-            // Act
             var callbackInvoked = false
             SuperBoard.displayMessagesFragment {
                 callbackInvoked = true
             }
 
-            // Assert
             E2ETestUtils.assertAuthenticationCompleted()
             val requests = E2ETestUtils.collectAllRequests(mockWebServer)
             E2ETestUtils.assertRequestMade(requests, "authenticate", "SDK should call authenticate endpoint")
@@ -117,7 +105,6 @@ class NotificationsE2ETest {
     @Test
     fun `Get number of unread notifications returns count`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -125,7 +112,6 @@ class NotificationsE2ETest {
             E2ETestUtils.enqueueUnreadCountResponse(mockWebServer, 5)
             E2ETestUtils.enqueueUnreadCountResponse(mockWebServer, 5)
 
-            // Act
             configureAndWaitForAuth()
             delay(200)
 
@@ -133,7 +119,6 @@ class NotificationsE2ETest {
                 SuperBoard.numberOfUnreadMessages()
             }
 
-            // Assert - verify the mocked unread count (5) is returned
             if (result != null) {
                 assertEquals("Should return mocked unread count", 5, result)
             } else {
@@ -144,9 +129,6 @@ class NotificationsE2ETest {
 
     @Test
     fun `Number of unread notifications before authentication returns null`() {
-        // Arrange - don't configure SDK
-
-        // Act & Assert
         try {
             runBlocking {
                 val result = SuperBoard.numberOfUnreadMessages()
@@ -164,7 +146,6 @@ class NotificationsE2ETest {
     @Test
     fun `Number of unread messages with callback style API works`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -176,7 +157,6 @@ class NotificationsE2ETest {
             delay(200)
 
 
-            // Act
             var callbackInvoked = false
             var callbackResult: Int? = null
             val latch = CountDownLatch(1)
@@ -187,22 +167,18 @@ class NotificationsE2ETest {
                 latch.countDown()
             }
 
-            // Wait for callback with looper pumping
             val startTime = System.currentTimeMillis()
             while (latch.count > 0 && System.currentTimeMillis() - startTime < 5000) {
                 Shadows.shadowOf(Looper.getMainLooper()).idle()
                 Thread.sleep(50)
             }
 
-            // Assert
             E2ETestUtils.assertAuthenticationCompleted()
             val requests = E2ETestUtils.collectAllRequests(mockWebServer)
             E2ETestUtils.assertRequestMade(requests, "authenticate", "SDK should call authenticate endpoint")
 
-            // Verify callback was actually invoked
             assertTrue("Callback should be invoked within timeout", callbackInvoked)
 
-            // Verify the mocked unread count (3) is returned in callback
             assertNotNull("Callback should receive unread count", callbackResult)
             assertEquals("Callback should receive mocked unread count", 3, callbackResult)
         }
@@ -211,7 +187,6 @@ class NotificationsE2ETest {
     @Test
     fun `numberOfUnreadMessages returns value after authentication`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -219,7 +194,6 @@ class NotificationsE2ETest {
             E2ETestUtils.enqueueUnreadCountResponse(mockWebServer, 5)
             E2ETestUtils.enqueueUnreadCountResponse(mockWebServer, 5)
 
-            // Act
             configureAndWaitForAuth()
             delay(200)
 
@@ -227,7 +201,6 @@ class NotificationsE2ETest {
                 SuperBoard.numberOfUnreadMessages()
             }
 
-            // Assert - verify the mocked unread count (5) is returned
             if (count != null) {
                 assertEquals("Should return mocked unread count", 5, count)
             } else {
@@ -239,20 +212,17 @@ class NotificationsE2ETest {
     @Test
     fun `numberOfUnreadMessages handles server error gracefully`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueErrorResponse(mockWebServer, 500, "Server Error")
 
-            // Act
             configureAndWaitForAuth()
             val count = E2ETestUtils.runWithLooperPumping(10_000) {
                 SuperBoard.numberOfUnreadMessages()
             }
 
-            // Assert
             E2ETestUtils.assertAuthenticationCompleted()
         }
     }
@@ -260,7 +230,6 @@ class NotificationsE2ETest {
     @Test
     fun `numberOfUnreadMessages with callback invokes listener`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -274,7 +243,6 @@ class NotificationsE2ETest {
             var receivedCount: Int? = null
             val latch = CountDownLatch(1)
 
-            // Act
             SuperBoard.numberOfUnreadMessages(lifecycleOwner = null) { count ->
                 callbackInvoked = true
                 receivedCount = count
@@ -287,7 +255,6 @@ class NotificationsE2ETest {
                 Thread.sleep(50)
             }
 
-            // Assert - verify callback was invoked and received the mocked unread count
             E2ETestUtils.assertAuthenticationCompleted()
             if (callbackInvoked && receivedCount != null && receivedCount != 0) {
                 assertEquals("Callback should receive mocked unread count", 3, receivedCount)
@@ -298,12 +265,8 @@ class NotificationsE2ETest {
     @Test
     fun `numberOfUnreadMessages returns null when SDK not configured`() {
         runBlocking {
-            // Arrange - do NOT configure SDK
-
-            // Act
             val count = SuperBoard.numberOfUnreadMessages()
 
-            // Assert
             assertNull("Should return null when SDK not configured", count)
         }
     }
@@ -311,20 +274,17 @@ class NotificationsE2ETest {
     @Test
     fun `numberOfUnreadMessages returns zero for new user`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueUnreadCountResponse(mockWebServer, 0)
 
-            // Act
             configureAndWaitForAuth()
             val count = E2ETestUtils.runWithLooperPumping(10_000) {
                 SuperBoard.numberOfUnreadMessages()
             }
 
-            // Assert
             if (count != null) {
                 assertEquals("Should return 0 for new user", 0, count)
             } else {
@@ -336,7 +296,6 @@ class NotificationsE2ETest {
     @Test
     fun `displayMessagesFragment handles missing activity gracefully`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -347,10 +306,8 @@ class NotificationsE2ETest {
             val authJob = E2ETestUtils.getAuthenticationJob()
             withTimeoutOrNull(5_000) { authJob?.join() }
 
-            // Act
             SuperBoard.displayMessagesFragment(onDismissed = null)
 
-            // Assert
             E2ETestUtils.assertAuthenticationCompleted()
         }
     }
@@ -358,19 +315,16 @@ class NotificationsE2ETest {
     @Test
     fun `Auto-display handles empty notifications list gracefully`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueAutoDisplayNotificationsResponse(mockWebServer, emptyList())
 
-            // Act
             configureAndWaitForAuth()
 
             delay(500)
 
-            // Assert
             E2ETestUtils.assertAuthenticationCompleted()
         }
     }

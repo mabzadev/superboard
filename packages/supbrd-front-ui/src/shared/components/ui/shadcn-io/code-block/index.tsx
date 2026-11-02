@@ -23,7 +23,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 let highlighter: HighlighterCore | null = null;
 let highlighterRequest: Promise<HighlighterCore> | null = null;
 
-// Shiki, its grammars and themes load on the first highlighted block instead of at import.
 function loadHighlighter(): Promise<HighlighterCore> {
 	highlighterRequest ??= Promise.all([
 		import("shiki/core"),
@@ -71,7 +70,6 @@ function useHighlighter(enabled: boolean): HighlighterCore | null {
 
 export type BundledLanguage = string;
 
-// Only the SDK setup snippets render filenames; unmatched names simply show no icon.
 const filenameIconMap = {
 	"*.js": SiJavascript,
 	"*.jsx": SiReact,

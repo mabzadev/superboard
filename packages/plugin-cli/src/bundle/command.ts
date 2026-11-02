@@ -1,14 +1,3 @@
-/**
- * `emdash-plugin bundle`
- *
- * Thin citty wrapper around `bundlePlugin` from `./api.js`. The interesting
- * logic lives there; this file only handles arg parsing, consola formatting,
- * and process exit on errors so the rest of the CLI can `await` it cleanly.
- *
- * If you're building tooling on top of bundling, import `bundlePlugin`
- * directly -- this command is the terminal-output adapter, not the API.
- */
-
 import { defineCommand } from "citty";
 import consola from "consola";
 import pc from "picocolors";
@@ -62,11 +51,6 @@ export const bundleCommand = defineCommand({
 			throw error;
 		}
 
-		// Bundling and publishing are two steps with a "go upload this somewhere"
-		// gap between them — the registry never accepts uploads, the publisher
-		// hosts the artifact (GitHub release asset, R2, S3, their own server)
-		// and the registry indexes the URL. Spell out the next step so users
-		// don't have to dig for it.
 		if (!args["validate-only"] && result.tarballPath) {
 			console.log();
 			consola.info("Next steps:");

@@ -1,15 +1,3 @@
-/**
- * In-Process Adapter for Standard-Format Plugins
- *
- * Converts a standard plugin definition ({ hooks, routes }) into a
- * ResolvedPlugin compatible with HookPipeline. This allows standard-format
- * plugins to run in-process when placed in the `plugins: []` config array.
- *
- * The adapter wraps each hook and route handler so that the PluginContextFactory
- * provides the same capability-gated context as the native path.
- *
- */
-
 import type { PluginDescriptor } from "../astro/integration/runtime.js";
 import type { RouteEntry, RouteHandler, SandboxedPlugin } from "../plugin-types.js";
 import { PLUGIN_CAPABILITIES, HOOK_NAMES } from "./manifest-schema.js";
@@ -24,16 +12,6 @@ import type {
 	PluginAdminConfig,
 } from "./types.js";
 
-/**
- * Loose per-hook entry shape used inside the adapter's iteration loop.
- *
- * `SandboxedPlugin.hooks` is a mapped type keyed by hook name, so each
- * entry's type depends on the key. When the adapter iterates with
- * `Object.entries`, the key is `string` (TypeScript can't see the
- * narrowing), so we need a *union* type that covers every hook entry
- * shape — bare handler or config form. This is that union, kept local
- * because it has no use outside the adapter.
- */
 // eslint-disable-next-line typescript-eslint/no-explicit-any -- must accept handlers with specific event types across all hook names
 type AnyHookHandler = (...args: any[]) => Promise<any>;
 type AnyHookEntry =
@@ -47,30 +25,14 @@ type AnyHookEntry =
 			exclusive?: boolean;
 	  };
 
-/**
- * Default hook configuration values
- */
 const DEFAULT_PRIORITY = 100;
 const DEFAULT_TIMEOUT = 5000;
 const DEFAULT_ERROR_POLICY = "abort" as const;
 
-/**
- * Check if a hook entry is the config form (has a `handler` property).
- */
 function isHookConfig(entry: AnyHookEntry): entry is Exclude<AnyHookEntry, AnyHookHandler> {
 	return typeof entry === "object" && entry !== null && "handler" in entry;
 }
 
-/**
- * Resolve a single hook entry to a ResolvedHook.
- *
- * Sandboxed-format hooks use the standard two-arg convention:
- *   handler(event, ctx)
- *
- * The HookPipeline dispatch methods also call handlers with (event, ctx),
- * so the handler is compatible as-is — we just normalise the
- * surrounding config (priority, timeout, etc.) to its defaults.
- */
 function resolveSandboxedHook(entry: AnyHookEntry, pluginId: string): ResolvedHook<AnyHookHandler> {
 	if (isHookConfig(entry)) {
 		return {
@@ -84,7 +46,6 @@ function resolveSandboxedHook(entry: AnyHookEntry, pluginId: string): ResolvedHo
 		};
 	}
 
-	// Bare function handler
 	return {
 		priority: DEFAULT_PRIORITY,
 		timeout: DEFAULT_TIMEOUT,
@@ -96,15 +57,6 @@ function resolveSandboxedHook(entry: AnyHookEntry, pluginId: string): ResolvedHo
 	};
 }
 
-/**
- * Normalise a `RouteEntry` (bare handler or `{ handler, public?, input? }`
- * config) to the config form. The `input` schema is intentionally typed
- * `unknown` in `RouteEntry` — sandboxed plugins describe it loosely
- * because the strict `z.ZodType<TInput>` constraint of the runtime's
- * `PluginRoute` only narrows once the route is wired into the router.
- * The wider type flows through to the runtime which validates at
- * invocation time.
- */
 function normalizeRouteEntry(entry: RouteEntry): {
 	handler: RouteHandler;
 	public?: boolean;
@@ -129,20 +81,6 @@ const VALID_CAPABILITIES_SET = new Set<string>(PLUGIN_CAPABILITIES);
 
 const VALID_HOOK_NAMES_SET = new Set<string>(HOOK_NAMES);
 
-/**
- * Adapt a sandboxed plugin's default export into a ResolvedPlugin.
- *
- * This is the in-process side of sandboxed-format plugins: it takes
- * the `{ hooks, routes }` default export of a sandboxed plugin and
- * produces a `ResolvedPlugin` that enters the HookPipeline alongside
- * native plugins. The descriptor supplies identity (id, version) and
- * the trust contract (capabilities, allowedHosts, storage); the
- * definition supplies behaviour.
- *
- * @param definition - The plugin's default export (matching `SandboxedPlugin` from `emdash/plugin`).
- * @param descriptor - The plugin descriptor with id, version, capabilities, etc.
- * @returns A ResolvedPlugin compatible with HookPipeline.
- */
 export function adaptSandboxEntry(
 	definition: SandboxedPlugin,
 	descriptor: PluginDescriptor,
@@ -150,9 +88,6 @@ export function adaptSandboxEntry(
 	const pluginId = descriptor.id;
 	const version = descriptor.version;
 
-	// A null / array / non-object `definition` would throw a generic
-	// `TypeError: Cannot read properties of null` further down the
-	// loop without the plugin id; surface a useful error first.
 	if (typeof definition !== "object" || definition === null || Array.isArray(definition)) {
 		throw new Error(
 			`Plugin "${pluginId}" default export must be an object with ` +
@@ -162,13 +97,6 @@ export function adaptSandboxEntry(
 		);
 	}
 
-	// Resolve hooks. `SandboxedPlugin.hooks` is keyed by hook name with
-	// per-key entry types; iterating with `Object.entries` collapses
-	// keys to `string`, so we treat each entry as the union `AnyHookEntry`
-	// for the duration of the loop. The widening from the strict mapped
-	// type to a plain record is sound because each entry still matches
-	// one of the bare-handler / config-object shapes captured by
-	// `AnyHookEntry`.
 	const resolvedHooks: ResolvedPluginHooks = {};
 	if (definition.hooks) {
 		// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- widening the strict mapped type to a string-keyed record for iteration; entries still match AnyHookEntry
@@ -180,32 +108,11 @@ export function adaptSandboxEntry(
 						`Valid hooks: ${[...VALID_HOOK_NAMES_SET].join(", ")}`,
 				);
 			}
-			// The resolved hook has the correct handler type for the hook name.
-			// We store it as the generic type and let HookPipeline's typed dispatch
-			// methods handle the type narrowing at call time.
 			// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- bridging untyped map to typed interface
 			(resolvedHooks as Record<string, unknown>)[hookName] = resolveSandboxedHook(entry, pluginId);
 		}
 	}
 
-	// Resolve routes: sandboxed format uses (routeCtx, pluginCtx) two-arg
-	// pattern. Standard format (`definePlugin(...)` as the default export)
-	// uses the public (ctx: RouteContext) single-arg pattern where
-	// RouteContext extends PluginContext with { input, request, requestMeta }.
-	//
-	// The two conventions disagree on the FIRST argument (`request` is a
-	// flattened plain object for sandboxed, a real WHATWG `Request` for
-	// standard), so the wrapper must know which contract the handler was
-	// written against. `definePlugin` requires `id`, and sandbox-format
-	// default exports never carry one (identity comes from the manifest's
-	// slug + publisher) — the same "no id" signal definePlugin itself
-	// documents. Calling a single-arg standard handler with the two-arg
-	// convention silently hands it the bare route context (JS drops the
-	// extra argument), so `ctx.storage` / `ctx.email` / etc. are all
-	// undefined at runtime (#2079).
-	//
-	// Route entries can be bare functions or `{ handler, public?, input? }`
-	// config objects; normalise to the config shape inside the loop.
 	const usesPublicRouteContext = "id" in definition && typeof definition.id === "string";
 	const resolvedRoutes: Record<string, PluginRoute> = {};
 	if (definition.routes) {
@@ -225,18 +132,9 @@ export function adaptSandboxEntry(
 				cacheControl,
 				handler: async (ctx) => {
 					if (usesPublicRouteContext) {
-						// The incoming ctx already IS the public RouteContext
-						// (full PluginContext + input / real Request /
-						// requestMeta) — pass it through unchanged.
 						// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- standard-format handlers are authored against the public single-arg PluginRoute contract; the sandbox RouteHandler type on `normalized` is the wider authoring union
 						return (handler as unknown as PluginRoute["handler"])(ctx);
 					}
-					// `ctx.request` is a real WHATWG `Request` (this is the
-					// in-process adapter; the worker-sandbox adapter handles
-					// the serialised case). Flatten `Headers` to the plain
-					// `Record<string, string>` shape that author-facing
-					// `SandboxedRequest` promises so handler bodies are
-					// identical across both adapters.
 					const headers: Record<string, string> = {};
 					ctx.request.headers.forEach((value, name) => {
 						headers[name] = value;
@@ -259,11 +157,6 @@ export function adaptSandboxEntry(
 		}
 	}
 
-	// Build capabilities from descriptor.
-	// Validate against the known set (same as defineNativePlugin). Both
-	// current and deprecated names are accepted; deprecated names are
-	// silently normalized to current names below so the runtime only ever
-	// sees the canonical form.
 	const rawCapabilities = descriptor.capabilities ?? [];
 	for (const cap of rawCapabilities) {
 		if (!VALID_CAPABILITIES_SET.has(cap)) {
@@ -274,16 +167,10 @@ export function adaptSandboxEntry(
 		}
 	}
 
-	// Silent normalization: rewrite deprecated names to current names.
-	// Safe assertion — `normalizeCapabilities` only emits validated input
-	// plus current names from the rename map, all of which are in the union.
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated above; normalizeCapabilities only returns capabilities from the union
 	const capabilities = normalizeCapabilities(rawCapabilities) as PluginCapability[];
 	const allowedHosts = descriptor.allowedHosts ?? [];
 
-	// Capability implications: broader capabilities imply narrower ones
-	// (mirrors the normalization in define-plugin.ts for native format).
-	// Operates on canonical names only.
 	if (capabilities.includes("content:write") && !capabilities.includes("content:read")) {
 		capabilities.push("content:read");
 	}
@@ -297,9 +184,6 @@ export function adaptSandboxEntry(
 		capabilities.push("network:request");
 	}
 
-	// Build storage config from descriptor.
-	// StorageCollectionDeclaration uses optional indexes, but PluginStorageConfig
-	// requires them. Ensure every collection has an indexes array.
 	const rawStorage = descriptor.storage ?? {};
 	const storage: PluginStorageConfig = {};
 	for (const [name, config] of Object.entries(rawStorage)) {
@@ -309,11 +193,6 @@ export function adaptSandboxEntry(
 		};
 	}
 
-	// Build admin config from descriptor.
-	// Portable Text blocks and field widgets are declarative (Block Kit), so they
-	// are forwarded for standard/sandboxed plugins just like pages and widgets —
-	// the admin editor consumes them from the manifest. Only the site-side render
-	// component (`componentsEntry`) stays native-only.
 	const admin: PluginAdminConfig = {};
 	if (descriptor.adminPages) {
 		admin.pages = descriptor.adminPages;

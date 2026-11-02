@@ -1,4 +1,3 @@
-/** Stable, machine-readable failures returned by this package. */
 export const VERIFICATION_ERROR_CODES = [
 	"BUNDLE_COMPRESSED_SIZE_EXCEEDED",
 	"BUNDLE_DECOMPRESSED_SIZE_EXCEEDED",

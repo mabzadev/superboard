@@ -10,10 +10,6 @@ import {
 import type { MediaItem } from "../../../../../packages/admin/src/lib/api";
 import { render } from "../utils/render.tsx";
 
-// ---------------------------------------------------------------------------
-// Mocks — heavy components that need network / Astro context
-// ---------------------------------------------------------------------------
-
 vi.mock("../../../../../packages/admin/src/components/MediaPickerModal", () => ({
 	MediaPickerModal: ({
 		open,
@@ -142,7 +138,6 @@ async function renderEditor(props: Partial<PortableTextEditorProps> = {}) {
 		<PortableTextEditor value={defaultValue} onEditorReady={onEditorReady} {...props} />,
 	);
 
-	// Wait for TipTap to initialize
 	await vi.waitFor(
 		() => {
 			expect(document.querySelector(".ProseMirror")).toBeTruthy();
@@ -153,26 +148,15 @@ async function renderEditor(props: Partial<PortableTextEditorProps> = {}) {
 	return { screen, editor: editorInstance! };
 }
 
-/** Focus the ProseMirror editor and select all text */
 async function focusAndSelectAll(screen: Awaited<ReturnType<typeof render>>) {
 	const prosemirror = screen.container.querySelector(".ProseMirror") as HTMLElement;
 	prosemirror.focus();
 	await vi.waitFor(() => expect(document.activeElement).toBe(prosemirror), { timeout: 1000 });
-	// Use Control on Linux CI, Meta on macOS
 	const mod = navigator.platform.includes("Mac") ? "{Meta>}" : "{Control>}";
 	const modUp = navigator.platform.includes("Mac") ? "{/Meta}" : "{/Control}";
 	await userEvent.keyboard(`${mod}{a}${modUp}`);
 }
 
-/**
- * Returns a locator scoped to the editor toolbar.
- *
- * The bubble menu (which appears when text is selected) renders buttons with
- * the same accessible names as some toolbar buttons (Bold, Italic, Underline,
- * Strikethrough). An unscoped `getByRole("button", { name: "Bold" })` after
- * selecting text races with the bubble menu and produces a strict-mode
- * violation in CI. Scoping to the toolbar via its aria-label avoids the race.
- */
 function getToolbarButton(screen: Awaited<ReturnType<typeof render>>, name: string) {
 	return screen.getByRole("toolbar", { name: "Text formatting" }).getByRole("button", { name });
 }
@@ -225,10 +209,6 @@ async function getHeadingMenuItem(
 	await expect.element(item).toBeVisible();
 	return { trigger, item };
 }
-
-// =============================================================================
-// 1. Toolbar Presence and Structure
-// =============================================================================
 
 describe("Toolbar Presence and Structure", () => {
 	it("has role='toolbar' with correct aria-label", async () => {
@@ -403,10 +383,6 @@ describe("Toolbar Presence and Structure", () => {
 	});
 });
 
-// =============================================================================
-// Block insertion
-// =============================================================================
-
 describe("Block insertion", () => {
 	it("leaves content unchanged until an image is selected from the toolbar picker", async () => {
 		const { screen, editor } = await renderEditor();
@@ -442,10 +418,6 @@ describe("Block insertion", () => {
 		});
 	});
 });
-
-// =============================================================================
-// 2. Formatting Button Toggle States
-// =============================================================================
 
 describe("Formatting Button Toggle States", () => {
 	it("shows existing bold formatting and clears the state for mixed or plain selections", async () => {
@@ -550,7 +522,6 @@ describe("Formatting Button Toggle States", () => {
 
 	it("Heading 1: click changes to h1 without exposing toggle semantics", async () => {
 		const { screen, editor } = await renderEditor();
-		// Focus editor and place cursor (block commands need cursor in a paragraph)
 		editor.commands.focus();
 
 		const { trigger, item } = await getHeadingMenuItem(screen, "Heading 1");
@@ -715,23 +686,17 @@ describe("Formatting Button Toggle States", () => {
 
 		const btn = getToolbarButton(screen, "Bold");
 
-		// First click: on
 		btn.element().click();
 		await vi.waitFor(() => {
 			expect(btn.element().getAttribute("aria-pressed")).toBe("true");
 		});
 
-		// Second click: off
 		btn.element().click();
 		await vi.waitFor(() => {
 			expect(btn.element().getAttribute("aria-pressed")).toBe("false");
 		});
 	});
 });
-
-// =============================================================================
-// 3. Text Alignment
-// =============================================================================
 
 describe("Text Alignment", () => {
 	it("tracks default and explicit alignment whenever the cursor changes paragraphs", async () => {
@@ -1002,13 +967,11 @@ describe("Text Alignment", () => {
 		const alignLeft = screen.getByRole("button", { name: "Align Left" });
 		const alignRight = screen.getByRole("button", { name: "Align Right" });
 
-		// First switch to right
 		alignRight.element().click();
 		await vi.waitFor(() => {
 			expect(alignRight.element().getAttribute("aria-pressed")).toBe("true");
 		});
 
-		// Then switch back to left
 		alignLeft.element().click();
 		await vi.waitFor(() => {
 			expect(alignLeft.element().getAttribute("aria-pressed")).toBe("true");
@@ -1016,10 +979,6 @@ describe("Text Alignment", () => {
 		});
 	});
 });
-
-// =============================================================================
-// 4. Undo/Redo
-// =============================================================================
 
 describe("Undo/Redo", () => {
 	it("initially Undo and Redo are disabled", async () => {
@@ -1036,7 +995,6 @@ describe("Undo/Redo", () => {
 		const { screen } = await renderEditor();
 		await focusAndSelectAll(screen);
 
-		// Make a change - toggle bold
 		getToolbarButton(screen, "Bold").element().click();
 
 		const undo = getToolbarButton(screen, "Undo");
@@ -1052,13 +1010,11 @@ describe("Undo/Redo", () => {
 		const { screen } = await renderEditor();
 		await focusAndSelectAll(screen);
 
-		// Make a change
 		getToolbarButton(screen, "Bold").element().click();
 
 		const undo = getToolbarButton(screen, "Undo");
 		const redo = getToolbarButton(screen, "Redo");
 
-		// Wait for undo to be enabled, then click it
 		await vi.waitFor(
 			() => {
 				expect(undo.element().disabled).toBe(false);
@@ -1079,13 +1035,11 @@ describe("Undo/Redo", () => {
 		const { screen } = await renderEditor();
 		await focusAndSelectAll(screen);
 
-		// Make a change
 		getToolbarButton(screen, "Bold").element().click();
 
 		const undo = getToolbarButton(screen, "Undo");
 		const redo = getToolbarButton(screen, "Redo");
 
-		// Undo
 		await vi.waitFor(
 			() => {
 				expect(undo.element().disabled).toBe(false);
@@ -1094,7 +1048,6 @@ describe("Undo/Redo", () => {
 		);
 		undo.element().click();
 
-		// Redo
 		await vi.waitFor(
 			() => {
 				expect(redo.element().disabled).toBe(false);
@@ -1112,10 +1065,6 @@ describe("Undo/Redo", () => {
 		);
 	});
 });
-
-// =============================================================================
-// 5. Link Insertion (Toolbar Popover)
-// =============================================================================
 
 describe("Link Insertion", () => {
 	it("clicking Insert Link opens a popover with URL input", async () => {
@@ -1154,9 +1103,7 @@ describe("Link Insertion", () => {
 		});
 
 		const input = document.querySelector('input[type="url"]') as HTMLInputElement;
-		// Focus input and type URL
 		input.focus();
-		// Use native input value setter to trigger React's onChange
 		const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
 			HTMLInputElement.prototype,
 			"value",
@@ -1196,14 +1143,12 @@ describe("Link Insertion", () => {
 		const { screen, editor } = await renderEditor();
 		await focusAndSelectAll(screen);
 
-		// Set a link programmatically
 		editor.chain().focus().setLink({ href: "https://example.com" }).run();
 
 		await vi.waitFor(() => {
 			expect(editor.isActive("link")).toBe(true);
 		});
 
-		// Re-select all to ensure cursor is in the link
 		const mod = navigator.platform.includes("Mac") ? "{Meta>}" : "{Control>}";
 		const modUp = navigator.platform.includes("Mac") ? "{/Meta}" : "{/Control}";
 		await userEvent.keyboard(`${mod}{a}${modUp}`);
@@ -1215,10 +1160,6 @@ describe("Link Insertion", () => {
 		});
 	});
 });
-
-// =============================================================================
-// 7. Focus Mode Toggle
-// =============================================================================
 
 describe("Focus Mode Toggle", () => {
 	it("initially Spotlight Mode aria-pressed is false", async () => {
@@ -1235,7 +1176,6 @@ describe("Focus Mode Toggle", () => {
 
 		await vi.waitFor(() => {
 			expect(btn.element().getAttribute("aria-pressed")).toBe("true");
-			// The wrapper div should have the spotlight-mode class
 			const wrapper = screen.container.querySelector(".spotlight-mode");
 			expect(wrapper).toBeTruthy();
 		});
@@ -1245,13 +1185,11 @@ describe("Focus Mode Toggle", () => {
 		const { screen } = await renderEditor();
 		const btn = screen.getByRole("button", { name: "Spotlight Mode" });
 
-		// Toggle on
 		btn.element().click();
 		await vi.waitFor(() => {
 			expect(btn.element().getAttribute("aria-pressed")).toBe("true");
 		});
 
-		// Toggle off
 		btn.element().click();
 		await vi.waitFor(() => {
 			expect(btn.element().getAttribute("aria-pressed")).toBe("false");
@@ -1262,7 +1200,6 @@ describe("Focus Mode Toggle", () => {
 	it("with controlled focusMode prop, reflects external state", async () => {
 		const { screen } = await renderEditor({ focusMode: "spotlight" });
 
-		// The button title changes to "Exit Spotlight Mode" when active
 		const btn = screen.getByRole("button", { name: "Exit Spotlight Mode" });
 		await expect.element(btn).toHaveAttribute("aria-pressed", "true");
 
@@ -1286,10 +1223,6 @@ describe("Focus Mode Toggle", () => {
 	});
 });
 
-// =============================================================================
-// 8. WAI-ARIA Keyboard Navigation
-// =============================================================================
-
 describe("WAI-ARIA Keyboard Navigation", () => {
 	it("ArrowRight from Bold moves focus to Italic", async () => {
 		const { screen } = await renderEditor();
@@ -1297,11 +1230,9 @@ describe("WAI-ARIA Keyboard Navigation", () => {
 		const bold = screen.getByRole("button", { name: "Bold" });
 		const italic = screen.getByRole("button", { name: "Italic" });
 
-		// Focus the Bold button
 		bold.element().focus();
 		expect(document.activeElement).toBe(bold.element());
 
-		// Press ArrowRight
 		await userEvent.keyboard("{ArrowRight}");
 
 		await vi.waitFor(() => {
@@ -1315,11 +1246,9 @@ describe("WAI-ARIA Keyboard Navigation", () => {
 		const bold = screen.getByRole("button", { name: "Bold" });
 		const italic = screen.getByRole("button", { name: "Italic" });
 
-		// Focus the Italic button
 		italic.element().focus();
 		expect(document.activeElement).toBe(italic.element());
 
-		// Press ArrowLeft
 		await userEvent.keyboard("{ArrowLeft}");
 
 		await vi.waitFor(() => {
@@ -1350,10 +1279,8 @@ describe("WAI-ARIA Keyboard Navigation", () => {
 		)!;
 		const alignCenter = screen.getByRole("button", { name: "Align Center" });
 
-		// Focus a button in the middle
 		alignCenter.element().focus();
 
-		// Press Home
 		await userEvent.keyboard("{Home}");
 
 		await vi.waitFor(() => {
@@ -1366,15 +1293,12 @@ describe("WAI-ARIA Keyboard Navigation", () => {
 
 		const bold = screen.getByRole("button", { name: "Bold" });
 
-		// Focus the first button
 		bold.element().focus();
 
-		// Press End — last button is Spotlight Mode (or Exit Spotlight Mode)
 		await userEvent.keyboard("{End}");
 
 		await vi.waitFor(() => {
 			const active = document.activeElement as HTMLElement;
-			// Last button in the toolbar — its aria-label should be "Spotlight Mode"
 			expect(active.getAttribute("aria-label")).toBe("Spotlight Mode");
 		});
 	});
@@ -1387,10 +1311,8 @@ describe("WAI-ARIA Keyboard Navigation", () => {
 			(button) => !button.disabled && button.getClientRects().length > 0,
 		)!;
 
-		// Focus the last button
 		spotlightBtn.element().focus();
 
-		// Press ArrowRight - should wrap to first
 		await userEvent.keyboard("{ArrowRight}");
 
 		await vi.waitFor(() => {
@@ -1405,10 +1327,8 @@ describe("WAI-ARIA Keyboard Navigation", () => {
 			(button) => !button.disabled && button.getClientRects().length > 0,
 		)!;
 
-		// Focus the first button
 		firstButton.focus();
 
-		// Press ArrowLeft - should wrap to last
 		await userEvent.keyboard("{ArrowLeft}");
 
 		await vi.waitFor(() => {

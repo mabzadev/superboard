@@ -33,10 +33,6 @@ import {
 
 const internalTrackingProvider = brand.brand.namespace;
 
-/**
- * Collection preferences only. Attributed results live in the Dynamic links
- * Analytics tab so settings and measurement are not duplicated.
- */
 export default function TrackingPageContent() {
 	const { tr } = useFlowI18n();
 	const { selectedProject } = useProjectSelection();

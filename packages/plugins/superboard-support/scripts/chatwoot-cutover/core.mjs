@@ -466,8 +466,6 @@ export function renderChatwootSql(transformation) {
 			`Chatwoot migration is blocked: ${transformation.blockers.map((item) => item.code).join(", ")}`,
 		);
 	}
-	// Wrangler D1 file execution is not globally atomic. Every statement is an
-	// idempotent upsert so an interrupted import can be safely resumed.
 	const statements = [];
 	for (const table of CHATWOOT_TABLES) {
 		statements.push(upsertSql(table, transformation.rows[table.id]));

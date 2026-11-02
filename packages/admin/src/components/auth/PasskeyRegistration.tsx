@@ -1,16 +1,3 @@
-/**
- * PasskeyRegistration - WebAuthn credential registration component
- *
- * Handles the passkey registration flow:
- * 1. Fetches registration options from server
- * 2. Triggers browser's WebAuthn credential creation
- * 3. Sends attestation back to server for verification
- *
- * Used in:
- * - Setup wizard (first admin creation)
- * - User settings (adding additional passkeys)
- */
-
 import { Button, Input } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import * as React from "react";
@@ -22,18 +9,11 @@ import {
 } from "../../lib/webauthn-environment";
 import { InsecurePasskeyContextMessage } from "./PasskeyContextMessage.js";
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const BASE64URL_DASH_REGEX = /-/g;
 const BASE64URL_UNDERSCORE_REGEX = /_/g;
 const BASE64_PLUS_REGEX = /\+/g;
 const BASE64_SLASH_REGEX = /\//g;
 
-// ============================================================================
-// WebAuthn types
-// ============================================================================
 interface PublicKeyCredentialCreationOptionsJSON {
 	challenge: string;
 	rp: {
@@ -77,19 +57,12 @@ interface RegistrationResponse {
 }
 
 export interface PasskeyRegistrationProps {
-	/** Endpoint to get registration options */
 	optionsEndpoint: string;
-	/** Endpoint to verify registration */
 	verifyEndpoint: string;
-	/** Called on successful registration */
 	onSuccess: (response: unknown) => void;
-	/** Called on error */
 	onError?: (error: Error) => void;
-	/** Button text */
 	buttonText?: string;
-	/** Show passkey name input */
 	showNameInput?: boolean;
-	/** Additional data to send with requests */
 	additionalData?: Record<string, unknown>;
 }
 
@@ -101,9 +74,6 @@ type RegistrationState =
 	| { status: "error"; message: string }
 	| { status: "success" };
 
-/**
- * Convert base64url to ArrayBuffer
- */
 function base64urlToBuffer(base64url: string): ArrayBuffer {
 	const base64 = base64url
 		.replace(BASE64URL_DASH_REGEX, "+")
@@ -117,9 +87,6 @@ function base64urlToBuffer(base64url: string): ArrayBuffer {
 	return bytes.buffer;
 }
 
-/**
- * Convert ArrayBuffer to base64url (with padding for @oslojs/encoding compatibility)
- */
 function bufferToBase64url(buffer: ArrayBuffer): string {
 	const bytes = new Uint8Array(buffer);
 	let binary = "";
@@ -127,13 +94,9 @@ function bufferToBase64url(buffer: ArrayBuffer): string {
 		binary += String.fromCharCode(bytes[i]!);
 	}
 	const base64 = btoa(binary);
-	// Convert to base64url but keep padding (required by @oslojs/encoding)
 	return base64.replace(BASE64_PLUS_REGEX, "-").replace(BASE64_SLASH_REGEX, "_");
 }
 
-/**
- * PasskeyRegistration Component
- */
 export function PasskeyRegistration({
 	optionsEndpoint,
 	verifyEndpoint,
@@ -150,7 +113,6 @@ export function PasskeyRegistration({
 	});
 	const [passkeyName, setPasskeyName] = React.useState("");
 
-	// Secure context (HTTPS or http://localhost) + PublicKeyCredential
 	const isSupported = React.useMemo(() => isPasskeyEnvironmentUsable(), []);
 	const insecureContext = React.useMemo(
 		() => typeof window !== "undefined" && !isWebAuthnSecureContext(),
@@ -167,7 +129,6 @@ export function PasskeyRegistration({
 		}
 
 		try {
-			// Step 1: Get registration options from server
 			setState({ status: "loading", message: t`Preparing registration...` });
 
 			const optionsResponse = await apiFetch(optionsEndpoint, {
@@ -181,10 +142,8 @@ export function PasskeyRegistration({
 			}>(optionsResponse, t`Failed to get registration options`);
 			const { options } = optionsData;
 
-			// Step 2: Create credential with browser
 			setState({ status: "loading", message: t`Waiting for passkey...` });
 
-			// Convert options to the format expected by the browser
 			const publicKeyOptions: PublicKeyCredentialCreationOptions = {
 				challenge: base64urlToBuffer(options.challenge),
 				rp: options.rp,
@@ -212,14 +171,11 @@ export function PasskeyRegistration({
 				throw new Error("No credential returned from authenticator");
 			}
 
-			// Step 3: Send credential to server for verification
 			setState({ status: "loading", message: t`Verifying...` });
 
-			// navigator.credentials.create() with publicKey returns PublicKeyCredential
 			const credential = rawCredential as PublicKeyCredential;
 			const attestationResponse = credential.response as AuthenticatorAttestationResponse;
 
-			// authenticatorAttachment exists at runtime on PublicKeyCredential but isn't in the base type definition
 			const rawAttachment =
 				"authenticatorAttachment" in credential ? credential.authenticatorAttachment : undefined;
 			const authenticatorAttachment =
@@ -259,7 +215,6 @@ export function PasskeyRegistration({
 		} catch (error) {
 			const message = error instanceof Error ? error.message : t`Registration failed`;
 
-			// Handle specific WebAuthn errors
 			let userMessage = message;
 			if (error instanceof DOMException) {
 				switch (error.name) {
@@ -294,7 +249,6 @@ export function PasskeyRegistration({
 		t,
 	]);
 
-	// Not usable (insecure origin vs missing API — browser hides WebAuthn the same way)
 	if (!isSupported) {
 		return (
 			<div className="rounded-lg border border-kumo-danger/50 bg-kumo-danger/10 p-4">
@@ -314,7 +268,6 @@ export function PasskeyRegistration({
 
 	return (
 		<div className="space-y-4">
-			{/* Passkey name input (optional) */}
 			{showNameInput && (
 				<div>
 					<Input
@@ -331,21 +284,18 @@ export function PasskeyRegistration({
 				</div>
 			)}
 
-			{/* Error message */}
 			{state.status === "error" && (
 				<div className="rounded-lg bg-kumo-danger/10 p-4 text-sm text-kumo-danger">
 					{state.message}
 				</div>
 			)}
 
-			{/* Success message */}
 			{state.status === "success" && (
 				<div className="rounded-lg bg-kumo-success/10 p-4 text-sm text-kumo-success">
 					{t`Passkey registered successfully!`}
 				</div>
 			)}
 
-			{/* Register button */}
 			<Button
 				type="button"
 				onClick={handleRegister}
@@ -356,7 +306,6 @@ export function PasskeyRegistration({
 				{state.status === "loading" ? <>{state.message}</> : resolvedButtonText}
 			</Button>
 
-			{/* Help text */}
 			<p className="text-xs text-kumo-subtle text-center">
 				{t`You'll be prompted to use your device's biometric authentication, security key, or PIN.`}
 			</p>

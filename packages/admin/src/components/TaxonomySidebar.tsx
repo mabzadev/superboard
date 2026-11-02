@@ -1,11 +1,3 @@
-/**
- * Taxonomy Sidebar for Content Editor
- *
- * Shows taxonomy selection UI in the content editor sidebar.
- * - Checkbox tree for hierarchical taxonomies (categories)
- * - Tag input for flat taxonomies (tags)
- */
-
 import { Autocomplete, Badge, Button, Checkbox, Input, Label, Text, Toast } from "@cloudflare/kumo";
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
@@ -60,14 +52,9 @@ interface TaxonomySidebarProps {
 	collection: string;
 	entryId?: string;
 	canManageTaxonomies: boolean;
-	/** Locale of the entry being edited. Scopes term reads/writes so only the
-	 * matching translation variants are shown — see issue #1218. */
 	entryLocale?: string;
-	/** Site default used when this logical taxonomy has no entry-locale definition. */
 	defaultLocale?: string;
 	onChange?: (taxonomyName: string, termIds: string[]) => void;
-	/** Applied to the root when the section renders. Omitted when the section
-	 * is empty so the caller doesn't need to guess whether to draw chrome. */
 	className?: string;
 }
 
@@ -76,9 +63,6 @@ const EMPTY_UNRESOLVED_ASSIGNMENTS: UnresolvedAssignment[] = [];
 
 type TagInputOption = { type: "term"; term: TaxonomyTerm } | { type: "create"; label: string };
 
-/**
- * Fetch taxonomy definitions
- */
 async function fetchTaxonomyDefs(): Promise<TaxonomyDef[]> {
 	const res = await apiFetch(`/_emdash/api/taxonomies`);
 	const data = await parseApiResponse<{ taxonomies: TaxonomyDef[] }>(
@@ -102,7 +86,6 @@ function useApplicableTaxonomies(
 	);
 }
 
-/** Whether the editor should include a taxonomy settings section. */
 export function useHasApplicableTaxonomies(
 	collection: string,
 	activeLocale?: string,
@@ -111,11 +94,6 @@ export function useHasApplicableTaxonomies(
 	return useApplicableTaxonomies(collection, activeLocale, defaultLocale).length > 0;
 }
 
-/**
- * Fetch terms for a taxonomy, scoped to the entry's locale so only the matching
- * translation variants are offered. The picker shows no usage counts, so it
- * opts out of the per-collection count aggregate the endpoint runs by default.
- */
 async function fetchTerms(taxonomyName: string, locale?: string): Promise<TaxonomyTerm[]> {
 	const path = `/_emdash/api/taxonomies/${taxonomyName}/terms?includeCounts=false${locale ? "&resolveFallback=true" : ""}`;
 	const res = await apiFetch(withLocale(path, locale));
@@ -126,9 +104,6 @@ async function fetchTerms(taxonomyName: string, locale?: string): Promise<Taxono
 	return data.terms;
 }
 
-/**
- * Fetch entry terms
- */
 async function fetchEntryTerms(
 	collection: string,
 	entryId: string,
@@ -142,9 +117,6 @@ async function fetchEntryTerms(
 	return data;
 }
 
-/**
- * Set entry terms
- */
 async function setEntryTerms(
 	collection: string,
 	entryId: string,
@@ -159,9 +131,6 @@ async function setEntryTerms(
 	if (!res.ok) await throwResponseError(res, i18n._(msg`Failed to set entry terms`));
 }
 
-/**
- * Checkbox tree for hierarchical taxonomies
- */
 function CategoryCheckboxTree({
 	term,
 	level = 0,
@@ -208,9 +177,6 @@ function CategoryCheckboxTree({
 	);
 }
 
-/**
- * Tag input for flat taxonomies
- */
 function TagInput({
 	terms,
 	selectedIds,
@@ -277,7 +243,6 @@ function TagInput({
 
 	return (
 		<div className="space-y-2">
-			{/* Selected tags */}
 			{selectedTerms.length > 0 && (
 				<div className="flex flex-wrap gap-2">
 					{selectedTerms.map((term) => (
@@ -356,9 +321,6 @@ function TermLocaleBadge({ term, entryLocale }: { term: TaxonomyTerm; entryLocal
 	return <Badge variant="secondary">{t`${term.locale.toUpperCase()} fallback`}</Badge>;
 }
 
-/**
- * Single taxonomy section
- */
 function TaxonomySection({
 	taxonomy,
 	collection,
@@ -380,8 +342,6 @@ function TaxonomySection({
 	const [newCategoryLabel, setNewCategoryLabel] = React.useState("");
 	const [showCategoryInput, setShowCategoryInput] = React.useState(false);
 
-	// The count mode belongs in the key: the Taxonomies settings page reads the
-	// same endpoint with counts and must not be served this count-free list.
 	const { data: terms = EMPTY_TERMS } = useQuery({
 		queryKey: ["taxonomy-terms", taxonomy.name, entryLocale, { includeCounts: false }],
 		queryFn: () => fetchTerms(taxonomy.name, entryLocale),
@@ -423,14 +383,12 @@ function TaxonomySection({
 		mutationFn: (label: string) =>
 			createTerm(taxonomy.name, {
 				label,
-				// Create the term in the entry's locale so it resolves on this entry.
 				...(entryLocale ? { locale: entryLocale } : {}),
 			}),
 		onSuccess: (newTerm) => {
 			void queryClient.invalidateQueries({
 				queryKey: ["taxonomy-terms", taxonomy.name, entryLocale],
 			});
-			// Auto-select the newly created term
 			const newSelected = new Set(selectedIds);
 			newSelected.add(newTerm.id);
 			setSelectedIds(newSelected);
@@ -442,7 +400,6 @@ function TaxonomySection({
 				saveMutation.mutate(termIdsArray);
 			}
 
-			// Reset category input
 			setNewCategoryLabel("");
 			setShowCategoryInput(false);
 		},
@@ -481,7 +438,6 @@ function TaxonomySection({
 
 	const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
 
-	// Sync selected IDs from entry terms
 	React.useEffect(() => {
 		const next = new Set(entryTerms.map((term) => term.id));
 		for (const assignment of unresolved) {
@@ -505,11 +461,9 @@ function TaxonomySection({
 		}
 		setSelectedIds(newSelected);
 
-		// Notify parent of change
 		const termIdsArray = [...newSelected];
 		onChange?.(termIdsArray);
 
-		// Auto-save if entry exists
 		if (entryId) {
 			saveMutation.mutate(termIdsArray);
 		}
@@ -657,9 +611,6 @@ function TaxonomySection({
 	);
 }
 
-/**
- * Main TaxonomySidebar component
- */
 export function TaxonomySidebar({
 	collection,
 	entryId,

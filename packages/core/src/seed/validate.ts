@@ -1,9 +1,3 @@
-/**
- * Seed file validation
- *
- * Validates a seed file structure before applying it.
- */
-
 import { getI18nConfig, resolveConfiguredLocale } from "../i18n/config.js";
 import { FIELD_TYPES, isIndexableFieldType, MAX_COLLECTION_LIST_COLUMNS } from "../schema/types.js";
 import type { SeedFile, SeedMenuItem, ValidationResult } from "./types.js";
@@ -13,7 +7,6 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/;
 const REDIRECT_TYPES = new Set([301, 302, 307, 308]);
 const CRLF_PATTERN = /[\r\n]/;
 
-/** Type guard for Record<string, unknown> */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -30,17 +23,10 @@ function isValidRedirectPath(path: string): boolean {
 	}
 }
 
-/**
- * Validate a seed file
- *
- * @param data - Unknown data to validate as a seed file
- * @returns Validation result with errors and warnings
- */
 export function validateSeed(data: unknown): ValidationResult {
 	const errors: string[] = [];
 	const warnings: string[] = [];
 
-	// Basic type check
 	if (!data || typeof data !== "object") {
 		return {
 			valid: false,
@@ -54,16 +40,12 @@ export function validateSeed(data: unknown): ValidationResult {
 		getI18nConfig()?.defaultLocale ??
 		(typeof seed.defaultLocale === "string" ? seed.defaultLocale : "en");
 
-	// Required fields
 	if (!seed.version) {
 		errors.push("Seed must have a version field");
 	} else if (seed.version !== "1") {
 		errors.push(`Unsupported seed version: ${String(seed.version)}`);
 	}
 
-	// defaultLocale backfills the locale of rows that omit one, so a blank or
-	// whitespace-padded value would silently write empty/invalid locales to the DB.
-	// Exported seeds never hit this, but it's part of the public schema now.
 	if (seed.defaultLocale !== undefined) {
 		if (
 			typeof seed.defaultLocale !== "string" ||
@@ -76,7 +58,6 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
-	// Validate collections
 	if (seed.collections) {
 		if (!Array.isArray(seed.collections)) {
 			errors.push("collections must be an array");
@@ -90,14 +71,12 @@ export function validateSeed(data: unknown): ValidationResult {
 				if (!collection.slug) {
 					errors.push(`${prefix}: slug is required`);
 				} else {
-					// Check for valid slug format
 					if (!COLLECTION_FIELD_SLUG_PATTERN.test(collection.slug)) {
 						errors.push(
 							`${prefix}.slug: must start with a letter and contain only lowercase letters, numbers, and underscores`,
 						);
 					}
 
-					// Check for duplicate slugs
 					if (collectionSlugs.has(collection.slug)) {
 						errors.push(`${prefix}.slug: duplicate collection slug "${collection.slug}"`);
 					}
@@ -145,7 +124,6 @@ export function validateSeed(data: unknown): ValidationResult {
 					}
 				}
 
-				// Validate fields
 				if (!Array.isArray(collection.fields)) {
 					errors.push(`${prefix}.fields: must be an array`);
 				} else {
@@ -158,14 +136,12 @@ export function validateSeed(data: unknown): ValidationResult {
 						if (!field.slug) {
 							errors.push(`${fieldPrefix}: slug is required`);
 						} else {
-							// Check for valid slug format
 							if (!COLLECTION_FIELD_SLUG_PATTERN.test(field.slug)) {
 								errors.push(
 									`${fieldPrefix}.slug: must start with a letter and contain only lowercase letters, numbers, and underscores`,
 								);
 							}
 
-							// Check for duplicate field slugs
 							if (fieldSlugs.has(field.slug)) {
 								errors.push(
 									`${fieldPrefix}.slug: duplicate field slug "${field.slug}" in collection "${collection.slug}"`,
@@ -195,7 +171,6 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
-	// Validate taxonomies
 	if (seed.taxonomies) {
 		if (!Array.isArray(seed.taxonomies)) {
 			errors.push("taxonomies must be an array");
@@ -209,7 +184,6 @@ export function validateSeed(data: unknown): ValidationResult {
 				if (!taxonomy.name) {
 					errors.push(`${prefix}: name is required`);
 				} else {
-					// Uniqueness is per (name, locale).
 					const locale = resolveConfiguredLocale(taxonomy.locale ?? defaultLocale);
 					const key = `${taxonomy.name}::${locale}`;
 					if (taxonomyNames.has(key)) {
@@ -238,7 +212,6 @@ export function validateSeed(data: unknown): ValidationResult {
 					);
 				}
 
-				// Validate terms if present
 				if (taxonomy.terms) {
 					if (!Array.isArray(taxonomy.terms)) {
 						errors.push(`${prefix}.terms: must be an array`);
@@ -252,8 +225,6 @@ export function validateSeed(data: unknown): ValidationResult {
 							if (!term.slug) {
 								errors.push(`${termPrefix}: slug is required`);
 							} else {
-								// Uniqueness is per (slug, locale) so the same slug can repeat
-								// across locale variants of the def.
 								const locale = resolveConfiguredLocale(
 									term.locale ?? taxonomy.locale ?? defaultLocale,
 								);
@@ -270,17 +241,13 @@ export function validateSeed(data: unknown): ValidationResult {
 								errors.push(`${termPrefix}: label is required`);
 							}
 
-							// Check parent reference validity (for hierarchical taxonomies)
-							if (term.parent && taxonomy.hierarchical) {
-								// Parent will be validated in a second pass
-							} else if (term.parent && !taxonomy.hierarchical) {
+							if (term.parent && !taxonomy.hierarchical) {
 								warnings.push(
 									`${termPrefix}.parent: taxonomy "${taxonomy.name}" is not hierarchical, parent will be ignored`,
 								);
 							}
 						}
 
-						// Second pass: validate parent references (within the same locale).
 						if (taxonomy.hierarchical && taxonomy.terms) {
 							for (let j = 0; j < taxonomy.terms.length; j++) {
 								const term = taxonomy.terms[j];
@@ -293,7 +260,6 @@ export function validateSeed(data: unknown): ValidationResult {
 									);
 								}
 
-								// Check for circular references
 								if (term.parent === term.slug) {
 									errors.push(`${prefix}.terms[${j}].parent: term cannot be its own parent`);
 								}
@@ -305,7 +271,6 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
-	// Validate menus
 	if (seed.menus) {
 		if (!Array.isArray(seed.menus)) {
 			errors.push("menus must be an array");
@@ -319,8 +284,6 @@ export function validateSeed(data: unknown): ValidationResult {
 				if (!menu.name) {
 					errors.push(`${prefix}: name is required`);
 				} else {
-					// Uniqueness is per (name, locale) — siblings of a translation
-					// group share name but differ in locale.
 					const locale = resolveConfiguredLocale(menu.locale ?? defaultLocale);
 					const key = `${menu.name}::${locale}`;
 					if (menuNames.has(key)) {
@@ -346,7 +309,6 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
-	// Validate redirects
 	if (seed.redirects) {
 		if (!Array.isArray(seed.redirects)) {
 			errors.push("redirects must be an array");
@@ -410,7 +372,6 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
-	// Validate widget areas
 	if (seed.widgetAreas) {
 		if (!Array.isArray(seed.widgetAreas)) {
 			errors.push("widgetAreas must be an array");
@@ -424,7 +385,6 @@ export function validateSeed(data: unknown): ValidationResult {
 				if (!area.name) {
 					errors.push(`${prefix}: name is required`);
 				} else {
-					// Check for duplicate area names
 					if (areaNames.has(area.name)) {
 						errors.push(`${prefix}.name: duplicate widget area name "${area.name}"`);
 					}
@@ -448,7 +408,6 @@ export function validateSeed(data: unknown): ValidationResult {
 							errors.push(`${widgetPrefix}.type: must be "content", "menu", or "component"`);
 						}
 
-						// Type-specific validation
 						if (widget.type === "menu" && !widget.menuName) {
 							errors.push(`${widgetPrefix}: menuName is required for menu widgets`);
 						}
@@ -462,7 +421,6 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
-	// Validate sections
 	if (seed.sections) {
 		if (!Array.isArray(seed.sections)) {
 			errors.push("sections must be an array");
@@ -495,7 +453,6 @@ export function validateSeed(data: unknown): ValidationResult {
 					errors.push(`${prefix}.content: must be an array`);
 				}
 
-				// Validate source
 				if (section.source && !["theme", "import"].includes(section.source)) {
 					errors.push(`${prefix}.source: must be "theme" or "import"`);
 				}
@@ -503,7 +460,6 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
-	// Validate bylines
 	if (seed.bylines) {
 		if (!Array.isArray(seed.bylines)) {
 			errors.push("bylines must be an array");
@@ -546,8 +502,6 @@ export function validateSeed(data: unknown): ValidationResult {
 					if (!isRecord(avatar)) {
 						errors.push(`${prefix}.avatar: must be an object`);
 					} else {
-						// storageKey is used verbatim in a `where storage_key = ?` lookup,
-						// so surrounding whitespace would silently never match a real key.
 						if (
 							typeof avatar.storageKey !== "string" ||
 							avatar.storageKey.length === 0 ||
@@ -562,9 +516,6 @@ export function validateSeed(data: unknown): ValidationResult {
 								errors.push(`${prefix}.avatar.${key}: must be a string`);
 							}
 						}
-						// filename/mimeType are used verbatim, so reject blank or
-						// whitespace-padded values (an empty filename would create a
-						// media row with no basename; a padded mime type is invalid).
 						for (const key of ["filename", "mimeType"] as const) {
 							const v = avatar[key];
 							if (typeof v === "string" && (v.length === 0 || v !== v.trim())) {
@@ -583,7 +534,6 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
-	// Validate content
 	if (seed.content) {
 		if (typeof seed.content !== "object" || Array.isArray(seed.content)) {
 			errors.push("content must be an object (collection -> entries)");
@@ -606,7 +556,6 @@ export function validateSeed(data: unknown): ValidationResult {
 					if (!entry.id) {
 						errors.push(`${prefix}: id is required`);
 					} else {
-						// Check for duplicate entry IDs
 						if (entryIds.has(entry.id)) {
 							errors.push(
 								`${prefix}.id: duplicate entry id "${entry.id}" in collection "${collectionSlug}"`,
@@ -627,7 +576,6 @@ export function validateSeed(data: unknown): ValidationResult {
 						errors.push(`${prefix}: data must be an object`);
 					}
 
-					// Validate i18n fields
 					if (entry.translationOf) {
 						if (!entry.locale) {
 							errors.push(`${prefix}: locale is required when translationOf is set`);
@@ -635,7 +583,6 @@ export function validateSeed(data: unknown): ValidationResult {
 					}
 				}
 
-				// Second pass: validate translationOf references within this collection
 				for (let i = 0; i < entries.length; i++) {
 					const entry = entries[i];
 					if (entry.translationOf && !entryIds.has(entry.translationOf)) {
@@ -648,7 +595,6 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
-	// Validate cross-references (content refs in menus)
 	if (seed.menus && seed.content) {
 		const allContentIds = new Set<string>();
 		for (const entries of Object.values(seed.content)) {
@@ -661,7 +607,6 @@ export function validateSeed(data: unknown): ValidationResult {
 			}
 		}
 
-		// Check menu item refs
 		for (const menu of seed.menus) {
 			if (Array.isArray(menu.items)) {
 				validateMenuItemRefs(menu.items, allContentIds, warnings);
@@ -669,7 +614,6 @@ export function validateSeed(data: unknown): ValidationResult {
 		}
 	}
 
-	// Validate byline refs in content
 	if (seed.content) {
 		const seedBylineIds = new Set<string>((seed.bylines ?? []).map((byline) => byline.id));
 		for (const [collectionSlug, entries] of Object.entries(seed.content)) {
@@ -703,9 +647,6 @@ export function validateSeed(data: unknown): ValidationResult {
 	};
 }
 
-/**
- * Validate menu items recursively
- */
 function validateMenuItems(
 	items: unknown[],
 	prefix: string,
@@ -733,7 +674,6 @@ function validateMenuItems(
 			);
 		}
 
-		// Type-specific validation
 		if (itemType === "custom" && !item.url) {
 			errors.push(`${itemPrefix}: url is required for custom menu items`);
 		}
@@ -742,16 +682,12 @@ function validateMenuItems(
 			errors.push(`${itemPrefix}: ref is required for page/post menu items`);
 		}
 
-		// Validate children recursively
 		if (Array.isArray(item.children)) {
 			validateMenuItems(item.children, itemPrefix, errors, warnings);
 		}
 	}
 }
 
-/**
- * Validate menu item references exist in content
- */
 function validateMenuItemRefs(
 	items: SeedMenuItem[],
 	contentIds: Set<string>,

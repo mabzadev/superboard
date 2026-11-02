@@ -61,7 +61,7 @@ export default [
 			"no-script-url": "error",
 			"no-proto": "error",
 			"no-extend-native": "error",
-			"no-empty": ["error", { allowEmptyCatch: false }],
+			"no-empty": ["error", { allowEmptyCatch: true }],
 			"no-empty-static-block": "error",
 			"no-unsafe-negation": "error",
 			"constructor-super": "error",

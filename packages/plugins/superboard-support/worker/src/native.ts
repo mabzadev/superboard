@@ -422,7 +422,13 @@ const resources: Resource[] = [
 	},
 ];
 
-const native = registerRouter(new Hono<{ Bindings: NativeEnv }>(), {"service":"support","module":"native.native","pluginId":"superboard-support","surface":"internal","access":"framework"});
+const native = registerRouter(new Hono<{ Bindings: NativeEnv }>(), {
+	service: "support",
+	module: "native.native",
+	pluginId: "superboard-support",
+	surface: "internal",
+	access: "framework",
+});
 
 for (const resource of resources) {
 	native.get(`/:projectId/${resource.path}`, async (c) => {
@@ -513,9 +519,6 @@ for (const resource of resources) {
 		}
 		const id = crypto.randomUUID();
 		if (resource.path === "providers" && body.provider === "api") {
-			// The API channel uses the signed application identity contract and has
-			// no external credential or smoke to perform. This state is assigned by
-			// Support itself, never trusted from the CRUD request.
 			fields.set("status", "configured");
 		}
 		if (resource.path === "integrations" && body.provider === "api") {
@@ -1191,8 +1194,6 @@ native.post("/:projectId/proactive-support/campaigns/:id/:action", async (c) => 
 		.bind(target, scheduledAt, target, target, id, projectId)
 		.first<Record<string, unknown>>();
 	if (!row) throw failure("support_campaign_not_found", "Support campaign not found", 404);
-	// Future schedules are claimed by the minute cron only when due. Explicit
-	// start/resume actions are the only actions that enqueue immediately.
 	if (target === "running") {
 		await c.env.SUPPORT_BULK_QUEUE?.send(
 			{

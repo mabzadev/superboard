@@ -1,10 +1,3 @@
-/**
- * Plugin State Repository
- *
- * Database-backed storage for plugin activation state.
- * Used by the admin API to persist plugin enable/disable across restarts.
- */
-
 import type { Kysely } from "kysely";
 
 import type { Database } from "../database/types.js";
@@ -41,34 +34,15 @@ export interface PluginState {
 	marketplaceVersion: string | null;
 	displayName: string | null;
 	description: string | null;
-	/**
-	 * Publisher DID this plugin was published under. Populated only when
-	 * `source === "registry"`; null otherwise.
-	 */
 	registryPublisherDid: string | null;
-	/**
-	 * Slug under which the plugin was published in the publisher's repo
-	 * (the rkey of the `pm.fair.package.profile` record). Populated only
-	 * when `source === "registry"`; null otherwise.
-	 *
-	 * The opaque `pluginId` for registry installs is derived from
-	 * `(registryPublisherDid, registrySlug)` -- see
-	 * `packages/core/src/registry/plugin-id.ts`.
-	 */
 	registrySlug: string | null;
 	mcpToolsEnabled: boolean;
 	mcpToolsConsent: string | null;
 }
 
-/**
- * Repository for plugin state in the database
- */
 export class PluginStateRepository {
 	constructor(private db: Kysely<Database>) {}
 
-	/**
-	 * Get state for a specific plugin
-	 */
 	async get(pluginId: string): Promise<PluginState | null> {
 		const row = await this.db
 			.selectFrom("_plugin_state")
@@ -81,17 +55,11 @@ export class PluginStateRepository {
 		return rowToPluginState(row);
 	}
 
-	/**
-	 * Get all plugin states
-	 */
 	async getAll(): Promise<PluginState[]> {
 		const rows = await this.db.selectFrom("_plugin_state").selectAll().execute();
 		return rows.map(rowToPluginState);
 	}
 
-	/**
-	 * Get all marketplace-installed plugin states
-	 */
 	async getMarketplacePlugins(): Promise<PluginState[]> {
 		const rows = await this.db
 			.selectFrom("_plugin_state")
@@ -101,12 +69,6 @@ export class PluginStateRepository {
 		return rows.map(rowToPluginState);
 	}
 
-	/**
-	 * Get all registry-installed plugin states.
-	 *
-	 * The runtime's registry sync path uses this to discover which
-	 * registry plugins should be loaded into the sandbox on this worker.
-	 */
 	async getRegistryPlugins(): Promise<PluginState[]> {
 		const rows = await this.db
 			.selectFrom("_plugin_state")
@@ -116,9 +78,6 @@ export class PluginStateRepository {
 		return rows.map(rowToPluginState);
 	}
 
-	/**
-	 * Create or update plugin state
-	 */
 	async upsert(
 		pluginId: string,
 		version: string,
@@ -138,7 +97,6 @@ export class PluginStateRepository {
 		const existing = await this.get(pluginId);
 
 		if (existing) {
-			// Update existing state
 			const updates: Record<string, string | number | null> = {
 				status,
 				version,
@@ -179,7 +137,6 @@ export class PluginStateRepository {
 				.where("plugin_id", "=", pluginId)
 				.execute();
 		} else {
-			// Create new state
 			await this.db
 				.insertInto("_plugin_state")
 				.values({
@@ -205,23 +162,14 @@ export class PluginStateRepository {
 		return (await this.get(pluginId))!;
 	}
 
-	/**
-	 * Enable a plugin
-	 */
 	async enable(pluginId: string, version: string): Promise<PluginState> {
 		return this.upsert(pluginId, version, "active");
 	}
 
-	/**
-	 * Disable a plugin
-	 */
 	async disable(pluginId: string, version: string): Promise<PluginState> {
 		return this.upsert(pluginId, version, "inactive");
 	}
 
-	/**
-	 * Delete plugin state
-	 */
 	async delete(pluginId: string): Promise<boolean> {
 		const result = await this.db
 			.deleteFrom("_plugin_state")
@@ -232,14 +180,6 @@ export class PluginStateRepository {
 	}
 }
 
-/**
- * Internal: map a `_plugin_state` row to the public `PluginState` shape.
- *
- * Kept at module scope so the three select paths (`get`, `getAll`,
- * `getMarketplacePlugins`, `getRegistryPlugins`) stay byte-identical in
- * their handling of nullable columns -- adding a new column to the table
- * means changing this function and nothing else.
- */
 interface PluginStateRow {
 	plugin_id: string;
 	status: string;

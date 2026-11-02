@@ -1,12 +1,3 @@
-/**
- * `emdash-plugin logout [--did <did>]`
- *
- * Revoke the active publisher session and remove its stored state.
- *
- * Without `--did`, removes the current session. With `--did`, removes the
- * session for that specific DID (useful if the user has multiple stored).
- */
-
 import { isDid } from "@atcute/lexicons/syntax";
 import { FileCredentialStore, type Did } from "@emdash-cms/registry-client";
 import { defineCommand } from "citty";

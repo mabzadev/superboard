@@ -7,7 +7,6 @@ import {
 	acquireToken,
 } from "../../../../../../../sdks/web/identity/vue/src/utils";
 
-// Define a minimal AuthState interface for tests
 type AuthState = {
 	config: {
 		onLoginSuccess?: (options: { state: string; locale?: string }) => void;
@@ -74,7 +73,6 @@ describe("handleTokenExchangeByAuthCode", () => {
 
 		handleTokenExchangeByAuthCode("code123", "reqState", state, "en");
 
-		// Wait for promise resolution
 		await Promise.resolve();
 
 		expect(state.accessTokenStorage).toEqual(mockResponse.accessTokenStorage);
@@ -93,7 +91,6 @@ describe("handleTokenExchangeByAuthCode", () => {
 
 	it("should set isAuthenticating to false if response has no accessTokenStorage", async () => {
 		const mockResponse = {
-			// No accessTokenStorage provided
 			refreshTokenStorage: { refreshToken: "fakeRefresh" },
 			idTokenStorage: {
 				idToken: "fakeIdToken",
@@ -119,16 +116,12 @@ describe("handleTokenExchangeByAuthCode", () => {
 		const mockedExchangeToken = exchangeTokenByAuthCode as unknown as vi.Mock;
 		mockedExchangeToken.mockRejectedValue(error);
 
-		// Set up spy on handleError
 		const handleErrorSpy = handleError as unknown as vi.Mock;
 
-		// Call the function that should trigger the error
 		handleTokenExchangeByAuthCode("code123", "reqState", state);
 
-		// Wait for all promises to resolve/reject
 		await new Promise(process.nextTick);
 
-		// Verify the error was handled correctly
 		expect(handleErrorSpy).toHaveBeenCalledWith(error, ErrorType.ObtainAccessToken);
 		expect(state.authenticationError).toBe(`handled ${ErrorType.ObtainAccessToken}`);
 		expect(state.isAuthenticating).toBe(false);

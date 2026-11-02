@@ -37,7 +37,6 @@ function edgeCtx(
 	return { params, url, request, locals: { emdash: { db }, user } } as unknown as APIContext;
 }
 
-// setupForDialectWithCollections registers two collections: "post" and "page".
 describeEachDialect("reference children handlers", (dialect) => {
 	let ctx: DialectTestContext;
 
@@ -49,7 +48,6 @@ describeEachDialect("reference children handlers", (dialect) => {
 	});
 
 	async function makeRelation() {
-		// post (parent) -> page (child)
 		const repo = new RelationRepository(ctx.db);
 		return repo.create({
 			name: "related_pages",
@@ -128,7 +126,6 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const rel = await makeRelation();
 		const content = new ContentRepository(ctx.db);
 		const shared = await content.create({ type: "page", slug: "shared", data: { title: "S" } });
-		// Three posts all reference the same page.
 		for (const slug of ["p1", "p2", "p3"]) {
 			const parent = await content.create({ type: "post", slug, data: { title: slug } });
 			await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [shared.id]);
@@ -188,7 +185,6 @@ describeEachDialect("reference children handlers", (dialect) => {
 	it("entry on the wrong side (child collection) is VALIDATION_ERROR", async () => {
 		const rel = await makeRelation();
 		const content = new ContentRepository(ctx.db);
-		// A "page" entry is the child side, not the parent — children route rejects it.
 		const page = await content.create({ type: "page", slug: "x", data: { title: "X" } });
 		const result = await handleReferenceChildrenGet(ctx.db, "page", page.id, rel.id);
 		expect(result.success).toBe(false);
@@ -200,7 +196,6 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const rel = await makeRelation();
 		const content = new ContentRepository(ctx.db);
 		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
-		// Another post can't be a child (child_collection is "page").
 		const otherPost = await content.create({ type: "post", slug: "q", data: { title: "Q" } });
 		const result = await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [
 			otherPost.id,
@@ -281,15 +276,13 @@ describeEachDialect("reference children handlers", (dialect) => {
 			});
 			ids.push(child.id);
 		}
-		// Mix ids and slugs in the request to exercise both resolution paths.
 		const childIds = ids.map((id, i) => (i % 2 === 0 ? id : slugs[i]!));
 
 		const set = await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, childIds);
 		expect(set.success).toBe(true);
 		if (!set.success) return;
-		expect(set.data.children).toHaveLength(50); // first page
+		expect(set.data.children).toHaveLength(50);
 		expect(set.data.nextCursor).toBeDefined();
-		// sort_order is positional over the full deduped set.
 		expect(set.data.children.map((r) => r.sortOrder)).toEqual(
 			Array.from({ length: 50 }, (_, i) => i),
 		);
@@ -312,7 +305,6 @@ describeEachDialect("reference children handlers", (dialect) => {
 			status: "published",
 		});
 		await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [a.id, b.id]);
-		// Hard-delete the underlying row so the edge dangles.
 		await ctx.db
 			.deleteFrom("ec_page" as never)
 			.where("id" as never, "=", a.id)
@@ -330,10 +322,6 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
 		const a = await content.create({ type: "page", slug: "a", data: { title: "A" } });
 
-		// Collection deletion drops the content table but does not cascade to the
-		// relation def, so the relation still points at a now-missing child table.
-		// The write path must surface a structured NOT_FOUND rather than 500 —
-		// mirroring the read path, which tolerates the missing table.
 		await ctx.db.schema.dropTable("ec_page").ifExists().execute();
 
 		const set = await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [a.id]);
@@ -347,10 +335,6 @@ describeEachDialect("reference children handlers", (dialect) => {
 		const content = new ContentRepository(ctx.db);
 		const parent = await content.create({ type: "post", slug: "p", data: { title: "P" } });
 
-		// The anchor entry lives in the parent collection. If that table is dropped
-		// (collection deletion doesn't cascade to relation defs), resolving the
-		// anchor must yield NOT_FOUND rather than a 500 — the symmetric case to the
-		// child-collection drop above, and consistent across children and parents.
 		await ctx.db.schema.dropTable("ec_post").ifExists().execute();
 
 		const childrenGet = await handleReferenceChildrenGet(
@@ -368,7 +352,6 @@ describeEachDialect("reference children handlers", (dialect) => {
 		expect(childrenSet.success).toBe(false);
 		if (!childrenSet.success) expect(childrenSet.error.code).toBe("NOT_FOUND");
 
-		// The parents endpoint anchors on the child side; drop that table too.
 		await ctx.db.schema.dropTable("ec_page").ifExists().execute();
 		const parentsGet = await handleReferenceParentsGet(
 			ctx.db,
@@ -391,7 +374,6 @@ describeEachDialect("reference children handlers", (dialect) => {
 			data: { title: "P" },
 			status: "published",
 		});
-		// Base64 of {"orderValue":"x","id":"y"} — structurally valid, semantically bad.
 		const cursor = Buffer.from(JSON.stringify({ orderValue: "x", id: "y" })).toString("base64url");
 		const result = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, { cursor });
 		expect(result.success).toBe(false);
@@ -400,9 +382,6 @@ describeEachDialect("reference children handlers", (dialect) => {
 	});
 });
 
-// The reference reads must honour the same draft-visibility boundary every other
-// content read enforces: a caller without `content:read_drafts` may not see
-// non-published entries — neither as resolved children/parents nor as the anchor.
 describeEachDialect("reference reads: draft visibility", (dialect) => {
 	let ctx: DialectTestContext;
 	beforeEach(async () => {
@@ -445,7 +424,6 @@ describeEachDialect("reference reads: draft visibility", (dialect) => {
 		});
 		await handleReferenceChildrenSet(ctx.db, "post", parent.id, rel.id, [published.id, draft.id]);
 
-		// includeDrafts=false: only the published child is visible.
 		const subscriber = await handleReferenceChildrenGet(
 			ctx.db,
 			"post",
@@ -457,7 +435,6 @@ describeEachDialect("reference reads: draft visibility", (dialect) => {
 		if (!subscriber.success) return;
 		expect(subscriber.data.children.map((r) => r.slug)).toEqual(["pub"]);
 
-		// includeDrafts=true: both are visible.
 		const editor = await handleReferenceChildrenGet(ctx.db, "post", parent.id, rel.id, {}, true);
 		if (!editor.success) return;
 		expect(
@@ -516,7 +493,6 @@ describeEachDialect("reference reads: draft visibility", (dialect) => {
 		if (result.success) return;
 		expect(result.error.code).toBe("NOT_FOUND");
 
-		// A caller with draft access can still anchor on it.
 		const withDrafts = await handleReferenceChildrenGet(
 			ctx.db,
 			"post",
@@ -600,7 +576,6 @@ describeEachDialect("reference children route (auth + ownership)", (dialect) => 
 		const child = await content.create({ type: "page", slug: "c", data: { title: "C" } });
 		const params = { collection: "post", id: parent.id, relation: rel.id };
 
-		// A different AUTHOR cannot edit author-1's content.
 		const denied = await setChildren(
 			edgeCtx(
 				ctx.db,
@@ -614,7 +589,6 @@ describeEachDialect("reference children route (auth + ownership)", (dialect) => 
 		);
 		expect(denied.status).toBe(403);
 
-		// The owner can.
 		const ok = await setChildren(
 			edgeCtx(
 				ctx.db,
@@ -628,7 +602,6 @@ describeEachDialect("reference children route (auth + ownership)", (dialect) => 
 		);
 		expect(ok.status).toBe(200);
 
-		// Anyone with content:read can GET.
 		const read = await getChildren(
 			edgeCtx(ctx.db, params, { id: "sub", role: Role.SUBSCRIBER as RoleLevel }),
 		);
@@ -644,8 +617,6 @@ describeEachDialect("reference children route (auth + ownership)", (dialect) => 
 			parentLabel: "Post",
 			childLabel: "Related page",
 		});
-		// A SUBSCRIBER has no edit permission. Whether the parent id exists or not,
-		// they must get 403 — never a 404 that would reveal which ids are real.
 		const fake = edgeCtx(
 			ctx.db,
 			{ collection: "post", id: "does-not-exist", relation: rel.id },

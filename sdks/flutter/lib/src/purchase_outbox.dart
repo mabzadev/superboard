@@ -131,9 +131,6 @@ class SuperBoardPurchaseOutboxEntry {
 class SuperBoardPurchaseOutbox {
   SuperBoardPurchaseOutbox(this._storage);
 
-  // This physical key is a compatibility boundary, not a product label. It is
-  // retained through 3.x so upgrades and rollbacks share the same durable
-  // outbox and cannot duplicate or lose an unverified purchase.
   static const _storageKey = 'superboard.purchases.outbox.v1';
   final SuperBoardPurchaseStorage _storage;
   Future<void> _tail = Future.value();

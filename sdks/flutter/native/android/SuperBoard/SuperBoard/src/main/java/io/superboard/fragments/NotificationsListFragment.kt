@@ -37,7 +37,6 @@ class NotificationsListFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
         binding = FragmentNotificationsListBinding.inflate(inflater, container, false)
 
         return binding.root
@@ -53,7 +52,6 @@ class NotificationsListFragment : Fragment() {
         binding.recyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
         setItems(notificationsToListItems(emptyList()))
 
-        // Observe loading state to show a progress indicator if needed
         lifecycleScope.launch {
             viewModel.isLoading.collectLatest { isLoading ->
                 if (isLoading) {
@@ -74,7 +72,6 @@ class NotificationsListFragment : Fragment() {
             }
         }
 
-        // Add scroll listener to load the next page when reaching the bottom
         binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
@@ -84,7 +81,6 @@ class NotificationsListFragment : Fragment() {
                 val totalItemCount = layoutManager.itemCount
                 val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
 
-                // Load more if scrolled to the bottom and not already loading
                 if (!viewModel.isLoading.value &&
                     visibleItemCount + firstVisibleItemPosition >= totalItemCount &&
                     firstVisibleItemPosition >= 0

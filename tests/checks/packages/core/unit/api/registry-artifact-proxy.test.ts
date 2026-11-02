@@ -1,22 +1,3 @@
-/**
- * Registry artifact proxy route.
- *
- * The proxy never accepts an artifact URL from the client. The caller
- * addresses an artifact by `(did, slug, version, kind, index)`; the server
- * resolves the *declared* URL from the validated release record fetched from
- * the aggregator, then fetches it. So the route must:
- *   - validate the coordinate params (400 on bad input),
- *   - resolve only the publisher-declared URL (never a caller-supplied one),
- *   - reject private / loopback / link-local hosts on the resolved URL (SSRF),
- *   - reject non-image content types, including SVG (allowlist), allow AVIF,
- *   - cap the body size, and serve image bytes with hardened headers.
- *
- * We drive the route's `GET` directly with a fabricated context, mock the
- * `DiscoveryClient` so release resolution returns a controlled `artifacts`
- * map, stub `globalThis.fetch` for the artifact fetch, and inject a DNS
- * resolver so hostnames resolve to controlled IPs without real network.
- */
-
 import type { APIContext } from "astro";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -35,8 +16,6 @@ const PNG_1x1 = Uint8Array.from(
 const PNG_SHA256 = "4e25b424165e2da0783d555132372a957c289f3fe074b2da17e93dd443c97379";
 const RELEASE_CID = `bafyrei${"a".repeat(52)}`;
 
-// The release record the mocked DiscoveryClient resolves. Tests mutate
-// `mockArtifacts` per case to point the declared URL where they need it.
 let mockArtifacts: unknown;
 let mockReleaseVersion = "1.0.0";
 let mockReleaseLabels: unknown[] = [];
@@ -79,12 +58,9 @@ vi.mock("@emdash-cms/registry-client/discovery", () => ({
 	}),
 }));
 
-// Imported after the mock is registered.
 const { GET } =
 	await import("../../../../../../packages/core/src/astro/routes/api/admin/plugins/registry/artifact.js");
 
-// Roles are numeric levels: SUBSCRIBER 10, EDITOR 40, ADMIN 50. `plugins:read`
-// requires EDITOR.
 const adminUser = { id: "u1", role: 50 };
 const subscriberUser = { id: "v", role: 10 };
 
@@ -148,8 +124,6 @@ describe("registry artifact proxy", () => {
 		getPackage.mockClear();
 		getLatestRelease.mockClear();
 		listReleases.mockClear();
-		// Default: every hostname resolves to a public IP. Individual tests
-		// override the resolver to exercise private-IP rejection.
 		setDefaultDnsResolver(async () => ["93.184.216.34"]);
 		transportFetch.mockClear();
 		setDefaultRegistryArtifactTransport({ fetch: transportFetch });
@@ -162,8 +136,6 @@ describe("registry artifact proxy", () => {
 		vi.restoreAllMocks();
 	});
 
-	// ── auth ───────────────────────────────────────────────────────────
-
 	it("requires authentication", async () => {
 		const res = await GET(makeContext(DEFAULT_PARAMS, null));
 		expect(res.status).toBe(401);
@@ -173,8 +145,6 @@ describe("registry artifact proxy", () => {
 		const res = await GET(makeContext(DEFAULT_PARAMS, subscriberUser));
 		expect(res.status).toBe(403);
 	});
-
-	// ── param validation ───────────────────────────────────────────────
 
 	it("rejects a missing did/slug/cid/kind", async () => {
 		expect((await GET(makeContext({ slug: "x", kind: "icon" }))).status).toBe(400);
@@ -253,8 +223,6 @@ describe("registry artifact proxy", () => {
 		).toBe(400);
 	});
 
-	// ── config ─────────────────────────────────────────────────────────
-
 	it("returns 400 when the registry is not configured", async () => {
 		const u = new URL("https://site.test/_emdash/api/admin/plugins/registry/artifact");
 		for (const [key, value] of Object.entries(DEFAULT_PARAMS)) u.searchParams.set(key, value);
@@ -266,15 +234,12 @@ describe("registry artifact proxy", () => {
 		expect(res.status).toBe(400);
 	});
 
-	// ── resolution → declared URL is proxied ───────────────────────────
-
 	it("resolves the declared icon URL and proxies it", async () => {
 		const fetchMock = vi.fn(async () => imageResponse(PNG_1x1)) as typeof globalThis.fetch;
 		globalThis.fetch = fetchMock;
 		const res = await GET(makeContext(DEFAULT_PARAMS));
 		expect(res.status).toBe(200);
 		expect(getLatestRelease).toHaveBeenCalled();
-		// The fetched URL is the publisher-DECLARED url, never a client param.
 		const fetched = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0];
 		expect(fetched).toBe("https://cdn.example.com/icon.png");
 		expect(res.headers.get("content-type")).toBe("image/png");
@@ -319,8 +284,6 @@ describe("registry artifact proxy", () => {
 		expect(listReleases).toHaveBeenCalled();
 		expect(getLatestRelease).not.toHaveBeenCalled();
 	});
-
-	// ── 404s ───────────────────────────────────────────────────────────
 
 	it("returns 404 when the requested artifact kind is absent", async () => {
 		mockArtifacts = { icon: { url: "https://cdn.example.com/icon.png", checksum: PNG_SHA256 } };
@@ -382,8 +345,6 @@ describe("registry artifact proxy", () => {
 		expect(res.status).toBe(404);
 	});
 
-	// ── content-type allowlist ─────────────────────────────────────────
-
 	it("allows AVIF", async () => {
 		globalThis.fetch = vi.fn(async () =>
 			imageResponse(PNG_1x1, "image/avif"),
@@ -429,8 +390,6 @@ describe("registry artifact proxy", () => {
 		expect(res.status).toBe(200);
 		expect(res.headers.get("content-type")).toBe("image/png");
 	});
-
-	// ── SSRF on the RESOLVED url ────────────────────────────────────────
 
 	it("rejects a declared non-http(s) scheme", async () => {
 		mockArtifacts = { icon: { url: "file:///etc/passwd", checksum: PNG_SHA256 } };
@@ -481,8 +440,6 @@ describe("registry artifact proxy", () => {
 		const res = await GET(makeContext(DEFAULT_PARAMS));
 		expect(res.status).toBe(400);
 	});
-
-	// ── upstream + size ─────────────────────────────────────────────────
 
 	it("rejects an upstream error status", async () => {
 		globalThis.fetch = vi.fn(

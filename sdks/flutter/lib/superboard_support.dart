@@ -1,4 +1,3 @@
-/// Canonical SuperBoard Support SDK.
 library;
 
 export 'src/support/client.dart';

@@ -59,8 +59,6 @@ const authenticationTabs: Readonly<Record<string, readonly [string, string, stri
 	"/auth/access-key": ["settings", "security", "keys"],
 };
 
-// Pages that became in-page tabs of a single workspace: the route stays registered, but every
-// link and bookmark opens the workspace on the matching tab.
 const workspaceTabs: Readonly<Record<string, string>> = {
 	"/analytics/app": "/analytics/home",
 	"/analytics/installations": "/analytics/users?tab=installations",

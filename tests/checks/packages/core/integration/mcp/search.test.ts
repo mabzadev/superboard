@@ -1,15 +1,3 @@
-/**
- * MCP search tool — comprehensive integration tests.
- *
- * Covers:
- *   - search query → matching results
- *   - empty index / no searchable collections
- *   - collection scoping
- *   - locale filtering
- *   - special characters / FTS5 syntax
- *   - permission gating
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -47,10 +35,6 @@ async function setupSearchablePostCollection(db: Kysely<Database>): Promise<void
 		type: "text",
 		searchable: true,
 	});
-	// Activate the FTS index. Production sites do this either via the seed
-	// pipeline or the admin "Enable search" toggle. Without it, the FTS
-	// table and triggers don't exist and the test would silently miss real
-	// indexing bugs.
 	await new FTSManager(db).enableSearch("post");
 }
 
@@ -69,7 +53,7 @@ describe("search", () => {
 
 	it("returns empty results when no collections are searchable", async () => {
 		const registry = new SchemaRegistry(db);
-		await registry.createCollection({ slug: "post", label: "Posts" }); // no search support
+		await registry.createCollection({ slug: "post", label: "Posts" });
 
 		harness = await connectMcpHarness({ db, userId: ADMIN_ID, userRole: Role.ADMIN });
 		const result = await harness.client.callTool({
@@ -187,8 +171,6 @@ describe("search", () => {
 			arguments: { query: "rocket", collections: ["post"] },
 		});
 		const data = extractJson<{ items: Array<{ collection?: string; type?: string }> }>(result);
-		// We seeded one post and one page that both match "rocket". Scoping
-		// to ["post"] must keep at least the post hit and exclude the page.
 		expect(data.items.length).toBeGreaterThan(0);
 		for (const item of data.items) {
 			const c = item.collection ?? item.type;
@@ -200,8 +182,6 @@ describe("search", () => {
 		await setupSearchablePostCollection(db);
 		harness = await connectMcpHarness({ db, userId: ADMIN_ID, userRole: Role.ADMIN });
 
-		// Seed a published item so a regression that interprets an empty
-		// query as "match all" would produce a non-empty list and fail.
 		const created = await harness.client.callTool({
 			name: "content_create",
 			arguments: {
@@ -221,8 +201,6 @@ describe("search", () => {
 			name: "search",
 			arguments: { query: "" },
 		});
-		// Empty queries are sanitized to a no-op and return zero matches.
-		// They must not surface as an error AND must not match all items.
 		expect(result.isError, extractText(result)).toBeFalsy();
 		const data = extractJson<{ items: unknown[] }>(result);
 		expect(data.items).toEqual([]);
@@ -232,8 +210,6 @@ describe("search", () => {
 		await setupSearchablePostCollection(db);
 		harness = await connectMcpHarness({ db, userId: ADMIN_ID, userRole: Role.ADMIN });
 
-		// Seed a published item so a regression that lets malformed input
-		// fall through to "match all" would surface a non-empty list.
 		const created = await harness.client.callTool({
 			name: "content_create",
 			arguments: {
@@ -249,9 +225,6 @@ describe("search", () => {
 			},
 		});
 
-		// FTS5 has special operators: AND OR NOT NEAR " * ( ) :
-		// `searchSingleCollection` swallows malformed-input FTS5 errors and
-		// returns no matches; the response is a clean empty list.
 		const result = await harness.client.callTool({
 			name: "search",
 			arguments: { query: 'NOT "quotes" AND* (' },
@@ -265,7 +238,6 @@ describe("search", () => {
 		await setupSearchablePostCollection(db);
 		harness = await connectMcpHarness({ db, userId: ADMIN_ID, userRole: Role.ADMIN });
 
-		// Create 10 items containing the same word
 		for (let i = 0; i < 10; i++) {
 			const c = await harness.client.callTool({
 				name: "content_create",
@@ -295,7 +267,6 @@ describe("search", () => {
 		await setupSearchablePostCollection(db);
 		harness = await connectMcpHarness({ db, userId: ADMIN_ID, userRole: Role.ADMIN });
 
-		// Create one draft, one published
 		await harness.client.callTool({
 			name: "content_create",
 			arguments: { collection: "post", data: { title: "draft-only-content" } },

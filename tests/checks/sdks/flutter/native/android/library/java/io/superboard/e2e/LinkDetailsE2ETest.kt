@@ -18,9 +18,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
-/**
- * E2E tests for link details functionality.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class LinkDetailsE2ETest {
@@ -46,14 +43,9 @@ class LinkDetailsE2ETest {
         E2ETestUtils.cleanupMockWebServer(mockWebServer)
     }
 
-    // ==================== Link Details Tests ====================
-
     @Test
     fun `Link details before authentication throws exception`() {
         runBlocking {
-            // Arrange - don't configure SDK
-
-            // Act & Assert
             try {
                 SuperBoard.linkDetails(path = "test-path")
                 fail("linkDetails should throw when not authenticated")
@@ -66,25 +58,20 @@ class LinkDetailsE2ETest {
 
     @Test
     fun `Link details returns valid details for existing link`() {
-        // Arrange
         E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
         E2ETestUtils.enqueueDeviceResponse(mockWebServer)
         E2ETestUtils.enqueueLinkDetailsResponse(mockWebServer, title = "Test Link", subtitle = "Description")
 
-        // Configure SDK
         SuperBoard.configure(application, "test-api-key", useTestEnvironment = true, baseURL = mockWebServer.url("/").toString())
         Shadows.shadowOf(Looper.getMainLooper()).idle()
 
-        // Wait for auth job with looper pumping
         val authJob = E2ETestUtils.getAuthenticationJob()
         E2ETestUtils.runWithLooperPumping(10_000) { authJob?.join() }
 
-        // Act
         val result = E2ETestUtils.runWithLooperPumping(10_000) {
             SuperBoard.linkDetails(path = "test-link-path")
         }
 
-        // Assert - verify the mocked title and subtitle are returned
         assertNotNull("linkDetails should return result", result)
         assertEquals("Should return mocked title", "Test Link", result?.get("title"))
         assertEquals("Should return mocked subtitle", "Description", result?.get("subtitle"))
@@ -92,7 +79,6 @@ class LinkDetailsE2ETest {
 
     @Test
     fun `Link details with custom data returns data map`() {
-        // Arrange
         E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
         E2ETestUtils.enqueueDeviceResponse(mockWebServer)
         E2ETestUtils.enqueueLinkDetailsResponse(mockWebServer, title = "Product Page", subtitle = "Check out this item")
@@ -103,12 +89,10 @@ class LinkDetailsE2ETest {
         val authJob = E2ETestUtils.getAuthenticationJob()
         E2ETestUtils.runWithLooperPumping(10_000) { authJob?.join() }
 
-        // Act
         val result = E2ETestUtils.runWithLooperPumping(10_000) {
             SuperBoard.linkDetails(path = "product-page")
         }
 
-        // Assert - verify the mocked title and subtitle are returned exactly
         assertNotNull("linkDetails should return result with custom data", result)
         assertEquals("Should return mocked title", "Product Page", result?.get("title"))
         assertEquals("Should return mocked subtitle", "Check out this item", result?.get("subtitle"))
@@ -116,7 +100,6 @@ class LinkDetailsE2ETest {
 
     @Test
     fun `Link details for non-existent link returns null or error`() {
-        // Arrange
         E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
         E2ETestUtils.enqueueDeviceResponse(mockWebServer)
         E2ETestUtils.enqueueErrorResponse(mockWebServer, 404, "Link not found")
@@ -127,18 +110,15 @@ class LinkDetailsE2ETest {
         val authJob = E2ETestUtils.getAuthenticationJob()
         E2ETestUtils.runWithLooperPumping(10_000) { authJob?.join() }
 
-        // Act
         val result = E2ETestUtils.runWithLooperPumping(10_000) {
             SuperBoard.linkDetails(path = "non-existent-path")
         }
 
-        // Assert
         assertNull("linkDetails for non-existent path should return null", result)
     }
 
     @Test
     fun `Link details handles server error gracefully`() {
-        // Arrange
         E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
         E2ETestUtils.enqueueDeviceResponse(mockWebServer)
         E2ETestUtils.enqueueErrorResponse(mockWebServer, 500, "Internal Server Error")
@@ -149,12 +129,10 @@ class LinkDetailsE2ETest {
         val authJob = E2ETestUtils.getAuthenticationJob()
         E2ETestUtils.runWithLooperPumping(10_000) { authJob?.join() }
 
-        // Act
         val result = E2ETestUtils.runWithLooperPumping(10_000) {
             SuperBoard.linkDetails(path = "error-test")
         }
 
-        // Assert
         assertNull("linkDetails should return null on server error", result)
         E2ETestUtils.assertAuthenticationCompleted()
         val requests = E2ETestUtils.collectAllRequests(mockWebServer)

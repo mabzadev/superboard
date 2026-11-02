@@ -1,10 +1,3 @@
-/**
- * Reusable confirmation dialog with inline error display.
- *
- * Handles the common pattern: title, description, optional error banner,
- * cancel/confirm buttons with pending state. Dialog stays open on error.
- */
-
 import { Button, Dialog } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import * as React from "react";
@@ -15,25 +8,16 @@ export interface ConfirmDialogProps {
 	open: boolean;
 	onClose: () => void;
 	title: string;
-	/** Static description or dynamic JSX content */
 	description: React.ReactNode;
-	/** Label for the confirm button (e.g. "Delete", "Disable User") */
 	confirmLabel: string;
-	/** Label shown while the action is pending (e.g. "Deleting...") */
 	pendingLabel: string;
-	/** Button variant — defaults to "destructive" */
 	variant?: "destructive" | "primary";
-	/** Use tighter Kumo spacing for short, focused confirmations. */
 	compact?: boolean;
-	/** Prevent dismissing an irreversible request after it has started. */
 	preventCloseWhilePending?: boolean;
-	/** Disable confirmation until required input in the dialog is complete. */
 	confirmDisabled?: boolean;
 	isPending: boolean;
-	/** Error from a mutation — pass mutation.error directly */
 	error: unknown;
 	onConfirm: () => void;
-	/** Extra content rendered between description and buttons (e.g. a checkbox) */
 	children?: React.ReactNode;
 }
 

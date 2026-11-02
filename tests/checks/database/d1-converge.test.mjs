@@ -87,7 +87,7 @@ test("Wrangler D1 migration output becomes a strict structured status", () => {
     `),
 		{
 			converged: false,
-			pending_migrations: ["0056_oauth_client_secret_overlap.sql", "0057_follow_up.sql"], // gitleaks:allow -- migration filenames, not credentials
+			pending_migrations: ["0056_oauth_client_secret_overlap.sql", "0057_follow_up.sql"],
 			pending_migration_count: 2,
 		},
 	);

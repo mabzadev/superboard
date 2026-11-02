@@ -16,17 +16,12 @@ export interface BillingEnv {
 	PURCHASES_SIGNING_KEYSET?: string;
 	SUPERBOARD_ENTITLEMENT_WEBHOOK_SECRET?: string;
 	APPLE_ROOT_CERTIFICATES_B64?: string;
-	/** Generated Worker bindings are strings; target validation constrains this to api or billing. */
 	CREDENTIAL_KEY_SCOPE?: string;
 	AUTH_GATEWAY_ISSUER: string;
 	AUTH_GATEWAY_AUDIENCE: string;
 	AUTH_GATEWAY_JWKS_URL: string;
 }
 
-/**
- * Secrets and optional rollout variables are not emitted by `wrangler types`.
- * Bindings and regular vars come from `src/generated-env.d.ts`.
- */
 interface ApiSecretEnv {
 	SUPERBOARD_TARGET?: string;
 	PLATFORM_WORKERS_JSON?: string;
@@ -38,7 +33,6 @@ interface ApiSecretEnv {
 	MODULE_INTERNAL_TOKEN_PREVIOUS?: string;
 	FLOWS_INTERNAL_TOKEN?: string;
 	EMAIL_INTERNAL_TOKEN?: string;
-	/** @deprecated Transitional compatibility only; new targets use EMAIL_SERVICE. */
 	EMAIL?: SendEmail;
 	SUPERBOARD_CUTOVER_TOKEN?: string;
 	JWT_SECRET: string;
@@ -49,7 +43,6 @@ interface ApiSecretEnv {
 	IAP_PROCESS_KEY?: string;
 	GOOGLE_PUBSUB_VERIFICATION_TOKEN?: string;
 	MESSAGING_INTERNAL_TOKEN?: string;
-	/** @deprecated Legacy Messaging is absent when features.messaging=false. */
 	MESSAGING?: Fetcher;
 	BILLING_CREDENTIALS_REWRAP_KEY?: string;
 	APP_URL?: string;
@@ -83,11 +76,8 @@ interface ApiSecretEnv {
 	CUSTOM_WORKER_TOKEN?: string;
 	CUSTOM_WORKER_PLUGIN_ID?: string;
 	OBSERVABILITY?: Fetcher;
-	/** Active on targets that have completed the Paywalls/Onboardings cutover. */
 	FLOWS_MODULE?: Fetcher;
-	/** @deprecated Preserved only for targets that have not cut over to Flows. */
 	PAYWALLS_MODULE?: Fetcher;
-	/** @deprecated Preserved only for targets that have not cut over to Flows. */
 	ONBOARDINGS_MODULE?: Fetcher;
 	OBSERVABILITY_INTERNAL_TOKEN?: string;
 	FILES_DOMAIN?: string;

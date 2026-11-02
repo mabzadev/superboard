@@ -1,9 +1,3 @@
-/**
- * User enable endpoint
- *
- * POST /_emdash/api/admin/users/:id/enable - Re-enable a disabled user
- */
-
 import { Role } from "@emdash-cms/auth";
 import { createKyselyAdapter } from "@emdash-cms/auth/adapters/kysely";
 import type { APIRoute } from "astro";
@@ -32,13 +26,11 @@ export const POST: APIRoute = async ({ params, locals }) => {
 	}
 
 	try {
-		// Get target user
 		const targetUser = await adapter.getUserById(id);
 		if (!targetUser) {
 			return apiError("NOT_FOUND", "User not found", 404);
 		}
 
-		// Enable user
 		await adapter.updateUser(id, { disabled: false });
 
 		return apiSuccess({ success: true });

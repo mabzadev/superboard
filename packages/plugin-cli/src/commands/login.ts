@@ -1,16 +1,3 @@
-/**
- * `emdash-plugin login <handle-or-did>`
- *
- * Interactive atproto OAuth login. Spins up a loopback HTTP server, opens the
- * user's browser at the AS authorization URL, awaits the callback, exchanges
- * the code, and persists the resulting session.
- *
- * Records the publisher's DID/handle/PDS into the EmDash credentials store
- * (`~/.emdash/credentials.json` by default) so subsequent registry commands
- * can identify the active publisher without cracking open the OAuth library's
- * `StoredSession`.
- */
-
 import { isHandle } from "@atcute/lexicons/syntax";
 import { OAuthCallbackError, OAuthResponseError } from "@atcute/oauth-node-client";
 import { FileCredentialStore } from "@emdash-cms/registry-client";
@@ -24,13 +11,6 @@ import { resolveAtprotoProfile } from "../profile.js";
 const BODY_SNIPPET_MAX_CHARS = 200;
 const WHITESPACE_RUN = /\s+/g;
 
-/**
- * Read up to `BODY_SNIPPET_MAX_CHARS` of the response body, collapsed to a
- * single line. Returns null if the body is empty or can't be read. Used to
- * surface what the PDS actually returned when the OAuth library couldn't
- * extract an `error` / `error_description` from the JSON body and fell back
- * to its `unknown_error` placeholder.
- */
 async function readBodySnippet(response: Response): Promise<string | null> {
 	try {
 		const text = await response.clone().text();
@@ -45,13 +25,6 @@ async function readBodySnippet(response: Response): Promise<string | null> {
 	}
 }
 
-/**
- * Render an OAuth response error as a clean CLI message. The atcute library
- * surfaces these as `OAuthResponseError` with `error: "unknown_error"` whenever
- * the AS response wasn't an OAuth-shaped JSON body — most often a transient
- * gateway/PDS hiccup. Without this, users just see "ERROR unknown_error" and a
- * stack trace, which doesn't help them tell "PDS hiccup" from "config issue".
- */
 async function reportOAuthFailure(error: OAuthResponseError): Promise<void> {
 	const { status } = error;
 	const statusText = error.response.statusText;
@@ -135,10 +108,6 @@ export const loginCommand = defineCommand({
 
 		const { displayName, handle, pds } = await resolveAtprotoProfile(result.session);
 
-		// `resolveAtprotoProfile` falls back to the DID when handle
-		// resolution fails. We persist `null` rather than a placeholder so
-		// downstream display code can render the DID directly instead of a
-		// fake "unknown.invalid"-style handle that misleads users.
 		const handleForStorage: string | null = isHandle(handle) ? handle : null;
 		const credentials = new FileCredentialStore();
 		await credentials.put({

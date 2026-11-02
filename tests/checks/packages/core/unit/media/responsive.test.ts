@@ -11,7 +11,6 @@ import {
 
 describe("responsiveWidths", () => {
 	it("includes breakpoints up to 2x the rendered width", () => {
-		// maxWidth 400 -> cap 800: 640, 750 qualify (<=800), 828 does not
 		expect(responsiveWidths(400)).toEqual([400, 640, 750]);
 	});
 
@@ -55,8 +54,6 @@ describe("buildResponsiveImage", () => {
 
 	it("returns null for relative URLs without calling getImage", async () => {
 		const getImage = vi.fn();
-		// Relative same-origin proxy/public URLs are never optimized by Astro's
-		// image services; skip them rather than emit a no-op srcset.
 		expect(
 			await buildResponsiveImage(getImage, {
 				src: "/_emdash/api/media/file/01ABC.jpg",
@@ -92,7 +89,6 @@ describe("buildResponsiveImage", () => {
 	});
 
 	it("returns null when the service passes the URL through unchanged (unauthorized host)", async () => {
-		// baseService.getURL returns options.src verbatim for unauthorized hosts.
 		const getImage: GetImage = async (opts) => ({ src: opts.src });
 		expect(await buildResponsiveImage(getImage, { src: ABS, width: 800, height: 600 })).toBeNull();
 	});
@@ -144,8 +140,6 @@ describe("toAbsoluteMediaUrl", () => {
 	});
 
 	it("does not let backslash tricks escape the origin (SSRF guard)", () => {
-		// WHATWG URL normalizes backslashes to slashes for http(s), so
-		// "/\\evil.com" would otherwise resolve to https://evil.com.
 		expect(toAbsoluteMediaUrl("/\\evil.com/x.jpg", ORIGIN)).toBe("/\\evil.com/x.jpg");
 		expect(toAbsoluteMediaUrl("/\\/evil.com/x.jpg", ORIGIN)).toBe("/\\/evil.com/x.jpg");
 	});

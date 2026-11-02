@@ -21,10 +21,6 @@ function loadIdentityMessages(locale: IdentityLocale): Promise<AbstractIntlMessa
 	return pending[locale];
 }
 
-/**
- * Loads only the active locale catalogue. The first render suspends inside the plugin
- * view boundary, which is still showing its loading state while the view chunk loads.
- */
 export function useIdentityMessages(locale: string): AbstractIntlMessages {
 	const language: IdentityLocale = locale === "fr" ? "fr" : "en";
 	return loaded[language] ?? use(loadIdentityMessages(language));

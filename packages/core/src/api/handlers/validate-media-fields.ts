@@ -54,15 +54,11 @@ export async function validateMediaFields(
 	collectionSlug: string,
 	data: Record<string, unknown>,
 ): Promise<ApiResult<true>> {
-	// Cache is keyed on slug only. If a handler creates/modifies a field and
-	// then writes content in the same request (e.g. bulk import), the cached
-	// list will be stale for that request. This is an edge case in normal use.
 	const fields = await requestCached(`mediaFields:${collectionSlug}`, () =>
 		loadMediaFieldsForCollection(db, collectionSlug),
 	);
 	if (fields.length === 0) return { success: true, data: true };
 
-	// Collect local media ids that need a MIME lookup
 	const localIds = new Set<string>();
 	for (const field of fields) {
 		const ref = asMediaRef(data[field.slug]);
@@ -73,7 +69,6 @@ export async function validateMediaFields(
 		}
 	}
 
-	// Batch-load local media MIMEs
 	const idList = [...localIds];
 	const mimeById = new Map<string, string>();
 	if (idList.length > 0) {
@@ -95,8 +90,6 @@ export async function validateMediaFields(
 
 		const provider = typeof ref.provider === "string" ? ref.provider : "local";
 
-		// External providers carry mimeType in the ref; trust it as-is.
-		// Local media: look up the stored mimeType by id.
 		let mime: string | undefined;
 		if (provider === "local") {
 			if (typeof ref.id !== "string") {
@@ -110,9 +103,6 @@ export async function validateMediaFields(
 			if (typeof ref.mimeType !== "string") {
 				return fail(`Field '${field.slug}' requires a mimeType declaration for non-local media`);
 			}
-			// TODO: long-term, consider a server-side HEAD probe or provider-vouched
-			// MIMEs for non-local refs; for now the constraint is only as strong as
-			// the client that constructed the ref.
 			mime = ref.mimeType;
 		}
 

@@ -8,7 +8,6 @@ import {
 	type DialectTestContext,
 } from "../../utils/test-db.js";
 
-// Mock loader.getDb so the runtime taxonomy functions read from our test db.
 vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 	getDb: vi.fn(),
 }));
@@ -37,7 +36,6 @@ describeEachDialect("getTaxonomyTerms", (dialect) => {
 	});
 
 	it("includes the description for flat (non-hierarchical) taxonomies", async () => {
-		// `tag` is seeded as non-hierarchical.
 		await taxRepo.create({
 			name: "tag",
 			slug: "longevity",
@@ -54,7 +52,6 @@ describeEachDialect("getTaxonomyTerms", (dialect) => {
 	});
 
 	it("includes the description for hierarchical taxonomies (control)", async () => {
-		// `category` is seeded as hierarchical.
 		await taxRepo.create({
 			name: "category",
 			slug: "tech",

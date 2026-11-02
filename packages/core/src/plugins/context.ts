@@ -1,10 +1,3 @@
-/**
- * Plugin Context v2
- *
- * Creates the unified context object provided to plugins in all hooks and routes.
- *
- */
-
 import type { Kysely } from "kysely";
 import { ulid } from "ulidx";
 
@@ -61,14 +54,6 @@ import type {
 	TaxonomyReadOptions,
 } from "./types.js";
 
-// =============================================================================
-// KV Access
-// =============================================================================
-
-/**
- * Create KV accessor for a plugin
- * All keys are automatically prefixed with the plugin ID
- */
 export function createKVAccess(optionsRepo: OptionsRepository, pluginId: string): KVAccess {
 	const prefix = `plugin:${pluginId}:`;
 
@@ -100,14 +85,6 @@ export function createKVAccess(optionsRepo: OptionsRepository, pluginId: string)
 	};
 }
 
-// =============================================================================
-// Storage Access
-// =============================================================================
-
-/**
- * Create storage collection accessor for a plugin
- * Wraps PluginStorageRepository with the v2 interface (no async iterators)
- */
 function createStorageCollection<T>(
 	db: Kysely<Database>,
 	pluginId: string,
@@ -126,7 +103,6 @@ function createStorageCollection<T>(
 		deleteMany: (ids) => repo.deleteMany(ids),
 		count: (where) => repo.count(where),
 
-		// Query returns PaginatedResult instead of the old format
 		async query(options?: QueryOptions): Promise<PaginatedResult<{ id: string; data: T }>> {
 			const result = await repo.query({
 				where: options?.where,
@@ -144,9 +120,6 @@ function createStorageCollection<T>(
 	};
 }
 
-/**
- * Create storage accessor with all declared collections
- */
 export function createStorageAccess<T extends PluginStorageConfig>(
 	db: Kysely<Database>,
 	pluginId: string,
@@ -162,30 +135,17 @@ export function createStorageAccess<T extends PluginStorageConfig>(
 	return storage;
 }
 
-// =============================================================================
-// Content Access
-// =============================================================================
-
-/**
- * Extract `seo` from a plugin-supplied content write input and return both
- * parts. Mutates nothing — returns a new field map without the `seo` key.
- */
 function splitSeoFromInput(input: ContentWriteInput): {
 	fields: Record<string, unknown>;
 	seo: ContentItemSeoInput | undefined;
 } {
 	const { seo, ...fields } = input;
-	// Reject non-object seo values rather than silently dropping them.
 	if (seo !== undefined && (seo === null || typeof seo !== "object" || Array.isArray(seo))) {
 		throw new Error("content.seo must be an object");
 	}
 	return { fields, seo };
 }
 
-/**
- * Reject writing SEO to a collection that does not have it enabled.
- * Matches the REST API behavior (VALIDATION_ERROR).
- */
 async function assertSeoEnabled(
 	seoRepo: SeoRepository,
 	collection: string,
@@ -201,11 +161,6 @@ async function assertSeoEnabled(
 	return hasSeo;
 }
 
-/**
- * Parse the `collections` JSON column into a string array (`[]` on anything
- * else). Mirrors the guards in the Cloudflare/workerd bridges so an
- * in-process plugin degrades on malformed data instead of crashing.
- */
 function parseCollectionsColumn(value: string | null): string[] {
 	if (!value) return [];
 	try {
@@ -218,7 +173,6 @@ function parseCollectionsColumn(value: string | null): string[] {
 	}
 }
 
-/** Map a repository `Taxonomy` row to the plugin-facing term shape. */
 function taxonomyToTermInfo(term: Taxonomy): TaxonomyTermInfo {
 	return {
 		id: term.id,
@@ -232,9 +186,6 @@ function taxonomyToTermInfo(term: Taxonomy): TaxonomyTermInfo {
 	};
 }
 
-/**
- * Create read-only content access
- */
 export function createContentAccess(db: Kysely<Database>): ContentAccess {
 	const contentRepo = new ContentRepository(db);
 	const seoRepo = new SeoRepository(db);
@@ -268,7 +219,6 @@ export function createContentAccess(db: Kysely<Database>): ContentAccess {
 			collection: string,
 			options?: ContentListOptions,
 		): Promise<PaginatedResult<ContentItem>> {
-			// Convert orderBy format if provided
 			let orderBy: { field: string; direction: "asc" | "desc" } | undefined;
 			if (options?.orderBy) {
 				const entries = Object.entries(options.orderBy);
@@ -318,9 +268,6 @@ export function createContentAccess(db: Kysely<Database>): ContentAccess {
 	};
 }
 
-/**
- * Create read-only taxonomy access (gated on `taxonomies:read`).
- */
 export function createTaxonomyAccess(db: Kysely<Database>): TaxonomyAccess {
 	const taxonomyRepo = new TaxonomyRepository(db);
 
@@ -360,15 +307,6 @@ export function createTaxonomyAccess(db: Kysely<Database>): TaxonomyAccess {
 	};
 }
 
-/**
- * Create full content access with write operations.
- *
- * `create` and `update` accept a reserved `seo` key in their `data`
- * argument. When present, it is routed to the core SEO panel
- * (`_emdash_seo`) via `SeoRepository.upsert`, in the same transaction as
- * the content write. The returned `ContentItem.seo` reflects the resulting
- * SEO state for SEO-enabled collections.
- */
 export function createContentAccessWithWrite(
 	db: Kysely<Database>,
 	beforeContentWrite?: () => Promise<void>,
@@ -447,11 +385,6 @@ export function createContentAccessWithWrite(
 
 					const hasSeo = await assertSeoEnabled(trxSeoRepo, collection, seo);
 
-					// Pass the `data` payload to ContentRepository.updateDraftAware only when
-					// there are field updates — passing an empty object would still
-					// bump updated_at/version, but we want a seo-only call to touch
-					// only the SEO table. updateDraftAware delegates no-op writes to
-					// ContentRepository.update.
 					const item = hasFieldUpdates
 						? await trxContentRepo.updateDraftAware(collection, id, { data: fields })
 						: await (async () => {
@@ -507,13 +440,6 @@ export function createContentAccessWithWrite(
 	};
 }
 
-// =============================================================================
-// Media Access
-// =============================================================================
-
-/**
- * Create read-only media access
- */
 export function createMediaAccess(db: Kysely<Database>): MediaAccess {
 	const mediaRepo = new MediaRepository(db);
 
@@ -527,7 +453,6 @@ export function createMediaAccess(db: Kysely<Database>): MediaAccess {
 				filename: item.filename,
 				mimeType: item.mimeType,
 				size: item.size,
-				// Construct URL from storage key (or use a sensible default path)
 				url: `/media/${item.id}/${item.filename}`,
 				createdAt: item.createdAt,
 			};
@@ -556,14 +481,6 @@ export function createMediaAccess(db: Kysely<Database>): MediaAccess {
 	};
 }
 
-/**
- * Create full media access with write operations.
- *
- * `getUploadUrlFn` is optional: when omitted, `getUploadUrl()` is derived from
- * `storage` (create a pending record + a signed PUT URL), mirroring the REST
- * `/_emdash/api/media/upload-url` endpoint. `upload()` only needs `storage`.
- * If storage is not provided, both throw at call time.
- */
 export function createMediaAccessWithWrite(
 	db: Kysely<Database>,
 	getUploadUrlFn:
@@ -619,25 +536,20 @@ export function createMediaAccessWithWrite(
 				);
 			}
 
-			// Generate a storage key with a unique prefix
 			const keyPrefix = ulid();
-			// Extract extension from basename (ignore path separators)
 			const basename = filename.split("/").pop() ?? filename;
 			const dotIdx = basename.lastIndexOf(".");
 			const ext = dotIdx > 0 ? basename.slice(dotIdx).toLowerCase() : "";
 			const storageKey = `${keyPrefix}${ext}`;
 
-			// Upload to storage first
 			await storage.upload({
 				key: storageKey,
 				body: new Uint8Array(bytes),
 				contentType,
 			});
 
-			// Derive dimensions + LQIP placeholders (no-op for non-images).
 			const enriched = await enrichImageMetadata(new Uint8Array(bytes), contentType);
 
-			// Create DB record — clean up storage on failure
 			let media;
 			try {
 				media = await mediaRepo.create({
@@ -654,9 +566,7 @@ export function createMediaAccessWithWrite(
 			} catch (error) {
 				try {
 					await storage.delete(storageKey);
-				} catch {
-					// Best-effort cleanup
-				}
+				} catch {}
 				throw error;
 			}
 
@@ -669,11 +579,6 @@ export function createMediaAccessWithWrite(
 
 		async delete(id: string): Promise<boolean> {
 			const deleted = await mediaRepo.delete(id);
-			// Plugins can delete media that's referenced by site settings
-			// (`logo`, `favicon`, `seo.defaultOgImage`); the worker-scoped
-			// resolved-URL cache must be dropped or it will keep serving
-			// 404s. Matches the invalidation in
-			// `EmDashRuntime.handleMediaDelete`.
 			if (deleted) {
 				invalidateSiteSettingsCache();
 			}
@@ -682,40 +587,22 @@ export function createMediaAccessWithWrite(
 	};
 }
 
-// =============================================================================
-// HTTP Access
-// =============================================================================
-
-/** Maximum number of redirects to follow in plugin HTTP access */
 const MAX_PLUGIN_REDIRECTS = 5;
 
-/**
- * Check if a hostname matches any pattern in the allowed list.
- * Patterns: "*" matches all, "*.example.com" matches subdomains AND bare "example.com",
- * "api.example.com" matches exactly.
- */
 function isHostAllowed(host: string, allowedHosts: string[]): boolean {
 	return allowedHosts.some((pattern) => {
 		if (pattern === "*") return true;
 		if (pattern.startsWith("*.")) {
-			const suffix = pattern.slice(1); // ".example.com"
-			// Match subdomains (foo.example.com) and bare domain (example.com)
+			const suffix = pattern.slice(1);
 			return host.endsWith(suffix) || host === pattern.slice(2);
 		}
 		return host === pattern;
 	});
 }
 
-/**
- * Create HTTP access with host validation.
- *
- * Uses redirect: "manual" to re-validate each redirect target against
- * the allowedHosts list, preventing redirects to unauthorized hosts.
- */
 export function createHttpAccess(pluginId: string, allowedHosts: string[]): HttpAccess {
 	return {
 		async fetch(url: string, init?: RequestInit): Promise<Response> {
-			// Deny by default — plugins must declare allowed hosts
 			if (allowedHosts.length === 0) {
 				throw new Error(
 					`Plugin "${pluginId}" has no allowed hosts configured. ` +
@@ -740,18 +627,15 @@ export function createHttpAccess(pluginId: string, allowedHosts: string[]): Http
 					redirect: "manual",
 				});
 
-				// Not a redirect -- return directly
 				if (response.status < 300 || response.status >= 400) {
 					return response;
 				}
 
-				// Extract redirect target
 				const location = response.headers.get("Location");
 				if (!location) {
 					return response;
 				}
 
-				// Resolve relative redirects; strip credentials on cross-origin hops
 				const previousOrigin = new URL(currentUrl).origin;
 				currentUrl = new URL(location, currentUrl).href;
 				const nextOrigin = new URL(currentUrl).origin;
@@ -766,11 +650,6 @@ export function createHttpAccess(pluginId: string, allowedHosts: string[]): Http
 	};
 }
 
-/**
- * Create unrestricted HTTP access (for plugins with network:fetch:any capability).
- * No host validation, but applies SSRF protection on redirect targets to
- * prevent plugins from being tricked into reaching internal services.
- */
 export function createUnrestrictedHttpAccess(pluginId: string): HttpAccess {
 	return {
 		async fetch(url: string, init?: RequestInit): Promise<Response> {
@@ -778,8 +657,6 @@ export function createUnrestrictedHttpAccess(pluginId: string): HttpAccess {
 			let currentInit = init;
 
 			for (let i = 0; i <= MAX_PLUGIN_REDIRECTS; i++) {
-				// Validate each URL against SSRF rules (private IPs, metadata
-				// endpoints, wildcard DNS, resolved-IP private ranges).
 				try {
 					await resolveAndValidateExternalUrl(currentUrl);
 				} catch (e) {
@@ -795,18 +672,15 @@ export function createUnrestrictedHttpAccess(pluginId: string): HttpAccess {
 					redirect: "manual",
 				});
 
-				// Not a redirect -- return directly
 				if (response.status < 300 || response.status >= 400) {
 					return response;
 				}
 
-				// Extract redirect target
 				const location = response.headers.get("Location");
 				if (!location) {
 					return response;
 				}
 
-				// Resolve relative redirects; strip credentials on cross-origin hops
 				const previousOrigin = new URL(currentUrl).origin;
 				currentUrl = new URL(location, currentUrl).href;
 				const nextOrigin = new URL(currentUrl).origin;
@@ -821,9 +695,6 @@ export function createUnrestrictedHttpAccess(pluginId: string): HttpAccess {
 	};
 }
 
-/**
- * Create blocked HTTP access (for plugins without network:request capability)
- */
 export function createBlockedHttpAccess(pluginId: string): HttpAccess {
 	return {
 		async fetch(): Promise<never> {
@@ -835,13 +706,6 @@ export function createBlockedHttpAccess(pluginId: string): HttpAccess {
 	};
 }
 
-// =============================================================================
-// Log Access
-// =============================================================================
-
-/**
- * Create logger for a plugin
- */
 export function createLogAccess(pluginId: string): LogAccess {
 	const prefix = `[plugin:${pluginId}]`;
 
@@ -880,49 +744,26 @@ export function createLogAccess(pluginId: string): LogAccess {
 	};
 }
 
-// =============================================================================
-// Site Info
-// =============================================================================
-
 const TRAILING_SLASH_RE = /\/$/;
 
-/**
- * Options for creating site info
- */
 export interface SiteInfoOptions {
-	/** Site name from options table */
 	siteName?: string;
-	/** Site URL from options table or Astro config */
 	siteUrl?: string;
-	/** Site locale from options table */
 	locale?: string;
-	/** Astro's `trailingSlash` config (from `virtual:emdash/config`). */
 	trailingSlash?: "always" | "never" | "ignore";
 }
 
-/**
- * Create site info from config and settings.
- *
- * Resolution order for URL:
- * 1. options table (emdash:site_url)
- * 2. Astro `site` config
- * 3. fallback to empty string
- */
 export function createSiteInfo(options: SiteInfoOptions): SiteInfo {
 	return {
 		name: options.siteName ?? "",
-		url: (options.siteUrl ?? "").replace(TRAILING_SLASH_RE, ""), // strip trailing slash
+		url: (options.siteUrl ?? "").replace(TRAILING_SLASH_RE, ""),
 		locale: options.locale ?? "en",
-		trailingSlash: options.trailingSlash ?? "ignore", // Astro's default
+		trailingSlash: options.trailingSlash ?? "ignore",
 	};
 }
 
-/**
- * Create a URL helper that generates absolute URLs from relative paths.
- * Validates that path starts with "/" and rejects protocol-relative paths ("//").
- */
 export function createUrlHelper(siteUrl: string): (path: string) => string {
-	const base = siteUrl.replace(TRAILING_SLASH_RE, ""); // strip trailing slash
+	const base = siteUrl.replace(TRAILING_SLASH_RE, "");
 
 	return (path: string): string => {
 		if (!path.startsWith("/")) {
@@ -935,14 +776,6 @@ export function createUrlHelper(siteUrl: string): (path: string) => string {
 	};
 }
 
-// =============================================================================
-// User Access
-// =============================================================================
-
-/**
- * Convert a UserRepository user to the plugin-facing UserInfo shape.
- * Strips sensitive fields (avatarUrl, emailVerified, data).
- */
 function toUserInfo(user: {
 	id: string;
 	email: string;
@@ -959,10 +792,6 @@ function toUserInfo(user: {
 	};
 }
 
-/**
- * Create read-only user access for plugins.
- * Excludes sensitive fields (password hashes, sessions, passkeys, avatar URL, data).
- */
 export function createUserAccess(db: Kysely<Database>): UserAccess {
 	const userRepo = new UserRepository(db);
 
@@ -998,65 +827,21 @@ export function createUserAccess(db: Kysely<Database>): UserAccess {
 	};
 }
 
-// =============================================================================
-// Plugin Context Factory
-// =============================================================================
-
 export interface PluginContextFactoryOptions {
 	db: Kysely<Database>;
 	beforeContentWrite?: () => Promise<void>;
-	/**
-	 * Resolver for the database connection, preferred over `db` when present.
-	 * Called per `createContext()` so connection-backed adapters (e.g. Postgres
-	 * over Hyperdrive) get the current request/event-scoped connection from ALS
-	 * rather than a snapshot of the per-isolate singleton — reusing the
-	 * singleton's socket from a later event trips workerd's cross-request I/O
-	 * guard. When omitted, `db` is used directly (correct for stateless
-	 * adapters like D1 and Node SQLite). `db` remains required as the fallback.
-	 */
 	getDb?: () => Kysely<Database>;
-	/**
-	 * Storage backend for direct media uploads.
-	 * If not provided, upload() will throw.
-	 */
 	storage?: Storage;
-	/**
-	 * Explicit provider for `ctx.media.getUploadUrl()`. Optional: when omitted
-	 * but `storage` is configured, the factory derives a working `getUploadUrl()`
-	 * (and `upload()`) from storage. Only when neither `getUploadUrl` nor
-	 * `storage` is present do media write operations become unavailable.
-	 */
 	getUploadUrl?: (
 		filename: string,
 		contentType: string,
 	) => Promise<{ uploadUrl: string; mediaId: string }>;
-	/**
-	 * Site information for ctx.site and ctx.url().
-	 * If not provided, site info will have empty defaults.
-	 */
 	siteInfo?: SiteInfoOptions;
-	/**
-	 * Callback to notify the cron scheduler that the next due time may have changed.
-	 * If not provided, ctx.cron will not be available.
-	 */
 	cronReschedule?: () => void;
-	/**
-	 * Email pipeline instance for ctx.email.
-	 * If not provided (or no provider configured), ctx.email will be undefined.
-	 */
 	emailPipeline?: EmailPipeline;
-	/**
-	 * Pre-resolved list of trusted proxy header names (from the runtime
-	 * `EmDashConfig.trustedProxyHeaders` or the env var). Plugin route
-	 * handlers pass this to `extractRequestMeta` so plugins see the same
-	 * client IP the core auth path does.
-	 */
 	trustedProxyHeaders?: string[];
 }
 
-/**
- * Factory for creating plugin contexts
- */
 export class PluginContextFactory {
 	private resolveDb: () => Kysely<Database>;
 	private beforeContentWrite?: () => Promise<void>;
@@ -1069,11 +854,6 @@ export class PluginContextFactory {
 	private urlHelper: (path: string) => string;
 	private cronReschedule?: () => void;
 	private emailPipeline?: EmailPipeline;
-	/**
-	 * Plugin IDs already warned about a missing media-write backend, so the
-	 * warning fires once per factory instead of on every hook/route context
-	 * creation (which would spam logs for hook-participating plugins).
-	 */
 	private warnedMissingMediaBackend = new Set<string>();
 
 	constructor(options: PluginContextFactoryOptions) {
@@ -1088,28 +868,16 @@ export class PluginContextFactory {
 		this.emailPipeline = options.emailPipeline;
 	}
 
-	/**
-	 * Create the unified plugin context
-	 */
 	createContext(plugin: ResolvedPlugin): PluginContext {
 		const capabilities = new Set(plugin.capabilities);
 
-		// Resolve the connection once per context. For stateless adapters this
-		// is the singleton; for connection-backed adapters it's the current
-		// request/event-scoped connection from ALS. All repos below are built
-		// from this local `db` so a hook never queries a stale singleton socket.
 		const db = this.resolveDb();
 		const optionsRepo = new OptionsRepository(db);
 
-		// Always available
 		const kv = createKVAccess(optionsRepo, plugin.id);
 		const log = createLogAccess(plugin.id);
 		const storage = createStorageAccess(db, plugin.id, plugin.storage);
 
-		// Capability-gated: content
-		// Note: capabilities reach this point already normalized to the
-		// canonical names by definePlugin / adaptSandboxEntry. Deprecated
-		// names ("read:content", "write:content") never appear here.
 		let content: ContentAccess | ContentAccessWithWrite | undefined;
 		if (capabilities.has("content:write")) {
 			content = createContentAccessWithWrite(db, this.beforeContentWrite);
@@ -1117,17 +885,11 @@ export class PluginContextFactory {
 			content = createContentAccess(db);
 		}
 
-		// Capability-gated: taxonomies (read-only)
 		let taxonomies: TaxonomyAccess | undefined;
 		if (capabilities.has("taxonomies:read")) {
 			taxonomies = createTaxonomyAccess(db);
 		}
 
-		// Capability-gated: media
-		// `upload()` only needs `storage`; `getUploadUrl()` is derived from
-		// storage when no explicit provider is wired. Granting write access on
-		// either avoids silently degrading media:write to read-only — the bug
-		// where the runtime threads `storage` but not `getUploadUrl`.
 		let media: MediaAccess | MediaAccessWithWrite | undefined;
 		if (capabilities.has("media:write")) {
 			if (this.getUploadUrl || this.storage) {
@@ -1147,7 +909,6 @@ export class PluginContextFactory {
 			media = createMediaAccess(db);
 		}
 
-		// Capability-gated: http
 		let http: HttpAccess | undefined;
 		if (capabilities.has("network:request:unrestricted")) {
 			http = createUnrestrictedHttpAccess(plugin.id);
@@ -1155,20 +916,16 @@ export class PluginContextFactory {
 			http = createHttpAccess(plugin.id, plugin.allowedHosts);
 		}
 
-		// Capability-gated: users
 		let users: UserAccess | undefined;
 		if (capabilities.has("users:read")) {
 			users = createUserAccess(db);
 		}
 
-		// Cron access — always available (scoped to plugin), but only if
-		// the runtime provided a reschedule callback (i.e. cron is wired up).
 		let cron: CronAccess | undefined;
 		if (this.cronReschedule) {
 			cron = new CronAccessImpl(db, plugin.id, this.cronReschedule);
 		}
 
-		// Email access — requires email:send capability AND a configured provider
 		let email: EmailAccess | undefined;
 		if (capabilities.has("email:send") && this.emailPipeline?.isAvailable()) {
 			const pipeline = this.emailPipeline;
@@ -1199,9 +956,6 @@ export class PluginContextFactory {
 	}
 }
 
-/**
- * Create a plugin context for a resolved plugin
- */
 export function createPluginContext(
 	options: PluginContextFactoryOptions,
 	plugin: ResolvedPlugin,

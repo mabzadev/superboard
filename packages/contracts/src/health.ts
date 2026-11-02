@@ -18,10 +18,6 @@ export interface SqlSchemaHealth {
 
 const MIGRATION_FILENAME_PATTERN = /^\d+[a-z0-9_-]*\.sql$/iu;
 
-/**
- * Executes the smallest possible read against a SQL binding and fails closed
- * when the binding is missing, unreachable, or returns an unexpected result.
- */
 export async function assertSqlDatabaseHealth(database: SqlHealthDatabase): Promise<void> {
 	const row = await database
 		.prepare("SELECT 1 AS superboard_health_check")
@@ -31,12 +27,6 @@ export async function assertSqlDatabaseHealth(database: SqlHealthDatabase): Prom
 	}
 }
 
-/**
- * Reads Wrangler's documented D1 migration ledger and compares it with the
- * exact latest migration injected from the reviewed source tree at build time.
- * A database is `behind` when the expected migration is absent and `drifted`
- * when that migration exists but a different migration was applied afterward.
- */
 export async function inspectSqlSchemaHealth(
 	database: SqlHealthDatabase,
 	expectedMigration: string,

@@ -86,7 +86,6 @@ describe("resolveReleaseArtifacts", () => {
 		);
 		expect(result?.screenshots?.[1]?.lang).toBe("de");
 
-		// One PUT per artifact, with the measured content type.
 		expect(uploads).toHaveLength(4);
 		expect(uploads.every((u) => u.contentType === "image/png")).toBe(true);
 	});

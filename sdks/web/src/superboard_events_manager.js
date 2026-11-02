@@ -1,10 +1,6 @@
-// Import necessary modules
 import SuperBoardAPIService from "./superboard_api_service.js";
 import SuperBoardDeviceDetails from "./superboard_device_details.js";
 
-/**
- * Represents an event.
- */
 class Event {
 	/**
 	 * Constructs an Event instance.
@@ -14,21 +10,14 @@ class Event {
 	 * @param {number|null} [engagementTime=null] - The engagement time for the event.
 	 */
 	constructor(type, createdAt, path = null, engagementTime = null) {
-		this.type = type; // The type of the event
-		this.createdAt = createdAt; // Timestamp of when the event occurred
-		this.path = path; // The associated path for the event, default is null
-		this.engagementTime = engagementTime; // Engagement time for the event, default is null
+		this.type = type;
+		this.createdAt = createdAt;
+		this.path = path;
+		this.engagementTime = engagementTime;
 	}
 }
 
-/**
- * Manages the storage of events.
- */
 class EventsStorage {
-	/**
-	 * Constructs an EventsStorage instance.
-	 * Loads events from localStorage or initializes as an empty array.
-	 */
 	constructor() {
 		this.storage = typeof localStorage !== "undefined" ? localStorage : null;
 		try {
@@ -43,14 +32,11 @@ class EventsStorage {
 	 * @returns {Array} All stored events.
 	 */
 	getEvents() {
-		return this.events; // Return the array of stored events
+		return this.events;
 	}
 
-	/**
-	 * Store events to localStorage.
-	 */
 	storeEventsLocally() {
-		this.storage?.setItem("SuperBoard-events", JSON.stringify(this.events)); // Store events array in localStorage
+		this.storage?.setItem("SuperBoard-events", JSON.stringify(this.events));
 	}
 
 	/**
@@ -58,8 +44,8 @@ class EventsStorage {
 	 * @param {Event} event - The event to store.
 	 */
 	storeEvent(event) {
-		this.events.push(event); // Add the event to the events array
-		this.storeEventsLocally(); // Store the updated events array in localStorage
+		this.events.push(event);
+		this.storeEventsLocally();
 	}
 
 	/**
@@ -67,8 +53,8 @@ class EventsStorage {
 	 * @param {Array<Event>} events - Array of events to store.
 	 */
 	storeEvents(events) {
-		this.events.push(...events); // Add multiple events to the events array
-		this.storeEventsLocally(); // Store the updated events array in localStorage
+		this.events.push(...events);
+		this.storeEventsLocally();
 	}
 
 	/**
@@ -76,8 +62,8 @@ class EventsStorage {
 	 * @param {Event} eventToDelete - The event to delete.
 	 */
 	deleteEvent(eventToDelete) {
-		this.events = this.events.filter((event) => event !== eventToDelete); // Filter out the event to delete
-		this.storeEventsLocally(); // Store the updated events array in localStorage
+		this.events = this.events.filter((event) => event !== eventToDelete);
+		this.storeEventsLocally();
 	}
 
 	/**
@@ -85,10 +71,10 @@ class EventsStorage {
 	 * @returns {Array} All stored events.
 	 */
 	getAndRemoveAllEvents() {
-		const eventsToReturn = this.events; // Store current events to return
-		this.events = []; // Clear the events array
-		this.storeEventsLocally(); // Store the empty array in localStorage
-		return eventsToReturn; // Return the stored events
+		const eventsToReturn = this.events;
+		this.events = [];
+		this.storeEventsLocally();
+		return eventsToReturn;
 	}
 
 	/**
@@ -96,10 +82,7 @@ class EventsStorage {
 	 * @param {number} timestamp - The timestamp to set.
 	 */
 	setTimestamp(timestamp) {
-		this.storage?.setItem(
-			"SuperBoard-events-timestamp",
-			JSON.stringify(timestamp), // Store the timestamp in localStorage
-		);
+		this.storage?.setItem("SuperBoard-events-timestamp", JSON.stringify(timestamp));
 	}
 
 	/**
@@ -107,38 +90,29 @@ class EventsStorage {
 	 * @returns {number|null} The timestamp from localStorage.
 	 */
 	getTimestamp() {
-		const storedTimestamp = this.storage?.getItem(
-			"SuperBoard-events-timestamp", // Retrieve timestamp from localStorage
-		);
+		const storedTimestamp = this.storage?.getItem("SuperBoard-events-timestamp");
 		try {
-			return storedTimestamp ? JSON.parse(storedTimestamp) : null; // Return parsed timestamp or null if not found
+			return storedTimestamp ? JSON.parse(storedTimestamp) : null;
 		} catch {
 			return null;
 		}
 	}
 }
 
-/**
- * Manages events and their handling.
- */
 class SuperBoardEventsManager {
-	/**
-	 * Constructs a SuperBoardEventsManager instance.
-	 * Initializes SuperBoard API service, EventsStorage, and lastTimestamp.
-	 */
 	constructor() {
-		this.service = new SuperBoardAPIService(); // Initialize SuperBoard API service
-		this.eventsStorage = new EventsStorage(); // Initialize event storage
-		this.lastTimestamp = Date.now(); // Set initial timestamp to current time
+		this.service = new SuperBoardAPIService();
+		this.eventsStorage = new EventsStorage();
+		this.lastTimestamp = Date.now();
 
-		const storedTimestamp = this.eventsStorage.getTimestamp(); // Get stored timestamp
+		const storedTimestamp = this.eventsStorage.getTimestamp();
 		if (storedTimestamp) {
-			this.setTimeSpent(); // Set time spent if stored timestamp exists
-			this.lastTimestamp = storedTimestamp; // Update lastTimestamp to stored timestamp
+			this.setTimeSpent();
+			this.lastTimestamp = storedTimestamp;
 		}
 
-		this.eventsStorage.setTimestamp(this.lastTimestamp); // Set the current timestamp in storage
-		this.handleFocus(); // Set up focus event listener
+		this.eventsStorage.setTimestamp(this.lastTimestamp);
+		this.handleFocus();
 	}
 
 	/**
@@ -146,13 +120,8 @@ class SuperBoardEventsManager {
 	 * @param {string} type - The type of the event.
 	 */
 	addEvent(type) {
-		const event = new Event(
-			type,
-			Date.now(), // Current timestamp for the event
-			SuperBoardDeviceDetails.getSuperBoardPath(), // Path associated with the event
-			null, // Engagement time is initially null
-		);
-		this.eventsStorage.storeEvent(event); // Store the newly created event
+		const event = new Event(type, Date.now(), SuperBoardDeviceDetails.getSuperBoardPath(), null);
+		this.eventsStorage.storeEvent(event);
 	}
 
 	/**
@@ -160,8 +129,8 @@ class SuperBoardEventsManager {
 	 * @param {string} type - The type of the event.
 	 */
 	addEventWithFlush(type) {
-		this.addEvent(type); // Add the event
-		this.flushEvents(); // Flush events to the server
+		this.addEvent(type);
+		this.flushEvents();
 	}
 
 	/**
@@ -174,7 +143,7 @@ class SuperBoardEventsManager {
 		}
 		const self = this;
 		window.addEventListener("focus", function () {
-			self.setTimeSpent(); // Update time spent when the window gains focus
+			self.setTimeSpent();
 		});
 	}
 
@@ -183,15 +152,13 @@ class SuperBoardEventsManager {
 	 * @private
 	 */
 	setTimeSpent() {
-		const storedTimestamp = this.eventsStorage.getTimestamp(); // Retrieve the stored timestamp
+		const storedTimestamp = this.eventsStorage.getTimestamp();
 		if (storedTimestamp) {
-			const currentTimestamp = Date.now(); // Current timestamp
-			const differenceInMilliseconds = Math.abs(
-				currentTimestamp - this.lastTimestamp, // Calculate time difference
-			);
-			const differenceInSeconds = Math.floor(differenceInMilliseconds / 1000); // Convert to seconds
-			this.setSecondsToEvents(differenceInSeconds); // Update events with the calculated seconds
-			this.eventsStorage.setTimestamp(null); // Clear the stored timestamp
+			const currentTimestamp = Date.now();
+			const differenceInMilliseconds = Math.abs(currentTimestamp - this.lastTimestamp);
+			const differenceInSeconds = Math.floor(differenceInMilliseconds / 1000);
+			this.setSecondsToEvents(differenceInSeconds);
+			this.eventsStorage.setTimestamp(null);
 		}
 	}
 
@@ -201,13 +168,13 @@ class SuperBoardEventsManager {
 	 * @private
 	 */
 	setSecondsToEvents(seconds) {
-		const events = this.eventsStorage.getAndRemoveAllEvents(); // Retrieve and clear stored events
+		const events = this.eventsStorage.getAndRemoveAllEvents();
 		events.forEach((event) => {
 			if (event.engagementTime == null) {
-				event.engagementTime = seconds; // Set engagement time if not already set
+				event.engagementTime = seconds;
 			}
 		});
-		this.eventsStorage.storeEvents(events); // Store the updated events back in storage
+		this.eventsStorage.storeEvents(events);
 	}
 
 	/**
@@ -215,10 +182,10 @@ class SuperBoardEventsManager {
 	 * @private
 	 */
 	flushEvents() {
-		this.setPathIfNeeded(); // Update event paths if needed
-		const events = this.eventsStorage.getEvents(); // Retrieve all stored events
+		this.setPathIfNeeded();
+		const events = this.eventsStorage.getEvents();
 		events.forEach((event) => {
-			this.sendAndDeleteEvent(event); // Send and delete each event
+			this.sendAndDeleteEvent(event);
 		});
 	}
 
@@ -227,17 +194,17 @@ class SuperBoardEventsManager {
 	 * @private
 	 */
 	setPathIfNeeded() {
-		const path = SuperBoardDeviceDetails.getSuperBoardPath(); // Get the current path
+		const path = SuperBoardDeviceDetails.getSuperBoardPath();
 		if (!path) {
-			return; // Exit if no path is available
+			return;
 		}
-		const events = this.eventsStorage.getAndRemoveAllEvents(); // Retrieve and clear stored events
+		const events = this.eventsStorage.getAndRemoveAllEvents();
 		events.forEach((event) => {
 			if (event.path == null) {
-				event.path = path; // Set path for events if not already set
+				event.path = path;
 			}
 		});
-		this.eventsStorage.storeEvents(events); // Store updated events back in storage
+		this.eventsStorage.storeEvents(events);
 	}
 
 	/**
@@ -253,14 +220,11 @@ class SuperBoardEventsManager {
 			event.path,
 			event.engagementTime,
 			(_response) => {
-				self.eventsStorage.deleteEvent(event); // Delete the event after successful sending
+				self.eventsStorage.deleteEvent(event);
 			},
-			(_error) => {
-				// Handle error if needed
-			},
+			(_error) => {},
 		);
 	}
 }
 
-// Export the SuperBoardEventsManager class
 export default SuperBoardEventsManager;

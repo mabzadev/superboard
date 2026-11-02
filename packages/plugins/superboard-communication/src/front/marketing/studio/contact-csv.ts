@@ -1,6 +1,5 @@
 export const MAX_IMPORT_ROWS = 10_000;
 
-/** Parses CSV text (comma or semicolon separated, quoted cells) into headers and rows. */
 export function parseCsvTable(
 	source: string,
 	maxRows = MAX_IMPORT_ROWS,
@@ -76,7 +75,6 @@ const aliases: Record<string, ColumnTarget> = {
 	optin: "consent",
 };
 
-/** Suggests a target for each column from its header and the project's fields. */
 export function guessColumnMapping(headers: string[], fieldKeys: string[]): ColumnTarget[] {
 	const used = new Set<string>();
 	return headers.map((header) => {
@@ -92,7 +90,6 @@ export function guessColumnMapping(headers: string[], fieldKeys: string[]): Colu
 	});
 }
 
-/** Turns parsed rows into import records using the chosen column mapping. */
 export function mapCsvRows(rows: string[][], mapping: ColumnTarget[]) {
 	return rows.map((values, index) => {
 		const record: {
@@ -124,7 +121,6 @@ export function mapCsvRows(rows: string[][], mapping: ColumnTarget[]) {
 	});
 }
 
-/** Legacy helper kept for the simple email/name/locale/attributes_json format. */
 export function parseContactCsv(source: string): Array<Record<string, unknown>> {
 	const { headers, rows } = parseCsvTable(source, 1000);
 	const keys = headers.map((header) => header.toLowerCase());

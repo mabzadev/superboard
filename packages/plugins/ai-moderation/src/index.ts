@@ -1,11 +1,3 @@
-/**
- * AI Moderation Plugin
- *
- * Uses Cloudflare Workers AI (Llama Guard 3 8B) to moderate comments.
- * Registers as the exclusive comment:moderate provider, replacing the
- * built-in default moderator.
- */
-
 import type { ResolvedPlugin } from "emdash";
 import { definePlugin } from "emdash";
 
@@ -16,24 +8,17 @@ import type { AIModerationOptions } from "./descriptor.js";
 import { runGuard } from "./guard.js";
 import type { GuardResult } from "./guard.js";
 
-/** KV key for stored categories */
 const KV_CATEGORIES = "config:categories";
-/** KV key for behavior settings */
 const KV_BEHAVIOR = "config:behavior";
 
-/** Narrow unknown to a record */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/**
- * Create the AI moderation plugin.
- */
 export function createPlugin(options: AIModerationOptions = {}): ResolvedPlugin {
 	const defaultAutoApprove = options.autoApproveClean ?? true;
 	const aiBinding = options.aiBinding ?? "AI";
 
-	/** Load categories from KV or fall back to options/defaults */
 	async function loadCategories(kv: {
 		get: <T>(key: string) => Promise<T | null>;
 	}): Promise<Category[]> {
@@ -41,7 +26,6 @@ export function createPlugin(options: AIModerationOptions = {}): ResolvedPlugin 
 		return stored ?? options.categories ?? DEFAULT_CATEGORIES;
 	}
 
-	/** Load behavior settings from KV or fall back to defaults */
 	async function loadBehavior(kv: {
 		get: <T>(key: string) => Promise<T | null>;
 	}): Promise<{ autoApproveClean: boolean }> {
@@ -62,14 +46,12 @@ export function createPlugin(options: AIModerationOptions = {}): ResolvedPlugin 
 		},
 
 		hooks: {
-			// Enrichment hook — runs AI guard, writes signals to metadata
 			"comment:beforeCreate": {
 				priority: 10,
 				errorPolicy: "continue",
 				handler: async (event, ctx) => {
 					const categories = await loadCategories(ctx.kv);
 
-					// Run AI guard (try/catch — failure is non-fatal)
 					let guard: GuardResult | undefined;
 					let guardError: string | undefined;
 
@@ -85,7 +67,6 @@ export function createPlugin(options: AIModerationOptions = {}): ResolvedPlugin 
 						}
 					}
 
-					// Write signals to metadata for the moderator
 					event.metadata.aiGuard = guard;
 					event.metadata.aiGuardError = guardError;
 
@@ -93,14 +74,12 @@ export function createPlugin(options: AIModerationOptions = {}): ResolvedPlugin 
 				},
 			},
 
-			// Exclusive moderator — reads metadata signals, computes decision
 			"comment:moderate": {
 				exclusive: true,
 				handler: async (event, ctx) => {
 					const categories = await loadCategories(ctx.kv);
 					const behavior = await loadBehavior(ctx.kv);
 
-					// Read signals from metadata (written by beforeCreate hook)
 					const guard = event.metadata.aiGuard as GuardResult | undefined;
 					const guardError = event.metadata.aiGuardError as string | undefined;
 
@@ -120,7 +99,6 @@ export function createPlugin(options: AIModerationOptions = {}): ResolvedPlugin 
 		},
 
 		routes: {
-			// Get current settings
 			settings: {
 				handler: async (ctx) => {
 					const categories = await loadCategories(ctx.kv);
@@ -130,7 +108,6 @@ export function createPlugin(options: AIModerationOptions = {}): ResolvedPlugin 
 				},
 			},
 
-			// Save settings
 			"settings/save": {
 				handler: async (ctx) => {
 					const input = isRecord(ctx.input) ? ctx.input : {};
@@ -181,7 +158,6 @@ export function createPlugin(options: AIModerationOptions = {}): ResolvedPlugin 
 				},
 			},
 
-			// Test AI analysis on sample text
 			"settings/test": {
 				handler: async (ctx) => {
 					const input = isRecord(ctx.input) ? ctx.input : {};
@@ -193,7 +169,6 @@ export function createPlugin(options: AIModerationOptions = {}): ResolvedPlugin 
 
 					const categories = await loadCategories(ctx.kv);
 
-					// Run AI guard
 					let guard: GuardResult | undefined;
 					let guardError: string | undefined;
 					const taxonomy = buildTaxonomy(categories);
@@ -215,7 +190,6 @@ export function createPlugin(options: AIModerationOptions = {}): ResolvedPlugin 
 				},
 			},
 
-			// Plugin status for dashboard widget
 			status: {
 				handler: async (ctx) => {
 					const categories = await loadCategories(ctx.kv);

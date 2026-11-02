@@ -1,12 +1,3 @@
-/**
- * Marketplace plugin icon proxy
- *
- * GET /_emdash/api/admin/plugins/marketplace/:id/icon - Proxy icon from marketplace
- *
- * Avoids CORS/auth issues when the marketplace Worker is behind Cloudflare Access
- * or on a different origin. The admin UI uses this instead of linking directly.
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -37,9 +28,6 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
 	try {
 		const resp = await fetch(target.href);
 		if (!resp.ok) {
-			// Allowlist: only forward Content-Type from upstream.
-			// Never copy all upstream headers (denylist approach leaks
-			// headers we haven't anticipated).
 			return new Response(resp.body, {
 				status: resp.status,
 				headers: {

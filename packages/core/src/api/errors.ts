@@ -1,13 +1,4 @@
-/**
- * Typed error codes and status mapping for the EmDash REST API.
- *
- * All handler-level and route-level error codes are defined here.
- * Routes and handlers should import error codes from this module
- * instead of using ad-hoc strings.
- */
-
 export const ErrorCode = {
-	// Shared (used across domains)
 	NOT_FOUND: "NOT_FOUND",
 	VALIDATION_ERROR: "VALIDATION_ERROR",
 	INVALID_INPUT: "INVALID_INPUT",
@@ -25,7 +16,6 @@ export const ErrorCode = {
 	MISSING_PARAM: "MISSING_PARAM",
 	CSRF_REJECTED: "CSRF_REJECTED",
 
-	// Content
 	CONTENT_CREATE_ERROR: "CONTENT_CREATE_ERROR",
 	CONTENT_UPDATE_ERROR: "CONTENT_UPDATE_ERROR",
 	CONTENT_DELETE_ERROR: "CONTENT_DELETE_ERROR",
@@ -42,13 +32,11 @@ export const ErrorCode = {
 	CONTENT_TRANSLATIONS_ERROR: "CONTENT_TRANSLATIONS_ERROR",
 	CONTENT_COUNT_ERROR: "CONTENT_COUNT_ERROR",
 
-	// Revisions
 	REVISION_LIST_ERROR: "REVISION_LIST_ERROR",
 	REVISION_GET_ERROR: "REVISION_GET_ERROR",
 	REVISION_RESTORE_ERROR: "REVISION_RESTORE_ERROR",
 	INVALID_REVISION: "INVALID_REVISION",
 
-	// Schema
 	SCHEMA_LIST_ERROR: "SCHEMA_LIST_ERROR",
 	SCHEMA_GET_ERROR: "SCHEMA_GET_ERROR",
 	SCHEMA_CREATE_ERROR: "SCHEMA_CREATE_ERROR",
@@ -61,9 +49,6 @@ export const ErrorCode = {
 	SCHEMA_FIELD_UPDATE_ERROR: "SCHEMA_FIELD_UPDATE_ERROR",
 	SCHEMA_FIELD_DELETE_ERROR: "SCHEMA_FIELD_DELETE_ERROR",
 	SCHEMA_FIELD_REORDER_ERROR: "SCHEMA_FIELD_REORDER_ERROR",
-	// Byline schema (Discussion #1174). Reuses RESERVED_SLUG, INVALID_SLUG,
-	// INVALID_TYPE, FIELD_EXISTS, NOT_FOUND, VALIDATION_ERROR where the
-	// semantics match; the two below are byline-domain specific:
 	TRANSLATABLE_LOCKED: "TRANSLATABLE_LOCKED",
 	REORDER_MISMATCH: "REORDER_MISMATCH",
 	ORPHAN_LIST_ERROR: "ORPHAN_LIST_ERROR",
@@ -80,7 +65,6 @@ export const ErrorCode = {
 	UPDATE_FAILED: "UPDATE_FAILED",
 	REGISTER_FAILED: "REGISTER_FAILED",
 
-	// Media
 	MEDIA_LIST_ERROR: "MEDIA_LIST_ERROR",
 	MEDIA_GET_ERROR: "MEDIA_GET_ERROR",
 	MEDIA_CREATE_ERROR: "MEDIA_CREATE_ERROR",
@@ -123,7 +107,6 @@ export const ErrorCode = {
 	PROVIDER_GET_ERROR: "PROVIDER_GET_ERROR",
 	PROVIDER_DELETE_ERROR: "PROVIDER_DELETE_ERROR",
 
-	// Comments
 	COMMENT_LIST_ERROR: "COMMENT_LIST_ERROR",
 	COMMENT_GET_ERROR: "COMMENT_GET_ERROR",
 	COMMENT_STATUS_ERROR: "COMMENT_STATUS_ERROR",
@@ -136,7 +119,6 @@ export const ErrorCode = {
 	COMMENTS_CLOSED: "COMMENTS_CLOSED",
 	COMMENT_REJECTED: "COMMENT_REJECTED",
 
-	// Auth
 	ACCOUNT_DISABLED: "ACCOUNT_DISABLED",
 	ADMIN_EXISTS: "ADMIN_EXISTS",
 	SETUP_COMPLETE: "SETUP_COMPLETE",
@@ -171,7 +153,6 @@ export const ErrorCode = {
 	USER_DISABLE_ERROR: "USER_DISABLE_ERROR",
 	USER_ENABLE_ERROR: "USER_ENABLE_ERROR",
 
-	// OAuth (internal codes -- distinct from RFC OAuthErrorCode)
 	UNSUPPORTED_RESPONSE_TYPE: "UNSUPPORTED_RESPONSE_TYPE",
 	INVALID_REDIRECT_URI: "INVALID_REDIRECT_URI",
 	INVALID_CLIENT: "INVALID_CLIENT",
@@ -198,13 +179,11 @@ export const ErrorCode = {
 	CLIENT_UPDATE_ERROR: "CLIENT_UPDATE_ERROR",
 	CLIENT_DELETE_ERROR: "CLIENT_DELETE_ERROR",
 
-	// Allowed domains
 	DOMAIN_LIST_ERROR: "DOMAIN_LIST_ERROR",
 	DOMAIN_CREATE_ERROR: "DOMAIN_CREATE_ERROR",
 	DOMAIN_UPDATE_ERROR: "DOMAIN_UPDATE_ERROR",
 	DOMAIN_DELETE_ERROR: "DOMAIN_DELETE_ERROR",
 
-	// Plugins / Marketplace
 	PLUGIN_LIST_ERROR: "PLUGIN_LIST_ERROR",
 	PLUGIN_GET_ERROR: "PLUGIN_GET_ERROR",
 	PLUGIN_ENABLE_ERROR: "PLUGIN_ENABLE_ERROR",
@@ -242,7 +221,6 @@ export const ErrorCode = {
 	EXCLUSIVE_HOOKS_LIST_ERROR: "EXCLUSIVE_HOOKS_LIST_ERROR",
 	EXCLUSIVE_HOOK_SET_ERROR: "EXCLUSIVE_HOOK_SET_ERROR",
 
-	// Menus
 	MENU_LIST_ERROR: "MENU_LIST_ERROR",
 	MENU_CREATE_ERROR: "MENU_CREATE_ERROR",
 	MENU_GET_ERROR: "MENU_GET_ERROR",
@@ -252,12 +230,8 @@ export const ErrorCode = {
 	MENU_ITEM_UPDATE_ERROR: "MENU_ITEM_UPDATE_ERROR",
 	MENU_ITEM_DELETE_ERROR: "MENU_ITEM_DELETE_ERROR",
 	MENU_REORDER_ERROR: "MENU_REORDER_ERROR",
-	// Returned when a menu name resolves to multiple locale variants and
-	// the caller did not pass `locale` to disambiguate. (name, locale) is
-	// unique, so this only fires for omitted-locale lookups.
 	AMBIGUOUS_LOCALE: "AMBIGUOUS_LOCALE",
 
-	// Taxonomies
 	TAXONOMY_LIST_ERROR: "TAXONOMY_LIST_ERROR",
 	TAXONOMY_CREATE_ERROR: "TAXONOMY_CREATE_ERROR",
 	TAXONOMY_GET_ERROR: "TAXONOMY_GET_ERROR",
@@ -273,7 +247,6 @@ export const ErrorCode = {
 	TERMS_GET_ERROR: "TERMS_GET_ERROR",
 	TERMS_SET_ERROR: "TERMS_SET_ERROR",
 
-	// Relations (content references)
 	RELATION_LIST_ERROR: "RELATION_LIST_ERROR",
 	RELATION_CREATE_ERROR: "RELATION_CREATE_ERROR",
 	RELATION_GET_ERROR: "RELATION_GET_ERROR",
@@ -283,14 +256,12 @@ export const ErrorCode = {
 	REFERENCES_GET_ERROR: "REFERENCES_GET_ERROR",
 	REFERENCES_SET_ERROR: "REFERENCES_SET_ERROR",
 
-	// Sections
 	SECTION_LIST_ERROR: "SECTION_LIST_ERROR",
 	SECTION_CREATE_ERROR: "SECTION_CREATE_ERROR",
 	SECTION_GET_ERROR: "SECTION_GET_ERROR",
 	SECTION_UPDATE_ERROR: "SECTION_UPDATE_ERROR",
 	SECTION_DELETE_ERROR: "SECTION_DELETE_ERROR",
 
-	// Redirects
 	REDIRECT_LIST_ERROR: "REDIRECT_LIST_ERROR",
 	REDIRECT_CREATE_ERROR: "REDIRECT_CREATE_ERROR",
 	REDIRECT_GET_ERROR: "REDIRECT_GET_ERROR",
@@ -301,7 +272,6 @@ export const ErrorCode = {
 	NOT_FOUND_CLEAR_ERROR: "NOT_FOUND_CLEAR_ERROR",
 	NOT_FOUND_PRUNE_ERROR: "NOT_FOUND_PRUNE_ERROR",
 
-	// Widgets
 	WIDGET_AREA_LIST_ERROR: "WIDGET_AREA_LIST_ERROR",
 	WIDGET_AREA_CREATE_ERROR: "WIDGET_AREA_CREATE_ERROR",
 	WIDGET_AREA_GET_ERROR: "WIDGET_AREA_GET_ERROR",
@@ -312,7 +282,6 @@ export const ErrorCode = {
 	WIDGET_REORDER_ERROR: "WIDGET_REORDER_ERROR",
 	WIDGET_COMPONENTS_ERROR: "WIDGET_COMPONENTS_ERROR",
 
-	// Setup
 	ALREADY_CONFIGURED: "ALREADY_CONFIGURED",
 	INVALID_SEED: "INVALID_SEED",
 	INVALID_REDIRECT: "INVALID_REDIRECT",
@@ -325,13 +294,11 @@ export const ErrorCode = {
 	MIGRATION_ERROR: "MIGRATION_ERROR",
 	SEED_ERROR: "SEED_ERROR",
 
-	// Settings
 	SETTINGS_READ_ERROR: "SETTINGS_READ_ERROR",
 	SETTINGS_UPDATE_ERROR: "SETTINGS_UPDATE_ERROR",
 	EMAIL_SETTINGS_READ_ERROR: "EMAIL_SETTINGS_READ_ERROR",
 	EMAIL_TEST_ERROR: "EMAIL_TEST_ERROR",
 
-	// Backups
 	BACKUP_SETTINGS_READ_ERROR: "BACKUP_SETTINGS_READ_ERROR",
 	BACKUP_SETTINGS_ERROR: "BACKUP_SETTINGS_ERROR",
 	BACKUP_EXPORT_ERROR: "BACKUP_EXPORT_ERROR",
@@ -340,13 +307,11 @@ export const ErrorCode = {
 	BACKUP_DELETE_ERROR: "BACKUP_DELETE_ERROR",
 	BACKUP_DOWNLOAD_ERROR: "BACKUP_DOWNLOAD_ERROR",
 
-	// Search
 	SEARCH_ERROR: "SEARCH_ERROR",
 	STATS_ERROR: "STATS_ERROR",
 	SUGGESTION_ERROR: "SUGGESTION_ERROR",
 	REBUILD_ERROR: "REBUILD_ERROR",
 
-	// Import
 	WXR_ANALYZE_ERROR: "WXR_ANALYZE_ERROR",
 	WXR_PREPARE_ERROR: "WXR_PREPARE_ERROR",
 	WXR_IMPORT_ERROR: "WXR_IMPORT_ERROR",
@@ -357,11 +322,9 @@ export const ErrorCode = {
 	SSRF_BLOCKED: "SSRF_BLOCKED",
 	PROBE_ERROR: "PROBE_ERROR",
 
-	// Dashboard
 	DASHBOARD_ERROR: "DASHBOARD_ERROR",
 	DASHBOARD_STATS_ERROR: "DASHBOARD_STATS_ERROR",
 
-	// Misc
 	SNAPSHOT_ERROR: "SNAPSHOT_ERROR",
 	TYPEGEN_ERROR: "TYPEGEN_ERROR",
 	SITEMAP_ERROR: "SITEMAP_ERROR",
@@ -372,12 +335,6 @@ export const ErrorCode = {
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
-/**
- * OAuth RFC 6749 error codes.
- *
- * These MUST be lowercase per the RFC spec. Used only by OAuth token endpoints.
- * Separate from ErrorCode to prevent mixing conventions.
- */
 export const OAuthErrorCode = {
 	INVALID_GRANT: "invalid_grant",
 	UNSUPPORTED_GRANT_TYPE: "unsupported_grant_type",
@@ -388,16 +345,8 @@ export const OAuthErrorCode = {
 
 export type OAuthErrorCode = (typeof OAuthErrorCode)[keyof typeof OAuthErrorCode];
 
-/**
- * Map a handler error code to an HTTP status code.
- *
- * Shared codes have explicit mappings. Domain-specific `*_ERROR` codes
- * (used in catch blocks via handleError) default to 500. Everything else
- * defaults to 400 (client error).
- */
 export function mapErrorStatus(code: string | undefined): number {
 	switch (code) {
-		// 400 Bad Request
 		case ErrorCode.VALIDATION_ERROR:
 		case ErrorCode.INVALID_INPUT:
 		case ErrorCode.INVALID_JSON:
@@ -428,12 +377,10 @@ export function mapErrorStatus(code: string | undefined): number {
 		case ErrorCode.REORDER_MISMATCH:
 			return 400;
 
-		// 401 Unauthorized
 		case ErrorCode.UNAUTHORIZED:
 		case ErrorCode.NOT_AUTHENTICATED:
 			return 401;
 
-		// 403 Forbidden
 		case ErrorCode.FORBIDDEN:
 		case ErrorCode.CSRF_REJECTED:
 		case ErrorCode.ACCOUNT_DISABLED:
@@ -449,7 +396,6 @@ export function mapErrorStatus(code: string | undefined): number {
 		case ErrorCode.AUDIT_FAILED:
 			return 403;
 
-		// 404 Not Found
 		case ErrorCode.NOT_FOUND:
 		case ErrorCode.TABLE_NOT_FOUND:
 		case ErrorCode.COLLECTION_NOT_FOUND:
@@ -458,7 +404,6 @@ export function mapErrorStatus(code: string | undefined): number {
 		case ErrorCode.AGGREGATOR_NOT_FOUND:
 			return 404;
 
-		// 409 Conflict
 		case ErrorCode.CONFLICT:
 		case ErrorCode.SLUG_CONFLICT:
 		case ErrorCode.COLLECTION_EXISTS:
@@ -480,21 +425,17 @@ export function mapErrorStatus(code: string | undefined): number {
 		case ErrorCode.MEDIA_USAGE_PROGRESS_NOT_ACTIVE:
 			return 409;
 
-		// 410 Gone
 		case ErrorCode.TOKEN_EXPIRED:
 			return 410;
 
-		// 422 Unprocessable Entity
 		case ErrorCode.CHECKSUM_MISMATCH:
 		case ErrorCode.INVALID_BUNDLE:
 		case ErrorCode.BUNDLE_EXTRACT_FAILED:
 			return 422;
 
-		// 429 Too Many Requests
 		case ErrorCode.RATE_LIMITED:
 			return 429;
 
-		// 500 Internal Server Error
 		case ErrorCode.NOT_CONFIGURED:
 		case ErrorCode.NO_STORAGE:
 		case ErrorCode.NO_DB:
@@ -503,26 +444,19 @@ export function mapErrorStatus(code: string | undefined): number {
 		case ErrorCode.COLLECTION_SCHEMA_MISMATCH:
 			return 500;
 
-		// 501 Not Implemented
 		case ErrorCode.NOT_IMPLEMENTED:
 			return 501;
 
-		// 502 Bad Gateway
 		case ErrorCode.BUNDLE_DOWNLOAD_FAILED:
 		case ErrorCode.AGGREGATOR_RESPONSE_INVALID:
 		case ErrorCode.AGGREGATOR_HTTP_ERROR:
 			return 502;
 
-		// 503 Service Unavailable
 		case ErrorCode.MARKETPLACE_UNAVAILABLE:
 		case ErrorCode.MARKETPLACE_NOT_CONFIGURED:
 		case ErrorCode.SANDBOX_NOT_AVAILABLE:
 			return 503;
 
-		// Domain-specific *_ERROR codes are catch-block codes -- always 500.
-		// WARNING: If adding a new code that ends in _ERROR but represents a
-		// client error (4xx), add it to an explicit case above or it will
-		// be incorrectly mapped to 500.
 		default:
 			return code?.endsWith("_ERROR") ? 500 : 400;
 	}

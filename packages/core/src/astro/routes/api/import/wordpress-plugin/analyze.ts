@@ -1,12 +1,3 @@
-/**
- * WordPress Plugin analyze endpoint
- *
- * POST /_emdash/api/import/wordpress-plugin/analyze
- *
- * Analyzes a WordPress site with EmDash Exporter plugin installed.
- * Returns content counts, schema compatibility, etc.
- */
-
 import type { APIRoute } from "astro";
 import { SchemaRegistry } from "emdash";
 
@@ -37,8 +28,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const body = await parseBody(request, wpPluginAnalyzeBody);
 		if (isParseError(body)) return body;
 
-		// SSRF: reject internal/private network targets. Uses DNS resolution
-		// to catch hostnames that resolve to private addresses.
 		try {
 			await resolveAndValidateExternalUrl(body.url);
 		} catch (e) {
@@ -46,16 +35,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			return apiError("SSRF_BLOCKED", msg, 400);
 		}
 
-		// Get the WordPress plugin source
 		const source = getSource("wordpress-plugin");
 		if (!source) {
 			return apiError("NOT_CONFIGURED", "WordPress plugin source not available", 500);
 		}
 
-		// Build context with existing collections info
 		const existingCollections = await fetchExistingCollections(emdash?.db);
 
-		// Analyze the site
 		const analysis = await source.analyze(
 			{ type: "url", url: body.url, token: body.token },
 			{
@@ -73,13 +59,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	}
 };
 
-/** Existing collection info from schema registry */
 interface ExistingCollection {
 	slug: string;
 	fields: Map<string, { type: string }>;
 }
 
-/** Fetch collections and their fields from schema registry */
 async function fetchExistingCollections(
 	db: EmDashHandlers["db"] | undefined,
 ): Promise<Map<string, ExistingCollection>> {

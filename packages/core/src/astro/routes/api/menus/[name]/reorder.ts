@@ -1,9 +1,3 @@
-/**
- * Menu items reorder endpoint
- *
- * POST /_emdash/api/menus/:name/reorder - Batch update positions
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

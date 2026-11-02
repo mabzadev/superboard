@@ -17,12 +17,6 @@ const roleRank: Record<SupportRole, number> = {
 	owner: 4,
 };
 
-/**
- * Resolves the signed Identity principal into Support's own authorization model.
- * Identity owner/admin remain project-wide overrides. Identity members must be
- * linked to an active Support membership; Support roles never leak back into
- * the Identity project context.
- */
 export async function resolveSupportPrincipal(
 	db: D1Database,
 	context: Pick<ProjectContext, "projectId" | "actorId" | "role" | "operatorId">,

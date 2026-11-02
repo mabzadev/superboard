@@ -1,15 +1,4 @@
 #!/usr/bin/env node
-/**
- * Copy the source lexicon JSON files from the repo root into this package
- * so they ship with the published artifact.
- *
- * The lexicons live at the repo root (currently authored on the
- * `wip/plugin-rfc` branch). On branches without the root `lexicons/` directory
- * — e.g. `main` before the RFC merges — we fall back to the copy already
- * checked into `packages/registry-lexicons/lexicons/`. That keeps the package
- * buildable on any branch without forcing every contributor to rebase the RFC
- * branch in.
- */
 import { access, cp, mkdir, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,7 +23,6 @@ if (sourceAvailable) {
 	await cp(src, dst, { recursive: true });
 	console.log(`copied lexicons from ${src} -> ${dst}`);
 } else {
-	// No repo-root lexicons on this branch — leave the in-package copy alone.
 	let inPackageAvailable = true;
 	try {
 		await access(dst);

@@ -1,7 +1,3 @@
-/**
- * Widget areas APIs
- */
-
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -20,7 +16,7 @@ export interface Widget {
 	id: string;
 	type: "content" | "menu" | "component";
 	title?: string;
-	content?: unknown[]; // Portable Text
+	content?: unknown[];
 	menuName?: string;
 	componentId?: string;
 	componentProps?: Record<string, unknown>;
@@ -66,9 +62,6 @@ export interface UpdateWidgetInput {
 	componentProps?: Record<string, unknown>;
 }
 
-/**
- * Fetch all widget areas
- */
 export async function fetchWidgetAreas(): Promise<WidgetArea[]> {
 	const response = await apiFetch(`${API_BASE}/widget-areas`);
 	const data = await parseApiResponse<{ items: WidgetArea[] }>(
@@ -78,17 +71,11 @@ export async function fetchWidgetAreas(): Promise<WidgetArea[]> {
 	return data.items;
 }
 
-/**
- * Fetch a single widget area by name
- */
 export async function fetchWidgetArea(name: string): Promise<WidgetArea> {
 	const response = await apiFetch(`${API_BASE}/widget-areas/${name}`);
 	return parseApiResponse<WidgetArea>(response, "Failed to fetch widget area");
 }
 
-/**
- * Create a widget area
- */
 export async function createWidgetArea(input: CreateWidgetAreaInput): Promise<WidgetArea> {
 	const response = await apiFetch(`${API_BASE}/widget-areas`, {
 		method: "POST",
@@ -98,9 +85,6 @@ export async function createWidgetArea(input: CreateWidgetAreaInput): Promise<Wi
 	return parseApiResponse<WidgetArea>(response, "Failed to create widget area");
 }
 
-/**
- * Delete a widget area
- */
 export async function deleteWidgetArea(name: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/widget-areas/${name}`, {
 		method: "DELETE",
@@ -108,9 +92,6 @@ export async function deleteWidgetArea(name: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete widget area`));
 }
 
-/**
- * Add a widget to an area
- */
 export async function createWidget(areaName: string, input: CreateWidgetInput): Promise<Widget> {
 	const response = await apiFetch(`${API_BASE}/widget-areas/${areaName}/widgets`, {
 		method: "POST",
@@ -120,9 +101,6 @@ export async function createWidget(areaName: string, input: CreateWidgetInput): 
 	return parseApiResponse<Widget>(response, "Failed to create widget");
 }
 
-/**
- * Update a widget
- */
 export async function updateWidget(
 	areaName: string,
 	widgetId: string,
@@ -136,9 +114,6 @@ export async function updateWidget(
 	return parseApiResponse<Widget>(response, "Failed to update widget");
 }
 
-/**
- * Delete a widget
- */
 export async function deleteWidget(areaName: string, widgetId: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/widget-areas/${areaName}/widgets/${widgetId}`, {
 		method: "DELETE",
@@ -146,9 +121,6 @@ export async function deleteWidget(areaName: string, widgetId: string): Promise<
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete widget`));
 }
 
-/**
- * Reorder widgets in an area
- */
 export async function reorderWidgets(areaName: string, widgetIds: string[]): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/widget-areas/${areaName}/reorder`, {
 		method: "POST",
@@ -158,9 +130,6 @@ export async function reorderWidgets(areaName: string, widgetIds: string[]): Pro
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to reorder widgets`));
 }
 
-/**
- * Fetch available widget components
- */
 export async function fetchWidgetComponents(): Promise<WidgetComponent[]> {
 	const response = await apiFetch(`${API_BASE}/widget-components`);
 	const data = await parseApiResponse<{ items: WidgetComponent[] }>(

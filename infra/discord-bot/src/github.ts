@@ -1,6 +1,3 @@
-/**
- * Verify GitHub webhook HMAC-SHA256 signature.
- */
 export async function verifyGitHubSignature(
 	body: string,
 	signature: string | null,
@@ -21,22 +18,16 @@ export async function verifyGitHubSignature(
 	return crypto.subtle.verify("HMAC", key, sigBytes, encoder.encode(body));
 }
 
-/**
- * Build the GitHub OAuth authorization URL.
- */
 export function githubAuthUrl(env: Env, state: string): string {
 	const params = new URLSearchParams({
 		client_id: env.GITHUB_CLIENT_ID,
 		redirect_uri: `${env.PUBLIC_URL}/callback/github`,
 		state,
-		scope: "", // no scope needed, just identity
+		scope: "",
 	});
 	return `https://github.com/login/oauth/authorize?${params.toString()}`;
 }
 
-/**
- * Exchange a GitHub OAuth code for an access token, then fetch the user.
- */
 export async function exchangeGitHubCode(
 	env: Env,
 	code: string,

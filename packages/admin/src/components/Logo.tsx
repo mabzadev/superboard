@@ -1,9 +1,5 @@
 import * as React from "react";
 
-/**
- * EmDash icon mark — the rounded-rect em dash symbol.
- * Used in the sidebar brand and as favicon.
- */
 export function LogoIcon(props: React.SVGProps<SVGSVGElement>) {
 	return (
 		<svg viewBox="0 0 75 75" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -59,10 +55,6 @@ export function LogoIcon(props: React.SVGProps<SVGSVGElement>) {
 	);
 }
 
-/**
- * Full logo lockup — icon + "EmDash" wordmark.
- * Renders both dark-text and light-text variants, switching via CSS `light-dark()`.
- */
 export function LogoLockup({ className, ...props }: React.SVGProps<SVGSVGElement>) {
 	return (
 		<svg
@@ -74,13 +66,11 @@ export function LogoLockup({ className, ...props }: React.SVGProps<SVGSVGElement
 			aria-label="EmDash"
 			{...props}
 		>
-			{/* Icon mark */}
 			<path
 				d="M0.410156 96.5125V21.2097C0.410156 9.48841 9.91245 -0.013916 21.6338 -0.013916V9.40601L21.3291 9.40991C14.9509 9.57133 9.83008 14.7927 9.83008 21.2097V96.5125C9.83008 102.93 14.9509 108.151 21.3291 108.312L21.6338 108.316H96.9365L97.2412 108.312C103.518 108.153 108.577 103.094 108.736 96.8171L108.74 96.5125V21.2097C108.74 14.6909 103.455 9.40601 96.9365 9.40601V-0.013916C108.658 -0.013916 118.16 9.48838 118.16 21.2097V96.5125C118.16 108.234 108.658 117.736 96.9365 117.736H21.6338C9.91248 117.736 0.410156 108.234 0.410156 96.5125ZM96.9365 -0.013916V9.40601H21.6338V-0.013916H96.9365Z"
 				fill="url(#emdash-lockup-icon)"
 			/>
 			<path d="M28.6699 53.366H90.4746V63.6668H28.6699V53.366Z" fill="url(#emdash-lockup-dash)" />
-			{/* Wordmark — uses currentColor so it adapts to light/dark context */}
 			<path
 				d="M154.762 90V27.4834H194.447V35.8449H164.467V54.0844H192.844V62.2293H164.467V81.6385H194.447V90H154.762Z"
 				fill="currentColor"

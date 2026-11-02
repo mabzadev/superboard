@@ -1,19 +1,3 @@
-/**
- * Closes the bug class behind #776, #873, #876, #877.
- *
- * The earlier failure mode was a worker-isolate manifest cache: schema
- * mutations on isolate A weren't visible to warm sibling isolates until
- * they were recycled, producing the "Collection 'X' not found" coin flip
- * that all four issues described from a different angle.
- *
- * The runtime no longer caches the manifest. Every admin request rebuilds
- * it from the live database via two queries (`listCollectionsWithFields`),
- * deduplicated within the request by `requestCached`. This test pins the
- * "always fresh" contract by simulating two isolates as two `EmDashRuntime`
- * instances against the same database — a mutation through one is visible
- * through the other on the very next call.
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -96,9 +80,6 @@ describe("EmDashRuntime.getManifest()", () => {
 		expect(Object.keys(initialA.collections)).toEqual(["posts"]);
 		expect(Object.keys(initialB.collections)).toEqual(["posts"]);
 
-		// A schema mutation through any path (admin route, MCP, seed, direct
-		// registry) is visible through every runtime instance on the next
-		// `getManifest()` call. No invalidation step required.
 		await registry.createCollection({
 			slug: "pages",
 			label: "Pages",

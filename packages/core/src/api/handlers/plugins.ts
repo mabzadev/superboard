@@ -1,7 +1,3 @@
-/**
- * Plugin management handlers
- */
-
 import type { Kysely } from "kysely";
 
 import type { Database } from "../../database/types.js";
@@ -23,31 +19,22 @@ export interface PluginInfo {
 	enabled: boolean;
 	status: PluginStatus;
 	source?: "config" | "marketplace" | "registry";
-	/** True for statically-sandboxed plugins (registered via `sandboxed: []`) */
 	sandboxed?: boolean;
-	/** True when the host owns activation outside generic plugin actions. */
 	lifecycleManaged?: boolean;
-	/** Host route that performs the complete managed activation workflow. */
 	lifecycleEnablePath?: string;
-	/** Host route that performs the complete managed deactivation workflow. */
 	lifecycleDisablePath?: string;
 	marketplaceVersion?: string;
-	/** Publisher DID, for registry-source plugins */
 	registryPublisherDid?: string;
-	/** Publisher slug, for registry-source plugins */
 	registrySlug?: string;
 	capabilities: string[];
 	hasAdminPages: boolean;
 	hasDashboardWidgets: boolean;
 	hasHooks: boolean;
-	/** True when the plugin declares `admin.settingsSchema` (auto-generated settings form) */
 	hasSettings: boolean;
 	installedAt?: string;
 	activatedAt?: string;
 	deactivatedAt?: string;
-	/** Description of what the plugin does */
 	description?: string;
-	/** URL to the plugin icon on the marketplace */
 	iconUrl?: string;
 	mcpToolsEnabled: boolean;
 	mcpTools: Array<{
@@ -71,15 +58,11 @@ function marketplaceIconUrl(marketplaceUrl: string, pluginId: string): string {
 	return `${marketplaceUrl}/api/v1/plugins/${encodeURIComponent(pluginId)}/icon`;
 }
 
-/**
- * Get plugin info from configured plugin and database state
- */
 function buildPluginInfo(
 	plugin: ResolvedPlugin,
 	state: PluginState | null,
 	marketplaceUrl?: string,
 ): PluginInfo {
-	// If no state exists, plugin is considered active (default on first run)
 	const status = state?.status ?? "active";
 	const enabled = status === "active";
 	const isMarketplace = (state?.source ?? "config") === "marketplace";
@@ -88,7 +71,7 @@ function buildPluginInfo(
 		id: plugin.id,
 		name: state?.displayName || plugin.id,
 		version: plugin.version,
-		package: undefined, // v2 doesn't have package field
+		package: undefined,
 		enabled,
 		status,
 		source: state?.source ?? "config",
@@ -124,9 +107,6 @@ function buildPluginInfo(
 	};
 }
 
-/**
- * Build plugin info for a statically-sandboxed plugin entry
- */
 function buildSandboxedPluginInfo(
 	entry: SandboxedPluginEntry,
 	state: PluginState | null,
@@ -138,7 +118,7 @@ function buildSandboxedPluginInfo(
 		id: entry.id,
 		name: state?.displayName || entry.id,
 		version: entry.version,
-		package: undefined, // v2 doesn't have package field
+		package: undefined,
 		enabled,
 		status,
 		source: "config",
@@ -160,19 +140,11 @@ function buildSandboxedPluginInfo(
 	};
 }
 
-/**
- * List all configured plugins with their state
- */
 export async function handlePluginList(
 	db: Kysely<Database>,
 	configuredPlugins: ResolvedPlugin[],
 	sandboxedPluginEntries: SandboxedPluginEntry[],
 	marketplaceUrl?: string,
-	/**
-	 * Settings-schema lookup for runtime-installed (marketplace/registry)
-	 * plugins, which aren't in either build-time list. Typically
-	 * `EmDashRuntime.getRuntimePluginSettingsSchema`.
-	 */
 	runtimeSettingsSchemaLookup?: (pluginId: string) => Record<string, unknown> | null,
 ): Promise<ApiResult<PluginListResponse>> {
 	try {
@@ -187,16 +159,12 @@ export async function handlePluginList(
 			return buildPluginInfo(plugin, state, marketplaceUrl);
 		});
 
-		// Include statically-sandboxed plugins (registered via `sandboxed: []`
-		// in astro.config.mjs).
 		for (const entry of sandboxedPluginEntries) {
 			if (configuredIds.has(entry.id)) continue;
 			configuredIds.add(entry.id);
 			items.push(buildSandboxedPluginInfo(entry, stateMap.get(entry.id) ?? null));
 		}
 
-		// Include runtime-installed plugins (marketplace or registry) that
-		// aren't in the configured plugins list.
 		for (const state of allStates) {
 			if (state.source !== "marketplace" && state.source !== "registry") continue;
 			if (configuredIds.has(state.pluginId)) continue;
@@ -244,9 +212,6 @@ export async function handlePluginList(
 	}
 }
 
-/**
- * Get a single plugin's info
- */
 export async function handlePluginGet(
 	db: Kysely<Database>,
 	configuredPlugins: ResolvedPlugin[],
@@ -293,14 +258,6 @@ export async function handlePluginGet(
 	}
 }
 
-/**
- * Build a minimal `PluginInfo` for a plugin that exists only as a
- * `_plugin_state` row (marketplace or registry install), with no
- * matching `configuredPlugins` entry. Runtime-installed plugins don't
- * have ResolvedPlugin metadata until they're loaded into the sandbox,
- * so the enable/disable response surfaces the state-row view as a
- * stable shape the admin UI already understands.
- */
 function buildStateOnlyPluginInfo(
 	state: NonNullable<Awaited<ReturnType<PluginStateRepository["get"]>>>,
 ): PluginInfo {
@@ -328,9 +285,6 @@ function buildStateOnlyPluginInfo(
 	};
 }
 
-/**
- * Enable a plugin
- */
 export async function handlePluginEnable(
 	db: Kysely<Database>,
 	configuredPlugins: ResolvedPlugin[],
@@ -341,13 +295,11 @@ export async function handlePluginEnable(
 		const stateRepo = new PluginStateRepository(db);
 		const plugin = configuredPlugins.find((p) => p.id === pluginId);
 
-		// Configured plugin: use its version as the source of truth.
 		if (plugin) {
 			const state = await stateRepo.enable(pluginId, plugin.version);
 			return { success: true, data: { item: buildPluginInfo(plugin, state) } };
 		}
 
-		// Statically-sandboxed plugin: addressable via its build-time entry.
 		const sandboxed = sandboxedPluginEntries.find((e) => e.id === pluginId);
 		if (sandboxed) {
 			if (sandboxed.lifecycleManaged) {
@@ -363,9 +315,6 @@ export async function handlePluginEnable(
 			return { success: true, data: { item: buildSandboxedPluginInfo(sandboxed, state) } };
 		}
 
-		// Runtime-installed plugin (marketplace or registry): only
-		// addressable through the state row. Fall back to the existing
-		// version recorded there.
 		const existing = await stateRepo.get(pluginId);
 		if (!existing || (existing.source !== "marketplace" && existing.source !== "registry")) {
 			return {
@@ -386,9 +335,6 @@ export async function handlePluginEnable(
 	}
 }
 
-/**
- * Disable a plugin
- */
 export async function handlePluginDisable(
 	db: Kysely<Database>,
 	configuredPlugins: ResolvedPlugin[],

@@ -1,22 +1,3 @@
-/**
- * Tests for admin router page components.
- *
- * Bug: content created in the wrong locale when using the locale switcher.
- *
- * Root cause (two parts):
- *   1. ContentListPage renders ContentList with `activeLocale` but the "Add New"
- *      <Link> in ContentList does NOT forward `search={{ locale: activeLocale }}` to
- *      the new-content route.  The locale is silently dropped on navigation.
- *   2. ContentNewPage (router.tsx:380) has no `validateSearch` and never reads the
- *      locale from URL search params, so `createContent` is always called without a
- *      locale, defaulting to English regardless of what is configured.
- *
- * Fix required in:
- *   packages/admin/src/components/ContentList.tsx     – forward locale on Add-New links
- *   packages/admin/src/router.tsx (ContentNewPage)    – read locale from search params
- *                                                       and pass it to createContent
- */
-
 import { Toasty } from "@cloudflare/kumo";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
@@ -32,10 +13,6 @@ import {
 } from "../../../../packages/admin/src/router";
 import { render } from "./utils/render.tsx";
 import { createTestQueryClient, createMockFetch, waitFor } from "./utils/test-helpers";
-
-// ---------------------------------------------------------------------------
-// Component mocks – keep layout plumbing out of these tests
-// ---------------------------------------------------------------------------
 
 vi.mock("../../../../packages/admin/src/components/Shell", () => ({
 	Shell: ({ children }: { children: React.ReactNode }) => <div data-testid="shell">{children}</div>,
@@ -254,10 +231,6 @@ vi.mock("../../../../packages/admin/src/components/MediaLibrary", () => ({
 	},
 }));
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 const MANIFEST: AdminManifest = {
 	version: "1.0.0",
 	hash: "abc123",
@@ -281,18 +254,12 @@ const MANIFEST: AdminManifest = {
 	},
 };
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function buildRouter() {
 	const queryClient = createTestQueryClient();
 	const router = createAdminRouter(queryClient);
 	if (!i18n.locale) {
 		i18n.loadAndActivate({ locale: "en", messages: {} });
 	}
-	// Toasty and I18nProvider are provided by App.tsx in production.
-	// Mirror that here so useLingui() and Toast.useToastManager() work inside page components.
 	function TestApp() {
 		return (
 			<I18nProvider i18n={i18n}>
@@ -932,10 +899,6 @@ describe("MediaPage – upload completion", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Tests: ContentListPage – locale forwarded to "Add New" link
-// ---------------------------------------------------------------------------
-
 describe("ContentListPage – locale forwarding to the new-content route", () => {
 	let mockFetch: ReturnType<typeof createMockFetch>;
 
@@ -960,10 +923,6 @@ describe("ContentListPage – locale forwarding to the new-content route", () =>
 	});
 
 	it("Add New link includes the active locale when a non-default locale (de) is selected", async () => {
-		// Navigate to the content list with locale=de selected in the switcher.
-		// The default locale is fr, so de is a non-default locale.
-		// The "Add New" <Link> must carry ?locale=de so that ContentNewPage
-		// receives it and creates content in German, not the default French.
 		const { router, TestApp } = buildRouter();
 
 		await router.navigate({
@@ -982,10 +941,6 @@ describe("ContentListPage – locale forwarding to the new-content route", () =>
 	});
 
 	it("Add New link uses the default locale (fr) when no locale is set in the URL", async () => {
-		// Navigate to the content list without an explicit locale param.
-		// activeLocale falls back to the configured defaultLocale ("fr").
-		// The "Add New" <Link> must carry ?locale=fr so that ContentNewPage
-		// creates content in the correct default language.
 		const { router, TestApp } = buildRouter();
 
 		await router.navigate({
@@ -1023,13 +978,6 @@ describe("ContentListPage – locale forwarding to the new-content route", () =>
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Tests: ContentListPage – hook order stays stable across an erroring refetch
-// (regression for #1415: inline useCallback for onLoadMore sat below the early
-// returns, so a render that took the `error` guard ran one fewer hook → React
-// #300 "Rendered fewer hooks than expected").
-// ---------------------------------------------------------------------------
-
 describe("ContentListPage – hook order is stable when a refetch errors (#1415)", () => {
 	let mockFetch: ReturnType<typeof createMockFetch>;
 
@@ -1063,15 +1011,9 @@ describe("ContentListPage – hook order is stable when a refetch errors (#1415)
 
 		const screen = await render(<TestApp />);
 
-		// First render succeeds and reaches the inline onLoadMore useCallback.
 		const addNewLink = screen.getByRole("link", { name: /add new/i });
 		await expect.element(addNewLink).toBeInTheDocument();
 
-		// Make the next content fetch fail, then force a refetch. The component
-		// re-renders with `error` truthy and takes the ErrorScreen early return,
-		// which sits ABOVE the onLoadMore useCallback. If that callback hook is
-		// below the guards, this render runs one fewer hook and React throws #300
-		// — so the ErrorScreen (and its Retry button) never appears.
 		mockFetch.on("GET", "/_emdash/api/content/posts", { error: { message: "Boom" } }, 500);
 		await queryClient.refetchQueries({ queryKey: ["content", "posts"] });
 
@@ -1079,10 +1021,6 @@ describe("ContentListPage – hook order is stable when a refetch errors (#1415)
 		await expect.element(retryButton).toBeInTheDocument();
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Tests: ContentNewPage – locale passed to createContent
-// ---------------------------------------------------------------------------
 
 describe("ContentNewPage – locale passed to createContent", () => {
 	let mockFetch: ReturnType<typeof createMockFetch>;
@@ -1124,8 +1062,6 @@ describe("ContentNewPage – locale passed to createContent", () => {
 	});
 
 	it("passes locale=de to the API when ?locale=de is in the URL", async () => {
-		// The default locale is fr; navigating with ?locale=de tests that the
-		// non-default locale is read from search params and forwarded to createContent.
 		const { router, TestApp } = buildRouter();
 
 		await router.navigate({
@@ -1136,12 +1072,10 @@ describe("ContentNewPage – locale passed to createContent", () => {
 
 		const screen = await render(<TestApp />);
 
-		// Wait for the editor to appear (manifest must have loaded)
 		await expect
 			.element(screen.getByRole("button", { name: "Save", exact: true }))
 			.toBeInTheDocument();
 
-		// Capture outgoing requests
 		const requests: { url: string; body: unknown }[] = [];
 		const origFetch = globalThis.fetch;
 		globalThis.fetch = async (input, init) => {
@@ -1158,15 +1092,10 @@ describe("ContentNewPage – locale passed to createContent", () => {
 
 		globalThis.fetch = origFetch;
 
-		// After the fix: the POST body must include locale: "de"
 		expect(requests).toHaveLength(1);
 		expect(requests[0]!.body).toMatchObject({ locale: "de" });
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Tests: ContentNewPage – a rejected create surfaces an error toast
-// ---------------------------------------------------------------------------
 
 describe("ContentNewPage – create failure surfaces the server's error", () => {
 	let mockFetch: ReturnType<typeof createMockFetch>;
@@ -1180,10 +1109,6 @@ describe("ContentNewPage – create failure surfaces the server's error", () => 
 				data: { id: "user_01", role: 60 },
 			})
 			.on("GET", "/_emdash/api/bylines", { data: { items: [] } })
-			// A canned 409 SLUG_CONFLICT — the response shape the server
-			// returns when the entry's slug is already taken in the
-			// collection (slug derivation itself is server-side and not
-			// exercised here).
 			.on(
 				"POST",
 				"/_emdash/api/content/posts",
@@ -1219,28 +1144,18 @@ describe("ContentNewPage – create failure surfaces the server's error", () => 
 
 		await screen.getByRole("button", { name: "Save", exact: true }).click();
 
-		// The UI surfaces WHAT happened — the server's human-readable
-		// conflict message.
 		await expect.element(screen.getByText("Failed to save")).toBeInTheDocument();
 		await expect
 			.element(screen.getByText("Slug 'test-post' already exists in collection 'posts'"))
 			.toBeInTheDocument();
 
-		// And with the error affordance: Kumo styles severity off `variant`
-		// (Base UI's `type` is inert for styling), and the toast icon only
-		// renders for a non-default variant.
 		await expect
 			.poll(() => document.querySelectorAll("[data-toast-icon]").length)
 			.toBeGreaterThan(0);
 
-		// And the failed create must not navigate anywhere.
 		expect(router.state.location.pathname).toContain("/content/posts/new");
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Tests: ContentEditPage – autosave cache stays in sync
-// ---------------------------------------------------------------------------
 
 describe("ContentEditPage – autosave cache patching", () => {
 	let mockFetch: ReturnType<typeof createMockFetch>;
@@ -1464,7 +1379,6 @@ describe("ContentEditPage – autosave cache patching", () => {
 			expect(screen.getByTestId("mock-title").element().textContent).toBe("Draft Title");
 		});
 
-		// Hold every PUT open so the mutation's pending window is observable.
 		const fetchWithMocks = globalThis.fetch;
 		let resolvePut: (() => void) | undefined;
 		globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
@@ -1498,7 +1412,6 @@ describe("ContentEditPage – autosave cache patching", () => {
 		}) as typeof fetch;
 
 		try {
-			// Auxiliary write (SEO): the Save control must stay idle while it flies.
 			await screen.getByRole("button", { name: "Trigger SEO Sync" }).click();
 			await new Promise((resolve) => setTimeout(resolve, 50));
 			expect(screen.getByTestId("is-saving").element().textContent).toBe("idle");
@@ -1512,7 +1425,6 @@ describe("ContentEditPage – autosave cache patching", () => {
 				expect(screen.getByTestId("manual-save-blocked").element().textContent).toBe("ready");
 			});
 
-			// Editor save: the same mutation with source "editor" must report saving.
 			await screen.getByRole("button", { name: "Save", exact: true }).click();
 			await waitFor(() => {
 				expect(screen.getByTestId("is-saving").element().textContent).toBe("saving");
@@ -1577,14 +1489,10 @@ describe("ContentEditPage – autosave cache patching", () => {
 				expect(screen.getByTestId("is-saving").element().textContent).toBe("saving");
 			});
 
-			// Auxiliary write lands while the editor save is still in flight.
 			await screen.getByRole("button", { name: "Trigger SEO Sync" }).click();
 			await new Promise((resolve) => setTimeout(resolve, 50));
 			expect(screen.getByTestId("is-saving").element().textContent).toBe("saving");
 
-			// Main's shared mutation observer follows the latest auxiliary write.
-			// When it settles, operation gating becomes idle even though the older
-			// editor request is still running; feedback remains visual-only.
 			expect(resolvers).toHaveLength(2);
 			resolvers[1]?.();
 			await waitFor(() => {

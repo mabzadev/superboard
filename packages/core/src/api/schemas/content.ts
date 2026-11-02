@@ -4,11 +4,6 @@ import { SQL_BATCH_SIZE } from "../../utils/chunks.js";
 import { bylineSummarySchema, bylineCreditSchema, contentBylineInputSchema } from "./bylines.js";
 import { cursorPaginationQuery, httpUrl, localeCode } from "./common.js";
 
-// ---------------------------------------------------------------------------
-// Content: Input schemas
-// ---------------------------------------------------------------------------
-
-/** SEO input — per-content meta fields */
 export const contentSeoInput = z
 	.object({
 		title: z.string().max(200).nullish(),
@@ -19,7 +14,6 @@ export const contentSeoInput = z
 	})
 	.meta({ id: "ContentSeoInput" });
 
-/** ISO 8601 date or datetime bound for the content-list date range filter. */
 const contentDateBound = z
 	.union([
 		z.iso.datetime({ offset: true, message: "must be an ISO 8601 datetime" }),
@@ -27,14 +21,6 @@ const contentDateBound = z
 	])
 	.optional();
 
-/**
- * Byline ids for the content-list filter: either the literal `none` or a
- * comma-separated list, parsed into an array.
- *
- * The 25-id cap keeps the `IN (...)` clause clear of D1's bound-parameter
- * ceiling once the rest of the list query's placeholders are counted
- * (`SQL_BATCH_SIZE` is 50 for a query binding nothing else).
- */
 const bylineFilterParam = z
 	.string()
 	.trim()
@@ -55,7 +41,6 @@ const bylineFilterParam = z
 		message: "must contain at least one byline id",
 	});
 
-/** Query-string boolean. Explicit values only — `z.coerce.boolean()` reads "false" as true. */
 const booleanParam = z
 	.enum(["1", "0", "true", "false"])
 	.optional()
@@ -93,7 +78,6 @@ function contentFieldFilterOperandCount(value: unknown): number {
 	return Object.values(value).filter((bound) => bound !== undefined).length;
 }
 
-/** AND-combined filters over custom fields explicitly marked as indexed. */
 export const contentFieldFiltersSchema = z
 	.record(
 		z
@@ -135,28 +119,13 @@ export const contentListQuery = cursorPaginationQuery
 		orderBy: z.string().optional(),
 		order: z.enum(["asc", "desc"]).optional(),
 		locale: localeCode.optional(),
-		/** Search across the collection's display fields, slug, and searchable custom fields. */
 		q: z.string().trim().min(1).max(200).optional(),
-		/** Filter to entries authored by this user (the `author_id` column). */
 		authorId: z.string().min(1).max(64).optional(),
-		/** Which timestamp column the `dateFrom`/`dateTo` range applies to. */
 		dateField: z.enum(["createdAt", "updatedAt", "publishedAt"]).optional(),
-		/** Inclusive lower bound for the date range. Requires `dateField`. */
 		dateFrom: contentDateBound,
-		/** Inclusive upper bound for the date range. Requires `dateField`. */
 		dateTo: contentDateBound,
-		/**
-		 * Comma-separated byline ids; an entry matches if it is credited to any
-		 * of them. The literal `none` (alone) matches entries with no byline.
-		 */
 		bylines: bylineFilterParam,
-		/**
-		 * Also match the byline inferred from an entry's author when it has no
-		 * explicit credit — i.e. filter on the byline the list renders rather
-		 * than on the credits stored against the entry. Off by default.
-		 */
 		includeInferredBylines: booleanParam,
-		/** JSON-encoded indexed custom-field filters, combined with AND semantics. */
 		fieldFilters: contentFieldFiltersQuery.optional(),
 	})
 	.transform(({ bylines, ...rest }) => ({
@@ -166,7 +135,6 @@ export const contentListQuery = cursorPaginationQuery
 	}))
 	.meta({ id: "ContentListQuery" });
 
-/** ISO 8601 datetime for `publishedAt` / `createdAt`. Routes gate writes behind `content:publish_any`. */
 const contentDateOverride = z.iso
 	.datetime({ offset: true, message: "must be an ISO 8601 datetime" })
 	.nullish();
@@ -221,11 +189,6 @@ export const contentScheduleBody = z
 
 export const contentPublishBody = z
 	.object({
-		// .optional() rather than .nullish(): publishing has no semantic
-		// meaning for `null` (you can't "clear" a publish timestamp by
-		// publishing). Tightening the schema here means callers either
-		// pass a valid datetime or omit the field, and the route doesn't
-		// have to silently drop a null that snuck through.
 		publishedAt: z.iso
 			.datetime({ offset: true, message: "must be an ISO 8601 datetime" })
 			.optional()
@@ -251,11 +214,6 @@ export const contentTermsBody = z
 
 export const contentTrashQuery = cursorPaginationQuery;
 
-// ---------------------------------------------------------------------------
-// Content: Response schemas
-// ---------------------------------------------------------------------------
-
-/** SEO metadata on a content item */
 export const contentSeoSchema = z
 	.object({
 		title: z.string().nullable(),
@@ -266,7 +224,6 @@ export const contentSeoSchema = z
 	})
 	.meta({ id: "ContentSeo" });
 
-/** A single content item as returned by the API */
 export const contentItemSchema = z
 	.object({
 		id: z.string(),
@@ -293,7 +250,6 @@ export const contentItemSchema = z
 	})
 	.meta({ id: "ContentItem" });
 
-/** Response for single content item endpoints (get, create, update) */
 export const contentResponseSchema = z
 	.object({
 		item: contentItemSchema,
@@ -304,7 +260,6 @@ export const contentResponseSchema = z
 	})
 	.meta({ id: "ContentResponse" });
 
-/** Response for content list endpoints */
 export const contentListResponseSchema = z
 	.object({
 		items: z.array(contentItemSchema),
@@ -313,7 +268,6 @@ export const contentListResponseSchema = z
 	})
 	.meta({ id: "ContentListResponse" });
 
-/** A distinct content author for the admin author filter */
 export const contentAuthorSchema = z
 	.object({
 		id: z.string(),
@@ -323,14 +277,12 @@ export const contentAuthorSchema = z
 	})
 	.meta({ id: "ContentAuthor" });
 
-/** Response for the content authors endpoint */
 export const contentAuthorsResponseSchema = z
 	.object({
 		items: z.array(contentAuthorSchema),
 	})
 	.meta({ id: "ContentAuthorsResponse" });
 
-/** Trashed content item */
 export const trashedContentItemSchema = z
 	.object({
 		id: z.string(),
@@ -346,7 +298,6 @@ export const trashedContentItemSchema = z
 	})
 	.meta({ id: "TrashedContentItem" });
 
-/** Response for trashed content list */
 export const trashedContentListResponseSchema = z
 	.object({
 		items: z.array(trashedContentItemSchema),
@@ -354,7 +305,6 @@ export const trashedContentListResponseSchema = z
 	})
 	.meta({ id: "TrashedContentListResponse" });
 
-/** Response for content compare (live vs draft) */
 export const contentCompareResponseSchema = z
 	.object({
 		hasChanges: z.boolean(),
@@ -363,7 +313,6 @@ export const contentCompareResponseSchema = z
 	})
 	.meta({ id: "ContentCompareResponse" });
 
-/** Translation summary for a content item */
 export const contentTranslationSchema = z.object({
 	id: z.string(),
 	locale: z.string().nullable(),
@@ -372,7 +321,6 @@ export const contentTranslationSchema = z.object({
 	updatedAt: z.string(),
 });
 
-/** Response for content translations endpoint */
 export const contentTranslationsResponseSchema = z
 	.object({
 		translationGroup: z.string(),

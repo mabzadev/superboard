@@ -558,14 +558,12 @@ export function AcquisitionSettingsPage({
 	const [tab, setTab] = useState(() => {
 		const requested =
 			typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab");
-		// Plugin health moved to the Plugins page, so old `?tab=configuration` links open the default tab.
 		return requested && ["environments", "sdk", "localization"].includes(requested)
 			? requested
 			: defaultTab;
 	});
 	useEffect(() => {
 		const url = new URL(window.location.href);
-		// Link defaults moved to Acquisition › Dynamic links › Settings.
 		if (url.searchParams.get("tab") === "links") {
 			const lang = url.searchParams.get("lang");
 			window.location.replace(

@@ -1,17 +1,3 @@
-/**
- * Query-plan shape of the pivot-driven taxonomy listing (#1834).
- *
- * On stats-blind SQLite/D1 (no ANALYZE, no `sqlite_stat1`) the old EXISTS shape
- * drove the scan from the collection's order index and probed a taxonomy EXISTS
- * per row — a full `ec_*` walk for a selective term. The restructure seeks the
- * term on the group-keyed pivot, then seeks matching content translations by
- * `translation_group`. Sorting is bounded to the tagged candidates.
- *
- * This asserts the plan, not the output (output is covered by
- * loader-taxonomy-pivot). SQLite-only: `EXPLAIN QUERY PLAN` is a SQLite concern
- * and, being stats-blind here, the plan is schema-driven — matching D1 exactly.
- */
-
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -45,7 +31,6 @@ beforeEach(async () => {
 		},
 	});
 
-	// Deliberately no ANALYZE: matches D1, which never maintains sqlite_stat1.
 	await runMigrations(db);
 	await db
 		.updateTable("_emdash_taxonomy_defs")
@@ -62,8 +47,6 @@ beforeEach(async () => {
 	const content = new ContentRepository(anyDb);
 	const tax = new TaxonomyRepository(anyDb);
 	const term = await tax.create({ name: "category", slug: "news", label: "News", locale: "en" });
-	// A selective term: one tagged entry among many. The plan is stats-blind so
-	// the ratio is immaterial — the point is that the seek short-circuits.
 	for (let i = 0; i < 30; i++) {
 		const post = await content.create({
 			type: "post",
@@ -80,7 +63,6 @@ afterEach(async () => {
 	await db.destroy();
 });
 
-/** better-sqlite3 only binds primitives; coerce the JS values Kysely captured. */
 function bindable(p: unknown): unknown {
 	if (typeof p === "boolean") return p ? 1 : 0;
 	if (p instanceof Date) return p.toISOString();
@@ -95,7 +77,6 @@ function explain(query: CapturedQuery): string {
 	return rows.map((r) => r.detail).join("\n");
 }
 
-/** The pivot-drive query is the one with the `picked` CTE. */
 function pivotQueryPlan(): string {
 	const query = captured.find((q) => q.sql.includes("picked"));
 	expect(query, "expected the loader to emit a pivot-drive query").toBeDefined();

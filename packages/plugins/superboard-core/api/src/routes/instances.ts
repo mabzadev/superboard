@@ -1,5 +1,5 @@
-import { registerRouter } from "@superboard/contracts/route-registry";
 import { readRequestObjectLimited } from "@superboard/contracts/request-body";
+import { registerRouter } from "@superboard/contracts/route-registry";
 import { Hono } from "hono";
 
 import { getRequestAuthUserId } from "../lib/auth";
@@ -14,7 +14,13 @@ import { siteOperatorAdapter, type SiteAdapterVariables } from "../lib/site-oper
 import { tokenDigest } from "../lib/token-storage";
 import { Env } from "../types";
 
-const instances = registerRouter(new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>(), {"service":"api","module":"routes.instances.instances","pluginId":"supbrd-core","surface":"internal","access":"operator"});
+const instances = registerRouter(new Hono<{ Bindings: Env; Variables: SiteAdapterVariables }>(), {
+	service: "api",
+	module: "routes.instances.instances",
+	pluginId: "supbrd-core",
+	surface: "internal",
+	access: "operator",
+});
 instances.use("*", siteOperatorAdapter("instances"));
 
 async function getAuthUserId(c: any): Promise<number | null> {
@@ -627,8 +633,6 @@ async function deleteInstanceTree(env: Env, instanceId: number) {
 	return summary;
 }
 
-// =================== INSTANCES ===================
-
 instances.get("/", async (c) => {
 	const userId = await getAuthUserId(c);
 	if (userId === null) return c.json({ error: "Unauthorized" }, 401);
@@ -726,8 +730,6 @@ instances.delete("/:id", async (c) => {
 	const cleanup = await deleteInstanceTree(c.env, instanceId);
 	return c.json({ deleted: true, cleanup });
 });
-
-// =================== MEMBERS ===================
 
 instances.get("/:id/members", async (c) => {
 	const instanceId = Number(c.req.param("id"));
@@ -891,8 +893,6 @@ instances.get("/:id/role", async (c) => {
 	const role = { role: access.role };
 	return c.json({ role: role?.role || "owner" });
 });
-
-// =================== CONFIGURATIONS ===================
 
 async function readBody(c: any): Promise<Record<string, any>> {
 	return readRequestObjectLimited(c.req.raw, 10 * 1024 * 1024);
@@ -1799,8 +1799,6 @@ instances.delete("/:id/configurations/web", async (c) => {
 	return c.json({ config: null, configuration: null });
 });
 
-// =================== REVENUE COLLECTION ===================
-
 instances.put("/:id/revenue_collection", async (c) => {
 	const instanceId = Number(c.req.param("id"));
 	const access = await requireInstanceRole(c, instanceId, true);
@@ -1824,8 +1822,6 @@ instances.put("/:id/revenue_collection", async (c) => {
 	);
 	return c.json({ instance, message: "Revenue collection updated" });
 });
-
-// =================== SETUP & MISC ===================
 
 instances.post("/:id/dismiss_get_started", async (c) => {
 	const userId = await getAuthUserId(c);

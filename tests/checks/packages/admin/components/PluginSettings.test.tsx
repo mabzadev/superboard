@@ -1,9 +1,3 @@
-/**
- * PluginSettings: auto-generated settings form from a plugin's
- * settingsSchema (#341). Covers field rendering per type, the
- * write-only secret contract, and the save payload.
- */
-
 import { Toasty } from "@cloudflare/kumo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
@@ -157,7 +151,6 @@ describe("PluginSettings", () => {
 			enabled: true,
 			mode: "safe",
 		});
-		// Untouched secret is not sent — the stored value stays as-is.
 		expect("secretKey" in values).toBe(false);
 	});
 
@@ -178,8 +171,6 @@ describe("PluginSettings", () => {
 			expect(mockUpdatePluginSettings).toHaveBeenCalledTimes(1);
 		});
 		const [, values] = mockUpdatePluginSettings.mock.calls[0]!;
-		// Storing "" would shadow the schema default forever; null deletes
-		// the stored value server-side so the default applies again.
 		expect(values.siteKey).toBeNull();
 	});
 

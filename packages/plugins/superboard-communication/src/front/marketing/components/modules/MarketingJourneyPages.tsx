@@ -238,7 +238,6 @@ export function MarketingJourneysPage() {
 		if (!values.length) return;
 		setBusy(true);
 		try {
-			// Operators know contacts by email; the API enrolls subscriber IDs.
 			const ids = await Promise.all(
 				values.map(async (value) => {
 					if (!value.includes("@")) return value;
@@ -370,9 +369,7 @@ export function MarketingJourneysPage() {
 												setBuilderDefinition(
 													parseObject(definitionText, "Journey definition") as JourneyDefinition,
 												);
-											} catch {
-												// Validation feedback remains attached to the save action.
-											}
+											} catch {}
 										}
 										setAdvanced(open);
 									}}

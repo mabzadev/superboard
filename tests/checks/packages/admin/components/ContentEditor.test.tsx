@@ -30,15 +30,6 @@ function makeByline(overrides: Partial<BylineSummary> = {}): BylineSummary {
 	};
 }
 
-// Mock child components that have complex dependencies.
-// The mock simulates the real editor's behaviour of freezing initial content on mount:
-// it captures `value` once via useState initializer and never re-reads it.
-// This is what makes the translation-switch bug observable in tests — the displayed
-// content stays stale unless the component is forced to remount via a fresh `key`.
-//
-// It also mirrors the real component's onEditorReady contract: called with a stub
-// editor on mount and with `null` on unmount, so consumers can clear stale refs
-// before the next instance mounts.
 let portableTextMountCount = 0;
 type EditorReadyCall = { mockId: number | null };
 let onEditorReadyCalls: EditorReadyCall[] = [];
@@ -47,7 +38,6 @@ vi.mock("../../../../../packages/admin/src/components/PortableTextEditor", () =>
 	PortableTextEditor: (props: Record<string, any>) => {
 		const { value, placeholder, onEditorReady } = props;
 		portableTextProps.current = props;
-		// Mirror the real component: capture initial value once, never update.
 		const [initialValue] = React.useState(() => value);
 		const mountIdRef = React.useRef<number>(0);
 		React.useEffect(() => {
@@ -202,9 +192,6 @@ function installMatchMedia(initialMatches: boolean) {
 		},
 		dispatchEvent: () => true,
 	} as MediaQueryList;
-	// Only viewport-width queries get the simulated value. Everything else
-	// (e.g. prefers-reduced-motion in SaveButton/Kumo) keeps its real default
-	// so these tests exercise the normal animation code paths.
 	const nonMatching = (query: string) =>
 		({
 			matches: false,
@@ -456,7 +443,6 @@ describe("ContentEditor", () => {
 			try {
 				const screen = await renderEditor({ isNew: false, item: makeItem(), fields: ptFields });
 				await expect.element(screen.getByTestId("portable-text-editor")).toBeInTheDocument();
-				// Sheet starts closed.
 				await expect
 					.element(screen.getByRole("navigation", { name: "Settings" }), { timeout: 100 })
 					.not.toBeInTheDocument();
@@ -464,7 +450,6 @@ describe("ContentEditor", () => {
 				const { open, close } = getPanelHooks();
 				open(makeBlockPanel());
 
-				// The sheet must open by itself, showing the block detail panel.
 				await expect
 					.element(screen.getByRole("navigation", { name: "Settings" }))
 					.toBeInTheDocument();
@@ -472,7 +457,6 @@ describe("ContentEditor", () => {
 					.element(screen.getByRole("button", { name: "Remove Image" }))
 					.toBeInTheDocument();
 
-				// Closing the block panel restores the sheet's prior (closed) state.
 				close();
 				await expect
 					.element(screen.getByRole("navigation", { name: "Settings" }))
@@ -482,16 +466,7 @@ describe("ContentEditor", () => {
 			}
 		});
 
-		// Not covered: the "restore to previously-open sheet" branch. Real input
-		// can't reach it below lg (the open sheet overlays the editor, so a block
-		// can't be tapped while it's up), and triggering it programmatically trips
-		// Kumo's focusout dismissal when the focused settings content is swapped
-		// out — pinning that would test Kumo internals, not the sync.
-
 		it("keeps the sheet closed for block panels in distraction-free mode", async () => {
-			// The sheet's nav is hidden in DF, but Kumo's mobile backdrop is a
-			// separate sibling: letting the sheet open would paint a full-screen
-			// scrim over the writing surface with nothing visible to dismiss.
 			const media = installMatchMedia(true);
 			try {
 				const screen = await renderEditor({ isNew: false, item: makeItem(), fields: ptFields });
@@ -501,14 +476,12 @@ describe("ContentEditor", () => {
 				const { open } = getPanelHooks();
 				open(makeBlockPanel());
 
-				// Sheet must not open (no nav, and the backdrop must not be scrimming).
 				await expect
 					.element(screen.getByRole("navigation", { name: "Settings" }), { timeout: 200 })
 					.not.toBeInTheDocument();
 				const backdrop = document.querySelector("[data-sidebar-backdrop]");
 				expect(backdrop?.classList.contains("pointer-events-none") ?? true).toBe(true);
 
-				// Exiting DF with the panel still active surfaces it in the sheet.
 				document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 				await expect
 					.element(screen.getByRole("navigation", { name: "Settings" }))
@@ -535,7 +508,6 @@ describe("ContentEditor", () => {
 
 				media.setMatches(false);
 
-				// No sheet on desktop; the block panel now lives in the pane.
 				await expect
 					.element(screen.getByRole("navigation", { name: "Settings" }))
 					.not.toBeInTheDocument();
@@ -564,7 +536,6 @@ describe("ContentEditor", () => {
 			await slugInput.fill("custom-slug");
 			await expect.element(slugInput).toHaveValue("custom-slug");
 
-			// After manual edit, typing in title should NOT update slug
 			const titleInput = screen.getByLabelText("Title");
 			await titleInput.fill("New Title");
 			await expect.element(slugInput).toHaveValue("custom-slug");
@@ -615,7 +586,6 @@ describe("ContentEditor", () => {
 					},
 				},
 			});
-			// Select renders a combobox role
 			const select = screen.getByRole("combobox");
 			await expect.element(select).toBeInTheDocument();
 		});
@@ -636,7 +606,6 @@ describe("ContentEditor", () => {
 			});
 			const checkboxes = screen.getByRole("checkbox", { exact: false });
 			await expect.element(checkboxes.first()).toBeInTheDocument();
-			// All option labels should be present
 			await expect.element(screen.getByText("News")).toBeInTheDocument();
 			await expect.element(screen.getByText("Tech")).toBeInTheDocument();
 			await expect.element(screen.getByText("Sports")).toBeInTheDocument();
@@ -668,15 +637,12 @@ describe("ContentEditor", () => {
 			const checkboxes = screen.getByRole("checkbox", { exact: false });
 			const all = checkboxes.all();
 
-			// Uncheck "sports" (index 2, currently checked)
 			await all[2]!.click();
 			await expect.element(all[2]!).not.toBeChecked();
 
-			// Check "tech" (index 1, currently unchecked)
 			await all[1]!.click();
 			await expect.element(all[1]!).toBeChecked();
 
-			// Save and verify the data sent to onSave
 			const saveBtn = screen.getByRole("button", { name: "Save" }).first();
 			await saveBtn.click();
 
@@ -709,34 +675,23 @@ describe("ContentEditor", () => {
 					},
 				},
 			});
-			// Verify the checkbox group renders with correct checked state via aria
 			const checkboxes = screen.getByRole("checkbox", { exact: false });
 			const all = checkboxes.all();
-			// Should have 3 checkboxes
 			expect(all).toHaveLength(3);
-			// news (checked), tech (unchecked), sports (checked)
 			await expect.element(all[0]!).toBeChecked();
 			await expect.element(all[1]!).not.toBeChecked();
 			await expect.element(all[2]!).toBeChecked();
 		});
 
 		it("renders file fields with a Select file button (not a plain text input)", async () => {
-			// Regression test for #718: the "file" field kind used to fall through to the
-			// default case and render a text input, making it impossible to actually attach
-			// a file. It must render a media picker trigger instead.
 			const screen = await renderEditor({
 				fields: { attachment: { kind: "file", label: "Attachment" } },
 				isNew: true,
 			});
 
-			// The button that opens the picker should be present and labeled with the
-			// field's label (accessibility).
 			const selectBtn = screen.getByRole("button", { name: /Select Attachment/i });
 			await expect.element(selectBtn).toBeInTheDocument();
 
-			// And there must not be a text input inside the file field region — the old
-			// bug rendered an `<Input>` labeled "Attachment" as a plain text field.
-			// Use the field id (`field-attachment`) as an unconditional positive selector.
 			const fieldRoot = document.getElementById("field-attachment");
 			expect(fieldRoot).not.toBeNull();
 			const textInputs = fieldRoot!.querySelectorAll(
@@ -767,16 +722,11 @@ describe("ContentEditor", () => {
 				},
 			});
 
-			// Filename should be visible
 			await expect.element(screen.getByText("report.pdf")).toBeInTheDocument();
-			// Change button present (picker is wired up)
 			await expect.element(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
 		});
 
 		it("renders 0-byte file size instead of hiding it", async () => {
-			// Regression test: a previous truthiness check (`const hasSize = normalized?.size`)
-			// hid the size label for valid 0-byte files even though `formatFileSize(0)`
-			// returns "0 B".
 			const item = makeItem({
 				data: {
 					title: "Test",
@@ -799,13 +749,10 @@ describe("ContentEditor", () => {
 			});
 
 			await expect.element(screen.getByText("empty.txt")).toBeInTheDocument();
-			// "0 B" must be rendered, not silently hidden
 			await expect.element(screen.getByText(/0\s*B/)).toBeInTheDocument();
 		});
 
 		it("falls back to value.src and then value.id for local files without meta.storageKey", async () => {
-			// Regression test: local files without meta.storageKey previously lost their
-			// download link because the URL was only built from storageKey.
 			const itemWithSrc = makeItem({
 				data: {
 					title: "Test",
@@ -831,7 +778,6 @@ describe("ContentEditor", () => {
 			const link1 = screen1.getByRole("link", { name: "backup.zip" });
 			await expect.element(link1).toHaveAttribute("href", "/_emdash/api/media/file/file-no-key");
 
-			// When src is also missing, fall back to value.id
 			const itemNoSrc = makeItem({
 				data: {
 					title: "Test",
@@ -913,9 +859,6 @@ describe("ContentEditor", () => {
 		});
 
 		it("does not render data: or javascript: URLs from external providers as links", async () => {
-			// A hostile external provider plugin could return src: "javascript:..." or
-			// "data:..."; the file field must not surface either as a clickable <a href>.
-			// Filename should still display as plain text so the user can see what's set.
 			const item = makeItem({
 				data: {
 					title: "Test",
@@ -938,9 +881,7 @@ describe("ContentEditor", () => {
 				},
 			});
 
-			// Filename renders…
 			await expect.element(screen.getByText("ok.txt")).toBeInTheDocument();
-			// …but never as a link with the hostile href.
 			const fieldRoot = document.getElementById("field-attachment");
 			expect(fieldRoot).not.toBeNull();
 			expect(fieldRoot!.querySelector('a[href^="javascript:"]')).toBeNull();
@@ -948,9 +889,6 @@ describe("ContentEditor", () => {
 		});
 
 		it("encodes path-unsafe characters in storageKey when building the local URL", async () => {
-			// Server-generated storage keys are flat ULIDs today, but the schema
-			// now allows clients to write any `meta.storageKey` string via the
-			// content API. `?` or `#` would otherwise escape the path.
 			const item = makeItem({
 				data: {
 					title: "Test",
@@ -1003,7 +941,6 @@ describe("ContentEditor", () => {
 			});
 
 			await screen.getByRole("button", { name: "Remove Attachment" }).click();
-			// The Select empty-state button replaces the filled state.
 			await expect
 				.element(screen.getByRole("button", { name: "Select Attachment" }))
 				.toBeInTheDocument();
@@ -1025,9 +962,6 @@ describe("ContentEditor", () => {
 		});
 
 		it("displays a stored ISO datetime in the datetime-local input", async () => {
-			// The validator stores datetimes as full ISO 8601 with "Z" + millis,
-			// but <input type="datetime-local"> only accepts "YYYY-MM-DDTHH:mm".
-			// Without conversion the browser silently renders an empty input.
 			const item = makeItem({
 				data: { title: "Recall", recall_date: "2026-02-26T09:30:00.000Z" },
 			});
@@ -1044,9 +978,6 @@ describe("ContentEditor", () => {
 		});
 
 		it("saves datetime fields back as full ISO 8601 with Z and milliseconds", async () => {
-			// datetime-local emits "YYYY-MM-DDTHH:mm" which the field's
-			// `z.string().datetime().or(z.string().date())` schema rejects.
-			// The widget must round-trip the value back to a validator-accepted shape.
 			const onSave = vi.fn();
 			const screen = await renderEditor({
 				isNew: true,
@@ -1082,7 +1013,6 @@ describe("ContentEditor", () => {
 			});
 			const textarea = screen.getByLabelText("Metadata");
 			await expect.element(textarea).toBeInTheDocument();
-			// JSON field uses a textarea element
 			expect(textarea.element().tagName).toBe("TEXTAREA");
 		});
 
@@ -1119,7 +1049,6 @@ describe("ContentEditor", () => {
 
 		it("SaveButton shows correct dirty state for new items", async () => {
 			const screen = await renderEditor({ isNew: true });
-			// New items are always dirty
 			const saveBtn = screen.getByRole("button", { name: "Save" }).first();
 			await expect.element(saveBtn).toBeEnabled();
 		});
@@ -1132,12 +1061,6 @@ describe("ContentEditor", () => {
 			expect(saveBtn.getByRole("status").element().textContent).toBe("Saved");
 		});
 
-		// Strict per-locale hydration (migration 040) can return
-		// `item.bylines = []` even when junction rows exist at other
-		// locales (e.g. an FR post that inherited an EN-only byline via
-		// copyContentBylines). Sending `bylines: []` on every save would
-		// silently wipe the copied credit. The editor must omit `bylines`
-		// from the payload unless the user actually touched the editor.
 		it("omits bylines from save payload when the user did not touch the byline editor", async () => {
 			const onSave = vi.fn();
 			const item = makeItem({ data: { title: "Hello", body: "" } });
@@ -1326,14 +1249,11 @@ describe("ContentEditor", () => {
 			const onDelete = vi.fn();
 			const screen = await renderEditor({ isNew: false, item, onDelete });
 
-			// Click the delete trigger button
 			const deleteBtn = screen.getByRole("button", { name: MOVE_TO_TRASH_PATTERN });
 			await deleteBtn.click();
 
-			// Dialog should appear with "Move to Trash?" title
 			await expect.element(screen.getByText("Move to Trash?")).toBeInTheDocument();
 
-			// There are multiple "Move to Trash" buttons - click the last one (the dialog confirm)
 			const allBtns = document.querySelectorAll("button");
 			const trashBtns = [...allBtns].filter((b) => b.textContent?.trim() === "Move to Trash");
 			if (trashBtns[1]) {
@@ -1847,7 +1767,6 @@ describe("ContentEditor", () => {
 			const enterBtn = screen.getByRole("button", { name: "Enter distraction-free mode" });
 			await enterBtn.click();
 
-			// The form should now have the fixed inset-0 class
 			const form = document.querySelector("form");
 			expect(form?.classList.toString()).toContain("fixed");
 		});
@@ -1857,14 +1776,11 @@ describe("ContentEditor", () => {
 			const enterBtn = screen.getByRole("button", { name: "Enter distraction-free mode" });
 			await enterBtn.click();
 
-			// Verify we're in distraction-free mode
 			let form = document.querySelector("form");
 			expect(form?.classList.toString()).toContain("fixed");
 
-			// Press Escape
 			document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
-			// Wait for the state to update
 			await vi.waitFor(() => {
 				form = document.querySelector("form");
 				expect(form?.classList.toString()).not.toContain("fixed");
@@ -1881,15 +1797,10 @@ describe("ContentEditor", () => {
 
 			await screen.getByRole("button", { name: "Enter distraction-free mode" }).click();
 
-			// The settings panel stays mounted while hidden, so the overlay adds a
-			// second Live View link rather than replacing the panel's copy.
 			expect(screen.getByRole("link", { name: "Live View" }).all()).toHaveLength(2);
 		});
 
 		it("preserves settings panel state across a distraction-free round trip", async () => {
-			// The panel is hidden, not unmounted, in distraction-free mode —
-			// otherwise panel-local state (an open scheduler, a typed date)
-			// is silently destroyed by the toggle.
 			const item = makeItem({ status: "draft" });
 			const screen = await renderEditor({ isNew: false, item, onSchedule: vi.fn() });
 
@@ -1898,16 +1809,12 @@ describe("ContentEditor", () => {
 			await scheduleInput.fill("2026-08-01T10:00");
 
 			await screen.getByRole("button", { name: "Enter distraction-free mode" }).click();
-			// Hidden while writing. Stylesheets aren't loaded in vitest browser
-			// mode, so assert the class hook (like the other DF tests) rather
-			// than computed visibility.
 			await vi.waitFor(() => {
 				const aside = document.querySelector('aside[data-sidebar="sidebar"]');
 				expect(aside?.classList.contains("hidden")).toBe(true);
 			});
 
 			await screen.getByRole("button", { name: "Exit distraction-free mode" }).click();
-			// …and still open with the typed date after exiting.
 			await vi.waitFor(() => {
 				const aside = document.querySelector('aside[data-sidebar="sidebar"]');
 				expect(aside?.classList.contains("hidden")).toBe(false);
@@ -1925,9 +1832,7 @@ describe("ContentEditor", () => {
 			const scheduleBtn = screen.getByRole("button", { name: "Schedule for later" });
 			await scheduleBtn.click();
 
-			// Should now show the datetime input
 			await expect.element(screen.getByLabelText("Schedule for")).toBeInTheDocument();
-			// And a Schedule submit button
 			await expect.element(screen.getByRole("button", { name: "Schedule" })).toBeInTheDocument();
 		});
 
@@ -1955,7 +1860,6 @@ describe("ContentEditor", () => {
 			const onUnschedule = vi.fn();
 			const screen = await renderEditor({ isNew: false, item, onUnschedule });
 
-			// Unschedule should be in the sidebar, not in the header
 			const unscheduleBtn = screen.getByRole("button", { name: "Unschedule" });
 			await expect.element(unscheduleBtn).toBeInTheDocument();
 		});
@@ -2000,21 +1904,6 @@ describe("ContentEditor", () => {
 		});
 	});
 
-	// ---------------------------------------------------------------------------
-	// Bug: translation switch leaves stale content in PortableTextEditor.
-	//
-	// When navigating between translations of the same content (e.g. /en post ->
-	// /fr post), TanStack Router keeps ContentEditor mounted and only the `item`
-	// prop changes. The PortableTextEditor (TipTap) freezes its content via
-	// useMemo([], ...) on mount and has no effect to reconcile incoming `value`
-	// changes, so it keeps showing the previous locale's body.
-	//
-	// Worse: any subsequent edit fires onUpdate with the stale content, silently
-	// overwriting the new translation's body in formData.
-	//
-	// Fix: key <FieldRenderer> by `${name}:${item?.id ?? "new"}` so all field
-	// editors remount cleanly when the underlying content item changes.
-	// ---------------------------------------------------------------------------
 	describe("translation / item switch", () => {
 		function buildPtItem(id: string, text: string): ContentItem {
 			return makeItem({
@@ -2044,7 +1933,6 @@ describe("ContentEditor", () => {
 			const itemEn = buildPtItem("post-en", "English body");
 			const itemFr = buildPtItem("post-fr", "French body");
 
-			// Use a wrapper so we can swap items without unmounting ContentEditor.
 			function Switcher({ item }: { item: ContentItem }) {
 				return (
 					<ContentEditor
@@ -2060,40 +1948,21 @@ describe("ContentEditor", () => {
 
 			const screen = await render(<Switcher item={itemEn} />);
 
-			// Initial mount: editor shows the English body.
 			const editor = screen.getByTestId("portable-text-editor");
 			await expect.element(editor).toHaveAttribute("data-content", "English body");
 			expect(portableTextMountCount).toBe(1);
 
-			// Simulate translation switch by rerendering with a different item id.
-			// The fix (keying FieldRenderer by item.id) must force a fresh mount
-			// so the editor reads the new locale's body.
 			await screen.rerender(<Switcher item={itemFr} />);
 
 			const editorAfter = screen.getByTestId("portable-text-editor");
 			await expect.element(editorAfter).toHaveAttribute("data-content", "French body");
 
-			// A new mount means the FieldRenderer was keyed by id and remounted.
-			// Without the fix, mountCount stays at 1 and content stays stale.
 			expect(portableTextMountCount).toBeGreaterThanOrEqual(2);
 		});
 
 		it("wires onEditorReady through for the 'content' field so DocumentOutline tracks remounts", async () => {
-			// ContentEditor only wires `onEditorReady` to its `setPortableTextEditor`
-			// slot when the field name is exactly "content" (see ContentEditor.tsx,
-			// where the conditional onEditorReady prop is set). On a translation
-			// switch, the FieldRenderer is keyed by item.id so the editor remounts;
-			// the corresponding cleanup call flows through, clearing the stale ref
-			// in the parent before the new instance mounts.
-			//
-			// The actual cleanup behaviour of PortableTextEditor (calling
-			// onEditorReady(null) on unmount) is exercised against the real
-			// component in tests/editor/PortableTextEditor.test.tsx — this test
-			// only verifies that ContentEditor wires the callback in the first place.
 			const ptFieldsForContent: Record<string, FieldDescriptor> = {
 				title: { kind: "string", label: "Title", required: true },
-				// "content" is the magic field name that wires onEditorReady through
-				// to ContentEditor's setPortableTextEditor (see ContentEditor.tsx).
 				content: { kind: "portableText", label: "Body" },
 			};
 
@@ -2148,7 +2017,6 @@ describe("ContentEditor", () => {
 				.element(screen.getByTestId("portable-text-editor"))
 				.toHaveAttribute("data-content", "English");
 
-			// Initial mount fired exactly one onEditorReady call with a non-null editor.
 			expect(onEditorReadyCalls).toHaveLength(1);
 			expect(onEditorReadyCalls[0]?.mockId).not.toBeNull();
 
@@ -2157,30 +2025,15 @@ describe("ContentEditor", () => {
 				.element(screen.getByTestId("portable-text-editor"))
 				.toHaveAttribute("data-content", "French");
 
-			// After the switch we expect the call sequence:
-			//   1. mount (en) -> non-null
-			//   2. cleanup (en) -> null   <-- the M1 fix
-			//   3. mount (fr) -> non-null
-			// Without the cleanup in PortableTextEditor's onEditorReady effect,
-			// step 2 is missing and the stale en-editor reference lingers in
-			// ContentEditor's state during the remount window.
 			const nullCallIndex = onEditorReadyCalls.findIndex((c) => c.mockId === null);
 			expect(nullCallIndex).toBeGreaterThan(-1);
 
-			// The null call must come before the final mount (otherwise the slot
-			// would end up null after a fresh editor was reported ready).
 			const lastCall = onEditorReadyCalls.at(-1);
 			expect(lastCall?.mockId).not.toBeNull();
 			expect(nullCallIndex).toBeLessThan(onEditorReadyCalls.length - 1);
 		});
 	});
 
-	// ---------------------------------------------------------------------------
-	// Bug #1217: the byline picker was a plain Select over the first 100 bylines
-	// with no search, so bylines beyond the initial page were unreachable, and a
-	// credited byline outside that page failed to render at all. The picker now
-	// searches the server and resolves credited bylines from the saved entry.
-	// ---------------------------------------------------------------------------
 	describe("byline picker search (#1217)", () => {
 		it("keeps search behind one choose action for an automatic credit", async () => {
 			const inferred = makeByline({ id: "inferred", displayName: "Owner Profile" });
@@ -2204,7 +2057,6 @@ describe("ContentEditor", () => {
 				isNew: false,
 				item,
 				currentUser: { id: "u-1", role: 50 },
-				// Empty initial list: the only way to reach "Zoe Far" is via search.
 				availableBylines: [],
 				availableBylinesLoaded: true,
 			});
@@ -2213,7 +2065,6 @@ describe("ContentEditor", () => {
 			const searchInput = screen.getByLabelText("Search bylines");
 			await searchInput.fill("Zoe");
 
-			// The debounced server search surfaces the result.
 			await expect.element(screen.getByText("Zoe Far")).toBeInTheDocument();
 			await vi.waitFor(() => {
 				expect(vi.mocked(fetchBylines)).toHaveBeenCalledWith(
@@ -2221,7 +2072,6 @@ describe("ContentEditor", () => {
 				);
 			});
 
-			// Clicking the result credits the byline and leaves the results list.
 			await screen.getByRole("button", { name: "Add Zoe Far" }).click();
 			await expect
 				.element(screen.getByRole("button", { name: "More actions for Zoe Far" }))
@@ -2239,8 +2089,6 @@ describe("ContentEditor", () => {
 				isNew: false,
 				item,
 				currentUser: { id: "u-1", role: 50 },
-				// Initial list does NOT include the credited byline (it would be
-				// past the old 100-row cap). It must still render from the entry.
 				availableBylines: [],
 				availableBylinesLoaded: true,
 			});

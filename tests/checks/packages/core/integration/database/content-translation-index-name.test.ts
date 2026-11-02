@@ -10,13 +10,6 @@ import {
 	teardownForDialect,
 } from "../../utils/test-db.js";
 
-/**
- * The longest collection slug `SchemaRegistry` can create on Postgres: at 47
- * characters the `deleted_updated_id` and `deleted_status` index names collide
- * once Postgres truncates identifiers to 63 bytes. `idx_{table}_tg_locale` and
- * `idx_{table}_del_tg_locale` are truncated at this length too, so the
- * migration's creates and drop must still name three different indexes.
- */
 const LONG_SLUG = `t${"o".repeat(45)}`;
 const TABLE_NAME = `ec_${LONG_SLUG}`;
 

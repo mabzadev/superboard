@@ -146,13 +146,10 @@ describe("RegistryPluginDetail sections", () => {
 			</Wrapper>,
 		);
 
-		// Tabs for present sections.
 		await expect.element(screen.getByRole("tab", { name: "Description" })).toBeInTheDocument();
 		await expect.element(screen.getByRole("tab", { name: "Installation" })).toBeInTheDocument();
-		// Empty/whitespace sections produce no tab.
 		expect(screen.getByRole("tab", { name: "FAQ" }).query()).toBeNull();
 		expect(screen.getByRole("tab", { name: "Security" }).query()).toBeNull();
-		// Default pane is the first present section (description).
 		await expect.element(screen.getByText("Description body text.")).toBeInTheDocument();
 	});
 
@@ -226,9 +223,6 @@ describe("RegistryPluginDetail declared permissions", () => {
 	});
 
 	it("derives the consent list faithfully from declaredAccess, including hook facets", async () => {
-		// declaredAccess carries the hook facets; the consent list must show the
-		// canonical capability strings the install handler enforces, derived via
-		// the shared converter rather than a component-local flattener.
 		setup(makePackage(), [
 			makeRelease({
 				extensions: {

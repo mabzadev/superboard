@@ -1,17 +1,3 @@
-/**
- * GET /_emdash/api/auth/atproto/callback
- *
- * Handles the OAuth callback from the user's PDS after authentication.
- * Exchanges the authorization code for tokens, resolves the user's identity,
- * finds or creates an EmDash user, and establishes a session.
- *
- * User lookup uses oauth_accounts (provider="atproto", provider_account_id=DID)
- * rather than email, since AT Protocol doesn't guarantee email access.
- *
- * For the first user (setup flow), the real email from the setup wizard is used.
- * For subsequent users, a synthetic email is generated from the DID.
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -42,7 +28,6 @@ export const GET: APIRoute = async ({ request, locals, session, redirect }) => {
 		const url = new URL(request.url);
 		const baseUrl = getPublicOrigin(url, emdash?.config);
 
-		// Handle OAuth errors from PDS
 		const error = url.searchParams.get("error");
 		const errorDescription = url.searchParams.get("error_description");
 		if (error) {
@@ -52,7 +37,6 @@ export const GET: APIRoute = async ({ request, locals, session, redirect }) => {
 			);
 		}
 
-		// Exchange code for session via atcute
 		const { getAtprotoOAuthClient, resolveAtprotoProfile } =
 			await import("@emdash-cms/auth-atproto/oauth-client");
 		const { getAtprotoStorage } = await import("../storage.js");
@@ -63,10 +47,8 @@ export const GET: APIRoute = async ({ request, locals, session, redirect }) => {
 
 		const did = atprotoSession.did;
 
-		// Resolve profile for display name and handle
 		const { displayName, handle } = await resolveAtprotoProfile(atprotoSession);
 
-		// Get auth config from authProviders
 		const providers =
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- emdash.config has authProviders but Astro locals type is opaque
 			(emdash.config as { authProviders?: AuthProviderDescriptor[] } | null | undefined)
@@ -79,7 +61,6 @@ export const GET: APIRoute = async ({ request, locals, session, redirect }) => {
 			defaultRole?: number;
 		};
 
-		// Check allowlists if configured (DID or handle match = allowed)
 		const hasAllowedDIDs = config.allowedDIDs && config.allowedDIDs.length > 0;
 		const hasAllowedHandles = config.allowedHandles && config.allowedHandles.length > 0;
 
@@ -88,8 +69,6 @@ export const GET: APIRoute = async ({ request, locals, session, redirect }) => {
 
 			let handleAllowed = false;
 			if (!didAllowed && hasAllowedHandles) {
-				// Independently verify the handle→DID binding before trusting it.
-				// A malicious PDS could claim any handle — we verify via DNS/HTTP.
 				const { verifyHandleDID } = await import("@emdash-cms/auth-atproto/resolve-handle");
 				const verifiedDid = await verifyHandleDID(handle);
 
@@ -116,7 +95,6 @@ export const GET: APIRoute = async ({ request, locals, session, redirect }) => {
 			}
 		}
 
-		// Resolve default role from config
 		let defaultRole: RoleLevel = Role.SUBSCRIBER;
 		try {
 			if (config.defaultRole != null) defaultRole = toRoleLevel(config.defaultRole);
@@ -126,19 +104,12 @@ export const GET: APIRoute = async ({ request, locals, session, redirect }) => {
 			);
 		}
 
-		// Check setup_complete as the authoritative first-user gate.
-		// Using an option flag instead of countUsers() avoids a TOCTOU race
-		// where two concurrent callbacks both see 0 users and both create admins.
-		// Cast needed: Database extends AuthTables but uses Generated<> wrappers
-		// that confuse structural checks. The adapter casts internally anyway.
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Database uses Generated<> wrappers incompatible with AuthTables structurally; safe at runtime
 		const adapter = createKyselyAdapter(emdash.db as unknown as Kysely<AuthTables>);
 		const options = new OptionsRepository(emdash.db);
 		const setupComplete = await options.get("emdash:setup_complete");
 		const isFirstUser = setupComplete !== true && setupComplete !== "true";
 
-		// Build synthetic email — AT Protocol doesn't guarantee email access.
-		// For the first user, read the real email from the setup wizard state.
 		let email: string;
 		if (isFirstUser) {
 			const setupState = await options.get<Record<string, unknown>>("emdash:setup_state");
@@ -156,9 +127,6 @@ export const GET: APIRoute = async ({ request, locals, session, redirect }) => {
 			emailVerified: isFirstUser,
 		};
 
-		// Use shared find-or-create with canSelfSignup policy.
-		// When no allowlists are configured, forbid self-signup — only the
-		// initial admin (first user during setup) is allowed through.
 		const user = await findOrCreateOAuthUser(adapter, "atproto", profile, async () => {
 			if (isFirstUser) {
 				return { allowed: true, role: Role.ADMIN };
@@ -170,30 +138,25 @@ export const GET: APIRoute = async ({ request, locals, session, redirect }) => {
 		});
 
 		if (isFirstUser) {
-			// finalizeSetup is idempotent — safe if two callbacks race past the check
 			await finalizeSetup(emdash.db);
 			console.log(`[atproto-auth] Setup complete: created admin user via atproto (${did})`);
 		}
 
-		// Update display name on each login in case it changed
 		const newName = displayName || handle;
 		if (user.name !== newName) {
 			await adapter.updateUser(user.id, { name: newName });
 		}
 
-		// Check if user is disabled
 		if (user.disabled) {
 			return redirect(
 				`/_emdash/admin/login?error=account_disabled&message=${encodeURIComponent("Account disabled")}`,
 			);
 		}
 
-		// Create Astro session
 		if (session) {
 			session.set("user", { id: user.id });
 		}
 
-		// Redirect to admin dashboard
 		return redirect("/_emdash/admin");
 	} catch (callbackError) {
 		console.error("[atproto-auth] Callback error:", callbackError);

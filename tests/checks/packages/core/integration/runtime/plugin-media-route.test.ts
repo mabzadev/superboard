@@ -1,12 +1,3 @@
-/**
- * Trusted plugin API routes must receive a writable `ctx.media`.
- *
- * Regression: `EmDashRuntime.handlePluginApiRoute` built a `PluginRouteRegistry`
- * without threading `storage`, so a `media:write` plugin invoked via
- * `/_emdash/api/plugin/{id}/{route}` got a read-only (or undefined) `ctx.media`
- * and `ctx.media.upload()` was unusable — the exact trigger in the bug report.
- */
-
 import { randomUUID } from "node:crypto";
 
 import Database from "better-sqlite3";
@@ -19,7 +10,6 @@ import { definePlugin } from "../../../../../../packages/core/src/plugins/define
 import type { RouteCallerInput } from "../../../../../../packages/core/src/plugins/routes.js";
 import type { Storage } from "../../../../../../packages/core/src/storage/types.js";
 
-/** Minimal in-memory Storage backend that records uploaded keys. */
 function createFakeStorage() {
 	const uploads = new Map<string, Uint8Array>();
 	const storage: Storage = {

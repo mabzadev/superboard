@@ -120,7 +120,6 @@ android {
     }
 }
 
-// Load local.properties for E2E test credentials
 val localProps = Properties()
 rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { localProps.load(it) }
 
@@ -134,7 +133,6 @@ tasks.withType<Test> {
         showStandardStreams = true
     }
     
-    // Print a summary after tests complete
     afterSuite(KotlinClosure2<TestDescriptor, TestResult, Unit>({ desc, result ->
         if (desc.parent == null) {
             println("\n========================================")
@@ -155,18 +153,14 @@ tasks.withType<Test> {
     }))
 }
 
-// JaCoCo Code Coverage Configuration
 jacoco {
     toolVersion = "0.8.14"
 }
 
-// Enable JaCoCo agent for unit tests with Robolectric compatibility
 tasks.withType<Test> {
     extensions.configure<JacocoTaskExtension> {
         isEnabled = true
-        // Required for Robolectric tests - includes classes without location info
         isIncludeNoLocationClasses = true
-        // Exclude JDK internal classes (required for Java 9+)
         excludes = listOf("jdk.internal.*")
     }
 }
@@ -224,11 +218,9 @@ tasks.register("printCoverageReport") {
                 return if (total > 0) (covered.toDouble() / total * 100) else 0.0
             }
 
-            // Overall counters (last set of counters in the XML, direct children of <report>)
             val counterPattern = """<counter type="(\w+)" missed="(\d+)" covered="(\d+)"/>""".toRegex()
             val allCounters = counterPattern.findAll(xmlContent).toList()
 
-            // The last 5 counters belong to the <report> element (overall)
             val overallCounters = allCounters.takeLast(5).associate { match ->
                 match.groupValues[1] to Pair(match.groupValues[2].toInt(), match.groupValues[3].toInt())
             }
@@ -242,7 +234,6 @@ tasks.register("printCoverageReport") {
             }
             println("========================================\n")
 
-            // Per-class coverage from <class> elements
             val classBlockPattern = """<class name="([^"]+)"[^>]*>[\s\S]*?</class>""".toRegex()
             data class ClassCoverage(
                 val name: String,
@@ -274,7 +265,6 @@ tasks.register("printCoverageReport") {
                 }
             }
 
-            // Group by package
             val byPackage = classes.groupBy { it.name.substringBeforeLast(".") }
                 .toSortedMap()
 
@@ -336,14 +326,11 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-    // AndroidX Test for better Android component testing
     testImplementation("androidx.test:core-ktx:1.5.0")
     testImplementation("androidx.test.ext:junit-ktx:1.1.5")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
-    // Robolectric for Android runtime simulation - requires 4.14+ for Java 24 support
     testImplementation("org.robolectric:robolectric:4.16.1")
     
-    // Instrumented test dependencies
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.mockwebserver)
@@ -375,7 +362,6 @@ project.afterEvaluate {
                 groupId = libraryGroupId
                 artifactId = libraryArtifactId
                 version = libraryVersion
-                //artifact(tasks["bundleEnvProdReleaseAar"])
                 artifact(tasks["bundleReleaseAar"])
                 artifact(tasks["androidSourcesJar"])
 
@@ -392,10 +378,8 @@ tasks.register("androidSourcesJar", Jar::class) {
     archiveClassifier.set("sources")
 
     if (project.plugins.hasPlugin("com.android.library")) {
-        // For Android libraries
         from(android.sourceSets["main"].java.srcDirs)
     } else {
-        // For pure Kotlin libraries
         from(sourceSets["main"].java.srcDirs)
         from(kotlin.sourceSets["main"].kotlin.srcDirs)
     }

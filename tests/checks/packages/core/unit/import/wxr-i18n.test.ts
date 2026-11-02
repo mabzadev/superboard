@@ -1,12 +1,3 @@
-/**
- * Tests for WXR import multilingual handling and custom-taxonomy
- * pass-through. Covers `wxrPostToNormalizedItem` only -- end-to-end
- * persistence is exercised by the integration tests.
- *
- * @see https://github.com/emdash-cms/emdash/issues/1080 (WPML / Polylang)
- * @see https://github.com/emdash-cms/emdash/issues/1061 (taxonomies dropped)
- */
-
 import { describe, it, expect } from "vitest";
 
 import type { WxrPost } from "../../../../../../packages/core/src/cli/wxr/parser.js";
@@ -50,10 +41,6 @@ describe("wxrPostToNormalizedItem locale + translationGroup", () => {
 
 describe("wxrPostToNormalizedItem custom taxonomy filtering", () => {
 	it("strips Polylang's `language` taxonomy from customTaxonomies", () => {
-		// The parser promotes the language taxonomy to `post.locale` (the
-		// caller-facing field). Re-emitting it as a content taxonomy would
-		// require EmDash to also have a `language` taxonomy registered,
-		// which it doesn't -- and would duplicate the locale signal.
 		const post = makePost({
 			id: 1,
 			title: "Bonjour",

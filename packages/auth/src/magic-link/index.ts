@@ -1,37 +1,22 @@
-/**
- * Magic link authentication
- */
-
 import { escapeHtml } from "../invite.js";
 import { generateTokenWithHash, hashToken } from "../tokens.js";
 import type { AuthAdapter, User, EmailMessage } from "../types.js";
 
-const TOKEN_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
+const TOKEN_EXPIRY_MS = 15 * 60 * 1000;
 
-/** Function that sends an email (matches the EmailPipeline.send signature) */
 export type EmailSendFn = (message: EmailMessage) => Promise<void>;
 
 export interface MagicLinkConfig {
 	baseUrl: string;
 	siteName: string;
-	/** Optional email sender. When omitted, magic links cannot be sent. */
 	email?: EmailSendFn;
 }
 
-/**
- * Add artificial delay with jitter to prevent timing attacks.
- * Range approximates the time for token creation + email send.
- */
 async function timingDelay(): Promise<void> {
-	const delay = 100 + Math.random() * 150; // 100-250ms
+	const delay = 100 + Math.random() * 150;
 	await new Promise((resolve) => setTimeout(resolve, delay));
 }
 
-/**
- * Send a magic link to a user's email.
- *
- * Requires `config.email` to be set. Throws if no email sender is configured.
- */
 export async function sendMagicLink(
 	config: MagicLinkConfig,
 	adapter: AuthAdapter,
@@ -42,18 +27,14 @@ export async function sendMagicLink(
 		throw new MagicLinkError("email_not_configured", "Email is not configured");
 	}
 
-	// Find user
 	const user = await adapter.getUserByEmail(email);
 	if (!user) {
-		// Don't reveal whether user exists - add delay to match successful path timing
 		await timingDelay();
 		return;
 	}
 
-	// Generate token
 	const { token, hash } = generateTokenWithHash();
 
-	// Store token hash
 	await adapter.createToken({
 		hash,
 		userId: user.id,
@@ -62,11 +43,9 @@ export async function sendMagicLink(
 		expiresAt: new Date(Date.now() + TOKEN_EXPIRY_MS),
 	});
 
-	// Build magic link URL
 	const url = new URL("/_emdash/api/auth/magic-link/verify", config.baseUrl);
 	url.searchParams.set("token", token);
 
-	// Send email
 	const safeName = escapeHtml(config.siteName);
 	await config.email({
 		to: user.email,
@@ -92,16 +71,11 @@ export async function sendMagicLink(
 	});
 }
 
-/**
- * Verify a magic link token and return the user
- */
 export async function verifyMagicLink(adapter: AuthAdapter, token: string): Promise<User> {
 	const hash = hashToken(token);
 
-	// Find and validate token
 	const authToken = await adapter.getToken(hash, "magic_link");
 	if (!authToken) {
-		// Also check for recovery tokens
 		const recoveryToken = await adapter.getToken(hash, "recovery");
 		if (!recoveryToken) {
 			throw new MagicLinkError("invalid_token", "Invalid or expired link");
@@ -117,16 +91,13 @@ async function verifyTokenAndGetUser(
 	authToken: { userId: string | null; expiresAt: Date },
 	hash: string,
 ): Promise<User> {
-	// Check expiry
 	if (authToken.expiresAt < new Date()) {
 		await adapter.deleteToken(hash);
 		throw new MagicLinkError("token_expired", "This link has expired");
 	}
 
-	// Delete token (single-use)
 	await adapter.deleteToken(hash);
 
-	// Get user
 	if (!authToken.userId) {
 		throw new MagicLinkError("invalid_token", "Invalid token");
 	}

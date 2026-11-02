@@ -1,11 +1,3 @@
-/**
- * Sandbox Entry Point -- AT Protocol
- *
- * Canonical plugin implementation using the standard format.
- * The bundler (tsdown) inlines all local imports from atproto.ts,
- * bluesky.ts, and standard-site.ts into a single self-contained file.
- */
-
 import type { PluginContext, SandboxedPlugin } from "emdash/plugin";
 
 import { getAdminPageTarget, type AdminInteraction } from "./admin-routing.js";
@@ -22,8 +14,6 @@ import {
 import { buildBskyPost } from "./bluesky.js";
 import { buildPublication, buildDocument } from "./standard-site.js";
 
-// ── Types ───────────────────────────────────────────────────────
-
 interface SyndicationRecord {
 	collection: string;
 	contentId: string;
@@ -37,8 +27,6 @@ interface SyndicationRecord {
 	errorMessage?: string;
 	retryCount?: number;
 }
-
-// ── Helpers ─────────────────────────────────────────────────────
 
 const DEFAULT_SYNDICATED_COLLECTIONS = ["posts"];
 
@@ -77,7 +65,6 @@ async function syndicateContent(
 
 	const { accessJwt, did, pdsHost } = await ensureSession(ctx);
 
-	// Upload cover image if present
 	let coverImageBlob;
 	const rawCoverImage = content.cover_image as string | undefined;
 	if (rawCoverImage) {
@@ -324,8 +311,6 @@ async function syndicatePublishedContent(
 	}
 }
 
-// ── Plugin definition ───────────────────────────────────────────
-
 export default {
 	hooks: {
 		"plugin:install": async (_event: unknown, ctx: PluginContext) => {
@@ -525,8 +510,6 @@ export default {
 		},
 	},
 } satisfies SandboxedPlugin;
-
-// ── Block Kit admin helpers ─────────────────────────────────────
 
 async function buildSyncWidget(ctx: PluginContext) {
 	try {

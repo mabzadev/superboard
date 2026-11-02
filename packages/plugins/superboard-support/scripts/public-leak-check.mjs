@@ -104,11 +104,6 @@ for (const source of sources) {
 	}
 }
 
-// Audit inventories intentionally contain upstream names, private route
-// fingerprints and the pinned reference commit. They are valid repository
-// inputs for the parity gate, but must never be bundled into a public Front
-// artifact. Scan generated text artifacts separately with exact audit markers
-// so third-party chunks are not subjected to the broader product-name rules.
 const auditManifest = JSON.parse(
 	await readFile(
 		resolve(root, "packages/plugins/superboard-support/scripts/support-audit/capabilities.json"),

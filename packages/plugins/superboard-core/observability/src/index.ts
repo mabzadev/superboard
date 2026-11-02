@@ -21,7 +21,6 @@ interface ObservabilitySecrets {
 
 type ObservabilityEnv = Env & ObservabilitySecrets;
 
-// Signed internal bodies are limited to 16 KiB, so traces are packed into as few requests as fit.
 const OBSERVATION_BATCH_BYTES = 15_000;
 const OBSERVATION_BATCH_SIZE = 100;
 
@@ -112,7 +111,6 @@ const lifecycleWorker = {
 				throw new Error("OBSERVABILITY_INGESTION_BINDING_REQUIRED");
 			return;
 		}
-		// The service health and runtime metric panels count every invocation, so all traces are kept.
 		for (const body of observationBatches(observations)) {
 			const request = new Request("https://api.internal/internal/observability/observations", {
 				method: "POST",
@@ -293,9 +291,7 @@ function classifyEvent(event: TraceItem["event"]): {
 		let path = "unknown";
 		try {
 			path = new URL(event.request.url).pathname;
-		} catch {
-			/* sanitized fallback */
-		}
+		} catch {}
 		return {
 			type: "fetch",
 			method: bounded(event.request.method || "", 16),

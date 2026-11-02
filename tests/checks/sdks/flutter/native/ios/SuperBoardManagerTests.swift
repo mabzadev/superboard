@@ -1,11 +1,9 @@
 import XCTest
 @testable import SuperBoard
 
-/// A spy delegate that records calls and can fulfill an expectation on each call.
 private class SpyDelegate: SuperBoardDelegate {
     var receivedPayloads: [(link: String?, payload: [String: Any]?, tracking: [String: Any]?)] = []
 
-    /// When set, fulfilled every time the delegate is called.
     var payloadExpectation: XCTestExpectation?
 
     func superboardReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tracking: [String: Any]?) {
@@ -14,7 +12,6 @@ private class SpyDelegate: SuperBoardDelegate {
     }
 }
 
-/// Subclass that bypasses the Bundle.main URI scheme check for testing.
 private class TestableSuperBoardManager: SuperBoardManager {
     override func hasURISchemesConfigured() -> Bool {
         return true
@@ -37,7 +34,6 @@ final class SuperBoardManagerTests: XCTestCase {
         super.tearDown()
     }
 
-    /// Creates a standard SuperBoardManager with catch-all mock handlers.
     private func makeManager(delegate: SuperBoardDelegate? = nil) -> SuperBoardManager {
         setupDefaultHandlers()
         return SuperBoardManager(
@@ -48,7 +44,6 @@ final class SuperBoardManagerTests: XCTestCase {
         )
     }
 
-    /// Creates a TestableSuperBoardManager (URI scheme check bypassed) with catch-all mock handlers.
     private func makeTestableManager(delegate: SuperBoardDelegate? = nil) -> TestableSuperBoardManager {
         setupDefaultHandlers()
         return TestableSuperBoardManager(
@@ -72,7 +67,6 @@ final class SuperBoardManagerTests: XCTestCase {
         }
     }
 
-    /// Sets up mock handlers for all endpoints triggered during authentication.
     private func setupAuthenticationHandlers(payloadData: [String: Any]? = nil) {
         MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             let json: [String: Any] = [
@@ -104,7 +98,6 @@ final class SuperBoardManagerTests: XCTestCase {
         }
     }
 
-    /// Sets up a mock handler for the /data_for_device_and_url endpoint.
     private func setupPayloadForURLHandler(data: [String: Any]? = ["screen": "promo"],
                                            link: String? = "https://app.link/xyz",
                                            tracking: [String: Any]? = ["src": "email"]) {
@@ -120,8 +113,6 @@ final class SuperBoardManagerTests: XCTestCase {
         }
     }
 
-    /// Authenticates a TestableSuperBoardManager and waits for completion.
-    /// Returns the manager ready for further operations.
     @discardableResult
     private func authenticateAndWait(_ manager: TestableSuperBoardManager,
                                      file: StaticString = #filePath,
@@ -135,8 +126,6 @@ final class SuperBoardManagerTests: XCTestCase {
         wait(for: [exp], timeout: 5)
         return manager
     }
-
-    // MARK: - Identifier / Attributes / Push Token
 
     func testIdentifierStoresInContext() {
         let manager = makeManager()
@@ -164,8 +153,6 @@ final class SuperBoardManagerTests: XCTestCase {
         XCTAssertEqual(manager.pushToken, "abc-token")
         XCTAssertEqual(Context.pushToken, "abc-token")
     }
-
-    // MARK: - setEnabled / generateLink
 
     func testGenerateLinkReturnsNilWhenDisabled() {
         let manager = makeManager()
@@ -195,8 +182,6 @@ final class SuperBoardManagerTests: XCTestCase {
         wait(for: [exp], timeout: 2)
     }
 
-    // MARK: - authenticate
-
     func testAuthenticateFailsWithoutURISchemes() {
         let manager = makeManager()
 
@@ -213,8 +198,6 @@ final class SuperBoardManagerTests: XCTestCase {
         XCTAssertFalse(manager.hasURISchemesConfigured(),
                        "Test bundle should not have CFBundleURLTypes")
     }
-
-    // MARK: - Authenticated happy path
 
     func testAuthenticateSucceedsWithTestableManager() {
         let manager = makeTestableManager()
@@ -274,15 +257,12 @@ final class SuperBoardManagerTests: XCTestCase {
         }
     }
 
-    // MARK: - Deep Link / URL Handling
-
     func testHandleAppDelegateOpenURLCallsDelegateWithPayload() {
         let spy = SpyDelegate()
         let manager = makeTestableManager(delegate: spy)
         setupAuthenticationHandlers()
         authenticateAndWait(manager)
 
-        // Now set up the URL payload handler and wire the spy expectation
         setupPayloadForURLHandler()
         let exp = expectation(description: "delegate called with URL payload")
         spy.payloadExpectation = exp
@@ -336,12 +316,10 @@ final class SuperBoardManagerTests: XCTestCase {
         setupAuthenticationHandlers()
         setupPayloadForURLHandler()
 
-        // Wire spy to fulfill when the URL payload arrives
         let exp = expectation(description: "URL payload received")
         exp.assertForOverFulfill = false
         spy.payloadExpectation = exp
 
-        // Call handleAppDelegate BEFORE auth — URL should be stored for later
         _ = manager.handleAppDelegate(open: URL(string: "testapp://pending")!, options: [:])
 
         authenticateAndWait(manager)
@@ -360,7 +338,6 @@ final class SuperBoardManagerTests: XCTestCase {
         setupPayloadForURLHandler()
         manager.setEnabled(false)
 
-        // Wire spy to detect any call — should NOT fire
         let exp = expectation(description: "delegate NOT called for disabled SDK")
         exp.isInverted = true
         spy.payloadExpectation = exp
@@ -388,8 +365,6 @@ final class SuperBoardManagerTests: XCTestCase {
         wait(for: [exp], timeout: 10)
         XCTAssertEqual(spy.receivedPayloads.last?.link, "https://app.link/xyz")
     }
-
-    // MARK: - Authentication Context Behavior
 
     func testAuthSetsContextIdentifierWhenNotManuallySet() {
         let manager = makeTestableManager()
@@ -427,22 +402,18 @@ final class SuperBoardManagerTests: XCTestCase {
         XCTAssertTrue(MockURLProtocol.requestedPaths.contains("/v1/communication/notifications_to_display_automatically"))
     }
 
-    // MARK: - Edge Cases
-
     func testPayloadWithNilDataAndNilLinkDoesNotCallDelegate() {
         let spy = SpyDelegate()
         let manager = makeTestableManager(delegate: spy)
         setupAuthenticationHandlers(payloadData: ["status": "ok"])
         authenticateAndWait(manager)
 
-        // URL handler returns empty payload (no data/link/tracking)
         MockURLProtocol.requestHandlers["/v1/acquisition/data_for_device_and_url"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let data = try JSONSerialization.data(withJSONObject: [:])
             return (response, data)
         }
 
-        // Wire spy — should NOT fire because both link and payload are nil
         let exp = expectation(description: "delegate NOT called for empty payload")
         exp.isInverted = true
         spy.payloadExpectation = exp
@@ -456,7 +427,6 @@ final class SuperBoardManagerTests: XCTestCase {
         let manager = makeTestableManager()
         setupDefaultHandlers()
 
-        // First auth fails
         MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             return (response, nil)
@@ -469,7 +439,6 @@ final class SuperBoardManagerTests: XCTestCase {
         }
         wait(for: [failExp], timeout: 5)
 
-        // Queue generateLink AFTER first auth fails
         let linkExp = expectation(description: "queued generateLink fires after retry")
         manager.generateLink(title: "Retry", subtitle: nil, imageURL: nil,
                              data: nil, tags: nil, customRedirects: nil,
@@ -478,7 +447,6 @@ final class SuperBoardManagerTests: XCTestCase {
             linkExp.fulfill()
         }
 
-        // Set up success handlers and retry
         setupAuthenticationHandlers()
         MockURLProtocol.requestHandlers["/v1/acquisition/create_link"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
@@ -495,13 +463,10 @@ final class SuperBoardManagerTests: XCTestCase {
         wait(for: [retryExp, linkExp], timeout: 10)
     }
 
-    // MARK: - Action queue cap
-
     func testActionQueueEvictsOldestWhenFull() {
         let manager = makeTestableManager()
 
         var evictedCount = 0
-        // Queue 1001 actions (cap is 1000) — the first should be evicted
         for i in 0..<1001 {
             manager.generateLink(title: "Link \(i)", subtitle: nil, imageURL: nil,
                                  data: nil, tags: nil, customRedirects: nil,
@@ -512,17 +477,13 @@ final class SuperBoardManagerTests: XCTestCase {
             }
         }
 
-        // The 1st action should have been evicted (failureBlock called with nil)
         XCTAssertEqual(evictedCount, 1,
                        "Oldest action should be evicted when queue exceeds cap")
     }
 
-    // MARK: - Auth failure drains action queue
-
     func testFailedAuthCallsFailureBlockOnQueuedGenerateLink() {
         let manager = makeTestableManager()
 
-        // Queue a generateLink action before auth
         let linkExp = expectation(description: "generateLink failure")
         manager.generateLink(title: "Test", subtitle: nil, imageURL: nil,
                              data: nil, tags: nil, customRedirects: nil,
@@ -531,7 +492,6 @@ final class SuperBoardManagerTests: XCTestCase {
             linkExp.fulfill()
         }
 
-        // Auth fails (500 on authenticate endpoint)
         MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             return (response, nil)
@@ -549,7 +509,6 @@ final class SuperBoardManagerTests: XCTestCase {
     func testFailedAuthClearsActionQueue() {
         let manager = makeTestableManager()
 
-        // Queue two actions
         let exp1 = expectation(description: "action 1 failure")
         manager.generateLink(title: "A", subtitle: nil, imageURL: nil,
                              data: nil, tags: nil, customRedirects: nil,
@@ -564,7 +523,6 @@ final class SuperBoardManagerTests: XCTestCase {
             exp2.fulfill()
         }
 
-        // Fail auth
         MockURLProtocol.requestHandlers["/v1/data/authenticate"] = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             return (response, nil)
@@ -578,7 +536,6 @@ final class SuperBoardManagerTests: XCTestCase {
 
         wait(for: [authExp, exp1, exp2], timeout: 5)
 
-        // Now succeed auth — old actions should NOT re-fire
         setupAuthenticationHandlers()
         MockURLProtocol.requestHandlers["/v1/acquisition/create_link"] = { request in
             XCTFail("Old generateLink action should not re-fire after failed auth cleared the queue")
@@ -639,8 +596,6 @@ final class SuperBoardManagerTests: XCTestCase {
 
         wait(for: [authExp, displayExp], timeout: 5)
     }
-
-    // MARK: - Notifications
 
     func testGetNotificationsWorksAfterAuthentication() {
         let manager = makeTestableManager()

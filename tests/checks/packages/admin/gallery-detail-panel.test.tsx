@@ -1,10 +1,3 @@
-/**
- * GalleryDetailPanel tests: thumbnail selection, caption editing, removal,
- * and the `nodeKey`-keyed resync effect (code-review finding #4 — the panel
- * must not clobber in-progress local edits when a parent re-renders with a
- * new `attributes` object identity for the SAME gallery node, but must reset
- * when the sidebar switches to a DIFFERENT gallery node).
- */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -95,7 +88,6 @@ describe("GalleryDetailPanel", () => {
 		const attributes: PanelAttrs = { images: threeImages(), columns: 3, nodeKey: "10" };
 		const screen = await renderPanel({ attributes });
 
-		// No settings card until a thumbnail is selected.
 		expect(screen.getByLabelText("Alt text").query()).toBeNull();
 
 		const thumb = screen.getByRole("img", { name: "Image Two" });
@@ -133,7 +125,6 @@ describe("GalleryDetailPanel", () => {
 		const lastCall = onUpdate.mock.calls.at(-1)![0] as Partial<GalleryAttributes>;
 		const patchedImages = lastCall.images!;
 		expect(patchedImages.find((img) => img._key === "img1")?.caption).toBe("New caption");
-		// Other images are untouched.
 		expect(patchedImages.find((img) => img._key === "img2")?.caption).toBeUndefined();
 	});
 
@@ -160,15 +151,11 @@ describe("GalleryDetailPanel", () => {
 		const attributes: PanelAttrs = { images: threeImages(), columns: 3, nodeKey: "10" };
 		const screen = await renderPanel({ attributes, onUpdate });
 
-		// Local edit: remove the second image.
 		const removeBtn = screen.getByRole("button", { name: "Remove image 2" });
 		await expect.element(removeBtn).toBeInTheDocument();
 		removeBtn.element().click();
 		await vi.waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
 
-		// Re-render with a brand-new `attributes` object (new identity) but the
-		// SAME nodeKey and the ORIGINAL (stale, unedited) images — simulating a
-		// parent re-wrapping attrs without the sidebar having switched nodes.
 		const staleAttrs: PanelAttrs = { images: threeImages(), columns: 3, nodeKey: "10" };
 		await screen.rerender(
 			<QueryWrapper>
@@ -182,7 +169,6 @@ describe("GalleryDetailPanel", () => {
 			</QueryWrapper>,
 		);
 
-		// The removed image must still be gone — local state was not clobbered.
 		expect(screen.getByRole("img", { name: "Image Two" }).query()).toBeNull();
 		await expect.element(screen.getByRole("img", { name: "Image One" })).toBeInTheDocument();
 		await expect.element(screen.getByRole("img", { name: "Image Three" })).toBeInTheDocument();
@@ -193,14 +179,12 @@ describe("GalleryDetailPanel", () => {
 		const attributes: PanelAttrs = { images: threeImages(), columns: 3, nodeKey: "10" };
 		const screen = await renderPanel({ attributes, onUpdate });
 
-		// Local edit: remove the second image.
 		const removeBtn = screen.getByRole("button", { name: "Remove image 2" });
 		await expect.element(removeBtn).toBeInTheDocument();
 		removeBtn.element().click();
 		await vi.waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
 		expect(screen.getByRole("img", { name: "Image Two" }).query()).toBeNull();
 
-		// Re-render for a DIFFERENT gallery node (different nodeKey, fresh images).
 		const otherNodeImages: GalleryImage[] = [
 			makeImage({
 				_key: "other1",
@@ -221,8 +205,6 @@ describe("GalleryDetailPanel", () => {
 			</QueryWrapper>,
 		);
 
-		// The panel now reflects the new node's images — the previous node's
-		// edited state is gone, replaced with the new node's snapshot.
 		await expect.element(screen.getByRole("img", { name: "Other Image" })).toBeInTheDocument();
 		expect(screen.getByRole("img", { name: "Image One" }).query()).toBeNull();
 		expect(screen.getByRole("img", { name: "Image Three" }).query()).toBeNull();

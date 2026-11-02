@@ -27,15 +27,10 @@ const SOCIAL_LABELS: Record<string, string> = {
 export const SOCIAL_NETWORKS = Object.keys(SOCIAL_LABELS);
 export const socialLabel = (network: string) => SOCIAL_LABELS[network] ?? network;
 
-/** Theme colors and font only: the Studio "apply brand" action keeps the content. */
 export function applyBrandTheme(design: EmailDesign, brand: BrandKit): EmailDesign {
 	return { ...design, theme: { ...design.theme, ...brand.colors, font: brand.font } };
 }
 
-/**
- * Brand defaults for a new email: theme, a logo header and a footer with the
- * company details and social links. Every block stays editable afterwards.
- */
 export function applyBrandKit(design: EmailDesign, brand: BrandKit): EmailDesign {
 	const next = applyBrandTheme(structuredClone(design), brand);
 	const footerLines = [brand.company_name, brand.footer_text, brand.company_address].filter(
@@ -81,7 +76,6 @@ export function applyBrandKit(design: EmailDesign, brand: BrandKit): EmailDesign
 						font_size: 12,
 					})),
 				];
-		// The footer goes before the unsubscribe divider when the template has one.
 		const divider = blocks.findIndex((block) => block.id === "footer-divider");
 		const at = divider === -1 ? blocks.length : divider;
 		translation.blocks = [...header, ...blocks.slice(0, at), ...footer, ...blocks.slice(at)];

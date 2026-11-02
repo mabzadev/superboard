@@ -13,7 +13,7 @@ describeEachDialect("Content references schema", (dialect) => {
 	let ctx: DialectTestContext;
 
 	beforeEach(async () => {
-		ctx = await setupForDialect(dialect); // runs all migrations
+		ctx = await setupForDialect(dialect);
 	});
 
 	afterEach(async () => {
@@ -59,7 +59,7 @@ describeEachDialect("Content references schema", (dialect) => {
 			.selectAll()
 			.where("name", "=", "manages")
 			.executeTakeFirstOrThrow();
-		expect(rel.locale).toBe("en"); // default locale backfill
+		expect(rel.locale).toBe("en");
 		expect(rel.child_collection).toBe("employees");
 
 		const edge = await ctx.db
@@ -68,7 +68,7 @@ describeEachDialect("Content references schema", (dialect) => {
 			.where("id", "=", "ref_1")
 			.executeTakeFirstOrThrow();
 		expect(edge.relation_group).toBe("rel_manages");
-		expect(edge.sort_order).toBe(0); // default
+		expect(edge.sort_order).toBe(0);
 	});
 
 	it("rejects a duplicate edge (same relation, parent, child)", async () => {
@@ -100,7 +100,6 @@ describeEachDialect("Content references schema", (dialect) => {
 			.values({ id: "r_en", locale: "en", ...base })
 			.execute();
 
-		// Same (name, locale) -> rejected
 		await expect(
 			ctx.db
 				.insertInto("_emdash_relations")
@@ -108,7 +107,6 @@ describeEachDialect("Content references schema", (dialect) => {
 				.execute(),
 		).rejects.toThrow();
 
-		// Same name, different locale -> allowed
 		await ctx.db
 			.insertInto("_emdash_relations")
 			.values({
@@ -142,8 +140,6 @@ describeEachDialect("Content references schema", (dialect) => {
 			.values({ id: "g_en", name: "manages", locale: "en", ...base })
 			.execute();
 
-		// Same (translation_group, locale) -> rejected by the partial unique,
-		// even though `name` differs.
 		await expect(
 			ctx.db
 				.insertInto("_emdash_relations")
@@ -151,7 +147,6 @@ describeEachDialect("Content references schema", (dialect) => {
 				.execute(),
 		).rejects.toThrow();
 
-		// Same translation_group, different locale -> allowed.
 		await ctx.db
 			.insertInto("_emdash_relations")
 			.values({ id: "g_fr", name: "gere", locale: "fr", ...base })
@@ -166,9 +161,6 @@ describeEachDialect("Content references schema", (dialect) => {
 	});
 
 	it("rejects a relation with a null translation_group", async () => {
-		// translation_group is NOT NULL: a relation must be addressable by edges
-		// (`_emdash_content_references.relation_group` is NOT NULL), so a null
-		// group would be an unreferenceable, dead row.
 		await expect(
 			ctx.db
 				.insertInto("_emdash_relations")
@@ -187,7 +179,6 @@ describeEachDialect("Content references schema", (dialect) => {
 	});
 
 	it("forward and backlink traversal return the expected rows", async () => {
-		// Parent p1 references children c1, c2 (ordered); p2 also references c1.
 		await ctx.db
 			.insertInto("_emdash_content_references")
 			.values([
@@ -197,7 +188,6 @@ describeEachDialect("Content references schema", (dialect) => {
 			])
 			.execute();
 
-		// Forward: p1's children for relation r1, ordered.
 		const children = await ctx.db
 			.selectFrom("_emdash_content_references")
 			.select("child_group")
@@ -207,7 +197,6 @@ describeEachDialect("Content references schema", (dialect) => {
 			.execute();
 		expect(children.map((r) => r.child_group)).toEqual(["c1", "c2"]);
 
-		// Backlink: who references c1 (any parent) for relation r1.
 		const parents = await ctx.db
 			.selectFrom("_emdash_content_references")
 			.select("parent_group")
@@ -219,7 +208,6 @@ describeEachDialect("Content references schema", (dialect) => {
 	});
 
 	it("allows same-collection and self references", async () => {
-		// Self reference: parent_group === child_group is permitted.
 		await ctx.db
 			.insertInto("_emdash_content_references")
 			.values({ id: "self1", relation_group: "r1", parent_group: "x1", child_group: "x1" })
@@ -234,7 +222,7 @@ describeEachDialect("Content references schema", (dialect) => {
 	});
 
 	it("creates the expected indexes (sqlite)", async () => {
-		if (ctx.dialect !== "sqlite") return; // index introspection is dialect-specific
+		if (ctx.dialect !== "sqlite") return;
 
 		const result = await sql<{ name: string }>`
 			SELECT name FROM sqlite_master WHERE type = 'index'
@@ -261,11 +249,9 @@ describeEachDialect("Content references schema", (dialect) => {
 
 		await down(ctx.db);
 
-		// Tables gone: a raw query against them should reject.
 		await expect(sql`SELECT 1 FROM _emdash_content_references`.execute(ctx.db)).rejects.toThrow();
 		await expect(sql`SELECT 1 FROM _emdash_relations`.execute(ctx.db)).rejects.toThrow();
 
-		// Re-applying up() restores them.
 		await up(ctx.db);
 		const rows = await ctx.db.selectFrom("_emdash_relations").selectAll().execute();
 		expect(Array.isArray(rows)).toBe(true);

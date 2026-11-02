@@ -1,12 +1,4 @@
 ---
-/**
- * Portable Text Gallery block component
- *
- * Renders image galleries from WordPress imports and EmDash media.
- * Uses the provider's getEmbed/getSrc functions for external media (mirrors
- * Image.astro), falling back to Astro's Image component when dimensions are
- * available for locally-stored media.
- */
 import { Image as AstroImage } from "astro:assets";
 import type { ImageEmbed } from "../media/types.js";
 import { getMediaProvider } from "../media/provider-loader.js";
@@ -25,7 +17,6 @@ export interface Props {
 			asset: {
 				_ref: string;
 				url?: string;
-				/** Provider ID for external media (e.g., "cloudflare-images") */
 				provider?: string;
 			};
 			alt?: string;
@@ -34,20 +25,14 @@ export interface Props {
 			height?: number;
 			focalX?: number;
 			focalY?: number;
-			/** LQIP blurhash placeholder (images only) */
 			blurhash?: string;
-			/** LQIP dominant-color placeholder, as a CSS color (images only) */
 			dominantColor?: string;
 		}>;
 		columns?: number;
 	};
-	/** Render the LQIP placeholder as an inline background. Disable for strict CSP. */
 	placeholder?: boolean;
 }
 
-/**
- * Generate srcset using provider's getSrc function
- */
 function generateSrcset(
 	getSrc: NonNullable<ImageEmbed["getSrc"]>,
 	maxWidth: number,
@@ -69,8 +54,6 @@ if (!images.length) {
 	return null;
 }
 
-// Resolve provider embeds up front (async), keeping the template's `.map()`
-// synchronous over the resolved data — mirrors Image.astro's per-image logic.
 const resolvedImages = await Promise.all(
 	images.map(async (image) => {
 		const { asset, alt = "", width, height } = image;
@@ -111,10 +94,6 @@ const resolvedImages = await Promise.all(
 			}
 		}
 
-		// Fallback for local provider. `asset.url` carries the storage key with
-		// extension when present; `asset._ref` is a bare ULID that only the
-		// internal `/file/{id}` route can resolve. `buildRenderMediaUrl` picks
-		// the right shape.
 		if (!src) {
 			src = buildRenderMediaUrl(Astro.locals.emdash?.getPublicMediaUrl, {
 				url: asset.url,
@@ -128,8 +107,6 @@ const resolvedImages = await Promise.all(
 			}
 		}
 
-		// Prefer blurhash over dominant color for the LQIP placeholder, like
-		// Image.astro.
 		let placeholderStyle = "";
 		if (placeholder && image.blurhash) {
 			const { blurhashToImageCssString } = await import("@unpic/placeholder");

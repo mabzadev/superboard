@@ -1,9 +1,3 @@
-/**
- * User disable endpoint
- *
- * POST /_emdash/api/admin/users/:id/disable - Soft-disable a user
- */
-
 import { Role } from "@emdash-cms/auth";
 import { createKyselyAdapter } from "@emdash-cms/auth/adapters/kysely";
 import type { APIRoute } from "astro";
@@ -32,20 +26,16 @@ export const POST: APIRoute = async ({ params, locals }) => {
 		return apiError("VALIDATION_ERROR", "User ID required", 400);
 	}
 
-	// Prevent disabling self
 	if (id === currentUser.id) {
 		return apiError("VALIDATION_ERROR", "Cannot disable your own account", 400);
 	}
 
 	try {
-		// Get target user
 		const targetUser = await adapter.getUserById(id);
 		if (!targetUser) {
 			return apiError("NOT_FOUND", "User not found", 404);
 		}
 
-		// Wrap admin check + disable in a transaction to prevent two
-		// concurrent requests from both passing the count check.
 		const lastAdminBlocked = await withTransaction(emdash.db, async (trx) => {
 			const trxAdapter = createKyselyAdapter(trx);
 			if (targetUser.role === Role.ADMIN) {
@@ -64,8 +54,6 @@ export const POST: APIRoute = async ({ params, locals }) => {
 			);
 		}
 
-		// SEC-43: Revoke all OAuth tokens for the disabled user.
-		// Without this, existing refresh tokens remain valid for up to 90 days.
 		await emdash.db.deleteFrom("_emdash_oauth_tokens").where("user_id", "=", id).execute();
 
 		return apiSuccess({ success: true });

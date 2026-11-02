@@ -1,51 +1,10 @@
-/**
- * Hang guard for D1 Sessions API databases.
- *
- * With the `global_fetch_strictly_public` compatibility flag set, the
- * internal request the D1 Sessions API makes to route queries to read
- * replicas is silently blocked by the runtime's fetch-isolation policy:
- * every query issued through `withSession()` hangs until the Worker is
- * killed, with no error logged (`outcome: "canceled"`, empty exceptions).
- * See https://github.com/emdash-cms/emdash/issues/1273.
- *
- * The guard races session queries against a timeout while the session
- * transport's health is unknown (i.e. until the first query settles in this
- * isolate). On a hang it:
- *
- * - latches the isolate as "broken" and logs one descriptive error,
- * - transparently re-executes plain SELECTs on the direct (non-session)
- *   binding — reads are idempotent, so a late completion of the hung call
- *   is harmless,
- * - rejects anything else with a descriptive error rather than silently
- *   re-running a write that might still complete.
- *
- * Once latched, `createRequestScopedDb` skips sessions entirely for the
- * rest of the isolate's life, so only requests already holding a session
- * db pay the timeout. Once a query settles (success or SQL error — either
- * proves the transport round-trips), the guard steps aside and queries
- * pass through with zero overhead.
- */
-
-/**
- * How long a session query may stay unsettled before the guard declares the
- * session transport broken. D1 queries normally settle in tens of
- * milliseconds; five seconds is far beyond any healthy p99 while still an
- * order of magnitude quicker than waiting for the Worker to be killed.
- * Only queries issued while health is still "unknown" are raced at all.
- */
 const SESSION_HANG_TIMEOUT_MS = 5_000;
 
-/**
- * Statements safe to re-execute after a timeout: plain SELECTs. Same
- * conservative pattern as the coalescing driver — `WITH` is excluded
- * because SQLite allows CTEs on writes.
- */
 const SELECT_PATTERN = /^select\b/i;
 
 type SessionHealth = "unknown" | "healthy" | "broken";
 
 interface StatementMeta {
-	/** The real session-bound statement. */
 	statement: D1PreparedStatement;
 	sql: string;
 	params: unknown[];
@@ -53,10 +12,6 @@ interface StatementMeta {
 
 type RaceOutcome<T> = { timedOut: false; value: T } | { timedOut: true };
 
-/**
- * Race a promise against a timeout. Rejections propagate to the caller;
- * the timer is always cleared so it can't keep the isolate alive.
- */
 async function raceTimeout<T>(promise: Promise<T>, ms: number): Promise<RaceOutcome<T>> {
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	try {
@@ -72,30 +27,12 @@ async function raceTimeout<T>(promise: Promise<T>, ms: number): Promise<RaceOutc
 }
 
 export interface D1SessionGuard {
-	/**
-	 * True once a session query has hung past the timeout in this isolate.
-	 * `createRequestScopedDb` checks this to skip sessions for subsequent
-	 * requests.
-	 */
 	isBroken(): boolean;
-	/**
-	 * Wrap a session-backed database so its queries are hang-guarded.
-	 * `fallback` is the raw (non-session) binding used to re-execute reads
-	 * after a hang.
-	 */
 	wrap(session: D1Database, fallback: D1Database): D1Database;
 }
 
-/**
- * Create a guard. One instance per isolate (stored on globalThis behind
- * a Symbol.for key in d1.ts, since Vite may duplicate this module across
- * SSR chunks); tests create their own with a short timeout.
- */
 export function createD1SessionGuard(timeoutMs: number = SESSION_HANG_TIMEOUT_MS): D1SessionGuard {
 	let health: SessionHealth = "unknown";
-	// Meta for statements produced by wrapped `prepare()`/`bind()`, so
-	// `batch()` can unwrap them for the session call and rebuild them on the
-	// fallback binding after a hang.
 	const statementMeta = new WeakMap<D1PreparedStatement, StatementMeta>();
 
 	function markBroken(): void {
@@ -113,9 +50,6 @@ export function createD1SessionGuard(timeoutMs: number = SESSION_HANG_TIMEOUT_MS
 	}
 
 	function markHealthy(): void {
-		// A settled query (even a SQL error) proves the session transport
-		// round-trips. Never un-latch "broken": requests created before the
-		// latch may still race, and a late success must not re-enable sessions.
 		if (health === "unknown") health = "healthy";
 	}
 
@@ -129,10 +63,6 @@ export function createD1SessionGuard(timeoutMs: number = SESSION_HANG_TIMEOUT_MS
 		);
 	}
 
-	/**
-	 * Execute `run` against the session statement, hang-guarded. On timeout,
-	 * SELECTs are re-executed on the fallback binding; anything else rejects.
-	 */
 	async function guardedExec<T>(
 		meta: StatementMeta,
 		fallback: D1Database,
@@ -140,9 +70,6 @@ export function createD1SessionGuard(timeoutMs: number = SESSION_HANG_TIMEOUT_MS
 	): Promise<T> {
 		if (health === "healthy") return run(meta.statement);
 		if (health === "broken") {
-			// The transport is already latched broken (a request created before
-			// the latch may still hold this wrapped db). Don't pay the timeout
-			// again per query — go straight to the fallback / rejection.
 			if (!SELECT_PATTERN.test(meta.sql.trim())) rejectAbandonedWrite();
 			return run(fallback.prepare(meta.sql).bind(...meta.params));
 		}
@@ -159,8 +86,6 @@ export function createD1SessionGuard(timeoutMs: number = SESSION_HANG_TIMEOUT_MS
 			return outcome.value;
 		}
 		markBroken();
-		// The hung call may still settle long after we've moved on; swallow it
-		// so a late rejection doesn't surface as an unhandled rejection.
 		sessionCall.catch(() => undefined);
 		if (!SELECT_PATTERN.test(meta.sql.trim())) rejectAbandonedWrite();
 		return run(fallback.prepare(meta.sql).bind(...meta.params));
@@ -206,15 +131,10 @@ export function createD1SessionGuard(timeoutMs: number = SESSION_HANG_TIMEOUT_MS
 				return wrapStatement({ statement: session.prepare(sql), sql, params: [] }, fallback);
 			},
 			async batch<T>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]> {
-				// Unwrap to the real session statements; statements not produced
-				// by this guard (shouldn't happen) pass through untouched.
 				const metas = statements.map(
 					(statement) =>
 						statementMeta.get(statement) ?? { statement, sql: "", params: [] as unknown[] },
 				);
-				// The coalescing driver only ever batches plain SELECTs, but
-				// verify before re-running: a batch containing a write must not
-				// execute twice.
 				function fallbackBatch(): Promise<D1Result<T>[]> {
 					if (!metas.every((meta) => SELECT_PATTERN.test(meta.sql.trim()))) {
 						throw new Error(
@@ -230,9 +150,6 @@ export function createD1SessionGuard(timeoutMs: number = SESSION_HANG_TIMEOUT_MS
 				}
 				const sessionStatements = metas.map((meta) => meta.statement);
 				if (health === "healthy") return session.batch<T>(sessionStatements);
-				// Already latched broken (a request created before the latch may
-				// still hold this wrapped db): skip the race, don't pay the
-				// timeout again.
 				if (health === "broken") return fallbackBatch();
 				const sessionCall = session.batch<T>(sessionStatements);
 				let outcome: RaceOutcome<D1Result<T>[]>;

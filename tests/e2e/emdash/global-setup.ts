@@ -1,11 +1,3 @@
-/**
- * Playwright global setup.
- *
- * Starts an isolated Astro dev server from the minimal e2e fixture,
- * runs dev-bypass setup, and seeds test data. Writes server info
- * to a temp file so tests and teardown can find it.
- */
-
 import { execFile, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -51,12 +43,7 @@ const PORT = 4444;
 const MARKETPLACE_PORT = 4445;
 const SERVER_INFO_PATH = join(tmpdir(), "emdash-pw-server.json");
 
-// Regex patterns
 const COOKIE_VALUE_PATTERN = /^([^;]+)/;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 async function ensureBuilt(): Promise<void> {
 	if (existsSync(CLI_BINARY)) return;
@@ -75,12 +62,6 @@ async function ensureFixtureDepsBuilt(): Promise<void> {
 	console.log("[pw] Fixture deps built.");
 }
 
-/**
- * Poll an endpoint until it returns a 2xx. We gate on a real success rather
- * than "server responding" because the dev server's Vite dep optimizer 500s on
- * cold start until it finishes pre-bundling -- pronounced under the Cloudflare
- * (workerd) runner, where the first requests fail with optimize-deps errors.
- */
 async function waitForOk(url: string, timeoutMs: number, token?: string): Promise<Response> {
 	const start = Date.now();
 	let lastStatus = 0;
@@ -92,19 +73,13 @@ async function waitForOk(url: string, timeoutMs: number, token?: string): Promis
 			if (res.ok) return res;
 			lastStatus = res.status;
 			lastBody = await res.text().catch(() => "");
-		} catch {
-			// Server/optimizer not ready yet
-		}
+		} catch {}
 		await new Promise((r) => setTimeout(r, 1000));
 	}
 	throw new Error(
 		`${url} did not return ok within ${timeoutMs}ms (last ${lastStatus}): ${lastBody.slice(0, 300)}`,
 	);
 }
-
-// ---------------------------------------------------------------------------
-// Seed data
-// ---------------------------------------------------------------------------
 
 async function apiPost(baseUrl: string, token: string, path: string, body: unknown): Promise<any> {
 	const res = await fetch(`${baseUrl}${path}`, {
@@ -169,11 +144,6 @@ async function apiGet(baseUrl: string, token: string, path: string): Promise<any
 	return json.data ?? json;
 }
 
-/**
- * Resolve seeded entries to their ids, in the order of `slugs`. The list GET
- * also warms the content route's module graph, so the media/image POSTs that
- * follow don't race the dev runner's optimizer on a cold route.
- */
 async function idsBySlug(
 	baseUrl: string,
 	token: string,
@@ -201,9 +171,6 @@ async function seedTestData(
 	const collections: string[] = ["posts", "pages"];
 	const mediaIds: Record<string, string> = {};
 
-	// Collections, fields, taxonomies, sections, and the plain posts/pages are
-	// seeded server-side from the fixture's .emdash/seed.json during dev-bypass.
-	// Resolve their ids by slug (the list GETs also warm the content routes).
 	const postIds = await idsBySlug(baseUrl, token, "posts", [
 		"first-post",
 		"second-post",
@@ -211,8 +178,6 @@ async function seedTestData(
 	]);
 	const pageIds = await idsBySlug(baseUrl, token, "pages", ["about", "contact"]);
 
-	// The image post needs real bytes in storage, so it stays an API flow. The
-	// content route is already warm from the GET above.
 	const testImagePath = join(ROOT, "tests/fixtures/emdash-browser/assets/test-image.png");
 	const media = await apiUploadMedia(baseUrl, token, testImagePath, "test-image.png", "image/png");
 	mediaIds["testImage"] = media.id;
@@ -284,25 +249,18 @@ async function seedTestData(
 	};
 }
 
-// ---------------------------------------------------------------------------
 // Global setup
-// ---------------------------------------------------------------------------
 
 export default async function globalSetup(): Promise<void> {
 	await ensureBuilt();
 	await ensureFixtureDepsBuilt();
 
-	// 0. Start mock marketplace server
 	const { startMockMarketplace } =
 		await import("../../fixtures/emdash-browser/mock-marketplace.js");
 	const marketplaceServer = await startMockMarketplace(MARKETPLACE_PORT);
 	const marketplaceUrl = `http://127.0.0.1:${MARKETPLACE_PORT}`;
 	console.log(`[pw] Mock marketplace ready at ${marketplaceUrl}`);
 
-	// 1. Run the fixture in-place to avoid Astro beta CSS virtual module
-	// resolution bugs with symlinked temp dirs. Use a temp directory only for
-	// the database — source files stay at their real paths so Astro's virtual
-	// module resolver can find the compile metadata.
 	const workDir = FIXTURE_DIR;
 	const tempDataDir = mkdtempSync(join(tmpdir(), "emdash-pw-"));
 	const dbPath = join(tempDataDir, "test.db");
@@ -311,14 +269,10 @@ export default async function globalSetup(): Promise<void> {
 
 	const baseUrl = `http://localhost:${PORT}`;
 
-	// Cloudflare target: start from fresh miniflare D1/R2 state each run so the
-	// fixture's seed isn't duplicated across runs (the Node target gets this for
-	// free via its per-run temp database).
 	if (!TARGET.usesTempDb) {
 		rmSync(join(FIXTURE_DIR, ".wrangler"), { recursive: true, force: true });
 	}
 
-	// 2. Start dev server (with marketplace URL injected via env)
 	const astroBin = join(fixtureNodeModules, ".bin", "astro");
 	const server = spawn(astroBin, ["dev", "--port", String(PORT)], {
 		cwd: workDir,
@@ -339,9 +293,6 @@ export default async function globalSetup(): Promise<void> {
 	});
 
 	try {
-		// Dev-bypass token creation is not idempotent: each call drops the named
-		// PAT and mints a new one. Poll the read-only status endpoint first, then
-		// call dev-bypass exactly once.
 		console.log("[pw] Waiting for server + setup...");
 		await waitForOk(`${baseUrl}/_emdash/api/setup/status`, 120_000);
 		const setupRes = await fetch(`${baseUrl}/_emdash/api/setup/dev-bypass?token=1`, {
@@ -363,28 +314,20 @@ export default async function globalSetup(): Promise<void> {
 			if (match) sessionCookie = match[1]!;
 		}
 
-		// 5. Seed test data
 		console.log("[pw] Seeding test data...");
 		const seed = await seedTestData(baseUrl, token);
 
-		// 5b. Warm up pages that use emdash/ui (triggers Astro compilation of all
-		// component virtual modules, avoiding race conditions in tests)
 		console.log("[pw] Warming up pages...");
 		for (let attempt = 0; attempt < 3; attempt++) {
 			try {
 				const resp = await fetch(`${baseUrl}/posts/post-with-image`);
 				if (resp.ok) break;
-				// Retry on compilation errors — Astro may need multiple passes
 				await new Promise((r) => setTimeout(r, 1000));
 			} catch {
 				await new Promise((r) => setTimeout(r, 1000));
 			}
 		}
 
-		// 5c. Warm the admin's data routes so the SPA's first client-side fetches
-		// don't race the dev optimizer. On a slow CI runner the Cloudflare runner
-		// otherwise serves a cold 500 for these, rendering an empty admin and
-		// failing the first specs before the route finishes compiling.
 		console.log("[pw] Warming up admin API routes...");
 		for (const path of [
 			"/_emdash/api/schema/collections?includeFields=true",
@@ -393,7 +336,6 @@ export default async function globalSetup(): Promise<void> {
 			await waitForOk(`${baseUrl}${path}`, 60_000, token);
 		}
 
-		// 6. Write server info
 		const info = {
 			pid: server.pid!,
 			workDir,

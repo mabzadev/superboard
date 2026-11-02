@@ -1,21 +1,8 @@
-/**
- * Comments Moderation E2E Tests
- *
- * Tests the admin comment moderation inbox at /comments.
- * Seeds comments via the public API, then exercises the moderation UI:
- * page rendering, empty state, comment list, approve, and delete.
- */
-
 import type { APIRequestContext } from "@playwright/test";
 
 import { test, expect } from "../../fixtures/emdash-browser";
 
-// Regex patterns (e18e/prefer-static-regex)
 const PENDING_EMPTY_PATTERN = /no comments awaiting moderation/i;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function apiHeaders(token: string) {
 	return {
@@ -25,7 +12,6 @@ function apiHeaders(token: string) {
 	};
 }
 
-/** Seed an anonymous comment via the public API. */
 async function seedComment(
 	request: APIRequestContext,
 	baseUrl: string,
@@ -48,7 +34,6 @@ async function seedComment(
 	expect(json.data.status).toBe("pending");
 }
 
-/** Delete all comments currently in the admin inbox (best-effort cleanup). */
 async function cleanupComments(
 	page: import("@playwright/test").Page,
 	baseUrl: string,
@@ -76,10 +61,6 @@ async function cleanupComments(
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 test.describe("Comments Moderation", () => {
 	test.beforeEach(async ({ admin }) => {
 		await admin.devBypassAuth();
@@ -94,14 +75,12 @@ test.describe("Comments Moderation", () => {
 	});
 
 	test("shows empty state when no comments exist", async ({ admin, page, serverInfo }) => {
-		// Clean up any existing comments first
 		await cleanupComments(page, serverInfo.baseUrl, serverInfo.token);
 
 		await admin.goto("/comments");
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
-		// The "Pending" tab is active by default -- should show empty message
 		await expect(page.locator("td").filter({ hasText: PENDING_EMPTY_PATTERN })).toBeVisible({
 			timeout: 10000,
 		});
@@ -115,10 +94,8 @@ test.describe("Comments Moderation", () => {
 	}) => {
 		const postId = serverInfo.contentIds.posts[0]!;
 
-		// Clean slate
 		await cleanupComments(page, serverInfo.baseUrl, serverInfo.token);
 
-		// Seed two comments
 		await seedComment(anonymousRequest, serverInfo.baseUrl, postId, {
 			body: "First seeded comment",
 			authorName: "Alice Commenter",
@@ -134,19 +111,14 @@ test.describe("Comments Moderation", () => {
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
-		// Comments land as "pending" by default (moderation: first_time or all).
-		// The Pending tab is the default view, so we should see them.
-		// If the collection auto-approves, check the Approved tab instead.
 		const approvedTab = page.locator('[role="tab"]', { hasText: "Approved" });
 
-		// Try pending first -- if empty, check approved
 		let foundAlice = await page
 			.locator("text=Alice Commenter")
 			.isVisible({ timeout: 5000 })
 			.catch(() => false);
 
 		if (!foundAlice) {
-			// Comments may have been auto-approved
 			await approvedTab.click();
 			await admin.waitForLoading();
 			foundAlice = await page
@@ -155,7 +127,6 @@ test.describe("Comments Moderation", () => {
 				.catch(() => false);
 		}
 
-		// At least one comment should be visible with author name and body
 		expect(foundAlice).toBe(true);
 		await expect(page.locator("text=First seeded comment").first()).toBeVisible();
 		await expect(page.locator("text=Bob Commenter").first()).toBeVisible();
@@ -170,10 +141,8 @@ test.describe("Comments Moderation", () => {
 	}) => {
 		const postId = serverInfo.contentIds.posts[0]!;
 
-		// Clean slate
 		await cleanupComments(page, serverInfo.baseUrl, serverInfo.token);
 
-		// Seed a comment
 		await seedComment(anonymousRequest, serverInfo.baseUrl, postId, {
 			body: "Comment to approve",
 			authorName: "Approval Tester",
@@ -184,19 +153,16 @@ test.describe("Comments Moderation", () => {
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
-		// Ensure we're on the Pending tab
 		const pendingTab = page.locator('[role="tab"]', { hasText: "Pending" });
 		await pendingTab.click();
 		await admin.waitForLoading();
 
-		// If the comment was auto-approved, this test cannot proceed -- skip gracefully
 		const hasPendingComment = await page
 			.locator("text=Approval Tester")
 			.isVisible({ timeout: 5000 })
 			.catch(() => false);
 
 		if (!hasPendingComment) {
-			// Comment was auto-approved -- verify it's in the Approved tab instead
 			const approvedTab = page.locator('[role="tab"]', { hasText: "Approved" });
 			await approvedTab.click();
 			await admin.waitForLoading();
@@ -206,21 +172,17 @@ test.describe("Comments Moderation", () => {
 			return;
 		}
 
-		// Find the comment row and click the Approve button
 		const row = page.locator("tr", { hasText: "Approval Tester" });
 		const approveBtn = row.locator('button[aria-label="Approve"]');
 		await expect(approveBtn).toBeVisible({ timeout: 5000 });
 		await approveBtn.click();
 
-		// Wait for the mutation to settle
 		await admin.waitForLoading();
 
-		// The comment should disappear from the Pending tab
 		await expect(page.locator("tr", { hasText: "Approval Tester" })).not.toBeVisible({
 			timeout: 10000,
 		});
 
-		// Verify it moved to the Approved tab
 		const approvedTab = page.locator('[role="tab"]', { hasText: "Approved" });
 		await approvedTab.click();
 		await admin.waitForLoading();
@@ -238,10 +200,8 @@ test.describe("Comments Moderation", () => {
 	}) => {
 		const postId = serverInfo.contentIds.posts[0]!;
 
-		// Clean slate
 		await cleanupComments(page, serverInfo.baseUrl, serverInfo.token);
 
-		// Seed a comment
 		await seedComment(anonymousRequest, serverInfo.baseUrl, postId, {
 			body: "Comment to delete",
 			authorName: "Delete Tester",
@@ -252,7 +212,6 @@ test.describe("Comments Moderation", () => {
 		await admin.waitForShell();
 		await admin.waitForLoading();
 
-		// Find the comment -- could be in Pending or Approved
 		let commentVisible = await page
 			.locator("text=Delete Tester")
 			.isVisible({ timeout: 5000 })
@@ -270,39 +229,32 @@ test.describe("Comments Moderation", () => {
 
 		expect(commentVisible).toBe(true);
 
-		// The admin user should see the "Delete permanently" button
 		const row = page.locator("tr", { hasText: "Delete Tester" });
 		const deleteBtn = row.locator('button[aria-label="Delete permanently"]');
 
 		const hasDeleteBtn = await deleteBtn.isVisible({ timeout: 3000 }).catch(() => false);
 
 		if (!hasDeleteBtn) {
-			// Fallback: try the "Trash" button instead (non-admin role)
 			const trashBtn = row.locator('button[aria-label="Trash"]');
 			await expect(trashBtn).toBeVisible({ timeout: 3000 });
 			await trashBtn.click();
 			await admin.waitForLoading();
 
-			// Comment should disappear from the current tab
 			await expect(row).not.toBeVisible({ timeout: 10000 });
 			return;
 		}
 
-		// Click "Delete permanently" -- this opens a ConfirmDialog
 		await deleteBtn.click();
 
-		// Confirm deletion in the dialog
 		const dialog = page.locator('[role="dialog"]');
 		await expect(dialog).toBeVisible({ timeout: 5000 });
 		await expect(dialog.locator("text=Delete Comment")).toBeVisible();
 
 		await dialog.getByRole("button", { name: "Delete" }).click();
 
-		// Wait for dialog to close and comment to disappear
 		await expect(dialog).not.toBeVisible({ timeout: 10000 });
 		await admin.waitForLoading();
 
-		// Comment should be gone from all tabs
 		await expect(page.locator("text=Delete Tester")).not.toBeVisible({ timeout: 10000 });
 	});
 });

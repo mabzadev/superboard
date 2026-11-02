@@ -18,8 +18,6 @@ describe("RedirectRepository", () => {
 		await teardownTestDatabase(db);
 	});
 
-	// --- CRUD ---------------------------------------------------------------
-
 	describe("create", () => {
 		it("creates a redirect with defaults", async () => {
 			const redirect = await repo.create({
@@ -199,7 +197,6 @@ describe("RedirectRepository", () => {
 			expect(page2.items).toHaveLength(2);
 			expect(page2.nextCursor).toBeTruthy();
 
-			// Ensure no overlap
 			const page1Ids = new Set(page1.items.map((r) => r.id));
 			for (const item of page2.items) {
 				expect(page1Ids.has(item.id)).toBe(false);
@@ -255,17 +252,13 @@ describe("RedirectRepository", () => {
 				await repo.create({ source: `/s${i}`, destination: `/d${i}` });
 			}
 
-			// limit=0 should clamp to 1
 			const min = await repo.findMany({ limit: 0 });
 			expect(min.items.length).toBeLessThanOrEqual(1);
 
-			// limit=200 should clamp to 100
 			const max = await repo.findMany({ limit: 200 });
-			expect(max.items).toHaveLength(3); // only 3 exist
+			expect(max.items).toHaveLength(3);
 		});
 	});
-
-	// --- findAllEnabled -----------------------------------------------------
 
 	describe("findAllEnabled", () => {
 		it("returns only enabled redirects", async () => {
@@ -284,8 +277,6 @@ describe("RedirectRepository", () => {
 			expect(result).toHaveLength(0);
 		});
 	});
-
-	// --- Matching -----------------------------------------------------------
 
 	describe("matchPath", () => {
 		it("returns null when no redirects exist", async () => {
@@ -340,12 +331,9 @@ describe("RedirectRepository", () => {
 			const match = await repo.matchPath("/category/typescript");
 			expect(match!.resolvedDestination).toBe("/tags/typescript");
 
-			// Should not match multi-segment
 			expect(await repo.matchPath("/category/a/b")).toBeNull();
 		});
 	});
-
-	// --- Hit tracking -------------------------------------------------------
 
 	describe("recordHit", () => {
 		it("increments hit count and updates lastHitAt", async () => {
@@ -366,8 +354,6 @@ describe("RedirectRepository", () => {
 			expect(again!.hits).toBe(2);
 		});
 	});
-
-	// --- Auto-redirects -----------------------------------------------------
 
 	describe("createAutoRedirect", () => {
 		it("creates a redirect for slug change with url pattern", async () => {
@@ -394,51 +380,37 @@ describe("RedirectRepository", () => {
 		});
 
 		it("collapses existing chains", async () => {
-			// First rename: A -> B
 			await repo.createAutoRedirect("posts", "title-a", "title-b", "id1", "/blog/{slug}");
 
-			// Second rename: B -> C (should update A's destination to C)
 			await repo.createAutoRedirect("posts", "title-b", "title-c", "id1", "/blog/{slug}");
 
-			// Check that the A -> B redirect now points to C
 			const aRedirect = await repo.findBySource("/blog/title-a");
 			expect(aRedirect!.destination).toBe("/blog/title-c");
 
-			// And B -> C also exists
 			const bRedirect = await repo.findBySource("/blog/title-b");
 			expect(bRedirect!.destination).toBe("/blog/title-c");
 		});
 
 		it("updates existing redirect from same source instead of duplicating", async () => {
-			// Create A -> B
 			await repo.createAutoRedirect("posts", "a", "b", "id1", "/blog/{slug}");
 
-			// Create A -> C (same source /blog/a, different dest)
-			// This calls collapseChains first, which doesn't touch /blog/a since
-			// nothing points to /blog/a as destination.
-			// Then it finds existing source=/blog/a and updates its destination.
 			await repo.createAutoRedirect("posts", "a", "c", "id1", "/blog/{slug}");
 
 			const all = await repo.findMany({});
-			// Should only have one redirect from /blog/a
 			const fromA = all.items.filter((r) => r.source === "/blog/a");
 			expect(fromA).toHaveLength(1);
 			expect(fromA[0]!.destination).toBe("/blog/c");
 		});
 
 		it("does not create a loop when a slug rename is reverted (#1986)", async () => {
-			// Rename A -> B, then revert B -> A
 			await repo.createAutoRedirect("posts", "a", "b", "id1", "/blog/{slug}");
 			await repo.createAutoRedirect("posts", "b", "a", "id1", "/blog/{slug}");
 
-			// The restored slug A must not be shadowed by any redirect
 			expect(await repo.findBySource("/blog/a")).toBeNull();
 
-			// The old slug B still redirects to A
 			const fromB = await repo.findBySource("/blog/b");
 			expect(fromB!.destination).toBe("/blog/a");
 
-			// No redirect anywhere is a self-redirect
 			const all = await repo.findMany({});
 			for (const r of all.items) {
 				expect(r.source).not.toBe(r.destination);
@@ -446,7 +418,6 @@ describe("RedirectRepository", () => {
 		});
 
 		it("does not create a loop when reverting after a rename chain", async () => {
-			// A -> B -> C, then revert C -> A
 			await repo.createAutoRedirect("posts", "a", "b", "id1", "/blog/{slug}");
 			await repo.createAutoRedirect("posts", "b", "c", "id1", "/blog/{slug}");
 			await repo.createAutoRedirect("posts", "c", "a", "id1", "/blog/{slug}");
@@ -468,8 +439,6 @@ describe("RedirectRepository", () => {
 			expect(all.items).toHaveLength(0);
 		});
 	});
-
-	// --- 404 log ------------------------------------------------------------
 
 	describe("log404", () => {
 		it("logs a 404 entry", async () => {
@@ -527,7 +496,6 @@ describe("RedirectRepository", () => {
 
 			const summary = await repo.get404Summary();
 			expect(summary).toHaveLength(2);
-			// Ordered by count desc
 			expect(summary[0]!.path).toBe("/a");
 			expect(summary[0]!.count).toBe(3);
 			expect(summary[1]!.path).toBe("/b");
@@ -535,8 +503,6 @@ describe("RedirectRepository", () => {
 		});
 
 		it("includes the most recently seen referrer", async () => {
-			// 404 rows are now deduped by path, so the stored referrer is the
-			// most recent one seen for that path rather than the most frequent.
 			await repo.log404({ path: "/x", referrer: "https://google.com" });
 			await repo.log404({ path: "/x", referrer: "https://google.com" });
 			await repo.log404({ path: "/x", referrer: "https://bing.com" });
@@ -576,7 +542,6 @@ describe("RedirectRepository", () => {
 	describe("prune404s", () => {
 		it("removes entries older than cutoff", async () => {
 			await repo.log404({ path: "/old" });
-			// All entries were just created, so pruning with a future date should clear them
 			const count = await repo.prune404s("2099-01-01T00:00:00.000Z");
 			expect(count).toBe(1);
 		});

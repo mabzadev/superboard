@@ -1,23 +1,7 @@
-/**
- * x402 Enforcer Tests
- *
- * Tests the x402 payment enforcement logic:
- * - createEnforcer() creates a valid enforcer
- * - enforce() returns 402 when no payment header is present
- * - enforce() verifies and settles valid payments
- * - enforce() returns 402 for invalid payments
- * - hasPayment() checks for payment headers
- * - applyHeaders() sets response headers
- * - botOnly mode skips enforcement for humans
- * - Price normalization ($ prefix stripping)
- * - Error when no price is configured
- */
-
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { X402Config, X402Enforcer } from "../../../../packages/x402/src/types.js";
 
-// Mock instances
 const mockBuildPaymentRequirements = vi.fn();
 const mockCreatePaymentRequiredResponse = vi.fn();
 const mockFindMatchingRequirements = vi.fn();
@@ -75,7 +59,6 @@ function makeRequest(
 	return req;
 }
 
-/** Re-import the enforcer module to reset the cached singleton */
 async function freshEnforcer(config: X402Config): Promise<X402Enforcer> {
 	const mod = await import("../../../../packages/x402/src/enforcer.js");
 	return mod.createEnforcer(config);
@@ -340,7 +323,6 @@ describe("createEnforcer()", () => {
 				botOnly: true,
 				botScoreThreshold: 50,
 			});
-			// Score 40 < threshold 50 -> bot -> enforce
 			const request = makeRequest(
 				"https://example.com/article",
 				{},

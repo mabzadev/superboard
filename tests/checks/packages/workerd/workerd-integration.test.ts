@@ -1,13 +1,3 @@
-/**
- * Workerd Integration Tests
- *
- * These tests spawn a real workerd process and exercise the full plugin
- * lifecycle: load, invoke hooks/routes, unload, and error handling.
- *
- * Skipped if the workerd binary is not available (e.g., in CI without
- * the workerd package installed).
- */
-
 import Database from "better-sqlite3";
 import { createSandboxRouteError } from "emdash";
 import { Kysely, SqliteDialect } from "kysely";
@@ -15,14 +5,11 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { WorkerdSandboxRunner } from "../../../../packages/workerd/src/sandbox/runner.js";
 
-// Check at module level so describe.skipIf works
 let workerdAvailable = false;
 try {
 	const testRunner = new WorkerdSandboxRunner({ db: null as any });
 	workerdAvailable = testRunner.isAvailable();
-} catch {
-	// workerd not available
-}
+} catch {}
 
 function createTestDb() {
 	const sqlite = new Database(":memory:");
@@ -62,8 +49,6 @@ async function setupTables(db: Kysely<any>) {
 		.execute();
 }
 
-/** Minimal plugin code that echoes back hook/route calls.
- * Route handlers receive { input, request, requestMeta } as first arg. */
 const ECHO_PLUGIN = `
 export default {
 	hooks: {
@@ -92,7 +77,6 @@ export default {
 };
 `;
 
-/** Plugin that sleeps longer than the wall-time limit */
 const SLOW_PLUGIN = `
 export default {
 	hooks: {},
@@ -182,7 +166,6 @@ describe.skipIf(!workerdAvailable)("WorkerdSandboxRunner integration", () => {
 
 		expect(result).toBeDefined();
 
-		// Verify KV was written via the hook
 		const kvResult = (await plugin.invokeRoute(
 			"echo",
 			{},
@@ -235,7 +218,6 @@ describe.skipIf(!workerdAvailable)("WorkerdSandboxRunner integration", () => {
 			ECHO_PLUGIN,
 		);
 
-		// Invoke to verify it works
 		const result1 = (await plugin1.invokeRoute(
 			"echo",
 			{ v: 1 },
@@ -247,10 +229,8 @@ describe.skipIf(!workerdAvailable)("WorkerdSandboxRunner integration", () => {
 		)) as any;
 		expect(result1.input.v).toBe(1);
 
-		// Unload
 		await plugin1.terminate();
 
-		// Reload with new version
 		const plugin2 = await runner.load(
 			{
 				id: "test-reload",

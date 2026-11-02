@@ -1,10 +1,3 @@
-/**
- * API client for EmDash admin
- *
- * Re-exports all API modules for backwards compatibility.
- */
-
-// Base client and shared types
 export {
 	API_BASE,
 	ApiResponseError,
@@ -17,7 +10,6 @@ export {
 	fetchAuthMode,
 } from "./client.js";
 
-// Content CRUD and revisions
 export {
 	type ContentSeo,
 	type ContentSeoInput,
@@ -56,7 +48,6 @@ export {
 	restoreRevision,
 } from "./content.js";
 
-// Media
 export {
 	type MediaItem,
 	type LocalMediaItem,
@@ -93,7 +84,6 @@ export {
 	deleteFromProvider,
 } from "./media.js";
 
-// Schema (Content Type Builder)
 export {
 	type FieldType,
 	type SchemaCollection,
@@ -119,7 +109,6 @@ export {
 	registerOrphanedTable,
 } from "./schema.js";
 
-// Plugins
 export {
 	type PluginInfo,
 	type SettingField,
@@ -132,10 +121,8 @@ export {
 	setPluginMcpEnabled,
 } from "./plugins.js";
 
-// Settings
 export { type SiteSettings, fetchSettings, updateSettings } from "./settings.js";
 
-// Users, passkeys, allowed domains
 export {
 	type UserListItem,
 	type UserDetail,
@@ -167,7 +154,6 @@ export {
 	hasAllowedDomains,
 } from "./users.js";
 
-// Bylines
 export {
 	type BylineSummary,
 	type BylineInput,
@@ -183,7 +169,6 @@ export {
 	createBylineTranslation,
 } from "./bylines.js";
 
-// Byline custom-field schema (Discussion #1174)
 export {
 	type BylineFieldType,
 	type BylineFieldValidation,
@@ -199,7 +184,6 @@ export {
 	reorderBylineFields,
 } from "./byline-fields.js";
 
-// Menus
 export {
 	type Menu,
 	type MenuItem,
@@ -225,7 +209,6 @@ export {
 	createMenuTranslation,
 } from "./menus.js";
 
-// Widget areas
 export {
 	type WidgetArea,
 	type Widget,
@@ -244,7 +227,6 @@ export {
 	fetchWidgetComponents,
 } from "./widgets.js";
 
-// Sections
 export {
 	type SectionSource,
 	type Section,
@@ -259,7 +241,6 @@ export {
 	deleteSection,
 } from "./sections.js";
 
-// Taxonomies
 export {
 	type TaxonomyTerm,
 	type TaxonomyDef,
@@ -279,7 +260,6 @@ export {
 	createTermTranslation,
 } from "./taxonomies.js";
 
-// WordPress import
 export {
 	type FieldCompatibility,
 	type ImportFieldDef,
@@ -316,7 +296,6 @@ export {
 	executeWpPluginImport,
 } from "./import.js";
 
-// API Tokens
 export {
 	type ApiTokenInfo,
 	type ApiTokenCreateResult,
@@ -328,7 +307,6 @@ export {
 	revokeApiToken,
 } from "./api-tokens.js";
 
-// Comments
 export {
 	type AdminComment,
 	type CommentStatus,
@@ -342,7 +320,6 @@ export {
 	bulkCommentAction,
 } from "./comments.js";
 
-// Dashboard
 export {
 	type CollectionStats,
 	type RecentItem,
@@ -350,10 +327,8 @@ export {
 	fetchDashboardStats,
 } from "./dashboard.js";
 
-// Search
 export { type SearchEnableResult, setSearchEnabled } from "./search.js";
 
-// Marketplace
 export {
 	type MarketplaceAuthor,
 	type MarketplaceAuditSummary,
@@ -377,7 +352,6 @@ export {
 	describeCapability,
 } from "./marketplace.js";
 
-// Email settings
 export {
 	type EmailProvider,
 	type EmailSettings,
@@ -385,7 +359,6 @@ export {
 	sendTestEmail,
 } from "./email-settings.js";
 
-// Theme marketplace
 export {
 	type ThemeAuthor,
 	type ThemeAuthorDetail,
@@ -398,7 +371,6 @@ export {
 	generatePreviewUrl,
 } from "./theme-marketplace.js";
 
-// Redirects
 export {
 	type Redirect,
 	type NotFoundSummary,
@@ -413,5 +385,4 @@ export {
 	fetch404Summary,
 } from "./redirects.js";
 
-// Current user
 export { type CurrentUser, useCurrentUser } from "./current-user.js";

@@ -1,22 +1,3 @@
-/**
- * Success-path coverage for the setup nonce cookie.
- *
- * The sibling file `setup-admin-nonce.test.ts` covers the negative
- * paths (missing cookie, mismatched cookie, rotation) by driving
- * /setup/admin/verify with a bogus credential that fails at the
- * WebAuthn step. That harness can't exercise the *successful* verify
- * path — real WebAuthn verification requires a live authenticator.
- *
- * This file stubs `verifyRegistrationResponse` with a fake that
- * returns synthetic credential material so we can reach the code
- * after the nonce gate: user creation, passkey registration, setup
- * completion, and — the property we actually care about — deletion
- * of the nonce cookie.
- *
- * `registerPasskey` is left real; it only talks to the Kysely
- * adapter against the in-memory test DB.
- */
-
 import type { APIContext, AstroCookies } from "astro";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,7 +18,6 @@ vi.mock("@emdash-cms/auth/passkey", async (importOriginal) => {
 	};
 });
 
-// Deferred so vi.mock applies before the route modules evaluate.
 type AdminRoute =
 	typeof import("../../../../../../packages/core/src/astro/routes/api/setup/admin.js");
 type AdminVerifyRoute =
@@ -128,9 +108,6 @@ function buildContext(db: Kysely<Database>, request: Request, cookies: AstroCook
 
 const adminBody = { email: "real@admin.example", name: "Real Admin" };
 
-// Any object that passes setupAdminVerifyBody — the actual WebAuthn
-// verification is mocked out, so the fields don't need to parse as
-// valid authenticator data.
 const fakeCredential = {
 	credential: {
 		id: "fake-credential-id",
@@ -159,7 +136,6 @@ describe("POST /setup/admin/verify — success path clears nonce cookie", () => 
 	});
 
 	it("deletes the setup nonce cookie and marks setup complete when verify succeeds", async () => {
-		// 1. Start admin setup — mints the nonce and drops the cookie.
 		const { jar, cookies } = createCookieJar();
 		const adminRes = await postAdmin(buildContext(db, buildAdminRequest(adminBody), cookies));
 		expect(adminRes.status).toBe(200);
@@ -167,22 +143,15 @@ describe("POST /setup/admin/verify — success path clears nonce cookie", () => 
 		expect(setCookie).toBeDefined();
 		expect(setCookie!.deleted).toBeFalsy();
 
-		// 2. Verify with the mocked-out WebAuthn check. The nonce gate
-		//    runs first (real code path), then the stub returns a
-		//    synthetic credential and the route creates the user.
 		const verifyRes = await postAdminVerify(
 			buildContext(db, buildVerifyRequest(fakeCredential), cookies),
 		);
 		expect(verifyRes.status).toBe(200);
 
-		// 3. Cookie should now be deleted. The deletion must be
-		//    scoped to /_emdash/ so it actually supersedes the cookie
-		//    the browser holds.
 		const afterVerify = jar.get("emdash_setup_nonce");
 		expect(afterVerify?.deleted).toBe(true);
 		expect(afterVerify?.options.path).toBe("/_emdash/");
 
-		// 4. Setup state is cleared and setup_complete is set.
 		const options = new OptionsRepository(db);
 		const setupState = await options.get("emdash:setup_state");
 		expect(setupState).toBeNull();

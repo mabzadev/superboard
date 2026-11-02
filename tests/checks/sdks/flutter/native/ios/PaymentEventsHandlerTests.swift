@@ -25,8 +25,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
         )
     }
 
-    // MARK: - start()
-
     func testMultipleStartCallsDoNotDuplicateObservers() {
         let handler = makeHandler()
         handler.start()
@@ -35,8 +33,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
 
         mockService.reset()
 
-        // Simulate didBecomeActive with a pending transaction — should trigger exactly one retry,
-        // not three (which would happen with duplicate observers).
         let pending = TransactionData(
             type: .buy, price: 100, transactionID: nil,
             oldTransactionID: nil, currency: "USD",
@@ -51,8 +47,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
         XCTAssertEqual(mockService.addPaymentEventCallCount, 1,
                        "Multiple start() calls should not register duplicate observers")
     }
-
-    // MARK: - logInAppPurchase
 
     func testLogInAppPurchaseReturnsFalseBeforeStart() {
         let handler = makeHandler()
@@ -94,8 +88,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
         XCTAssertNil(sent?.productID)
         XCTAssertNil(sent?.startDate)
     }
-
-    // MARK: - logCustomPurchase
 
     func testLogCustomPurchaseReturnsFalseBeforeStart() {
         let handler = makeHandler()
@@ -167,8 +159,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
                        "Should use the explicit startDate, not default to Date()")
     }
 
-    // MARK: - sendTransactionToBackend
-
     func testSendTransactionMarksAsHandledOnSuccess() {
         mockService.addPaymentEventResult = true
 
@@ -209,7 +199,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
     func testSendTransactionWithNilTransactionIDDoesNotMarkAsHandled() {
         mockService.addPaymentEventResult = true
 
-        // Create a transaction with nil transactionID (custom purchase path)
         let handler = makeHandler()
         handler.start()
         mockService.reset()
@@ -230,8 +219,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
         XCTAssertEqual(mockStorage.markCallCount, 0,
                        "Should not mark as handled when transactionID is nil")
     }
-
-    // MARK: - logInAppPurchase deduplication
 
     func testLogInAppPurchaseSkipsAlreadyHandledTransaction() {
         let handler = makeHandler()
@@ -267,8 +254,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
         XCTAssertEqual(mockService.addPaymentEventCallCount, 1,
                        "Unhandled transaction should be sent")
     }
-
-    // MARK: - Custom purchase retry on failure
 
     func testFailedCustomPurchaseIsSavedForRetry() {
         let handler = makeHandler()
@@ -338,7 +323,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
         handler.start()
         mockService.reset()
 
-        // Simulate a previously failed custom purchase in storage
         let pending = TransactionData(
             type: .refund, price: 1500, transactionID: nil,
             oldTransactionID: nil, currency: "GBP",
@@ -379,7 +363,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
         mockStorage.savePendingTransaction(pending2)
         mockStorage.savePendingCallCount = 0
 
-        // First pending succeeds, second fails
         mockService.addPaymentEventHandler = { transaction in
             return transaction.productID == "prod.success"
         }
@@ -400,7 +383,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
         handler.start()
         mockService.reset()
 
-        // No pending transactions in storage
         XCTAssertTrue(mockStorage.pendingTransactions.isEmpty)
 
         handler.applicationDidBecomeActive()
@@ -429,8 +411,6 @@ final class PaymentEventsHandlerTests: XCTestCase {
                        "Still-failing transaction should remain in pending queue")
         XCTAssertEqual(mockStorage.pendingTransactions.count, 1)
     }
-
-    // MARK: - Async dispatch mode
 
     func testLogInAppPurchaseWorksWithAsyncMockDispatch() {
         mockService.completionQueue = .global()

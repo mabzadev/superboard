@@ -1,10 +1,3 @@
-/**
- * Seed engine - applies seed files to database
- *
- * This is the core implementation that bootstraps an EmDash site from a seed file.
- * Apply order is critical for foreign keys and references.
- */
-
 import { imageSize } from "image-size";
 import type { Kysely } from "kysely";
 import mime from "mime/lite";
@@ -38,10 +31,6 @@ import type {
 	SeedBylineAvatar,
 } from "./types.js";
 
-/**
- * Set a collection's `titleField`/`dateField`: a separate write run after the
- * fields exist, so `updateCollection` can validate them. No-op when neither is set.
- */
 async function applyDisplayDateFields(
 	registry: SchemaRegistry,
 	collection: SeedCollection,
@@ -56,34 +45,19 @@ async function applyDisplayDateFields(
 const FILE_EXTENSION_PATTERN = /\.([a-z0-9]+)(?:\?|$)/i;
 import { validateSeed } from "./validate.js";
 
-/** Pattern to remove file extensions */
 const EXTENSION_PATTERN = /\.[^.]+$/;
 
-/** Pattern to remove query parameters */
 const QUERY_PARAM_PATTERN = /\?.*$/;
 
-/** Pattern to remove non-alphanumeric characters (except dash and underscore) */
 const SANITIZE_PATTERN = /[^a-zA-Z0-9_-]/g;
 
-/** Pattern to collapse multiple hyphens */
 const MULTIPLE_HYPHENS_PATTERN = /-+/g;
 
-/**
- * Apply a seed file to the database
- *
- * This function is idempotent - safe to run multiple times.
- *
- * @param db - Kysely database instance
- * @param seed - Seed file to apply
- * @param options - Application options
- * @returns Result summary
- */
 export async function applySeed(
 	db: Kysely<Database>,
 	seed: SeedFile,
 	options: SeedApplyOptions = {},
 ): Promise<SeedApplyResult> {
-	// Validate seed first
 	const validation = validateSeed(seed);
 	if (!validation.valid) {
 		throw new Error(`Invalid seed file:\n${validation.errors.join("\n")}`);
@@ -96,7 +70,6 @@ export async function applySeed(
 		onConflict = "skip",
 	} = options;
 
-	// Result counters
 	const result: SeedApplyResult = {
 		collections: { created: 0, skipped: 0, updated: 0 },
 		fields: { created: 0, skipped: 0, updated: 0 },
@@ -111,34 +84,18 @@ export async function applySeed(
 		media: { created: 0, skipped: 0 },
 	};
 
-	// Media context for $media resolution
 	const mediaContext: MediaContext = {
 		db,
 		storage: storage ?? null,
 		skipMediaDownload,
-		mediaCache: new Map(), // Cache downloaded media by URL to avoid re-downloading
+		mediaCache: new Map(),
 	};
 
-	// Apply order (critical for foreign keys and references):
-	// 1. Site settings
-	// 2. Collections + Fields
-	// 3. Taxonomy definitions + Terms
-	// 4. Content (so menu refs can resolve)
-	// 5. Menus + Menu items (can now resolve content refs)
-	// 6. Redirects
-	// 7. Widget areas + Widgets
-
-	// Track seed content IDs for reference resolution (shared across content and menus)
-	const seedIdMap = new Map<string, string>(); // seed id -> real entry id
-	const seedBylineIdMap = new Map<string, string>(); // seed byline id -> real byline id
+	const seedIdMap = new Map<string, string>();
+	const seedBylineIdMap = new Map<string, string>();
 	const staleMarkedContentCollections = new Set<string>();
 	const failedStaleContentCollections = new Set<string>();
 
-	// Fallback locale for rows that omit an explicit `locale`. Prefer the runtime
-	// config (runtime-driven seeds), then the seed's self-described `defaultLocale`
-	// (CLI exports run outside the runtime), and only then `en`. Without the
-	// seed-carried default, a non-`en` single-locale project would be rewritten to
-	// `en` on apply (#1421).
 	const defaultLocale = getI18nConfig()?.defaultLocale ?? seed.defaultLocale ?? "en";
 	const markSeedContentCollectionStale = async (collectionSlug: string): Promise<void> => {
 		if (staleMarkedContentCollections.has(collectionSlug)) return;
@@ -168,18 +125,15 @@ export async function applySeed(
 		}
 	};
 
-	// 1. Site settings
 	if (seed.settings) {
 		await setSiteSettings(seed.settings, db);
 		result.settings.applied = Object.keys(seed.settings).length;
 	}
 
-	// 2-3. Collections and Fields
 	if (seed.collections) {
 		const registry = new SchemaRegistry(db);
 
 		for (const collection of seed.collections) {
-			// Check if collection exists
 			const existing = await registry.getCollection(collection.slug);
 
 			if (existing) {
@@ -203,7 +157,6 @@ export async function applySeed(
 					});
 					result.collections.updated++;
 
-					// Update or create fields
 					for (const field of collection.fields) {
 						const existingField = await registry.getField(collection.slug, field.slug);
 						if (existingField) {
@@ -238,12 +191,10 @@ export async function applySeed(
 						}
 					}
 
-					// Second write: display/date fields, now that fields exist.
 					await applyDisplayDateFields(registry, collection);
 					continue;
 				}
 
-				// skip
 				result.collections.skipped++;
 				result.fields.skipped += collection.fields.length;
 				continue;
@@ -263,7 +214,6 @@ export async function applySeed(
 				options: field.options,
 			}));
 
-			// Create a fresh seed schema in bulk to stay within D1's query budget.
 			await registry.createSeedCollection(
 				{
 					slug: collection.slug,
@@ -281,24 +231,19 @@ export async function applySeed(
 				},
 				fields,
 			);
-			// titleField/dateField reference existing fields, so set them after
-			// the schema exists.
 			await applyDisplayDateFields(registry, collection);
 			result.collections.created++;
 			result.fields.created += fields.length;
 		}
 	}
 
-	// 4-5. Taxonomies
 	if (seed.taxonomies) {
-		// seed-local id -> resolved info, used to wire `translationOf` refs.
 		const defSeedIdMap = new Map<string, { id: string; translationGroup: string }>();
 		const termSeedIdMap = new Map<string, string>();
 
 		for (const taxonomy of seed.taxonomies) {
 			const defLocale = resolveConfiguredLocale(taxonomy.locale ?? defaultLocale);
 
-			// (name, locale) is the UNIQUE key after migration 036.
 			const existingDef = await db
 				.selectFrom("_emdash_taxonomy_defs")
 				.selectAll()
@@ -357,7 +302,6 @@ export async function applySeed(
 			if (taxonomy.id)
 				defSeedIdMap.set(taxonomy.id, { id: defId, translationGroup: defTranslationGroup });
 
-			// Create terms (if provided)
 			if (includeContent && taxonomy.terms && taxonomy.terms.length > 0) {
 				const termRepo = new TaxonomyRepository(db);
 
@@ -409,14 +353,10 @@ export async function applySeed(
 			}
 		}
 
-		// Seeded/updated defs change which taxonomies exist — clear the
-		// isolate-wide defs + names caches so later reads in this isolate
-		// (e.g. an auto-seed triggered mid-request) reflect them immediately.
 		const { invalidateTaxonomyDefsCache } = await import("../taxonomies/index.js");
 		invalidateTaxonomyDefsCache();
 	}
 
-	// 6. Bylines
 	if (includeContent && seed.bylines) {
 		const bylineRepo = new BylineRepository(db);
 		for (const byline of seed.bylines) {
@@ -427,10 +367,6 @@ export async function applySeed(
 				}
 
 				if (onConflict === "update") {
-					// Resolve the avatar (reusing an existing media row by storage
-					// key, so re-running an update stays idempotent). Only relink
-					// when the seed supplies an avatar; otherwise leave the existing
-					// one untouched.
 					const avatar = byline.avatar ? await resolveSeedBylineAvatar(db, byline.avatar) : null;
 					try {
 						const updated = await bylineRepo.update(existing.id, {
@@ -440,15 +376,10 @@ export async function applySeed(
 							isGuest: byline.isGuest,
 							...(avatar ? { avatarMediaId: avatar.id } : {}),
 						});
-						// update() returns null (no throw) if the row vanished between
-						// findBySlug and here; treat that as a failure so the catch
-						// cleans up any freshly-created avatar media instead of leaking it.
 						if (!updated) {
 							throw new Error(`Byline "${byline.slug}" disappeared during update`);
 						}
 					} catch (error) {
-						// withTransaction is a no-op on D1, so undo a freshly-created
-						// media row by hand to avoid orphaning it.
 						if (avatar?.created) await deleteMediaRow(db, avatar.id);
 						throw error;
 					}
@@ -458,7 +389,6 @@ export async function applySeed(
 					continue;
 				}
 
-				// skip
 				seedBylineIdMap.set(byline.id, existing.id);
 				result.bylines.skipped++;
 				continue;
@@ -486,26 +416,19 @@ export async function applySeed(
 		}
 	}
 
-	// 7. Content (created before menus so refs can resolve)
 	if (includeContent && seed.content) {
 		const contentRepo = new ContentRepository(db);
 		const schemaRegistry = new SchemaRegistry(db);
 
 		try {
-			// Create content entries
 			for (const [collectionSlug, entries] of Object.entries(seed.content)) {
 				const collectionRoutable =
 					(await schemaRegistry.getCollection(collectionSlug))?.routable !== false;
 				for (const entry of entries) {
 					const entrySlug =
 						typeof entry.slug === "string" && entry.slug.trim().length > 0 ? entry.slug : null;
-					// Resolve the entry's locale up front so a non-`en` single-locale
-					// export (which omits `locale`) is filed under the project default
-					// rather than `en` (#1421).
 					const entryLocale = resolveConfiguredLocale(entry.locale ?? defaultLocale);
 
-					// Slugful entries use the existing locale-aware key. Slugless seed
-					// entries persist their seed ID, which keeps re-application idempotent.
 					const existing = entrySlug
 						? await contentRepo.findBySlug(collectionSlug, entrySlug, entryLocale)
 						: await contentRepo.findById(collectionSlug, entry.id);
@@ -534,7 +457,6 @@ export async function applySeed(
 						}
 
 						if (onConflict === "update") {
-							// Resolve $ref and $media in data
 							const resolvedData = await resolveReferences(
 								entry.data,
 								seedIdMap,
@@ -542,7 +464,6 @@ export async function applySeed(
 								result,
 							);
 
-							// Update content + bylines + taxonomies atomically
 							const status = entry.status || "published";
 							let contentMutated = false;
 							try {
@@ -567,13 +488,6 @@ export async function applySeed(
 									);
 									await applyContentTaxonomies(trx, collectionSlug, existing.id, entry, true);
 
-									// Seed is declarative — when status is "published", promote to a live
-									// revision so the admin UI shows "Unpublish" instead of "Save & Publish"
-									// and `live_revision_id` is populated for downstream queries.
-									//
-									// Create a fresh revision from the updated data and stage it as the
-									// draft so `publish()` picks it up instead of re-syncing stale data
-									// from an existing live revision.
 									if (status === "published") {
 										const draft = await trxRevisionRepo.create({
 											collection: collectionSlug,
@@ -619,16 +533,13 @@ export async function applySeed(
 							continue;
 						}
 
-						// skip
 						result.content.skipped++;
 						seedIdMap.set(entry.id, existing.id);
 						continue;
 					}
 
-					// Resolve $ref and $media in data
 					const resolvedData = await resolveReferences(entry.data, seedIdMap, mediaContext, result);
 
-					// Resolve translationOf: map from seed-local ID to real EmDash ID
 					let translationOf: string | undefined;
 					if (entry.translationOf) {
 						const sourceId = seedIdMap.get(entry.translationOf);
@@ -641,7 +552,6 @@ export async function applySeed(
 						}
 					}
 
-					// Create entry + bylines + taxonomies atomically
 					const status = entry.status || "published";
 					let contentMutated = false;
 					let created: Awaited<ReturnType<ContentRepository["create"]>>;
@@ -671,9 +581,6 @@ export async function applySeed(
 							);
 							await applyContentTaxonomies(trx, collectionSlug, item.id, entry, false);
 
-							// Seed is declarative — when status is "published", promote to a live
-							// revision so the admin UI shows "Unpublish" instead of "Save & Publish"
-							// and `live_revision_id` is populated for downstream queries.
 							if (status === "published") {
 								await trxContentRepo.publish(
 									collectionSlug,
@@ -703,11 +610,8 @@ export async function applySeed(
 		}
 	}
 
-	// 8. Menus and Menu Items (after content so refs can resolve)
 	if (seed.menus) {
-		// seed-local id -> resolved info, used to wire `translationOf` refs.
 		const menuSeedIdMap = new Map<string, { id: string; translationGroup: string }>();
-		// Shared across menus: translated items reference anchor items in sibling menus.
 		const itemSeedIdMap = new Map<string, { id: string; translationGroup: string }>();
 
 		for (const menu of seed.menus) {
@@ -725,11 +629,9 @@ export async function applySeed(
 			if (existingMenu) {
 				menuId = existingMenu.id;
 				translationGroup = existingMenu.translation_group ?? existingMenu.id;
-				// Clear existing items (menus are recreated)
 				await db.deleteFrom("_emdash_menu_items").where("menu_id", "=", menuId).execute();
 			} else {
 				menuId = ulid();
-				// Resolve translationOf to the source menu's translation_group.
 				translationGroup = menuId;
 				if (menu.translationOf) {
 					const source = menuSeedIdMap.get(menu.translationOf);
@@ -756,14 +658,13 @@ export async function applySeed(
 
 			if (menu.id) menuSeedIdMap.set(menu.id, { id: menuId, translationGroup });
 
-			// Create menu items
 			const itemCount = await applyMenuItems(
 				db,
 				menuId,
 				locale,
 				menu.items,
-				null, // parent_id
-				0, // sort_order
+				null,
+				0,
 				seedIdMap,
 				itemSeedIdMap,
 			);
@@ -771,7 +672,6 @@ export async function applySeed(
 		}
 	}
 
-	// 9. Redirects
 	if (seed.redirects) {
 		const redirectRepo = new RedirectRepository(db);
 
@@ -793,7 +693,6 @@ export async function applySeed(
 					continue;
 				}
 
-				// skip
 				result.redirects.skipped++;
 				continue;
 			}
@@ -809,10 +708,8 @@ export async function applySeed(
 		}
 	}
 
-	// 10. Widget Areas and Widgets
 	if (seed.widgetAreas) {
 		for (const area of seed.widgetAreas) {
-			// Check if area exists
 			const existingArea = await db
 				.selectFrom("_emdash_widget_areas")
 				.selectAll()
@@ -823,10 +720,8 @@ export async function applySeed(
 
 			if (existingArea) {
 				areaId = existingArea.id;
-				// Clear existing widgets (areas are recreated)
 				await db.deleteFrom("_emdash_widgets").where("area_id", "=", areaId).execute();
 			} else {
-				// Create area
 				areaId = ulid();
 				await db
 					.insertInto("_emdash_widget_areas")
@@ -840,7 +735,6 @@ export async function applySeed(
 				result.widgetAreas.created++;
 			}
 
-			// Create widgets
 			for (let i = 0; i < area.widgets.length; i++) {
 				const widget = area.widgets[i];
 				await applyWidget(db, areaId, widget, i);
@@ -849,10 +743,8 @@ export async function applySeed(
 		}
 	}
 
-	// 11. Sections
 	if (seed.sections) {
 		for (const section of seed.sections) {
-			// Check if section exists
 			const existing = await db
 				.selectFrom("_emdash_sections")
 				.select("id")
@@ -881,7 +773,6 @@ export async function applySeed(
 					continue;
 				}
 
-				// skip
 				result.sections.skipped++;
 				continue;
 			}
@@ -910,19 +801,16 @@ export async function applySeed(
 		}
 	}
 
-	// 11. Enable search for collections that have `search` in supports
 	if (seed.collections) {
 		const ftsManager = new FTSManager(db);
 
 		for (const collection of seed.collections) {
 			if (collection.supports?.includes("search")) {
-				// Check if there are searchable fields
 				const searchableFields = await ftsManager.getSearchableFields(collection.slug);
 				if (searchableFields.length > 0) {
 					try {
 						await ftsManager.enableSearch(collection.slug);
 					} catch (err) {
-						// Log but don't fail - search can be enabled manually later
 						console.warn(`Failed to enable search for ${collection.slug}:`, err);
 					}
 				}
@@ -930,9 +818,6 @@ export async function applySeed(
 		}
 	}
 
-	// Invalidate caches that may have been affected by seed data.
-	// Seed creates bylines, redirects, and collections, all of which
-	// have module-level caches in the hot path.
 	const { invalidateBylineCache } = await import("../bylines/index.js");
 	const { invalidateRedirectCache } = await import("../redirects/cache.js");
 	const { invalidateUrlPatternCache } = await import("../query.js");
@@ -943,9 +828,6 @@ export async function applySeed(
 	return result;
 }
 
-/**
- * Apply hierarchical taxonomy terms (parents before children)
- */
 async function applyHierarchicalTerms(
 	termRepo: TaxonomyRepository,
 	taxonomyName: string,
@@ -955,12 +837,10 @@ async function applyHierarchicalTerms(
 	result: SeedApplyResult,
 	onConflict: "skip" | "update" | "error" = "skip",
 ): Promise<void> {
-	// "locale::slug" -> id, so the same slug can resolve per locale.
 	const slugToId = new Map<string, string>();
 	const resolveTermLocale = (term: SeedTaxonomyTerm) =>
 		resolveConfiguredLocale(term.locale ?? defLocale);
 
-	// Multiple passes — handles deep nesting and translationOf forward refs.
 	let remaining = [...terms];
 	let maxPasses = 10;
 
@@ -1023,10 +903,6 @@ async function applyHierarchicalTerms(
 	}
 }
 
-/**
- * Apply byline credits to a content entry.
- * In update mode, clears existing credits even if the seed has none.
- */
 async function applyContentBylines(
 	bylineRepo: BylineRepository,
 	collectionSlug: string,
@@ -1040,7 +916,6 @@ async function applyContentBylines(
 	isUpdate = false,
 ): Promise<void> {
 	if (!entry.bylines || entry.bylines.length === 0) {
-		// In update mode, clear existing bylines when the seed entry has none
 		if (isUpdate) {
 			await bylineRepo.setContentBylines(collectionSlug, contentId, []);
 		}
@@ -1064,18 +939,11 @@ async function applyContentBylines(
 		);
 	}
 
-	// In update mode, always call setContentBylines (even with empty credits)
-	// to clear stale assignments when all byline refs fail to resolve.
-	// In create mode, only call if there are credits to assign.
 	if (credits.length > 0 || isUpdate) {
 		await bylineRepo.setContentBylines(collectionSlug, contentId, credits);
 	}
 }
 
-/**
- * Apply taxonomy term assignments to a content entry.
- * In update mode, clears existing assignments before re-attaching.
- */
 async function applyContentTaxonomies(
 	db: Kysely<Database>,
 	collectionSlug: string,
@@ -1084,14 +952,11 @@ async function applyContentTaxonomies(
 	isUpdate: boolean,
 ): Promise<void> {
 	const termRepo = new TaxonomyRepository(db);
-	// In update mode, clear existing taxonomy assignments first
 	if (isUpdate) {
 		await termRepo.clearEntryTerms(collectionSlug, contentId);
 	}
 
 	if (!entry.taxonomies) {
-		// In update mode we may have just deleted rows above; invalidate so
-		// hydration doesn't serve stale "has terms" cached value.
 		if (isUpdate) {
 			const { invalidateTermCache } = await import("../taxonomies/index.js");
 			invalidateTermCache();
@@ -1108,21 +973,10 @@ async function applyContentTaxonomies(
 		}
 	}
 
-	// Seed writes directly to content_taxonomies. Clear the cache so
-	// the worker lifetime cached "has any term assignments" probe
-	// re-runs on the next read.
 	const { invalidateTermCache } = await import("../taxonomies/index.js");
 	invalidateTermCache();
 }
 
-/**
- * Apply menu items recursively.
- *
- * When a `SeedMenuItem` carries `id`/`translationOf`, the import resolves the
- * source item's `translation_group` so cross-locale "same nav entry" links
- * survive export → apply. Items without `translationOf` get a fresh group
- * (= their own id).
- */
 async function applyMenuItems(
 	db: Kysely<Database>,
 	menuId: string,
@@ -1140,18 +994,14 @@ async function applyMenuItems(
 		const itemId = ulid();
 		const itemLocale = item.locale ?? locale;
 
-		// Resolve reference if needed
 		let referenceId: string | null = null;
 		let referenceCollection: string | null = null;
 
 		if (item.type === "page" || item.type === "post") {
-			// Try to resolve from seedIdMap
 			if (item.ref && seedIdMap.has(item.ref)) {
 				referenceId = seedIdMap.get(item.ref)!;
-				// Default to plural collection name (pages/posts) if not specified
 				referenceCollection = item.collection || `${item.type}s`;
 			}
-			// If not in map, the content might not exist yet (will be broken link)
 		}
 
 		let translationGroup = itemId;
@@ -1208,9 +1058,6 @@ async function applyMenuItems(
 	return count;
 }
 
-/**
- * Apply a widget
- */
 async function applyWidget(
 	db: Kysely<Database>,
 	areaId: string,
@@ -1225,8 +1072,6 @@ async function applyWidget(
 			sort_order: sortOrder,
 			type: widget.type,
 			title: widget.title ?? null,
-			// `widget.content` is Portable Text for content-type widgets;
-			// for other widget kinds it's null.
 			content: widget.content ? JSON.stringify(widget.content) : null,
 			menu_name: widget.menuName ?? null,
 			component_id: widget.componentId ?? null,
@@ -1235,19 +1080,13 @@ async function applyWidget(
 		.execute();
 }
 
-/**
- * Context for media resolution during seed application
- */
 interface MediaContext {
 	db: Kysely<Database>;
 	storage: Storage | null;
 	skipMediaDownload: boolean;
-	mediaCache: Map<string, MediaValue>; // URL -> resolved MediaValue
+	mediaCache: Map<string, MediaValue>;
 }
 
-/**
- * Type guard for $media reference
- */
 function isSeedMediaReference(value: unknown): value is SeedMediaReference {
 	if (typeof value !== "object" || value === null || !("$media" in value)) {
 		return false;
@@ -1261,9 +1100,6 @@ function isSeedMediaReference(value: unknown): value is SeedMediaReference {
 	);
 }
 
-/**
- * Resolve $ref: and $media references in content data
- */
 async function resolveReferences(
 	data: Record<string, unknown>,
 	seedIdMap: Map<string, string>,
@@ -1279,32 +1115,25 @@ async function resolveReferences(
 	return resolved;
 }
 
-/**
- * Resolve a single value recursively
- */
 async function resolveValue(
 	value: unknown,
 	seedIdMap: Map<string, string>,
 	mediaContext: MediaContext,
 	result: SeedApplyResult,
 ): Promise<unknown> {
-	// Handle $ref: syntax
 	if (typeof value === "string" && value.startsWith("$ref:")) {
 		const seedId = value.slice(5);
-		return seedIdMap.get(seedId) ?? value; // Return unresolved if not found
+		return seedIdMap.get(seedId) ?? value;
 	}
 
-	// Handle $media syntax
 	if (isSeedMediaReference(value)) {
 		return resolveMedia(value, mediaContext, result);
 	}
 
-	// Handle arrays
 	if (Array.isArray(value)) {
 		return Promise.all(value.map((item) => resolveValue(item, seedIdMap, mediaContext, result)));
 	}
 
-	// Handle objects recursively
 	if (typeof value === "object" && value !== null) {
 		const resolved: Record<string, unknown> = {};
 		for (const [k, v] of Object.entries(value)) {
@@ -1316,26 +1145,10 @@ async function resolveValue(
 	return value;
 }
 
-/**
- * Resolve a seeded byline avatar to a `media` row id. The file is assumed to
- * already exist in storage (the caller supplies its `storageKey`), so nothing
- * is downloaded or uploaded.
- *
- * Idempotent: if a media row with the same `storageKey` already exists it is
- * reused rather than duplicated, so re-applying a seed in `update` mode does
- * not leak rows. `created` reports whether a new row was inserted, so the
- * caller can both account for it and delete it if the subsequent byline write
- * fails (the only cross-dialect way to avoid an orphan — `withTransaction`
- * is a no-op on D1).
- */
 async function resolveSeedBylineAvatar(
 	db: Kysely<Database>,
 	avatar: SeedBylineAvatar,
 ): Promise<{ id: string; created: boolean }> {
-	// `media.storage_key` has no unique constraint, so order deterministically
-	// to reuse the same row across runs if duplicates already exist. (Concurrent
-	// seed applies against one DB are out of scope; seeding is a single-shot
-	// init operation.)
 	const existing = await db
 		.selectFrom("media")
 		.select("id")
@@ -1359,11 +1172,6 @@ async function resolveSeedBylineAvatar(
 	return { id: created.id, created: true };
 }
 
-/**
- * Delete a media row by id. Best-effort cleanup for a failed byline write: a
- * failure here must not mask the original error that triggered the cleanup, so
- * it is logged and swallowed rather than thrown.
- */
 async function deleteMediaRow(db: Kysely<Database>, id: string): Promise<void> {
 	try {
 		await db.deleteFrom("media").where("id", "=", id).execute();
@@ -1372,9 +1180,6 @@ async function deleteMediaRow(db: Kysely<Database>, id: string): Promise<void> {
 	}
 }
 
-/**
- * Resolve a $media reference by downloading and uploading the media
- */
 async function resolveMedia(
 	ref: SeedMediaReference,
 	ctx: MediaContext,
@@ -1382,15 +1187,12 @@ async function resolveMedia(
 ): Promise<MediaValue | null> {
 	const { url, alt, filename, caption } = ref.$media;
 
-	// Check cache first
 	const cached = ctx.mediaCache.get(url);
 	if (cached) {
 		result.media.skipped++;
 		return { ...cached, alt: alt ?? cached.alt };
 	}
 
-	// When skipMediaDownload is set, resolve $media to an external URL reference
-	// without downloading or storing anything. Used by playground mode.
 	if (ctx.skipMediaDownload) {
 		const mediaValue: MediaValue = {
 			provider: "external",
@@ -1404,7 +1206,6 @@ async function resolveMedia(
 		return mediaValue;
 	}
 
-	// Storage is required for $media resolution
 	if (!ctx.storage) {
 		console.warn(`Skipping $media reference (no storage configured): ${url}`);
 		result.media.skipped++;
@@ -1412,14 +1213,11 @@ async function resolveMedia(
 	}
 
 	try {
-		// SSRF protection: validate URL before downloading
 		validateExternalUrl(url);
 
-		// Download the media (ssrfSafeFetch re-validates redirect targets)
 		console.log(`  📥 Downloading: ${url}`);
 		const response = await ssrfSafeFetch(url, {
 			headers: {
-				// Some services like Unsplash require a user-agent
 				"User-Agent": "EmDash-CMS/1.0",
 			},
 		});
@@ -1430,20 +1228,16 @@ async function resolveMedia(
 			return null;
 		}
 
-		// Get content type and determine extension
 		const contentType = response.headers.get("content-type") || "application/octet-stream";
 		const ext = getExtensionFromContentType(contentType) || getExtensionFromUrl(url) || ".bin";
 
-		// Generate filename and storage key
 		const storageId = ulid();
 		const finalFilename = filename || generateFilename(url, ext);
 		const storageKey = `${storageId}${ext}`;
 
-		// Get the body as buffer
 		const arrayBuffer = await response.arrayBuffer();
 		const body = new Uint8Array(arrayBuffer);
 
-		// Get image dimensions if it's an image
 		let width: number | undefined;
 		let height: number | undefined;
 		if (contentType.startsWith("image/")) {
@@ -1452,14 +1246,12 @@ async function resolveMedia(
 			height = dimensions?.height;
 		}
 
-		// Upload to storage
 		await ctx.storage.upload({
 			key: storageKey,
 			body,
 			contentType,
 		});
 
-		// Create media record
 		const mediaRepo = new MediaRepository(ctx.db);
 		const media = await mediaRepo.create({
 			filename: finalFilename,
@@ -1473,7 +1265,6 @@ async function resolveMedia(
 			status: "ready",
 		});
 
-		// Create the MediaValue - only store id, URL is built at runtime by EmDashMedia
 		const mediaValue: MediaValue = {
 			provider: "local",
 			id: media.id,
@@ -1485,7 +1276,6 @@ async function resolveMedia(
 			meta: { storageKey },
 		};
 
-		// Cache for reuse
 		ctx.mediaCache.set(url, mediaValue);
 		result.media.created++;
 
@@ -1501,19 +1291,12 @@ async function resolveMedia(
 	}
 }
 
-/**
- * Get file extension from content type
- */
 function getExtensionFromContentType(contentType: string): string | null {
-	// Handle content-type with parameters like "image/jpeg; charset=utf-8"
 	const baseMime = contentType.split(";")[0].trim();
 	const ext = mime.getExtension(baseMime);
 	return ext ? `.${ext}` : null;
 }
 
-/**
- * Get file extension from URL
- */
 function getExtensionFromUrl(url: string): string | null {
 	try {
 		const pathname = new URL(url).pathname;
@@ -1524,16 +1307,11 @@ function getExtensionFromUrl(url: string): string | null {
 	}
 }
 
-/**
- * Generate a filename from URL
- */
 function generateFilename(url: string, ext: string): string {
 	try {
 		const pathname = new URL(url).pathname;
 		const basename = pathname.split("/").pop() || "media";
-		// Remove any existing extension and query params
 		const name = basename.replace(EXTENSION_PATTERN, "").replace(QUERY_PARAM_PATTERN, "");
-		// Sanitize: only alphanumeric, dash, underscore
 		const sanitized = name.replace(SANITIZE_PATTERN, "-").replace(MULTIPLE_HYPHENS_PATTERN, "-");
 		return `${sanitized || "media"}${ext}`;
 	} catch {
@@ -1541,10 +1319,6 @@ function generateFilename(url: string, ext: string): string {
 	}
 }
 
-/**
- * Get image dimensions from buffer using image-size.
- * Supports PNG, JPEG, GIF, WebP, AVIF, SVG, TIFF, and more.
- */
 function getImageDimensions(buffer: Uint8Array): { width: number; height: number } | null {
 	try {
 		const result = imageSize(buffer);

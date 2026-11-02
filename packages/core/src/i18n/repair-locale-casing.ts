@@ -4,7 +4,6 @@ import { sql } from "kysely";
 import { listTablesLike } from "../database/dialect-helpers.js";
 import type { Database } from "../database/types.js";
 
-/** Rewrite stored locales to the exact casing used by the site configuration. */
 export async function repairLocaleCasing(
 	db: Kysely<Database>,
 	configuredLocales: readonly string[],

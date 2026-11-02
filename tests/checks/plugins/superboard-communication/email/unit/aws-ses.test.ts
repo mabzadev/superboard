@@ -181,9 +181,6 @@ function encodeBase64(value: Uint8Array): string {
 }
 
 function testCertificatePem(spki: Uint8Array): string {
-	// The production parser only extracts SubjectPublicKeyInfo. Build the
-	// minimal DER certificate shape around a fresh key so no private fixture is
-	// ever committed to the repository.
 	const tbsCertificate = derSequence(
 		derElement(0x02, new Uint8Array([1])),
 		derSequence(),

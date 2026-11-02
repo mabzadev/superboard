@@ -1,15 +1,3 @@
-/**
- * Byline field usage counts.
- *
- * GET /_emdash/api/admin/byline-fields/{slug}/usage
- *
- * Returns `{ translatableValueCount, groupValueCount, totalAffectedRows }`.
- * Backs the destructive-delete confirm dialog in the admin UI (Phase 5).
- * Thin wrapper around `handleBylineFieldUsage`.
- *
- * Phase 4 of Discussion #1174.
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";
@@ -18,8 +6,6 @@ import { handleBylineFieldUsage } from "#api/handlers/byline-fields.js";
 
 export const prerender = false;
 
-// GET requires `schema:read` (Editor+); see byline-fields/index.ts GET
-// for rationale on the read/manage split.
 export const GET: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 	const denied = requirePerm(user, "schema:read");

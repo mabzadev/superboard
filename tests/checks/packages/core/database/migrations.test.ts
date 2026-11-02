@@ -14,7 +14,6 @@ describe("Database Migrations", () => {
 	let db: Kysely<Database>;
 
 	beforeEach(() => {
-		// Fresh in-memory database for each test
 		db = createDatabase({ url: ":memory:" });
 	});
 
@@ -31,10 +30,8 @@ describe("Database Migrations", () => {
 		});
 
 		it("should create migrations tracking table when running migrations", async () => {
-			// Note: getMigrationStatus doesn't create the table, runMigrations does
 			await runMigrations(db);
 
-			// Verify table was created
 			const tables = await db.introspection.getTables();
 			const migrationTable = tables.find((t) => t.name === "_emdash_migrations");
 			expect(migrationTable).toBeDefined();
@@ -56,7 +53,6 @@ describe("Database Migrations", () => {
 			const tables = await db.introspection.getTables();
 			const tableNames = tables.map((t) => t.name);
 
-			// Core system tables (no generic "content" table - collections create ec_* tables)
 			expect(tableNames).toContain("revisions");
 			expect(tableNames).toContain("taxonomies");
 			expect(tableNames).toContain("content_taxonomies");
@@ -65,7 +61,6 @@ describe("Database Migrations", () => {
 			expect(tableNames).toContain("options");
 			expect(tableNames).toContain("audit_logs");
 			expect(tableNames).toContain("_emdash_migrations");
-			// Schema registry tables
 			expect(tableNames).toContain("_emdash_collections");
 			expect(tableNames).toContain("_emdash_fields");
 		});
@@ -75,7 +70,7 @@ describe("Database Migrations", () => {
 			await expect(runMigrations(db)).resolves.not.toThrow();
 
 			const status = await getMigrationStatus(db);
-			expect(status.applied).toHaveLength(MIGRATION_COUNT); // derived from MIGRATIONS map in runner.ts
+			expect(status.applied).toHaveLength(MIGRATION_COUNT);
 		});
 
 		it("should remove custom field indexes when rolling back indexed field support", async () => {
@@ -249,7 +244,7 @@ describe("Database Migrations", () => {
 				.values({
 					id: "1",
 					email: "test@example.com",
-					role: 50, // ADMIN
+					role: 50,
 				})
 				.execute();
 
@@ -259,7 +254,7 @@ describe("Database Migrations", () => {
 					.values({
 						id: "2",
 						email: "test@example.com",
-						role: 40, // EDITOR
+						role: 40,
 					})
 					.execute(),
 			).rejects.toThrow();
@@ -288,7 +283,6 @@ describe("Database Migrations", () => {
 			expect(revisionsTable).toBeDefined();
 			const columns = revisionsTable!.columns.map((c) => c.name);
 
-			// Revisions now reference collection + entry_id instead of content_id
 			expect(columns).toContain("id");
 			expect(columns).toContain("collection");
 			expect(columns).toContain("entry_id");

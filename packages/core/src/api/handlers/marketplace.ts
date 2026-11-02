@@ -1,10 +1,3 @@
-/**
- * Marketplace plugin handlers
- *
- * Business logic for installing, updating, uninstalling, and checking
- * updates for marketplace plugins. Routes are thin wrappers around these.
- */
-
 import type { Kysely } from "kysely";
 
 import type { Database } from "../../database/types.js";
@@ -33,8 +26,6 @@ import type { PluginManifest } from "../../plugins/types.js";
 import { EmDashStorageError } from "../../storage/types.js";
 import type { Storage } from "../../storage/types.js";
 import type { ApiResult } from "../types.js";
-
-// ── Types ──────────────────────────────────────────────────────────
 
 export interface MarketplaceInstallResult {
 	pluginId: string;
@@ -76,9 +67,6 @@ export interface MarketplaceUninstallResult {
 	dataDeleted: boolean;
 }
 
-// ── Helpers ────────────────────────────────────────────────────────
-
-/** Semver-like pattern: digits, dots, hyphens, plus signs (e.g. 1.0.0, 1.0.0-beta.1) */
 const VERSION_PATTERN = /^[a-z0-9][a-z0-9._+-]*$/i;
 
 function validateVersion(version: string): void {
@@ -100,10 +88,6 @@ export function diffCapabilities(
 	oldCaps: string[],
 	newCaps: string[],
 ): { added: string[]; removed: string[] } {
-	// Normalize both sides before diffing so that an installed v1 manifest
-	// declaring `read:content` and an upgrade v2 manifest declaring
-	// `content:read` produces an empty diff — users should not see a
-	// spurious "capability changed" prompt for a pure rename.
 	const oldNorm = normalizeCapabilities(oldCaps);
 	const newNorm = normalizeCapabilities(newCaps);
 	const oldSet = new Set(oldNorm);
@@ -114,10 +98,6 @@ export function diffCapabilities(
 	};
 }
 
-/**
- * Diff route visibility between two manifests.
- * Returns routes that changed from private to public (newly exposed).
- */
 export function diffRouteVisibility(
 	oldManifest: PluginManifest | undefined,
 	newManifest: PluginManifest,
@@ -196,12 +176,6 @@ function validateBundleIdentity(
 	return null;
 }
 
-/** Store a plugin bundle's files in site-local R2 storage */
-/**
- * Storage source for an installed plugin bundle. Determines the R2
- * key prefix and is used to keep marketplace and registry installs
- * cleanly separated in object listings.
- */
 export type PluginBundleSource = "marketplace" | "registry";
 
 function bundlePrefix(source: PluginBundleSource, pluginId: string, version: string): string {
@@ -219,21 +193,18 @@ export async function storeBundleInR2(
 	validateVersion(version);
 	const prefix = bundlePrefix(source, pluginId, version);
 
-	// Store manifest
 	await storage.upload({
 		key: `${prefix}/manifest.json`,
 		body: new TextEncoder().encode(JSON.stringify(bundle.manifest)),
 		contentType: "application/json",
 	});
 
-	// Store backend code
 	await storage.upload({
 		key: `${prefix}/backend.js`,
 		body: new TextEncoder().encode(bundle.backendCode),
 		contentType: "application/javascript",
 	});
 
-	// Store admin code if present
 	if (bundle.adminCode) {
 		await storage.upload({
 			key: `${prefix}/admin.js`,
@@ -243,19 +214,10 @@ export async function storeBundleInR2(
 	}
 }
 
-/** Read a ReadableStream to string */
 async function streamToText(stream: ReadableStream<Uint8Array>): Promise<string> {
 	return new Response(stream).text();
 }
 
-/**
- * Load a plugin bundle from site-local R2 storage.
- *
- * `source` selects the R2 key prefix: marketplace plugins are stored
- * under `marketplace/<id>/<version>/`, registry plugins under
- * `registry/<id>/<version>/`. Defaults to `"marketplace"` for
- * backwards compatibility with pre-registry call sites.
- */
 export async function loadBundleFromR2(
 	storage: Storage,
 	pluginId: string,
@@ -277,14 +239,11 @@ export async function loadBundleFromR2(
 		if (!result.success) return null;
 		const manifest = reconcileManifestAccess(result.data);
 
-		// Try to load admin code (optional)
 		let adminCode: string | undefined;
 		try {
 			const adminResult = await storage.download(`${prefix}/admin.js`);
 			adminCode = await streamToText(adminResult.body);
-		} catch {
-			// admin.js is optional
-		}
+		} catch {}
 
 		return { manifest, backendCode, adminCode };
 	} catch {
@@ -292,7 +251,6 @@ export async function loadBundleFromR2(
 	}
 }
 
-/** Delete a plugin bundle from site-local R2 storage */
 export async function deleteBundleFromR2(
 	storage: Storage,
 	pluginId: string,
@@ -307,13 +265,9 @@ export async function deleteBundleFromR2(
 	for (const file of files) {
 		try {
 			await storage.delete(`${prefix}/${file}`);
-		} catch {
-			// Ignore missing files
-		}
+		} catch {}
 	}
 }
-
-// ── Install ────────────────────────────────────────────────────────
 
 export async function handleMarketplaceInstall(
 	db: Kysely<Database>,
@@ -325,12 +279,6 @@ export async function handleMarketplaceInstall(
 		version?: string;
 		configuredPluginIds?: Set<string>;
 		siteOrigin?: string;
-		/**
-		 * When true, sandbox: false bypass mode is active. The sandbox runner
-		 * is the noop runner (isAvailable() === false) but the runtime will
-		 * load the marketplace plugin in-process via syncMarketplacePlugins().
-		 * Skip the SANDBOX_NOT_AVAILABLE gate so the install can proceed.
-		 */
 		sandboxBypassed?: boolean;
 		confirmMcpTools?: boolean;
 	},
@@ -356,8 +304,6 @@ export async function handleMarketplaceInstall(
 		};
 	}
 
-	// Sandbox availability check: skip when sandbox: false bypass is active.
-	// The runtime's syncMarketplacePlugins() will load the plugin in-process.
 	if (!opts?.sandboxBypassed && (!sandboxRunner || !sandboxRunner.isAvailable())) {
 		return {
 			success: false,
@@ -369,7 +315,6 @@ export async function handleMarketplaceInstall(
 	}
 
 	try {
-		// Check if already installed
 		const stateRepo = new PluginStateRepository(db);
 		const existing = await stateRepo.get(pluginId);
 		if (existing && existing.source === "marketplace") {
@@ -382,9 +327,6 @@ export async function handleMarketplaceInstall(
 			};
 		}
 
-		// Block installation if a configured (trusted) plugin with the same ID exists.
-		// Without this check, the sandboxed plugin could shadow the trusted plugin's
-		// route handlers while auth decisions are made against the trusted plugin's metadata.
 		if (opts?.configuredPluginIds?.has(pluginId)) {
 			return {
 				success: false,
@@ -395,7 +337,6 @@ export async function handleMarketplaceInstall(
 			};
 		}
 
-		// Fetch plugin detail from marketplace
 		const pluginDetail = await client.getPlugin(pluginId);
 		const version = opts?.version ?? pluginDetail.latestVersion?.version;
 		if (!version) {
@@ -419,10 +360,6 @@ export async function handleMarketplaceInstall(
 			};
 		}
 
-		// Block installation of plugins that haven't passed audit.
-		// Both "fail" (explicitly malicious) and "warn" (audit error or
-		// inconclusive) are non-installable — only "pass" or null (no audit
-		// ran) are allowed through.
 		if (versionMetadata.auditVerdict === "fail" || versionMetadata.auditVerdict === "warn") {
 			return {
 				success: false,
@@ -436,10 +373,8 @@ export async function handleMarketplaceInstall(
 			};
 		}
 
-		// Download and extract bundle
 		const bundle = await client.downloadBundle(pluginId, version);
 
-		// Verify checksum matches marketplace-published checksum
 		if (versionMetadata.checksum && bundle.checksum !== versionMetadata.checksum) {
 			return {
 				success: false,
@@ -468,10 +403,8 @@ export async function handleMarketplaceInstall(
 			};
 		}
 
-		// Store bundle in site-local R2
 		await storeBundleInR2(storage, pluginId, version, bundle);
 
-		// Write plugin state
 		await stateRepo.upsert(pluginId, version, "active", {
 			source: "marketplace",
 			marketplaceVersion: version,
@@ -481,10 +414,7 @@ export async function handleMarketplaceInstall(
 
 		await syncDeclaredStorageIndexes(db, [bundle.manifest]);
 
-		// Fire-and-forget install stat
-		client.reportInstall(pluginId, version).catch(() => {
-			// Intentional: never fails the install
-		});
+		client.reportInstall(pluginId, version).catch(() => {});
 		return {
 			success: true,
 			data: {
@@ -544,8 +474,6 @@ export async function handleMarketplaceInstall(
 	}
 }
 
-// ── Update ─────────────────────────────────────────────────────────
-
 export async function handleMarketplaceUpdate(
 	db: Kysely<Database>,
 	storage: Storage | null,
@@ -557,12 +485,6 @@ export async function handleMarketplaceUpdate(
 		confirmCapabilityChanges?: boolean;
 		confirmRouteVisibilityChanges?: boolean;
 		confirmMcpTools?: boolean;
-		/**
-		 * When true, sandbox: false bypass mode is active. The sandbox runner
-		 * is the noop runner (isAvailable() === false) but the runtime will
-		 * load the marketplace plugin in-process via syncMarketplacePlugins().
-		 * Skip the SANDBOX_NOT_AVAILABLE gate so the update can proceed.
-		 */
 		sandboxBypassed?: boolean;
 	},
 ): Promise<ApiResult<MarketplaceUpdateResult>> {
@@ -579,8 +501,6 @@ export async function handleMarketplaceUpdate(
 			error: { code: "STORAGE_NOT_CONFIGURED", message: "Storage is required" },
 		};
 	}
-	// Sandbox availability check: skip when sandbox: false bypass is active.
-	// The runtime's syncMarketplacePlugins() will load the plugin in-process.
 	if (!opts?.sandboxBypassed && (!sandboxRunner || !sandboxRunner.isAvailable())) {
 		return {
 			success: false,
@@ -603,7 +523,6 @@ export async function handleMarketplaceUpdate(
 
 		const oldVersion = existing.marketplaceVersion ?? existing.version;
 
-		// Get target version
 		const pluginDetail = await client.getPlugin(pluginId);
 		const newVersion = opts?.version ?? pluginDetail.latestVersion?.version;
 		if (!newVersion) {
@@ -636,10 +555,8 @@ export async function handleMarketplaceUpdate(
 			};
 		}
 
-		// Download new bundle
 		const bundle = await client.downloadBundle(pluginId, newVersion);
 
-		// Verify checksum matches marketplace-published checksum for this version
 		if (versionMetadata.checksum && bundle.checksum !== versionMetadata.checksum) {
 			return {
 				success: false,
@@ -653,13 +570,11 @@ export async function handleMarketplaceUpdate(
 		const bundleIdentityError = validateBundleIdentity(bundle, pluginId, newVersion);
 		if (bundleIdentityError) return bundleIdentityError;
 
-		// Diff capabilities and route visibility against old version
 		const oldBundle = await loadBundleFromR2(storage, pluginId, oldVersion);
 		const oldCaps = oldBundle?.manifest.capabilities ?? [];
 		const capabilityChanges = diffCapabilities(oldCaps, bundle.manifest.capabilities);
 		const hasEscalation = capabilityChanges.added.length > 0;
 
-		// If capabilities escalated, require explicit confirmation
 		if (hasEscalation && !opts?.confirmCapabilityChanges) {
 			return {
 				success: false,
@@ -671,8 +586,6 @@ export async function handleMarketplaceUpdate(
 			};
 		}
 
-		// Diff route visibility — routes going from private to public are a
-		// security-sensitive change that exposes unauthenticated endpoints.
 		const routeVisibilityChanges = diffRouteVisibility(oldBundle?.manifest, bundle.manifest);
 		const hasNewPublicRoutes = routeVisibilityChanges.newlyPublic.length > 0;
 
@@ -706,10 +619,8 @@ export async function handleMarketplaceUpdate(
 			};
 		}
 
-		// Store new bundle
 		await storeBundleInR2(storage, pluginId, newVersion, bundle);
 
-		// Update state
 		await stateRepo.upsert(pluginId, newVersion, "active", {
 			source: "marketplace",
 			marketplaceVersion: newVersion,
@@ -721,7 +632,6 @@ export async function handleMarketplaceUpdate(
 
 		await syncDeclaredStorageIndexes(db, [bundle.manifest]);
 
-		// Clean up old bundle from R2 (best-effort)
 		deleteBundleFromR2(storage, pluginId, oldVersion).catch(() => {});
 
 		return {
@@ -755,8 +665,6 @@ export async function handleMarketplaceUpdate(
 	}
 }
 
-// ── Uninstall ──────────────────────────────────────────────────────
-
 export async function handleMarketplaceUninstall(
 	db: Kysely<Database>,
 	storage: Storage | null,
@@ -778,29 +686,22 @@ export async function handleMarketplaceUninstall(
 
 		const version = existing.marketplaceVersion ?? existing.version;
 
-		// Delete bundle from site R2
 		if (storage) {
 			await deleteBundleFromR2(storage, pluginId, version);
 		}
 
-		// Optionally delete plugin storage data
 		let dataDeleted = false;
 		if (opts?.deleteData) {
 			try {
 				await db.deleteFrom("_plugin_storage").where("plugin_id", "=", pluginId).execute();
 				dataDeleted = true;
-			} catch {
-				// Plugin storage table may not have data for this plugin
-			}
+			} catch {}
 		}
 
 		try {
 			await removeAllPluginIndexes(db, pluginId);
-		} catch {
-			// Nothing to drop, or tracking table predates the feature
-		}
+		} catch {}
 
-		// Delete state row
 		await stateRepo.delete(pluginId);
 
 		return {
@@ -818,8 +719,6 @@ export async function handleMarketplaceUninstall(
 		};
 	}
 }
-
-// ── Update check ───────────────────────────────────────────────────
 
 export async function handleMarketplaceUpdateCheck(
 	db: Kysely<Database>,
@@ -866,13 +765,9 @@ export async function handleMarketplaceUpdateCheck(
 					hasUpdate,
 					hasCapabilityChanges,
 					capabilityChanges: hasCapabilityChanges ? capabilityChanges : undefined,
-					// Route visibility changes require downloading both bundles to compare
-					// manifests, which is too expensive for a preview check. The actual
-					// enforcement happens at update time in handleMarketplaceUpdate.
 					hasRouteVisibilityChanges: false,
 				});
 			} catch (err) {
-				// Skip plugins that can't be checked (marketplace down, plugin delisted)
 				console.warn(`Failed to check updates for ${plugin.pluginId}:`, err);
 			}
 		}
@@ -892,8 +787,6 @@ export async function handleMarketplaceUpdateCheck(
 		};
 	}
 }
-
-// ── Proxy ──────────────────────────────────────────────────────────
 
 export async function handleMarketplaceSearch(
 	marketplaceUrl: string | undefined,
@@ -961,8 +854,6 @@ export async function handleMarketplaceGetPlugin(
 		};
 	}
 }
-
-// ── Theme proxy handlers ──────────────────────────────────────────
 
 export async function handleThemeSearch(
 	marketplaceUrl: string | undefined,

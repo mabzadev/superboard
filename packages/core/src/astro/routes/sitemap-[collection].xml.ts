@@ -1,20 +1,3 @@
-/**
- * Per-collection sitemap endpoint
- *
- * GET /sitemap-{collection}.xml - Sitemap for a single content collection.
- *
- * Uses the collection's url_pattern to build URLs. Falls back to
- * /{collection}/{slug} when no pattern is configured.
- *
- * i18n behaviour: when Astro i18n is enabled, the locale prefix is
- * applied via Astro's own `getRelativeLocaleUrl` (which honours
- * `prefixDefaultLocale`, custom `path` mappings, and other `routing`
- * config). Each translation row is emitted as its own `<url>` with
- * `<xhtml:link rel="alternate" hreflang="...">` entries pointing to
- * its siblings (grouped by `translation_group`). The default-locale
- * variant is also linked as `hreflang="x-default"`.
- */
-
 import type { APIRoute } from "astro";
 
 import { handleSitemapData } from "#api/handlers/seo.js";
@@ -72,9 +55,6 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 		const i18nEnabled = isI18nEnabled();
 		const i18nConfig = getI18nConfig();
 
-		// Group entries by `translation_group` so each <url> can advertise
-		// its sibling translations via xhtml:link. Rows without a group
-		// (legacy/single-locale data) are emitted individually.
 		type Entry = (typeof col.entries)[number];
 		const groups = new Map<string, Entry[]>();
 		const ungrouped: Entry[] = [];
@@ -88,12 +68,6 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 			}
 		}
 
-		// Resolve every URL up-front so we can reference sibling URLs
-		// while emitting hreflang alternates without re-resolving.
-		// `localizePath` returns `null` when the row's locale isn't in
-		// the configured `i18n.locales` list -- the site can't serve a
-		// route for it, so the entry is dropped from the sitemap and
-		// omitted from sibling alternates.
 		const urlByEntry = new Map<string, string | null>();
 		const resolveEntryUrl = async (entry: Entry): Promise<string | null> => {
 			if (urlByEntry.has(entry.id)) return urlByEntry.get(entry.id) ?? null;
@@ -119,18 +93,12 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 
 		const writeUrl = async (entry: Entry, siblings: Entry[] | null) => {
 			const loc = await resolveEntryUrl(entry);
-			// Skip rows whose locale isn't in the configured `i18n.locales`
-			// list. Linking to a route the site can't serve is worse than
-			// no link at all (search engines hit a 404 and downrank).
 			if (loc === null) return;
 
 			lines.push("  <url>");
 			lines.push(`    <loc>${escapeXml(loc)}</loc>`);
 			lines.push(`    <lastmod>${escapeXml(entry.updatedAt)}</lastmod>`);
 
-			// Google image sitemap extension: advertise the entry's SEO
-			// image (the same "preferred image" used for og:image) so it
-			// can be discovered and indexed for Google Images.
 			if (entry.image) {
 				const imageLoc = buildSeoImageUrl(entry.image, siteUrl);
 				lines.push("    <image:image>");
@@ -140,9 +108,6 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 
 			const alternateEntries = siblings ?? (useXhtml ? [entry] : null);
 			if (useXhtml && alternateEntries) {
-				// Emit one xhtml:link per sibling (including self -- Google
-				// recommends including the page's own hreflang annotation).
-				// Siblings with unroutable locales are skipped here too.
 				for (const sib of alternateEntries) {
 					const sibLoc = await resolveEntryUrl(sib);
 					if (sibLoc === null) continue;
@@ -151,9 +116,6 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 					);
 				}
 
-				// x-default: prefer the default-locale sibling, otherwise
-				// the first sibling with a routable URL. Stable order:
-				// rows arrive sorted by updated_at DESC from the handler.
 				const defaultSibling =
 					i18nConfig && alternateEntries.find((s) => s.locale === i18nConfig.defaultLocale);
 				let xDefaultLoc: string | null = null;
@@ -205,7 +167,6 @@ export const GET: APIRoute = async ({ params, locals, url }) => {
 	}
 };
 
-/** Escape special XML characters in a string */
 function escapeXml(str: string): string {
 	return str
 		.replace(AMP_RE, "&amp;")

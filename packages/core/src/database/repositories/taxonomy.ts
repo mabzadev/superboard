@@ -7,21 +7,14 @@ import { withTransaction } from "../transaction.js";
 import type { Database, TaxonomyTable } from "../types.js";
 import { validateIdentifier } from "../validate.js";
 
-/** A member of one sibling group and the position it currently holds. */
 export interface SiblingPosition {
 	group: string;
 	position: number;
 }
 
-/**
- * Translation groups per reorder `UPDATE`. Each costs three bound parameters —
- * a CASE `WHEN`/`THEN` pair plus one slot in the `IN` list — which keeps a
- * statement inside D1's 100-parameter ceiling.
- */
 const GROUPS_PER_UPDATE = 32;
 const NUMERIC_SUFFIX_PATTERN = /^\d+$/;
 
-/** Deal the listed groups back out over the slots they hold, in the order given. */
 function permuteWithinSlots(
 	listed: readonly string[],
 	occupied: readonly number[],
@@ -35,16 +28,6 @@ function permuteWithinSlots(
 	return target;
 }
 
-/**
- * Renumber a whole sibling group 0..n-1, with the listed groups in the order
- * given and every other member left in the place it already held.
- *
- * Works off each member's index in the sequence rather than its stored value,
- * which is what lets it resolve positions that tie. The sort is stable, so
- * tied members keep the order `siblings` arrives in — deterministic, but a
- * listing that mixes locales breaks a tie on whichever locale's label sorts
- * first, not on the order any one caller rendered.
- */
 function renumberSiblings(
 	listed: readonly string[],
 	siblings: readonly SiblingPosition[],
@@ -69,10 +52,6 @@ export interface Taxonomy {
 	data: Record<string, unknown> | null;
 	locale: string;
 	translationGroup: string | null;
-	/**
-	 * Position among siblings. Shared by every row of a `translation_group` —
-	 * a term sits in the same place in every locale it is translated into.
-	 */
 	sortOrder: number;
 }
 
@@ -82,10 +61,7 @@ export interface CreateTaxonomyInput {
 	label: string;
 	parentId?: string;
 	data?: Record<string, unknown>;
-	/** Omit to let the DB default (current value: 'en') apply. Higher layers
-	 * resolve the locale from the request context / i18n config. */
 	locale?: string;
-	/** When set, links the new term into the source term's translation_group. */
 	translationOf?: string;
 }
 
@@ -130,40 +106,12 @@ export interface TaxonomyAssignmentResolution {
 	translations: TaxonomyAssignmentTranslation[];
 }
 
-/**
- * Taxonomy repository for categories, tags, and other classification.
- *
- * Terms are per-locale. Translations of the same term share a `translation_group`
- * ULID. `content_taxonomies` stores translation_groups on both sides so a single
- * association spans every locale of a post and term.
- *
- * Strict lookup methods use only the locale callers supply. The explicitly
- * resolved methods accept both the preferred and default locales so their
- * fallback policy stays visible at the call site.
- *
- * `sort_order` is per translation_group, not per row: every row sharing a
- * translation_group carries the same value, so a term holds one position across
- * all its locales. Sibling groups are keyed on the raw `parent_id` column, which
- * is locale-agnostic for the same reason (it stores the parent's
- * translation_group). Writes must preserve both invariants.
- */
 export class TaxonomyRepository {
 	constructor(private db: Kysely<Database>) {}
 
-	/**
-	 * Create a new taxonomy term. When `translationOf` is set the new row joins
-	 * the source term's translation_group; otherwise a fresh group is minted
-	 * (matching the migration backfill pattern `translation_group = id`).
-	 */
 	async create(input: CreateTaxonomyInput): Promise<Taxonomy> {
 		const id = ulid();
 
-		// Empty-string parentId is coerced to null defensively. Higher layers
-		// also normalize this — see handleTermCreate / handleTermUpdate.
-		// `parent_id` stores the parent's locale-agnostic translation_group (not a
-		// row id), mirroring content_taxonomies.taxonomy_id, so a child stays
-		// nested in every locale's tree. resolveTranslationGroup accepts either a
-		// row id or an already-resolved group, so this is idempotent.
 		const parentInput =
 			input.parentId === undefined || input.parentId === "" ? null : input.parentId;
 		const parentId = parentInput ? await this.resolveParentRef(parentInput) : null;
@@ -173,10 +121,6 @@ export class TaxonomyRepository {
 		if (input.translationOf) {
 			const source = await this.findById(input.translationOf);
 			if (source?.translationGroup) translationGroup = source.translationGroup;
-			// A translation is the same term in another locale, so it takes the
-			// group's position — but only while it stays in the group that position
-			// belongs to. Landing under a different parent makes it a new member of
-			// that sibling group, and the source's position means nothing there.
 			if (source && source.parentId === parentId) sortOrder = source.sortOrder;
 		}
 		sortOrder ??= await this.nextSortOrder(input.name, parentId);
@@ -191,9 +135,6 @@ export class TaxonomyRepository {
 				parent_id: parentId,
 				data: input.data ? JSON.stringify(input.data) : null,
 				sort_order: sortOrder,
-				// When omitted, the DB DEFAULT 'en' is used — keeps behaviour
-				// consistent with ContentRepository and lets higher layers
-				// supply an explicit locale from request context.
 				...(input.locale !== undefined ? { locale: input.locale } : {}),
 				translation_group: translationGroup,
 			})
@@ -215,11 +156,6 @@ export class TaxonomyRepository {
 		return row ? this.rowToTaxonomy(row) : null;
 	}
 
-	/**
-	 * Find a term by (name, slug). When `locale` is provided, filter by it.
-	 * When omitted, returns the lowest-locale-code match (deterministic across
-	 * calls). Mirrors `ContentRepository.findBySlug`.
-	 */
 	async findBySlug(name: string, slug: string, locale?: string): Promise<Taxonomy | null> {
 		let query = this.db
 			.selectFrom("taxonomies")
@@ -231,7 +167,6 @@ export class TaxonomyRepository {
 		return row ? this.rowToTaxonomy(row) : null;
 	}
 
-	/** Generate a locale-scoped term slug, adding a numeric suffix when needed. */
 	async generateUniqueSlug(name: string, text: string, locale?: string): Promise<string> {
 		const baseSlug = slugify(text);
 		let query = this.db
@@ -254,14 +189,6 @@ export class TaxonomyRepository {
 		return `${baseSlug}-${maxSuffix + 1}`;
 	}
 
-	/**
-	 * Get all terms for a taxonomy (e.g., all categories).
-	 *
-	 * `sort_order` carries the manual order set from the admin; it is 0 for
-	 * terms nobody has reordered, so an untouched taxonomy still comes back
-	 * alphabetically. `id asc` is a stable tiebreaker for terms that share both
-	 * values. Without it the SQL ordering is implementation-defined when they match.
-	 */
 	async findByName(name: string, options: FindOptions = {}): Promise<Taxonomy[]> {
 		let query = this.db
 			.selectFrom("taxonomies")
@@ -350,13 +277,6 @@ export class TaxonomyRepository {
 		};
 	}
 
-	/**
-	 * Children of a term. Accepts a term id OR a translation_group and resolves
-	 * to the group, since `parent_id` stores the parent's translation_group.
-	 * Pass `locale` to scope to one locale's tree (children share the parent's
-	 * group across locales); omit it to find children in every locale (used to
-	 * block deletes that would orphan a sibling translation's subtree).
-	 */
 	async findChildren(parentIdOrGroup: string, locale?: string): Promise<Taxonomy[]> {
 		const group = await this.resolveTranslationGroup(parentIdOrGroup);
 		if (!group) return [];
@@ -374,10 +294,6 @@ export class TaxonomyRepository {
 		return rows.map((row) => this.rowToTaxonomy(row));
 	}
 
-	/**
-	 * Every translation sibling of a term (including itself), identified by
-	 * their shared `translation_group`.
-	 */
 	async findTranslations(translationGroup: string): Promise<Taxonomy[]> {
 		const rows = await this.db
 			.selectFrom("taxonomies")
@@ -392,8 +308,6 @@ export class TaxonomyRepository {
 		const existing = await this.findById(id);
 		if (!existing) return null;
 
-		// Per-row display fields. `parent_id` and `sort_order` are not here: both
-		// belong to the translation_group and are written across it below.
 		const updates: Record<string, unknown> = {};
 		if (input.slug !== undefined) updates.slug = input.slug;
 		if (input.label !== undefined) updates.label = input.label;
@@ -401,9 +315,6 @@ export class TaxonomyRepository {
 
 		const group: { parent_id?: string | null; sort_order?: number } = {};
 		if (input.parentId !== undefined) {
-			// Defense in depth: empty-string parentId means null (no parent).
-			// Otherwise persist the parent's translation_group (locale-agnostic),
-			// matching create() — see the note there.
 			const parentId =
 				input.parentId === "" || input.parentId === null
 					? null
@@ -411,8 +322,6 @@ export class TaxonomyRepository {
 
 			if (parentId !== existing.parentId) {
 				group.parent_id = parentId;
-				// A position only means anything within one sibling group, so a term
-				// that changes parent is appended to the group it lands in.
 				group.sort_order = await this.nextSortOrder(existing.name, parentId);
 			}
 		}
@@ -438,20 +347,6 @@ export class TaxonomyRepository {
 		return this.findById(id);
 	}
 
-	/**
-	 * Move `groups` (translation_groups, in the desired order) into the positions
-	 * those same groups already occupy, leaving every other member of the sibling
-	 * group where it is.
-	 *
-	 * `groups` may be a subset: a locale renders only the terms translated into
-	 * it, so an admin in `fr` often cannot name every member. A group left out
-	 * keeps its place, which is also what makes a stale list harmless.
-	 *
-	 * `siblings` is every member of the group with the position it holds, in a
-	 * listing's order — tied positions are resolved by that order, so pass it as
-	 * read. Groups already at their target are skipped, so one swap rewrites two
-	 * groups rather than the whole list.
-	 */
 	async reorder(groups: string[], siblings: readonly SiblingPosition[]): Promise<void> {
 		const current = new Map(siblings.map(({ group, position }) => [group, position]));
 
@@ -465,9 +360,6 @@ export class TaxonomyRepository {
 		}
 		if (listed.length === 0) return;
 
-		// Tied positions have no distinct order to permute into, so the requested
-		// one would be dropped without a word. Renumbering is the only way to
-		// honour it, and it repairs the tie on the way through.
 		const target =
 			new Set(occupied).size === occupied.length
 				? permuteWithinSlots(listed, occupied)
@@ -481,20 +373,9 @@ export class TaxonomyRepository {
 		invalidateTaxonomyObjectCache();
 	}
 
-	/**
-	 * Write one position per translation_group, GROUPS_PER_UPDATE at a time so
-	 * each statement stays inside D1's parameter ceiling.
-	 *
-	 * D1 has no transactions — `withTransaction` runs its callback bare there —
-	 * so a chunk is the unit that can't tear. A reorder spanning several chunks
-	 * can, and leaves ties, which the next reorder renumbers away.
-	 */
 	private async applyPositions(positions: readonly (readonly [string, number])[]): Promise<void> {
 		for (let index = 0; index < positions.length; index += GROUPS_PER_UPDATE) {
 			const chunk = positions.slice(index, index + GROUPS_PER_UPDATE);
-			// The CAST types the bound position. Postgres resolves a CASE whose THEN
-			// arms are all untyped parameters to text, then refuses to assign text to
-			// an integer column.
 			const arms = sql.join(
 				chunk.map(([group, position]) => sql`WHEN ${group} THEN CAST(${position} AS INTEGER)`),
 				sql` `,
@@ -508,14 +389,6 @@ export class TaxonomyRepository {
 		}
 	}
 
-	/**
-	 * Position for a term joining a sibling group: one past the last member, or
-	 * 0 when the group is empty.
-	 *
-	 * Bounds are taken across every locale because a position belongs to the
-	 * translation_group, not to a row — a term translated into only one locale
-	 * still occupies its slot for all of them.
-	 */
 	private async nextSortOrder(name: string, parentId: string | null): Promise<number> {
 		let query = this.db
 			.selectFrom("taxonomies")
@@ -527,7 +400,6 @@ export class TaxonomyRepository {
 				: query.where("parent_id", "=", parentId);
 
 		const bounds = await query.executeTakeFirst();
-		// Null only when the group is empty.
 		if (!bounds || bounds.max === null) return 0;
 		return bounds.max + 1;
 	}
@@ -536,8 +408,6 @@ export class TaxonomyRepository {
 		const term = await this.findById(id);
 		if (!term) return false;
 
-		// When deleting the last translation of a group the pivot rows that
-		// reference that translation_group become orphaned — purge them.
 		if (term.translationGroup) {
 			const siblings = await this.db
 				.selectFrom("taxonomies")
@@ -558,18 +428,12 @@ export class TaxonomyRepository {
 		return (result.numDeletedRows ?? 0n) > 0n;
 	}
 
-	// --- Content-Taxonomy Junction (both ids store translation_groups) ---
-
 	async attachToEntry(collection: string, entryId: string, taxonomyId: string): Promise<void> {
 		const taxonomyGroup = await this.resolveTranslationGroup(taxonomyId);
 		if (!taxonomyGroup) return;
 		await this.attachGroupsToEntry(collection, entryId, [taxonomyGroup]);
 	}
 
-	/**
-	 * Attach already-resolved term translation groups in one insert and return
-	 * the number of assignments that did not already exist.
-	 */
 	async attachGroupsToEntry(
 		collection: string,
 		entryId: string,
@@ -612,11 +476,6 @@ export class TaxonomyRepository {
 		invalidateTaxonomyObjectCache();
 	}
 
-	/**
-	 * Taxonomy terms assigned to a content entry, resolved into a specific locale.
-	 * Terms whose translation_group lacks a row in the requested locale are
-	 * omitted — callers wanting fallback behaviour apply it themselves.
-	 */
 	async getTermsForEntry(
 		collection: string,
 		entryId: string,
@@ -687,10 +546,6 @@ export class TaxonomyRepository {
 		});
 	}
 
-	/**
-	 * Replace all assignments of a given taxonomy for one content entry.
-	 * Term ids OR translation_groups are accepted and normalised to groups.
-	 */
 	async setTermsForEntry(
 		collection: string,
 		entryId: string,
@@ -775,16 +630,6 @@ export class TaxonomyRepository {
 		return result.rows[0]?.translation_group ?? null;
 	}
 
-	/**
-	 * Count content entries that use any translation of this term. Accepts
-	 * either a term id or a translation_group — we normalise to the group.
-	 *
-	 * Counts raw pivot rows regardless of the entry's status or deletion —
-	 * drafts and trashed entries are included. User-facing counts (admin term
-	 * list/get, public widget and term pages) use `fetchVisibleTermCounts`
-	 * from `taxonomies/term-counts.ts` instead, which counts only publicly
-	 * visible entries.
-	 */
 	async countEntriesWithTerm(termIdOrGroup: string): Promise<number> {
 		const group = await this.resolveTranslationGroup(termIdOrGroup);
 		if (!group) return 0;
@@ -797,15 +642,6 @@ export class TaxonomyRepository {
 		return Number(result?.count ?? 0);
 	}
 
-	/**
-	 * Resolve a parent reference (a row id or a translation_group) to the value
-	 * persisted in `parent_id`: the parent's translation_group, which is
-	 * locale-agnostic so the child stays nested in every locale. A
-	 * translation_group normally equals its anchor row's id, which satisfies the
-	 * self-FK on `parent_id`. If that anchor row is missing (a translation whose
-	 * anchor was deleted), fall back to the id we were given so we never write a
-	 * dangling FK value.
-	 */
 	private async resolveParentRef(idOrGroup: string): Promise<string> {
 		const group = await this.resolveTranslationGroup(idOrGroup);
 		if (!group) return idOrGroup;
@@ -826,17 +662,6 @@ export class TaxonomyRepository {
 		return row?.translation_group ?? null;
 	}
 
-	/**
-	 * Batch count entries for multiple taxonomy translation_groups.
-	 * Chunks the query at SQL_BATCH_SIZE to stay below D1's bind-parameter limit.
-	 * Returns a Map from translation_group to count.
-	 *
-	 * Pass translation_groups (not term ids) — `content_taxonomies.taxonomy_id`
-	 * stores the translation_group so a single assignment spans every locale.
-	 *
-	 * Like `countEntriesWithTerm`, this counts raw pivot rows regardless of
-	 * status/deletion; user-facing counts go through `fetchVisibleTermCounts`.
-	 */
 	async countEntriesForTerms(translationGroups: string[]): Promise<Map<string, number>> {
 		if (translationGroups.length === 0) return new Map();
 

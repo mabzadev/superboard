@@ -1,9 +1,3 @@
-/**
- * emdash export-seed
- *
- * Export current database schema (and optionally content) as a seed file
- */
-
 import { resolve } from "node:path";
 
 import { defineCommand } from "citty";
@@ -73,13 +67,11 @@ export const exportSeedCommand = defineCommand({
 	async run({ args }) {
 		const cwd = resolve(args.cwd);
 
-		// Connect to database
 		const dbPath = resolve(cwd, args.database);
 		consola.info(`Database: ${dbPath}`);
 
 		const db = createDatabase({ url: `file:${dbPath}` });
 
-		// Run migrations to ensure tables exist
 		try {
 			await runMigrations(db);
 		} catch (error) {
@@ -91,7 +83,6 @@ export const exportSeedCommand = defineCommand({
 		try {
 			const seed = await exportSeed(db, args["with-content"]);
 
-			// Output to stdout
 			const output = args.pretty ? JSON.stringify(seed, null, "\t") : JSON.stringify(seed);
 
 			console.log(output);
@@ -105,9 +96,6 @@ export const exportSeedCommand = defineCommand({
 	},
 });
 
-/**
- * Export database to seed file format
- */
 export async function exportSeed(db: Kysely<Database>, withContent?: string): Promise<SeedFile> {
 	const seed: SeedFile = {
 		$schema: "https://emdashcms.com/seed.schema.json",
@@ -118,47 +106,29 @@ export async function exportSeed(db: Kysely<Database>, withContent?: string): Pr
 		},
 	};
 
-	// 1. Export settings
 	seed.settings = await exportSettings(db);
 
-	// 2. Export collections and fields
 	seed.collections = await exportCollections(db);
 
-	// Decide locale-awareness from the data. The runtime sets the i18n config via
-	// middleware, but the CLI never does, so `isI18nEnabled()` is always false
-	// under `emdash export-seed` (#1330). Detecting multiple locales in the data
-	// keeps the export locale-aware without the runtime flag.
 	const { i18nEnabled, defaultLocale } = await detectLocaleInfo(db, seed.collections);
 
-	// Self-describe the default locale so a non-`en` single-locale project
-	// survives the round-trip: `emdash seed` runs outside the runtime and would
-	// otherwise backfill omitted locales as `en` (#1421).
 	if (defaultLocale) seed.defaultLocale = defaultLocale;
 
-	// 3. Export taxonomy definitions and terms
 	seed.taxonomies = await exportTaxonomies(db, i18nEnabled);
 
-	// 4. Export menus
 	seed.menus = await exportMenus(db, i18nEnabled);
 
-	// 5. Export widget areas
 	seed.widgetAreas = await exportWidgetAreas(db);
 
-	// 6. Export byline profiles. The returned map (translation_group -> seed-local
-	// id) lets content credits below reference the same ids the root list emits.
 	const { bylines, groupToSeedId } = await exportBylines(db);
 	if (bylines.length > 0) {
 		seed.bylines = bylines;
 	}
 
-	// 7. Export content (if requested)
 	if (withContent !== undefined) {
-		// Treat "all" as a synonym for the bare flag and "true". The args help
-		// text documents `all` as a valid value, but without this the literal
-		// string is read as a collection name and matches no collection (#1329).
 		const includeAll = withContent === "" || withContent === "true" || withContent === "all";
 		const collections = includeAll
-			? null // all collections
+			? null
 			: withContent
 					.split(",")
 					.map((s) => s.trim())
@@ -176,15 +146,6 @@ export async function exportSeed(db: Kysely<Database>, withContent?: string): Pr
 	return seed;
 }
 
-/**
- * Export byline profiles as root-level `bylines[]`.
- *
- * `SeedByline` has no locale axis, so locale siblings of the same byline
- * (sharing a `translation_group`) collapse to a single profile. The returned
- * `groupToSeedId` map keys on `translation_group` — the value stored in
- * `_emdash_content_bylines.byline_id` — so content credits can resolve to the
- * emitted seed id.
- */
 async function exportBylines(
 	db: Kysely<Database>,
 ): Promise<{ bylines: SeedByline[]; groupToSeedId: Map<string, string> }> {
@@ -198,12 +159,9 @@ async function exportBylines(
 		const result = await bylineRepo.findMany({ limit: 100, cursor });
 		for (const byline of result.items) {
 			const group = byline.translationGroup ?? byline.id;
-			// One seed entry per translation group; first row seen wins.
 			if (groupToSeedId.has(group)) continue;
 
 			let seedId = `byline:${byline.slug}`;
-			// Disambiguate the rare case of two distinct groups sharing a slug
-			// (slug is unique per-locale, not globally) so seed ids stay unique.
 			if (usedSeedIds.has(seedId)) seedId = `byline:${byline.slug}:${group}`;
 			usedSeedIds.add(seedId);
 			groupToSeedId.set(group, seedId);
@@ -223,25 +181,6 @@ async function exportBylines(
 	return { bylines, groupToSeedId };
 }
 
-/**
- * Determine locale-awareness and the data's default locale for the export.
- *
- * The runtime initializes the i18n config in middleware, but the CLI never does,
- * so `isI18nEnabled()` is always false under `emdash export-seed` (#1330). When
- * the flag is unset, fall back to the data: a project is multi-locale when its
- * i18n-aware tables hold rows in more than one distinct locale. `locale` is
- * NOT NULL (defaulting to the site's default locale), so a per-row presence
- * check is not enough — only the *count* of distinct locales distinguishes a
- * genuinely single-locale project from a multi-locale one. This keeps
- * single-locale exports on bare ids and gives multi-locale exports the
- * per-locale suffix they need to avoid duplicate seed ids.
- *
- * `defaultLocale` self-describes the single-locale case so a non-`en` default
- * survives the round-trip (#1421). When more than one locale is present every
- * row already carries its own `locale`, so no fallback is needed and we leave it
- * undefined rather than guess which locale is the "default" without the runtime
- * config.
- */
 async function detectLocaleInfo(
 	db: Kysely<Database>,
 	collections: SeedCollection[],
@@ -266,8 +205,6 @@ async function detectLocaleInfo(
 
 	for (const collection of collections) {
 		validateIdentifier(collection.slug, "collection slug");
-		// On D1, deleteCollection is non-atomic, so a collection row can outlive
-		// its ec_* table. Skip missing tables rather than crashing the export.
 		try {
 			await collectDistinctLocales(sql.ref(`ec_${collection.slug}`));
 		} catch (error) {
@@ -281,9 +218,6 @@ async function detectLocaleInfo(
 	};
 }
 
-/**
- * Export site settings
- */
 async function exportSettings(db: Kysely<Database>): Promise<SeedFile["settings"]> {
 	const options = new OptionsRepository(db);
 	const allOptions = await options.getByPrefix(SETTINGS_PREFIX);
@@ -297,9 +231,6 @@ async function exportSettings(db: Kysely<Database>): Promise<SeedFile["settings"
 	return Object.keys(settings).length > 0 ? settings : undefined;
 }
 
-/**
- * Export collections and their fields
- */
 async function exportCollections(db: Kysely<Database>): Promise<SeedCollection[]> {
 	const registry = new SchemaRegistry(db);
 	const collections = await registry.listCollections();
@@ -343,15 +274,10 @@ async function exportCollections(db: Kysely<Database>): Promise<SeedCollection[]
 	return result;
 }
 
-/**
- * Export taxonomy definitions and terms
- */
 async function exportTaxonomies(
 	db: Kysely<Database>,
 	i18nEnabled: boolean,
 ): Promise<SeedTaxonomy[]> {
-	// Mirrors the content export pattern: one entry per (name, locale), stable
-	// seed-local id, translations linked via `translationOf` to the anchor's id.
 	const defs = await db
 		.selectFrom("_emdash_taxonomy_defs")
 		.selectAll()
@@ -361,22 +287,17 @@ async function exportTaxonomies(
 	const result: SeedTaxonomy[] = [];
 	const termRepo = new TaxonomyRepository(db);
 
-	// translation_group -> seed-local id of first def we emitted in that group.
 	const defGroupToSeedId = new Map<string, string>();
 
 	for (const def of defs) {
 		const defSeedId =
 			i18nEnabled && def.locale ? `tax:${def.name}:${def.locale}` : `tax:${def.name}`;
 
-		// Terms in this def's locale.
 		const terms = await termRepo.findByName(def.name, { locale: def.locale });
 
-		// translation_group -> slug for parent resolution within this locale.
-		// `parentId` stores the parent's translation_group, not a row id.
 		const groupToSlug = new Map<string, string>();
 		for (const term of terms) groupToSlug.set(term.translationGroup ?? term.id, term.slug);
 
-		// translation_group -> seed id of the anchor term.
 		const termGroupToSeedId = new Map<string, string>();
 
 		const seedTerms: SeedTaxonomyTerm[] = [];
@@ -407,7 +328,6 @@ async function exportTaxonomies(
 			seedTerms.push(seedTerm);
 		}
 
-		// Anchors first so import can resolve `translationOf`.
 		seedTerms.sort((a, b) => Number(!!a.translationOf) - Number(!!b.translationOf));
 
 		const taxonomy: SeedTaxonomy = {
@@ -433,15 +353,11 @@ async function exportTaxonomies(
 		result.push(taxonomy);
 	}
 
-	// Anchors first at def level too.
 	result.sort((a, b) => Number(!!a.translationOf) - Number(!!b.translationOf));
 
 	return result;
 }
 
-/**
- * Export menus with their items
- */
 async function exportMenus(db: Kysely<Database>, i18nEnabled: boolean): Promise<SeedMenu[]> {
 	const menus = await db
 		.selectFrom("_emdash_menus")
@@ -450,9 +366,7 @@ async function exportMenus(db: Kysely<Database>, i18nEnabled: boolean): Promise<
 		.execute();
 
 	const result: SeedMenu[] = [];
-	// translation_group -> seed-local id of the anchor menu in that group.
 	const groupToSeedId = new Map<string, string>();
-	// Shared across menus: translated items reference anchor items in sibling menus.
 	const itemGroupToSeedId = new Map<string, string>();
 	const usedItemSeedIds = new Set<string>();
 
@@ -494,20 +408,15 @@ async function exportMenus(db: Kysely<Database>, i18nEnabled: boolean): Promise<
 		result.push(seedMenu);
 	}
 
-	// Anchors first so import can resolve `translationOf`.
 	result.sort((a, b) => Number(!!a.translationOf) - Number(!!b.translationOf));
 
 	return result;
 }
 
-/** Type guard for valid widget types */
 function isWidgetType(t: string): t is SeedWidget["type"] {
 	return t === "content" || t === "menu" || t === "component";
 }
 
-/**
- * Build hierarchical menu item tree from flat array
- */
 function buildMenuItemTree(
 	items: Array<{
 		id: string;
@@ -527,12 +436,10 @@ function buildMenuItemTree(
 		i18nEnabled: boolean;
 		menuName: string;
 		menuLocale: string | null;
-		// translation_group -> seed-local id of the anchor item in that group.
 		itemGroupToSeedId: Map<string, string>;
 		usedItemSeedIds: Set<string>;
 	},
 ): SeedMenuItem[] {
-	// Build parent -> children map
 	const childMap = new Map<string | null, typeof items>();
 
 	for (const item of items) {
@@ -553,7 +460,6 @@ function buildMenuItemTree(
 			i18nCtx.usedItemSeedIds.add(candidate);
 			return candidate;
 		}
-		// Collision fallback: append DB id to disambiguate duplicate labels.
 		const fallback = locale
 			? `item:${i18nCtx.menuName}:${base}:${item.id}:${locale}`
 			: `item:${i18nCtx.menuName}:${base}:${item.id}`;
@@ -561,7 +467,6 @@ function buildMenuItemTree(
 		return fallback;
 	}
 
-	// Recursively build tree
 	function buildLevel(parentId: string | null): SeedMenuItem[] {
 		const children = childMap.get(parentId) || [];
 		const result = children.map((item) => {
@@ -599,7 +504,6 @@ function buildMenuItemTree(
 				}
 			}
 
-			// Add children
 			const itemChildren = buildLevel(item.id);
 			if (itemChildren.length > 0) {
 				seedItem.children = itemChildren;
@@ -608,25 +512,18 @@ function buildMenuItemTree(
 			return seedItem;
 		});
 
-		// Sibling order is preserved (maps to sort_order on import). Cross-menu
-		// `translationOf` already resolves because exportMenus sorts anchors first.
 		return result;
 	}
 
 	return buildLevel(null);
 }
 
-/**
- * Export widget areas with their widgets
- */
 async function exportWidgetAreas(db: Kysely<Database>): Promise<SeedWidgetArea[]> {
-	// Get all widget areas
 	const areas = await db.selectFrom("_emdash_widget_areas").selectAll().execute();
 
 	const result: SeedWidgetArea[] = [];
 
 	for (const area of areas) {
-		// Get widgets for this area
 		const widgets = await db
 			.selectFrom("_emdash_widgets")
 			.selectAll()
@@ -673,9 +570,6 @@ async function exportWidgetAreas(db: Kysely<Database>): Promise<SeedWidgetArea[]
 	return result;
 }
 
-/**
- * Export content from collections
- */
 async function exportContent(
 	db: Kysely<Database>,
 	collections: SeedCollection[],
@@ -688,7 +582,6 @@ async function exportContent(
 	const taxonomyRepo = new TaxonomyRepository(db);
 	const mediaRepo = new MediaRepository(db);
 
-	// Build media id -> info map for $media conversion
 	const mediaMap = new Map<
 		string,
 		{ url: string; filename: string; alt?: string; caption?: string }
@@ -711,12 +604,9 @@ async function exportContent(
 			}
 			cursor = result.nextCursor;
 		} while (cursor);
-	} catch {
-		// Media table might not exist or be empty
-	}
+	} catch {}
 
 	for (const collection of collections) {
-		// Skip if not in include list
 		if (includeCollections && !includeCollections.includes(collection.slug)) {
 			continue;
 		}
@@ -724,12 +614,8 @@ async function exportContent(
 		const entries: SeedContentEntry[] = [];
 		let cursor: string | undefined;
 
-		// When i18n is enabled, track translation_group -> seed ID so that
-		// translations can reference the source entry's seed-local ID.
-		// Key: EmDash translation_group ULID, Value: seed-local ID of the first entry in that group
 		const translationGroupToSeedId = new Map<string, string>();
 
-		// Paginate through all entries
 		do {
 			const result = await contentRepo.findMany(collection.slug, {
 				limit: 100,
@@ -737,14 +623,12 @@ async function exportContent(
 			});
 
 			for (const item of result.items) {
-				// Generate seed ID from collection:slug:locale for stable references
 				const seedId = item.slug
 					? i18nEnabled && item.locale
 						? `${collection.slug}:${item.slug}:${item.locale}`
 						: `${collection.slug}:${item.slug}`
 					: item.id;
 
-				// Process data fields for $media conversion
 				const processedData = processDataForExport(item.data, collection.fields, mediaMap);
 
 				const entry: SeedContentEntry = {
@@ -754,33 +638,24 @@ async function exportContent(
 					data: processedData,
 				};
 
-				// Add i18n fields when enabled
 				if (i18nEnabled && item.locale) {
 					entry.locale = item.locale;
 
 					if (item.translationGroup) {
 						const sourceSeedId = translationGroupToSeedId.get(item.translationGroup);
 						if (sourceSeedId) {
-							// This is a translation — reference the source entry
 							entry.translationOf = sourceSeedId;
 						} else {
-							// First entry in this translation group — track it
 							translationGroupToSeedId.set(item.translationGroup, seedId);
 						}
 					}
 				}
 
-				// Get taxonomy assignments
 				const taxonomies = await getTaxonomyAssignments(taxonomyRepo, collection.slug, item.id);
 				if (Object.keys(taxonomies).length > 0) {
 					entry.taxonomies = taxonomies;
 				}
 
-				// Get byline credits. Read the junction directly: its `byline_id`
-				// stores the translation_group, which is exactly the key in
-				// `bylineGroupToSeedId`. This is locale-agnostic (one row per
-				// credit) and avoids the locale-sibling fan-out a hydrated read
-				// would produce.
 				const bylines = await getBylineCredits(db, collection.slug, item.id, bylineGroupToSeedId);
 				if (bylines.length > 0) {
 					entry.bylines = bylines;
@@ -793,8 +668,6 @@ async function exportContent(
 		} while (cursor);
 
 		if (i18nEnabled && entries.length > 0) {
-			// Sort entries so source locale entries appear before their translations.
-			// Entries without translationOf come first; entries with translationOf come after.
 			entries.sort((a, b) => {
 				if (a.translationOf && !b.translationOf) return 1;
 				if (!a.translationOf && b.translationOf) return -1;
@@ -810,9 +683,6 @@ async function exportContent(
 	return content;
 }
 
-/**
- * Process content data for export, converting image fields to $media syntax
- */
 function processDataForExport(
 	data: Record<string, unknown>,
 	fields: SeedField[],
@@ -820,7 +690,6 @@ function processDataForExport(
 ): Record<string, unknown> {
 	const result: Record<string, unknown> = {};
 
-	// Create field type lookup
 	const fieldTypes = new Map<string, FieldType>();
 	for (const field of fields) {
 		fieldTypes.set(field.slug, field.type);
@@ -830,7 +699,6 @@ function processDataForExport(
 		const fieldType = fieldTypes.get(key);
 
 		if (fieldType === "image" && value && typeof value === "object") {
-			// Convert image field to $media syntax
 			const imageValue = value as { id?: string; src?: string; alt?: string };
 			if (imageValue.id) {
 				const mediaInfo = mediaMap.get(imageValue.id);
@@ -846,13 +714,10 @@ function processDataForExport(
 					continue;
 				}
 			}
-			// Fallback: keep as-is if no media info found
 			result[key] = value;
 		} else if (fieldType === "reference" && typeof value === "string") {
-			// Convert reference to $ref syntax (assumes same collection for now)
 			result[key] = `$ref:${value}`;
 		} else if (Array.isArray(value)) {
-			// Process arrays (could contain references or images)
 			result[key] = value.map((item) => {
 				if (typeof item === "string" && fieldType === "reference") {
 					return `$ref:${item}`;
@@ -867,14 +732,6 @@ function processDataForExport(
 	return result;
 }
 
-/**
- * Get ordered byline credits for a content entry as `SeedBylineCredit[]`.
- *
- * The `_emdash_content_bylines.byline_id` column stores the credited byline's
- * `translation_group`, so it maps straight through `groupToSeedId`. Credits
- * whose group wasn't emitted in the root `bylines[]` are skipped (defensive;
- * shouldn't happen for a consistent DB).
- */
 async function getBylineCredits(
 	db: Kysely<Database>,
 	collection: string,
@@ -901,9 +758,6 @@ async function getBylineCredits(
 	return credits;
 }
 
-/**
- * Get taxonomy term assignments for a content entry
- */
 async function getTaxonomyAssignments(
 	taxonomyRepo: TaxonomyRepository,
 	collection: string,

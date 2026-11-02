@@ -35,7 +35,6 @@ const main = defineCommand({
 		migrate: migrateCommand,
 		"export-seed": exportSeedCommand,
 		secrets: secretsCommand,
-		// Deprecated alias kept for backwards compat; will be removed in a future minor.
 		auth: authCommand,
 		login: loginCommand,
 		logout: logoutCommand,

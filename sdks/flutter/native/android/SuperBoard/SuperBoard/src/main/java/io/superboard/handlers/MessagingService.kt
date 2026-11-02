@@ -43,13 +43,11 @@ fun FirebaseMessagingService.handleSuperBoardNotification(message: RemoteMessage
 
     DebugLogger.instance.log(LogLevel.INFO, "Received push notification: ${message.notification} data: ${message.data} ")
 
-    // Retrieve the drawable name from meta-data
     val applicationInfo = packageManager.getApplicationInfo(
         packageName,
         PackageManager.GET_META_DATA
     )
     val iconName = applicationInfo.metaData?.getString("io.superboard.NotificationIconSmall")
-    // Get the drawable resource ID
     val iconResId = iconName?.let { resources.getIdentifier(it, "drawable", packageName) }
 
     handleSuperBoardNotification(message.notification?.title, message.notification?.body, iconResId ?: R.drawable.ic_superboard_notification_default_small)
@@ -60,14 +58,12 @@ fun FirebaseMessagingService.handleSuperBoardNotification(message: RemoteMessage
 private fun FirebaseMessagingService.handleSuperBoardNotification(title: String?, body: String?, smallIcon: Int) {
     val channelId = "SuperBoardChannel"
 
-    // Build the notification
     val notificationBuilder = NotificationCompat.Builder(this, channelId)
         .setSmallIcon(smallIcon)
         .setContentTitle(title)
         .setContentText(body)
         .setAutoCancel(true)
 
-    // Send the notification
     val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     val channel = NotificationChannel(channelId, "SuperBoard Channel", NotificationManager.IMPORTANCE_HIGH)

@@ -1,19 +1,3 @@
-/**
- * Draft saves on published entries must not advance the content row's
- * `updated_at` (#2143).
- *
- * On revision-supporting collections, **Save** and **Autosave** on an
- * already-published entry store changes as a pending draft — live public
- * content is unchanged until **Publish**. Those draft-only writes previously
- * bumped `updated_at` anyway, which public SEO surfaces (sitemap <lastmod>,
- * JSON-LD dateModified) treat as "content last modified" — a phantom
- * modification for crawlers.
- *
- * The fix skips the `updated_at` stamp on content-row writes that touch no
- * live columns (pure draft staging / discard), and restores the pre-save
- * timestamp when a draft-only update request resolves to a metadata no-op.
- */
-
 import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,10 +16,8 @@ describe("draft saves on published entries keep updated_at (#2143)", () => {
 	beforeEach(async () => {
 		db = await setupTestDatabase();
 		const registry = new SchemaRegistry(db);
-		// Default supports: drafts + revisions.
 		await registry.createCollection({ slug: "posts", label: "Posts" });
 		await registry.createField("posts", { slug: "title", label: "Title", type: "string" });
-		// No revision support: updates land directly on the live row.
 		await registry.createCollection({
 			slug: "plain_posts",
 			label: "Plain Posts",
@@ -66,8 +48,6 @@ describe("draft saves on published entries keep updated_at (#2143)", () => {
 		expect(published.success).toBe(true);
 		const publishedUpdatedAt = published.data!.item.updatedAt;
 
-		// Manual Save: no skipRevision → creates a new draft revision and
-		// points draft_revision_id at it. Live columns are untouched.
 		const saved = await runtime.handleContentUpdate("posts", id, {
 			data: { title: "Live Post (edited, unpublished)" },
 		});
@@ -92,7 +72,6 @@ describe("draft saves on published entries keep updated_at (#2143)", () => {
 		expect(firstSave.success).toBe(true);
 		expect(firstSave.data!.item.updatedAt).toBe(publishedUpdatedAt);
 
-		// Autosave replaces the previous draft without changing the live row.
 		const autosaved = await runtime.handleContentUpdate("posts", id, {
 			data: { title: "Draft v2" },
 			skipRevision: true,
@@ -233,8 +212,6 @@ describe("draft saves on published entries keep updated_at (#2143)", () => {
 		});
 		expect(saved.data!.item.updatedAt).toBe(publishedUpdatedAt);
 
-		// The draft saves left updated_at untouched, so comparing with Date.now()
-		// proves publish moves it forward (same-millisecond collisions impossible).
 		const republished = await runtime.handleContentPublish("posts", id);
 		expect(republished.success).toBe(true);
 		expect(republished.data!.item.draftRevisionId).toBeNull();
@@ -257,8 +234,6 @@ describe("draft saves on published entries keep updated_at (#2143)", () => {
 			data: { title: "Edited" },
 		});
 		expect(saved.success).toBe(true);
-		// updated_at frozen (no phantom modification), but version moved so a
-		// second editor holding the pre-save _rev gets a 409.
 		expect(saved.data!.item.updatedAt).toBe(publishedUpdatedAt);
 		expect(saved.data!.item.version).toBe(publishedVersion + 1);
 
@@ -279,15 +254,12 @@ describe("draft saves on published entries keep updated_at (#2143)", () => {
 		const published = await runtime.handleContentPublish("posts", id);
 		const publishedUpdatedAt = published.data!.item.updatedAt;
 
-		// Find the published revision to restore from.
 		const revisions = await runtime.handleRevisionList("posts", id);
 		expect(revisions.success).toBe(true);
 		const liveRevisionId = published.data!.item.liveRevisionId;
 		const targetRevision = revisions.data!.items.find((r) => r.id === liveRevisionId);
 		expect(targetRevision).toBeDefined();
 
-		// Restore that revision as the current draft — draft-only staging,
-		// live columns untouched, so updated_at must not move.
 		const restored = await runtime.handleRevisionRestore(targetRevision!.id, "author-1");
 		expect(restored.success).toBe(true);
 		expect(restored.data!.item.updatedAt).toBe(publishedUpdatedAt);

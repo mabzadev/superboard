@@ -1,14 +1,3 @@
-/**
- * `emdash-plugin info <handle-or-did> <slug>`
- *
- * Show details about a single package. Read-only; no auth required.
- *
- * The first positional argument can be either a handle (`alice.example.com`)
- * or a DID (`did:plc:abc...`). The aggregator distinguishes via separate XRPC
- * methods -- handle goes through `resolvePackage` (which does the
- * handle-to-DID lookup server-side), DID goes straight to `getPackage`.
- */
-
 import { isDid, isHandle } from "@atcute/lexicons/syntax";
 import { DiscoveryClient } from "@emdash-cms/registry-client";
 import { defineCommand } from "citty";
@@ -66,9 +55,6 @@ export const infoCommand = defineCommand({
 			return;
 		}
 
-		// `result.profile` is validated against the package profile lexicon by
-		// DiscoveryClient (the read-side trust boundary), or `null` when the
-		// aggregator returned a non-conforming record.
 		const profile = result.profile;
 		if (!profile) {
 			consola.warn(

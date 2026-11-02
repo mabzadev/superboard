@@ -60,7 +60,7 @@ describe("plugin ctx.media.upload — metadata enrichment", () => {
 
 	it("populates width, height, blurhash and dominantColor for an image upload", async () => {
 		const media = createMediaAccessWithWrite(db, undefined, fakeStorage());
-		const ab = JPEG_4x4.slice().buffer; // clean ArrayBuffer copy
+		const ab = JPEG_4x4.slice().buffer;
 		const result = await media.upload("derived.jpg", "image/jpeg", ab);
 
 		const row = await new MediaRepository(db).findById(result.mediaId);

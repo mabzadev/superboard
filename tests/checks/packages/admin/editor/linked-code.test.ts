@@ -1,10 +1,3 @@
-/**
- * Inline code + link can coexist on the same span.
- *
- * TipTap's default Code mark sets `excludes: '_'`, which drops every other
- * mark. EmDash overrides that so linked code works in body text and headings.
- */
-
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";

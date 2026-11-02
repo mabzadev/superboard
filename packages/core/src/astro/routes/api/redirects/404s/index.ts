@@ -1,11 +1,3 @@
-/**
- * 404 log list and management endpoints
- *
- * GET    /_emdash/api/redirects/404s - List 404 log entries
- * DELETE /_emdash/api/redirects/404s - Clear all 404 log entries
- * POST   /_emdash/api/redirects/404s - Prune 404 log entries older than date
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

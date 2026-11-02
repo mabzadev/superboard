@@ -1,14 +1,3 @@
-/**
- * MCP content_create / content_update — Markdown -> Portable Text conversion.
- *
- * Agents emit the `content_create` arguments as one inline JSON blob. A rich
- * text field authored as a deeply nested Portable Text array makes that blob
- * large and easy to truncate/mis-escape, so the whole tool call fails to parse
- * before any handler runs. Accepting a Markdown string for `portableText`
- * fields collapses the array to a single scalar, mirroring what EmDashClient
- * already does on write. A Portable Text array is still accepted unchanged.
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

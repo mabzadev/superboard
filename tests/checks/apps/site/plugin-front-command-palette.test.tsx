@@ -136,7 +136,6 @@ beforeEach(async () => {
 	container = document.createElement("div");
 	document.body.append(container);
 	root = createRoot(container);
-	// The palette is a lazy chunk: load it up front so opening it settles inside act().
 	await import("../../../../apps/site/src/components/NativeFrontCommandPalette.js");
 });
 afterEach(async () => {

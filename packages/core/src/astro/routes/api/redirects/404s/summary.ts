@@ -1,9 +1,3 @@
-/**
- * 404 summary endpoint
- *
- * GET /_emdash/api/redirects/404s/summary - Get 404 summary grouped by path
- */
-
 import type { APIRoute } from "astro";
 
 import { requirePerm } from "#api/authorize.js";

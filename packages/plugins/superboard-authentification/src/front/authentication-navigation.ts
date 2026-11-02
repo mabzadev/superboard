@@ -11,10 +11,6 @@ export const accessSections = ["roles", "permissions", "organizations", "apps"] 
 
 type Target = readonly [AuthenticationView, string, string?];
 
-/**
- * Former tab names (still emitted by bookmarks and by `canonicalFrontHref`)
- * and the tab, plus optional section, that now owns their content.
- */
 const legacyTabs: Readonly<Record<string, Target>> = {
 	accounts: ["users", "users"],
 	directory: ["users", "users", "directory"],
@@ -52,12 +48,10 @@ export function authenticationTarget(
 		: Object.hasOwn(legacyTabs, raw)
 			? legacyTabs[raw]
 			: [view, authenticationTabs[view][0]];
-	// Banners are edited from Appearance even when the link still says `tab=apps`.
 	if (params.get("editor") === "banners") target = ["settings", "appearance"];
 	return { view: target[0], tab: target[1], section: params.get("section") || target[2] || null };
 }
 
-/** Canonical href, with former authentication tabs moved to the view and tab that now own them. */
 export function authenticationHref(href: string): string {
 	const canonical = canonicalFrontHref(href);
 	if (!canonical.startsWith("/") || canonical.startsWith("//")) return canonical;

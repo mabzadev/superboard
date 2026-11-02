@@ -1,13 +1,3 @@
-/**
- * Autosave E2E Tests
- *
- * Tests that autosave updates the existing draft revision in place
- * rather than creating a new revision on each keystroke.
- *
- * Covers issue #5: skipRevision was stripped by Zod validation,
- * causing every autosave to create a new revision.
- */
-
 import { test, expect } from "../../fixtures/emdash-browser";
 
 test.describe("Autosave", () => {
@@ -27,7 +17,6 @@ test.describe("Autosave", () => {
 			Origin: baseUrl,
 		};
 
-		// Create a collection with revision support
 		collectionSlug = `autosave_${Date.now()}`;
 		await fetch(`${baseUrl}/_emdash/api/schema/collections`, {
 			method: "POST",
@@ -46,7 +35,6 @@ test.describe("Autosave", () => {
 			body: JSON.stringify({ slug: "title", type: "string", label: "Title", required: true }),
 		});
 
-		// Create and publish a post
 		const createRes = await fetch(`${baseUrl}/_emdash/api/content/${collectionSlug}`, {
 			method: "POST",
 			headers,
@@ -89,18 +77,14 @@ test.describe("Autosave", () => {
 		const titleInput = admin.page.locator("#field-title");
 		await expect(titleInput).toHaveValue("Original");
 
-		// First edit — listen for both the PUT and the subsequent cache re-fetch GET
 		const firstPut = admin.page.waitForResponse(isPut, { timeout: 10000 });
 		await titleInput.fill("Edit One");
 		await firstPut;
 
-		// Wait for the cache invalidation GET to settle so form doesn't get overwritten
 		const refetchGet = admin.page.waitForResponse(isGet, { timeout: 5000 }).catch(() => {});
 		await refetchGet;
-		// Extra settle time for React state updates
 		await admin.page.waitForTimeout(500);
 
-		// Check revision count after first autosave
 		const res1 = await fetch(
 			`${baseUrl}/_emdash/api/content/${collectionSlug}/${postId}/revisions`,
 			{ headers },
@@ -108,12 +92,10 @@ test.describe("Autosave", () => {
 		const data1: any = await res1.json();
 		const countAfterFirst = data1.data.total;
 
-		// Second edit — set up listener BEFORE typing
 		const secondPut = admin.page.waitForResponse(isPut, { timeout: 10000 });
 		await titleInput.fill("Edit Two");
 		await secondPut;
 
-		// Check revision count — should be same (updated in place, not new revision)
 		const res2 = await fetch(
 			`${baseUrl}/_emdash/api/content/${collectionSlug}/${postId}/revisions`,
 			{ headers },
@@ -123,7 +105,6 @@ test.describe("Autosave", () => {
 
 		expect(countAfterSecond).toBe(countAfterFirst);
 
-		// Verify the latest revision contains the last autosaved data
 		const latestRevision = data2.data.items?.[0];
 		expect(latestRevision?.data?.title).toBe("Edit Two");
 	});

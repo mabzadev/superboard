@@ -80,8 +80,6 @@ describe("target-owned API configuration", () => {
 	});
 });
 
-// --- request() core behavior ---
-
 describe("request: success", () => {
 	it("sends Bearer token and returns parsed JSON", async () => {
 		mockFetch.mockResolvedValueOnce(jsonResponse({ user: "alice" }));
@@ -234,8 +232,6 @@ describe("request: network errors", () => {
 		expect(opts.signal).toBeInstanceOf(AbortSignal);
 	});
 });
-
-// --- URL encoding (security-critical) ---
 
 describe("URL encoding", () => {
 	beforeEach(() => {

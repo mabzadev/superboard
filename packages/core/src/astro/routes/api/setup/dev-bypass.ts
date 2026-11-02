@@ -1,23 +1,3 @@
-/**
- * POST /_emdash/api/setup/dev-bypass
- * GET  /_emdash/api/setup/dev-bypass
- *
- * Development-only endpoint to bypass the setup wizard.
- * Creates a dev admin user and marks setup complete after runtime initialization.
- * Newly applied sample content has its Media Usage index prepared before redirecting.
- *
- * ONLY available when import.meta.env.DEV is true.
- *
- * Usage:
- * - GET with redirect: /_emdash/api/setup/dev-bypass?redirect=/_emdash/admin
- * - POST for API: Returns JSON with setup info
- * - ?content=0 (or ?content=false): apply schema/structure only, skipping
- *   sample content entries, bylines, and taxonomy terms
- *
- * For agent/browser testing, navigate to:
- *   /_emdash/api/setup/dev-bypass?redirect=/_emdash/admin
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -35,7 +15,6 @@ import { applySeed } from "#seed/apply.js";
 import { loadSeed } from "#seed/load.js";
 import { validateSeed } from "#seed/validate.js";
 
-// RBAC role levels (matching @emdash-cms/auth)
 const ROLE_ADMIN = 50;
 
 const DEV_USER_EMAIL = "dev@emdash.local";
@@ -43,7 +22,6 @@ const DEV_USER_NAME = "Dev Admin";
 const DEV_SITE_TITLE = "EmDash Dev Site";
 
 async function handleDevBypass(context: Parameters<APIRoute>[0]): Promise<Response> {
-	// CRITICAL: Only allow in development mode
 	if (!import.meta.env.DEV) {
 		return apiError("FORBIDDEN", "Dev bypass is only available in development mode", 403);
 	}
@@ -56,8 +34,6 @@ async function handleDevBypass(context: Parameters<APIRoute>[0]): Promise<Respon
 	}
 
 	try {
-		// Apply seed (user seed or built-in default). `?content=0` (or `false`)
-		// applies schema/structure only — no sample content, bylines, or terms.
 		const contentParam = url.searchParams.get("content");
 		const includeContent = contentParam !== "0" && contentParam !== "false";
 		const seed = await loadSeed();
@@ -85,7 +61,6 @@ async function handleDevBypass(context: Parameters<APIRoute>[0]): Promise<Respon
 
 		const options = new OptionsRepository(emdash.db);
 
-		// Find or create dev user (direct DB access to avoid @emdash-cms/auth import issues in dev)
 		const existingUser = await emdash.db
 			.selectFrom("users")
 			.selectAll()
@@ -126,29 +101,21 @@ async function handleDevBypass(context: Parameters<APIRoute>[0]): Promise<Respon
 			};
 		}
 
-		// Set site title if not already set
 		const existingTitle = await options.get("emdash:site_title");
 		if (!existingTitle) {
 			await options.set("emdash:site_title", DEV_SITE_TITLE);
 		}
 
-		// Store canonical site URL (used by magic-link/recovery emails)
 		await options.set("emdash:site_url", getPublicOrigin(url, emdash?.config));
 
-		// Mark setup complete
 		await options.set("emdash:setup_complete", true);
 
-		// Create session
 		if (session) {
 			session.set("user", { id: user.id });
 		}
 
-		// Optionally create a PAT token (?token=1) for headless/CLI testing.
 		let token: string | undefined;
 		if (url.searchParams.has("token")) {
-			// Idempotent by name: a prior reset can leave a stale dev-bypass-token,
-			// and the raw token is only available at creation, so drop any existing
-			// one and mint a fresh, usable PAT rather than accumulating duplicates.
 			await deleteApiTokensByName(emdash.db, user.id, "dev-bypass-token");
 			const result = await handleApiTokenCreate(emdash.db, user.id, {
 				name: "dev-bypass-token",
@@ -167,17 +134,13 @@ async function handleDevBypass(context: Parameters<APIRoute>[0]): Promise<Respon
 			}
 		}
 
-		// Check for redirect parameter
 		const redirect = url.searchParams.get("redirect");
 
 		if (redirect) {
-			// Validate redirect is a safe local path (prevent open redirect via //evil.com or /\evil.com)
 			if (!isSafeRedirect(redirect)) {
 				return apiError("INVALID_REDIRECT", "Redirect must be a local path", 400);
 			}
 
-			// Return an HTML page with meta-refresh redirect
-			// This ensures the session is fully saved before redirect
 			const safeRedirect = escapeHtml(redirect);
 			const html = `<!DOCTYPE html>
 <html>
@@ -192,7 +155,6 @@ async function handleDevBypass(context: Parameters<APIRoute>[0]): Promise<Respon
 			});
 		}
 
-		// Return JSON response
 		return apiSuccess({
 			success: true,
 			message: "Dev setup complete",
@@ -211,6 +173,5 @@ async function handleDevBypass(context: Parameters<APIRoute>[0]): Promise<Respon
 	}
 }
 
-// Support both GET and POST
 export const GET: APIRoute = handleDevBypass;
 export const POST: APIRoute = handleDevBypass;

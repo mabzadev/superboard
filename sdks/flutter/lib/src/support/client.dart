@@ -54,9 +54,6 @@ class SuperBoardSupportClient {
          projectHeader: 'X-SuperBoard-Project-Id',
        );
 
-  /// Delays between attempts for transient failures (network errors,
-  /// timeouts, 408, 425, 429 and 5xx gateway statuses), matching the Web
-  /// Support SDK. Each delay is jittered; mutations keep their idempotency key.
   static const List<Duration> defaultRetryDelays = [
     Duration(milliseconds: 250),
     Duration(seconds: 1),
@@ -871,7 +868,6 @@ class SuperBoardSupportClient {
             )
             .toList(growable: false);
       } catch (_) {
-        // The stable error below is more useful than a cast error.
       }
     }
     throw SuperBoardSupportException(

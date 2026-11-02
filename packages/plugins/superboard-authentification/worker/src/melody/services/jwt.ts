@@ -480,9 +480,6 @@ export interface OidcUser {
 	id: string;
 }
 
-/**
- * According to the OIDC provider, the implementation of this function might need to be adjusted.
- */
 export const verifyOidcCredential = async (
 	clientId: string,
 	issuer: string,

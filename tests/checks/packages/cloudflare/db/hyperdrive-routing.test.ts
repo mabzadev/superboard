@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-// The hyperdrive runtime adapter imports the bindings from cloudflare:workers,
-// builds a node-postgres Pool, and routes per-request queries through the
-// instrumentation logger. Mock all three so we can assert which binding's
-// connection string the per-request pool is built from, without a real DB.
 const { poolCalls, fakeEnv } = vi.hoisted(() => ({
 	poolCalls: [] as Array<{ connectionString: string }>,
 	fakeEnv: {
@@ -22,7 +18,6 @@ vi.mock("pg", () => ({
 		constructor(opts: { connectionString: string }) {
 			poolCalls.push({ connectionString: opts.connectionString });
 		}
-		// Kysely's PostgresDialect only needs these to construct; no query runs.
 		async end() {}
 	},
 }));

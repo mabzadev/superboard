@@ -1,10 +1,3 @@
-/**
- * SandboxedPluginPage
- *
- * Renders a plugin's admin page using Block Kit. Sends page_load/block_action/form_submit
- * interactions to the plugin's admin route and renders the returned blocks.
- */
-
 import { BlockRenderer } from "@emdash-cms/blocks";
 import type { Block, BlockInteraction, BlockResponse } from "@emdash-cms/blocks";
 import { useLingui } from "@lingui/react/macro";
@@ -27,7 +20,6 @@ export function SandboxedPluginPage({ pluginId, page }: SandboxedPluginPageProps
 	const [error, setError] = useState<string | null>(null);
 	const [toast, setToast] = useState<BlockResponse["toast"] | null>(null);
 
-	// Send an interaction to the plugin admin route
 	const sendInteraction = useCallback(
 		async (interaction: BlockInteraction, signal?: AbortSignal) => {
 			const generation = pageGeneration.current;
@@ -65,7 +57,6 @@ export function SandboxedPluginPage({ pluginId, page }: SandboxedPluginPageProps
 		[pluginId, locale, t],
 	);
 
-	// Initial page load
 	useEffect(() => {
 		pageGeneration.current += 1;
 		const controller = new AbortController();
@@ -78,7 +69,6 @@ export function SandboxedPluginPage({ pluginId, page }: SandboxedPluginPageProps
 		return () => controller.abort();
 	}, [sendInteraction, page]);
 
-	// Handle block actions
 	const handleAction = useCallback(
 		(interaction: BlockInteraction) => {
 			void sendInteraction(interaction);
@@ -110,7 +100,6 @@ export function SandboxedPluginPage({ pluginId, page }: SandboxedPluginPageProps
 
 	return (
 		<div className="relative">
-			{/* Toast notification */}
 			{toast && (
 				<div
 					className={`fixed end-4 top-4 z-50 rounded-lg border px-4 py-3 text-sm shadow-lg ${

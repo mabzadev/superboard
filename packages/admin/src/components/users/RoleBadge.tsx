@@ -16,10 +16,6 @@ export interface RoleBadgeProps {
 	className?: string;
 }
 
-/**
- * Maps a role's semantic color name to a Kumo Badge token variant, so
- * light/dark theming comes from tokens rather than hard-coded palette classes.
- */
 const ROLE_VARIANTS: Record<string, BadgeVariant> = {
 	gray: "neutral",
 	blue: "blue",
@@ -28,9 +24,6 @@ const ROLE_VARIANTS: Record<string, BadgeVariant> = {
 	red: "red",
 };
 
-/**
- * Role badge component built on Kumo Badge semantic variants.
- */
 export function RoleBadge({
 	role,
 	size = "sm",

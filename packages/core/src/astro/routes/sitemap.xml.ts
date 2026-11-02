@@ -1,13 +1,3 @@
-/**
- * Sitemap index endpoint
- *
- * GET /sitemap.xml - Sitemap index listing one sitemap per collection.
- *
- * Each collection with published, indexable content gets its own
- * child sitemap at /sitemap-{collection}.xml. The index includes
- * a <lastmod> per child derived from the most recently updated entry.
- */
-
 import type { APIRoute } from "astro";
 
 import { handleSitemapData } from "#api/handlers/seo.js";
@@ -81,7 +71,6 @@ export const GET: APIRoute = async ({ locals, url }) => {
 	}
 };
 
-/** Escape special XML characters in a string */
 function escapeXml(str: string): string {
 	return str
 		.replace(AMP_RE, "&amp;")

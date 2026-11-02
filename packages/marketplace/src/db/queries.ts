@@ -42,8 +42,6 @@ function decodeCursor(cursor?: string): number {
 	}
 }
 
-// ── Plugin queries ──────────────────────────────────────────────
-
 export async function getPlugin(db: D1Database, id: string): Promise<PluginRow | null> {
 	return db.prepare("SELECT * FROM plugins WHERE id = ?").bind(id).first<PluginRow>();
 }
@@ -146,9 +144,6 @@ export async function searchPlugins(
 	return { items, nextCursor };
 }
 
-// ── Version queries ─────────────────────────────────────────────
-
-/** Public-facing: only returns published/flagged versions. */
 export async function getPluginVersions(
 	db: D1Database,
 	pluginId: string,
@@ -162,7 +157,6 @@ export async function getPluginVersions(
 	return result.results ?? [];
 }
 
-/** Returns all versions regardless of status (for author dashboard). */
 export async function getAllPluginVersions(
 	db: D1Database,
 	pluginId: string,
@@ -174,7 +168,6 @@ export async function getAllPluginVersions(
 	return result.results ?? [];
 }
 
-/** Public-facing: only returns the latest published/flagged version. */
 export async function getLatestVersion(
 	db: D1Database,
 	pluginId: string,
@@ -198,14 +191,10 @@ export async function getPluginVersion(
 		.first<PluginVersionRow>();
 }
 
-// ── Install queries ─────────────────────────────────────────────
-
 export async function upsertInstall(
 	db: D1Database,
 	data: { pluginId: string; siteHash: string; version: string },
 ): Promise<void> {
-	// Run the install upsert and install_count recomputation together so the
-	// plugin count stays consistent with the installs table.
 	await db.batch([
 		db
 			.prepare(
@@ -220,8 +209,6 @@ export async function upsertInstall(
 			.bind(data.pluginId, data.pluginId),
 	]);
 }
-
-// ── Write queries ───────────────────────────────────────────────
 
 export async function createPlugin(
 	db: D1Database,
@@ -310,10 +297,6 @@ export async function createVersion(
 		.first<PluginVersionRow>())!;
 }
 
-/**
- * Update an existing version row for seed re-publishing.
- * Re-uploads overwrite the R2 bundle, so the DB row must match.
- */
 export async function updateVersionForReseed(
 	db: D1Database,
 	versionId: string,
@@ -350,7 +333,6 @@ export async function updateVersionForReseed(
 		.run();
 }
 
-/** Update a version's status (used after audit completes). */
 export async function updateVersionStatus(
 	db: D1Database,
 	versionId: string,
@@ -362,7 +344,6 @@ export async function updateVersionStatus(
 		.run();
 }
 
-/** Store the Workflow instance ID on a version row. */
 export async function setVersionWorkflowId(
 	db: D1Database,
 	versionId: string,
@@ -437,8 +418,6 @@ export async function updatePlugin(
 	return getPlugin(db, id);
 }
 
-// ── Author queries ──────────────────────────────────────────────
-
 export async function createAuthor(
 	db: D1Database,
 	data: {
@@ -467,13 +446,7 @@ export async function getAuthorByGithubId(
 
 const SYSTEM_AUTHOR_ID = "system";
 
-/**
- * Find or create the system author used for seed token publishing.
- * The system author has no GitHub account -- it represents first-party
- * plugins published via the SEED_TOKEN in CI.
- */
 export async function findOrCreateSystemAuthor(db: D1Database): Promise<AuthorRow> {
-	// INSERT OR IGNORE handles concurrent creation safely (no TOCTOU race).
 	await db
 		.prepare(
 			"INSERT OR IGNORE INTO authors (id, github_id, name, email, avatar_url, verified) VALUES (?, NULL, ?, NULL, NULL, 1)",
@@ -486,8 +459,6 @@ export async function findOrCreateSystemAuthor(db: D1Database): Promise<AuthorRo
 		.bind(SYSTEM_AUTHOR_ID)
 		.first<AuthorRow>())!;
 }
-
-// ── Audit queries ───────────────────────────────────────────────
 
 export async function createAudit(
 	db: D1Database,
@@ -586,8 +557,6 @@ export async function linkImageAuditToVersion(
 		.bind(imageAuditId, verdict, versionId)
 		.run();
 }
-
-// ── Theme queries ───────────────────────────────────────────────
 
 export async function getTheme(db: D1Database, id: string): Promise<ThemeRow | null> {
 	return db.prepare("SELECT * FROM themes WHERE id = ?").bind(id).first<ThemeRow>();

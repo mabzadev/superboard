@@ -42,7 +42,6 @@ import {
 import type { Icon } from "@phosphor-icons/react";
 import * as React from "react";
 
-/** Shared icon vocabulary for first-party admin entities and navigation surfaces. */
 export const ADMIN_NAV_ICONS = {
 	dashboard: SquaresFour,
 	collection: Files,
@@ -68,17 +67,14 @@ const COLLECTION_NAV_ICON_OVERRIDES: Record<string, Icon> = {
 	posts: ADMIN_NAV_ICONS.posts,
 };
 
-/** Use distinct icons for built-in collections and the default for custom collections. */
 export function getCollectionNavIcon(name: string): Icon {
 	return COLLECTION_NAV_ICON_OVERRIDES[name] ?? ADMIN_NAV_ICONS.collection;
 }
 
-/** Tags have a distinct meaning; other taxonomies are collections of terms. */
 export function getTaxonomyNavIcon(name: string): Icon {
 	return name === "tag" ? ADMIN_NAV_ICONS.tags : ADMIN_NAV_ICONS.taxonomy;
 }
 
-/** Common plugin-declared icon names that should resolve without loading another chunk. */
 const PLUGIN_NAV_ICON_MAP: Record<string, React.ElementType> = {
 	settings: Gear,
 	gear: Gear,
@@ -112,7 +108,6 @@ const PLUGIN_NAV_ICON_MAP: Record<string, React.ElementType> = {
 
 const ICON_NAME_SEPARATOR = /[-_\s]+/;
 
-/** Convert kebab, snake, or space-separated names to Phosphor's PascalCase exports. */
 export function toPhosphorIconName(name: string): string {
 	return name
 		.split(ICON_NAME_SEPARATOR)
@@ -130,7 +125,6 @@ function isIconComponent(value: unknown): value is React.ComponentType<{ classNa
 	);
 }
 
-/** Resolve a plugin page icon while keeping uncommon Phosphor icons code-split. */
 export function resolveNavIcon(name?: string): React.ElementType {
 	if (!name) {
 		return ADMIN_NAV_ICONS.plugins;

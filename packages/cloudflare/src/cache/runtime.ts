@@ -1,92 +1,34 @@
-/**
- * Legacy Cloudflare Cache API route cache provider — RUNTIME ENTRY
- *
- * @deprecated Prefer native Workers Caching: wrangler `"cache": { "enabled": true }`
- * + `cacheCloudflare()` from `@astrojs/cloudflare/cache`, purge via
- * `cache.purge()` from `cloudflare:workers` (no zone credentials).
- *
- * This legacy provider implements Astro's CacheProvider with the Cache API
- * (`put`/`match`) for storage and the zone purge-by-tag REST API for global
- * invalidation (`CF_ZONE_ID` + `CF_CACHE_PURGE_TOKEN`). Kept for existing sites.
- *
- * We do NOT implement setHeaders() — Astro's defaultSetHeaders correctly
- * emits CDN-Cache-Control and Cache-Tag. Our onRequest() reads those
- * headers from the response that next() returns.
- *
- * Do NOT import this at config time. Use cloudflareCache() from
- * "@emdash-cms/cloudflare" or "@emdash-cms/cloudflare/cache/config" instead
- * (only if you intentionally need this legacy path).
- */
-
 import type { CacheProviderFactory } from "astro";
 import { env, waitUntil } from "cloudflare:workers";
 
-/**
- * Internal headers stored on cached responses for freshness tracking.
- * These are removed before returning to the client.
- */
 const STORED_AT_HEADER = "X-EmDash-Stored-At";
 const MAX_AGE_HEADER = "X-EmDash-Max-Age";
 const SWR_HEADER = "X-EmDash-SWR";
 
-/** Cloudflare purge API base */
 const CF_API_BASE = "https://api.cloudflare.com/client/v4";
 
-/** Matches max-age in CDN-Cache-Control */
 const MAX_AGE_REGEX = /max-age=(\d+)/;
 
-/** Matches stale-while-revalidate in CDN-Cache-Control */
 const SWR_REGEX = /stale-while-revalidate=(\d+)/;
 
-/** Internal headers to strip before returning responses to the client */
 const INTERNAL_HEADERS = [STORED_AT_HEADER, MAX_AGE_HEADER, SWR_HEADER];
 
-/** Default D1 bookmark cookie name (from @emdash-cms/cloudflare d1 config) */
 const DEFAULT_BOOKMARK_COOKIE = "__em_d1_bookmark";
 
 export interface CloudflareCacheConfig {
-	/**
-	 * Name of the Cache API cache to use.
-	 * @default "emdash"
-	 */
 	cacheName?: string;
 
-	/**
-	 * D1 bookmark cookie name. Responses whose only Set-Cookie is this
-	 * bookmark will have it stripped before caching. Responses with any
-	 * other Set-Cookie headers will not be cached.
-	 * @default "__em_d1_bookmark"
-	 */
 	bookmarkCookie?: string;
 
-	/**
-	 * Cloudflare Zone ID. Required for tag-based invalidation.
-	 * If not provided, reads from `zoneIdEnvVar` at runtime.
-	 */
 	zoneId?: string;
 
-	/**
-	 * Environment variable name containing the Zone ID.
-	 * @default "CF_ZONE_ID"
-	 */
 	zoneIdEnvVar?: string;
 
-	/**
-	 * Cloudflare API token with Cache Purge permission.
-	 * If not provided, reads from `apiTokenEnvVar` at runtime.
-	 */
 	apiToken?: string;
 
-	/**
-	 * Environment variable name containing the API token.
-	 * @default "CF_CACHE_PURGE_TOKEN"
-	 */
 	apiTokenEnvVar?: string;
 }
 
-/**
- * Parse CDN-Cache-Control header for max-age and stale-while-revalidate.
- */
 function parseCdnCacheControl(header: string | null): { maxAge: number; swr: number } {
 	let maxAge = 0;
 	let swr = 0;
@@ -98,10 +40,6 @@ function parseCdnCacheControl(header: string | null): { maxAge: number; swr: num
 	return { maxAge, swr };
 }
 
-/**
- * Normalize a URL for use as a cache key.
- * Strips common tracking query parameters and sorts the rest.
- */
 function normalizeCacheKey(url: URL): string {
 	const normalized = new URL(url.toString());
 
@@ -129,9 +67,6 @@ function normalizeCacheKey(url: URL): string {
 	return normalized.toString();
 }
 
-/**
- * Read a config value, falling back to an env var.
- */
 function resolveEnvValue(explicit: string | undefined, envVarName: string): string | undefined {
 	if (explicit) return explicit;
 	if (!(envVarName in env)) return undefined;
@@ -139,35 +74,18 @@ function resolveEnvValue(explicit: string | undefined, envVarName: string): stri
 	return typeof value === "string" ? value : undefined;
 }
 
-/**
- * Strip internal tracking headers from a response before returning to client.
- */
 function stripInternalHeaders(response: Response): void {
 	for (const header of INTERNAL_HEADERS) {
 		response.headers.delete(header);
 	}
 }
 
-/**
- * Check whether all Set-Cookie headers on a response are only the D1
- * bookmark cookie. Returns true if we can safely strip them for caching.
- * Returns false if there are non-bookmark cookies (session, auth, etc.)
- * which means the response should NOT be cached.
- */
 function hasOnlyBookmarkCookies(response: Response, bookmarkCookie: string): boolean {
 	const cookies = response.headers.getSetCookie();
 	if (cookies.length === 0) return true;
 	return cookies.every((c) => c.startsWith(`${bookmarkCookie}=`));
 }
 
-/**
- * Prepare a response for storage in the Cache API.
- * - Adds internal tracking headers (stored-at, max-age, swr)
- * - Strips Set-Cookie (only called when cookies are safe to strip)
- *
- * Returns null if the response has non-bookmark Set-Cookie headers
- * and should not be cached.
- */
 function prepareForCache(
 	response: Response,
 	maxAge: number,
@@ -198,18 +116,11 @@ const factory: CacheProviderFactory<CloudflareCacheConfig> = (config) => {
 	return {
 		name: "cloudflare-cache-api",
 
-		// No setHeaders() — we use Astro's defaultSetHeaders which correctly
-		// emits CDN-Cache-Control and Cache-Tag. Our onRequest() reads those.
-
 		async onRequest(context, next) {
-			// Only cache GET requests
 			if (context.request.method !== "GET") {
 				return next();
 			}
 
-			// Skip cache for authenticated users. Their responses may differ
-			// (edit toolbar, admin UI, draft content) and must not be served
-			// to other visitors. The Astro session cookie indicates a logged-in user.
 			const cookieHeader = context.request.headers.get("Cookie") ?? "";
 			if (cookieHeader.includes("astro-session=")) {
 				return next();
@@ -227,7 +138,6 @@ const factory: CacheProviderFactory<CloudflareCacheConfig> = (config) => {
 				const ageSeconds = (Date.now() - storedAt) / 1000;
 
 				if (ageSeconds < maxAge) {
-					// Fresh — serve from cache
 					const hit = new Response(cached.body, cached);
 					hit.headers.set("X-Astro-Cache", "HIT");
 					stripInternalHeaders(hit);
@@ -235,7 +145,6 @@ const factory: CacheProviderFactory<CloudflareCacheConfig> = (config) => {
 				}
 
 				if (swr > 0 && ageSeconds < maxAge + swr) {
-					// Stale but within SWR window — serve stale, revalidate in background
 					const stale = new Response(cached.body, cached);
 					stale.headers.set("X-Astro-Cache", "STALE");
 					stripInternalHeaders(stale);
@@ -252,23 +161,18 @@ const factory: CacheProviderFactory<CloudflareCacheConfig> = (config) => {
 										await cache.put(cacheKey, toStore);
 									}
 								}
-							} catch {
-								// Non-fatal — next request will retry
-							}
+							} catch {}
 						})(),
 					);
 
 					return stale;
 				}
 
-				// Expired and past SWR window — delete and fall through
 				await cache.delete(cacheKey);
 			}
 
-			// Cache MISS — render
 			const response = await next();
 
-			// Read cache directives from CDN-Cache-Control (set by Astro's defaultSetHeaders)
 			const cdnCC = response.headers.get("CDN-Cache-Control");
 			const { maxAge, swr } = parseCdnCacheControl(cdnCC);
 
@@ -283,7 +187,6 @@ const factory: CacheProviderFactory<CloudflareCacheConfig> = (config) => {
 				return miss;
 			}
 
-			// No cache directives — pass through without caching
 			return response;
 		},
 

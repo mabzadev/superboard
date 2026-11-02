@@ -118,7 +118,6 @@ describe("ensureSession token-refresh single-flight", () => {
 	});
 
 	function makeCtx(fetch: ReturnType<typeof vi.fn>) {
-		// No state:accessJwt -> ensureSession takes the refresh path.
 		const kv = new Map<string, unknown>([
 			["settings:pdsHost", "bsky.social"],
 			["settings:handle", "example.com"],
@@ -169,8 +168,6 @@ describe("ensureSession token-refresh single-flight", () => {
 
 		const a = ensureSession(ctx);
 		const b = ensureSession(ctx);
-		// Hold the owner mid-refresh so the second caller parks in the poll
-		// loop, then let it finish.
 		await new Promise((resolve) => setTimeout(resolve, 30));
 		release();
 		const [ra, rb] = await Promise.all([a, b]);
@@ -181,18 +178,12 @@ describe("ensureSession token-refresh single-flight", () => {
 	});
 
 	it("a stranded owner (cancelled request) does not hang later refreshers", async () => {
-		// Regression for the isolate-poisoning class: the old implementation
-		// cached the in-flight refresh *promise*, so a first caller whose
-		// request was cancelled mid-refresh left a never-settling promise that
-		// every later ensureSession on the isolate awaited forever (524). The
-		// lock-and-poll cache must let a later caller reclaim and recover.
 		__resetRefreshSingleFlightForTests({ deadlineMs: 80, pollMs: 10, maxWaitMs: 5000 });
 		let refreshCalls = 0;
 		const fetch = vi.fn(async (url: string) => {
 			if (url.includes("refreshSession")) {
 				refreshCalls += 1;
 				if (refreshCalls === 1) {
-					// Owner A's request is cancelled mid-refresh: never settles.
 					await new Promise(() => {});
 				}
 				return freshRefreshResponse();
@@ -201,13 +192,10 @@ describe("ensureSession token-refresh single-flight", () => {
 		});
 		const { ctx } = makeCtx(fetch);
 
-		// Owner A claims and strands. Its request is gone; nobody awaits it.
 		const stranded = ensureSession(ctx);
 		void stranded.catch(() => {});
 		await new Promise((resolve) => setTimeout(resolve, 20));
 
-		// Reader B must reclaim the stale lock and refresh, not hang on A's
-		// dead promise.
 		const recovered = await ensureSession(ctx);
 		expect(recovered.accessJwt).toBe("fresh-access");
 		expect(refreshCalls).toBeGreaterThanOrEqual(2);

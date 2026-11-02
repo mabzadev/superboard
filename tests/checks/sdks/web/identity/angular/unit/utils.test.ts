@@ -1,5 +1,4 @@
 import { ErrorType, isValidTokens } from "@melody-auth/shared";
-// Import the functions under test and the mocked functions
 import { exchangeTokenByAuthCode, exchangeTokenByRefreshToken } from "@melody-auth/web";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -8,7 +7,6 @@ import {
 	acquireToken,
 } from "../../../../../../../sdks/web/identity/angular/src/utils";
 
-// MOCK EXTERNAL DEPENDENCIES BEFORE IMPORTING the module under test
 vi.mock("@melody-auth/web", () => ({
 	exchangeTokenByAuthCode: vi.fn(),
 	exchangeTokenByRefreshToken: vi.fn(),
@@ -23,7 +21,6 @@ vi.mock("@melody-auth/shared", () => ({
 	isValidTokens: vi.fn(),
 }));
 
-// A helper to simulate Angular's WritableSignal
 function createFakeWritableSignal(initialValue: any) {
 	let value = initialValue;
 	const signal = () => value;
@@ -64,13 +61,10 @@ describe("handleTokenExchangeByAuthCode", () => {
 				account: { id: "account1" },
 			},
 		};
-		// resolve the promise returned by exchangeTokenByAuthCode
 		(exchangeTokenByAuthCode as any).mockResolvedValue(fakeResponse);
 
-		// Call the function under test
 		handleTokenExchangeByAuthCode("sample-code", "sample-state", state, "en");
 
-		// Wait for promise resolution in handleTokenExchangeByAuthCode:
 		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		const updatedState = state();
@@ -99,7 +93,6 @@ describe("handleTokenExchangeByAuthCode", () => {
 		const error = new Error("failure");
 		(exchangeTokenByAuthCode as any).mockRejectedValue(error);
 
-		// Spy on console.error so as not to pollute test output.
 		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
 		handleTokenExchangeByAuthCode("code", "reqState", state);
@@ -219,13 +212,10 @@ describe("acquireToken", () => {
 });
 
 describe("handleTokenExchangeByAuthCode", () => {
-	// ... existing tests ...
-
-	// New unit test: cover the branch when no accessTokenStorage is returned.
 	it("should set isAuthenticating to false if no accessTokenStorage is returned", async () => {
 		const onLoginSuccess = vi.fn();
 		const initialState = {
-			config: { onLoginSuccess }, // simulate a config object with an onLoginSuccess callback
+			config: { onLoginSuccess },
 			isAuthenticated: false,
 			isAuthenticating: true,
 			isLoadingToken: true,
@@ -236,20 +226,15 @@ describe("handleTokenExchangeByAuthCode", () => {
 		};
 
 		const state = createFakeWritableSignal(initialState);
-		// Simulate a response without accessTokenStorage (and also without refreshTokenStorage).
 		const fakeResponse = {};
 		(exchangeTokenByAuthCode as any).mockResolvedValue(fakeResponse);
 
-		// Call the function under test.
 		handleTokenExchangeByAuthCode("dummy-code", "dummy-state", state);
 
-		// Wait for the promise resolution.
 		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		const updatedState = state();
-		// Since no accessTokenStorage was returned, the else branch should set isAuthenticating to false.
 		expect(updatedState.isAuthenticating).toBe(false);
-		// Other properties remain unchanged.
 		expect(updatedState.isAuthenticated).toBe(false);
 		expect(updatedState.isLoadingToken).toBe(true);
 	});

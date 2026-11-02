@@ -112,12 +112,10 @@ function createValidRS256Assertion(opts: { rpId?: string; origin?: string } = {}
 	const origin = opts.origin ?? config.origins[0];
 	if (!origin) throw new Error("origin must be defined for createValidRS256Assertion");
 
-	// Generate RSA key pair
 	const { privateKey, publicKey } = generateKeyPairSync("rsa", {
 		modulusLength: 2048,
 	});
 
-	// Export public key in PKIX (SPKI) format - this is what we store for RSA
 	const publicKeyBytes = publicKey.export({ type: "spki", format: "der" });
 
 	const challenge = base64url(Buffer.from("test-challenge"));
@@ -135,7 +133,6 @@ function createValidRS256Assertion(opts: { rpId?: string; origin?: string } = {}
 	const authenticatorData = Buffer.concat([rpIdHash, Buffer.from([0x01]), signatureCounter]);
 	const signatureMessage = createAssertionSignatureMessage(authenticatorData, clientDataJSON);
 
-	// RSA signatures in WebAuthn use RSASSA-PKCS1-v1_5 + SHA-256
 	const signatureBytes = sign("sha256", signatureMessage, privateKey);
 
 	return {
@@ -205,7 +202,6 @@ describe("authenticateWithPasskey", () => {
 	});
 
 	it("rejects an origin that is not in the accepted list", async () => {
-		// Single-origin config; assertion arrives from a different subdomain.
 		const singleOriginConfig = {
 			rpName: "Test Site",
 			rpId: "example.com",
@@ -238,8 +234,6 @@ describe("authenticateWithPasskey", () => {
 	});
 
 	it("accepts an assertion from a subdomain when its origin is listed under a shared rpId", async () => {
-		// Reproduces emdash-cms/emdash#393 follow-up: apex + preview share rpId,
-		// passkey was bound to the apex but the user is hitting preview.
 		const multiOriginConfig = {
 			rpName: "Test Site",
 			rpId: "example.com",
@@ -264,7 +258,6 @@ describe("authenticateWithPasskey", () => {
 			})),
 		} as unknown as AuthAdapter;
 
-		// Should not throw — origin is in the accepted list.
 		const user = await authenticateWithPasskey(
 			multiOriginConfig,
 			adapter,
@@ -291,7 +284,7 @@ describe("authenticateWithPasskey", () => {
 		const adapter = {
 			getCredentialById: vi.fn(async () => ({
 				...validCredential,
-				algorithm: 0, // Unsupported algorithm ID
+				algorithm: 0,
 			})),
 			updateCredentialCounter: vi.fn(async () => undefined),
 			getUserById: vi.fn(async () => ({ id: "user_1" })),

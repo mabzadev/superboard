@@ -128,7 +128,6 @@ try {
 					);
 				await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
-				// Verify paywalls statistics view renders statistics, NOT editor
 				if (path === "/acquisition/paywalls/statistics" || path === "/paywalls/statistics") {
 					const hasSaveButton = await page
 						.locator('button:has-text("Save paywall"), button:has-text("Enregistrer le paywall")')
@@ -224,7 +223,6 @@ try {
 		}
 	}
 
-	// Execute Representative Business Actions
 	if (!requested.length) {
 		const records = await runPublishedBusinessActions(context, { origin, releaseId });
 		actionResults.push(...records);

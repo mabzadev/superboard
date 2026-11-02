@@ -295,7 +295,6 @@ function rowSort(left: AudienceRow, right: AudienceRow, sort: SortType) {
 	return sort.ascending ? comparison : -comparison;
 }
 
-/** SDK profiles and their devices: platform, installs and activity in one table. */
 export function CustomersAnalyticsPage() {
 	const i18n = useAuthenticationI18n();
 	const { selectedProject } = useProjectSelection();

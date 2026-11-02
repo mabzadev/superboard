@@ -1,18 +1,3 @@
-/**
- * Tests for sandboxHttpFetch — the bridge's outbound HTTP helper used by
- * sandboxed plugins.
- *
- * Two behaviours that need coverage:
- *   - Redirects must re-validate against allowedHosts at every hop. The
- *     native `fetch` follows 3xx responses automatically, so an allowed host
- *     that 302s to a blocked host would otherwise bypass the allowlist.
- *   - Credential headers (Authorization, Cookie, Proxy-Authorization) must
- *     be stripped on cross-origin hops so they don't leak to attacker
- *     destinations.
- *   - With `network:request:unrestricted` (no allowlist), requests targeting literal
- *     private IPs or known internal hostnames must still be rejected.
- */
-
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { sandboxHttpFetch } from "../../../../../packages/cloudflare/src/sandbox/bridge-http.js";
@@ -40,10 +25,6 @@ function mockFetchSequence(responses: Response[]): FetchImpl {
 afterEach(() => {
 	vi.restoreAllMocks();
 });
-
-// ---------------------------------------------------------------------------
-// Capability gating
-// ---------------------------------------------------------------------------
 
 describe("sandboxHttpFetch — capability enforcement", () => {
 	it("rejects when neither network:request nor network:request:unrestricted is held", async () => {
@@ -75,10 +56,6 @@ describe("sandboxHttpFetch — capability enforcement", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Host allowlist enforcement per redirect hop
-// ---------------------------------------------------------------------------
-
 describe("sandboxHttpFetch — redirect allowlist enforcement", () => {
 	it("rejects a redirect to a host not on the allowlist", async () => {
 		await expect(
@@ -104,7 +81,6 @@ describe("sandboxHttpFetch — redirect allowlist enforcement", () => {
 	});
 
 	it("rejects chains that exceed the redirect limit", async () => {
-		// 6 redirects to the same allowed host — more than our max of 5
 		const fetchImpl = mockFetchSequence([
 			redirectResponse("https://a.example.com/1"),
 			redirectResponse("https://a.example.com/2"),
@@ -124,10 +100,6 @@ describe("sandboxHttpFetch — redirect allowlist enforcement", () => {
 		).rejects.toThrow(/too many redirects|redirect/i);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Credential header stripping on cross-origin redirects
-// ---------------------------------------------------------------------------
 
 describe("sandboxHttpFetch — credential header stripping", () => {
 	it("preserves credentials on same-origin redirect", async () => {
@@ -210,10 +182,6 @@ describe("sandboxHttpFetch — credential header stripping", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// SSRF defence for network:request:unrestricted
-// ---------------------------------------------------------------------------
-
 describe("sandboxHttpFetch — SSRF defence with network:request:unrestricted", () => {
 	it("rejects literal loopback IPv4", async () => {
 		await expect(
@@ -265,7 +233,6 @@ describe("sandboxHttpFetch — SSRF defence with network:request:unrestricted", 
 	});
 
 	it("re-applies the SSRF check on redirects", async () => {
-		// Public host redirects to a private IP — must be blocked.
 		await expect(
 			sandboxHttpFetch("https://public.example.com/", undefined, {
 				capabilities: ["network:request:unrestricted"],
@@ -278,12 +245,6 @@ describe("sandboxHttpFetch — SSRF defence with network:request:unrestricted", 
 		).rejects.toThrow();
 	});
 
-	// The WHATWG URL parser normalises IPv4-mapped IPv6 to hex form:
-	//   [::ffff:127.0.0.1]       -> [::ffff:7f00:1]
-	//   [::ffff:169.254.169.254] -> [::ffff:a9fe:a9fe]
-	// A literal-string check against "::ffff:127.0.0.1" never matches the
-	// form the bridge actually sees. We must normalise the hex form back
-	// to dotted-decimal before the range check.
 	it("rejects IPv4-mapped IPv6 loopback in hex form", async () => {
 		await expect(
 			sandboxHttpFetch("http://[::ffff:7f00:1]/", undefined, {
@@ -306,9 +267,9 @@ describe("sandboxHttpFetch — SSRF defence with network:request:unrestricted", 
 
 	it("rejects IPv4-mapped IPv6 private ranges in hex form", async () => {
 		for (const url of [
-			"http://[::ffff:a00:1]/", // 10.0.0.1
-			"http://[::ffff:c0a8:1]/", // 192.168.0.1
-			"http://[::ffff:ac10:1]/", // 172.16.0.1
+			"http://[::ffff:a00:1]/",
+			"http://[::ffff:c0a8:1]/",
+			"http://[::ffff:ac10:1]/",
 		]) {
 			await expect(
 				sandboxHttpFetch(url, undefined, {
@@ -321,15 +282,7 @@ describe("sandboxHttpFetch — SSRF defence with network:request:unrestricted", 
 	});
 });
 
-// ---------------------------------------------------------------------------
-// SSRF defence applies even when the restricted path uses allowedHosts=["*"]
-// ---------------------------------------------------------------------------
-
 describe('sandboxHttpFetch — SSRF defence with allowedHosts=["*"]', () => {
-	// A plugin with { capabilities: ["network:request"], allowedHosts: ["*"] }
-	// gets full egress with zero SSRF protection unless we apply the literal
-	// check on the restricted path too. The allowlist describes scope, not
-	// safety.
 	it("rejects literal private IPv4 even with allowedHosts=['*']", async () => {
 		await expect(
 			sandboxHttpFetch("http://127.0.0.1/", undefined, {
@@ -369,10 +322,6 @@ describe('sandboxHttpFetch — SSRF defence with allowedHosts=["*"]', () => {
 		expect(res.status).toBe(200);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// URL scheme enforcement
-// ---------------------------------------------------------------------------
 
 describe("sandboxHttpFetch — scheme enforcement", () => {
 	it("rejects file: scheme", async () => {
@@ -417,10 +366,6 @@ describe("sandboxHttpFetch — scheme enforcement", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Allowlist normalisation — trailing dots and mixed case
-// ---------------------------------------------------------------------------
-
 describe("sandboxHttpFetch — allowlist normalisation", () => {
 	it("matches when the manifest uses mixed case", async () => {
 		const res = await sandboxHttpFetch("https://api.example.com/", undefined, {
@@ -450,13 +395,7 @@ describe("sandboxHttpFetch — allowlist normalisation", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// *.localhost hostnames
-// ---------------------------------------------------------------------------
-
 describe("sandboxHttpFetch — *.localhost", () => {
-	// RFC 6761 reserves .localhost for loopback. Subdomains of localhost
-	// must be treated as internal too.
 	it("rejects app.localhost", async () => {
 		await expect(
 			sandboxHttpFetch("http://app.localhost/", undefined, {

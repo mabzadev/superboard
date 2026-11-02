@@ -1,9 +1,3 @@
-// Server-only helpers for the SuperBoard transactional email API.
-//
-// They require a secret server API key (sb_email_…) created in
-// Communication › Settings › Senders & domains. Never ship that key to a
-// browser, a mobile application or any other client you do not control.
-
 const KEY_FORMAT = /^sb_email_[a-f0-9]{64}$/;
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -48,7 +42,6 @@ export class SuperBoardServer {
 		this.#timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 	}
 
-	/** Sends (or schedules) a transactional email. Returns `{ id, status, scheduled_at }`. */
 	sendEmail(input, options = {}) {
 		const body = emailRequestBody(input);
 		return this.#request("POST", "/v1/email/send", {
@@ -58,7 +51,6 @@ export class SuperBoardServer {
 		});
 	}
 
-	/** Returns the status, recipients and timeline of a message sent with this project's keys. */
 	getEmail(id, options = {}) {
 		return this.#request(
 			"GET",
@@ -67,7 +59,6 @@ export class SuperBoardServer {
 		);
 	}
 
-	/** Cancels a scheduled message that has not been released yet. */
 	cancelEmail(id, options = {}) {
 		return this.#request(
 			"POST",
@@ -115,16 +106,10 @@ export class SuperBoardServer {
 	}
 }
 
-/** One-shot helper: `sendEmail({ apiUrl, secretKey }, message)`. */
 export function sendEmail(options, input, requestOptions) {
 	return new SuperBoardServer(options).sendEmail(input, requestOptions);
 }
 
-/**
- * Verifies an outbound event webhook. `signature` is the X-SuperBoard-Signature
- * header (`v1=<hex>`), `timestamp` the X-SuperBoard-Timestamp header and
- * `payload` the raw request body, before any JSON parsing.
- */
 export async function verifyWebhookSignature({
 	payload,
 	signature,

@@ -4,8 +4,8 @@ import type { FieldDefinition, FieldUIHints, FileValue } from "./types.js";
 
 export interface FileOptions {
 	required?: boolean;
-	maxSize?: number; // In bytes
-	allowedTypes?: string[]; // MIME types — exact (image/png) or prefix (image/)
+	maxSize?: number;
+	allowedTypes?: string[];
 	helpText?: string;
 }
 

@@ -17,11 +17,6 @@ interface MockStatement {
 	all: () => Promise<unknown>;
 }
 
-/**
- * Hand-rolled mock of the D1Database subset the dialect uses (prepare/batch).
- * Records every `all()` and `batch()` call (and their order) so tests can
- * assert exactly which statements were coalesced.
- */
 function createMockD1(resultsBySql: Record<string, MockResultConfig> = {}) {
 	const operations: string[] = [];
 	const batchCalls: MockStatement[][] = [];
@@ -54,8 +49,6 @@ function createMockD1(resultsBySql: Record<string, MockResultConfig> = {}) {
 			};
 			return stmt;
 		},
-		// D1 batches are atomic: a single bad statement rejects the whole call,
-		// which the throw inside d1Result reproduces.
 		async batch(statements: MockStatement[]) {
 			operations.push(`batch:${statements.map((s) => s.sql).join("|")}`);
 			batchCalls.push(statements);
@@ -92,11 +85,9 @@ describe("CoalescingD1Dialect", () => {
 			"SELECT * FROM a",
 			"select * from b where id = ?",
 		]);
-		// Each caller gets its own rows, and bind params are preserved.
 		expect(r1.rows).toEqual(rowsA);
 		expect(r2.rows).toEqual(rowsB);
 		expect(mock.batchCalls[0]?.[1]?.params).toEqual(["abc"]);
-		// Nothing went through the single-statement path.
 		expect(mock.allCalls).toHaveLength(0);
 	});
 
@@ -114,7 +105,6 @@ describe("CoalescingD1Dialect", () => {
 		expect(mock.allCalls.map((s) => s.sql)).toEqual(["select 1", "select 2"]);
 		expect(r1.rows).toEqual([{ one: 1 }]);
 		expect(r2.rows).toEqual([{ two: 2 }]);
-		// Lone SELECTs flow through the buffer but report no affected rows.
 		expect(r1.numAffectedRows).toBeUndefined();
 	});
 
@@ -128,11 +118,9 @@ describe("CoalescingD1Dialect", () => {
 			db.executeQuery(CompiledQuery.raw("update a set name = ?", ["y"])),
 			db.executeQuery(CompiledQuery.raw("delete from a where id = ?", [1])),
 			db.executeQuery(CompiledQuery.raw("select * from b")),
-			// WITH is never coalesced: SQLite allows CTEs on writes.
 			db.executeQuery(CompiledQuery.raw("with x as (select 1) delete from a")),
 		]);
 
-		// Non-SELECTs hit the direct path before the macrotask flush fires.
 		expect(mock.operations).toEqual([
 			"all:insert into a (name) values (?)",
 			"all:update a set name = ?",
@@ -157,7 +145,6 @@ describe("CoalescingD1Dialect", () => {
 			db.executeQuery(CompiledQuery.raw("select good2")),
 		]);
 
-		// One atomic batch was attempted, then every statement re-ran solo.
 		expect(mock.batchCalls).toHaveLength(1);
 		expect(mock.allCalls.map((s) => s.sql)).toEqual([
 			"select good1",
@@ -192,7 +179,6 @@ describe("CoalescingD1Dialect", () => {
 		expect(inserted.insertId).toBe(7n);
 		expect(mock.allCalls[0]?.params).toEqual(["x"]);
 
-		// Zero changes maps to undefined, matching kysely-d1.
 		const deleted = await db.executeQuery(CompiledQuery.raw("delete from a where 1 = 0"));
 		expect(deleted.numAffectedRows).toBeUndefined();
 
@@ -223,12 +209,6 @@ describe("CoalescingD1Dialect", () => {
 	});
 
 	it("never overlaps physical session calls: a write and a SELECT batch run serially", async () => {
-		// The driver flips supportsMultipleConnections to true, which removes
-		// Kysely's connection mutex. A same-turn write (direct path) must still
-		// not run concurrently with the buffered-SELECT batch on the shared D1
-		// session — overlapping calls could interleave the session bookmark.
-		// This mock counts how many physical calls are in flight at once; the
-		// pre-serialization code reaches 2 here.
 		let inFlight = 0;
 		let maxInFlight = 0;
 		const ops: string[] = [];
@@ -237,8 +217,6 @@ describe("CoalescingD1Dialect", () => {
 			inFlight++;
 			maxInFlight = Math.max(maxInFlight, inFlight);
 			ops.push(label);
-			// Hold the "connection" across a macrotask so a concurrent call,
-			// if one were issued, would be observed in flight simultaneously.
 			await new Promise((resolve) => setTimeout(resolve, 0));
 			inFlight--;
 			return value;
@@ -275,19 +253,15 @@ describe("CoalescingD1Dialect", () => {
 		]);
 
 		expect(maxInFlight).toBe(1);
-		// The write executes first (direct path, enqueued immediately), then the
-		// coalesced SELECT batch — never overlapping.
 		expect(ops).toEqual(["all:update a set n = ?", "batch:select * from a|select * from b"]);
 	});
 
 	it("rejects transactions", async () => {
 		const db = createDb(createMockD1());
 
-		await expect(
-			db.transaction().execute(async () => {
-				// never reached
-			}),
-		).rejects.toThrow("Transactions are not supported");
+		await expect(db.transaction().execute(async () => {})).rejects.toThrow(
+			"Transactions are not supported",
+		);
 	});
 
 	describe("cancellation-safe flush (#1927)", () => {
@@ -296,21 +270,13 @@ describe("CoalescingD1Dialect", () => {
 		});
 
 		it("reclaims a stranded flush so a later query is not left hanging", async () => {
-			// On workerd a cancelled request drops its pending timers, so the
-			// flush it scheduled never fires and #flushScheduled stays true. The
-			// next query must clear the stale flag (past its deadline) and
-			// reschedule instead of queueing behind a flush that will never run.
 			vi.useFakeTimers();
 			const mock = createMockD1({ "select 1": { rows: [{ id: 1 }] } });
 			const db = createDb(mock);
 
-			// Queue a query, then drop its flush timer to simulate a cancelled
-			// owner: #flushScheduled is left set with no timer to clear it.
 			const first = db.executeQuery(CompiledQuery.raw("select 1"));
 			vi.clearAllTimers();
 
-			// Let the reclaim deadline lapse, then queue another query. It must
-			// reclaim the stranded flag, reschedule, and both queries resolve.
 			await vi.advanceTimersByTimeAsync(2_000);
 			const second = db.executeQuery(CompiledQuery.raw("select 1"));
 			await vi.runAllTimersAsync();
@@ -324,9 +290,6 @@ describe("CoalescingD1Dialect", () => {
 			const mock = createMockD1();
 			const db = createDb(mock);
 
-			// Queue two queries in the same turn without advancing past the
-			// deadline: the second must coalesce onto the first's pending flush
-			// (no premature reclaim), so both land in one batch.
 			const p1 = db.executeQuery(CompiledQuery.raw("select 1"));
 			const p2 = db.executeQuery(CompiledQuery.raw("select 2"));
 			await vi.runAllTimersAsync();

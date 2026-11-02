@@ -3,13 +3,11 @@ const FINISH_PRUNE_LIMIT = 20;
 const PRUNE_BATCH_SIZE = 1000;
 const PRUNE_MAX_BATCHES = 20;
 
-// Running leases are never removed: they are the proof that blocks plugin disablement.
 export function finishedPluginTaskLeaseRetention(
 	db: Pick<D1Database, "prepare">,
 	scope: { instanceId: string; target: string; pluginId: string },
 	now = Date.now(),
 ): D1PreparedStatement {
-	// Each finish removes a few expired siblings through the running-lease index, bounding the table.
 	return db
 		.prepare(
 			"DELETE FROM superboard_plugin_task_leases WHERE lease_id IN (SELECT lease_id FROM superboard_plugin_task_leases WHERE instance_id = ? AND target = ? AND plugin_id = ? AND state = 'finished' AND finished_at < ? LIMIT ?)",

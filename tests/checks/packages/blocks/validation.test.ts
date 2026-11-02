@@ -3,8 +3,6 @@ import { describe, expect, it } from "vitest";
 import { validateBlocks } from "../../../../packages/blocks/src/validation.js";
 
 describe("validateBlocks", () => {
-	// ── Valid blocks ─────────────────────────────────────────────────────────
-
 	describe("valid blocks", () => {
 		it("header", () => {
 			const result = validateBlocks([{ type: "header", text: "Hello" }]);
@@ -205,8 +203,6 @@ describe("validateBlocks", () => {
 			expect(result).toEqual({ valid: true, errors: [] });
 		});
 	});
-
-	// ── Invalid blocks ───────────────────────────────────────────────────────
 
 	describe("invalid blocks", () => {
 		it("not an array", () => {
@@ -435,10 +431,7 @@ describe("validateBlocks", () => {
 			const result = validateBlocks([
 				{
 					type: "columns",
-					columns: [
-						[{ type: "header", text: "OK" }],
-						[{ type: "header" }], // missing text
-					],
+					columns: [[{ type: "header", text: "OK" }], [{ type: "header" }]],
 				},
 			]);
 			expect(result.valid).toBe(false);
@@ -768,8 +761,6 @@ describe("validateBlocks", () => {
 		});
 	});
 
-	// ── Edge cases ───────────────────────────────────────────────────────────
-
 	describe("edge cases", () => {
 		it("empty blocks array is valid", () => {
 			const result = validateBlocks([]);
@@ -784,10 +775,7 @@ describe("validateBlocks", () => {
 						[
 							{
 								type: "columns",
-								columns: [
-									[{ type: "header", text: "Deep left" }],
-									[{ type: "header" }], // missing text
-								],
+								columns: [[{ type: "header", text: "Deep left" }], [{ type: "header" }]],
 							},
 						],
 						[{ type: "divider" }],
@@ -802,13 +790,11 @@ describe("validateBlocks", () => {
 			const result = validateBlocks([
 				{
 					type: "table",
-					columns: [{ format: "invalid" }], // missing key, label, bad format
+					columns: [{ format: "invalid" }],
 					rows: "not an array",
-					// missing page_action_id
 				},
 			]);
 			expect(result.valid).toBe(false);
-			// Should have errors for key, label, format, rows, and page_action_id
 			expect(result.errors.length).toBeGreaterThanOrEqual(4);
 			const paths = result.errors.map((e) => e.path);
 			expect(paths).toContain("blocks[0].columns[0].key");

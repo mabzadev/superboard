@@ -1,22 +1,3 @@
-/**
- * Standard (sandboxed) plugin format tests.
- *
- * Covers the runtime + integration side of sandboxed plugins:
- *
- *   - `definePlugin` rejects sandboxed-shape input (missing `id`)
- *     with a helpful message pointing at the new `satisfies
- *     SandboxedPlugin` pattern. The type system catches this at
- *     compile time too; this is the bypass-the-type-system runtime
- *     check.
- *   - `generatePluginsModule` emits the right import + adapter call
- *     for sandboxed (`format: "standard"`) plugins vs the native
- *     `createPlugin` call for native plugins.
- *
- * Authoring-side tests for `SandboxedPlugin` live next to the
- * plugin-types module — strictness of the mapped type is verified
- * there.
- */
-
 import { describe, it, expect, vi } from "vitest";
 
 import type { PluginDescriptor } from "../../../../../../packages/core/src/astro/integration/runtime.js";
@@ -41,9 +22,6 @@ describe("definePlugin()", () => {
 	});
 
 	it("throws when called without an id (sandboxed-shape input)", () => {
-		// The type system rejects this at compile time. At runtime,
-		// callers who bypass typechecking get a clear pointer at the
-		// sandboxed authoring flow.
 		expect(() =>
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional type bypass for runtime check coverage
 			definePlugin({ hooks: {} } as any),
@@ -115,14 +93,11 @@ describe("generatePluginsModule() standard format", () => {
 
 		const code = generatePluginsModule(descriptors);
 
-		// Should have the adapter import (at least one standard plugin)
 		expect(code).toContain("adaptSandboxEntry");
 
-		// Native plugin uses createPlugin
 		expect(code).toContain('import { createPlugin as createPlugin0 } from "@my/native-plugin"');
 		expect(code).toContain("createPlugin0(");
 
-		// Standard plugin uses default import + adapter
 		expect(code).toContain('import pluginDef1 from "@my/standard-plugin"');
 		expect(code).toContain("adaptSandboxEntry(pluginDef1");
 	});
@@ -156,13 +131,6 @@ describe("generatePluginsModule() standard format", () => {
 	});
 
 	it("throws an actionable error when a descriptor has no entrypoint (issue #1416)", () => {
-		// In-process plugins -- an inline `definePlugin({...})` result passed
-		// directly to `plugins: []` -- have no file entrypoint. The generator
-		// used to emit `import pluginDef0 from "undefined";`, which failed deep
-		// in Rollup with `failed to resolve import "undefined"`. It must instead
-		// fail fast with a message that names the offending plugin and explains
-		// the constraint. (The type bypass mirrors the reporter's scenario: a
-		// `PluginDescriptor` whose required `entrypoint` is missing at runtime.)
 		const descriptors = [
 			{
 				id: "misarico-resend-email",
@@ -181,7 +149,6 @@ describe("generatePluginsModule() standard format", () => {
 		expect(error).toBeDefined();
 		expect(error!.message).toContain("misarico-resend-email");
 		expect(error!.message).toMatch(/entrypoint/i);
-		// The cryptic failure mode must be gone.
 		expect(error!.message).not.toContain('"undefined"');
 	});
 
@@ -201,7 +168,6 @@ describe("generatePluginsModule() standard format", () => {
 
 		const code = generatePluginsModule(descriptors);
 
-		// The descriptor metadata should be serialized into the adapter call
 		expect(code).toContain('"id":"my-plugin"');
 		expect(code).toContain('"version":"1.0.0"');
 		expect(code).toContain('"capabilities":["content:read","network:request"]');

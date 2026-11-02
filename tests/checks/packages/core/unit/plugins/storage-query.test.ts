@@ -210,8 +210,6 @@ describe("storage-query", () => {
 		});
 
 		it("should handle number values", () => {
-			// Numeric operands use a type-guarded extract so the comparison is
-			// numeric (not lexical text) and total across schemaless documents.
 			const result = buildCondition(db, "count", 42);
 			expect(result.sql).toBe(
 				"CASE WHEN json_type(data, '$.count') IN ('integer', 'real') THEN json_extract(data, '$.count') END = ?",
@@ -243,8 +241,6 @@ describe("storage-query", () => {
 			expect(buildCondition(db, "name", { startsWith: "c:\\dir" }).params).toEqual(["c:\\\\dir%"]);
 		});
 
-		// Numeric range bounds are type-guarded so `'9' >= '10'` can't sneak in
-		// via lexical text comparison.
 		const ageNum =
 			"CASE WHEN json_type(data, '$.age') IN ('integer', 'real') THEN json_extract(data, '$.age') END";
 

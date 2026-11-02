@@ -35,8 +35,6 @@ class GenerateLinkRequest(
 class CustomLinkRedirect(
     @SerializedName("url")
     val link: String,
-    // true: if the app is installed it will handle the link
-    // false: even the app is installed the link should be opened in the browser
     @SerializedName("open_app_if_installed")
     val openAppIfInstalled: Boolean = true
 ) : Parcelable {

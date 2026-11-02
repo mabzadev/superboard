@@ -1,11 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-// The KV backend imports the binding from cloudflare:workers. Provide a fake
-// `env` with a KV namespace whose ops never settle — the production hang.
-// `vi.hoisted` runs before the hoisted `vi.mock` factory below.
 const { stalledKv } = vi.hoisted(() => ({
 	stalledKv: {
-		get: () => new Promise<string | null>(() => {}), // never resolves or rejects
+		get: () => new Promise<string | null>(() => {}),
 		put: () => new Promise<void>(() => {}),
 		delete: () => new Promise<void>(() => {}),
 	},

@@ -17,7 +17,6 @@ class NotificationsMainViewModel(application: Application) : AndroidViewModel(ap
     private val _notifications = MutableStateFlow(emptyList<Notification>())
     val notifications: StateFlow<List<Notification>> = _notifications.asStateFlow()
 
-    // Controls loading state to show a loading spinner or message
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 

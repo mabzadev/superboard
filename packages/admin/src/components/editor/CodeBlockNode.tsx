@@ -1,29 +1,3 @@
-/**
- * Code block node with language picker.
- *
- * Wraps the Lowlight code block with a React node view that
- * overlays a small language chip in the top-right corner. Clicking the chip
- * opens a popover with a Kumo Autocomplete: a free-form text input plus a
- * filtered list of curated language suggestions. The value is persisted on
- * the node's `language` attribute and round-trips through Portable Text as
- * `block.language`.
- *
- * The picker accepts arbitrary strings (not restricted to the curated list)
- * so that less common languages can still be used. Free-form input is
- * sanitized to a single safe CSS class token via `normalizeLanguage` so the
- * frontend's `language-{id}` class stays well-formed.
- *
- * The popover content is rendered through Kumo's `Popover`, which portals it
- * out of the editor's contentEditable DOM. That portal is load-bearing, not
- * cosmetic: a code block is a non-atom ProseMirror node with live editable
- * content, so if the picker's text input lived inside the node view, typing
- * would move the DOM selection into it. ProseMirror reads that selection,
- * dispatches a selection-correcting transaction, and the resulting node-view
- * redraw recreates this React component mid-edit, tearing the picker down --
- * the "language picker loses focus and closes when you type" bug (issue
- * #1200). Keeping the input outside the editor DOM avoids it entirely.
- */
-
 import { Autocomplete, Button, Popover, Toolbar, Tooltip, TooltipProvider } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { CaretDown, Check, Copy, X } from "@phosphor-icons/react";
@@ -138,9 +112,6 @@ function CodeBlockNodeView({ node, updateAttributes }: NodeViewProps) {
 
 	const [draft, setDraft] = React.useState(() => labelText(storedLanguage));
 
-	// Sync draft when the stored language changes from outside the node view
-	// (e.g. another collaborator edits the attribute, or the editor reloads
-	// content). Don't clobber an in-progress edit.
 	React.useEffect(() => {
 		if (!isEditing) {
 			setDraft(labelText(storedLanguage));
@@ -168,8 +139,6 @@ function CodeBlockNodeView({ node, updateAttributes }: NodeViewProps) {
 		[draft, findLanguageByDisplayLabel, updateAttributes],
 	);
 
-	// Enter in the autocomplete input commits the current draft. Escape is
-	// handled by the Popover itself (it calls onOpenChange(false) -> closePicker).
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
 		if (e.key === "Enter" && e.target instanceof HTMLInputElement) {
 			e.preventDefault();
@@ -321,13 +290,6 @@ function CodeBlockNodeView({ node, updateAttributes }: NodeViewProps) {
 	);
 }
 
-/**
- * TipTap extension: code block with an inline language picker node view.
- *
- * Drop-in replacement for StarterKit's default `codeBlock`. Configure
- * `StarterKit.configure({ codeBlock: false })` and add this extension to
- * the editor's extensions array.
- */
 export const CodeBlockExtension = CodeBlockLowlight.extend({
 	addKeyboardShortcuts() {
 		const shortcuts = this.parent?.() ?? {};

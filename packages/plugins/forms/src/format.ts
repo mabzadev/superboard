@@ -1,7 +1,3 @@
-/**
- * Formatting utilities for email notifications and webhook payloads.
- */
-
 import type { FormDefinition, Submission, SubmissionFile } from "./types.js";
 import { getFormFields } from "./types.js";
 
@@ -9,9 +5,6 @@ const CSV_ESCAPE_RE = /[,"\n]/;
 const DOUBLE_QUOTE_RE = /"/g;
 const CSV_FORMULA_TRIGGERS = new Set(["=", "+", "-", "@", "\t", "\r"]);
 
-/**
- * Format a submission as plain text for email notifications.
- */
 export function formatSubmissionText(
 	form: FormDefinition,
 	data: Record<string, unknown>,
@@ -41,9 +34,6 @@ export function formatSubmissionText(
 	return lines.join("\n");
 }
 
-/**
- * Format a digest email summarizing submissions over a period.
- */
 export function formatDigestText(
 	form: FormDefinition,
 	formId: string,
@@ -73,9 +63,6 @@ export function formatDigestText(
 	return lines.join("\n");
 }
 
-/**
- * Format a webhook payload for a new submission.
- */
 export function formatWebhookPayload(
 	form: FormDefinition,
 	submissionId: string,
@@ -99,9 +86,6 @@ export function formatWebhookPayload(
 	};
 }
 
-/**
- * Format submissions as CSV.
- */
 export function formatCsv(
 	form: FormDefinition,
 	items: Array<{ id: string; data: Submission }>,
@@ -130,7 +114,6 @@ export function formatCsv(
 }
 
 function escapeCsv(value: string): string {
-	// Neutralize formula triggers to prevent CSV injection in spreadsheet apps
 	if (value.length > 0 && CSV_FORMULA_TRIGGERS.has(value.charAt(0))) {
 		value = "'" + value;
 	}

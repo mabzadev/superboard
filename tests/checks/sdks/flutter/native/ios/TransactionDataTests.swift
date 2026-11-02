@@ -3,8 +3,6 @@ import XCTest
 
 final class TransactionDataTests: XCTestCase {
 
-    // MARK: - toData() key mapping
-
     func testToDataContainsAllKeysWithCorrectMapping() {
         let date = Date()
         let data = TransactionData(
@@ -59,15 +57,11 @@ final class TransactionDataTests: XCTestCase {
         assertValueIsNil(dict, key: "date")
     }
 
-    // MARK: - TransactionType raw values
-
     func testTransactionTypeRawValues() {
         XCTAssertEqual(TransactionType.buy.rawValue, "buy")
         XCTAssertEqual(TransactionType.cancel.rawValue, "cancel")
         XCTAssertEqual(TransactionType.refund.rawValue, "refund")
     }
-
-    // MARK: - Boundary values
 
     func testToDataWithZeroPriceAndEmptyStrings() {
         let data = TransactionData(
@@ -111,8 +105,6 @@ final class TransactionDataTests: XCTestCase {
         XCTAssertEqual(dict["transaction_id"] as? UInt64, UInt64.max)
         XCTAssertEqual(dict["original_transaction_id"] as? UInt64, UInt64.max)
     }
-
-    // MARK: - Date formatting
 
     func testToDataDateFormattingMatchesBackendDateString() {
         let date = Date()

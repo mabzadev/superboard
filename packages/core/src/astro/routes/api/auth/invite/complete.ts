@@ -1,10 +1,3 @@
-/**
- * POST /_emdash/api/auth/invite/complete
- *
- * Complete the invite by registering a passkey for the new user.
- * This creates the user account and establishes a session.
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -35,7 +28,6 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 
 		const adapter = createKyselyAdapter(emdash.db);
 
-		// Get passkey config
 		const url = new URL(request.url);
 		const options = new OptionsRepository(emdash.db);
 		const siteName = (await options.get<string>("emdash:site_title")) ?? undefined;
@@ -46,7 +38,6 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 		);
 		const passkeyConfig = getPasskeyConfig(url, siteName, siteUrl, allowedOrigins);
 
-		// Verify the passkey registration response
 		const challengeStore = createChallengeStore(emdash.db);
 		const verified = await verifyRegistrationResponse(
 			passkeyConfig,
@@ -54,15 +45,12 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 			challengeStore,
 		);
 
-		// Complete the invite - creates the user
 		const user = await completeInvite(adapter, body.token, {
 			name: body.name,
 		});
 
-		// Register the passkey for the new user
 		await registerPasskey(adapter, user.id, verified, "Initial passkey");
 
-		// Create session
 		if (session) {
 			session.set("user", { id: user.id });
 		}

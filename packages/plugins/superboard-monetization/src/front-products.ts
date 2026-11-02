@@ -3,7 +3,6 @@ import {
 	navigationGroup,
 } from "../../../supbrd-core/src/plugin-front-runtime.js";
 
-// Fallback navigation (used only when the EmDash menu is missing) mirrors the seeded section.
 const monetization = navigationGroup({
 	group_id: "products",
 	group_label: "navigation.section.monetization",

@@ -1,11 +1,3 @@
-/**
- * Send recovery link endpoint
- *
- * POST /_emdash/api/admin/users/:id/send-recovery
- *
- * Admin-initiated account recovery — sends a recovery magic link to the user's email.
- */
-
 import { Role, sendMagicLink, type MagicLinkConfig } from "@emdash-cms/auth";
 import { createKyselyAdapter } from "@emdash-cms/auth/adapters/kysely";
 import type { APIRoute } from "astro";
@@ -36,13 +28,11 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
 	try {
 		const adapter = createKyselyAdapter(emdash.db);
 
-		// Verify target user exists
 		const targetUser = await adapter.getUserById(id);
 		if (!targetUser) {
 			return apiError("NOT_FOUND", "User not found", 404);
 		}
 
-		// Check if email pipeline is available
 		if (!emdash.email?.isAvailable()) {
 			return apiError(
 				"EMAIL_NOT_CONFIGURED",
@@ -51,7 +41,6 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
 			);
 		}
 
-		// Build config using the configured site URL, stored option as fallback (not request Host header)
 		const options = new OptionsRepository(emdash.db);
 		const baseUrl = await getSiteBaseUrl(emdash.db, request, emdash.config);
 		const siteName = (await options.get<string>("emdash:site_title")) ?? "EmDash";
@@ -62,7 +51,6 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
 			email: (message) => emdash.email!.send(message, "system"),
 		};
 
-		// Send recovery link
 		await sendMagicLink(config, adapter, targetUser.email, "recovery");
 
 		return apiSuccess({ success: true, message: "Recovery link sent" });

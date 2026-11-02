@@ -102,7 +102,6 @@ describe("untarInto", () => {
 	it("applies GNU longname and pax path overrides", async () => {
 		const longName = `repo-abc/deep/${"d/".repeat(60)}long-file.txt`;
 		const longNameBytes = encoder.encode(longName);
-		// pax record: "<len> key=value\n" where len counts the whole record.
 		const paxBody = "path=repo-abc/pax-named.txt\n";
 		const paxLen = String(paxBody.length + 3).length + 1 + paxBody.length;
 		const paxBytes = encoder.encode(`${paxLen} ${paxBody}`);
@@ -254,7 +253,6 @@ describe("untarInto", () => {
 
 	it("throws on a truncated archive instead of writing partial content", async () => {
 		const r = recorder();
-		// No terminator and only 100 of the 600 declared content bytes.
 		const stream = new ReadableStream<Uint8Array>({
 			start(controller) {
 				controller.enqueue(header({ name: "repo-abc/cut.txt", size: 600 }));

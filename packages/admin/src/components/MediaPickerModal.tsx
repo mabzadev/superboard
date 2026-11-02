@@ -1,11 +1,3 @@
-/**
- * Media Picker Modal
- *
- * A modal dialog for selecting media from the library or uploading new files.
- * Supports multiple media providers with tabbed navigation.
- * Used by the rich text editor and image field components.
- */
-
 import { Button, Dialog, Input, Label, Loader } from "@cloudflare/kumo";
 import { plural } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
@@ -37,17 +29,11 @@ import { matchesMimeAllowlist, mimeFromUrl } from "../lib/mime-utils.js";
 import { cn } from "../lib/utils";
 import { DialogError } from "./DialogError.js";
 
-/** Selected item can be either a local MediaItem or a provider item with provider context */
 interface SelectedMedia {
 	providerId: string;
 	item: MediaItem | MediaProviderItem;
 }
 
-/**
- * Returns true if the given MIME type matches any entry in the filters array.
- * Each filter entry is either an exact MIME type (e.g. "image/png") or a
- * type prefix ending with "/" (e.g. "image/").
- */
 function matchesAnyFilter(mime: string, filters: string[] | undefined): boolean {
 	if (!filters || filters.length === 0) return true;
 	const normalizedMime = mime.toLowerCase();
@@ -67,46 +53,17 @@ export interface MediaPickerModalProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onSelect: (item: MediaItem) => void;
-	/** Allow selecting several items at once; confirms through `onSelectMany`. */
 	multiple?: boolean;
-	/** Called instead of `onSelect` when `multiple` is set. */
 	onSelectMany?: (items: MediaItem[]) => void;
-	/** Filter by mime type prefix, e.g. "image/" */
 	mimeTypeFilter?: string;
 	title?: string;
-	/**
-	 * Hide the "Insert from URL" input. Defaults to false.
-	 * The URL input probes image dimensions and is only meaningful for image pickers,
-	 * so non-image pickers (e.g. generic file pickers) should hide it.
-	 */
 	hideUrlInput?: boolean;
-	/**
-	 * What kind of media this picker is for. Drives user-facing copy
-	 * (default title, empty-state message, upload button label, empty-state icon).
-	 * Defaults to "image" — set to "file" for generic file pickers.
-	 */
 	mediaKind?: "image" | "file";
-	/** MIME allowlist — array of exact MIMEs or `type/` prefixes. */
 	mimeTypeFilters?: string[];
-	/** `_emdash_fields` row id for server-side MIME widening. */
 	fieldId?: string;
-	/**
-	 * Restrict the picker to the local Library only — hides the "Insert from URL"
-	 * input and suppresses external provider tabs.
-	 *
-	 * Use this for fields whose storage model only persists a local `mediaId`.
-	 * Selecting an external URL or provider item would return an item the
-	 * server cannot later resolve back to a URL (the `id` is either empty
-	 * for "Insert from URL" or a provider-namespaced string that won't match
-	 * a row in the `media` table). Site settings (logo, favicon,
-	 * `seo.defaultOgImage`) are the canonical callers.
-	 */
 	localOnly?: boolean;
 }
 
-/**
- * Probe image URL to get dimensions
- */
 function probeImageDimensions(
 	url: string,
 	errorMessage: string,
@@ -140,8 +97,6 @@ export function MediaPickerModal({
 	const { t } = useLingui();
 	const isFileKind = mediaKind === "file";
 
-	// Unified filters: mimeTypeFilters (plural array) takes precedence over the
-	// legacy mimeTypeFilter (singular string).
 	const filters = React.useMemo(() => {
 		if (mimeTypeFilters !== undefined)
 			return mimeTypeFilters.length > 0 ? mimeTypeFilters : undefined;
@@ -156,29 +111,20 @@ export function MediaPickerModal({
 	const EmptyStateIcon = isFileKind ? Paperclip : Image;
 	const queryClient = useQueryClient();
 	const [selectedItem, setSelectedItem] = React.useState<SelectedMedia | null>(null);
-	// Multi-select mode keeps items in click order — it becomes the gallery order.
 	const [selectedItems, setSelectedItems] = React.useState<SelectedMedia[]>([]);
 	const [activeProvider, setActiveProvider] = React.useState<string>("local");
 	const [searchQuery, setSearchQuery] = React.useState("");
-	// Debounced for the local library's server-side filename search.
 	const debouncedSearch = useDebouncedValue(searchQuery, 300);
 	const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-	// URL input state
 	const [imageUrl, setImageUrl] = React.useState("");
 	const [isProbing, setIsProbing] = React.useState(false);
 	const [urlError, setUrlError] = React.useState<string | null>(null);
 
-	// Track loaded image dimensions for providers that don't return them (e.g., CF Images)
 	const [providerDimensions, setProviderDimensions] = React.useState<
 		Record<string, { width: number; height: number }>
 	>({});
 
-	// Reset state when modal opens, or when `localOnly` flips on while it's
-	// already open. Without the `localOnly` dependency a parent that toggles
-	// the prop mid-session could leave `activeProvider` on a non-local tab
-	// (the tab UI is suppressed, but the selection state and provider-media
-	// query would still target the external provider).
 	React.useEffect(() => {
 		if (open) {
 			setSelectedItem(null);
@@ -192,19 +138,13 @@ export function MediaPickerModal({
 		}
 	}, [open, localOnly]);
 
-	// Fetch available providers — skipped when `localOnly` is set since the
-	// list isn't used (provider tabs are suppressed and the active provider
-	// stays "local"). Avoids a request to /providers on every modal open
-	// when we'll just throw the result away.
 	const { data: providers } = useQuery({
 		queryKey: ["media-providers"],
 		queryFn: fetchMediaProviders,
 		enabled: open && !localOnly,
-		// Default to just local if fetch fails
 		placeholderData: [],
 	});
 
-	// Get active provider info
 	const activeProviderInfo = React.useMemo(() => {
 		if (activeProvider === "local") {
 			return {
@@ -217,10 +157,6 @@ export function MediaPickerModal({
 		return providers?.find((p) => p.id === activeProvider);
 	}, [activeProvider, providers, t]);
 
-	// Fetch local media list (cursor-paginated so libraries beyond the
-	// first page remain selectable from the picker, not just the first 50).
-	// setQueryData is exact-match, so the optimistic dimension update below
-	// must share this exact key with the query that populates it.
 	const mediaQueryKey = ["media", filters?.join(",") ?? "", debouncedSearch.trim()];
 	const {
 		data: localData,
@@ -242,10 +178,6 @@ export function MediaPickerModal({
 		enabled: open && activeProvider === "local",
 	});
 
-	// Fetch provider media list. Belt-and-suspenders: the reset effect
-	// forces `activeProvider` back to "local" when `localOnly` is true, but
-	// also gate this query directly so a stale render can't fire an
-	// external request between state updates.
 	const { data: providerData, isLoading: providerLoading } = useQuery({
 		queryKey: ["provider-media", activeProvider, filters?.join(",") ?? "", searchQuery],
 		queryFn: () =>
@@ -262,7 +194,6 @@ export function MediaPickerModal({
 
 	const [uploadError, setUploadError] = React.useState<string | null>(null);
 
-	// Upload mutation for local provider
 	const uploadLocalMutation = useMutation({
 		mutationFn: (file: File) => uploadMedia(file, { fieldId }),
 		onSuccess: (item) => {
@@ -279,7 +210,6 @@ export function MediaPickerModal({
 		},
 	});
 
-	// Upload mutation for external providers
 	const uploadProviderMutation = useMutation({
 		mutationFn: ({ providerId, file }: { providerId: string; file: File }) =>
 			uploadToProvider(providerId, file),
@@ -299,10 +229,8 @@ export function MediaPickerModal({
 
 	const isUploading = uploadLocalMutation.isPending || uploadProviderMutation.isPending;
 
-	// Track which items we've already updated dimensions for
 	const updatedDimensionsRef = React.useRef<Set<string>>(new Set());
 
-	// Mutation for updating media dimensions
 	const dimensionsMutation = useMutation({
 		mutationFn: ({ id, width, height }: { id: string; width: number; height: number }) =>
 			updateMedia(id, { width, height }),
@@ -340,7 +268,6 @@ export function MediaPickerModal({
 		},
 	});
 
-	// Handle dimensions detected for local images missing them
 	const handleDimensionsDetected = React.useCallback(
 		(id: string, width: number, height: number) => {
 			if (updatedDimensionsRef.current.has(id)) return;
@@ -350,7 +277,6 @@ export function MediaPickerModal({
 		[dimensionsMutation],
 	);
 
-	// Get items for current view
 	const items = React.useMemo(() => {
 		if (activeProvider === "local") {
 			const localItems = localData?.pages.flatMap((page) => page.items) || [];
@@ -374,7 +300,6 @@ export function MediaPickerModal({
 		}
 	};
 
-	// When providerId is "local", item is always MediaItem; otherwise MediaProviderItem
 	const toMediaItem = (selected: SelectedMedia): MediaItem => {
 		if (selected.providerId === "local") {
 			return selected.item as MediaItem;
@@ -450,8 +375,6 @@ export function MediaPickerModal({
 		try {
 			const sniffedMime = mimeFromUrl(url) ?? "image/unknown";
 
-			// Pre-validate against the field's allowlist so the user sees the error
-			// here rather than at content-save time (where it becomes INVALID_MIME_FOR_FIELD).
 			if (sniffedMime === "image/unknown" && filters && filters.length > 0) {
 				setUrlError(
 					t`Cannot determine MIME type from URL. Use a URL ending in a recognized image extension (e.g. .jpg, .png, .webp).`,
@@ -501,10 +424,6 @@ export function MediaPickerModal({
 		activeProvider === "local" || (activeProviderInfo?.capabilities.upload ?? false);
 	const canSearch = activeProviderInfo?.capabilities.search ?? false;
 
-	// Build provider tabs - always show local first, then add external providers
-	// Filter out "local" from API response since we add it manually.
-	// When `localOnly` is set, suppress external providers entirely so the
-	// picker can only return locally-stored media (see prop docs).
 	const providerTabs = React.useMemo(() => {
 		const tabs: Array<{ id: string; name: string; icon?: string }> = [
 			{ id: "local", name: t`Library`, icon: undefined },
@@ -543,7 +462,6 @@ export function MediaPickerModal({
 					/>
 				</div>
 
-				{/* URL Input (image pickers only — probes image dimensions) */}
 				{!hideUrlInput && !localOnly && (
 					<>
 						<div className="border-b pb-4">
@@ -571,7 +489,6 @@ export function MediaPickerModal({
 							{urlError && <p className="text-sm text-kumo-danger mt-1">{urlError}</p>}
 						</div>
 
-						{/* Divider with "or" */}
 						<div className="relative py-2">
 							<div className="absolute inset-0 flex items-center">
 								<span className="w-full border-t" />
@@ -583,7 +500,6 @@ export function MediaPickerModal({
 					</>
 				)}
 
-				{/* Provider Tabs */}
 				{providerTabs.length > 1 && (
 					<div className="flex gap-2 border-b pb-3 flex-wrap">
 						{providerTabs.map((tab) => (
@@ -615,10 +531,7 @@ export function MediaPickerModal({
 					</div>
 				)}
 
-				{/* Toolbar */}
 				<div className="flex items-center justify-between pb-3 gap-4">
-					{/* Search — providers that support it, plus the local library
-					    (filename/extension search, handled server-side). */}
 					{canSearch || activeProvider === "local" ? (
 						<div className="relative flex-1 max-w-xs">
 							<MagnifyingGlass className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-kumo-subtle" />
@@ -638,7 +551,6 @@ export function MediaPickerModal({
 						</p>
 					)}
 
-					{/* Upload button (if provider supports it) */}
 					{canUpload && (
 						<>
 							<Button
@@ -665,20 +577,12 @@ export function MediaPickerModal({
 					)}
 				</div>
 
-				{/* Upload error */}
 				<DialogError
 					message={uploadError ? t`Upload failed: ${uploadError}` : null}
 					className="mb-3"
 				/>
 
-				{/* Media Grid */}
 				<div className="flex-1 overflow-y-auto min-h-0">
-					{/*
-					 * Gate the centered loader on items being empty so that "Load More"
-					 * (which sets isLoading=true while fetching the next cursor page)
-					 * does not blank out already-rendered items / lose the user's
-					 * selection. Mirrors the ContentList pattern from #135.
-					 */}
 					{isLoading && items.length === 0 ? (
 						<div className="flex items-center justify-center h-full">
 							<Loader />
@@ -718,7 +622,6 @@ export function MediaPickerModal({
 											selected={isItemSelected("local", item.id)}
 											onClick={() => handleItemClick("local", item)}
 											onDoubleClick={() => {
-												// Multi-select: double-click is just a toggle, no instant insert
 												if (multiple) {
 													handleItemClick("local", item);
 													return;
@@ -740,7 +643,6 @@ export function MediaPickerModal({
 													handleItemClick(activeProvider, item);
 													return;
 												}
-												// Merge loaded dimensions for double-click select
 												const dims = providerDimensions[item.id];
 												const itemWithDims = dims
 													? {
@@ -764,7 +666,6 @@ export function MediaPickerModal({
 						</ul>
 					)}
 
-					{/* Load more (local library only — providers handle pagination internally) */}
 					{activeProvider === "local" && hasNextLocalPage && (
 						<div className="flex justify-center py-3">
 							<Button
@@ -779,7 +680,6 @@ export function MediaPickerModal({
 					)}
 				</div>
 
-				{/* Footer */}
 				<div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 border-t pt-4">
 					<div className="flex-1 text-sm text-kumo-subtle">
 						{multiple
@@ -836,10 +736,6 @@ function MediaPickerItem({
 	const isImage = item.mimeType.startsWith("image/");
 	const needsDimensions = isImage && (!item.width || !item.height);
 
-	// Serve a resized thumbnail only when the original dimensions are already
-	// known. When they're missing we display the original so `onLoad` can read
-	// the true `naturalWidth`/`naturalHeight` to backfill them — a resized
-	// rendition would report the thumbnail's dimensions and corrupt the record.
 	const displayUrl = needsDimensions ? item.url : getMediaThumbnailUrl(item.url, item.mimeType);
 
 	const handleImageLoad = React.useCallback(
@@ -911,7 +807,6 @@ interface ProviderMediaItemProps {
 	selected: boolean;
 	onClick: () => void;
 	onDoubleClick: () => void;
-	/** Callback when image dimensions are loaded (for providers that don't return dimensions) */
 	onDimensionsLoaded?: (width: number, height: number) => void;
 }
 

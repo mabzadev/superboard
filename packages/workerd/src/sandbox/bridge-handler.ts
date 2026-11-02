@@ -1,19 +1,3 @@
-/**
- * Bridge Handler
- *
- * Handles bridge calls from sandboxed plugin workers.
- * Used in two contexts:
- * - Dev mode: as a miniflare outboundService function (Request -> Response)
- * - Production: called from the backing service HTTP handler
- *
- * Each handler is scoped to a specific plugin with its capabilities.
- * Capability enforcement happens here, not in the plugin.
- *
- * This implementation maintains behavioral parity with the Cloudflare
- * PluginBridge (packages/cloudflare/src/sandbox/bridge.ts). Same inputs
- * must produce same outputs, same return shapes, same error messages.
- */
-
 import {
 	ContentRepository,
 	createHttpAccess,
@@ -25,12 +9,6 @@ import {
 import type { Database, I18nConfig, SandboxEmailSendCallback } from "emdash";
 import type { Kysely } from "kysely";
 
-/**
- * Schema view of a content table (ec_${collection}) for kysely. The standard
- * system columns are typed; user-defined fields are addressed via the open
- * `[key: string]` index. Each kysely call resolves the table name dynamically
- * via `asContentDb()`.
- */
 interface ContentTableRow {
 	id: string;
 	slug: string | null;
@@ -46,29 +24,18 @@ interface ContentTableRow {
 	draft_revision_id: string | null;
 	locale: string;
 	translation_group: string | null;
-	// User-defined fields. kysely.set()/values() accept these because they're
-	// typed as unknown rather than never.
 	[key: string]: unknown;
 }
 
 type ContentSchema = { [tableName: string]: ContentTableRow };
 
-/**
- * View the host db as a content schema where any `ec_*` table is addressable.
- * Centralizes the one unavoidable narrowing for dynamic content tables (whose
- * names are computed from user-defined collection slugs and so cannot appear
- * in the static `Database` interface). The runtime SQL is identical; only the
- * type lens changes.
- */
 function asContentDb(db: Kysely<Database>): Kysely<ContentSchema> {
 	// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- ec_* content tables are created at runtime by SchemaRegistry and cannot be expressed in the static Database interface. ContentSchema is a structural view of any ec_* table.
 	return db as unknown as Kysely<ContentSchema>;
 }
 
-/** Validates collection/field names to prevent SQL injection */
 const COLLECTION_NAME_RE = /^[a-z][a-z0-9_]*$/;
 
-/** System columns that plugins cannot directly write to */
 const SYSTEM_COLUMNS = new Set([
 	"id",
 	"slug",
@@ -86,13 +53,11 @@ const SYSTEM_COLUMNS = new Set([
 	"translation_group",
 ]);
 
-/** Minimal storage interface for media uploads and deletes */
 export interface BridgeStorage {
 	upload(options: { key: string; body: Uint8Array; contentType: string }): Promise<unknown>;
 	delete(key: string): Promise<unknown>;
 }
 
-/** Per-collection storage config (matches manifest.storage entries) */
 export interface BridgeStorageCollectionConfig {
 	indexes?: Array<string | string[]>;
 	uniqueIndexes?: Array<string | string[]>;
@@ -103,22 +68,15 @@ export interface BridgeHandlerOptions {
 	version: string;
 	capabilities: string[];
 	allowedHosts: string[];
-	/** Storage collection names declared by the plugin */
 	storageCollections: string[];
-	/** Full storage config (with indexes) for proper query/count delegation */
 	storageConfig?: Record<string, BridgeStorageCollectionConfig>;
 	i18nConfig?: I18nConfig | null;
 	db: Kysely<Database>;
 	beforeContentWrite?: () => Promise<void>;
 	emailSend: () => SandboxEmailSendCallback | null;
-	/** Storage for media uploads. Optional; media/upload throws if not provided. */
 	storage?: BridgeStorage | null;
 }
 
-/**
- * Create a bridge handler function scoped to a specific plugin.
- * Returns an async function that takes a Request and returns a Response.
- */
 export function createBridgeHandler(
 	opts: BridgeHandlerOptions,
 ): (request: Request) => Promise<Response> {
@@ -158,8 +116,6 @@ export function createBridgeHandler(
 	};
 }
 
-// ── Dispatch ─────────────────────────────────────────────────────────────
-
 async function dispatch(
 	opts: BridgeHandlerOptions,
 	method: string,
@@ -168,7 +124,6 @@ async function dispatch(
 	const { db, pluginId } = opts;
 
 	switch (method) {
-		// ── KV (stored in _plugin_storage with collection='__kv') ────────
 		case "kv/get":
 			return kvGet(db, pluginId, requireString(body, "key"));
 		case "kv/set":
@@ -178,7 +133,6 @@ async function dispatch(
 		case "kv/list":
 			return kvList(db, pluginId, optionalString(body, "prefix") ?? "");
 
-		// ── Content ─────────────────────────────────────────────────────
 		case "content/get":
 			requireCapability(opts, "read:content");
 			return contentGet(db, requireString(body, "collection"), requireString(body, "id"));
@@ -239,9 +193,6 @@ async function dispatch(
 				requireStringArray(body, "ids"),
 			);
 
-		// ── Taxonomies (read-only) ──────────────────────────────────────
-		// `taxonomies:read` is a post-rename capability: it has no legacy
-		// alias, so the canonical name is checked directly.
 		case "taxonomy/list":
 			requireCapability(opts, "taxonomies:read");
 			return taxonomyList(db, optionalString(body, "locale"));
@@ -258,7 +209,6 @@ async function dispatch(
 				optionalString(body, "locale"),
 			);
 
-		// ── Media ───────────────────────────────────────────────────────
 		case "media/get":
 			requireCapability(opts, "read:media");
 			return mediaGet(db, requireString(body, "id"));
@@ -279,12 +229,10 @@ async function dispatch(
 			requireCapability(opts, "write:media");
 			return mediaDelete(db, requireString(body, "id"), opts.storage);
 
-		// ── HTTP ────────────────────────────────────────────────────────
 		case "http/fetch":
 			requireCapability(opts, "network:fetch");
 			return httpFetch(requireString(body, "url"), body.init, opts);
 
-		// ── Email ───────────────────────────────────────────────────────
 		case "email/send": {
 			requireCapability(opts, "email:send");
 			const message = requireEmailMessage(body, "message");
@@ -294,7 +242,6 @@ async function dispatch(
 			return null;
 		}
 
-		// ── Users ───────────────────────────────────────────────────────
 		case "users/get":
 			requireCapability(opts, "read:users");
 			return userGet(db, requireString(body, "id"));
@@ -305,7 +252,6 @@ async function dispatch(
 			requireCapability(opts, "read:users");
 			return userList(db, body);
 
-		// ── Storage (document store, scoped to declared collections) ────
 		case "storage/get":
 			validateStorageCollection(opts, requireString(body, "collection"));
 			return storageGet(opts, requireString(body, "collection"), requireString(body, "id"));
@@ -348,7 +294,6 @@ async function dispatch(
 				requireStringArray(body, "ids"),
 			);
 
-		// ── Logging ─────────────────────────────────────────────────────
 		case "log": {
 			const level = requireLogLevel(body, "level");
 			const msg = requireString(body, "msg");
@@ -357,28 +302,9 @@ async function dispatch(
 		}
 
 		default:
-			// All outbound fetch() from sandboxed plugins is routed to the
-			// backing service via workerd's globalOutbound config. If a plugin
-			// calls plain fetch("https://anywhere.com/path") instead of
-			// ctx.http.fetch(), we land here. This is intentional: plugins
-			// must use ctx.http.fetch (which goes through the http/fetch
-			// bridge with capability + host enforcement) to reach the network.
 			throw new Error(`Unknown bridge method: ${method}`);
 	}
 }
-
-// ── Validation ───────────────────────────────────────────────────────────
-//
-// Bridge call bodies are JSON-RPC-style payloads constructed by the workerd
-// plugin wrapper (see ./wrapper.ts) and consumed here. We control both ends
-// of the protocol, so these assertions exist to catch buggy or malicious
-// plugins rather than to parse an open API surface — that's why they throw
-// rather than return tagged errors. The bridge top-level catch turns thrown
-// errors into JSON error responses the plugin sees as bridge call failures.
-//
-// Each `require*` helper is backed by a narrowing predicate so the returned
-// value is typed via flow analysis rather than via a `as T` assertion. This
-// keeps the @typescript-eslint/no-unsafe-type-assertion rule clean.
 
 type EmailMessage = { to: string; subject: string; text: string; html?: string };
 type LogLevel = "debug" | "info" | "warn" | "error";
@@ -538,29 +464,14 @@ function requireOrderBy(
 }
 
 function requireCapability(opts: BridgeHandlerOptions, capability: string): void {
-	// Strict capability check matching the Cloudflare PluginBridge.
-	// We do NOT imply write → read here: a plugin that declares only
-	// write:content cannot call ctx.content.get/list. The plugin must
-	// declare read:content explicitly. This matches the Cloudflare bridge
-	// behavior and ensures sandboxed plugins behave the same on both runners.
-	//
-	// Note: the in-process PluginContextFactory in core does build the read
-	// API onto the write object, so a trusted plugin can read with only
-	// write:content. The sandbox bridges are stricter on purpose — they
-	// enforce the manifest as written.
-	//
-	// The one exception: network:fetch:any is documented as a strict
-	// superset of network:fetch, so the broader capability satisfies it.
 	if (capability === "network:fetch" && opts.capabilities.includes("network:fetch:any")) return;
 	if (!opts.capabilities.includes(capability)) {
-		// Error message matches Cloudflare PluginBridge format
 		throw new Error(`Missing capability: ${capability}`);
 	}
 }
 
 function validateStorageCollection(opts: BridgeHandlerOptions, collection: string): void {
 	if (!opts.storageCollections.includes(collection)) {
-		// Error message matches Cloudflare PluginBridge format
 		throw new Error(`Storage collection not declared: ${collection}`);
 	}
 }
@@ -571,8 +482,6 @@ function validateCollectionName(collection: string): void {
 	}
 }
 
-// ── Value serialization (matches Cloudflare bridge) ──────────────────────
-
 function serializeValue(value: unknown): unknown {
 	if (value === null || value === undefined) return null;
 	if (typeof value === "boolean") return value ? 1 : 0;
@@ -580,10 +489,6 @@ function serializeValue(value: unknown): unknown {
 	return value;
 }
 
-/**
- * Transform a raw DB row into the content item shape returned to plugins.
- * Matches the Cloudflare bridge's rowToContentItem.
- */
 function rowToContentItem(
 	collection: string,
 	row: Record<string, unknown>,
@@ -619,9 +524,6 @@ function rowToContentItem(
 		locale: typeof row.locale === "string" ? row.locale : "en",
 	};
 }
-
-// ── KV Operations ────────────────────────────────────────────────────────
-// Uses _plugin_storage with collection='__kv' (matching Cloudflare bridge)
 
 async function kvGet(db: Kysely<Database>, pluginId: string, key: string): Promise<unknown> {
 	const row = await db
@@ -694,8 +596,6 @@ async function kvList(
 		value: JSON.parse(r.data),
 	}));
 }
-
-// ── Content Operations ───────────────────────────────────────────────────
 
 async function contentGet(
 	db: Kysely<Database>,
@@ -786,12 +686,10 @@ async function contentCreate(
 	validateCollectionName(collection);
 	const table = `ec_${collection}`;
 
-	// Generate ULID for the new content item
 	const { ulid } = await import("ulidx");
 	const id = ulid();
 	const now = new Date().toISOString();
 
-	// Build insert values: system columns + user data columns
 	const values: Record<string, unknown> = {
 		id,
 		slug: typeof data.slug === "string" ? data.slug : null,
@@ -804,7 +702,6 @@ async function contentCreate(
 	};
 	if (locale !== undefined) values.locale = locale;
 
-	// Add user data fields (skip system columns, validate names)
 	for (const [key, value] of Object.entries(data)) {
 		if (!SYSTEM_COLUMNS.has(key) && COLLECTION_NAME_RE.test(key)) {
 			values[key] = serializeValue(value);
@@ -814,7 +711,6 @@ async function contentCreate(
 	const cdb = asContentDb(db);
 	await cdb.insertInto(table).values(values).execute();
 
-	// Re-read the created row
 	const created = await cdb
 		.selectFrom(table)
 		.where("id", "=", id)
@@ -872,7 +768,6 @@ async function contentDelete(
 	validateCollectionName(collection);
 	const table = `ec_${collection}`;
 
-	// Soft-delete: set deleted_at timestamp (matching Cloudflare bridge)
 	const now = new Date().toISOString();
 	const result = await asContentDb(db)
 		.updateTable(table)
@@ -883,8 +778,6 @@ async function contentDelete(
 
 	return BigInt(result.numUpdatedRows) > 0n;
 }
-
-// ── Batch Content Operations ─────────────────────────────────────────────
 
 const MAX_BATCH_SIZE = 100;
 
@@ -959,14 +852,10 @@ async function contentDeleteMany(
 	});
 }
 
-// ── Taxonomy Operations (read-only) ──────────────────────────────────────
-
-/** Type guard for plain JSON objects. */
 function isJsonObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Parse the `collections` JSON column into a string array (`[]` on anything else). */
 function parseCollectionsColumn(value: string | null): string[] {
 	if (!value) return [];
 	try {
@@ -979,10 +868,6 @@ function parseCollectionsColumn(value: string | null): string[] {
 	}
 }
 
-/**
- * Convert a `taxonomies` row to the term shape exposed over the bridge.
- * Matches the Cloudflare PluginBridge and core's TaxonomyTermInfo.
- */
 function rowToTaxonomyTerm(row: {
 	id: string;
 	name: string;
@@ -1029,8 +914,6 @@ async function taxonomyList(db: Kysely<Database>, locale?: string) {
 }
 
 async function taxonomyTerms(db: Kysely<Database>, taxonomy: string, locale?: string) {
-	// Manual order first, then label with `id asc` as a stable tiebreaker for
-	// terms sharing both — matching core's TaxonomyRepository.findByName.
 	let query = db
 		.selectFrom("taxonomies")
 		.selectAll()
@@ -1050,8 +933,6 @@ async function taxonomyEntryTerms(
 	taxonomy?: string,
 	locale?: string,
 ) {
-	// The pivot stores the term's translation_group in taxonomy_id, so the
-	// join resolves an assignment into each locale's term row.
 	let query = db
 		.selectFrom("content_taxonomies")
 		.innerJoin("taxonomies", "taxonomies.translation_group", "content_taxonomies.taxonomy_id")
@@ -1064,8 +945,6 @@ async function taxonomyEntryTerms(
 	const rows = await query.execute();
 	return rows.map(rowToTaxonomyTerm);
 }
-
-// ── Media Operations ─────────────────────────────────────────────────────
 
 function rowToMediaItem(row: {
 	id: string;
@@ -1118,7 +997,6 @@ async function mediaList(
 }> {
 	const limit = Math.max(1, Math.min(Number(opts.limit) || 50, 100));
 
-	// Only return ready items (matching Cloudflare bridge)
 	let query = db
 		.selectFrom("media")
 		.where("status", "=", "ready")
@@ -1188,10 +1066,6 @@ async function mediaUpload(
 		throw new Error("media/upload: bytes must be a base64-encoded string or an array of bytes");
 	}
 
-	// Write bytes to storage first, then create DB record.
-	// If DB insert fails, delete the storage object so we don't leak files.
-	// (cleanupPendingUploads only deletes 'pending' DB rows; objects with no
-	// row are invisible to it.)
 	await storage.upload({ key: storageKey, body: byteArray, contentType });
 
 	try {
@@ -1208,8 +1082,6 @@ async function mediaUpload(
 			})
 			.execute();
 	} catch (error) {
-		// Best-effort cleanup of the orphaned storage object. Log if cleanup
-		// itself fails so operators see the leak instead of silently dropping it.
 		try {
 			await storage.delete(storageKey);
 		} catch (cleanupError) {
@@ -1234,7 +1106,6 @@ async function mediaDelete(
 	id: string,
 	storage?: BridgeStorage | null,
 ): Promise<boolean> {
-	// Look up storage key before deleting
 	const media = await db
 		.selectFrom("media")
 		.where("id", "=", id)
@@ -1243,12 +1114,8 @@ async function mediaDelete(
 
 	if (!media) return false;
 
-	// Delete the DB row first
 	const result = await db.deleteFrom("media").where("id", "=", id).executeTakeFirst();
 
-	// Delete the storage object. If this fails, log but don't throw —
-	// the DB row is already deleted and the orphan cleanup cron will
-	// catch it. Matches the Cloudflare bridge's behavior.
 	if (storage && media.storage_key) {
 		try {
 			await storage.delete(media.storage_key);
@@ -1260,9 +1127,6 @@ async function mediaDelete(
 	return BigInt(result.numDeletedRows) > 0n;
 }
 
-// ── HTTP Operations ──────────────────────────────────────────────────────
-
-/** A multipart form part as marshaled by the wrapper. */
 interface MarshaledFormDataPart {
 	name: string;
 	value: string;
@@ -1271,18 +1135,10 @@ interface MarshaledFormDataPart {
 	isBlob?: boolean;
 }
 
-/** Marshaled RequestInit shape sent over the bridge from the wrapper. */
 interface MarshaledRequestInit {
 	method?: string;
 	redirect?: RequestRedirect;
-	/** List of [name, value] pairs to preserve multi-value headers */
 	headers?: Array<[string, string]>;
-	/**
-	 * Body is discriminated by bodyType. The wrapper (see wrapper.ts:
-	 * marshalRequestInit) guarantees the shape, but we validate defensively
-	 * at unmarshal time so a misbehaving plugin can't smuggle unexpected
-	 * data into the host fetch.
-	 */
 	bodyType?: "string" | "base64" | "formdata";
 	body?: string | MarshaledFormDataPart[];
 }
@@ -1364,10 +1220,6 @@ function parseMarshaledRequestInit(value: unknown): MarshaledRequestInit | undef
 	return out;
 }
 
-/**
- * Reverse the wrapper's marshalRequestInit() to reconstruct a real RequestInit
- * with proper Headers, binary bodies, and FormData.
- */
 function unmarshalRequestInit(
 	marshaled: MarshaledRequestInit | undefined,
 ): RequestInit | undefined {
@@ -1376,8 +1228,6 @@ function unmarshalRequestInit(
 	if (marshaled.method) init.method = marshaled.method;
 	if (marshaled.redirect) init.redirect = marshaled.redirect;
 	if (marshaled.headers && marshaled.headers.length > 0) {
-		// Use a Headers instance and append() so duplicates are preserved
-		// (e.g., multiple Set-Cookie). A plain Record would collapse them.
 		const headers = new Headers();
 		for (const [name, value] of marshaled.headers) {
 			headers.append(name, value);
@@ -1431,7 +1281,6 @@ async function httpFetch(
 
 	const init = unmarshalRequestInit(parseMarshaledRequestInit(marshaledInit));
 	const res = await httpAccess.fetch(url, init);
-	// Read as bytes to preserve binary content (images, audio, etc.)
 	const bytes = new Uint8Array(await res.arrayBuffer());
 	const headers: Record<string, string> = {};
 	res.headers.forEach((v, k) => {
@@ -1444,8 +1293,6 @@ async function httpFetch(
 		bodyBase64: Buffer.from(bytes).toString("base64"),
 	};
 }
-
-// ── User Operations ──────────────────────────────────────────────────────
 
 function rowToUser(row: {
 	id: string;
@@ -1533,17 +1380,8 @@ async function userList(
 	};
 }
 
-// ── Storage Operations ───────────────────────────────────────────────────
-
-/**
- * Construct a PluginStorageRepository for the requested collection.
- * Uses the indexes from the plugin's storage config (if provided) so
- * query/count operations support the same WHERE/ORDER BY clauses as
- * in-process plugins.
- */
 function getStorageRepo(opts: BridgeHandlerOptions, collection: string): PluginStorageRepository {
 	const config = opts.storageConfig?.[collection];
-	// Merge unique indexes into the indexes list since both are queryable
 	const allIndexes: Array<string | string[]> = [
 		...(config?.indexes ?? []),
 		...(config?.uniqueIndexes ?? []),
@@ -1617,9 +1455,6 @@ async function storageGetMany(
 	if (!ids || ids.length === 0) return [];
 	const repo = getStorageRepo(opts, collection);
 	const result = await repo.getMany(ids);
-	// Return as a list of [id, data] pairs rather than a plain object so
-	// special property names like "__proto__" survive transport. The wrapper
-	// reconstructs a Map from these entries.
 	return [...result.entries()];
 }
 

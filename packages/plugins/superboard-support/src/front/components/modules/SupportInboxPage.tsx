@@ -118,12 +118,10 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 	}>({ agents: [], teams: [], inboxes: [] });
 	const [selectedMacroId, setSelectedMacroId] = useState("");
 	const { t } = useSupportI18n();
-	// `?q=` narrows the list to one customer (email, user id or conversation id).
 	const [query, setQuery] = useState(() =>
 		typeof window === "undefined" ? "" : inboxDeepLink(window.location.search).query,
 	);
 	const [queryDraft, setQueryDraft] = useState(query);
-	// User ids of the Support contacts matching the search, kept with the search they answer.
 	const [contactMatch, setContactMatch] = useState<{
 		query: string;
 		references: ReadonlySet<string>;
@@ -158,7 +156,6 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 		() => items.filter((item) => inboxItemMatchesQuery(item, query, customerReferences)),
 		[items, query, customerReferences],
 	);
-	// While searching, the first matching conversation is shown until another one is chosen.
 	const selected = useMemo(
 		() =>
 			visibleItems.find((item) => item.id === selectedId) ?? (query ? visibleItems[0] : undefined),
@@ -214,9 +211,7 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 							: item,
 					),
 				);
-			} catch {
-				// A failed receipt does not hide messages and will retry on refresh.
-			}
+			} catch {}
 		} catch (error) {
 			showErrorNotification(
 				error instanceof Error ? error.message : "Unable to load the conversation",
@@ -234,7 +229,6 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 		void loadItems();
 	}, [loadItems]);
 	useEffect(() => {
-		// An email resolves to the Support contacts' user ids, which conversations reference.
 		if (!projectId || !query) return;
 		let current = true;
 		getSupportContacts(projectId, query).then(
@@ -310,7 +304,6 @@ export default function InboxPage({ inboxId }: { inboxId?: string } = {}) {
 		};
 	}, [projectId, selected?.source_id, selected?.source_type]);
 	useEffect(() => {
-		// Polling pauses while the tab is hidden and catches up when it becomes visible.
 		const refresh = () => {
 			if (document.visibilityState === "hidden") return;
 			void loadItems();

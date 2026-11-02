@@ -1,8 +1,3 @@
-/**
- * Hono app instance -- separated from index.ts so tests can import it
- * without pulling in the Workflow export (which requires cloudflare:workers).
- */
-
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 

@@ -21,7 +21,6 @@ const ADMIN_PREFIX = "/internal/v1/admin";
 const MAX_ACTIVE_API_KEYS = 10;
 const MAX_EVENT_WEBHOOKS = 5;
 
-/** Mirrors the mutation contract of admin.ts; `response` is returned but never persisted. */
 interface EmailApiAdminMutation {
 	action: string;
 	resourceId: string;
@@ -92,7 +91,6 @@ emailApiAdminRoutes.post(
 			action: "api_key.created",
 			resourceId: id,
 			status: 201,
-			// The plaintext key is returned once and never stored (not even in the idempotency log).
 			data: { ...data, secret: null },
 			response: { data: { ...data, secret } },
 			statements: [
@@ -363,7 +361,6 @@ export function profileAuthenticationConfig(row: object): DomainAuthenticationCo
 	const legacySelector = typeof selector === "string" && selector ? selector : null;
 	return {
 		...stored,
-		// The column is written by both the profile form and the wizard: it wins.
 		dkim_selector: legacySelector ?? stored.dkim_selector ?? null,
 		dkim_tokens: Array.isArray(stored.dkim_tokens) ? stored.dkim_tokens : [],
 	};

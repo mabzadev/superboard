@@ -88,8 +88,6 @@ describe("exportSeed: bylines", () => {
 
 		const seed = await exportSeed(db, "posts");
 
-		// The root byline seed ids and the credit references must match so the
-		// exported seed round-trips through applySeed.
 		const bylines = seed.bylines ?? [];
 		const editorialSeedId = bylines.find((b) => b.slug === "editorial")?.id;
 		const guestSeedId = bylines.find((b) => b.slug === "guest-writer")?.id;
@@ -140,7 +138,6 @@ describe("exportSeed: bylines", () => {
 
 		const seed = await exportSeed(db, "posts");
 
-		// Apply the exported seed into a separate, empty database.
 		const fresh = await setupTestDatabase();
 		try {
 			const result = await applySeed(fresh, seed, { includeContent: true });

@@ -1,11 +1,3 @@
-/**
- * Tests for the code block language helpers.
- *
- * Covers id/alias lookup, normalization of free-form input, and human-readable
- * label fallback. These are the helpers backing the editor's language picker
- * and the round-trip between user input and the stored `language` attribute.
- */
-
 import { i18n } from "@lingui/core";
 import { describe, it, expect } from "vitest";
 
@@ -80,9 +72,6 @@ describe("normalizeLanguage", () => {
 	});
 
 	it("collapses internal whitespace so the value remains a single class token", () => {
-		// Frontend renders `<pre class="language-${id}">`; whitespace would
-		// split that into two classes (`language-objective c`), so unknown
-		// inputs with spaces are joined with a single hyphen.
 		expect(normalizeLanguage("Objective C")).toBe("objective-c");
 		expect(normalizeLanguage("My  Lang")).toBe("my-lang");
 		expect(normalizeLanguage("Pure\tScript")).toBe("pure-script");
@@ -90,7 +79,6 @@ describe("normalizeLanguage", () => {
 	});
 
 	it("strips other characters that would break a CSS class token", () => {
-		// Dots, slashes, and other punctuation get collapsed to `-`.
 		expect(normalizeLanguage("foo.bar")).toBe("foo-bar");
 		expect(normalizeLanguage("a/b")).toBe("a-b");
 		expect(normalizeLanguage("plain!text")).toBe("plain-text");

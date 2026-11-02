@@ -1,11 +1,3 @@
-// Result schema for the Flue PR reviewer.
-//
-// The agent returns this structured shape. A separate GitHub Actions
-// orchestrator reads it and posts the review with a write-scoped token; the
-// agent itself never writes to GitHub. Keeping the shape flat and close to the
-// GitHub review API (path/line/side + a free-form markdown body) means the
-// orchestrator can map findings to review comments with almost no translation.
-
 import * as v from "valibot";
 
 export const reviewResultSchema = v.object({

@@ -28,19 +28,16 @@ describe("createDatabase", () => {
 		it("should allow queries on in-memory database", async () => {
 			db = createDatabase({ url: ":memory:" });
 
-			// Create a simple table
 			await db.schema
 				.createTable("test")
 				.addColumn("id", "text", (col) => col.primaryKey())
 				.execute();
 
-			// Insert a row
 			await db
 				.insertInto("test" as any)
 				.values({ id: "test-1" })
 				.execute();
 
-			// Query it back
 			const result = await db
 				.selectFrom("test" as any)
 				.selectAll()
@@ -56,9 +53,7 @@ describe("createDatabase", () => {
 		afterEach(() => {
 			try {
 				unlinkSync(testDbPath);
-			} catch {
-				// Ignore if file doesn't exist
-			}
+			} catch {}
 		});
 
 		it("should create file-based database with file: URL", () => {
@@ -67,7 +62,6 @@ describe("createDatabase", () => {
 		});
 
 		it("should persist data to file", async () => {
-			// Create database and insert data
 			db = createDatabase({ url: `file:${testDbPath}` });
 
 			await db.schema
@@ -82,7 +76,6 @@ describe("createDatabase", () => {
 			await db.destroy();
 			db = undefined;
 
-			// Reopen database and verify data persists
 			db = createDatabase({ url: `file:${testDbPath}` });
 			const result = await db
 				.selectFrom("test" as any)
@@ -163,7 +156,6 @@ describe("createDatabase", () => {
 		it("should return functional Kysely instance", () => {
 			db = createDatabase({ url: ":memory:" });
 
-			// Check for Kysely methods
 			expect(db.selectFrom).toBeInstanceOf(Function);
 			expect(db.insertInto).toBeInstanceOf(Function);
 			expect(db.updateTable).toBeInstanceOf(Function);

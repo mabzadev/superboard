@@ -40,7 +40,6 @@ describe("tokens", () => {
 		it("generates a base64url-encoded token", () => {
 			const token = generateToken();
 			expect(token).toMatch(BASE64URL_REGEX);
-			// 32 bytes = 43 base64url characters (without padding)
 			expect(token.length).toBe(43);
 		});
 
@@ -79,7 +78,6 @@ describe("tokens", () => {
 		it("generates a shorter session ID", () => {
 			const sessionId = generateSessionId();
 			expect(sessionId).toMatch(BASE64URL_REGEX);
-			// 20 bytes = 27 base64url characters
 			expect(sessionId.length).toBe(27);
 		});
 	});
@@ -108,9 +106,6 @@ describe("tokens", () => {
 
 	describe("computeS256Challenge", () => {
 		it("produces correct S256 challenge for a known verifier", () => {
-			// RFC 7636 Appendix B test vector:
-			// verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-			// expected challenge = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
 			const challenge = computeS256Challenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk");
 			expect(challenge).toBe("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
 		});

@@ -8,18 +8,6 @@ import { setI18nConfig } from "../../../../../packages/core/src/i18n/config.js";
 import { applySeed } from "../../../../../packages/core/src/seed/apply.js";
 import { setupTestDatabaseWithCollections, teardownTestDatabase } from "../utils/test-db.js";
 
-/**
- * Regression for #1421: the seed CLI hardcodes `en` as the default locale.
- *
- * A project whose only authored locale is a non-`en` default (e.g. `de`) is
- * treated as non-i18n by `export-seed` (single distinct locale → no `locale`
- * emitted), and `apply` — running outside the Astro runtime with no i18n
- * config — backfills the missing locale as `en`. The round-trip silently
- * rewrites `de` rows to `en`, breaking locale-scoped runtime lookups.
- *
- * These tests run with the i18n config UNSET (the CLI environment) and assert
- * the data's real default locale survives an export → apply round-trip.
- */
 describe("seed round-trip preserves a non-en default locale (#1421)", () => {
 	let source: Kysely<Database>;
 	let target: Kysely<Database>;
@@ -38,14 +26,8 @@ describe("seed round-trip preserves a non-en default locale (#1421)", () => {
 		source = await setupTestDatabaseWithCollections();
 		const now = new Date().toISOString();
 
-		// A genuine single-locale `de` project: every locale-bearing row is `de`.
-		// The built-in taxonomy defs are created at the project default, so move
-		// the seeded `category`/`tag` defs to `de` rather than leaving stray `en`
-		// rows that would make the data look multi-locale.
 		await source.updateTable("_emdash_taxonomy_defs").set({ locale: "de" }).execute();
 
-		// A single-locale `de` project: one menu, one taxonomy def, one post,
-		// all in `de`.
 		await source
 			.insertInto("_emdash_menus")
 			.values({
@@ -88,10 +70,8 @@ describe("seed round-trip preserves a non-en default locale (#1421)", () => {
 			} as never)
 			.execute();
 
-		// Export from the CLI environment (i18n config unset).
 		const seed = await exportSeed(source, "post");
 
-		// Apply into a fresh DB, also outside the runtime.
 		target = await setupTestDatabaseWithCollections();
 		await applySeed(target, seed, { includeContent: true });
 

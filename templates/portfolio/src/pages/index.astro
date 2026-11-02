@@ -3,9 +3,6 @@ import { getEmDashCollection, getSiteSettings } from "emdash";
 import Base from "../layouts/Base.astro";
 import ProjectCard from "../components/ProjectCard.astro";
 
-// Fetch settings + the 4 featured projects in parallel. Limiting and
-// sorting in the database avoids loading every project just to slice
-// off the first 4 in JS (a full-table read on sites with lots of work).
 const [settings, { entries: featuredProjects, cacheHint }] = await Promise.all([
 	getSiteSettings(),
 	getEmDashCollection("projects", {

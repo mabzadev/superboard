@@ -10,7 +10,6 @@ import { ApiResponseError } from "../../../../../packages/admin/src/lib/api/clie
 import type { PluginUpdateInfo } from "../../../../../packages/admin/src/lib/api/marketplace";
 import { render } from "../utils/render.tsx";
 
-// Mock router
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual("@tanstack/react-router");
 	return {
@@ -79,7 +78,6 @@ vi.mock("../../../../../packages/admin/src/lib/api/marketplace", async () => {
 	};
 });
 
-// Import after mocks
 const { PluginManager } =
 	await import("../../../../../packages/admin/src/components/PluginManager");
 
@@ -150,7 +148,6 @@ describe("PluginManager", () => {
 				.element(screen.getByRole("dialog", { name: "Verify your identity" }))
 				.toBeInTheDocument();
 			expect(mockEnablePlugin).toHaveBeenCalledTimes(1);
-			// The unit harness omits Kumo's portal CSS; native DOM clicks exercise the handler.
 			screen.getByRole("button", { name: "Complete verification" }).element().click();
 			await expect.element(screen.getByRole("switch", { name: "Disable plugin" })).toBeChecked();
 			expect(mockEnablePlugin).toHaveBeenCalledTimes(2);
@@ -331,8 +328,6 @@ describe("PluginManager", () => {
 		const pagesLink = screen.getByRole("link", { name: "Plugin pages" });
 		await expect.element(pagesLink).toBeInTheDocument();
 		const anchor = pagesLink.element() as HTMLAnchorElement;
-		// Plugins are not required to expose a `/settings` sub-page; the pages
-		// icon should land on the plugin's primary admin page.
 		expect(anchor.getAttribute("href")).toMatch(/^\/plugins\/audit-log\/?$/);
 	});
 
@@ -392,10 +387,6 @@ describe("PluginManager", () => {
 			.toBeInTheDocument();
 	});
 
-	// -----------------------------------------------------------------------
-	// Marketplace features
-	// -----------------------------------------------------------------------
-
 	it("shows Marketplace link when manifest has marketplace URL", async () => {
 		const screen = await render(
 			<Wrapper>
@@ -434,9 +425,7 @@ describe("PluginManager", () => {
 			</Wrapper>,
 		);
 		await expect.element(screen.getByText("Marketplace Plugin")).toBeInTheDocument();
-		// Look for the "Marketplace" badge
 		const badges = screen.getByText("Marketplace").all();
-		// At least one should be the source badge on the card (not the nav link)
 		expect(badges.length).toBeGreaterThanOrEqual(1);
 	});
 
@@ -522,7 +511,6 @@ describe("PluginManager", () => {
 			</Wrapper>,
 		);
 		await expect.element(screen.getByText("MP Plugin")).toBeInTheDocument();
-		// Expand
 		const expandBtn = screen.getByRole("button", { name: "Expand details" });
 		await expandBtn.click();
 		await expect
@@ -544,7 +532,6 @@ describe("PluginManager", () => {
 			</Wrapper>,
 		);
 		await expect.element(screen.getByText("MP Plugin")).toBeInTheDocument();
-		// Expand
 		const expandBtn = screen.getByRole("button", { name: "Expand details" });
 		await expandBtn.click();
 		await expect.element(screen.getByText("Uninstall")).toBeInTheDocument();
@@ -567,7 +554,6 @@ describe("PluginManager", () => {
 		const expandBtn = screen.getByRole("button", { name: "Expand details" });
 		await expandBtn.click();
 		await screen.getByText("Uninstall").click();
-		// Confirm dialog
 		await expect.element(screen.getByText("Uninstall MP Plugin?")).toBeInTheDocument();
 		await expect
 			.element(screen.getByText("This will remove the plugin and its bundle from your site."))
@@ -585,7 +571,6 @@ describe("PluginManager", () => {
 			</Wrapper>,
 		);
 		await expect.element(screen.getByText("No plugins configured")).toBeInTheDocument();
-		// The empty state links to the marketplace
 		await expect.element(screen.getByText("marketplace", { exact: true })).toBeInTheDocument();
 	});
 });

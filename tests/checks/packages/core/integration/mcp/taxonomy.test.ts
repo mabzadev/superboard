@@ -1,16 +1,3 @@
-/**
- * MCP taxonomy tools — comprehensive integration tests.
- *
- * Covers:
- *   - taxonomy_list
- *   - taxonomy_list_terms
- *   - taxonomy_create_term
- *
- * Plus regression coverage for:
- *   - bug #7 (orphan taxonomy collection inconsistency)
- *   - bug #13 (no delete/update term tool — gap test)
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -43,10 +30,6 @@ async function setupTaxonomy(
 	}
 }
 
-// ---------------------------------------------------------------------------
-// taxonomy_list
-// ---------------------------------------------------------------------------
-
 describe("taxonomy_list", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -61,9 +44,6 @@ describe("taxonomy_list", () => {
 	});
 
 	it("returns only the seeded defaults when no extra taxonomies are added", async () => {
-		// Migration 006 seeds two default taxonomies: 'category' (hierarchical)
-		// and 'tag' (flat), both linked to the 'posts' collection. A fresh
-		// install always has these.
 		harness = await connectMcpHarness({ db, userId: ADMIN_ID, userRole: Role.ADMIN });
 		const result = await harness.client.callTool({
 			name: "taxonomy_list",
@@ -80,7 +60,6 @@ describe("taxonomy_list", () => {
 	it("lists user-created taxonomies alongside the defaults", async () => {
 		const registry = new SchemaRegistry(db);
 		await registry.createCollection({ slug: "post", label: "Posts" });
-		// Use names that don't collide with the seeded `category` / `tag`.
 		await setupTaxonomy(db, {
 			name: "section",
 			label: "Sections",
@@ -119,10 +98,6 @@ describe("taxonomy_list", () => {
 	});
 
 	it("bug #7: orphaned collection slugs are filtered from taxonomy_list output", async () => {
-		// The seed taxonomies (category, tag) both reference 'posts' — a
-		// collection that doesn't exist in this test DB (no auto-seed). After
-		// the bug #7 fix, `taxonomy_list` filters those orphans out. We don't
-		// need to manufacture an orphan; the seed already gives us one.
 		harness = await connectMcpHarness({ db, userId: ADMIN_ID, userRole: Role.ADMIN });
 
 		const taxResult = await harness.client.callTool({
@@ -133,13 +108,10 @@ describe("taxonomy_list", () => {
 			taxonomies: Array<{ name: string; collections?: string[] }>;
 		}>(taxResult);
 
-		// Each seeded taxonomy referenced 'posts'. After filtering, that
-		// orphan slug is gone — the array should be empty for both seeds.
 		for (const t of taxonomies) {
 			expect(t.collections).not.toContain("posts");
 		}
 
-		// And schema_list_collections agrees: there is no 'posts' collection.
 		const collResult = await harness.client.callTool({
 			name: "schema_list_collections",
 			arguments: {},
@@ -148,10 +120,6 @@ describe("taxonomy_list", () => {
 		expect(items.find((c) => c.slug === "posts")).toBeUndefined();
 	});
 });
-
-// ---------------------------------------------------------------------------
-// taxonomy_list_terms
-// ---------------------------------------------------------------------------
 
 describe("taxonomy_list_terms", () => {
 	let db: Kysely<Database>;
@@ -213,7 +181,6 @@ describe("taxonomy_list_terms", () => {
 
 	it("paginates with limit + cursor", async () => {
 		harness = await connectMcpHarness({ db, userId: ADMIN_ID, userRole: Role.ADMIN });
-		// Insert 5 terms — labels chosen so alphabetical ordering is predictable
 		for (const label of ["alpha", "bravo", "charlie", "delta", "echo"]) {
 			await harness.client.callTool({
 				name: "taxonomy_create_term",
@@ -238,7 +205,6 @@ describe("taxonomy_list_terms", () => {
 		const p2 = extractJson<{ items: Array<{ slug: string }>; nextCursor?: string }>(page2);
 		expect(p2.items).toHaveLength(2);
 
-		// No overlap
 		const p1Slugs = p1.items.map((i) => i.slug);
 		for (const t of p2.items) expect(p1Slugs).not.toContain(t.slug);
 	});
@@ -519,10 +485,6 @@ describe("taxonomy_list_terms", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// taxonomy_create_term
-// ---------------------------------------------------------------------------
-
 describe("taxonomy_create_term", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -667,12 +629,6 @@ describe("taxonomy_create_term", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Bug #13 / F2 / F3 / F12 — happy paths for taxonomy_update_term and
-// taxonomy_delete_term, plus parent validation, cycle detection, and
-// empty-string rejection.
-// ---------------------------------------------------------------------------
-
 describe("taxonomy_update_term (bug #13 / F2 / F12)", () => {
 	let db: Kysely<Database>;
 	let harness: McpHarness;
@@ -778,7 +734,6 @@ describe("taxonomy_update_term (bug #13 / F2 / F12)", () => {
 	});
 
 	it("rejects a 2-cycle (descendant becoming ancestor)", async () => {
-		// A is parent of B. Now try to make B the parent of A — that's a cycle.
 		const aId = await createTerm("tags", "a", "A");
 		const bId = await createTerm("tags", "b", "B", aId);
 		const result = await harness.client.callTool({
@@ -794,10 +749,6 @@ describe("taxonomy_update_term (bug #13 / F2 / F12)", () => {
 			name: "taxonomy_create_term",
 			arguments: { taxonomy: "tags", slug: "x", label: "X", parentId: "" },
 		});
-		// Either returns a validation error, or treats it as no-parent.
-		// We choose strict: empty string is normalized to undefined so it
-		// succeeds with parentId === null (no parent attached). That's the
-		// behavior we documented.
 		if (result.isError) {
 			expect(extractText(result)).toMatch(/VALIDATION_ERROR/);
 		} else {
@@ -806,19 +757,10 @@ describe("taxonomy_update_term (bug #13 / F2 / F12)", () => {
 		}
 	});
 
-	// ----- MAX_DEPTH boundary -----
-	// validateParentTerm walks up the parent chain bounded by MAX_DEPTH=100
-	// to prevent a pathological pre-existing cycle from hanging the
-	// validator. The boundary is "more than 100 ancestors": exactly-100 is
-	// accepted, 101+ is rejected.
-
 	it("accepts a chain of exactly MAX_DEPTH (100) ancestors", async () => {
 		const { TaxonomyRepository } =
 			await import("../../../../../../packages/core/src/database/repositories/taxonomy.js");
 		const repo = new TaxonomyRepository(db);
-		// Build root → 1 → 2 → ... → 100. 101 terms total. The deepest
-		// term has 100 ancestors; setting it as parent of a new term means
-		// validateParentTerm walks 100 hops up before exhausting the chain.
 		let parentId: string | undefined;
 		const ids: string[] = [];
 		for (let i = 0; i < 101; i++) {
@@ -837,9 +779,6 @@ describe("taxonomy_update_term (bug #13 / F2 / F12)", () => {
 			name: "taxonomy_create_term",
 			arguments: { taxonomy: "tags", slug: "leaf", label: "Leaf", parentId: deepest },
 		});
-		// New term's parent is the 100-deep tail. Walking up from there
-		// reaches the root after exactly 100 hops; cursor becomes null,
-		// the depth-exceeded check does NOT fire.
 		expect(result.isError, extractText(result)).toBeFalsy();
 	});
 
@@ -847,8 +786,6 @@ describe("taxonomy_update_term (bug #13 / F2 / F12)", () => {
 		const { TaxonomyRepository } =
 			await import("../../../../../../packages/core/src/database/repositories/taxonomy.js");
 		const repo = new TaxonomyRepository(db);
-		// Build a 102-term chain. The deepest term has 101 ancestors —
-		// one more than MAX_DEPTH allows.
 		let parentId: string | undefined;
 		const ids: string[] = [];
 		for (let i = 0; i < 102; i++) {
@@ -914,7 +851,6 @@ describe("taxonomy_delete_term (bug #13 / F12)", () => {
 			arguments: { taxonomy: "tags", slug: "leaf", label: "Leaf" },
 		});
 
-		// Pre-condition: the term is listable.
 		const before = await harness.client.callTool({
 			name: "taxonomy_list_terms",
 			arguments: { taxonomy: "tags" },
@@ -930,9 +866,6 @@ describe("taxonomy_delete_term (bug #13 / F12)", () => {
 		});
 		expect(result.isError, extractText(result)).toBeFalsy();
 
-		// Post-condition: the term is no longer listable. A regression where
-		// the handler returns success: true without actually deleting the row
-		// fails this assertion.
 		const after = await harness.client.callTool({
 			name: "taxonomy_list_terms",
 			arguments: { taxonomy: "tags" },

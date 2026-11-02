@@ -20,7 +20,6 @@ describe("InviteUserModal", () => {
 		const screen = await render(
 			<InviteUserModal open={true} onOpenChange={noop} onInvite={noop} />,
 		);
-		// The select should display "Author" as the selected value
 		await expect.element(screen.getByText("Author")).toBeInTheDocument();
 	});
 
@@ -68,7 +67,6 @@ describe("InviteUserModal", () => {
 		const result = await render(
 			<InviteUserModal open={false} onOpenChange={noop} onInvite={noop} />,
 		);
-		// Open the modal - the effect should reset email to "" and role to 30
 		await result.rerender(<InviteUserModal open={true} onOpenChange={noop} onInvite={noop} />);
 		await expect.element(result.getByLabelText("Email address")).toHaveValue("");
 	});

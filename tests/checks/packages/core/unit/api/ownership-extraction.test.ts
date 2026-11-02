@@ -1,10 +1,3 @@
-/**
- * Tests for SEC-07: ownership extraction bugs (#12, #13, #14, #16)
- *
- * Verifies that handler response shapes carry authorId correctly
- * and that ownership-related operations work as expected.
- */
-
 import type { Kysely } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -41,13 +34,10 @@ describe("SEC-07: Ownership extraction", () => {
 			const result = await handleContentGet(db, "post", created.data!.item.id);
 			expect(result.success).toBe(true);
 
-			// The route pattern extracts: existing.data.item.authorId
-			// If authorId were only on data (wrong), ownership checks would always fail
 			const data = result.data as Record<string, unknown>;
 			const item = data.item as Record<string, unknown>;
 
 			expect(item.authorId).toBe("user_author_123");
-			// data level should NOT have authorId directly
 			expect(data.authorId).toBeUndefined();
 		});
 
@@ -78,7 +68,6 @@ describe("SEC-07: Ownership extraction", () => {
 			});
 			expect(original.success).toBe(true);
 
-			// Duplicate as a different user
 			const dup = await handleContentDuplicate(db, "post", original.data!.item.id, "caller_user");
 			expect(dup.success).toBe(true);
 			expect(dup.data?.item.authorId).toBe("caller_user");

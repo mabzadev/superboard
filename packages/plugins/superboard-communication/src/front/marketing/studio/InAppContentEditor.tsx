@@ -28,9 +28,7 @@ function initialState(html: string | null) {
 		try {
 			const value: unknown = JSON.parse(stored);
 			if (typeof value === "string") return value;
-		} catch {
-			/* Legacy HTML can be edited in the source field. */
-		}
+		} catch {}
 	}
 	return JSON.stringify(initialEditorState);
 }

@@ -1,17 +1,3 @@
-/**
- * Tests for the `toolbar` config modes (Discussion #1742).
- *
- * - `"server"` (default): current behavior — the toolbar is injected
- *   server-side for authenticated editors.
- * - `"client"`: public HTML is identical for everyone (bootstrap script,
- *   cache headers untouched). The full toolbar is only server-rendered for
- *   requests carrying the `_edit` param (editors only — everyone else is
- *   redirected to the canonical URL) or an active edit-mode/preview signal.
- * - `false`: no toolbar, no bootstrap.
- *
- * The middleware reads the mode from `virtual:emdash/config` at module scope,
- * so each case loads a fresh module instance via `vi.resetModules()`.
- */
 import { describe, it, expect, vi } from "vitest";
 
 type Middleware = (context: unknown, next: () => Promise<Response>) => Promise<Response> | Response;
@@ -86,7 +72,6 @@ describe("toolbar: client", () => {
 		expect(html).toContain("emdash-toolbar-bootstrap");
 		expect(html).not.toContain('id="emdash-toolbar"');
 		expect(res.headers.get("Cache-Control")).toBeNull();
-		// The response stays shareable — no route-cache opt-out.
 		expect(context.cache.set).not.toHaveBeenCalled();
 	});
 
@@ -96,8 +81,6 @@ describe("toolbar: client", () => {
 		const editorRes = await onRequest(buildContext({ user: EDITOR }), async () => htmlResponse());
 		const anonRes = await onRequest(buildContext({}), async () => htmlResponse());
 
-		// Byte-identical to the anonymous variant — this is what keeps shared
-		// caches serving one entry for everyone.
 		expect(await editorRes.text()).toBe(await anonRes.text());
 		expect(editorRes.headers.get("Cache-Control")).toBeNull();
 	});
@@ -109,7 +92,6 @@ describe("toolbar: client", () => {
 		const html = await res.text();
 		expect(html).toContain('id="emdash-toolbar"');
 		expect(res.headers.get("Cache-Control")).toBe("private, no-store");
-		// _edit responses must never enter the shared route cache.
 		expect(context.cache.set).toHaveBeenCalledWith(false);
 	});
 
@@ -122,9 +104,6 @@ describe("toolbar: client", () => {
 			const res = await onRequest(context, next);
 			expect(res.status).toBe(302);
 			expect(res.headers.get("Location")).toBe("/blog?page=2");
-			// The redirect must not be stored either — a cached 302 would bounce
-			// editors back to the canonical URL. Route-cache opt-out covers the
-			// Workers Cache; the header covers header-following caches.
 			expect(context.cache.set).toHaveBeenCalledWith(false);
 			expect(res.headers.get("Cache-Control")).toBe("private, no-store");
 		}
@@ -154,15 +133,12 @@ describe("toolbar bootstrap script", () => {
 		const { renderToolbarBootstrap } =
 			await import("../../../../../../packages/core/src/visual-editing/toolbar-bootstrap.js");
 		const html = renderToolbarBootstrap();
-		// Index-based extraction (not regex): this parses our own generated
-		// string with known fixed tags, not untrusted HTML.
 		const open = html.indexOf("<script>");
 		const close = html.lastIndexOf("</script>");
 		expect(open).toBeGreaterThanOrEqual(0);
 		expect(close).toBeGreaterThan(open);
 		const script = html.slice(open + "<script>".length, close);
 		expect(script.trim()).toBeTruthy();
-		// Throws SyntaxError if the template literal produced broken JS.
 		// eslint-disable-next-line typescript/no-implied-eval -- deliberate parse-only syntax check of generated script, never invoked
 		expect(() => new Function(script)).not.toThrow();
 	});

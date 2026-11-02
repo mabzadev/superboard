@@ -6,7 +6,6 @@ import { TaxonomyRepository } from "../../../../../../packages/core/src/database
 import type { Database } from "../../../../../../packages/core/src/database/types.js";
 import { setupTestDatabaseWithCollections, teardownTestDatabase } from "../../utils/test-db.js";
 
-// Mock loader.getDb so the runtime taxonomy functions read from our test db.
 vi.mock("../../../../../../packages/core/src/loader.js", () => ({
 	getDb: vi.fn(),
 }));
@@ -45,7 +44,6 @@ describe("getAllTermsForEntries", () => {
 	});
 
 	it("short-circuits without querying when no assignments exist", async () => {
-		// Create terms but attach to nothing
 		await taxRepo.create({ name: "tag", slug: "a", label: "A" });
 
 		const post = await contentRepo.create({
@@ -56,7 +54,6 @@ describe("getAllTermsForEntries", () => {
 
 		const result = await getAllTermsForEntries("post", [post.id]);
 
-		// Still returns the entry id, but with empty object
 		expect(result.get(post.id)).toEqual({});
 	});
 
@@ -81,7 +78,6 @@ describe("getAllTermsForEntries", () => {
 		await taxRepo.attachToEntry("post", p1.id, cat.id);
 		await taxRepo.attachToEntry("post", p2.id, tag1.id);
 
-		// Invalidate the hasAnyTermAssignments probe cached from earlier tests
 		invalidateTermCache();
 
 		const result = await getAllTermsForEntries("post", [p1.id, p2.id]);
@@ -118,8 +114,6 @@ describe("getAllTermsForEntries", () => {
 		invalidateTermCache();
 
 		const postTerms = await getAllTermsForEntries("post", [post.id, page.id]);
-		// Only `post.id` should have the tag in post scope; page.id is a no-op here
-		// since its assignment is to the `page` collection.
 		expect(postTerms.get(post.id)?.tag?.[0].slug).toBe("shared");
 		expect(postTerms.get(page.id)).toEqual({});
 	});
@@ -146,9 +140,6 @@ describe("getAllTermsForEntries", () => {
 	});
 
 	it("primes the request cache so getEntryTerms doesn't re-query", async () => {
-		// Extend the default "tag" taxonomy (seeded for `posts`) to also
-		// apply to the `post` collection used in these tests. Without this,
-		// the primer wouldn't seed the "tag" key for entries with no tags.
 		await db
 			.updateTable("_emdash_taxonomy_defs")
 			.set({ collections: JSON.stringify(["posts", "post"]) })
@@ -173,20 +164,16 @@ describe("getAllTermsForEntries", () => {
 		const getDbSpy = vi.mocked(getDb);
 
 		await runWithContext({ editMode: false }, async () => {
-			// Populate the cache via the batched API.
 			await getAllTermsForEntries("post", [p1.id, p2.id]);
 
 			const callsAfterBatch = getDbSpy.mock.calls.length;
 
-			// These per-entry calls should hit the primed cache.
 			const p1Tags = await getEntryTerms("post", p1.id, "tag");
 			const p2Tags = await getEntryTerms("post", p2.id, "tag");
-			const p1All = await getEntryTerms("post", p1.id); // the `*` key
+			const p1All = await getEntryTerms("post", p1.id);
 
-			// No additional DB calls should have happened for the primed keys.
 			expect(getDbSpy.mock.calls.length).toBe(callsAfterBatch);
 
-			// And the values should match what the batch returned.
 			expect(p1Tags.map((t) => t.slug)).toEqual(["web"]);
 			expect(p2Tags).toEqual([]);
 			expect(p1All.map((t) => t.slug)).toEqual(["web"]);
@@ -218,12 +205,9 @@ describe("getAllTermsForEntries", () => {
 		const callsBeforeSecondRequest = getDbSpy.mock.calls.length;
 
 		await runWithContext({ editMode: false }, async () => {
-			// Different request context — the cache from the previous context
-			// must not be visible here.
 			await getEntryTerms("post", p1.id, "tag");
 		});
 
-		// At least one DB call should have happened in the second request.
 		expect(getDbSpy.mock.calls.length).toBeGreaterThan(callsBeforeSecondRequest);
 	});
 
@@ -243,12 +227,11 @@ describe("getAllTermsForEntries", () => {
 		const getDbSpy = vi.mocked(getDb);
 
 		await runWithContext({ editMode: false }, async () => {
-			await getAllTermsForEntries("post", [p1.id, p2.id]); // primes the per-entry cache
+			await getAllTermsForEntries("post", [p1.id, p2.id]);
 			const callsAfterBatch = getDbSpy.mock.calls.length;
 
 			const map = await getTermsForEntries("post", [p1.id, p2.id], "tag");
 
-			// All entries were primed, so no further DB calls.
 			expect(getDbSpy.mock.calls.length).toBe(callsAfterBatch);
 			expect(map.get(p1.id)!.map((t) => t.slug)).toEqual(["web"]);
 			expect(map.get(p2.id)).toEqual([]);
@@ -271,14 +254,12 @@ describe("getAllTermsForEntries", () => {
 		invalidateTermCache();
 
 		await runWithContext({ editMode: false }, async () => {
-			await getAllTermsForEntries("post", [p1.id]); // prime
+			await getAllTermsForEntries("post", [p1.id]);
 
 			const first = await getTermsForEntries("post", [p1.id], "tag");
 			const arr = first.get(p1.id)!;
 			expect(arr.map((t) => t.slug).toSorted()).toEqual(["a", "b"]);
 
-			// Mutate the returned array in place (truncate + push junk) and mutate
-			// a term's children — none of this must leak into the shared cache.
 			arr.length = 0;
 			// eslint-disable-next-line typescript/no-unsafe-type-assertion -- deliberate junk for the mutation test
 			arr.push({ slug: "junk" } as unknown as (typeof arr)[number]);

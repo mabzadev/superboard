@@ -1,11 +1,3 @@
-/**
- * Term translation endpoints
- *
- * GET  /_emdash/api/taxonomies/:name/terms/:slug/translations[?locale=xx]
- * POST /_emdash/api/taxonomies/:name/terms/:slug/translations
- *    body: { locale, label?, slug? }
- */
-
 import type { APIRoute } from "astro";
 import { z } from "zod";
 

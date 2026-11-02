@@ -1,14 +1,9 @@
 import { ApiError, getErrorMessage } from "./ApiError.js";
 
-/**
- * Categorizes an error into a user-friendly title and description.
- * Uses ApiError status codes when available, falls back to message matching.
- */
 export function categorizeError(error: Error): {
 	title: string;
 	description: string;
 } {
-	// Use structured ApiError when available
 	if (error instanceof ApiError) {
 		const { status } = error;
 
@@ -49,7 +44,6 @@ export function categorizeError(error: Error): {
 		};
 	}
 
-	// Fallback: match on message text for non-API errors
 	const message = error.message?.toLowerCase() ?? "";
 
 	if (
@@ -83,10 +77,6 @@ export function categorizeError(error: Error): {
 	};
 }
 
-/**
- * Registers a global handler for unhandled promise rejections.
- * Should be called once from the root layout or analytics provider.
- */
 export function registerGlobalErrorHandlers(
 	onError: (event: string, properties: Record<string, unknown>) => void,
 ) {

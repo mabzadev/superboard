@@ -20,7 +20,6 @@ describe("Loader field filters", () => {
 			.where("name", "in", ["category", "tag"])
 			.execute();
 		resetTaxonomyNamesCache();
-		// Add a 'series' field to the post collection for field filtering tests
 		const registry = new SchemaRegistry(db);
 		await registry.createField("post", {
 			slug: "series",
@@ -133,7 +132,6 @@ describe("Loader field filters", () => {
 			}),
 		);
 
-		// Invalid field names are skipped, so no filter is applied
 		expect(result.entries).toHaveLength(2);
 	});
 
@@ -214,7 +212,6 @@ describe("Loader field filters", () => {
 	});
 
 	it("should combine taxonomy filter with field filter", async () => {
-		// Create a taxonomy term and assign it to posts
 		await db
 			.insertInto("taxonomies" as never)
 			.values({
@@ -222,8 +219,6 @@ describe("Loader field filters", () => {
 				name: "category",
 				slug: "news",
 				label: "News",
-				// content_taxonomies.taxonomy_id stores the term's translation_group
-				// (migration 036). Single-locale terms seed translation_group = id.
 				translation_group: "tax_cat_news",
 			} as never)
 			.execute();
@@ -232,7 +227,6 @@ describe("Loader field filters", () => {
 		const postB = await createPost("B-News-Beta", { series: "beta" });
 		await createPost("C-Other-Alpha", { series: "alpha" });
 
-		// Assign taxonomy to posts A and B
 		await db
 			.insertInto("content_taxonomies" as never)
 			.values([
@@ -251,7 +245,6 @@ describe("Loader field filters", () => {
 			}),
 		);
 
-		// Only post A matches both category=news AND series=alpha
 		expect(result.entries).toHaveLength(1);
 		expect(result.entries[0].data.title).toBe("A-News-Alpha");
 	});
@@ -271,8 +264,6 @@ describe("Loader field filters", () => {
 		const postA = await createPost("Tech Post");
 		await createPost("Other Post");
 
-		// Attach through the repository so the pivot row is stamped with the
-		// entry's denormalized filter/sort columns (migration 051).
 		await new TaxonomyRepository(db).attachToEntry("post", postA.id, "tax_cat_tech");
 
 		const loader = emdashLoader();
@@ -300,7 +291,6 @@ describe("Loader field filters", () => {
 			}),
 		);
 
-		// null values are skipped, so no filter is applied
 		expect(result.entries).toHaveLength(2);
 	});
 
@@ -330,7 +320,6 @@ describe("Loader field filters", () => {
 			}),
 		);
 
-		// Range on taxonomy is ignored, returns all entries
 		expect(result.entries).toHaveLength(2);
 		expect(warnSpy).toHaveBeenCalledWith(
 			expect.stringContaining("range operators are not supported on taxonomy"),

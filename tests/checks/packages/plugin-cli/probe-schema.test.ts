@@ -1,12 +1,3 @@
-/**
- * Tests for `parseProbedDefault`, the runtime validation the build
- * pipeline runs against the imported default export of a probed plugin.
- *
- * These tests lock in the user-facing error-message contract: plugin
- * authors and any aggregator that scrapes stderr depend on these
- * exact strings. Behaviour changes here should be deliberate.
- */
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -102,9 +93,6 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("rejects a Date hook entry as the wrong shape", () => {
-			// Only plain objects (`Object.prototype` or null prototype)
-			// reach the per-field validation. Anything with a more
-			// specific prototype is treated as a wrong-shaped entry.
 			const error = expectFailure({ hooks: { h: new Date() } });
 			expect(error.message).toBe(
 				`${PLUGIN_ENTRY}: hook "h" must be a function or { handler: function, ... }. Got object.`,
@@ -119,9 +107,6 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("rejects a Promise hook entry as the wrong shape", () => {
-			// Forgot-to-await mistake: `hooks: { h: makeHandler() }` where
-			// `makeHandler` is async. Caught at the entry-shape level so
-			// the author sees the standard wrong-shape message.
 			const error = expectFailure({ hooks: { h: Promise.resolve(() => {}) } });
 			expect(error.code).toBe("INVALID_PLUGIN_FORMAT");
 			expect(error.message).toBe(
@@ -159,8 +144,6 @@ describe("parseProbedDefault", () => {
 			const error = expectFailure({
 				hooks: { h: { handler: (): void => {}, priority: Infinity } },
 			});
-			// `JSON.stringify(Infinity)` is the string "null" per the JSON
-			// spec; safeStringify passes that through unchanged.
 			expect(error.message).toBe(
 				`${PLUGIN_ENTRY}: hook "h" has invalid priority null (must be a finite number).`,
 			);
@@ -198,8 +181,6 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("renders a BigInt field value as <n>n", () => {
-			// `JSON.stringify` throws on BigInt; safeStringify marshals
-			// it through a JSON replacer that emits the `10n` notation.
 			const error = expectFailure({
 				hooks: { h: { handler: (): void => {}, priority: 10n } },
 			});
@@ -209,8 +190,6 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("renders a function field value as 'function'", () => {
-			// `JSON.stringify(fn)` returns the JS value `undefined`;
-			// safeStringify falls back to `describeShape`.
 			const error = expectFailure({
 				hooks: { h: { handler: (): void => {}, priority: (): void => {} } },
 			});
@@ -229,8 +208,6 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("renders a cyclic-object field value as 'object'", () => {
-			// `JSON.stringify` throws on cyclic structures; safeStringify
-			// catches and falls back to `describeShape`.
 			const cycle: Record<string, unknown> = {};
 			cycle.self = cycle;
 			const error = expectFailure({
@@ -242,9 +219,6 @@ describe("parseProbedDefault", () => {
 		});
 
 		it("displays the whole array when a single element of dependencies is bad", () => {
-			// The issue path is `["hooks","h","dependencies",1]`; the
-			// displayed value is the field as a whole rather than the
-			// offending element. The Zod message names the actual fault.
 			const error = expectFailure({
 				hooks: {
 					h: { handler: (): void => {}, dependencies: ["a", 42, "c"] },
@@ -260,8 +234,6 @@ describe("parseProbedDefault", () => {
 					h: { handler: (): void => {}, priority: "high", errorPolicy: "bogus" },
 				},
 			});
-			// Don't lock in *which* field surfaces first (Zod issue order
-			// is an implementation detail); enforce that only one does.
 			const matches = error.message.match(/has invalid /g);
 			expect(matches).toHaveLength(1);
 			expect(error.message).toMatch(/hook "h" has invalid (priority|errorPolicy)/);
@@ -292,9 +264,6 @@ describe("parseProbedDefault", () => {
 	});
 
 	describe("non-record collection coercion", () => {
-		// A malformed `hooks` / `routes` outer collection harvests no
-		// entries but doesn't fail the build. Entries themselves are
-		// still strictly validated.
 		it("treats an array hooks field as empty", () => {
 			const result = parseProbedDefault(PLUGIN_ENTRY, { hooks: [] });
 			expect(result.hooks).toEqual({});

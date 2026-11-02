@@ -1,10 +1,3 @@
-/**
- * RepeaterField — renders a list of repeating sub-field groups in the content editor.
- *
- * Each item is a collapsible card containing the defined sub-fields.
- * Items can be added, removed, and reordered via drag-and-drop.
- */
-
 import { Button, Combobox, Input, InputArea, Switch } from "@cloudflare/kumo";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
@@ -71,9 +64,6 @@ export function RepeaterField({
 	const [items, setItems] = React.useState<RepeaterItem[]>(() => ensureKeys(rawItems));
 	const [collapsedItems, setCollapsedItems] = React.useState<Set<string>>(new Set());
 
-	// Sync from external value changes.
-	// Preserve each item's _key by position so round-trips through onChange
-	// (which strips _key) don't remount children on every keystroke.
 	React.useEffect(() => {
 		const incoming = Array.isArray(value) ? value : [];
 		setItems((prev) =>
@@ -233,7 +223,6 @@ function SortableRepeaterItem({
 		transition,
 	};
 
-	// Use the first text sub-field as the item summary label
 	const summaryField = subFields.find((sf) => sf.type === "string" || sf.type === "text");
 	const summaryValue = summaryField ? (item[summaryField.slug] as string) || "" : "";
 	const summaryLabel = summaryValue || t`Item ${index + 1}`;
@@ -247,7 +236,6 @@ function SortableRepeaterItem({
 				isDragging && "opacity-50 ring-2 ring-kumo-brand",
 			)}
 		>
-			{/* Header */}
 			<div
 				className="flex items-center gap-2 px-3 py-2 border-b cursor-pointer"
 				onClick={onToggleCollapse}
@@ -279,7 +267,6 @@ function SortableRepeaterItem({
 				)}
 			</div>
 
-			{/* Sub-fields */}
 			{!isCollapsed && (
 				<div className="p-3 space-y-3">
 					{subFields.map((sf) => (
@@ -357,9 +344,6 @@ function SubFieldInput({ subField, value, onChange }: SubFieldInputProps) {
 				/>
 			);
 		case "select": {
-			// Searchable combobox so long option lists (e.g. taxonomy-derived
-			// options) stay usable inside repeater rows, rather than a plain
-			// scrolling select.
 			const options = Array.isArray(subField.options) ? subField.options : [];
 			return (
 				<Combobox
@@ -387,8 +371,6 @@ function SubFieldInput({ subField, value, onChange }: SubFieldInputProps) {
 			return (
 				<ImageFieldRenderer
 					label={subField.label}
-					// Same backwards-compat contract as top-level image fields:
-					// objects are MediaValues, strings are legacy URLs.
 					value={
 						value != null && typeof value === "object"
 							? (value as ImageFieldValue)

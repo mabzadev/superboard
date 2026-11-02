@@ -1,11 +1,3 @@
-/**
- * Tests for WXR taxonomy import (categories, tags, custom taxonomies).
- *
- * Regression coverage for issue #1061: the HTTP WXR import handler parsed
- * `wp:category` / `wp:tag` blocks and per-item `<category>` assignments but
- * never wrote anything to `taxonomies` or `content_taxonomies`.
- */
-
 import type { Kysely, KyselyPlugin } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -24,9 +16,6 @@ import {
 import { SchemaRegistry } from "../../../../../../packages/core/src/schema/registry.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
-/**
- * Build a fully-formed WxrPost with minimal boilerplate.
- */
 function makePost(overrides: Partial<WxrPost> = {}): WxrPost {
 	return {
 		id: 1,
@@ -65,11 +54,6 @@ function createAssignmentReadCountingPlugin(): {
 	return { plugin, counter };
 }
 
-/**
- * Create the `posts` collection (plural) so the seeded `category` / `tag`
- * taxonomy defs (which list `["posts"]` in their `collections` array) match.
- * Inserts a content row and returns its id, ready for taxonomy attachment.
- */
 async function createPostsCollectionWithEntry(
 	db: Kysely<Database>,
 	slug = "hello-world",
@@ -78,8 +62,6 @@ async function createPostsCollectionWithEntry(
 	await registry.createCollection({ slug: "posts", label: "Posts" });
 	await registry.createField("posts", { slug: "title", label: "Title", type: "string" });
 
-	// Insert the content row directly (the runtime handler isn't needed for
-	// this test — we just need an existing row to attach taxonomies to).
 	const id = `post_${Math.random().toString(36).slice(2, 10)}`;
 	await db
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion -- ec_* tables aren't typed in Database
@@ -144,7 +126,6 @@ describe("preImportWxrTaxonomies", () => {
 	});
 
 	it("re-uses existing terms instead of duplicating them", async () => {
-		// Pre-create a term to simulate an existing taxonomy state.
 		const repo = new TaxonomyRepository(db);
 		await repo.create({ name: "category", slug: "patents", label: "Patents" });
 
@@ -169,8 +150,6 @@ describe("preImportWxrTaxonomies", () => {
 	});
 
 	it("backfills terms referenced only by per-item <category> assignments", async () => {
-		// Hand-edited WXR sometimes omits the top-level <wp:category> blocks
-		// but still has per-item <category nicename="…"> assignments.
 		const posts: WxrPost[] = [
 			makePost({
 				id: 1,
@@ -183,8 +162,6 @@ describe("preImportWxrTaxonomies", () => {
 
 		expect(plan.termsCreated.category).toBe(1);
 		expect(plan.termsCreated.tag).toBe(1);
-		// Label falls back to slug because the parser doesn't capture the
-		// text content of per-item <category> elements.
 		const catRow = await db
 			.selectFrom("taxonomies")
 			.selectAll()
@@ -194,7 +171,6 @@ describe("preImportWxrTaxonomies", () => {
 	});
 
 	it("creates terms in custom taxonomies when a matching def exists", async () => {
-		// Create a custom 'genre' taxonomy linked to `posts`.
 		await db
 			.insertInto("_emdash_taxonomy_defs")
 			.values({
@@ -225,7 +201,6 @@ describe("preImportWxrTaxonomies", () => {
 		expect(plan.termsCreated.industry).toBeUndefined();
 		expect(plan.missingTaxonomies).toContain("industry");
 
-		// Nothing was written to `taxonomies` for the missing def.
 		const rows = await db
 			.selectFrom("taxonomies")
 			.selectAll()
@@ -235,8 +210,6 @@ describe("preImportWxrTaxonomies", () => {
 	});
 
 	it("normalises WordPress `post_tag` synonym to EmDash `tag`", async () => {
-		// Some exports emit `<wp:term wp:term_taxonomy="post_tag">` instead of
-		// `<wp:tag>` — both must land in the same taxonomy.
 		const terms: WxrTerm[] = [{ id: 1, taxonomy: "post_tag", slug: "featured", name: "Featured" }];
 
 		const plan = await preImportWxrTaxonomies(db, [], [], [], terms, undefined);
@@ -246,8 +219,6 @@ describe("preImportWxrTaxonomies", () => {
 	});
 
 	it("records `category` as missing when the seeded def has been deleted", async () => {
-		// Simulate a user who removed the default `category` taxonomy via the
-		// admin UI before importing.
 		await db.deleteFrom("_emdash_taxonomy_defs").where("name", "=", "category").execute();
 
 		const plan = await preImportWxrTaxonomies(
@@ -271,8 +242,6 @@ describe("preImportWxrTaxonomies", () => {
 		const plan = await preImportWxrTaxonomies(db, [], [], [], terms, undefined);
 
 		expect(plan.termsCreated).toEqual({});
-		// nav_menu shouldn't appear in missingTaxonomies — it's not "missing",
-		// it's "not our job here".
 		expect(plan.missingTaxonomies).not.toContain("nav_menu");
 	});
 });
@@ -319,8 +288,6 @@ describe("attachPostTaxonomies", () => {
 	});
 
 	it("respects the taxonomy def's `collections` filter", async () => {
-		// Seeded `category` def lists `["posts"]`. Create a different
-		// collection and verify category assignments don't leak into it.
 		const registry = new SchemaRegistry(db);
 		await registry.createCollection({ slug: "products", label: "Products" });
 		await registry.createField("products", {
@@ -410,7 +377,6 @@ describe("attachPostTaxonomies", () => {
 		customTax.set("industry", ["tech"]);
 		const post = makePost({ customTaxonomies: customTax });
 
-		// No def for `industry` — pre-import won't have a term id for it.
 		const plan = await preImportWxrTaxonomies(db, [post], [], [], [], undefined);
 
 		const written = await attachPostTaxonomies(db, "posts", entryId, post, plan);
@@ -420,7 +386,6 @@ describe("attachPostTaxonomies", () => {
 
 	it("attaches custom taxonomy terms when a matching def exists", async () => {
 		const entryId = await createPostsCollectionWithEntry(db);
-		// Create custom 'genre' taxonomy linked to `posts`.
 		await db
 			.insertInto("_emdash_taxonomy_defs")
 			.values({

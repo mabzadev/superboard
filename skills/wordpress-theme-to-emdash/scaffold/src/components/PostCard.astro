@@ -1,18 +1,9 @@
 ---
-/**
- * PostCard Component
- *
- * Displays a post preview with optional featured image.
- *
- * IMPORTANT: Image fields are objects with { src, alt }, not strings!
- */
-
 interface Props {
 	title: string;
 	href: string;
 	date?: string;
 	excerpt?: string;
-	// Image fields from EmDash are always { src?: string, alt?: string }
 	featuredImage?: {
 		src?: string;
 		alt?: string;
@@ -31,7 +22,6 @@ const formattedDate = date
 ---
 
 <article class="post-card">
-	{/* Check featuredImage.src, not just featuredImage */}
 	{
 		featuredImage?.src && (
 			<a href={href} class="post-card-image">

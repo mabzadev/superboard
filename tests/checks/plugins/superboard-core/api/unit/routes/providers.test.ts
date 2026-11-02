@@ -11,7 +11,7 @@ function pemFromPkcs8(bytes: ArrayBuffer): string {
 	const binary = String.fromCharCode(...new Uint8Array(bytes));
 	const base64 = btoa(binary);
 	const lines = base64.match(/.{1,64}/g) || [];
-	return ["-----BEGIN PRIVATE KEY-----", ...lines, "-----END PRIVATE KEY-----"].join("\n"); // gitleaks:allow -- generated in memory
+	return ["-----BEGIN PRIVATE KEY-----", ...lines, "-----END PRIVATE KEY-----"].join("\n");
 }
 
 async function googleServiceAccountJson() {

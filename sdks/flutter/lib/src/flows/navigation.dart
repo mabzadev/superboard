@@ -26,7 +26,6 @@ class SuperBoardCallbackFlowNavigationAdapter
   Future<void> navigate(String location) async => _onNavigate(location);
 }
 
-/// Navigation adapter for applications using Flutter's Navigator.
 class SuperBoardNavigatorFlowAdapter
     implements SuperBoardFlowNavigationAdapter {
   SuperBoardNavigatorFlowAdapter({
@@ -99,7 +98,6 @@ class SuperBoardFlowAnchorController {
   }
 }
 
-/// Native replacement for DOM selectors used by web tooltips and tours.
 class SuperBoardFlowAnchor extends StatefulWidget {
   const SuperBoardFlowAnchor({
     super.key,

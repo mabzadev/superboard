@@ -23,10 +23,6 @@ vi.mock("../../../../../packages/admin/src/lib/api", async () => {
 
 import * as api from "../../../../../packages/admin/src/lib/api";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const DELETE_WIDGET_AREA_MSG_REGEX = /This will delete the widget area and all its widgets/;
 const ADD_WIDGET_AREA_REGEX = /Add Widget Area/;
 
@@ -80,10 +76,7 @@ describe("Widgets", () => {
 	it("shows widgets within each area", async () => {
 		const screen = await render(<Widgets />, { wrapper: Wrapper });
 
-		// Widget titles are rendered in <span> elements. Use exact match to avoid
-		// matching the "Recent Posts Widget" component in the available widgets list.
 		await expect.element(screen.getByText("Quick Links")).toBeInTheDocument();
-		// Verify widget type badges
 		await expect.element(screen.getByText("(content)")).toBeInTheDocument();
 		await expect.element(screen.getByText("(menu)")).toBeInTheDocument();
 	});
@@ -106,12 +99,8 @@ describe("Widgets", () => {
 
 		await expect.element(screen.getByRole("heading", { name: "Sidebar" })).toBeInTheDocument();
 
-		// The area header has a delete button next to the area label.
-		// The WidgetAreaPanel header is a .p-4.border-b div with the label and a button.
-		// Find the button inside the panel header (the div that contains the heading "Sidebar")
 		const sidebarHeading = document.querySelector("h3");
 		expect(sidebarHeading).not.toBeNull();
-		// The delete button is a sibling of the div containing h3, within the .border-b parent
 		const headerContainer = sidebarHeading!.closest(".border-b");
 		expect(headerContainer).not.toBeNull();
 		const deleteBtn = headerContainer!.querySelector("button");
@@ -129,15 +118,12 @@ describe("Widgets", () => {
 
 		await expect.element(screen.getByText("Quick Links")).toBeInTheDocument();
 
-		// Initially collapsed — editor form should not be visible
 		expect(screen.getByText("Save").query()).toBeNull();
 
-		// Click the widget title area to expand (it's a <button> wrapping the title)
 		const expandButtons = document.querySelectorAll("button.text-start");
 		expect(expandButtons.length).toBeGreaterThanOrEqual(1);
 		(expandButtons[0] as HTMLButtonElement).click();
 
-		// Now the editor should be visible with a Title field and Save button
 		await expect.element(screen.getByLabelText("Title")).toBeInTheDocument();
 		await expect.element(screen.getByText("Save")).toBeInTheDocument();
 	});
@@ -145,15 +131,12 @@ describe("Widgets", () => {
 	it("content widget editor shows portable text editor", async () => {
 		const screen = await render(<Widgets />, { wrapper: Wrapper });
 
-		// Wait for widget type badge to render — indicates widgets are loaded
 		await expect.element(screen.getByText("(content)")).toBeInTheDocument();
 
-		// Expand the first widget (content type — "Recent Posts")
 		const expandButtons = document.querySelectorAll("button.text-start");
 		expect(expandButtons.length).toBeGreaterThanOrEqual(1);
 		(expandButtons[0] as HTMLButtonElement).click();
 
-		// Content widget should show the Save button and Title input in the editor
 		await expect.element(screen.getByText("Save")).toBeInTheDocument();
 	});
 
@@ -179,13 +162,11 @@ describe("Widgets", () => {
 
 		const screen = await render(<Widgets />, { wrapper: Wrapper });
 
-		// Expand the second widget (menu type — "Quick Links")
 		await expect.element(screen.getByText("Quick Links")).toBeInTheDocument();
 		const expandButtons = document.querySelectorAll("button.text-start");
 		expect(expandButtons.length).toBeGreaterThanOrEqual(2);
 		(expandButtons[1] as HTMLButtonElement).click();
 
-		// Menu widget should show the Menu select
 		await expect.element(screen.getByLabelText("Menu")).toBeInTheDocument();
 	});
 
@@ -206,7 +187,6 @@ describe("Widgets", () => {
 			.element(screen.getByRole("heading", { name: "Available Widgets" }))
 			.toBeInTheDocument();
 		await expect.element(screen.getByText("Content Block")).toBeInTheDocument();
-		// Use exact text to avoid matching the widget type "(menu)" badge
 		await expect.element(screen.getByText("Display a navigation menu")).toBeInTheDocument();
 		await expect.element(screen.getByText("Shows recent posts")).toBeInTheDocument();
 	});

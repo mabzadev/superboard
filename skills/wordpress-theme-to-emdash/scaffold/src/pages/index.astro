@@ -1,12 +1,4 @@
 ---
-/**
- * Homepage / Blog Index
- *
- * Demonstrates:
- * - getEmDashCollection for listing entries
- * - Passing image fields correctly to components
- */
-
 import { getEmDashCollection } from "emdash";
 import Base from "../layouts/Base.astro";
 import PostCard from "../components/PostCard.astro";
@@ -29,11 +21,6 @@ const { entries: posts } = await getEmDashCollection("posts", {
 								href={`/posts/${post.data.slug || post.id}`}
 								date={post.data.published_at}
 								excerpt={post.data.excerpt}
-								{
-								/* 
-									IMPORTANT: featured_image is { src, alt }, not a string!
-									Pass the whole object, or extract src/alt explicitly.
-								*/ }
 								featuredImage={
 									post.data.featured_image?.src
 										? {

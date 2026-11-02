@@ -1,7 +1,3 @@
-/**
- * Sections API (reusable content blocks)
- */
-
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -15,7 +11,7 @@ export interface Section {
 	title: string;
 	description?: string;
 	keywords: string[];
-	content: unknown[]; // Portable Text
+	content: unknown[];
 	previewUrl?: string;
 	source: SectionSource;
 	themeId?: string;
@@ -53,9 +49,6 @@ export interface SectionsResult {
 	nextCursor?: string;
 }
 
-/**
- * Fetch all sections
- */
 export async function fetchSections(options?: GetSectionsOptions): Promise<SectionsResult> {
 	const params = new URLSearchParams();
 	if (options?.source) params.set("source", options.source);
@@ -68,17 +61,11 @@ export async function fetchSections(options?: GetSectionsOptions): Promise<Secti
 	return parseApiResponse<SectionsResult>(response, i18n._(msg`Failed to fetch sections`));
 }
 
-/**
- * Fetch a single section by slug
- */
 export async function fetchSection(slug: string): Promise<Section> {
 	const response = await apiFetch(`${API_BASE}/sections/${slug}`);
 	return parseApiResponse<Section>(response, i18n._(msg`Failed to fetch section`));
 }
 
-/**
- * Create a section
- */
 export async function createSection(input: CreateSectionInput): Promise<Section> {
 	const response = await apiFetch(`${API_BASE}/sections`, {
 		method: "POST",
@@ -88,9 +75,6 @@ export async function createSection(input: CreateSectionInput): Promise<Section>
 	return parseApiResponse<Section>(response, i18n._(msg`Failed to create section`));
 }
 
-/**
- * Update a section
- */
 export async function updateSection(slug: string, input: UpdateSectionInput): Promise<Section> {
 	const response = await apiFetch(`${API_BASE}/sections/${slug}`, {
 		method: "PUT",
@@ -100,9 +84,6 @@ export async function updateSection(slug: string, input: UpdateSectionInput): Pr
 	return parseApiResponse<Section>(response, i18n._(msg`Failed to update section`));
 }
 
-/**
- * Delete a section
- */
 export async function deleteSection(slug: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/sections/${slug}`, {
 		method: "DELETE",

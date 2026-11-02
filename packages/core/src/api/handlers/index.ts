@@ -1,10 +1,3 @@
-/**
- * API handler implementations for EmDash REST endpoints
- *
- * Re-exports all handlers from their respective modules
- */
-
-// Content handlers
 export {
 	handleContentList,
 	handleContentAuthors,
@@ -30,7 +23,6 @@ export {
 	type TrashedContentItem,
 } from "./content.js";
 
-// Dashboard stats
 export {
 	handleDashboardStats,
 	type CollectionStats,
@@ -38,10 +30,8 @@ export {
 	type RecentItem,
 } from "./dashboard.js";
 
-// Manifest generation
 export { generateManifest } from "./manifest.js";
 
-// Revision handlers
 export {
 	handleRevisionList,
 	handleRevisionGet,
@@ -50,7 +40,6 @@ export {
 	type RevisionResponse,
 } from "./revision.js";
 
-// Media handlers
 export {
 	handleMediaList,
 	handleMediaGet,
@@ -98,7 +87,6 @@ export {
 	type MediaUsageWorkRetryResponse,
 } from "./media-usage-work.js";
 
-// Schema handlers
 export {
 	handleSchemaCollectionList,
 	handleSchemaCollectionGet,
@@ -123,7 +111,6 @@ export {
 	type OrphanedTableListResponse,
 } from "./schema.js";
 
-// SEO handlers
 export {
 	handleSitemapData,
 	type SitemapCollectionData,
@@ -131,7 +118,6 @@ export {
 	type SitemapDataResponse,
 } from "./seo.js";
 
-// Plugin handlers
 export {
 	handlePluginList,
 	handlePluginGet,
@@ -148,7 +134,6 @@ export {
 	type PluginSettingsResponse,
 } from "./plugin-settings.js";
 
-// Menu handlers
 export {
 	handleMenuList,
 	handleMenuCreate,
@@ -168,7 +153,6 @@ export {
 	type MenuSetItemsInput,
 } from "./menus.js";
 
-// Section handlers
 export {
 	handleSectionList,
 	handleSectionCreate,
@@ -178,10 +162,8 @@ export {
 	type SectionListResponse,
 } from "./sections.js";
 
-// Settings handlers
 export { handleSettingsGet, handleSettingsUpdate } from "./settings.js";
 
-// Taxonomy handlers
 export {
 	handleTaxonomyList,
 	handleTaxonomyGet,
@@ -204,7 +186,6 @@ export {
 	type TermGetResponse,
 } from "./taxonomies.js";
 
-// Marketplace handlers
 export {
 	handleMarketplaceInstall,
 	handleMarketplaceUpdate,
@@ -221,7 +202,6 @@ export {
 	type MarketplaceUninstallResult,
 } from "./marketplace.js";
 
-// Registry handlers (experimental)
 export {
 	assertEnvCompatible,
 	assertSafeArtifactUrl,

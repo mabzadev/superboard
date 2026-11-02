@@ -208,7 +208,6 @@ function baseConfig() {
 		$schema: "../../node_modules/wrangler/config-schema.json",
 		name: workerNameForService(target, service, environment),
 		...(accountId ? { account_id: accountId } : {}),
-		// Pin to the newest date supported by the current Wrangler/workerd toolchain.
 		compatibility_date: "2026-08-08",
 		compatibility_flags:
 			service === "site" ? ["nodejs_compat"] : ["nodejs_compat", "global_fetch_strictly_public"],

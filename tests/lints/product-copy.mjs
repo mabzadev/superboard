@@ -19,9 +19,6 @@ const sourceRoots = [
 	"packages/plugins/superboard-core/api/src",
 	"packages/plugins/superboard-monetization/billing/src",
 ];
-// Engineering documentation and migration runbooks are intentionally excluded:
-// they may be localized and may name the deployment they document. This gate is
-// limited to copy that can ship in a product surface or reusable SDK.
 const extensions = new Set([
 	".dart",
 	".html",

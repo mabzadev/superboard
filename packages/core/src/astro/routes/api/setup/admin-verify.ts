@@ -1,9 +1,3 @@
-/**
- * POST /_emdash/api/setup/admin/verify
- *
- * Complete admin creation by verifying the passkey registration
- */
-
 import type { APIRoute } from "astro";
 
 export const prerender = false;
@@ -30,12 +24,10 @@ export const POST: APIRoute = async ({ cookies, request, locals }) => {
 	}
 
 	try {
-		// Check if setup is already complete
 		const options = new OptionsRepository(emdash.db);
 		const setupComplete = await options.get("emdash:setup_complete");
 		const isComplete = setupComplete === true || setupComplete === "true";
 
-		// Check if any users exist
 		const adapter = createKyselyAdapter(emdash.db);
 		const userCount = await adapter.countUsers();
 
@@ -46,11 +38,6 @@ export const POST: APIRoute = async ({ cookies, request, locals }) => {
 			return apiError("ADMIN_EXISTS", "Admin user already exists", 400);
 		}
 
-		// `setup_complete` with ZERO users is a recoverable half-state —
-		// see the matching guard in ./admin.ts. The verify step must
-		// accept it too, or the wizard dies between its two calls.
-
-		// Get setup state
 		const setupState = await options.get<{
 			step?: string;
 			email?: string;
@@ -62,11 +49,6 @@ export const POST: APIRoute = async ({ cookies, request, locals }) => {
 			return apiError("INVALID_STATE", "Invalid setup state. Please restart setup.", 400);
 		}
 
-		// Verify the session nonce. The cookie was minted by POST /setup/admin
-		// and stored alongside setup_state; presenting a matching cookie is
-		// proof that this verify call comes from the same browser that
-		// started the admin step. Constant-time compare to avoid leaking the
-		// stored value through timing.
 		const cookieNonce = cookies.get(SETUP_NONCE_COOKIE)?.value;
 		if (!setupState.nonce || !cookieNonce || !secureCompare(cookieNonce, setupState.nonce)) {
 			return apiError(
@@ -80,11 +62,9 @@ export const POST: APIRoute = async ({ cookies, request, locals }) => {
 			return apiError("INVALID_STATE", "Invalid setup state. Please restart setup.", 400);
 		}
 
-		// Parse request body
 		const body = await parseBody(request, setupAdminVerifyBody);
 		if (isParseError(body)) return body;
 
-		// Get passkey config
 		const url = new URL(request.url);
 		const siteName = (await options.get<string>("emdash:site_title")) ?? undefined;
 		const siteUrl = getPublicOrigin(url, emdash?.config);
@@ -94,7 +74,6 @@ export const POST: APIRoute = async ({ cookies, request, locals }) => {
 		);
 		const passkeyConfig = getPasskeyConfig(url, siteName, siteUrl, allowedOrigins);
 
-		// Verify the registration response
 		const challengeStore = createChallengeStore(emdash.db);
 
 		const verified = await verifyRegistrationResponse(
@@ -103,21 +82,17 @@ export const POST: APIRoute = async ({ cookies, request, locals }) => {
 			challengeStore,
 		);
 
-		// Create the admin user
 		const user = await adapter.createUser({
 			email: setupState.email,
 			name: setupState.name ?? null,
 			role: Role.ADMIN,
-			emailVerified: false, // No email verification for first user
+			emailVerified: false,
 		});
 
-		// Register the passkey
 		await registerPasskey(adapter, user.id, verified, "Setup passkey");
 
-		// Mark setup as complete
 		await options.set("emdash:setup_complete", true);
 
-		// Clean up setup state and the session nonce cookie
 		await options.delete("emdash:setup_state");
 		cookies.delete(SETUP_NONCE_COOKIE, { path: "/_emdash/" });
 

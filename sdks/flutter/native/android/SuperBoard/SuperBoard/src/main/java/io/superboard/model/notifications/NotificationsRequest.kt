@@ -14,20 +14,20 @@ data class NotificationsRequest (
 
 @Parcelize
 data class NotificationsResponse (
-    val notifications: List<Notification>?  // List of notifications.
+    val notifications: List<Notification>?
 ) : Parcelable {
 }
 
 @Parcelize
 data class Notification(
-    val id: Int,                                 // Unique identifier for the notification.
-    val title: String,                           // The title of the notification.
+    val id: Int,
+    val title: String,
     @SerializedName("updated_at")
-    val updatedAt: InstantCompat, // The date when the notification was last updated.
-    val subtitle: String?,                       // An optional subtitle for the notification.
+    val updatedAt: InstantCompat,
+    val subtitle: String?,
     @SerializedName("auto_display")
-    val autoDisplay: Boolean, // Indicates whether the notification should be displayed automatically.
+    val autoDisplay: Boolean,
     @SerializedName("access_url")
-    val accessURL: String?,     // An optional URL associated with the notification.
-    var read: Boolean                            // Indicates whether the notification has been read.
+    val accessURL: String?,
+    var read: Boolean
 ) : Parcelable

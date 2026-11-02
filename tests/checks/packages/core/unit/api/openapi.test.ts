@@ -403,7 +403,6 @@ describe("OpenAPI document generation", () => {
 			}
 		}
 
-		// Content operations
 		expect(operationIds).toContain("listContent");
 		expect(operationIds).toContain("createContent");
 		expect(operationIds).toContain("getContent");
@@ -412,7 +411,6 @@ describe("OpenAPI document generation", () => {
 		expect(operationIds).toContain("publishContent");
 		expect(operationIds).toContain("duplicateContent");
 
-		// Media operations
 		expect(operationIds).toContain("listMedia");
 		expect(operationIds).toContain("getMedia");
 		expect(operationIds).toContain("getMediaUsage");
@@ -422,55 +420,44 @@ describe("OpenAPI document generation", () => {
 		expect(operationIds).toContain("listMediaUsageWork");
 		expect(operationIds).toContain("retryMediaUsageWork");
 
-		// Schema operations
 		expect(operationIds).toContain("listCollections");
 		expect(operationIds).toContain("createCollection");
 		expect(operationIds).toContain("listFields");
 		expect(operationIds).toContain("createField");
 
-		// Comments operations
 		expect(operationIds).toContain("listPublicComments");
 		expect(operationIds).toContain("createComment");
 		expect(operationIds).toContain("listAdminComments");
 		expect(operationIds).toContain("bulkCommentAction");
 
-		// Taxonomy operations
 		expect(operationIds).toContain("listTaxonomies");
 		expect(operationIds).toContain("listTerms");
 		expect(operationIds).toContain("createTerm");
 
-		// Menu operations
 		expect(operationIds).toContain("listMenus");
 		expect(operationIds).toContain("createMenu");
 		expect(operationIds).toContain("createMenuItem");
 
-		// Section operations
 		expect(operationIds).toContain("listSections");
 		expect(operationIds).toContain("createSection");
 
-		// Widget operations
 		expect(operationIds).toContain("listWidgetAreas");
 		expect(operationIds).toContain("createWidget");
 
-		// Settings operations
 		expect(operationIds).toContain("getSettings");
 		expect(operationIds).toContain("updateSettings");
 
-		// Search operations
 		expect(operationIds).toContain("search");
 		expect(operationIds).toContain("rebuildSearchIndex");
 
-		// Redirect operations
 		expect(operationIds).toContain("listRedirects");
 		expect(operationIds).toContain("createRedirect");
 		expect(operationIds).toContain("listNotFoundEntries");
 
-		// User operations
 		expect(operationIds).toContain("listUsers");
 		expect(operationIds).toContain("getUser");
 		expect(operationIds).toContain("disableUser");
 
-		// No duplicate operation IDs
 		const uniqueIds = new Set(operationIds);
 		expect(uniqueIds.size).toBe(operationIds.length);
 	});
@@ -479,14 +466,12 @@ describe("OpenAPI document generation", () => {
 		const doc = generateOpenApiDocument();
 		const schemas = doc.components?.schemas ?? {};
 
-		// Content schemas
 		expect(schemas).toHaveProperty("ContentCreateBody");
 		expect(schemas).toHaveProperty("ContentUpdateBody");
 		expect(schemas).toHaveProperty("ContentItem");
 		expect(schemas).toHaveProperty("ContentResponse");
 		expect(schemas).toHaveProperty("ContentListResponse");
 
-		// Media schemas
 		expect(schemas).toHaveProperty("MediaItem");
 		expect(schemas).toHaveProperty("MediaListResponse");
 		expect(schemas).toHaveProperty("MediaReadResponse");
@@ -500,23 +485,18 @@ describe("OpenAPI document generation", () => {
 		expect(schemas).toHaveProperty("MediaUsageRepairBody");
 		expect(schemas).toHaveProperty("MediaUsageRepairResponse");
 
-		// Schema schemas
 		expect(schemas).toHaveProperty("Collection");
 		expect(schemas).toHaveProperty("CollectionListResponse");
 
-		// Comment schemas
 		expect(schemas).toHaveProperty("PublicComment");
 		expect(schemas).toHaveProperty("Comment");
 		expect(schemas).toHaveProperty("CommentBulkBody");
 
-		// Taxonomy schemas
 		expect(schemas).toHaveProperty("Term");
 		expect(schemas).toHaveProperty("TermListResponse");
 
-		// Menu schemas
 		expect(schemas).toHaveProperty("MenuWithItems");
 
-		// User schemas
 		expect(schemas).toHaveProperty("User");
 		expect(schemas).toHaveProperty("UserListResponse");
 	});
@@ -558,7 +538,6 @@ describe("OpenAPI document generation", () => {
 		const schema = getResponse?.responses?.["200"]?.content?.["application/json"]?.schema;
 
 		expect(schema).toBeDefined();
-		// The envelope should have a "data" property
 		expect(schema).toHaveProperty("properties");
 		const props = (schema as Record<string, unknown>).properties as Record<string, unknown>;
 		expect(props).toHaveProperty("data");
@@ -571,7 +550,6 @@ describe("OpenAPI document generation", () => {
 			responses: Record<string, unknown>;
 		};
 
-		// Should have auth error responses
 		expect(getOp?.responses).toHaveProperty("401");
 		expect(getOp?.responses).toHaveProperty("403");
 	});
@@ -607,7 +585,6 @@ describe("OpenAPI document generation", () => {
 		const doc = generateOpenApiDocument();
 		const json = JSON.stringify(doc);
 
-		// Should not throw
 		const parsed = JSON.parse(json);
 		expect(parsed.openapi).toBe("3.1.0");
 	});

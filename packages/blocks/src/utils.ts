@@ -6,10 +6,6 @@ export function cn(...inputs: Parameters<typeof clsx>) {
 	return twMerge(clsx(inputs));
 }
 
-/**
- * Detects dark mode from `<html data-theme="dark">` or the system
- * `prefers-color-scheme` media query and stays in sync reactively.
- */
 export function useIsDarkMode(): boolean {
 	const [dark, setDark] = useState(() => {
 		if (typeof document === "undefined") return false;
@@ -20,7 +16,6 @@ export function useIsDarkMode(): boolean {
 	});
 
 	useEffect(() => {
-		// Watch for data-theme attribute changes on <html>
 		const observer = new MutationObserver(() => {
 			const attr = document.documentElement.getAttribute("data-theme");
 			if (attr === "dark") return setDark(true);
@@ -32,7 +27,6 @@ export function useIsDarkMode(): boolean {
 			attributeFilter: ["data-theme"],
 		});
 
-		// Also watch the system media query
 		const mq = window.matchMedia("(prefers-color-scheme: dark)");
 		const handler = (e: MediaQueryListEvent) => {
 			if (!document.documentElement.hasAttribute("data-theme")) {

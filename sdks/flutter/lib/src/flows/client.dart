@@ -354,8 +354,6 @@ class SuperBoardFlowsClient {
       workflowId: block.workflowId,
       blockId: block.id,
       blockStateId: block.blockStateId,
-      // Keep the exact upstream SDK contract. The Worker validates this key
-      // before applying the tour transition.
       properties: {
         'currentTourIndex': index,
         if (action != null) 'action': action,
@@ -469,7 +467,6 @@ class SuperBoardFlowsClient {
   Future<void> _openRealtime() async {
     _reconnectTimer?.cancel();
     final uri = _webSocketUri();
-    // Never place the WebSocket credential in debug output.
     _log('Connecting realtime: ${uri.path}');
     try {
       final channel = _webSocketConnector(uri);
@@ -791,8 +788,6 @@ class SuperBoardFlowsClient {
       value.environment == _environment &&
       value.userId == _userId;
 
-  /// Debounce window for high-frequency, fire-and-forget persistence such as
-  /// realtime update bursts. Awaited callers write without this delay.
   static const Duration _persistDebounce = Duration(milliseconds: 300);
 
   SuperBoardFlowPersistedState _snapshot() => SuperBoardFlowPersistedState(
@@ -807,18 +802,12 @@ class SuperBoardFlowsClient {
     pendingCommands: List.unmodifiable(_pendingCommands),
   );
 
-  /// Persists the current state. Writes are serialized and coalesced: callers
-  /// arriving while a write is in flight share a single trailing write that
-  /// snapshots the latest state when it starts (latest snapshot wins), so a
-  /// burst of mutations produces at most one extra secure-storage write.
   Future<void> _persist() {
     _persistTimer?.cancel();
     _persistTimer = null;
     return _schedulePersistWrite();
   }
 
-  /// Persists the current state after [_persistDebounce] without blocking the
-  /// caller. Pending writes are flushed by [dispose].
   void _persistSoon() {
     if (_disposed || _persistTimer?.isActive == true) return;
     _persistTimer = Timer(_persistDebounce, () {

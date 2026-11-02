@@ -1,13 +1,3 @@
-/**
- * Manifest assertions for the AT Protocol plugin.
- *
- * The redesigned sandboxed-plugin layout puts identity, trust contract,
- * and admin surface in `emdash-plugin.jsonc` (the source of truth) and
- * leaves `src/plugin.ts` for runtime code only. This test snapshots the
- * manifest's structural shape so a refactor can't silently change the
- * published trust contract or admin surface.
- */
-
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 

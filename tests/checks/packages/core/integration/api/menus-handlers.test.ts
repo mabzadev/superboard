@@ -1,13 +1,3 @@
-/**
- * Menu handler + schema tests
- *
- * Covers the fixes shipped in this PR:
- * - Input schemas reject unknown keys (snake_case payloads no longer pass silently)
- * - `type` is validated against the allowed enum
- * - `customUrl` actually persists when sent under the documented (camelCase) key
- * - Handler responses are camelCase, aligning with the rest of the REST surface
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -38,8 +28,6 @@ describe("menu schemas", () => {
 			});
 			expect(result.success).toBe(false);
 			if (!result.success) {
-				// Zod 4 reports unknown keys with a single `unrecognized_keys`
-				// issue whose `keys` array lists the offending names.
 				const unknownKeys = result.error.issues
 					.filter((i) => i.code === "unrecognized_keys")
 					.flatMap((i) =>
@@ -150,7 +138,6 @@ describe("menu handlers — camelCase responses & customUrl persistence", () => 
 		});
 		expect(itemRes.success).toBe(true);
 		if (itemRes.success) {
-			// camelCase response shape
 			expect(itemRes.data).toMatchObject({
 				type: "custom",
 				label: "Blog",
@@ -165,7 +152,6 @@ describe("menu handlers — camelCase responses & customUrl persistence", () => 
 			expect(itemRes.data).not.toHaveProperty("translation_group");
 		}
 
-		// And the persisted DB row still has the snake_case column populated
 		const getRes = await handleMenuGet(db, "primary");
 		expect(getRes.success).toBe(true);
 		if (getRes.success) {
@@ -250,17 +236,11 @@ describe("handleMenuSetItems — concurrent delete race", () => {
 	});
 
 	it("returns NOT_FOUND when the menu vanishes between resolve and write", async () => {
-		// The original handler's in-transaction `notFoundSentinel` guarded
-		// this exact race: a concurrent menu_delete between resolveMenu and
-		// the setItems INSERTs would otherwise orphan items on D1.
 		const createRes = await handleMenuCreate(db, { name: "primary", label: "Primary" });
 		expect(createRes.success).toBe(true);
 		if (!createRes.success) return;
 		const menuId = createRes.data.id;
 
-		// Simulate the concurrent delete that lands between the handler's
-		// resolveMenu lookup and the repository's transaction. We delete
-		// directly through Kysely (handlers can't be paused mid-flight).
 		await db.deleteFrom("_emdash_menu_items").where("menu_id", "=", menuId).execute();
 		await db.deleteFrom("_emdash_menus").where("id", "=", menuId).execute();
 
@@ -273,7 +253,6 @@ describe("handleMenuSetItems — concurrent delete race", () => {
 			expect(result.error.message).toContain("primary");
 		}
 
-		// Nothing was inserted — no orphans.
 		const orphans = await db
 			.selectFrom("_emdash_menu_items")
 			.selectAll()
@@ -285,10 +264,6 @@ describe("handleMenuSetItems — concurrent delete race", () => {
 
 describe("menu items path-style route", () => {
 	it("exposes a [name]/items/[id].ts route file", async () => {
-		// The presence of the file (path-style) is what makes the documented
-		// REST-style DELETE /items/:id reachable; without it Astro returns the
-		// SSR 404 HTML page. We import dynamically to assert the module exists
-		// and exports the expected HTTP verbs.
 		const mod =
 			await import("../../../../../../packages/core/src/astro/routes/api/menus/[name]/items/[id].js");
 		expect(typeof mod.PUT).toBe("function");

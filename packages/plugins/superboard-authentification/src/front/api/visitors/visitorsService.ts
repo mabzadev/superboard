@@ -9,8 +9,6 @@ import type {
 } from "@superboard/front-ui/types";
 import type { AxiosResponse } from "axios";
 
-// --- Response types ---
-
 interface PaginationMeta {
 	total_pages: number;
 	total_entries: number;
@@ -32,8 +30,6 @@ interface GetVisitorDetailsResponse {
 	aggregated_metrics: AggregatedVisitorMetrics | null;
 	number_of_generated_links: number;
 }
-
-// --- API calls ---
 
 export const getVisitorsAPICall = async (
 	project_id: string,

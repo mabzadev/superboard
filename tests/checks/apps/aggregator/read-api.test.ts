@@ -1,17 +1,3 @@
-/**
- * Read API integration tests.
- *
- * Each test seeds D1 directly with the columns the handlers read, then
- * exercises the handler via `SELF.fetch` to a `/xrpc/...` URL — same path
- * a real client would take. Asserts on the envelope shape (uri, cid, did,
- * indexedAt, mirrors, labels) and on error mappings (404 NotFound, 400
- * InvalidRequest).
- *
- * `mirrors: []` and `labels: []` are the v1 contract; Slice 2 (labels)
- * and Slice 3 (mirrors) populate them, but the contract is locked now so
- * cached clients don't see a shape change later.
- */
-
 import { NSID } from "@emdash-cms/registry-lexicons";
 import { applyD1Migrations, env, SELF } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -31,8 +17,6 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-	// Tables in dependency order: releases → packages (FK), then publishers
-	// + verifications.
 	await testEnv.DB.prepare("UPDATE public_projection_state SET active_generation = NULL").run();
 	await testEnv.DB.prepare("DELETE FROM public_releases").run();
 	await testEnv.DB.prepare("DELETE FROM public_packages").run();
@@ -157,9 +141,6 @@ async function seedTakedown(uri: string, cid: string | null = null): Promise<voi
 		.run();
 }
 
-/** Naive 1.x.y zero-padded version_sort for the test fixtures. Real values
- * come from the consumer's `computeVersionSort`; tests just need the
- * relative ordering to be right. */
 function defaultVersionSort(version: string): string {
 	const [major = "0", minor = "0", patch = "0"] = version.split(".");
 	const pad = (s: string) => s.padStart(10, "0");
@@ -184,7 +165,6 @@ describe("getPackage", () => {
 			indexedAt: NOW.toISOString(),
 			labels: [],
 		});
-		// `mirrors` is on releaseView only — assert it's NOT on packageView.
 		expect(body).not.toHaveProperty("mirrors");
 		const profile = body["profile"] as Record<string, unknown>;
 		expect(profile["$type"]).toBe(NSID.packageProfile);
@@ -321,10 +301,6 @@ describe("getLatestRelease", () => {
 	});
 
 	it("falls back to the next-best release when latest_version points at a tombstoned one", async () => {
-		// `latest_version` was set to 2.0.0, then 2.0.0 was tombstoned but
-		// `refreshPackageLatestStmt` hasn't run yet (or failed). The fast-path
-		// JOIN misses; the slow-path ORDER BY should still find 1.0.0 and
-		// return it instead of 404ing.
 		await seedPackage({ slug: "demo", latestVersion: "2.0.0" });
 		await seedRelease({ version: "1.0.0" });
 		await seedRelease({ version: "2.0.0", tombstoned: true });
@@ -404,7 +380,6 @@ describe("searchPackages", () => {
 		);
 		const secondBody = (await second.json()) as { packages: Array<{ slug: string }> };
 		expect(secondBody.packages).toHaveLength(2);
-		// Distinct from page 1 — seeded slugs don't overlap.
 		const overlap = firstBody.packages
 			.map((p) => p.slug)
 			.filter((s) => secondBody.packages.some((p) => p.slug === s));
@@ -416,18 +391,12 @@ describe("searchPackages", () => {
 		const res = await SELF.fetch(
 			`https://test/xrpc/${NSID.aggregatorSearchPackages}?q=${encodeURIComponent('demo "*"(')}`,
 		);
-		// Either matches nothing or matches normally — but doesn't 500.
 		expect(res.status).toBe(200);
 	});
 
 	it("treats FTS operators as literal tokens (the escape actually works)", async () => {
 		await seedPackage({ slug: "alpha", name: "Alpha" });
 		await seedPackage({ slug: "beta", name: "Beta" });
-		// `alpha OR beta` would match both packages if `OR` were interpreted
-		// as the FTS5 operator. With proper escaping the whole string is one
-		// literal phrase that can't possibly appear in either record's
-		// indexed text → zero matches. A buggy escape that stripped the
-		// quotes would return *both* packages.
 		const res = await SELF.fetch(
 			`https://test/xrpc/${NSID.aggregatorSearchPackages}?q=${encodeURIComponent("alpha OR beta")}`,
 		);
@@ -444,7 +413,6 @@ describe("searchPackages", () => {
 	});
 
 	it("400s on a forged cursor with an out-of-range offset", async () => {
-		// Encode {offset: 1_000_000} → over MAX_OFFSET → 400.
 		const forged = btoa(JSON.stringify({ offset: 1_000_000 }))
 			.replace(/\+/g, "-")
 			.replace(/\//g, "_")
@@ -532,8 +500,6 @@ describe("sync.getRecord", () => {
 	});
 
 	it("only matches publisher.profile when rkey='self'", async () => {
-		// publisher.profile rkey is always 'self'; any other rkey returns 404
-		// even if the (did) row exists.
 		await testEnv.DB.prepare(
 			`INSERT INTO publishers
 			   (did, display_name, record_blob, verified_at, indexed_at)

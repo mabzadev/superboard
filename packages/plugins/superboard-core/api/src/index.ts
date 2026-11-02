@@ -216,11 +216,6 @@ export function allowedCorsOrigin(
 	}
 }
 
-/**
- * Flows environment keys are intentionally public client credentials. Its web
- * SDK must therefore work on the customer origins where a flow is embedded,
- * while still rejecting malformed/non-HTTP Origin values.
- */
 export function allowedEmbeddableSdkOrigin(origin: string): string | undefined {
 	try {
 		const candidate = new URL(origin);
@@ -239,8 +234,6 @@ export function allowedEmbeddableSdkOrigin(origin: string): string | undefined {
 	}
 }
 
-// Public readiness for the API route. It deliberately verifies the central
-// state authorities instead of returning a process-only liveness response.
 app
 	.defineRoute({
 		pluginId: "supbrd-core",
@@ -386,9 +379,6 @@ app
 		return collectSdkTelemetry(c, resolved.context.projectId);
 	});
 
-// =============================================
-// Route requests by subdomain
-// =============================================
 app.defineRoute({ continuation: true }).all("*", async (c, next) => {
 	const host = c.req.header("host") || new URL(c.req.url).hostname;
 	const customPath = new URL(c.req.url).pathname;
@@ -411,7 +401,6 @@ app.defineRoute({ continuation: true }).all("*", async (c, next) => {
 		return c.notFound();
 	}
 
-	// Mobile SDK custom domain.
 	if (host === c.env.SDK_DOMAIN) {
 		const pathname = new URL(c.req.url).pathname;
 		if (
@@ -424,14 +413,9 @@ app.defineRoute({ continuation: true }).all("*", async (c, next) => {
 		return sdkRoutes.fetch(c.req.raw, c.env);
 	}
 
-	// Short-link custom domain and well-known resources.
-	// The workers.dev host is also accepted for tests.
 	return next();
 });
 
-// =====================================
-// Routes for the custom domain and workers.dev.
-// =====================================
 app
 	.defineRoute({ surface: "internal", access: "internal" })
 	.get("/internal/site/plugin-health/:pluginId", async (c) => {
@@ -1023,8 +1007,6 @@ app.use("/api/v1/billing/*", async (c, next) =>
 	proxyBillingAdmin(c, next, "/api/v1/billing", "/internal/v1/admin/billing"),
 );
 app.route("/api/v1/billing", purchasesAdminRoutes);
-// The v2 admin surface is additive: existing catalogue/customer operations
-// stay available while new resources use stable error envelopes.
 app.use("/api/v2/purchases/projects/*", async (c, next) =>
 	proxyBillingAdmin(c, next, "/api/v2/purchases/projects", "/internal/v1/admin/purchases/projects"),
 );
@@ -1125,7 +1107,6 @@ app
 		);
 	});
 
-// Short link redirect — this must remain last.
 app.route("", redirectRoute);
 
 function proxyFilesAlias(

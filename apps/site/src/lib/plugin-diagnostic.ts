@@ -124,7 +124,6 @@ export async function resolvePluginDiagnostic(
 	const target = resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local");
 	const instanceId = env.SUPERBOARD_INSTANCE_ID;
 
-	// 1. Plugin Lifecycle
 	let lifecycle: PluginLifecycleDiagnostic = {
 		state: "available",
 		changedAt: null,
@@ -180,7 +179,6 @@ export async function resolvePluginDiagnostic(
 				activatedReleaseId: row.activated_release_id,
 			};
 		} else {
-			// Fallback check in _plugin_state if table exists
 			const stateRow = await env.DB.prepare(
 				`SELECT status, activated_at, installed_at FROM _plugin_state WHERE plugin_id = ? LIMIT 1`,
 			)
@@ -195,15 +193,12 @@ export async function resolvePluginDiagnostic(
 				};
 			}
 		}
-	} catch {
-		// Retain default lifecycle state if DB error occurs
-	}
+	} catch {}
 
 	if (lifecycle.state === "disabled" && !options.includeDisabled) {
 		throw new PluginDisabledError(pluginId);
 	}
 
-	// 2. Declared Configuration
 	const catalog = superBoardRuntimePluginCatalog();
 	const catalogEntry =
 		packageCatalog.plugins.find(
@@ -241,7 +236,6 @@ export async function resolvePluginDiagnostic(
 				: null,
 	};
 
-	// 3. Verified Health & Dependencies
 	let health: PluginHealthDiagnostic = {
 		status: "unknown",
 		checkedAt: null,
@@ -252,7 +246,6 @@ export async function resolvePluginDiagnostic(
 	const componentProofs: PluginHealthDiagnostic[] = [];
 
 	try {
-		// Read dependency health records
 		const depRows = await env.DB.prepare(
 			`SELECT dependency_id, status, checked_at, expires_at
 			 FROM superboard_dependency_health
@@ -317,16 +310,13 @@ export async function resolvePluginDiagnostic(
 				});
 			}
 		}
-	} catch {
-		// DB table missing or query error
-	}
+	} catch {}
 	for (const componentId of componentIds) {
 		if (!observedComponents.has(componentId))
 			componentProofs.push({ status: "unknown", checkedAt: null, reason: "HEALTH_PROOF_MISSING" });
 	}
 	health = leastAvailableHealth(componentProofs);
 
-	// If health status is unknown, or if explicit recheck requested, probe health
 	if (options.recheckHealth || health.status === "unknown") {
 		const reports = await Promise.all(
 			componentIds.map(async (componentId) => {
@@ -375,7 +365,6 @@ export async function resolvePluginDiagnostic(
 		health = leastAvailableHealth(reports);
 	}
 
-	// 4. Associated Services and Cloudflare Workers
 	let deploymentConfig: DeploymentConfiguration | null = null;
 	if (env.SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON) {
 		try {
@@ -434,7 +423,6 @@ export async function resolvePluginDiagnostic(
 		});
 	}
 
-	// 5. Routes (Views and API)
 	const views: PluginRouteViewDiagnostic[] = [];
 	for (const plugin of nativeFrontPluginCatalog()) {
 		if (!aliasIds.includes(plugin.plugin_id)) continue;

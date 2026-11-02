@@ -1,7 +1,3 @@
-/**
- * Tests for importing WordPress reusable blocks as sections
- */
-
 import type { Kysely } from "kysely";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -53,7 +49,6 @@ describe("importReusableBlocksAsSections", () => {
 				tags: [],
 				meta: new Map(),
 			},
-			// Regular post - should be ignored
 			{
 				id: 1,
 				title: "Regular Post",
@@ -73,7 +68,6 @@ describe("importReusableBlocksAsSections", () => {
 		expect(result.sectionsSkipped).toBe(0);
 		expect(result.errors).toHaveLength(0);
 
-		// Verify sections were created
 		const sections = await db.selectFrom("_emdash_sections").selectAll().execute();
 
 		expect(sections).toHaveLength(2);
@@ -89,7 +83,6 @@ describe("importReusableBlocksAsSections", () => {
 	});
 
 	it("should skip existing sections by slug", async () => {
-		// Create existing section
 		await db
 			.insertInto("_emdash_sections")
 			.values({
@@ -137,7 +130,6 @@ describe("importReusableBlocksAsSections", () => {
 		expect(result.sectionsCreated).toBe(1);
 		expect(result.sectionsSkipped).toBe(1);
 
-		// Original title should be preserved
 		const existing = await db
 			.selectFrom("_emdash_sections")
 			.selectAll()

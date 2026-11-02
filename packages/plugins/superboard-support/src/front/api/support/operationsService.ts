@@ -3,8 +3,6 @@ import { config } from "@superboard/front-ui/lib/config.js";
 import { DELETE, GET, PATCH, POST, PUT } from "../../transport.js";
 import { getSupportAction } from "./nativeClient.js";
 
-// Canonical Grow client for Support contacts and conversation operations.
-
 export type SupportContact = {
 	id: string;
 	external_user_id: string;
@@ -243,7 +241,6 @@ export const executeSupportMacro = async (
 		)
 	).data;
 
-// Source-compatibility aliases for internal adapters.
 export type MessagingContact = SupportContact;
 export type MessagingContactNote = SupportContactNote;
 export type MessagingCompany = SupportCompany;

@@ -1,6 +1,3 @@
-// Two scheduled-maintenance intervals and twice the labeler identity TTL.
-// A healthy idle subscription therefore gets a reconnect/catch-up opportunity
-// before its authority is withdrawn at the exact boundary.
 export const REQUIRED_LABEL_SOURCE_HEALTH_TIMEOUT_MS = 10 * 60 * 1_000;
 
 interface HealthInstant {

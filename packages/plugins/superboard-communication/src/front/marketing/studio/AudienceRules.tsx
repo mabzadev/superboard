@@ -40,7 +40,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Renders a stored scalar condition value in a text control. */
 function conditionText(value: unknown, fallback: string) {
 	return typeof value === "string" || typeof value === "number" ? String(value) : fallback;
 }
@@ -63,10 +62,6 @@ function defaultCondition(kind: Kind, tags: Option[], lists: Option[]): Conditio
 	return { field: "locale", operator: "equals", value: "" };
 }
 
-/**
- * Segment rule editor. Each row picks what to look at (profile, tag, list or
- * email activity) and only shows the controls that kind needs.
- */
 export function AudienceRules({
 	value,
 	onChange,

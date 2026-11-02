@@ -1,12 +1,3 @@
-/**
- * Taxonomies API (categories, tags, custom taxonomies).
- *
- * All endpoints are locale-aware. When no `locale` option is passed we omit
- * the query param and the server falls back to its usual resolution (no
- * filter, returning every locale — same as pre-i18n behaviour for clients
- * that haven't yet been updated).
- */
-
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -96,9 +87,6 @@ export function withLocale(path: string, locale?: string): string {
 		: path;
 }
 
-/**
- * Fetch all taxonomy definitions
- */
 export async function fetchTaxonomyDefs(options: LocaleOptions = {}): Promise<TaxonomyDef[]> {
 	const response = await apiFetch(withLocale(`${API_BASE}/taxonomies`, options.locale));
 	const data = await parseApiResponse<{ taxonomies: TaxonomyDef[] }>(
@@ -108,9 +96,6 @@ export async function fetchTaxonomyDefs(options: LocaleOptions = {}): Promise<Ta
 	return data.taxonomies;
 }
 
-/**
- * Fetch taxonomy definition by name
- */
 export async function fetchTaxonomyDef(
 	name: string,
 	options: LocaleOptions = {},
@@ -119,9 +104,6 @@ export async function fetchTaxonomyDef(
 	return defs.find((t) => t.name === name) || null;
 }
 
-/**
- * Create a custom taxonomy definition
- */
 export async function createTaxonomy(input: CreateTaxonomyInput): Promise<TaxonomyDef> {
 	const response = await apiFetch(`${API_BASE}/taxonomies`, {
 		method: "POST",
@@ -135,9 +117,6 @@ export async function createTaxonomy(input: CreateTaxonomyInput): Promise<Taxono
 	return data.taxonomy;
 }
 
-/**
- * Fetch terms for a taxonomy
- */
 export async function fetchTerms(
 	taxonomyName: string,
 	options: LocaleOptions = {},
@@ -149,9 +128,6 @@ export async function fetchTerms(
 	return data.terms;
 }
 
-/**
- * Create a term
- */
 export async function createTerm(
 	taxonomyName: string,
 	input: CreateTermInput,
@@ -165,9 +141,6 @@ export async function createTerm(
 	return data.term;
 }
 
-/**
- * Update a term
- */
 export async function updateTerm(
 	taxonomyName: string,
 	slug: string,
@@ -186,14 +159,6 @@ export async function updateTerm(
 	return data.term;
 }
 
-/**
- * Set the manual order of one sibling group.
- *
- * `ids` and `parentId` are translation groups: a term holds one position across
- * every locale, so there is no locale to pass. `ids` may name only the terms
- * this locale renders — the server permutes them within the positions they
- * already occupy and leaves untranslated members where they are.
- */
 export async function reorderTerms(
 	taxonomyName: string,
 	input: { parentId: string | null; ids: string[] },
@@ -206,9 +171,6 @@ export async function reorderTerms(
 	await parseApiResponse<{ reordered: true }>(response, "Failed to reorder terms");
 }
 
-/**
- * Delete a term
- */
 export async function deleteTerm(
 	taxonomyName: string,
 	slug: string,
@@ -221,7 +183,6 @@ export async function deleteTerm(
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete term`));
 }
 
-/** List every translation (locale variant) of a term. */
 export async function fetchTermTranslations(
 	taxonomyName: string,
 	slug: string,
@@ -233,10 +194,6 @@ export async function fetchTermTranslations(
 	return parseApiResponse<TermTranslationsResponse>(response, "Failed to fetch term translations");
 }
 
-/**
- * Create a new locale translation of a term. The new term inherits slug,
- * label, parent, and description from the source unless overridden in `input`.
- */
 export async function createTermTranslation(
 	taxonomyName: string,
 	slug: string,

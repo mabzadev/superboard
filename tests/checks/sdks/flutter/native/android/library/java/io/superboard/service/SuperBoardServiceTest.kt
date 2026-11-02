@@ -20,8 +20,6 @@ import io.superboard.model.GenerateLinkResponse
 import io.superboard.model.GetDeviceResponse
 import io.superboard.model.LinkDetailsResponse
 import io.superboard.model.LogLevel
-// PURCHASE_EVENT_DISABLED: import io.superboard.model.events.PaymentEvent
-// PURCHASE_EVENT_DISABLED: import io.superboard.model.events.PaymentEventType
 import io.superboard.model.notifications.NotificationsResponse
 import io.superboard.model.notifications.NumberOfUnreadNotificationsResponse
 import io.superboard.utils.GVRetryResult
@@ -46,9 +44,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import retrofit2.Response
 
-/**
- * Core unit tests for SuperBoardService.
- */
 @ExperimentalCoroutinesApi
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [28])
@@ -107,8 +102,6 @@ class SuperBoardServiceTest {
         )
     }
 
-    // ==================== authenticate Tests ====================
-
     @Test
     fun `SuperBoardService authenticate returns GVRetryResult Success with superboardId on successful API response`() = runTest {
         val expectedResponse = AuthenticationResponse(
@@ -161,8 +154,6 @@ class SuperBoardServiceTest {
         )
     }
 
-    // ==================== generateLink Tests ====================
-
     @Test
     fun `SuperBoardService generateLink returns LSResult Success with link URL on successful API response`() = runTest {
         val expectedLink = "https://example.superboard.io/generated123"
@@ -214,8 +205,6 @@ class SuperBoardServiceTest {
         )
     }
 
-    // ==================== payloadFor Tests ====================
-
     @Test
     fun `SuperBoardService payloadFor returns LSResult Success with DeeplinkDetails on successful response`() = runTest {
         val expectedDetails = DeeplinkDetails(
@@ -251,8 +240,6 @@ class SuperBoardServiceTest {
         )
     }
 
-    // ==================== linkDetails Tests ====================
-
     @Test
     fun `SuperBoardService linkDetails returns LSResult Success with link data on successful response`() = runTest {
         val jsonResponse = """{"title": "My Link", "description": "A test link", "data": {"key": "value"}}"""
@@ -282,8 +269,6 @@ class SuperBoardServiceTest {
             context = "after linkDetails('/nonexistent') with 404 error response"
         )
     }
-
-    // ==================== addEvent Tests ====================
 
     @Test
     fun `SuperBoardService addEvent returns LSResult Success with true on successful API response`() = runTest {
@@ -320,47 +305,6 @@ class SuperBoardServiceTest {
             context = "after addEvent() with 500 error response"
         )
     }
-
-    // ==================== addPaymentEvent Tests ====================
-
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `SuperBoardService addPaymentEvent passes payment event to API with correct eventType`() = runTest {
-    // PURCHASE_EVENT_DISABLED:     val paymentEvent = PaymentEvent(
-    // PURCHASE_EVENT_DISABLED:         eventType = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:         priceCents = 1999,
-    // PURCHASE_EVENT_DISABLED:         currency = "EUR",
-    // PURCHASE_EVENT_DISABLED:         productId = "pro_plan"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     superboardService.addPaymentEvent(paymentEvent)
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     assertTrueWithContext(
-    // PURCHASE_EVENT_DISABLED:         mockSuperBoardApi.verifyAddPaymentEventCalled(),
-    // PURCHASE_EVENT_DISABLED:         "addPaymentEvent was called on mockApi",
-    // PURCHASE_EVENT_DISABLED:         "after addPaymentEvent() with BUY event"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:     assertEqualsWithContext(
-    // PURCHASE_EVENT_DISABLED:         PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:         mockSuperBoardApi.addPaymentEventCalls[0].eventType,
-    // PURCHASE_EVENT_DISABLED:         "eventType",
-    // PURCHASE_EVENT_DISABLED:         "after addPaymentEvent() with BUY event"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED: }
-
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `SuperBoardService addPaymentEvent returns LSResult Error on 400 API response`() = runTest {
-    // PURCHASE_EVENT_DISABLED:     mockSuperBoardApi.addPaymentEventResponse = MockSuperBoardApi.createErrorResponseTyped(400, "Invalid payment")
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     val paymentEvent = PaymentEvent(eventType = PaymentEventType.BUY, priceCents = 100, currency = "USD")
-    // PURCHASE_EVENT_DISABLED:     val result = superboardService.addPaymentEvent(paymentEvent)
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     assertResultError(
-    // PURCHASE_EVENT_DISABLED:         result,
-    // PURCHASE_EVENT_DISABLED:         context = "after addPaymentEvent() with 400 error response"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED: }
-
-    // ==================== notifications Tests ====================
 
     @Test
     fun `SuperBoardService notifications returns LSResult Success with notification list on successful response`() = runTest {
@@ -412,9 +356,6 @@ class SuperBoardServiceTest {
     }
 }
 
-/**
- * Testable subclass of SuperBoardService that allows injecting a mock SuperBoardApi.
- */
 class TestableSuperBoardService(
     context: Context,
     apiKey: String,

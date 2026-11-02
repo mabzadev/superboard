@@ -1,33 +1,3 @@
-/**
- * `emdash-plugin update-package [--manifest <path>] [--yes] [--json]`
- *
- * Edit an already-published package record without cutting a new release.
- * Operates on the `com.emdashcms.experimental.package.profile` record — the
- * registry's per-package metadata, not the publisher's atproto profile.
- *
- * Reads `emdash-plugin.jsonc`, fetches the existing package record from the
- * publisher's PDS, diffs the manifest's lexicon-controlled fields against
- * what's on the PDS, and (with `--yes`) writes the updated record back via
- * `com.atproto.repo.putRecord`. Without `--yes`, prints the diff and exits 0.
- *
- * The slug is the record key; the command refuses to change it (renames
- * would orphan every release tied to the old slug). `lastUpdated` is
- * auto-bumped to now on any successful write and is never user-editable.
- *
- * Fields the manifest controls and this command can update:
- *   - `license`
- *   - `authors` / `author`
- *   - `security` / `securityContacts`
- *   - `name`
- *   - `description`
- *   - `keywords`
- *   - `sections`
- *
- * Fields preserved verbatim from the existing record: `$type`, `id`, `slug`,
- * `type`, plus any unknown forward-compatible fields from a future lexicon
- * revision.
- */
-
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -157,13 +127,6 @@ async function runUpdatePackage(args: UpdatePackageArgs): Promise<void> {
 	renderResult(result, args.yes ?? false);
 }
 
-/**
- * Result of resolving the manifest for `runUpdatePackage`. Surfaces the
- * normalised manifest with `manifest.version` resolved against the sibling
- * `package.json` (mirrors the publish path so the two commands agree on
- * which manifest they're talking about — even though version isn't part of
- * the profile record).
- */
 interface ManifestLoadOutcome {
 	path: string;
 	manifest: ReturnType<typeof normaliseManifest>;
@@ -203,12 +166,6 @@ async function loadManifestForUpdate(path: string): Promise<ManifestLoadOutcome>
 	}
 }
 
-/**
- * Read `package.json#version` from the directory containing the manifest.
- * Mirrors the publish path. Missing or unparseable package.json is non-
- * fatal for update-package (version isn't part of the profile record),
- * but malformed JSON still surfaces so a typo doesn't pass silently.
- */
 async function readSiblingPackageVersion(manifestDir: string): Promise<string | undefined> {
 	const packageJsonPath = join(manifestDir, "package.json");
 	let source: string;
@@ -249,22 +206,11 @@ async function readSiblingPackageVersion(manifestDir: string): Promise<string | 
 	return typeof version === "string" ? version : undefined;
 }
 
-/**
- * Project the manifest's package-record fields into the
- * `PackageUpdateInput` contract. We reuse `manifestToProfileInput` from
- * the publish path so the two commands agree on what comes out of the
- * manifest, then drop the first-publish-only fields that update-package
- * doesn't touch.
- */
 function packageUpdateInputFromManifest(
 	manifest: ReturnType<typeof normaliseManifest>,
 ): PackageUpdateInput {
 	const profile = manifestToProfileInput(manifest);
 	const input: PackageUpdateInput = {
-		// license is required in the manifest schema, so it's always
-		// present in `manifestToProfileInput`'s output. The non-null
-		// assertion would be wrong if the manifest schema ever relaxes
-		// that; assigning via fallback keeps the cast honest.
 		license: profile.license ?? "",
 		authors: profile.authors ?? [],
 		security: profile.security ?? [],
@@ -315,7 +261,6 @@ function renderDiffLine(diff: PackageFieldDiff): void {
 function formatFieldValue(value: unknown): string {
 	if (value === undefined) return "(unset)";
 	const str = typeof value === "string" ? value : JSON.stringify(value);
-	// Sections (and other long fields) can be tens of KB; keep the diff readable.
 	return str.length > 160 ? `${str.slice(0, 159)}…` : str;
 }
 

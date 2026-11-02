@@ -1,27 +1,3 @@
-/**
- * Records consumer tests.
- *
- * Three layers of coverage:
- *
- *   1. **Writer unit tests** call the per-collection ingest functions directly
- *      with synthetic `VerifiedPdsRecord` payloads. This sidesteps the PDS
- *      verification step (already tested in pds-verify.test.ts) and the
- *      in-workerd unavailability of the FakePublisher fixture (which depends
- *      on `@atproto/repo`, a Node-only package). What we test here is the
- *      structural validation + D1 write SQL, against a real D1 instance.
- *
- *   2. **Delete tests** call `applyDelete` with each collection and assert the
- *      right tombstone / hard-delete behaviour.
- *
- *   3. **Dispatcher tests** drive `processMessage` with stub deps to cover
- *      ack/retry decisions: transient PDS errors retry, permanent errors
- *      forensics+ack, IngestError forensics+ack, unexpected errors
- *      forensics+ack, success acks. The verify path is stubbed via a
- *      drop-in `DidResolver` and a `fetch` that throws controlled errors;
- *      end-to-end success-path verification will land in a follow-up PR
- *      once a node-pool integration test config is in place.
- */
-
 import { P256PrivateKeyExportable } from "@atcute/crypto";
 import type { DidDocument } from "@atcute/identity";
 import type { Did } from "@atcute/lexicons/syntax";
@@ -112,8 +88,6 @@ function jobFor(
 
 const NOW = new Date("2026-05-09T12:00:00.000Z");
 
-// ─── Writer: package.profile ────────────────────────────────────────────────
-
 describe("ingestPackageProfile", () => {
 	const validRecord = {
 		$type: NSID.packageProfile,
@@ -152,10 +126,6 @@ describe("ingestPackageProfile", () => {
 	});
 
 	it("preserves indexed_at across re-ingest, advances verified_at", async () => {
-		// Lexicon's `packageView.indexedAt` semantic is "first observed".
-		// The upsert omits `indexed_at` from `DO UPDATE SET` to keep the
-		// first-write timestamp stable. `verified_at` is bumped (it tracks
-		// "last verified" — the opposite intent).
 		const job = jobFor(DID_A, NSID.packageProfile, "demo");
 		const firstSeen = new Date("2026-01-01T00:00:00.000Z");
 		const reIngested = new Date("2026-05-10T12:00:00.000Z");
@@ -182,17 +152,10 @@ describe("ingestPackageProfile", () => {
 	it("rejects records that don't match the lexicon", async () => {
 		const job = jobFor(DID_A, NSID.packageProfile, "demo");
 		await expect(
-			ingestPackageProfile(
-				testEnv.DB,
-				job,
-				fakeVerified({ slug: "demo" /* missing required */ }),
-				NOW,
-			),
+			ingestPackageProfile(testEnv.DB, job, fakeVerified({ slug: "demo" }), NOW),
 		).rejects.toMatchObject({ name: "IngestError", reason: "LEXICON_VALIDATION_FAILED" });
 	});
 });
-
-// ─── Writer: package.release ────────────────────────────────────────────────
 
 describe("ingestPackageRelease", () => {
 	const validProfile = {
@@ -223,7 +186,6 @@ describe("ingestPackageRelease", () => {
 	}
 
 	beforeEach(async () => {
-		// Releases reference packages via FK; seed the parent profile.
 		await ingestPackageProfile(
 			testEnv.DB,
 			jobFor(DID_A, NSID.packageProfile, "demo"),
@@ -243,7 +205,6 @@ describe("ingestPackageRelease", () => {
 			.bind(DID_A, "1.10.0")
 			.first<{ version: string; version_sort: string }>();
 		expect(row?.version).toBe("1.10.0");
-		// 1.10.0 must sort after 1.9.0 — the whole point of version_sort.
 		expect(row?.version_sort.startsWith("0000000001.0000000010.")).toBe(true);
 	});
 
@@ -258,8 +219,6 @@ describe("ingestPackageRelease", () => {
 	it("rejects unparseable semver versions", async () => {
 		const release = makeRelease("not-a-version");
 		const job = jobFor(DID_A, NSID.packageRelease, "demo:not-a-version");
-		// Lexicon validation accepts any 1-64 char string in `version`; the
-		// semver parse failure is what catches non-semver strings.
 		await expect(
 			ingestPackageRelease(testEnv.DB, job, fakeVerified(release), NOW),
 		).rejects.toMatchObject({ reason: "INVALID_VERSION" });
@@ -281,8 +240,6 @@ describe("ingestPackageRelease", () => {
 		const job = jobFor(DID_A, NSID.packageRelease, "demo:1.0.0");
 		await ingestPackageRelease(testEnv.DB, job, fakeVerified(makeRelease("1.0.0")), NOW);
 
-		// Second call — same did/package/version, different carBytes (simulating
-		// a malicious republish or a publisher trying to mutate a version).
 		const tampered: VerifiedPdsRecord = {
 			cid: "bafyreigDIFFERENT00000000000000000000000000000000000000",
 			record: makeRelease("1.0.0"),
@@ -301,8 +258,6 @@ describe("ingestPackageRelease", () => {
 		});
 	});
 });
-
-// ─── Writer: publisher.profile ──────────────────────────────────────────────
 
 describe("ingestPublisherProfile", () => {
 	const validRecord = {
@@ -347,8 +302,6 @@ describe("ingestPublisherProfile", () => {
 		).rejects.toMatchObject({ reason: "CONTACT_VALIDATION_FAILED" });
 	});
 });
-
-// ─── Writer: publisher.verification ─────────────────────────────────────────
 
 describe("ingestPublisherVerification", () => {
 	const validRecord = {
@@ -396,8 +349,6 @@ describe("ingestPublisherVerification", () => {
 		expect(row?.tombstoned_at).toBeNull();
 	});
 });
-
-// ─── Delete handling ────────────────────────────────────────────────────────
 
 describe("applyDelete", () => {
 	beforeEach(async () => {
@@ -525,13 +476,8 @@ describe("applyDelete", () => {
 	});
 });
 
-// ─── Dispatcher (processMessage) ────────────────────────────────────────────
-
 class StubResolver implements DidDocumentResolverLike {
 	resolve(_did: Did): Promise<DidDocument> {
-		// processMessage tests inject a DidResolver that's wired to a stub DID
-		// doc — we never actually traverse this resolver because the cache
-		// always hits.
 		return Promise.reject(new Error("StubResolver should not be called"));
 	}
 }
@@ -582,7 +528,6 @@ function buildDeps(opts: { fetch: typeof fetch }): {
 	const resolver = new DidResolver({
 		cache,
 		resolver: new StubResolver(),
-		// Long TTL so we never actually call StubResolver.
 		ttlMs: 1_000_000,
 		now: () => NOW,
 	});
@@ -680,8 +625,6 @@ describe("processMessage dispatcher", () => {
 	});
 });
 
-// ─── Adversarial-review fixes: regression tests ─────────────────────────────
-
 describe("ingestPackageProfile: security[] contact validation", () => {
 	it("rejects security entries with neither url nor email", async () => {
 		const job = jobFor(DID_A, NSID.packageProfile, "demo");
@@ -770,7 +713,6 @@ describe("ingestPackageRelease: releaseExtension validation", () => {
 					extensions: {
 						"com.emdashcms.experimental.package.releaseExtension": {
 							$type: "com.emdashcms.experimental.package.releaseExtension",
-							// missing required `declaredAccess`
 						},
 					},
 				}),
@@ -793,7 +735,6 @@ describe("ingestPackageRelease: releaseExtension validation", () => {
 						$type: "com.emdashcms.experimental.package.releaseExtension",
 						declaredAccess: { network: { fetch: {} } },
 					},
-					// arbitrary extra key — must NOT land in the column
 					"com.example.someoneElse": { irrelevant: "data" },
 				},
 			}),
@@ -829,8 +770,6 @@ describe("ingestPackageRelease: package field charset", () => {
 	});
 
 	it("rejects record.package containing a colon", async () => {
-		// Ambiguous-rkey attack: `package: "foo:bar"` + `version: "1.0.0"`
-		// would build the same rkey as `package: "foo"` + `version: "bar:1.0.0"`.
 		await expect(
 			ingestPackageRelease(
 				testEnv.DB,
@@ -855,7 +794,6 @@ describe("ingestPackageRelease: package field charset", () => {
 
 describe("ingestPackageRelease: parent profile pre-check", () => {
 	it("throws MissingDependencyError when no parent profile exists", async () => {
-		// No profile seeded — release event arriving before its profile.
 		await expect(
 			ingestPackageRelease(
 				testEnv.DB,
@@ -876,12 +814,6 @@ describe("ingestPackageRelease: parent profile pre-check", () => {
 			),
 		).rejects.toMatchObject({ name: "MissingDependencyError" });
 	});
-
-	// Dispatcher-level retry-on-MissingDependency coverage lives in the
-	// "processMessage dispatcher" suite further down — uses
-	// `ConsumerDeps.verify` injection so the writer's parent-profile
-	// pre-check actually fires and the dispatcher's retry branch runs
-	// end-to-end.
 });
 
 describe("ingestPackageRelease: latest_version + capabilities denormalisation", () => {
@@ -986,7 +918,6 @@ describe("ingestPackageRelease: latest_version + capabilities denormalisation", 
 			fakeVerified(release("2.0.0", {})),
 			NOW,
 		);
-		// Tombstone the latest.
 		await applyDelete(
 			testEnv.DB,
 			jobFor(DID_A, NSID.packageRelease, "demo:2.0.0", { operation: "delete" }),
@@ -1036,14 +967,12 @@ describe("ingestPackageRelease: same-content re-publish on tombstoned row", () =
 		const verified = fakeVerified(release);
 		await ingestPackageRelease(testEnv.DB, job, verified, NOW);
 		await applyDelete(testEnv.DB, { ...job, operation: "delete" }, NOW);
-		// Confirm tombstoned.
 		const before = await testEnv.DB.prepare(
 			`SELECT tombstoned_at FROM releases WHERE did = ? AND package = ? AND version = ?`,
 		)
 			.bind(DID_A, "demo", "1.0.0")
 			.first<{ tombstoned_at: string | null }>();
 		expect(before?.tombstoned_at).not.toBeNull();
-		// Re-publish identical bytes.
 		await ingestPackageRelease(testEnv.DB, job, verified, NOW);
 		const after = await testEnv.DB.prepare(
 			`SELECT tombstoned_at FROM releases WHERE did = ? AND package = ? AND version = ?`,
@@ -1137,8 +1066,6 @@ describe("applyDelete unknown collection", () => {
 
 describe("processMessage dispatcher: MissingDependencyError → retry", () => {
 	it("retries the message when the release writer throws MissingDependencyError", async () => {
-		// No parent profile seeded — release writer's parent-profile check
-		// throws MissingDependencyError → dispatcher should map to retry().
 		const cache = new MapDidDocCache();
 		const resolver = new DidResolver({
 			cache,
@@ -1163,8 +1090,6 @@ describe("processMessage dispatcher: MissingDependencyError → retry", () => {
 			db: testEnv.DB,
 			resolver,
 			now: () => NOW,
-			// Inject a verifier that returns a real-shaped record without
-			// running the actual @atcute/repo verification chain.
 			verify: () =>
 				Promise.resolve({
 					cid: "bafyreigtest00000000000000000000000000000000000000000000",
@@ -1218,10 +1143,7 @@ describe("ingestPackageRelease: latest_version refresh atomicity", () => {
 		const job = jobFor(DID_A, NSID.packageRelease, "demo:1.0.0");
 		const verified = fakeVerified(release("1.0.0"));
 		await ingestPackageRelease(testEnv.DB, job, verified, NOW);
-		// Manually corrupt latest_version to simulate a refresh that
-		// somehow drifted out of sync with the underlying releases.
 		await testEnv.DB.prepare(`UPDATE packages SET latest_version = NULL`).run();
-		// Replay same content. Refresh always runs in the batch — should fix.
 		await ingestPackageRelease(testEnv.DB, job, verified, NOW);
 		const row = await testEnv.DB.prepare(`SELECT latest_version FROM packages`).first<{
 			latest_version: string;
@@ -1230,18 +1152,12 @@ describe("ingestPackageRelease: latest_version refresh atomicity", () => {
 	});
 
 	it("uses single-statement UPDATE for refresh (race-safety check via SQL shape)", async () => {
-		// Insert v1, manually insert v2 directly (bypassing writer), then
-		// re-trigger refresh by re-inserting v1 (idempotent). The race-safe
-		// UPDATE should pick up v2 as the new latest because its subquery
-		// reads current max state, not a snapshot from before the manual
-		// insert.
 		await ingestPackageRelease(
 			testEnv.DB,
 			jobFor(DID_A, NSID.packageRelease, "demo:1.0.0"),
 			fakeVerified(release("1.0.0")),
 			NOW,
 		);
-		// Manually insert v2 with a known version_sort that sorts after 1.0.0.
 		await testEnv.DB.prepare(
 			`INSERT INTO releases
 			   (did, package, version, rkey, version_sort, artifacts,
@@ -1262,8 +1178,6 @@ describe("ingestPackageRelease: latest_version refresh atomicity", () => {
 				NOW.toISOString(),
 			)
 			.run();
-		// Re-trigger refresh by re-publishing v1 (same content → DO NOTHING,
-		// but the batched refresh-UPDATE still runs).
 		await ingestPackageRelease(
 			testEnv.DB,
 			jobFor(DID_A, NSID.packageRelease, "demo:1.0.0"),
@@ -1315,8 +1229,6 @@ describe("release_duplicate_attempts UNIQUE constraint", () => {
 		const job = jobFor(DID_A, NSID.packageRelease, "demo:1.0.0");
 		await ingestPackageRelease(testEnv.DB, job, fakeVerified(release("1.0.0")), NOW);
 
-		// Hostile-publisher pattern: pump the same different-content tampered
-		// payload many times.
 		const tampered: VerifiedPdsRecord = {
 			cid: "bafyreigDIFFERENT00000000000000000000000000000000000000",
 			record: release("1.0.0"),
@@ -1364,9 +1276,6 @@ describe("release_duplicate_attempts UNIQUE constraint", () => {
 
 describe("parseReleaseRkey: malformed %-encoding in delete rkey", () => {
 	it("throws IngestError so the dispatcher writes a dead_letters row before acking", async () => {
-		// Silently no-op'ing the parse failure would lose the audit trail —
-		// an operator investigating "why didn't this delete take effect?"
-		// would have nothing to look at.
 		await expect(
 			applyDelete(
 				testEnv.DB,
@@ -1426,7 +1335,6 @@ describe("drainDeadLetterBatch: D1 failure", () => {
 				retried += 1;
 			},
 		};
-		// Stub DB whose insert throws to simulate transient D1 failure.
 		const failingDb = {
 			prepare: () => ({
 				bind: () => ({
@@ -1448,8 +1356,6 @@ describe("refresh skips writes when values unchanged (avoids FTS-trigger thrashi
 		slug: "demo",
 		type: "emdash-plugin",
 		license: "MIT",
-		// name + description give FTS something to index so the test can
-		// observe trigger-induced reindexing.
 		name: "Demo Plugin",
 		description: "A searchable demo plugin",
 		authors: [{ name: "Tester" }],
@@ -1482,16 +1388,12 @@ describe("refresh skips writes when values unchanged (avoids FTS-trigger thrashi
 		const verified = fakeVerified(release);
 		await ingestPackageRelease(testEnv.DB, job, verified, NOW);
 
-		// Capture FTS state after first ingest.
 		const ftsBefore = await testEnv.DB.prepare(
 			`SELECT rowid FROM packages_fts WHERE packages_fts MATCH ?`,
 		)
 			.bind("demo")
 			.all();
 
-		// Replay same content many times. Each replay would normally fire
-		// the AFTER UPDATE trigger and re-index FTS even with same content.
-		// The WHERE-AND-IS-NOT guard short-circuits before the trigger.
 		for (let i = 0; i < 10; i++) {
 			await ingestPackageRelease(testEnv.DB, job, verified, NOW);
 		}
@@ -1502,10 +1404,6 @@ describe("refresh skips writes when values unchanged (avoids FTS-trigger thrashi
 			.bind("demo")
 			.all();
 
-		// FTS state must be unchanged (same single row). Asserting both row
-		// count and rowid stability — a re-trigger would delete + re-insert
-		// with the same rowid in this trigger's design, but if SQLite ever
-		// optimizes that to a no-op, this test still passes.
 		expect(ftsAfter.results).toHaveLength(1);
 		expect(ftsAfter.results).toEqual(ftsBefore.results);
 	});
@@ -1564,8 +1462,6 @@ describe("release_duplicate_attempts.rejected_at tracks latest attempt", () => {
 describe("processBatch isolates per-message failures", () => {
 	it("retries the failing message and continues processing the rest of the batch", async () => {
 		const { processBatch } = await import("../../../../apps/aggregator/src/records-consumer.js");
-		// First message's processMessage will throw (forensics-write fails);
-		// second message should still be processed.
 		const failingDeps: ConsumerDeps = {
 			db: {
 				prepare: () => ({
@@ -1582,8 +1478,6 @@ describe("processBatch isolates per-message failures", () => {
 				now: () => NOW,
 			}),
 			now: () => NOW,
-			// verify that throws → processMessage tries to writeDeadLetter →
-			// that throws too because db is broken → escapes to processBatch.
 			verify: () =>
 				Promise.reject(Object.assign(new Error("network down"), { name: "PdsVerificationError" })),
 		};
@@ -1605,9 +1499,6 @@ describe("processBatch isolates per-message failures", () => {
 		}
 		await processBatch({ messages }, {} as Env, failingDeps);
 
-		// Each message either acks or retries — no message escapes the loop
-		// without being controlled. With the failing deps every message ends
-		// up retried via the catch in processBatch.
 		expect(retries).toEqual([0, 1, 2]);
 		expect(acks).toEqual([]);
 	});
@@ -1647,7 +1538,6 @@ describe("duplicate detection compares CIDs, not CAR bytes", () => {
 
 	it("treats same CID + different CAR bytes as a benign replay (no audit row)", async () => {
 		const job = jobFor(DID_A, NSID.packageRelease, "demo:1.0.0");
-		// First ingest with one set of bytes.
 		await ingestPackageRelease(
 			testEnv.DB,
 			job,
@@ -1658,8 +1548,6 @@ describe("duplicate detection compares CIDs, not CAR bytes", () => {
 			},
 			NOW,
 		);
-		// Re-fetch produces different CAR bytes (publisher has written other
-		// records → MST proof differs) but the same record CID.
 		await ingestPackageRelease(
 			testEnv.DB,
 			job,
@@ -1761,8 +1649,6 @@ describe("computeVersionSort: final sentinel beats pathological prereleases", ()
 
 describe("parseReleaseRkey component validation", () => {
 	it("applyDelete rejects `package:version:extra` rkey via IngestError", async () => {
-		// Splitting on the first `:` would parse as pkg=`demo`, version=`1.0.0:extra`.
-		// The semver regex must reject the colon-bearing version.
 		await expect(
 			applyDelete(
 				testEnv.DB,
@@ -1783,7 +1669,5 @@ describe("parseReleaseRkey component validation", () => {
 	});
 });
 
-// Anchors the imports so a future refactor that drops them gets flagged. The
-// classes are referenced indirectly via toMatchObject({ name }) assertions.
 const _imports: ReadonlyArray<unknown> = [IngestError, PdsVerificationError];
 void _imports;

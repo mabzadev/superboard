@@ -1,13 +1,3 @@
-/**
- * Playground Loading Page
- *
- * Rendered when a user first hits /playground. Shows an animated loading state
- * while the client-side JS calls /_playground/init to create the DO, run
- * migrations, and apply the seed. Once init completes, redirects to the admin.
- *
- * No dependencies -- plain HTML with inline styles and a <script> tag.
- */
-
 export function renderPlaygroundLoadingPage(): string {
 	return `<!DOCTYPE html>
 <html lang="en">

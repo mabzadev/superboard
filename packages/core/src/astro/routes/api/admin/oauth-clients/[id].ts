@@ -1,11 +1,3 @@
-/**
- * Single OAuth client endpoints
- *
- * GET    /_emdash/api/admin/oauth-clients/:id — Get a client
- * PUT    /_emdash/api/admin/oauth-clients/:id — Update a client
- * DELETE /_emdash/api/admin/oauth-clients/:id — Delete a client
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { APIRoute } from "astro";
 import { z } from "zod";
@@ -29,9 +21,6 @@ const updateClientSchema = z.object({
 	scopes: z.array(z.string()).nullable().optional(),
 });
 
-/**
- * Get a single OAuth client.
- */
 export const GET: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 
@@ -52,9 +41,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	return unwrapResult(result);
 };
 
-/**
- * Update an OAuth client.
- */
 export const PUT: APIRoute = async ({ params, request, locals }) => {
 	const { emdash, user } = locals;
 
@@ -82,9 +68,6 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 	}
 };
 
-/**
- * Delete an OAuth client.
- */
 export const DELETE: APIRoute = async ({ params, locals }) => {
 	const { emdash, user } = locals;
 

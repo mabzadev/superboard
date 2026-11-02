@@ -1,23 +1,13 @@
-//
-//  Context.swift
-//
-//  superboard
-//
-
 import Foundation
 
 struct Context {
 
     private static let lock = NSLock()
 
-    // MARK: - Backing storage
-
     private static var _identifier: String?
     private static var _attributes: [String: Any]?
     private static var _userAgent: String?
     private static var _pushToken: String?
-
-    // MARK: - Keychain-backed (thread-safe at the OS level)
 
     static var linksquaredID: String? {
         get {
@@ -31,8 +21,6 @@ struct Context {
             }
         }
     }
-
-    // MARK: - Synchronized properties
 
     static var identifier: String? {
         get {
@@ -86,7 +74,6 @@ struct Context {
         }
     }
 
-    /// Resets all static state. Used by tests to prevent cross-test contamination.
     static func reset() {
         lock.lock()
         defer { lock.unlock() }

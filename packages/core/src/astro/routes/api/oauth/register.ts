@@ -1,11 +1,3 @@
-/**
- * POST /_emdash/api/oauth/register
- *
- * RFC 7591 Dynamic Client Registration. Public, unauthenticated.
- * MCP clients (e.g. Claude Code) call this to register themselves
- * before starting the OAuth authorization flow.
- */
-
 import type { APIRoute } from "astro";
 
 import { apiError, handleError } from "#api/error.js";
@@ -16,9 +8,6 @@ export const prerender = false;
 const OAUTH_REGISTRATION_HEADERS: HeadersInit = {
 	"Cache-Control": "no-store",
 	Pragma: "no-cache",
-	// RFC 7591 dynamic client registration is called cross-origin by MCP clients,
-	// CLIs, and native apps. The endpoint is anonymous and carries no ambient
-	// credentials, so CORS `*` is safe.
 	"Access-Control-Allow-Origin": "*",
 };
 
@@ -106,7 +95,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			return registrationError("Request body must be a JSON object");
 		}
 
-		// redirect_uris is the only required field per RFC 7591 §2
 		if (!isStringArray(body.redirect_uris) || body.redirect_uris.length === 0) {
 			return registrationError("redirect_uris must be a non-empty array of strings");
 		}
@@ -158,7 +146,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			return registrationError(result.error.message);
 		}
 
-		// RFC 7591 §3.2.1 response
 		return Response.json(
 			{
 				client_id: result.data.id,

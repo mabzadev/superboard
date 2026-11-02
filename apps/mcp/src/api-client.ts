@@ -176,8 +176,6 @@ export function createApiClient(options: {
 	};
 }
 
-// --- Status ---
-
 export async function getStatus(
 	token: string,
 	runtime: ApiRuntime = processRuntime(),
@@ -191,8 +189,6 @@ export async function getPlatformStatus(
 ): Promise<unknown> {
 	return request("GET", "/api/v1/mcp/platform-status", token, undefined, runtime);
 }
-
-// --- Usage ---
 
 export async function getUsage(
 	token: string,
@@ -208,8 +204,6 @@ export async function getUsage(
 	);
 }
 
-// --- Projects ---
-
 export async function createProject(
 	token: string,
 	name: string,
@@ -218,11 +212,6 @@ export async function createProject(
 	return request("POST", "/api/v1/mcp/projects", token, { name }, runtime);
 }
 
-// --- Links ---
-
-// Per-platform redirect:
-//   • string                                       → app + custom URL (open app if installed, else this URL)
-//   • { url, open_app_if_installed?: boolean }    → explicit form; false skips the app-open attempt
 export type CustomRedirect = string | { url: string; open_app_if_installed?: boolean };
 
 export interface CreateLinkData {
@@ -333,8 +322,6 @@ export async function searchLinks(
 	);
 }
 
-// --- Analytics ---
-
 export interface AnalyticsParams {
 	start_date?: string;
 	end_date?: string;
@@ -399,8 +386,6 @@ export async function getTopLinks(
 	);
 }
 
-// --- Configuration ---
-
 export async function configureRedirects(
 	token: string,
 	projectId: string,
@@ -430,8 +415,6 @@ export async function configureSdk(
 		runtime,
 	);
 }
-
-// --- Campaigns ---
 
 export async function createCampaign(
 	token: string,

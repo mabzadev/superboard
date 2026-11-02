@@ -10,14 +10,11 @@ import type { SeedFile } from "../../../../../../packages/core/src/seed/types.js
 import type { Storage, UploadOptions } from "../../../../../../packages/core/src/storage/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../utils/test-db.js";
 
-// Regex patterns for file validation
 const PNG_EXTENSION_REGEX = /\.png$/;
 
-// Mock fetch globally
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-// Bypass DoH so the fetch mock only sees the calls these tests model.
 let previousResolver: ReturnType<typeof setDefaultDnsResolver> | undefined;
 beforeAll(() => {
 	previousResolver = setDefaultDnsResolver(async () => ["93.184.216.34"]);
@@ -26,7 +23,6 @@ afterAll(() => {
 	setDefaultDnsResolver(previousResolver ?? null);
 });
 
-// Create a mock storage that tracks uploads
 function createMockStorage(): Storage & { uploads: UploadOptions[] } {
 	const uploads: UploadOptions[] = [];
 
@@ -53,7 +49,6 @@ function createMockStorage(): Storage & { uploads: UploadOptions[] } {
 	};
 }
 
-// Create a mock response for fetch
 function createMockResponse(
 	body: Uint8Array,
 	contentType: string,
@@ -68,67 +63,15 @@ function createMockResponse(
 	} as Response;
 }
 
-// Simple 1x1 PNG for testing
 const MOCK_PNG = new Uint8Array([
-	0x89,
-	0x50,
-	0x4e,
-	0x47,
-	0x0d,
-	0x0a,
-	0x1a,
-	0x0a, // PNG signature
-	0x00,
-	0x00,
-	0x00,
-	0x0d, // IHDR length
-	0x49,
-	0x48,
-	0x44,
-	0x52, // IHDR chunk type
-	0x00,
-	0x00,
-	0x00,
-	0x01, // width: 1
-	0x00,
-	0x00,
-	0x00,
-	0x01, // height: 1
-	0x08,
-	0x02,
-	0x00,
-	0x00,
-	0x00, // bit depth, color type, etc.
-	0x90,
-	0x77,
-	0x53,
-	0xde, // CRC
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
+	0xde,
 ]);
 
-// Simple 1x1 JPEG for testing
 const MOCK_JPEG = new Uint8Array([
-	0xff,
-	0xd8,
-	0xff,
-	0xe0, // SOI + APP0
-	0x00,
-	0x10, // APP0 length
-	0x4a,
-	0x46,
-	0x49,
-	0x46,
-	0x00, // JFIF identifier
-	0x01,
-	0x01, // version
-	0x00, // aspect ratio units
-	0x00,
-	0x01, // X density (1)
-	0x00,
-	0x01, // Y density (1)
-	0x00,
-	0x00, // thumbnail dimensions
-	0xff,
-	0xd9, // EOI
+	0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
+	0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
 ]);
 
 describe("$media seed resolution", () => {
@@ -140,7 +83,6 @@ describe("$media seed resolution", () => {
 		storage = createMockStorage();
 		mockFetch.mockReset();
 
-		// Set up a collection with an image field
 		const registry = new SchemaRegistry(db);
 		await registry.createCollection({ slug: "posts", label: "Posts" });
 		await registry.createField("posts", {
@@ -195,16 +137,13 @@ describe("$media seed resolution", () => {
 		expect(result.content.created).toBe(1);
 		expect(storage.uploads).toHaveLength(1);
 
-		// Check the upload
 		expect(storage.uploads[0].contentType).toBe("image/png");
 		expect(storage.uploads[0].key).toMatch(PNG_EXTENSION_REGEX);
 
-		// Check the content has resolved ImageValue
 		const contentRepo = new ContentRepository(db);
 		const entry = await contentRepo.findBySlug("posts", "hello");
 		const media = await db.selectFrom("media").select("id").executeTakeFirstOrThrow();
 
-		// ImageValue stores id (URL is built at runtime by EmDashImage)
 		expect(entry?.data.featured_image).toMatchObject({
 			id: media.id,
 			alt: "Test image",
@@ -254,13 +193,11 @@ describe("$media seed resolution", () => {
 			baseUrl: "",
 		});
 
-		// Only downloaded/uploaded once
 		expect(result.media.created).toBe(1);
 		expect(result.media.skipped).toBe(1);
 		expect(mockFetch).toHaveBeenCalledTimes(1);
 		expect(storage.uploads).toHaveLength(1);
 
-		// Both entries should have the same src but different alt
 		const contentRepo = new ContentRepository(db);
 		const first = await contentRepo.findBySlug("posts", "first");
 		const second = await contentRepo.findBySlug("posts", "second");
@@ -292,14 +229,12 @@ describe("$media seed resolution", () => {
 			},
 		};
 
-		// No storage provided
 		const result = await applySeed(db, seed, { includeContent: true });
 
 		expect(result.media.skipped).toBe(1);
 		expect(result.media.created).toBe(0);
 		expect(mockFetch).not.toHaveBeenCalled();
 
-		// Image field should be null/undefined (not resolved)
 		const contentRepo = new ContentRepository(db);
 		const entry = await contentRepo.findBySlug("posts", "hello");
 		expect(entry?.data.featured_image).toBeFalsy();
@@ -338,7 +273,6 @@ describe("$media seed resolution", () => {
 		expect(result.media.skipped).toBe(1);
 		expect(result.content.created).toBe(1);
 
-		// Image field should be null/undefined (not resolved)
 		const contentRepo = new ContentRepository(db);
 		const entry = await contentRepo.findBySlug("posts", "hello");
 		expect(entry?.data.featured_image).toBeFalsy();
@@ -408,7 +342,6 @@ describe("$media seed resolution", () => {
 			baseUrl: "",
 		});
 
-		// Check media record in database
 		const media = await db.selectFrom("media").selectAll().executeTakeFirst();
 
 		expect(media?.filename).toBe("beautiful-sunset.png");
@@ -495,7 +428,6 @@ describe("$media seed resolution", () => {
 	});
 
 	it("should resolve nested $media in arrays", async () => {
-		// Set up a collection with a json field for gallery
 		const registry = new SchemaRegistry(db);
 		await registry.createField("posts", {
 			slug: "gallery",
@@ -548,7 +480,6 @@ describe("$media seed resolution", () => {
 		const entry = await contentRepo.findBySlug("posts", "hello");
 
 		expect(entry?.data.gallery).toHaveLength(2);
-		// ImageValue stores id (URL is built at runtime by EmDashImage)
 		const gallery = entry?.data.gallery as unknown[] | undefined;
 		expect(gallery?.[0]).toMatchObject({
 			id: expect.any(String),

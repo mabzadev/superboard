@@ -1,10 +1,3 @@
-/**
- * Regression test for #1884 (render side): consecutive blockquote-styled
- * Portable Text blocks are one quote and must render as a single
- * <blockquote>. `groupBlockquoteRuns` merges each run into a synthetic
- * `blockquoteGroup` node consumed by BlockquoteGroup.astro.
- */
-
 import { describe, it, expect } from "vitest";
 
 import {

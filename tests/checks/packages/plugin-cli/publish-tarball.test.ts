@@ -7,13 +7,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTarball, MAX_FILE_SIZE } from "../../../../packages/plugin-cli/src/bundle/utils.js";
 import { extractManifestFromTarballForTest } from "../../../../packages/plugin-cli/src/commands/publish.js";
 
-/**
- * Round-trip the tarball-extraction step from the publish CLI: build a real
- * gzipped tarball on disk, read its bytes, and feed them through the same
- * function the publish flow calls. This exercises the bundle-size-cap wiring
- * end-to-end (decompression + per-file accounting + total accounting) which
- * the pure `validateBundleSize` unit tests cannot.
- */
 describe("extractManifestFromTarball (publish CLI)", () => {
 	let stagingDir: string;
 	let outDir: string;
@@ -71,8 +64,6 @@ describe("extractManifestFromTarball (publish CLI)", () => {
 	});
 
 	it("rejects a tarball whose total decompressed size exceeds the bundle cap", async () => {
-		// Three files at exactly MAX_FILE_SIZE — each within per-file cap, but
-		// total (3 × 128 KB = 384 KB) exceeds the 256 KB total cap.
 		const bytes = await buildTarball({
 			"manifest.json": minimalManifest,
 			"a.js": "a".repeat(MAX_FILE_SIZE),
@@ -94,10 +85,6 @@ describe("extractManifestFromTarball (publish CLI)", () => {
 	});
 
 	it("does not count non-file tar entries (symlinks etc.) toward the file cap", async () => {
-		// Hand-build a tarball with 25 symlink entries plus one real file.
-		// Symlinks have type "2" and size 0 in USTAR. The file cap is 20, so
-		// counting symlinks would reject this; the filter should only see one
-		// real file (manifest.json) and accept it.
 		const { packTar } = await import("modern-tar");
 		const { gzipSync } = await import("node:zlib");
 		const symlinkEntries = Array.from({ length: 25 }, (_, i) => ({

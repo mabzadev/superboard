@@ -10,10 +10,6 @@ function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** A promise that never settles — simulates a fetch whose owning request
- * context was torn down mid-await (workerd cancels the continuation, so
- * neither `then` nor `finally` ever runs). This is the production poisoning
- * scenario. */
 function neverSettles<T>(): Promise<T> {
 	return new Promise<T>(() => {});
 }
@@ -32,9 +28,6 @@ describe("singleFlightCached", () => {
 	});
 
 	it("caches a void/undefined result so it is not treated as a miss", async () => {
-		// The reason the cache stores a boxed value + presence flag rather
-		// than relying on a null check: a falsy/void result must still count
-		// as cached. Without the box this would refetch every call.
 		const cache = createSingleFlightCache<void>();
 		let calls = 0;
 		const fetch = async () => {
@@ -71,11 +64,6 @@ describe("singleFlightCached", () => {
 	});
 
 	it("a stranded owner fetch does not poison later callers", async () => {
-		// The whole point of the rewrite. First caller claims, then its
-		// fetch never settles (cancelled request). With the old "cache the
-		// in-flight promise" approach every later caller awaited that dead
-		// promise forever. Here later callers poll a value, reclaim the stale
-		// lock after the deadline, and succeed.
 		const cache = createSingleFlightCache<string>();
 
 		void singleFlightCached(cache, () => neverSettles<string>(), {
@@ -99,16 +87,13 @@ describe("singleFlightCached", () => {
 		await expect(
 			singleFlightCached(cache, () => neverSettles<string>(), {
 				ownerTimeoutMs: 50,
-				deadlineMs: 60_000, // high so reclaim doesn't mask the owner timeout
+				deadlineMs: 60_000,
 				pollMs: 10,
 			}),
 		).rejects.toThrow(/exceeded/i);
 	});
 
 	it("anchored fetch still publishes for a later caller after the owner times out", async () => {
-		// A slow-but-live fetch: the owner gives up at ownerTimeoutMs, but the
-		// anchored copy keeps running and populates the cache, so the next
-		// caller is served without refetching.
 		const cache = createSingleFlightCache<string>();
 		let release!: (value: string) => void;
 		const slow = new Promise<string>((resolve) => {
@@ -142,10 +127,6 @@ describe("singleFlightCached", () => {
 	});
 
 	it("keeps the reclaim deadline above ownerTimeoutMs so a slow-but-live owner is not superseded", async () => {
-		// A deadlineMs smaller than ownerTimeoutMs, left unguarded, would let a
-		// waiter reclaim before the owner finishes — a self-sustaining stampede
-		// that never populates the cache. The helper must raise the effective
-		// deadline above the owner timeout.
 		const cache = createSingleFlightCache<string>();
 		let calls = 0;
 		const fetch = async () => {
@@ -164,7 +145,6 @@ describe("singleFlightCached", () => {
 
 	it("invalidation frees the lock so a fresh reader doesn't wait out a stale owner", async () => {
 		const cache = createSingleFlightCache<string>();
-		// A slow/stuck in-flight owner holds the lock.
 		void singleFlightCached(cache, () => neverSettles<string>(), {
 			deadlineMs: 10_000,
 			pollMs: 10,
@@ -174,8 +154,6 @@ describe("singleFlightCached", () => {
 		invalidateSingleFlightCache(cache);
 		expect(cache.lock.ownerStartedAt).toBeNull();
 
-		// maxWaitMs (200) is far below deadlineMs (10s): without the lock being
-		// freed, the fresh reader would give up before it could ever reclaim.
 		const result = await singleFlightCached(cache, async () => "fresh", {
 			deadlineMs: 10_000,
 			pollMs: 10,

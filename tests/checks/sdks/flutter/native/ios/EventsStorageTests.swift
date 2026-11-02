@@ -3,9 +3,6 @@ import XCTest
 
 final class EventsStorageTests: XCTestCase {
 
-    /// Disk-backed checks are intentionally slower on shared CI simulators.
-    /// Give the serial persistence queue enough time to drain so a timeout
-    /// cannot leak writes into the next test.
     private let storageTimeout: TimeInterval = 60
 
     private var eventsCachePath: String {
@@ -22,8 +19,6 @@ final class EventsStorageTests: XCTestCase {
         try? FileManager.default.removeItem(atPath: eventsCachePath)
         super.tearDown()
     }
-
-    // MARK: - Deduplication Logic
 
     func testRemoveDuplicateEventsKeepsLatestInstall() {
         let storage = EventsStorage()
@@ -89,8 +84,6 @@ final class EventsStorageTests: XCTestCase {
         XCTAssertEqual(result.first?.id, install.id)
     }
 
-    // MARK: - Storage: Add & Retrieve
-
     func testAddAndRetrieveEvent() {
         let storage = EventsStorage()
         let event = Event(type: .appOpen, createdAt: Date(), link: "https://test.com")
@@ -130,8 +123,6 @@ final class EventsStorageTests: XCTestCase {
         }
         wait(for: [getExp], timeout: storageTimeout)
     }
-
-    // MARK: - Storage: Remove
 
     func testRemoveEventByID() {
         let storage = EventsStorage()
@@ -174,8 +165,6 @@ final class EventsStorageTests: XCTestCase {
         wait(for: [removeExp], timeout: storageTimeout)
     }
 
-    // MARK: - Storage: Add or Replace
-
     func testAddOrReplaceUpdatesExistingEventByID() {
         let storage = EventsStorage()
         let event = Event(type: .timeSpent, createdAt: Date())
@@ -198,8 +187,6 @@ final class EventsStorageTests: XCTestCase {
         }
         wait(for: [getExp], timeout: storageTimeout)
     }
-
-    // MARK: - transformEvents
 
     func testTransformEventsModifiesInPlace() {
         let storage = EventsStorage()
@@ -229,7 +216,6 @@ final class EventsStorageTests: XCTestCase {
         let event1 = Event(type: .timeSpent, createdAt: Date())
         let event2 = Event(type: .view, createdAt: Date())
 
-        // Add both events
         let addExp = expectation(description: "add both")
         storage.addEvent(event: event1) {
             storage.addEvent(event: event2) {
@@ -238,8 +224,6 @@ final class EventsStorageTests: XCTestCase {
         }
         wait(for: [addExp], timeout: storageTimeout)
 
-        // Remove event1, then transform. Both go through the serial queue
-        // so the remove completes before the transform reads.
         let removeExp = expectation(description: "remove")
         storage.removeEvent(event: event1) { removeExp.fulfill() }
 
@@ -262,10 +246,7 @@ final class EventsStorageTests: XCTestCase {
         wait(for: [getExp], timeout: storageTimeout)
     }
 
-    // MARK: - Corrupt Data Recovery
-
     func testGetEventsWithCorruptedCacheReturnsNil() {
-        // Write garbage to the cache file used by EventsStorage
         let cachePath = eventsCachePath
         try? FileManager.default.createDirectory(atPath: cachePath, withIntermediateDirectories: true)
         let filePath = (cachePath as NSString).appendingPathComponent("cached-events".md5)
@@ -281,7 +262,6 @@ final class EventsStorageTests: XCTestCase {
     }
 
     func testAddEventAfterCorruptedCacheRecoversByOverwriting() {
-        // Write garbage to cache
         let cachePath = eventsCachePath
         try? FileManager.default.createDirectory(atPath: cachePath, withIntermediateDirectories: true)
         let filePath = (cachePath as NSString).appendingPathComponent("cached-events".md5)
@@ -303,8 +283,6 @@ final class EventsStorageTests: XCTestCase {
         wait(for: [getExp], timeout: storageTimeout)
     }
 
-    // MARK: - Concurrency
-
     func testConcurrentAddAndGetDoesNotCrashOrLoseData() {
         let storage = EventsStorage()
         let count = 20
@@ -313,7 +291,6 @@ final class EventsStorageTests: XCTestCase {
             events.append(Event(type: .appOpen, createdAt: Date()))
         }
 
-        // Add all events concurrently (each goes through the serial queue inside storage)
         let addGroup = DispatchGroup()
         for event in events {
             addGroup.enter()
@@ -325,7 +302,6 @@ final class EventsStorageTests: XCTestCase {
         XCTAssertEqual(addResult, .success, "All concurrent adds should complete")
         guard addResult == .success else { return }
 
-        // Verify all events are stored
         let getExp = expectation(description: "get")
         storage.getEvents { stored in
             let storedIDs = Set(stored?.map { $0.id } ?? [])
@@ -342,14 +318,12 @@ final class EventsStorageTests: XCTestCase {
         let event1 = Event(type: .appOpen, createdAt: Date())
         let event2 = Event(type: .view, createdAt: Date())
 
-        // Add both first
         let setupExp = expectation(description: "setup")
         storage.addEvent(event: event1) {
             storage.addEvent(event: event2) { setupExp.fulfill() }
         }
         wait(for: [setupExp], timeout: storageTimeout)
 
-        // Concurrently: remove event1, add event3, transform all
         let event3 = Event(type: .timeSpent, createdAt: Date())
         let group = DispatchGroup()
 
@@ -372,8 +346,6 @@ final class EventsStorageTests: XCTestCase {
         let result = group.wait(timeout: .now() + storageTimeout)
         XCTAssertEqual(result, .success, "Concurrent operations should all complete")
     }
-
-    // MARK: - Add or Replace (new ID)
 
     func testAddOrReplaceAddsNewEventWhenIDNotFound() {
         let storage = EventsStorage()

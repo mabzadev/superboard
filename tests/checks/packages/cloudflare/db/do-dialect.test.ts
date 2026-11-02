@@ -46,7 +46,6 @@ describe("PreviewDODriver", () => {
 		await driver.commitTransaction(conn);
 		await driver.rollbackTransaction(conn);
 
-		// Preview is read-only: transaction control must not issue any SQL to the stub.
 		expect(queryFn).not.toHaveBeenCalled();
 	});
 });

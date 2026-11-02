@@ -1,11 +1,3 @@
-/**
- * Content route locale forwarding.
- *
- * When a ?locale query param is present, single-item write routes must
- * forward it to handleContentGet so slug-based lookups resolve to the
- * correct i18n variant instead of returning the first matching row.
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { APIContext } from "astro";
 import { describe, it, expect, vi } from "vitest";

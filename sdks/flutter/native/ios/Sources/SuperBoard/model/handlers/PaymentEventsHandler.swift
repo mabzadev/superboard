@@ -1,30 +1,16 @@
-//
-//  PaymentsEventsHandler.swift
-//
-//  superboard
-//
-
 import UIKit
 
-/// Manages event handling and dispatching for the application.
 class PaymentEventsHandler {
 
     private let service: APIServiceProtocol
     private let storage: PaymentEventsStorageProtocol
     private var started = false
 
-    // MARK: Initialization
-
-    /// Initializes the `PaymentEventsHandler` with the provided API service.
-    /// - Parameter apiService: The service used for API calls
-    /// - Parameter storage: The payment events storage
     init(apiService: APIServiceProtocol,
          storage: PaymentEventsStorageProtocol = PaymentEventsStorage()) {
         self.service = apiService
         self.storage = storage
     }
-
-    // MARK: Public Methods
 
     func start() {
         guard !started else { return }
@@ -33,8 +19,6 @@ class PaymentEventsHandler {
         started = true
     }
 
-    /// Logs an event and sends it to the backend.
-    /// - Parameter event: The event to log
     func logInAppPurchase(transactionID: UInt64, completion: @escaping SuperBoardBoolCompletion) {
         guard started else {
             DebugLogger.shared.log(.error, "You need to be authenticated to start sending payment events.")
@@ -53,15 +37,6 @@ class PaymentEventsHandler {
         sendTransactionToBackend(transaction: data, completion: completion)
     }
 
-    /// Logs a custom purchase transaction and sends it to the backend.
-    ///
-    /// - Parameters:
-    ///   - type: The type of transaction (e.g., purchase, refund).
-    ///   - priceInCents: The price of the transaction in cents.
-    ///   - currency: The currency of the transaction (e.g., "USD").
-    ///   - productID: A product identifier typically, the name of the service.
-    ///   - startDate: An optional start date for the transaction. Defaults to the current date if not provided.
-    ///   - completion: A closure that gets called once the transaction is processed.
     func logCustomPurchase(type: TransactionType, priceInCents: Int, currency: String, productID: String, startDate: Date? = nil, completion: @escaping SuperBoardBoolCompletion) {
         guard started else {
             DebugLogger.shared.log(.error, "You need to be authenticated to start sending payment events.")
@@ -80,18 +55,11 @@ class PaymentEventsHandler {
         sendTransactionToBackend(transaction: data, completion: completion)
     }
 
-    // MARK: Notifications
-
-    /// Called when the application becomes active.
     @objc func applicationDidBecomeActive() {
         retryPendingTransactions()
     }
 
-    // MARK: Private Methods
-
-    /// Sets up observers for application lifecycle notifications.
     private func addObservers() {
-        // Add observers for application lifecycle notifications
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(applicationDidBecomeActive),
                                                name: UIApplication.didBecomeActiveNotification,
@@ -123,7 +91,6 @@ class PaymentEventsHandler {
             if result {
                 self.markTransactionAsHandledIfNeeded(transaction: transaction)
             } else if !transaction.store {
-                // Custom purchases have no StoreKit-based retry — persist for retry on next foreground
                 self.storage.savePendingTransaction(transaction)
             }
 

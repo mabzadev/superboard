@@ -19,7 +19,6 @@ import { useSettingsI18n } from "../../i18n.js";
 import AddNewMemberDialog from "./AddNewMemberDialog.js";
 import MemberSectionElement from "./MemberSectionElement.js";
 
-/** Environment settings › Team: members of the selected instance. */
 const TeamMebersSection = () => {
 	const { t } = useSettingsI18n();
 	const { selectedInstance } = useProjectSelection();
@@ -63,7 +62,6 @@ const TeamMebersSection = () => {
 
 	return (
 		<div className="flex flex-col gap-4">
-			{/* Section header */}
 			<div className="flex items-center gap-3">
 				<div className="flex flex-col gap-0.5 flex-1">
 					<h2 className="text-sm font-semibold">{t("team.title")}</h2>
@@ -75,9 +73,7 @@ const TeamMebersSection = () => {
 				</Button>
 			</div>
 
-			{/* Table */}
 			<div className="rounded-xl border border-sidebar-border overflow-hidden">
-				{/* Table header */}
 				<div className="grid grid-cols-[1fr_140px_40px] items-center px-4 py-2.5 bg-muted/40 border-b border-sidebar-border">
 					<span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
 						{t("team.member")}
@@ -87,7 +83,6 @@ const TeamMebersSection = () => {
 					</span>
 					<span />
 				</div>
-				{/* Table rows */}
 				<div className="divide-y divide-sidebar-border">
 					{members.map((member) => (
 						<MemberSectionElement

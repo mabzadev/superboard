@@ -5,8 +5,6 @@ export interface PaginatedResponse<T> {
 	per_page: number;
 }
 
-// --- Instance API payloads ---
-
 export interface DismissGetStartedPayload {
 	get_started_dismissed?: boolean;
 }
@@ -20,14 +18,10 @@ export interface RevenueCollectionPayload {
 	revenue_collection_enabled: boolean;
 }
 
-// --- User API payloads ---
-
 export interface EditUserPayload {
 	name?: string;
 	email?: string;
 }
-
-// --- Campaign API payloads ---
 
 export interface CreateCampaignPayload {
 	name: string;
@@ -37,8 +31,6 @@ export interface UpdateCampaignPayload {
 	name?: string;
 	active?: boolean;
 }
-
-// --- Events API payloads ---
 
 export interface EventsSearchPayload {
 	start_date: string;
@@ -66,13 +58,9 @@ export interface EventsSortedPayload {
 	platform?: string;
 }
 
-// --- Link API payloads ---
-
 export interface LinksByIdsPayload {
 	ids: string[];
 }
-
-// --- Domain API payloads ---
 
 export interface SubdomainPayload {
 	subdomain?: string;
@@ -85,8 +73,6 @@ export interface GoogleTrackingIdPayload {
 	google_tracking_id: string;
 }
 
-// --- Notification API payloads ---
-
 export interface CreateNotificationApiPayload {
 	title: string;
 	subtitle: string;
@@ -98,10 +84,6 @@ export interface CreateNotificationApiPayload {
 	send_push: boolean;
 	html?: string;
 }
-
-// --- Platform config payloads ---
-// These can be either FormData (for file uploads) or typed objects.
-// Use `FormData | PlatformConfigPayload` at call sites.
 
 export interface IosConfigPayload {
 	bundle_id?: string;

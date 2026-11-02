@@ -24,10 +24,6 @@ const messages = {
 	},
 };
 
-/**
- * Content and file settings live in their own pages; legacy `?tab=content|files` links open them there.
- * Service health and lifecycle are owned by the Plugins page, so `?tab=configuration` just lands here.
- */
 const legacyTargets = { content: "/data/content", files: "/data/files" } as const;
 function legacyTarget() {
 	if (typeof window === "undefined") return null;

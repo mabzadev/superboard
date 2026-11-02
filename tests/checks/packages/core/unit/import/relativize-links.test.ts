@@ -1,10 +1,3 @@
-/**
- * Internal links in imported content must be rewritten to root-relative
- * URLs — otherwise migrated posts keep sending readers back to the old
- * WordPress domain (live-migration finding: an imported post linked to
- * `https://techgarage.blog/companies/google/` instead of the new site).
- */
-
 import type { PortableTextBlock } from "@emdash-cms/gutenberg-to-portable-text";
 import { describe, it, expect } from "vitest";
 
@@ -38,10 +31,8 @@ describe("relativizeContentLinks", () => {
 
 		const defs = (blocks[0] as { markDefs: Array<{ href: string }> }).markDefs;
 		expect(defs[0]?.href).toBe("/companies/google/");
-		// www-insensitive, query + hash preserved
 		expect(defs[1]?.href).toBe("/posts/a?x=1#frag");
 		expect(defs[2]?.href).toBe("https://example.com/other");
-		// media stays absolute for the media pass's URL map
 		expect(defs[3]?.href).toBe(`${SITE}/wp-content/uploads/img.jpg`);
 		expect(defs[4]?.href).toBe("mailto:hi@techgarage.blog");
 	});
@@ -65,7 +56,7 @@ describe("relativizeContentLinks", () => {
 		relativizeContentLinks(blocks, SITE);
 
 		expect(blocks[0]).toMatchObject({
-			asset: { _ref: `${SITE}/wp-content/uploads/a.jpg` }, // untouched
+			asset: { _ref: `${SITE}/wp-content/uploads/a.jpg` },
 			link: "/gallery/",
 		});
 		expect(blocks[1]).toMatchObject({ url: "/pricing/" });

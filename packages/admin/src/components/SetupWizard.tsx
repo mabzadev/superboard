@@ -1,16 +1,3 @@
-/**
- * Setup Wizard - Multi-step first-run setup page
- *
- * This component is NOT wrapped in the admin Shell.
- * It's a standalone page for initial site configuration.
- *
- * Steps:
- * 1. Site Configuration (title, tagline, sample content)
- * 2. Create admin account — user picks any available auth method:
- *    - Passkey (always available)
- *    - Any configured auth provider (AT Protocol, GitHub, Google, etc.)
- */
-
 import { Button, Checkbox, Input, Loader } from "@cloudflare/kumo";
 import { plural } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
@@ -21,10 +8,6 @@ import { apiFetch, fetchManifest, parseApiResponse } from "../lib/api/client";
 import { useAuthProviderList, type AuthProviderModule } from "../lib/auth-provider-context";
 import { PasskeyRegistration } from "./auth/PasskeyRegistration";
 import { BrandLogo } from "./Logo.js";
-
-// ============================================================================
-// Types
-// ============================================================================
 
 interface SetupStatusResponse {
 	needsSetup: boolean;
@@ -37,7 +20,6 @@ interface SetupStatusResponse {
 		title?: string;
 		tagline?: string;
 	};
-	/** Auth mode - "cloudflare-access" or "passkey" */
 	authMode?: "cloudflare-access" | "passkey";
 }
 
@@ -50,7 +32,6 @@ interface SetupSiteRequest {
 interface SetupSiteResponse {
 	success: boolean;
 	error?: string;
-	/** In Access mode, setup is complete after site config */
 	setupComplete?: boolean;
 	result?: {
 		collections: { created: number; skipped: number };
@@ -71,14 +52,10 @@ interface SetupAdminRequest {
 interface SetupAdminResponse {
 	success: boolean;
 	error?: string;
-	options?: unknown; // WebAuthn registration options
+	options?: unknown;
 }
 
 type WizardStep = "site" | "admin" | "passkey";
-
-// ============================================================================
-// Step Components
-// ============================================================================
 
 interface SiteStepProps {
 	seedInfo?: SetupStatusResponse["seedInfo"];
@@ -282,7 +259,6 @@ function AuthMethodStep({ adminData, providers, onBack }: AuthMethodStepProps) {
 		);
 	}
 
-	// Show provider form (full card replacement)
 	if (activeProvider) {
 		const provider = providers.find((p) => p.id === activeProvider);
 		if (provider && (provider.SetupStep || provider.LoginForm)) {
@@ -311,7 +287,6 @@ function AuthMethodStep({ adminData, providers, onBack }: AuthMethodStepProps) {
 
 	return (
 		<div className="space-y-6">
-			{/* Passkey option */}
 			<div className="text-center">
 				<h3 className="text-lg font-medium">{t`Choose how to sign in`}</h3>
 				<p className="text-sm text-kumo-subtle mt-1">
@@ -347,7 +322,6 @@ function AuthMethodStep({ adminData, providers, onBack }: AuthMethodStepProps) {
 			</Button>
 			{emailSetup.error && <p className="text-sm text-kumo-danger">{emailSetup.error.message}</p>}
 
-			{/* Auth provider options */}
 			{hasProviders && (
 				<>
 					<div
@@ -374,10 +348,6 @@ function AuthMethodStep({ adminData, providers, onBack }: AuthMethodStepProps) {
 	);
 }
 
-// ============================================================================
-// Progress Indicator
-// ============================================================================
-
 interface StepIndicatorProps {
 	currentStep: WizardStep;
 	useAccessAuth?: boolean;
@@ -385,7 +355,6 @@ interface StepIndicatorProps {
 
 function StepIndicator({ currentStep, useAccessAuth }: StepIndicatorProps) {
 	const { t } = useLingui();
-	// In Access mode, only show the site step
 	const steps = useAccessAuth
 		? ([{ key: "site", label: t`Site Settings` }] as const)
 		: ([
@@ -445,10 +414,6 @@ function StepIndicator({ currentStep, useAccessAuth }: StepIndicatorProps) {
 	);
 }
 
-// ============================================================================
-// Main Component
-// ============================================================================
-
 export function SetupWizard() {
 	const { t } = useLingui();
 	const [currentStep, setCurrentStep] = React.useState<WizardStep>("site");
@@ -457,10 +422,8 @@ export function SetupWizard() {
 	const [error, setError] = React.useState<string | undefined>();
 	const [urlError, setUrlError] = React.useState<string | null>(null);
 
-	// Auth provider components from virtual module (via context)
 	const authProviderList = useAuthProviderList();
 
-	// Check for error in URL (from OAuth/provider redirect)
 	React.useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
 		const errorParam = params.get("error");
@@ -468,12 +431,10 @@ export function SetupWizard() {
 
 		if (errorParam) {
 			setUrlError(message || `Authentication error: ${errorParam}`);
-			// Clean up URL
 			window.history.replaceState({}, "", window.location.pathname);
 		}
 	}, []);
 
-	// Check setup status
 	const {
 		data: status,
 		isLoading: statusLoading,
@@ -487,16 +448,13 @@ export function SetupWizard() {
 		retry: false,
 	});
 
-	// Fetch manifest for admin branding
 	const { data: manifest } = useQuery({
 		queryKey: ["manifest"],
 		queryFn: fetchManifest,
 	});
 
-	// Check if using Cloudflare Access auth
 	const useAccessAuth = status?.authMode === "cloudflare-access";
 
-	// Site setup mutation
 	const siteMutation = useMutation({
 		mutationFn: async (data: SetupSiteRequest) => {
 			const response = await apiFetch("/_emdash/api/setup", {
@@ -508,12 +466,10 @@ export function SetupWizard() {
 		},
 		onSuccess: (data) => {
 			setError(undefined);
-			// In Access mode, setup is complete - redirect to admin
 			if (data.setupComplete) {
 				window.location.href = "/_emdash/admin";
 				return;
 			}
-			// Continue to admin account creation
 			setCurrentStep("admin");
 		},
 		onError: (err: Error) => {
@@ -521,7 +477,6 @@ export function SetupWizard() {
 		},
 	});
 
-	// Admin setup mutation
 	const adminMutation = useMutation({
 		mutationFn: async (data: SetupAdminRequest) => {
 			const response = await apiFetch("/_emdash/api/setup/admin", {
@@ -540,25 +495,21 @@ export function SetupWizard() {
 		},
 	});
 
-	// Handle site step completion
 	const handleSiteNext = (data: SetupSiteRequest) => {
 		setSiteData(data);
 		siteMutation.mutate(data);
 	};
 
-	// Handle admin step completion
 	const handleAdminNext = (data: SetupAdminRequest) => {
 		setAdminData(data);
 		adminMutation.mutate(data);
 	};
 
-	// Redirect if setup already complete
 	if (!statusLoading && status && !status.needsSetup) {
 		window.location.href = "/_emdash/admin";
 		return null;
 	}
 
-	// Loading state
 	if (statusLoading) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-kumo-base">
@@ -570,7 +521,6 @@ export function SetupWizard() {
 		);
 	}
 
-	// Error state
 	if (statusError) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-kumo-base">
@@ -587,7 +537,6 @@ export function SetupWizard() {
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-kumo-base p-4">
 			<div className="w-full max-w-lg">
-				{/* Header */}
 				<div className="text-center mb-6">
 					<BrandLogo
 						logoUrl={manifest?.admin?.logo}
@@ -604,17 +553,14 @@ export function SetupWizard() {
 					)}
 				</div>
 
-				{/* Error from URL (provider failure) */}
 				{urlError && (
 					<div className="mb-6 rounded-lg bg-kumo-danger/10 border border-kumo-danger/20 p-4 text-sm text-kumo-danger">
 						{urlError}
 					</div>
 				)}
 
-				{/* Progress */}
 				<StepIndicator currentStep={currentStep} useAccessAuth={useAccessAuth} />
 
-				{/* Form Card */}
 				<div className="bg-kumo-base border rounded-lg shadow-sm p-6">
 					{currentStep === "site" && (
 						<SiteStep

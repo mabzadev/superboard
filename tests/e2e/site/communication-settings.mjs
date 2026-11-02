@@ -235,7 +235,6 @@ try {
 			await page.reload();
 			await page.locator('astro-island[component-url*="NativeFrontApp"]:not([ssr])').waitFor();
 			await expect(frequency).toHaveValue(fr ? "47" : "46");
-			// Plugin health and lifecycle are owned by the central Plugins page; old links open Senders.
 			await open("configuration", locale);
 			await expect(page.getByRole("tab", { name: "Configuration", exact: true })).toHaveCount(0);
 			await expect(

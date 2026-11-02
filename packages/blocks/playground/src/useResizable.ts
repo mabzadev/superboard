@@ -1,11 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 
 interface UseResizableOptions {
-	/** Initial width in pixels */
 	initial: number;
-	/** Minimum width */
 	min: number;
-	/** Maximum width */
 	max: number;
 }
 

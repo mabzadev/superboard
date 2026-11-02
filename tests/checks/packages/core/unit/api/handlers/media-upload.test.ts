@@ -1,11 +1,3 @@
-/**
- * Tests for the programmatic media upload handler backing the
- * `media_upload` MCP tool (#620).
- *
- * Covers base64 and URL modes, input validation, the global MIME
- * allowlist, size limits, SSRF rejection, and content-hash dedupe.
- */
-
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,7 +7,6 @@ import { setDefaultDnsResolver } from "../../../../../../../packages/core/src/se
 import type { Storage } from "../../../../../../../packages/core/src/storage/types.js";
 import { setupTestDatabase, teardownTestDatabase } from "../../../utils/test-db.js";
 
-// 1x1 transparent PNG
 const PNG_BASE64 =
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 const PNG_BYTES = Uint8Array.from(atob(PNG_BASE64), (c) => c.charCodeAt(0));
@@ -44,7 +35,6 @@ function createFakeStorage() {
 			throw new Error("not implemented");
 		},
 	};
-	// ponytail: structural stand-in covers the Storage surface this handler uses
 	return storage as unknown as Storage & { uploads: Map<string, Uint8Array> };
 }
 
@@ -56,7 +46,6 @@ describe("handleMediaUpload (#620)", () => {
 	beforeEach(async () => {
 		db = await setupTestDatabase();
 		storage = createFakeStorage();
-		// Resolve every hostname to a public IP so ssrfSafeFetch doesn't hit DNS
 		previousResolver = setDefaultDnsResolver(async () => ["93.184.216.34"]);
 	});
 
@@ -142,8 +131,6 @@ describe("handleMediaUpload (#620)", () => {
 	});
 
 	it("rejects malformed MIME strings that would pass the prefix allowlist", async () => {
-		// "image/png\r\nX-Evil: 1" starts with "image/" but must never reach
-		// the storage ContentType header or the file-serving response.
 		const crafted = await handleMediaUpload(db, storage, {
 			filename: "x.png",
 			base64: PNG_BASE64,
@@ -159,7 +146,6 @@ describe("handleMediaUpload (#620)", () => {
 			"fetch",
 			vi.fn(async () => {
 				const response = new Response(PNG_BYTES);
-				// Response normalizes header values, so inject the raw string
 				vi.spyOn(response.headers, "get").mockReturnValue("image/png\r\nX-Evil: 1");
 				return response;
 			}),

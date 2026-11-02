@@ -1,9 +1,3 @@
-/**
- * Marketplace plugin uninstall endpoint
- *
- * POST /_emdash/api/admin/plugins/:id/uninstall - Uninstall a marketplace plugin
- */
-
 import type { APIRoute } from "astro";
 import { z } from "zod";
 

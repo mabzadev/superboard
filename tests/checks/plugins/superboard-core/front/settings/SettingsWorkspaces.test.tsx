@@ -114,7 +114,6 @@ describe("SDK & apps", () => {
 		expect(`${window.location.pathname}${window.location.search}`).toBe("/core/libraries?tab=web");
 		expect(screen.getByText("web setup")).toBeInTheDocument();
 
-		// A legacy route view keeps the tab explicit so it does not reopen its own tab.
 		selectTab("SDK libraries");
 		expect(`${window.location.pathname}${window.location.search}`).toBe(
 			"/core/libraries?tab=libraries",

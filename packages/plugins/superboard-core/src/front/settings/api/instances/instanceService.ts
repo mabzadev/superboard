@@ -9,8 +9,6 @@ import type { AxiosResponse } from "axios";
 
 import { DELETE, GET, POST, PUT } from "../../transport.js";
 
-// --- Response interfaces ---
-
 export interface InstancesResponse {
 	instances: Instance[];
 }

@@ -1,13 +1,11 @@
 import Foundation
 
-/// A pending custom purchase awaiting retry.
 struct PendingTransaction: Codable {
     let id: UUID
     let transaction: TransactionData
     var retryCount: Int = 0
 }
 
-/// Protocol defining the payment events storage interface.
 protocol PaymentEventsStorageProtocol {
     func markTransactionAsHandled(transactionID: UInt64)
     func removeEvent(transactionID: UInt64)
@@ -19,13 +17,8 @@ protocol PaymentEventsStorageProtocol {
     func incrementRetryCount(id: UUID)
 }
 
-/// A class responsible for storing and managing payment transaction events.
-/// Uses UserDefaults for persistent storage that survives cache purges and has no TTL.
 class PaymentEventsStorage: PaymentEventsStorageProtocol {
 
-    // MARK: - Constants
-
-    /// Constants used within the class.
     private struct Constants {
         static let userDefaultsKey = "com.superboard.handled-transaction-ids"
         static let migrationDoneKey = "com.superboard.payment-storage-migrated"
@@ -34,24 +27,14 @@ class PaymentEventsStorage: PaymentEventsStorageProtocol {
         static let legacyCacheKey = "handled-transaction-ids"
     }
 
-    // MARK: - Properties
-
     private let defaults: UserDefaults
     private let queue = DispatchQueue(label: "com.superboard.paymentEventsStorage")
-
-    // MARK: - Initialization
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         migrateFromDataCacheIfNeeded()
     }
 
-    // MARK: - Public Methods
-
-    /// Marks a transaction as handled by adding its ID to the storage.
-    /// If the transaction ID already exists, it will not be added again.
-    ///
-    /// - Parameter transactionID: The ID of the transaction to mark as handled.
     func markTransactionAsHandled(transactionID: UInt64) {
         queue.sync {
             var existingTransactionIDs = fetchHandledTransactionIDs()
@@ -63,9 +46,6 @@ class PaymentEventsStorage: PaymentEventsStorageProtocol {
         }
     }
 
-    /// Removes a transaction from the list of handled transactions.
-    ///
-    /// - Parameter transactionID: The ID of the transaction to remove.
     func removeEvent(transactionID: UInt64) {
         queue.sync {
             var existingTransactionIDs = fetchHandledTransactionIDs()
@@ -74,10 +54,6 @@ class PaymentEventsStorage: PaymentEventsStorageProtocol {
         }
     }
 
-    /// Checks if a transaction has already been handled.
-    ///
-    /// - Parameter transactionID: The ID of the transaction to check.
-    /// - Returns: A boolean value indicating whether the transaction has been handled.
     func isTransactionHandled(transactionID: UInt64?) -> Bool {
         queue.sync {
             guard let transactionID else {
@@ -87,8 +63,6 @@ class PaymentEventsStorage: PaymentEventsStorageProtocol {
             return fetchHandledTransactionIDs().contains(transactionID)
         }
     }
-
-    // MARK: - Pending Transactions
 
     func savePendingTransaction(_ transaction: TransactionData) {
         queue.sync {
@@ -122,7 +96,6 @@ class PaymentEventsStorage: PaymentEventsStorageProtocol {
         }
     }
 
-    /// Internal fetch — must be called within `queue`.
     private func _fetchPendingTransactions() -> [PendingTransaction] {
         guard let data = defaults.data(forKey: Constants.pendingTransactionsKey) else {
             return []
@@ -144,8 +117,6 @@ class PaymentEventsStorage: PaymentEventsStorageProtocol {
         }
     }
 
-    // MARK: - Private Methods
-
     private func fetchHandledTransactionIDs() -> Set<UInt64> {
         guard let array = defaults.object(forKey: Constants.userDefaultsKey) as? [UInt64] else {
             return []
@@ -157,8 +128,6 @@ class PaymentEventsStorage: PaymentEventsStorageProtocol {
         defaults.set(Array(transactionIDs), forKey: Constants.userDefaultsKey)
     }
 
-    /// One-time migration from the old DataCache-backed storage to UserDefaults.
-    /// Prevents a mass re-report of historical transactions on the first launch after update.
     private func migrateFromDataCacheIfNeeded() {
         queue.sync {
             guard !defaults.bool(forKey: Constants.migrationDoneKey) else { return }
@@ -169,12 +138,10 @@ class PaymentEventsStorage: PaymentEventsStorageProtocol {
                 return
             }
 
-            // Merge legacy IDs with any that may already exist in UserDefaults
             var current = fetchHandledTransactionIDs()
             current.formUnion(legacyIDs)
             saveHandledTransactionIDs(current)
 
-            // Clean up the old cache entry
             legacyCache.clean(byKey: Constants.legacyCacheKey)
         }
     }

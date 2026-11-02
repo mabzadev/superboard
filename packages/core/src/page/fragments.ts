@@ -1,23 +1,8 @@
-/**
- * Page fragment collection and rendering
- *
- * Collects raw markup / script contributions from trusted plugins via
- * the page:fragments hook. Sandboxed plugins are never invoked.
- */
-
 import type { PageFragmentContribution, PagePlacement } from "../plugins/types.js";
 import { escapeHtmlAttr } from "./metadata.js";
 
-/** Escape sequences that would break out of a script tag */
 const SCRIPT_CLOSE_RE = /<\//g;
 
-// ── Dedupe and filter ───────────────────────────────────────────
-
-/**
- * Filter contributions to a specific placement and deduplicate.
- * - Contributions with the same `key + placement` are deduped (first wins).
- * - External scripts with the same `src + placement` are deduped.
- */
 export function resolveFragments(
 	contributions: PageFragmentContribution[],
 	placement: PagePlacement,
@@ -27,7 +12,6 @@ export function resolveFragments(
 	const result: PageFragmentContribution[] = [];
 
 	for (const c of filtered) {
-		// Key-based dedupe
 		if (c.key) {
 			const dedupeKey = `key:${c.key}`;
 			if (seen.has(dedupeKey)) continue;
@@ -44,8 +28,6 @@ export function resolveFragments(
 	return result;
 }
 
-// ── HTML rendering ──────────────────────────────────────────────
-
 const EVENT_HANDLER_RE = /^on/i;
 
 function renderAttributes(attrs: Record<string, string>): string {
@@ -55,7 +37,6 @@ function renderAttributes(attrs: Record<string, string>): string {
 		.join("");
 }
 
-/** Render a single fragment contribution to HTML */
 function renderFragment(c: PageFragmentContribution): string {
 	switch (c.kind) {
 		case "external-script": {
@@ -69,8 +50,6 @@ function renderFragment(c: PageFragmentContribution): string {
 		case "inline-script": {
 			let tag = "<script";
 			if (c.attributes) tag += renderAttributes(c.attributes);
-			// Escape </ to <\/ to prevent breaking out of the script tag.
-			// This is valid JS and protects against code built from user data.
 			tag += `>${c.code.replace(SCRIPT_CLOSE_RE, "<\\/")}</script>`;
 			return tag;
 		}
@@ -79,7 +58,6 @@ function renderFragment(c: PageFragmentContribution): string {
 	}
 }
 
-/** Render a list of fragment contributions to an HTML string */
 export function renderFragments(
 	contributions: PageFragmentContribution[],
 	placement: PagePlacement,

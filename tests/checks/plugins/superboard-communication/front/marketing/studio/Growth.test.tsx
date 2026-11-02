@@ -13,7 +13,6 @@ globalThis.ResizeObserver ??= class {
 	unobserve() {}
 	disconnect() {}
 };
-// Base UI checkboxes dispatch pointer events; jsdom has no PointerEvent.
 globalThis.PointerEvent ??= class extends MouseEvent {} as typeof PointerEvent;
 
 const growth = vi.hoisted(() => ({

@@ -4,7 +4,6 @@ import { describe, it, expect, vi } from "vitest";
 import { fetchUserInfo } from "../../../../../../../../sdks/web/identity/web/src/flows/fetchUserInfo";
 import { getUserInfo } from "../../../../../../../../sdks/web/identity/web/src/requests";
 
-// Mock the requests module
 vi.mock("../../../../../../../../sdks/web/identity/web/src/requests", () => ({
 	getUserInfo: vi.fn(),
 }));

@@ -18,8 +18,6 @@ export default centralTests(
 	defineConfig({
 		root,
 		plugins: [
-			// The Cloudflare pool currently resolves Vite 8 while Identity's client
-			// build remains on Vite 7. Both implement the same runtime plugin contract.
 			cloudflareTest(async () => {
 				const pair = await generateKeyPair("ES256", { extractable: true });
 				const key = await exportJWK(pair.privateKey);

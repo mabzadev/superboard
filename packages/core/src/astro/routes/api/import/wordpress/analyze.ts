@@ -1,12 +1,3 @@
-/**
- * WordPress WXR analyze endpoint
- *
- * POST /_emdash/api/import/wordpress/analyze
- *
- * Accepts a WXR file upload and returns analysis of its contents,
- * including post types, counts, custom fields, and schema compatibility.
- */
-
 import type { APIRoute } from "astro";
 import { parseWxrString, SchemaRegistry, type WxrData } from "emdash";
 import mime from "mime/lite";
@@ -22,13 +13,8 @@ const NUMERIC_PATTERN = /^-?\d+(\.\d+)?$/;
 const INVALID_SLUG_CHARS = /[^a-z0-9_]/g;
 const LEADING_NON_ALPHA = /^[^a-z]+/;
 
-/** Field compatibility status */
-export type FieldCompatibility =
-	| "compatible" // Field exists with compatible type
-	| "type_mismatch" // Field exists but type differs
-	| "missing"; // Field doesn't exist
+export type FieldCompatibility = "compatible" | "type_mismatch" | "missing";
 
-/** Single field definition for import */
 export interface ImportFieldDef {
 	slug: string;
 	label: string;
@@ -37,11 +23,8 @@ export interface ImportFieldDef {
 	searchable?: boolean;
 }
 
-/** Schema status for a collection */
 export interface CollectionSchemaStatus {
-	/** Whether collection exists */
 	exists: boolean;
-	/** If exists, per-field compatibility */
 	fieldStatus: Record<
 		string,
 		{
@@ -50,27 +33,18 @@ export interface CollectionSchemaStatus {
 			requiredType: string;
 		}
 	>;
-	/** Can we safely import to this collection? */
 	canImport: boolean;
-	/** Human-readable reason if canImport is false */
 	reason?: string;
 }
 
-/** Post type with full schema info */
 export interface PostTypeAnalysis {
-	/** WordPress post type name */
 	name: string;
-	/** Number of items to import */
 	count: number;
-	/** Suggested collection slug */
 	suggestedCollection: string;
-	/** Fields we need to create */
 	requiredFields: ImportFieldDef[];
-	/** Schema compatibility status */
 	schemaStatus: CollectionSchemaStatus;
 }
 
-/** Individual attachment info for media import */
 export interface AttachmentInfo {
 	id?: number;
 	title?: string;
@@ -79,7 +53,6 @@ export interface AttachmentInfo {
 	mimeType?: string;
 }
 
-/** Author info from WordPress */
 export interface WpAuthorInfo {
 	id?: number;
 	login?: string;
@@ -126,14 +99,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			return apiError("VALIDATION_ERROR", "No file provided", 400);
 		}
 
-		// Parse WXR
 		const text = await file.text();
 		const wxr = await parseWxrString(text);
 
-		// Fetch existing collections from schema registry
 		const existingCollections = await fetchExistingCollections(emdash?.db);
 
-		// Analyze content with schema compatibility
 		const analysis = analyzeWxr(wxr, existingCollections);
 
 		return apiSuccess(analysis);
@@ -142,13 +112,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	}
 };
 
-/** Existing collection info from schema registry */
 interface ExistingCollection {
 	slug: string;
 	fields: Map<string, { type: string; columnType: string }>;
 }
 
-/** Fetch collections and their fields from schema registry */
 async function fetchExistingCollections(
 	db: EmDashHandlers["db"] | undefined,
 ): Promise<Map<string, ExistingCollection>> {
@@ -184,14 +152,12 @@ async function fetchExistingCollections(
 	return result;
 }
 
-/** Base fields required for any WordPress import */
 const BASE_REQUIRED_FIELDS: ImportFieldDef[] = [
 	{ slug: "title", label: "Title", type: "string", required: true, searchable: true },
 	{ slug: "content", label: "Content", type: "portableText", required: false, searchable: true },
 	{ slug: "excerpt", label: "Excerpt", type: "text", required: false },
 ];
 
-/** Featured image field - only added to post types that have _thumbnail_id */
 const FEATURED_IMAGE_FIELD: ImportFieldDef = {
 	slug: "featured_image",
 	label: "Featured Image",
@@ -203,7 +169,6 @@ function analyzeWxr(
 	wxr: WxrData,
 	existingCollections: Map<string, ExistingCollection>,
 ): WxrAnalysis {
-	// Count post types and track which have featured images
 	const postTypeCounts = new Map<string, number>();
 	const postTypesWithThumbnails = new Set<string>();
 	const metaKeys = new Map<string, { count: number; samples: string[]; isInternal: boolean }>();
@@ -213,17 +178,14 @@ function analyzeWxr(
 		const type = post.postType || "post";
 		postTypeCounts.set(type, (postTypeCounts.get(type) || 0) + 1);
 
-		// Count posts per author (by login)
 		if (post.creator) {
 			authorPostCounts.set(post.creator, (authorPostCounts.get(post.creator) || 0) + 1);
 		}
 
-		// Track if this post type has featured images
 		if (post.meta.has("_thumbnail_id")) {
 			postTypesWithThumbnails.add(type);
 		}
 
-		// Analyze meta keys
 		for (const [key, value] of post.meta) {
 			const existing = metaKeys.get(key);
 			if (existing) {
@@ -241,7 +203,6 @@ function analyzeWxr(
 		}
 	}
 
-	// Map meta keys to fields (for custom fields analysis)
 	const customFields = [...metaKeys.entries()]
 		.filter(([_, info]) => !info.isInternal)
 		.map(([key, info]) => ({
@@ -254,14 +215,12 @@ function analyzeWxr(
 		}))
 		.toSorted((a, b) => b.count - a.count);
 
-	// Build post type analysis with schema compatibility
 	const seenSlugs = new Map<string, number>();
 	const postTypes: PostTypeAnalysis[] = [...postTypeCounts.entries()]
 		.filter(([type]) => !isInternalPostType(type))
 		.map(([name, count]) => {
 			let suggestedCollection = mapPostTypeToCollection(name);
 
-			// Deduplicate: if multiple post types produce the same slug, append a suffix
 			const seen = seenSlugs.get(suggestedCollection) ?? 0;
 			seenSlugs.set(suggestedCollection, seen + 1);
 			if (seen > 0) {
@@ -269,7 +228,6 @@ function analyzeWxr(
 			}
 			const existingCollection = existingCollections.get(suggestedCollection);
 
-			// Build required fields - add featured_image only if posts have thumbnails
 			const requiredFields = [...BASE_REQUIRED_FIELDS];
 			if (postTypesWithThumbnails.has(name)) {
 				requiredFields.push(FEATURED_IMAGE_FIELD);
@@ -287,7 +245,6 @@ function analyzeWxr(
 		})
 		.toSorted((a, b) => b.count - a.count);
 
-	// Build attachment info list
 	const attachmentItems: AttachmentInfo[] = wxr.attachments.map((att) => {
 		const filename = att.url ? getFilenameFromUrl(att.url) : undefined;
 		const mimeType = filename ? guessMimeType(filename) : undefined;
@@ -323,7 +280,6 @@ function analyzeWxr(
 	};
 }
 
-/** Extract filename from URL */
 function getFilenameFromUrl(url: string): string | undefined {
 	try {
 		const parsed = new URL(url);
@@ -334,18 +290,15 @@ function getFilenameFromUrl(url: string): string | undefined {
 	}
 }
 
-/** Guess MIME type from filename extension */
 function guessMimeType(filename: string): string | undefined {
 	return mime.getType(filename) ?? undefined;
 }
 
-/** Check if a collection schema is compatible with import requirements */
 function checkSchemaCompatibility(
 	requiredFields: ImportFieldDef[],
 	existingCollection: ExistingCollection | undefined,
 ): CollectionSchemaStatus {
 	if (!existingCollection) {
-		// Collection doesn't exist - will need to create it
 		const fieldStatus: CollectionSchemaStatus["fieldStatus"] = {};
 		for (const field of requiredFields) {
 			fieldStatus[field.slug] = {
@@ -356,11 +309,10 @@ function checkSchemaCompatibility(
 		return {
 			exists: false,
 			fieldStatus,
-			canImport: true, // We can create it
+			canImport: true,
 		};
 	}
 
-	// Collection exists - check field compatibility
 	const fieldStatus: CollectionSchemaStatus["fieldStatus"] = {};
 	const incompatibleFields: string[] = [];
 
@@ -368,20 +320,17 @@ function checkSchemaCompatibility(
 		const existingField = existingCollection.fields.get(field.slug);
 
 		if (!existingField) {
-			// Field missing - we can add it
 			fieldStatus[field.slug] = {
 				status: "missing",
 				requiredType: field.type,
 			};
 		} else if (isTypeCompatible(field.type, existingField.type)) {
-			// Field exists and is compatible
 			fieldStatus[field.slug] = {
 				status: "compatible",
 				existingType: existingField.type,
 				requiredType: field.type,
 			};
 		} else {
-			// Field exists but type doesn't match
 			fieldStatus[field.slug] = {
 				status: "type_mismatch",
 				existingType: existingField.type,
@@ -405,12 +354,9 @@ function checkSchemaCompatibility(
 	};
 }
 
-/** Check if two field types are compatible for import */
 function isTypeCompatible(requiredType: string, existingType: string): boolean {
-	// Exact match
 	if (requiredType === existingType) return true;
 
-	// Compatible mappings
 	const compatibleTypes: Record<string, string[]> = {
 		string: ["string", "text", "slug"],
 		text: ["string", "text"],
@@ -434,8 +380,8 @@ function isInternalPostType(type: string): boolean {
 		"wp_navigation",
 		"wp_template",
 		"wp_template_part",
-		"attachment", // Handled separately as media
-		"wp_block", // Handled separately as sections (reusable blocks)
+		"attachment",
+		"wp_block",
 	].includes(type);
 }
 
@@ -445,12 +391,10 @@ function isInternalMetaKey(key: string): boolean {
 	if (key === "_edit_last" || key === "_edit_lock") return true;
 	if (key === "_pingme" || key === "_encloseme") return true;
 
-	// Keep these useful ones
 	if (key === "_thumbnail_id") return false;
 	if (key.startsWith("_yoast_")) return false;
 	if (key.startsWith("_rank_math_")) return false;
 
-	// Other underscore prefixes are usually internal
 	if (key.startsWith("_")) return true;
 
 	return false;
@@ -482,14 +426,12 @@ function mapPostTypeToCollection(postType: string): string {
 }
 
 function mapMetaKeyToField(key: string): string {
-	// SEO plugins
 	if (key === "_yoast_wpseo_title") return "seo_title";
 	if (key === "_yoast_wpseo_metadesc") return "seo_description";
 	if (key === "_rank_math_title") return "seo_title";
 	if (key === "_rank_math_description") return "seo_description";
 	if (key === "_thumbnail_id") return "featured_image";
 
-	// Remove leading underscore
 	if (key.startsWith("_")) return key.slice(1);
 
 	return key;
@@ -499,19 +441,16 @@ function inferMetaType(
 	key: string,
 	value: string | undefined,
 ): "string" | "number" | "boolean" | "date" | "json" {
-	if (key.endsWith("_id") || key === "_thumbnail_id") return "string"; // reference
+	if (key.endsWith("_id") || key === "_thumbnail_id") return "string";
 	if (key.endsWith("_date") || key.endsWith("_time")) return "date";
 	if (key.endsWith("_count") || key.endsWith("_number")) return "number";
 
 	if (!value) return "string";
 
-	// Serialized PHP or JSON
 	if (value.startsWith("a:") || value.startsWith("{") || value.startsWith("[")) return "json";
 
-	// Number
 	if (NUMERIC_PATTERN.test(value)) return "number";
 
-	// Boolean
 	if (["0", "1", "true", "false"].includes(value)) return "boolean";
 
 	return "string";
@@ -527,5 +466,4 @@ function singularize(str: string): string {
 	return str;
 }
 
-// Export helpers for use in prepare endpoint
 export { capitalize, sanitizeSlug, singularize, mapPostTypeToCollection };

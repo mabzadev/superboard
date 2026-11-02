@@ -19,11 +19,6 @@ import * as React from "react";
 
 import { cn } from "../../lib/utils.js";
 
-/**
- * TipTap's heading-dropdown-menu API adapted to EmDash's Kumo primitives.
- * Source pattern: `npx @tiptap/cli add heading-dropdown-menu`.
- */
-
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 const DEFAULT_LEVELS: readonly HeadingLevel[] = [1, 2, 3, 4, 5, 6];

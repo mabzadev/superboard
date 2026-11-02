@@ -5,29 +5,11 @@ import * as React from "react";
 import type { FieldWidgetProps } from "../shared/types";
 import { normalizeTags } from "../shared/utils";
 
-/**
- * Tags widget — free-form chip/tag input for json fields that store string arrays.
- *
- * Seed usage:
- *   {
- *     "slug": "keywords",
- *     "type": "json",
- *     "widget": "field-kit:tags",
- *     "options": {
- *       "placeholder": "Add keyword...",
- *       "max": 10,
- *       "suggestions": ["organic", "seasonal", "dried"],
- *       "allowCustom": true,
- *       "transform": "lowercase"
- *     }
- *   }
- *
- * Stored value: ["organic", "seasonal"]
- */
 export function Tags({ value, onChange, label, id, required, options, minimal }: FieldWidgetProps) {
 	const placeholder = (options?.placeholder as string | undefined) ?? "Add...";
 	const max = options?.max as number | undefined;
-	const suggestions = (options?.suggestions as string[] | undefined) ?? [];
+	const rawSuggestions = options?.suggestions as string[] | undefined;
+	const suggestions = React.useMemo(() => rawSuggestions ?? [], [rawSuggestions]);
 	const allowCustom = (options?.allowCustom as boolean | undefined) ?? true;
 	const transform = (options?.transform as string | undefined) ?? "none";
 	const helpText = options?.helpText as string | undefined;

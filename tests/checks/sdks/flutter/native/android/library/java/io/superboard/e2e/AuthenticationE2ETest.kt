@@ -23,9 +23,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.util.concurrent.TimeUnit
 
-/**
- * E2E tests for SDK authentication flow.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class AuthenticationE2ETest {
@@ -54,12 +51,9 @@ class AuthenticationE2ETest {
     private suspend fun configureAndWaitForAuth(apiKey: String = "test-api-key") =
         E2ETestUtils.configureAndWaitForAuth(application, apiKey, baseURL = mockWebServer.url("/").toString())
 
-    // ==================== Authentication Flow Tests ====================
-
     @Test
     fun `test SDK authenticates device and makes requests on app startup`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer, superboardId = "superboard_e2e_authenticated_123")
             E2ETestUtils.enqueueDeviceResponse(mockWebServer, lastSeen = null)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
@@ -73,10 +67,8 @@ class AuthenticationE2ETest {
                 "before SuperBoard.configure()"
             )
 
-            // Act
             val activityController = configureAndWaitForAuth("test-api-key-e2e")
 
-            // Assert - verify requests and authentication state
             val requestCount = mockWebServer.requestCount
             assertTrue("SDK should make requests to MockWebServer", requestCount > 0)
 
@@ -87,10 +79,8 @@ class AuthenticationE2ETest {
                 "after SDK configure and activity start"
             )
 
-            // Verify SDK is actually authenticated
             E2ETestUtils.assertAuthenticationCompleted()
 
-            // Verify superboardId if accessible (internal implementation detail)
             val storedSuperBoardId = E2ETestUtils.getSuperBoardId()
             if (storedSuperBoardId != null) {
                 assertEquals(
@@ -121,10 +111,8 @@ class AuthenticationE2ETest {
 
     @Test
     fun `test direct HTTP call to MockWebServer works`() {
-        // Arrange
         E2ETestUtils.enqueueAuthenticationResponse(mockWebServer, superboardId = "direct-test-123")
 
-        // Act
         val client = okhttp3.OkHttpClient()
         val mediaType = "application/json".toMediaType()
         val requestBody = "{}".toRequestBody(mediaType)
@@ -135,7 +123,6 @@ class AuthenticationE2ETest {
 
         val response = client.newCall(request).execute()
 
-        // Assert
         assertTrue("Response should be successful", response.isSuccessful)
         assertEquals(1, mockWebServer.requestCount)
     }
@@ -143,16 +130,13 @@ class AuthenticationE2ETest {
     @Test
     fun `test SDK handles authentication with test environment`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
 
-            // Act
             configureAndWaitForAuth("my-api-key")
 
-            // Assert
             val request = mockWebServer.takeRequest(1, TimeUnit.SECONDS)
             assertNotNull("Expected request to be made", request)
 
@@ -168,16 +152,13 @@ class AuthenticationE2ETest {
     @Test
     fun `test SDK completes authentication flow successfully`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
             E2ETestUtils.enqueueDeviceResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
             E2ETestUtils.enqueueEventResponse(mockWebServer)
 
-            // Act
             val activityController = configureAndWaitForAuth()
 
-            // Assert
             E2ETestUtils.assertAuthenticationCompleted()
             val requests = E2ETestUtils.collectAllRequests(mockWebServer)
             E2ETestUtils.assertAuthenticateRequestValues(requests)
@@ -191,10 +172,8 @@ class AuthenticationE2ETest {
     @Test
     fun `test SDK handles authentication timeout gracefully`() {
         runBlocking {
-            // Arrange
             E2ETestUtils.enqueueDelayedResponse(mockWebServer, 30_000)
 
-            // Act
             SuperBoard.configure(application, "test-api-key", useTestEnvironment = true, baseURL = mockWebServer.url("/").toString())
 
             E2ETestUtils.processMainLooper()
@@ -208,7 +187,6 @@ class AuthenticationE2ETest {
             delay(1000)
             E2ETestUtils.processMainLooper()
 
-            // Assert
             assertTrue(
                 "SDK should attempt authentication even with slow server",
                 mockWebServer.requestCount >= 1

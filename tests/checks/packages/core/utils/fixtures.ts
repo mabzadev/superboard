@@ -1,8 +1,5 @@
 import type { CreateContentInput } from "../../../../../packages/core/src/database/repositories/types.js";
 
-/**
- * Fixture for creating a post
- */
 export function createPostFixture(overrides: Partial<CreateContentInput> = {}): CreateContentInput {
 	return {
 		type: "post",
@@ -27,9 +24,6 @@ export function createPostFixture(overrides: Partial<CreateContentInput> = {}): 
 	};
 }
 
-/**
- * Fixture for creating a page
- */
 export function createPageFixture(overrides: Partial<CreateContentInput> = {}): CreateContentInput {
 	return {
 		type: "page",

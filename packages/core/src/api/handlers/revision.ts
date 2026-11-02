@@ -1,7 +1,3 @@
-/**
- * Revision history handlers
- */
-
 import type { Kysely } from "kysely";
 
 import { after } from "../../after.js";
@@ -20,9 +16,6 @@ export interface RevisionResponse {
 	item: Revision;
 }
 
-/**
- * List revisions for a content entry
- */
 export async function handleRevisionList(
 	db: Kysely<Database>,
 	collection: string,
@@ -51,9 +44,6 @@ export async function handleRevisionList(
 	}
 }
 
-/**
- * Get a specific revision
- */
 export async function handleRevisionGet(
 	db: Kysely<Database>,
 	revisionId: string,
@@ -87,9 +77,6 @@ export async function handleRevisionGet(
 	}
 }
 
-/**
- * Restore a revision (updates content to this revision's data and creates new revision)
- */
 export async function handleRevisionRestore(
 	db: Kysely<Database>,
 	revisionId: string,
@@ -98,7 +85,6 @@ export async function handleRevisionRestore(
 	try {
 		const revisionRepo = new RevisionRepository(db);
 
-		// Get the revision
 		const revision = await revisionRepo.findById(revisionId);
 		if (!revision) {
 			return {
@@ -110,12 +96,8 @@ export async function handleRevisionRestore(
 			};
 		}
 
-		// Extract _slug from revision data (stored as metadata, not a real column)
 		const { _slug, ...fieldData } = revision.data;
 
-		// Atomically update content and create a new revision to record the restore.
-		// If either operation fails, neither is committed (on engines that support
-		// transactions; on D1, withTransaction falls back to sequential execution).
 		const { item, queuedRevisionId } = await withTransaction(db, async (trx) => {
 			const trxContentRepo = new ContentRepository(trx);
 			const trxRevisionRepo = new RevisionRepository(trx);

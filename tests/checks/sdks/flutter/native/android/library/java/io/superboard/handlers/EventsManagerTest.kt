@@ -8,13 +8,10 @@ import io.superboard.TestAssertions.assertNotNullWithContext
 import io.superboard.TestAssertions.assertNullWithContext
 import io.superboard.TestAssertions.assertTrueWithContext
 import io.superboard.TestAssertions.assertEventStored
-// PURCHASE_EVENT_DISABLED: import io.superboard.TestAssertions.assertPaymentEventStored
 import io.superboard.model.DebugLogger
 import io.superboard.model.Event
 import io.superboard.model.EventType
 import io.superboard.model.LogLevel
-// PURCHASE_EVENT_DISABLED: import io.superboard.model.events.PaymentEvent
-// PURCHASE_EVENT_DISABLED: import io.superboard.model.events.PaymentEventType
 import io.superboard.service.ISuperBoardService
 import io.superboard.storage.IEventsStorage
 import io.superboard.storage.ILocalCache
@@ -35,9 +32,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-/**
- * Core unit tests for EventsManager.
- */
 @ExperimentalCoroutinesApi
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [28])
@@ -68,7 +62,6 @@ class EventsManagerTest {
         mockLocalCache = mockk(relaxed = true)
 
         coEvery { mockEventsStorage.getEvents() } returns emptyList()
-        // PURCHASE_EVENT_DISABLED: coEvery { mockEventsStorage.getPaymentEvents() } returns emptyList()
         coEvery { mockEventsStorage.hasEmptyTimeSpentEvent() } returns false
         every { mockLocalCache.numberOfOpens } returns 0
         every { mockLocalCache.resignTimestamp } returns null
@@ -90,8 +83,6 @@ class EventsManagerTest {
     fun tearDown() {
         unmockkAll()
     }
-
-    // ==================== Constructor Tests ====================
 
     @Test
     fun `EventsManager constructor initializes with provided context`() {
@@ -116,8 +107,6 @@ class EventsManagerTest {
             context = "after construction with default settings"
         )
     }
-
-    // ==================== App Lifecycle Tests ====================
 
     @Test
     fun `EventsManager onAppForegrounded sends queued events to backend when sending allowed`() = runTest {
@@ -224,8 +213,6 @@ class EventsManagerTest {
         }
     }
 
-    // ==================== Launch Events Tests ====================
-
     @Test
     fun `EventsManager logAppLaunchEvents stores INSTALL event when numberOfOpens is zero`() = runTest {
         every { mockLocalCache.numberOfOpens } returns 0
@@ -281,8 +268,6 @@ class EventsManagerTest {
         )
     }
 
-    // ==================== Event Logging Tests ====================
-
     @Test
     fun `EventsManager log stores event in storage`() = runTest {
         eventsManager.allowedToSendToBackend = true
@@ -322,66 +307,6 @@ class EventsManagerTest {
         coVerify { mockSuperBoardService.addEvent(any()) }
     }
 
-    // ==================== Purchase Tests ====================
-
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `EventsManager logInAppPurchase parses originalJson and stores payment event`() = runTest {
-    // PURCHASE_EVENT_DISABLED:     eventsManager.allowedToSendToBackend = true
-    // PURCHASE_EVENT_DISABLED:     eventsManager.firstRequestTime = InstantCompat.now()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     val originalJson = """
-    // PURCHASE_EVENT_DISABLED:         {
-    // PURCHASE_EVENT_DISABLED:             "orderId": "GPA.1234-5678",
-    // PURCHASE_EVENT_DISABLED:             "packageName": "io.superboard.test",
-    // PURCHASE_EVENT_DISABLED:             "productId": "premium_subscription",
-    // PURCHASE_EVENT_DISABLED:             "purchaseTime": 1234567890000,
-    // PURCHASE_EVENT_DISABLED:             "purchaseState": 0,
-    // PURCHASE_EVENT_DISABLED:             "purchaseToken": "token123"
-    // PURCHASE_EVENT_DISABLED:         }
-    // PURCHASE_EVENT_DISABLED:     """.trimIndent()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     eventsManager.logInAppPurchase(originalJson)
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     coVerify { mockEventsStorage.addPaymentEvent(any()) }
-    // PURCHASE_EVENT_DISABLED: }
-
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `EventsManager logCustomPurchase stores payment event with correct type`() = runTest {
-    // PURCHASE_EVENT_DISABLED:     eventsManager.allowedToSendToBackend = true
-    // PURCHASE_EVENT_DISABLED:     eventsManager.firstRequestTime = InstantCompat.now()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     eventsManager.logCustomPurchase(
-    // PURCHASE_EVENT_DISABLED:         type = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:         priceInCents = 999,
-    // PURCHASE_EVENT_DISABLED:         currency = "USD",
-    // PURCHASE_EVENT_DISABLED:         productId = "premium"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     assertPaymentEventStored(
-    // PURCHASE_EVENT_DISABLED:         eventType = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:         mockStorage = mockEventsStorage,
-    // PURCHASE_EVENT_DISABLED:         context = "after logCustomPurchase() with type=BUY"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED: }
-
-    // PURCHASE_EVENT_DISABLED: @Test
-    // PURCHASE_EVENT_DISABLED: fun `EventsManager logCustomPurchase includes linkForFutureActions on payment event`() = runTest {
-    // PURCHASE_EVENT_DISABLED:     eventsManager.linkForFutureActions = "https://test.link"
-    // PURCHASE_EVENT_DISABLED:     eventsManager.allowedToSendToBackend = true
-    // PURCHASE_EVENT_DISABLED:     eventsManager.firstRequestTime = InstantCompat.now()
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     eventsManager.logCustomPurchase(
-    // PURCHASE_EVENT_DISABLED:         type = PaymentEventType.BUY,
-    // PURCHASE_EVENT_DISABLED:         priceInCents = 999,
-    // PURCHASE_EVENT_DISABLED:         currency = "USD",
-    // PURCHASE_EVENT_DISABLED:         productId = "premium"
-    // PURCHASE_EVENT_DISABLED:     )
-    // PURCHASE_EVENT_DISABLED:
-    // PURCHASE_EVENT_DISABLED:     coVerify { mockEventsStorage.addPaymentEvent(match { it.link == "https://test.link" }) }
-    // PURCHASE_EVENT_DISABLED: }
-
-    // ==================== Link Association Tests ====================
-
     @Test
     fun `EventsManager setLinkToNewFutureActions sets linkForFutureActions property`() = runTest {
         eventsManager.setLinkToNewFutureActions("https://test.link", delayEvents = false)
@@ -418,8 +343,6 @@ class EventsManagerTest {
             })
         }
     }
-
-    // ==================== Backend Sending Tests ====================
 
     @Test
     fun `EventsManager does not send events when allowedToSendToBackend is false`() = runTest {

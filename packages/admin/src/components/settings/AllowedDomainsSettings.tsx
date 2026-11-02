@@ -1,10 +1,3 @@
-/**
- * Allowed Domains Settings - Self-signup domain management
- *
- * Only available when using passkey auth. When external auth (e.g., Cloudflare Access)
- * is configured, this page shows an informational message instead.
- */
-
 import {
 	Banner,
 	Button,

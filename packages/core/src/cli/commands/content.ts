@@ -1,9 +1,3 @@
-/**
- * emdash content
- *
- * CRUD commands for managing content items via the EmDash REST API.
- */
-
 import { readFile } from "node:fs/promises";
 
 import { defineCommand } from "citty";
@@ -13,11 +7,6 @@ import { convertDataForRead } from "../../client/portable-text.js";
 import { connectionArgs, createClientFromArgs } from "../client-factory.js";
 import { configureOutputMode, output } from "../output.js";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Read content data from --data, --file, or --stdin */
 async function readInputData(args: {
 	data?: string;
 	file?: string;
@@ -59,10 +48,6 @@ async function readInputData(args: {
 	throw new Error("Provide content data via --data, --file, or --stdin");
 }
 
-// ---------------------------------------------------------------------------
-// Subcommands
-// ---------------------------------------------------------------------------
-
 const listCommand = defineCommand({
 	meta: { name: "list", description: "List content items" },
 	args: {
@@ -87,7 +72,6 @@ const listCommand = defineCommand({
 				limit: args.limit ? parseInt(args.limit, 10) : undefined,
 				cursor: args.cursor,
 			});
-			// Summarize items — strip heavy data fields for readable output
 			const summary = {
 				items: result.items.map((item) => ({
 					id: item.id,
@@ -140,13 +124,10 @@ const getCommand = defineCommand({
 				locale: args.locale,
 			});
 
-			// If a draft exists, overlay draft data unless --published
 			if (!args.published && item.draftRevisionId) {
 				const comparison = await client.compare(args.collection, args.id);
 				if (comparison.hasChanges && comparison.draft) {
 					item.data = comparison.draft;
-					// The comparison endpoint returns raw PT data. Apply the same
-					// PT-to-markdown conversion that `client.get` does, unless --raw.
 					if (!args.raw && item.data) {
 						const col = await client.collection(args.collection);
 						const fields = col.fields.map((f) => ({ slug: f.slug, type: f.type }));
@@ -198,12 +179,10 @@ const createCommand = defineCommand({
 				translationOf: args["translation-of"],
 			});
 
-			// Auto-publish unless --draft is set
 			if (!args.draft) {
 				await client.publish(args.collection, item.id);
 			}
 
-			// Re-fetch to return the current state
 			const result = await client.get(args.collection, item.id);
 			output(result, args);
 		} catch (error) {
@@ -251,14 +230,10 @@ const updateCommand = defineCommand({
 				locale: args.locale,
 			});
 
-			// Auto-publish unless --draft is set.
-			// Only publish if the update created a draft revision (i.e. the
-			// collection supports revisions and data went to a draft).
 			if (!args.draft && updated.draftRevisionId) {
 				await client.publish(args.collection, updated.id);
 			}
 
-			// Re-fetch to return the current state
 			const item = await client.get(args.collection, updated.id);
 			output(item, args);
 		} catch (error) {
@@ -445,10 +420,6 @@ const translationsCommand = defineCommand({
 		}
 	},
 });
-
-// ---------------------------------------------------------------------------
-// Export
-// ---------------------------------------------------------------------------
 
 export const contentCommand = defineCommand({
 	meta: { name: "content", description: "Manage content" },

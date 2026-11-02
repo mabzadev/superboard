@@ -1,11 +1,3 @@
-/**
- * Plugin Manager Component
- *
- * Displays list of configured plugins with enable/disable controls.
- * Extended with marketplace features: source badges, update checking,
- * update/uninstall for marketplace-installed plugins.
- */
-
 import { Badge, Button, Checkbox, Dialog, Switch, Toast } from "@cloudflare/kumo";
 import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
@@ -71,7 +63,6 @@ export function MarketplaceInstallMessage() {
 }
 
 export interface PluginManagerProps {
-	/** Admin manifest — used to check if marketplace is configured */
 	manifest?: AdminManifest;
 }
 
@@ -128,7 +119,7 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 	} = useQuery({
 		queryKey: ["plugin-updates"],
 		queryFn: checkPluginUpdates,
-		enabled: false, // Only fetch on demand
+		enabled: false,
 	});
 
 	const enableMutation = useMutation({
@@ -314,7 +305,6 @@ interface PluginCardProps {
 	onDisable: () => void;
 	isToggling: boolean;
 	isChanging: boolean;
-	/** Whether the marketplace is configured (controls "View in Marketplace" link) */
 	hasMarketplace: boolean;
 }
 
@@ -376,10 +366,6 @@ function PluginCard({
 
 	const handleUpdateClick = () => {
 		if (isRegistry) {
-			// Preflight without confirm flags. Server returns the real
-			// capability / route-visibility diff (or just updates if there
-			// is none); `onError` opens the consent dialog populated with
-			// the actual diff.
 			setRegistryEscalation(null);
 			updateMutation.mutate({});
 		} else {
@@ -446,7 +432,6 @@ function PluginCard({
 				)}
 			>
 				<div className="flex items-center gap-4 p-4">
-					{/* Plugin icon */}
 					{plugin.iconUrl ? (
 						<img
 							src={safeIconUrl(plugin.iconUrl, 80) ?? undefined}
@@ -467,7 +452,6 @@ function PluginCard({
 						</div>
 					)}
 
-					{/* Plugin info */}
 					<div className="flex-1 min-w-0">
 						<div className="flex items-center gap-2">
 							<h3 className="font-semibold truncate">{plugin.name}</h3>
@@ -486,12 +470,10 @@ function PluginCard({
 							<p className="mt-1 text-xs text-kumo-subtle font-mono">{plugin.configurationId}</p>
 						)}
 
-						{/* Description */}
 						{plugin.description && (
 							<p className="mt-0.5 text-sm text-kumo-subtle line-clamp-1">{plugin.description}</p>
 						)}
 
-						{/* Feature indicators + inline capabilities */}
 						<div className="flex items-center gap-3 mt-1 text-sm text-kumo-subtle">
 							{plugin.hasAdminPages && (
 								<span className="flex items-center gap-1">
@@ -537,7 +519,6 @@ function PluginCard({
 						</div>
 					</div>
 
-					{/* Actions */}
 					<div className="flex items-center gap-2">
 						{hasUpdate && (
 							<Button
@@ -619,10 +600,8 @@ function PluginCard({
 					</div>
 				</div>
 
-				{/* Expanded details */}
 				{expanded && (
 					<div className="border-t px-4 py-3 space-y-3">
-						{/* Capabilities */}
 						{plugin.capabilities.length > 0 && (
 							<div>
 								<h4 className="text-xs font-medium text-kumo-subtle uppercase tracking-wider mb-1">
@@ -683,7 +662,6 @@ function PluginCard({
 							</div>
 						)}
 
-						{/* Source */}
 						{isMarketplace && (
 							<div>
 								<h4 className="text-xs font-medium text-kumo-subtle uppercase tracking-wider mb-1">
@@ -695,7 +673,6 @@ function PluginCard({
 							</div>
 						)}
 
-						{/* Package */}
 						{plugin.package && (
 							<div>
 								<h4 className="text-xs font-medium text-kumo-subtle uppercase tracking-wider mb-1">
@@ -705,7 +682,6 @@ function PluginCard({
 							</div>
 						)}
 
-						{/* Timestamps */}
 						<div className="grid grid-cols-2 gap-4 text-xs">
 							{plugin.installedAt && (
 								<div>
@@ -727,7 +703,6 @@ function PluginCard({
 							)}
 						</div>
 
-						{/* Uninstall button for any sandboxed source (marketplace + registry). */}
 						{(isMarketplace || isRegistry) && (
 							<div className="pt-2 border-t">
 								<Button
@@ -745,7 +720,6 @@ function PluginCard({
 				)}
 			</div>
 
-			{/* Update consent dialog */}
 			{showUpdateConsent && updateInfo && (
 				<CapabilityConsentDialog
 					mode="update"
@@ -770,7 +744,6 @@ function PluginCard({
 				/>
 			)}
 
-			{/* Uninstall confirmation */}
 			{showUninstallConfirm && (
 				<UninstallConfirmDialog
 					pluginName={plugin.name}
@@ -786,10 +759,6 @@ function PluginCard({
 		</>
 	);
 }
-
-// ---------------------------------------------------------------------------
-// Uninstall confirmation dialog
-// ---------------------------------------------------------------------------
 
 interface UninstallConfirmDialogProps {
 	pluginName: string;

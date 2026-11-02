@@ -6,16 +6,10 @@ import { Progress } from "@superboard/front-ui/ui/progress.js";
 import { Check, ChevronLeft, ChevronRight, Circle, Save } from "lucide-react";
 import React, { lazy, Suspense, useCallback, useRef } from "react";
 
-/**
- * Attaches a native DOM click listener to bypass React's synthetic event dispatch,
- * which can crash with SecurityError when cross-origin analytics iframes are on the page.
- * Returns a callback ref to attach to the button element.
- */
 function useNativeClick(handler: (() => void) | undefined) {
 	const handlerRef = useRef(handler);
 	handlerRef.current = handler;
 
-	// Stable listener function — never changes identity so removeEventListener works
 	const listenerRef = useRef<(e: Event) => void>(null!);
 	if (!listenerRef.current) {
 		listenerRef.current = (e: Event) => {
@@ -40,8 +34,6 @@ function useNativeClick(handler: (() => void) | undefined) {
 	return setRef;
 }
 
-// --- Types ---
-
 export type StepDef = {
 	name: string;
 	icon: React.ComponentType<{ className?: string }>;
@@ -55,9 +47,6 @@ export type CodeBlockData = {
 	highlightLines?: number[];
 };
 
-// --- RenderCodeBlock ---
-
-// The code block pulls in Shiki, so it loads only when a setup step shows a snippet.
 const CodeBlockView = lazy(() => import("./RenderCodeBlock.js"));
 
 export function RenderCodeBlock({ data }: { data: CodeBlockData[] }) {
@@ -75,8 +64,6 @@ export function RenderCodeBlock({ data }: { data: CodeBlockData[] }) {
 		</Suspense>
 	);
 }
-
-// --- SectionHeader ---
 
 export function SectionHeader({
 	icon: Icon,
@@ -108,8 +95,6 @@ export function SectionHeader({
 	);
 }
 
-// --- OverviewRow ---
-
 export function OverviewRow({
 	title,
 	description,
@@ -139,8 +124,6 @@ export function OverviewRow({
 		</div>
 	);
 }
-
-// --- WizardSidebar ---
 
 export function WizardSidebar({
 	platformLabel,
@@ -243,8 +226,6 @@ export function WizardSidebar({
 	);
 }
 
-// --- StepNavigation ---
-
 export function StepNavigation({
 	currentStep,
 	totalSteps,
@@ -272,8 +253,6 @@ export function StepNavigation({
 }) {
 	const isLastStep = currentStep === totalSteps - 1;
 
-	// Native click listeners bypass React's synthetic event dispatch, which crashes
-	// with SecurityError when cross-origin analytics iframes are on the page.
 	const backRef = useNativeClick(onBack);
 	const continueRef = useNativeClick(onContinue);
 	const saveAndContinueRef = useNativeClick(onSaveAndContinue);

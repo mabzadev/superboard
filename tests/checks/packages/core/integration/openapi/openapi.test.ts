@@ -7,8 +7,6 @@ describe("OpenAPI spec validation", () => {
 	it("produces a valid OpenAPI 3.1 document", async () => {
 		const doc = generateOpenApiDocument();
 
-		// swagger-parser.validate() resolves $refs and validates against the OAS JSON Schema.
-		// It throws if the document is invalid.
 		const validated = await SwaggerParser.validate(structuredClone(doc));
 
 		expect(validated.openapi).toBe("3.1.0");
@@ -18,12 +16,8 @@ describe("OpenAPI spec validation", () => {
 	it("resolves all $ref pointers without errors", async () => {
 		const doc = generateOpenApiDocument();
 
-		// dereference() resolves every $ref in the document tree.
-		// If any $ref points to a missing schema, it throws.
 		const dereferenced = await SwaggerParser.dereference(structuredClone(doc));
 
-		// After dereferencing, no $ref keys should remain.
-		// Use a replacer to handle circular references (e.g. PublicComment.replies)
 		const seen = new WeakSet();
 		const json = JSON.stringify(dereferenced, (_key, value) => {
 			if (typeof value === "object" && value !== null) {
@@ -46,13 +40,10 @@ describe("OpenAPI spec validation", () => {
 					| undefined;
 				if (!op) continue;
 
-				// Every operation must have responses
 				expect(op.responses, `${method.toUpperCase()} ${path} missing responses`).toBeDefined();
 
-				// Every operation must have an operationId
 				expect(op.operationId, `${method.toUpperCase()} ${path} missing operationId`).toBeDefined();
 
-				// Every operation must have at least one success response (2xx)
 				const statusCodes = Object.keys(op.responses ?? {});
 				const has2xx = statusCodes.some((code) => code.startsWith("2"));
 				expect(has2xx, `${method.toUpperCase()} ${path} has no 2xx response`).toBe(true);
@@ -85,9 +76,6 @@ describe("OpenAPI spec validation", () => {
 						`${method.toUpperCase()} ${path} ${statusCode} missing schema`,
 					).toBeDefined();
 
-					// The envelope must have "success" and "data" properties (either
-					// directly or via $ref that wraps them). Check for direct
-					// properties or allOf/oneOf patterns.
 					const props = (schema as Record<string, unknown>)?.properties as
 						| Record<string, unknown>
 						| undefined;
@@ -110,7 +98,6 @@ describe("OpenAPI spec validation", () => {
 		const doc = generateOpenApiDocument();
 		const paths = doc.paths ?? {};
 
-		// Public endpoints that don't require authentication
 		const publicPaths = new Set(["/_emdash/api/comments/{collection}/{contentId}"]);
 
 		for (const [path, pathItem] of Object.entries(paths)) {
@@ -156,10 +143,8 @@ describe("OpenAPI spec validation", () => {
 		const schemas = doc.components?.schemas ?? {};
 		const schemaNames = Object.keys(schemas);
 
-		// Should have a reasonable number of reusable schemas
 		expect(schemaNames.length).toBeGreaterThanOrEqual(5);
 
-		// All registered schemas should be valid objects with type or properties
 		for (const [name, schema] of Object.entries(schemas)) {
 			expect(schema, `component schema "${name}" is not an object`).toBeTypeOf("object");
 		}
@@ -177,7 +162,6 @@ describe("OpenAPI spec validation", () => {
 				if (!op?.responses) continue;
 
 				for (const [statusCode, response] of Object.entries(op.responses)) {
-					// Only check error responses (4xx, 5xx)
 					const code = Number(statusCode);
 					if (code < 400) continue;
 
@@ -192,8 +176,6 @@ describe("OpenAPI spec validation", () => {
 						`${method.toUpperCase()} ${path} ${statusCode} error missing schema`,
 					).toBeDefined();
 
-					// Error responses either $ref the shared ApiError component or
-					// inline its shape; both must carry the `success` discriminant.
 					const props = (schema as Record<string, unknown>)?.properties as
 						| Record<string, unknown>
 						| undefined;

@@ -49,8 +49,6 @@ const initial = (kind: Draft["kind"], offeringId = ""): Draft => ({
 const titles = { products: "Products", offerings: "Offerings", entitlements: "Entitlements" };
 const sections: Section[] = ["products", "offerings", "entitlements"];
 
-/** Products, Offerings and Entitlements are tabs of one Catalog page kept in `?tab=`; the
- * former /monetization/offerings and /monetization/entitlements routes open their tab. */
 function CatalogTabs({ section }: { section: Section }) {
 	const { t, locale } = useMonetizationI18n();
 	return (

@@ -14,12 +14,10 @@ import {
 import { createObjectCache as createMemoryCache } from "../../../../../packages/core/src/object-cache/memory.js";
 import { runWithContext } from "../../../../../packages/core/src/request-context.js";
 
-/** Flush the microtask + macrotask queue so deferred `after()` writes land. */
 async function flush(): Promise<void> {
 	await new Promise((r) => setTimeout(r, 0));
 }
 
-/** A simple in-memory backend with call spies, isolated per test. */
 function spyBackend(): ObjectCacheBackend & { store: Map<string, string> } {
 	const store = new Map<string, string>();
 	return {
@@ -111,7 +109,7 @@ describe("cachedQuery", () => {
 	it("serves the second call from cache without calling load", async () => {
 		const load = vi.fn(() => Promise.resolve({ n: Math.random() }));
 		const first = await cachedQuery({ namespace: "t", key: "k", load });
-		await flush(); // let the deferred set land
+		await flush();
 		const second = await cachedQuery({ namespace: "t", key: "k", load });
 		expect(second).toEqual(first);
 		expect(load).toHaveBeenCalledTimes(1);
@@ -178,7 +176,6 @@ describe("cachedQuery", () => {
 		await cachedQuery({ namespace: ns, key: "k", load });
 		expect(load).toHaveBeenCalledTimes(1);
 
-		// Bump only the shared bylines namespace.
 		invalidateObjectCache("bylines");
 		await flush();
 
@@ -187,9 +184,6 @@ describe("cachedQuery", () => {
 	});
 
 	it("does not let a stale in-flight epoch read clobber a concurrent invalidation", async () => {
-		// An epoch read started before an invalidation must not, on resolving with
-		// the pre-bump backend value, lower the freshly-bumped local epoch — that
-		// would resurrect the values the invalidation just orphaned.
 		const store = new Map<string, string>();
 		let releaseEpoch: ((v: string | null) => void) | undefined;
 		let gate = false;
@@ -215,34 +209,24 @@ describe("cachedQuery", () => {
 
 		const load = vi.fn(() => Promise.resolve({ n: Math.random() }));
 
-		// Prime: value stored under epoch 0.
 		const primed = await cachedQuery({ namespace: "posts", key: "k", load });
 		await flush();
 
-		// Start a query whose epoch read parks in flight.
 		gate = true;
 		const inflight = cachedQuery({ namespace: "posts", key: "k", load });
 		await flush();
 
-		// Invalidate mid-flight: bumps the local epoch above 0.
 		invalidateObjectCache("posts");
 
-		// The parked epoch read now resolves with the stale backend epoch.
 		releaseEpoch?.(null);
 		const inflightResult = await inflight;
 		await flush();
 
-		// The bump must survive: the in-flight query reloads rather than serving
-		// the pre-invalidation value.
 		expect(inflightResult).not.toEqual(primed);
 		expect(load).toHaveBeenCalledTimes(2);
 	});
 
 	it("captures epochs before load even when the value read fails", async () => {
-		// When the value read errors, the epochs must still be captured *before*
-		// load() runs. Re-reading them afterwards would pick up a write that
-		// landed mid-load and stamp the stale value under the new epoch, so a
-		// later read would serve it as a HIT.
 		const store = new Map<string, string>();
 		let failValueGet = true;
 		let releaseLoad: (() => void) | undefined;
@@ -276,11 +260,9 @@ describe("cachedQuery", () => {
 			return Promise.resolve({ n: v });
 		});
 
-		// Value read rejects → load path. Hold load open.
 		const q1 = cachedQuery<{ n: number }>({ namespace: "posts", key: "k", load });
 		await flush();
 
-		// A write invalidates the namespace while load is in flight.
 		invalidateObjectCache("posts");
 		await flush();
 
@@ -288,8 +270,6 @@ describe("cachedQuery", () => {
 		const first = await q1;
 		await flush();
 
-		// Value reads work again; the value cached during the load must have been
-		// stamped with the pre-load epoch, so the bump orphans it and we reload.
 		failValueGet = false;
 		const second = await cachedQuery<{ n: number }>({ namespace: "posts", key: "k", load });
 		expect(second).not.toEqual(first);
@@ -307,10 +287,8 @@ describe("cachedQuery", () => {
 	});
 
 	it("does not hang when a backend read never settles — times out to a miss", async () => {
-		// A backend.get that never resolves or rejects (the production hang:
-		// a stalled KV read). With a short timeout the query must still settle.
 		const backend = spyBackend();
-		backend.get = vi.fn(() => new Promise<string | null>(() => {})); // never settles
+		backend.get = vi.fn(() => new Promise<string | null>(() => {}));
 		__setObjectCacheBackendForTests(backend, { revalidate: 1000, defaultTtl: 3600, timeout: 20 });
 		const load = vi.fn(() => Promise.resolve({ n: 1 }));
 
@@ -320,11 +298,6 @@ describe("cachedQuery", () => {
 	});
 
 	it("reclaims an epoch read whose owner was cancelled and never settles", async () => {
-		// On workerd a cancelled request's continuations never run — including
-		// the epoch read's own timeout timer — so the shared in-flight promise
-		// neither settles nor gets replaced. Simulated here with a get that
-		// never settles and a timeout too long to fire during the test; the
-		// deadline check is driven by Date.now, not timers.
 		const store = new Map<string, string>();
 		let stallEpoch = true;
 		const backend: ObjectCacheBackend = {
@@ -345,13 +318,9 @@ describe("cachedQuery", () => {
 
 		const load = vi.fn(() => Promise.resolve({ n: 1 }));
 
-		// The cancelled owner: parks on the epoch read and is never awaited.
 		void cachedQuery({ namespace: "posts", key: "k", load }).catch(() => {});
 		await flush();
 
-		// Past the read deadline (timeout + grace) the owner is presumed dead:
-		// the next caller must start a fresh read instead of joining the dead
-		// promise — which, on a recovered backend, settles normally.
 		const realNow = Date.now();
 		vi.spyOn(Date, "now").mockReturnValue(realNow + 6001);
 		stallEpoch = false;
@@ -364,14 +333,10 @@ describe("cachedQuery", () => {
 	});
 
 	it("bounds a waiter on a foreign in-flight epoch read with its own timer", async () => {
-		// A waiter must never await another request's epoch-read promise bare:
-		// if the owner was cancelled the promise never settles. The waiter's
-		// race timer belongs to the waiter's own (live) request, so the query
-		// degrades to the last-known epoch instead of hanging.
 		const store = new Map<string, string>();
 		const backend: ObjectCacheBackend = {
 			get: (key) => {
-				if (key.includes(":epoch:")) return new Promise<string | null>(() => {}); // never settles
+				if (key.includes(":epoch:")) return new Promise<string | null>(() => {});
 				return Promise.resolve(store.get(key) ?? null);
 			},
 			set: (key, value) => {
@@ -391,13 +356,9 @@ describe("cachedQuery", () => {
 
 		const load = vi.fn(() => Promise.resolve({ n: 1 }));
 
-		// The cancelled owner parks on the epoch read.
 		void cachedQuery({ namespace: "posts", key: "k", load }).catch(() => {});
 		await flush();
 
-		// A waiter arriving late in the share window: its remaining bound is
-		// short, so its own timer fires and the query settles. (Unfixed, the
-		// waiter awaits the dead promise and hangs past the test timeout.)
 		const realNow = Date.now();
 		vi.spyOn(Date, "now").mockReturnValue(realNow + 20_900);
 		await expect(cachedQuery({ namespace: "posts", key: "k", load })).resolves.toEqual({
@@ -407,13 +368,11 @@ describe("cachedQuery", () => {
 	});
 
 	it("self-heals after a stalled read instead of poisoning the namespace", async () => {
-		// First the backend stalls (epoch + value reads hang); after the timeout
-		// the namespace must recover and serve from cache on a healthy backend.
 		const store = new Map<string, string>();
 		let healthy = false;
 		const backend: ObjectCacheBackend = {
 			get: (key) =>
-				healthy ? Promise.resolve(store.get(key) ?? null) : new Promise<string | null>(() => {}), // stalls while unhealthy
+				healthy ? Promise.resolve(store.get(key) ?? null) : new Promise<string | null>(() => {}),
 			set: (key, value) => {
 				store.set(key, value);
 				return Promise.resolve();
@@ -427,18 +386,14 @@ describe("cachedQuery", () => {
 
 		const load = vi.fn(() => Promise.resolve({ n: 1 }));
 
-		// While stalled: degrades to load() instead of hanging.
 		await expect(cachedQuery({ namespace: "posts", key: "k", load })).resolves.toEqual({ n: 1 });
 
-		// Backend recovers; the stuck epoch promise must have settled (timed out)
-		// and been replaced, so the namespace is usable again.
 		healthy = true;
 		await flush();
 		await cachedQuery({ namespace: "posts", key: "k", load });
 		await flush();
 		const calls = load.mock.calls.length;
 		await cachedQuery({ namespace: "posts", key: "k", load });
-		// The second post-recovery call is served from cache (load not re-run).
 		expect(load.mock.calls.length).toBe(calls);
 	});
 });

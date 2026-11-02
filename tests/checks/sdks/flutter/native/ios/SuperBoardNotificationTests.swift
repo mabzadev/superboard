@@ -3,14 +3,9 @@ import XCTest
 
 final class SuperBoardNotificationTests: XCTestCase {
 
-    // MARK: - Helpers
-
-    /// Uses the same decoder as production code — single source of truth.
     private var decoder: JSONDecoder {
         SuperBoardNotification.backendDecoder()
     }
-
-    // MARK: - SuperBoardNotification decoding
 
     func testDecodeNotificationWithAllFields() throws {
         let json = """
@@ -59,7 +54,6 @@ final class SuperBoardNotificationTests: XCTestCase {
     }
 
     func testDecodeNotificationWithMissingOptionals() throws {
-        // subtitle and access_url omitted entirely (vs null)
         let json = """
         {
             "id": 5,
@@ -78,7 +72,6 @@ final class SuperBoardNotificationTests: XCTestCase {
     }
 
     func testDecodeFailsOnMissingRequiredField() {
-        // Missing "title" which is required
         let json = """
         {
             "id": 1,
@@ -104,8 +97,6 @@ final class SuperBoardNotificationTests: XCTestCase {
 
         XCTAssertThrowsError(try decoder.decode(SuperBoardNotification.self, from: json))
     }
-
-    // MARK: - SuperBoardNotificationsResponse decoding
 
     func testDecodeNotificationsResponse() throws {
         let json = """
@@ -145,8 +136,6 @@ final class SuperBoardNotificationTests: XCTestCase {
         let response = try decoder.decode(SuperBoardNotificationsResponse.self, from: json)
         XCTAssertTrue(response.notifications.isEmpty)
     }
-
-    // MARK: - Codable round-trip
 
     func testEncodeThenDecodePreservesAllFields() throws {
         let json = """

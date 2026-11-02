@@ -1,13 +1,3 @@
-/**
- * OAuth 2.1 Authorization Code + PKCE handlers.
- *
- * Implements the server side of the authorization code grant for MCP clients
- * (Claude Desktop, VS Code, etc.) per the MCP authorization spec (draft).
- *
- * Uses arctic for PKCE challenge generation and @emdash-cms/auth for token
- * utilities. Token infrastructure is shared with the device flow.
- */
-
 import { clampScopes, computeS256Challenge, secureCompare } from "@emdash-cms/auth";
 import type { RoleLevel } from "@emdash-cms/auth";
 import { generateCodeVerifier } from "arctic";
@@ -26,22 +16,11 @@ import type { ApiResult } from "../types.js";
 import { lookupOAuthClient, validateClientRedirectUri } from "./oauth-clients.js";
 import { lookupUserRoleAndStatus } from "./oauth-user-lookup.js";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/** Authorization codes expire after 10 minutes (RFC 6749 §4.1.2 recommends short-lived) */
 const AUTH_CODE_TTL_SECONDS = 10 * 60;
 
-/** Access token TTL: 1 hour */
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
 
-/** Refresh token TTL: 90 days */
 const REFRESH_TOKEN_TTL_SECONDS = 90 * 24 * 60 * 60;
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export interface AuthorizationParams {
 	response_type: string;
@@ -71,19 +50,12 @@ export interface TokenResponse {
 	scope: string;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function expiresAt(seconds: number): string {
 	return new Date(Date.now() + seconds * 1000).toISOString();
 }
 
 export { validateRedirectUri };
 
-/**
- * Validate and normalize scopes. Returns validated scope list.
- */
 function normalizeScopes(requested?: string): string[] {
 	if (!requested) return [];
 
@@ -92,18 +64,6 @@ function normalizeScopes(requested?: string): string[] {
 	return scopes;
 }
 
-// ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-/**
- * Process an authorization request after the user approves consent.
- *
- * Generates an authorization code, stores it with the PKCE challenge,
- * and returns the redirect URL with the code appended.
- *
- * Scopes are clamped to the user's role to prevent scope escalation.
- */
 export async function handleAuthorizationApproval(
 	db: Kysely<Database>,
 	userId: string,
@@ -111,7 +71,6 @@ export async function handleAuthorizationApproval(
 	params: AuthorizationParams,
 ): Promise<ApiResult<{ redirect_url: string }>> {
 	try {
-		// Validate response_type
 		if (params.response_type !== "code") {
 			return {
 				success: false,
@@ -122,7 +81,6 @@ export async function handleAuthorizationApproval(
 			};
 		}
 
-		// Validate redirect_uri scheme/host (basic security check)
 		const uriError = validateRedirectUri(params.redirect_uri);
 		if (uriError) {
 			return {
@@ -131,7 +89,6 @@ export async function handleAuthorizationApproval(
 			};
 		}
 
-		// Look up the registered OAuth client
 		const client = await lookupOAuthClient(db, params.client_id);
 		if (!client) {
 			return {
@@ -143,7 +100,6 @@ export async function handleAuthorizationApproval(
 			};
 		}
 
-		// Validate redirect_uri against client's registered URIs
 		const clientUriError = validateClientRedirectUri(params.redirect_uri, client.redirectUris);
 		if (clientUriError) {
 			return {
@@ -152,7 +108,6 @@ export async function handleAuthorizationApproval(
 			};
 		}
 
-		// Validate code_challenge_method
 		if (params.code_challenge_method !== "S256") {
 			return {
 				success: false,
@@ -163,7 +118,6 @@ export async function handleAuthorizationApproval(
 			};
 		}
 
-		// Validate code_challenge is present
 		if (!params.code_challenge) {
 			return {
 				success: false,
@@ -171,12 +125,8 @@ export async function handleAuthorizationApproval(
 			};
 		}
 
-		// Validate scopes, then clamp to user's role
 		const userScopes = clampScopes(normalizeScopes(params.scope), userRole);
 
-		// SEC-41: Intersect with client's registered scopes (if restricted).
-		// A client registered with scopes: ["content:read"] should never receive
-		// admin or schema:write, regardless of the approving user's role.
 		const clientScopes = client.scopes;
 		const scopes = clientScopes?.length
 			? userScopes.filter((s: string) => clientScopes.includes(s))
@@ -189,11 +139,9 @@ export async function handleAuthorizationApproval(
 			};
 		}
 
-		// Generate authorization code (high entropy, base64url)
-		const code = generateCodeVerifier(); // 32 bytes random, base64url
+		const code = generateCodeVerifier();
 		const codeHash = hashApiToken(code);
 
-		// Store the authorization code
 		await db
 			.insertInto("_emdash_authorization_codes")
 			.values({
@@ -209,7 +157,6 @@ export async function handleAuthorizationApproval(
 			})
 			.execute();
 
-		// Build the redirect URL
 		const redirectUrl = new URL(params.redirect_uri);
 		redirectUrl.searchParams.set("code", code);
 		if (params.state) {
@@ -232,18 +179,11 @@ export async function handleAuthorizationApproval(
 	}
 }
 
-/**
- * Exchange an authorization code for access + refresh tokens.
- *
- * Validates the code, verifies PKCE, and issues tokens using the same
- * infrastructure as the device flow (ec_oat_*, ec_ort_*).
- */
 export async function handleAuthorizationCodeExchange(
 	db: Kysely<Database>,
 	params: TokenExchangeParams,
 ): Promise<ApiResult<TokenResponse>> {
 	try {
-		// Validate grant_type
 		if (params.grant_type !== "authorization_code") {
 			return {
 				success: false,
@@ -251,9 +191,6 @@ export async function handleAuthorizationCodeExchange(
 			};
 		}
 
-		// SEC-39: Atomically consume the authorization code using DELETE...RETURNING.
-		// This prevents TOCTOU double-exchange: two concurrent requests with the
-		// same code will race on the DELETE, and only one will get a row back.
 		const codeHash = hashApiToken(params.code);
 
 		const row = await db
@@ -269,7 +206,6 @@ export async function handleAuthorizationCodeExchange(
 			};
 		}
 
-		// Check expiry
 		if (new Date(row.expires_at) < new Date()) {
 			return {
 				success: false,
@@ -277,7 +213,6 @@ export async function handleAuthorizationCodeExchange(
 			};
 		}
 
-		// Verify redirect_uri matches exactly
 		if (row.redirect_uri !== params.redirect_uri) {
 			return {
 				success: false,
@@ -285,7 +220,6 @@ export async function handleAuthorizationCodeExchange(
 			};
 		}
 
-		// Verify client_id matches
 		if (row.client_id !== params.client_id) {
 			return {
 				success: false,
@@ -293,8 +227,6 @@ export async function handleAuthorizationCodeExchange(
 			};
 		}
 
-		// PKCE verification: SHA256(code_verifier) must match stored code_challenge
-		// Use constant-time comparison to prevent timing side-channels
 		const derivedChallenge = computeS256Challenge(params.code_verifier);
 		if (!secureCompare(derivedChallenge, row.code_challenge)) {
 			return {
@@ -303,7 +235,6 @@ export async function handleAuthorizationCodeExchange(
 			};
 		}
 
-		// Verify resource matches (if stored)
 		if (row.resource && params.resource && row.resource !== params.resource) {
 			return {
 				success: false,
@@ -311,8 +242,6 @@ export async function handleAuthorizationCodeExchange(
 			};
 		}
 
-		// Revalidate user role before issuing tokens (same pattern as handleTokenRefresh).
-		// The user's role may have changed since the authorization code was issued.
 		const userInfo = await lookupUserRoleAndStatus(db, row.user_id);
 		if (!userInfo) {
 			return {
@@ -328,11 +257,9 @@ export async function handleAuthorizationCodeExchange(
 			};
 		}
 
-		// Re-clamp scopes against the user's current role
 		const storedScopes = JSON.parse(row.scopes) as string[];
 		let scopes = clampScopes(storedScopes, userInfo.role);
 
-		// Intersect with client's registered scopes (if restricted)
 		const client = await lookupOAuthClient(db, row.client_id);
 		if (client?.scopes?.length) {
 			scopes = scopes.filter((s: string) => client.scopes!.includes(s));
@@ -348,14 +275,12 @@ export async function handleAuthorizationCodeExchange(
 			};
 		}
 
-		// Issue tokens (same as device flow)
 		const accessToken = generatePrefixedToken(TOKEN_PREFIXES.OAUTH_ACCESS);
 		const accessExpires = expiresAt(ACCESS_TOKEN_TTL_SECONDS);
 
 		const refreshToken = generatePrefixedToken(TOKEN_PREFIXES.OAUTH_REFRESH);
 		const refreshExpires = expiresAt(REFRESH_TOKEN_TTL_SECONDS);
 
-		// Atomically store both tokens in a transaction
 		await withTransaction(db, async (trx) => {
 			await trx
 				.insertInto("_emdash_oauth_tokens")
@@ -408,9 +333,6 @@ export async function handleAuthorizationCodeExchange(
 	}
 }
 
-/**
- * Build the authorization denied redirect URL.
- */
 export function buildDeniedRedirect(redirectUri: string, state?: string): string {
 	const url = new URL(redirectUri);
 	url.searchParams.set("error", "access_denied");
@@ -421,9 +343,6 @@ export function buildDeniedRedirect(redirectUri: string, state?: string): string
 	return url.toString();
 }
 
-/**
- * Clean up expired authorization codes.
- */
 export async function cleanupExpiredAuthorizationCodes(db: Kysely<Database>): Promise<number> {
 	const result = await db
 		.deleteFrom("_emdash_authorization_codes")

@@ -1,12 +1,3 @@
-/**
- * Registry plugin uninstall endpoint (experimental)
- *
- * POST /_emdash/api/admin/plugins/registry/:id/uninstall — Uninstall a
- * registry-source plugin. Mirrors the marketplace uninstall route; the
- * handler refuses non-registry sources, so this won't trash a marketplace
- * or config plugin that shares the id namespace.
- */
-
 import type { APIRoute } from "astro";
 import { z } from "zod";
 

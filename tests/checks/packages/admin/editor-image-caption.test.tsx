@@ -7,8 +7,6 @@ import { describe, it, expect } from "vitest";
 import { ImageExtension } from "../../../../packages/admin/src/components/editor/ImageNode.js";
 import { render } from "./utils/render.js";
 
-// The editor figcaption must mirror the published renderer (Image.astro):
-// caption only — alt text must not display as a visible caption.
 function TestEditor({ attrs }: { attrs: Record<string, string> }) {
 	const editor = useEditor({
 		extensions: [StarterKit, ImageExtension],
@@ -32,9 +30,7 @@ describe("Editor image caption display", () => {
 
 	it("does NOT render alt text as a caption (WYSIWYG parity with Image.astro)", async () => {
 		void render(<TestEditor attrs={{ src: "/img.jpg", alt: "Alt text only" }} />);
-		// the image itself renders with the alt attribute…
 		await screen.findByAltText("Alt text only");
-		// …but no visible figcaption is shown for it
 		expect(screen.queryByText("Alt text only")).toBeNull();
 	});
 

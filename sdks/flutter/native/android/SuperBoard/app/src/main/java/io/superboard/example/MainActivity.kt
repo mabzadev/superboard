@@ -60,10 +60,8 @@ class MainActivity : FragmentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // FCM SDK (and your app) can post notifications.
             updateFCMToken()
         } else {
-            // TODO: Inform user that that your app will not show notifications.
         }
     }
 
@@ -84,8 +82,6 @@ class MainActivity : FragmentActivity() {
 
             viewModel.updateCallbackState(message)
         }
-
-        // Notifications
 
         SuperBoard.setOnAutomaticNotificationsListener { isLast ->
             Log.d("MainActivity", "Dismissed automatic notification is last: $isLast")
@@ -119,7 +115,6 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun askNotificationPermission() {
-        // This is only necessary for API level >= 33 (TIRAMISU)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
@@ -144,7 +139,6 @@ class MainActivity : FragmentActivity() {
                 return@addOnCompleteListener
             }
 
-            // Get new FCM registration token
             val token = task.result
             Log.d("MainActivity", "FCM token: $token")
             Toast.makeText(this, "FCM token: $token", Toast.LENGTH_LONG).show()
@@ -156,7 +150,6 @@ class MainActivity : FragmentActivity() {
 
 @Composable
 fun CenteredTextViewAndButton(viewModel: MainViewModel) {
-    // State for the text content
     val callbackGeneratedLinkState = remember { mutableStateOf("Callback generated link") }
     val flowGeneratedLinkState = remember { mutableStateOf("Flow generated link") }
     val incomingLinkCallbackState by viewModel::incomingLinkCallbackState
@@ -358,16 +351,13 @@ fun CopyableText(text: String) {
         modifier = Modifier
             .padding(16.dp)
             .clickable {
-            // Copy the text to clipboard
             clipboardManager.setText(AnnotatedString(text))
 
-            // Show a confirmation toast
             Toast.makeText(context, "Text copied to clipboard", Toast.LENGTH_SHORT).show()
         }
     )
 }
 
-// Function to retrieve text from clipboard
 fun getClipboardText(context: Context): String? {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
     val clipData = clipboard.primaryClip
@@ -378,12 +368,10 @@ fun getClipboardText(context: Context): String? {
     }
 }
 
-// Function to check if the string is a valid URL
 fun isValidUrl(url: String): Boolean {
     return url.startsWith("http://") || url.startsWith("https://")
 }
 
-// Function to open the URL using an Intent (default browser)
 fun openWebPage(context: Context, url: String) {
     try {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))

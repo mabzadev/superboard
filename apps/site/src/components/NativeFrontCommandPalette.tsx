@@ -39,10 +39,6 @@ const MOVES: Record<string, (current: number, last: number) => number> = {
 	PageUp: (current) => Math.max(current - 5, 0),
 };
 
-/**
- * ⌘K / Ctrl+K palette of the Front shell: menu pages, quick actions and recent pages. Loaded on
- * first open so the shell bundle does not carry it.
- */
 export default function NativeFrontCommandPalette({
 	open,
 	onOpenChange,
@@ -56,7 +52,6 @@ export default function NativeFrontCommandPalette({
 				showCloseButton={false}
 				aria-describedby={hintId}
 			>
-				{/* Mounted only while open, so every opening starts from an empty search. */}
 				<CommandPaletteBody
 					{...props}
 					hintId={hintId}
@@ -97,7 +92,6 @@ function CommandPaletteBody({
 		const list: FrontCommand[] = [];
 		const add = (command: Omit<FrontCommand, "group">) =>
 			list.push({ ...command, group: "actions" });
-		// Quick actions only exist when the EmDash menu offers their page to this operator.
 		const createLink = menuDestination(pages, "/acquisition/dynamic-links", { create: "1" });
 		if (createLink)
 			add({
@@ -255,8 +249,6 @@ function CommandPaletteBody({
 								{t(GROUP_LABELS[group])}
 							</div>
 							{items.map(([command, index]) => (
-								// Options stay out of the tab order: the search field owns focus and points at
-								// the active option through aria-activedescendant.
 								<div
 									key={command.id}
 									id={optionId(index)}

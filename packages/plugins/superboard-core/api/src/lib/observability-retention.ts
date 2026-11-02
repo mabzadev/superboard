@@ -2,7 +2,6 @@ export const OBSERVATION_RETENTION_MS = 14 * 86_400_000;
 const PRUNE_BATCH_SIZE = 1000;
 const PRUNE_MAX_BATCHES = 20;
 
-// Incidents and their transitions are kept; only raw per-invocation observations expire.
 export async function pruneObservabilityObservations(
 	db: D1Database,
 	now = Date.now(),

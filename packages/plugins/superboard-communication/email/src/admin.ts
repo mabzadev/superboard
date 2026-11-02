@@ -43,7 +43,6 @@ interface AdminMutation {
 	resourceId: string;
 	statements: D1PreparedStatement[];
 	data: unknown;
-	/** Returned to the caller instead of `data`; never persisted (one-time secrets). */
 	response?: unknown;
 	status?: number;
 }

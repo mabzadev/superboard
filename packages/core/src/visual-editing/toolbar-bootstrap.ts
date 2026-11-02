@@ -1,39 +1,7 @@
-/**
- * EmDash Toolbar Bootstrap (toolbar: "client")
- *
- * A tiny script injected into every public HTML response when the client
- * toolbar mode is enabled. It is identical for every visitor, so the HTML
- * stays fully cacheable by shared caches (Workers Cache, Cache Everything,
- * Fastly, Varnish, …).
- *
- * Behavior: if this browser has logged into the admin (non-secret
- * localStorage flag set by the admin SPA), render a small "Edit" pill.
- * Clicking it verifies the session server-side and reloads the page with the
- * `_edit` query param — that URL is always rendered fresh with the full
- * server-side toolbar. Logged-out browsers pay one localStorage read and
- * nothing else. See Discussion #1742.
- */
-
-/**
- * Non-secret localStorage flag set by the admin SPA when an editor session
- * exists in this browser. It only means "a session may exist" — the click
- * handler verifies the real session before entering edit mode. The literal
- * is duplicated in `@emdash-cms/admin` (Shell/Header), which cannot import
- * from core.
- */
 export const EDITOR_FLAG_KEY = "emdash-editor";
 
-/**
- * localStorage flag set when the user dismisses the toolbar in this browser.
- * Cleared the next time an editor opens the admin. Also duplicated in
- * `@emdash-cms/admin`.
- */
 export const TOOLBAR_DISMISSED_KEY = "emdash-toolbar-dismissed";
 
-/**
- * Query param that requests a fresh (never cached) editor render. Presence is
- * verified server-side: non-editors are redirected to the canonical URL.
- */
 export const EDIT_PARAM = "_edit";
 
 export function renderToolbarBootstrap(): string {

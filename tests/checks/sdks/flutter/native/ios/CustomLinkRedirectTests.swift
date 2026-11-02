@@ -3,8 +3,6 @@ import XCTest
 
 final class CustomLinkRedirectTests: XCTestCase {
 
-    // MARK: - CustomLinkRedirect toBackend()
-
     func testToBackendMapsLinkToURLAndOpenAppIfInstalled() {
         let redirect = CustomLinkRedirect(link: "https://example.com")
 
@@ -23,14 +21,10 @@ final class CustomLinkRedirectTests: XCTestCase {
         XCTAssertEqual(dict["open_app_if_installed"] as? Bool, false)
     }
 
-    // MARK: - Default values
-
     func testDefaultOpenAppIfInstalledIsTrue() {
         let redirect = CustomLinkRedirect(link: "https://test.com")
         XCTAssertTrue(redirect.openAppIfInstalled)
     }
-
-    // MARK: - CustomRedirects
 
     func testCustomRedirectsInitWithAllNilDefaults() {
         let redirects = CustomRedirects()

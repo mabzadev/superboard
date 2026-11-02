@@ -1,7 +1,8 @@
-import { createFetchRouter } from "@superboard/contracts/route-registry";
-import { DurableObject } from "cloudflare:workers";
 import type { FlowWebSocketMessage } from "@superboard/contracts/flows";
+import { createFetchRouter } from "@superboard/contracts/route-registry";
 import { configuredSecrets, matchesAnySecret } from "@superboard/contracts/secret";
+import { DurableObject } from "cloudflare:workers";
+
 import type { Env } from "../types";
 
 type SocketAttachment = { userIdHash: string; connectedAt: string };
@@ -63,9 +64,7 @@ export class FlowRealtimeHub extends DurableObject<Env> {
 			} catch {
 				try {
 					socket.close(1011, "Delivery failed");
-				} catch {
-					// Socket is already closed.
-				}
+				} catch {}
 			}
 		}
 		return delivered;
@@ -82,8 +81,6 @@ export class FlowRealtimeHub extends DurableObject<Env> {
 	webSocketError(socket: WebSocket): void {
 		try {
 			socket.close(1011, "WebSocket error");
-		} catch {
-			// Socket is already closed.
-		}
+		} catch {}
 	}
 }

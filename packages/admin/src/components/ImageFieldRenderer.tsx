@@ -1,13 +1,3 @@
-/**
- * Image field with media picker
- *
- * Stores full image metadata including dimensions for responsive images.
- * Handles backwards compatibility with legacy string URLs.
- *
- * Extracted from ContentEditor so non-top-level field UIs (e.g. repeater
- * sub-fields) can reuse the same picker without a circular import.
- */
-
 import { Button, Label, LayerCard, Text } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { Image as ImageIcon, ImageBroken, ImageSquare, X } from "@phosphor-icons/react";
@@ -18,16 +8,10 @@ import { getMediaObjectPosition, metaString } from "../lib/media-utils";
 import { FieldHelpLabel } from "./FieldHelpLabel.js";
 import { MediaPickerModal } from "./MediaPickerModal";
 
-/**
- * Image field value - matches emdash's MediaValue type
- */
 export interface ImageFieldValue {
 	id: string;
-	/** Provider ID (e.g., "local", "cloudflare-images") */
 	provider?: string;
-	/** Direct URL for local media or legacy data */
 	src?: string;
-	/** Preview URL for admin display (separate from src used for rendering) */
 	previewUrl?: string;
 	filename?: string;
 	mimeType?: string;
@@ -36,11 +20,8 @@ export interface ImageFieldValue {
 	height?: number;
 	focalX?: number;
 	focalY?: number;
-	/** LQIP blurhash placeholder (images only) */
 	blurhash?: string;
-	/** LQIP dominant-color placeholder, as a CSS color (images only) */
 	dominantColor?: string;
-	/** Provider-specific metadata */
 	meta?: Record<string, unknown>;
 }
 
@@ -70,8 +51,6 @@ export function ImageFieldRenderer({
 	const { t } = useLingui();
 	const [pickerOpen, setPickerOpen] = React.useState(false);
 	const [imageBroken, setImageBroken] = React.useState(false);
-	// Normalize value to get display URL (handles both object and legacy string)
-	// Prefer previewUrl for admin display, fall back to src, then derive from storageKey/id
 	const displayUrl =
 		typeof value === "string"
 			? value
@@ -93,8 +72,6 @@ export function ImageFieldRenderer({
 		onChange({
 			id: item.id,
 			provider: item.provider || "local",
-			// Local media derives URLs from meta.storageKey at display time — no src needed
-			// External providers cache a preview URL for admin display
 			previewUrl: isLocalProvider ? undefined : item.url,
 			alt: item.alt || "",
 			width: item.width,
@@ -103,8 +80,6 @@ export function ImageFieldRenderer({
 			focalY: item.focalY ?? undefined,
 			filename: item.filename,
 			mimeType: item.mimeType,
-			// Cache LQIP alongside dimensions so embeds render a placeholder without a
-			// runtime lookup. Fall back to `meta` for providers that stash it there.
 			blurhash: item.blurhash ?? metaString(item.meta, "blurhash"),
 			dominantColor: item.dominantColor ?? metaString(item.meta, "dominantColor"),
 			meta: isLocalProvider ? { ...item.meta, storageKey: item.storageKey } : item.meta,

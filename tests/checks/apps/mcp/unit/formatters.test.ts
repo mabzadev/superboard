@@ -35,8 +35,6 @@ import {
 	usageActivity,
 } from "./fixtures.js";
 
-// ── slugify ──
-
 describe("slugify", () => {
 	it("converts name to lowercase slug", () => {
 		expect(slugify("Summer Sale")).toBe("summer-sale");
@@ -63,8 +61,6 @@ describe("slugify", () => {
 		expect(slugify(long).length).toBe(128);
 	});
 });
-
-// ── extractPath ──
 
 describe("extractPath", () => {
 	it("extracts path from full URL", () => {
@@ -96,8 +92,6 @@ describe("extractPath", () => {
 	});
 });
 
-// ── formatStatus ──
-
 describe("formatStatus", () => {
 	it("renders user and instance table", () => {
 		const out = formatStatus(statusWithProjects);
@@ -119,7 +113,6 @@ describe("formatStatus", () => {
 	it("handles missing user gracefully", () => {
 		const out = formatStatus({ instances: [] });
 		expect(out).toContain("Account Overview");
-		// val() produces em-dash for missing fields
 	});
 
 	it("does not turn operational activity into a product gate", () => {
@@ -144,8 +137,6 @@ describe("formatPlatformStatus", () => {
 	});
 });
 
-// ── formatUsage ──
-
 describe("formatUsage", () => {
 	it("renders 30-day activity without quota or subscription fields", () => {
 		const out = formatUsage(usageActivity);
@@ -163,8 +154,6 @@ describe("formatUsage", () => {
 	});
 });
 
-// ── formatCreateProject ──
-
 describe("formatCreateProject", () => {
 	it("renders instance and project IDs", () => {
 		const out = formatCreateProject(createdProject);
@@ -181,8 +170,6 @@ describe("formatCreateProject", () => {
 		expect(out).toContain("Project Created");
 	});
 });
-
-// ── formatLink ──
 
 describe("formatLink", () => {
 	it("renders link details with action label", () => {
@@ -253,8 +240,6 @@ describe("formatLink", () => {
 	});
 });
 
-// ── formatSearchLinks ──
-
 describe("formatSearchLinks", () => {
 	it("renders links table with pagination", () => {
 		const out = formatSearchLinks(searchLinksPage);
@@ -273,8 +258,6 @@ describe("formatSearchLinks", () => {
 		expect(out).toContain("No links found");
 	});
 });
-
-// ── formatAnalyticsOverview ──
 
 describe("formatAnalyticsOverview", () => {
 	it("renders current and previous periods", () => {
@@ -298,8 +281,6 @@ describe("formatAnalyticsOverview", () => {
 	});
 });
 
-// ── formatLinkAnalytics ──
-
 describe("formatLinkAnalytics", () => {
 	it("renders per-link metrics", () => {
 		const out = formatLinkAnalytics(linkAnalytics);
@@ -319,8 +300,6 @@ describe("formatLinkAnalytics", () => {
 		expect(out).toContain("No data for this period");
 	});
 });
-
-// ── formatTopLinks ──
 
 describe("formatTopLinks", () => {
 	it("renders ranked table", () => {
@@ -342,8 +321,6 @@ describe("formatTopLinks", () => {
 	});
 });
 
-// ── formatRedirects ──
-
 describe("formatRedirects", () => {
 	it("renders redirect config with multiple platforms", () => {
 		const out = formatRedirects(redirectConfig);
@@ -360,8 +337,6 @@ describe("formatRedirects", () => {
 		expect(out).toContain("No redirect configuration returned");
 	});
 });
-
-// ── formatSdkConfig ──
 
 describe("formatSdkConfig", () => {
 	it("renders platform configs and hides sensitive fields", () => {
@@ -419,8 +394,6 @@ describe("formatSdkConfig", () => {
 	});
 });
 
-// ── formatCampaign ──
-
 describe("formatCampaign", () => {
 	it("renders created campaign with add-link hint", () => {
 		const out = formatCampaign(createdCampaign, "Created");
@@ -446,8 +419,6 @@ describe("formatCampaign", () => {
 	});
 });
 
-// ── formatListCampaigns ──
-
 describe("formatListCampaigns", () => {
 	it("renders campaigns table with revenue formatting", () => {
 		const out = formatListCampaigns(campaignListSingle);
@@ -463,11 +434,8 @@ describe("formatListCampaigns", () => {
 	});
 });
 
-// ── Helper edge cases ──
-
 describe("helper edge cases", () => {
 	it("pct handles NaN input", () => {
-		// pct is exercised through formatAnalyticsOverview
 		const out = formatAnalyticsOverview({
 			metrics: {
 				current: {
@@ -516,13 +484,10 @@ describe("helper edge cases", () => {
 			{ campaign: { id: 1, name: "X", archived: false, created_at: "not-a-date" } },
 			"Created",
 		);
-		// Should not contain "Invalid Date" — falls back to raw string
 		expect(out).not.toContain("Invalid Date");
 		expect(out).toContain("not-a-date");
 	});
 });
-
-// ── API shape warnings ──
 
 describe("API shape warnings", () => {
 	it("formatStatus warns when user key is missing", () => {

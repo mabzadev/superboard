@@ -22,9 +22,6 @@ export interface UserListProps {
 	onLoadMore?: () => void;
 }
 
-/**
- * User list component with search, filter, and table display
- */
 export function UserList({
 	users,
 	isLoading,
@@ -50,7 +47,6 @@ export function UserList({
 
 	return (
 		<div className="space-y-4">
-			{/* Header */}
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-semibold leading-tight">{t`Users`}</h1>
 				<Button onClick={onInviteUser} icon={<UserPlus />}>
@@ -82,7 +78,6 @@ export function UserList({
 				</Select>
 			</TableToolbar>
 
-			{/* Table */}
 			<div className="rounded-md border bg-kumo-base overflow-x-auto">
 				<table className="w-full">
 					<thead>
@@ -155,7 +150,6 @@ export function UserList({
 				</table>
 			</div>
 
-			{/* Load more */}
 			{hasMore && !isLoading && (
 				<div className="flex justify-center">
 					<Button variant="outline" onClick={onLoadMore}>
@@ -181,7 +175,6 @@ function UserListRow({ user, onSelect }: UserListRowProps) {
 		<tr className="hover:bg-kumo-tint/25 cursor-pointer" onClick={onSelect}>
 			<td className="px-4 py-3">
 				<div className="flex items-center gap-3">
-					{/* Avatar */}
 					{user.avatarUrl ? (
 						<img src={user.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
 					) : (
@@ -221,23 +214,19 @@ function UserListRow({ user, onSelect }: UserListRowProps) {
 	);
 }
 
-/** Loading skeleton for user list */
 export function UserListSkeleton() {
 	return (
 		<div className="space-y-4">
-			{/* Header skeleton */}
 			<div className="flex items-center justify-between">
 				<div className="h-8 w-24 bg-kumo-tint animate-pulse rounded" />
 				<div className="h-10 w-32 bg-kumo-tint animate-pulse rounded" />
 			</div>
 
-			{/* Filters skeleton */}
 			<div className="flex gap-4">
 				<div className="h-10 w-64 bg-kumo-tint animate-pulse rounded" />
 				<div className="h-10 w-44 bg-kumo-tint animate-pulse rounded" />
 			</div>
 
-			{/* Table skeleton */}
 			<div className="rounded-md border bg-kumo-base">
 				<div className="border-b bg-kumo-tint/50 px-4 py-3">
 					<div className="h-4 w-full bg-kumo-tint animate-pulse rounded" />

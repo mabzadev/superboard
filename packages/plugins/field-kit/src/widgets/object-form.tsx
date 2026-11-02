@@ -6,25 +6,6 @@ import { SubField } from "../shared/sub-field";
 import type { FieldWidgetProps, SubFieldDef } from "../shared/types";
 import { normalizeObject } from "../shared/utils";
 
-/**
- * Object form widget — renders a group of typed sub-fields that store as a
- * single JSON object.
- *
- * Seed usage:
- *   {
- *     "slug": "nutrition",
- *     "type": "json",
- *     "widget": "field-kit:object-form",
- *     "options": {
- *       "fields": [
- *         { "key": "calories", "label": "Calories", "type": "number", "suffix": "kcal" },
- *         { "key": "protein", "label": "Protein", "type": "number", "suffix": "g" }
- *       ]
- *     }
- *   }
- *
- * Stored value: { "calories": 250, "protein": 12.5 }
- */
 export function ObjectForm({
 	value,
 	onChange,

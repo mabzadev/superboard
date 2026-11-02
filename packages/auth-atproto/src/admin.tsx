@@ -1,16 +1,5 @@
-/**
- * AT Protocol Auth Provider Admin Components
- *
- * Provides LoginForm and SetupStep components for the pluggable auth system.
- * These are imported at build time via the virtual:emdash/auth-providers module.
- */
-
 import { Button, Input } from "@cloudflare/kumo";
 import * as React from "react";
-
-// ============================================================================
-// Shared icon
-// ============================================================================
 
 function AtprotoIcon({ className }: { className?: string }) {
 	return (
@@ -20,10 +9,6 @@ function AtprotoIcon({ className }: { className?: string }) {
 	);
 }
 
-// ============================================================================
-// LoginButton — compact button shown in the provider grid
-// ============================================================================
-
 export function LoginButton() {
 	return (
 		<Button type="button" variant="outline" className="w-full justify-center">
@@ -32,10 +17,6 @@ export function LoginButton() {
 		</Button>
 	);
 }
-
-// ============================================================================
-// LoginForm — expanded form shown when LoginButton is clicked
-// ============================================================================
 
 export function LoginForm() {
 	const [handle, setHandle] = React.useState("");
@@ -94,16 +75,11 @@ export function LoginForm() {
 	);
 }
 
-// ============================================================================
-// SetupStep — shown in the setup wizard
-// ============================================================================
-
 export function SetupStep({ onComplete }: { onComplete: () => void }) {
 	const [handle, setHandle] = React.useState("");
 	const [isLoading, setIsLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
 
-	// Suppress unused variable warning — onComplete is called after redirect
 	void onComplete;
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -129,7 +105,6 @@ export function SetupStep({ onComplete }: { onComplete: () => void }) {
 			}
 
 			const result: { data: { url: string } } = await response.json();
-			// Redirect to PDS authorization page — onComplete will be called after redirect back
 			window.location.href = result.data.url;
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to start AT Protocol login");

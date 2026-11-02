@@ -628,9 +628,6 @@ INSERT OR IGNORE INTO module_cutover_audit (id,project_id,action,actor,details_j
 				project_id: project.project_id,
 			}),
 		).slice(0, 48)}`;
-		// A remote D1 file can stop between statements. Apply the replay-safe state
-		// and deterministic audit first, then seal the command receipt last. A
-		// retry can safely finish the sequence without duplicating the audit.
 		const sql = `INSERT INTO flows_legacy_cutover_state
       (project_id,enabled,window_id,plan_id,verification_checksum_sha256,updated_by,updated_at)
       VALUES (${Number(project.project_id)},${state.enabled ? 1 : 0},${sqlLiteral(state.window_id)},${sqlLiteral(state.plan_id)},${sqlLiteral(state.verification_checksum_sha256)},${sqlLiteral(actor)},${sqlLiteral(now)})
@@ -804,9 +801,7 @@ function parseJsonOutput(output) {
 	const value = String(output || "").trim();
 	try {
 		return JSON.parse(value);
-	} catch {
-		/* Wrangler may print a banner before JSON. */
-	}
+	} catch {}
 	const starts = [value.indexOf("["), value.indexOf("{")]
 		.filter((index) => index >= 0)
 		.sort((a, b) => a - b);
@@ -815,9 +810,7 @@ function parseJsonOutput(output) {
 			if (!["}", "]"].includes(value[end - 1])) continue;
 			try {
 				return JSON.parse(value.slice(start, end));
-			} catch {
-				/* keep looking */
-			}
+			} catch {}
 		}
 	}
 	throw new Error("Unable to parse Wrangler JSON output");

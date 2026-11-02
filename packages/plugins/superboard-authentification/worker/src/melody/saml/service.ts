@@ -178,7 +178,7 @@ function parseIdentityProviderMetadata(metadata: string): IdentityProvider {
 	const ssoUrl = service?.getAttribute("Location")?.trim() ?? "";
 	const signingCertificates = allElements(idpDescriptor, "KeyDescriptor")
 		.filter((key) => (key.getAttribute("use") ?? "signing") !== "encryption")
-		.flatMap((key) => allElements(key, "X509Certificate")) // gitleaks:allow -- XML element name, never key material
+		.flatMap((key) => allElements(key, "X509Certificate"))
 		.map((node) => node.textContent?.replace(/\s/g, "") ?? "")
 		.filter(Boolean)
 		.map(toCertificatePem);
@@ -313,9 +313,7 @@ function verifySignedDocuments(
 					if (rootName === "Response" || rootName === "Assertion") authenticated.push(signedDoc);
 				}
 				break;
-			} catch {
-				// Another configured signing certificate may be active during IdP rotation.
-			}
+			} catch {}
 		}
 	}
 	return authenticated;
@@ -370,7 +368,10 @@ async function decryptAssertionFromDocument(
 				disallowDecryptionWithInsecureAlgorithm: false,
 				warnInsecureAlgorithm: false,
 			},
-			(error, result) => (error ? reject(error) : resolve(result)),
+			(error, result) => {
+				if (error) reject(error);
+				else resolve(result);
+			},
 		);
 	});
 	const assertion = parseXml(decrypted);

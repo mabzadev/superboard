@@ -1,9 +1,3 @@
-/**
- * Type definitions for Cloudflare event subscription messages.
- * See: https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/
- */
-
-/** Workers Builds `build.succeeded` event. */
 export interface BuildSucceededEvent {
 	type: "cf.workersBuilds.worker.build.succeeded";
 	source: {
@@ -40,10 +34,6 @@ export interface BuildSucceededEvent {
 	};
 }
 
-/**
- * Other event types we may receive from the subscription but ignore.
- * Kept loose (string `type`) so we don't block on schema updates.
- */
 export interface UnknownEvent {
 	type: string;
 	source?: unknown;
@@ -53,7 +43,6 @@ export interface UnknownEvent {
 
 export type PerfQueueMessage = BuildSucceededEvent | UnknownEvent;
 
-/** Type guard for the only event we actually act on. */
 export function isBuildSucceeded(event: PerfQueueMessage): event is BuildSucceededEvent {
 	return event.type === "cf.workersBuilds.worker.build.succeeded";
 }

@@ -2,10 +2,6 @@ import { z } from "zod";
 
 import { roleLevel } from "./common.js";
 
-// ---------------------------------------------------------------------------
-// Admin / Users: Input schemas
-// ---------------------------------------------------------------------------
-
 export const usersListQuery = z
 	.object({
 		search: z.string().optional(),
@@ -36,10 +32,6 @@ export const allowedDomainUpdateBody = z
 		defaultRole: roleLevel.optional(),
 	})
 	.meta({ id: "AllowedDomainUpdateBody" });
-
-// ---------------------------------------------------------------------------
-// Admin / Users: Response schemas
-// ---------------------------------------------------------------------------
 
 export const userSchema = z
 	.object({

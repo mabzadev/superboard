@@ -1,7 +1,3 @@
-/**
- * Media upload, list, delete, and provider APIs
- */
-
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 
@@ -23,7 +19,6 @@ export interface UploadMediaOptions extends MediaUploadOptions {
 	fieldId?: string;
 }
 
-/** Trim and clamp a search term to the server-accepted range. */
 export function normalizeMediaSearch(value: string | undefined | null): string {
 	return (value ?? "").trim().slice(0, MEDIA_SEARCH_MAX_LENGTH);
 }
@@ -84,23 +79,18 @@ export interface MediaItem {
 	filename: string;
 	mimeType: string;
 	url: string;
-	/** Storage key for local media (e.g., "01ABC.jpg"). Not present for external URLs. */
 	storageKey?: string;
 	size: number;
 	width?: number;
 	height?: number;
 	focalX?: number | null;
 	focalY?: number | null;
-	/** LQIP blurhash placeholder (images only) */
 	blurhash?: string;
-	/** LQIP dominant-color placeholder, as a CSS color (images only) */
 	dominantColor?: string;
 	alt?: string;
 	caption?: string;
 	createdAt: string;
-	/** Provider ID for external media (e.g., "cloudflare-images") */
 	provider?: string;
-	/** Provider-specific metadata */
 	meta?: Record<string, unknown>;
 }
 
@@ -122,16 +112,12 @@ export interface MediaListResult extends FindManyResult<LocalMediaItem> {
 
 export interface MediaFolderListResult extends FindManyResult<MediaFolder> {}
 
-/**
- * Fetch media list
- */
 export async function fetchMediaList(options?: {
 	cursor?: string;
 	page?: number;
 	limit?: number;
 	mimeType?: string | string[];
 	folderId?: string | null;
-	/** Case-insensitive filename substring search (also matches extensions). */
 	search?: string;
 }): Promise<MediaListResult> {
 	const params = new URLSearchParams();
@@ -148,8 +134,6 @@ export async function fetchMediaList(options?: {
 		params.set("folderId", options.folderId);
 	}
 	if (options?.search) {
-		// Trim and clamp to the server's accepted range so a long or
-		// whitespace-only term can't trigger an avoidable 400.
 		const q = normalizeMediaSearch(options.search);
 		if (q) params.set("q", q);
 	}
@@ -159,12 +143,6 @@ export async function fetchMediaList(options?: {
 	return parseApiResponse<MediaListResult>(response, i18n._(msg`Failed to fetch media`));
 }
 
-/**
- * Fetch a single media item by id.
- *
- * Used to resolve an id-only reference (e.g. a byline's `avatarMediaId`)
- * back into a full media item for display.
- */
 export async function fetchMediaItem(
 	id: string,
 	options?: MediaUploadOptions,
@@ -259,9 +237,6 @@ export async function deleteMediaFolder(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete media folder`));
 }
 
-/**
- * Upload URL response from the API
- */
 interface UploadUrlResponse {
 	uploadUrl: string;
 	method: "PUT";
@@ -299,10 +274,6 @@ async function computeContentHash(file: File, signal?: AbortSignal): Promise<str
 	}
 }
 
-/**
- * Try to get a signed upload URL
- * Returns null if signed URLs are not supported (e.g., local storage)
- */
 async function getUploadUrl(
 	file: File,
 	opts?: UploadMediaOptions,
@@ -323,7 +294,6 @@ async function getUploadUrl(
 		});
 
 		if (response.status === 501) {
-			// Not implemented - storage doesn't support signed URLs
 			return null;
 		}
 
@@ -333,7 +303,6 @@ async function getUploadUrl(
 		);
 	} catch (error) {
 		opts?.signal?.throwIfAborted();
-		// If the endpoint doesn't exist, fall back to direct upload
 		if (error instanceof TypeError && error.message.includes("fetch")) {
 			return null;
 		}
@@ -341,9 +310,6 @@ async function getUploadUrl(
 	}
 }
 
-/**
- * Confirm upload after uploading to signed URL
- */
 async function confirmUpload(
 	mediaId: string,
 	metadata?: { width?: number; height?: number; size?: number },
@@ -362,9 +328,6 @@ async function confirmUpload(
 	return data.item;
 }
 
-/**
- * Upload directly to signed URL
- */
 async function uploadToSignedUrl(
 	file: File,
 	uploadInfo: UploadUrlResponse,
@@ -383,9 +346,6 @@ async function uploadToSignedUrl(
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to upload file`));
 }
 
-/**
- * Get image dimensions from a file
- */
 async function getImageDimensions(
 	file: File,
 	options?: MediaUploadOptions,
@@ -426,16 +386,11 @@ async function getImageDimensions(
 	});
 }
 
-/**
- * Upload media file via direct upload (legacy/local storage)
- */
 async function uploadMediaDirect(file: File, opts?: UploadMediaOptions): Promise<MediaItem> {
-	// Get image dimensions before upload
 	const dimensions = await getImageDimensions(file, opts);
 
 	const formData = new FormData();
 	formData.append("file", file);
-	// Send dimensions as form fields
 	if (dimensions?.width) formData.append("width", String(dimensions.width));
 	if (dimensions?.height) formData.append("height", String(dimensions.height));
 	if (opts?.fieldId) formData.append("fieldId", opts.fieldId);
@@ -452,32 +407,21 @@ async function uploadMediaDirect(file: File, opts?: UploadMediaOptions): Promise
 	return data.item;
 }
 
-/**
- * Upload media file
- *
- * Tries signed URL upload first (for S3/R2 storage), falls back to direct upload
- * (for local storage) if signed URLs are not supported.
- */
 export async function uploadMedia(file: File, opts?: UploadMediaOptions): Promise<MediaItem> {
 	opts?.signal?.throwIfAborted();
-	// Try to get a signed upload URL
 	const uploadInfo = await getUploadUrl(file, opts);
 
 	if (!uploadInfo) {
-		// Signed URLs not supported, use direct upload
 		return uploadMediaDirect(file, opts);
 	}
 	if ("existing" in uploadInfo) {
 		return fetchMediaItem(uploadInfo.mediaId, opts);
 	}
 
-	// Upload directly to storage via signed URL
 	await uploadToSignedUrl(file, uploadInfo, opts);
 
-	// Get image dimensions for confirmation
 	const dimensions = await getImageDimensions(file, opts);
 
-	// Confirm the upload
 	return confirmUpload(
 		uploadInfo.mediaId,
 		{
@@ -489,9 +433,6 @@ export async function uploadMedia(file: File, opts?: UploadMediaOptions): Promis
 	);
 }
 
-/**
- * Delete media
- */
 export async function deleteMedia(id: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/media/${id}`, {
 		method: "DELETE",
@@ -499,9 +440,6 @@ export async function deleteMedia(id: string): Promise<void> {
 	if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to delete media`));
 }
 
-/**
- * Update media metadata (dimensions, alt text, etc.)
- */
 export interface MediaUpdateInput {
 	alt?: string;
 	caption?: string;
@@ -525,11 +463,6 @@ export async function updateMedia(id: string, input: MediaUpdateInput): Promise<
 	return data.item;
 }
 
-// =============================================================================
-// Media Providers API
-// =============================================================================
-
-/** Media provider capabilities */
 export interface MediaProviderCapabilities {
 	browse: boolean;
 	search: boolean;
@@ -537,7 +470,6 @@ export interface MediaProviderCapabilities {
 	delete: boolean;
 }
 
-/** Media provider info from the API */
 export interface MediaProviderInfo {
 	id: string;
 	name: string;
@@ -545,7 +477,6 @@ export interface MediaProviderInfo {
 	capabilities: MediaProviderCapabilities;
 }
 
-/** Media item from a provider */
 export interface MediaProviderItem {
 	id: string;
 	filename: string;
@@ -553,18 +484,13 @@ export interface MediaProviderItem {
 	size?: number;
 	width?: number;
 	height?: number;
-	/** LQIP blurhash placeholder (images only) */
 	blurhash?: string;
-	/** LQIP dominant-color placeholder, as a CSS color (images only) */
 	dominantColor?: string;
 	alt?: string;
 	previewUrl?: string;
 	meta?: Record<string, unknown>;
 }
 
-/**
- * Fetch all configured media providers
- */
 export async function fetchMediaProviders(): Promise<MediaProviderInfo[]> {
 	const response = await apiFetch(`${API_BASE}/media/providers`);
 	const data = await parseApiResponse<{ items: MediaProviderInfo[] }>(
@@ -574,9 +500,6 @@ export async function fetchMediaProviders(): Promise<MediaProviderInfo[]> {
 	return data.items;
 }
 
-/**
- * Fetch media items from a specific provider
- */
 export async function fetchProviderMedia(
 	providerId: string,
 	options?: {
@@ -603,9 +526,6 @@ export async function fetchProviderMedia(
 	);
 }
 
-/**
- * Upload media to a specific provider
- */
 export async function uploadToProvider(
 	providerId: string,
 	file: File,
@@ -629,9 +549,6 @@ export async function uploadToProvider(
 	return data.item;
 }
 
-/**
- * Delete media from a specific provider
- */
 export async function deleteFromProvider(providerId: string, itemId: string): Promise<void> {
 	const response = await apiFetch(`${API_BASE}/media/providers/${providerId}/${itemId}`, {
 		method: "DELETE",

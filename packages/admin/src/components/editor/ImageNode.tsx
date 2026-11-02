@@ -1,14 +1,3 @@
-/**
- * Custom Image Node for TipTap
- *
- * Provides a selectable, editable image with:
- * - Click to select
- * - Visual selection indicator
- * - Quick inline alt text editing
- * - Full detail panel for advanced settings
- * - Delete/replace options
- */
-
 import { Button, Input } from "@cloudflare/kumo";
 import { useLingui } from "@lingui/react/macro";
 import { Trash, Pencil, X, Check, SlidersHorizontal } from "@phosphor-icons/react";
@@ -20,7 +9,6 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 import type { ImageAttributes } from "./ImageDetailPanel";
 
-// Extend the Commands interface to include setImage
 declare module "@tiptap/react" {
 	interface Commands<ReturnType> {
 		image: {
@@ -30,13 +18,10 @@ declare module "@tiptap/react" {
 				title?: string;
 				caption?: string;
 				mediaId?: string;
-				/** Provider ID for external media (e.g., "cloudflare-images") */
 				provider?: string;
 				width?: number;
 				height?: number;
-				/** LQIP blurhash placeholder */
 				blurhash?: string;
-				/** LQIP dominant-color placeholder */
 				dominantColor?: string;
 				displayWidth?: number;
 				displayHeight?: number;
@@ -46,7 +31,6 @@ declare module "@tiptap/react" {
 	}
 }
 
-// React component for the image node view
 function ImageNodeView({
 	node,
 	updateAttributes,
@@ -59,7 +43,6 @@ function ImageNodeView({
 	const [isEditingAlt, setIsEditingAlt] = React.useState(false);
 	const [altText, setAltText] = React.useState(node.attrs.alt || "");
 
-	/** Whether this node currently has its sidebar panel open */
 	const sidebarOpenRef = React.useRef(false);
 
 	const handleSaveAlt = () => {
@@ -77,7 +60,6 @@ function ImageNodeView({
 		}
 	};
 
-	// Sync local alt text state when node attributes change
 	React.useEffect(() => {
 		setAltText(node.attrs.alt || "");
 	}, [node.attrs.alt]);
@@ -150,7 +132,6 @@ function ImageNodeView({
 		}
 	};
 
-	// Close sidebar when this node is deselected
 	React.useEffect(() => {
 		if (!selected) {
 			closeSidebar();
@@ -164,8 +145,6 @@ function ImageNodeView({
 		| "wide"
 		| "full"
 		| undefined;
-	// Mirror the published <Image> layout so the editor is WYSIWYG: left/right
-	// float (text wraps), center/wide/full size the block.
 	const alignmentStyle: React.CSSProperties =
 		alignment === "left"
 			? { float: "left", width: "fit-content", maxWidth: "50%", marginInlineEnd: "1.5rem" }
@@ -196,7 +175,6 @@ function ImageNodeView({
 					draggable={false}
 				/>
 
-				{/* Selection overlay with actions */}
 				{selected && (
 					<div className="absolute top-2 end-2 flex gap-1">
 						<Button
@@ -238,7 +216,6 @@ function ImageNodeView({
 					</div>
 				)}
 
-				{/* Quick alt text editor (inline) */}
 				{isEditingAlt && (
 					<div className="absolute bottom-0 start-0 end-0 bg-kumo-base/95 backdrop-blur p-3 rounded-b-lg border-t">
 						<label className="text-xs font-medium text-kumo-subtle mb-1 block">{t`Alt text`}</label>
@@ -283,7 +260,6 @@ function ImageNodeView({
 					</div>
 				)}
 
-				{/* Caption only — must mirror the published renderer (Image.astro) */}
 				{!isEditingAlt && node.attrs.caption && (
 					<figcaption className="text-center text-sm text-kumo-subtle mt-2">
 						{node.attrs.caption}
@@ -294,7 +270,6 @@ function ImageNodeView({
 	);
 }
 
-// Custom Image extension with React NodeView
 export const ImageExtension = Node.create({
 	name: "image",
 
@@ -308,7 +283,6 @@ export const ImageExtension = Node.create({
 
 	addStorage() {
 		return {
-			/** Callback set by PortableTextEditor to open image settings in the content sidebar */
 			onOpenBlockSidebar: null as
 				| ((panel: {
 						type: "image";
@@ -319,7 +293,6 @@ export const ImageExtension = Node.create({
 						onClose: () => void;
 				  }) => void)
 				| null,
-			/** Callback set by PortableTextEditor to close the sidebar */
 			onCloseBlockSidebar: null as (() => void) | null,
 		};
 	},
@@ -351,7 +324,6 @@ export const ImageExtension = Node.create({
 			mediaId: {
 				default: null,
 			},
-			/** Provider ID for external media (e.g., "cloudflare-images") */
 			provider: {
 				default: null,
 			},

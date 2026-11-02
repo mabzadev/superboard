@@ -1,9 +1,3 @@
-/**
- * Statically-sandboxed plugins through the real admin plugin routes and a real
- * EmDashRuntime: the list route surfaces them, and the enable/disable routes
- * toggle them without error.
- */
-
 import type { APIContext } from "astro";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -65,12 +59,8 @@ function buildRuntime(
 	});
 }
 
-// Role.ADMIN is 50 in @emdash-cms/auth; plugins:read / plugins:manage require it.
 const admin = { id: "admin-1", role: 50 };
 
-// Mirror the subset of the middleware's `locals.emdash` facade that the plugin
-// routes read. The facade once dropped `sandboxedPluginEntries` (not compile-checked
-// here), which a raw-runtime fixture would hide, so this drives the real field through.
 function facade(runtime: EmDashRuntime) {
 	return {
 		db: runtime.db,

@@ -64,7 +64,6 @@ describe("CommentInbox", () => {
 
 		await checkbox.click();
 
-		// Bulk action bar appears only after at least one comment is selected.
 		await expect.element(screen.getByText("1 selected")).toBeInTheDocument();
 	});
 

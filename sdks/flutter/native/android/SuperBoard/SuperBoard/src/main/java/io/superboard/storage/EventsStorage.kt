@@ -29,9 +29,6 @@ class EventsStorage(context: Context) : IEventsStorage {
         private const val STORED_PAYMENT_EVENTS = "stored_payment_events"
     }
 
-    /// Adds or replaces events in the storage.
-    ///
-    /// - Parameter events: The events to add or replace.
     override suspend fun addOrReplaceEvents(events: List<Event>) = withContext(storageSerialDispatcher) {
         DebugLogger.instance.log(LogLevel.INFO, "Caching events - Events update: ${events}")
 
@@ -58,9 +55,6 @@ class EventsStorage(context: Context) : IEventsStorage {
         }
     }
 
-    /// Adds an event to the storage.
-    ///
-    /// - Parameter event: The event to add.
     override suspend fun addEvent(event: Event) = withContext(storageSerialDispatcher) {
         var currentEvents = getEvents().toMutableList()
         currentEvents.add(event)
@@ -121,7 +115,6 @@ class EventsStorage(context: Context) : IEventsStorage {
             }
         }
 
-        // Remove invalid TIME_SPENT events
         for (event in events) {
             if ((event.event == EventType.TIME_SPENT) && (event.engagementTime == null)) {
                 removeEvent(event)
@@ -134,9 +127,6 @@ class EventsStorage(context: Context) : IEventsStorage {
         }
     }
 
-    /// Removes an event from the storage.
-    ///
-    /// - Parameter event: The event to remove.
     override suspend fun removeEvent(event: Event) = withContext(storageSerialDispatcher) {
         val currentEvents = getEvents().toMutableList()
         currentEvents.remove(event)
@@ -154,9 +144,6 @@ class EventsStorage(context: Context) : IEventsStorage {
         }
     }
 
-    /// Removes a payment event from the storage.
-    ///
-    /// - Parameter event: The event to remove.
     override suspend fun removePaymentEvent(event: PaymentEvent) = withContext(storageSerialDispatcher) {
         val currentEvents = getPaymentEvents().toMutableList()
         currentEvents.remove(event)
@@ -174,7 +161,6 @@ class EventsStorage(context: Context) : IEventsStorage {
         }
     }
 
-    /// Retrieves all events from the storage.
     override suspend fun getEvents(): List<Event> = withContext(storageSerialDispatcher) {
             val jsonString = preferences.getString(STORED_EVENTS, null)
             val type = object : TypeToken<List<Event>>() {}.type
@@ -186,7 +172,6 @@ class EventsStorage(context: Context) : IEventsStorage {
             }
     }
 
-    /// Retrieves all payment from the storage.
     override suspend fun getPaymentEvents(): List<PaymentEvent> = withContext(storageSerialDispatcher) {
         val jsonString = preferences.getString(STORED_PAYMENT_EVENTS, null)
         val type = object : TypeToken<List<PaymentEvent>>() {}.type
@@ -198,7 +183,6 @@ class EventsStorage(context: Context) : IEventsStorage {
         }
     }
 
-    /// Check if we already have an empty time spent event.
     override suspend fun hasEmptyTimeSpentEvent(): Boolean = withContext(storageSerialDispatcher) {
         val jsonString = preferences.getString(STORED_EVENTS, null)
         val type = object : TypeToken<List<Event>>() {}.type

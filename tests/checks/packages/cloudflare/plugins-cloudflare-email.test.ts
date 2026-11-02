@@ -28,9 +28,6 @@ function fakeEnv(sendImpl?: () => Promise<{ messageId?: string }>) {
 
 describe("cloudflareEmail()", () => {
 	it("returns a descriptor with a bundlable entrypoint (not an in-process definition)", () => {
-		// The astro integration rejects `plugins: []` entries without an
-		// `entrypoint` (#1721), so the documented usage must produce a
-		// descriptor the integration can statically import at build time.
 		const descriptor = cloudflareEmail({ from: "cms@mails.example.com" });
 		expect(descriptor.id).toBe("cloudflare-email");
 		expect(descriptor.entrypoint).toBe("@emdash-cms/cloudflare/plugins/cloudflare-email");
@@ -63,15 +60,10 @@ describe("createPlugin()", () => {
 
 	it("round-trips the descriptor options the virtual plugins module passes back", async () => {
 		const descriptor = cloudflareEmail({ from: "cms@mails.example.com" });
-		// Simulate what the generated virtual:emdash/plugins module does:
-		// `createPlugin(descriptor.options)`.
 		const plugin = createPlugin(descriptor.options as CloudflareEmailConfig);
 		const hook = plugin.hooks["email:deliver"];
 		expect(hook).toBeDefined();
 
-		// The handler resolves the env via cloudflare:workers, which is not
-		// available in vitest — assert it fails with the runtime-guard error
-		// rather than a config error, proving the wiring is intact.
 		await expect(hook?.handler(event, fakeCtx())).rejects.toThrow(
 			/cloudflare:workers is not available/,
 		);

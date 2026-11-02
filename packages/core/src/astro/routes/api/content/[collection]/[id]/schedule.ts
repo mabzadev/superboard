@@ -1,10 +1,3 @@
-/**
- * Schedule content for future publishing - injected by EmDash integration
- *
- * POST /_emdash/api/content/{collection}/{id}/schedule - Schedule for publishing
- * DELETE /_emdash/api/content/{collection}/{id}/schedule - Unschedule (clear scheduled time)
- */
-
 import type { APIRoute } from "astro";
 
 import { requireOwnerPerm } from "#api/authorize.js";
@@ -14,9 +7,6 @@ import { contentScheduleBody } from "#api/schemas.js";
 
 export const prerender = false;
 
-/**
- * Extract author ID from a content item response (shared by POST and DELETE).
- */
 function extractOwnership(data: unknown): { authorId: string; resolvedId: string | undefined } {
 	const obj =
 		data && typeof data === "object"
@@ -47,7 +37,6 @@ export const POST: APIRoute = async ({ params, request, locals, url, cache }) =>
 
 	const locale = url.searchParams.get("locale") || undefined;
 
-	// Fetch item to check ownership
 	const existing = await emdash.handleContentGet(collection, id, locale);
 	if (!existing.success) {
 		return apiError(
@@ -81,7 +70,6 @@ export const DELETE: APIRoute = async ({ params, locals, url, cache }) => {
 
 	const locale = url.searchParams.get("locale") || undefined;
 
-	// Fetch item to check ownership
 	const existing = await emdash.handleContentGet(collection, id, locale);
 	if (!existing.success) {
 		return apiError(

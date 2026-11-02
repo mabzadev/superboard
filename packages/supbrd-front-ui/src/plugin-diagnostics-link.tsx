@@ -19,13 +19,11 @@ const messages = {
 	},
 } as const;
 
-/** Address of the central Plugins diagnostics page for a plugin or one of its components. */
 export function pluginDiagnosticsHref(pluginId: string): string {
 	const directory = pluginPackage(canonicalPluginId(pluginId))?.directory ?? pluginId;
 	return `/_emdash/admin/plugins-manager/${encodeURIComponent(directory)}/configuration`;
 }
 
-/** Points module settings to the central Plugins page, which owns plugin health and lifecycle. */
 export function PluginDiagnosticsLink({ pluginId, locale, className }: PluginDiagnosticsLinkProps) {
 	const front = useOptionalFrontContext();
 	const id = front?.pluginId ?? pluginId;

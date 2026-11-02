@@ -1,14 +1,3 @@
-/**
- * create-emdash
- *
- * CLI for creating new EmDash projects.
- *
- * Defaults to an interactive flow. Pass flags (or --yes) to run
- * non-interactively — see `--help` or {@link HELP_TEXT} for the full set.
- *
- * Usage: npm create emdash@latest [name] [options]
- */
-
 import { exec } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
@@ -38,7 +27,6 @@ const GITHUB_REPO = "emdash-cms/templates";
 interface TemplateConfig {
 	name: string;
 	description: string;
-	/** Directory name in the templates repo */
 	dir: string;
 }
 
@@ -88,13 +76,10 @@ const CLOUDFLARE_TEMPLATES = {
 	},
 } as const satisfies Record<TemplateKey, TemplateConfig>;
 
-/** Defaults applied under `--yes` when the user omits a flag. */
 const DEFAULT_PLATFORM: Platform = "cloudflare";
 const DEFAULT_TEMPLATE: TemplateKey = "blog";
-/** Used by `--yes` when the user omits the project name positional. */
 const DEFAULT_PROJECT_NAME = "my-site";
 
-/** Detect which package manager invoked us, or fall back to npm */
 function detectPackageManager(): PackageManager {
 	const agent = process.env.npm_config_user_agent ?? "";
 	if (agent.startsWith("pnpm")) return "pnpm";
@@ -103,7 +88,6 @@ function detectPackageManager(): PackageManager {
 	return "npm";
 }
 
-/** Build select options from a config object, preserving literal key types */
 function selectOptions<K extends string>(
 	obj: Readonly<Record<K, Readonly<{ name: string; description: string }>>>,
 ): { value: K; label: string; hint: string }[] {
@@ -117,12 +101,6 @@ function selectOptions<K extends string>(
 
 const NEWLINE_PATTERN = /\r?\n/;
 
-/**
- * Make sure `fileName` is excluded by `.gitignore`. Templates' gitignores
- * already cover `.env*`, but rather than relying on every template being
- * current, the scaffolder defensively appends a stanza if no existing line
- * matches.
- */
 function ensureGitignored(projectDir: string, fileName: string): void {
 	const target = resolve(projectDir, ".gitignore");
 	const existing = existsSync(target) ? readFileSync(target, "utf-8") : "";
@@ -153,19 +131,9 @@ async function selectTemplate(platform: Platform): Promise<TemplateKey> {
 	return key;
 }
 
-/**
- * Resolve the project name + directory. Honours flags first, then falls back
- * to the interactive prompt.
- *
- * Returns `null` if the user declined to overwrite a non-empty target.
- */
 async function resolveProjectLocation(
 	flags: ParsedFlags,
 ): Promise<{ projectName: string; projectDir: string; isCurrentDir: boolean } | null> {
-	// Validate the positional once, here, so the error message matches the
-	// prompt path and parseFlags stays purely structural. parseFlags already
-	// captured the raw value; this is the only place that enforces the
-	// pattern across both flag and prompt entry points.
 	if (flags.name !== undefined) {
 		const error = validateProjectName(flags.name);
 		if (error) {
@@ -178,9 +146,6 @@ async function resolveProjectLocation(
 
 	if (target === undefined) {
 		if (flags.yes) {
-			// --yes with no positional: fall back to the documented default
-			// rather than silently dropping into the (broken-in-non-TTY) prompt.
-			// This is the contract documented in flags.ts and HELP_TEXT.
 			target = DEFAULT_PROJECT_NAME;
 		} else {
 			const name = await p.text({
@@ -201,9 +166,6 @@ async function resolveProjectLocation(
 		const projectDir = process.cwd();
 		const projectName = sanitizePackageName(basename(projectDir));
 		if (isDirNonEmpty(projectDir)) {
-			// Under --yes we refuse to clobber unless --force is also set.
-			// Silently overwriting source files in the user's cwd is the
-			// kind of default we should never ship.
 			if (flags.yes && !flags.force) {
 				p.cancel("Current directory is not empty. Re-run with --force to allow overwriting.");
 				process.exit(1);
@@ -215,7 +177,6 @@ async function resolveProjectLocation(
 				});
 				if (p.isCancel(proceed) || !proceed) return null;
 			}
-			// flags.yes && flags.force: proceed silently.
 		}
 		return { projectName, projectDir, isCurrentDir: true };
 	}
@@ -236,7 +197,6 @@ async function resolveProjectLocation(
 			});
 			if (p.isCancel(overwrite) || !overwrite) return null;
 		}
-		// flags.yes && flags.force: proceed silently.
 	}
 	return { projectName, projectDir, isCurrentDir: false };
 }
@@ -301,9 +261,6 @@ async function resolveShouldInstall(flags: ParsedFlags): Promise<boolean> {
 }
 
 async function main() {
-	// Short-circuit --help before strict parsing so a user typing
-	// `npm create emdash@latest --help --template nope` gets the help they
-	// asked for, not the parse error for the bad template.
 	if (wantsHelp(process.argv)) {
 		console.log(HELP_TEXT);
 		process.exit(0);
@@ -313,8 +270,6 @@ async function main() {
 	try {
 		flags = parseFlags(process.argv);
 	} catch (error) {
-		// FlagError carries a friendly message; parseArgs's own errors do too
-		// (e.g. "Unknown option '--templat'"). Either way, surface and exit.
 		const message =
 			error instanceof FlagError || error instanceof Error ? error.message : String(error);
 		console.error(`\n${pc.red("Error:")} ${message}\n`);
@@ -351,20 +306,15 @@ async function main() {
 			force: true,
 		});
 
-		// Set project name in package.json
 		const pkgPath = resolve(projectDir, "package.json");
 		if (existsSync(pkgPath)) {
 			const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
 			pkg.name = projectName;
 
-			// Templates ship with `packageManager: "pnpm@X"` baked in by the
-			// sync script. Drop it when the user picked a different PM so
-			// corepack doesn't force pnpm on yarn/npm/bun users.
 			if (pm !== "pnpm") {
 				delete pkg.packageManager;
 			}
 
-			// Add emdash config if template has seed data
 			const seedPath = resolve(projectDir, "seed", "seed.json");
 			if (existsSync(seedPath)) {
 				pkg.emdash = {
@@ -376,23 +326,12 @@ async function main() {
 			writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
 		}
 
-		// Scaffold a fresh EMDASH_ENCRYPTION_KEY into the local-secrets file.
-		// Both Node and Cloudflare use `.env` now — since Aug 2025 Wrangler and
-		// the Cloudflare Vite plugin read `.env` in local development, so we no
-		// longer special-case Workers with `.dev.vars`. Idempotent — won't
-		// overwrite an existing entry if the user re-runs scaffolding into a
-		// non-empty directory. We also defensively ensure the file is gitignored.
 		const secretsFile = ".env";
 		const keyResult = writeEncryptionKey(projectDir, secretsFile);
 		ensureGitignored(projectDir, secretsFile);
 
 		s.stop("Project created!");
 
-		// Wrangler loads either `.dev.vars` or `.env`, but never both: when a
-		// `.dev.vars` file is present its values win and `.env` is ignored
-		// entirely. A stray legacy `.dev.vars` (e.g. scaffolding over an older
-		// project) would therefore silently shadow the `.env` we just wrote and
-		// the encryption key would never load. Warn so the user consolidates.
 		if (platform === "cloudflare" && existsSync(resolve(projectDir, ".dev.vars"))) {
 			p.log.warn(
 				`Found an existing ${pc.cyan(".dev.vars")}. Wrangler ignores ${pc.cyan(".env")} while ` +

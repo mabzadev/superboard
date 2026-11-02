@@ -1,14 +1,3 @@
-/**
- * MCP concurrency tests — InMemoryTransport surface.
- *
- * Exercises the runtime + handler + tool dispatch under concurrent
- * invocation: shared mutable state, race conditions in tool registration,
- * draft revision creation under load. The HTTP-transport-level 401 race
- * (where parallel requests sometimes lose the runtime singleton during
- * cold-start) lives in the smoke test against a live server, since
- * InMemoryTransport doesn't exercise the auth middleware path.
- */
-
 import { Role } from "@emdash-cms/auth";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -39,13 +28,6 @@ describe("MCP concurrency — in-memory transport (bug #8 partial)", () => {
 	});
 
 	it("14 parallel read calls all succeed (no spurious failures)", async () => {
-		// 14 batched calls — covers the same fan-out a real session sees.
-		// Over the in-memory transport the auth path is bypassed, so a
-		// failure here would indicate a runtime-level race rather than the
-		// HTTP-transport 401 issue (which the smoke test covers).
-		// Each iteration must call the tool fresh — .fill() would reuse one
-		// Promise. `void i` keeps the lint rule from misreading the callback
-		// as constant.
 		const callPromises = Array.from({ length: 14 }, (_, i) => {
 			void i;
 			return harness.client.callTool({ name: "schema_list_collections", arguments: {} });
@@ -58,8 +40,6 @@ describe("MCP concurrency — in-memory transport (bug #8 partial)", () => {
 	});
 
 	it("mixed read/write calls in parallel maintain correctness", async () => {
-		// 5 creates + 5 lists running concurrently. Final list count must
-		// equal initial count + creates that succeeded.
 		const initial = await harness.client.callTool({
 			name: "content_list",
 			arguments: { collection: "post" },
@@ -84,13 +64,11 @@ describe("MCP concurrency — in-memory transport (bug #8 partial)", () => {
 
 		const results = await Promise.all(work);
 
-		// Count successful creates
 		const createsSuccessful = results
 			.slice(0, 5)
 			.filter((r) => !(r as { isError?: boolean }).isError).length;
 		expect(createsSuccessful).toBe(5);
 
-		// Final list should reflect all creates
 		const final = await harness.client.callTool({
 			name: "content_list",
 			arguments: { collection: "post" },
@@ -106,7 +84,6 @@ describe("MCP concurrency — in-memory transport (bug #8 partial)", () => {
 		});
 		const id = extractJson<{ item: { id: string } }>(created).item.id;
 
-		// 10 concurrent updates with different titles
 		const work = Array.from({ length: 10 }, (_, i) =>
 			harness.client.callTool({
 				name: "content_update",
@@ -119,8 +96,6 @@ describe("MCP concurrency — in-memory transport (bug #8 partial)", () => {
 			expect(result.isError, extractText(result)).toBeFalsy();
 		}
 
-		// Final state should be a valid title from one of the updates,
-		// not corrupted or empty.
 		const got = await harness.client.callTool({
 			name: "content_get",
 			arguments: { collection: "post", id },
@@ -132,8 +107,6 @@ describe("MCP concurrency — in-memory transport (bug #8 partial)", () => {
 	});
 
 	it("parallel calls don't leak data across users", async () => {
-		// Two harnesses on the same DB, one ADMIN, one CONTRIBUTOR.
-		// Concurrent reads should each see their own permitted view.
 		const userTwo = await connectMcpHarness({
 			db,
 			userId: "user_contrib",
@@ -141,7 +114,6 @@ describe("MCP concurrency — in-memory transport (bug #8 partial)", () => {
 		});
 
 		try {
-			// Admin creates an item
 			const created = await harness.client.callTool({
 				name: "content_create",
 				arguments: { collection: "post", data: { title: "by admin" } },
@@ -149,9 +121,6 @@ describe("MCP concurrency — in-memory transport (bug #8 partial)", () => {
 			expect(created.isError, extractText(created)).toBeFalsy();
 			const id = extractJson<{ item: { id: string } }>(created).item.id;
 
-			// 10 concurrent updates: 5 from admin (allowed), 5 from contributor
-			// who isn't the author (denied). All admin updates should succeed,
-			// all contributor updates should fail — no cross-contamination.
 			const adminWork = Array.from({ length: 5 }, (_, i) =>
 				harness.client.callTool({
 					name: "content_update",

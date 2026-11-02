@@ -1,10 +1,3 @@
-/**
- * Kysely dialect for Durable Object preview databases
- *
- * Proxies all queries to an EmDashPreviewDB DO instance via RPC.
- * Preview mode is read-only — no transaction support needed.
- */
-
 import type {
 	CompiledQuery,
 	DatabaseConnection,
@@ -19,27 +12,11 @@ import { SqliteAdapter, SqliteQueryCompiler } from "kysely";
 import { D1Introspector } from "./d1-introspector.js";
 import type { QueryResult as DOQueryResult } from "./do-class.js";
 
-/**
- * Minimal interface for the DO stub's RPC methods.
- *
- * We define this instead of using DurableObjectStub<EmDashPreviewDB> directly
- * because Rpc.Result<T> resolves to `never` when the return type contains
- * `unknown` (Record<string, unknown> in QueryResult.rows). This interface
- * gives us clean typing without fighting the Rpc type system.
- */
 export interface PreviewDBStub {
 	query(sql: string, params?: unknown[]): Promise<DOQueryResult>;
 }
 
 export interface PreviewDODialectConfig {
-	/**
-	 * Factory that returns a fresh DO stub on each call.
-	 *
-	 * DO stubs are bound to the request context that created them.
-	 * Since the Kysely instance may be cached across requests, we can't
-	 * hold a single stub — each connection must get a fresh one via
-	 * namespace.get(id), which is cheap (no RPC, just a local ref).
-	 */
 	getStub: () => PreviewDBStub;
 }
 
@@ -80,17 +57,11 @@ class PreviewDODriver implements Driver {
 		return new PreviewDOConnection(this.#config.getStub());
 	}
 
-	async beginTransaction(): Promise<void> {
-		// No-op. Preview is read-only.
-	}
+	async beginTransaction(): Promise<void> {}
 
-	async commitTransaction(): Promise<void> {
-		// No-op.
-	}
+	async commitTransaction(): Promise<void> {}
 
-	async rollbackTransaction(): Promise<void> {
-		// No-op.
-	}
+	async rollbackTransaction(): Promise<void> {}
 
 	async releaseConnection(): Promise<void> {}
 

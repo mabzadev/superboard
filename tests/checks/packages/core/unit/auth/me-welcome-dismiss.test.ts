@@ -20,12 +20,6 @@ describe("GET/POST /_emdash/api/auth/me – welcome dismiss", () => {
 		await teardownTestDatabase(db);
 	});
 
-	/**
-	 * Regression: the welcome-dismissed flag was stored in the Astro session,
-	 * which is ephemeral. When the session expired the flag was lost and the
-	 * modal appeared again on every login. The fix persists the flag in the
-	 * user's `data` JSON column so it survives session rotation.
-	 */
 	it("persists welcomeDismissed in the database, not the session", async () => {
 		const user = await userRepo.create({
 			email: "scott@example.com",
@@ -33,7 +27,6 @@ describe("GET/POST /_emdash/api/auth/me – welcome dismiss", () => {
 			role: "admin",
 		});
 
-		// 1. GET should report isFirstLogin = true for a brand-new user
 		const getRes1 = await GET({
 			locals: { emdash: { db }, user, __playgroundDb: db },
 			session: { get: vi.fn().mockResolvedValue(undefined), set: vi.fn() },
@@ -43,7 +36,6 @@ describe("GET/POST /_emdash/api/auth/me – welcome dismiss", () => {
 		const body1 = await getRes1.json();
 		expect(body1.data.isFirstLogin).toBe(true);
 
-		// 2. POST dismissWelcome should persist the flag
 		const sessionSet = vi.fn();
 		const postRes = await POST({
 			request: new Request("http://localhost/_emdash/api/auth/me", {
@@ -57,7 +49,6 @@ describe("GET/POST /_emdash/api/auth/me – welcome dismiss", () => {
 
 		expect(postRes.status).toBe(200);
 
-		// Playground reuses its injected user object, so GET must read the persisted data.
 		const staleSession = {
 			get: vi.fn().mockResolvedValue(false),
 			set: vi.fn(),

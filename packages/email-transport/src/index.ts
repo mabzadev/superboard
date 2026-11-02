@@ -11,13 +11,9 @@ export type SmtpPublicConfig = {
 export type SmtpSecretConfig = { password: string | null };
 
 export type SmtpAttachment = {
-	/** Display filename. It is sanitized and RFC 2231 encoded by the transport. */
 	filename: string;
-	/** MIME type such as application/pdf. Invalid values fall back to application/octet-stream. */
 	contentType?: string | null;
-	/** Standard base64 content (whitespace is ignored). */
 	content: string;
-	/** Optional Content-ID for inline images referenced as cid:<contentId> in HTML. */
 	contentId?: string | null;
 	disposition?: "attachment" | "inline";
 };
@@ -32,9 +28,7 @@ export type SmtpMessage = {
 	attachments?: SmtpAttachment[];
 };
 
-/** Maximum decoded size of all attachments of one message. */
 export const EMAIL_ATTACHMENTS_MAX_BYTES = 10 * 1024 * 1024;
-/** Maximum number of attachments of one message. */
 export const EMAIL_ATTACHMENTS_MAX_COUNT = 20;
 
 export class EmailTransportError extends Error {
@@ -54,8 +48,6 @@ export async function sendSmtpMessage(
 	secret: SmtpSecretConfig,
 	message: SmtpMessage,
 ): Promise<{ messageId: string; response: string }> {
-	// Build (and validate attachments) before opening a socket so invalid input
-	// never reaches the provider and never becomes an ambiguous SMTP outcome.
 	const built = buildMessage(config, message);
 	const { connect } = await import("cloudflare:sockets");
 	let socket = connect(
@@ -110,9 +102,6 @@ export async function sendSmtpMessage(
 				{ phase: "provider_acceptance" },
 			);
 		}
-		// A 250 response is the provider acceptance boundary. QUIT only closes the
-		// SMTP session; losing its response must never turn an accepted message
-		// into a retryable delivery.
 		await session.command("QUIT", [221]).catch(() => undefined);
 		return {
 			messageId: extractMessageId(accepted.text) || built.messageId,
@@ -292,10 +281,6 @@ function attachmentPart(attachment: NormalizedAttachment): MimePart {
 	};
 }
 
-/**
- * Validates attachments before any byte reaches the SMTP session. Content must
- * be strict base64; the decoded total is bounded by EMAIL_ATTACHMENTS_MAX_BYTES.
- */
 export function normalizeAttachments(
 	attachments: SmtpAttachment[] | undefined,
 ): NormalizedAttachment[] {
@@ -345,7 +330,6 @@ export function decodedBase64Length(value: string): number {
 	return Math.floor((value.length * 3) / 4) - padding;
 }
 
-/** Removes path, control, quoting and header-breaking characters from a filename. */
 export function sanitizeFilename(value: unknown): string {
 	let replaced = "";
 	let previousUnsafe = false;
@@ -362,7 +346,6 @@ export function sanitizeFilename(value: unknown): string {
 		.slice(0, 200);
 	return cleaned || "attachment";
 }
-/** Text of a primitive header input; objects and missing values become empty. */
 function scalarText(value: unknown): string {
 	return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
 		? String(value)
