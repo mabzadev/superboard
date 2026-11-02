@@ -625,21 +625,21 @@ console.log(result);
 
 Seeding is safe to run multiple times. Conflict behavior by entity type:
 
-| Entity              | Behavior                              |
-| ------------------- | ------------------------------------- |
-| Collection          | Skip if slug exists                   |
-| Field               | Skip if collection + slug exists      |
-| Taxonomy definition | Skip if name exists                   |
-| Taxonomy term       | Skip if name + slug exists            |
-| Byline profile      | Skip if slug exists                   |
-| Menu                | Skip if name exists                   |
-| Menu items          | Replace all (menu is recreated)       |
-| Redirect            | Skip if source exists                 |
-| Widget area         | Skip if name exists                   |
-| Widgets             | Replace all (area is recreated)       |
-| Section             | Skip if slug exists                   |
-| Settings            | Update (settings are meant to change) |
-| Content             | Skip if slug exists in collection     |
+| Entity              | Behavior                                                     |
+| ------------------- | ------------------------------------------------------------ |
+| Collection          | Skip if slug exists                                          |
+| Field               | Skip if collection + slug exists                             |
+| Taxonomy definition | Skip if name exists                                          |
+| Taxonomy term       | Skip if name + slug exists                                   |
+| Byline profile      | Skip if slug exists                                          |
+| Menu                | Skip if name exists                                          |
+| Menu items          | Replace all (menu is recreated)                              |
+| Redirect            | Skip if source exists                                        |
+| Widget area         | Skip if name exists                                          |
+| Widgets             | Replace all (area is recreated)                              |
+| Section             | Skip if slug exists                                          |
+| Settings            | Update (settings are meant to change)                        |
+| Content             | Skip if slug exists in collection, including trashed entries |
 
 <Aside type="caution">
 	Menu items and widgets are **replaced**, not merged. The seed file is the source of truth for menu

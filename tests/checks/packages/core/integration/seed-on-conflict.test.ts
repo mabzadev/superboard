@@ -8,6 +8,7 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { ContentRepository } from "../../../../../packages/core/src/database/repositories/content.js";
 import type { Database } from "../../../../../packages/core/src/database/types.js";
 import { applySeed } from "../../../../../packages/core/src/seed/apply.js";
 import type { SeedFile } from "../../../../../packages/core/src/seed/types.js";
@@ -193,6 +194,20 @@ describe("applySeed onConflict modes", () => {
 			expect(result.collections.skipped).toBe(1);
 			expect(result.collections.created).toBe(0);
 			expect(result.collections.updated).toBe(0);
+		});
+
+		it("skips trashed content instead of recreating its slug", async () => {
+			const seed = createTestSeed();
+			await applySeed(db, seed, { includeContent: true });
+			const repo = new ContentRepository(db);
+			const original = await repo.findBySlug("posts", "hello-world", "en");
+			await repo.delete("posts", original!.id);
+
+			const result = await applySeed(db, seed, { includeContent: true });
+
+			expect(result.content.created).toBe(0);
+			expect(result.content.skipped).toBe(1);
+			expect(await repo.findBySlug("posts", "hello-world", "en")).toBeNull();
 		});
 	});
 

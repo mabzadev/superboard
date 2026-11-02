@@ -510,6 +510,22 @@ export async function applySeed(
 						? await contentRepo.findBySlug(collectionSlug, entrySlug, entryLocale)
 						: await contentRepo.findById(collectionSlug, entry.id);
 
+					if (!existing) {
+						const trashed = entrySlug
+							? await contentRepo.findBySlugIncludingTrashed(collectionSlug, entrySlug, entryLocale)
+							: await contentRepo.findByIdIncludingTrashed(collectionSlug, entry.id);
+						if (trashed) {
+							if (onConflict === "error") {
+								throw new Error(
+									`Conflict: content "${entrySlug ?? entry.id}" in "${collectionSlug}" already exists`,
+								);
+							}
+							result.content.skipped++;
+							seedIdMap.set(entry.id, trashed.id);
+							continue;
+						}
+					}
+
 					if (existing) {
 						if (onConflict === "error") {
 							throw new Error(
