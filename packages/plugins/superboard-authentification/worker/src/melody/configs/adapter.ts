@@ -26,7 +26,6 @@ export enum BaseKVKey {
   JwtPublicSecret = 'jwtPublicSecret',
   DeprecatedJwtPublicSecret = 'deprecatedJwtPublicSecret',
   JwtPrivateSecret = 'jwtPrivateSecret',
-  DeprecatedJwtPrivateSecret = 'deprecatedJwtPrivateSecret',
   SessionSecret = 'sessionSecret',
   SamlSpCert = 'samlSpCrt',
   SamlSpKey = 'samlSpKey',
@@ -87,11 +86,3 @@ export const getSmsMfaRememberDeviceCookieKey = (userId: number) => {
   return `${BaseKVKey.SmsMfaRememberDevice}-${userId}`
 }
 
-export enum FileLocation {
-  NodePublicKey = 'node_jwt_public_key.pem',
-  NodePrivateKey = 'node_jwt_private_key.pem',
-  NodeDeprecatedPrivateKey = 'node_deprecated_jwt_private_key.pem',
-  NodeDeprecatedPublicKey = 'node_deprecated_jwt_public_key.pem',
-  NodeSamlSpCert = 'node_saml_sp.crt',
-  NodeSamlSpKey = 'node_saml_sp.key',
-}

@@ -43,9 +43,6 @@
 		"src/**/*.test.ts",
 		"src/**/*.test.tsx",
 		"src/**/__tests__/**",
-		"src/**/tests/**",
-		"src/melody/adapters/**",
-		"src/melody/node.tsx",
-		"src/melody/node_compat.tsx"
+		"src/**/tests/**"
 	]
 }

@@ -29,8 +29,6 @@
 		"xml-crypto": "^6.1.2",
 		"xml-encryption": "^6.0.0",
 		"yup": "^1.7.1",
-		"@hono/node-server": "1.19.9",
-		"dotenv": "17.4.2",
 		"toml": "3.0.0"
 	},
 	"devDependencies": {

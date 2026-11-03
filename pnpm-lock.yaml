@@ -2740,9 +2740,6 @@ importers:
 
   packages/plugins/superboard-authentification/worker:
     dependencies:
-      '@hono/node-server':
-        specifier: 1.19.9
-        version: 1.19.9(hono@4.13.5)
       '@hono/swagger-ui':
         specifier: ^0.5.2
         version: 0.5.3(hono@4.13.5)
@@ -2773,9 +2770,6 @@ importers:
       class-validator:
         specifier: ^0.14.2
         version: 0.14.4
-      dotenv:
-        specifier: 17.4.2
-        version: 17.4.2
       fflate:
         specifier: ^0.4.8
         version: 0.4.9

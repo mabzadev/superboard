@@ -10,6 +10,10 @@ concurrency:
   group: flutterflow-library
   cancel-in-progress: false
 
+env:
+  pnpm_config_fetch_timeout: "300000"
+  pnpm_config_fetch_retries: "5"
+
 jobs:
   sync:
     if: github.ref == 'refs/heads/dev'

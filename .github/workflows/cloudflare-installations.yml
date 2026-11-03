@@ -18,6 +18,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  pnpm_config_fetch_timeout: "300000"
+  pnpm_config_fetch_retries: "5"
   SUPERBOARD_INSTALLER_ORIGIN: ${{ vars.SUPERBOARD_INSTALLER_ORIGIN }}
 
 jobs:
