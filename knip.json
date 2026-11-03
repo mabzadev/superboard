@@ -10,7 +10,8 @@
 				"tests/fixtures/site-browser/business-actions.mjs",
 				"tests/checks/**/env.d.ts"
 			],
-			"project": ["tests/**/*.{ts,tsx,mjs}", "scripts/**/*.{ts,mjs}"]
+			"project": ["tests/**/*.{ts,tsx,mjs}", "scripts/**/*.{ts,mjs}"],
+			"ignoreDependencies": ["cloudflare"]
 		},
 		"packages/core": {
 			"entry": ["src/astro/**/*.ts", "src/db/*.ts", "src/storage/*.ts"],
