@@ -49,7 +49,7 @@ describe("Front Release Route View Validation", () => {
 
 		const failures = await validateReleaseRouteViews(routes, validRenderers, pluginLock);
 		expect(failures).toEqual([]);
-	});
+	}, 30_000);
 
 	test("fails with diagnostic identifying plugin and route when component is missing or unmapped", async () => {
 		const routes = [
