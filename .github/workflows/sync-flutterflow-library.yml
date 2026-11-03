@@ -10,10 +10,6 @@ concurrency:
   group: flutterflow-library
   cancel-in-progress: false
 
-env:
-  pnpm_config_fetch_timeout: "300000"
-  pnpm_config_fetch_retries: "5"
-
 jobs:
   sync:
     if: github.ref == 'refs/heads/dev'
@@ -37,7 +33,12 @@ jobs:
       - uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260
         with:
           sdk: stable
-      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pnpm
+          key: pnpm-metadata-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-metadata-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile --prefer-offline
       - name: Validate the library contract and published SDK revisions
         run: |
           pnpm flutterflow-library:check

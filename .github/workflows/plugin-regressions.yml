@@ -19,10 +19,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-env:
-  pnpm_config_fetch_timeout: "300000"
-  pnpm_config_fetch_retries: "5"
-
 jobs:
   plugin-regressions:
     runs-on: ubuntu-latest
@@ -43,7 +39,12 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pnpm
+          key: pnpm-metadata-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-metadata-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile --prefer-offline
       - name: Build test dependencies
         run: |
           pnpm --filter '@emdash-cms/admin...' build
