@@ -68,7 +68,7 @@ export const triggerLogger = (
   }
 }
 
-export const infoLogger = (message: string) => {
+const infoLogger = (message: string) => {
   console.info(
     `[${LoggerLevel.Info}]`,
     message,
@@ -76,7 +76,7 @@ export const infoLogger = (message: string) => {
   )
 }
 
-export const warnLogger = (message: string) => {
+const warnLogger = (message: string) => {
   console.warn(
     `[${LoggerLevel.Warn}]`,
     message,

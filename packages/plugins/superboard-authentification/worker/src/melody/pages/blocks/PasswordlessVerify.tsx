@@ -4,7 +4,7 @@ import {
 import { passwordlessCode } from '../tools/locale'
 import { typeConfig } from '../../configs'
 
-export interface PasswordlessVerifyProps {
+interface PasswordlessVerifyProps {
   locale: typeConfig.Locale;
   onSubmit: (e: Event) => void;
   onChange: (name: 'mfaCode', value: string[]) => void;

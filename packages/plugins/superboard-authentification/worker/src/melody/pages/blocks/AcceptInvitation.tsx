@@ -4,7 +4,7 @@ import {
 import { acceptInvitation } from '../tools/locale'
 import { typeConfig } from '../../configs'
 
-export interface AcceptInvitationProps {
+interface AcceptInvitationProps {
   success: boolean;
   locale: typeConfig.Locale;
   onSubmit: (e: Event) => void;

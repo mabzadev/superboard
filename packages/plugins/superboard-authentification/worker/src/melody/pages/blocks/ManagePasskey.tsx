@@ -5,7 +5,7 @@ import {
 import { typeConfig } from '../../configs'
 import { userPasskeyModel } from '../../models'
 
-export interface ManagePasskeyProps {
+interface ManagePasskeyProps {
   locale: typeConfig.Locale;
   successMessage: string | null;
   passkey: userPasskeyModel.Record | null;

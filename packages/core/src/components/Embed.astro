@@ -2,6 +2,11 @@
 import { sanitizeHref } from "../utils/url.js";
 import { sanitizeContent } from "../utils/sanitize.js";
 
+/**
+ * Portable Text Embed block component
+ *
+ * Renders embeds from YouTube, Vimeo, Twitter, etc.
+ */
 export interface Props {
 	node: {
 		_type: "embed";
@@ -25,6 +30,7 @@ const url = sanitizeHref(rawUrl);
 const YOUTUBE_ID_PATTERN = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
 const VIMEO_ID_PATTERN = /vimeo\.com\/(\d+)/;
 
+// Extract video ID for common providers
 function getYouTubeId(input: string): string | null {
 	const match = input.match(YOUTUBE_ID_PATTERN);
 	return match?.[1] || null;
@@ -38,6 +44,7 @@ function getVimeoId(input: string): string | null {
 const youtubeId = getYouTubeId(url);
 const vimeoId = getVimeoId(url);
 
+// Check if this is a self-hosted video or audio
 const isSelfHostedVideo = provider === "video";
 const isSelfHostedAudio = provider === "audio";
 ---
@@ -93,7 +100,7 @@ const isSelfHostedAudio = provider === "audio";
 	}
 	.emdash-embed-video {
 		position: relative;
-		padding-bottom: 56.25%;
+		padding-bottom: 56.25%; /* 16:9 */
 		height: 0;
 		overflow: hidden;
 	}

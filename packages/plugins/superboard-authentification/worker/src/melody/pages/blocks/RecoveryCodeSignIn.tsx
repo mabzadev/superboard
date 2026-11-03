@@ -9,7 +9,7 @@ import {
 } from '../tools/locale'
 import { typeConfig } from '../../configs'
 
-export interface RecoveryCodeSignInProps {
+interface RecoveryCodeSignInProps {
   locale: typeConfig.Locale;
   onSubmit: (e: Event) => void;
   onChange: (name: 'email' | 'recoveryCode', value: string) => void;

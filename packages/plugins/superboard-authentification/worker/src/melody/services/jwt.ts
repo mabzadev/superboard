@@ -13,7 +13,7 @@ import { cryptoUtil, loggerUtil } from "../utils";
 
 const EXTERNAL_JSON_MAX_BYTES = 1_048_576;
 
-export const base64UrlEncode = (data: string) => {
+const base64UrlEncode = (data: string) => {
 	return btoa(data).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 };
 
@@ -33,11 +33,11 @@ export const decodeBase64 = (str: string): Uint8Array<ArrayBuffer> => {
 	return bytes;
 };
 
-export const pemToBinary = (pem: string): Uint8Array<ArrayBuffer> => {
+const pemToBinary = (pem: string): Uint8Array<ArrayBuffer> => {
 	return decodeBase64(pem.replace(/-+(BEGIN|END).*/g, "").replace(/\s/g, ""));
 };
 
-export const signWithKid = async (c: Context<typeConfig.Context>, payload: object) => {
+const signWithKid = async (c: Context<typeConfig.Context>, payload: object) => {
 	const privateKey = await kvService.getJwtPrivateSecret(c);
 	const publicKey = await kvService.getJwtPublicSecret(c);
 	const jwk = await cryptoUtil.secretToJwk(publicKey);
@@ -480,6 +480,9 @@ export interface OidcUser {
 	id: string;
 }
 
+/**
+ * According to the OIDC provider, the implementation of this function might need to be adjusted.
+ */
 export const verifyOidcCredential = async (
 	clientId: string,
 	issuer: string,

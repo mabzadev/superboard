@@ -74,7 +74,7 @@ export const getFollowUpParams = (): FollowUpParams => {
   }
 }
 
-export interface AuthCodeExpiredParams {
+interface AuthCodeExpiredParams {
   locale: typeConfig.Locale;
   redirectUri: string;
 }
@@ -91,7 +91,7 @@ export const getAuthCodeExpiredParams = (): AuthCodeExpiredParams => {
   }
 }
 
-export interface MagicSignInParams {
+interface MagicSignInParams {
   locale: typeConfig.Locale;
   code: string;
   otp: string;
@@ -112,7 +112,7 @@ export const getMagicSignInParams = (): MagicSignInParams => {
   }
 }
 
-export interface VerifyEmailParams {
+interface VerifyEmailParams {
   locale: typeConfig.Locale;
   id: string;
   org: string;
@@ -131,7 +131,7 @@ export const getVerifyEmailParams = (): VerifyEmailParams => {
   }
 }
 
-export interface InvitationParams {
+interface InvitationParams {
   locale: typeConfig.Locale;
   invitationToken: string;
   signinUrl: string;

@@ -8,7 +8,7 @@ import { recoveryCodeEnroll } from '../tools/locale'
 
 import { typeConfig } from '../../configs'
 
-export interface RecoveryCodeEnrollProps {
+interface RecoveryCodeEnrollProps {
   locale: typeConfig.Locale;
   recoveryCodeEnrollInfo: GetProcessRecoveryCodeEnrollRes | null;
   submitError: string | null;

@@ -49,7 +49,7 @@
 			}
 		},
 		"packages/plugins/superboard-authentification/worker": {
-			"entry": ["src/index.ts", "src/melody/node.tsx"],
+			"entry": ["src/index.ts", "src/melody/node.tsx", "src/melody/pages/client.tsx"],
 			"wrangler": {
 				"config": ["wrangler.jsonc"]
 			},

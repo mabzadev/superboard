@@ -6,7 +6,7 @@ import { consent } from '../tools/locale'
 import { typeConfig } from '../../configs'
 import { GetAppConsentRes } from '../../handlers/identity'
 
-export interface ConsentProps {
+interface ConsentProps {
   locale: typeConfig.Locale;
   consentInfo: GetAppConsentRes | null;
   onDecline: () => void;

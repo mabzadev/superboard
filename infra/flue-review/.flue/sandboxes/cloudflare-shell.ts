@@ -1,3 +1,11 @@
+// flue-blueprint: sandbox/cloudflare-shell@1
+//
+// Project-owned Cloudflare Shell sandbox adapter (from `flue add sandbox
+// cloudflare-shell`). Adapts a @cloudflare/shell Workspace into a Flue
+// SandboxFactory: a durable Workspace filesystem (Durable Object SQLite) plus a
+// model-facing JavaScript `code` tool executed via a Worker Loader binding.
+// There is NO Linux shell -- exec() throws; agents use the `code` tool + fs.
+
 import {
 	DynamicWorkerExecutor,
 	type DynamicWorkerExecutorOptions,
@@ -212,6 +220,10 @@ function buildCodeToolDescription(): string {
 	].join("\n");
 }
 
+// R2 operations log start/end so a stalled call is visible as an unmatched
+// start line. Wrapped once and cached per underlying bucket: Workspace
+// fingerprints construction options per storage, so every construction site
+// must receive the identical instance.
 const instrumentedBuckets = new WeakMap<R2Bucket, R2Bucket>();
 let r2OpSeq = 0;
 function instrumentR2(bucket: R2Bucket): R2Bucket {
@@ -259,6 +271,8 @@ export function getDefaultWorkspace(r2?: R2Bucket, name?: string): Workspace {
 	return new Workspace({
 		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		sql: storage.sql as SqlStorage,
+		// `name` keys R2 objects and namespaces this workspace; required when an
+		// R2 bucket is provided (large files spill under r2://<name>/...).
 		...(name ? { name } : {}),
 		...(r2 ? { r2: instrumentR2(r2) } : {}),
 	});

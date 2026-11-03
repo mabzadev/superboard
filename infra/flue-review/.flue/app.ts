@@ -1,3 +1,13 @@
+// Custom Flue application: the GitHub App webhook orchestrator.
+//
+// This is the ONLY public surface. We deliberately do NOT mount flue() at a
+// public path, so the workflow/agent HTTP endpoints are not externally
+// reachable; the workflow is admitted only via an internal request from this
+// handler. The handler does no long-running work itself (a webhook must ack
+// within seconds, and waitUntil caps at 30s): it verifies, gates, admits the
+// durable workflow run, and returns. The review and the GitHub post happen
+// inside the workflow's Durable Object, which is not bound by that budget.
+
 import { getRun, listRuns, registerProvider } from "@flue/runtime";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
@@ -23,6 +33,8 @@ registerProvider("cloudflare", {
 	binding: createAiPayloadGuard(env.AI),
 });
 
+// Extract a short, displayable message from an unknown run error without
+// risking an "[object Object]" stringification.
 function formatRunError(err: unknown): string | undefined {
 	if (err === undefined || err === null) return undefined;
 	if (err instanceof Error) return err.message.slice(0, 200);
@@ -35,6 +47,11 @@ function formatRunError(err: unknown): string | undefined {
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Protected admin read of the workflow run-index (sampling-immune ground truth,
+// unlike Workers Logs). Lets us compare runs admitted vs reviews posted to see
+// whether misses are "never started" or "started and failed". Gated by the
+// webhook secret. Note: the FlueRegistry DO was reset 2026-06-21, so history
+// only goes back to then.
 app.get("/webhook/admin/runs", async (c) => {
 	if (c.req.header("x-admin-token") !== c.env.GITHUB_WEBHOOK_SECRET) {
 		return c.text("unauthorized", 401);
@@ -54,6 +71,9 @@ app.get("/webhook/admin/runs", async (c) => {
 		else summary.other++;
 	}
 
+	// ?detail=1: pull the full RunRecord (input/result/error) for each run via
+	// getRun, to see whether the Cloudflare registry persists those (needed to
+	// map a run -> PR and to read the failure reason).
 	if (c.req.query("detail") === "1") {
 		const detailed = await Promise.all(
 			runs.slice(0, 25).map(async (r) => {
@@ -224,6 +244,9 @@ app.post("/webhook/github", async (c) => {
 		return c.text("duplicate delivery", 200);
 	}
 
+	// Admit the durable workflow run (fast). The review + post run in the
+	// workflow DO independently of this request. No ?wait=result: we don't
+	// block the webhook on the (minutes-long) review.
 	let admit: Response;
 	try {
 		admit = await admitReviewWorkflow(
@@ -286,7 +309,9 @@ app.post("/webhook/github", async (c) => {
 	let admission: { runId?: string } = {};
 	try {
 		admission = await admit.json<{ runId?: string }>();
-	} catch {}
+	} catch {
+		// The workflow is already admitted; report the missing correlation below.
+	}
 	const runId = admission.runId;
 	if (!runId) {
 		console.error(

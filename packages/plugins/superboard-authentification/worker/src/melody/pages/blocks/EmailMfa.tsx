@@ -6,7 +6,7 @@ import { emailMfa } from '../tools/locale'
 import { typeConfig } from '../../configs'
 import { InitialProps } from '../hooks/useInitialProps'
 
-export interface EmailMfaProps {
+interface EmailMfaProps {
   locale: typeConfig.Locale;
   onSubmit: (e: Event) => void;
   onChange: (name: 'mfaCode' | 'rememberDevice', value: string[] | boolean) => void;

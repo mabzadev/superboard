@@ -9,7 +9,7 @@ import {
 import { switchOrg } from '../tools/locale'
 import { typeConfig } from '../../configs'
 
-export interface SwitchOrgProps {
+interface SwitchOrgProps {
   locale: typeConfig.Locale;
   orgs: GetProcessSwitchOrgRes['orgs'];
   activeOrgSlug: GetProcessSwitchOrgRes['activeOrgSlug'];

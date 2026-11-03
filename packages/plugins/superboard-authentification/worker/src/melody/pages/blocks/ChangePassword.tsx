@@ -4,7 +4,7 @@ import {
 import { changePassword } from '../tools/locale'
 import { typeConfig } from '../../configs'
 
-export interface ChangePasswordProps {
+interface ChangePasswordProps {
   locale: typeConfig.Locale;
   success: boolean;
   onSubmit: (e: Event) => void;

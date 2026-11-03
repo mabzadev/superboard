@@ -1,3 +1,22 @@
+// Review workflow (Cloudflare target) -- cf-shell (Cloudflare Shell) variant.
+//
+// Reviews one pull request and returns structured findings plus a verdict. No
+// firecracker container: the PR is hydrated into a durable cf-shell Workspace
+// (DO SQLite + R2 for large files) from the GitHub tarball of the PR head, and
+// the agent inspects it with a
+// Worker-Loader-backed `code` tool. It does NOT post to GitHub: the workflow's
+// trusted Action code posts with a write-scoped installation token, so no
+// secret is ever reachable by the model.
+//
+// @flue 1.0 workflow model: the agent (execution policy + sandbox) is defined
+// with `defineAgent`, and the finite behavior is an inline Action bound with
+// `defineWorkflow`. The Action's `run` receives `{ harness, log, input }` --
+// deliberately NOT platform bindings -- so env-scoped work (repo hydration,
+// GitHub auth) reads the bindings back through `getCloudflareContext()`. The
+// Workspace is keyed by the Durable Object identity so the sandbox built in the
+// agent initializer and the clone performed in the Action target the exact same
+// DO SQLite + R2 namespace.
+
 import {
 	defineAgent,
 	defineWorkflow,
@@ -36,6 +55,7 @@ const reviewPayloadSchema = v.object({
 	prTitle: v.string(),
 	prBody: v.string(),
 	headRef: v.string(),
+	// Optional only so persisted pre-observability runs remain readable; run() fails closed without them.
 	headSha: v.optional(v.string()),
 	baseRef: v.string(),
 	baseSha: v.optional(v.string()),
@@ -85,6 +105,14 @@ function assertSafe(payload: ReviewPayload): void {
 	}
 }
 
+// Stable per-run Workspace name shared by the agent initializer (sandbox) and
+// the Action (clone). Both run inside the same workflow-run Durable Object and
+// therefore share one DO SqlStorage regardless of this name -- SQLite isolation
+// comes from the per-run DO, not the name. The name only keys the R2 large-file
+// spill prefix (r2://<name>/...) and observability, so the two call sites must
+// derive it identically, otherwise the sandbox and the clone would look for
+// spilled git objects under different prefixes. The DO id is a run-unique,
+// retry-stable key (same runId -> same DO).
 function workspaceName(): string {
 	return `review-${getDurableObjectIdentity().id}`;
 }
@@ -93,9 +121,14 @@ function workflowRunId(): string {
 	return getDurableObjectIdentity().name;
 }
 
+// The agent: execution policy (model, reasoning effort) plus the cf-shell
+// sandbox built from the platform bindings. Repo hydration cannot live here --
+// the initializer has no access to the PR payload -- so it moves into the
+// Action's `run` below, which shares this sandbox via the same Workspace name.
 const reviewAgent = defineAgent<Env>(({ env }) => {
 	const workspace = getDefaultWorkspace(env.REVIEW_WORKSPACE, workspaceName());
 	return {
+		// Kimi K2.7 Code via the Workers AI binding: no model API key needed.
 		model: "cloudflare/@cf/moonshotai/kimi-k2.7-code",
 		sandbox: getShellSandbox({ workspace, loader: env.LOADER }),
 		cwd: REPO_DIR,
@@ -127,6 +160,9 @@ function buildPrContext(payload: ReviewPayload, priorReview?: string): string {
 	return lines.join("\n");
 }
 
+// Hydration stage logs bracket each phase so a hang shows as a start line
+// with no matching end line. R2 operations are instrumented in the shared
+// getDefaultWorkspace.
 function hydrateStep(payload: ReviewPayload, step: string, startedAt: number): void {
 	console.log(
 		JSON.stringify({
@@ -139,6 +175,12 @@ function hydrateStep(payload: ReviewPayload, step: string, startedAt: number): v
 	);
 }
 
+// Hydrate the PR into the durable Workspace from the GitHub tarball of the PR
+// head SHA (reachable in the base repo for fork PRs too). No git objects and
+// no pack indexing: pure-JS pack inflation in the DO stops completing once
+// the repo's shallow pack grows past roughly 16MB, so hydration must not
+// depend on git. gzip decompression is the runtime-native DecompressionStream.
+// Idempotent: a HYDRATED marker skips re-fetching on workflow re-entry.
 async function hydrate(env: Env, payload: ReviewPayload): Promise<void> {
 	const t0 = Date.now();
 	const workspace = getDefaultWorkspace(env.REVIEW_WORKSPACE, workspaceName());
@@ -248,10 +290,14 @@ async function finishReviewCheck(
 async function run(context: ActionContext<typeof reviewPayloadSchema>): Promise<ReviewResult> {
 	const payload = context.input;
 
+	// ActionContext intentionally excludes platform bindings; read them back
+	// through the Cloudflare context established for this workflow run.
 	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 	const env = getCloudflareContext().env as unknown as Env;
 	let runId = payload.attemptId ?? "unidentified";
 
+	// GitHub access lives only in this trusted Action code, never in the agent's
+	// workspace. Without app creds (local dev) we skip posting and return.
 	const creds = readAppCreds(env);
 	let token: string | undefined;
 	let priorReview: string | undefined;
@@ -280,6 +326,8 @@ async function run(context: ActionContext<typeof reviewPayloadSchema>): Promise<
 			priorReview = await fetchPriorReview(token, payload.owner, payload.repo, payload.prNumber);
 		}
 
+		// Hydrate the Workspace (clone + checkout the PR head) into the same DO
+		// SQLite + R2 namespace the agent's sandbox reads from.
 		stage = "hydrating";
 		if (
 			!(await reportStage(env, token, payload, runId, "hydrating", "Preparing the PR workspace."))
@@ -290,6 +338,7 @@ async function run(context: ActionContext<typeof reviewPayloadSchema>): Promise<
 
 		const session = await context.harness.session();
 
+		// Stage the canonical unified diff into the Workspace (no `git` in cf-shell).
 		stage = "fetching_diff";
 		if (
 			!(await reportStage(
@@ -430,4 +479,6 @@ export default defineWorkflow({
 	run,
 });
 
+// Enable POST /workflows/review (the internal admission route the webhook
+// handler calls). Pass-through: admission control lives in the webhook handler.
 export const route: WorkflowRouteHandler = async (_c, next) => next();

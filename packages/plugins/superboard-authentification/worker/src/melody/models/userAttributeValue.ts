@@ -3,7 +3,7 @@ import {
 } from '../configs'
 import { dbUtil } from '../utils'
 
-export interface Record {
+interface Record {
   id: number;
   userId: number;
   userAttributeId: number;

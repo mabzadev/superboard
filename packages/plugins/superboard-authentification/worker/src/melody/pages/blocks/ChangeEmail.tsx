@@ -4,7 +4,7 @@ import {
   SuccessMessage, ViewTitle, Field, SecondaryButton, CodeInput, SubmitError, PrimaryButton,
 } from '../components'
 
-export interface ChangeEmailProps {
+interface ChangeEmailProps {
   locale: typeConfig.Locale;
   success: boolean;
   onSubmit: (e: Event) => void;

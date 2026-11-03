@@ -1,3 +1,9 @@
+/**
+ * Perf probe Worker -- deployed per-region with placement hints.
+ * Receives measurement requests via service binding fetch(),
+ * runs the measurements from its placed location, returns results.
+ */
+
 import { measureRoutes } from "./measure.js";
 import type { MeasureRequest, MeasureResponse } from "./measure.js";
 

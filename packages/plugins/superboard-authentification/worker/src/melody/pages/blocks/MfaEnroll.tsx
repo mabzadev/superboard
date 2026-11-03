@@ -8,7 +8,7 @@ import {
 import { mfaEnroll } from '../tools/locale'
 import { typeConfig } from '../../configs'
 
-export interface MfaEnrollProps {
+interface MfaEnrollProps {
   locale: typeConfig.Locale;
   mfaEnrollInfo: GetProcessMfaEnrollRes | null;
   onEnroll: (mfaType: MfaType) => void;

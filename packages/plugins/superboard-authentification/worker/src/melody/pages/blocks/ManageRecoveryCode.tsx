@@ -7,7 +7,7 @@ import {
 } from '../components'
 import { typeConfig } from '../../configs'
 
-export interface ManageRecoveryCodeProps {
+interface ManageRecoveryCodeProps {
   locale: typeConfig.Locale;
   successMessage: string | null;
   recoveryCode: string | null;
