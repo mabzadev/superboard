@@ -1,6 +1,6 @@
 const issuer = "https://token.actions.githubusercontent.com";
 const repository = "mabzadev/superboard";
-const repositoryId = "1307937671";
+const repositoryId = "1444140649";
 const ownerId = "95926658";
 
 function decode(value) {

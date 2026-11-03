@@ -105,7 +105,7 @@ test("runner identities require a GitHub signature and the canonical workflow an
 		iss: "https://token.actions.githubusercontent.com",
 		aud: "superboard-installer",
 		repository: "mabzadev/superboard",
-		repository_id: "1307937671",
+		repository_id: "1444140649",
 		repository_owner_id: "95926658",
 		ref: "refs/heads/main",
 		workflow_ref:
@@ -142,7 +142,7 @@ test("runner identities require a GitHub signature and the canonical workflow an
 			await runnerIdentity(
 				await request({
 					...base,
-					sub: "repo:mabzadev@95926658/superboard@1307937671:ref:refs/heads/main",
+					sub: "repo:mabzadev@95926658/superboard@1444140649:ref:refs/heads/main",
 				}),
 				fetchKeys,
 			)
@@ -153,7 +153,7 @@ test("runner identities require a GitHub signature and the canonical workflow an
 		{ repository: "another/repository" },
 		{ repository_id: "999" },
 		{ repository_owner_id: "999" },
-		{ sub: "repo:mabzadev@999/superboard@1307937671:ref:refs/heads/main" },
+		{ sub: "repo:mabzadev@999/superboard@1444140649:ref:refs/heads/main" },
 		{ ref: "refs/pull/12/merge" },
 		{ workflow_ref: "mabzadev/superboard/.github/workflows/other.yml@refs/heads/main" },
 		{ aud: "another-app" },
